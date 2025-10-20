@@ -4,7 +4,7 @@ import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
 import { ContentNotification, NotificationType } from './storage.service';
 import { LocalStorageService } from './local-storage.service';
-import { kinds } from 'nostr-tools';
+import { kinds, nip57 } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 
 /**
@@ -74,7 +74,6 @@ export class ContentNotificationService {
    * Check for new content notifications since last check
    */
   async checkForNewNotifications(): Promise<void> {
-    debugger;
     if (this.isChecking()) {
       this.logger.debug('Already checking for notifications, skipping');
       return;
@@ -346,13 +345,27 @@ export class ContentNotificationService {
         const bolt11Tag = event.tags.find(tag => tag[0] === 'bolt11');
         let zapAmount = 0;
 
-        if (bolt11Tag) {
-          // Parse amount from bolt11 invoice (simplified)
-          // In production, you'd want a proper bolt11 decoder
-          const bolt11 = bolt11Tag[1];
-          const amountMatch = bolt11.match(/lnbc(\d+)/);
-          if (amountMatch) {
-            zapAmount = parseInt(amountMatch[1], 10);
+        if (bolt11Tag && bolt11Tag[1]) {
+          try {
+            // Use nostr-tools to properly decode bolt11 invoice amount
+            const amountSats = nip57.getSatoshisAmountFromBolt11(bolt11Tag[1]);
+            if (amountSats) {
+              zapAmount = amountSats; // Amount is already in satoshis
+            }
+          } catch (error) {
+            this.logger.warn('Failed to parse bolt11 amount from zap receipt', error);
+            // Fallback: try to get amount from the zap request
+            try {
+              const zapRequest = descriptionTag && descriptionTag[1] ? JSON.parse(descriptionTag[1]) : null;
+              if (zapRequest) {
+                const amountTag = zapRequest.tags?.find((t: string[]) => t[0] === 'amount');
+                if (amountTag && amountTag[1]) {
+                  zapAmount = Math.round(parseInt(amountTag[1], 10) / 1000); // Convert msats to sats
+                }
+              }
+            } catch (fallbackError) {
+              this.logger.warn('Fallback amount parsing also failed', fallbackError);
+            }
           }
         }
 
@@ -395,14 +408,21 @@ export class ContentNotificationService {
       recipientPubkey?: string; // For profile zaps, the recipient's pubkey
     };
   }): Promise<void> {
-    // Use eventId in the notification ID to ensure uniqueness (especially important for zaps)
-    // For profile zaps without eventId, use zapReceiptId instead
-    // Fall back to timestamp-based ID if neither is available
-    const notificationId = data.eventId
-      ? `content-${data.type}-${data.eventId}`
-      : data.metadata?.zapReceiptId
-        ? `content-${data.type}-${data.metadata.zapReceiptId}`
-        : `content-${data.type}-${data.authorPubkey}-${data.timestamp}`;
+    // Generate unique notification ID
+    // For zaps, always use the zap receipt ID (unique per zap) to avoid duplicates
+    // For other notification types, use eventId if available
+    let notificationId: string;
+
+    if (data.type === NotificationType.ZAP && data.metadata?.zapReceiptId) {
+      // For zaps, use the zap receipt ID (unique for each zap)
+      notificationId = `content-${data.type}-${data.metadata.zapReceiptId}`;
+    } else if (data.eventId) {
+      // For other notifications, use the event ID
+      notificationId = `content-${data.type}-${data.eventId}`;
+    } else {
+      // Fallback to timestamp-based ID
+      notificationId = `content-${data.type}-${data.authorPubkey}-${data.timestamp}`;
+    }
 
     const notification: ContentNotification = {
       id: notificationId,
