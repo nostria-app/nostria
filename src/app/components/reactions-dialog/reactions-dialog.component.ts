@@ -365,7 +365,6 @@ export interface ReactionsDialogData {
 
       ::ng-deep .mat-mdc-tab-group {
         height: auto;
-        height: auto;
         display: flex;
         flex-direction: column;
       }
