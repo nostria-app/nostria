@@ -427,6 +427,10 @@ mat-sidenav-content {
 
   .child-nav-item {
     flex: 1;
+
+    &:hover mat-icon {
+      color: var(--mat-sys-primary);
+    }
   }
 
   .feed-edit-button {
@@ -440,6 +444,10 @@ mat-sidenav-content {
       font-size: 18px;
       width: 18px;
       height: 18px;
+    }
+
+    &:hover mat-icon {
+      color: var(--mat-sys-primary);
     }
   }
 
