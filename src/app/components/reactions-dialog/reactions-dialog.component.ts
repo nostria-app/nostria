@@ -199,6 +199,8 @@ export interface ReactionsDialogData {
         width: 100%;
         max-width: 650px;
         max-height: 85vh;
+        display: flex;
+        flex-direction: column;
       }
 
       .dialog-header {
@@ -217,16 +219,18 @@ export interface ReactionsDialogData {
         padding: 16px 0;
         min-height: 400px;
         max-height: 70vh;
-        overflow: hidden;
+        overflow-y: auto;
+        overflow-x: hidden;
+        flex: 1;
+        min-height: 0;
+        /* Ensure proper scrolling behavior for the entire dialog body */
+        -webkit-overflow-scrolling: touch;
       }
 
       .tab-content {
-        height: 100%;
-        overflow-y: auto;
-        overflow-x: hidden;
+        height: auto;
+        overflow: visible;
         padding: 16px 0;
-        /* Ensure proper scrolling behavior */
-        -webkit-overflow-scrolling: touch;
       }
 
       .empty-state {
@@ -355,10 +359,12 @@ export interface ReactionsDialogData {
       .dialog-actions {
         padding: 8px 24px 16px;
         justify-content: flex-end;
+        flex-shrink: 0;
+        border-top: 1px solid var(--mat-sys-outline-variant);
       }
 
       ::ng-deep .mat-mdc-tab-group {
-        height: 100%;
+        height: auto;
         display: flex;
         flex-direction: column;
       }
@@ -368,13 +374,13 @@ export interface ReactionsDialogData {
       }
 
       ::ng-deep .mat-mdc-tab-body-wrapper {
-        flex: 1;
-        overflow: hidden;
+        flex: none;
+        overflow: visible;
       }
 
       ::ng-deep .mat-mdc-tab-body-content {
-        height: 100%;
-        overflow: hidden;
+        height: auto;
+        overflow: visible;
       }
     `,
   ],
