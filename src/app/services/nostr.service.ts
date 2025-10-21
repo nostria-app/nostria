@@ -102,7 +102,6 @@ export class NostrService implements NostriaService {
       const event = this.accountState.publish();
 
       if (event) {
-        debugger;
         try {
           const signedEvent = await this.sign(event);
 
