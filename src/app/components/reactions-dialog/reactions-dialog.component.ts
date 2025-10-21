@@ -382,8 +382,6 @@ export interface ReactionsDialogData {
       ::ng-deep .mat-mdc-tab-body-content {
         height: auto;
         overflow: visible;
-        height: auto;
-        overflow: visible;
       }
     `,
   ],
