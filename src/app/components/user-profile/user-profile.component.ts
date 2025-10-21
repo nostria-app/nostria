@@ -578,7 +578,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     if (
       this.view() !== 'list' &&
       this.view() !== 'details' &&
-      this.view() !== 'grid'
+      this.view() !== 'grid' &&
+      this.view() !== 'compact'
     ) {
       return;
     }
