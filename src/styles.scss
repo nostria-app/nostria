@@ -12,6 +12,9 @@ html {
   --mat-success-lighter: #c8e6c9;
   --mat-success-darker: #2e7d32;
 
+  // Override Material list active indicator border radius
+  --mat-list-active-indicator-shape: 8px;
+
   // Scrollbar colors for light theme
   --scrollbar-track: #f1f1f1;
   --scrollbar-thumb: #c1c1c1;
