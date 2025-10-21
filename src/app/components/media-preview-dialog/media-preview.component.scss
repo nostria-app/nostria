@@ -34,11 +34,6 @@
   background-color: black;
 }
 
-/* Adds same amount of border radius as the dialog itself for top of image previews. */
-.preview-content {
-  border-radius: 28px !important;
-}
-
 .preview-image {
   max-width: 100%;
   max-height: calc(95vh - 64px);

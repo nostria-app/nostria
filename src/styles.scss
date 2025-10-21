@@ -21,6 +21,13 @@ html {
   --mat-button-text-container-shape: 8px;
   --mdc-elevated-button-container-shape: 8px;
 
+  // Override Material dialog border radius to make it less rounded
+  --mdc-dialog-container-shape: 8px;
+  --mat-dialog-container-shape: 8px;
+
+  // Override Material card avatar border radius
+  --mat-card-avatar-size: 40px;
+
   // Scrollbar colors for light theme
   --scrollbar-track: #f1f1f1;
   --scrollbar-thumb: #c1c1c1;
@@ -128,6 +135,11 @@ body {
     border-radius: 8px !important;
     border: none !important;
   }
+}
+
+// Material card avatar styling
+.mat-mdc-card-avatar {
+  border-radius: 8px !important;
 }
 
 // Remove borders between button toggle items
