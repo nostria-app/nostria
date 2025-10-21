@@ -86,6 +86,55 @@ body {
   box-sizing: border-box;
 }
 
+// Force all Material buttons to have 8px border radius
+.mat-mdc-button,
+.mat-mdc-unelevated-button,
+.mat-mdc-raised-button,
+.mat-mdc-outlined-button,
+.mat-mdc-fab,
+.mat-mdc-mini-fab {
+  border-radius: 8px !important;
+  
+  .mdc-button__ripple {
+    border-radius: 8px !important;
+  }
+}
+
+// Force icon buttons to be square with rounded corners
+.mat-mdc-icon-button {
+  border-radius: 8px !important;
+  
+  .mdc-icon-button__ripple,
+  .mat-mdc-button-ripple,
+  .mat-mdc-button-persistent-ripple {
+    border-radius: 8px !important;
+  }
+  
+  // Remove focus/hover circular styling
+  &:focus,
+  &:hover,
+  &.cdk-focused,
+  &.mat-mdc-button-disabled-interactive:focus {
+    border-radius: 8px !important;
+  }
+}
+
+// Button toggle groups styling
+.mat-button-toggle-group {
+  border-radius: 8px !important;
+  border: none !important;
+  
+  .mat-button-toggle {
+    border-radius: 8px !important;
+    border: none !important;
+  }
+}
+
+// Remove borders between button toggle items
+.mat-button-toggle-group-appearance-standard .mat-button-toggle-appearance-standard + .mat-button-toggle-appearance-standard {
+  border-left: none !important;
+}
+
 .filled {
   font-family: 'Material Symbols Outlined';
   font-weight: normal;
