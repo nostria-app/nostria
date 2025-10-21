@@ -44,7 +44,7 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [x] [NIP-23: Long-form Content](https://github.com/nostr-protocol/nips/blob/master/23.md)
 - [x] [NIP-25: Reactions](https://github.com/nostr-protocol/nips/blob/master/25.md)
 - [x] [NIP-26: Delegated Event Signing](https://github.com/nostr-protocol/nips/blob/master/26.md)
-- [ ] [NIP-27: Text Note References](https://github.com/nostr-protocol/nips/blob/master/27.md)
+- [x] [NIP-27: Text Note References](https://github.com/nostr-protocol/nips/blob/master/27.md)
 - [ ] [NIP-28: Public Chat](https://github.com/nostr-protocol/nips/blob/master/28.md)
 - [x] [NIP-36: Sensitive Content](https://github.com/nostr-protocol/nips/blob/master/36.md)
 - [x] [NIP-40: Expiration Timestamp](https://github.com/nostr-protocol/nips/blob/master/40.md)
