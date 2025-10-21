@@ -34,6 +34,8 @@ import { Router } from '@angular/router';
 import { nip19, Event as NostrEvent, UnsignedEvent } from 'nostr-tools';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { PowService, PowProgress } from '../../services/pow.service';
+import { MentionAutocompleteComponent, MentionSelection, MentionAutocompleteConfig } from '../mention-autocomplete/mention-autocomplete.component';
+import { MentionInputService, MentionDetectionResult } from '../../services/mention-input.service';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -84,6 +86,7 @@ interface NoteAutoDraft {
     MatCheckboxModule,
     MatSlideToggleModule,
     ContentComponent,
+    MentionAutocompleteComponent,
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
@@ -102,6 +105,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private router = inject(Router);
   private powService = inject(PowService);
+  private mentionInputService = inject(MentionInputService);
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -119,6 +123,11 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
   mentions = signal<string[]>(this.data?.mentions || []);
+
+  // Mention autocomplete state
+  mentionConfig = signal<MentionAutocompleteConfig | null>(null);
+  mentionPosition = signal<{ top: number; left: number }>({ top: 0, left: 0 });
+  mentionDetection = signal<MentionDetectionResult | null>(null);
 
   // Advanced options
   expirationEnabled = signal(false);
@@ -586,6 +595,133 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
   removeMention(pubkey: string): void {
     this.mentions.set(this.mentions().filter(p => p !== pubkey));
+  }
+
+  // Mention input handling methods
+  onContentInput(event: Event): void {
+    const target = event.target as HTMLTextAreaElement;
+    const newContent = target.value;
+    this.content.set(newContent);
+
+    // Check for mention trigger
+    this.handleMentionInput(newContent, target.selectionStart || 0);
+  }
+
+  onContentKeyDown(event: KeyboardEvent): void {
+    const mentionConfig = this.mentionConfig();
+
+    // If mention autocomplete is open, let it handle arrow keys and enter
+    if (mentionConfig) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) {
+        // Let the autocomplete component handle these keys
+        return;
+      }
+    }
+  }
+
+  onContentKeyUp(event: KeyboardEvent): void {
+    const target = event.target as HTMLTextAreaElement;
+    this.handleMentionInput(this.content(), target.selectionStart || 0);
+  }
+
+  onContentClick(event: MouseEvent): void {
+    const target = event.target as HTMLTextAreaElement;
+    this.handleMentionInput(this.content(), target.selectionStart || 0);
+  }
+
+  private handleMentionInput(content: string, cursorPosition: number): void {
+    const detection = this.mentionInputService.detectMention(content, cursorPosition);
+    this.mentionDetection.set(detection);
+
+    if (detection.isTypingMention) {
+      // Calculate position for autocomplete dropdown
+      const textareaElement = this.contentTextarea?.nativeElement;
+      if (textareaElement) {
+        const position = this.calculateMentionPosition(textareaElement);
+        this.mentionPosition.set(position);
+
+        // Set mention config for autocomplete
+        this.mentionConfig.set({
+          cursorPosition: detection.cursorPosition,
+          query: detection.query,
+          mentionStart: detection.mentionStart,
+        });
+      }
+    } else {
+      // Hide mention autocomplete
+      this.mentionConfig.set(null);
+    }
+  }
+
+  private calculateMentionPosition(textarea: HTMLTextAreaElement): { top: number; left: number } {
+    // Use viewport positioning to properly place the dropdown above the textarea
+    // This ensures it floats above the textarea regardless of container constraints
+
+    const textareaRect = textarea.getBoundingClientRect();
+
+    // Position above the textarea with adequate spacing
+    const autocompleteHeight = 300; // Approximate height of dropdown
+    const gap = 16; // Gap between dropdown and textarea
+
+    // Calculate position above the textarea
+    let top = textareaRect.top - autocompleteHeight - gap;
+    let left = textareaRect.left;
+
+    // Ensure the dropdown doesn't go above the viewport
+    if (top < 10) {
+      // If not enough space above, position below the textarea instead
+      top = textareaRect.bottom + gap;
+    }
+
+    // Ensure horizontal positioning fits within viewport
+    const viewportWidth = window.innerWidth;
+    const autocompleteWidth = 420; // Updated width from CSS
+
+    if (left + autocompleteWidth > viewportWidth - 16) {
+      left = viewportWidth - autocompleteWidth - 16; // 16px margin from right edge
+    }    // Ensure minimum left position
+    if (left < 16) {
+      left = 16;
+    }
+
+    return {
+      top: top,
+      left: left
+    };
+  }
+
+  onMentionSelected(selection: MentionSelection): void {
+    const detection = this.mentionDetection();
+    if (!detection) return;
+
+    // Replace the mention in the content
+    const replacement = this.mentionInputService.replaceMention(
+      detection,
+      selection.nprofileUri
+    );
+
+    // Update content
+    this.content.set(replacement.replacementText);
+
+    // Update cursor position
+    setTimeout(() => {
+      const textarea = this.contentTextarea?.nativeElement;
+      if (textarea) {
+        textarea.selectionStart = replacement.newCursorPosition;
+        textarea.selectionEnd = replacement.newCursorPosition;
+        textarea.focus();
+      }
+    }, 0);
+
+    // Add to mentions list for p tags
+    this.addMention(selection.pubkey);
+
+    // Hide autocomplete
+    this.mentionConfig.set(null);
+  }
+
+  onMentionDismissed(): void {
+    this.mentionConfig.set(null);
   }
 
   cancel(): void {

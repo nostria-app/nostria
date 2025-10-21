@@ -1,0 +1,202 @@
+.mention-autocomplete {
+  position: fixed; // Changed from absolute to fixed for viewport positioning
+  z-index: 2000; // Higher z-index to ensure it floats above dialog content
+  background: var(--mat-sys-surface-container-high);
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 8px;
+  box-shadow: var(--mat-sys-level4); // Enhanced shadow for floating effect
+  overflow: hidden;
+  max-width: 420px; // Increased width for better content display
+  min-width: 380px; // Increased min-width
+  // Ensure proper containment and scrolling behavior
+  contain: layout style;
+  transform: translateZ(0); // Force GPU layer for better performance
+}
+
+.mention-autocomplete-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 8px;
+  background: var(--mat-sys-surface-container);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.mention-icon {
+  color: var(--mat-sys-primary);
+  font-size: 18px;
+  width: 18px;
+  height: 18px;
+}
+
+.mention-title {
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  font-size: 14px;
+}
+
+.mention-count {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 12px;
+  margin-left: auto;
+}
+
+.mention-autocomplete-list {
+  max-height: 240px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.mention-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border: none;
+  background: transparent;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.2s ease;
+  outline: none;
+  min-height: 60px; // Ensure adequate height for multi-line content
+}
+
+.mention-item:hover,
+.mention-item.focused {
+  background: var(--mat-sys-surface-container-highest);
+}
+
+.mention-item:focus-visible {
+  outline: 2px solid var(--mat-sys-primary);
+  outline-offset: -2px;
+}
+
+.mention-item-avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+}
+
+.mention-item-details {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mention-item-name {
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  font-size: 14px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-item-nip05 {
+  color: var(--mat-sys-primary);
+  font-size: 12px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mention-item-about {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 11px;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mention-item-meta {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 80px;
+}
+
+.mention-item-pubkey {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 10px;
+  font-family: monospace;
+  opacity: 0.7;
+}
+
+.mention-item-following {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--mat-sys-primary);
+  font-size: 10px;
+
+  .following-icon {
+    font-size: 12px;
+    width: 12px;
+    height: 12px;
+  }
+}
+
+.mention-autocomplete-footer {
+  padding: 8px 16px;
+  background: var(--mat-sys-surface-container);
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.mention-hint {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+/* Scrollbar styling */
+.mention-autocomplete-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mention-autocomplete-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.mention-autocomplete-list::-webkit-scrollbar-thumb {
+  background: var(--mat-sys-outline-variant);
+  border-radius: 3px;
+}
+
+.mention-autocomplete-list::-webkit-scrollbar-thumb:hover {
+  background: var(--mat-sys-outline);
+}
+
+/* Animation */
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.mention-autocomplete {
+  animation: slideInUp 0.15s ease-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .mention-autocomplete {
+    max-width: calc(100vw - 32px);
+    min-width: 240px;
+  }
+}

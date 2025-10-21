@@ -264,9 +264,19 @@
 }
 
 .content-editor-section {
-  .content-field {
-    width: 100%;
-    margin-bottom: 8px;
+  .textarea-container {
+    // Remove position relative since we're using fixed positioning for mentions
+
+    .content-field {
+      width: 100%;
+      margin-bottom: 8px;
+    }
+
+    // Mention autocomplete will use fixed positioning
+    app-mention-autocomplete {
+      // Positioning is now handled via fixed position in the component
+      pointer-events: auto;
+    }
   }
 
   .upload-actions {
