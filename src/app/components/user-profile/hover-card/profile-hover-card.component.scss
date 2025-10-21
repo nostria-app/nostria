@@ -207,6 +207,35 @@
   button,
   a {
     flex: 1;
+    min-height: 40px;
+  }
+
+  button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    border-radius: 8px !important;
+
+    &.mat-mdc-button,
+    &.mat-mdc-raised-button,
+    &.mat-mdc-unelevated-button {
+      border-radius: 8px !important;
+    }
+
+    .mdc-button__ripple {
+      border-radius: 8px !important;
+    }
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+
+    span {
+      font-size: 14px;
+    }
   }
 
   a {
@@ -214,6 +243,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: 8px !important;
+
+    &.mat-mdc-button,
+    &.mat-mdc-outlined-button {
+      border-radius: 8px !important;
+    }
+
+    .mdc-button__ripple {
+      border-radius: 8px !important;
+    }
   }
 
   mat-spinner {

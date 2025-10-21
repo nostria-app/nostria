@@ -65,7 +65,6 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc';
     ScrollingModule,
     UserProfileComponent,
     MatMenuModule,
-    FollowsetComponent,
   ],
   templateUrl: './people.component.html',
   styleUrls: ['./people.component.scss'],
@@ -299,7 +298,7 @@ export class PeopleComponent {
         break;
 
       case 'engagement-asc':
-      case 'engagement-desc':
+      case 'engagement-desc': {
         // Get metrics for all users
         const userMetrics = new Map<string, number>();
 
@@ -323,6 +322,7 @@ export class PeopleComponent {
           }
         });
         break;
+      }
     }
 
     this.sortedPeople.set(result);

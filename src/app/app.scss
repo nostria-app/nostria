@@ -346,7 +346,7 @@ mat-sidenav-content {
 }
 
 .sidenav-small {
-  width: 56px;
+  width: 66px;
 }
 
 .sidenav-small .mat-icon {
@@ -729,8 +729,12 @@ mat-sidenav-content {
 // Additional z-index fixes for Material sidenav
 .profile-sidenav .mat-drawer-inner-container {
   z-index: 1001;
+  padding: 5px;
 }
 
+.mat-drawer-inner-container {
+  padding: 5px;
+}
 // Ensure backdrop appears above toolbar but below sidenav
 .sidenav-container .mat-drawer-backdrop {
   z-index: 1000 !important;

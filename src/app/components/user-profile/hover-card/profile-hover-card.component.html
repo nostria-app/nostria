@@ -78,29 +78,27 @@
     <!-- Actions -->
     <div class="actions">
       @if (!isFollowing()) {
-      <button mat-raised-button color="primary" (click)="toggleFollow()" [disabled]="isLoadingFollowing()">
+      <button mat-button color="primary" (click)="toggleFollow()" [disabled]="isLoadingFollowing()">
         @if (isLoadingFollowing()) {
         <mat-spinner [diameter]="20"></mat-spinner>
         } @else {
         <ng-container>
-          <mat-icon>person_add</mat-icon>
           <span>Follow</span>
         </ng-container>
         }
       </button>
       } @else {
-      <button mat-raised-button (click)="toggleFollow()" [disabled]="isLoadingFollowing()">
+      <button mat-button (click)="toggleFollow()" [disabled]="isLoadingFollowing()">
         @if (isLoadingFollowing()) {
         <mat-spinner [diameter]="20"></mat-spinner>
         } @else {
         <ng-container>
-          <mat-icon>person_remove</mat-icon>
           <span>Unfollow</span>
         </ng-container>
         }
       </button>
       }
-      <a [routerLink]="['/p', npubValue()]" mat-stroked-button>
+      <a [routerLink]="['/p', npubValue()]" mat-button>
         View Profile
       </a>
     </div>
