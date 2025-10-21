@@ -377,8 +377,6 @@ export interface ReactionsDialogData {
       ::ng-deep .mat-mdc-tab-body-wrapper {
         flex: none;
         overflow: visible;
-        flex: none;
-        overflow: visible;
       }
 
       ::ng-deep .mat-mdc-tab-body-content {
