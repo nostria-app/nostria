@@ -361,8 +361,6 @@ export interface ReactionsDialogData {
         justify-content: flex-end;
         flex-shrink: 0;
         border-top: 1px solid var(--mat-sys-outline-variant);
-        flex-shrink: 0;
-        border-top: 1px solid var(--mat-sys-outline-variant);
       }
 
       ::ng-deep .mat-mdc-tab-group {
