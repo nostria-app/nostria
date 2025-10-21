@@ -9,7 +9,7 @@
   align-items: center;
   justify-content: center;
   min-height: 200px;
-  color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.6));
+  color: var(--mat-sys-on-surface-variant);
 
   mat-icon {
     font-size: 48px;
@@ -17,5 +17,6 @@
     width: 48px;
     margin-bottom: 1rem;
     opacity: 0.5;
+    color: var(--mat-sys-on-surface-variant);
   }
 }

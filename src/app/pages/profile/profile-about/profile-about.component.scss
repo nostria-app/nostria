@@ -10,11 +10,11 @@
 
   mat-icon {
     margin-right: 1rem;
-    color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.6));
+    color: var(--mat-sys-on-surface-variant);
   }
 
   a {
-    color: var(--mat-sys-primary, #673ab7);
+    color: var(--mat-sys-primary);
     text-decoration: none;
 
     &:hover {
