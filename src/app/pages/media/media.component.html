@@ -102,8 +102,14 @@
                 <span class="mirror-count">{{ item.mirrors.length }}</span>
               </div>
               }
-              <img [src]="item.url" [alt]="item.url || 'Image'" (click)="navigateToDetails($event, item)"
-                loading="lazy" />
+              @if (shouldShowLogo(item.sha256)) {
+                <div class="nostria-logo" (click)="navigateToDetails($event, item)">
+                  <img src="/icons/icon.svg" alt="Nostria Logo" />
+                </div>
+              } @else {
+                <img [src]="item.url" [alt]="item.url || 'Image'" (click)="navigateToDetails($event, item)"
+                  loading="lazy" (error)="onImageError($event, item)" />
+              }
               <div class="video-actions">
                 <button mat-icon-button [matMenuTriggerFor]="imageMenu" (click)="$event.stopPropagation()">
                   <mat-icon>more_vert</mat-icon>
@@ -198,10 +204,16 @@
               </div>
               }
               <div class="video-preview">
-                <video [src]="item.url" preload="metadata" (click)="navigateToDetails($event, item)"></video>
-                <div class="play-button" (click)="navigateToDetails($event, item)">
-                  <mat-icon>play_circle_filled</mat-icon>
-                </div>
+                @if (shouldShowLogo(item.sha256)) {
+                  <div class="nostria-logo" (click)="navigateToDetails($event, item)">
+                    <img src="/icons/icon.svg" alt="Nostria Logo" />
+                  </div>
+                } @else {
+                  <video [src]="item.url" preload="metadata" (click)="navigateToDetails($event, item)" (error)="onVideoError($event, item)"></video>
+                  <div class="play-button" (click)="navigateToDetails($event, item)">
+                    <mat-icon>play_circle_filled</mat-icon>
+                  </div>
+                }
               </div>
               <div class="video-actions">
                 <button mat-icon-button [matMenuTriggerFor]="videoMenu" (click)="$event.stopPropagation()">

@@ -87,6 +87,9 @@ export class MediaComponent {
   videos = signal<MediaItem[]>([]);
   files = signal<MediaItem[]>([]);
 
+  // Track failed media items to show logo instead
+  private failedItems = signal<Set<string>>(new Set());
+
   // Table columns for files display
   displayedColumns: string[] = ['select', 'name', 'mirrors', 'type', 'size', 'uploaded', 'actions'];
 
@@ -217,6 +220,28 @@ export class MediaComponent {
 
   dismissError(): void {
     this.mediaService.clearError();
+  }
+
+  onImageError(event: Event, item: MediaItem): void {
+    console.warn('Failed to load image:', item.url);
+    // Add this item to the failed set to show logo instead
+    const currentFailed = this.failedItems();
+    const newFailed = new Set(currentFailed);
+    newFailed.add(item.sha256);
+    this.failedItems.set(newFailed);
+  }
+
+  onVideoError(event: Event, item: MediaItem): void {
+    console.warn('Failed to load video:', item.url);
+    // Add this item to the failed set to show logo instead
+    const currentFailed = this.failedItems();
+    const newFailed = new Set(currentFailed);
+    newFailed.add(item.sha256);
+    this.failedItems.set(newFailed);
+  }
+
+  shouldShowLogo(sha256: string): boolean {
+    return this.failedItems().has(sha256);
   }
 
   openServerDialog(server?: string): void {

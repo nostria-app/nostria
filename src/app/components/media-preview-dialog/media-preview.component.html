@@ -8,22 +8,35 @@
 
   <div class="preview-content" [ngClass]="{ 'video-content': isVideo() }">
     @if (isImage()) {
-      <img [src]="data.mediaUrl" [alt]="data.mediaTitle" class="preview-image" />
+      @if (shouldShowLogo()) {
+        <div class="nostria-logo">
+          <img src="/icons/icon.svg" alt="Nostria Logo" />
+        </div>
+      } @else {
+        <img [src]="data.mediaUrl" [alt]="data.mediaTitle" class="preview-image" (error)="onImageError($event)" />
+      }
     } @else if (isVideo()) {
       <div class="video-container">
-        @if (isVideoLoading) {
-          <div class="loading-indicator">
-            <mat-icon>videocam</mat-icon>
-            <p>Loading video...</p>
+        @if (shouldShowLogo()) {
+          <div class="nostria-logo">
+            <img src="/icons/icon.svg" alt="Nostria Logo" />
           </div>
+        } @else {
+          @if (isVideoLoading) {
+            <div class="loading-indicator">
+              <mat-icon>videocam</mat-icon>
+              <p>Loading video...</p>
+            </div>
+          }
+          <video
+            [src]="data.mediaUrl"
+            controls
+            autoplay
+            class="preview-video"
+            (loadeddata)="onVideoLoad()"
+            (error)="onVideoError($event)"
+          ></video>
         }
-        <video
-          [src]="data.mediaUrl"
-          controls
-          autoplay
-          class="preview-video"
-          (loadeddata)="onVideoLoad()"
-        ></video>
       </div>
     } @else {
       <div class="unsupported-media">

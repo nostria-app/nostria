@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -22,6 +22,9 @@ export class MediaPreviewDialogComponent {
   data: MediaPreviewData = inject(MAT_DIALOG_DATA);
 
   isVideoLoading = true;
+  
+  // Track if media failed to load to show logo instead
+  private mediaFailed = signal(false);
 
   close(): void {
     this.dialogRef.close();
@@ -59,5 +62,19 @@ export class MediaPreviewDialogComponent {
     }
 
     return false;
+  }
+
+  onImageError(event: Event): void {
+    console.warn('Failed to load image in media preview:', this.data.mediaUrl);
+    this.mediaFailed.set(true);
+  }
+
+  onVideoError(event: Event): void {
+    console.warn('Failed to load video in media preview:', this.data.mediaUrl);
+    this.mediaFailed.set(true);
+  }
+
+  shouldShowLogo(): boolean {
+    return this.mediaFailed();
   }
 }

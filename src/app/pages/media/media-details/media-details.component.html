@@ -28,13 +28,26 @@
       <div class="media-preview-card">
         <div class="media-preview">
           @if (mediaItem()?.type?.startsWith('image')) {
-            <img
-              [src]="mediaItem()!.url"
-              [alt]="mediaItem()!.url || 'Image'"
-              (click)="openFullScreen()"
-            />
+            @if (shouldShowLogo()) {
+              <div class="nostria-logo" (click)="openFullScreen()">
+                <img src="/icons/icon.svg" alt="Nostria Logo" />
+              </div>
+            } @else {
+              <img
+                [src]="mediaItem()!.url"
+                [alt]="mediaItem()!.url || 'Image'"
+                (click)="openFullScreen()"
+                (error)="onImageError($event)"
+              />
+            }
           } @else if (mediaItem()?.type?.startsWith('video')) {
-            <video [src]="mediaItem()!.url" controls></video>
+            @if (shouldShowLogo()) {
+              <div class="nostria-logo" (click)="openFullScreen()">
+                <img src="/icons/icon.svg" alt="Nostria Logo" />
+              </div>
+            } @else {
+              <video [src]="mediaItem()!.url" controls (error)="onVideoError($event)"></video>
+            }
           } @else if (mediaItem()?.type && isTextFile(mediaItem()!.type)) {
             @if (textLoading()) {
               <div class="text-loading">

@@ -42,6 +42,9 @@ export class MediaDetailsComponent {
   mediaItem = signal<MediaItem | null>(null);
   textContent = signal<string | null>(null);
   textLoading = signal(false);
+  
+  // Track if media failed to load to show logo instead
+  private mediaFailed = signal(false);
 
   // Add computed signal for memoized mirror status
   isFullyMirroredStatus = computed(() => {
@@ -66,6 +69,7 @@ export class MediaDetailsComponent {
     try {
       this.loading.set(true);
       this.error.set(null);
+      this.mediaFailed.set(false); // Reset failed state for new media item
 
       const item = await this.mediaService.getFileById(id);
       this.mediaItem.set(item);
@@ -264,6 +268,20 @@ export class MediaDetailsComponent {
     // Simply navigate back to the media list
     // The active tab will be restored from localStorage by the MediaComponent
     this.router.navigate(['/media']);
+  }
+
+  onImageError(event: Event): void {
+    console.warn('Failed to load image in media details:', this.mediaItem()?.url);
+    this.mediaFailed.set(true);
+  }
+
+  onVideoError(event: Event): void {
+    console.warn('Failed to load video in media details:', this.mediaItem()?.url);
+    this.mediaFailed.set(true);
+  }
+
+  shouldShowLogo(): boolean {
+    return this.mediaFailed();
   }
 
   getMediaIcon(type: string | null | undefined): string {

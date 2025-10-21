@@ -69,7 +69,15 @@
   <div class="media-player-controls-footer">
     @if (!media.videoMode()) {
     <div class="media-info">
-      <img class="music-album" [src]="media.current?.artwork" alt="Album artwork" />
+      <div class="album-artwork">
+        @if (media.current?.artwork) {
+        <img class="music-album" [src]="media.current?.artwork" alt="Album artwork" />
+        } @else {
+        <div class="nostria-logo">
+          <img src="/icons/icon.svg" alt="Nostria" />
+        </div>
+        }
+      </div>
       <div class="media-info-text hide-small">
         <div class="music-title">{{ media.current?.title }}</div>
         <div class="music-artist">{{ media.current?.artist }}</div>

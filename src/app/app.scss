@@ -735,6 +735,7 @@ mat-sidenav-content {
 .mat-drawer-inner-container {
   padding: 5px;
 }
+
 // Ensure backdrop appears above toolbar but below sidenav
 .sidenav-container .mat-drawer-backdrop {
   z-index: 1000 !important;
