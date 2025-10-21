@@ -61,13 +61,24 @@
 
     <!-- Content editor with upload actions -->
     <div class="content-editor-section">
-      <mat-form-field appearance="outline" class="content-field">
-        <mat-label>What's on your mind?</mat-label>
-        <textarea matInput [(ngModel)]="content" placeholder="Write your note..." rows="4" class="content-textarea"
-          #contentTextarea>
-        </textarea>
-        <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
-      </mat-form-field>
+      <div class="textarea-container">
+        <mat-form-field appearance="outline" class="content-field">
+          <mat-label>What's on your mind?</mat-label>
+          <textarea matInput [value]="content()" (input)="onContentInput($event)" (keydown)="onContentKeyDown($event)"
+            (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
+            placeholder="Write your note... Use @ to mention someone" rows="4" class="content-textarea"
+            #contentTextarea>
+          </textarea>
+          <mat-hint align="end"> {{ characterCount() }} characters </mat-hint>
+        </mat-form-field>
+
+        <!-- Mention Autocomplete positioned relative to textarea -->
+        @if (mentionConfig()) {
+        <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="15"
+          [maxHeight]="400" (mentionSelected)="onMentionSelected($event)"
+          (dismissed)="onMentionDismissed()"></app-mention-autocomplete>
+        }
+      </div>
 
       <!-- Upload actions -->
       <div class="upload-actions">
