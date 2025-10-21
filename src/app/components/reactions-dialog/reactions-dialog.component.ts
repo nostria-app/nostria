@@ -201,8 +201,6 @@ export interface ReactionsDialogData {
         max-height: 85vh;
         display: flex;
         flex-direction: column;
-        display: flex;
-        flex-direction: column;
       }
 
       .dialog-header {
