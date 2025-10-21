@@ -158,15 +158,21 @@ export class DataService {
       return this.pendingProfileRequests.get(pubkey);
     }
 
-    // Check cache first, but skip if refresh is requested
-    if (!refresh && this.cache.has(cacheKey)) {
+    // Always check cache first to return immediately if available
+    if (this.cache.has(cacheKey)) {
       const record = this.cache.get<NostrRecord>(cacheKey);
       if (record) {
+        // If refresh is requested, load fresh data in background
+        if (refresh) {
+          this.logger.debug(`Returning cached profile and refreshing in background: ${pubkey}`);
+          // Load fresh data without blocking the return
+          this.refreshProfileInBackground(pubkey, cacheKey);
+        }
         return record;
       }
     }
 
-    // Create and store the promise to prevent race conditions
+    // If no cached data available or refresh requested and no cache, load fresh data
     const profilePromise = this.loadProfile(pubkey, cacheKey, refresh);
     this.pendingProfileRequests.set(pubkey, profilePromise);
 

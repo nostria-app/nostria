@@ -412,26 +412,46 @@ export class ProfileComponent {
     this.error.set(null);
 
     try {
-      // Try to get from cache first - use the validated hex pubkey
-      const metadata = await this.data.getProfile(hexPubkey, true);
-      // let metadata = await this.nostrService.getMetadataForUser(hexPubkey, true);
-      this.userMetadata.set(metadata);
+      // First, try to get cached profile data to show immediately
+      const cachedMetadata = await this.data.getProfile(hexPubkey, false);
+      if (cachedMetadata) {
+        this.logger.debug('Showing cached profile data immediately for:', hexPubkey);
+        this.userMetadata.set(cachedMetadata);
+        this.isLoading.set(false);
 
-      if (!metadata) {
+        // Always scroll when we have data to show
+        setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
+      }
+
+      // Then refresh profile data in the background to ensure it's up to date
+      this.logger.debug('Refreshing profile data in background for:', hexPubkey);
+      const refreshedMetadata = await this.data.getProfile(hexPubkey, true);
+
+      // Only update if we got newer data or if we didn't have cached data
+      if (refreshedMetadata && (!cachedMetadata || refreshedMetadata.event.created_at > cachedMetadata.event.created_at)) {
+        this.logger.debug('Updated with refreshed profile data for:', hexPubkey);
+        this.userMetadata.set(refreshedMetadata);
+      }
+
+      // If we didn't have cached data and couldn't get fresh data either
+      if (!cachedMetadata && !refreshedMetadata) {
         // Don't set an error - allow the profile page to load without metadata
         this.logger.warn('User profile metadata not found, but continuing to load profile content');
       }
 
-      // Always scroll and load data, regardless of whether metadata was found
-      setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
+      // If we haven't scrolled yet (no cached data case), scroll now
+      if (!cachedMetadata) {
+        setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
+      }
 
-      // Load user data regardless of metadata availability
-      // this.loadUserData(hexPubkey);
     } catch (err) {
       this.logger.error('Error loading user profile', err);
       this.error.set('Error loading user profile');
     } finally {
-      this.isLoading.set(false);
+      // Only set loading to false if we don't have any data to show
+      if (!this.userMetadata()) {
+        this.isLoading.set(false);
+      }
     }
   }
 
