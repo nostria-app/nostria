@@ -833,20 +833,18 @@ export class AccountStateService implements OnDestroy {
       console.log('Loading profiles from storage to cache for account:', pubkey);
       console.log('Following list size:', followingList.length);
 
-      // REMOVED: Let's not load everything into memory of all following.
-
       // Load metadata events from storage for all following users
-      // const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
-      // const records = dataService.toRecords(events);
+      const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
+      const records = dataService.toRecords(events);
 
-      // console.log('Found metadata records in storage:', records.length);
+      console.log('Found metadata records in storage:', records.length);
 
-      // // Add all found profiles to cache
-      // for (const record of records) {
-      //   this.addToCache(record.event.pubkey, record);
-      // }
+      // Add all found profiles to cache
+      for (const record of records) {
+        this.addToCache(record.event.pubkey, record);
+      }
 
-      // console.log('Profile cache populated with', records.length, 'profiles from storage');
+      console.log('Profile cache populated with', records.length, 'profiles from storage');
     } catch (error) {
       console.error('Failed to load profiles from storage to cache:', error);
     }
