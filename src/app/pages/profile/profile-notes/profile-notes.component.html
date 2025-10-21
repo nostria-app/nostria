@@ -16,7 +16,7 @@
       } @else {
         <div class="notes-list">
           @for (item of profileState.sortedTimeline(); track item.event.id || $index) {
-            <app-event [event]="item.event" appearance="card"></app-event>
+            <app-event [event]="item.event" appearance="plain"></app-event>
           }
 
           <!-- Loading more indicator -->
