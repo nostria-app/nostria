@@ -15,6 +15,7 @@ import { UserProfileComponent } from '../../../components/user-profile/user-prof
 import { SettingsService } from '../../../services/settings.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
+import { ReportingService } from '../../../services/reporting.service';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -39,6 +40,7 @@ export class PrivacySettingsComponent {
   nostrService = inject(NostrService);
   settingsService = inject(SettingsService);
   imageCacheService = inject(ImageCacheService);
+  reportingService = inject(ReportingService);
   router = inject(Router);
 
   // NIP-56 report types
@@ -83,10 +85,35 @@ export class PrivacySettingsComponent {
     return this.nostrService.getTags(muteList, 'e');
   });
 
-  removeMutedItem(type: string, value: string): void {
-    // This would need to be implemented to update the mute list
-    console.log(`Remove ${type}: ${value}`);
-    // Would create a new mute event with the item removed and update via accountState
+  async removeMutedItem(type: string, value: string): Promise<void> {
+    try {
+      switch (type) {
+        case 'account':
+          // Use the reporting service to unblock the user
+          await this.reportingService.unblockUser(value);
+          console.log(`Successfully removed user from mute list: ${value}`);
+          break;
+        case 'word':
+          // Remove word from mute list
+          await this.reportingService.removeFromMuteList({ type: 'word', value });
+          console.log(`Successfully removed word from mute list: ${value}`);
+          break;
+        case 'tag':
+          // Remove tag from mute list
+          await this.reportingService.removeFromMuteList({ type: 't', value });
+          console.log(`Successfully removed tag from mute list: ${value}`);
+          break;
+        case 'thread':
+          // Remove thread from mute list
+          await this.reportingService.removeFromMuteList({ type: 'e', value });
+          console.log(`Successfully removed thread from mute list: ${value}`);
+          break;
+        default:
+          console.warn(`Unknown mute item type: ${type}`);
+      }
+    } catch (error) {
+      console.error(`Failed to remove ${type} from mute list:`, error);
+    }
   }
 
   async toggleSocialSharingPreview(): Promise<void> {
