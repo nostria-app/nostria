@@ -253,19 +253,19 @@ export class ProfileHoverCardComponent {
       .filter(n => n !== 'Unknown');
 
     if (count === 1) {
-      return names.length > 0 ? `Also follow ${names[0]}` : '1 mutual follow';
+      return names.length > 0 ? `Also follows ${names[0]}` : '1 follower in common';
     } else if (count === 2) {
       return names.length === 2
-        ? `Also follow ${names[0]} and ${names[1]}`
-        : `${count} mutual follows`;
+        ? `Also follows ${names[0]} and ${names[1]}`
+        : `${count} followers in common`;
     } else {
       const remaining = count - names.length;
       if (names.length === 0) {
-        return `${count} mutual follows`;
+        return `${count} followers in common`;
       } else if (names.length === 1) {
-        return `Also follow ${names[0]} and ${remaining} other${remaining !== 1 ? 's' : ''}`;
+        return `Also follows ${names[0]} and ${remaining} other${remaining !== 1 ? 's' : ''}`;
       } else {
-        return `Also follow ${names[0]}, ${names[1]} and ${remaining} other${remaining !== 1 ? 's' : ''}`;
+        return `Also follows ${names[0]}, ${names[1]} and ${remaining} other${remaining !== 1 ? 's' : ''}`;
       }
     }
   }
