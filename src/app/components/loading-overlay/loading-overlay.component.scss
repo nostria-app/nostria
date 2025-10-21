@@ -68,24 +68,18 @@
 
         // Different colors for different log levels
         &.log-level-debug {
-          border-left: 3px solid #2196f3;
-
           .log-level {
             color: #2196f3;
           }
         }
 
         &.log-level-info {
-          border-left: 3px solid #4caf50;
-
           .log-level {
             color: #4caf50;
           }
         }
 
         &.log-level-warn {
-          border-left: 3px solid #ff9800;
-
           .log-level {
             color: #ff9800;
           }

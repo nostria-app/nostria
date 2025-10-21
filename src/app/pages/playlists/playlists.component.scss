@@ -93,8 +93,6 @@
   }
 
   &.draft-card {
-    border-left: 4px solid var(--mat-sys-tertiary);
-
     .mat-card-header .mat-card-avatar mat-icon {
       color: var(--mat-sys-tertiary);
     }

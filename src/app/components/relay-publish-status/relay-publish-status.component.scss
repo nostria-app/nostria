@@ -59,18 +59,6 @@ mat-progress-bar {
   border-radius: 4px;
   margin-bottom: 4px;
   background-color: rgba(0, 0, 0, 0.05);
-
-  &.success {
-    border-left: 4px solid #4caf50;
-  }
-
-  &.failed {
-    border-left: 4px solid #f44336;
-  }
-
-  &.pending {
-    border-left: 4px solid #ff9800;
-  }
 }
 
 .relay-name {

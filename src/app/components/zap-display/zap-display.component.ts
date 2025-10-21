@@ -189,7 +189,6 @@ interface ZapReceipt {
         gap: 8px;
         margin-top: 8px;
         padding-left: 20px;
-        border-left: 3px solid #ff6b1a;
         background: rgba(255, 107, 26, 0.05);
         padding: 8px;
         border-radius: 4px;

@@ -329,7 +329,6 @@ export interface ReactionsDialogData {
         margin-top: 12px;
         padding: 12px;
         background: var(--mat-sys-primary-container);
-        border-left: 4px solid var(--mat-sys-primary);
         border-radius: 6px;
       }
 

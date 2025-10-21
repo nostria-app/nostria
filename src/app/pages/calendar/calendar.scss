@@ -461,10 +461,6 @@
         z-index: 2;
       }
 
-      &.has-events {
-        border-left: 4px solid var(--mat-sys-primary);
-      }
-
       .date-number {
         font-size: 1.1rem;
         font-weight: 500;
@@ -649,7 +645,6 @@
           font-size: 0.75rem;
           z-index: 1;
           overflow: hidden;
-          border-left: 3px solid var(--mat-sys-primary);
           cursor: pointer;
           transition: all 0.2s ease;
 
@@ -752,7 +747,6 @@
       box-shadow: var(--mat-sys-level1);
       transition: all 0.3s ease;
       overflow: hidden;
-      border-left: 6px solid var(--mat-sys-primary);
       cursor: pointer;
 
       &:hover {
@@ -761,7 +755,6 @@
       }
 
       &.all-day-event {
-        border-left-color: var(--mat-sys-tertiary);
         background: linear-gradient(
           135deg,
           var(--mat-sys-surface) 0%,
