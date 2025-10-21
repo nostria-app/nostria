@@ -224,9 +224,6 @@ export interface ReactionsDialogData {
         flex: 1;
         min-height: 0;
         /* Ensure proper scrolling behavior for the entire dialog body */
-        flex: 1;
-        min-height: 0;
-        /* Ensure proper scrolling behavior for the entire dialog body */
         -webkit-overflow-scrolling: touch;
       }
 
