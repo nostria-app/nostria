@@ -582,13 +582,15 @@ mat-sidenav-content {
 .search-container {
   position: relative;
   width: 100%;
+  display: flex;
+  align-items: center;
 }
 
 .search-input {
   width: 100%;
-  padding: 8px 12px;
+  padding: 8px 96px 8px 12px; // Extra padding on right for the buttons
   border: 1px solid var(--mat-sys-outline-variant);
-  border-radius: 20px;
+  border-radius: 24px;
   background: var(--mat-sys-surface-container);
   color: var(--mat-sys-on-surface);
   font-size: 14px;
@@ -601,6 +603,29 @@ mat-sidenav-content {
 
   &::placeholder {
     color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.search-action-button {
+  position: absolute;
+  right: 4px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  min-width: 40px;
+  
+  .mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+  
+  &.qr-button {
+    right: 48px; // Position QR button before close button
+  }
+  
+  &.close-button {
+    right: 4px;
   }
 }
 
