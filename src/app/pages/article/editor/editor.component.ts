@@ -38,6 +38,7 @@ import { DecodedNaddr } from 'nostr-tools/nip19';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { Cache } from '../../../services/cache';
 import { NostrRecord } from '../../../interfaces';
+import { MentionHoverDirective } from '../../../directives/mention-hover.directive';
 
 interface ArticleDraft {
   title: string;
@@ -80,6 +81,7 @@ interface ArticleAutoDraft {
     RichTextEditorComponent,
     MatExpansionModule,
     MatTooltipModule,
+    MentionHoverDirective,
   ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
@@ -842,6 +844,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   /**
    * Process nostr: references in HTML content to create clickable links with profile names
    * This enhances the preview to show profile display names for npub/nprofile references
+   * Uses nostr-mention class and data attributes for hover card functionality
    */
   private processNostrReferences(html: string): string {
     // Match nostr: URIs in the HTML content
@@ -855,16 +858,16 @@ export class EditorComponent implements OnInit, OnDestroy {
         const decodedType = decoded.type as string;
 
         if (decodedType === 'npub') {
-          // For npub references, try to get profile display name
+          // For npub references, create profile link with hover card support
           const pubkey = decoded.data as unknown as string;
           const npubIdentifier = nip19.npubEncode(pubkey);
 
           // Get display name from cache (synchronous)
           const displayName = this.getCachedDisplayName(pubkey);
 
-          return `<a href="/p/${npubIdentifier}" class="nostr-profile-link" title="${match}">@${displayName}</a>`;
+          return `<a href="/p/${npubIdentifier}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="${match}">@${displayName}</a>`;
         } else if (decodedType === 'nprofile') {
-          // For nprofile references, try to get profile display name
+          // For nprofile references, create profile link with hover card support
           const profileData = decoded.data as unknown as { pubkey: string; relays?: string[] };
           const pubkey = profileData.pubkey;
           const npubIdentifier = nip19.npubEncode(pubkey);
@@ -872,7 +875,7 @@ export class EditorComponent implements OnInit, OnDestroy {
           // Get display name from cache (synchronous)
           const displayName = this.getCachedDisplayName(pubkey);
 
-          return `<a href="/p/${npubIdentifier}" class="nostr-profile-link" title="${match}">@${displayName}</a>`;
+          return `<a href="/p/${npubIdentifier}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="${match}">@${displayName}</a>`;
         } else if (decodedType === 'note') {
           // For note references, show as a link
           const eventId = decoded.data as unknown as string;
@@ -906,21 +909,25 @@ export class EditorComponent implements OnInit, OnDestroy {
   /**
    * Get cached profile display name synchronously
    * Uses the same cache as DataService to avoid async operations in computed properties
+   * Uses untracked() to prevent cache stats from triggering computed recalculation
    */
   private getCachedDisplayName(pubkey: string): string {
-    const cacheKey = `metadata-${pubkey}`;
-    const record = this.cache.get<NostrRecord>(cacheKey);
+    // Use untracked to avoid creating reactive dependency on cache stats
+    return untracked(() => {
+      const cacheKey = `metadata-${pubkey}`;
+      const record = this.cache.get<NostrRecord>(cacheKey);
 
-    if (record?.data) {
-      // Same priority as ParsingService: display_name > name > truncated npub
-      return (
-        record.data.display_name ||
-        record.data.name ||
-        `${nip19.npubEncode(pubkey).substring(0, 12)}...`
-      );
-    }
+      if (record?.data) {
+        // Same priority as ParsingService: display_name > name > truncated npub
+        return (
+          record.data.display_name ||
+          record.data.name ||
+          `${nip19.npubEncode(pubkey).substring(0, 12)}...`
+        );
+      }
 
-    // Fallback to truncated npub if not cached
-    return `${nip19.npubEncode(pubkey).substring(0, 12)}...`;
+      // Fallback to truncated npub if not cached
+      return `${nip19.npubEncode(pubkey).substring(0, 12)}...`;
+    });
   }
 }

@@ -85,7 +85,7 @@
               <img [src]="article().image" [attr.alt]="article().title || 'Article featured image'"
                 [attr.title]="article().title || 'Article featured image'" class="preview-image" loading="lazy" />
               }
-              <div class="preview-markdown">
+              <div class="preview-markdown" appMentionHover>
                 <div [innerHTML]="markdownHtml()"></div>
               </div>
             </div>

@@ -94,9 +94,12 @@ export class MentionHoverDirective implements OnDestroy {
       return;
     }
 
+    // Create an ElementRef wrapper for proper positioning
+    const elementRef = new ElementRef(element);
+
     const positionStrategy = this.overlay
       .position()
-      .flexibleConnectedTo(element)
+      .flexibleConnectedTo(elementRef)
       .withPositions([
         {
           originX: 'center',
@@ -137,7 +140,7 @@ export class MentionHoverDirective implements OnDestroy {
 
     const portal = new ComponentPortal(ProfileHoverCardComponent, this.viewContainerRef);
     this.hoverCardComponentRef = this.overlayRef.attach(portal);
-    this.hoverCardComponentRef.instance.pubkey.set(pubkey);
+    this.hoverCardComponentRef.setInput('pubkey', pubkey);
 
     // Track mouse over card
     const cardElement = this.overlayRef.overlayElement;
