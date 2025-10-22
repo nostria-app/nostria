@@ -588,12 +588,14 @@ mat-sidenav-content {
 
 .search-input {
   width: 100%;
-  padding: 8px 96px 8px 12px; // Extra padding on right for the buttons
+  padding: 9px 98px 9px 13px; // Slightly increased padding
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 24px;
   background: var(--mat-sys-surface-container);
   color: var(--mat-sys-on-surface);
   font-size: 14px;
+  height: 40px; // Slightly taller than original
+  box-sizing: border-box;
 
   &:focus {
     outline: none;
@@ -613,17 +615,17 @@ mat-sidenav-content {
   height: 40px;
   padding: 0;
   min-width: 40px;
-  
+
   .mat-icon {
     font-size: 20px;
     width: 20px;
     height: 20px;
   }
-  
+
   &.qr-button {
-    right: 48px; // Position QR button before close button
+    right: 48px;
   }
-  
+
   &.close-button {
     right: 4px;
   }
