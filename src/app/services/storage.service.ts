@@ -666,6 +666,14 @@ export class StorageService {
 
   // Generic event storage methods
   async saveEvent(event: Event): Promise<void> {
+    // Check if event has expired according to NIP-40
+    if (this.utilities.isEventExpired(event)) {
+      this.logger.debug(`Dropping expired event: ${event.id} (kind: ${event.kind})`);
+      // If the event already exists in storage, delete it
+      await this.deleteEvent(event.id);
+      return;
+    }
+
     if (this.useFallbackMode()) {
       return this.saveEventToFallback(event);
     }
@@ -798,21 +806,51 @@ export class StorageService {
 
   async getEvent(id: string): Promise<Event | undefined> {
     if (this.useFallbackMode()) {
-      return this.fallbackStorage.get(`event_${id}`);
+      const event = this.fallbackStorage.get(`event_${id}`);
+      // Check if event has expired and delete it if so
+      if (event && this.utilities.isEventExpired(event)) {
+        this.logger.debug(`Deleting expired event from fallback: ${id}`);
+        this.fallbackStorage.delete(`event_${id}`);
+        return undefined;
+      }
+      return event;
     }
 
     try {
-      return await this.db.get('events', id);
+      const event = await this.db.get('events', id);
+      // Check if event has expired and delete it if so
+      if (event && this.utilities.isEventExpired(event)) {
+        this.logger.debug(`Deleting expired event: ${id} (kind: ${event.kind})`);
+        await this.deleteEvent(id);
+        return undefined;
+      }
+      return event;
     } catch (error) {
       this.logger.error(`Error getting event ${id}`, error);
       // Try fallback storage as last resort
-      return this.fallbackStorage.get(`event_${id}`);
+      const event = this.fallbackStorage.get(`event_${id}`);
+      if (event && this.utilities.isEventExpired(event)) {
+        this.fallbackStorage.delete(`event_${id}`);
+        return undefined;
+      }
+      return event;
     }
   }
 
   async getEventsByKind(kind: number): Promise<Event[]> {
     try {
-      return await this.db.getAllFromIndex('events', 'by-kind', kind);
+      const events = await this.db.getAllFromIndex('events', 'by-kind', kind);
+      // Filter out expired events and delete them
+      const validEvents: Event[] = [];
+      for (const event of events) {
+        if (this.utilities.isEventExpired(event)) {
+          this.logger.debug(`Deleting expired event: ${event.id} (kind: ${event.kind})`);
+          await this.deleteEvent(event.id);
+        } else {
+          validEvents.push(event);
+        }
+      }
+      return validEvents;
     } catch (error) {
       this.logger.error(`Error getting events by kind ${kind}`, error);
       return [];
@@ -844,10 +882,31 @@ export class StorageService {
           const events = await this.db.getAllFromIndex('events', 'by-pubkey', pk);
           allEvents.push(...events);
         }
-        return allEvents;
+        // Filter out expired events and delete them
+        const validEvents: Event[] = [];
+        for (const event of allEvents) {
+          if (this.utilities.isEventExpired(event)) {
+            this.logger.debug(`Deleting expired event: ${event.id} (kind: ${event.kind})`);
+            await this.deleteEvent(event.id);
+          } else {
+            validEvents.push(event);
+          }
+        }
+        return validEvents;
       } else {
         // Handle single pubkey (original behavior)
-        return await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
+        const events = await this.db.getAllFromIndex('events', 'by-pubkey', pubkey);
+        // Filter out expired events and delete them
+        const validEvents: Event[] = [];
+        for (const event of events) {
+          if (this.utilities.isEventExpired(event)) {
+            this.logger.debug(`Deleting expired event: ${event.id} (kind: ${event.kind})`);
+            await this.deleteEvent(event.id);
+          } else {
+            validEvents.push(event);
+          }
+        }
+        return validEvents;
       }
     } catch (error) {
       const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
@@ -859,7 +918,16 @@ export class StorageService {
   async getEventById(id: string): Promise<Event | null> {
     try {
       const event = await this.db.get('events', id);
-      return event || null;
+      if (!event) {
+        return null;
+      }
+      // Check if event has expired and delete it if so
+      if (this.utilities.isEventExpired(event)) {
+        this.logger.debug(`Deleting expired event: ${id} (kind: ${event.kind})`);
+        await this.deleteEvent(id);
+        return null;
+      }
+      return event;
     } catch (error) {
       this.logger.error(`Error getting event by ID ${id}`, error);
       return null;
@@ -917,10 +985,31 @@ export class StorageService {
           const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pk, kind]);
           allEvents.push(...events);
         }
-        return allEvents;
+        // Filter out expired events and delete them
+        const validEvents: Event[] = [];
+        for (const event of allEvents) {
+          if (this.utilities.isEventExpired(event)) {
+            this.logger.debug(`Deleting expired event: ${event.id} (kind: ${event.kind})`);
+            await this.deleteEvent(event.id);
+          } else {
+            validEvents.push(event);
+          }
+        }
+        return validEvents;
       } else {
         // Handle single pubkey (original behavior)
-        return await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pubkey, kind]);
+        const events = await this.db.getAllFromIndex('events', 'by-pubkey-kind', [pubkey, kind]);
+        // Filter out expired events and delete them
+        const validEvents: Event[] = [];
+        for (const event of events) {
+          if (this.utilities.isEventExpired(event)) {
+            this.logger.debug(`Deleting expired event: ${event.id} (kind: ${event.kind})`);
+            await this.deleteEvent(event.id);
+          } else {
+            validEvents.push(event);
+          }
+        }
+        return validEvents;
       }
     } catch (error) {
       const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
@@ -970,8 +1059,20 @@ export class StorageService {
         }
 
         if (allEvents.length > 0) {
+          // Filter out expired events and delete them
+          const validEvents: Event[] = [];
+          for (const event of allEvents) {
+            if (this.utilities.isEventExpired(event)) {
+              this.logger.debug(`Deleting expired event: ${event.id} (kind: ${event.kind})`);
+              await this.deleteEvent(event.id);
+            } else {
+              validEvents.push(event);
+            }
+          }
           // Return the most recent one across all pubkeys
-          return allEvents.sort((a, b) => b.created_at - a.created_at)[0];
+          if (validEvents.length > 0) {
+            return validEvents.sort((a, b) => b.created_at - a.created_at)[0];
+          }
         }
         return undefined;
       } else {
@@ -982,8 +1083,20 @@ export class StorageService {
           dTagValue,
         ]);
         if (events.length > 0) {
+          // Filter out expired events and delete them
+          const validEvents: Event[] = [];
+          for (const event of events) {
+            if (this.utilities.isEventExpired(event)) {
+              this.logger.debug(`Deleting expired event: ${event.id} (kind: ${event.kind})`);
+              await this.deleteEvent(event.id);
+            } else {
+              validEvents.push(event);
+            }
+          }
           // Return the most recent one
-          return events.sort((a, b) => b.created_at - a.created_at)[0];
+          if (validEvents.length > 0) {
+            return validEvents.sort((a, b) => b.created_at - a.created_at)[0];
+          }
         }
         return undefined;
       }
