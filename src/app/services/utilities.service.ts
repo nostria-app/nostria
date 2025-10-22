@@ -576,6 +576,53 @@ export class UtilitiesService {
     return Math.floor(Date.now() / 1000);
   }
 
+  /**
+   * Check if an event has expired according to NIP-40
+   * @param event The event to check
+   * @returns true if the event has expired, false otherwise
+   */
+  isEventExpired(event: Event): boolean {
+    const expirationTag = event.tags.find(tag => tag[0] === 'expiration');
+    
+    if (!expirationTag || expirationTag.length < 2) {
+      return false; // No expiration tag means the event doesn't expire
+    }
+
+    const expirationTimestamp = parseInt(expirationTag[1], 10);
+    
+    if (isNaN(expirationTimestamp)) {
+      return false; // Invalid expiration timestamp
+    }
+
+    const currentTimestamp = this.currentDate();
+    return currentTimestamp >= expirationTimestamp;
+  }
+
+  /**
+   * Get the expiration timestamp from an event (NIP-40)
+   * @param event The event to check
+   * @returns The expiration timestamp in seconds, or null if no expiration
+   */
+  getEventExpiration(event: Event): number | null {
+    const expirationTag = event.tags.find(tag => tag[0] === 'expiration');
+    
+    if (!expirationTag || expirationTag.length < 2) {
+      return null;
+    }
+
+    const expirationTimestamp = parseInt(expirationTag[1], 10);
+    return isNaN(expirationTimestamp) ? null : expirationTimestamp;
+  }
+
+  /**
+   * Filter out expired events from an array
+   * @param events Array of events to filter
+   * @returns Array of non-expired events
+   */
+  filterExpiredEvents(events: Event[]): Event[] {
+    return events.filter(event => !this.isEventExpired(event));
+  }
+
   isRootPost(event: Event) {
     // A root post has no 'e' tag (no reply or root reference)
     return !event.tags.some(tag => tag[0] === 'e');
