@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 import { kinds, SimplePool } from 'nostr-tools';
-import { UtilitiesService } from '../utilities.service';
 import { StorageService } from '../storage.service';
 import { RelayServiceBase } from './relay';
 import { DiscoveryRelayService } from './discovery-relay';
@@ -10,7 +9,6 @@ import { DiscoveryRelayService } from './discovery-relay';
 })
 export class AccountRelayService extends RelayServiceBase {
   private storage = inject(StorageService);
-  private utilities = inject(UtilitiesService);
   private discoveryRelay = inject(DiscoveryRelayService);
 
   constructor() {

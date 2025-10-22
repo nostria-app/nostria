@@ -2,6 +2,7 @@ import { inject, signal, Signal } from '@angular/core';
 import { LoggerService } from '../logger.service';
 import { Event, SimplePool } from 'nostr-tools';
 import { RelaysService } from './relays';
+import { UtilitiesService } from '../utilities.service';
 
 export interface Relay {
   url: string;
@@ -15,6 +16,7 @@ export abstract class RelayServiceBase {
   protected relayUrls: string[] = [];
   protected logger = inject(LoggerService);
   protected relaysService = inject(RelaysService);
+  protected utilities = inject(UtilitiesService);
   protected useOptimizedRelays = false;
 
   // Activity tracking
@@ -475,6 +477,12 @@ export abstract class RelayServiceBase {
         maxWait: timeout,
       })) as T;
 
+      // Check if event has expired according to NIP-40
+      if (event && this.utilities.isEventExpired(event)) {
+        this.logger.debug(`Dropping expired event from relay: ${event.id} (kind: ${event.kind})`);
+        return null; // Don't return expired events
+      }
+
       this.logger.debug(`Received event from query`, event);
 
       // Update lastUsed for all relays used in this query
@@ -582,6 +590,11 @@ export abstract class RelayServiceBase {
         this.#pool!.subscribeEose(urls, filter, {
           maxWait: timeout,
           onevent: (event) => {
+            // Check if event has expired according to NIP-40
+            if (this.utilities.isEventExpired(event)) {
+              this.logger.debug(`Dropping expired event from relay: ${event.id} (kind: ${event.kind})`);
+              return; // Don't add expired events
+            }
             // Add the received event to our collection
             events.push(event as T);
           },
@@ -733,6 +746,12 @@ export abstract class RelayServiceBase {
       // Create the subscription
       const sub = this.#pool.subscribeMany(urls, filter, {
         onevent: (evt) => {
+          // Check if event has expired according to NIP-40
+          if (this.utilities.isEventExpired(evt)) {
+            this.logger.debug(`Dropping expired event from relay: ${evt.id} (kind: ${evt.kind})`);
+            return; // Don't process expired events
+          }
+
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
           // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
@@ -831,6 +850,12 @@ export abstract class RelayServiceBase {
       // Create the subscription
       const sub = this.#pool.subscribeManyEose(urls, filter, {
         onevent: (evt) => {
+          // Check if event has expired according to NIP-40
+          if (this.utilities.isEventExpired(evt)) {
+            this.logger.debug(`Dropping expired event from relay: ${evt.id} (kind: ${evt.kind})`);
+            return; // Don't process expired events
+          }
+
           this.logger.debug(`Received event of kind ${evt.kind}`);
 
           // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
