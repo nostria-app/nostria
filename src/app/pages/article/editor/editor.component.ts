@@ -610,6 +610,10 @@ export class EditorComponent implements OnInit, OnDestroy {
         tags.push(['t', tag]);
       });
 
+      // Parse NIP-27 references from content and add appropriate tags
+      // This is optional according to NIP-27, but recommended for notifications
+      this.extractNip27Tags(art.content, tags);
+
       // Create the event
       const event = await this.nostrService.createEvent(kind, art.content, tags);
 
@@ -750,6 +754,79 @@ export class EditorComponent implements OnInit, OnDestroy {
     const suggested = this.suggestedDTag();
     if (suggested) {
       this.article.update(art => ({ ...art, dTag: suggested }));
+    }
+  }
+
+  /**
+   * Extract NIP-27 references from content and add corresponding tags
+   * According to NIP-27, adding tags is optional but recommended for notifications
+   */
+  private extractNip27Tags(content: string, tags: string[][]): void {
+    // Match all nostr: URIs in content
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
+    const matches = content.matchAll(nostrUriPattern);
+
+    const addedEventIds = new Set(tags.filter(tag => tag[0] === 'e').map(tag => tag[1]));
+    const addedPubkeys = new Set(tags.filter(tag => tag[0] === 'p').map(tag => tag[1]));
+
+    for (const match of matches) {
+      const fullIdentifier = match[1] + match[2];
+
+      try {
+        const decoded = nip19.decode(fullIdentifier);
+
+        switch (decoded.type) {
+          case 'note':
+            // Add e tag for note reference
+            if (!addedEventIds.has(decoded.data)) {
+              tags.push(['e', decoded.data, '']);
+              addedEventIds.add(decoded.data);
+            }
+            break;
+
+          case 'nevent':
+            // Add e tag for event reference with optional relay and pubkey
+            if (!addedEventIds.has(decoded.data.id)) {
+              const relay = decoded.data.relays?.[0] || '';
+              const pubkey = decoded.data.author || '';
+              tags.push(['e', decoded.data.id, relay, '', pubkey]);
+              addedEventIds.add(decoded.data.id);
+            }
+            // Also add p tag for the author if available
+            if (decoded.data.author && !addedPubkeys.has(decoded.data.author)) {
+              tags.push(['p', decoded.data.author, '']);
+              addedPubkeys.add(decoded.data.author);
+            }
+            break;
+
+          case 'npub':
+            // Add p tag for profile reference
+            if (!addedPubkeys.has(decoded.data)) {
+              tags.push(['p', decoded.data, '']);
+              addedPubkeys.add(decoded.data);
+            }
+            break;
+
+          case 'nprofile':
+            // Add p tag for profile reference
+            if (!addedPubkeys.has(decoded.data.pubkey)) {
+              tags.push(['p', decoded.data.pubkey, '']);
+              addedPubkeys.add(decoded.data.pubkey);
+            }
+            break;
+
+          case 'naddr': {
+            // Add a tag for addressable event reference
+            const aTagValue = `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`;
+            const relay = decoded.data.relays?.[0] || '';
+            tags.push(['a', aTagValue, relay]);
+            break;
+          }
+        }
+      } catch (error) {
+        // Invalid NIP-19 identifier, skip it
+        console.warn('Failed to decode NIP-19 identifier:', fullIdentifier, error);
+      }
     }
   }
 }

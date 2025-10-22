@@ -569,6 +569,10 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       }
     });
 
+    // Parse NIP-27 references from content and add appropriate tags (NIP-18 for quotes)
+    // This is optional according to NIP-27, but recommended for notifications
+    this.extractNip27Tags(this.content(), tags);
+
     // Add expiration tag if enabled
     if (this.expirationEnabled()) {
       const expirationDateTime = this.getExpirationDateTime();
@@ -584,6 +588,79 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     }
 
     return tags;
+  }
+
+  /**
+   * Extract NIP-27 references from content and add corresponding tags
+   * According to NIP-27, adding tags is optional but recommended for notifications
+   */
+  private extractNip27Tags(content: string, tags: string[][]): void {
+    // Match all nostr: URIs in content
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
+    const matches = content.matchAll(nostrUriPattern);
+
+    const addedEventIds = new Set(tags.filter(tag => tag[0] === 'e').map(tag => tag[1]));
+    const addedPubkeys = new Set(tags.filter(tag => tag[0] === 'p').map(tag => tag[1]));
+
+    for (const match of matches) {
+      const fullIdentifier = match[1] + match[2];
+
+      try {
+        const decoded = nip19.decode(fullIdentifier);
+
+        switch (decoded.type) {
+          case 'note':
+            // Add e tag for note reference
+            if (!addedEventIds.has(decoded.data)) {
+              tags.push(['e', decoded.data, '']);
+              addedEventIds.add(decoded.data);
+            }
+            break;
+
+          case 'nevent':
+            // Add e tag for event reference with optional relay and pubkey
+            if (!addedEventIds.has(decoded.data.id)) {
+              const relay = decoded.data.relays?.[0] || '';
+              const pubkey = decoded.data.author || '';
+              tags.push(['e', decoded.data.id, relay, '', pubkey]);
+              addedEventIds.add(decoded.data.id);
+            }
+            // Also add p tag for the author if available
+            if (decoded.data.author && !addedPubkeys.has(decoded.data.author)) {
+              tags.push(['p', decoded.data.author, '']);
+              addedPubkeys.add(decoded.data.author);
+            }
+            break;
+
+          case 'npub':
+            // Add p tag for profile reference
+            if (!addedPubkeys.has(decoded.data)) {
+              tags.push(['p', decoded.data, '']);
+              addedPubkeys.add(decoded.data);
+            }
+            break;
+
+          case 'nprofile':
+            // Add p tag for profile reference
+            if (!addedPubkeys.has(decoded.data.pubkey)) {
+              tags.push(['p', decoded.data.pubkey, '']);
+              addedPubkeys.add(decoded.data.pubkey);
+            }
+            break;
+
+          case 'naddr': {
+            // Add a tag for addressable event reference
+            const aTagValue = `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`;
+            const relay = decoded.data.relays?.[0] || '';
+            tags.push(['a', aTagValue, relay]);
+            break;
+          }
+        }
+      } catch (error) {
+        // Invalid NIP-19 identifier, skip it
+        console.warn('Failed to decode NIP-19 identifier:', fullIdentifier, error);
+      }
+    }
   }
 
   addMention(pubkey: string): void {
@@ -1007,7 +1084,16 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // If no image files, allow normal text pasting
+    // Check for NIP-19 identifiers in text and auto-prefix with nostr:
+    const text = event.clipboardData?.getData('text/plain');
+    if (text && this.containsNip19Identifier(text)) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.insertTextWithNostrPrefix(text);
+      return;
+    }
+
+    // If no image files or NIP-19 identifiers, allow normal text pasting
   }
 
   private isImageFile(file: File): boolean {
@@ -1019,6 +1105,47 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     // Additional check by file extension as fallback
     const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
     return imageExtensions.test(file.name);
+  }
+
+  /**
+   * Check if text contains NIP-19 identifiers that need nostr: prefix
+   * Matches: note1, nevent1, npub1, nprofile1, naddr1, nsec1
+   */
+  private containsNip19Identifier(text: string): boolean {
+    const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)[a-zA-Z0-9]+\b/;
+    return nip19Pattern.test(text);
+  }
+
+  /**
+   * Insert text with NIP-19 identifiers automatically prefixed with nostr:
+   * According to NIP-27, all references should be in the format nostr:<identifier>
+   */
+  private insertTextWithNostrPrefix(text: string): void {
+    const textarea = this.contentTextarea.nativeElement;
+    const cursorPosition = textarea.selectionStart || 0;
+    const currentContent = this.content();
+
+    // Replace NIP-19 identifiers with nostr: prefix if not already present
+    // This regex matches NIP-19 identifiers that don't already have nostr: prefix
+    const processedText = text.replace(
+      /(?<!nostr:)\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)([a-zA-Z0-9]+)\b/g,
+      'nostr:$1$2'
+    );
+
+    // Insert the processed text at cursor position
+    const newContent =
+      currentContent.substring(0, cursorPosition) +
+      processedText +
+      currentContent.substring(cursorPosition);
+
+    this.content.set(newContent);
+
+    // Restore cursor position after the inserted text
+    setTimeout(() => {
+      const newCursorPosition = cursorPosition + processedText.length;
+      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+      textarea.focus();
+    }, 0);
   }
 
   // Proof of Work methods
