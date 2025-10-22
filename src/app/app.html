@@ -42,31 +42,29 @@
       <div class="search-container">
         <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
           (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)" placeholder="Search..." />
+        <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
+          <mat-icon>qr_code_scanner</mat-icon>
+        </button>
+        <button mat-icon-button class="search-action-button close-button" (click)="layout.toggleSearch()">
+          <mat-icon>close</mat-icon>
+        </button>
         <app-search-results></app-search-results>
       </div>
       }
     </span>
 
-    @if (layout.search()) {
-    <button mat-icon-button (click)="qrScan()">
-      <mat-icon>qr_code_scanner</mat-icon>
+    @if (!layout.search()) {
+    <button mat-icon-button (click)="layout.toggleSearch()">
+      <mat-icon>search</mat-icon>
     </button>
     }
-
-    <button mat-icon-button (click)="layout.toggleSearch()">
-      @if (layout.search()) {
-      <mat-icon>close</mat-icon>
-      } @else {
-      <mat-icon>search</mat-icon>
-      }
-    </button>
-    @if (pwaUpdateService.updateAvailable()) {
+    @if (pwaUpdateService.updateAvailable() && !layout.search()) {
     <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
       matTooltip="Update ready!" aria-label="Update application">
       <mat-icon class="update-icon">system_update</mat-icon>
     </button>
     }
-    @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
+    @if (app.authenticated() && accountState.profileProcessingState().isProcessing && !layout.search()) {
     <button mat-icon-button class="profile-cache-button" [matTooltip]="
             'Caching profiles: ' +
             accountState.processingProgress() +
@@ -80,13 +78,13 @@
       <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
     </button>
     }
-    @if (app.authenticated() && appState.isPublishing()) {
+    @if (app.authenticated() && appState.isPublishing() && !layout.search()) {
     <button mat-icon-button class="profile-cache-button" matTooltip="Publishing event..."
       aria-label="Publishing in progress">
       <mat-icon class="spinning-icon">sync</mat-icon>
     </button>
     }
-    @if (app.authenticated()) {
+    @if (app.authenticated() && !layout.search()) {
     <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
       #notificationMenuTrigger="matMenuTrigger">
       <mat-icon [class.pulsing-icon]="hasActivePendingNotifications()"
@@ -149,9 +147,11 @@
       </button>
     </mat-menu>
 
+    @if (!layout.search()) {
     <button mat-icon-button [matMenuTriggerFor]="menuApps">
       <mat-icon>apps</mat-icon>
     </button>
+    }
 
     <mat-menu #menuApps="matMenu">
       @if (app.authenticated()) {
@@ -207,6 +207,7 @@
       </button>
     </mat-menu>
 
+    @if (!layout.search()) {
     <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
       (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
       @if (accountState.profile()?.data?.picture) {
@@ -219,6 +220,7 @@
       }
       }
     </button>
+    }
   </mat-toolbar>
   }
 
