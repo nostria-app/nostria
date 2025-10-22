@@ -180,14 +180,19 @@ export class EditorComponent implements OnInit, OnDestroy {
     );
   });
 
-  // Markdown preview
+  // Markdown preview with nostr: reference handling
   markdownHtml = computed(() => {
     const content = this.article().content;
     if (!content.trim()) return this.sanitizer.bypassSecurityTrustHtml('');
 
     try {
-      const html = marked.parse(content);
-      return this.sanitizer.bypassSecurityTrustHtml(html as string);
+      // First, parse markdown to HTML
+      let html = marked.parse(content) as string;
+      
+      // Then, process nostr: references to create clickable links with profile names
+      html = this.processNostrReferences(html);
+      
+      return this.sanitizer.bypassSecurityTrustHtml(html);
     } catch (error) {
       console.error('Error parsing markdown:', error);
       return this.sanitizer.bypassSecurityTrustHtml('<p>Error parsing markdown</p>');
@@ -828,5 +833,58 @@ export class EditorComponent implements OnInit, OnDestroy {
         console.warn('Failed to decode NIP-19 identifier:', fullIdentifier, error);
       }
     }
+  }
+
+  /**
+   * Process nostr: references in HTML content to create clickable links
+   * This enhances the preview to make nostr: references clickable
+   */
+  private processNostrReferences(html: string): string {
+    // Match nostr: URIs in the HTML content
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
+    
+    return html.replace(nostrUriPattern, (match, prefix, identifier) => {
+      const fullIdentifier = prefix + identifier;
+      
+      try {
+        const decoded = nip19.decode(fullIdentifier);
+        const decodedType = decoded.type as string;
+        
+        if (decodedType === 'npub') {
+          // For npub references, create a clickable link
+          const pubkey = decoded.data as unknown as string;
+          const npubIdentifier = nip19.npubEncode(pubkey);
+          const shortPubkey = pubkey.substring(0, 8);
+          return `<a href="/p/${npubIdentifier}" class="nostr-profile-link" title="${match}">@${shortPubkey}...</a>`;
+        } else if (decodedType === 'nprofile') {
+          // For nprofile references, create a clickable link
+          const profileData = decoded.data as unknown as { pubkey: string; relays?: string[] };
+          const pubkey = profileData.pubkey;
+          const npubIdentifier = nip19.npubEncode(pubkey);
+          const shortPubkey = pubkey.substring(0, 8);
+          return `<a href="/p/${npubIdentifier}" class="nostr-profile-link" title="${match}">@${shortPubkey}...</a>`;
+        } else if (decodedType === 'note') {
+          // For note references, show as a link
+          const eventId = decoded.data as unknown as string;
+          const neventIdentifier = nip19.neventEncode({ id: eventId });
+          return `<a href="/e/${neventIdentifier}" class="nostr-event-link" title="${match}">📝 Note</a>`;
+        } else if (decodedType === 'nevent') {
+          // For nevent references, show as a link
+          const neventIdentifier = fullIdentifier;
+          return `<a href="/e/${neventIdentifier}" class="nostr-event-link" title="${match}">📝 Note</a>`;
+        } else if (decodedType === 'naddr') {
+          // For addressable events, show as a link
+          const addrData = decoded.data as unknown as { identifier: string; pubkey: string; kind: number; relays?: string[] };
+          const npubIdentifier = nip19.npubEncode(addrData.pubkey);
+          return `<a href="/a/${npubIdentifier}/${addrData.identifier}" class="nostr-addr-link" title="${match}">📄 Article</a>`;
+        }
+        
+        return match;
+      } catch (error) {
+        // If decoding fails, just return the original match
+        console.warn('Failed to decode nostr reference in preview:', fullIdentifier, error);
+        return match;
+      }
+    });
   }
 }
