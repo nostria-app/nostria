@@ -186,10 +186,23 @@ export class App implements OnInit {
       }));
   });
 
-  // Computed signal to count unread notifications
+  // Computed signal to count unread content notifications only (excludes technical/system notifications)
   unreadNotificationsCount = computed(() => {
-    return this.notificationService.notifications().filter(notification => !notification.read)
-      .length;
+    const contentNotificationTypes = [
+      NotificationType.NEW_FOLLOWER,
+      NotificationType.MENTION,
+      NotificationType.REPOST,
+      NotificationType.REPLY,
+      NotificationType.REACTION,
+      NotificationType.ZAP,
+    ];
+
+    return this.notificationService
+      .notifications()
+      .filter(
+        notification =>
+          !notification.read && contentNotificationTypes.includes(notification.type)
+      ).length;
   });
 
   // Computed signal to check if there are any active pending notifications
@@ -205,6 +218,22 @@ export class App implements OnInit {
       }
       return false;
     });
+  });
+
+  // Computed signal to get content notifications only (excluding technical/system notifications)
+  contentNotifications = computed(() => {
+    const contentNotificationTypes = [
+      NotificationType.NEW_FOLLOWER,
+      NotificationType.MENTION,
+      NotificationType.REPOST,
+      NotificationType.REPLY,
+      NotificationType.REACTION,
+      NotificationType.ZAP,
+    ];
+
+    return this.notificationService
+      .notifications()
+      .filter(notification => contentNotificationTypes.includes(notification.type));
   });
 
   navigationItems = computed(() => {
