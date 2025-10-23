@@ -41,7 +41,8 @@
       @if (layout.search()) {
       <div class="search-container">
         <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
-          (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)" placeholder="Search for cached profiles or paste identifiers..." />
+          (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
+          placeholder="Search for cached profiles or paste identifiers..." />
         <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
           <mat-icon>qr_code_scanner</mat-icon>
         </button>
@@ -93,10 +94,10 @@
     }
 
     <mat-menu #menuNotifications="matMenu">
-      @if (notificationService.notifications().length > 0) {
-      <!-- Display last 5 notifications -->
+      @if (contentNotifications().length > 0) {
+      <!-- Display last 5 content notifications -->
       @for (
-      notification of notificationService.notifications().slice(0, 5);
+      notification of contentNotifications().slice(0, 5);
       track notification.id
       ) {
       <button mat-menu-item (click)="onNotificationClick(notification, $event)">

@@ -90,9 +90,9 @@ const POPULAR_STARTER_PACK_EVENT: Event = {
   created_at: 1760778777,
   kind: 39089,
   tags: [
-    ['d', 'popular'],
-    ['title', 'Popular'],
-    ['description', 'These are the profiles that are presented in the Popular feed on Nostria'],
+    ['d', 'discovery'],
+    ['title', 'Discover'],
+    ['description', 'These are the profiles that are presented in the Discover feed on Nostria'],
     ['image', 'https://www.nostria.app/assets/nostria-social.jpg'],
     ['p', '101a112c8adc2e69e0003114ff1c1d36b7fcde06d84d47968e599d558721b0df'],
     ['p', 'c0e0c4272134d92da8651650c10ca612b710a670d5e043488f27e073a1f63a16'],
@@ -167,10 +167,10 @@ const COLUMN_TYPES = {
 
 const DEFAULT_FEEDS: FeedConfig[] = [
   {
-    id: 'default-feed-popular',
-    label: 'Popular',
+    id: 'default-feed-discover',
+    label: 'Discover',
     icon: 'rocket_launch',
-    description: 'Curated content from popular Nostr accounts',
+    description: 'Curated content to discovery Nostr accounts',
     columns: [
       {
         id: 'starter-pack-column',
