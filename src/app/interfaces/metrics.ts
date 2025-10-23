@@ -1,5 +1,6 @@
 export interface UserMetric {
-  pubkey: string;
+  accountPubkey: string; // The account that recorded these metrics
+  pubkey: string; // The user being tracked
   // Profile engagement metrics
   viewed: number; // Number of times profile has been viewed
   profileClicks: number; // Number of times profile link was clicked
@@ -29,10 +30,11 @@ export interface UserMetric {
 }
 
 export interface MetricUpdate {
+  accountPubkey?: string; // Optional: if not provided, will use current account
   pubkey: string;
   metric: keyof Omit<
     UserMetric,
-    'pubkey' | 'updated' | 'firstInteraction' | 'averageTimePerView' | 'engagementScore'
+    'pubkey' | 'accountPubkey' | 'updated' | 'firstInteraction' | 'averageTimePerView' | 'engagementScore'
   >;
   increment?: number; // Amount to increment (default: 1)
   value?: number; // Absolute value to set
@@ -40,6 +42,7 @@ export interface MetricUpdate {
 }
 
 export interface MetricQuery {
+  accountPubkey?: string; // Optional: filter by account
   pubkey?: string;
   minViewed?: number;
   minLiked?: number;

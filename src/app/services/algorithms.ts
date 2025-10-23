@@ -100,8 +100,12 @@ export class Algorithms {
     const metricsPublicKeys = new Set(allMetrics.map(m => m.pubkey));
     const favoritesWithoutMetrics = validFavorites.filter(pubkey => !metricsPublicKeys.has(pubkey));
 
+    // Get current account pubkey
+    const currentAccountPubkey = this.accountState.pubkey();
+
     // Create minimal metrics for favorites without data
     const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map(pubkey => ({
+      accountPubkey: currentAccountPubkey,
       pubkey,
       viewed: 0,
       profileClicks: 0,
@@ -257,8 +261,12 @@ export class Algorithms {
       pubkey => !metricsPublicKeys.has(pubkey) && following.includes(pubkey)
     );
 
+    // Get current account pubkey
+    const currentAccountPubkey = this.accountState.pubkey();
+
     // Create minimal metrics for favorites without data
     const favoriteMetrics: UserMetric[] = favoritesWithoutMetrics.map(pubkey => ({
+      accountPubkey: currentAccountPubkey,
       pubkey,
       viewed: 0,
       profileClicks: 0,
@@ -285,6 +293,7 @@ export class Algorithms {
         .filter(pubkey => !candidatePubkeys.has(pubkey))
         .slice(0, limit - allCandidates.length)
         .map(pubkey => ({
+          accountPubkey: currentAccountPubkey,
           pubkey,
           viewed: 0,
           profileClicks: 0,
