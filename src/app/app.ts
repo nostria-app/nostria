@@ -158,6 +158,16 @@ export class App implements OnInit {
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
   @ViewChild('notificationMenuTrigger') notificationMenuTrigger!: MatMenuTrigger;
 
+  // Content notification types (social interactions that users care about)
+  private readonly contentNotificationTypes = [
+    NotificationType.NEW_FOLLOWER,
+    NotificationType.MENTION,
+    NotificationType.REPOST,
+    NotificationType.REPLY,
+    NotificationType.REACTION,
+    NotificationType.ZAP,
+  ];
+
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
   displayLabels = computed(() => this.localSettings.menuExpanded());
@@ -188,20 +198,11 @@ export class App implements OnInit {
 
   // Computed signal to count unread content notifications only (excludes technical/system notifications)
   unreadNotificationsCount = computed(() => {
-    const contentNotificationTypes = [
-      NotificationType.NEW_FOLLOWER,
-      NotificationType.MENTION,
-      NotificationType.REPOST,
-      NotificationType.REPLY,
-      NotificationType.REACTION,
-      NotificationType.ZAP,
-    ];
-
     return this.notificationService
       .notifications()
       .filter(
         notification =>
-          !notification.read && contentNotificationTypes.includes(notification.type)
+          !notification.read && this.contentNotificationTypes.includes(notification.type)
       ).length;
   });
 
@@ -222,18 +223,9 @@ export class App implements OnInit {
 
   // Computed signal to get content notifications only (excluding technical/system notifications)
   contentNotifications = computed(() => {
-    const contentNotificationTypes = [
-      NotificationType.NEW_FOLLOWER,
-      NotificationType.MENTION,
-      NotificationType.REPOST,
-      NotificationType.REPLY,
-      NotificationType.REACTION,
-      NotificationType.ZAP,
-    ];
-
     return this.notificationService
       .notifications()
-      .filter(notification => contentNotificationTypes.includes(notification.type));
+      .filter(notification => this.contentNotificationTypes.includes(notification.type));
   });
 
   navigationItems = computed(() => {
