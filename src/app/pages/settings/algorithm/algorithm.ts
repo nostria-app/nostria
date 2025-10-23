@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal, computed } from '@angular/core';
+import { Component, inject, OnInit, signal, computed, effect } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +19,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { RouterModule } from '@angular/router';
 import { FavoritesService } from '../../../services/favorites.service';
+import { AccountStateService } from '../../../services/account-state.service';
 
 @Component({
   selector: 'app-algorithm',
@@ -49,6 +50,7 @@ export class AlgorithmComponent implements OnInit {
   private readonly snackBar = inject(MatSnackBar);
   private readonly dialog = inject(MatDialog);
   private readonly favoritesService = inject(FavoritesService);
+  private readonly accountState = inject(AccountStateService);
 
   // Data signals
   allMetrics = signal<UserMetric[]>([]);
@@ -93,6 +95,18 @@ export class AlgorithmComponent implements OnInit {
           : 0,
     };
   });
+
+  constructor() {
+    // Watch for account changes and reload data
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      
+      // Only reload if we have a pubkey and the component has been initialized
+      if (pubkey && this.accountState.initialized()) {
+        this.loadData();
+      }
+    });
+  }
 
   async ngOnInit() {
     await this.loadData();

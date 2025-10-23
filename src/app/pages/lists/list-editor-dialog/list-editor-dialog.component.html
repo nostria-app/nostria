@@ -188,7 +188,7 @@
 
     <div class="actions-right">
       <button mat-button (click)="cancel()">Cancel</button>
-      <button mat-raised-button color="primary" (click)="save()" [disabled]="!isValid()">
+      <button mat-flat-button (click)="save()" [disabled]="!isValid()">
         <mat-icon>save</mat-icon>
         {{ mode === 'create' ? 'Create List' : 'Save Changes' }}
       </button>
