@@ -32,3 +32,18 @@
   justify-content: center;
   margin-bottom: 1rem;
 }
+
+.build-info {
+  font-size: 0.9rem;
+  color: var(--mdc-theme-text-secondary-on-background, rgba(0, 0, 0, 0.6));
+  margin: 0.25rem 0;
+
+  a {
+    color: var(--mdc-theme-primary, #5953a9);
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}

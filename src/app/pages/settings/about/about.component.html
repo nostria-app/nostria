@@ -15,6 +15,15 @@
         <div>
           <h1>About Nostria</h1>
           <h3>Version: {{ version() }}</h3>
+          @if (buildDate()) {
+          <p class="build-info">Built on: {{ buildDate() }}</p>
+          }
+          @if (commitShort() && commitSha()) {
+          <p class="build-info">
+            Commit: <a [href]="'https://github.com/nostria-app/nostria/commit/' + commitSha()" target="_blank"
+              rel="noopener noreferrer">{{ commitShort() }}</a>
+          </p>
+          }
         </div>
         <div class="logo-container">
           <img src="icons/icon.svg" alt="Nostria Logo" class="logo" />
@@ -46,12 +55,8 @@
       <p>Nostria is also accessible as desktop app:</p>
       <ul>
         <li>
-          <a
-            href="https://github.com/nostria-app/nostria/releases"
-            target="_blank"
-            rel="noopener noreferrer"
-            >Downloads</a
-          >
+          <a href="https://github.com/nostria-app/nostria/releases" target="_blank"
+            rel="noopener noreferrer">Downloads</a>
         </li>
       </ul>
 
@@ -59,9 +64,7 @@
       <p>Visit our website for more information, documentation, and support.</p>
       <ul>
         <li>
-          <a href="https://www.nostria.app" target="_blank" rel="noopener noreferrer"
-            >Nostria Website</a
-          >
+          <a href="https://www.nostria.app" target="_blank" rel="noopener noreferrer">Nostria Website</a>
         </li>
       </ul>
 
@@ -95,11 +98,7 @@
         <h3>Useful Links</h3>
         <mat-list>
           <mat-list-item>
-            <a
-              href="https://github.com/nostria-app/nostria"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href="https://github.com/nostria-app/nostria" target="_blank" rel="noopener noreferrer">
               <mat-icon>code</mat-icon>
               GitHub Repository
             </a>
@@ -111,11 +110,7 @@
             </a>
           </mat-list-item>
           <mat-list-item>
-            <a
-              href="https://github.com/nostria-app/nostria/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
+            <a href="https://github.com/nostria-app/nostria/issues" target="_blank" rel="noopener noreferrer">
               <mat-icon>bug_report</mat-icon>
               Report Issues
             </a>

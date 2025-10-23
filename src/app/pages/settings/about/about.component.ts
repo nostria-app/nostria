@@ -12,6 +12,9 @@ import { MatButtonModule } from '@angular/material/button';
 
 interface WebManifest {
   version?: string;
+  commitSha?: string;
+  commitShort?: string;
+  buildDate?: string;
   name: string;
   short_name: string;
   [key: string]: any;
@@ -31,6 +34,9 @@ export class AboutComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
   version = signal('Loading...');
+  commitSha = signal<string | undefined>(undefined);
+  commitShort = signal<string | undefined>(undefined);
+  buildDate = signal<string | undefined>(undefined);
 
   constructor() {
     effect(() => {
@@ -67,7 +73,7 @@ export class AboutComponent implements OnInit {
     return match ? match[0] : null;
   }
 
-  async ngOnInit() {}
+  async ngOnInit() { }
 
   private async fetchManifestVersion(): Promise<void> {
     // Skip fetch on server side
@@ -87,6 +93,17 @@ export class AboutComponent implements OnInit {
       } else {
         console.warn('Version not found in manifest.webmanifest');
         this.version.set('1.0.0'); // Fallback version
+      }
+
+      // Set commit and build date information
+      if (manifestData.commitSha) {
+        this.commitSha.set(manifestData.commitSha);
+      }
+      if (manifestData.commitShort) {
+        this.commitShort.set(manifestData.commitShort);
+      }
+      if (manifestData.buildDate) {
+        this.buildDate.set(manifestData.buildDate);
       }
     } catch (error) {
       console.error('Error fetching manifest.webmanifest:', error);
