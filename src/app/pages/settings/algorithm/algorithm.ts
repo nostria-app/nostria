@@ -90,8 +90,8 @@ export class AlgorithmComponent implements OnInit {
       averageEngagement:
         metrics.length > 0
           ? Math.round(
-              (metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / metrics.length) * 100
-            ) / 100
+            (metrics.reduce((sum, m) => sum + (m.engagementScore || 0), 0) / metrics.length) * 100
+          ) / 100
           : 0,
     };
   });
@@ -100,7 +100,7 @@ export class AlgorithmComponent implements OnInit {
     // Watch for account changes and reload data
     effect(() => {
       const pubkey = this.accountState.pubkey();
-      
+
       // Only reload if we have a pubkey and the component has been initialized
       if (pubkey && this.accountState.initialized()) {
         this.loadData();
