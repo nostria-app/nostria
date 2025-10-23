@@ -625,7 +625,11 @@ export class EventComponent implements AfterViewChecked {
     if (!currentEvent) return;
 
     const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) return;
+    if (!userPubkey) {
+      // Show login dialog if no account is active
+      await this.layout.showLoginDialog();
+      return;
+    }
 
     // Disable reaction loading temporarily to prevent interference
     this.isLoadingReactions.set(true);

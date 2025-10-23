@@ -9,6 +9,8 @@ import { Event } from 'nostr-tools';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { ZapService } from '../../services/zap.service';
 import { DataService } from '../../services/data.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-zap-button',
@@ -79,6 +81,8 @@ export class ZapButtonComponent {
   private snackBar = inject(MatSnackBar);
   private zapService = inject(ZapService);
   private dataService = inject(DataService);
+  private accountState = inject(AccountStateService);
+  private layout = inject(LayoutService);
 
   // State
   isLoading = signal(false);
@@ -113,6 +117,14 @@ export class ZapButtonComponent {
 
   async onZapClick(event: MouseEvent): Promise<void> {
     event.stopPropagation();
+
+    // Check if user is logged in
+    const userPubkey = this.accountState.pubkey();
+    if (!userPubkey) {
+      // Show login dialog if no account is active
+      await this.layout.showLoginDialog();
+      return;
+    }
 
     // Get the recipient pubkey from either direct input or event
     const pubkey = this.recipientPubkey() || this.event()?.pubkey;
