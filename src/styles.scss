@@ -73,7 +73,7 @@ body {
 // Firefox scrollbar support
 * {
   scrollbar-width: thin;
-  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   box-sizing: border-box;
 }
 
