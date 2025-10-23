@@ -26,7 +26,21 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 24
-          cache: 'npm'
+          cache: "npm"
+
+      - name: Update manifest with build info
+        run: |
+          BUILD_DATE=$(date -u +"%Y-%m-%d")
+          COMMIT_SHA="${{ github.sha }}"
+          COMMIT_SHORT="${COMMIT_SHA:0:7}"
+
+          # Update manifest.webmanifest with commit and build date
+          jq --arg commit "$COMMIT_SHA" --arg commitShort "$COMMIT_SHORT" --arg buildDate "$BUILD_DATE" \
+            '. + {commitSha: $commit, commitShort: $commitShort, buildDate: $buildDate}' \
+            public/manifest.webmanifest > public/manifest.webmanifest.tmp
+          mv public/manifest.webmanifest.tmp public/manifest.webmanifest
+
+          echo "Updated manifest with commit $COMMIT_SHORT and build date $BUILD_DATE"
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
