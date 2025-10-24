@@ -308,6 +308,35 @@ body {
   background: rgba(0, 0, 0, 0.7);
 }
 
+// Signing dialog styles - ensure it appears above backdrop
+.signing-dialog-backdrop {
+  -webkit-backdrop-filter: blur(3px);
+  backdrop-filter: blur(3px);
+  background: rgba(0, 0, 0, 0.4) !important;
+  z-index: 1000 !important;
+}
+
+.dark .signing-dialog-backdrop {
+  background: rgba(0, 0, 0, 0.6) !important;
+}
+
+// Ensure the overlay container has the right z-index
+.cdk-overlay-container {
+  .signing-dialog {
+    z-index: 1001 !important;
+  }
+}
+
+// Target the specific overlay pane that contains our dialog
+.cdk-overlay-pane:has(.signing-dialog-container) {
+  z-index: 1001 !important;
+}
+
+// Fallback: directly target the dialog pane class
+.signing-dialog.cdk-overlay-pane {
+  z-index: 1001 !important;
+}
+
 // Info tooltip overlay styles
 .cdk-overlay-transparent-backdrop {
   background: transparent;

@@ -27,6 +27,8 @@ import { AccountRelayService } from './relays/account-relay';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { LocalSettingsService } from './local-settings.service';
 import { PublishService } from './publish.service';
+import { MatDialog } from '@angular/material/dialog';
+import { SigningDialogComponent } from '../components/signing-dialog/signing-dialog.component';
 
 export interface NostrUser {
   pubkey: string;
@@ -69,6 +71,7 @@ export class NostrService implements NostriaService {
   private readonly publishQueueService = inject(PublishQueueService);
   private readonly settings = inject(LocalSettingsService);
   private readonly publishService = inject(PublishService);
+  private readonly dialog = inject(MatDialog);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
@@ -459,29 +462,42 @@ export class NostrService implements NostriaService {
           );
         }
 
-        // Create EventTemplate WITHOUT pubkey for NIP-07 extensions
-        // Extensions will add the pubkey themselves
-        // Preserve created_at if already set (important for PoW)
-        // For PoW events, we need to include the pre-calculated ID
-        const eventTemplate: any = {
-          kind: event.kind,
-          created_at: event.created_at ?? this.currentDate(),
-          tags: event.tags,
-          content: event.content,
-        };
+        // Open signing dialog
+        const dialogRef = this.dialog.open(SigningDialogComponent, {
+          disableClose: true,
+          hasBackdrop: true,
+          panelClass: 'signing-dialog',
+          backdropClass: 'signing-dialog-backdrop',
+        });
 
-        // If this is a mined PoW event (has nonce tag and pubkey), include the ID
-        const hasNonceTag = event.tags.some(tag => tag[0] === 'nonce');
-        if (hasNonceTag && 'pubkey' in event) {
-          // Calculate and include the event ID for PoW events
-          const { getEventHash } = await import('nostr-tools');
-          eventTemplate.id = getEventHash(event as UnsignedEvent);
-          eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
+        try {
+          // Create EventTemplate WITHOUT pubkey for NIP-07 extensions
+          // Extensions will add the pubkey themselves
+          // Preserve created_at if already set (important for PoW)
+          // For PoW events, we need to include the pre-calculated ID
+          const eventTemplate: any = {
+            kind: event.kind,
+            created_at: event.created_at ?? this.currentDate(),
+            tags: event.tags,
+            content: event.content,
+          };
+
+          // If this is a mined PoW event (has nonce tag and pubkey), include the ID
+          const hasNonceTag = event.tags.some(tag => tag[0] === 'nonce');
+          if (hasNonceTag && 'pubkey' in event) {
+            // Calculate and include the event ID for PoW events
+            const { getEventHash } = await import('nostr-tools');
+            eventTemplate.id = getEventHash(event as UnsignedEvent);
+            eventTemplate.pubkey = (event as UnsignedEvent).pubkey;
+          }
+
+          // Pass event template to extension
+          const extensionResult = await window.nostr.signEvent(eventTemplate);
+          signedEvent = extensionResult as Event;
+        } finally {
+          // Always close the dialog when signing completes (success or error)
+          dialogRef.close();
         }
-
-        // Pass event template to extension
-        const extensionResult = await window.nostr.signEvent(eventTemplate);
-        signedEvent = extensionResult as Event;
 
         break;
       }
