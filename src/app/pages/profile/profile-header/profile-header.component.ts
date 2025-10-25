@@ -147,9 +147,7 @@ export class ProfileHeaderComponent {
     status: string;
   }>({ value: '', valid: false, status: '' });
 
-  currentPubkey = computed(() => {
-    return this.profile()?.event.pubkey || this.pubkey();
-  });
+  currentPubkey = computed(() => this.pubkey());
 
   name = computed(() => {
     const profileData = this.profile();
