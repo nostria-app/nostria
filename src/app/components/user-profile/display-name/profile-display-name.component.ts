@@ -15,14 +15,12 @@ import { DataService } from '../../../services/data.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { RouterModule } from '@angular/router';
-import { Overlay, OverlayRef, OverlayModule } from '@angular/cdk/overlay';
-import { ComponentPortal } from '@angular/cdk/portal';
-import { ProfileHoverCardComponent } from '../hover-card/profile-hover-card.component';
+import { ProfileHoverCardService } from '../../../services/profile-hover-card.service';
 
 @Component({
   selector: 'app-profile-display-name',
   standalone: true,
-  imports: [RouterModule, OverlayModule],
+  imports: [RouterModule],
   templateUrl: './profile-display-name.component.html',
   styleUrl: './profile-display-name.component.scss',
 })
@@ -30,16 +28,9 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private data = inject(DataService);
   private logger = inject(LoggerService);
   private elementRef = inject(ElementRef);
-  private overlay = inject(Overlay);
+  private hoverCardService = inject(ProfileHoverCardService);
   readonly utilities = inject(UtilitiesService);
 
-  // Hover card overlay
-  private overlayRef: OverlayRef | null = null;
-  private hoverCardComponentRef: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
-  private hoverTimeout?: number;
-  private closeTimeout?: number;
-  private isMouseOverTrigger = signal(false);
-  private isMouseOverCard = signal(false);
   private linkElement: HTMLElement | null = null;
 
   publicKey = '';
@@ -113,7 +104,6 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
     this.disconnectObserver();
     this.clearDebounceTimer();
     this.clearScrollCheckTimer();
-    this.closeHoverCard();
   }
 
   /**
@@ -299,128 +289,17 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
    * Handles mouse enter event to show hover card
    */
   onMouseEnter(event: MouseEvent): void {
-    this.isMouseOverTrigger.set(true);
     this.linkElement = event.currentTarget as HTMLElement;
-
-    // Clear any existing close timeout
-    if (this.closeTimeout) {
-      window.clearTimeout(this.closeTimeout);
-      this.closeTimeout = undefined;
+    if (this.linkElement) {
+      this.hoverCardService.showHoverCard(this.linkElement, this.pubkey());
     }
-
-    // Show hover card after delay
-    this.hoverTimeout = window.setTimeout(() => {
-      if (this.linkElement) {
-        this.showHoverCard(this.linkElement);
-      }
-    }, 500);
   }
 
   /**
    * Handles mouse leave event to hide hover card
    */
   onMouseLeave(): void {
-    this.isMouseOverTrigger.set(false);
     this.linkElement = null;
-
-    // Clear hover timeout
-    if (this.hoverTimeout) {
-      window.clearTimeout(this.hoverTimeout);
-      this.hoverTimeout = undefined;
-    }
-
-    // Schedule close
-    this.scheduleClose();
-  }
-
-  /**
-   * Shows the hover card overlay
-   */
-  private showHoverCard(element: HTMLElement): void {
-    // Don't show if already showing
-    if (this.overlayRef) {
-      return;
-    }
-
-    const positionStrategy = this.overlay
-      .position()
-      .flexibleConnectedTo(element)
-      .withPositions([
-        {
-          originX: 'start',
-          originY: 'bottom',
-          overlayX: 'start',
-          overlayY: 'top',
-          offsetY: 8,
-        },
-        {
-          originX: 'end',
-          originY: 'bottom',
-          overlayX: 'end',
-          overlayY: 'top',
-          offsetY: 8,
-        },
-      ])
-      .withViewportMargin(16)
-      .withPush(true);
-
-    this.overlayRef = this.overlay.create({
-      positionStrategy,
-      scrollStrategy: this.overlay.scrollStrategies.close(),
-      hasBackdrop: false,
-    });
-
-    const portal = new ComponentPortal(ProfileHoverCardComponent);
-    const componentRef = this.overlayRef.attach(portal);
-    componentRef.setInput('pubkey', this.pubkey());
-    this.hoverCardComponentRef = componentRef;
-
-    // Add mouse enter/leave listeners to overlay
-    const overlayElement = this.overlayRef.overlayElement;
-    overlayElement.addEventListener('mouseenter', () => {
-      this.isMouseOverCard.set(true);
-      if (this.closeTimeout) {
-        window.clearTimeout(this.closeTimeout);
-        this.closeTimeout = undefined;
-      }
-    });
-
-    overlayElement.addEventListener('mouseleave', () => {
-      this.isMouseOverCard.set(false);
-      this.scheduleClose();
-    });
-  }
-
-  /**
-   * Schedules closing the hover card
-   */
-  private scheduleClose(): void {
-    this.closeTimeout = window.setTimeout(() => {
-      const isMenuOpen = this.hoverCardComponentRef?.instance?.isMenuOpen?.();
-      if (!this.isMouseOverTrigger() && !this.isMouseOverCard() && !isMenuOpen) {
-        this.closeHoverCard();
-      }
-    }, 300);
-  }
-
-  /**
-   * Closes the hover card overlay
-   */
-  private closeHoverCard(): void {
-    if (this.hoverTimeout) {
-      window.clearTimeout(this.hoverTimeout);
-      this.hoverTimeout = undefined;
-    }
-
-    if (this.closeTimeout) {
-      window.clearTimeout(this.closeTimeout);
-      this.closeTimeout = undefined;
-    }
-
-    if (this.overlayRef) {
-      this.overlayRef.dispose();
-      this.overlayRef = null;
-      this.hoverCardComponentRef = null;
-    }
+    this.hoverCardService.hideHoverCard();
   }
 }
