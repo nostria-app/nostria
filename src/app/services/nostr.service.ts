@@ -29,9 +29,15 @@ import { LocalSettingsService } from './local-settings.service';
 import { PublishService } from './publish.service';
 import { MatDialog } from '@angular/material/dialog';
 import { SigningDialogComponent } from '../components/signing-dialog/signing-dialog.component';
+import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.service';
 
 export interface NostrUser {
   pubkey: string;
+  /** 
+   * Private key storage - can be either:
+   * - Plain hex string (legacy, backwards compatible)
+   * - JSON string of EncryptedData (encrypted with PIN)
+   */
   privkey?: string;
   name?: string;
   source: 'extension' | 'nsec' | 'preview' | 'remote';
@@ -45,6 +51,13 @@ export interface NostrUser {
    * and publish Relay List + other events, like Profile Edit or publishing a post.
    */
   hasActivated: boolean;
+
+  /** 
+   * Indicates if the private key is encrypted with a PIN
+   * If true, privkey contains JSON-stringified EncryptedData
+   * If false or undefined, privkey is plain hex (backwards compatible)
+   */
+  isEncrypted?: boolean;
 }
 
 export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
@@ -72,6 +85,7 @@ export class NostrService implements NostriaService {
   private readonly settings = inject(LocalSettingsService);
   private readonly publishService = inject(PublishService);
   private readonly dialog = inject(MatDialog);
+  private readonly crypto = inject(CryptoEncryptionService);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
@@ -188,6 +202,72 @@ export class NostrService implements NostriaService {
     this.logger.debug('NostrService initialization completed');
   }
 
+  /**
+   * Gets the decrypted private key from a NostrUser
+   * Handles both encrypted and plaintext (legacy) private keys
+   * 
+   * @param user The NostrUser to get the private key from
+   * @param pin The PIN for encrypted keys (defaults to DEFAULT_PIN)
+   * @returns Decrypted private key in hex format
+   * @throws Error if decryption fails or privkey is missing
+   */
+  async getDecryptedPrivateKey(user: NostrUser, pin: string = this.crypto.DEFAULT_PIN): Promise<string> {
+    if (!user.privkey) {
+      throw new Error('No private key available for this account');
+    }
+
+    // Check if the private key is encrypted
+    if (user.isEncrypted) {
+      try {
+        // Parse the encrypted data
+        const encryptedData: EncryptedData = JSON.parse(user.privkey);
+        // Decrypt and return
+        return await this.crypto.decryptPrivateKey(encryptedData, pin);
+      } catch (error) {
+        this.logger.error('Failed to decrypt private key', error);
+        throw new Error('Failed to decrypt private key. Incorrect PIN or corrupted data.');
+      }
+    }
+
+    // Legacy plaintext private key - return as-is
+    return user.privkey;
+  }
+
+  /**
+   * Migrates an account from plaintext to encrypted private key
+   * Uses the default PIN for initial encryption
+   * 
+   * @param user The NostrUser to migrate
+   * @returns Updated NostrUser with encrypted private key
+   */
+  async migrateAccountToEncrypted(user: NostrUser): Promise<NostrUser> {
+    // Skip if already encrypted or no privkey
+    if (user.isEncrypted || !user.privkey || user.source !== 'nsec') {
+      return user;
+    }
+
+    try {
+      this.logger.info('Migrating account to encrypted storage', { pubkey: user.pubkey });
+
+      // Encrypt the private key with default PIN
+      const encryptedData = await this.crypto.encryptPrivateKey(user.privkey, this.crypto.DEFAULT_PIN);
+
+      // Update the user object
+      const updatedUser: NostrUser = {
+        ...user,
+        privkey: JSON.stringify(encryptedData),
+        isEncrypted: true,
+      };
+
+      this.logger.info('Account migration completed', { pubkey: user.pubkey });
+      return updatedUser;
+    } catch (error) {
+      this.logger.error('Failed to migrate account to encrypted storage', error);
+      // Return original user on error - don't break existing functionality
+      return user;
+    }
+  }
+
   async initialize() {
     try {
       const accounts = await this.getAccountsFromStorage();
@@ -200,7 +280,28 @@ export class NostrService implements NostriaService {
         return;
       }
 
-      this.accountState.accounts.set(accounts);
+      // MIGRATION: Encrypt any plaintext private keys with default PIN
+      let accountsNeedUpdate = false;
+      const migratedAccounts = await Promise.all(
+        accounts.map(async (account: NostrUser) => {
+          const migrated = await this.migrateAccountToEncrypted(account);
+          if (migrated !== account) {
+            accountsNeedUpdate = true;
+          }
+          return migrated;
+        })
+      );
+
+      // Save migrated accounts if any were updated
+      if (accountsNeedUpdate) {
+        this.logger.info('Saving migrated accounts to storage');
+        this.localStorage.setItem(
+          this.appState.ACCOUNTS_STORAGE_KEY,
+          JSON.stringify(migratedAccounts)
+        );
+      }
+
+      this.accountState.accounts.set(migratedAccounts);
 
       // We keep an in-memory copy of the user metadata and relay list for all accounts,
       // they won't take up too much memory space.
@@ -535,9 +636,12 @@ export class NostrService implements NostriaService {
           pubkey: eventPubkey,
         };
 
+        // Get the decrypted private key
+        const decryptedPrivkey = await this.getDecryptedPrivateKey(currentUser);
+
         const pool = new SimplePool();
         const bunker = BunkerSigner.fromBunker(
-          hexToBytes(currentUser.privkey!),
+          hexToBytes(decryptedPrivkey),
           this.accountState.account()!.bunker!,
           { pool }
         );
@@ -560,7 +664,11 @@ export class NostrService implements NostriaService {
           content: event.content,
           pubkey: eventPubkey,
         };
-        signedEvent = finalizeEvent(cleanEvent, hexToBytes(currentUser.privkey!));
+
+        // Get the decrypted private key
+        const decryptedPrivkey = await this.getDecryptedPrivateKey(currentUser);
+
+        signedEvent = finalizeEvent(cleanEvent, hexToBytes(decryptedPrivkey));
         break;
       }
     }
@@ -1231,20 +1339,23 @@ export class NostrService implements NostriaService {
     const secretKey = generateSecretKey(); // Returns a Uint8Array
     const pubkey = getPublicKey(secretKey); // Converts to hex string
 
-    // We'll store the hex string representation of the private key
-    // In a real app, you might want to encrypt this before storing
+    // Store the hex string representation of the private key
     const privkeyHex = bytesToHex(secretKey);
+
+    // Encrypt the private key with default PIN
+    const encryptedData = await this.crypto.encryptPrivateKey(privkeyHex, this.crypto.DEFAULT_PIN);
 
     const newUser: NostrUser = {
       pubkey,
-      privkey: privkeyHex,
+      privkey: JSON.stringify(encryptedData),
       source: 'nsec',
       lastUsed: Date.now(),
       region: region,
       hasActivated: false,
+      isEncrypted: true,
     };
 
-    this.logger.debug('New keypair generated successfully', { pubkey, region });
+    this.logger.debug('New keypair generated successfully (encrypted)', { pubkey, region });
 
     // Configure the discovery relay based on the user's region
     if (region) {
@@ -1517,16 +1628,20 @@ export class NostrService implements NostriaService {
       // Generate the public key from the private key
       const pubkey = getPublicKey(privkeyArray);
 
+      // Encrypt the private key with default PIN
+      const encryptedData = await this.crypto.encryptPrivateKey(privkeyHex, this.crypto.DEFAULT_PIN);
+
       // Store the user info
       const newUser: NostrUser = {
         pubkey,
-        privkey: privkeyHex,
+        privkey: JSON.stringify(encryptedData),
         source: 'nsec',
         lastUsed: Date.now(),
         hasActivated: true, // Assume activation is done via nsec
+        isEncrypted: true,
       };
 
-      this.logger.info('Login with nsec successful', { pubkey });
+      this.logger.info('Login with nsec successful (encrypted)', { pubkey });
       await this.setAccount(newUser);
     } catch (error) {
       this.logger.error('Error decoding nsec:', error);
