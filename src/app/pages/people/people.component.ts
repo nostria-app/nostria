@@ -64,8 +64,7 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc';
     RouterModule,
     ScrollingModule,
     UserProfileComponent,
-    MatMenuModule,
-    FollowsetComponent,
+    MatMenuModule
   ],
   templateUrl: './people.component.html',
   styleUrls: ['./people.component.scss'],
