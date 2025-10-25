@@ -92,31 +92,20 @@ export class DiscoverComponent implements OnInit {
     }
   }
 
-  async onFollowsetComplete(event: { selectedInterests: string[]; followsToAdd: string[] }) {
+  async onFollowProfile(profileId: string) {
     try {
-      const { selectedInterests, followsToAdd } = event;
+      this.logger.debug('Following profile from followset', { profileId });
 
-      this.logger.debug('Followset onboarding completed', {
-        selectedInterests,
-        followsToAdd,
-      });
+      // Follow the profile immediately - accountState.follow handles publishing to relays
+      await this.accountState.follow(profileId);
 
-      // Follow all selected profiles in a single batch operation
-      await this.accountState.follow(followsToAdd);
+      this.notificationService.notify(`Following new account.`);
 
-      this.notificationService.notify(`Welcome! Following ${followsToAdd.length} accounts.`);
-
-      // Update local state
-      this.selectedInterests.set(selectedInterests);
-
-      // Refresh following feeds to load content from newly followed accounts
+      // Refresh following feeds to load content from newly followed account
       await this.feedsCollectionService.refreshFollowingColumns();
-
-      // Navigate back to people page after completion
-      this.router.navigate(['/people']);
     } catch (error) {
-      this.logger.error('Failed to complete followset onboarding:', error);
-      this.notificationService.notify('Error completing setup. Please try again.');
+      this.logger.error('Failed to follow profile:', error);
+      this.notificationService.notify('Error following account. Please try again.');
     }
   }
 
