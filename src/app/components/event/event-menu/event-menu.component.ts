@@ -77,7 +77,9 @@ export class EventMenuComponent {
       author: event.pubkey,
     });
 
-    const url = new URL(window.location.href);
+    // const url = new URL(window.location.href);
+    const url = new URL('https://nostria.app/');
+
     url.search = '';
     url.pathname = `/e/${neventId}`;
     return url.toString();
