@@ -19,23 +19,29 @@
         Add Person
       </button>
 
-      <!-- View options -->
-      <div class="view-options">
-        <mat-button-toggle-group hideSingleSelectionIndicator="true" [value]="viewMode()">
-          <mat-button-toggle value="large" (click)="changeViewMode('large')" matTooltip="Large icons">
-            <mat-icon>view_module</mat-icon>
-          </mat-button-toggle>
-          <mat-button-toggle value="medium" (click)="changeViewMode('medium')" matTooltip="Medium icons">
-            <mat-icon>grid_view</mat-icon>
-          </mat-button-toggle>
-          <mat-button-toggle value="small" (click)="changeViewMode('small')" matTooltip="Small icons">
-            <mat-icon>apps</mat-icon>
-          </mat-button-toggle>
-          <mat-button-toggle value="details" (click)="changeViewMode('details')" matTooltip="Details">
-            <mat-icon>view_list</mat-icon>
-          </mat-button-toggle>
-        </mat-button-toggle-group>
-      </div>
+      <!-- View menu -->
+      <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="View options">
+        <mat-icon>view_comfy</mat-icon>
+      </button>
+
+      <mat-menu #viewMenu="matMenu">
+        <button mat-menu-item (click)="changeViewMode('large')">
+          <mat-icon>calendar_view_month</mat-icon>
+          <span>Large icons</span>
+        </button>
+        <button mat-menu-item (click)="changeViewMode('medium')">
+          <mat-icon>view_module</mat-icon>
+          <span>Medium icons</span>
+        </button>
+        <button mat-menu-item (click)="changeViewMode('small')">
+          <mat-icon>apps</mat-icon>
+          <span>Small icons</span>
+        </button>
+        <button mat-menu-item (click)="changeViewMode('details')">
+          <mat-icon>view_list</mat-icon>
+          <span>Details</span>
+        </button>
+      </mat-menu>
 
       <!-- Filter button with menu -->
       <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Filter options">
