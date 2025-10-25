@@ -18,6 +18,7 @@ import { Wallets, Wallet } from '../../services/wallets';
 import { LN, USD } from '@getalby/sdk';
 import { CryptoEncryptionService, EncryptedData } from '../../services/crypto-encryption.service';
 import { PinPromptService } from '../../services/pin-prompt.service';
+import { CoinosService } from '../../services/coinos.service';
 import { nip19 } from 'nostr-tools';
 
 @Component({
@@ -45,6 +46,7 @@ export class CredentialsComponent implements OnInit {
   accountState = inject(AccountStateService);
   crypto = inject(CryptoEncryptionService);
   pinPrompt = inject(PinPromptService);
+  coinos = inject(CoinosService);
   isNsecVisible = signal(false);
   wallets = inject(Wallets);
 
@@ -54,6 +56,7 @@ export class CredentialsComponent implements OnInit {
   ]);
 
   isAddingWallet = signal(false);
+  isSettingUpCoinos = signal(false);
   editingWallet = signal<string | null>(null);
   editNameControl = new FormControl('', [Validators.required]);
 
@@ -510,6 +513,136 @@ export class CredentialsComponent implements OnInit {
         horizontalPosition: 'center',
         verticalPosition: 'bottom',
       });
+    }
+  }
+
+  // Coinos Wallet Setup methods
+
+  /**
+   * Checks if the user can setup a Coinos wallet
+   * Requires a private key account (nsec)
+   */
+  canSetupCoinos(): boolean {
+    const account = this.accountState.account();
+    return account?.privkey != null && account?.source === 'nsec';
+  }
+
+  /**
+   * Gets the expected Coinos Lightning Address for the current user
+   */
+  getCoinosLightningAddress(): string {
+    if (!this.canSetupCoinos()) {
+      return 'Not available';
+    }
+    // This will be computed deterministically, but we can't show it synchronously
+    // Just show a placeholder that indicates it will be generated
+    return 'Will be generated automatically';
+  }
+
+  /**
+   * Sets up the Coinos wallet with one click
+   */
+  async setupCoinosWallet(): Promise<void> {
+    const account = this.accountState.account();
+
+    if (!account?.privkey) {
+      this.snackBar.open('Private key is required to setup Coinos wallet', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    this.isSettingUpCoinos.set(true);
+
+    try {
+      // Get decrypted private key (will prompt for PIN if needed)
+      const privkey = await this.getDecryptedPrivkeyWithPrompt();
+      if (!privkey) {
+        this.isSettingUpCoinos.set(false);
+        return; // User cancelled or wrong PIN
+      }
+
+      // Setup the deterministic Coinos wallet
+      const nwcUrl = await this.coinos.setupDeterministicWallet(privkey);
+
+      // Parse the connection string to get details
+      const parsed = this.wallets.parseConnectionString(nwcUrl);
+
+      // Get the Lightning Address
+      const lud16 = this.coinos.getExpectedLud16(privkey);
+
+      // Add wallet to the wallets service
+      this.wallets.addWallet(parsed.pubkey, nwcUrl, {
+        relay: parsed.relay,
+        secret: parsed.secret,
+        lud16: lud16,
+        provider: 'Coinos',
+      });
+
+      this.snackBar.open(
+        `Coinos wallet setup successfully! Lightning Address: ${lud16}`,
+        'Dismiss',
+        {
+          duration: 5000,
+          horizontalPosition: 'center',
+          verticalPosition: 'bottom',
+        }
+      );
+    } catch (error) {
+      console.error('Failed to setup Coinos wallet:', error);
+      let errorMessage = 'Failed to setup Coinos wallet. Please try again.';
+
+      if (error instanceof Error) {
+        if (error.message.includes('Unauthorized')) {
+          errorMessage = 'Authentication failed. Please try again.';
+        } else if (error.message.includes('Failed to create NWC')) {
+          errorMessage = 'Failed to create wallet connection. Please try again.';
+        }
+      }
+
+      this.snackBar.open(errorMessage, 'Dismiss', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } finally {
+      this.isSettingUpCoinos.set(false);
+    }
+  }
+
+  /**
+   * Gets the decrypted private key as hex string, prompting for PIN if needed
+   */
+  private async getDecryptedPrivkeyWithPrompt(): Promise<string | null> {
+    const account = this.accountState.account();
+    if (!account?.privkey) {
+      return null;
+    }
+
+    try {
+      // Try with default PIN first
+      return await this.nostrService.getDecryptedPrivateKey(account, this.crypto.DEFAULT_PIN);
+    } catch {
+      // Default PIN failed, prompt user for their PIN
+      const pin = await this.pinPrompt.promptForPin();
+
+      if (!pin) {
+        // User cancelled
+        this.snackBar.open('PIN required to setup wallet', 'Dismiss', { duration: 3000 });
+        return null;
+      }
+
+      try {
+        // Try to decrypt with the provided PIN
+        const privkey = await this.nostrService.getDecryptedPrivateKey(account, pin);
+        return privkey;
+      } catch {
+        // Wrong PIN
+        this.snackBar.open('Incorrect PIN. Please try again.', 'Dismiss', { duration: 3000 });
+        return null;
+      }
     }
   }
 }
