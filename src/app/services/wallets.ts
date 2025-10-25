@@ -6,6 +6,7 @@ export interface Wallet {
   pubkey: string;
   connections: string[];
   name?: string;
+  data?: Record<string, unknown>;
 }
 
 @Injectable({
@@ -42,7 +43,7 @@ export class Wallets {
     return { pubkey, relay, secret };
   }
 
-  addWallet(pubkey: string, connection: string, data: any) {
+  addWallet(pubkey: string, connection: string, data?: Record<string, unknown>) {
     const currentWallets = this.wallets();
     const currentWallet = currentWallets[pubkey] || {
       pubkey,
