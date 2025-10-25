@@ -93,6 +93,7 @@ export class ContentNotificationService {
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
 
       // Check for all notification types in parallel
+      // Pass the pubkey to each check function
       await Promise.all([
         this.checkForNewFollowers(pubkey, since),
         this.checkForMentions(pubkey, since),
@@ -147,6 +148,7 @@ export class ContentNotificationService {
               title: 'New follower',
               message: 'Someone started following you',
               authorPubkey: event.pubkey,
+              recipientPubkey: pubkey, // The account that received this notification
               eventId: event.id,
               timestamp: event.created_at * 1000, // Convert to milliseconds
             });
@@ -187,6 +189,7 @@ export class ContentNotificationService {
             title: 'Mentioned you',
             message: event.content.substring(0, 100), // Preview of content
             authorPubkey: event.pubkey,
+            recipientPubkey: pubkey,
             eventId: event.id,
             timestamp: event.created_at * 1000,
             metadata: {
@@ -221,6 +224,7 @@ export class ContentNotificationService {
           type: NotificationType.REPOST,
           title: 'Reposted your note',
           authorPubkey: event.pubkey,
+          recipientPubkey: pubkey,
           eventId: event.id,
           timestamp: event.created_at * 1000,
         });
@@ -258,6 +262,7 @@ export class ContentNotificationService {
             title: 'Replied to your note',
             message: event.content.substring(0, 100),
             authorPubkey: event.pubkey,
+            recipientPubkey: pubkey,
             eventId: event.id,
             timestamp: event.created_at * 1000,
             metadata: {
@@ -295,6 +300,7 @@ export class ContentNotificationService {
           title: `Reacted ${reactionContent}`,
           message: 'Someone reacted to your note',
           authorPubkey: event.pubkey,
+          recipientPubkey: pubkey,
           eventId: event.id,
           timestamp: event.created_at * 1000,
           metadata: {
@@ -379,6 +385,7 @@ export class ContentNotificationService {
           title: 'Zapped you',
           message: zapAmount > 0 ? `${zapAmount} sats` : undefined,
           authorPubkey: zapperPubkey, // Use the actual zapper's pubkey
+          recipientPubkey: pubkey, // The account that received this zap
           eventId: zapRequestEventId, // Use the zapped event ID (undefined for profile zaps)
           timestamp: event.created_at * 1000,
           metadata: {
@@ -402,6 +409,7 @@ export class ContentNotificationService {
     title: string;
     message?: string;
     authorPubkey: string;
+    recipientPubkey: string; // The account that received this notification
     eventId?: string;
     timestamp: number;
     metadata?: {
@@ -436,6 +444,7 @@ export class ContentNotificationService {
       message: data.message,
       timestamp: data.timestamp,
       read: false,
+      recipientPubkey: data.recipientPubkey, // Store which account received this notification
       authorPubkey: data.authorPubkey,
       eventId: data.eventId,
       metadata: data.metadata,
