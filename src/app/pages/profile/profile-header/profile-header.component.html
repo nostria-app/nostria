@@ -45,13 +45,13 @@
         </button> -->
 
         <button class="hide-tiny" [matTooltip]="'Send private message'" mat-icon-button
-          (click)="layoutService.openSendMessage(currentPubkey())">
+          (click)="layoutService.openSendMessage(pubkey())">
           <mat-icon>message</mat-icon>
         </button>
 
         <!-- Zap Button -->
         @if (hasLightningAddress()) {
-        <app-zap-button [recipientPubkey]="currentPubkey()" class="hide-tiny"> </app-zap-button>
+        <app-zap-button [recipientPubkey]="pubkey()" class="hide-tiny"> </app-zap-button>
         }
         }
 
@@ -204,7 +204,7 @@
         </button>
         }
 
-        <button mat-menu-item (click)="layoutService.openSendMessage(currentPubkey())">
+        <button mat-menu-item (click)="layoutService.openSendMessage(pubkey())">
           <mat-icon>message</mat-icon>
           <span>Message</span>
         </button>
@@ -253,10 +253,10 @@
         <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'npub')">
           <span>Identifier (npub)</span>
         </button>
-        <button mat-menu-item (click)="layout.copyToClipboard(this.currentPubkey(), 'hex')">
+        <button mat-menu-item (click)="layout.copyToClipboard(this.pubkey(), 'hex')">
           <span>Identifier (hex)</span>
         </button>
-        <button mat-menu-item (click)="layout.copyToClipboard(this.currentPubkey(), 'nprofile')">
+        <button mat-menu-item (click)="layout.copyToClipboard(this.pubkey(), 'nprofile')">
           <span>Identifier (nprofile)</span>
         </button>
         <button mat-menu-item (click)="copyProfileData()">

@@ -147,13 +147,11 @@ export class ProfileHeaderComponent {
     status: string;
   }>({ value: '', valid: false, status: '' });
 
-  currentPubkey = computed(() => this.pubkey());
-
   name = computed(() => {
     const profileData = this.profile();
     if (!profileData) {
       // Fallback to truncated pubkey when no profile exists
-      return this.utilities.getTruncatedNpub(this.currentPubkey());
+      return this.utilities.getTruncatedNpub(this.pubkey());
     }
 
     if (profileData.data.display_name) {
@@ -166,7 +164,7 @@ export class ProfileHeaderComponent {
   });
 
   isOwnProfile = computed(() => {
-    return this.accountState.pubkey() === this.currentPubkey();
+    return this.accountState.pubkey() === this.pubkey();
   });
 
   isFollowing = computed(() => {
@@ -182,7 +180,7 @@ export class ProfileHeaderComponent {
   });
 
   isFavorite = computed(() => {
-    return this.favoritesService.isFavorite(this.currentPubkey());
+    return this.favoritesService.isFavorite(this.pubkey());
   });
 
   getUserRelays = computed(() => {
@@ -193,7 +191,7 @@ export class ProfileHeaderComponent {
 
   // Check if the current user is blocked
   isUserBlocked = computed(() => {
-    const pubkey = this.currentPubkey();
+    const pubkey = this.pubkey();
     if (!pubkey || this.isOwnProfile()) return false;
     return this.reportingService.isUserBlocked(pubkey);
   });
@@ -219,7 +217,7 @@ export class ProfileHeaderComponent {
 
   constructor() {
     effect(() => {
-      const currentPubkey = this.currentPubkey();
+      const currentPubkey = this.pubkey();
       if (currentPubkey) {
         console.debug('LOCATION 4:');
         this.npub.set(this.utilities.getNpubFromPubkey(currentPubkey));
@@ -228,7 +226,7 @@ export class ProfileHeaderComponent {
 
     // Add effect to fetch premium status when pubkey changes
     effect(async () => {
-      const currentPubkey = this.currentPubkey();
+      const currentPubkey = this.pubkey();
       if (currentPubkey) {
         await this.fetchPremiumStatus(currentPubkey);
       }
@@ -258,7 +256,7 @@ export class ProfileHeaderComponent {
   }
 
   blockUser(): void {
-    const pubkey = this.currentPubkey();
+    const pubkey = this.pubkey();
     if (pubkey) {
       if (this.isUserBlocked()) {
         // User is already blocked, so unblock them
@@ -271,7 +269,7 @@ export class ProfileHeaderComponent {
   }
 
   reportUser(): void {
-    const pubkey = this.currentPubkey();
+    const pubkey = this.pubkey();
     if (!pubkey) {
       return;
     }
@@ -303,7 +301,7 @@ export class ProfileHeaderComponent {
    * Opens the zap dialog for the user
    */
   zapUser(): void {
-    const pubkey = this.currentPubkey();
+    const pubkey = this.pubkey();
     const profileData = this.profile()?.data;
 
     if (!pubkey) {
@@ -431,7 +429,7 @@ export class ProfileHeaderComponent {
   }
 
   toggleFavorite(): void {
-    const currentPubkey = this.currentPubkey();
+    const currentPubkey = this.pubkey();
     if (!currentPubkey) return;
 
     const success = this.favoritesService.toggleFavorite(currentPubkey);
@@ -466,7 +464,7 @@ export class ProfileHeaderComponent {
   }
 
   async publishRelayListEvent(): Promise<void> {
-    const currentPubkey = this.currentPubkey();
+    const currentPubkey = this.pubkey();
     if (!currentPubkey) {
       this.snackBar.open('Profile not found', 'Close', { duration: 2000 });
       return;
@@ -504,7 +502,7 @@ export class ProfileHeaderComponent {
   }
 
   async publishFollowingListEvent(): Promise<void> {
-    const currentPubkey = this.currentPubkey();
+    const currentPubkey = this.pubkey();
     if (!currentPubkey) {
       this.snackBar.open('Profile not found', 'Close', { duration: 2000 });
       return;
