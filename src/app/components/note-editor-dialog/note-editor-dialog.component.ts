@@ -152,6 +152,39 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
   // Computed properties
   characterCount = computed(() => this.content().length);
+
+  // Current account pubkey for display
+  currentAccountPubkey = computed(() => this.accountState.pubkey());
+
+  // Current account profile for display
+  currentAccountProfile = computed(() => {
+    const pubkey = this.currentAccountPubkey();
+    if (!pubkey) return null;
+    return this.accountState.profile();
+  });
+
+  // Display name for current account
+  currentAccountDisplayName = computed(() => {
+    const profile = this.currentAccountProfile();
+    const pubkey = this.currentAccountPubkey();
+
+    if (profile?.data?.display_name) {
+      return profile.data.display_name;
+    } else if (profile?.data?.name) {
+      return profile.data.name;
+    } else if (pubkey) {
+      const npub = nip19.npubEncode(pubkey);
+      return `${npub.substring(0, 8)}...${npub.substring(npub.length - 4)}`;
+    }
+    return 'Unknown';
+  });
+
+  // Avatar URL for current account
+  currentAccountAvatar = computed(() => {
+    const profile = this.currentAccountProfile();
+    return profile?.data?.picture || null;
+  });
+
   // charactersRemaining = computed(() => 280 - this.characterCount());
   // isOverLimit = computed(() => this.characterCount() > 280);
   canPublish = computed(() => {
