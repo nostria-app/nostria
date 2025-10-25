@@ -1,4 +1,5 @@
-<span>
+<a [routerLink]="['/p', npubValue()]" class="profile-link" (mouseenter)="onMouseEnter($event)"
+  (mouseleave)="onMouseLeave()">
   @if (isLoading() || profile() === null) {
   ...
   } @else if (profile() && !profile().isEmpty && profile().data) {
@@ -12,4 +13,4 @@
   } @else {
   {{ truncatedNpubValue() }}
   }
-</span>
+</a>
