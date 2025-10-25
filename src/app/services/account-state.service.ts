@@ -179,32 +179,41 @@ export class AccountStateService implements OnDestroy {
 
     // CRITICAL: Get the existing following event from relay FIRST
     // This prevents overwriting changes made in other Nostria instances
-    let followingEvent = await this.accountRelay.getEventByPubkeyAndKind(account.pubkey, kinds.Contacts);
+    let existingFollowingEvent = await this.accountRelay.getEventByPubkeyAndKind(account.pubkey, kinds.Contacts);
 
-    if (followingEvent) {
+    if (existingFollowingEvent) {
       // Save fresh following list to storage
-      await this.storage.saveEvent(followingEvent);
+      await this.storage.saveEvent(existingFollowingEvent);
       console.log('Fetched fresh following list from relay before unfollowing');
     } else {
       // Fallback to storage only if relay fetch fails
       console.warn('Could not fetch following list from relay, falling back to storage');
-      followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+      existingFollowingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
     }
 
-    if (!followingEvent) {
+    if (!existingFollowingEvent) {
       console.warn('No existing following event found. Cannot unfollow.', pubkey);
       return;
     }
 
-    // Remove the pubkey from the following list in the event
-    followingEvent.tags = followingEvent.tags.filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
+    // Get existing tags and remove the pubkey
+    const updatedTags = existingFollowingEvent.tags.filter(tag => !(tag[0] === 'p' && tag[1] === pubkey));
+
+    // CRITICAL: Create a NEW unsigned event with CURRENT timestamp
+    // This ensures we don't reuse old timestamps from previously signed events
+    const newFollowingEvent = this.utilities.createEvent(
+      kinds.Contacts,
+      existingFollowingEvent.content || '', // Preserve existing content if any
+      updatedTags,
+      account.pubkey
+    );
 
     // Remove from following list
     this.followingList.update(list => list.filter(p => p !== pubkey));
 
     // Publish the event to update the following list
     try {
-      this.publish.set(followingEvent);
+      this.publish.set(newFollowingEvent);
       console.log(`Unfollowed ${pubkey} successfully.`);
     } catch (error) {
       console.error(`Failed to unfollow ${pubkey}:`, error);
@@ -287,37 +296,44 @@ export class AccountStateService implements OnDestroy {
 
     // CRITICAL: Get the existing following event from relay FIRST
     // This prevents overwriting changes made in other Nostria instances
-    let followingEvent: Event | UnsignedEvent | null = await this.accountRelay.getEventByPubkeyAndKind(
+    let existingFollowingEvent: Event | null = await this.accountRelay.getEventByPubkeyAndKind(
       account.pubkey,
       kinds.Contacts
     );
 
-    if (followingEvent) {
+    if (existingFollowingEvent) {
       // Save fresh following list to storage (relay always returns signed Event)
-      await this.storage.saveEvent(followingEvent as Event);
+      await this.storage.saveEvent(existingFollowingEvent);
       console.log('Fetched fresh following list from relay before following');
     } else {
       // Fallback to storage only if relay fetch fails
       console.warn('Could not fetch following list from relay, falling back to storage');
-      followingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+      existingFollowingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
     }
 
-    if (!followingEvent) {
-      console.warn(
-        'No existing following event found. This might result in overwriting this event on unknown relays.',
-        newPubkeys
-      );
-      // Create new event with all new pubkeys
-      const tags = newPubkeys.map(pubkey => ['p', pubkey]);
-      followingEvent = this.utilities.createEvent(kinds.Contacts, '', tags, account.pubkey);
-    } else {
-      // Add all new pubkeys to the following list in the event
-      for (const pubkey of newPubkeys) {
-        if (!followingEvent.tags.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
-          followingEvent.tags.push(['p', pubkey]);
-        }
+    // Get existing tags (p-tags for followed users)
+    let existingTags: string[][] = [];
+
+    if (existingFollowingEvent) {
+      // Extract all existing tags
+      existingTags = existingFollowingEvent.tags;
+    }
+
+    // Add new pubkeys to the tags
+    for (const pubkey of newPubkeys) {
+      if (!existingTags.some(tag => tag[0] === 'p' && tag[1] === pubkey)) {
+        existingTags.push(['p', pubkey]);
       }
     }
+
+    // CRITICAL: Create a NEW unsigned event with CURRENT timestamp
+    // This ensures we don't reuse old timestamps from previously signed events
+    const newFollowingEvent = this.utilities.createEvent(
+      kinds.Contacts,
+      existingFollowingEvent?.content || '', // Preserve existing content if any
+      existingTags,
+      account.pubkey
+    );
 
     // Add all new pubkeys to following list
     this.followingList.update(list => [...list, ...newPubkeys]);
@@ -327,7 +343,7 @@ export class AccountStateService implements OnDestroy {
 
     // Publish the event to update the following list (single operation)
     try {
-      this.publish.set(followingEvent);
+      this.publish.set(newFollowingEvent);
       console.log(`Followed ${newPubkeys.length} pubkey(s) successfully:`, newPubkeys);
     } catch (error) {
       console.error(`Failed to follow pubkey(s):`, error);
