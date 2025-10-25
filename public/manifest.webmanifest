@@ -13,8 +13,13 @@
     "window-controls-overlay"
   ],
   "display": "standalone",
-  "scope": "./",
-  "start_url": "./",
+  "scope": "https://nostria.app/",
+  "start_url": "https://nostria.app/",
+  "url_handlers": [
+    {
+      "origin": "https://nostria.app"
+    }
+  ],
   "launch_handler": {
     "client_mode": [
       "focus-existing",
