@@ -285,12 +285,22 @@ export class AccountStateService implements OnDestroy {
     // Normalize input to always be an array
     const pubkeyArray = Array.isArray(pubkeys) ? pubkeys : [pubkeys];
 
+    console.log('[AccountStateService] DEBUG follow() called:', {
+      inputPubkeys: pubkeyArray.map(pk => pk.slice(0, 16)),
+      currentFollowing: this.followingList().length,
+    });
+
     // Filter out pubkeys that are already being followed
     const currentFollowing = this.followingList();
     const newPubkeys = pubkeyArray.filter(pubkey => !currentFollowing.includes(pubkey));
 
+    console.log('[AccountStateService] DEBUG after filtering:', {
+      newPubkeysCount: newPubkeys.length,
+      newPubkeysList: newPubkeys.map(pk => pk.slice(0, 16)),
+    });
+
     if (newPubkeys.length === 0) {
-      console.log('All specified pubkeys are already being followed');
+      console.log('All specified pubkeys are already being followed - RETURNING EARLY');
       return;
     }
 
@@ -340,6 +350,15 @@ export class AccountStateService implements OnDestroy {
 
     // Store the newly followed pubkeys for the publish operation
     this.newlyFollowedPubkeys.set(newPubkeys);
+
+    console.log('[AccountStateService] DEBUG: About to publish follow event:', {
+      newPubkeysCount: newPubkeys.length,
+      newPubkeysList: newPubkeys.map(pk => pk.slice(0, 16)),
+      totalTagsCount: existingTags.length,
+      eventKind: newFollowingEvent.kind,
+      eventCreatedAt: newFollowingEvent.created_at,
+      currentTime: Math.floor(Date.now() / 1000),
+    });
 
     // Publish the event to update the following list (single operation)
     try {
