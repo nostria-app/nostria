@@ -519,7 +519,7 @@ export class ArticleComponent implements OnDestroy {
 
     // Get the text content to speak
     let textToSpeak = '';
-    
+
     // Add title
     const titleText = this.title();
     if (titleText) {
@@ -560,7 +560,7 @@ export class ArticleComponent implements OnDestroy {
 
     // Create utterance
     this.currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
-    
+
     // Set voice properties
     this.currentUtterance.rate = 1.0;
     this.currentUtterance.pitch = 1.0;

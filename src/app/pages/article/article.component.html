@@ -72,18 +72,18 @@
             <mat-icon>volume_up</mat-icon>
           </button>
           } @else {
-            @if (isPaused()) {
-            <button mat-icon-button color="primary" (click)="resumeSpeech()" title="Resume reading">
-              <mat-icon>play_arrow</mat-icon>
-            </button>
-            } @else {
-            <button mat-icon-button color="primary" (click)="pauseSpeech()" title="Pause reading">
-              <mat-icon>pause</mat-icon>
-            </button>
-            }
-            <button mat-icon-button color="primary" (click)="stopSpeech()" title="Stop reading">
-              <mat-icon>stop</mat-icon>
-            </button>
+          @if (isPaused()) {
+          <button mat-icon-button color="primary" (click)="resumeSpeech()" title="Resume reading">
+            <mat-icon>play_arrow</mat-icon>
+          </button>
+          } @else {
+          <button mat-icon-button color="primary" (click)="pauseSpeech()" title="Pause reading">
+            <mat-icon>pause</mat-icon>
+          </button>
+          }
+          <button mat-icon-button color="primary" (click)="stopSpeech()" title="Stop reading">
+            <mat-icon>stop</mat-icon>
+          </button>
           }
         </div>
       </div>
@@ -168,21 +168,21 @@
         Read Aloud
       </button>
       } @else {
-        @if (isPaused()) {
-        <button mat-button color="primary" (click)="resumeSpeech()" title="Resume reading">
-          <mat-icon>play_arrow</mat-icon>
-          Resume
-        </button>
-        } @else {
-        <button mat-button color="primary" (click)="pauseSpeech()" title="Pause reading">
-          <mat-icon>pause</mat-icon>
-          Pause
-        </button>
-        }
-        <button mat-button color="primary" (click)="stopSpeech()" title="Stop reading">
-          <mat-icon>stop</mat-icon>
-          Stop
-        </button>
+      @if (isPaused()) {
+      <button mat-button color="primary" (click)="resumeSpeech()" title="Resume reading">
+        <mat-icon>play_arrow</mat-icon>
+        Resume
+      </button>
+      } @else {
+      <button mat-button color="primary" (click)="pauseSpeech()" title="Pause reading">
+        <mat-icon>pause</mat-icon>
+        Pause
+      </button>
+      }
+      <button mat-button color="primary" (click)="stopSpeech()" title="Stop reading">
+        <mat-icon>stop</mat-icon>
+        Stop
+      </button>
       }
 
       <app-event-menu [event]="article" [view]="'full'"></app-event-menu>
