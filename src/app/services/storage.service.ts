@@ -139,6 +139,7 @@ export interface Notification {
   read: boolean;
   title: string;
   message?: string;
+  recipientPubkey?: string; // The pubkey of the account that received this notification
 }
 
 export interface RelayPublishingNotification extends Notification {
@@ -245,7 +246,10 @@ interface NostriaDBSchema extends DBSchema {
   notifications: {
     key: string; // notification id
     value: Notification;
-    indexes: { 'by-timestamp': number };
+    indexes: {
+      'by-timestamp': number;
+      'by-recipient': string; // Filter notifications by recipient pubkey
+    };
   };
   // @ts-ignore TypeScript issue with IndexedDB schema value types
   observedRelays: {
@@ -279,7 +283,7 @@ export class StorageService {
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria';
-  private readonly DB_VERSION = 4;
+  private readonly DB_VERSION = 5;
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -455,7 +459,18 @@ export class StorageService {
             keyPath: 'id',
           });
           notificationsStore.createIndex('by-timestamp', 'timestamp');
+          notificationsStore.createIndex('by-recipient', 'recipientPubkey');
           this.logger.debug('Created notifications object store');
+        } else if (oldVersion < 5 && db.objectStoreNames.contains('notifications')) {
+          // For version 5 upgrade, recreate the notifications store to add the by-recipient index
+          // Note: This will clear existing notifications, but they don't have recipientPubkey anyway
+          db.deleteObjectStore('notifications');
+          const notificationsStore = db.createObjectStore('notifications', {
+            keyPath: 'id',
+          });
+          notificationsStore.createIndex('by-timestamp', 'timestamp');
+          notificationsStore.createIndex('by-recipient', 'recipientPubkey');
+          this.logger.debug('Recreated notifications object store with by-recipient index');
         }
 
         // Create new observed relays object store
@@ -1457,6 +1472,23 @@ export class StorageService {
       return await index.getAll(); // No limit - retrieve all stored notifications
     } catch (error) {
       this.logger.error('Error getting all notifications', error);
+      return [];
+    }
+  }
+
+  async getAllNotificationsForPubkey(pubkey: string): Promise<Notification[]> {
+    try {
+      // Get notifications for a specific pubkey, sorted by timestamp (newest first)
+      const tx = this.db.transaction('notifications', 'readonly');
+      const index = tx.store.index('by-recipient');
+      const notifications = await index.getAll(pubkey);
+
+      // Sort by timestamp (newest first) since the index doesn't guarantee order
+      notifications.sort((a, b) => b.timestamp - a.timestamp);
+
+      return notifications;
+    } catch (error) {
+      this.logger.error(`Error getting notifications for pubkey ${pubkey}`, error);
       return [];
     }
   }

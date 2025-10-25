@@ -9,6 +9,7 @@ import {
   StorageService,
 } from './storage.service';
 import { Event } from 'nostr-tools';
+import { AccountStateService } from './account-state.service';
 
 @Injectable({
   providedIn: 'root',
@@ -16,6 +17,7 @@ import { Event } from 'nostr-tools';
 export class NotificationService {
   private logger = inject(LoggerService);
   private storage = inject(StorageService);
+  private accountState = inject(AccountStateService);
 
   // Store all notifications
   private _notifications = signal<Notification[]>([]);
@@ -37,10 +39,19 @@ export class NotificationService {
         // this.persistNotifications();
       }
     });
+
+    // Set up effect to reload notifications when account changes
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey && this._notificationsLoaded()) {
+        this.logger.info(`Account changed to ${pubkey}, reloading notifications`);
+        this.loadNotifications();
+      }
+    });
   }
 
   /**
-   * Load notifications from storage
+   * Load notifications from storage for the current account
    */
   async loadNotifications(): Promise<void> {
     try {
@@ -52,7 +63,18 @@ export class NotificationService {
         return;
       }
 
-      const storedNotifications = await this.storage.getAllNotifications();
+      const pubkey = this.accountState.pubkey();
+      let storedNotifications: Notification[];
+
+      if (pubkey) {
+        // Load notifications for the current account
+        this.logger.info(`Loading notifications for account: ${pubkey}`);
+        storedNotifications = await this.storage.getAllNotificationsForPubkey(pubkey);
+      } else {
+        // No account logged in, load all notifications (for backward compatibility)
+        this.logger.info('No account logged in, loading all notifications');
+        storedNotifications = await this.storage.getAllNotifications();
+      }
 
       if (storedNotifications && storedNotifications.length > 0) {
         // Sort by timestamp (newest first)
