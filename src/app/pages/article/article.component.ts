@@ -79,15 +79,26 @@ export class ArticleComponent implements OnDestroy {
   isLoading = signal(false);
   error = signal<string | null>(null);
 
+  // Text-to-Speech state
+  isSpeaking = signal(false);
+  isPaused = signal(false);
+  private speechSynthesis: SpeechSynthesis | null = null;
+  private currentUtterance: SpeechSynthesisUtterance | null = null;
+
   constructor() {
     if (!this.layout.isBrowser()) {
       return;
     }
 
+    // Initialize speech synthesis
+    this.speechSynthesis = window.speechSynthesis;
+
     // Subscribe to route parameter changes
     this.routeSubscription = this.route.paramMap.subscribe(params => {
       const addrParam = params.get('id');
       if (addrParam) {
+        // Stop speech when navigating to a new article
+        this.stopSpeech();
         this.loadArticle(addrParam, params);
         // Scroll to top when navigating to a new article
         setTimeout(() => this.layout.scrollMainContentToTop(), 100);
@@ -102,6 +113,7 @@ export class ArticleComponent implements OnDestroy {
 
   ngOnDestroy(): void {
     this.routeSubscription?.unsubscribe();
+    this.stopSpeech();
   }
 
   bookmarkArticle() {
@@ -491,6 +503,140 @@ export class ArticleComponent implements OnDestroy {
       return JSON.stringify(value, null, 2);
     } catch {
       return String(value);
+    }
+  }
+
+  /**
+   * Start reading the article content aloud using text-to-speech
+   */
+  startSpeech(): void {
+    if (!this.speechSynthesis || !this.layout.isBrowser()) {
+      return;
+    }
+
+    // Stop any ongoing speech
+    this.stopSpeech();
+
+    // Get the text content to speak
+    let textToSpeak = '';
+    
+    // Add title
+    const titleText = this.title();
+    if (titleText) {
+      textToSpeak += titleText + '. ';
+    }
+
+    // Add summary
+    const summaryText = this.summary();
+    if (summaryText) {
+      textToSpeak += summaryText + '. ';
+    }
+
+    // Add main content
+    if (this.isJsonContent()) {
+      // For JSON content, stringify it in a readable way
+      const jsonContent = this.jsonData();
+      if (jsonContent) {
+        textToSpeak += 'Content: ' + JSON.stringify(jsonContent, null, 2);
+      }
+    } else {
+      // For markdown content, strip HTML tags and use plain text
+      const contentText = this.content();
+      if (contentText) {
+        // Remove markdown formatting for better speech
+        const plainText = contentText
+          .replace(/[#*_~`]/g, '') // Remove markdown symbols
+          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to text
+          .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Remove images
+          .trim();
+        textToSpeak += plainText;
+      }
+    }
+
+    if (!textToSpeak.trim()) {
+      console.warn('No content to speak');
+      return;
+    }
+
+    // Create utterance
+    this.currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
+    
+    // Set voice properties
+    this.currentUtterance.rate = 1.0;
+    this.currentUtterance.pitch = 1.0;
+    this.currentUtterance.volume = 1.0;
+
+    // Set up event listeners
+    this.currentUtterance.onstart = () => {
+      this.isSpeaking.set(true);
+      this.isPaused.set(false);
+    };
+
+    this.currentUtterance.onend = () => {
+      this.isSpeaking.set(false);
+      this.isPaused.set(false);
+      this.currentUtterance = null;
+    };
+
+    this.currentUtterance.onerror = (event) => {
+      console.error('Speech synthesis error:', event);
+      this.isSpeaking.set(false);
+      this.isPaused.set(false);
+      this.currentUtterance = null;
+    };
+
+    // Start speaking
+    this.speechSynthesis.speak(this.currentUtterance);
+  }
+
+  /**
+   * Pause the current speech
+   */
+  pauseSpeech(): void {
+    if (!this.speechSynthesis || !this.isSpeaking()) {
+      return;
+    }
+
+    this.speechSynthesis.pause();
+    this.isPaused.set(true);
+  }
+
+  /**
+   * Resume paused speech
+   */
+  resumeSpeech(): void {
+    if (!this.speechSynthesis || !this.isPaused()) {
+      return;
+    }
+
+    this.speechSynthesis.resume();
+    this.isPaused.set(false);
+  }
+
+  /**
+   * Stop the current speech
+   */
+  stopSpeech(): void {
+    if (!this.speechSynthesis) {
+      return;
+    }
+
+    this.speechSynthesis.cancel();
+    this.isSpeaking.set(false);
+    this.isPaused.set(false);
+    this.currentUtterance = null;
+  }
+
+  /**
+   * Toggle between play and pause
+   */
+  toggleSpeech(): void {
+    if (!this.isSpeaking()) {
+      this.startSpeech();
+    } else if (this.isPaused()) {
+      this.resumeSpeech();
+    } else {
+      this.pauseSpeech();
     }
   }
 }

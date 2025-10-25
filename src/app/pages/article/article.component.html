@@ -64,6 +64,28 @@
           </mat-chip-set>
         </div>
         }
+
+        <!-- Text-to-Speech Controls (Header) -->
+        <div class="article-tts-controls">
+          @if (!isSpeaking()) {
+          <button mat-icon-button color="primary" (click)="startSpeech()" title="Read article aloud">
+            <mat-icon>volume_up</mat-icon>
+          </button>
+          } @else {
+            @if (isPaused()) {
+            <button mat-icon-button color="primary" (click)="resumeSpeech()" title="Resume reading">
+              <mat-icon>play_arrow</mat-icon>
+            </button>
+            } @else {
+            <button mat-icon-button color="primary" (click)="pauseSpeech()" title="Pause reading">
+              <mat-icon>pause</mat-icon>
+            </button>
+            }
+            <button mat-icon-button color="primary" (click)="stopSpeech()" title="Stop reading">
+              <mat-icon>stop</mat-icon>
+            </button>
+          }
+        </div>
       </div>
     </div>
   </header>
@@ -138,6 +160,30 @@
         <mat-icon>comment</mat-icon>
         Comment
       </button>
+
+      <!-- Text-to-Speech Controls -->
+      @if (!isSpeaking()) {
+      <button mat-button color="primary" (click)="startSpeech()" title="Read article aloud">
+        <mat-icon>volume_up</mat-icon>
+        Read Aloud
+      </button>
+      } @else {
+        @if (isPaused()) {
+        <button mat-button color="primary" (click)="resumeSpeech()" title="Resume reading">
+          <mat-icon>play_arrow</mat-icon>
+          Resume
+        </button>
+        } @else {
+        <button mat-button color="primary" (click)="pauseSpeech()" title="Pause reading">
+          <mat-icon>pause</mat-icon>
+          Pause
+        </button>
+        }
+        <button mat-button color="primary" (click)="stopSpeech()" title="Stop reading">
+          <mat-icon>stop</mat-icon>
+          Stop
+        </button>
+      }
 
       <app-event-menu [event]="article" [view]="'full'"></app-event-menu>
     </div>

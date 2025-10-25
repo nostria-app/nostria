@@ -167,6 +167,21 @@
       gap: 12px;
     }
   }
+
+  .article-tts-controls {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+
+    button {
+      transition: all 0.2s ease-in-out;
+
+      &:hover {
+        transform: scale(1.1);
+      }
+    }
+  }
 }
 
 // Author section
