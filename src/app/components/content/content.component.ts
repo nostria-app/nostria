@@ -209,6 +209,19 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         });
       } catch (error) {
         console.error('Error parsing content:', error);
+
+        // Fallback: If parsing fails completely, create a simple text token
+        // so the raw content is still displayed to the user
+        untracked(() => {
+          const fallbackTokens: ContentToken[] = [{
+            id: 0,
+            type: 'text',
+            content: content
+          }];
+          this._cachedTokens.set(fallbackTokens);
+          this.eventMentions.set([]);
+          this._lastParsedContent = content;
+        });
       } finally {
         this._isParsing.set(false);
       }

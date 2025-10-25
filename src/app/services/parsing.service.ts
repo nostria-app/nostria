@@ -342,7 +342,14 @@ export class ParsingService {
     // Batch process nostr URIs to avoid sequential awaits
     const nostrDataPromises = nostrMatches.map(async nostrMatch => {
       try {
-        const nostrData = await this.parseNostrUri(nostrMatch.match[0]);
+        // Add timeout protection (5 seconds) to prevent hanging
+        const timeoutPromise = new Promise<null>((resolve) =>
+          setTimeout(() => resolve(null), 5000)
+        );
+
+        const nostrDataPromise = this.parseNostrUri(nostrMatch.match[0]);
+        const nostrData = await Promise.race([nostrDataPromise, timeoutPromise]);
+
         return {
           ...nostrMatch,
           nostrData,
