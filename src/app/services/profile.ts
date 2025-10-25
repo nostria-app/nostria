@@ -106,7 +106,7 @@ export class Profile {
       if (options.profileImageFile && (options.skipMediaServerCheck || this.hasMediaServers())) {
         const uploadResult = await this.media.uploadFile(
           options.profileImageFile,
-          true,
+          false,
           this.media.mediaServers()
         );
 
@@ -126,7 +126,7 @@ export class Profile {
       if (options.bannerImageFile && (options.skipMediaServerCheck || this.hasMediaServers())) {
         const uploadResult = await this.media.uploadFile(
           options.bannerImageFile,
-          true,
+          false,
           this.media.mediaServers()
         );
 
