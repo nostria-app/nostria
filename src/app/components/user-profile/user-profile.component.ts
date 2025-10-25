@@ -31,9 +31,7 @@ import { SettingsService } from '../../services/settings.service';
 import { SharedRelayService } from '../../services/relays/shared-relay';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { ProfileDisplayNameComponent } from './display-name/profile-display-name.component';
-import { Overlay, OverlayRef, OverlayModule } from '@angular/cdk/overlay';
-import { ComponentPortal } from '@angular/cdk/portal';
-import { ProfileHoverCardComponent } from './hover-card/profile-hover-card.component';
+import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
 
 @Component({
   selector: 'app-user-profile',
@@ -49,7 +47,6 @@ import { ProfileHoverCardComponent } from './hover-card/profile-hover-card.compo
     MatMenuModule,
     MatButtonModule,
     RouterModule,
-    OverlayModule,
   ],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.scss',
@@ -67,16 +64,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   settingsService = inject(SettingsService);
   private readonly sharedRelay = inject(SharedRelayService);
   private readonly imageCacheService = inject(ImageCacheService);
-  private overlay = inject(Overlay);
+  private hoverCardService = inject(ProfileHoverCardService);
   layout = inject(LayoutService);
 
-  // Hover card overlay
-  private overlayRef: OverlayRef | null = null;
-  private hoverCardComponentRef: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
-  private hoverTimeout?: number;
-  private closeTimeout?: number;
-  private isMouseOverTrigger = signal(false);
-  private isMouseOverCard = signal(false);
   publicKey = '';
   pubkey = input<string>('');
   npub = signal<string | undefined>(undefined);
@@ -212,13 +202,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     this.disconnectObserver();
     this.clearDebounceTimer();
     this.clearScrollCheckTimer();
-    this.closeHoverCard();
-    if (this.hoverTimeout) {
-      window.clearTimeout(this.hoverTimeout);
-    }
-    if (this.closeTimeout) {
-      window.clearTimeout(this.closeTimeout);
-    }
   }
 
   /**
@@ -584,134 +567,13 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    this.isMouseOverTrigger.set(true);
-
-    // Clear any existing close timeout
-    if (this.closeTimeout) {
-      window.clearTimeout(this.closeTimeout);
-      this.closeTimeout = undefined;
-    }
-
-    // Clear any existing hover timeout
-    if (this.hoverTimeout) {
-      window.clearTimeout(this.hoverTimeout);
-    }
-
-    // Delay showing the hover card
-    this.hoverTimeout = window.setTimeout(() => {
-      if (this.isMouseOverTrigger()) {
-        this.showHoverCard(triggerElement);
-      }
-    }, 500);
+    this.hoverCardService.showHoverCard(triggerElement, this.pubkey());
   }
 
   /**
    * Hides the profile hover card
    */
   onMouseLeave(): void {
-    this.isMouseOverTrigger.set(false);
-
-    if (this.hoverTimeout) {
-      window.clearTimeout(this.hoverTimeout);
-      this.hoverTimeout = undefined;
-    }
-
-    // Small delay before closing to allow moving mouse to hover card
-    this.closeTimeout = window.setTimeout(() => {
-      if (!this.isMouseOverTrigger() && !this.isMouseOverCard()) {
-        this.closeHoverCard();
-      }
-    }, 150);
-  }
-
-  private showHoverCard(triggerElement: HTMLElement): void {
-    if (this.overlayRef) {
-      return;
-    }
-
-    const positionStrategy = this.overlay
-      .position()
-      .flexibleConnectedTo(triggerElement)
-      .withPositions([
-        {
-          originX: 'center',
-          originY: 'bottom',
-          overlayX: 'center',
-          overlayY: 'top',
-          offsetY: 8,
-        },
-        {
-          originX: 'center',
-          originY: 'top',
-          overlayX: 'center',
-          overlayY: 'bottom',
-          offsetY: -8,
-        },
-        {
-          originX: 'start',
-          originY: 'bottom',
-          overlayX: 'start',
-          overlayY: 'top',
-          offsetY: 8,
-        },
-        {
-          originX: 'end',
-          originY: 'bottom',
-          overlayX: 'end',
-          overlayY: 'top',
-          offsetY: 8,
-        },
-      ])
-      .withViewportMargin(16)
-      .withPush(true);
-
-    this.overlayRef = this.overlay.create({
-      positionStrategy,
-      scrollStrategy: this.overlay.scrollStrategies.close(),
-      hasBackdrop: false,
-    });
-
-    const portal = new ComponentPortal(ProfileHoverCardComponent);
-    const componentRef = this.overlayRef.attach(portal);
-    componentRef.setInput('pubkey', this.pubkey());
-    this.hoverCardComponentRef = componentRef;
-
-    // Add mouse enter/leave listeners to overlay
-    const overlayElement = this.overlayRef.overlayElement;
-    overlayElement.addEventListener('mouseenter', () => {
-      this.isMouseOverCard.set(true);
-      if (this.closeTimeout) {
-        window.clearTimeout(this.closeTimeout);
-        this.closeTimeout = undefined;
-      }
-    });
-
-    overlayElement.addEventListener('mouseleave', () => {
-      this.isMouseOverCard.set(false);
-      // Don't close immediately, check if menu is open
-      this.scheduleClose();
-    });
-  }
-
-  private scheduleClose(): void {
-    this.closeTimeout = window.setTimeout(() => {
-      // Check if menu is open before closing
-      const isMenuOpen = this.hoverCardComponentRef?.instance?.isMenuOpen?.();
-      if (!this.isMouseOverTrigger() && !this.isMouseOverCard() && !isMenuOpen) {
-        this.closeHoverCard();
-      } else if (isMenuOpen) {
-        // If menu is open, check again later
-        this.scheduleClose();
-      }
-    }, 150);
-  }
-
-  private closeHoverCard(): void {
-    if (this.overlayRef) {
-      this.overlayRef.dispose();
-      this.overlayRef = null;
-    }
-    this.hoverCardComponentRef = null;
-    this.isMouseOverCard.set(false);
+    this.hoverCardService.hideHoverCard();
   }
 }
