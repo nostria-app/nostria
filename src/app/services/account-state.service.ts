@@ -443,16 +443,23 @@ export class AccountStateService implements OnDestroy {
 
     const subscription = this.subscription() as any;
 
+    // If there was an error, retry only after 1 day
     if (
       subscription &&
       subscription.error &&
-      Date.now() - subscription.retrieved < 60 * 60 * 1000
+      subscription.retrieved &&
+      Date.now() - subscription.retrieved < 24 * 60 * 60 * 1000
     ) {
-      return; // Retry only after 1 hour if there was an error
+      return;
     }
 
-    // Don't fetch if data is less than 3 days old
-    if (subscription && Date.now() - subscription.retrieved < 3 * 24 * 60 * 60 * 1000) {
+    // Don't fetch if data is less than 3 days old and no error
+    if (
+      subscription &&
+      !subscription.error &&
+      subscription.retrieved &&
+      Date.now() - subscription.retrieved < 3 * 24 * 60 * 60 * 1000
+    ) {
       return;
     }
 
@@ -470,13 +477,12 @@ export class AccountStateService implements OnDestroy {
         error: err => {
           console.error('Failed to fetch account:', err);
 
-          if (subscription) {
-            // Create a copy with lastRetrieved property
-            subscription.retrieved = Date.now();
-            subscription.error = 'Failed to fetch account';
-            // Add the subscription to the local storage
-            this.addSubscription(subscription);
-          }
+          // Always save the error state to prevent repeated requests
+          const errorSubscription = subscription || { pubkey };
+          errorSubscription.retrieved = Date.now();
+          errorSubscription.error = 'Failed to fetch account';
+          // Add the subscription to the local storage
+          this.addSubscription(errorSubscription);
         },
       });
   }
