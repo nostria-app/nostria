@@ -26,6 +26,23 @@
     </div>
     }
 
+    <!-- Current Account Display -->
+    <div class="current-account-banner">
+      <div class="current-account-info">
+        <div class="current-account-avatar">
+          @if (currentAccountAvatar()) {
+          <img [src]="currentAccountAvatar()" alt="Current account avatar" class="account-avatar-img" />
+          } @else {
+          <mat-icon class="account-avatar-icon">account_circle</mat-icon>
+          }
+        </div>
+        <div class="current-account-details">
+          <span class="current-account-label">Publishing as</span>
+          <span class="current-account-name">{{ currentAccountDisplayName() }}</span>
+        </div>
+      </div>
+    </div>
+
     <!-- Error display -->
     @if (mediaService.error()) {
     <div class="error-container">
