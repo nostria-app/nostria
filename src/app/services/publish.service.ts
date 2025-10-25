@@ -93,6 +93,13 @@ export class PublishService {
       // Determine which relays to use
       const relayUrls = await this.getRelayUrlsForPublish(event, options);
 
+      console.log('[PublishService] DEBUG: Publishing to relays:', {
+        kind: event.kind,
+        totalRelays: relayUrls.length,
+        relayUrls: relayUrls,
+        options: options,
+      });
+
       if (relayUrls.length === 0) {
         this.logger.warn('[PublishService] No relays available for publishing');
         return result;
@@ -200,11 +207,29 @@ export class PublishService {
     const accountRelayUrls = this.accountRelay.getRelayUrls();
     const allRelayUrls = new Set<string>(accountRelayUrls);
 
+    console.log('[PublishService] DEBUG getRelayUrlsForPublish:', {
+      kind: event.kind,
+      accountRelays: accountRelayUrls.length,
+      accountRelaysList: accountRelayUrls,
+      options: options,
+    });
+
     // Special handling for kind 3 (follow list) events
     if (event.kind === kinds.Contacts && options.notifyFollowed !== false) {
       const followedRelayUrls = await this.getFollowedUsersRelays(event, options.newlyFollowedPubkeys);
 
       followedRelayUrls.forEach(url => allRelayUrls.add(url));
+
+      console.log('[PublishService] DEBUG Kind 3 relay collection:', {
+        accountRelays: accountRelayUrls.length,
+        accountRelaysList: accountRelayUrls,
+        newlyFollowedPubkeys: options.newlyFollowedPubkeys,
+        newlyFollowedCount: options.newlyFollowedPubkeys?.length || 0,
+        followedRelays: followedRelayUrls.length,
+        followedRelaysList: followedRelayUrls,
+        totalUnique: allRelayUrls.size,
+        allRelaysList: Array.from(allRelayUrls),
+      });
 
       this.logger.debug('[PublishService] Kind 3 event - publishing to account + newly followed relays', {
         accountRelays: accountRelayUrls.length,
@@ -262,23 +287,32 @@ export class PublishService {
    *                             If not provided, falls back to all p tags in the event.
    */
   private async getFollowedUsersRelays(event: Event, newlyFollowedPubkeys?: string[]): Promise<string[]> {
-    // Use the specific newly followed pubkeys if provided, otherwise use all p tags
-    const followedPubkeys = newlyFollowedPubkeys && newlyFollowedPubkeys.length > 0
-      ? newlyFollowedPubkeys
-      : event.tags
-        .filter(tag => tag[0] === 'p' && tag[1])
-        .map(tag => tag[1]);
+    console.log('[PublishService] DEBUG getFollowedUsersRelays:', {
+      newlyFollowedPubkeysProvided: newlyFollowedPubkeys,
+      newlyFollowedPubkeysCount: newlyFollowedPubkeys?.length || 0,
+    });
 
-    if (followedPubkeys.length === 0) {
+    // CRITICAL: Only use newly followed pubkeys if explicitly provided
+    // If not provided or empty, return empty array (don't notify anyone)
+    if (!newlyFollowedPubkeys || newlyFollowedPubkeys.length === 0) {
+      console.log('[PublishService] DEBUG: No newly followed pubkeys - not notifying any users');
       return [];
     }
 
     this.logger.debug('[PublishService] Getting relays for newly followed users', {
-      count: followedPubkeys.length,
-      pubkeys: followedPubkeys.map(pk => pk.slice(0, 16)),
+      count: newlyFollowedPubkeys.length,
+      pubkeys: newlyFollowedPubkeys.map(pk => pk.slice(0, 16)),
     });
 
-    return await this.getAllRelaysForPubkeys(followedPubkeys);
+    const relays = await this.getAllRelaysForPubkeys(newlyFollowedPubkeys);
+
+    console.log('[PublishService] DEBUG: Retrieved relays for followed users:', {
+      followedUsersCount: newlyFollowedPubkeys.length,
+      relaysFound: relays.length,
+      relaysList: relays,
+    });
+
+    return relays;
   }
 
   /**
@@ -310,6 +344,11 @@ export class PublishService {
   private async getAllRelaysForPubkeys(pubkeys: string[]): Promise<string[]> {
     const allRelayUrls = new Set<string>();
 
+    console.log('[PublishService] DEBUG getAllRelaysForPubkeys:', {
+      pubkeysCount: pubkeys.length,
+      pubkeysList: pubkeys.map(pk => pk.slice(0, 16)),
+    });
+
     // Process in batches to avoid overwhelming the system
     const batchSize = 20;
     for (let i = 0; i < pubkeys.length; i += batchSize) {
@@ -320,8 +359,19 @@ export class PublishService {
           try {
             // Use getUserRelaysForPublishing to get ALL relays for this user
             const relayUrls = await this.userRelaysService.getUserRelaysForPublishing(pubkey);
+
+            console.log('[PublishService] DEBUG: Relays for user:', {
+              pubkey: pubkey.slice(0, 16),
+              relaysFound: relayUrls.length,
+              relaysList: relayUrls,
+            });
+
             relayUrls.forEach(url => allRelayUrls.add(url));
           } catch (error) {
+            console.warn('[PublishService] DEBUG: Failed to get relays for user:', {
+              pubkey: pubkey.slice(0, 16),
+              error: error,
+            });
             this.logger.warn('[PublishService] Failed to get relays for user', {
               pubkey: pubkey.slice(0, 16),
               error,
@@ -330,6 +380,11 @@ export class PublishService {
         })
       );
     }
+
+    console.log('[PublishService] DEBUG getAllRelaysForPubkeys result:', {
+      totalRelays: allRelayUrls.size,
+      relaysList: Array.from(allRelayUrls),
+    });
 
     return Array.from(allRelayUrls);
   }

@@ -126,13 +126,35 @@ export class RelayPoolService {
       throw new Error('No relays provided');
     }
 
+    console.log('[RelayPoolService] DEBUG publish called:', {
+      relayCount: relayUrls.length,
+      relayUrls: relayUrls,
+      eventKind: event.kind,
+      eventId: event.id,
+    });
+
     // Add any new relays to the pool
     this.addRelays(relayUrls);
 
     try {
       const publishPromises = this.#pool.publish(relayUrls, event);
 
+      console.log('[RelayPoolService] DEBUG: Got publish promises:', {
+        promiseCount: publishPromises.length,
+      });
+
       const results = await Promise.allSettled(publishPromises);
+
+      console.log('[RelayPoolService] DEBUG: Publish results:', {
+        totalResults: results.length,
+        fulfilled: results.filter(r => r.status === 'fulfilled').length,
+        rejected: results.filter(r => r.status === 'rejected').length,
+        details: results.map((r, i) => ({
+          relay: relayUrls[i],
+          status: r.status,
+          reason: r.status === 'rejected' ? r.reason : undefined,
+        })),
+      });
 
       // Track publish results
       results.forEach((result, index) => {
@@ -142,13 +164,17 @@ export class RelayPoolService {
           this.relaysService.updateRelayConnection(relayUrl, true);
         } else {
           // Failed publish - record retry attempt
+          console.warn('[RelayPoolService] Failed to publish to relay:', {
+            relay: relayUrl,
+            reason: result.reason,
+          });
           this.relaysService.recordConnectionRetry(relayUrl);
           this.relaysService.updateRelayConnection(relayUrl, false);
         }
       });
 
     } catch (error) {
-      console.error('Error publishing event:', error);
+      console.error('[RelayPoolService] Error publishing event:', error);
 
       // Record connection issues for all relays
       relayUrls.forEach(url => {

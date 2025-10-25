@@ -105,13 +105,32 @@ export class NostrService implements NostriaService {
       const event = this.accountState.publish();
 
       if (event) {
+        console.log('[NostrService] DEBUG: Publish effect triggered:', {
+          eventKind: event.kind,
+          eventCreatedAt: event.created_at,
+          currentTime: Math.floor(Date.now() / 1000),
+          newlyFollowedPubkeys: this.accountState.newlyFollowedPubkeys(),
+        });
+
         try {
           const signedEvent = await this.sign(event);
+
+          console.log('[NostrService] DEBUG: Event signed:', {
+            signedEventKind: signedEvent.kind,
+            signedEventCreatedAt: signedEvent.created_at,
+            signedEventId: signedEvent.id,
+          });
 
           // Get newly followed pubkeys for kind 3 events
           const newlyFollowedPubkeys = signedEvent.kind === kinds.Contacts
             ? this.accountState.newlyFollowedPubkeys()
             : undefined;
+
+          console.log('[NostrService] DEBUG: Preparing to publish:', {
+            isKind3: signedEvent.kind === kinds.Contacts,
+            newlyFollowedPubkeys: newlyFollowedPubkeys,
+            newlyFollowedCount: newlyFollowedPubkeys?.length || 0,
+          });
 
           // IMPORTANT: ALL events from the current account must go to ALL configured relays
           // to prevent data fragmentation. This ensures complete data redundancy and 
@@ -125,6 +144,10 @@ export class NostrService implements NostriaService {
               newlyFollowedPubkeys  // Pass the newly followed pubkeys
             }
             : { useOptimizedRelays: false }; // Always use all relays for all events
+
+          console.log('[NostrService] DEBUG: Publishing with options:', {
+            options: options,
+          });
 
           await this.publishService.publish(signedEvent, options);
         } catch (error) {
