@@ -2,13 +2,17 @@ import { Component, inject, ViewEncapsulation } from '@angular/core';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-signing-dialog',
-  imports: [MatDialogModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatDialogModule, MatIconModule, MatProgressSpinnerModule, MatButtonModule],
   encapsulation: ViewEncapsulation.None,
   template: `
     <div class="signing-dialog-container">
+      <button mat-icon-button class="close-button" (click)="close()">
+        <mat-icon>close</mat-icon>
+      </button>
       <div class="signing-dialog-content">
         <mat-spinner [diameter]="48"></mat-spinner>
         <h2 mat-dialog-title>Signing Request</h2>
@@ -26,6 +30,19 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
       min-width: 300px;
       position: relative;
       z-index: 1001;
+    }
+
+    .close-button {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      color: var(--mdc-theme-on-surface, rgba(0, 0, 0, 0.87));
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
+
+    .close-button:hover {
+      opacity: 1;
     }
 
     .signing-dialog-content {
