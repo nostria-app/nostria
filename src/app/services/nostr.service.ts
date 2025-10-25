@@ -30,6 +30,7 @@ import { PublishService } from './publish.service';
 import { MatDialog } from '@angular/material/dialog';
 import { SigningDialogComponent } from '../components/signing-dialog/signing-dialog.component';
 import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.service';
+import { PinPromptService } from './pin-prompt.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -86,6 +87,7 @@ export class NostrService implements NostriaService {
   private readonly publishService = inject(PublishService);
   private readonly dialog = inject(MatDialog);
   private readonly crypto = inject(CryptoEncryptionService);
+  private readonly pinPrompt = inject(PinPromptService);
 
   initialized = signal(false);
   MAX_WAIT_TIME = 2000;
@@ -231,6 +233,47 @@ export class NostrService implements NostriaService {
 
     // Legacy plaintext private key - return as-is
     return user.privkey;
+  }
+
+  /**
+   * Gets the decrypted private key with automatic PIN prompting if needed.
+   * This method first tries the default PIN, and if that fails, prompts the user
+   * for their custom PIN.
+   * 
+   * @param user The NostrUser whose private key to decrypt
+   * @returns The decrypted private key as hex string, or null if user cancelled
+   */
+  async getDecryptedPrivateKeyWithPrompt(user: NostrUser): Promise<string | null> {
+    if (!user.privkey) {
+      throw new Error('No private key available for this account');
+    }
+
+    // If not encrypted, return plaintext key
+    if (!user.isEncrypted) {
+      return user.privkey;
+    }
+
+    try {
+      // Try with default PIN first (cached PIN would be tried by PinPromptService)
+      return await this.getDecryptedPrivateKey(user, this.crypto.DEFAULT_PIN);
+    } catch {
+      // Default PIN failed, prompt user for their custom PIN
+      const pin = await this.pinPrompt.promptForPin();
+
+      if (!pin) {
+        // User cancelled
+        return null;
+      }
+
+      try {
+        // Try decryption with user-provided PIN
+        return await this.getDecryptedPrivateKey(user, pin);
+      } catch {
+        // Wrong PIN
+        this.logger.error('Incorrect PIN provided by user');
+        throw new Error('Incorrect PIN. Please try again.');
+      }
+    }
   }
 
   /**
@@ -665,8 +708,12 @@ export class NostrService implements NostriaService {
           pubkey: eventPubkey,
         };
 
-        // Get the decrypted private key
-        const decryptedPrivkey = await this.getDecryptedPrivateKey(currentUser);
+        // Get the decrypted private key (will prompt for PIN if needed)
+        const decryptedPrivkey = await this.getDecryptedPrivateKeyWithPrompt(currentUser);
+
+        if (!decryptedPrivkey) {
+          throw new Error('Failed to unlock private key. PIN required.');
+        }
 
         signedEvent = finalizeEvent(cleanEvent, hexToBytes(decryptedPrivkey));
         break;
@@ -1696,6 +1743,8 @@ export class NostrService implements NostriaService {
     this.logger.info('Logging out current user');
     this.localStorage.removeItem(this.appState.ACCOUNT_STORAGE_KEY);
     this.accountState.changeAccount(null);
+    // Clear cached PIN for security
+    this.pinPrompt.clearCache();
     this.logger.debug('User logged out successfully');
   }
 
