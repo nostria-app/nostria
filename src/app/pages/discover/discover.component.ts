@@ -101,8 +101,10 @@ export class DiscoverComponent implements OnInit {
 
       this.notificationService.notify(`Following new account.`);
 
-      // Refresh following feeds to load content from newly followed account
-      await this.feedsCollectionService.refreshFollowingColumns();
+      // Only refresh following feeds if we're on the feeds page
+      if (this.router.url.startsWith('/feeds')) {
+        await this.feedsCollectionService.refreshFollowingColumns();
+      }
     } catch (error) {
       this.logger.error('Failed to follow profile:', error);
       this.notificationService.notify('Error following account. Please try again.');

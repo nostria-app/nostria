@@ -522,8 +522,10 @@ export class PeopleComponent {
       // Refresh the people list
       await this.loadPeople();
 
-      // Refresh following feeds to load content from newly followed accounts
-      await this.feedsCollectionService.refreshFollowingColumns();
+      // Only refresh following feeds if we're on the feeds page
+      if (this.router.url.startsWith('/feeds')) {
+        await this.feedsCollectionService.refreshFollowingColumns();
+      }
 
       // Reset followset display state
       this.suggestedProfiles.set([]);
