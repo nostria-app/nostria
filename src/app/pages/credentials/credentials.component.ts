@@ -10,7 +10,6 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
-import { MatDialog } from '@angular/material/dialog';
 import { RouterModule } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -18,7 +17,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { Wallets, Wallet } from '../../services/wallets';
 import { LN, USD } from '@getalby/sdk';
 import { CryptoEncryptionService, EncryptedData } from '../../services/crypto-encryption.service';
-import { PinPromptDialogComponent } from '../../components/pin-prompt-dialog/pin-prompt-dialog.component';
+import { PinPromptService } from '../../services/pin-prompt.service';
 import { nip19 } from 'nostr-tools';
 
 @Component({
@@ -45,7 +44,7 @@ export class CredentialsComponent implements OnInit {
   utilities = inject(UtilitiesService);
   accountState = inject(AccountStateService);
   crypto = inject(CryptoEncryptionService);
-  dialog = inject(MatDialog);
+  pinPrompt = inject(PinPromptService);
   isNsecVisible = signal(false);
   wallets = inject(Wallets);
 
@@ -130,12 +129,7 @@ export class CredentialsComponent implements OnInit {
       return null;
     }
 
-    const dialogRef = this.dialog.open(PinPromptDialogComponent, {
-      disableClose: true,
-      width: '400px',
-    });
-
-    const pin = await dialogRef.afterClosed().toPromise();
+    const pin = await this.pinPrompt.promptForPin();
 
     if (!pin) {
       // User cancelled
