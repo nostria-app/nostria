@@ -16,11 +16,11 @@ export class ProfileHoverCardService implements OnDestroy {
   // Track active overlay and component references
   private overlayRef: OverlayRef | null = null;
   private hoverCardComponentRef: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
-  
+
   // Track mouse state
   private isMouseOverTrigger = signal(false);
   private isMouseOverCard = signal(false);
-  
+
   // Timers
   private hoverTimeout?: number;
   private closeTimeout?: number;
@@ -40,9 +40,15 @@ export class ProfileHoverCardService implements OnDestroy {
       this.closeTimeout = undefined;
     }
 
-    // If already showing for this element, don't create another
+    // Clear any existing hover timeout
+    if (this.hoverTimeout) {
+      window.clearTimeout(this.hoverTimeout);
+      this.hoverTimeout = undefined;
+    }
+
+    // If already showing a hover card, close it immediately
     if (this.overlayRef) {
-      return;
+      this.closeHoverCard();
     }
 
     // Show hover card after delay
