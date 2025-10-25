@@ -1,6 +1,8 @@
 import { Injectable, inject, signal, OnDestroy } from '@angular/core';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
+import { Router, NavigationStart } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { ProfileHoverCardComponent } from '../components/user-profile/hover-card/profile-hover-card.component';
 
 /**
@@ -12,6 +14,7 @@ import { ProfileHoverCardComponent } from '../components/user-profile/hover-card
 })
 export class ProfileHoverCardService implements OnDestroy {
   private overlay = inject(Overlay);
+  private router = inject(Router);
 
   // Track active overlay and component references
   private overlayRef: OverlayRef | null = null;
@@ -24,6 +27,15 @@ export class ProfileHoverCardService implements OnDestroy {
   // Timers
   private hoverTimeout?: number;
   private closeTimeout?: number;
+
+  constructor() {
+    // Close hover card on navigation
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationStart))
+      .subscribe(() => {
+        this.closeHoverCard();
+      });
+  }
 
   /**
    * Shows a hover card for a profile
