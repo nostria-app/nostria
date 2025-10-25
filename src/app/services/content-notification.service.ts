@@ -132,20 +132,25 @@ export class ContentNotificationService {
       this.logger.debug(`Found ${events.length} potential follow events`);
 
       for (const event of events) {
-        // Check if this user's pubkey is in the tags
-        const isFollowing = event.tags.some(
-          tag => tag[0] === 'p' && tag[1] === pubkey
-        );
+        // Get all 'p' tags (follows) from the contact list
+        const pTags = event.tags.filter(tag => tag[0] === 'p');
 
-        if (isFollowing) {
-          await this.createContentNotification({
-            type: NotificationType.NEW_FOLLOWER,
-            title: 'New follower',
-            message: 'Someone started following you',
-            authorPubkey: event.pubkey,
-            eventId: event.id,
-            timestamp: event.created_at * 1000, // Convert to milliseconds
-          });
+        // Only create notification if this user's pubkey is the LAST 'p' tag
+        // This indicates it's the most recent follow, not an old one
+        if (pTags.length > 0) {
+          const lastPTag = pTags[pTags.length - 1];
+          const isLastFollow = lastPTag[1] === pubkey;
+
+          if (isLastFollow) {
+            await this.createContentNotification({
+              type: NotificationType.NEW_FOLLOWER,
+              title: 'New follower',
+              message: 'Someone started following you',
+              authorPubkey: event.pubkey,
+              eventId: event.id,
+              timestamp: event.created_at * 1000, // Convert to milliseconds
+            });
+          }
         }
       }
     } catch (error) {
