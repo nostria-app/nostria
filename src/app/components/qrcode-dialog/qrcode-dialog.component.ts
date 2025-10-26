@@ -1,7 +1,7 @@
-import { Component, inject, Inject, AfterViewInit } from '@angular/core';
+import { Component, Inject, AfterViewInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatButtonToggleChange, MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import encodeQR from 'qr';
@@ -17,7 +17,7 @@ export class QRCodeDialogComponent implements AfterViewInit {
 
   qrValue = '';
 
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { did: string }) {}
+  constructor(@Inject(MAT_DIALOG_DATA) public data: { did: string; hideToggle?: boolean; title?: string }) { }
 
   ngAfterViewInit() {
     this.generateQR(this.data.did);
@@ -76,7 +76,7 @@ export class QRCodeDialogComponent implements AfterViewInit {
     }
   }
 
-  onToggleGroupChange(event: MatButtonToggleChange) {
+  onToggleGroupChange() {
     if (this.qrStyle == 'profile') {
       this.generateQR(`https://profile.ariton.app/?did=${this.data.did}`);
     } else {

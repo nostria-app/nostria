@@ -785,6 +785,21 @@
   }
 }
 
+.nsec-input-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  .nsec-input {
+    flex: 1;
+  }
+
+  .qr-scan-button {
+    margin-top: -20px;
+  }
+}
+
 .extension-error {
   margin: 16px 0;
   border-radius: 12px;

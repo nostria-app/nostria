@@ -11,6 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { RouterModule } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -19,6 +20,7 @@ import { LN, USD } from '@getalby/sdk';
 import { CryptoEncryptionService, EncryptedData } from '../../services/crypto-encryption.service';
 import { PinPromptService } from '../../services/pin-prompt.service';
 import { nip19 } from 'nostr-tools';
+import { QRCodeDialogComponent } from '../../components/qrcode-dialog/qrcode-dialog.component';
 
 @Component({
   selector: 'app-credentials',
@@ -45,6 +47,7 @@ export class CredentialsComponent implements OnInit {
   accountState = inject(AccountStateService);
   crypto = inject(CryptoEncryptionService);
   pinPrompt = inject(PinPromptService);
+  dialog = inject(MatDialog);
   isNsecVisible = signal(false);
   wallets = inject(Wallets);
 
@@ -231,6 +234,45 @@ export class CredentialsComponent implements OnInit {
     } catch (error) {
       console.error('Failed to download credentials:', error);
       this.snackBar.open('Failed to download credentials. Could not decrypt private key.', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    }
+  }
+
+  async exportQrCode(): Promise<void> {
+    const account = this.accountState.account();
+
+    if (!account?.privkey) {
+      this.snackBar.open('Private key not available for export', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    try {
+      // Get decrypted nsec (will prompt for PIN if needed)
+      const nsec = await this.getDecryptedNsecWithPrompt();
+      if (!nsec) {
+        return; // User cancelled or wrong PIN
+      }
+
+      // Open QR code dialog with the nsec
+      this.dialog.open(QRCodeDialogComponent, {
+        width: '400px',
+        panelClass: 'responsive-dialog',
+        data: {
+          did: nsec,
+          hideToggle: true,
+          title: 'Export Account to Another Device'
+        },
+      });
+    } catch (error) {
+      console.error('Failed to export QR code:', error);
+      this.snackBar.open('Failed to export QR code. Could not decrypt private key.', 'Dismiss', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'bottom',

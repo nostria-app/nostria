@@ -513,6 +513,42 @@ export class LoginDialogComponent {
     });
   }
 
+  scanQrCodeForNsec(): void {
+    this.logger.debug('Opening QR code scanner for nsec');
+
+    const scanDialogRef = this.dialog.open(QrcodeScanDialogComponent, {
+      width: '100vw',
+      height: '100vh',
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      panelClass: 'qr-scan-dialog',
+      hasBackdrop: true,
+      disableClose: false,
+    });
+
+    scanDialogRef.afterClosed().subscribe(async result => {
+      if (result && typeof result === 'string') {
+        this.logger.debug('QR scan result:', { result });
+
+        // Check if the result is a valid nsec
+        if (result.startsWith('nsec1')) {
+          this.nsecKey = result;
+          this.snackBar.open('Private key scanned successfully', 'Dismiss', {
+            duration: 2000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+        } else {
+          this.snackBar.open('Invalid QR code. Expected a private key (nsec1...)', 'Dismiss', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+        }
+      }
+    });
+  }
+
   usePreviewAccount(pubkey?: string): void {
     this.logger.debug('Using preview account', { pubkey });
 

@@ -1,27 +1,31 @@
-<h2 mat-dialog-title>QR Code</h2>
+<h2 mat-dialog-title>{{ data.title || 'QR Code' }}</h2>
 <mat-dialog-content class="qr-code-content centered-dialog-content">
   <canvas #qrCanvas></canvas>
   <br />
-  <mat-button-toggle-group
-    hideSingleSelectionIndicator="true"
-    [(ngModel)]="qrStyle"
-    (change)="onToggleGroupChange($event)"
-  >
+  @if (data.hideToggle) {
+  <div class="instructions">
+    <p><strong>To add this account to another device:</strong></p>
+    <ol>
+      <li>Open Nostria on your other device</li>
+      <li>Click "Login" to open the sign-in dialog</li>
+      <li>Select "Private Key" as the sign-in method</li>
+      <li>Click the QR code scanner icon next to the private key input field</li>
+      <li>Scan this QR code with your device's camera</li>
+    </ol>
+  </div>
+  } @else {
+  <mat-button-toggle-group hideSingleSelectionIndicator="true" [(ngModel)]="qrStyle" (change)="onToggleGroupChange()">
     <mat-button-toggle value="did">Identifier (in-app)</mat-button-toggle>
     <mat-button-toggle value="profile">Profile URL (camera)</mat-button-toggle>
   </mat-button-toggle-group>
 
   <p class="wrap">
     {{ qrValue }}
-    <button
-      class="copy-button"
-      matTooltip="Copy the identifier"
-      mat-icon-button
-      (click)="copyValue()"
-    >
+    <button class="copy-button" matTooltip="Copy the identifier" mat-icon-button (click)="copyValue()">
       <mat-icon>content_copy</mat-icon>
     </button>
   </p>
+  }
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button [mat-dialog-close]="true" cdkFocusInitial>Close</button>

@@ -580,6 +580,7 @@ export class LayoutService implements OnDestroy {
     const dialogRef = this.dialog.open(LoginDialogComponent, {
       // width: '400px',
       // maxWidth: '95vw',
+      panelClass: 'responsive-dialog',
       disableClose: true,
       // panelClass: 'welcome-dialog'
     });
