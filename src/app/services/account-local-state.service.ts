@@ -2,12 +2,27 @@ import { Injectable, inject } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 
 /**
+ * Filter options for People page
+ */
+export interface PeopleFilters {
+  hasRelayList: boolean;
+  hasFollowingList: boolean;
+  hasNip05: boolean;
+  hasPicture: boolean;
+  hasBio: boolean;
+  favoritesOnly: boolean;
+}
+
+/**
  * Per-account state stored in localStorage
  */
 interface AccountLocalState {
   notificationLastCheck?: number;
   activeFeed?: string;
   favorites?: string[];
+  peopleViewMode?: string;
+  peopleSortOption?: string;
+  peopleFilters?: PeopleFilters;
 }
 
 /**
@@ -117,6 +132,51 @@ export class AccountLocalStateService {
    */
   setFavorites(pubkey: string, favorites: string[]): void {
     this.updateAccountState(pubkey, { favorites });
+  }
+
+  /**
+   * Get people view mode for an account
+   */
+  getPeopleViewMode(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.peopleViewMode;
+  }
+
+  /**
+   * Set people view mode for an account
+   */
+  setPeopleViewMode(pubkey: string, viewMode: string | null | undefined): void {
+    this.updateAccountState(pubkey, { peopleViewMode: viewMode || undefined });
+  }
+
+  /**
+   * Get people sort option for an account
+   */
+  getPeopleSortOption(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.peopleSortOption;
+  }
+
+  /**
+   * Set people sort option for an account
+   */
+  setPeopleSortOption(pubkey: string, sortOption: string | null | undefined): void {
+    this.updateAccountState(pubkey, { peopleSortOption: sortOption || undefined });
+  }
+
+  /**
+   * Get people filters for an account
+   */
+  getPeopleFilters(pubkey: string): PeopleFilters | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.peopleFilters;
+  }
+
+  /**
+   * Set people filters for an account
+   */
+  setPeopleFilters(pubkey: string, filters: PeopleFilters | null | undefined): void {
+    this.updateAccountState(pubkey, { peopleFilters: filters || undefined });
   }
 
   /**

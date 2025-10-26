@@ -184,16 +184,18 @@ export class ApplicationService {
       this.appState.WALLETS_KEY,
       this.appState.USERNAMES_STORAGE_KEY,
       this.favorites.STORAGE_KEY,
-      // Note: 'nostria-active-feed' and 'nostria-favorites' are now in centralized 'nostria-state'
-      // Note: 'nostria-notification-lastcheck' was per-account, now in centralized 'nostria-state'
+      // Note: Per-account state now in centralized 'nostria-state':
+      //   - 'nostria-active-feed' (activeFeed)
+      //   - 'nostria-favorites' (favorites)
+      //   - 'nostria-notification-lastcheck-{pubkey}' (notificationLastCheck)
+      //   - 'peopleViewMode' (peopleViewMode)
+      //   - 'peopleSortOption' (peopleSortOption)
+      //   - 'peopleFilters' (peopleFilters)
 
       'nostria-notification-filters',
       'nostria-poll-drafts',
       'nostria-polls',
       'nostria-subscriptions',
-      'peopleFilters', // TODO: Refactor to use Nostria prefix.
-      'peopleSortOption', // TODO: Refactor to use Nostria prefix.
-      'peopleViewMode', // TODO: Refactor to use Nostria prefix.
       'nostria-settings'
 
       // Delete auto-drafts, example:
