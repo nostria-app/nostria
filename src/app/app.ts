@@ -569,23 +569,6 @@ export class App implements OnInit {
       await this.contentNotificationService.initialize();
       this.logger.info('[App] Content notification service initialized successfully');
 
-      // Check for new notifications on startup if user is authenticated
-      if (this.app.authenticated()) {
-        // Check if this is the first time checking notifications (new user or fresh database)
-        const isFirstTime = this.contentNotificationService.lastCheckTimestamp() === 0;
-
-        if (isFirstTime) {
-          // For first-time users, only load notifications from the last 30 days
-          this.logger.info('[App] First-time notification check - loading last 30 days');
-          await this.contentNotificationService.checkForNewNotifications(30);
-        } else {
-          // For returning users, check normally (since last check)
-          await this.contentNotificationService.checkForNewNotifications();
-        }
-
-        this.logger.info('[App] Initial content notification check completed');
-      }
-
       // Set up periodic checks every 5 minutes for authenticated users
       setInterval(async () => {
         if (this.app.authenticated()) {

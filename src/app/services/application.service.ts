@@ -61,6 +61,7 @@ export class ApplicationService {
   previousPubKey = '';
 
   constructor() {
+    // Effect for profile processing when following list changes
     effect(async () => {
       const followingList = this.accountState.followingList();
       // const initialize = this.appState.
@@ -79,8 +80,8 @@ export class ApplicationService {
                 followingList,
                 this.dataService,
                 () => {
-                  debugger;
                   // Callback: After profile processing completes, check for first-time notifications
+                  debugger;
                   this.checkFirstTimeNotifications();
                 }
               );
@@ -101,6 +102,41 @@ export class ApplicationService {
           }
         });
       }
+    });
+
+    // Effect for checking notifications when account changes
+    effect(() => {
+      const isAuthenticated = this.authenticated();
+      const pubkey = this.accountState.pubkey();
+      const isInitialized = this.contentNotificationService.initialized();
+
+      debugger;
+
+      // Only proceed if we're authenticated, have a pubkey, and service is initialized
+      if (!isAuthenticated || !pubkey || !isInitialized) {
+        return;
+      }
+
+      untracked(async () => {
+        const lastCheck = this.contentNotificationService.lastCheckTimestamp();
+        const isFirstTime = lastCheck === 0;
+
+        // Only check for returning users here
+        // First-time checks are handled after profile processing completes
+        if (!isFirstTime) {
+          this.logger.info(
+            `[ApplicationService] Account changed - checking notifications for returning user (lastCheck: ${lastCheck})`
+          );
+          try {
+            await this.contentNotificationService.checkForNewNotifications();
+            this.logger.info('[ApplicationService] Notification check completed after account change');
+          } catch (error) {
+            this.logger.error('[ApplicationService] Failed to check notifications after account change', error);
+          }
+        } else {
+          this.logger.debug('[ApplicationService] First-time user - notification check will happen after profile processing');
+        }
+      });
     });
   }
 
