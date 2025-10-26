@@ -70,6 +70,7 @@ export class NotificationService {
         // Load notifications for the current account
         this.logger.info(`Loading notifications for account: ${pubkey}`);
         storedNotifications = await this.storage.getAllNotificationsForPubkey(pubkey);
+        this.logger.info(`Found ${storedNotifications.length} notifications for account ${pubkey}`);
       } else {
         // No account logged in, load all notifications (for backward compatibility)
         this.logger.info('No account logged in, loading all notifications');
@@ -96,12 +97,12 @@ export class NotificationService {
   }
 
   /**
-   * Add a new relay publishing notification
+   * Add a relay publishing notification
    */
-  addRelayPublishingNotification(
+  async addRelayPublishingNotification(
     event: Event,
     relayPromises: Map<Promise<string>, string>
-  ): string {
+  ): Promise<string> {
     const notificationId = `publish-${event.id}-${Date.now()}`;
 
     this.logger.debug(
@@ -137,6 +138,11 @@ export class NotificationService {
       }
     });
 
+    const pubkey = this.accountState.pubkey();
+    this.logger.debug(
+      `Creating relay publishing notification for event ${event.id}, pubkey: ${pubkey || 'undefined'}`
+    );
+
     const notification: RelayPublishingNotification = {
       id: notificationId,
       type: NotificationType.RELAY_PUBLISHING,
@@ -147,6 +153,7 @@ export class NotificationService {
       event,
       relayPromises: relayPromiseObjects,
       complete: false,
+      recipientPubkey: pubkey, // Associate with current account
     };
 
     const notificationForStorage: RelayPublishingNotification = {
@@ -158,11 +165,12 @@ export class NotificationService {
       message: `Publishing event ${event.id.substring(0, 8)}... to ${relayPromises.size} relays`,
       event,
       complete: false,
+      recipientPubkey: pubkey, // Associate with current account
     };
 
     this.addNotification(notification);
 
-    this.persistNotificationToStorage(notificationForStorage);
+    await this.persistNotificationToStorage(notificationForStorage);
     return notificationId;
   }
 
@@ -176,7 +184,11 @@ export class NotificationService {
     }
 
     try {
+      this.logger.debug(
+        `Persisting notification ${notification.id} with recipientPubkey: ${notification.recipientPubkey || 'undefined'}`
+      );
       await this.storage.saveNotification(notification);
+      this.logger.debug(`Successfully persisted notification ${notification.id}`);
     } catch (error) {
       this.logger.error(`Failed to persist notification ${notification.id} to storage`, error);
     }
@@ -193,14 +205,16 @@ export class NotificationService {
   /**
    * Add a simple notification with optional action
    */
-  notify(
+  async notify(
     title: string,
     message?: string,
     type: NotificationType = NotificationType.GENERAL,
     actionLabel?: string,
     actionCallback?: () => void
-  ): string {
+  ): Promise<string> {
     const id = `notification-${Date.now()}`;
+    const pubkey = this.accountState.pubkey();
+    this.logger.debug(`Creating general notification "${title}", pubkey: ${pubkey || 'undefined'}`);
 
     const notification: GeneralNotification = {
       id,
@@ -209,6 +223,7 @@ export class NotificationService {
       read: false,
       title,
       message,
+      recipientPubkey: pubkey, // Associate with current account
       ...(actionLabel &&
         actionCallback && {
         action: {
@@ -219,7 +234,7 @@ export class NotificationService {
     };
 
     this.addNotification(notification);
-    this.persistNotificationToStorage(notification);
+    await this.persistNotificationToStorage(notification);
     return id;
   }
 

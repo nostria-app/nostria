@@ -21,6 +21,7 @@ import { DataService } from './data.service';
 import { BadgeService } from './badge.service';
 import { SleepModeService } from './sleep-mode.service';
 import { FavoritesService } from './favorites.service';
+import { ContentNotificationService } from './content-notification.service';
 
 @Injectable({
   providedIn: 'root',
@@ -37,6 +38,7 @@ export class ApplicationService {
   theme = inject(ThemeService);
   notificationService = inject(NotificationService);
   dataService = inject(DataService);
+  contentNotificationService = inject(ContentNotificationService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly favorites = inject(FavoritesService);
   private readonly platformId = inject(PLATFORM_ID);
@@ -73,7 +75,15 @@ export class ApplicationService {
           try {
             // Check if profile discovery has already been done for this account
             if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
-              await this.accountState.startProfileProcessing(followingList, this.dataService);
+              await this.accountState.startProfileProcessing(
+                followingList,
+                this.dataService,
+                () => {
+                  debugger;
+                  // Callback: After profile processing completes, check for first-time notifications
+                  this.checkFirstTimeNotifications();
+                }
+              );
               this.accountState.markProfileDiscoveryDone(pubkey);
             } else {
               const currentState = this.accountState.profileProcessingState();
@@ -140,6 +150,21 @@ export class ApplicationService {
       this.appState.USERNAMES_STORAGE_KEY,
       this.favorites.STORAGE_KEY,
       'nostria-active-feed', // FeedsCollectionService.ACTIVE_FEED_KEY (avoid circular dependency)
+
+      'nostria-notification-filters',
+      'nostria-notification-lastcheck',
+      'nostria-poll-drafts',
+      'nostria-polls',
+      'nostria-subscriptions',
+      'peopleFilters', // TODO: Refactor to use Nostria prefix.
+      'peopleSortOption', // TODO: Refactor to use Nostria prefix.
+      'peopleViewMode', // TODO: Refactor to use Nostria prefix.
+      'nostria-settings',
+      'nostria-favorites'
+
+      // Delete auto-drafts, example:
+      // article-auto-draft-ad755dd2d56d4bff21d0d2670ed6fc13ef9fae1fb78b75e81b98b5dbcc22fd27
+      // note-auto-draft-ad755dd2d56d4bff21d0d2670ed6fc13ef9fae1fb78b75e81b98b5dbcc22fd27
     ];
 
     for (let i = 0; i < keysToRemove.length; i++) {
@@ -160,5 +185,22 @@ export class ApplicationService {
       // Reload the application
       window.location.reload();
     }
+  }
+
+  /**
+   * Check if this is the first time loading notifications for this account
+   * and trigger a 30-day limited fetch if so
+   */
+  private checkFirstTimeNotifications(): void {
+    if (!this.authenticated()) {
+      return;
+    }
+
+    this.logger.info(
+      '[ApplicationService] Profile processing complete - triggering first-time notification check (30 days)'
+    );
+    this.contentNotificationService.checkForNewNotifications(30).catch(error => {
+      this.logger.error('[ApplicationService] Failed to check notifications after profile processing', error);
+    });
   }
 }

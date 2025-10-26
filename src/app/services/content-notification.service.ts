@@ -42,10 +42,17 @@ export class ContentNotificationService {
   private accountState = inject(AccountStateService);
 
   // Track the last check timestamp to avoid duplicate notifications
-  private lastCheckTimestamp = signal<number>(0);
+  private _lastCheckTimestamp = signal<number>(0);
+
+  // Public readonly accessor for lastCheckTimestamp
+  readonly lastCheckTimestamp = this._lastCheckTimestamp.asReadonly();
+
+  // Track if the service has been initialized
+  private _initialized = signal<boolean>(false);
+  readonly initialized = this._initialized.asReadonly();
 
   resetLastCheckTimestamp(): void {
-    this.lastCheckTimestamp.set(0);
+    this._lastCheckTimestamp.set(0);
     this.localStorage.removeItem(LAST_NOTIFICATION_CHECK_KEY);
     this.logger.info('ContentNotificationService last check timestamp reset');
   }
@@ -63,7 +70,8 @@ export class ContentNotificationService {
   async initialize(): Promise<void> {
     try {
       const timestamp = await this.getLastCheckTimestamp();
-      this.lastCheckTimestamp.set(timestamp);
+      this._lastCheckTimestamp.set(timestamp);
+      this._initialized.set(true);
       this.logger.debug(`Initialized with last check timestamp: ${timestamp}`);
     } catch (error) {
       this.logger.error('Failed to initialize ContentNotificationService', error);
@@ -72,8 +80,9 @@ export class ContentNotificationService {
 
   /**
    * Check for new content notifications since last check
+   * @param limitDays If provided, only fetch notifications from the last N days (for initial load)
    */
-  async checkForNewNotifications(): Promise<void> {
+  async checkForNewNotifications(limitDays?: number): Promise<void> {
     if (this.isChecking()) {
       this.logger.debug('Already checking for notifications, skipping');
       return;
@@ -89,8 +98,16 @@ export class ContentNotificationService {
 
     try {
       this.logger.info('Checking for new content notifications');
-      const since = this.lastCheckTimestamp();
+      let since = this._lastCheckTimestamp();
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+
+      // If limitDays is specified, use it to limit how far back we look
+      // This is useful for first-time users to avoid loading too much history
+      if (limitDays !== undefined && limitDays > 0) {
+        const limitTimestamp = Math.floor((Date.now() - limitDays * 24 * 60 * 60 * 1000) / 1000);
+        since = Math.max(since, limitTimestamp);
+        this.logger.info(`Limiting notification fetch to last ${limitDays} days (since ${new Date(since * 1000).toISOString()})`);
+      }
 
       // Check for all notification types in parallel
       // Pass the pubkey to each check function
@@ -105,7 +122,7 @@ export class ContentNotificationService {
 
       // Update the last check timestamp
       await this.updateLastCheckTimestamp(now);
-      this.lastCheckTimestamp.set(now);
+      this._lastCheckTimestamp.set(now);
 
       this.logger.info('Completed checking for new content notifications');
     } catch (error) {
