@@ -538,6 +538,8 @@ export class LoginDialogComponent {
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
           });
+          // Automatically trigger login with the scanned key
+          await this.loginWithNsec();
         } else {
           this.snackBar.open('Invalid QR code. Expected a private key (nsec1...)', 'Dismiss', {
             duration: 3000,
