@@ -283,7 +283,7 @@ export class StorageService {
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria';
-  private readonly DB_VERSION = 5;
+  private readonly DB_VERSION = 6;
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -461,16 +461,17 @@ export class StorageService {
           notificationsStore.createIndex('by-timestamp', 'timestamp');
           notificationsStore.createIndex('by-recipient', 'recipientPubkey');
           this.logger.debug('Created notifications object store');
-        } else if (oldVersion < 5 && db.objectStoreNames.contains('notifications')) {
-          // For version 5 upgrade, recreate the notifications store to add the by-recipient index
-          // Note: This will clear existing notifications, but they don't have recipientPubkey anyway
+        } else if (oldVersion < 6 && db.objectStoreNames.contains('notifications')) {
+          // For version 6 upgrade, recreate the notifications store to ensure by-recipient index exists
+          // This is needed because some users may have version 5 without the index
+          this.logger.info('Upgrading notifications store to version 6 - recreating with proper indexes');
           db.deleteObjectStore('notifications');
           const notificationsStore = db.createObjectStore('notifications', {
             keyPath: 'id',
           });
           notificationsStore.createIndex('by-timestamp', 'timestamp');
           notificationsStore.createIndex('by-recipient', 'recipientPubkey');
-          this.logger.debug('Recreated notifications object store with by-recipient index');
+          this.logger.debug('Recreated notifications object store with all required indexes');
         }
 
         // Create new observed relays object store
@@ -1478,15 +1479,50 @@ export class StorageService {
 
   async getAllNotificationsForPubkey(pubkey: string): Promise<Notification[]> {
     try {
+      this.logger.info(`[getAllNotificationsForPubkey] Querying notifications for pubkey: ${pubkey}`);
+
       // Get notifications for a specific pubkey, sorted by timestamp (newest first)
       const tx = this.db.transaction('notifications', 'readonly');
+
+      // Get notifications with matching recipientPubkey
       const index = tx.store.index('by-recipient');
-      const notifications = await index.getAll(pubkey);
+      const notificationsWithPubkey = await index.getAll(pubkey);
 
-      // Sort by timestamp (newest first) since the index doesn't guarantee order
-      notifications.sort((a, b) => b.timestamp - a.timestamp);
+      this.logger.info(
+        `[getAllNotificationsForPubkey] Index query returned ${notificationsWithPubkey.length} notifications`
+      );
 
-      return notifications;
+      if (notificationsWithPubkey.length > 0) {
+        this.logger.debug(
+          `[getAllNotificationsForPubkey] Sample notification:`,
+          notificationsWithPubkey[0]
+        );
+      }
+
+      // Also get notifications with undefined recipientPubkey (for backward compatibility)
+      // These are older notifications or notifications created when account wasn't set
+      const allNotifications = await tx.store.getAll();
+      const notificationsWithoutPubkey = allNotifications.filter(n => !n.recipientPubkey);
+
+      this.logger.info(
+        `[getAllNotificationsForPubkey] Total notifications in DB: ${allNotifications.length}, ` +
+        `without pubkey: ${notificationsWithoutPubkey.length}`
+      );
+
+      // Combine both sets and deduplicate by ID
+      const combinedNotifications = [...notificationsWithPubkey, ...notificationsWithoutPubkey];
+      const uniqueNotifications = Array.from(
+        new Map(combinedNotifications.map(n => [n.id, n])).values()
+      );
+
+      // Sort by timestamp (newest first)
+      uniqueNotifications.sort((a, b) => b.timestamp - a.timestamp);
+
+      this.logger.info(
+        `[getAllNotificationsForPubkey] Returning ${uniqueNotifications.length} total unique notifications`
+      );
+
+      return uniqueNotifications;
     } catch (error) {
       this.logger.error(`Error getting notifications for pubkey ${pubkey}`, error);
       return [];

@@ -606,7 +606,11 @@ export class AccountStateService implements OnDestroy {
   }
 
   // Method to start processing profiles
-  async startProfileProcessing(pubkeys: string[], dataService: DataService): Promise<void> {
+  async startProfileProcessing(
+    pubkeys: string[],
+    dataService: DataService,
+    onComplete?: () => void
+  ): Promise<void> {
     // Don't start if already processing
     const currentState = this.profileProcessingState();
     if (currentState.isProcessing) {
@@ -665,6 +669,15 @@ export class AccountStateService implements OnDestroy {
           currentProfile: '',
           startedAt: 0,
         });
+
+        // Call the completion callback if provided
+        if (onComplete) {
+          try {
+            onComplete();
+          } catch (error) {
+            console.error('Error in profile processing completion callback:', error);
+          }
+        }
       }
     }
   }

@@ -225,7 +225,8 @@ export class App implements OnInit {
   contentNotifications = computed(() => {
     return this.notificationService
       .notifications()
-      .filter(notification => this.contentNotificationTypes.includes(notification.type));
+      .filter(notification => this.contentNotificationTypes.includes(notification.type))
+      .sort((a, b) => b.timestamp - a.timestamp);
   });
 
   navigationItems = computed(() => {
@@ -570,7 +571,18 @@ export class App implements OnInit {
 
       // Check for new notifications on startup if user is authenticated
       if (this.app.authenticated()) {
-        await this.contentNotificationService.checkForNewNotifications();
+        // Check if this is the first time checking notifications (new user or fresh database)
+        const isFirstTime = this.contentNotificationService.lastCheckTimestamp() === 0;
+
+        if (isFirstTime) {
+          // For first-time users, only load notifications from the last 30 days
+          this.logger.info('[App] First-time notification check - loading last 30 days');
+          await this.contentNotificationService.checkForNewNotifications(30);
+        } else {
+          // For returning users, check normally (since last check)
+          await this.contentNotificationService.checkForNewNotifications();
+        }
+
         this.logger.info('[App] Initial content notification check completed');
       }
 
