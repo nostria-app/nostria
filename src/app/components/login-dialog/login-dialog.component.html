@@ -263,10 +263,19 @@
     </div>
 
     @if (extensionError()) {
-    <div class="extension-error">
-      <!-- <p>{{ extensionError() }}</p> -->
-      <p>Make sure you have a Nostr extension installed like Blockcore Wallet, Alby or nos2x</p>
-    </div>
+    <mat-card class="extension-error" appearance="outlined">
+      <mat-card-content>
+        <div class="error-header">
+          <mat-icon color="warn">extension_off</mat-icon>
+          <h3>Extension Not Found</h3>
+        </div>
+        <ul>
+          <li>Make sure you have a Nostr extension installed.</li>
+          <li>Supported extensions: Blockcore Wallet, Alby, or nos2x.</li>
+          <li>After installation, refresh this page and try again.</li>
+        </ul>
+      </mat-card-content>
+    </mat-card>
     }
     }
 
@@ -345,13 +354,19 @@
       </button>
     </div>
 
-    <div class="nostr-connect-info">
-      <p>Nostr Connect allows you to use your private key from a separate device.</p>
-      <p>
-        Use the Nostria Signer app to approve signing requests without exposing your private key
-        to this browser.
-      </p>
-    </div>
+    <mat-card class="nostr-connect-info" appearance="outlined">
+      <mat-card-content>
+        <div class="info-header">
+          <mat-icon color="primary">info</mat-icon>
+          <h3>About Nostr Connect</h3>
+        </div>
+        <ul>
+          <li>Use your private key from a separate device for enhanced security.</li>
+          <li>Sign requests are approved via the Nostria Signer app.</li>
+          <li>Your private key never leaves your signing device.</li>
+        </ul>
+      </mat-card-content>
+    </mat-card>
 
     <div class="button-row">
       <button mat-raised-button color="primary" (click)="loginWithNostrConnect()"
@@ -380,13 +395,19 @@
       <mat-hint>You will be able to view content but not interact</mat-hint>
     </mat-form-field>
 
-    <div class="preview-info">
-      <p>Preview mode allows you to browse Nostr content using any public key.</p>
-      <p>
-        You will be able to view posts, profiles, and content but will not be able to interact or
-        post.
-      </p>
-    </div>
+    <mat-card class="preview-info" appearance="outlined">
+      <mat-card-content>
+        <div class="info-header">
+          <mat-icon color="accent">visibility</mat-icon>
+          <h3>Preview Mode</h3>
+        </div>
+        <ul>
+          <li>Browse Nostr content using any public key.</li>
+          <li>View posts, profiles, and other content.</li>
+          <li>Read-only mode - you cannot post or interact.</li>
+        </ul>
+      </mat-card-content>
+    </mat-card>
 
     <div class="button-row">
       <button mat-raised-button color="primary" (click)="usePreviewAccount(previewPubkey)" [disabled]="!previewPubkey">
