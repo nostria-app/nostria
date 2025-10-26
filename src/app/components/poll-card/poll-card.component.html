@@ -1,0 +1,116 @@
+<mat-card class="poll-card">
+  <mat-card-header>
+    <mat-card-title>
+      <div class="poll-header">
+        <mat-icon>poll</mat-icon>
+        <span>Poll</span>
+      </div>
+    </mat-card-title>
+  </mat-card-header>
+
+  <mat-card-content>
+    <!-- Poll Question -->
+    <p class="poll-question">{{ poll().content }}</p>
+
+    <!-- Poll Type Badge -->
+    <mat-chip-set class="poll-metadata">
+      <mat-chip>
+        @if (isSingleChoice()) {
+          <mat-icon>radio_button_checked</mat-icon>
+          Single Choice
+        } @else {
+          <mat-icon>check_box</mat-icon>
+          Multiple Choice
+        }
+      </mat-chip>
+      
+      @if (!isExpired()) {
+        <mat-chip class="time-chip">
+          <mat-icon>schedule</mat-icon>
+          {{ getTimeRemaining() }}
+        </mat-chip>
+      } @else {
+        <mat-chip class="expired-chip">
+          <mat-icon>event_busy</mat-icon>
+          Expired
+        </mat-chip>
+      }
+    </mat-chip-set>
+
+    <!-- Poll Options -->
+    <div class="poll-options">
+      @if (hasVoted() || isExpired() || !canVote()) {
+        <!-- Show Results -->
+        @for (option of poll().options; track option.id) {
+          <div class="poll-option-result">
+            <div class="option-header">
+              <span class="option-label">{{ option.label }}</span>
+              <span class="option-stats">
+                {{ getVoteCount(option.id) }} {{ getVoteCount(option.id) === 1 ? 'vote' : 'votes' }} ({{ getPercentage(option.id) }}%)
+              </span>
+            </div>
+            <mat-progress-bar 
+              mode="determinate" 
+              [value]="getPercentage(option.id)"
+              [class.winning-option]="isWinningOption(option.id)">
+            </mat-progress-bar>
+          </div>
+        }
+
+        <!-- Total Votes -->
+        @if (results()) {
+          <div class="total-votes">
+            <mat-icon>how_to_vote</mat-icon>
+            <span><strong>{{ results()!.totalVotes }}</strong> {{ results()!.totalVotes === 1 ? 'person' : 'people' }} voted</span>
+          </div>
+        }
+      } @else {
+        <!-- Voting Interface -->
+        @if (isSingleChoice()) {
+          <!-- Single Choice -->
+          <mat-radio-group class="radio-group">
+            @for (option of poll().options; track option.id) {
+              <mat-radio-button 
+                [value]="option.id"
+                [checked]="selectedOptions().includes(option.id)"
+                (change)="onSingleChoiceChange(option.id)">
+                {{ option.label }}
+              </mat-radio-button>
+            }
+          </mat-radio-group>
+        } @else {
+          <!-- Multiple Choice -->
+          <div class="checkbox-group">
+            @for (option of poll().options; track option.id) {
+              <mat-checkbox 
+                [checked]="selectedOptions().includes(option.id)"
+                (change)="onMultipleChoiceChange(option.id, $event.checked)">
+                {{ option.label }}
+              </mat-checkbox>
+            }
+          </div>
+        }
+      }
+    </div>
+  </mat-card-content>
+
+  <mat-card-actions>
+    @if (!hasVoted() && !isExpired() && canVote()) {
+      <button 
+        mat-raised-button 
+        color="primary"
+        [disabled]="!canSubmit()"
+        (click)="submitVote()">
+        <mat-icon>how_to_vote</mat-icon>
+        Submit Vote
+      </button>
+    }
+    
+    <button 
+      mat-button 
+      (click)="onViewDetails()">
+      <mat-icon>info</mat-icon>
+      View Details
+    </button>
+  </mat-card-actions>
+</mat-card>

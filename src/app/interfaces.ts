@@ -50,6 +50,54 @@ export interface PlaylistDraft {
   isNewPlaylist: boolean;
 }
 
+// Poll-related interfaces for NIP-88 (Nostr kind 1068 events)
+export interface PollOption {
+  id: string; // Option ID (alphanumeric)
+  label: string; // Option label
+}
+
+export interface PollMetadata {
+  id: string; // From event id or draft id
+  content: string; // Poll question/label
+  options: PollOption[];
+  relays: string[]; // Relays where responses should be published
+  pollType: 'singlechoice' | 'multiplechoice';
+  endsAt?: number; // Unix timestamp in seconds
+  created_at: number; // Unix timestamp in seconds
+  pubkey: string;
+  eventId?: string; // Nostr event id if published
+  isLocal: boolean; // True if only stored locally, false if published to Nostr
+}
+
+export interface Poll extends PollMetadata {
+  responses?: PollResponse[]; // Collected responses
+  results?: PollResults; // Calculated results
+}
+
+export interface PollResponse {
+  id: string; // Response event id
+  pollId: string; // Poll event id
+  pubkey: string; // Responder's pubkey
+  responseIds: string[]; // Selected option IDs
+  created_at: number; // Unix timestamp in seconds
+}
+
+export interface PollResults {
+  totalVotes: number;
+  optionCounts: Record<string, number>; // option id -> count
+  voters: string[]; // List of pubkeys who voted
+}
+
+export interface PollDraft {
+  id?: string;
+  content: string;
+  options: PollOption[];
+  relays: string[];
+  pollType: 'singlechoice' | 'multiplechoice';
+  endsAt?: number;
+  isNewPoll: boolean;
+}
+
 export declare interface OnInitialized {
   initialize(): void;
 }

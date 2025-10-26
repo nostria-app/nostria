@@ -1,0 +1,119 @@
+.poll-editor-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.editor-header {
+  margin-bottom: 32px;
+
+  .header-content {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+
+    .back-button {
+      margin-right: 8px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 1.75rem;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+}
+
+.editor-content {
+  .poll-form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+
+    .full-width {
+      width: 100%;
+    }
+
+    .options-section {
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+
+        h2 {
+          margin: 0;
+          font-size: 1.25rem;
+          color: var(--mat-sys-on-surface);
+        }
+      }
+
+      .options-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+
+        .option-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+
+          .option-input {
+            flex: 1;
+          }
+
+          button[mat-icon-button] {
+            margin-top: 8px;
+          }
+        }
+      }
+    }
+
+    mat-divider {
+      margin: 16px 0;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding-top: 16px;
+      border-top: 1px solid var(--mat-sys-outline-variant);
+
+      button {
+        mat-icon {
+          margin-right: 4px;
+        }
+      }
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .poll-editor-container {
+    padding: 16px;
+  }
+
+  .editor-header .header-content h1 {
+    font-size: 1.5rem;
+  }
+
+  .editor-content .poll-form .form-actions {
+    flex-direction: column;
+
+    button {
+      width: 100%;
+    }
+  }
+
+  .editor-content .poll-form .options-section .options-list .option-item {
+    flex-direction: column;
+    align-items: stretch;
+
+    button[mat-icon-button] {
+      margin-top: 0;
+      align-self: flex-end;
+    }
+  }
+}
