@@ -75,9 +75,6 @@ Uses Angular's `effect()` to automatically save filters whenever the signal chan
 async ngOnInit(): Promise<void> {
   // Load saved notification filters from localStorage
   this.loadNotificationFilters();
-  
-  await this.recordNotificationsView();
-  await this.getLastViewedTimestamp();
 }
 
 private loadNotificationFilters(): void {
@@ -150,8 +147,6 @@ private loadNotificationFilters(): void {
 ```typescript
 async ngOnInit(): Promise<void> {
   this.loadNotificationFilters(); // Added
-  await this.recordNotificationsView();
-  await this.getLastViewedTimestamp();
 }
 ```
 
