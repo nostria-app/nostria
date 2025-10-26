@@ -81,7 +81,6 @@ export class ApplicationService {
                 this.dataService,
                 () => {
                   // Callback: After profile processing completes, check for first-time notifications
-                  debugger;
                   this.checkFirstTimeNotifications();
                 }
               );
@@ -109,8 +108,6 @@ export class ApplicationService {
       const isAuthenticated = this.authenticated();
       const pubkey = this.accountState.pubkey();
       const isInitialized = this.contentNotificationService.initialized();
-
-      debugger;
 
       // Only proceed if we're authenticated, have a pubkey, and service is initialized
       if (!isAuthenticated || !pubkey || !isInitialized) {
@@ -225,18 +222,28 @@ export class ApplicationService {
 
   /**
    * Check if this is the first time loading notifications for this account
-   * and trigger a 30-day limited fetch if so
+   * and trigger a 30-day limited fetch if so.
+   * This is called after profile pre-caching completes.
    */
   private checkFirstTimeNotifications(): void {
     if (!this.authenticated()) {
       return;
     }
 
-    this.logger.info(
-      '[ApplicationService] Profile processing complete - triggering first-time notification check (30 days)'
-    );
-    this.contentNotificationService.checkForNewNotifications(30).catch(error => {
-      this.logger.error('[ApplicationService] Failed to check notifications after profile processing', error);
-    });
+    const lastCheck = this.contentNotificationService.lastCheckTimestamp();
+
+    // Only trigger for first-time users (lastCheck === 0)
+    if (lastCheck === 0) {
+      this.logger.info(
+        '[ApplicationService] Profile processing complete - triggering first-time notification check (30 days)'
+      );
+      this.contentNotificationService.checkForNewNotifications(30).catch(error => {
+        this.logger.error('[ApplicationService] Failed to check notifications after profile processing', error);
+      });
+    } else {
+      this.logger.debug(
+        `[ApplicationService] Not first-time (lastCheck: ${lastCheck}), skipping notification check after profile processing`
+      );
+    }
   }
 }

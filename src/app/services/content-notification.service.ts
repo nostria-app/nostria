@@ -485,15 +485,14 @@ export class ContentNotificationService {
         return parseInt(data, 10);
       }
 
-      // Default to 1 month ago instead of 0 (epoch time)
-      // This prevents loading years of notification history on first run
-      const oneMonthAgo = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60); // 30 days in seconds
-      this.logger.debug(`No previous check found, defaulting to 1 month ago: ${oneMonthAgo}`);
-      return oneMonthAgo;
+      // Return 0 for first-time users (no previous check)
+      // The 30-day limit for first-time users is handled by the limitDays parameter
+      this.logger.debug('No previous check found, returning 0 for first-time user');
+      return 0;
     } catch (error) {
       this.logger.error('Failed to get last check timestamp', error);
-      // Return 1 month ago as fallback
-      return Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);
+      // Return 0 as fallback for first-time detection
+      return 0;
     }
   }
 
