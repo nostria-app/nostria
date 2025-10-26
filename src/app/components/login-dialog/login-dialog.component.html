@@ -298,13 +298,19 @@
       </button>
     </div>
 
-    <div class="nsec-warning">
-      <p>⚠️ Your private key will be stored locally on your device.</p>
-      <p>
-        This form is configured to try and prevent password managers from saving your key. If your
-        browser suggests to save, reject it.
-      </p>
-    </div>
+    <mat-card class="nsec-warning" appearance="outlined">
+      <mat-card-content>
+        <div class="warning-header">
+          <mat-icon color="warn">warning</mat-icon>
+          <h3>Security Notice</h3>
+        </div>
+        <ul>
+          <li>Your private key will be stored locally on your device.</li>
+          <li>This form is configured to prevent password managers from saving your key.</li>
+          <li>If your browser suggests to save, please reject it.</li>
+        </ul>
+      </mat-card-content>
+    </mat-card>
 
     <div class="button-row">
       <button mat-raised-button color="primary" (click)="loginWithNsec()" [disabled]="!nsecKey">
