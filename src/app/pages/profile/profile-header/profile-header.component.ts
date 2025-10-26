@@ -15,6 +15,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { NostrRecord } from '../../../interfaces';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
+import { nip19 } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { QrCodeComponent } from '../../../components/qr-code/qr-code.component';
@@ -38,6 +39,7 @@ import {
   ZapDialogData,
 } from '../../../components/zap-dialog/zap-dialog.component';
 import { UserRelayService } from '../../../services/relays/user-relay';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 
 @Component({
   selector: 'app-profile-header',
@@ -77,6 +79,7 @@ export class ProfileHeaderComponent {
   private reportingService = inject(ReportingService);
   private zapService = inject(ZapService);
   private userRelayService = inject(UserRelayService);
+  private accountRelay = inject(AccountRelayService);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -351,6 +354,117 @@ export class ProfileHeaderComponent {
     // Placeholder for actual implementation that would fetch the relay list
     this.logger.debug('Copy relay list requested for:', this.pubkey());
     this.layout.copyToClipboard('Relay list not implemented yet', 'relay list');
+  }
+
+  /**
+   * Generate and share an invite link to Nostria
+   */
+  shareInviteLink(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.snackBar.open('Unable to generate invite link', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    try {
+      // Get the logged-in user's account relays (not the profile being viewed)
+      const relays = this.accountRelay.getRelayUrls();
+
+      // Encode nprofile with pubkey and relays
+      const nprofile = nip19.nprofileEncode({
+        pubkey: pubkey,
+        relays: relays.slice(0, 5), // Include up to 5 relays
+      });
+
+      // Generate the invite URL
+      const inviteUrl = `${window.location.origin}/invite/${nprofile}`;
+
+      // Use Web Share API if available
+      if (navigator.share) {
+        navigator
+          .share({
+            title: `Join me on Nostria!`,
+            text: `${this.name()} invited you to join Nostria - Your Social Media, Your Control`,
+            url: inviteUrl,
+          })
+          .then(() => {
+            this.logger.debug('Invite link shared successfully');
+          })
+          .catch(err => {
+            this.logger.error('Error sharing invite link:', err);
+            // Fallback to copying
+            this.copyInviteLink();
+          });
+      } else {
+        // Fallback to copying
+        this.copyInviteLink();
+      }
+    } catch (err) {
+      this.logger.error('Failed to generate invite link', err);
+      this.snackBar.open('Failed to generate invite link', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    }
+  }
+
+  /**
+   * Copy invite link to clipboard
+   */
+  copyInviteLink(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.snackBar.open('You must be logged in to generate an invite link', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    try {
+      // Get the logged-in user's account relays (not the profile being viewed)
+      const relays = this.accountRelay.getRelayUrls();
+
+      // Encode nprofile with pubkey and relays
+      const nprofile = nip19.nprofileEncode({
+        pubkey: pubkey,
+        relays: relays.slice(0, 5), // Include up to 5 relays
+      });
+
+      // Generate the invite URL
+      const inviteUrl = `${window.location.origin}/invite/${nprofile}`;
+
+      navigator.clipboard.writeText(inviteUrl).then(
+        () => {
+          this.snackBar.open('Invite link copied to clipboard!', 'Dismiss', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+        },
+        err => {
+          this.logger.error('Failed to copy invite link:', err);
+          this.snackBar.open('Failed to copy invite link', 'Dismiss', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+        }
+      );
+    } catch (err) {
+      this.logger.error('Failed to generate invite link', err);
+      this.snackBar.open('Failed to generate invite link', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    }
   }
 
   getDefaultBanner(): string {
