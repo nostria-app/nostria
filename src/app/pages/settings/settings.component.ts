@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -35,7 +35,7 @@ interface SettingsSection {
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })
-export class SettingsComponent {
+export class SettingsComponent implements OnInit {
   private breakpointObserver = inject(BreakpointObserver);
   private titleService = inject(Title);
   app = inject(ApplicationService);
@@ -77,6 +77,8 @@ export class SettingsComponent {
     this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(() => {
       const currentRoute = this.router.url.split('/').pop() || 'general';
       this.activeSection.set(currentRoute);
+      // Scroll to top when navigating between settings sections
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
 
     // Set initial active section
@@ -98,6 +100,11 @@ export class SettingsComponent {
         this.titleService.setTitle(sectionTitle);
       }
     });
+  }
+
+  ngOnInit(): void {
+    // Scroll to top when settings page is opened
+    window.scrollTo({ top: 0, behavior: 'auto' });
   }
 
   selectSection(sectionId: string): void {

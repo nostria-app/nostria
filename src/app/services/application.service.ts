@@ -184,13 +184,6 @@ export class ApplicationService {
       this.appState.WALLETS_KEY,
       this.appState.USERNAMES_STORAGE_KEY,
       this.favorites.STORAGE_KEY,
-      // Note: Per-account state now in centralized 'nostria-state':
-      //   - 'nostria-active-feed' (activeFeed)
-      //   - 'nostria-favorites' (favorites)
-      //   - 'nostria-notification-lastcheck-{pubkey}' (notificationLastCheck)
-      //   - 'peopleViewMode' (peopleViewMode)
-      //   - 'peopleSortOption' (peopleSortOption)
-      //   - 'peopleFilters' (peopleFilters)
 
       'nostria-notification-filters',
       'nostria-poll-drafts',
