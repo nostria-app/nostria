@@ -33,16 +33,10 @@ import {
 import { Followset } from '../../services/followset';
 import { NotificationService } from '../../services/notification.service';
 import { FeedsCollectionService } from '../../services/feeds-collection.service';
+import { AccountLocalStateService, PeopleFilters } from '../../services/account-local-state.service';
 
-// Define filter options interface
-interface FilterOptions {
-  hasRelayList: boolean;
-  hasFollowingList: boolean;
-  hasNip05: boolean;
-  hasPicture: boolean;
-  hasBio: boolean;
-  favoritesOnly: boolean;
-}
+// Re-export for local use
+type FilterOptions = PeopleFilters;
 
 // Define sorting options
 type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc';
@@ -77,6 +71,7 @@ export class PeopleComponent {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private readonly localStorage = inject(LocalStorageService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   private metrics = inject(Metrics);
   private favoritesService = inject(FavoritesService);
   private dialog = inject(MatDialog);
@@ -235,36 +230,53 @@ export class PeopleComponent {
       }
     });
 
-    // Load view mode from localStorage if available
-    const savedViewMode = this.localStorage.getItem('peopleViewMode');
-    if (savedViewMode) {
-      this.viewMode.set(savedViewMode);
-    }
-
-    // Load filters from localStorage if available
-    const savedFilters = this.localStorage.getItem('peopleFilters');
-    if (savedFilters) {
-      try {
-        this.filters.set(JSON.parse(savedFilters));
-      } catch (e) {
-        this.logger.error('Failed to load saved filters', e);
+    // Load view mode from centralized state if available
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        const savedViewMode = this.accountLocalState.getPeopleViewMode(pubkey);
+        if (savedViewMode) {
+          this.viewMode.set(savedViewMode);
+        }
       }
-    }
+    });
+
+    // Load filters from centralized state if available
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        const savedFilters = this.accountLocalState.getPeopleFilters(pubkey);
+        if (savedFilters) {
+          this.filters.set(savedFilters);
+        }
+      }
+    });
 
     // Save filters when they change
     effect(() => {
-      this.localStorage.setItem('peopleFilters', JSON.stringify(this.filters()));
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.accountLocalState.setPeopleFilters(pubkey, this.filters());
+      }
     });
 
-    // Load sort option from localStorage if available
-    const savedSortOption = this.localStorage.getItem('peopleSortOption');
-    if (savedSortOption) {
-      this.sortOption.set(savedSortOption as SortOption);
-    }
+    // Load sort option from centralized state if available
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        const savedSortOption = this.accountLocalState.getPeopleSortOption(pubkey);
+        if (savedSortOption) {
+          this.sortOption.set(savedSortOption as SortOption);
+        }
+      }
+    });
 
     // Save sort option when it changes
     effect(() => {
-      this.localStorage.setItem('peopleSortOption', this.sortOption());
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.accountLocalState.setPeopleSortOption(pubkey, this.sortOption());
+      }
     });
 
     // Update sorted people when filtered people or sort option changes
@@ -401,7 +413,10 @@ export class PeopleComponent {
 
   changeViewMode(mode: string) {
     this.viewMode.set(mode);
-    this.localStorage.setItem('peopleViewMode', mode);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setPeopleViewMode(pubkey, mode);
+    }
   }
 
   changeSortOption(option: SortOption) {
