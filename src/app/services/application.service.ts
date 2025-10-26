@@ -22,6 +22,7 @@ import { BadgeService } from './badge.service';
 import { SleepModeService } from './sleep-mode.service';
 import { FavoritesService } from './favorites.service';
 import { ContentNotificationService } from './content-notification.service';
+import { AccountLocalStateService } from './account-local-state.service';
 
 @Injectable({
   providedIn: 'root',
@@ -40,6 +41,7 @@ export class ApplicationService {
   dataService = inject(DataService);
   contentNotificationService = inject(ContentNotificationService);
   private readonly localStorage = inject(LocalStorageService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly favorites = inject(FavoritesService);
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
@@ -182,27 +184,29 @@ export class ApplicationService {
       this.appState.WALLETS_KEY,
       this.appState.USERNAMES_STORAGE_KEY,
       this.favorites.STORAGE_KEY,
-      'nostria-active-feed', // FeedsCollectionService.ACTIVE_FEED_KEY (avoid circular dependency)
+      // Note: 'nostria-active-feed' and 'nostria-favorites' are now in centralized 'nostria-state'
+      // Note: 'nostria-notification-lastcheck' was per-account, now in centralized 'nostria-state'
 
       'nostria-notification-filters',
-      'nostria-notification-lastcheck',
       'nostria-poll-drafts',
       'nostria-polls',
       'nostria-subscriptions',
       'peopleFilters', // TODO: Refactor to use Nostria prefix.
       'peopleSortOption', // TODO: Refactor to use Nostria prefix.
       'peopleViewMode', // TODO: Refactor to use Nostria prefix.
-      'nostria-settings',
-      'nostria-favorites'
+      'nostria-settings'
 
       // Delete auto-drafts, example:
       // article-auto-draft-ad755dd2d56d4bff21d0d2670ed6fc13ef9fae1fb78b75e81b98b5dbcc22fd27
       // note-auto-draft-ad755dd2d56d4bff21d0d2670ed6fc13ef9fae1fb78b75e81b98b5dbcc22fd27
     ];
 
-    for (let i = 0; i < keysToRemove.length; i++) {
-      this.localStorage.removeItem(keysToRemove[i]);
+    for (const key of keysToRemove) {
+      this.localStorage.removeItem(key);
     }
+
+    // Clear all per-account state (nostria-state with all pubkeys)
+    this.accountLocalState.clearAllStates();
 
     // Clear notifications from memory
     this.notificationService.clearNotifications();
