@@ -1,0 +1,111 @@
+<div class="invite-container">
+  @if (loading()) {
+  <div class="loading-state">
+    <mat-spinner diameter="60"></mat-spinner>
+    <p>Loading invitation...</p>
+  </div>
+  } @else if (error()) {
+  <div class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <h2>Invalid Invite Link</h2>
+    <p>{{ error() }}</p>
+    <button mat-flat-button color="primary" (click)="skipInvite()">Go to Home</button>
+  </div>
+  } @else {
+  <div class="invite-content">
+    <div class="invite-header">
+      <img src="/icons/icon-192x192.png" alt="Nostria Logo" class="app-logo" />
+      <h1>Welcome to Nostria</h1>
+      <p class="subtitle">Your Social Media. Your Control.</p>
+    </div>
+
+    <mat-card class="inviter-card">
+      <mat-card-content>
+        <div class="inviter-info">
+          @if (inviterAvatar()) {
+          <img [src]="inviterAvatar()" alt="Inviter avatar" class="inviter-avatar" />
+          } @else {
+          <div class="inviter-avatar-placeholder">
+            <mat-icon>person</mat-icon>
+          </div>
+          }
+          <div class="inviter-details">
+            <h3>{{ inviterName() }} invited you!</h3>
+            <p>Join them on Nostr, the decentralized social network</p>
+          </div>
+        </div>
+      </mat-card-content>
+    </mat-card>
+
+    <div class="features-section">
+      <h2>Why Nostria?</h2>
+
+      <mat-card class="feature-card">
+        <mat-card-content>
+          <div class="feature-content">
+            <mat-icon color="primary">verified_user</mat-icon>
+            <div class="feature-text">
+              <h3>You Own Your Identity</h3>
+              <p>
+                Your account can never be deleted or banned. You control your identity with your own
+                cryptographic keys.
+              </p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="feature-card">
+        <mat-card-content>
+          <div class="feature-content">
+            <mat-icon color="primary">tune</mat-icon>
+            <div class="feature-text">
+              <h3>Control Your Feed</h3>
+              <p>
+                No algorithm decides what you see. You choose who to follow and what content appears
+                in your timeline.
+              </p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
+      <mat-card class="feature-card">
+        <mat-card-content>
+          <div class="feature-content">
+            <mat-icon color="primary">bolt</mat-icon>
+            <div class="feature-text">
+              <h3>Support Creators with Zaps</h3>
+              <p>
+                Send small amounts of Bitcoin instantly to content creators you appreciate. It's
+                fast, borderless, and empowering.
+              </p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <div class="actions-section">
+      @if (!hasAccount()) {
+      <button mat-flat-button color="primary" class="primary-action" (click)="acceptInvite()">
+        <mat-icon>person_add</mat-icon>
+        Create Account & Follow {{ inviterName() }}
+      </button>
+
+      <button mat-stroked-button class="secondary-action" (click)="loginWithExistingAccount()">
+        <mat-icon>login</mat-icon>
+        I Already Have an Account
+      </button>
+      } @else {
+      <button mat-flat-button color="primary" class="primary-action" (click)="skipInvite()">
+        <mat-icon>home</mat-icon>
+        Go to Home
+      </button>
+      }
+
+      <button mat-button class="tertiary-action" (click)="skipInvite()">Skip for now</button>
+    </div>
+  </div>
+  }
+</div>

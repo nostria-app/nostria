@@ -250,6 +250,11 @@
       </mat-menu>
 
       <mat-menu #copyMenu="matMenu">
+        <button mat-menu-item (click)="copyInviteLink()">
+          <mat-icon>person_add</mat-icon>
+          <span>Invite Link</span>
+        </button>
+        <mat-divider></mat-divider>
         <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'npub')">
           <span>Identifier (npub)</span>
         </button>
@@ -262,6 +267,10 @@
         <button mat-menu-item (click)="copyProfileData()">
           <span>Profile Data</span>
         </button>
+        <button mat-menu-item (click)="layout.copyProfileUrl(this.npub(), this.profileUsername())">
+          <mat-icon>link</mat-icon>
+          <span>Profile URL</span>
+        </button>
         <button mat-menu-item (click)="copyFollowingList()">
           <span>Following List</span>
         </button>
@@ -271,12 +280,15 @@
       </mat-menu>
 
       <mat-menu #shareMenu="matMenu">
+        <button mat-menu-item (click)="shareInviteLink()">
+          <mat-icon>person_add</mat-icon>
+          <span>Invitation</span>
+        </button>
         <button mat-menu-item (click)="layout.shareProfile(this.npub(), this.name())">
+          <mat-icon>share</mat-icon>
           <span>Profile</span>
         </button>
-        <button mat-menu-item (click)="layout.shareProfileUrl(this.npub(), this.profileUsername())">
-          <span>Profile URL</span>
-        </button>
+
       </mat-menu>
 
       <mat-menu #publishEventMenu="matMenu">
