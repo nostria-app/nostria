@@ -105,7 +105,7 @@ interface ContentNotification extends Notification {
 ```typescript
 newNotificationCount = computed(() => {
   const contentNotifs = this.contentNotifications();
-  return contentNotifs.filter(n => n.timestamp > lastViewed && !n.read).length;
+  return contentNotifs.filter(n => !n.read).length;
 });
 ```
 
