@@ -2,3 +2,29 @@
   margin: 0;
   padding: 2em;
 }
+
+.instructions {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  text-align: left;
+
+  p {
+    margin: 0 0 12px 0;
+  }
+
+  ol {
+    margin: 0;
+    padding-left: 20px;
+
+    li {
+      margin-bottom: 8px;
+      line-height: 1.5;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+  }
+}
