@@ -509,7 +509,7 @@ export class EditorComponent implements OnInit, OnDestroy {
       });
 
       // Navigate to drafts list after successful save
-      this.router.navigate(['/drafts']);
+      this.router.navigate(['/article/drafts']);
     } catch (error) {
       console.error('Error saving draft:', error);
       this.snackBar.open('Error saving draft', 'Close', { duration: 3000 });
@@ -657,7 +657,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   navigateToDrafts(): void {
-    this.router.navigate(['/drafts']);
+    this.router.navigate(['/article/drafts']);
   }
 
   updateTitle(value: string): void {

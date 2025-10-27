@@ -1,27 +1,12 @@
-.editor-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: var(--mat-sys-level2);
+.editor-header {
+  padding: 24px 24px 0;
+  max-width: 752px;
+  margin: 0 auto;
 
-  .spacer {
-    flex: 1;
-  }
-
-  .publish-progress {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-  }
-
-  button {
-    margin-left: 8px;
-
-    mat-icon {
-      margin-right: 4px;
-    }
+  h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--mat-sys-on-surface);
   }
 }
 
@@ -83,6 +68,31 @@
 
       mat-icon {
         margin-right: 8px;
+      }
+    }
+  }
+
+  .action-buttons {
+    max-width: 752px;
+    margin: 24px auto;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+
+    .publish-progress {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+    }
+
+    button {
+      mat-icon {
+        margin-right: 4px;
       }
     }
   }
@@ -334,6 +344,14 @@
 
 // Responsive design
 @media (max-width: 768px) {
+  .editor-header {
+    padding: 16px 16px 0;
+
+    h2 {
+      font-size: 1.25rem;
+    }
+  }
+
   .editor-container {
     .medium-editor {
       padding: 24px 16px;
@@ -346,19 +364,17 @@
     .metadata-panel {
       margin: 16px;
     }
-  }
 
-  .editor-toolbar {
-    button {
-      margin-left: 4px;
+    .action-buttons {
+      margin: 16px;
+      padding: 12px 16px;
 
-      .button-label {
-        display: none;
-      }
+      button {
+        margin-left: 4px;
 
-      .mat-button-wrapper {
-        display: flex;
-        align-items: center;
+        .button-label {
+          display: none;
+        }
 
         mat-icon {
           margin-right: 0;
