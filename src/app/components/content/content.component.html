@@ -8,14 +8,16 @@
   <app-badge [badge]="mention.event.event"></app-badge>
   } @else {
   <!-- Regular event mention -->
-  <mat-card appearance="outlined">
+  <mat-card appearance="outlined" class="event-mention-card" tabindex="0" role="button"
+    (click)="onEventMentionClick($event, mention.event.event)"
+    (keydown.enter)="onEventMentionClick($event, mention.event.event)"
+    (keydown.space)="onEventMentionClick($event, mention.event.event)">
     <mat-card-header>
       <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
-        <a class="date-link" [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
-          matTooltipPosition="below" tabindex="0" role="button"
-          (click)="layoutService.openEvent(mention.event.event.id, mention.event.event)">
+        <span class="date-link" [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
+          matTooltipPosition="below">
           {{ mention.event.event.created_at | ago }}
-        </a>
+        </span>
       </app-user-profile>
     </mat-card-header>
     <mat-card-content>

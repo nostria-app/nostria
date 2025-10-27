@@ -16,7 +16,7 @@ import { DatePipe } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
-import { Event } from 'nostr-tools';
+import { Event as NostrEvent } from 'nostr-tools';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 
 interface SocialPreview {
@@ -59,7 +59,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private _content = signal<string>('');
 
   // Input for the event (to access tags for mentions/articles)
-  event = input<Event | null>(null);
+  event = input<NostrEvent | null>(null);
 
   // Track visibility of the component
   private _isVisible = signal<boolean>(false);
@@ -370,6 +370,15 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       default:
         console.warn('Unsupported nostr URI type:', type);
     }
+  }
+
+  onEventMentionClick(event: Event, nostrEvent: NostrEvent) {
+    // Prevent default link behavior and stop propagation
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Use the layout service to navigate, which properly uses Angular router
+    this.layoutService.openEvent(nostrEvent.id, nostrEvent);
   }
 
   // Control when content should be shown - once visible, always show
