@@ -59,7 +59,6 @@ interface ArticleAutoDraft {
   tags: string[];
   dTag: string;
   lastModified: number;
-  autoTitleEnabled: boolean;
   autoDTagEnabled: boolean;
 }
 
@@ -109,7 +108,6 @@ export class EditorComponent implements OnInit, OnDestroy {
   isPublishing = signal(false);
   isEditMode = signal(false);
   selectedTabIndex = signal(0);
-  autoTitleEnabled = signal(true);
   autoDTagEnabled = signal(true);
   isLoadingArticle = signal(false); // Track when we're loading an existing article
 
@@ -121,36 +119,6 @@ export class EditorComponent implements OnInit, OnDestroy {
     content: '',
     tags: [],
     dTag: this.generateUniqueId(),
-  });
-
-  // Auto-title feature
-  suggestedTitle = computed(() => {
-    if (!this.autoTitleEnabled()) return '';
-
-    const content = this.article().content;
-    if (!content.trim()) return '';
-
-    // Extract first line and clean it up
-    const firstLine = content.split('\n')[0];
-
-    // Remove markdown heading syntax
-    let title = firstLine.replace(/^#{1,6}\s+/, '');
-
-    // Remove other markdown formatting
-    title = title
-      .replace(/\*\*/g, '') // Bold
-      .replace(/\*/g, '') // Italic
-      .replace(/\_\_/g, '') // Bold
-      .replace(/\_/g, '') // Italic
-      .replace(/\~\~/g, '') // Strikethrough
-      .replace(/\`/g, ''); // Code
-
-    // Limit length
-    if (title.length > 100) {
-      title = title.substring(0, 97) + '...';
-    }
-
-    return title;
   });
 
   // Auto-dTag feature
@@ -338,7 +306,6 @@ export class EditorComponent implements OnInit, OnDestroy {
       tags: [...article.tags],
       dTag: article.dTag,
       lastModified: Date.now(),
-      autoTitleEnabled: this.autoTitleEnabled(),
       autoDTagEnabled: this.autoDTagEnabled(),
     };
 
@@ -390,7 +357,6 @@ export class EditorComponent implements OnInit, OnDestroy {
           dTag: autoDraft.dTag,
         });
 
-        this.autoTitleEnabled.set(autoDraft.autoTitleEnabled);
         this.autoDTagEnabled.set(autoDraft.autoDTagEnabled);
 
         // Show restoration message if there's meaningful content
@@ -484,9 +450,6 @@ export class EditorComponent implements OnInit, OnDestroy {
           publishedAt: parseInt(this.getTagValue(tags, 'published_at') || '0') || undefined,
           dTag: this.getTagValue(tags, 'd') || articleId,
         });
-
-        // Disable auto-title when editing existing article since title is already established
-        this.autoTitleEnabled.set(false);
       } else {
         this.snackBar.open('Article not found', 'Close', { duration: 3000 });
         this.router.navigate(['/articles']);
@@ -730,27 +693,6 @@ export class EditorComponent implements OnInit, OnDestroy {
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
-  }
-
-  toggleAutoTitleMode(): void {
-    const wasEnabled = this.autoTitleEnabled();
-    this.autoTitleEnabled.update(enabled => !enabled);
-
-    // Apply auto-title when enabling and show notification
-    if (!wasEnabled && this.autoTitleEnabled() && this.suggestedTitle()) {
-      this.applyAutoTitle();
-      this.snackBar.open('Auto-title enabled - title updated from content', 'Close', {
-        duration: 3000,
-      });
-    }
-  }
-
-  applyAutoTitle(): void {
-    const suggested = this.suggestedTitle();
-    if (suggested) {
-      this.article.update(art => ({ ...art, title: suggested }));
-      // Only show notification when manually triggered, not during auto-updates
-    }
   }
 
   toggleAutoDTagMode(): void {

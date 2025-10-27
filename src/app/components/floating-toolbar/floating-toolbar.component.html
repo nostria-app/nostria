@@ -1,0 +1,35 @@
+@if (visible()) {
+<div #toolbar class="floating-toolbar" [style.top.px]="position().top" [style.left.px]="position().left">
+  <button mat-icon-button (click)="onBold()" matTooltip="Bold">
+    <mat-icon>format_bold</mat-icon>
+  </button>
+
+  <button mat-icon-button (click)="onItalic()" matTooltip="Italic">
+    <mat-icon>format_italic</mat-icon>
+  </button>
+
+  <mat-divider [vertical]="true"></mat-divider>
+
+  <button mat-icon-button (click)="onHeading1()" matTooltip="Heading 1">
+    <mat-icon>looks_one</mat-icon>
+  </button>
+
+  <button mat-icon-button (click)="onHeading2()" matTooltip="Heading 2">
+    <mat-icon>looks_two</mat-icon>
+  </button>
+
+  <button mat-icon-button (click)="onHeading3()" matTooltip="Heading 3">
+    <mat-icon>looks_3</mat-icon>
+  </button>
+
+  <mat-divider [vertical]="true"></mat-divider>
+
+  <button mat-icon-button (click)="onQuote()" matTooltip="Quote">
+    <mat-icon>format_quote</mat-icon>
+  </button>
+
+  <button mat-icon-button (click)="onLink()" matTooltip="Insert Link">
+    <mat-icon>link</mat-icon>
+  </button>
+</div>
+}
