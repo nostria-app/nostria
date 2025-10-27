@@ -85,6 +85,7 @@ export class EventComponent implements AfterViewChecked {
   appearance = input<EventCardAppearance>('plain');
   navigationDisabled = input<boolean>(false);
   mode = input<'timeline' | 'thread'>('timeline');
+  compact = input<boolean>(false);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   @ViewChild('rootContent') rootContentRef?: ElementRef<HTMLElement>;
@@ -525,7 +526,7 @@ export class EventComponent implements AfterViewChecked {
   }
 
   async loadZaps() {
-    const currentEvent = this.event();
+    const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return;
 
     try {
@@ -554,7 +555,7 @@ export class EventComponent implements AfterViewChecked {
   }
 
   async loadReposts() {
-    const currentEvent = this.event();
+    const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return;
 
     const userPubkey = this.accountState.pubkey();
@@ -574,7 +575,7 @@ export class EventComponent implements AfterViewChecked {
   }
 
   async loadQuotes() {
-    const currentEvent = this.event();
+    const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return;
 
     try {
@@ -598,7 +599,7 @@ export class EventComponent implements AfterViewChecked {
   }
 
   openReactionsDialog(selectedTab: 'likes' | 'zaps' | 'reposts' | 'quotes' = 'likes') {
-    const currentEvent = this.event();
+    const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return;
 
     this.dialog.open(ReactionsDialogComponent, {
@@ -621,7 +622,7 @@ export class EventComponent implements AfterViewChecked {
       event.stopPropagation();
     }
 
-    const currentEvent = this.event();
+    const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return;
 
     const userPubkey = this.accountState.pubkey();
@@ -681,6 +682,7 @@ export class EventComponent implements AfterViewChecked {
     const currentReactions = this.reactions();
     const currentEvents = [...currentReactions.events];
     const currentData = new Map(currentReactions.data);
+    const currentEvent = this.event() || this.record()?.event;
 
     if (isAdding) {
       // Create a temporary reaction event for optimistic UI
@@ -691,8 +693,8 @@ export class EventComponent implements AfterViewChecked {
         kind: kinds.Reaction,
         content: emoji,
         tags: [
-          ['e', this.event()?.id || ''],
-          ['p', this.event()?.pubkey || '']
+          ['e', currentEvent?.id || ''],
+          ['p', currentEvent?.pubkey || '']
         ],
         sig: ''
       };
