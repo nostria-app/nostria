@@ -274,61 +274,63 @@ app-user-profile {
           z-index: 2;
         }
 
-        // Column header - now sticky
-        .column-header {
-          padding: 12px;
-          background-color: var(--mat-app-background-color);
-          border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-          box-shadow: var(--mat-sys-level1);
-          z-index: 5;
-          position: sticky;
-          top: 0;
-
-          .column-header-content {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-
-            .drag-handle {
-              cursor: move;
-              opacity: 0.5;
-              transition: opacity 0.2s ease;
-
-              &:hover {
-                opacity: 1;
-              }
-            }
-
-            .column-title {
-              flex: 1;
-              white-space: nowrap;
-              overflow: hidden;
-              text-overflow: ellipsis;
-              font-weight: 500;
-            }
-
-            .column-header-actions {
-              margin-left: auto;
-            }
-          }
-        }
-
-        // Column content
+        // Column content - now scrollable and contains the header
         .column-content {
           flex: 1;
           display: flex;
           flex-direction: column;
-          overflow: hidden;
+          overflow-y: auto;
+          overflow-x: hidden;
           position: relative;
+
+          // Column header - inside scrollable content
+          .column-header {
+            padding: 12px;
+            background-color: var(--mat-app-background-color);
+            border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+            box-shadow: var(--mat-sys-level1);
+            z-index: 5;
+            flex-shrink: 0; // Prevent header from shrinking
+
+            .column-header-content {
+              display: flex;
+              align-items: center;
+              gap: 8px;
+
+              .drag-handle {
+                cursor: move;
+                opacity: 0.5;
+                transition: opacity 0.2s ease;
+
+                &:hover {
+                  opacity: 1;
+                }
+              }
+
+              .column-title {
+                flex: 1;
+                white-space: nowrap;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                font-weight: 500;
+              }
+
+              .column-header-actions {
+                margin-left: auto;
+              }
+            }
+          }
 
           // New posts notification
           .new-posts-notification {
-            position: absolute;
-            top: 16px;
+            position: sticky;
+            top: 70px; // Position below header
             left: 50%;
             transform: translateX(-50%);
             z-index: 100;
             animation: slideDown 0.3s ease-out;
+            width: fit-content;
+            margin: 16px auto 0;
 
             .new-posts-button {
               display: flex;
@@ -362,60 +364,61 @@ app-user-profile {
             }
           }
 
-          .column-scroll-container {
-            flex: 1;
-            overflow-y: auto;
+          // Column items container - direct child of column-content
+          .column-items {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            width: 100%;
             padding: 10px;
 
-            // Column items container
-            .column-items {
-              display: flex;
-              flex-direction: column;
-              gap: 12px;
+            // Content card with max width
+            .content-card {
               width: 100%;
+              max-width: 680px;
+              margin: 0 auto;
+              box-shadow: var(--mat-sys-level1);
 
-              // Content card with max width
-              .content-card {
-                width: 100%;
-                max-width: 680px;
-                margin: 0 auto;
-                box-shadow: var(--mat-sys-level1);
+              mat-card-header {
+                margin-bottom: 1rem;
+              }
 
-                mat-card-header {
-                  margin-bottom: 1rem;
+              mat-card-content {
+                p {
+                  margin-bottom: 8px;
                 }
 
-                mat-card-content {
-                  p {
-                    margin-bottom: 8px;
-                  }
+                .tags {
+                  display: flex;
+                  flex-wrap: wrap;
+                  gap: 8px;
 
-                  .tags {
-                    display: flex;
-                    flex-wrap: wrap;
-                    gap: 8px;
-
-                    .tag {
-                      padding: 4px 8px;
-                      border-radius: 16px;
-                      font-size: 0.875rem;
-                    }
+                  .tag {
+                    padding: 4px 8px;
+                    border-radius: 16px;
+                    font-size: 0.875rem;
                   }
                 }
               }
             }
+          }
 
-            .column-loading {
-              display: flex;
-              flex-direction: column;
-              align-items: center;
-              justify-content: center;
-              padding: 40px 0;
-              gap: 16px;
+          // Empty following state and skeleton items - direct children
+          .empty-following-state,
+          .column-skeleton-items {
+            padding: 10px;
+          }
 
-              p {
-                margin: 0;
-              }
+          .column-loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 0;
+            gap: 16px;
+
+            p {
+              margin: 0;
             }
           }
         }
