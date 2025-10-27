@@ -352,12 +352,16 @@
     button {
       margin-left: 4px;
 
+      .button-label {
+        display: none;
+      }
+
       .mat-button-wrapper {
         display: flex;
         align-items: center;
 
         mat-icon {
-          margin-right: 2px;
+          margin-right: 0;
         }
       }
     }

@@ -12,17 +12,17 @@
 
   <button mat-button (click)="cancel()" [disabled]="isPublishing()">
     <mat-icon>close</mat-icon>
-    Cancel
+    <span class="button-label">Cancel</span>
   </button>
 
   <button mat-button (click)="saveDraft()" [disabled]="!isDraftValid() || isPublishing()">
     <mat-icon>save</mat-icon>
-    Save Draft
+    <span class="button-label">Save Draft</span>
   </button>
 
   <button mat-flat-button (click)="publish()" [disabled]="!isValid() || isPublishing()">
     <mat-icon>publish</mat-icon>
-    Publish
+    <span class="button-label">Publish</span>
   </button>
 </mat-toolbar>
 
