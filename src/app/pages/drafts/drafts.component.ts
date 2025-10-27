@@ -20,6 +20,7 @@ import { DataService } from '../../services/data.service';
 import { ApplicationService } from '../../services/application.service';
 import { standardizedTag } from '../../standardized-tags';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { CommonModule } from '@angular/common';
 
 interface Draft {
   id: string;
@@ -48,6 +49,7 @@ interface Draft {
     MatProgressSpinnerModule,
     MatDialogModule,
     AgoPipe,
+    CommonModule
   ],
   templateUrl: './drafts.component.html',
   styleUrl: './drafts.component.scss',
