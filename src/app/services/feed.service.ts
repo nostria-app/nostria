@@ -53,7 +53,7 @@ export interface ColumnConfig {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'custom';
   kinds: number[];
-  source?: 'following' | 'public' | 'custom';
+  source?: 'following' | 'public' | 'custom' | 'for-you';
   customUsers?: string[]; // Array of pubkeys for custom user selection
   customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   relayConfig: 'account' | 'custom';
@@ -167,21 +167,18 @@ const COLUMN_TYPES = {
 
 const DEFAULT_FEEDS: FeedConfig[] = [
   {
-    id: 'default-feed-discover',
-    label: 'Discover',
-    icon: 'rocket_launch',
-    description: 'Curated content to discovery Nostr accounts',
+    id: 'default-feed-for-you',
+    label: 'For You',
+    icon: 'for_you',
+    description: 'Personalized content based on your interests and network',
     columns: [
       {
-        id: 'starter-pack-column',
+        id: 'for-you-column',
         label: '',
-        icon: 'group',
+        icon: 'auto_awesome',
         type: 'notes',
         kinds: [kinds.ShortTextNote, kinds.Repost],
-        source: 'custom',
-        // Use hard-coded pubkeys from the Popular starter pack
-        customUsers: POPULAR_STARTER_PACK_PUBKEYS,
-        customStarterPacks: [], // Not using dynamic starter packs, using hard-coded list
+        source: 'for-you',
         relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -193,7 +190,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
   {
     id: 'default-feed-following',
     label: 'Following',
-    icon: 'dynamic_feed',
+    icon: 'diversity_2',
     description: 'Content from people you follow',
     columns: [
       {
@@ -203,6 +200,30 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         type: 'notes',
         kinds: [kinds.ShortTextNote, kinds.Repost],
         source: 'following',
+        relayConfig: 'account',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    ],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    id: 'default-feed-discover',
+    label: 'Discover',
+    icon: 'rocket_launch',
+    description: 'Curated content to discover Nostr accounts',
+    columns: [
+      {
+        id: 'discover-column',
+        label: '',
+        icon: 'group',
+        type: 'notes',
+        kinds: [kinds.ShortTextNote, kinds.Repost],
+        source: 'custom',
+        // Use hard-coded pubkeys from the Popular starter pack
+        customUsers: POPULAR_STARTER_PACK_PUBKEYS,
+        customStarterPacks: [], // Not using dynamic starter packs, using hard-coded list
         relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -430,9 +451,11 @@ export class FeedService {
       };
     }
 
-    // If the source is following, use algorithm to get top engaged users
+    // If the source is following, load only from following list (strict)
     if (column.source === 'following') {
-      await this.loadFollowingFeed(item);
+      await this.loadFollowingStrictFeed(item);
+    } else if (column.source === 'for-you') {
+      await this.loadForYouFeed(item);
     } else if (column.source === 'custom') {
       await this.loadCustomFeed(item);
     } else {
@@ -658,6 +681,76 @@ export class FeedService {
   }
 
   /**
+   * Load following-strict feed - shows ONLY accounts the user follows
+   * 
+   * This method fetches content strictly from the user's following list
+   * without any algorithm-based filtering or recommendations.
+   */
+  private async loadFollowingStrictFeed(feedData: FeedItem) {
+    try {
+      const followingList = this.accountState.followingList();
+
+      // If following list is empty, return early
+      if (followingList.length === 0) {
+        this.logger.debug('Following list is empty, no users to fetch from');
+        return;
+      }
+
+      this.logger.debug(`Loading following-strict feed with ${followingList.length} users`);
+
+      // Fetch events from all following users
+      await this.fetchEventsFromUsers(followingList, feedData);
+
+      this.logger.debug(`Loaded following-strict feed with ${followingList.length} users`);
+    } catch (error) {
+      this.logger.error('Error loading following-strict feed:', error);
+    }
+  }
+
+  /**
+   * Load "For You" feed - combines multiple sources for personalized content
+   * 
+   * This method implements a personalized feed strategy:
+   * 1. Includes popular starter pack accounts
+   * 2. Includes algorithm-recommended users based on engagement
+   * 3. Includes all following accounts
+   * 4. Deduplicates and fetches events from combined list
+   */
+  private async loadForYouFeed(feedData: FeedItem) {
+    try {
+      const allPubkeys = new Set<string>();
+      const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
+
+      // 1. Add popular starter pack pubkeys
+      POPULAR_STARTER_PACK_PUBKEYS.forEach(pubkey => allPubkeys.add(pubkey));
+      this.logger.debug(`Added ${POPULAR_STARTER_PACK_PUBKEYS.length} popular starter pack users`);
+
+      // 2. Add algorithm-recommended users
+      const topEngagedUsers = isArticlesFeed
+        ? await this.algorithms.getRecommendedUsersForArticles(20)
+        : await this.algorithms.getRecommendedUsers(10);
+
+      topEngagedUsers.forEach(user => allPubkeys.add(user.pubkey));
+      this.logger.debug(`Added ${topEngagedUsers.length} algorithm-recommended users`);
+
+      // 3. Add all following accounts
+      const followingList = this.accountState.followingList();
+      followingList.forEach(pubkey => allPubkeys.add(pubkey));
+      this.logger.debug(`Added ${followingList.length} following users`);
+
+      const pubkeysArray = Array.from(allPubkeys);
+      this.logger.debug(`Loading For You feed with ${pubkeysArray.length} total unique users`);
+
+      // Fetch events from all combined users
+      await this.fetchEventsFromUsers(pubkeysArray, feedData);
+
+      this.logger.debug(`Loaded For You feed with ${pubkeysArray.length} unique users`);
+    } catch (error) {
+      this.logger.error('Error loading For You feed:', error);
+    }
+  }
+
+  /**
    * Fetch events from a list of users using the outbox model
    * Updates UI incrementally as events are received for better UX
    */
@@ -827,17 +920,29 @@ export class FeedService {
       const column = feedData.column;
 
       if (column.source === 'following') {
-        // Check if this is an articles feed
+        // For following, use all following users (strict)
+        const followingList = this.accountState.followingList();
+        await this.fetchOlderEventsFromUsers(followingList, feedData);
+      } else if (column.source === 'for-you') {
+        // For "For You" feed, combine all sources like in initial load
+        const allPubkeys = new Set<string>();
         const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
-        // Get top engaged users again (they might have changed)
+        // Add popular starter pack pubkeys
+        POPULAR_STARTER_PACK_PUBKEYS.forEach(pubkey => allPubkeys.add(pubkey));
+
+        // Add algorithm-recommended users
         const topEngagedUsers = isArticlesFeed
           ? await this.algorithms.getRecommendedUsersForArticles(20)
           : await this.algorithms.getRecommendedUsers(10);
-        const topPubkeys = topEngagedUsers.map(user => user.pubkey);
+        topEngagedUsers.forEach(user => allPubkeys.add(user.pubkey));
 
-        // Fetch older events using the lastTimestamp
-        await this.fetchOlderEventsFromUsers(topPubkeys, feedData);
+        // Add all following accounts
+        const followingList = this.accountState.followingList();
+        followingList.forEach(pubkey => allPubkeys.add(pubkey));
+
+        const pubkeysArray = Array.from(allPubkeys);
+        await this.fetchOlderEventsFromUsers(pubkeysArray, feedData);
       } else if (column.source === 'custom') {
         // For custom feeds, collect the same pubkeys used in initial load
         const allPubkeys = new Set<string>();
@@ -1834,11 +1939,11 @@ export class FeedService {
   }
 
   /**
-   * Refresh all columns with 'following' source in the active feed
+   * Refresh all columns with 'following', 'following-strict', or 'for-you' source in the active feed
    * This should be called after the user's following list changes to reload content
    */
   async refreshFollowingColumns(): Promise<void> {
-    console.log(`🔄 FeedService: Refreshing all following columns`);
+    console.log(`🔄 FeedService: Refreshing all following-related columns`);
     const activeFeedId = this._activeFeedId();
     if (!activeFeedId) {
       this.logger.warn('Cannot refresh following columns: no active feed');
@@ -1851,27 +1956,27 @@ export class FeedService {
       return;
     }
 
-    // Find all columns with 'following' source
-    const followingColumns = activeFeed.columns.filter(column => column.source === 'following');
+    // Find all columns with 'following' or 'for-you' source
+    const followingRelatedColumns = activeFeed.columns.filter(
+      column => column.source === 'following' || column.source === 'for-you'
+    );
 
-    if (followingColumns.length === 0) {
-      this.logger.debug('No following columns found in active feed');
-      console.log(`ℹ️ No following columns to refresh in feed: ${activeFeed.label}`);
+    if (followingRelatedColumns.length === 0) {
+      this.logger.debug('No following-related columns found in active feed');
+      console.log(`ℹ️ No following-related columns to refresh in feed: ${activeFeed.label}`);
       return;
     }
 
-    console.log(`📊 Found ${followingColumns.length} following columns to refresh`);
+    console.log(`📊 Found ${followingRelatedColumns.length} following-related columns to refresh`);
 
-    // Refresh each following column
-    for (const column of followingColumns) {
-      console.log(`🔄 Refreshing following column: ${column.label} (${column.id})`);
+    // Refresh each following-related column
+    for (const column of followingRelatedColumns) {
+      console.log(`🔄 Refreshing ${column.source} column: ${column.label} (${column.id})`);
       await this.refreshColumn(column.id);
     }
 
-    this.logger.debug(`Refreshed ${followingColumns.length} following columns`);
-    console.log(
-      `✅ FeedService: Refreshed ${followingColumns.length} following columns successfully`
-    );
+    this.logger.debug(`Refreshed ${followingRelatedColumns.length} following-related columns`);
+    console.log(`✅ FeedService: All following-related columns refreshed successfully`);
   }
 
   /**
