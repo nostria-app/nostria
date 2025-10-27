@@ -44,9 +44,10 @@
   margin: 0 auto;
 
   .medium-editor {
-    max-width: 740px;
+    max-width: 752px;
     margin: 0 auto;
-    padding: 48px 24px;
+    padding: 2rem 0;
+    // padding: 48px 24px;
 
     .title-input {
       width: 100%;
@@ -72,7 +73,7 @@
   }
 
   .metadata-panel {
-    max-width: 740px;
+    max-width: 752px;
     margin: 24px auto;
     box-shadow: var(--mat-sys-level1);
 
