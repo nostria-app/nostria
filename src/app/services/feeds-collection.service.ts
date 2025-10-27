@@ -12,6 +12,9 @@ export interface ColumnDefinition {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'custom';
   kinds: number[];
+  source?: 'following' | 'public' | 'custom' | 'for-you';
+  customUsers?: string[]; // Array of pubkeys for custom user selection
+  customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   relayConfig: 'account' | 'custom';
   customRelays?: string[];
   filters?: Record<string, unknown>;
