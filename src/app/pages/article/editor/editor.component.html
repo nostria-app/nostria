@@ -37,7 +37,7 @@
   <div class="medium-editor">
     <!-- Title Input -->
     <input type="text" class="title-input" placeholder="Title" [value]="article().title"
-      (input)="updateTitle($any($event.target).value)" />
+      (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
 
     <!-- Content Editor -->
     <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">

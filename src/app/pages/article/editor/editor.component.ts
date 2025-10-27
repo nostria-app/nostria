@@ -667,6 +667,20 @@ export class EditorComponent implements OnInit, OnDestroy {
     this.scheduleAutoSaveIfNeeded();
   }
 
+  onTitleKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      // Focus on the rich text editor content
+      // Use a small timeout to ensure the editor is ready
+      setTimeout(() => {
+        const editorContent = document.querySelector('.rich-text-content') as HTMLElement;
+        if (editorContent) {
+          editorContent.focus();
+        }
+      }, 0);
+    }
+  }
+
   updateSummary(value: string): void {
     this.article.update(art => ({ ...art, summary: value }));
 
