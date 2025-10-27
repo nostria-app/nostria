@@ -17,6 +17,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
 import { Event } from 'nostr-tools';
+import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 
 interface SocialPreview {
   url: string;
@@ -40,6 +41,7 @@ interface SocialPreview {
     DatePipe,
     UserProfileComponent,
     TaggedReferencesComponent,
+    BadgeComponent,
   ],
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss',

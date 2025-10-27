@@ -3,6 +3,11 @@
   <app-note-content [contentTokens]="contentTokens()"></app-note-content>
 
   @for (mention of eventMentions(); track mention.event.event.id) {
+  @if (mention.event.event.kind === 8) {
+  <!-- Badge Award (kind 8) -->
+  <app-badge [badge]="mention.event.event"></app-badge>
+  } @else {
+  <!-- Regular event mention -->
   <mat-card appearance="outlined">
     <mat-card-header>
       <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
@@ -19,6 +24,7 @@
       </div>
     </mat-card-content>
   </mat-card>
+  }
   }
 
   @for (preview of socialPreviews(); track preview.url) {
