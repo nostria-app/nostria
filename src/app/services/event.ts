@@ -794,6 +794,9 @@ export class EventService {
     // Open note editor dialog
     const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
       panelClass: 'responsive-dialog',
+      width: '680px',
+      maxWidth: '680px',
+      disableClose: true,
       data,
     });
 
