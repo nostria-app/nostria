@@ -277,21 +277,25 @@
 
   <mat-card-actions class="note-footer">
     @if (item.event.kind === 1) {
-    <div class="reactions-row">
+    <div class="reactions-row" [class.compact]="compact()">
       <!-- Reply -->
       <div class="reaction-group">
         <app-reply-button [event]="targetItem.event"></app-reply-button>
+        @if (!compact()) {
         <button mat-button class="count-button" disabled>
           <span>...</span>
         </button>
+        }
       </div>
 
       <!-- Repost -->
       <div class="reaction-group">
         <app-repost-button [event]="targetItem.event"></app-repost-button>
+        @if (!compact()) {
         <button mat-button class="count-button" (click)="openReactionsDialog('reposts'); $event.stopPropagation()">
           <span>{{ repostCount() }}</span>
         </button>
+        }
       </div>
 
       <!-- Like -->
@@ -302,15 +306,18 @@
                 }" [disabled]="isLoadingReactions()" (click)="toggleLike($event)">
           <mat-icon>favorite</mat-icon>
         </button>
+        @if (!compact()) {
         <button mat-button class="count-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()">
           <span>{{ likes().length }}</span>
         </button>
+        }
       </div>
 
       <!-- Zap -->
       <div class="reaction-group">
         <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey">
         </app-zap-button>
+        @if (!compact()) {
         <button mat-button class="count-button" (click)="openReactionsDialog('zaps'); $event.stopPropagation()">
           <span>
             @if (totalZapAmount() > 0) {
@@ -320,7 +327,16 @@
             }
           </span>
         </button>
+        }
       </div>
+
+      <!-- View All button (compact mode only) -->
+      @if (compact()) {
+      <button mat-icon-button class="view-all-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()"
+        matTooltip="View all reactions">
+        <mat-icon>more_horiz</mat-icon>
+      </button>
+      }
     </div>
     }
 

@@ -73,6 +73,23 @@
   align-items: center;
   gap: 24px;
   flex: 1;
+
+  &.compact {
+    gap: 12px;
+
+    .view-all-button {
+      margin-left: auto;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 20px;
+      }
+
+      &:hover {
+        background-color: var(--mat-sys-surface-container-high);
+      }
+    }
+  }
 }
 
 .reaction-group {

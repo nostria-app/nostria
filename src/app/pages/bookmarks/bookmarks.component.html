@@ -63,7 +63,7 @@
   <div class="bookmarks-list" [attr.data-view]="viewMode()">
     @if (selectedCategory() === 'events') {
     @for (bookmark of bookmarkService.bookmarkEvents(); track $index) {
-    <app-event [id]="bookmark.id"></app-event>
+    <app-event [id]="bookmark.id" [compact]="viewMode() === 'tiles'"></app-event>
     }
     } @else if (selectedCategory() === 'articles') {
     @for (bookmark of bookmarkService.bookmarkArticles(); track $index) {
