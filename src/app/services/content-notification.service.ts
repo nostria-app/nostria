@@ -310,16 +310,21 @@ export class ContentNotificationService {
       for (const event of events) {
         const reactionContent = event.content || '👍';
 
+        // Extract the event being reacted to from the 'e' tag
+        const eTag = event.tags.find(tag => tag[0] === 'e');
+        const reactedEventId = eTag?.[1];
+
         await this.createContentNotification({
           type: NotificationType.REACTION,
           title: `Reacted ${reactionContent}`,
           message: 'Someone reacted to your note',
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
-          eventId: event.id,
+          eventId: reactedEventId, // Use the event being reacted to, not the reaction event
           timestamp: event.created_at * 1000,
           metadata: {
             reactionContent,
+            reactionEventId: event.id, // Store the reaction event ID for reference
           },
         });
       }
@@ -430,6 +435,7 @@ export class ContentNotificationService {
     metadata?: {
       content?: string;
       reactionContent?: string;
+      reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
       zapAmount?: number;
       zappedEventId?: string; // The event that was zapped (if any)
       zapReceiptId?: string; // The zap receipt event ID (kind 9735)

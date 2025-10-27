@@ -174,6 +174,7 @@ export interface ContentNotification extends Notification {
   metadata?: {
     content?: string; // For mentions/replies, the text content
     reactionContent?: string; // For reactions, the emoji/content
+    reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
     zapAmount?: number; // For zaps, the amount in sats
     zappedEventId?: string; // For zaps, the event that was zapped (if any)
     zapReceiptId?: string; // For zaps, the zap receipt event ID (kind 9735)
