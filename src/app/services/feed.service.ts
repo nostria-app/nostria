@@ -175,9 +175,10 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         type: 'notes',
         kinds: [kinds.ShortTextNote, kinds.Repost],
         source: 'custom',
-        // Use the 'discovery' starter pack dynamically fetched from relays
+        // Use the 'popular' starter pack dynamically fetched from relays
+        // Published by d1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b
         customUsers: [], // Will be populated dynamically from starter pack
-        customStarterPacks: ['discovery'], // Reference the 'discovery' starter pack by dTag
+        customStarterPacks: ['popular'], // Reference the 'popular' starter pack by dTag
         relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -652,7 +653,7 @@ export class FeedService {
 
       // Limit to 50 users for performance - prioritize recent follows
       const maxUsers = 50;
-      const limitedUsers = followingList.length > maxUsers 
+      const limitedUsers = followingList.length > maxUsers
         ? followingList.slice(-maxUsers) // Get most recent follows
         : followingList;
 
@@ -681,22 +682,20 @@ export class FeedService {
       const allPubkeys = new Set<string>();
       const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
-      // 1. Add popular starter pack pubkeys (fetch from 'discovery' starter pack)
+      // 1. Add popular starter pack pubkeys (fetch from 'popular' starter pack)
       try {
         const starterPacks = await this.followset.fetchStarterPacks();
-        const discoveryPack = starterPacks.find(pack => pack.dTag === 'discovery');
-        
-        if (discoveryPack) {
-          discoveryPack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
-          this.logger.debug(`Added ${discoveryPack.pubkeys.length} popular starter pack users from discovery pack`);
+        const popularPack = starterPacks.find(pack => pack.dTag === 'popular');
+
+        if (popularPack) {
+          popularPack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
+          this.logger.debug(`Added ${popularPack.pubkeys.length} popular starter pack users from popular pack`);
         } else {
-          this.logger.warn('Discovery starter pack not found');
+          this.logger.warn('Popular starter pack not found');
         }
       } catch (error) {
-        this.logger.error('Error fetching discovery starter pack:', error);
-      }
-
-      // 2. Add algorithm-recommended users
+        this.logger.error('Error fetching popular starter pack:', error);
+      }      // 2. Add algorithm-recommended users
       const topEngagedUsers = isArticlesFeed
         ? await this.algorithms.getRecommendedUsersForArticles(20)
         : await this.algorithms.getRecommendedUsers(10);
@@ -710,7 +709,7 @@ export class FeedService {
       const limitedFollowing = followingList.length > maxFollowingToAdd
         ? followingList.slice(-maxFollowingToAdd)
         : followingList;
-      
+
       limitedFollowing.forEach(pubkey => allPubkeys.add(pubkey));
       this.logger.debug(`Added ${limitedFollowing.length} following users (out of ${followingList.length} total)`);
 
@@ -904,19 +903,17 @@ export class FeedService {
         const allPubkeys = new Set<string>();
         const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
-        // Add popular starter pack pubkeys (fetch from 'discovery' starter pack)
+        // Add popular starter pack pubkeys (fetch from 'popular' starter pack)
         try {
           const starterPacks = await this.followset.fetchStarterPacks();
-          const discoveryPack = starterPacks.find(pack => pack.dTag === 'discovery');
-          
-          if (discoveryPack) {
-            discoveryPack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
+          const popularPack = starterPacks.find(pack => pack.dTag === 'popular');
+
+          if (popularPack) {
+            popularPack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
           }
         } catch (error) {
-          this.logger.error('Error fetching discovery starter pack for pagination:', error);
-        }
-
-        // Add algorithm-recommended users
+          this.logger.error('Error fetching popular starter pack for pagination:', error);
+        }        // Add algorithm-recommended users
         const topEngagedUsers = isArticlesFeed
           ? await this.algorithms.getRecommendedUsersForArticles(20)
           : await this.algorithms.getRecommendedUsers(10);
