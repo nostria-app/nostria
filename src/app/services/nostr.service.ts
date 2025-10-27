@@ -384,7 +384,12 @@ export class NostrService implements NostriaService {
     this.appState.isLoading.set(true);
     const account = this.accountState.account();
 
-    if (account) {
+    if (!account) {
+      this.appState.isLoading.set(false);
+      return;
+    }
+
+    try {
       const pubkey = account.pubkey;
       // When the account changes, check what data we have and get if missing.
       this.logger.info('Account changed, loading data for new account', {
@@ -459,6 +464,17 @@ export class NostrService implements NostriaService {
       setTimeout(() => {
         this.appState.showSuccess.set(false);
       }, 1500);
+    } catch (error) {
+      this.logger.error('Error during account data loading', error);
+      // Ensure loading state is cleared even on error
+      this.appState.isLoading.set(false);
+      this.appState.loadingMessage.set('Error loading account data');
+
+      // Still mark as initialized to prevent the app from being stuck
+      if (!this.initialized()) {
+        this.initialized.set(true);
+      }
+      this.accountState.initialized.set(true);
     }
   }
 
@@ -468,6 +484,16 @@ export class NostrService implements NostriaService {
   }
 
   clear() {
+    // Clean up the account subscription if it exists
+    if (this.accountSubscription) {
+      this.logger.debug('Unsubscribing from account metadata subscription');
+      try {
+        this.accountSubscription.close();
+      } catch (error) {
+        this.logger.warn('Error closing account subscription', error);
+      }
+      this.accountSubscription = null;
+    }
     // this.accountState.clearProfileCache();
     // this.accountsMetadata.set([]);
     // this.accountsRelays.set([]);

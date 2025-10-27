@@ -17,11 +17,12 @@ import { LoggerService } from './services/logger.service';
 import { provideClientHydration, withEventReplay } from '@angular/platform-browser';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { MatIconRegistry } from '@angular/material/icon';
+import { provideNativeDateAdapter } from '@angular/material/core';
 import { ApiConfiguration } from './api/api-configuration';
 import { environment } from '../environments/environment';
 import { nip98AuthInterceptor } from './services/interceptors/nip98Auth';
 import { MAT_FORM_FIELD_DEFAULT_OPTIONS } from '@angular/material/form-field';
-import { MAT_TOOLTIP_DEFAULT_OPTIONS, MatTooltipDefaultOptions } from '@angular/material/tooltip';
+import { MAT_TOOLTIP_DEFAULT_OPTIONS } from '@angular/material/tooltip';
 
 let appLang = 'en';
 
@@ -84,6 +85,7 @@ export const appConfig: ApplicationConfig = {
       provide: MAT_FORM_FIELD_DEFAULT_OPTIONS,
       useValue: { appearance: 'outline' },
     },
+    provideNativeDateAdapter(),
     provideZonelessChangeDetection(),
     provideRouter(routes),
     provideAnimations(),

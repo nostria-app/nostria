@@ -1,0 +1,120 @@
+<div class="polls-container">
+  <header class="polls-header">
+    <div class="header-content">
+      <h1>Polls</h1>
+      <div class="header-actions">
+        <button mat-icon-button [matTooltip]="selectedView() === 'grid' ? 'List view' : 'Grid view'"
+          (click)="toggleView()">
+          <mat-icon>{{ selectedView() === 'grid' ? 'view_list' : 'view_module' }}</mat-icon>
+        </button>
+        <button mat-flat-button color="primary" (click)="createNewPoll()">
+          <mat-icon>add</mat-icon>
+          New Poll
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="switchTab($event)">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>dynamic_feed</mat-icon>
+          Feed
+        </ng-template>
+      </mat-tab>
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>person</mat-icon>
+          Your Polls
+        </ng-template>
+      </mat-tab>
+    </mat-tab-group>
+  </header>
+
+  <main class="polls-content">
+    <!-- Loading indicator -->
+    @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Loading polls...</p>
+    </div>
+    } @else {
+    <!-- Drafts Section (only in "Your Polls" tab) -->
+    @if (selectedTab() === 'yours' && drafts().length > 0) {
+    <section class="drafts-section">
+      <h2>Drafts</h2>
+      <div class="poll-grid" [class.list-view]="selectedView() === 'list'">
+        @for (draft of drafts(); track draft.id) {
+        <mat-card class="poll-card draft-card">
+          <mat-card-header>
+            <mat-icon mat-card-avatar>edit</mat-icon>
+            <mat-card-title>{{ draft.content }}</mat-card-title>
+            <mat-card-subtitle>
+              {{ draft.options.length }} options · {{ draft.pollType === 'singlechoice' ? 'Single choice' : 'Multiple choice' }}
+            </mat-card-subtitle>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-chip-set>
+              @for (option of draft.options; track option.id) {
+              <mat-chip>{{ option.label }}</mat-chip>
+              }
+            </mat-chip-set>
+          </mat-card-content>
+          <mat-card-actions>
+            <button mat-button (click)="loadDraft(draft.id!)">
+              <mat-icon>edit</mat-icon>
+              Continue Editing
+            </button>
+            <button mat-icon-button (click)="deleteDraft(draft.id!)" color="warn">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </mat-card-actions>
+        </mat-card>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Polls Section -->
+    <section class="polls-section">
+      <div class="section-header">
+        <h2>{{ selectedTab() === 'feed' ? 'Feed Polls' : 'Your Polls' }}</h2>
+        @if (selectedTab() === 'feed') {
+          <button mat-icon-button (click)="refreshFeed()" [disabled]="isLoading()" matTooltip="Refresh feed">
+            <mat-icon>refresh</mat-icon>
+          </button>
+        }
+      </div>
+      @if (getDisplayedPolls().length === 0) {
+      <div class="empty-state">
+        <mat-icon class="empty-icon">poll</mat-icon>
+        @if (selectedTab() === 'feed') {
+          <h3>No polls in feed</h3>
+          <p>Polls from people you follow will appear here</p>
+        } @else {
+          <h3>No polls yet</h3>
+          <p>Create your first poll to get started</p>
+          <button mat-flat-button color="primary" (click)="createNewPoll()">
+            <mat-icon>add</mat-icon>
+            Create Poll
+          </button>
+        }
+      </div>
+      } @else {
+      <div class="poll-grid" [class.list-view]="selectedView() === 'list'">
+        @for (poll of getDisplayedPolls(); track poll.id) {
+        <app-poll-card
+          [poll]="poll"
+          [results]="getResultsForPoll(poll)?.results ?? null"
+          [hasVoted]="hasUserVoted(poll)"
+          [canVote]="!isPollEnded(poll)"
+          (vote)="submitVote(poll, $event)"
+          (viewDetails)="viewPollResults(poll)">
+        </app-poll-card>
+        }
+      </div>
+      }
+    </section>
+    }
+  </main>
+</div>

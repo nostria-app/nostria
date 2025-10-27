@@ -30,8 +30,14 @@ export class StateService implements NostriaService {
     effect(async () => {
       const account = this.accountState.account();
       if (account) {
-        this.clear();
-        await this.load();
+        try {
+          this.clear();
+          await this.load();
+        } catch (error) {
+          console.error('Error during account change:', error);
+          // Ensure we don't leave the app in a broken state
+          this.clear();
+        }
       } else {
         // Clear when account is null (logout)
         this.clear();
@@ -44,7 +50,8 @@ export class StateService implements NostriaService {
 
     // This is never called for anonymous accounts.
     await this.discoveryRelay.load();
-    await this.accountRelay.setAccount(pubkey);
+    // Destroy old connections before setting up new ones
+    await this.accountRelay.setAccount(pubkey, true);
     await this.accountState.load();
     await this.nostr.load();
 

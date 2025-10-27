@@ -28,6 +28,8 @@ import { PlaylistsComponent } from './pages/playlists/playlists.component';
 import { PlaylistEditorComponent } from './pages/playlists/playlist-editor/playlist-editor.component';
 import { EventPageComponent } from './pages/event/event.component';
 import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
+import { PollsComponent } from './pages/polls/polls.component';
+import { PollEditorComponent } from './pages/polls/poll-editor/poll-editor.component';
 import { DataResolver } from './data-resolver';
 import { UsernameResolver } from './usernameResolver';
 import { ArticleResolver } from './articleResolver';
@@ -165,6 +167,8 @@ export const routes: Routes = [
   { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
   { path: 'playlists', component: PlaylistsComponent, title: 'Playlists' },
   { path: 'playlists/edit/:id', component: PlaylistEditorComponent, title: 'Edit Playlist' },
+  { path: 'polls', component: PollsComponent, title: 'Polls' },
+  { path: 'polls/edit/:id', component: PollEditorComponent, title: 'Edit Poll' },
   {
     path: 'notifications',
     component: NotificationsComponent,
