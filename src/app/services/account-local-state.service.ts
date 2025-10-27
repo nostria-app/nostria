@@ -23,6 +23,7 @@ interface AccountLocalState {
   peopleViewMode?: string;
   peopleSortOption?: string;
   peopleFilters?: PeopleFilters;
+  bookmarksViewMode?: string;
 }
 
 /**
@@ -177,6 +178,21 @@ export class AccountLocalStateService {
    */
   setPeopleFilters(pubkey: string, filters: PeopleFilters | null | undefined): void {
     this.updateAccountState(pubkey, { peopleFilters: filters || undefined });
+  }
+
+  /**
+   * Get bookmarks view mode for an account
+   */
+  getBookmarksViewMode(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.bookmarksViewMode;
+  }
+
+  /**
+   * Set bookmarks view mode for an account
+   */
+  setBookmarksViewMode(pubkey: string, viewMode: string | null | undefined): void {
+    this.updateAccountState(pubkey, { bookmarksViewMode: viewMode || undefined });
   }
 
   /**

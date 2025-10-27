@@ -2,6 +2,19 @@
   <div class="bookmarks-header">
     <h1>Bookmarks</h1>
     <div class="header-actions">
+      <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="Change View">
+        <mat-icon>{{ getViewIcon() }}</mat-icon>
+      </button>
+      <mat-menu #viewMenu="matMenu">
+        <button mat-menu-item (click)="setViewMode('content')">
+          <mat-icon>view_agenda</mat-icon>
+          <span>Content View</span>
+        </button>
+        <button mat-menu-item (click)="setViewMode('tiles')">
+          <mat-icon>grid_view</mat-icon>
+          <span>Tiles View</span>
+        </button>
+      </mat-menu>
       <button mat-flat-button color="primary" (click)="addBookmark()" [disabled]="loading()">
         <mat-icon>add</mat-icon>
         Add Bookmark
@@ -10,13 +23,13 @@
   </div>
 
   @if (loading()) {
-    <div class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Loading bookmarks...</p>
-    </div>
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading bookmarks...</p>
+  </div>
   } @else {
-    <div class="filters-container">
-      <!-- <mat-form-field appearance="outline" class="search-field">
+  <div class="filters-container">
+    <!-- <mat-form-field appearance="outline" class="search-field">
         <mat-label>Search Bookmarks</mat-label>
         <input matInput type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Search by title, URL, or description" />
         @if (searchQuery()) {
@@ -27,120 +40,86 @@
         <mat-icon matPrefix>search</mat-icon>
       </mat-form-field> -->
 
-      <div class="categories-container">
-        <!-- <div class="categories-header">
+    <div class="categories-container">
+      <!-- <div class="categories-header">
           <h3>Categories</h3>
           <button mat-icon-button (click)="openManageCategories()" matTooltip="Manage Categories">
             <mat-icon>settings</mat-icon>
           </button>
         </div> -->
-        <div class="categories-list">
-          @for (category of categories(); track category.id) {
-            <div
-              class="category-chip"
-              [class.selected]="selectedCategory() === category.id"
-              [style.background-color]="
+      <div class="categories-list">
+        @for (category of categories(); track category.id) {
+        <div class="category-chip" [class.selected]="selectedCategory() === category.id" [style.background-color]="
                 selectedCategory() === category.id ? category.color : 'transparent'
-              "
-              [style.color]="selectedCategory() === category.id ? '#fff' : category.color"
-              [style.border-color]="category.color"
-              (click)="selectCategory(category.id)"
-            >
-              {{ category.name }}
-            </div>
-          }
+              " [style.color]="selectedCategory() === category.id ? '#fff' : category.color"
+          [style.border-color]="category.color" (click)="selectCategory(category.id)">
+          {{ category.name }}
         </div>
+        }
       </div>
     </div>
+  </div>
 
-    <div class="bookmarks-list">
-      <!-- @if (filteredBookmarks().length === 0) {
-    <div class="empty-state">
-      <mat-icon>bookmark_border</mat-icon>
-      @if (!isLoggedIn()) {
-      <p>Please log in to view your bookmarks</p>
-      <p>Your bookmarks are stored securely on the Nostr network</p>
-      } @else if (searchQuery()) {
-      <p>No bookmarks found</p>
-      <p>Try changing your search or category filter</p>
-      } @else if (selectedCategory() !== 'all') {
-      <p>No bookmarks in this category</p>
-      <p>Try selecting a different category</p>
-      } @else {
-      <p>No bookmarks found</p>
-      <p>Add some bookmarks to get started</p>
-      <button mat-stroked-button color="primary" (click)="addBookmark()">
-        <mat-icon>add</mat-icon>
-        Add Bookmark
+  <div class="bookmarks-list" [attr.data-view]="viewMode()">
+    @if (selectedCategory() === 'events') {
+    @for (bookmark of bookmarkService.bookmarkEvents(); track $index) {
+    <app-event [id]="bookmark.id"></app-event>
+    }
+    } @else if (selectedCategory() === 'articles') {
+    @for (bookmark of bookmarkService.bookmarkArticles(); track $index) {
+    @let bm = bookmarkService.parseArticleId(bookmark.id);
+    <app-article [pubkey]="bm.id" [kind]="bm.kind" [slug]="bm.slug" mode="card" [showAuthor]="true"
+      [showMetadata]="true" [showActions]="false" [clickable]="true"></app-article>
+    }
+    } @else if (selectedCategory() === 'websites') {
+    @for (bookmark of bookmarkService.bookmarkUrls(); track $index) {
+    @if (viewMode() === 'content') {
+    <div class="bookmark-url-card">
+      <mat-icon>link</mat-icon>
+      <a [href]="bookmark.id" target="_blank" rel="noopener noreferrer">{{ bookmark.id }}</a>
+      <button mat-icon-button
+        (click)="deleteBookmark({id: bookmark.id, title: 'Website', url: bookmark.id, categories: ['websites'], type: 'r', createdAt: bookmark.timestamp, updatedAt: bookmark.timestamp}, $event)"
+        matTooltip="Remove">
+        <mat-icon>delete</mat-icon>
       </button>
-      }
     </div>
-    } @else { -->
-
-      @if (selectedCategory() === 'events') {
-        @for (bookmark of bookmarkService.bookmarkEvents(); track $index) {
-          <app-event [id]="bookmark.id"></app-event>
-        }
-      } @else if (selectedCategory() === 'articles') {
-        @for (bookmark of bookmarkService.bookmarkArticles(); track $index) {
-          @let bm = bookmarkService.parseArticleId(bookmark.id);
-          <app-article
-            [pubkey]="bm.id"
-            [kind]="bm.kind"
-            [slug]="bm.slug"
-            mode="card"
-            [showAuthor]="true"
-            [showMetadata]="true"
-            [showActions]="false"
-            [clickable]="true"
-          ></app-article>
-        }
-      } @else if (selectedCategory() === 'urls') {
-        @for (bookmark of bookmarkService.bookmarkUrls(); track $index) {
-          <a [href]="bookmark.id" target="_blank" rel="noopener noreferrer">{{ bookmark.id }}</a>
-        }
-      }
-
-      <!-- <mat-card class="bookmark-card" (click)="openBookmark(bookmark)">
-            <mat-card-header>
-              <div mat-card-avatar class="bookmark-type-icon">
-                <mat-icon>{{ getBookmarkTypeIcon(bookmark.type) }}</mat-icon>
-              </div>
-              <mat-card-title>{{ bookmark.title }}</mat-card-title>
-              <mat-card-subtitle>{{ bookmark.url }}</mat-card-subtitle>
-            </mat-card-header>
-            <mat-card-content>
-              @if (bookmark.description) {
-                <p class="bookmark-description">{{ bookmark.description }}</p>
-              }
-              <div class="bookmark-categories">
-                @for (categoryId of bookmark.categories.slice(1); track categoryId) { 
-                  @if (getCategoryById(categoryId); as category) {
-                    <div class="category-tag" [style.background-color]="category.color">
-                      {{ category.name }}
-                    </div>
-                  }
-                }
-                <div class="bookmark-type-tag">
-                  {{ getBookmarkTypeLabel(bookmark.type) }}
-                </div>
-              </div>
-              <div class="bookmark-info">
-                <span class="bookmark-date">Added: {{ getFormattedDate(bookmark.createdAt) }}</span>
-              </div>
-            </mat-card-content>
-            @if (isLoggedIn()) {
-              <div class="bookmark-actions">
-                <button mat-icon-button (click)="editBookmark(bookmark, $event)" matTooltip="Edit">
-                  <mat-icon>edit</mat-icon>
-                </button>
-                <button mat-icon-button (click)="deleteBookmark(bookmark, $event)" matTooltip="Delete" [disabled]="loading()">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </div>
-            }
-          </mat-card> -->
-      <!-- } -->
+    } @else if (viewMode() === 'tiles') {
+    <div class="bookmark-tile">
+      <div class="tile-header">
+        <mat-icon>link</mat-icon>
+        <span class="tile-type">Website</span>
+      </div>
+      <div class="tile-content">
+        <a [href]="bookmark.id" target="_blank" rel="noopener noreferrer">
+          <h3>{{ bookmark.id.length > 30 ? bookmark.id.substring(0, 30) + '...' : bookmark.id }}</h3>
+        </a>
+      </div>
+      <div class="tile-actions">
+        <button mat-icon-button
+          (click)="deleteBookmark({id: bookmark.id, title: 'Website', url: bookmark.id, categories: ['websites'], type: 'r', createdAt: bookmark.timestamp, updatedAt: bookmark.timestamp}, $event)"
+          matTooltip="Remove">
+          <mat-icon>delete</mat-icon>
+        </button>
+      </div>
     </div>
+    } @else {
+    <div class="bookmark-detail">
+      <mat-icon class="detail-icon">link</mat-icon>
+      <div class="detail-content">
+        <a [href]="bookmark.id" target="_blank" rel="noopener noreferrer">
+          <h3>{{ bookmark.id }}</h3>
+        </a>
+        <p class="detail-meta">Website • Added {{ getFormattedDate(bookmark.timestamp) }}</p>
+      </div>
+      <button mat-icon-button
+        (click)="deleteBookmark({id: bookmark.id, title: 'Website', url: bookmark.id, categories: ['websites'], type: 'r', createdAt: bookmark.timestamp, updatedAt: bookmark.timestamp}, $event)"
+        matTooltip="Remove">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
+    }
+    }
+    } -->
+  </div>
   }
 </div>
