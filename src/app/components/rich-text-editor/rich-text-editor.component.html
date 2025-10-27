@@ -5,42 +5,7 @@
     (change)="onFileSelected($event)" class="hidden-file-input" aria-label="Upload files" title="Upload files" />
 
   <div class="editor-toolbar">
-    @if (isRichTextMode()) {
-    <div class="formatting-controls">
-      <button mat-icon-button (click)="applyBold()" matTooltip="Bold (Ctrl+B)">
-        <mat-icon>format_bold</mat-icon>
-      </button>
-      <button mat-icon-button (click)="applyItalic()" matTooltip="Italic (Ctrl+I)">
-        <mat-icon>format_italic</mat-icon>
-      </button>
-      <mat-divider [vertical]="true"></mat-divider>
-      <button mat-icon-button (click)="applyHeading(1)" matTooltip="Heading 1">
-        <mat-icon>looks_one</mat-icon>
-      </button>
-      <button mat-icon-button (click)="applyHeading(2)" matTooltip="Heading 2">
-        <mat-icon>looks_two</mat-icon>
-      </button>
-      <button mat-icon-button (click)="applyHeading(3)" matTooltip="Heading 3">
-        <mat-icon>looks_3</mat-icon>
-      </button>
-      <mat-divider [vertical]="true"></mat-divider>
-      <button mat-icon-button (click)="applyQuote()" matTooltip="Quote">
-        <mat-icon>format_quote</mat-icon>
-      </button>
-      <button mat-icon-button (click)="applyUnorderedList()" matTooltip="Bullet List">
-        <mat-icon>format_list_bulleted</mat-icon>
-      </button>
-      <button mat-icon-button (click)="applyOrderedList()" matTooltip="Numbered List">
-        <mat-icon>format_list_numbered</mat-icon>
-      </button>
-      <mat-divider [vertical]="true"></mat-divider>
-      <button mat-icon-button (click)="applyLink()" matTooltip="Insert Link">
-        <mat-icon>link</mat-icon>
-      </button>
-      <button mat-icon-button (click)="insertCode()" matTooltip="Insert Code">
-        <mat-icon>code</mat-icon>
-      </button>
-      <mat-divider [vertical]="true"></mat-divider>
+    <div class="editor-actions">
       <button mat-icon-button (click)="openFileDialog()" [disabled]="isUploading()" matTooltip="Upload Files">
         @if (isUploading()) {
         <mat-icon>hourglass_empty</mat-icon>
@@ -49,17 +14,6 @@
         }
       </button>
     </div>
-    } @else {
-    <div class="markdown-controls">
-      <button mat-icon-button (click)="openFileDialog()" [disabled]="isUploading()" matTooltip="Upload Files">
-        @if (isUploading()) {
-        <mat-icon>hourglass_empty</mat-icon>
-        } @else {
-        <mat-icon>attach_file</mat-icon>
-        }
-      </button>
-    </div>
-    }
     <div class="editor-mode-toggle">
       <mat-button-toggle-group [value]="isRichTextMode() ? 'rich' : 'markdown'">
         <mat-button-toggle value="rich" [class.active]="isRichTextMode()"
@@ -107,5 +61,6 @@
   <!-- Floating Toolbar -->
   <app-floating-toolbar [visible]="showFloatingToolbar()" [position]="floatingToolbarPosition()" (bold)="applyBold()"
     (italic)="applyItalic()" (link)="applyLink()" (heading1)="applyHeading(1)" (heading2)="applyHeading(2)"
-    (heading3)="applyHeading(3)" (quote)="applyQuote()" />
+    (heading3)="applyHeading(3)" (quote)="applyQuote()" (bulletList)="applyUnorderedList()"
+    (orderedList)="applyOrderedList()" (code)="insertCode()" (uploadFiles)="openFileDialog()" />
 </div>
