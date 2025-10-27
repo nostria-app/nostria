@@ -144,8 +144,7 @@
     </button>
 
     <button mat-button (click)="cancel()" [disabled]="isPublishing()">
-      <mat-icon>close</mat-icon>
-      <span class="button-label">Cancel</span>
+      Cancel
     </button>
 
     <button mat-button (click)="saveDraft()" [disabled]="!isDraftValid() || isPublishing()">
