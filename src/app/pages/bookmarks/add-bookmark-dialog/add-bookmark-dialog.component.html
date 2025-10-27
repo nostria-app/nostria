@@ -1,0 +1,70 @@
+<h2 mat-dialog-title>Add Bookmark</h2>
+
+<mat-dialog-content>
+  <div class="form-container">
+    <mat-form-field appearance="outline">
+      <mat-label>Type</mat-label>
+      <mat-select [ngModel]="selectedType()" (ngModelChange)="selectedType.set($event); onTypeChange()">
+        @for (type of bookmarkTypes; track type.value) {
+        <mat-option [value]="type.value">
+          <div class="type-option">
+            <mat-icon>{{ type.icon }}</mat-icon>
+            <span>{{ type.label }}</span>
+          </div>
+        </mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>
+        @if (selectedType() === 'r') {
+        URL
+        } @else if (selectedType() === 'e') {
+        Event ID
+        } @else {
+        Article Reference
+        }
+      </mat-label>
+      <input matInput type="text" [ngModel]="url()" (ngModelChange)="url.set($event); validateUrl()" [placeholder]="
+          selectedType() === 'r'
+            ? 'https://example.com'
+            : selectedType() === 'e'
+              ? 'Event ID (hex)'
+              : 'naddr... or author:kind:slug'
+        " required />
+      @if (!isUrlValid() && url()) {
+      <mat-error>Please enter a valid {{ selectedType() === 'r' ? 'URL' : 'ID' }}</mat-error>
+      }
+      <mat-icon matPrefix>
+        @if (selectedType() === 'r') {
+        link
+        } @else if (selectedType() === 'e') {
+        event
+        } @else {
+        article
+        }
+      </mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Title (optional)</mat-label>
+      <input matInput type="text" [ngModel]="title()" (ngModelChange)="title.set($event)" />
+      <mat-icon matPrefix>title</mat-icon>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline">
+      <mat-label>Description (optional)</mat-label>
+      <textarea matInput rows="3" [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+      <mat-icon matPrefix>description</mat-icon>
+    </mat-form-field>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="save()" [disabled]="!canSave()">
+    <mat-icon>add</mat-icon>
+    Add Bookmark
+  </button>
+</mat-dialog-actions>
