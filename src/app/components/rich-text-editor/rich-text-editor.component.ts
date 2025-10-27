@@ -22,6 +22,10 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MediaService } from '../../services/media.service';
+import {
+  FloatingToolbarComponent,
+  FloatingToolbarPosition,
+} from '../floating-toolbar/floating-toolbar.component';
 
 @Component({
   selector: 'app-rich-text-editor',
@@ -36,6 +40,7 @@ import { MediaService } from '../../services/media.service';
     MatButtonToggleModule,
     MatProgressBarModule,
     MatSnackBarModule,
+    FloatingToolbarComponent,
   ],
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss',
@@ -52,6 +57,8 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   markdownContent = signal('');
   isUploading = signal(false);
   isDragOver = signal(false);
+  showFloatingToolbar = signal(false);
+  floatingToolbarPosition = signal<FloatingToolbarPosition>({ top: 0, left: 0 });
   private dragCounter = 0;
   private isInternalChange = false; // Flag to track internal vs external changes
 
@@ -650,6 +657,40 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   private containsNip19Identifier(text: string): boolean {
     const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)[a-zA-Z0-9]+\b/;
     return nip19Pattern.test(text);
+  }
+
+  /**
+   * Handle text selection to show/hide floating toolbar
+   */
+  onTextSelection() {
+    if (!this.isRichTextMode()) {
+      this.showFloatingToolbar.set(false);
+      return;
+    }
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
+      this.showFloatingToolbar.set(false);
+      return;
+    }
+
+    const selectedText = selection.toString().trim();
+    if (!selectedText) {
+      this.showFloatingToolbar.set(false);
+      return;
+    }
+
+    // Get the position of the selection
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    // Position the toolbar above the selection
+    const toolbarWidth = 280; // Approximate toolbar width
+    const top = rect.top + window.scrollY - 50; // 50px above selection
+    const left = rect.left + window.scrollX + rect.width / 2 - toolbarWidth / 2;
+
+    this.floatingToolbarPosition.set({ top, left });
+    this.showFloatingToolbar.set(true);
   }
 
   /**

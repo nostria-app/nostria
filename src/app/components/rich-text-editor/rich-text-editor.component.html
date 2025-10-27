@@ -1,106 +1,74 @@
-<div
-  class="rich-editor-container"
-  [class.drag-over]="isDragOver()"
-  (dragenter)="onDragEnter($event)"
-  (dragover)="onDragOver($event)"
-  (dragleave)="onDragLeave($event)"
-  (drop)="onDrop($event)"
->
+<div class="rich-editor-container" [class.drag-over]="isDragOver()" (dragenter)="onDragEnter($event)"
+  (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
   <!-- Hidden file input -->
-  <input
-    #fileInput
-    type="file"
-    multiple
-    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
-    (change)="onFileSelected($event)"
-    class="hidden-file-input"
-    aria-label="Upload files"
-    title="Upload files"
-  />
+  <input #fileInput type="file" multiple accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar"
+    (change)="onFileSelected($event)" class="hidden-file-input" aria-label="Upload files" title="Upload files" />
 
   <div class="editor-toolbar">
     @if (isRichTextMode()) {
-      <div class="formatting-controls">
-        <button mat-icon-button (click)="applyBold()" matTooltip="Bold (Ctrl+B)">
-          <mat-icon>format_bold</mat-icon>
-        </button>
-        <button mat-icon-button (click)="applyItalic()" matTooltip="Italic (Ctrl+I)">
-          <mat-icon>format_italic</mat-icon>
-        </button>
-        <mat-divider [vertical]="true"></mat-divider>
-        <button mat-icon-button (click)="applyHeading(1)" matTooltip="Heading 1">
-          <mat-icon>looks_one</mat-icon>
-        </button>
-        <button mat-icon-button (click)="applyHeading(2)" matTooltip="Heading 2">
-          <mat-icon>looks_two</mat-icon>
-        </button>
-        <button mat-icon-button (click)="applyHeading(3)" matTooltip="Heading 3">
-          <mat-icon>looks_3</mat-icon>
-        </button>
-        <mat-divider [vertical]="true"></mat-divider>
-        <button mat-icon-button (click)="applyQuote()" matTooltip="Quote">
-          <mat-icon>format_quote</mat-icon>
-        </button>
-        <button mat-icon-button (click)="applyUnorderedList()" matTooltip="Bullet List">
-          <mat-icon>format_list_bulleted</mat-icon>
-        </button>
-        <button mat-icon-button (click)="applyOrderedList()" matTooltip="Numbered List">
-          <mat-icon>format_list_numbered</mat-icon>
-        </button>
-        <mat-divider [vertical]="true"></mat-divider>
-        <button mat-icon-button (click)="applyLink()" matTooltip="Insert Link">
-          <mat-icon>link</mat-icon>
-        </button>
-        <button mat-icon-button (click)="insertCode()" matTooltip="Insert Code">
-          <mat-icon>code</mat-icon>
-        </button>
-        <mat-divider [vertical]="true"></mat-divider>
-        <button
-          mat-icon-button
-          (click)="openFileDialog()"
-          [disabled]="isUploading()"
-          matTooltip="Upload Files"
-        >
-          @if (isUploading()) {
-            <mat-icon>hourglass_empty</mat-icon>
-          } @else {
-            <mat-icon>attach_file</mat-icon>
-          }
-        </button>
-      </div>
+    <div class="formatting-controls">
+      <button mat-icon-button (click)="applyBold()" matTooltip="Bold (Ctrl+B)">
+        <mat-icon>format_bold</mat-icon>
+      </button>
+      <button mat-icon-button (click)="applyItalic()" matTooltip="Italic (Ctrl+I)">
+        <mat-icon>format_italic</mat-icon>
+      </button>
+      <mat-divider [vertical]="true"></mat-divider>
+      <button mat-icon-button (click)="applyHeading(1)" matTooltip="Heading 1">
+        <mat-icon>looks_one</mat-icon>
+      </button>
+      <button mat-icon-button (click)="applyHeading(2)" matTooltip="Heading 2">
+        <mat-icon>looks_two</mat-icon>
+      </button>
+      <button mat-icon-button (click)="applyHeading(3)" matTooltip="Heading 3">
+        <mat-icon>looks_3</mat-icon>
+      </button>
+      <mat-divider [vertical]="true"></mat-divider>
+      <button mat-icon-button (click)="applyQuote()" matTooltip="Quote">
+        <mat-icon>format_quote</mat-icon>
+      </button>
+      <button mat-icon-button (click)="applyUnorderedList()" matTooltip="Bullet List">
+        <mat-icon>format_list_bulleted</mat-icon>
+      </button>
+      <button mat-icon-button (click)="applyOrderedList()" matTooltip="Numbered List">
+        <mat-icon>format_list_numbered</mat-icon>
+      </button>
+      <mat-divider [vertical]="true"></mat-divider>
+      <button mat-icon-button (click)="applyLink()" matTooltip="Insert Link">
+        <mat-icon>link</mat-icon>
+      </button>
+      <button mat-icon-button (click)="insertCode()" matTooltip="Insert Code">
+        <mat-icon>code</mat-icon>
+      </button>
+      <mat-divider [vertical]="true"></mat-divider>
+      <button mat-icon-button (click)="openFileDialog()" [disabled]="isUploading()" matTooltip="Upload Files">
+        @if (isUploading()) {
+        <mat-icon>hourglass_empty</mat-icon>
+        } @else {
+        <mat-icon>attach_file</mat-icon>
+        }
+      </button>
+    </div>
     } @else {
-      <div class="markdown-controls">
-        <button
-          mat-icon-button
-          (click)="openFileDialog()"
-          [disabled]="isUploading()"
-          matTooltip="Upload Files"
-        >
-          @if (isUploading()) {
-            <mat-icon>hourglass_empty</mat-icon>
-          } @else {
-            <mat-icon>attach_file</mat-icon>
-          }
-        </button>
-      </div>
+    <div class="markdown-controls">
+      <button mat-icon-button (click)="openFileDialog()" [disabled]="isUploading()" matTooltip="Upload Files">
+        @if (isUploading()) {
+        <mat-icon>hourglass_empty</mat-icon>
+        } @else {
+        <mat-icon>attach_file</mat-icon>
+        }
+      </button>
+    </div>
     }
     <div class="editor-mode-toggle">
       <mat-button-toggle-group [value]="isRichTextMode() ? 'rich' : 'markdown'">
-        <mat-button-toggle
-          value="rich"
-          [class.active]="isRichTextMode()"
-          (click)="isRichTextMode() ? null : toggleEditorMode()"
-          matTooltip="Rich Text Editor"
-        >
+        <mat-button-toggle value="rich" [class.active]="isRichTextMode()"
+          (click)="isRichTextMode() ? null : toggleEditorMode()" matTooltip="Rich Text Editor">
           <mat-icon>wysiwyg</mat-icon>
           <span class="toggle-label">Rich Text</span>
         </mat-button-toggle>
-        <mat-button-toggle
-          value="markdown"
-          [class.active]="!isRichTextMode()"
-          (click)="!isRichTextMode() ? null : toggleEditorMode()"
-          matTooltip="Markdown Editor"
-        >
+        <mat-button-toggle value="markdown" [class.active]="!isRichTextMode()"
+          (click)="!isRichTextMode() ? null : toggleEditorMode()" matTooltip="Markdown Editor">
           <mat-icon>code</mat-icon>
           <span class="toggle-label">Markdown</span>
         </mat-button-toggle>
@@ -110,39 +78,34 @@
 
   <div class="editor-content-area">
     @if (isUploading()) {
-      <div class="upload-progress">
-        <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-        <span>Uploading files...</span>
-      </div>
+    <div class="upload-progress">
+      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+      <span>Uploading files...</span>
+    </div>
     }
 
     @if (isDragOver()) {
-      <div class="drag-overlay">
-        <div class="drag-message">
-          <mat-icon>cloud_upload</mat-icon>
-          <p>Drop files here to upload</p>
-        </div>
+    <div class="drag-overlay">
+      <div class="drag-message">
+        <mat-icon>cloud_upload</mat-icon>
+        <p>Drop files here to upload</p>
       </div>
+    </div>
     }
 
     @if (isRichTextMode()) {
-      <div
-        #editorContent
-        class="rich-text-content"
-        contenteditable="true"
-        (input)="onRichTextContentChange()"
-        [attr.placeholder]="'Write your article content...'"
-      ></div>
+    <div #editorContent class="rich-text-content" contenteditable="true" (input)="onRichTextContentChange()"
+      (mouseup)="onTextSelection()" (keyup)="onTextSelection()" [attr.placeholder]="'Write your article content...'">
+    </div>
     } @else {
-      <textarea
-        #markdownTextarea
-        class="markdown-content"
-        [value]="markdownContent()"
-        (input)="onMarkdownContentChange($event)"
-        placeholder="Write your article content in Markdown..."
-        rows="20"
-      >
+    <textarea #markdownTextarea class="markdown-content" [value]="markdownContent()"
+      (input)="onMarkdownContentChange($event)" placeholder="Write your article content in Markdown..." rows="20">
       </textarea>
     }
   </div>
+
+  <!-- Floating Toolbar -->
+  <app-floating-toolbar [visible]="showFloatingToolbar()" [position]="floatingToolbarPosition()" (bold)="applyBold()"
+    (italic)="applyItalic()" (link)="applyLink()" (heading1)="applyHeading(1)" (heading2)="applyHeading(2)"
+    (heading3)="applyHeading(3)" (quote)="applyQuote()" />
 </div>

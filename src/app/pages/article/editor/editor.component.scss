@@ -39,59 +39,41 @@
 }
 
 .editor-container {
-  padding: 24px;
-  max-width: 1200px;
+  padding: 0;
+  max-width: 100%;
   margin: 0 auto;
 
-  .content-card {
-    margin-bottom: 24px;
-    box-shadow: var(--mat-sys-level1);
+  .medium-editor {
+    max-width: 740px;
+    margin: 0 auto;
+    padding: 48px 24px;
 
-    mat-card-header {
-      display: flex;
-      align-items: center;
+    .title-input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 42px;
+      line-height: 1.2;
+      padding: 0;
+      margin: 0 0 24px 0;
+      color: var(--mat-sys-on-surface);
+      font-family: inherit;
 
-      .spacer {
-        flex: 1;
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.6;
       }
 
-      .auto-title-badge {
-        display: flex;
-        align-items: center;
-        background-color: var(--mat-sys-primary-container);
-        color: var(--mat-sys-on-primary-container);
-        padding: 4px 12px;
-        border-radius: 16px;
-        font-size: 0.9rem;
-        margin-left: 16px;
-
-        mat-icon {
-          font-size: 18px;
-          width: 18px;
-          height: 18px;
-          margin-right: 4px;
-        }
-      }
-    }
-
-    .suggested-title-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background-color: var(--mat-sys-primary-container);
-      color: var(--mat-sys-on-primary-container);
-      padding: 8px 16px;
-      margin-bottom: 16px;
-      border-radius: 4px;
-
-      strong {
-        font-weight: 500;
+      &:focus {
+        outline: none;
       }
     }
   }
 
   .metadata-panel {
-    margin-bottom: 24px;
+    max-width: 740px;
+    margin: 24px auto;
     box-shadow: var(--mat-sys-level1);
 
     mat-panel-title {
@@ -177,8 +159,13 @@
       --mat-tab-active-indicator-color: var(--mat-sys-primary);
     }
 
+    .mat-mdc-tab-header {
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      margin-bottom: 24px;
+    }
+
     .write-tab {
-      padding: 16px 0;
+      padding: 0;
 
       .content-editor {
         width: 100%;
@@ -189,25 +176,10 @@
           line-height: 1.6;
         }
       }
-
-      .editor-hint {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 12px;
-        color: var(--mat-sys-on-surface-variant);
-        font-size: 0.9em;
-
-        mat-icon {
-          font-size: 18px;
-          width: 18px;
-          height: 18px;
-        }
-      }
     }
 
     .preview-tab {
-      padding: 16px 0;
+      padding: 0;
 
       .preview-content {
         .preview-title {
@@ -239,6 +211,7 @@
 
           // Markdown styling
           ::ng-deep {
+
             h1,
             h2,
             h3,
@@ -361,11 +334,16 @@
 // Responsive design
 @media (max-width: 768px) {
   .editor-container {
-    padding: 16px;
+    .medium-editor {
+      padding: 24px 16px;
 
-    .metadata-card,
-    .content-card {
-      margin-bottom: 16px;
+      .title-input {
+        font-size: 32px;
+      }
+    }
+
+    .metadata-panel {
+      margin: 16px;
     }
   }
 
