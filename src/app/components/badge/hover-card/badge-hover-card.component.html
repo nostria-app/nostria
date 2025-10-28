@@ -1,0 +1,58 @@
+<mat-card class="badge-hover-card">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner [diameter]="40"></mat-spinner>
+  </div>
+  } @else if (error()) {
+  <div class="error-container">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
+  } @else if (parsedBadge()) {
+  <div class="card-content">
+    <!-- Badge Image -->
+    <div class="badge-image-container">
+      @if (parsedBadge()!.image || parsedBadge()!.thumb) {
+      <img [src]="parsedBadge()!.image || parsedBadge()!.thumb" [alt]="parsedBadge()!.name" class="badge-image" />
+      } @else {
+      <div class="badge-placeholder">
+        <mat-icon>military_tech</mat-icon>
+      </div>
+      }
+    </div>
+
+    <!-- Badge Info -->
+    <div class="badge-info">
+      <h3 class="badge-name">{{ parsedBadge()!.name }}</h3>
+
+      @if (issuerName()) {
+      <div class="issuer-info">
+        <mat-icon>person</mat-icon>
+        <span>{{ issuerName() }} created a badge</span>
+      </div>
+      }
+
+      @if (parsedBadge()!.description) {
+      <p class="badge-description">{{ parsedBadge()!.description }}</p>
+      }
+
+      <!-- Badge Tags -->
+      @if (parsedBadge()!.tags && parsedBadge()!.tags.length > 0) {
+      <div class="badge-tags">
+        @for (tag of parsedBadge()!.tags; track tag) {
+        <span class="badge-tag">{{ tag }}</span>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- Actions -->
+    <div class="card-actions">
+      <a mat-button color="primary" [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey(), slug: slug() }">
+        <mat-icon>visibility</mat-icon>
+        View Badge
+      </a>
+    </div>
+  </div>
+  }
+</mat-card>

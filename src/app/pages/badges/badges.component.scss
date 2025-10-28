@@ -29,23 +29,48 @@
 }
 
 .badge-drag-container {
-  cursor: move;
+  cursor: grab;
+
+  &:active {
+    cursor: grabbing;
+  }
 
   &.cdk-drag-preview {
-    opacity: 0.8;
-    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    opacity: 0.9;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    transform: rotate(2deg);
+    z-index: 1000;
+
+    app-badge {
+      pointer-events: none;
+    }
   }
 
   &.cdk-drag-animating {
-    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    transition: transform 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  &.cdk-drag-dragging {
+    opacity: 0.5;
   }
 }
 
 .badge-drag-placeholder {
-  background: rgba(128, 128, 128, 0.1);
-  border: 2px dashed rgba(128, 128, 128, 0.3);
+  background: var(--mat-sys-surface-container);
+  border: 2px dashed var(--mat-sys-outline);
+  border-radius: 12px;
   min-height: 200px;
-  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 250ms cubic-bezier(0, 0, 0.2, 1);
+
+  &::before {
+    content: 'Drop here';
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 14px;
+    opacity: 0.6;
+  }
 }
 
 .badges-list {

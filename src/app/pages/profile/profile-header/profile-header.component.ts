@@ -95,10 +95,10 @@ export class ProfileHeaderComponent {
   // Add signal for bio expansion
   isBioExpanded = signal<boolean>(false);
 
-  // Computed for top 3 accepted badges
+  // Computed for top 4 accepted badges (changed from 3)
   topBadges = computed(() => {
     const accepted = this.badgeService.acceptedBadges();
-    return accepted.slice(0, 3);
+    return accepted.slice(0, 4);
   });
 
   // Computed to check if user has accepted badges
@@ -106,9 +106,18 @@ export class ProfileHeaderComponent {
     return this.badgeService.acceptedBadges().length > 0;
   });
 
-  // Computed to check if user has more than 3 badges
-  hasMoreBadges = computed(() => {
-    return this.badgeService.acceptedBadges().length > 3;
+  // No longer need hasMoreBadges since all badges link to badges page
+
+  // Memoized parsed badges to prevent NG0100 error
+  // Need to also track badgeDefinitions signal to react to async loading
+  parsedBadges = computed(() => {
+    // Include badgeDefinitions in the dependency graph so computed re-runs when definitions load
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const definitions = this.badgeService.badgeDefinitions();
+    return this.topBadges().map(badge => {
+      const badgeDefinition = this.getBadgeDefinition(badge);
+      return this.parseBadgeDefinition(badgeDefinition);
+    });
   });
 
   // Computed property to check if bio needs expansion
