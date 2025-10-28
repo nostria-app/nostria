@@ -21,7 +21,6 @@ import { LayoutService } from '../../services/layout.service';
 import { CommonModule } from '@angular/common';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
-import { ProfileHeaderComponent } from '../profile/profile-header/profile-header.component';
 import { DataService } from '../../services/data.service';
 import { NostrRecord } from '../../interfaces';
 
@@ -40,7 +39,6 @@ import { NostrRecord } from '../../interfaces';
     MatProgressSpinnerModule,
     CommonModule,
     DragDropModule,
-    ProfileHeaderComponent,
   ],
   templateUrl: './badges.component.html',
   styleUrl: './badges.component.scss',
@@ -81,7 +79,7 @@ export class BadgesComponent {
 
       if (appInitialized && appAuthenticated) {
         console.log('appInitialized && appAuthenticated');
-        
+
         // Run the loading logic untracked to prevent infinite loops
         untracked(async () => {
           this.isInitialLoading.set(true);
@@ -90,11 +88,11 @@ export class BadgesComponent {
             // Use pubkey from query params if provided, otherwise use current user's pubkey
             const targetPubkey = pubkeyParam || this.accountState.pubkey();
             this.viewingPubkey.set(targetPubkey);
-            
+
             // Load profile data for the viewing user
             const profile = await this.dataService.getProfile(targetPubkey);
             this.viewingProfile.set(profile);
-            
+
             await this.badgeService.loadAllBadges(targetPubkey);
           } catch (err) {
             console.error('Error loading badges:', err);
@@ -141,6 +139,25 @@ export class BadgesComponent {
   }
   get isLoadingDefinitions() {
     return this.badgeService.isLoadingDefinitions;
+  }
+
+  getProfileIdentifier(): string {
+    const profile = this.viewingProfile();
+    if (!profile) return '';
+    
+    // Prefer NIP-05 if available and valid
+    const nip05 = profile.data?.nip05;
+    if (nip05 && profile.data?.nip05valid) {
+      return nip05;
+    }
+    
+    // Fall back to truncated npub
+    const pubkey = this.viewingPubkey();
+    if (pubkey) {
+      return this.utilities.getTruncatedNpub(pubkey);
+    }
+    
+    return '';
   }
 
   openBadgeEditor(): void {
