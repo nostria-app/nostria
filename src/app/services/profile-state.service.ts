@@ -44,6 +44,10 @@ export class ProfileStateService {
   isLoadingMoreArticles = signal<boolean>(false);
   hasMoreArticles = signal<boolean>(true);
 
+  // Loading states for media
+  isLoadingMoreMedia = signal<boolean>(false);
+  hasMoreMedia = signal<boolean>(true);
+
   constructor() {
     effect(async () => {
       const pubkey = this.pubkey();
@@ -100,6 +104,7 @@ export class ProfileStateService {
     this.media.set([]);
     this.hasMoreNotes.set(true);
     this.hasMoreArticles.set(true);
+    this.hasMoreMedia.set(true);
   }
 
   // Computed signals for sorted data
@@ -158,9 +163,9 @@ export class ProfileStateService {
       }
     }, 2000); // Wait 2 seconds before trying fallback
 
-    // Subscribe to content events (notes, articles, reposts)
+    // Subscribe to content events (notes, articles, reposts, media)
     const events = await this.userRelayService.query(pubkey, {
-      kinds: [kinds.ShortTextNote, kinds.LongFormArticle, kinds.Repost, kinds.GenericRepost],
+      kinds: [kinds.ShortTextNote, kinds.LongFormArticle, kinds.Repost, kinds.GenericRepost, 20, 21, 22],
       authors: [pubkey],
       limit: 20,
     });
@@ -565,6 +570,102 @@ export class ProfileStateService {
     } catch (error) {
       this.logger.error('Failed to load more articles:', error);
       this.isLoadingMoreArticles.set(false);
+      return [];
+    }
+  }
+
+  /**
+   * Load more media events (kinds 20, 21, 22) for the profile
+   * @param beforeTimestamp Optional timestamp to load events before. If not provided, uses the oldest media event timestamp
+   * @returns Array of newly loaded media records
+   */
+  async loadMoreMedia(beforeTimestamp?: number): Promise<NostrRecord[]> {
+    if (this.isLoadingMoreMedia() || !this.hasMoreMedia()) {
+      return [];
+    }
+
+    this.isLoadingMoreMedia.set(true);
+    const pubkey = this.pubkey();
+
+    try {
+      const currentMedia = this.media();
+      const oldestTimestamp =
+        beforeTimestamp ||
+        (currentMedia.length > 0
+          ? Math.min(...currentMedia.map(m => m.event.created_at)) - 1
+          : Math.floor(Date.now() / 1000));
+
+      this.logger.debug(
+        `Loading more media for ${pubkey}, before timestamp: ${oldestTimestamp}`
+      );
+
+      const newMedia: NostrRecord[] = [];
+
+      // Query events using the async method
+      const events = await this.userRelayService.query(pubkey, {
+        kinds: [20, 21, 22], // Picture, Video, and other media types
+        authors: [pubkey],
+        until: oldestTimestamp,
+        limit: 15, // Load 15 more media items at a time
+      });
+
+      // Process all returned events
+      for (const event of events || []) {
+        if (event.kind === 20 || event.kind === 21 || event.kind === 22) {
+          // Create a NostrRecord
+          const record: NostrRecord = {
+            event: event,
+            data: event.content,
+          };
+
+          // Check if we already have this media item to avoid duplicates
+          const existingMedia = this.media();
+          const exists = existingMedia.some(m => m.event.id === event.id);
+
+          if (!exists) {
+            newMedia.push(record);
+          }
+        }
+      }
+
+      this.logger.debug(`Loaded ${newMedia.length} more media items`);
+
+      // Track if we added any new content
+      let addedAnyContent = false;
+
+      // Add new media to the existing ones with final deduplication check
+      if (newMedia.length > 0) {
+        this.media.update(existing => {
+          const filtered = newMedia.filter(
+            newMediaItem =>
+              !existing.some(
+                existingMediaItem => existingMediaItem.event.id === newMediaItem.event.id
+              )
+          );
+          console.log(
+            `Adding ${filtered.length} new media items (${newMedia.length - filtered.length} duplicates filtered)`
+          );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
+          return [...existing, ...filtered];
+        });
+      }
+
+      // Only keep hasMoreMedia true if we actually added new content
+      if (!addedAnyContent) {
+        this.hasMoreMedia.set(false);
+      } else {
+        this.hasMoreMedia.set(true);
+      }
+
+      this.isLoadingMoreMedia.set(false);
+      return newMedia;
+    } catch (error) {
+      this.logger.error('Failed to load more media:', error);
+      this.isLoadingMoreMedia.set(false);
       return [];
     }
   }
