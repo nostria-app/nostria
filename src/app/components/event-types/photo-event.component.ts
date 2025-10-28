@@ -3,7 +3,8 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { Event } from 'nostr-tools';
+import { Router } from '@angular/router';
+import { Event, nip19 } from 'nostr-tools';
 import { decode } from 'blurhash';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
@@ -19,8 +20,10 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 export class PhotoEventComponent {
   event = input.required<Event>();
   hideComments = input<boolean>(false);
+  showOverlay = input<boolean>(false);
 
   private dialog = inject(MatDialog);
+  private router = inject(Router);
 
   // Current carousel index for inline navigation
   currentCarouselIndex = signal(0);
@@ -199,6 +202,13 @@ export class PhotoEventComponent {
         maxHeight: '95vh',
         panelClass: 'image-dialog-panel',
       });
+    }
+  }
+
+  openEventPage(): void {
+    const event = this.event();
+    if (event) {
+      this.router.navigate(['/e', event.id]);
     }
   }
 

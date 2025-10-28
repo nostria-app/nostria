@@ -31,11 +31,13 @@
       <app-event-header [event]="repostService.decodeRepost(item.event).event"></app-event-header>
       <mat-card-content>
         @if (targetItem.event.kind === 20) {
-        <app-photo-event [event]="targetItem.event" [hideComments]="hideComments()"></app-photo-event>
+        <app-photo-event [event]="targetItem.event" [hideComments]="hideComments()"
+          [showOverlay]="showOverlay()"></app-photo-event>
         }
         <!-- Videos (NIP-71, kind 21/22) -->
         @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22) {
-        <app-video-event [event]="targetItem.event" [hideComments]="hideComments()"></app-video-event>
+        <app-video-event [event]="targetItem.event" [hideComments]="hideComments()"
+          [showOverlay]="showOverlay()"></app-video-event>
         }
         <!-- Articles (kind 30023) -->
         @else if (targetItem.event.kind === 30023) {
@@ -84,11 +86,13 @@
         <app-event-header [event]="rootRecordData.event"></app-event-header>
         <mat-card-content #rootContent [class.collapsed]="!isRootEventExpanded()">
           @if (rootRecordData.event.kind === 20) {
-          <app-photo-event [event]="rootRecordData.event" [hideComments]="hideComments()"></app-photo-event>
+          <app-photo-event [event]="rootRecordData.event" [hideComments]="hideComments()"
+            [showOverlay]="showOverlay()"></app-photo-event>
           }
           <!-- Videos (NIP-71, kind 21/22) -->
           @else if (rootRecordData.event.kind === 21 || rootRecordData.event.kind === 22) {
-          <app-video-event [event]="rootRecordData.event" [hideComments]="hideComments()"></app-video-event>
+          <app-video-event [event]="rootRecordData.event" [hideComments]="hideComments()"
+            [showOverlay]="showOverlay()"></app-video-event>
           }
           <!-- Articles (kind 30023) -->
           @else if (rootRecordData.event.kind === 30023) {
@@ -141,13 +145,15 @@
         <app-event-header [event]="parentRecordData.event"></app-event-header>
         <mat-card-content #parentContent [class.collapsed]="!isParentEventExpanded()">
           @if (parentRecordData.event.kind === 20) {
-          <app-photo-event [event]="parentRecordData.event" [hideComments]="hideComments()"></app-photo-event>
+          <app-photo-event [event]="parentRecordData.event" [hideComments]="hideComments()"
+            [showOverlay]="showOverlay()"></app-photo-event>
           }
           <!-- Videos (NIP-71, kind 21/22) -->
           @else if (
           parentRecordData.event.kind === 21 || parentRecordData.event.kind === 22
           ) {
-          <app-video-event [event]="parentRecordData.event" [hideComments]="hideComments()"></app-video-event>
+          <app-video-event [event]="parentRecordData.event" [hideComments]="hideComments()"
+            [showOverlay]="showOverlay()"></app-video-event>
           }
           <!-- Articles (kind 30023) -->
           @else if (parentRecordData.event.kind === 30023) {
@@ -192,11 +198,13 @@
     <app-reported-content [event]="item.event"></app-reported-content>
     } @else {
     @if (item.event.kind === 20) {
-    <app-photo-event [event]="item.event" [hideComments]="hideComments()"></app-photo-event>
+    <app-photo-event [event]="item.event" [hideComments]="hideComments()"
+      [showOverlay]="showOverlay()"></app-photo-event>
     }
     <!-- Videos (NIP-71, kind 21/22) -->
     @else if (item.event.kind === 21 || item.event.kind === 22) {
-    <app-video-event [event]="item.event" [hideComments]="hideComments()"></app-video-event>
+    <app-video-event [event]="item.event" [hideComments]="hideComments()"
+      [showOverlay]="showOverlay()"></app-video-event>
     }
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {
@@ -235,11 +243,13 @@
     <app-reported-content [event]="item.event"></app-reported-content>
     } @else {
     @if (item.event.kind === 20) {
-    <app-photo-event [event]="item.event" [hideComments]="hideComments()"></app-photo-event>
+    <app-photo-event [event]="item.event" [hideComments]="hideComments()"
+      [showOverlay]="showOverlay()"></app-photo-event>
     }
     <!-- Videos (NIP-71, kind 21/22) -->
     @else if (item.event.kind === 21 || item.event.kind === 22) {
-    <app-video-event [event]="item.event" [hideComments]="hideComments()"></app-video-event>
+    <app-video-event [event]="item.event" [hideComments]="hideComments()"
+      [showOverlay]="showOverlay()"></app-video-event>
     }
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {
