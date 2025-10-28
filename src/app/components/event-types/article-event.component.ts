@@ -101,6 +101,15 @@ export class ArticleEventComponent {
     return new Date(event.created_at * 1000);
   });
 
+  // Article image
+  image = computed(() => {
+    const event = this.event();
+    if (!event) return null;
+
+    const imageTag = event.tags.find(tag => tag[0] === 'image');
+    return imageTag?.[1] || null;
+  });
+
   // Author information from tags
   authorName = computed(() => {
     const event = this.event();
