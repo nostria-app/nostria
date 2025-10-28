@@ -195,6 +195,12 @@
         } @else {
         <span class="inline-error"> <mat-icon>error</mat-icon>&nbsp; No relays found! </span>
         }
+
+        @if (badgeCount() > 0) {
+        <a class="following-count" [routerLink]="'badges'" [queryParamsHandling]="'preserve'">
+          Badges {{ badgeCount() }}
+        </a>
+        }
         }
       </div>
 
