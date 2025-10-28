@@ -274,6 +274,14 @@ interface NostriaDBSchema extends DBSchema {
       'by-source': string;
     };
   };
+  badgeDefinitions: {
+    key: string; // composite key: pubkey:d-tag (unique identifier for badge definition)
+    value: Event;
+    indexes: {
+      'by-pubkey': string;
+      'by-updated': number;
+    };
+  };
 }
 
 @Injectable({

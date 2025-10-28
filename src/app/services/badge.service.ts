@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal, NgZone } from '@angular/core';
 import { StorageService } from './storage.service';
 import { NostrService } from './nostr.service';
 import { Event, kinds, NostrEvent } from 'nostr-tools';
@@ -17,6 +17,14 @@ export interface ParsedBadge {
   image: string;
   thumb: string;
   tags: string[];
+}
+
+export interface AcceptedBadge {
+  aTag: string[];
+  eTag: string[];
+  id: string;
+  pubkey: string;
+  slug: string;
 }
 
 interface ParsedReward {
@@ -43,6 +51,7 @@ export class BadgeService implements NostriaService {
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
   private readonly data = inject(DataService);
+  private readonly ngZone = inject(NgZone);
 
   // Signals to store different types of badges
   badgeDefinitions = signal<Event[]>([]);
@@ -52,15 +61,7 @@ export class BadgeService implements NostriaService {
   });
 
   profileBadgesEvent = signal<NostrEvent | null>(null);
-  acceptedBadges = signal<
-    {
-      aTag: string[];
-      eTag: string[];
-      id: string;
-      pubkey: string;
-      slug: string;
-    }[]
-  >([]);
+  acceptedBadges = signal<AcceptedBadge[]>([]);
   issuedBadges = signal<NostrEvent[]>([]);
   receivedBadges = signal<NostrEvent[]>([]);
   badgeIssuers = signal<Record<string, any>>({});
@@ -82,15 +83,18 @@ export class BadgeService implements NostriaService {
 
   putBadgeDefinition(badge: Event): void {
     if (badge.kind === kinds.BadgeDefinition) {
-      this.badgeDefinitions.update(badges => {
-        const index = badges.findIndex(b => b.id === badge.id);
-        if (index !== -1) {
-          badges[index] = badge;
-        } else {
-          badges.push(badge);
-        }
-        return badges;
-      });
+      // Schedule the update for the next change detection cycle to avoid ExpressionChangedAfterItHasBeenCheckedError
+      setTimeout(() => {
+        this.badgeDefinitions.update(badges => {
+          const index = badges.findIndex(b => b.id === badge.id);
+          if (index !== -1) {
+            badges[index] = badge;
+          } else {
+            badges.push(badge);
+          }
+          return badges;
+        });
+      }, 0);
     }
   }
 
