@@ -6,6 +6,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
+import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 @Component({
@@ -91,12 +92,38 @@ export class PhotoEventComponent {
   });
 
   openImageDialog(imageUrl: string, alt: string): void {
-    this.dialog.open(ImageDialogComponent, {
-      data: { imageUrl, alt },
-      maxWidth: '95vw',
-      maxHeight: '95vh',
-      panelClass: 'image-dialog-panel',
-    });
+    const imageUrls = this.imageUrls();
+    const altTexts = this.altTexts();
+
+    // Find the index of the clicked image
+    const clickedIndex = imageUrls.indexOf(imageUrl);
+
+    // If there are multiple images, use MediaPreviewDialogComponent
+    if (imageUrls.length > 1) {
+      const mediaItems = imageUrls.map((url, index) => ({
+        url,
+        type: 'image/jpeg',
+        title: altTexts[index] || `Photo ${index + 1}`,
+      }));
+
+      this.dialog.open(MediaPreviewDialogComponent, {
+        data: {
+          mediaItems,
+          initialIndex: clickedIndex >= 0 ? clickedIndex : 0,
+        },
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        panelClass: 'media-preview-dialog',
+      });
+    } else {
+      // Single image - use existing ImageDialogComponent
+      this.dialog.open(ImageDialogComponent, {
+        data: { imageUrl, alt },
+        maxWidth: '95vw',
+        maxHeight: '95vh',
+        panelClass: 'image-dialog-panel',
+      });
+    }
   }
 
   onImageLoad(event: globalThis.Event): void {
