@@ -24,6 +24,13 @@
   </div>
   }
 
+  @if (image()) {
+  <div class="article-image-container">
+    <img [src]="image()" [attr.alt]="title() || 'Article image'" [attr.title]="title() || 'Article image'"
+      class="article-image" loading="lazy" />
+  </div>
+  }
+
   @if (summary()) {
   <p class="article-summary">{{ summary() }}</p>
   }
