@@ -182,6 +182,17 @@ export class BadgesComponent {
     return '';
   }
 
+  goBack(): void {
+    const pubkey = this.viewingPubkey();
+    if (pubkey) {
+      const npub = this.utilities.getNpubFromPubkey(pubkey);
+      this.router.navigate(['/p', npub || pubkey]);
+    } else {
+      // Fallback to home if no pubkey
+      this.router.navigate(['/']);
+    }
+  }
+
   openBadgeEditor(): void {
     this.router.navigate(['/badges/create']);
   }

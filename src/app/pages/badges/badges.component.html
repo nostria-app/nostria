@@ -1,28 +1,36 @@
 <div class="badges-container">
   <div class="badges-header">
-    <h1>Badges</h1>
+    <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="profile-mini">
+      @if (viewingProfile(); as profile) {
+      <div class="profile-mini-avatar">
+        @if (profile.data?.picture) {
+        <img [src]="profile.data.picture" alt="Profile picture" />
+        } @else {
+        <mat-icon>account_circle</mat-icon>
+        }
+      </div>
+      <h1 class="profile-mini-name">{{ profile.data?.display_name || profile.data?.name || 'Anonymous' }}'s Badges</h1>
+      } @else {
+      <div class="profile-mini-avatar">
+        <mat-icon>account_circle</mat-icon>
+      </div>
+      <h1 class="profile-mini-name">Badges</h1>
+      }
+    </div>
+
     <div class="badges-actions">
+      @if (isViewingOwnProfile()) {
       <button mat-raised-button color="primary" (click)="openBadgeEditor()">
         <mat-icon>add</mat-icon>
         Badge Editor
       </button>
+      }
     </div>
   </div>
-
-  @if (viewingProfile()) {
-  <div class="minimal-profile">
-    <img [src]="viewingProfile()?.data?.picture || 'assets/default-avatar.png'" alt="Profile picture"
-      class="profile-avatar" />
-    <div class="profile-info">
-      <div class="profile-name">
-        {{ viewingProfile()?.data?.display_name || viewingProfile()?.data?.name || 'Anonymous' }}
-      </div>
-      <div class="profile-identifier">
-        {{ getProfileIdentifier() }}
-      </div>
-    </div>
-  </div>
-  }
 
   @if (isInitialLoading()) {
   <div class="initial-loading">

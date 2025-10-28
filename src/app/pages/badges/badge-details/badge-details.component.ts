@@ -240,7 +240,7 @@ export class BadgeDetailsComponent {
       // Navigate to the badge creator's badges page
       const npub = this.utilities.getNpubFromPubkey(badge.creator);
       const identifier = npub || badge.creator;
-      
+
       // Include tab index if available
       if (this.returnTabIndex() !== null) {
         this.router.navigate(['/p', identifier, 'badges'], {
