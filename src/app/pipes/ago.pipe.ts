@@ -28,7 +28,7 @@ export class AgoPipe implements PipeTransform {
       case diff < 5:
         return 'just now';
       case diff < minute:
-        return `${diff} seconds ago`;
+        return `${Math.floor(diff)} seconds ago`;
       case diff < minute * 2:
         return 'a minute ago';
       case diff < hour:
