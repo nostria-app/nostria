@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal, untracked } from '@angular/core';
+import { Component, effect, inject, signal, untracked, computed } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -62,6 +62,17 @@ export class BadgesComponent {
   activeTabIndex = signal<number>(0);
   viewingPubkey = signal<string>(''); // Track which pubkey's badges we're viewing
   viewingProfile = signal<NostrRecord | undefined>(undefined); // Profile data for the viewing user
+
+  // Computed signal to get badge definitions for the viewing user
+  viewingUserDefinitions = computed(() => {
+    const pubkey = this.viewingPubkey();
+    return this.badgeService.badgeDefinitions().filter(badge => badge.pubkey === pubkey);
+  });
+
+  // Check if we're viewing our own profile
+  isViewingOwnProfile = computed(() => {
+    return this.viewingPubkey() === this.accountState.pubkey();
+  });
 
   constructor() {
     // Get the active tab from query params if available

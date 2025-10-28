@@ -136,17 +136,21 @@
       </div>
       } @else {
       <div class="badges-list">
-        @for (badge of createdDefinitions(); track badge.id) {
+        @for (badge of viewingUserDefinitions(); track badge.id) {
         <app-badge [badge]="badge" layout="horizontal" (click)="viewBadgeDetails(badge)"></app-badge>
         }
 
-        @if (createdDefinitions().length === 0) {
+        @if (viewingUserDefinitions().length === 0) {
         <div class="no-badges-message">
           <mat-icon>sentiment_very_dissatisfied</mat-icon>
+          @if (isViewingOwnProfile()) {
           <p>You haven't created any badges yet</p>
           <button mat-raised-button color="accent" (click)="openBadgeEditor()">
             Create Your First Badge
           </button>
+          } @else {
+          <p>No badges created yet</p>
+          }
         </div>
         }
       </div>
