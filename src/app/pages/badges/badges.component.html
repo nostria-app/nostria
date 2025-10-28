@@ -135,9 +135,9 @@
         <p>Loading created badges...</p>
       </div>
       } @else {
-      <div class="badges-grid">
+      <div class="badges-list">
         @for (badge of createdDefinitions(); track badge.id) {
-        <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
+        <app-badge [badge]="badge" layout="horizontal" (click)="viewBadgeDetails(badge)"></app-badge>
         }
 
         @if (createdDefinitions().length === 0) {
