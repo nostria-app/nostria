@@ -39,6 +39,8 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { Cache } from '../../../services/cache';
 import { NostrRecord } from '../../../interfaces';
 import { MentionHoverDirective } from '../../../directives/mention-hover.directive';
+import { MediaService } from '../../../services/media.service';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 interface ArticleDraft {
   title: string;
@@ -49,6 +51,8 @@ interface ArticleDraft {
   publishedAt?: number;
   dTag: string;
   lastSaved?: number; // Timestamp for auto-save
+  selectedImageFile?: File; // Store selected image file for upload
+  imageUrl?: string; // Store URL input separately
 }
 
 interface ArticleAutoDraft {
@@ -81,6 +85,7 @@ interface ArticleAutoDraft {
     MatExpansionModule,
     MatTooltipModule,
     MentionHoverDirective,
+    MatSlideToggleModule,
   ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
@@ -98,6 +103,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private localStorage = inject(LocalStorageService);
   private cache = inject(Cache);
+  private media = inject(MediaService);
 
   // Auto-save configuration
   private readonly AUTO_SAVE_INTERVAL = 2000; // Save every 2 seconds
@@ -175,6 +181,11 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   // Tag input
   newTag = signal('');
+
+  // Image upload state
+  useImageUrl = signal(true); // Default to URL mode
+  previewImage = signal<string | null>(null);
+  hasMediaServers = computed(() => this.media.mediaServers().length > 0);
 
   constructor() {
     // Check if we're editing an existing article
@@ -544,6 +555,37 @@ export class EditorComponent implements OnInit, OnDestroy {
       this.isPublishing.set(true);
       const art = this.article();
 
+      // Handle image file upload if selected
+      let imageUrl = art.image;
+      if (art.selectedImageFile) {
+        try {
+          const uploadResult = await this.media.uploadFile(
+            art.selectedImageFile,
+            false,
+            this.media.mediaServers()
+          );
+
+          if (!uploadResult.item) {
+            throw new Error(
+              `Failed to upload image: ${uploadResult.message || 'Unknown error'}`
+            );
+          }
+
+          imageUrl = uploadResult.item.url;
+          // Update the article with the uploaded URL
+          this.article.update(a => ({ ...a, image: imageUrl, selectedImageFile: undefined }));
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          this.snackBar.open(
+            `Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            'Close',
+            { duration: 5000 }
+          );
+          this.isPublishing.set(false);
+          return;
+        }
+      }
+
       // Ensure dTag has a value, generate one if empty (especially for drafts)
       let dTag = art.dTag.trim();
       if (!dTag) {
@@ -566,8 +608,8 @@ export class EditorComponent implements OnInit, OnDestroy {
         tags.push(['summary', art.summary]);
       }
 
-      if (art.image) {
-        tags.push(['image', art.image]);
+      if (imageUrl) {
+        tags.push(['image', imageUrl]);
       }
 
       // Add published_at for first time publication
@@ -689,10 +731,82 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   updateImage(value: string): void {
-    this.article.update(art => ({ ...art, image: value }));
+    this.article.update(art => ({ ...art, image: value, imageUrl: value }));
+
+    // Update preview if in URL mode
+    if (this.useImageUrl()) {
+      this.previewImage.set(value || null);
+    }
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
+  }
+
+  // Handle file selection for article image
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+
+      // Simple file type validation
+      if (!file.type.includes('image/')) {
+        this.snackBar.open('Please select a valid image file', 'Close', {
+          duration: 3000,
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const result = e.target?.result as string;
+        this.previewImage.set(result);
+        // Store the file for later upload
+        this.article.update(art => ({ ...art, selectedImageFile: file }));
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // Handle URL input for image
+  onImageUrlChange(): void {
+    const url = this.article()?.imageUrl || '';
+    if (url && url.trim() !== '') {
+      this.previewImage.set(url);
+      // Update the main image field immediately
+      this.article.update(art => ({ ...art, image: url }));
+    } else {
+      this.previewImage.set(null);
+    }
+  }
+
+  // Toggle image input method
+  toggleImageInputMethod(): void {
+    const currentUrl = this.article()?.image || '';
+    this.useImageUrl.update(current => !current);
+
+    if (this.useImageUrl()) {
+      // Switching to URL mode - preserve existing URL
+      this.article.update(art => ({
+        ...art,
+        imageUrl: currentUrl,
+        selectedImageFile: undefined,
+      }));
+      if (currentUrl) {
+        this.previewImage.set(currentUrl);
+      }
+    } else {
+      // Switching to file mode - clear file selection but keep URL for potential switch back
+      this.article.update(art => ({
+        ...art,
+        selectedImageFile: undefined,
+      }));
+      this.previewImage.set(currentUrl || null);
+    }
+  }
+
+  // Navigate to media settings
+  navigateToMediaSettings(): void {
+    this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
   }
 
   updateContent(value: string): void {
