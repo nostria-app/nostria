@@ -3,19 +3,20 @@
 }
 
 .badge-hover-card {
-  width: 320px;
+  width: 340px;
   max-width: 90vw;
   padding: 0;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
   overflow: hidden;
+  background-color: var(--mat-sys-surface);
 }
 
 .loading-container {
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 48px;
+  padding: 64px;
 }
 
 .error-container {
@@ -47,102 +48,180 @@
 
 .badge-image-container {
   width: 100%;
-  height: 180px;
+  height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
+  background: linear-gradient(145deg,
+      var(--mat-sys-primary-container) 0%,
+      var(--mat-sys-secondary-container) 50%,
+      var(--mat-sys-tertiary-container) 100%);
   position: relative;
   overflow: hidden;
+  padding: 32px;
 
-  .badge-image {
-    max-width: 140px;
-    max-height: 140px;
-    object-fit: contain;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  // Add subtle pattern overlay
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: radial-gradient(circle at 25% 25%, rgba(255, 255, 255, 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 75% 75%, rgba(255, 255, 255, 0.05) 0%, transparent 50%);
+    pointer-events: none;
   }
 
-  .badge-placeholder {
-    width: 140px;
-    height: 140px;
+  .badge-image-wrapper {
+    position: relative;
+    z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    background-color: var(--mat-sys-surface-variant);
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    width: 160px;
+    height: 160px;
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border-radius: 50%;
+    padding: 12px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.15),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
 
-    mat-icon {
-      font-size: 64px;
-      width: 64px;
-      height: 64px;
-      color: var(--mat-sys-on-surface-variant);
+    .badge-image {
+      max-width: 136px;
+      max-height: 136px;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.2));
+    }
+
+    .badge-placeholder {
+      width: 136px;
+      height: 136px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: var(--mat-sys-surface-variant);
+      border-radius: 50%;
+
+      mat-icon {
+        font-size: 72px;
+        width: 72px;
+        height: 72px;
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.6;
+      }
     }
   }
 }
 
 .badge-info {
-  padding: 16px;
+  padding: 20px 24px 16px 24px;
 
-  .badge-name {
-    margin: 0 0 8px 0;
-    font-size: 18px;
-    font-weight: 600;
+  .badge-title {
+    margin: 0 0 12px 0;
+    font-size: 22px;
+    font-weight: 700;
     color: var(--mat-sys-on-surface);
+    line-height: 1.3;
   }
 
   .issuer-info {
     display: flex;
     align-items: center;
-    gap: 6px;
-    margin-bottom: 12px;
-    font-size: 13px;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 8px 0;
+    font-size: 14px;
     color: var(--mat-sys-on-surface-variant);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
 
-    mat-icon {
-      font-size: 16px;
-      width: 16px;
-      height: 16px;
+    .issuer-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--mat-sys-primary);
+    }
+
+    span {
+      font-weight: 500;
     }
   }
 
   .badge-description {
-    margin: 0 0 12px 0;
-    font-size: 14px;
-    line-height: 1.5;
-    color: var(--mat-sys-on-surface-variant);
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    margin: 0 0 16px 0;
+
+    p {
+      margin: 0;
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--mat-sys-on-surface);
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      line-clamp: 4;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      word-break: break-word;
+    }
   }
 
   .badge-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
+    margin-top: 12px;
 
     .badge-tag {
-      padding: 4px 8px;
-      background-color: var(--mat-sys-surface-variant);
-      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 6px 12px;
+      background-color: var(--mat-sys-surface-container-high);
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 16px;
       font-size: 12px;
+      font-weight: 500;
       color: var(--mat-sys-on-surface-variant);
+      transition: all 0.2s ease;
+
+      .tag-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+        opacity: 0.7;
+      }
+
+      &:hover {
+        background-color: var(--mat-sys-surface-container-highest);
+        border-color: var(--mat-sys-outline);
+      }
     }
   }
 }
 
 .card-actions {
-  padding: 0 16px 16px 16px;
+  padding: 0 24px 24px 24px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: stretch;
 
-  a {
-    text-decoration: none;
-  }
+  .view-button {
+    width: 100%;
+    height: 42px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: none;
+    letter-spacing: 0.25px;
 
-  mat-icon {
-    margin-right: 4px;
+    mat-icon {
+      margin-right: 8px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
   }
 }
