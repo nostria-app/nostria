@@ -73,12 +73,54 @@
           </textarea>
       </mat-form-field>
 
-      <div class="two-column-layout">
+      <!-- Article Image Section -->
+      <div class="file-upload-section">
+        <div class="section-header">
+          <h3>Article Image</h3>
+          <div class="toggle-container">
+            <span>File</span>
+            <mat-slide-toggle [checked]="useImageUrl()" (change)="toggleImageInputMethod()" color="primary">
+            </mat-slide-toggle>
+            <span>URL</span>
+          </div>
+        </div>
+
+        <!-- No media servers warning for file upload mode -->
+        @if (!useImageUrl() && !hasMediaServers()) {
+        <div class="media-server-warning">
+          <mat-icon color="warn">warning</mat-icon>
+          <span>You need to configure a media server to upload image files</span>
+          <button mat-flat-button color="primary" type="button" (click)="navigateToMediaSettings()">
+            Configure Media Server
+          </button>
+        </div>
+        }
+
+        @if (!useImageUrl()) {
+        <div class="file-upload">
+          <button mat-stroked-button type="button" (click)="articleImageInput.click()" [disabled]="!hasMediaServers()">
+            <mat-icon>upload</mat-icon>
+            Choose article image
+          </button>
+          <input #articleImageInput type="file" hidden (change)="onFileSelected($event)" accept="image/*" />
+          @if (previewImage()) {
+          <span>File selected</span>
+          }
+        </div>
+        } @else {
         <mat-form-field appearance="outline" class="full-width">
+          <mat-icon matPrefix>image</mat-icon>
           <mat-label>Image URL</mat-label>
-          <input matInput [value]="article().image" (input)="updateImage($any($event.target).value)"
+          <input matInput type="text" [value]="article().imageUrl || article().image"
+            (input)="updateImage($any($event.target).value)" (blur)="onImageUrlChange()"
             placeholder="https://example.com/image.jpg" />
+          <mat-icon matSuffix>link</mat-icon>
         </mat-form-field>
+        }
+      </div>
+
+      <div class="two-column-layout">
+        <div></div> <!-- Empty div to maintain layout -->
 
         <div class="dTag-field-container">
           <mat-form-field appearance="outline" class="full-width">
