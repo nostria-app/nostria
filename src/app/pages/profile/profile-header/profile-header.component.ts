@@ -112,11 +112,18 @@ export class ProfileHeaderComponent {
   // Need to also track badgeDefinitions signal to react to async loading
   parsedBadges = computed(() => {
     // Include badgeDefinitions in the dependency graph so computed re-runs when definitions load
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const definitions = this.badgeService.badgeDefinitions();
-    return this.topBadges().map(badge => {
+    console.log('parsedBadges computed running, definitions count:', definitions.length);
+
+    const badges = this.topBadges();
+    console.log('topBadges:', badges);
+
+    return badges.map(badge => {
       const badgeDefinition = this.getBadgeDefinition(badge);
-      return this.parseBadgeDefinition(badgeDefinition);
+      console.log('Badge definition for', badge.slug, ':', badgeDefinition);
+      const parsed = this.parseBadgeDefinition(badgeDefinition);
+      console.log('Parsed badge:', parsed);
+      return parsed;
     });
   });
 
