@@ -99,7 +99,11 @@ export class BadgeService implements NostriaService {
   async loadAcceptedBadges(pubkey: string): Promise<void> {
     this.isLoadingAccepted.set(true);
     try {
-      const profileBadgesEvent = await this.accountRelay.getEventByPubkeyAndKind(
+      // Ensure relays are discovered for this pubkey first
+      await this.userRelayService.ensureRelaysForPubkey(pubkey);
+
+      // Use userRelayService to query the specific user's relays
+      const profileBadgesEvent = await this.userRelayService.getEventByPubkeyAndKind(
         pubkey,
         kinds.ProfileBadges
       );
@@ -108,11 +112,16 @@ export class BadgeService implements NostriaService {
       if (profileBadgesEvent) {
         this.parseBadgeTags(profileBadgesEvent.tags);
         await this.storage.saveEvent(profileBadgesEvent);
+      } else {
+        // Clear accepted badges if no profile badges event found
+        this.acceptedBadges.set([]);
       }
 
       this.profileBadgesEvent.set(profileBadgesEvent);
     } catch (err) {
       console.error('Error loading accepted badges:', err);
+      // Clear accepted badges on error
+      this.acceptedBadges.set([]);
     } finally {
       this.isLoadingAccepted.set(false);
     }
@@ -157,18 +166,34 @@ export class BadgeService implements NostriaService {
           // Ensure relays are discovered for this pubkey
           await this.userRelayService.ensureRelaysForPubkey(pubkey);
 
-          definition = await this.userRelayService.getEventByPubkeyAndKindAndTag(
-            pubkey,
-            kinds.BadgeDefinition,
-            { key: 'd', value: slug }
-          );
+          // Check what relays were discovered
+          const authorRelays = this.userRelayService.getRelaysForPubkey(pubkey);
+          console.log(`Badge author ${pubkey.slice(0, 16)}... relays discovered:`, authorRelays);
+
+          if (authorRelays.length === 0) {
+            this.logger.warn(`No relays found for badge author: ${pubkey.slice(0, 16)}...`);
+            // Try using global discovery relays as fallback
+            console.log('Attempting to fetch from discovery relays as fallback');
+            definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
+              pubkey,
+              kinds.BadgeDefinition,
+              { key: 'd', value: slug }
+            );
+          } else {
+            definition = await this.userRelayService.getEventByPubkeyAndKindAndTag(
+              pubkey,
+              kinds.BadgeDefinition,
+              { key: 'd', value: slug }
+            );
+          }
+
           console.log(
-            'Badge definition not found on user relays, fetched from author relays:',
-            definition
+            'Badge definition fetch result from author relays:',
+            definition ? 'found' : 'not found'
           );
 
           if (!definition) {
-            this.logger.error('Badge definition not found on author relays.');
+            this.logger.error(`Badge definition not found for ${pubkey.slice(0, 16)}... slug: ${slug}`);
           }
         } catch (err) {
           this.logger.error('Error loading badge definition:', err);
@@ -329,6 +354,26 @@ export class BadgeService implements NostriaService {
 
     console.log('Parsed badge pairs:', pairs);
     this.acceptedBadges.set(pairs);
+
+    // Start loading badge definitions in the background
+    this.loadBadgeDefinitionsInBackground(pairs);
+  }
+
+  private async loadBadgeDefinitionsInBackground(
+    badges: { pubkey: string; slug: string }[]
+  ): Promise<void> {
+    console.log(`Starting background load of ${badges.length} badge definitions`);
+
+    for (const badge of badges) {
+      // Check if we already have this definition cached
+      const cached = this.getBadgeDefinition(badge.pubkey, badge.slug);
+      if (!cached) {
+        // Load in background without blocking
+        this.loadBadgeDefinition(badge.pubkey, badge.slug).catch(err => {
+          console.error(`Failed to load badge definition for ${badge.slug}:`, err);
+        });
+      }
+    }
   }
 
   isBadgeAccepted(badgeAward: NostrEvent): boolean {
