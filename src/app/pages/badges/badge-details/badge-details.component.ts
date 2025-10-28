@@ -16,6 +16,7 @@ import { BadgeService } from '../../../services/badge.service';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 interface BadgeDisplayData {
   id: string;
@@ -58,6 +59,7 @@ export class BadgeDetailsComponent {
   private snackBar = inject(MatSnackBar);
   private readonly badgeService = inject(BadgeService);
   private readonly accountState = inject(AccountStateService);
+  private readonly utilities = inject(UtilitiesService);
 
   badge = signal<BadgeDisplayData | null>(null);
   isCreator = signal(false);
@@ -233,12 +235,22 @@ export class BadgeDetailsComponent {
   }
 
   goBack(): void {
-    // Return to the badges page with the stored tab index
-    if (this.returnTabIndex() !== null) {
-      this.router.navigate(['/badges'], {
-        queryParams: { tab: this.returnTabIndex() },
-      });
+    const badge = this.badge();
+    if (badge && badge.creator) {
+      // Navigate to the badge creator's badges page
+      const npub = this.utilities.getNpubFromPubkey(badge.creator);
+      const identifier = npub || badge.creator;
+      
+      // Include tab index if available
+      if (this.returnTabIndex() !== null) {
+        this.router.navigate(['/p', identifier, 'badges'], {
+          queryParams: { tab: this.returnTabIndex() },
+        });
+      } else {
+        this.router.navigate(['/p', identifier, 'badges']);
+      }
     } else {
+      // Fallback to generic badges page if no creator info
       this.router.navigate(['/badges']);
     }
   }
