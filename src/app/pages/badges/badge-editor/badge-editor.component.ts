@@ -23,6 +23,8 @@ import { kinds } from 'nostr-tools';
 import { MediaService } from '../../../services/media.service';
 import { LayoutService } from '../../../services/layout.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { AccountStateService } from '../../../services/account-state.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 @Component({
   selector: 'app-badge-editor',
@@ -53,6 +55,8 @@ export class BadgeEditorComponent {
   accountRelay = inject(AccountRelayService);
   media = inject(MediaService);
   layout = inject(LayoutService);
+  private accountState = inject(AccountStateService);
+  private utilities = inject(UtilitiesService);
 
   // Form for badge creation
   badgeForm: FormGroup;
@@ -302,8 +306,10 @@ export class BadgeEditorComponent {
 
       await this.layout.showPublishResults(publishResult, 'Badge');
 
-      // this.snackBar.open('Badge published successfully!', 'Close', { duration: 3000 });
-      this.router.navigate(['/badges']);
+      // Navigate back to user's badges page
+      const pubkey = this.accountState.pubkey();
+      const npub = this.utilities.getNpubFromPubkey(pubkey);
+      this.router.navigate(['/p', npub || pubkey, 'badges']);
     } catch (error) {
       console.error('Error publishing badge:', error);
       this.snackBar.open(
@@ -320,6 +326,8 @@ export class BadgeEditorComponent {
 
   // Navigation
   cancel(): void {
-    this.router.navigate(['/badges']);
+    const pubkey = this.accountState.pubkey();
+    const npub = this.utilities.getNpubFromPubkey(pubkey);
+    this.router.navigate(['/p', npub || pubkey, 'badges']);
   }
 }
