@@ -25,6 +25,7 @@ interface VideoData {
 })
 export class VideoEventComponent {
   event = input.required<Event>();
+  hideComments = input<boolean>(false);
 
   // Video expansion state
   isExpanded = signal(false);

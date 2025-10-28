@@ -18,6 +18,7 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 })
 export class PhotoEventComponent {
   event = input.required<Event>();
+  hideComments = input<boolean>(false);
 
   private dialog = inject(MatDialog);
 

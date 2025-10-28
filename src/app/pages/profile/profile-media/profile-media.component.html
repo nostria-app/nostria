@@ -10,7 +10,7 @@
       @for (mediaItem of media(); track mediaItem.event.id) {
       <mat-grid-tile>
         <div class="media-item">
-          <app-event [event]="mediaItem.event" appearance="plain" [navigationDisabled]="false">
+          <app-event [event]="mediaItem.event" appearance="plain" [navigationDisabled]="false" [hideComments]="true">
           </app-event>
         </div>
       </mat-grid-tile>
