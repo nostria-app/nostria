@@ -175,6 +175,7 @@
     margin-left: 0; // Removed margin
     display: flex;
     flex-direction: column;
+    align-items: flex-start; // Align items to the start instead of stretching
   }
 
   .user-profile-custom-content {
@@ -190,12 +191,14 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    max-width: 100%; // Allow ellipsis to work
   }
 
   .user-profile-name-link {
     text-decoration: none;
     color: inherit;
-    display: block;
+    display: inline-block; // Changed from block to inline-block
+    max-width: 100%; // Constrain width for ellipsis
     cursor: pointer;
 
     &:hover {
@@ -206,7 +209,8 @@
   .user-profile-npub-link {
     text-decoration: none;
     color: inherit;
-    display: block;
+    display: inline-block; // Changed from block to inline-block
+    max-width: 100%; // Constrain width for ellipsis
     cursor: pointer;
 
     &:hover {
@@ -226,6 +230,11 @@
   .user-profile-details {
     font-size: 0.8rem;
     color: var(--mat-sys-on-surface);
+    display: inline-block; // Changed to inline-block so it doesn't stretch full width
+    max-width: 100%; // Allow ellipsis to work
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .user-profile-about {
