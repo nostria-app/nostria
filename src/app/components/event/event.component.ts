@@ -86,6 +86,7 @@ export class EventComponent implements AfterViewChecked {
   navigationDisabled = input<boolean>(false);
   mode = input<'timeline' | 'thread'>('timeline');
   compact = input<boolean>(false);
+  hideComments = input<boolean>(false);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   @ViewChild('rootContent') rootContentRef?: ElementRef<HTMLElement>;
