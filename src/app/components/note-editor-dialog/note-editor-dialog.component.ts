@@ -991,7 +991,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       const uploadPromises = files.map(async file => {
         try {
           console.log(`Uploading file: ${file.name}, type: ${file.type}, size: ${file.size}`);
-          
+
           const result = await this.mediaService.uploadFile(
             file,
             this.uploadOriginal(),

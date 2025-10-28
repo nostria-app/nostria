@@ -447,7 +447,7 @@ export class MediaService implements NostriaService {
           const url = server.endsWith('/') ? server : `${server}/`;
 
           const action = this.determineAction(file);
-          
+
           console.log(`Uploading to server: ${server}`);
           console.log(`File type: ${file.type}, Action: ${action.action}, isPicture: ${action.isPicture}, isVideo: ${action.isVideo}`);
 
@@ -477,12 +477,16 @@ export class MediaService implements NostriaService {
           if (!headResponse.ok) {
             const reason = headResponse.headers.get('x-reason');
             const response = await headResponse.text();
+            console.error(`HEAD failed: Status ${headResponse.status}, Reason: ${reason}`);
             console.log('Response:', response);
 
             throw new Error(
               `Upload not allowed on ${server}: Reason: ${reason}, Status: ${headResponse.status}`
             );
           }
+
+          console.log('HEAD request successful, proceeding with PUT...');
+          console.log(`File size: ${file.size} bytes, type: ${file.type}`);
 
           // Send the binary file directly
           const response = await fetch(`${url}${api}`, {
@@ -495,12 +499,17 @@ export class MediaService implements NostriaService {
             body: file, // Send the file directly as binary data
           });
 
+          console.log(`PUT response status: ${response.status}`);
+
+          console.log(`PUT response status: ${response.status}`);
+
           if (!response.ok) {
             const reason = response.headers.get('x-reason');
+            console.error(`PUT failed: Status ${response.status}, Reason: ${reason}`);
 
             if (response.status == 500) {
-              const errorText = response.statusText;
               const responseText = await response.text();
+              console.error(`Server error response: ${responseText}`);
 
               if (!uploadOriginal) {
                 if (action.isVideo) {
@@ -520,22 +529,24 @@ export class MediaService implements NostriaService {
             }
 
             if (!reason) {
+              console.error(`No reason header in error response: ${response.status}`);
               throw new Error(`Failed to upload file on ${server}: ${response.status}`);
             }
 
             throw new Error(
-              `Failed to upload file on ${server}: Reason: ${reason}, Status: ${headResponse.status}`
+              `Failed to upload file on ${server}: Reason: ${reason}, Status: ${response.status}`
             );
           }
 
           uploadedMedia = await response.json();
-          console.log('Uploaded media:', uploadedMedia);
+          console.log('Upload successful! Uploaded media:', uploadedMedia);
 
           // After the first successful upload, we will simply call mirror on the other servers to ensure they do server-to-server transfer.
           if (uploadedMedia) {
             break;
           }
         } catch (err) {
+          console.error('Upload error:', err);
           if (!firstError) {
             firstError = err instanceof Error ? err : new Error('Unknown error occurred');
           }
