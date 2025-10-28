@@ -55,6 +55,7 @@ export class BadgeComponent {
 
   @Output() acceptClicked = new EventEmitter<void>();
   @Output() viewClicked = new EventEmitter<void>();
+  @Output() removeClicked = new EventEmitter<void>();
 
   nostr = inject(NostrService);
   storage = inject(StorageService);
@@ -151,6 +152,12 @@ export class BadgeComponent {
   onView(event: Event): void {
     event.stopPropagation();
     this.viewClicked.emit();
+  }
+
+  onRemove(event: Event): void {
+    debugger;
+    event.stopPropagation();
+    this.removeClicked.emit();
   }
 
   async loadBadgeDefinition(pubkey: string, slug: string) {

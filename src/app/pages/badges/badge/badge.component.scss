@@ -114,3 +114,9 @@ button mat-spinner {
   margin: 0 8px 0 0;
   display: inline-block;
 }
+
+.error-message {
+  color: var(--mat-sys-error);
+  font-style: italic;
+  margin-top: 8px;
+}

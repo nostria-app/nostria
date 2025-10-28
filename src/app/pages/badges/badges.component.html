@@ -10,123 +10,112 @@
   </div>
 
   @if (isInitialLoading()) {
-    <div class="initial-loading">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Loading badges...</p>
-    </div>
+  <div class="initial-loading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading badges...</p>
+  </div>
   } @else {
-    <mat-tab-group
-      animationDuration="0ms"
-      [selectedIndex]="activeTabIndex()"
-      (selectedIndexChange)="onTabChange($event)"
-    >
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">verified</mat-icon>
-          Accepted
-        </ng-template>
-        @if (isLoadingAccepted()) {
-          <div class="tab-loading">
-            <mat-spinner diameter="32"></mat-spinner>
-            <p>Loading accepted badges...</p>
-          </div>
-        } @else {
-          <div class="badges-grid">
-            @for (badge of accepted(); track badge.aTag) {
-              <app-badge
-                [badge]="badge"
-                (click)="viewBadgeDetailsById(badge.id, badge.slug)"
-              ></app-badge>
-            }
-          </div>
+  <mat-tab-group animationDuration="0ms" [selectedIndex]="activeTabIndex()" (selectedIndexChange)="onTabChange($event)">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">verified</mat-icon>
+        Accepted
+      </ng-template>
+      @if (isLoadingAccepted()) {
+      <div class="tab-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <p>Loading accepted badges...</p>
+      </div>
+      } @else {
+      <div class="badges-grid" cdkDropList (cdkDropListDropped)="onBadgeDropped($event)">
+        @for (badge of accepted(); track badge.aTag) {
+        <div cdkDrag class="badge-drag-container">
+          <app-badge [badge]="badge" [showActions]="true" [isUpdating]="isUpdating()" [isAccepted]="true"
+            (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)" (removeClicked)="removeBadge(badge)"></app-badge>
+          <div class="badge-drag-placeholder" *cdkDragPlaceholder></div>
+        </div>
         }
-      </mat-tab>
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">military_tech</mat-icon>
-          Received
-        </ng-template>
-        @if (isLoadingReceived()) {
-          <div class="tab-loading">
-            <mat-spinner diameter="32"></mat-spinner>
-            <p>Loading received badges...</p>
-          </div>
-        } @else {
-          <div class="badges-list">
-            @for (badge of received(); track badge.id) {
-              <app-badge
-                [badge]="badge"
-                layout="horizontal"
-                [showActions]="true"
-                [issuerName]="
+      </div>
+      }
+    </mat-tab>
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">military_tech</mat-icon>
+        Received
+      </ng-template>
+      @if (isLoadingReceived()) {
+      <div class="tab-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <p>Loading received badges...</p>
+      </div>
+      } @else {
+      <div class="badges-list">
+        @for (badge of received(); track badge.id) {
+        <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [issuerName]="
                   badgeIssuers()[badge.pubkey]?.name ||
                   badgeIssuers()[badge.pubkey]?.display_name ||
                   'Unknown User'
-                "
-                [isAccepted]="isBadgeAccepted(badge)"
-                [isUpdating]="isUpdating()"
-                (viewClicked)="viewBadgeDetails(badge)"
-                (acceptClicked)="acceptBadge(badge)"
-                (click)="viewBadgeDetails(badge)"
-              >
-              </app-badge>
-            }
+                " [isAccepted]="isBadgeAccepted(badge)" [isUpdating]="isUpdating()"
+          (viewClicked)="viewBadgeDetails(badge)" (acceptClicked)="acceptBadge(badge)"
+          (removeClicked)="removeReceivedBadge(badge)" (click)="viewBadgeDetails(badge)">
+        </app-badge>
+        }
 
-            @if (received().length === 0) {
-              <div class="no-badges-message">
-                <mat-icon>emoji_events</mat-icon>
-                <p>You haven't received any badges yet</p>
-              </div>
-            }
-          </div>
+        @if (received().length === 0) {
+        <div class="no-badges-message">
+          <mat-icon>emoji_events</mat-icon>
+          <p>You haven't received any badges yet</p>
+        </div>
         }
-      </mat-tab>
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">emoji_events</mat-icon>
-          Given
-        </ng-template>
-        @if (isLoadingIssued()) {
-          <div class="tab-loading">
-            <mat-spinner diameter="32"></mat-spinner>
-            <p>Loading given badges...</p>
-          </div>
-        } @else {
-          <div class="badges-grid">
-            @for (badge of issued(); track badge.id) {
-              <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
-            }
-          </div>
+      </div>
+      }
+    </mat-tab>
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">emoji_events</mat-icon>
+        Given
+      </ng-template>
+      @if (isLoadingIssued()) {
+      <div class="tab-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <p>Loading given badges...</p>
+      </div>
+      } @else {
+      <div class="badges-grid">
+        @for (badge of issued(); track badge.id) {
+        <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
         }
-      </mat-tab>
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon class="tab-icon">create</mat-icon>
-          Created
-        </ng-template>
-        @if (isLoadingDefinitions()) {
-          <div class="tab-loading">
-            <mat-spinner diameter="32"></mat-spinner>
-            <p>Loading created badges...</p>
-          </div>
-        } @else {
-          <div class="badges-grid">
-            @for (badge of createdDefinitions(); track badge.id) {
-              <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
-            }
+      </div>
+      }
+    </mat-tab>
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">create</mat-icon>
+        Created
+      </ng-template>
+      @if (isLoadingDefinitions()) {
+      <div class="tab-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <p>Loading created badges...</p>
+      </div>
+      } @else {
+      <div class="badges-grid">
+        @for (badge of createdDefinitions(); track badge.id) {
+        <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
+        }
 
-            @if (createdDefinitions().length === 0) {
-              <div class="no-badges-message">
-                <mat-icon>sentiment_very_dissatisfied</mat-icon>
-                <p>You haven't created any badges yet</p>
-                <button mat-raised-button color="accent" (click)="openBadgeEditor()">
-                  Create Your First Badge
-                </button>
-              </div>
-            }
-          </div>
+        @if (createdDefinitions().length === 0) {
+        <div class="no-badges-message">
+          <mat-icon>sentiment_very_dissatisfied</mat-icon>
+          <p>You haven't created any badges yet</p>
+          <button mat-raised-button color="accent" (click)="openBadgeEditor()">
+            Create Your First Badge
+          </button>
+        </div>
         }
-      </mat-tab>
-    </mat-tab-group>
+      </div>
+      }
+    </mat-tab>
+  </mat-tab-group>
   }
 </div>
