@@ -29,7 +29,16 @@ export class ProfileMediaComponent {
     const scrollPosition = window.innerHeight + window.scrollY;
     const threshold = document.documentElement.scrollHeight - 500;
 
+    console.log('Scroll detected:', {
+      scrollPosition,
+      threshold,
+      isLoadingMore: this.isLoadingMore(),
+      hasMore: this.hasMore(),
+      shouldLoad: scrollPosition >= threshold && !this.isLoadingMore() && this.hasMore()
+    });
+
     if (scrollPosition >= threshold && !this.isLoadingMore() && this.hasMore()) {
+      console.log('Triggering loadMore()');
       this.loadMore();
     }
   }

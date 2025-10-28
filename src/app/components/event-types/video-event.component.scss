@@ -34,6 +34,66 @@
   // box-shadow: var(--mat-sys-level1);
   margin: 1rem 0rem;
 
+  &.has-overlay {
+    cursor: pointer;
+  }
+
+  .event-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: background 0.3s ease;
+
+    .overlay-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s ease;
+    }
+
+    .overlay-button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 20px !important;
+      background: rgba(0, 0, 0, 0.9) !important;
+      color: white !important;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      min-width: 160px;
+      justify-content: flex-start;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 1) !important;
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: translateX(4px);
+      }
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.4);
+
+      .overlay-actions {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  }
+
   .video-thumbnail-container {
     position: relative;
     width: 100%;

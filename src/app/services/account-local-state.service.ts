@@ -24,6 +24,7 @@ interface AccountLocalState {
   peopleSortOption?: string;
   peopleFilters?: PeopleFilters;
   bookmarksViewMode?: string;
+  activeProfileTab?: string;
 }
 
 /**
@@ -193,6 +194,21 @@ export class AccountLocalStateService {
    */
   setBookmarksViewMode(pubkey: string, viewMode: string | null | undefined): void {
     this.updateAccountState(pubkey, { bookmarksViewMode: viewMode || undefined });
+  }
+
+  /**
+   * Get active profile tab for an account
+   */
+  getActiveProfileTab(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.activeProfileTab;
+  }
+
+  /**
+   * Set active profile tab for an account
+   */
+  setActiveProfileTab(pubkey: string, tabId: string | null | undefined): void {
+    this.updateAccountState(pubkey, { activeProfileTab: tabId || undefined });
   }
 
   /**
