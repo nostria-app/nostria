@@ -10,47 +10,58 @@
   </div>
   } @else if (parsedBadge()) {
   <div class="card-content">
-    <!-- Badge Image -->
+    <!-- Badge Image with Gradient Background -->
     <div class="badge-image-container">
-      @if (parsedBadge()!.image || parsedBadge()!.thumb) {
-      <img [src]="parsedBadge()!.image || parsedBadge()!.thumb" [alt]="parsedBadge()!.name" class="badge-image" />
-      } @else {
-      <div class="badge-placeholder">
-        <mat-icon>military_tech</mat-icon>
+      <div class="badge-image-wrapper">
+        @if (parsedBadge()!.image || parsedBadge()!.thumb) {
+        <img [src]="parsedBadge()!.image || parsedBadge()!.thumb" [alt]="parsedBadge()!.name" class="badge-image" />
+        } @else {
+        <div class="badge-placeholder">
+          <mat-icon>military_tech</mat-icon>
+        </div>
+        }
       </div>
-      }
     </div>
 
-    <!-- Badge Info -->
+    <!-- Badge Info Section -->
     <div class="badge-info">
-      <h3 class="badge-name">{{ parsedBadge()!.name }}</h3>
+      <!-- Badge Name/Title -->
+      <h2 class="badge-title">{{ parsedBadge()!.name }}</h2>
 
+      <!-- Issuer Info -->
       @if (issuerName()) {
       <div class="issuer-info">
-        <mat-icon>person</mat-icon>
-        <span>{{ issuerName() }} created a badge</span>
+        <mat-icon class="issuer-icon">account_circle</mat-icon>
+        <span>{{ issuerName() }} created this badge</span>
       </div>
       }
 
+      <!-- Description -->
       @if (parsedBadge()!.description) {
-      <p class="badge-description">{{ parsedBadge()!.description }}</p>
+      <div class="badge-description">
+        <p>{{ parsedBadge()!.description }}</p>
+      </div>
       }
 
-      <!-- Badge Tags -->
+      <!-- Tags Section -->
       @if (parsedBadge()!.tags && parsedBadge()!.tags.length > 0) {
       <div class="badge-tags">
-        @for (tag of parsedBadge()!.tags; track tag) {
-        <span class="badge-tag">{{ tag }}</span>
+        @for (tag of parsedBadge()!.tags.slice(0, 5); track tag) {
+        <span class="badge-tag">
+          <mat-icon class="tag-icon">label</mat-icon>
+          {{ tag }}
+        </span>
         }
       </div>
       }
     </div>
 
-    <!-- Actions -->
+    <!-- View Badge Button -->
     <div class="card-actions">
-      <a mat-button color="primary" [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey(), slug: slug() }">
+      <a mat-flat-button color="primary" [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey() }"
+        class="view-button">
         <mat-icon>visibility</mat-icon>
-        View Badge
+        View Badge Details
       </a>
     </div>
   </div>

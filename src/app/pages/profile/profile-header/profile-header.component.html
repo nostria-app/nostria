@@ -26,23 +26,25 @@
       <!-- Badges Section positioned relative to avatar -->
       @if (!compact() && hasAcceptedBadges()) {
       <div class="profile-badges">
-        @for (parsedBadge of parsedBadges(); track $index) {
-        <a [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey() }" class="badge-item">
-          @if (parsedBadge) {
+        @for (badge of topBadges(); track $index) {
+        @if (parsedBadges()[$index]; as parsedBadge) {
+        <a [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey() }" class="badge-item"
+          (mouseenter)="onBadgeMouseEnter($event, badge)" (mouseleave)="onBadgeMouseLeave()">
           @if (parsedBadge.thumb || parsedBadge.image) {
-          <img [src]="parsedBadge.thumb || parsedBadge.image" [alt]="parsedBadge.name" [title]="parsedBadge.name"
-            class="badge-image" loading="lazy" />
+          <img [src]="parsedBadge.thumb || parsedBadge.image" class="badge-image" loading="lazy" />
           } @else {
           <div class="badge-placeholder" [title]="parsedBadge.name">
             <mat-icon>military_tech</mat-icon>
           </div>
           }
-          } @else {
+        </a>
+        } @else {
+        <a [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey() }" class="badge-item">
           <div class="badge-loading" title="Loading badge...">
             <mat-spinner diameter="32"></mat-spinner>
           </div>
-          }
         </a>
+        }
         }
       </div>
       }

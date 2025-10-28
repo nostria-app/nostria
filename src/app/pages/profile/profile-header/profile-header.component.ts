@@ -41,6 +41,7 @@ import {
 import { UserRelayService } from '../../../services/relays/user-relay';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { BadgeService } from '../../../services/badge.service';
+import { BadgeHoverCardService } from '../../../services/badge-hover-card.service';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import type { Event as NostrEvent } from 'nostr-tools';
@@ -86,6 +87,7 @@ export class ProfileHeaderComponent {
   private userRelayService = inject(UserRelayService);
   private accountRelay = inject(AccountRelayService);
   badgeService = inject(BadgeService);
+  private badgeHoverCardService = inject(BadgeHoverCardService);
   private router = inject(Router);
 
   // Add signal for QR code visibility
@@ -112,22 +114,13 @@ export class ProfileHeaderComponent {
   // Need to also track badgeDefinitions signal to react to async loading
   parsedBadges = computed(() => {
     // Include badgeDefinitions in the dependency graph so computed re-runs when definitions load
-    const definitions = this.badgeService.badgeDefinitions();
-    console.log('parsedBadges computed running, definitions count:', definitions.length);
+    this.badgeService.badgeDefinitions();
 
-    const badges = this.topBadges();
-    console.log('topBadges:', badges);
-
-    return badges.map(badge => {
+    return this.topBadges().map(badge => {
       const badgeDefinition = this.getBadgeDefinition(badge);
-      console.log('Badge definition for', badge.slug, ':', badgeDefinition);
-      const parsed = this.parseBadgeDefinition(badgeDefinition);
-      console.log('Parsed badge:', parsed);
-      return parsed;
+      return this.parseBadgeDefinition(badgeDefinition);
     });
-  });
-
-  // Computed property to check if bio needs expansion
+  });  // Computed property to check if bio needs expansion
   shouldShowExpander = computed(() => {
     const about = this.profile()?.data.about;
     if (!about || this.compact()) return false;
@@ -764,5 +757,25 @@ export class ProfileHeaderComponent {
    */
   viewAllBadges(): void {
     this.router.navigate(['/badges'], { queryParams: { pubkey: this.pubkey() } });
+  }
+
+  // Badge hover card
+  private badgeHoverElement?: HTMLElement;
+
+  /**
+   * Shows badge hover card on mouse enter
+   */
+  onBadgeMouseEnter(event: Event, badge: { pubkey: string; slug: string }): void {
+    const element = event.currentTarget as HTMLElement;
+    this.badgeHoverElement = element;
+    this.badgeHoverCardService.showHoverCard(element, badge.pubkey, badge.slug);
+  }
+
+  /**
+   * Hides badge hover card on mouse leave
+   */
+  onBadgeMouseLeave(): void {
+    this.badgeHoverElement = undefined;
+    this.badgeHoverCardService.hideHoverCard();
   }
 }
