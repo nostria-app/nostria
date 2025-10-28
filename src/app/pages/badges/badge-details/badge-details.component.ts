@@ -168,12 +168,9 @@ export class BadgeDetailsComponent {
   editBadge(): void {
     if (this.badge()) {
       const badge = this.badge()!;
-      this.router.navigate(['/badges/edit'], {
-        queryParams: {
-          pubkey: badge.creator,
-          slug: badge.slug,
-        },
-      });
+      // Construct the badge id in the format: kind:pubkey:slug
+      const badgeId = `30009:${badge.creator}:${badge.slug}`;
+      this.router.navigate(['/badges/edit', badgeId]);
     }
   }
 

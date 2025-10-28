@@ -184,6 +184,20 @@ export class BadgesComponent {
 
   viewBadgeDetails(badge: NostrEvent): void {
     console.log('Viewing badge details:', badge);
+    
+    // For BadgeDefinition events (kind 30009), construct the id from pubkey and d-tag
+    if (badge.kind === 30009) {
+      const dTag = badge.tags.find(tag => tag[0] === 'd');
+      if (dTag && dTag[1]) {
+        const id = `${badge.kind}:${badge.pubkey}:${dTag[1]}`;
+        this.layout.openBadge(id, badge, {
+          queryParams: { tab: this.activeTabIndex() },
+        });
+        return;
+      }
+    }
+    
+    // For BadgeAward events, extract the a-tag reference
     const id = this.utilities.getATagValueFromEvent(badge);
 
     if (!id) {
