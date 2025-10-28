@@ -77,7 +77,13 @@ export class CommentComponent {
     }
 
     // Open comment dialog to reply to this comment
-    this.eventService.createCommentReply(this.rootEvent(), this.event());
+    const dialogRef = this.eventService.createCommentReply(this.rootEvent(), this.event());
+
+    // Note: The reply will be shown after the parent comments-list refreshes
+    // We don't handle it here since comment replies are managed by the parent component
+    dialogRef.afterClosed().subscribe(() => {
+      // Could emit an event to notify parent to refresh if needed
+    });
   }
 
   private parseCommentTags(event: Event): CommentTags {

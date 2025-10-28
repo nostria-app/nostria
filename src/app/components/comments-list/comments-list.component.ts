@@ -190,13 +190,27 @@ export class CommentsListComponent implements AfterViewInit {
     }
 
     // Open comment creation dialog
-    this.eventService.createComment(this.event());
+    const dialogRef = this.eventService.createComment(this.event());
 
-    // Refresh comments after dialog closes (to show new comment)
-    // We'll wait a bit for the event to propagate through relays
-    setTimeout(() => {
-      this.refreshComments();
-    }, 1000);
+    // Handle dialog result
+    dialogRef.afterClosed().subscribe((result: { published: boolean; event?: Event } | undefined) => {
+      if (result?.published && result.event) {
+        // Immediately add the new comment to the list (optimistic update)
+        const newCommentRecord = this.data.toRecord(result.event);
+        const currentComments = this.comments();
+        const updatedComments = [...currentComments, newCommentRecord];
+
+        // Sort by created_at (oldest first for display)
+        updatedComments.sort((a, b) => a.event.created_at - b.event.created_at);
+
+        this.comments.set(updatedComments);
+
+        // Optionally refresh after a delay to catch any other new comments
+        setTimeout(() => {
+          this.refreshComments();
+        }, 2000);
+      }
+    });
   }
 
   async refreshComments(): Promise<void> {
