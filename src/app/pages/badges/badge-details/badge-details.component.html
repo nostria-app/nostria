@@ -7,110 +7,106 @@
   </div>
 
   @if (loading()) {
-    <div class="loading-state">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Loading badge details...</p>
-    </div>
+  <div class="loading-state">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading badge details...</p>
+  </div>
   } @else if (error()) {
-    <div class="error-state">
-      <mat-icon>error_outline</mat-icon>
-      <p>{{ error() }}</p>
-    </div>
+  <div class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
   } @else if (badge()) {
-    <div class="badge-details">
-      <div class="badge-image">
-        @if (badge()?.image) {
-          <img [src]="badge()?.image" alt="{{ badge()?.name }}" />
-        } @else {
-          <div class="no-image-placeholder">
-            <mat-icon>image</mat-icon>
-            <p>No image available</p>
-          </div>
-        }
+  <div class="badge-details">
+    <div class="badge-image">
+      @if (badge()?.image) {
+      <img [src]="badge()?.image" alt="{{ badge()?.name }}" />
+      } @else {
+      <div class="no-image-placeholder">
+        <mat-icon>image</mat-icon>
+        <p>No image available</p>
+      </div>
+      }
 
-        @if (isCreator()) {
-          <div class="badge-actions">
-            <button mat-raised-button color="primary" (click)="toggleIssueBadge()">
-              <mat-icon>card_giftcard</mat-icon>
-              Issue Badge
-            </button>
-            <button mat-stroked-button (click)="editBadge()">
-              <mat-icon>edit</mat-icon>
-              Edit
-            </button>
-          </div>
+      @if (isCreator()) {
+      <div class="badge-actions">
+        <button mat-raised-button color="primary" (click)="toggleIssueBadge()">
+          <mat-icon>card_giftcard</mat-icon>
+          Issue Badge
+        </button>
+        <button mat-stroked-button (click)="editBadge()">
+          <mat-icon>edit</mat-icon>
+          Edit
+        </button>
+      </div>
+      }
+    </div>
+
+    <div class="badge-info">
+      <h1>{{ badge()?.name }}</h1>
+
+      @if (badge()?.tags?.length) {
+      <div class="badge-tags">
+        @for (tag of badge()?.tags; track tag) {
+        <mat-chip>{{ tag }}</mat-chip>
         }
       </div>
+      }
 
-      <div class="badge-info">
-        <h1>{{ badge()?.name }}</h1>
+      <mat-card>
+        <mat-card-content>
+          <h3>Description</h3>
+          <p>{{ badge()?.description }}</p>
 
-        @if (badge()?.tags?.length) {
-          <div class="badge-tags">
-            @for (tag of badge()?.tags; track tag) {
-              <mat-chip>{{ tag }}</mat-chip>
-            }
-          </div>
-        }
+          <mat-divider></mat-divider>
 
-        <mat-card>
-          <mat-card-content>
-            <h3>Description</h3>
-            <p>{{ badge()?.description }}</p>
-
-            <mat-divider></mat-divider>
-
-            <div class="badge-meta">
-              <div>
-                <h3>Creator</h3>
-                <p>{{ badge()?.creator }}</p>
-              </div>
-              <div>
-                <h3>Created</h3>
-                <p>{{ badge()?.created | date: 'medium' }}</p>
-              </div>
-              <div>
-                <h3>Slug</h3>
-                <p>{{ badge()?.slug }}</p>
-              </div>
-              <div>
-                <h3>Event ID</h3>
-                <p>{{ badge()?.id }}</p>
-              </div>
+          <div class="badge-meta">
+            <div class="creator-section">
+              <h3>Creator</h3>
+              <app-user-profile [pubkey]="badge()?.creator || ''" [view]="'list'"></app-user-profile>
             </div>
+            <div>
+              <h3>Created</h3>
+              <p>{{ badge()?.created | date: 'medium' }}</p>
+            </div>
+            <div>
+              <h3>Slug</h3>
+              <p>{{ badge()?.slug }}</p>
+            </div>
+            <div>
+              <h3>Event ID</h3>
+              <p>{{ badge()?.id }}</p>
+            </div>
+          </div>
 
-            @if (issuingBadge()) {
-              <mat-divider></mat-divider>
+          @if (issuingBadge()) {
+          <mat-divider></mat-divider>
 
-              <div class="issue-badge-form">
-                <h3>Issue Badge to Recipients</h3>
-                <p>Enter public keys or npubs (one per line or comma-separated)</p>
+          <div class="issue-badge-form">
+            <h3>Issue Badge to Recipients</h3>
+            <p>Enter public keys or npubs (one per line or comma-separated)</p>
 
-                <mat-form-field class="full-width">
-                  <textarea
-                    matInput
-                    [formControl]="recipientPubkeys"
-                    placeholder="npub1... or public keys"
-                    rows="3"
-                  ></textarea>
-                </mat-form-field>
+            <mat-form-field class="full-width">
+              <textarea matInput [formControl]="recipientPubkeys" placeholder="npub1... or public keys"
+                rows="3"></textarea>
+            </mat-form-field>
 
-                <div class="form-actions">
-                  <button mat-stroked-button (click)="toggleIssueBadge()">Cancel</button>
-                  <button mat-flat-button color="primary" (click)="publishBadgeReward()">
-                    Publish Badge Reward
-                  </button>
-                </div>
-              </div>
-            }
-          </mat-card-content>
-        </mat-card>
-      </div>
+            <div class="form-actions">
+              <button mat-stroked-button (click)="toggleIssueBadge()">Cancel</button>
+              <button mat-flat-button color="primary" (click)="publishBadgeReward()">
+                Publish Badge Reward
+              </button>
+            </div>
+          </div>
+          }
+        </mat-card-content>
+      </mat-card>
     </div>
+  </div>
   } @else {
-    <div class="error-state">
-      <mat-icon>error_outline</mat-icon>
-      <p>Badge not found</p>
-    </div>
+  <div class="error-state">
+    <mat-icon>error_outline</mat-icon>
+    <p>Badge not found</p>
+  </div>
   }
 </div>

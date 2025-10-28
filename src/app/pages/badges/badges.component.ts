@@ -144,19 +144,19 @@ export class BadgesComponent {
   getProfileIdentifier(): string {
     const profile = this.viewingProfile();
     if (!profile) return '';
-    
+
     // Prefer NIP-05 if available and valid
     const nip05 = profile.data?.nip05;
     if (nip05 && profile.data?.nip05valid) {
       return nip05;
     }
-    
+
     // Fall back to truncated npub
     const pubkey = this.viewingPubkey();
     if (pubkey) {
       return this.utilities.getTruncatedNpub(pubkey);
     }
-    
+
     return '';
   }
 
