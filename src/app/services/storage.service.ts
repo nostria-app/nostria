@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { Relay } from './relays/relay';
 import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
-import { Event } from 'nostr-tools';
+import { Event, kinds } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 
 // Interface for NIP-11 relay information
@@ -292,7 +292,7 @@ export class StorageService {
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria';
-  private readonly DB_VERSION = 6;
+  private readonly DB_VERSION = 7;
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -505,6 +505,14 @@ export class StorageService {
           pubkeyRelayMappingsStore.createIndex('by-last-seen', 'lastSeen');
           pubkeyRelayMappingsStore.createIndex('by-source', 'source');
           this.logger.debug('Created pubkeyRelayMappings object store');
+        }
+
+        // Create badge definitions object store
+        if (!db.objectStoreNames.contains('badgeDefinitions')) {
+          const badgeDefinitionsStore = db.createObjectStore('badgeDefinitions');
+          badgeDefinitionsStore.createIndex('by-pubkey', 'pubkey');
+          badgeDefinitionsStore.createIndex('by-updated', 'created_at');
+          this.logger.debug('Created badgeDefinitions object store');
         }
       },
       blocked: (currentVersion, blockedVersion, event) => {
@@ -1851,6 +1859,82 @@ export class StorageService {
     } catch (error) {
       this.logger.error('Error cleaning up old pubkey-relay mappings', error);
       return 0;
+    }
+  }
+
+  /**
+   * Save a badge definition event to IndexedDB
+   * Uses composite key: pubkey::slug
+   */
+  async saveBadgeDefinition(badgeEvent: Event): Promise<void> {
+    try {
+      if (badgeEvent.kind !== kinds.BadgeDefinition) {
+        throw new Error('Event is not a badge definition');
+      }
+
+      // Extract the d-tag (slug)
+      const dTag = badgeEvent.tags.find(tag => tag[0] === 'd');
+      if (!dTag || !dTag[1]) {
+        throw new Error('Badge definition missing d-tag (slug)');
+      }
+
+      const slug = dTag[1];
+      const compositeKey = `${badgeEvent.pubkey}::${slug}`;
+
+      // Check if an existing definition exists
+      const existing = await this.db.get('badgeDefinitions', compositeKey);
+
+      // Only save if this is newer or doesn't exist
+      if (!existing || badgeEvent.created_at > existing.created_at) {
+        await this.db.put('badgeDefinitions', badgeEvent, compositeKey);
+        this.logger.debug(`Saved badge definition: ${compositeKey}`);
+      }
+    } catch (error) {
+      this.logger.error('Error saving badge definition', error);
+    }
+  }
+
+  /**
+   * Get a badge definition by pubkey and slug
+   */
+  async getBadgeDefinition(pubkey: string, slug: string): Promise<Event | null> {
+    try {
+      const compositeKey = `${pubkey}::${slug}`;
+      const badge = await this.db.get('badgeDefinitions', compositeKey);
+      return badge || null;
+    } catch (error) {
+      this.logger.error(`Error getting badge definition ${pubkey}::${slug}`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all badge definitions by pubkey
+   */
+  async getBadgeDefinitionsByPubkey(pubkey: string): Promise<Event[]> {
+    try {
+      const index = this.db.transaction('badgeDefinitions', 'readonly')
+        .objectStore('badgeDefinitions')
+        .index('by-pubkey');
+
+      const badges = await index.getAll(pubkey);
+      return badges || [];
+    } catch (error) {
+      this.logger.error(`Error getting badge definitions for ${pubkey}`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete a badge definition
+   */
+  async deleteBadgeDefinition(pubkey: string, slug: string): Promise<void> {
+    try {
+      const compositeKey = `${pubkey}::${slug}`;
+      await this.db.delete('badgeDefinitions', compositeKey);
+      this.logger.debug(`Deleted badge definition: ${compositeKey}`);
+    } catch (error) {
+      this.logger.error(`Error deleting badge definition ${pubkey}::${slug}`, error);
     }
   }
 }

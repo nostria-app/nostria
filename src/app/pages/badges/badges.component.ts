@@ -1,4 +1,4 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, signal, untracked } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,6 +21,9 @@ import { LayoutService } from '../../services/layout.service';
 import { CommonModule } from '@angular/common';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
+import { ProfileHeaderComponent } from '../profile/profile-header/profile-header.component';
+import { DataService } from '../../services/data.service';
+import { NostrRecord } from '../../interfaces';
 
 @Component({
   selector: 'app-badges',
@@ -37,6 +40,7 @@ import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-
     MatProgressSpinnerModule,
     CommonModule,
     DragDropModule,
+    ProfileHeaderComponent,
   ],
   templateUrl: './badges.component.html',
   styleUrl: './badges.component.scss',
@@ -51,6 +55,7 @@ export class BadgesComponent {
   private readonly storage = inject(StorageService);
   private readonly badgeService = inject(BadgeService);
   private readonly layout = inject(LayoutService);
+  private readonly dataService = inject(DataService);
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
 
@@ -58,6 +63,7 @@ export class BadgesComponent {
   isInitialLoading = signal<boolean>(true);
   activeTabIndex = signal<number>(0);
   viewingPubkey = signal<string>(''); // Track which pubkey's badges we're viewing
+  viewingProfile = signal<NostrRecord | undefined>(undefined); // Profile data for the viewing user
 
   constructor() {
     // Get the active tab from query params if available
@@ -69,24 +75,33 @@ export class BadgesComponent {
     // Get pubkey from query params if available
     const pubkeyParam = this.route.snapshot.queryParamMap.get('pubkey');
 
-    effect(async () => {
+    effect(() => {
       const appInitialized = this.app.initialized();
       const appAuthenticated = this.app.authenticated();
 
       if (appInitialized && appAuthenticated) {
         console.log('appInitialized && appAuthenticated');
-        this.isInitialLoading.set(true);
+        
+        // Run the loading logic untracked to prevent infinite loops
+        untracked(async () => {
+          this.isInitialLoading.set(true);
 
-        try {
-          // Use pubkey from query params if provided, otherwise use current user's pubkey
-          const targetPubkey = pubkeyParam || this.accountState.pubkey();
-          this.viewingPubkey.set(targetPubkey);
-          await this.badgeService.loadAllBadges(targetPubkey);
-        } catch (err) {
-          console.error('Error loading badges:', err);
-        } finally {
-          this.isInitialLoading.set(false);
-        }
+          try {
+            // Use pubkey from query params if provided, otherwise use current user's pubkey
+            const targetPubkey = pubkeyParam || this.accountState.pubkey();
+            this.viewingPubkey.set(targetPubkey);
+            
+            // Load profile data for the viewing user
+            const profile = await this.dataService.getProfile(targetPubkey);
+            this.viewingProfile.set(profile);
+            
+            await this.badgeService.loadAllBadges(targetPubkey);
+          } catch (err) {
+            console.error('Error loading badges:', err);
+          } finally {
+            this.isInitialLoading.set(false);
+          }
+        });
       }
     });
   }

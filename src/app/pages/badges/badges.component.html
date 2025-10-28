@@ -9,6 +9,12 @@
     </div>
   </div>
 
+  @if (viewingProfile()) {
+    <div class="profile-section">
+      <app-profile-header [profile]="viewingProfile()" [pubkey]="viewingPubkey()" [compact]="true"></app-profile-header>
+    </div>
+  }
+
   @if (isInitialLoading()) {
   <div class="initial-loading">
     <mat-spinner diameter="40"></mat-spinner>
@@ -27,12 +33,20 @@
         <p>Loading accepted badges...</p>
       </div>
       } @else {
-      <div class="badges-grid" cdkDropList (cdkDropListDropped)="onBadgeDropped($event)">
+      <div class="badges-list" cdkDropList (cdkDropListDropped)="onBadgeDropped($event)">
         @for (badge of accepted(); track badge.aTag) {
         <div cdkDrag class="badge-drag-container">
-          <app-badge [badge]="badge" [showActions]="true" [isUpdating]="isUpdating()" [isAccepted]="true"
-            (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)" (removeClicked)="removeBadge(badge)"></app-badge>
+          <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [isUpdating]="isUpdating()" [isAccepted]="true"
+            (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)" (removeClicked)="removeBadge(badge)">
+          </app-badge>
           <div class="badge-drag-placeholder" *cdkDragPlaceholder></div>
+        </div>
+        }
+
+        @if (accepted().length === 0) {
+        <div class="no-badges-message">
+          <mat-icon>verified</mat-icon>
+          <p>You haven't accepted any badges yet</p>
         </div>
         }
       </div>
