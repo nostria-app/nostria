@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
+import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 interface VideoData {
   url: string;
@@ -18,7 +19,7 @@ interface VideoData {
 @Component({
   selector: 'app-video-event',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, CommentsListComponent],
   templateUrl: './video-event.component.html',
   styleUrl: './video-event.component.scss',
 })

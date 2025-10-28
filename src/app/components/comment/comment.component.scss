@@ -1,0 +1,18 @@
+.comment-card {
+  margin-bottom: 16px;
+
+  &.nested {
+    margin-left: 32px;
+    margin-top: 8px;
+  }
+}
+
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+mat-card-header {
+  margin-bottom: 8px;
+}

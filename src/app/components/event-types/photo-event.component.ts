@@ -6,11 +6,12 @@ import { MatDialog } from '@angular/material/dialog';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
+import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 @Component({
   selector: 'app-photo-event',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, CommentsListComponent],
   templateUrl: './photo-event.component.html',
   styleUrl: './photo-event.component.scss',
 })

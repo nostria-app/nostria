@@ -17,6 +17,10 @@ import {
   NoteEditorDialogComponent,
   NoteEditorDialogData,
 } from '../components/note-editor-dialog/note-editor-dialog.component';
+import {
+  CommentEditorDialogComponent,
+  CommentEditorDialogData,
+} from '../components/comment-editor-dialog/comment-editor-dialog.component';
 import { MatDialog } from '@angular/material/dialog';
 
 export interface Reaction {
@@ -803,6 +807,45 @@ export class EventService {
     dialogRef.afterClosed().subscribe((result) => {
       if (result?.published) {
         console.log('Note published successfully:', result.event);
+      }
+    });
+  }
+
+  createComment(rootEvent: Event): void {
+    // Open comment editor dialog for NIP-22 comments
+    const dialogRef = this.dialog.open(CommentEditorDialogComponent, {
+      panelClass: 'responsive-dialog',
+      width: '600px',
+      maxWidth: '90vw',
+      disableClose: true,
+      data: {
+        rootEvent,
+      } as CommentEditorDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.published) {
+        console.log('Comment published successfully:', result.event);
+      }
+    });
+  }
+
+  createCommentReply(rootEvent: Event, parentComment: Event): void {
+    // Open comment editor dialog for replying to a comment
+    const dialogRef = this.dialog.open(CommentEditorDialogComponent, {
+      panelClass: 'responsive-dialog',
+      width: '600px',
+      maxWidth: '90vw',
+      disableClose: true,
+      data: {
+        rootEvent,
+        parentComment,
+      } as CommentEditorDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.published) {
+        console.log('Comment reply published successfully:', result.event);
       }
     });
   }

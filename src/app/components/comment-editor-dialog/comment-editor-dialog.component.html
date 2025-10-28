@@ -1,0 +1,41 @@
+<div class="comment-editor-dialog">
+  <h2 mat-dialog-title>{{ getTitle() }}</h2>
+
+  <mat-dialog-content>
+    <div class="editor-container">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Your comment</mat-label>
+        <textarea #contentTextarea matInput [(ngModel)]="content"
+          placeholder="Write your comment... (plaintext only, no formatting)" rows="6" [disabled]="isPublishing()"
+          (keydown.ctrl.enter)="onPublish()" (keydown.meta.enter)="onPublish()"></textarea>
+        <mat-hint>Press Ctrl+Enter (Cmd+Enter on Mac) to publish</mat-hint>
+      </mat-form-field>
+
+      @if (content().trim()) {
+      <div class="preview-section">
+        <h3>Preview</h3>
+        <div class="preview-content">
+          <app-content [content]="content().trim()" [event]="data.rootEvent"></app-content>
+        </div>
+      </div>
+      }
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()" [disabled]="isPublishing()">Cancel</button>
+    <button mat-flat-button color="primary" (click)="onPublish()" [disabled]="!content().trim() || isPublishing()">
+      @if (isPublishing()) {
+      <mat-icon>hourglass_empty</mat-icon>
+      Publishing...
+      } @else {
+      <mat-icon>send</mat-icon>
+      Publish Comment
+      }
+    </button>
+  </mat-dialog-actions>
+
+  @if (isPublishing()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  }
+</div>
