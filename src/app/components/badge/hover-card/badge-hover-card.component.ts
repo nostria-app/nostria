@@ -5,6 +5,7 @@ import {
   effect,
   inject,
   untracked,
+  computed,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -15,6 +16,7 @@ import { RouterModule } from '@angular/router';
 import { BadgeService, ParsedBadge } from '../../../services/badge.service';
 import { NostrEvent } from 'nostr-tools';
 import { StorageService } from '../../../services/storage.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 @Component({
   selector: 'app-badge-hover-card',
@@ -35,6 +37,11 @@ export class BadgeHoverCardComponent {
 
   private badgeService = inject(BadgeService);
   private storage = inject(StorageService);
+  private utilities = inject(UtilitiesService);
+
+  npub = computed(() => {
+    return this.utilities.getNpubFromPubkey(this.pubkey());
+  });
 
   isLoading = signal<boolean>(true);
   badgeDefinition = signal<NostrEvent | undefined>(undefined);

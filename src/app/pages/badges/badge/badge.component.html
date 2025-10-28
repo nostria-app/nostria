@@ -95,6 +95,13 @@
       </div>
       }
 
+      @if (recipientName()) {
+      <div class="badge-metadata">
+        <mat-icon>person</mat-icon>
+        <span>Awarded to: {{ recipientName() }}</span>
+      </div>
+      }
+
       @if (awardDate()) {
       <div class="badge-metadata">
         <mat-icon>calendar_today</mat-icon>

@@ -756,7 +756,7 @@ export class ProfileHeaderComponent {
    * Navigates to the badges page
    */
   viewAllBadges(): void {
-    this.router.navigate(['/badges'], { queryParams: { pubkey: this.pubkey() } });
+    this.router.navigate(['/p', this.npub() || this.pubkey(), 'badges']);
   }
 
   // Badge hover card

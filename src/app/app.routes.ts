@@ -70,6 +70,7 @@ const profileChildren: Routes = [
   { path: 'following', component: FollowingComponent, title: 'Following' },
   { path: 'relays', component: ProfileRelaysComponent, title: 'Relays' },
   { path: 'details', component: DetailsComponent, title: 'Details' },
+  { path: 'badges', component: BadgesComponent, title: 'Badges' },
 ];
 
 export const routes: Routes = [

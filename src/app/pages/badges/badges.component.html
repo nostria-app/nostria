@@ -105,9 +105,21 @@
         <p>Loading given badges...</p>
       </div>
       } @else {
-      <div class="badges-grid">
+      <div class="badges-list">
         @for (badge of issued(); track badge.id) {
-        <app-badge [badge]="badge" (click)="viewBadgeDetails(badge)"></app-badge>
+        <app-badge [badge]="badge" layout="horizontal" [recipientName]="
+                  badgeRecipients()[getRecipientPubkey(badge) || '']?.name ||
+                  badgeRecipients()[getRecipientPubkey(badge) || '']?.display_name ||
+                  'Unknown User'
+                " (click)="viewBadgeDetails(badge)">
+        </app-badge>
+        }
+
+        @if (issued().length === 0) {
+        <div class="no-badges-message">
+          <mat-icon>emoji_events</mat-icon>
+          <p>You haven't given any badges yet</p>
+        </div>
         }
       </div>
       }
