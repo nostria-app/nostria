@@ -64,6 +64,14 @@ export class CommentEditorDialogComponent implements AfterViewInit {
     }, 100);
   }
 
+  onKeydown(event: KeyboardEvent): void {
+    // Check for Ctrl+Enter (Windows/Linux) or Cmd+Enter (Mac)
+    if (event.key === 'Enter' && (event.ctrlKey || event.metaKey)) {
+      event.preventDefault();
+      this.onPublish();
+    }
+  }
+
   async onPublish(): Promise<void> {
     const commentText = this.content().trim();
 
