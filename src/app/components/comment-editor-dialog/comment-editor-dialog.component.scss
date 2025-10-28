@@ -1,0 +1,85 @@
+.comment-editor-dialog {
+  display: flex;
+  flex-direction: column;
+  min-width: 500px;
+  max-width: 600px;
+
+  @media (max-width: 768px) {
+    min-width: unset;
+    max-width: unset;
+    width: 100%;
+  }
+}
+
+h2[mat-dialog-title] {
+  margin: 0;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+mat-dialog-content {
+  padding: 24px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.editor-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 8px; // Add top padding to prevent label cutoff
+}
+
+.full-width {
+  width: 100%;
+}
+
+textarea {
+  font-family: inherit;
+  line-height: 1.5;
+  field-sizing: content;
+  min-height: 120px;
+  max-height: 400px;
+  resize: vertical;
+}
+
+.preview-section {
+  padding: 16px;
+  background: var(--mat-sys-surface-variant);
+  border-radius: 8px;
+
+  h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .preview-content {
+    padding: 8px;
+    background: var(--mat-sys-surface-container);
+    border-radius: 4px;
+    min-height: 50px;
+  }
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  gap: 8px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+mat-progress-bar {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}

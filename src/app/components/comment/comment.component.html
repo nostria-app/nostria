@@ -1,0 +1,18 @@
+<mat-card class="comment-card" [class.nested]="nested()" appearance="outlined">
+  <mat-card-header>
+    <app-event-header [event]="event()"></app-event-header>
+  </mat-card-header>
+
+  <mat-card-content>
+    <app-content [content]="commentContent()" [event]="event()"></app-content>
+  </mat-card-content>
+
+  <mat-card-actions>
+    <div class="comment-actions">
+      <button mat-icon-button [matTooltip]="'Reply to comment'" (click)="onReply()">
+        <mat-icon>reply</mat-icon>
+      </button>
+      <app-event-menu [event]="event()"></app-event-menu>
+    </div>
+  </mat-card-actions>
+</mat-card>

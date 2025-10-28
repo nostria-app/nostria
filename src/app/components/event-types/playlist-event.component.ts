@@ -9,6 +9,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 interface PlaylistTrack {
   url: string;
@@ -35,6 +36,7 @@ interface PlaylistData {
     MatTooltipModule,
     MatMenuModule,
     MatDividerModule,
+    CommentsListComponent,
   ],
   templateUrl: './playlist-event.component.html',
   styleUrl: './playlist-event.component.scss',
