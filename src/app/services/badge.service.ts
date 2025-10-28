@@ -166,7 +166,7 @@ export class BadgeService implements NostriaService {
     // If not in memory, check storage
     if (!definition) {
       definition = await this.storage.getBadgeDefinition(pubkey, slug);
-      
+
       // If found in storage, add to memory
       if (definition) {
         this.putBadgeDefinition(definition);
@@ -264,7 +264,7 @@ export class BadgeService implements NostriaService {
     try {
       // First, load from storage
       const cachedDefinitions = await this.storage.getBadgeDefinitionsByPubkey(pubkey);
-      
+
       // Add cached definitions to memory
       for (const event of cachedDefinitions) {
         this.putBadgeDefinition(event);
