@@ -40,11 +40,11 @@ export class CommentsListComponent implements AfterViewInit {
   isLoadingMore = signal(false);
   isExpanded = signal(false);
   hasMore = signal(true);
+  hasLoadedInitial = signal(false);
 
   private readonly INITIAL_LIMIT = 30;
   private readonly LOAD_MORE_LIMIT = 20;
   private oldestCommentTimestamp: number | null = null;
-  private hasLoadedInitial = false;
 
   // Computed count of comments
   commentCount = computed(() => this.comments().length);
@@ -62,7 +62,7 @@ export class CommentsListComponent implements AfterViewInit {
     this.isExpanded.update((v) => !v);
 
     // Load initial comments when expanding for the first time
-    if (!wasExpanded && !this.hasLoadedInitial) {
+    if (!wasExpanded && !this.hasLoadedInitial()) {
       await this.loadComments();
     }
   }
@@ -82,7 +82,7 @@ export class CommentsListComponent implements AfterViewInit {
 
   async loadComments(): Promise<void> {
     const event = this.event();
-    if (!event || this.hasLoadedInitial) return;
+    if (!event || this.hasLoadedInitial()) return;
 
     this.isLoading.set(true);
 
@@ -102,7 +102,7 @@ export class CommentsListComponent implements AfterViewInit {
 
       if (!commentEvents || commentEvents.length === 0) {
         this.hasMore.set(false);
-        this.hasLoadedInitial = true;
+        this.hasLoadedInitial.set(true);
         this.isLoading.set(false);
         return;
       }
@@ -122,7 +122,7 @@ export class CommentsListComponent implements AfterViewInit {
       this.hasMore.set(commentEvents.length >= this.INITIAL_LIMIT);
 
       this.comments.set(commentRecords);
-      this.hasLoadedInitial = true;
+      this.hasLoadedInitial.set(true);
     } catch (error) {
       console.error('Failed to load comments:', error);
     } finally {
@@ -201,7 +201,7 @@ export class CommentsListComponent implements AfterViewInit {
 
   async refreshComments(): Promise<void> {
     // Reset state and reload
-    this.hasLoadedInitial = false;
+    this.hasLoadedInitial.set(false);
     this.oldestCommentTimestamp = null;
     this.comments.set([]);
     this.hasMore.set(true);

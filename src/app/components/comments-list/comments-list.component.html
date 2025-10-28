@@ -2,7 +2,11 @@
   <div class="comments-header">
     <button mat-button (click)="toggleComments()" class="comments-toggle">
       <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+      @if (!hasLoadedInitial()) {
+      <span>View Comments</span>
+      } @else {
       <span>{{ commentCount() }} {{ commentCount() === 1 ? 'Comment' : 'Comments' }}</span>
+      }
     </button>
 
     @if (isExpanded()) {
