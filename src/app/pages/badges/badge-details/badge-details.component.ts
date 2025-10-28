@@ -13,7 +13,8 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BadgeService } from '../../../services/badge.service';
-import { Event, NostrEvent } from 'nostr-tools';
+import { Event } from 'nostr-tools';
+import { AccountStateService } from '../../../services/account-state.service';
 
 interface BadgeDisplayData {
   id: string;
@@ -54,6 +55,7 @@ export class BadgeDetailsComponent {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private readonly badgeService = inject(BadgeService);
+  private readonly accountState = inject(AccountStateService);
 
   badge = signal<BadgeDisplayData | null>(null);
   isCreator = signal(false);
@@ -91,7 +93,7 @@ export class BadgeDetailsComponent {
         return;
       }
 
-      const [kind, pubkey, slug] = parts;
+      const [, pubkey, slug] = parts;
       this.fetchBadge(pubkey, slug);
     });
   }
@@ -99,8 +101,6 @@ export class BadgeDetailsComponent {
   private async fetchBadge(pubkey: string, slug: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
-
-    const receivedData = history.state.event as Event | undefined;
 
     try {
       // Check if we have the badge definition in memory first
@@ -122,8 +122,7 @@ export class BadgeDetailsComponent {
       const badgeInfo = this.extractBadgeInfo(badgeDefinition);
 
       // Check if current user is the creator
-      // TODO: Replace with actual current user check
-      this.isCreator.set(badgeDefinition.pubkey === pubkey);
+      this.isCreator.set(badgeDefinition.pubkey === this.accountState.pubkey());
 
       this.badge.set(badgeInfo);
     } catch (err) {

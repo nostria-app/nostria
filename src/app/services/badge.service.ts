@@ -99,6 +99,9 @@ export class BadgeService implements NostriaService {
           return [...badges, badge];
         }
       });
+
+      // Save to storage for persistence
+      this.storage.saveBadgeDefinition(badge);
     }
   }
 
@@ -160,6 +163,17 @@ export class BadgeService implements NostriaService {
   async loadBadgeDefinition(pubkey: string, slug: string) {
     let definition: NostrEvent | null | undefined = this.getBadgeDefinition(pubkey, slug);
 
+    // If not in memory, check storage
+    if (!definition) {
+      definition = await this.storage.getBadgeDefinition(pubkey, slug);
+      
+      // If found in storage, add to memory
+      if (definition) {
+        this.putBadgeDefinition(definition);
+      }
+    }
+
+    // If still not found, fetch from relays
     if (!definition) {
       definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
         pubkey,
@@ -248,6 +262,15 @@ export class BadgeService implements NostriaService {
   async loadBadgeDefinitions(pubkey: string): Promise<void> {
     this.isLoadingDefinitions.set(true);
     try {
+      // First, load from storage
+      const cachedDefinitions = await this.storage.getBadgeDefinitionsByPubkey(pubkey);
+      
+      // Add cached definitions to memory
+      for (const event of cachedDefinitions) {
+        this.putBadgeDefinition(event);
+      }
+
+      // Then fetch fresh from relays
       const badgeDefinitionEvents = await this.accountRelay.getEventsByPubkeyAndKind(
         pubkey,
         kinds.BadgeDefinition
