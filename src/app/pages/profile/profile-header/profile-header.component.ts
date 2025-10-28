@@ -40,11 +40,16 @@ import {
 } from '../../../components/zap-dialog/zap-dialog.component';
 import { UserRelayService } from '../../../services/relays/user-relay';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { BadgeService } from '../../../services/badge.service';
+import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
+import type { Event as NostrEvent } from 'nostr-tools';
 
 @Component({
   selector: 'app-profile-header',
   standalone: true,
   imports: [
+    CommonModule,
     MatIconModule,
     MatListModule,
     MatProgressSpinnerModule,
@@ -80,6 +85,8 @@ export class ProfileHeaderComponent {
   private zapService = inject(ZapService);
   private userRelayService = inject(UserRelayService);
   private accountRelay = inject(AccountRelayService);
+  badgeService = inject(BadgeService);
+  private router = inject(Router);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -87,6 +94,22 @@ export class ProfileHeaderComponent {
 
   // Add signal for bio expansion
   isBioExpanded = signal<boolean>(false);
+
+  // Computed for top 3 accepted badges
+  topBadges = computed(() => {
+    const accepted = this.badgeService.acceptedBadges();
+    return accepted.slice(0, 3);
+  });
+
+  // Computed to check if user has accepted badges
+  hasAcceptedBadges = computed(() => {
+    return this.badgeService.acceptedBadges().length > 0;
+  });
+
+  // Computed to check if user has more than 3 badges
+  hasMoreBadges = computed(() => {
+    return this.badgeService.acceptedBadges().length > 3;
+  });
 
   // Computed property to check if bio needs expansion
   shouldShowExpander = computed(() => {
@@ -251,6 +274,16 @@ export class ProfileHeaderComponent {
             status: 'No NIP-05 value',
           });
         });
+      }
+    });
+
+    // Load badges when pubkey changes
+    effect(async () => {
+      const currentPubkey = this.pubkey();
+      if (currentPubkey) {
+        // Clear badges first to prevent showing stale data from previous profile
+        this.badgeService.clear();
+        await this.badgeService.loadAcceptedBadges(currentPubkey);
       }
     });
 
@@ -693,5 +726,27 @@ export class ProfileHeaderComponent {
       this.premiumTier.set(null);
       this.profileUsername.set(null);
     }
+  }
+
+  /**
+   * Gets badge definition for display
+   */
+  getBadgeDefinition(badge: { aTag: string[]; pubkey: string; slug: string }) {
+    return this.badgeService.getBadgeDefinition(badge.pubkey, badge.slug);
+  }
+
+  /**
+   * Parses badge definition for display data
+   */
+  parseBadgeDefinition(badgeEvent: NostrEvent | undefined) {
+    if (!badgeEvent) return null;
+    return this.badgeService.parseDefinition(badgeEvent);
+  }
+
+  /**
+   * Navigates to the badges page
+   */
+  viewAllBadges(): void {
+    this.router.navigate(['/badges'], { queryParams: { pubkey: this.pubkey() } });
   }
 }

@@ -17,10 +17,13 @@
   flex-direction: row;
   gap: 1.5rem; // Space between the two divs
 
-  // First div should always be 168px width
+  // First div (avatar wrapper) should always be 168px width
   >div:first-child {
     flex: 0 0 168px; // Don't grow or shrink, always 168px
     width: 168px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   // Second div should take remaining space
@@ -49,6 +52,13 @@
     align-items: center;
     top: -60px;
     position: relative;
+
+    // Avatar wrapper should maintain width
+    >div:first-child {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 12px;
+    }
   }
 
   &.compact {
@@ -372,6 +382,82 @@
 .profile-extra-info {
   display: flex;
   align-items: center;
+}
+
+.profile-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: 8px;
+
+  // Mobile: show inline to the right of avatar
+  .mobile & {
+    margin-top: 0;
+    margin-left: 12px;
+    justify-content: flex-start;
+  }
+
+  .badge-item {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-sys-surface-variant);
+    border: 2px solid var(--mat-sys-outline-variant);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+
+    &:hover {
+      transform: scale(1.1);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    }
+
+    .badge-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .badge-placeholder,
+    .badge-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+
+  .more-badges-btn {
+    width: 40px;
+    height: 40px;
+    border: 2px dashed var(--mat-sys-outline-variant);
+    background-color: var(--mat-sys-surface-variant);
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: var(--mat-sys-primary);
+      background-color: var(--mat-sys-primary-container);
+      transform: scale(1.05);
+    }
+
+    mat-icon {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 20px;
+    }
+  }
 }
 
 .inline-error {

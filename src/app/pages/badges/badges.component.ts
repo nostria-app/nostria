@@ -55,6 +55,7 @@ export class BadgesComponent {
   isUpdating = signal<boolean>(false);
   isInitialLoading = signal<boolean>(true);
   activeTabIndex = signal<number>(0);
+  viewingPubkey = signal<string>(''); // Track which pubkey's badges we're viewing
 
   constructor() {
     // Get the active tab from query params if available
@@ -62,6 +63,9 @@ export class BadgesComponent {
     if (tabParam) {
       this.activeTabIndex.set(parseInt(tabParam, 10));
     }
+
+    // Get pubkey from query params if available
+    const pubkeyParam = this.route.snapshot.queryParamMap.get('pubkey');
 
     effect(async () => {
       const appInitialized = this.app.initialized();
@@ -72,7 +76,10 @@ export class BadgesComponent {
         this.isInitialLoading.set(true);
 
         try {
-          await this.badgeService.loadAllBadges(this.accountState.pubkey());
+          // Use pubkey from query params if provided, otherwise use current user's pubkey
+          const targetPubkey = pubkeyParam || this.accountState.pubkey();
+          this.viewingPubkey.set(targetPubkey);
+          await this.badgeService.loadAllBadges(targetPubkey);
         } catch (err) {
           console.error('Error loading badges:', err);
         } finally {
