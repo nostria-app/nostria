@@ -31,6 +31,12 @@
 .media-grid {
   margin-top: 1rem;
 
+  mat-grid-list {
+    ::ng-deep .mat-grid-list {
+      gap: 8px;
+    }
+  }
+
   .media-item {
     width: 100%;
     height: 100%;
@@ -74,5 +80,19 @@
         height: 100%;
       }
     }
+  }
+}
+
+.loading-more,
+.end-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+  opacity: 0.7;
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
   }
 }

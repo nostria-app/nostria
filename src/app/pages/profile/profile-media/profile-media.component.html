@@ -1,21 +1,33 @@
 <div class="tab-content">
   @if (media().length === 0) {
-    <div class="empty-state">
-      <mat-icon>image</mat-icon>
-      <p>No media to display yet</p>
-    </div>
+  <div class="empty-state">
+    <mat-icon>image</mat-icon>
+    <p>No media to display yet</p>
+  </div>
   } @else {
-    <div class="media-grid">
-      <mat-grid-list cols="3" rowHeight="1:1">
-        @for (mediaItem of media(); track mediaItem.event.id) {
-          <mat-grid-tile>
-            <div class="media-item">
-              <app-event [event]="mediaItem.event" appearance="plain" [navigationDisabled]="false">
-              </app-event>
-            </div>
-          </mat-grid-tile>
-        }
-      </mat-grid-list>
-    </div>
+  <div class="media-grid">
+    <mat-grid-list cols="3" rowHeight="1:1" gutterSize="8px">
+      @for (mediaItem of media(); track mediaItem.event.id) {
+      <mat-grid-tile>
+        <div class="media-item">
+          <app-event [event]="mediaItem.event" appearance="plain" [navigationDisabled]="false">
+          </app-event>
+        </div>
+      </mat-grid-tile>
+      }
+    </mat-grid-list>
+  </div>
+
+  @if (isLoadingMore()) {
+  <div class="loading-more">
+    <mat-spinner [diameter]="40"></mat-spinner>
+  </div>
+  }
+
+  @if (!hasMore() && media().length > 0) {
+  <div class="end-message">
+    <p>No more media to load</p>
+  </div>
+  }
   }
 </div>
