@@ -51,6 +51,7 @@ export class BadgeComponent {
   isAccepted = input<boolean>(false);
   isUpdating = input<boolean>(false);
   issuerName = input<string | null>(null);
+  recipientName = input<string | null>(null);
   utilities = inject(UtilitiesService);
 
   @Output() acceptClicked = new EventEmitter<void>();

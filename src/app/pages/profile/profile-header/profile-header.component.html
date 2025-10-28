@@ -28,7 +28,7 @@
       <div class="profile-badges">
         @for (badge of topBadges(); track $index) {
         @if (parsedBadges()[$index]; as parsedBadge) {
-        <a [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey() }" class="badge-item"
+        <a [routerLink]="['/p', npub() || pubkey(), 'badges']" class="badge-item"
           (mouseenter)="onBadgeMouseEnter($event, badge)" (mouseleave)="onBadgeMouseLeave()">
           @if (parsedBadge.thumb || parsedBadge.image) {
           <img [src]="parsedBadge.thumb || parsedBadge.image" class="badge-image" loading="lazy" />
@@ -39,7 +39,7 @@
           }
         </a>
         } @else {
-        <a [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey() }" class="badge-item">
+        <a [routerLink]="['/p', npub() || pubkey(), 'badges']" class="badge-item">
           <div class="badge-loading" title="Loading badge...">
             <mat-spinner diameter="32"></mat-spinner>
           </div>

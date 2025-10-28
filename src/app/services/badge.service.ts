@@ -65,6 +65,7 @@ export class BadgeService implements NostriaService {
   issuedBadges = signal<NostrEvent[]>([]);
   receivedBadges = signal<NostrEvent[]>([]);
   badgeIssuers = signal<Record<string, any>>({});
+  badgeRecipients = signal<Record<string, any>>({});
 
   // Loading states
   isLoadingAccepted = signal<boolean>(false);
@@ -152,6 +153,9 @@ export class BadgeService implements NostriaService {
       }
 
       this.issuedBadges.set(badgeAwardEvents);
+
+      // Fetch recipient metadata
+      await this.fetchBadgeRecipients(badgeAwardEvents);
     } catch (err) {
       console.error('Error loading issued badges:', err);
     } finally {
@@ -348,6 +352,39 @@ export class BadgeService implements NostriaService {
     this.badgeIssuers.set(issuers);
   }
 
+  private async fetchBadgeRecipients(issuedBadges: NostrEvent[]): Promise<void> {
+    const recipients: Record<string, any> = {};
+
+    // Get unique recipient pubkeys from 'p' tags
+    const recipientPubkeys = new Set<string>();
+    for (const badge of issuedBadges) {
+      const pTags = badge.tags.filter(tag => tag[0] === 'p');
+      for (const pTag of pTags) {
+        if (pTag[1]) {
+          recipientPubkeys.add(pTag[1]);
+        }
+      }
+    }
+
+    // Fetch metadata for each recipient
+    for (const pubkey of recipientPubkeys) {
+      try {
+        const metadata = await this.data.getProfile(pubkey);
+
+        if (metadata) {
+          recipients[pubkey] = metadata.data;
+        } else {
+          recipients[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
+        }
+      } catch (err) {
+        console.error(`Error fetching metadata for ${pubkey}:`, err);
+        recipients[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
+      }
+    }
+
+    this.badgeRecipients.set(recipients);
+  }
+
   private parseBadgeTags(tags: string[][]): void {
     // Find the 'a' tags
     const aTags = tags.filter(tag => tag[0] === 'a');
@@ -473,5 +510,6 @@ export class BadgeService implements NostriaService {
     this.issuedBadges.set([]);
     this.receivedBadges.set([]);
     this.badgeIssuers.set({});
+    this.badgeRecipients.set({});
   }
 }

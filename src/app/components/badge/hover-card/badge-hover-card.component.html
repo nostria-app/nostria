@@ -58,8 +58,7 @@
 
     <!-- View Badge Button -->
     <div class="card-actions">
-      <a mat-flat-button color="primary" [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey() }"
-        class="view-button">
+      <a mat-flat-button color="primary" [routerLink]="['/p', npub() || pubkey(), 'badges']" class="view-button">
         <mat-icon>visibility</mat-icon>
         View Badge Details
       </a>

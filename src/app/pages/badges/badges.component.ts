@@ -70,8 +70,16 @@ export class BadgesComponent {
       this.activeTabIndex.set(parseInt(tabParam, 10));
     }
 
-    // Get pubkey from query params if available
-    const pubkeyParam = this.route.snapshot.queryParamMap.get('pubkey');
+    // Get pubkey from route params (new: /p/:id/badges) or query params (legacy: /badges?pubkey=xxx)
+    let pubkeyParam = this.route.snapshot.queryParamMap.get('pubkey');
+    if (!pubkeyParam) {
+      // Check if we're under a profile route (parent :id param)
+      const parentId = this.route.parent?.snapshot.paramMap.get('id');
+      if (parentId) {
+        // Convert npub to hex if needed
+        pubkeyParam = this.utilities.safeGetHexPubkey(parentId) || parentId;
+      }
+    }
 
     effect(() => {
       const appInitialized = this.app.initialized();
@@ -85,7 +93,7 @@ export class BadgesComponent {
           this.isInitialLoading.set(true);
 
           try {
-            // Use pubkey from query params if provided, otherwise use current user's pubkey
+            // Use pubkey from route/query params if provided, otherwise use current user's pubkey
             const targetPubkey = pubkeyParam || this.accountState.pubkey();
             this.viewingPubkey.set(targetPubkey);
 
@@ -122,6 +130,9 @@ export class BadgesComponent {
   }
   get badgeIssuers() {
     return this.badgeService.badgeIssuers;
+  }
+  get badgeRecipients() {
+    return this.badgeService.badgeRecipients;
   }
   get profileBadgesEvent() {
     return this.badgeService.profileBadgesEvent;
@@ -205,6 +216,11 @@ export class BadgesComponent {
 
   getBadgeDefinition(aTag: string): NostrEvent | undefined {
     return this.badgeService.getBadgeDefinitionByATag(aTag);
+  }
+
+  getRecipientPubkey(badgeAward: NostrEvent): string | null {
+    const pTags = badgeAward.tags.filter(tag => tag[0] === 'p');
+    return pTags.length > 0 && pTags[0][1] ? pTags[0][1] : null;
   }
 
   // getBadgeInfo(badgeAward: NostrEvent): { name: string, description: string, image: string, thumbnail: string } {
