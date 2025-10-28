@@ -15,6 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BadgeService } from '../../../services/badge.service';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 
 interface BadgeDisplayData {
   id: string;
@@ -45,6 +46,7 @@ interface BadgeDisplayData {
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    UserProfileComponent,
   ],
   templateUrl: './badge-details.component.html',
   styleUrl: './badge-details.component.scss',

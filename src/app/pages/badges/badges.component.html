@@ -10,21 +10,18 @@
   </div>
 
   @if (viewingProfile()) {
-    <div class="minimal-profile">
-      <img 
-        [src]="viewingProfile()?.data?.picture || 'assets/default-avatar.png'" 
-        alt="Profile picture"
-        class="profile-avatar"
-      />
-      <div class="profile-info">
-        <div class="profile-name">
-          {{ viewingProfile()?.data?.display_name || viewingProfile()?.data?.name || 'Anonymous' }}
-        </div>
-        <div class="profile-identifier">
-          {{ getProfileIdentifier() }}
-        </div>
+  <div class="minimal-profile">
+    <img [src]="viewingProfile()?.data?.picture || 'assets/default-avatar.png'" alt="Profile picture"
+      class="profile-avatar" />
+    <div class="profile-info">
+      <div class="profile-name">
+        {{ viewingProfile()?.data?.display_name || viewingProfile()?.data?.name || 'Anonymous' }}
+      </div>
+      <div class="profile-identifier">
+        {{ getProfileIdentifier() }}
       </div>
     </div>
+  </div>
   }
 
   @if (isInitialLoading()) {

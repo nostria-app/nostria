@@ -101,6 +101,19 @@
     margin: 0;
     word-break: break-all;
   }
+
+  .creator-section {
+    grid-column: 1 / -1; // Make creator section span full width
+
+    h3 {
+      margin-bottom: 8px;
+    }
+
+    app-user-profile {
+      display: block;
+      margin-top: 8px;
+    }
+  }
 }
 
 mat-divider {
