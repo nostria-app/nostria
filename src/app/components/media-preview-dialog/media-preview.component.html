@@ -1,6 +1,38 @@
-<div class="media-preview-container">
+<div class="media-preview-container" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
   <div class="preview-header">
-    <h2 class="preview-title">{{ data.mediaTitle }}</h2>
+    <div class="header-left">
+      @if (isImage()) {
+      <button mat-icon-button (click)="zoomIn()" aria-label="Zoom in">
+        <mat-icon>zoom_in</mat-icon>
+      </button>
+      <button mat-icon-button (click)="zoomOut()" aria-label="Zoom out">
+        <mat-icon>zoom_out</mat-icon>
+      </button>
+      <button mat-icon-button (click)="resetView()" aria-label="Reset view">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      <span class="zoom-level">{{ scale() * 100 }}%</span>
+      }
+    </div>
+
+    <h2 class="preview-title">{{ currentMedia().title || 'Media' }}</h2>
+
+    @if (hasMultipleItems()) {
+    <div class="navigation-controls">
+      <button mat-icon-button (click)="previous()" [disabled]="!hasPrevious()" class="nav-button">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+
+      <span class="media-counter">
+        {{ currentIndex() + 1 }} / {{ mediaItems().length }}
+      </span>
+
+      <button mat-icon-button (click)="next()" [disabled]="!hasNext()" class="nav-button">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+    }
+
     <button mat-icon-button (click)="close()">
       <mat-icon>close</mat-icon>
     </button>
@@ -8,29 +40,31 @@
 
   <div class="preview-content" [ngClass]="{ 'video-content': isVideo() }">
     @if (isImage()) {
-      <img [src]="data.mediaUrl" [alt]="data.mediaTitle" class="preview-image" />
+    <div class="image-container" #containerElement (mousedown)="onPointerDown($event)"
+      (mousemove)="onPointerMove($event)" (mouseup)="onPointerUp()" (mouseleave)="onPointerUp()"
+      (touchstart)="onPointerDown($event)" (touchmove)="onPointerMove($event)" (touchend)="onPointerUp()"
+      (touchcancel)="onPointerUp()" (wheel)="onWheel($event)">
+      <img #imageElement [src]="currentMedia().url" [alt]="currentMedia().title || 'Media'"
+        title="{{ currentMedia().title || 'Media' }}" class="preview-image" [class.draggable]="scale() > 1"
+        [style.transform]="getTransformStyle()"
+        [style.cursor]="isDragging() ? 'grabbing' : scale() > 1 ? 'grab' : 'default'" draggable="false" />
+    </div>
     } @else if (isVideo()) {
-      <div class="video-container">
-        @if (isVideoLoading) {
-          <div class="loading-indicator">
-            <mat-icon>videocam</mat-icon>
-            <p>Loading video...</p>
-          </div>
-        }
-        <video
-          [src]="data.mediaUrl"
-          controls
-          autoplay
-          class="preview-video"
-          (loadeddata)="onVideoLoad()"
-        ></video>
+    <div class="video-container">
+      @if (isVideoLoading) {
+      <div class="loading-indicator">
+        <mat-icon>videocam</mat-icon>
+        <p>Loading video...</p>
       </div>
+      }
+      <video [src]="currentMedia().url" controls autoplay class="preview-video" (loadeddata)="onVideoLoad()"></video>
+    </div>
     } @else {
-      <div class="unsupported-media">
-        <mat-icon>broken_image</mat-icon>
-        <p>This media type cannot be previewed</p>
-        <a [href]="data.mediaUrl" target="_blank" mat-raised-button color="primary"> Open File </a>
-      </div>
+    <div class="unsupported-media">
+      <mat-icon>broken_image</mat-icon>
+      <p>This media type cannot be previewed</p>
+      <a [href]="currentMedia().url" target="_blank" mat-raised-button color="primary"> Open File </a>
+    </div>
     }
   </div>
 </div>
