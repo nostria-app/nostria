@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -20,6 +20,14 @@ export class PhotoEventComponent {
   event = input.required<Event>();
 
   private dialog = inject(MatDialog);
+
+  // Current carousel index for inline navigation
+  currentCarouselIndex = signal(0);
+
+  // Touch tracking for swipe gestures
+  private touchStartX = 0;
+  private touchEndX = 0;
+  private readonly SWIPE_THRESHOLD = 50;
 
   // Computed image URLs from the event
   imageUrls = computed(() => {
@@ -90,6 +98,73 @@ export class PhotoEventComponent {
     const altTexts = this.altTexts();
     return altTexts[0] || 'Photo';
   });
+
+  // Carousel navigation state
+  hasMultipleImages = computed(() => this.imageUrls().length > 1);
+  canGoToPrevious = computed(() => this.currentCarouselIndex() > 0);
+  canGoToNext = computed(() => this.currentCarouselIndex() < this.imageUrls().length - 1);
+
+  // Current image for carousel display
+  currentImageUrl = computed(() => {
+    const urls = this.imageUrls();
+    const index = this.currentCarouselIndex();
+    return urls[index] || urls[0];
+  });
+
+  currentAltText = computed(() => {
+    const alts = this.altTexts();
+    const index = this.currentCarouselIndex();
+    return alts[index] || 'Photo';
+  });
+
+  currentBlurhashDataUrl = computed(() => {
+    const blurhashes = this.blurhashDataUrls();
+    const index = this.currentCarouselIndex();
+    return blurhashes[index] || null;
+  });
+
+  // Carousel navigation methods
+  goToPrevious(): void {
+    if (this.canGoToPrevious()) {
+      this.currentCarouselIndex.update(i => i - 1);
+    }
+  }
+
+  goToNext(): void {
+    if (this.canGoToNext()) {
+      this.currentCarouselIndex.update(i => i + 1);
+    }
+  }
+
+  goToIndex(index: number): void {
+    if (index >= 0 && index < this.imageUrls().length) {
+      this.currentCarouselIndex.set(index);
+    }
+  }
+
+  // Touch event handlers for swipe
+  onTouchStart(event: TouchEvent): void {
+    this.touchStartX = event.changedTouches[0].screenX;
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    this.touchEndX = event.changedTouches[0].screenX;
+    this.handleSwipe();
+  }
+
+  private handleSwipe(): void {
+    const swipeDistance = this.touchStartX - this.touchEndX;
+
+    if (Math.abs(swipeDistance) > this.SWIPE_THRESHOLD) {
+      if (swipeDistance > 0) {
+        // Swiped left - go to next
+        this.goToNext();
+      } else {
+        // Swiped right - go to previous
+        this.goToPrevious();
+      }
+    }
+  }
 
   openImageDialog(imageUrl: string, alt: string): void {
     const imageUrls = this.imageUrls();
