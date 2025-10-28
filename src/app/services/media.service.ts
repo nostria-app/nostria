@@ -447,10 +447,14 @@ export class MediaService implements NostriaService {
           const url = server.endsWith('/') ? server : `${server}/`;
 
           const action = this.determineAction(file);
+          
+          console.log(`Uploading to server: ${server}`);
+          console.log(`File type: ${file.type}, Action: ${action.action}, isPicture: ${action.isPicture}, isVideo: ${action.isVideo}`);
 
           // If the user chose to upload the original file, set the action to 'upload'
           if (uploadOriginal) {
             action.action = 'upload';
+            console.log(`Uploading original, action changed to: ${action.action}`);
           }
 
           headers = await this.getAuthHeaders('Upload File', action.action, hash);
@@ -460,12 +464,15 @@ export class MediaService implements NostriaService {
           headers['X-Content-Length'] = file.size.toString();
 
           const api = action.action === 'media' ? 'media' : 'upload';
+          console.log(`Using API endpoint: ${url}${api}`);
 
           // First check if upload is allowed with HEAD request (BUD-06)
           const headResponse = await fetch(`${url}${api}`, {
             method: 'HEAD',
             headers: headers,
           });
+
+          console.log(`HEAD response status: ${headResponse.status}`);
 
           if (!headResponse.ok) {
             const reason = headResponse.headers.get('x-reason');
