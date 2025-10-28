@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
 
 import {
   FormBuilder,
@@ -17,7 +17,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { kinds } from 'nostr-tools';
 import { MediaService } from '../../../services/media.service';
@@ -25,6 +25,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { BadgeService } from '../../../services/badge.service';
 
 @Component({
   selector: 'app-badge-editor',
@@ -51,12 +52,14 @@ export class BadgeEditorComponent {
   private fb = inject(FormBuilder);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   nostr = inject(NostrService);
   accountRelay = inject(AccountRelayService);
   media = inject(MediaService);
   layout = inject(LayoutService);
   private accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
+  private badgeService = inject(BadgeService);
 
   // Form for badge creation
   badgeForm: FormGroup;
@@ -88,9 +91,11 @@ export class BadgeEditorComponent {
       thumbnailUrl: [''],
     });
 
-    // Update slug automatically from name
+    // Update slug automatically from name (only when creating new badges)
     this.badgeForm.get('name')?.valueChanges.subscribe(name => {
-      if (name) {
+      const badgeId = this.route.snapshot.paramMap.get('id');
+      // Don't auto-update slug when editing
+      if (name && !badgeId) {
         const slug = name
           .toLowerCase()
           .replace(/\s+/g, '-')
@@ -98,6 +103,73 @@ export class BadgeEditorComponent {
         this.badgeForm.get('slug')?.setValue(slug);
       }
     });
+
+    // Load existing badge data if editing
+    effect(() => {
+      untracked(async () => {
+        const badgeId = this.route.snapshot.paramMap.get('id');
+        if (badgeId) {
+          await this.loadBadgeForEdit(badgeId);
+        }
+      });
+    });
+  }
+
+  async loadBadgeForEdit(badgeId: string): Promise<void> {
+    try {
+      // Parse the badge id format: "kind:pubkey:slug"
+      const parts = badgeId.split(':');
+      if (parts.length < 3) {
+        this.snackBar.open('Invalid badge ID format', 'Close', { duration: 3000 });
+        return;
+      }
+
+      const [, pubkey, slug] = parts;
+
+      // Load the badge definition
+      const badgeDefinition = await this.badgeService.loadBadgeDefinition(pubkey, slug);
+
+      if (!badgeDefinition) {
+        this.snackBar.open('Badge not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      // Parse badge data from tags
+      const tags = badgeDefinition.tags || [];
+      const name = tags.find(t => t[0] === 'name')?.[1] || '';
+      const description = tags.find(t => t[0] === 'description')?.[1] || '';
+      const image = tags.find(t => t[0] === 'image')?.[1] || '';
+      const thumb = tags.find(t => t[0] === 'thumb')?.[1] || '';
+      const tagValues = tags.filter(t => t[0] === 't').map(t => t[1]);
+
+      // Populate the form
+      this.badgeForm.patchValue({
+        name,
+        slug,
+        description,
+        image,
+        thumbnail: thumb,
+        imageUrl: image,
+        thumbnailUrl: thumb,
+      });
+
+      // Set preview images
+      if (image) {
+        this.previewImage.set(image);
+        this.useImageUrl.set(true);
+      }
+      if (thumb) {
+        this.previewThumbnail.set(thumb);
+        this.useThumbnailUrl.set(true);
+      }
+
+      // Set tags
+      this.tags.set(tagValues);
+
+    } catch (error) {
+      console.error('Error loading badge for edit:', error);
+      this.snackBar.open('Failed to load badge data', 'Close', { duration: 3000 });
+    }
   }
 
   // Handle image upload for badge graphics

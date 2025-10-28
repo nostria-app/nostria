@@ -202,7 +202,7 @@
         <span>Calendar</span>
       </button>
       }
-      <button mat-menu-item routerLink="/badges">
+      <button mat-menu-item [routerLink]="['p', accountState.pubkey(), 'badges']">
         <mat-icon>badge</mat-icon>
         <span>Badges</span>
       </button>
