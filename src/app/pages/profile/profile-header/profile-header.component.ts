@@ -108,6 +108,11 @@ export class ProfileHeaderComponent {
     return this.badgeService.acceptedBadges().length > 0;
   });
 
+  // Computed for badge count
+  badgeCount = computed(() => {
+    return this.badgeService.acceptedBadges().length;
+  });
+
   // No longer need hasMoreBadges since all badges link to badges page
 
   // Memoized parsed badges to prevent NG0100 error
