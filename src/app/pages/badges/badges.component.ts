@@ -346,13 +346,23 @@ export class BadgesComponent {
    * Handle drag-and-drop reordering of badges
    */
   async onBadgeDropped(event: CdkDragDrop<unknown>) {
+    // If dropped in the same position, do nothing
+    if (event.previousIndex === event.currentIndex) {
+      console.log('Badge dropped in same position, no change needed');
+      return;
+    }
+
+    console.log(`Moving badge from position ${event.previousIndex} to ${event.currentIndex}`);
+
     try {
       this.isUpdating.set(true);
 
       const currentAccepted = [...this.accepted()];
+      console.log('Current badge order:', currentAccepted.map(b => b.slug));
 
       // Reorder the array based on drag-drop
       moveItemInArray(currentAccepted, event.previousIndex, event.currentIndex);
+      console.log('New badge order:', currentAccepted.map(b => b.slug));
 
       // Get the current profile badges event
       const currentEvent = this.badgeService.profileBadgesEvent();
@@ -370,12 +380,19 @@ export class BadgesComponent {
       }
 
       // Add badges in new order
+      // Note: badge.aTag is already an array like ['a', '30009:pubkey:slug']
+      // We need to extract the value at index 1
       for (const badge of currentAccepted) {
-        tags.push(['a', badge.aTag] as string[]);
-        if (badge.eTag) {
-          tags.push(['e', badge.eTag] as string[]);
+        const aTagValue = Array.isArray(badge.aTag) ? badge.aTag[1] : badge.aTag;
+        const eTagValue = Array.isArray(badge.eTag) ? badge.eTag[1] : badge.eTag;
+
+        tags.push(['a', aTagValue]);
+        if (eTagValue) {
+          tags.push(['e', eTagValue]);
         }
       }
+
+      console.log('New tags array:', tags);
 
       // Create and sign the new event
       const unsignedEvent: UnsignedEvent = {
@@ -387,6 +404,8 @@ export class BadgesComponent {
       };
 
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
+      console.log('Signed reordered event:', signedEvent);
+
       await this.accountRelay.publish(signedEvent);
       await this.storage.saveEvent(signedEvent);
 
@@ -395,6 +414,8 @@ export class BadgesComponent {
 
       // Reload accepted badges
       await this.badgeService.loadAcceptedBadges(this.accountState.pubkey());
+
+      console.log('Badge reordering complete');
     } catch (err) {
       console.error('Error reordering badges:', err);
     } finally {

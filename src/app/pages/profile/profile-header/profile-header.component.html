@@ -26,10 +26,8 @@
       <!-- Badges Section positioned relative to avatar -->
       @if (!compact() && hasAcceptedBadges()) {
       <div class="profile-badges">
-        @for (badge of topBadges(); track badge.id) {
-        @let badgeDefinition = getBadgeDefinition(badge);
-        @let parsedBadge = parseBadgeDefinition(badgeDefinition);
-        <div class="badge-item">
+        @for (parsedBadge of parsedBadges(); track $index) {
+        <a [routerLink]="['/badges']" [queryParams]="{ pubkey: pubkey() }" class="badge-item">
           @if (parsedBadge) {
           @if (parsedBadge.thumb || parsedBadge.image) {
           <img [src]="parsedBadge.thumb || parsedBadge.image" [alt]="parsedBadge.name" [title]="parsedBadge.name"
@@ -44,12 +42,7 @@
             <mat-spinner diameter="32"></mat-spinner>
           </div>
           }
-        </div>
-        }
-        @if (hasMoreBadges()) {
-        <button mat-icon-button class="more-badges-btn" (click)="viewAllBadges()" title="View all badges">
-          <mat-icon>more_horiz</mat-icon>
-        </button>
+        </a>
         }
       </div>
       }
