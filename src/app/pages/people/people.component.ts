@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +10,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { RouterModule } from '@angular/router';
-import { ScrollingModule } from '@angular/cdk/scrolling';
+import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { StorageService, InfoRecord } from '../../services/storage.service';
@@ -63,7 +63,9 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc';
   templateUrl: './people.component.html',
   styleUrls: ['./people.component.scss'],
 })
-export class PeopleComponent {
+export class PeopleComponent implements AfterViewInit, OnDestroy {
+  @ViewChild(CdkVirtualScrollViewport) viewport?: CdkVirtualScrollViewport;
+
   private router = inject(Router);
   private nostr = inject(NostrService);
   private logger = inject(LoggerService);
@@ -283,6 +285,30 @@ export class PeopleComponent {
     effect(() => {
       this.updateSortedPeople();
     });
+  }
+
+  ngAfterViewInit(): void {
+    // Restore scroll position after view is initialized
+    setTimeout(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey && this.viewport) {
+        const savedPosition = this.accountLocalState.getPeopleScrollPosition(pubkey);
+        if (savedPosition !== undefined && savedPosition > 0) {
+          this.viewport.scrollToOffset(savedPosition);
+          this.logger.debug('Restored scroll position:', savedPosition);
+        }
+      }
+    }, 100);
+  }
+
+  ngOnDestroy(): void {
+    // Save scroll position when leaving the component
+    const pubkey = this.accountState.pubkey();
+    if (pubkey && this.viewport) {
+      const currentOffset = this.viewport.measureScrollOffset();
+      this.accountLocalState.setPeopleScrollPosition(pubkey, currentOffset);
+      this.logger.debug('Saved scroll position:', currentOffset);
+    }
   }
 
   private async updateSortedPeople() {
