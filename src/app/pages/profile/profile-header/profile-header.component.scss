@@ -417,8 +417,8 @@
   }
 
   .badge-item {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     overflow: hidden;
     display: flex;
@@ -435,7 +435,7 @@
 
     /* Stack badges with overlap */
     &:not(:first-child) {
-      margin-left: -12px;
+      margin-left: -13px;
       /* Negative margin to create overlap */
     }
 
@@ -462,9 +462,9 @@
       color: var(--mat-sys-on-surface-variant);
 
       mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
+        font-size: 22px;
+        width: 22px;
+        height: 22px;
       }
     }
   }

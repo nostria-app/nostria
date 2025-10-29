@@ -97,10 +97,10 @@ export class ProfileHeaderComponent {
   // Add signal for bio expansion
   isBioExpanded = signal<boolean>(false);
 
-  // Computed for top 4 accepted badges (changed from 3)
+  // Computed for top 3 accepted badges
   topBadges = computed(() => {
     const accepted = this.badgeService.acceptedBadges();
-    return accepted.slice(0, 4);
+    return accepted.slice(0, 3);
   });
 
   // Computed to check if user has accepted badges
