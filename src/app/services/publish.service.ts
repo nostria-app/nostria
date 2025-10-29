@@ -6,6 +6,7 @@ import { RelayPoolService } from './relays/relay-pool';
 import { AccountRelayService } from './relays/account-relay';
 import { UserRelaysService } from './relays/user-relays';
 import { ApplicationStateService } from './application-state.service';
+import { NotificationService } from './notification.service';
 
 /**
  * Options for publishing events
@@ -61,6 +62,7 @@ export class PublishService {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly userRelaysService = inject(UserRelaysService);
   private readonly appState = inject(ApplicationStateService);
+  private readonly notificationService = inject(NotificationService);
 
   /**
    * Publish a signed event to relays.
@@ -105,8 +107,27 @@ export class PublishService {
         return result;
       }
 
-      // Get the appropriate relay service to use
-      const publishPromises = await this.executePublish(event, relayUrls);
+      // Create relay promises map for notification tracking
+      const relayPromises = new Map<Promise<string>, string>();
+      const publishPromises: Promise<string>[] = [];
+
+      // Publish to each relay individually so we can track status
+      for (const relayUrl of relayUrls) {
+        const publishPromise = this.pool.publish([relayUrl], event)
+          .then(() => relayUrl)
+          .catch(error => {
+            throw new Error(`${relayUrl}: ${error.message || 'Failed'}`);
+          });
+        
+        relayPromises.set(publishPromise, relayUrl);
+        publishPromises.push(publishPromise);
+      }
+
+      // Create notification for tracking
+      await this.notificationService.addRelayPublishingNotification(
+        event,
+        relayPromises
+      );
 
       // Process results with timeout
       const timeout = options.timeout || 10000;
