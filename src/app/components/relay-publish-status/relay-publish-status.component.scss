@@ -9,7 +9,7 @@
   align-items: center;
   gap: 12px;
 
-  > mat-icon {
+  >mat-icon {
     &.spinning {
       animation: spin 1s linear infinite;
     }
@@ -145,6 +145,7 @@ mat-progress-bar {
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }

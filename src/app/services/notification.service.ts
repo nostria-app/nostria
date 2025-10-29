@@ -103,7 +103,9 @@ export class NotificationService {
     event: Event,
     relayPromises: Map<Promise<string>, string>
   ): Promise<string> {
-    const notificationId = `publish-${event.id}-${Date.now()}`;
+    // Use a combination of event ID, timestamp, and random value to ensure uniqueness
+    // This prevents collisions when publishing multiple events in quick succession
+    const notificationId = `publish-${event.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
     this.logger.debug(
       `Creating relay publishing notification ${notificationId} for event ${event.id}`
@@ -124,7 +126,7 @@ export class NotificationService {
     });
 
     // Process each promise to update its status
-    relayPromiseObjects.forEach(async (relayPromise, i) => {
+    relayPromiseObjects.forEach(async (relayPromise) => {
       this.logger.debug(`Starting promise monitoring for relay ${relayPromise.relayUrl}`);
       try {
         this.logger.debug(`Awaiting promise for relay ${relayPromise.relayUrl}...`);
@@ -164,6 +166,12 @@ export class NotificationService {
       title: 'Publishing to relays',
       message: `Publishing event ${event.id.substring(0, 8)}... to ${relayPromises.size} relays`,
       event,
+      relayPromises: relayPromiseObjects.map(rp => ({
+        relayUrl: rp.relayUrl,
+        status: rp.status,
+        error: rp.error,
+        // Don't persist the promise itself, just the metadata
+      })),
       complete: false,
       recipientPubkey: pubkey, // Associate with current account
     };
@@ -187,7 +195,24 @@ export class NotificationService {
       this.logger.debug(
         `Persisting notification ${notification.id} with recipientPubkey: ${notification.recipientPubkey || 'undefined'}`
       );
-      await this.storage.saveNotification(notification);
+
+      // If this is a relay publishing notification, strip out the promise objects
+      // as they cannot be serialized to IndexedDB
+      let notificationToStore = notification;
+      if (notification.type === NotificationType.RELAY_PUBLISHING) {
+        const relayNotification = notification as RelayPublishingNotification;
+        notificationToStore = {
+          ...relayNotification,
+          relayPromises: relayNotification.relayPromises?.map(rp => ({
+            relayUrl: rp.relayUrl,
+            status: rp.status,
+            error: rp.error,
+            // Explicitly exclude the promise property - it cannot be cloned for IndexedDB
+          })),
+        } as RelayPublishingNotification;
+      }
+
+      await this.storage.saveNotification(notificationToStore);
       this.logger.debug(`Successfully persisted notification ${notification.id}`);
     } catch (error) {
       this.logger.error(`Failed to persist notification ${notification.id} to storage`, error);
@@ -290,7 +315,7 @@ export class NotificationService {
    */
   async retryFailedRelays(
     notificationId: string,
-    retryFunction: (event: Event, relayUrl: string) => Promise<any>
+    retryFunction: (event: Event, relayUrl: string) => Promise<unknown>
   ): Promise<void> {
     this.logger.info(`Attempting to retry failed relays for notification ${notificationId}`);
 
@@ -330,7 +355,11 @@ export class NotificationService {
         this.logger.debug(`Awaiting retry promise for relay ${relayUrl}...`);
 
         // Since this retry only does a single relay URL, we can get the first promise directly.
-        await retryPromise[0];
+        if (Array.isArray(retryPromise)) {
+          await retryPromise[0];
+        } else {
+          await retryPromise;
+        }
         this.logger.debug(`Retry successful for relay ${relayUrl}`);
         this.updateRelayPromiseStatus(notificationId, relayUrl, 'success');
       } catch (error) {
@@ -349,7 +378,7 @@ export class NotificationService {
     notificationId: string,
     relayUrl: string,
     status: 'pending' | 'success' | 'failed',
-    error?: any
+    error?: unknown
   ): void {
     this.logger.debug(
       `Updating relay promise status for notification ${notificationId}, relay ${relayUrl} to ${status}`
@@ -395,16 +424,23 @@ export class NotificationService {
             );
           }
 
-          return {
+          const updatedNotification = {
             ...relayNotification,
             relayPromises: updatedRelayPromises,
             complete: allResolved,
           };
+
+          // Persist the updated notification to storage
+          this.persistNotificationToStorage(updatedNotification).catch(err => {
+            this.logger.error('Failed to persist updated notification', err);
+          });
+
+          return updatedNotification;
         }
         return notification;
       });
     });
 
-    // Storage will be updated via the effect
+    // Storage is updated inline above
   }
 }

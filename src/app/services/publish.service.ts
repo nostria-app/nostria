@@ -118,7 +118,7 @@ export class PublishService {
           .catch(error => {
             throw new Error(`${relayUrl}: ${error.message || 'Failed'}`);
           });
-        
+
         relayPromises.set(publishPromise, relayUrl);
         publishPromises.push(publishPromise);
       }
