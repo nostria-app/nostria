@@ -39,6 +39,8 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { Cache } from '../../../services/cache';
 import { NostrRecord } from '../../../interfaces';
 import { MentionHoverDirective } from '../../../directives/mention-hover.directive';
+import { MediaService } from '../../../services/media.service';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 interface ArticleDraft {
   title: string;
@@ -49,6 +51,8 @@ interface ArticleDraft {
   publishedAt?: number;
   dTag: string;
   lastSaved?: number; // Timestamp for auto-save
+  selectedImageFile?: File; // Store selected image file for upload
+  imageUrl?: string; // Store URL input separately
 }
 
 interface ArticleAutoDraft {
@@ -59,7 +63,6 @@ interface ArticleAutoDraft {
   tags: string[];
   dTag: string;
   lastModified: number;
-  autoTitleEnabled: boolean;
   autoDTagEnabled: boolean;
 }
 
@@ -82,6 +85,7 @@ interface ArticleAutoDraft {
     MatExpansionModule,
     MatTooltipModule,
     MentionHoverDirective,
+    MatSlideToggleModule,
   ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
@@ -99,6 +103,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private localStorage = inject(LocalStorageService);
   private cache = inject(Cache);
+  private media = inject(MediaService);
 
   // Auto-save configuration
   private readonly AUTO_SAVE_INTERVAL = 2000; // Save every 2 seconds
@@ -109,7 +114,6 @@ export class EditorComponent implements OnInit, OnDestroy {
   isPublishing = signal(false);
   isEditMode = signal(false);
   selectedTabIndex = signal(0);
-  autoTitleEnabled = signal(true);
   autoDTagEnabled = signal(true);
   isLoadingArticle = signal(false); // Track when we're loading an existing article
 
@@ -121,36 +125,6 @@ export class EditorComponent implements OnInit, OnDestroy {
     content: '',
     tags: [],
     dTag: this.generateUniqueId(),
-  });
-
-  // Auto-title feature
-  suggestedTitle = computed(() => {
-    if (!this.autoTitleEnabled()) return '';
-
-    const content = this.article().content;
-    if (!content.trim()) return '';
-
-    // Extract first line and clean it up
-    const firstLine = content.split('\n')[0];
-
-    // Remove markdown heading syntax
-    let title = firstLine.replace(/^#{1,6}\s+/, '');
-
-    // Remove other markdown formatting
-    title = title
-      .replace(/\*\*/g, '') // Bold
-      .replace(/\*/g, '') // Italic
-      .replace(/\_\_/g, '') // Bold
-      .replace(/\_/g, '') // Italic
-      .replace(/\~\~/g, '') // Strikethrough
-      .replace(/\`/g, ''); // Code
-
-    // Limit length
-    if (title.length > 100) {
-      title = title.substring(0, 97) + '...';
-    }
-
-    return title;
   });
 
   // Auto-dTag feature
@@ -207,6 +181,11 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   // Tag input
   newTag = signal('');
+
+  // Image upload state
+  useImageUrl = signal(true); // Default to URL mode
+  previewImage = signal<string | null>(null);
+  hasMediaServers = computed(() => this.media.mediaServers().length > 0);
 
   constructor() {
     // Check if we're editing an existing article
@@ -338,7 +317,6 @@ export class EditorComponent implements OnInit, OnDestroy {
       tags: [...article.tags],
       dTag: article.dTag,
       lastModified: Date.now(),
-      autoTitleEnabled: this.autoTitleEnabled(),
       autoDTagEnabled: this.autoDTagEnabled(),
     };
 
@@ -390,7 +368,6 @@ export class EditorComponent implements OnInit, OnDestroy {
           dTag: autoDraft.dTag,
         });
 
-        this.autoTitleEnabled.set(autoDraft.autoTitleEnabled);
         this.autoDTagEnabled.set(autoDraft.autoDTagEnabled);
 
         // Show restoration message if there's meaningful content
@@ -484,9 +461,6 @@ export class EditorComponent implements OnInit, OnDestroy {
           publishedAt: parseInt(this.getTagValue(tags, 'published_at') || '0') || undefined,
           dTag: this.getTagValue(tags, 'd') || articleId,
         });
-
-        // Disable auto-title when editing existing article since title is already established
-        this.autoTitleEnabled.set(false);
       } else {
         this.snackBar.open('Article not found', 'Close', { duration: 3000 });
         this.router.navigate(['/articles']);
@@ -546,7 +520,7 @@ export class EditorComponent implements OnInit, OnDestroy {
       });
 
       // Navigate to drafts list after successful save
-      this.router.navigate(['/drafts']);
+      this.router.navigate(['/article/drafts']);
     } catch (error) {
       console.error('Error saving draft:', error);
       this.snackBar.open('Error saving draft', 'Close', { duration: 3000 });
@@ -581,6 +555,37 @@ export class EditorComponent implements OnInit, OnDestroy {
       this.isPublishing.set(true);
       const art = this.article();
 
+      // Handle image file upload if selected
+      let imageUrl = art.image;
+      if (art.selectedImageFile) {
+        try {
+          const uploadResult = await this.media.uploadFile(
+            art.selectedImageFile,
+            false,
+            this.media.mediaServers()
+          );
+
+          if (!uploadResult.item) {
+            throw new Error(
+              `Failed to upload image: ${uploadResult.message || 'Unknown error'}`
+            );
+          }
+
+          imageUrl = uploadResult.item.url;
+          // Update the article with the uploaded URL
+          this.article.update(a => ({ ...a, image: imageUrl, selectedImageFile: undefined }));
+        } catch (error) {
+          console.error('Error uploading image:', error);
+          this.snackBar.open(
+            `Failed to upload image: ${error instanceof Error ? error.message : 'Unknown error'}`,
+            'Close',
+            { duration: 5000 }
+          );
+          this.isPublishing.set(false);
+          return;
+        }
+      }
+
       // Ensure dTag has a value, generate one if empty (especially for drafts)
       let dTag = art.dTag.trim();
       if (!dTag) {
@@ -603,8 +608,8 @@ export class EditorComponent implements OnInit, OnDestroy {
         tags.push(['summary', art.summary]);
       }
 
-      if (art.image) {
-        tags.push(['image', art.image]);
+      if (imageUrl) {
+        tags.push(['image', imageUrl]);
       }
 
       // Add published_at for first time publication
@@ -694,7 +699,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   navigateToDrafts(): void {
-    this.router.navigate(['/drafts']);
+    this.router.navigate(['/article/drafts']);
   }
 
   updateTitle(value: string): void {
@@ -702,6 +707,20 @@ export class EditorComponent implements OnInit, OnDestroy {
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
+  }
+
+  onTitleKeyDown(event: KeyboardEvent): void {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      // Focus on the rich text editor content
+      // Use a small timeout to ensure the editor is ready
+      setTimeout(() => {
+        const editorContent = document.querySelector('.rich-text-content') as HTMLElement;
+        if (editorContent) {
+          editorContent.focus();
+        }
+      }, 0);
+    }
   }
 
   updateSummary(value: string): void {
@@ -712,10 +731,82 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   updateImage(value: string): void {
-    this.article.update(art => ({ ...art, image: value }));
+    this.article.update(art => ({ ...art, image: value, imageUrl: value }));
+
+    // Update preview if in URL mode
+    if (this.useImageUrl()) {
+      this.previewImage.set(value || null);
+    }
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
+  }
+
+  // Handle file selection for article image
+  onFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+
+      // Simple file type validation
+      if (!file.type.includes('image/')) {
+        this.snackBar.open('Please select a valid image file', 'Close', {
+          duration: 3000,
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const result = e.target?.result as string;
+        this.previewImage.set(result);
+        // Store the file for later upload
+        this.article.update(art => ({ ...art, selectedImageFile: file }));
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  // Handle URL input for image
+  onImageUrlChange(): void {
+    const url = this.article()?.imageUrl || '';
+    if (url && url.trim() !== '') {
+      this.previewImage.set(url);
+      // Update the main image field immediately
+      this.article.update(art => ({ ...art, image: url }));
+    } else {
+      this.previewImage.set(null);
+    }
+  }
+
+  // Toggle image input method
+  toggleImageInputMethod(): void {
+    const currentUrl = this.article()?.image || '';
+    this.useImageUrl.update(current => !current);
+
+    if (this.useImageUrl()) {
+      // Switching to URL mode - preserve existing URL
+      this.article.update(art => ({
+        ...art,
+        imageUrl: currentUrl,
+        selectedImageFile: undefined,
+      }));
+      if (currentUrl) {
+        this.previewImage.set(currentUrl);
+      }
+    } else {
+      // Switching to file mode - clear file selection but keep URL for potential switch back
+      this.article.update(art => ({
+        ...art,
+        selectedImageFile: undefined,
+      }));
+      this.previewImage.set(currentUrl || null);
+    }
+  }
+
+  // Navigate to media settings
+  navigateToMediaSettings(): void {
+    this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
   }
 
   updateContent(value: string): void {
@@ -730,27 +821,6 @@ export class EditorComponent implements OnInit, OnDestroy {
 
     // Schedule auto-save directly instead of relying on effect
     this.scheduleAutoSaveIfNeeded();
-  }
-
-  toggleAutoTitleMode(): void {
-    const wasEnabled = this.autoTitleEnabled();
-    this.autoTitleEnabled.update(enabled => !enabled);
-
-    // Apply auto-title when enabling and show notification
-    if (!wasEnabled && this.autoTitleEnabled() && this.suggestedTitle()) {
-      this.applyAutoTitle();
-      this.snackBar.open('Auto-title enabled - title updated from content', 'Close', {
-        duration: 3000,
-      });
-    }
-  }
-
-  applyAutoTitle(): void {
-    const suggested = this.suggestedTitle();
-    if (suggested) {
-      this.article.update(art => ({ ...art, title: suggested }));
-      // Only show notification when manually triggered, not during auto-updates
-    }
   }
 
   toggleAutoDTagMode(): void {

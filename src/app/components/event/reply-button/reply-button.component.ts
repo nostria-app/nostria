@@ -49,7 +49,8 @@ export class ReplyButtonComponent {
         },
       });
     } else {
-      // TODO: create kind:1111 event (NIP-22)
+      // Create kind:1111 comment (NIP-22)
+      this.eventService.createComment(this.event());
     }
   }
 }

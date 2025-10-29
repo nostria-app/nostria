@@ -1,23 +1,37 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { Event } from 'nostr-tools';
+import { Router } from '@angular/router';
+import { Event, nip19 } from 'nostr-tools';
 import { decode } from 'blurhash';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
+import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
+import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 @Component({
   selector: 'app-photo-event',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, CommentsListComponent],
   templateUrl: './photo-event.component.html',
   styleUrl: './photo-event.component.scss',
 })
 export class PhotoEventComponent {
   event = input.required<Event>();
+  hideComments = input<boolean>(false);
+  showOverlay = input<boolean>(false);
 
   private dialog = inject(MatDialog);
+  private router = inject(Router);
+
+  // Current carousel index for inline navigation
+  currentCarouselIndex = signal(0);
+
+  // Touch tracking for swipe gestures
+  private touchStartX = 0;
+  private touchEndX = 0;
+  private readonly SWIPE_THRESHOLD = 50;
 
   // Computed image URLs from the event
   imageUrls = computed(() => {
@@ -89,13 +103,113 @@ export class PhotoEventComponent {
     return altTexts[0] || 'Photo';
   });
 
+  // Carousel navigation state
+  hasMultipleImages = computed(() => this.imageUrls().length > 1);
+  canGoToPrevious = computed(() => this.currentCarouselIndex() > 0);
+  canGoToNext = computed(() => this.currentCarouselIndex() < this.imageUrls().length - 1);
+
+  // Current image for carousel display
+  currentImageUrl = computed(() => {
+    const urls = this.imageUrls();
+    const index = this.currentCarouselIndex();
+    return urls[index] || urls[0];
+  });
+
+  currentAltText = computed(() => {
+    const alts = this.altTexts();
+    const index = this.currentCarouselIndex();
+    return alts[index] || 'Photo';
+  });
+
+  currentBlurhashDataUrl = computed(() => {
+    const blurhashes = this.blurhashDataUrls();
+    const index = this.currentCarouselIndex();
+    return blurhashes[index] || null;
+  });
+
+  // Carousel navigation methods
+  goToPrevious(): void {
+    if (this.canGoToPrevious()) {
+      this.currentCarouselIndex.update(i => i - 1);
+    }
+  }
+
+  goToNext(): void {
+    if (this.canGoToNext()) {
+      this.currentCarouselIndex.update(i => i + 1);
+    }
+  }
+
+  goToIndex(index: number): void {
+    if (index >= 0 && index < this.imageUrls().length) {
+      this.currentCarouselIndex.set(index);
+    }
+  }
+
+  // Touch event handlers for swipe
+  onTouchStart(event: TouchEvent): void {
+    this.touchStartX = event.changedTouches[0].screenX;
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    this.touchEndX = event.changedTouches[0].screenX;
+    this.handleSwipe();
+  }
+
+  private handleSwipe(): void {
+    const swipeDistance = this.touchStartX - this.touchEndX;
+
+    if (Math.abs(swipeDistance) > this.SWIPE_THRESHOLD) {
+      if (swipeDistance > 0) {
+        // Swiped left - go to next
+        this.goToNext();
+      } else {
+        // Swiped right - go to previous
+        this.goToPrevious();
+      }
+    }
+  }
+
   openImageDialog(imageUrl: string, alt: string): void {
-    this.dialog.open(ImageDialogComponent, {
-      data: { imageUrl, alt },
-      maxWidth: '95vw',
-      maxHeight: '95vh',
-      panelClass: 'image-dialog-panel',
-    });
+    const imageUrls = this.imageUrls();
+    const altTexts = this.altTexts();
+
+    // Find the index of the clicked image
+    const clickedIndex = imageUrls.indexOf(imageUrl);
+
+    // If there are multiple images, use MediaPreviewDialogComponent
+    if (imageUrls.length > 1) {
+      const mediaItems = imageUrls.map((url, index) => ({
+        url,
+        type: 'image/jpeg',
+        title: altTexts[index] || `Photo ${index + 1}`,
+      }));
+
+      this.dialog.open(MediaPreviewDialogComponent, {
+        data: {
+          mediaItems,
+          initialIndex: clickedIndex >= 0 ? clickedIndex : 0,
+        },
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        panelClass: 'media-preview-dialog',
+      });
+    } else {
+      // Single image - use existing ImageDialogComponent
+      this.dialog.open(ImageDialogComponent, {
+        data: { imageUrl, alt },
+        maxWidth: '95vw',
+        maxHeight: '95vh',
+        panelClass: 'image-dialog-panel',
+      });
+    }
+  }
+
+  openEventPage(): void {
+    const event = this.event();
+    if (event) {
+      this.router.navigate(['/e', event.id]);
+    }
   }
 
   onImageLoad(event: globalThis.Event): void {

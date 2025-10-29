@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, effect } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,9 +14,12 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { LoggerService } from '../../services/logger.service';
 import { BookmarkCategoryDialogComponent } from './bookmark-category-dialog/bookmark-category-dialog.component';
+import { AddBookmarkDialogComponent } from './add-bookmark-dialog/add-bookmark-dialog.component';
 import { BookmarkService, BookmarkType } from '../../services/bookmark.service';
 import { LocalStorageService } from '../../services/local-storage.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ApplicationStateService } from '../../services/application-state.service';
+import { AccountStateService } from '../../services/account-state.service';
 import { Router } from '@angular/router';
 import { LayoutService } from '../../services/layout.service';
 import { EventComponent } from '../../components/event/event.component';
@@ -39,9 +42,10 @@ interface BookmarkCategory {
   color: string;
 }
 
+export type ViewMode = 'tiles' | 'content';
+
 @Component({
   selector: 'app-bookmarks',
-  standalone: true,
   imports: [
     FormsModule,
     MatButtonModule,
@@ -66,6 +70,8 @@ export class BookmarksComponent {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private localStorage = inject(LocalStorageService);
+  private accountLocalState = inject(AccountLocalStateService);
+  private accountState = inject(AccountStateService);
   bookmarkService = inject(BookmarkService);
   private appState = inject(ApplicationStateService);
   private router = inject(Router);
@@ -122,6 +128,7 @@ export class BookmarksComponent {
   // Current state
   searchQuery = signal('');
   selectedCategory = signal('events');
+  viewMode = signal<ViewMode>('content');
 
   // Computed state for filtered bookmarks
   // filteredBookmarks = computed(() => {
@@ -148,7 +155,7 @@ export class BookmarksComponent {
   // });
 
   constructor() {
-    // Load categories from storage
+    // Load categories and view preference from storage
     this.loadFromStorage();
 
     effect(() => {
@@ -157,6 +164,11 @@ export class BookmarksComponent {
 
     effect(() => {
       this.logger.debug('Search query changed:', this.searchQuery());
+    });
+
+    effect(() => {
+      this.logger.debug('View mode changed:', this.viewMode());
+      this.saveViewMode();
     });
 
     // Log bookmark changes
@@ -196,6 +208,19 @@ export class BookmarksComponent {
         this.logger.error('Error parsing saved categories:', error);
       }
     }
+
+    // Load view mode from account-specific state
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      const savedViewMode = this.accountLocalState.getBookmarksViewMode(pubkey);
+      if (savedViewMode) {
+        const viewMode = savedViewMode as ViewMode;
+        if (['tiles', 'content'].includes(viewMode)) {
+          this.viewMode.set(viewMode);
+          this.logger.debug('Loaded view mode from storage:', viewMode);
+        }
+      }
+    }
   }
 
   private saveToStorage(): void {
@@ -203,15 +228,39 @@ export class BookmarksComponent {
     this.logger.debug('Categories saved to storage');
   }
 
+  private saveViewMode(): void {
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setBookmarksViewMode(pubkey, this.viewMode());
+      this.logger.debug('View mode saved to storage:', this.viewMode());
+    }
+  }
+
   // Actions
   selectCategory(categoryId: string): void {
     this.selectedCategory.set(categoryId);
+  }
+
+  setViewMode(mode: ViewMode): void {
+    this.viewMode.set(mode);
+  }
+
+  getViewIcon(): string {
+    switch (this.viewMode()) {
+      case 'tiles':
+        return 'grid_view';
+      case 'content':
+        return 'view_agenda';
+      default:
+        return 'view_agenda';
+    }
   }
 
   openManageCategories(): void {
     const dialogRef = this.dialog.open(BookmarkCategoryDialogComponent, {
       data: { categories: this.categories() },
       width: '500px',
+      panelClass: 'responsive-dialog',
     });
 
     dialogRef.afterClosed().subscribe(result => {
@@ -224,15 +273,19 @@ export class BookmarksComponent {
   }
 
   async addBookmark(): Promise<void> {
-    // Simple prompt for now - in a full implementation this would be a dialog
-    const url = prompt('Enter URL to bookmark:');
-    if (!url?.trim()) {
+    const dialogRef = this.dialog.open(AddBookmarkDialogComponent, {
+      width: '500px',
+      panelClass: 'responsive-dialog',
+    });
+
+    const result = await dialogRef.afterClosed().toPromise();
+    if (!result) {
       return;
     }
 
     this.loading.set(true);
     try {
-      await this.bookmarkService.addBookmark(url.trim(), 'r');
+      await this.bookmarkService.addBookmark(result.url, result.type);
       this.snackBar.open('Bookmark added successfully', 'Close', {
         duration: 3000,
       });

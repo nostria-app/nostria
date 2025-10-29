@@ -9,16 +9,44 @@
     [attr.aria-label]="profile()?.data.banner ? 'View full size banner image' : null"></div>
   }
   <div class="profile-info-container" [class.compact]="compact()" [class.mobile]="layoutService.isHandset()">
-    <div class="profile-avatar" [class.clickable]="profile()?.data.picture" [class.mobile]="layoutService.isHandset()"
-      (click)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
-      (keydown.enter)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
-      (keydown.space)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
-      [tabindex]="profile()?.data.picture ? 0 : -1" [attr.role]="profile()?.data.picture ? 'button' : null"
-      [attr.aria-label]="profile()?.data.picture ? 'View full size profile picture' : null">
-      @if (profile()?.data.picture) {
-      <img [src]="profile()!.data.picture" alt="Profile picture" class="avatar-image" />
-      } @else {
-      <mat-icon class="default-avatar">account_circle</mat-icon>
+    <div class="profile-avatar-wrapper">
+      <div class="profile-avatar" [class.clickable]="profile()?.data.picture" [class.mobile]="layoutService.isHandset()"
+        (click)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
+        (keydown.enter)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
+        (keydown.space)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
+        [tabindex]="profile()?.data.picture ? 0 : -1" [attr.role]="profile()?.data.picture ? 'button' : null"
+        [attr.aria-label]="profile()?.data.picture ? 'View full size profile picture' : null">
+        @if (profile()?.data.picture) {
+        <img [src]="profile()!.data.picture" alt="Profile picture" class="avatar-image" />
+        } @else {
+        <mat-icon class="default-avatar">account_circle</mat-icon>
+        }
+      </div>
+
+      <!-- Badges Section positioned relative to avatar -->
+      @if (!compact() && hasAcceptedBadges()) {
+      <div class="profile-badges">
+        @for (badge of topBadges(); track $index) {
+        @if (parsedBadges()[$index]; as parsedBadge) {
+        <a [routerLink]="['/p', npub() || pubkey(), 'badges']" class="badge-item"
+          (mouseenter)="onBadgeMouseEnter($event, badge)" (mouseleave)="onBadgeMouseLeave()">
+          @if (parsedBadge.thumb || parsedBadge.image) {
+          <img [src]="parsedBadge.thumb || parsedBadge.image" class="badge-image" loading="lazy" />
+          } @else {
+          <div class="badge-placeholder" [title]="parsedBadge.name">
+            <mat-icon>military_tech</mat-icon>
+          </div>
+          }
+        </a>
+        } @else {
+        <a [routerLink]="['/p', npub() || pubkey(), 'badges']" class="badge-item">
+          <div class="badge-loading" title="Loading badge...">
+            <mat-spinner diameter="32"></mat-spinner>
+          </div>
+        </a>
+        }
+        }
+      </div>
       }
     </div>
 
@@ -167,6 +195,12 @@
         } @else {
         <span class="inline-error"> <mat-icon>error</mat-icon>&nbsp; No relays found! </span>
         }
+
+        @if (badgeCount() > 0) {
+        <a class="following-count" [routerLink]="'badges'" [queryParamsHandling]="'preserve'">
+          Badges {{ badgeCount() }}
+        </a>
+        }
         }
       </div>
 
@@ -250,6 +284,11 @@
       </mat-menu>
 
       <mat-menu #copyMenu="matMenu">
+        <button mat-menu-item (click)="copyInviteLink()">
+          <mat-icon>person_add</mat-icon>
+          <span>Invite Link</span>
+        </button>
+        <mat-divider></mat-divider>
         <button mat-menu-item (click)="layout.copyToClipboard(this.npub(), 'npub')">
           <span>Identifier (npub)</span>
         </button>
@@ -262,6 +301,10 @@
         <button mat-menu-item (click)="copyProfileData()">
           <span>Profile Data</span>
         </button>
+        <button mat-menu-item (click)="layout.copyProfileUrl(this.npub(), this.profileUsername())">
+          <mat-icon>link</mat-icon>
+          <span>Profile URL</span>
+        </button>
         <button mat-menu-item (click)="copyFollowingList()">
           <span>Following List</span>
         </button>
@@ -271,12 +314,15 @@
       </mat-menu>
 
       <mat-menu #shareMenu="matMenu">
+        <button mat-menu-item (click)="shareInviteLink()">
+          <mat-icon>person_add</mat-icon>
+          <span>Invitation</span>
+        </button>
         <button mat-menu-item (click)="layout.shareProfile(this.npub(), this.name())">
+          <mat-icon>share</mat-icon>
           <span>Profile</span>
         </button>
-        <button mat-menu-item (click)="layout.shareProfileUrl(this.npub(), this.profileUsername())">
-          <span>Profile URL</span>
-        </button>
+
       </mat-menu>
 
       <mat-menu #publishEventMenu="matMenu">

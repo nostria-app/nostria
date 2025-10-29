@@ -72,6 +72,22 @@
   }
 }
 
+.article-image-container {
+  width: 100%;
+  max-width: 100%;
+  border-radius: 8px;
+  overflow: hidden;
+  background-color: var(--mat-sys-surface-variant);
+
+  .article-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    max-height: 400px;
+  }
+}
+
 .article-summary {
   margin: 0;
   font-size: 1rem;

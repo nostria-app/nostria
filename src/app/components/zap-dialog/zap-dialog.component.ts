@@ -130,6 +130,12 @@ export class ZapDialogComponent {
     return lnurlInfo.commentAllowed ?? 0;
   });
 
+  // Computed property to check if comments are allowed
+  commentsAllowed = computed(() => {
+    const limit = this.commentLimit();
+    return limit !== null && limit > 0;
+  });
+
   // Computed property for amount limits
   amountLimits = computed(() => {
     const lnurlInfo = this.lnurlPayInfo();
@@ -142,7 +148,7 @@ export class ZapDialogComponent {
     };
   });
 
-   contentInfo = computed(() => {
+  contentInfo = computed(() => {
     const content = this.data.eventContent;
     if (!content) {
       return { type: 'text', icon: 'article', display: content || '' };
@@ -242,14 +248,21 @@ export class ZapDialogComponent {
     const commentLimit = this.commentLimit();
     const amountLimits = this.amountLimits();
 
-    // Update message validators
+    // Update message validators and enable/disable based on commentAllowed
     if (messageControl) {
       if (commentLimit === null) {
         // LNURL info not loaded yet, use conservative default
         messageControl.setValidators([Validators.maxLength(200)]);
+        messageControl.enable();
+      } else if (commentLimit === 0) {
+        // Comments not allowed, disable the field
+        messageControl.clearValidators();
+        messageControl.disable();
+        messageControl.setValue(''); // Clear any existing message
       } else {
-        const currentValidators = commentLimit > 0 ? [Validators.maxLength(commentLimit)] : [];
-        messageControl.setValidators(currentValidators);
+        // Comments allowed with specific limit
+        messageControl.setValidators([Validators.maxLength(commentLimit)]);
+        messageControl.enable();
       }
       messageControl.updateValueAndValidity();
     }
@@ -468,61 +481,61 @@ export class ZapDialogComponent {
     try {
       const url = new URL(content);
       const extension = url.pathname.split('.').pop()?.toLowerCase();
-      
+
       // Image types
       if (extension && IMAGE_EXTENSIONS.includes(extension)) {
         return { type: 'image', icon: 'image', display: 'Image' };
       }
-      
+
       // Video types  
       if (extension && VIDEO_EXTENSIONS.includes(extension)) {
         return { type: 'video', icon: 'videocam', display: 'Video' };
       }
-      
+
       // Audio types
       if (extension && AUDIO_EXTENSIONS.includes(extension)) {
         return { type: 'audio', icon: 'audiotrack', display: 'Audio' };
       }
-      
+
       // Document types
       if (extension && DOCUMENT_EXTENSIONS.includes(extension)) {
         return { type: 'document', icon: 'description', display: 'Document' };
       }
-      
+
       // Check for common image hosting domains
       const hostname = url.hostname.toLowerCase();
       if (IMAGE_HOSTING_DOMAINS.some(domain => hostname.includes(domain))) {
         return { type: 'image', icon: 'image', display: 'Image' };
       }
-      
+
       // Check for common video hosting domains
       if (VIDEO_HOSTING_DOMAINS.some(domain => hostname.includes(domain))) {
         return { type: 'video', icon: 'videocam', display: 'Video' };
       }
-      
+
       // Generic URL - show domain
       return { type: 'link', icon: 'link', display: `Link (${hostname})` };
     } catch {
       // Not a valid URL, check for other patterns
-      
+
       // Check if it looks like a data URL (base64 image)
       if (content.startsWith('data:image/')) {
         return { type: 'image', icon: 'image', display: 'Image' };
       }
-      
+
       if (content.startsWith('data:video/')) {
         return { type: 'video', icon: 'videocam', display: 'Video' };
       }
-      
+
       if (content.startsWith('data:audio/')) {
         return { type: 'audio', icon: 'audiotrack', display: 'Audio' };
       }
-      
+
       // Check if it's very long text (likely needs truncation)
       if (content.length > 100) {
         return { type: 'text', icon: 'article', display: content.substring(0, 97) + '...' };
       }
-      
+
       // Regular text
       return { type: 'text', icon: 'article', display: content };
     }

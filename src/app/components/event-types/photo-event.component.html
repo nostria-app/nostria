@@ -1,47 +1,79 @@
 @if (hasContentWarning()) {
-  <div class="content-warning">
-    <mat-icon>warning</mat-icon>
-    <span>{{ contentWarning() }}</span>
-  </div>
+<div class="content-warning">
+  <mat-icon>warning</mat-icon>
+  <span>{{ contentWarning() }}</span>
+</div>
 }
 
 @if (title()) {
-  <h3 class="media-title">{{ title() }}</h3>
+<h3 class="media-title">{{ title() }}</h3>
 }
 
-<div class="photo-gallery">
-  @for (imageUrl of imageUrls(); track $index) {
-    @let blurhashDataUrl = blurhashDataUrls()[$index];
-    @let imageAltText = altTexts()[$index];
-    <div class="photo-container">
-      @if (blurhashDataUrl) {
-        <img
-          [src]="blurhashDataUrl"
-          class="photo-item blurhash-placeholder"
-          [alt]="imageAltText"
-          [title]="imageAltText"
-          aria-hidden="true"
-        />
-      }
-      <img
-        [src]="imageUrl"
-        [alt]="imageAltText"
-        [title]="imageAltText"
-        class="photo-item main-image"
-        loading="lazy"
-        (load)="onImageLoad($event)"
-        (click)="openImageDialog(imageUrl, imageAltText)"
-        tabindex="0"
-        role="button"
-        (keyup.enter)="openImageDialog(imageUrl, imageAltText)"
-        (keyup.space)="openImageDialog(imageUrl, imageAltText)"
-      />
+<div class="photo-carousel-container" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)"
+  [class.has-overlay]="showOverlay()">
+  @if (showOverlay()) {
+  <div class="event-overlay">
+    <div class="overlay-actions">
+      <button mat-raised-button class="overlay-button" (click)="openImageDialog(currentImageUrl(), currentAltText())"
+        title="View media in fullscreen">
+        <mat-icon>fullscreen</mat-icon>
+        <span>View Media</span>
+      </button>
+      <button mat-raised-button class="overlay-button" (click)="openEventPage()" title="Open full event">
+        <mat-icon>open_in_new</mat-icon>
+        <span>Open Event</span>
+      </button>
     </div>
+  </div>
   }
+  <div class="photo-carousel">
+    <div class="photo-container">
+      @if (currentBlurhashDataUrl()) {
+      <img [src]="currentBlurhashDataUrl()!" class="photo-item blurhash-placeholder" [alt]="currentAltText()"
+        [title]="currentAltText()" aria-hidden="true" />
+      }
+      <img [src]="currentImageUrl()" [alt]="currentAltText()" [title]="currentAltText()" title="{{ currentAltText() }}"
+        class="photo-item main-image" loading="lazy" (load)="onImageLoad($event)"
+        (click)="openImageDialog(currentImageUrl(), currentAltText())" tabindex="0" role="button"
+        (keyup.enter)="openImageDialog(currentImageUrl(), currentAltText())"
+        (keyup.space)="openImageDialog(currentImageUrl(), currentAltText())" />
+    </div>
+
+    @if (hasMultipleImages()) {
+    <!-- Navigation buttons -->
+    @if (canGoToPrevious()) {
+    <button mat-icon-button class="carousel-nav-button carousel-nav-left" (click)="goToPrevious()"
+      aria-label="Previous photo">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    }
+
+    @if (canGoToNext()) {
+    <button mat-icon-button class="carousel-nav-button carousel-nav-right" (click)="goToNext()" aria-label="Next photo">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+    }
+
+    <!-- Indicator dots -->
+    <div class="carousel-indicators">
+      @for (imageUrl of imageUrls(); track $index) {
+      <button class="indicator-dot" [class.active]="currentCarouselIndex() === $index" (click)="goToIndex($index)"
+        [attr.aria-label]="'Go to photo ' + ($index + 1)" title="Go to photo {{ $index + 1 }}">
+        <span class="sr-only">Go to photo {{ $index + 1 }}</span>
+      </button>
+      }
+    </div>
+    }
+  </div>
 </div>
 
 @if (description()) {
-  <p class="photo-description">
-    {{ description() }}
-  </p>
+<p class="photo-description">
+  {{ description() }}
+</p>
+}
+
+@if (!hideComments()) {
+<!-- NIP-22 Comments Section -->
+<app-comments-list [event]="event()"></app-comments-list>
 }

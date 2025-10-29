@@ -990,16 +990,21 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
       const uploadPromises = files.map(async file => {
         try {
+          console.log(`Uploading file: ${file.name}, type: ${file.type}, size: ${file.size}`);
+
           const result = await this.mediaService.uploadFile(
             file,
             this.uploadOriginal(),
             this.mediaService.mediaServers()
           );
 
+          console.log(`Upload result for ${file.name}:`, result);
+
           if (result.status === 'success' && result.item) {
             this.insertFileUrl(result.item.url);
             return { success: true, fileName: file.name };
           } else {
+            console.error(`Upload failed for ${file.name}:`, result.message);
             return {
               success: false,
               fileName: file.name,
@@ -1007,6 +1012,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
             };
           }
         } catch (error) {
+          console.error(`Upload error for ${file.name}:`, error);
           return {
             success: false,
             fileName: file.name,

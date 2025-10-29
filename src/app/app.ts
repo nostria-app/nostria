@@ -225,7 +225,8 @@ export class App implements OnInit {
   contentNotifications = computed(() => {
     return this.notificationService
       .notifications()
-      .filter(notification => this.contentNotificationTypes.includes(notification.type));
+      .filter(notification => this.contentNotificationTypes.includes(notification.type))
+      .sort((a, b) => b.timestamp - a.timestamp);
   });
 
   navigationItems = computed(() => {
@@ -567,12 +568,6 @@ export class App implements OnInit {
     try {
       await this.contentNotificationService.initialize();
       this.logger.info('[App] Content notification service initialized successfully');
-
-      // Check for new notifications on startup if user is authenticated
-      if (this.app.authenticated()) {
-        await this.contentNotificationService.checkForNewNotifications();
-        this.logger.info('[App] Initial content notification check completed');
-      }
 
       // Set up periodic checks every 5 minutes for authenticated users
       setInterval(async () => {

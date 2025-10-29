@@ -31,6 +31,12 @@
 .media-grid {
   margin-top: 1rem;
 
+  mat-grid-list {
+    ::ng-deep .mat-grid-list {
+      gap: 8px;
+    }
+  }
+
   .media-item {
     width: 100%;
     height: 100%;
@@ -39,9 +45,14 @@
 
     // Override event component styles for grid display
     ::ng-deep app-event {
+      display: block;
+      height: 100%;
+      width: 100%;
+
       .note-card {
         height: 100%;
-        margin: 0;
+        margin: 0 !important;
+        padding: 0 !important;
         border-radius: 8px;
 
         &.plain {
@@ -53,26 +64,62 @@
       // Ensure media components fill the grid space
       app-photo-event,
       app-video-event {
+        display: block;
         height: 100%;
+        width: 100%;
 
         img,
         video {
           width: 100%;
           height: 100%;
           object-fit: cover;
+          display: block;
+        }
+
+        // Remove any padding from photo/video containers
+        .photo-carousel-container,
+        .video-container {
+          margin: 0 !important;
+          padding: 0 !important;
+        }
+
+        .photo-carousel,
+        .photo-container {
+          margin: 0 !important;
+          padding: 0 !important;
         }
       }
 
       // Hide event header in grid view for cleaner look
+      app-event-header {
+        display: none !important;
+      }
+
       .event-header {
-        display: none;
+        display: none !important;
       }
 
       // Adjust card content padding
       mat-card-content {
         padding: 0 !important;
+        margin: 0 !important;
         height: 100%;
+        width: 100%;
       }
     }
+  }
+}
+
+.loading-more,
+.end-message {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 2rem 1rem;
+  opacity: 0.7;
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
   }
 }

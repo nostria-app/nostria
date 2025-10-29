@@ -3,14 +3,9 @@ import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
 import { ContentNotification, NotificationType } from './storage.service';
-import { LocalStorageService } from './local-storage.service';
 import { kinds, nip57 } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
-
-/**
- * Local storage key for tracking the last notification check timestamp
- */
-const LAST_NOTIFICATION_CHECK_KEY = 'nostria-notification-lastcheck';
+import { AccountLocalStateService } from './account-local-state.service';
 
 /**
  * Query limits for fetching notifications from relays
@@ -38,16 +33,26 @@ export class ContentNotificationService {
   private logger = inject(LoggerService);
   private notificationService = inject(NotificationService);
   private accountRelay = inject(AccountRelayService);
-  private localStorage = inject(LocalStorageService);
+  private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
 
   // Track the last check timestamp to avoid duplicate notifications
-  private lastCheckTimestamp = signal<number>(0);
+  private _lastCheckTimestamp = signal<number>(0);
+
+  // Public readonly accessor for lastCheckTimestamp
+  readonly lastCheckTimestamp = this._lastCheckTimestamp.asReadonly();
+
+  // Track if the service has been initialized
+  private _initialized = signal<boolean>(false);
+  readonly initialized = this._initialized.asReadonly();
 
   resetLastCheckTimestamp(): void {
-    this.lastCheckTimestamp.set(0);
-    this.localStorage.removeItem(LAST_NOTIFICATION_CHECK_KEY);
-    this.logger.info('ContentNotificationService last check timestamp reset');
+    this._lastCheckTimestamp.set(0);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setNotificationLastCheck(pubkey, 0);
+    }
+    this.logger.info('ContentNotificationService last check timestamp reset for account');
   }
 
   // Track if we're currently checking for new content
@@ -63,7 +68,8 @@ export class ContentNotificationService {
   async initialize(): Promise<void> {
     try {
       const timestamp = await this.getLastCheckTimestamp();
-      this.lastCheckTimestamp.set(timestamp);
+      this._lastCheckTimestamp.set(timestamp);
+      this._initialized.set(true);
       this.logger.debug(`Initialized with last check timestamp: ${timestamp}`);
     } catch (error) {
       this.logger.error('Failed to initialize ContentNotificationService', error);
@@ -72,8 +78,9 @@ export class ContentNotificationService {
 
   /**
    * Check for new content notifications since last check
+   * @param limitDays If provided, only fetch notifications from the last N days (for initial load)
    */
-  async checkForNewNotifications(): Promise<void> {
+  async checkForNewNotifications(limitDays?: number): Promise<void> {
     if (this.isChecking()) {
       this.logger.debug('Already checking for notifications, skipping');
       return;
@@ -89,8 +96,16 @@ export class ContentNotificationService {
 
     try {
       this.logger.info('Checking for new content notifications');
-      const since = this.lastCheckTimestamp();
+      let since = this._lastCheckTimestamp();
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+
+      // If limitDays is specified, use it to limit how far back we look
+      // This is useful for first-time users to avoid loading too much history
+      if (limitDays !== undefined && limitDays > 0) {
+        const limitTimestamp = Math.floor((Date.now() - limitDays * 24 * 60 * 60 * 1000) / 1000);
+        since = Math.max(since, limitTimestamp);
+        this.logger.info(`Limiting notification fetch to last ${limitDays} days (since ${new Date(since * 1000).toISOString()})`);
+      }
 
       // Check for all notification types in parallel
       // Pass the pubkey to each check function
@@ -105,7 +120,7 @@ export class ContentNotificationService {
 
       // Update the last check timestamp
       await this.updateLastCheckTimestamp(now);
-      this.lastCheckTimestamp.set(now);
+      this._lastCheckTimestamp.set(now);
 
       this.logger.info('Completed checking for new content notifications');
     } catch (error) {
@@ -295,16 +310,21 @@ export class ContentNotificationService {
       for (const event of events) {
         const reactionContent = event.content || '👍';
 
+        // Extract the event being reacted to from the 'e' tag
+        const eTag = event.tags.find(tag => tag[0] === 'e');
+        const reactedEventId = eTag?.[1];
+
         await this.createContentNotification({
           type: NotificationType.REACTION,
           title: `Reacted ${reactionContent}`,
           message: 'Someone reacted to your note',
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
-          eventId: event.id,
+          eventId: reactedEventId, // Use the event being reacted to, not the reaction event
           timestamp: event.created_at * 1000,
           metadata: {
             reactionContent,
+            reactionEventId: event.id, // Store the reaction event ID for reference
           },
         });
       }
@@ -415,6 +435,7 @@ export class ContentNotificationService {
     metadata?: {
       content?: string;
       reactionContent?: string;
+      reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
       zapAmount?: number;
       zappedEventId?: string; // The event that was zapped (if any)
       zapReceiptId?: string; // The zap receipt event ID (kind 9735)
@@ -458,35 +479,40 @@ export class ContentNotificationService {
   }
 
   /**
-   * Get the last check timestamp from storage, or 1 month ago if never checked
-   * This prevents loading the entire notification history on first run
+   * Get the last check timestamp from storage for the current account
+   * Returns 0 if never checked before (first-time user)
    */
   private async getLastCheckTimestamp(): Promise<number> {
     try {
-      const data = this.localStorage.getItem(LAST_NOTIFICATION_CHECK_KEY);
-      if (data) {
-        return parseInt(data, 10);
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.logger.warn('No pubkey available, returning 0 for last check timestamp');
+        return 0;
       }
 
-      // Default to 1 month ago instead of 0 (epoch time)
-      // This prevents loading years of notification history on first run
-      const oneMonthAgo = Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60); // 30 days in seconds
-      this.logger.debug(`No previous check found, defaulting to 1 month ago: ${oneMonthAgo}`);
-      return oneMonthAgo;
+      const timestamp = this.accountLocalState.getNotificationLastCheck(pubkey);
+      this.logger.debug(`Loaded last check timestamp for account: ${timestamp}`);
+      return timestamp;
     } catch (error) {
       this.logger.error('Failed to get last check timestamp', error);
-      // Return 1 month ago as fallback
-      return Math.floor(Date.now() / 1000) - (30 * 24 * 60 * 60);
+      // Return 0 as fallback for first-time detection
+      return 0;
     }
   }
 
   /**
-   * Update the last check timestamp in storage
+   * Update the last check timestamp in storage for the current account
    */
   private async updateLastCheckTimestamp(timestamp: number): Promise<void> {
     try {
-      this.localStorage.setItem(LAST_NOTIFICATION_CHECK_KEY, timestamp.toString());
-      this.logger.debug(`Updated last check timestamp to ${timestamp}`);
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.logger.warn('No pubkey available, cannot update last check timestamp');
+        return;
+      }
+
+      this.accountLocalState.setNotificationLastCheck(pubkey, timestamp);
+      this.logger.debug(`Updated last check timestamp for account to ${timestamp}`);
     } catch (error) {
       this.logger.error('Failed to update last check timestamp', error);
     }

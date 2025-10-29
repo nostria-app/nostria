@@ -1,10 +1,12 @@
-import { Component, computed, input, signal } from '@angular/core';
+import { Component, computed, input, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { Router } from '@angular/router';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
+import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 interface VideoData {
   url: string;
@@ -18,12 +20,16 @@ interface VideoData {
 @Component({
   selector: 'app-video-event',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, CommentsListComponent],
   templateUrl: './video-event.component.html',
   styleUrl: './video-event.component.scss',
 })
 export class VideoEventComponent {
   event = input.required<Event>();
+  hideComments = input<boolean>(false);
+  showOverlay = input<boolean>(false);
+
+  private router = inject(Router);
 
   // Video expansion state
   isExpanded = signal(false);
@@ -90,6 +96,13 @@ export class VideoEventComponent {
 
   collapseVideo(): void {
     this.isExpanded.set(false);
+  }
+
+  openEventPage(): void {
+    const event = this.event();
+    if (event) {
+      this.router.navigate(['/e', event.id]);
+    }
   }
 
   private getVideoData(event: Event): VideoData | null {

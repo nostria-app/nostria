@@ -123,6 +123,7 @@ export class GeneralSettingsComponent {
         this.logger.info('Notifications cache cleared');
 
         // Start a fresh notification check to repopulate from relays
+        // Note: No day limit - this fetches full history when manually resetting
         try {
           await this.contentNotificationService.checkForNewNotifications();
           this.logger.info('Fresh notifications fetched from relays');

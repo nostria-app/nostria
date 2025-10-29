@@ -9,8 +9,6 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { RelayPublishStatusComponent } from '../../components/relay-publish-status/relay-publish-status.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { NostrService } from '../../services/nostr.service';
-import { kinds } from 'nostr-tools';
 import { NotificationService } from '../../services/notification.service';
 import {
   NotificationType,
@@ -52,13 +50,11 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
 export class NotificationsComponent implements OnInit {
   private notificationService = inject(NotificationService);
   private accountRelay = inject(AccountRelayService);
-  private nostrService = inject(NostrService);
   private router = inject(Router);
   private localStorage = inject(LocalStorageService);
 
   notifications = this.notificationService.notifications;
   notificationType = NotificationType;
-  lastViewedTimestamp = signal<number | null>(null);
 
   // Notification type filter preferences
   notificationFilters = signal<Record<NotificationType, boolean>>({
@@ -121,22 +117,15 @@ export class NotificationsComponent implements OnInit {
       .sort((a, b) => b.timestamp - a.timestamp);
   });
 
-  // Count only content notifications (not system/technical ones)
+  // Count unread content notifications
   newNotificationCount = computed(() => {
-    const lastViewed = this.lastViewedTimestamp();
     const contentNotifs = this.contentNotifications();
-
-    if (!lastViewed) return contentNotifs.length;
-
-    return contentNotifs.filter(n => n.timestamp > lastViewed && !n.read).length;
+    return contentNotifs.filter(n => !n.read).length;
   });
 
   async ngOnInit(): Promise<void> {
     // Load saved notification filters from localStorage
     this.loadNotificationFilters();
-
-    await this.recordNotificationsView();
-    await this.getLastViewedTimestamp();
   }
 
   /**
@@ -152,51 +141,6 @@ export class NotificationsComponent implements OnInit {
     } catch (error) {
       console.error('Failed to load notification filters from localStorage', error);
     }
-  }
-
-  async recordNotificationsView(): Promise<void> {
-    const tags = [['d', 'client:notifications:seen']];
-
-    const unsignedEvent = this.nostrService.createEvent(kinds.Application, '', tags);
-    const signedEvent = await this.nostrService.signEvent(unsignedEvent);
-
-    // We don't want to show in notifications the app settings publishing.
-    await this.accountRelay.publish(signedEvent);
-  }
-
-  async getLastViewedTimestamp(): Promise<void> {
-    try {
-      const filter = {
-        kinds: [kinds.Application],
-        '#d': ['client:notifications:seen'],
-        limit: 1,
-      };
-
-      const event = await this.accountRelay.get(filter);
-      if (event) {
-        this.lastViewedTimestamp.set(event.created_at * 1000); // Convert to milliseconds
-      }
-    } catch (error) {
-      console.error('Failed to get last notifications view', error);
-    }
-  }
-
-  isNewNotification(notification: Notification): boolean {
-    const lastViewed = this.lastViewedTimestamp();
-    if (!lastViewed) return true;
-
-    // Compare notification timestamp with last viewed timestamp
-    return notification.timestamp > lastViewed;
-  }
-
-  shouldShowSeparator(index: number, notifications: Notification[]): boolean {
-    if (index === 0) return false;
-
-    const current = notifications[index];
-    const previous = notifications[index - 1];
-
-    // Return true if this is the first new notification after old ones
-    return this.isNewNotification(current) && !this.isNewNotification(previous);
   }
 
   async onRetryPublish(notificationId: string): Promise<void> {

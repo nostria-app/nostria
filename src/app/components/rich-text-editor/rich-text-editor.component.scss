@@ -30,24 +30,15 @@
     background-color: var(--mat-sys-surface-variant);
     gap: 8px;
 
-    .formatting-controls {
+    .editor-actions {
       display: flex;
       align-items: center;
       flex-wrap: wrap;
       gap: 4px;
 
-      mat-divider {
-        height: 24px;
-        margin: 0 8px;
-      }
-
       button {
         &:hover {
           background-color: var(--mat-sys-surface);
-        }
-
-        &.active {
-          color: var(--mat-sys-primary);
         }
       }
     }

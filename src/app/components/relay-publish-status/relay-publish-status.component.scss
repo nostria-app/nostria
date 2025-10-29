@@ -7,6 +7,25 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
+
+  >mat-icon {
+    &.spinning {
+      animation: spin 1s linear infinite;
+    }
+  }
+}
+
+.subtitle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.progress-text {
+  font-weight: 500;
+  color: var(--mat-sys-primary);
 }
 
 .status-indicators {
@@ -46,7 +65,7 @@ mat-progress-bar {
 }
 
 .relays-container {
-  max-height: 200px;
+  max-height: 300px;
   overflow-y: auto;
   margin-top: 16px;
 }
@@ -59,23 +78,40 @@ mat-progress-bar {
   border-radius: 4px;
   margin-bottom: 4px;
   background-color: rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
 
   &.success {
     border-left: 4px solid #4caf50;
+    background-color: rgba(76, 175, 80, 0.1);
   }
 
   &.failed {
     border-left: 4px solid #f44336;
+    background-color: rgba(244, 67, 54, 0.1);
   }
 
   &.pending {
     border-left: 4px solid #ff9800;
+    background-color: rgba(255, 152, 0, 0.1);
   }
+}
+
+.relay-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .relay-name {
   font-family: monospace;
   font-size: 0.9em;
+  font-weight: 500;
+}
+
+.relay-error {
+  font-size: 0.75em;
+  color: var(--mat-sys-error);
+  opacity: 0.8;
 }
 
 .relay-status {
@@ -98,5 +134,19 @@ mat-progress-bar {
 
   &.pending {
     color: #ff9800;
+  }
+
+  &.spinning {
+    animation: spin 1s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }

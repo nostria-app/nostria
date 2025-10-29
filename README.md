@@ -41,6 +41,7 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [x] [NIP-17: Private Direct Messages](https://github.com/nostr-protocol/nips/blob/master/17.md)
 - [x] [NIP-19: bech32-encoded entities](https://github.com/nostr-protocol/nips/blob/master/19.md)
 - [x] [NIP-21: `nostr:` URL scheme](https://github.com/nostr-protocol/nips/blob/master/21.md)
+- [x] [NIP-22: Comment](https://github.com/nostr-protocol/nips/blob/master/22.md)
 - [x] [NIP-23: Long-form Content](https://github.com/nostr-protocol/nips/blob/master/23.md)
 - [x] [NIP-25: Reactions](https://github.com/nostr-protocol/nips/blob/master/25.md)
 - [x] [NIP-26: Delegated Event Signing](https://github.com/nostr-protocol/nips/blob/master/26.md)

@@ -13,7 +13,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { BadgeService } from '../../../services/badge.service';
-import { Event, NostrEvent } from 'nostr-tools';
+import { Event } from 'nostr-tools';
+import { AccountStateService } from '../../../services/account-state.service';
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 interface BadgeDisplayData {
   id: string;
@@ -44,6 +47,7 @@ interface BadgeDisplayData {
     MatFormFieldModule,
     MatInputModule,
     MatProgressSpinnerModule,
+    UserProfileComponent,
   ],
   templateUrl: './badge-details.component.html',
   styleUrl: './badge-details.component.scss',
@@ -54,6 +58,8 @@ export class BadgeDetailsComponent {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private readonly badgeService = inject(BadgeService);
+  private readonly accountState = inject(AccountStateService);
+  private readonly utilities = inject(UtilitiesService);
 
   badge = signal<BadgeDisplayData | null>(null);
   isCreator = signal(false);
@@ -91,7 +97,7 @@ export class BadgeDetailsComponent {
         return;
       }
 
-      const [kind, pubkey, slug] = parts;
+      const [, pubkey, slug] = parts;
       this.fetchBadge(pubkey, slug);
     });
   }
@@ -99,8 +105,6 @@ export class BadgeDetailsComponent {
   private async fetchBadge(pubkey: string, slug: string): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
-
-    const receivedData = history.state.event as Event | undefined;
 
     try {
       // Check if we have the badge definition in memory first
@@ -122,8 +126,7 @@ export class BadgeDetailsComponent {
       const badgeInfo = this.extractBadgeInfo(badgeDefinition);
 
       // Check if current user is the creator
-      // TODO: Replace with actual current user check
-      this.isCreator.set(badgeDefinition.pubkey === pubkey);
+      this.isCreator.set(badgeDefinition.pubkey === this.accountState.pubkey());
 
       this.badge.set(badgeInfo);
     } catch (err) {
@@ -167,12 +170,9 @@ export class BadgeDetailsComponent {
   editBadge(): void {
     if (this.badge()) {
       const badge = this.badge()!;
-      this.router.navigate(['/badges/edit'], {
-        queryParams: {
-          pubkey: badge.creator,
-          slug: badge.slug,
-        },
-      });
+      // Construct the badge id in the format: kind:pubkey:slug
+      const badgeId = `30009:${badge.creator}:${badge.slug}`;
+      this.router.navigate(['/badges/edit', badgeId]);
     }
   }
 
@@ -235,12 +235,22 @@ export class BadgeDetailsComponent {
   }
 
   goBack(): void {
-    // Return to the badges page with the stored tab index
-    if (this.returnTabIndex() !== null) {
-      this.router.navigate(['/badges'], {
-        queryParams: { tab: this.returnTabIndex() },
-      });
+    const badge = this.badge();
+    if (badge && badge.creator) {
+      // Navigate to the badge creator's badges page
+      const npub = this.utilities.getNpubFromPubkey(badge.creator);
+      const identifier = npub || badge.creator;
+
+      // Include tab index if available
+      if (this.returnTabIndex() !== null) {
+        this.router.navigate(['/p', identifier, 'badges'], {
+          queryParams: { tab: this.returnTabIndex() },
+        });
+      } else {
+        this.router.navigate(['/p', identifier, 'badges']);
+      }
     } else {
+      // Fallback to generic badges page if no creator info
       this.router.navigate(['/badges']);
     }
   }

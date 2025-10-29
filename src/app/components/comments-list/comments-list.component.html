@@ -1,0 +1,53 @@
+<div class="comments-section">
+  <div class="comments-header">
+    <button mat-button (click)="toggleComments()" class="comments-toggle">
+      <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
+      @if (!hasLoadedInitial()) {
+      <span>View Comments</span>
+      } @else {
+      <span>{{ commentCount() }} {{ commentCount() === 1 ? 'Comment' : 'Comments' }}</span>
+      }
+    </button>
+
+    @if (isExpanded()) {
+    <button mat-icon-button (click)="onAddComment()" matTooltip="Add comment">
+      <mat-icon>add_comment</mat-icon>
+    </button>
+    }
+  </div>
+
+  @if (isExpanded()) {
+  <div class="comments-content" #commentsContainer>
+    @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="32"></mat-spinner>
+      <p>Loading comments...</p>
+    </div>
+    } @else if (commentCount() === 0) {
+    <div class="no-comments">
+      <mat-icon>chat_bubble_outline</mat-icon>
+      <p>No comments yet. Be the first to comment!</p>
+    </div>
+    } @else {
+    <div class="comments-list">
+      @for (comment of comments(); track comment.event.id) {
+      <app-comment [event]="comment.event" [rootEvent]="event()"></app-comment>
+      }
+    </div>
+
+    @if (isLoadingMore()) {
+    <div class="loading-more">
+      <mat-spinner diameter="24"></mat-spinner>
+      <p>Loading more comments...</p>
+    </div>
+    }
+
+    @if (!hasMore() && commentCount() > 0) {
+    <div class="no-more-comments">
+      <p>No more comments to load</p>
+    </div>
+    }
+    }
+  </div>
+  }
+</div>

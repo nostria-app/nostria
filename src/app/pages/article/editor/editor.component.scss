@@ -1,27 +1,12 @@
-.editor-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: var(--mat-sys-level2);
+.editor-header {
+  padding: 24px 24px 0;
+  max-width: 752px;
+  margin: 0 auto;
 
-  .spacer {
-    flex: 1;
-  }
-
-  .publish-progress {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 2px;
-  }
-
-  button {
-    margin-left: 8px;
-
-    mat-icon {
-      margin-right: 4px;
-    }
+  h2 {
+    margin: 0;
+    font-size: 1.5rem;
+    color: var(--mat-sys-on-surface);
   }
 }
 
@@ -39,59 +24,42 @@
 }
 
 .editor-container {
-  padding: 24px;
-  max-width: 1200px;
+  padding: 0;
+  max-width: 100%;
   margin: 0 auto;
 
-  .content-card {
-    margin-bottom: 24px;
-    box-shadow: var(--mat-sys-level1);
+  .medium-editor {
+    max-width: 752px;
+    margin: 0 auto;
+    padding: 2rem 0;
+    // padding: 48px 24px;
 
-    mat-card-header {
-      display: flex;
-      align-items: center;
+    .title-input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 42px;
+      line-height: 1.2;
+      padding: 0;
+      margin: 0 0 24px 0;
+      color: var(--mat-sys-on-surface);
+      font-family: inherit;
 
-      .spacer {
-        flex: 1;
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.6;
       }
 
-      .auto-title-badge {
-        display: flex;
-        align-items: center;
-        background-color: var(--mat-sys-primary-container);
-        color: var(--mat-sys-on-primary-container);
-        padding: 4px 12px;
-        border-radius: 16px;
-        font-size: 0.9rem;
-        margin-left: 16px;
-
-        mat-icon {
-          font-size: 18px;
-          width: 18px;
-          height: 18px;
-          margin-right: 4px;
-        }
-      }
-    }
-
-    .suggested-title-bar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      background-color: var(--mat-sys-primary-container);
-      color: var(--mat-sys-on-primary-container);
-      padding: 8px 16px;
-      margin-bottom: 16px;
-      border-radius: 4px;
-
-      strong {
-        font-weight: 500;
+      &:focus {
+        outline: none;
       }
     }
   }
 
   .metadata-panel {
-    margin-bottom: 24px;
+    max-width: 752px;
+    margin: 24px auto;
     box-shadow: var(--mat-sys-level1);
 
     mat-panel-title {
@@ -104,11 +72,101 @@
     }
   }
 
+  .action-buttons {
+    max-width: 752px;
+    margin: 24px auto;
+    padding: 16px 24px;
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+
+    .publish-progress {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+    }
+
+    button {
+      mat-icon {
+        margin-right: 4px;
+      }
+    }
+  }
+
   .metadata-form {
     display: flex;
     flex-direction: column;
     gap: 16px;
     padding-top: 16px;
+
+    .file-upload-section {
+      margin-bottom: 16px;
+
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+
+        h3 {
+          margin: 0;
+          font-size: 1rem;
+        }
+
+        .toggle-container {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+
+          span {
+            font-size: 14px;
+          }
+        }
+      }
+
+      .file-upload {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-top: 20px;
+        margin-bottom: 20px;
+
+        button {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+
+        span {
+          color: var(--mat-sys-on-surface-variant);
+          font-size: 14px;
+        }
+      }
+    }
+
+    .media-server-warning {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      border-radius: 4px;
+      border-left: 4px solid var(--mat-warn-500);
+
+      mat-icon {
+        margin-right: 8px;
+      }
+
+      span {
+        color: var(--mat-warn-700);
+        margin-bottom: 8px;
+      }
+    }
 
     .two-column-layout {
       display: grid;
@@ -177,8 +235,13 @@
       --mat-tab-active-indicator-color: var(--mat-sys-primary);
     }
 
+    .mat-mdc-tab-header {
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+      margin-bottom: 24px;
+    }
+
     .write-tab {
-      padding: 16px 0;
+      padding: 0;
 
       .content-editor {
         width: 100%;
@@ -189,25 +252,10 @@
           line-height: 1.6;
         }
       }
-
-      .editor-hint {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-top: 12px;
-        color: var(--mat-sys-on-surface-variant);
-        font-size: 0.9em;
-
-        mat-icon {
-          font-size: 18px;
-          width: 18px;
-          height: 18px;
-        }
-      }
     }
 
     .preview-tab {
-      padding: 16px 0;
+      padding: 0;
 
       .preview-content {
         .preview-title {
@@ -239,6 +287,7 @@
 
           // Markdown styling
           ::ng-deep {
+
             h1,
             h2,
             h3,
@@ -360,25 +409,40 @@
 
 // Responsive design
 @media (max-width: 768px) {
-  .editor-container {
-    padding: 16px;
+  .editor-header {
+    padding: 16px 16px 0;
 
-    .metadata-card,
-    .content-card {
-      margin-bottom: 16px;
+    h2 {
+      font-size: 1.25rem;
     }
   }
 
-  .editor-toolbar {
-    button {
-      margin-left: 4px;
+  .editor-container {
+    .medium-editor {
+      padding: 24px 16px;
 
-      .mat-button-wrapper {
-        display: flex;
-        align-items: center;
+      .title-input {
+        font-size: 32px;
+      }
+    }
+
+    .metadata-panel {
+      margin: 16px;
+    }
+
+    .action-buttons {
+      margin: 16px;
+      padding: 12px 16px;
+
+      button {
+        margin-left: 4px;
+
+        .button-label {
+          display: none;
+        }
 
         mat-icon {
-          margin-right: 2px;
+          margin-right: 0;
         }
       }
     }

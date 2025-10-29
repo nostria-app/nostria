@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { Relay } from './relays/relay';
 import { openDB, IDBPDatabase, DBSchema, deleteDB } from 'idb';
-import { Event } from 'nostr-tools';
+import { Event, kinds } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 
 // Interface for NIP-11 relay information
@@ -174,6 +174,7 @@ export interface ContentNotification extends Notification {
   metadata?: {
     content?: string; // For mentions/replies, the text content
     reactionContent?: string; // For reactions, the emoji/content
+    reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
     zapAmount?: number; // For zaps, the amount in sats
     zappedEventId?: string; // For zaps, the event that was zapped (if any)
     zapReceiptId?: string; // For zaps, the zap receipt event ID (kind 9735)
@@ -273,6 +274,14 @@ interface NostriaDBSchema extends DBSchema {
       'by-source': string;
     };
   };
+  badgeDefinitions: {
+    key: string; // composite key: pubkey:d-tag (unique identifier for badge definition)
+    value: Event;
+    indexes: {
+      'by-pubkey': string;
+      'by-updated': number;
+    };
+  };
 }
 
 @Injectable({
@@ -283,7 +292,7 @@ export class StorageService {
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria';
-  private readonly DB_VERSION = 5;
+  private readonly DB_VERSION = 7;
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -461,16 +470,17 @@ export class StorageService {
           notificationsStore.createIndex('by-timestamp', 'timestamp');
           notificationsStore.createIndex('by-recipient', 'recipientPubkey');
           this.logger.debug('Created notifications object store');
-        } else if (oldVersion < 5 && db.objectStoreNames.contains('notifications')) {
-          // For version 5 upgrade, recreate the notifications store to add the by-recipient index
-          // Note: This will clear existing notifications, but they don't have recipientPubkey anyway
+        } else if (oldVersion < 6 && db.objectStoreNames.contains('notifications')) {
+          // For version 6 upgrade, recreate the notifications store to ensure by-recipient index exists
+          // This is needed because some users may have version 5 without the index
+          this.logger.info('Upgrading notifications store to version 6 - recreating with proper indexes');
           db.deleteObjectStore('notifications');
           const notificationsStore = db.createObjectStore('notifications', {
             keyPath: 'id',
           });
           notificationsStore.createIndex('by-timestamp', 'timestamp');
           notificationsStore.createIndex('by-recipient', 'recipientPubkey');
-          this.logger.debug('Recreated notifications object store with by-recipient index');
+          this.logger.debug('Recreated notifications object store with all required indexes');
         }
 
         // Create new observed relays object store
@@ -495,6 +505,14 @@ export class StorageService {
           pubkeyRelayMappingsStore.createIndex('by-last-seen', 'lastSeen');
           pubkeyRelayMappingsStore.createIndex('by-source', 'source');
           this.logger.debug('Created pubkeyRelayMappings object store');
+        }
+
+        // Create badge definitions object store
+        if (!db.objectStoreNames.contains('badgeDefinitions')) {
+          const badgeDefinitionsStore = db.createObjectStore('badgeDefinitions');
+          badgeDefinitionsStore.createIndex('by-pubkey', 'pubkey');
+          badgeDefinitionsStore.createIndex('by-updated', 'created_at');
+          this.logger.debug('Created badgeDefinitions object store');
         }
       },
       blocked: (currentVersion, blockedVersion, event) => {
@@ -1478,15 +1496,50 @@ export class StorageService {
 
   async getAllNotificationsForPubkey(pubkey: string): Promise<Notification[]> {
     try {
+      this.logger.info(`[getAllNotificationsForPubkey] Querying notifications for pubkey: ${pubkey}`);
+
       // Get notifications for a specific pubkey, sorted by timestamp (newest first)
       const tx = this.db.transaction('notifications', 'readonly');
+
+      // Get notifications with matching recipientPubkey
       const index = tx.store.index('by-recipient');
-      const notifications = await index.getAll(pubkey);
+      const notificationsWithPubkey = await index.getAll(pubkey);
 
-      // Sort by timestamp (newest first) since the index doesn't guarantee order
-      notifications.sort((a, b) => b.timestamp - a.timestamp);
+      this.logger.info(
+        `[getAllNotificationsForPubkey] Index query returned ${notificationsWithPubkey.length} notifications`
+      );
 
-      return notifications;
+      if (notificationsWithPubkey.length > 0) {
+        this.logger.debug(
+          `[getAllNotificationsForPubkey] Sample notification:`,
+          notificationsWithPubkey[0]
+        );
+      }
+
+      // Also get notifications with undefined recipientPubkey (for backward compatibility)
+      // These are older notifications or notifications created when account wasn't set
+      const allNotifications = await tx.store.getAll();
+      const notificationsWithoutPubkey = allNotifications.filter(n => !n.recipientPubkey);
+
+      this.logger.info(
+        `[getAllNotificationsForPubkey] Total notifications in DB: ${allNotifications.length}, ` +
+        `without pubkey: ${notificationsWithoutPubkey.length}`
+      );
+
+      // Combine both sets and deduplicate by ID
+      const combinedNotifications = [...notificationsWithPubkey, ...notificationsWithoutPubkey];
+      const uniqueNotifications = Array.from(
+        new Map(combinedNotifications.map(n => [n.id, n])).values()
+      );
+
+      // Sort by timestamp (newest first)
+      uniqueNotifications.sort((a, b) => b.timestamp - a.timestamp);
+
+      this.logger.info(
+        `[getAllNotificationsForPubkey] Returning ${uniqueNotifications.length} total unique notifications`
+      );
+
+      return uniqueNotifications;
     } catch (error) {
       this.logger.error(`Error getting notifications for pubkey ${pubkey}`, error);
       return [];
@@ -1806,6 +1859,82 @@ export class StorageService {
     } catch (error) {
       this.logger.error('Error cleaning up old pubkey-relay mappings', error);
       return 0;
+    }
+  }
+
+  /**
+   * Save a badge definition event to IndexedDB
+   * Uses composite key: pubkey::slug
+   */
+  async saveBadgeDefinition(badgeEvent: Event): Promise<void> {
+    try {
+      if (badgeEvent.kind !== kinds.BadgeDefinition) {
+        throw new Error('Event is not a badge definition');
+      }
+
+      // Extract the d-tag (slug)
+      const dTag = badgeEvent.tags.find(tag => tag[0] === 'd');
+      if (!dTag || !dTag[1]) {
+        throw new Error('Badge definition missing d-tag (slug)');
+      }
+
+      const slug = dTag[1];
+      const compositeKey = `${badgeEvent.pubkey}::${slug}`;
+
+      // Check if an existing definition exists
+      const existing = await this.db.get('badgeDefinitions', compositeKey);
+
+      // Only save if this is newer or doesn't exist
+      if (!existing || badgeEvent.created_at > existing.created_at) {
+        await this.db.put('badgeDefinitions', badgeEvent, compositeKey);
+        this.logger.debug(`Saved badge definition: ${compositeKey}`);
+      }
+    } catch (error) {
+      this.logger.error('Error saving badge definition', error);
+    }
+  }
+
+  /**
+   * Get a badge definition by pubkey and slug
+   */
+  async getBadgeDefinition(pubkey: string, slug: string): Promise<Event | null> {
+    try {
+      const compositeKey = `${pubkey}::${slug}`;
+      const badge = await this.db.get('badgeDefinitions', compositeKey);
+      return badge || null;
+    } catch (error) {
+      this.logger.error(`Error getting badge definition ${pubkey}::${slug}`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all badge definitions by pubkey
+   */
+  async getBadgeDefinitionsByPubkey(pubkey: string): Promise<Event[]> {
+    try {
+      const index = this.db.transaction('badgeDefinitions', 'readonly')
+        .objectStore('badgeDefinitions')
+        .index('by-pubkey');
+
+      const badges = await index.getAll(pubkey);
+      return badges || [];
+    } catch (error) {
+      this.logger.error(`Error getting badge definitions for ${pubkey}`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete a badge definition
+   */
+  async deleteBadgeDefinition(pubkey: string, slug: string): Promise<void> {
+    try {
+      const compositeKey = `${pubkey}::${slug}`;
+      await this.db.delete('badgeDefinitions', compositeKey);
+      this.logger.debug(`Deleted badge definition: ${compositeKey}`);
+    } catch (error) {
+      this.logger.error(`Error deleting badge definition ${pubkey}::${slug}`, error);
     }
   }
 }

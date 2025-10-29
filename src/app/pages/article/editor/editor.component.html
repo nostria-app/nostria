@@ -1,30 +1,6 @@
-<mat-toolbar class="editor-toolbar">
-  <span>{{ isEditMode() ? 'Edit Article' : 'New Article' }}</span>
-  <span class="spacer"></span>
-
-  @if (isPublishing()) {
-  <mat-progress-bar mode="indeterminate" class="publish-progress"></mat-progress-bar>
-  }
-
-  <button mat-icon-button (click)="navigateToDrafts()" matTooltip="View all drafts">
-    <mat-icon>edit_document</mat-icon>
-  </button>
-
-  <button mat-button (click)="cancel()" [disabled]="isPublishing()">
-    <mat-icon>close</mat-icon>
-    Cancel
-  </button>
-
-  <button mat-button (click)="saveDraft()" [disabled]="!isDraftValid() || isPublishing()">
-    <mat-icon>save</mat-icon>
-    Save Draft
-  </button>
-
-  <button mat-flat-button (click)="publish()" [disabled]="!isValid() || isPublishing()">
-    <mat-icon>publish</mat-icon>
-    Publish
-  </button>
-</mat-toolbar>
+<div class="editor-header">
+  <h2>{{ isEditMode() ? 'Edit Article' : 'New Article' }}</h2>
+</div>
 
 @if (isLoading()) {
 <div class="loading-container">
@@ -33,75 +9,51 @@
 </div>
 } @else {
 <div class="editor-container">
-  <!-- Content Editor - Now at the top for more focus -->
-  <mat-card class="content-card">
-    <mat-card-header>
-      <mat-card-title>Article Content</mat-card-title>
-      @if (autoTitleEnabled()) {
-      <span class="auto-title-badge">
-        <mat-icon>auto_awesome</mat-icon>
-        Auto-title enabled
-      </span>
-      }
-      <span class="spacer"></span>
-      <button mat-button color="primary" (click)="toggleAutoTitleMode()"
-        matTooltip="Auto-title will continuously update title based on first line of content">
-        {{ autoTitleEnabled() ? 'Disable' : 'Enable' }} Auto-Title
-      </button>
-    </mat-card-header>
-    <mat-card-content>
-      @if (suggestedTitle() && autoTitleEnabled()) {
-      <div class="suggested-title-bar">
-        <span>Title: <strong>{{ suggestedTitle() }}</strong></span>
-        <button mat-icon-button matTooltip="Apply suggested title" (click)="applyAutoTitle()">
-          <mat-icon>check</mat-icon>
-        </button>
-      </div>
-      }
+  <!-- Medium-style Editor -->
+  <div class="medium-editor">
+    <!-- Title Input -->
+    <input type="text" class="title-input" placeholder="Title" [value]="article().title"
+      (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
 
-      <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">
-        <mat-tab label="Write">
-          <div class="write-tab">
-            <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)">
-            </app-rich-text-editor>
-            <div class="editor-hint">
-              <mat-icon>info</mat-icon>
-              <span>Toggle between Rich Text and Markdown modes using the controls above</span>
-            </div>
-          </div>
-        </mat-tab>
+    <!-- Content Editor -->
+    <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">
+      <mat-tab label="Write">
+        <div class="write-tab">
+          <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)">
+          </app-rich-text-editor>
+        </div>
+      </mat-tab>
 
-        <mat-tab label="Preview">
-          <div class="preview-tab">
-            @if (article().content.trim()) {
-            <div class="preview-content">
-              <h1 class="preview-title">
-                {{ article().title || 'Untitled' }}
-              </h1>
-              @if (article().summary) {
-              <p class="preview-summary">{{ article().summary }}</p>
-              }
-              @if (article().image) {
-              <img [src]="article().image" [attr.alt]="article().title || 'Article featured image'"
-                [attr.title]="article().title || 'Article featured image'" class="preview-image" loading="lazy" />
-              }
-              <div class="preview-markdown" appMentionHover>
-                <div [innerHTML]="markdownHtml()"></div>
-              </div>
-            </div>
-            } @else {
-            <div class="empty-preview">
-              <mat-icon>preview</mat-icon>
-              <p>Write some content to see the preview</p>
-            </div>
+      <mat-tab label="Preview">
+        <div class="preview-tab">
+          @if (article().content.trim()) {
+          <div class="preview-content">
+            <h1 class="preview-title">
+              {{ article().title || 'Untitled' }}
+            </h1>
+            @if (article().summary) {
+            <p class="preview-summary">{{ article().summary }}</p>
             }
+            @if (article().image) {
+            <img [src]="article().image" [attr.alt]="article().title || 'Article featured image'"
+              [attr.title]="article().title || 'Article featured image'" class="preview-image" loading="lazy" />
+            }
+            <div class="preview-markdown" appMentionHover>
+              <div [innerHTML]="markdownHtml()"></div>
+            </div>
           </div>
-        </mat-tab>
-      </mat-tab-group>
-    </mat-card-content>
-  </mat-card>
+          } @else {
+          <div class="empty-preview">
+            <mat-icon>preview</mat-icon>
+            <p>Write some content to see the preview</p>
+          </div>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
 
-  <!-- Article Metadata - Moved below content -->
+  <!-- Article Metadata -->
   <mat-expansion-panel class="metadata-panel">
     <mat-expansion-panel-header>
       <mat-panel-title>
@@ -109,20 +61,11 @@
         Article Metadata
       </mat-panel-title>
       <mat-panel-description>
-        Title, summary, tags, and other article information
+        Summary, image, tags, and other article information
       </mat-panel-description>
     </mat-expansion-panel-header>
 
     <div class="metadata-form">
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Title *</mat-label>
-        <input matInput [value]="article().title" (input)="updateTitle($any($event.target).value)"
-          placeholder="Enter article title" required [readonly]="autoTitleEnabled()" />
-        @if (autoTitleEnabled()) {
-        <mat-hint>Auto-title is enabled. Title will update based on content.</mat-hint>
-        }
-      </mat-form-field>
-
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Summary</mat-label>
         <textarea matInput [value]="article().summary" (input)="updateSummary($any($event.target).value)"
@@ -130,12 +73,54 @@
           </textarea>
       </mat-form-field>
 
-      <div class="two-column-layout">
+      <!-- Article Image Section -->
+      <div class="file-upload-section">
+        <div class="section-header">
+          <h3>Article Image</h3>
+          <div class="toggle-container">
+            <span>File</span>
+            <mat-slide-toggle [checked]="useImageUrl()" (change)="toggleImageInputMethod()" color="primary">
+            </mat-slide-toggle>
+            <span>URL</span>
+          </div>
+        </div>
+
+        <!-- No media servers warning for file upload mode -->
+        @if (!useImageUrl() && !hasMediaServers()) {
+        <div class="media-server-warning">
+          <mat-icon color="warn">warning</mat-icon>
+          <span>You need to configure a media server to upload image files</span>
+          <button mat-flat-button color="primary" type="button" (click)="navigateToMediaSettings()">
+            Configure Media Server
+          </button>
+        </div>
+        }
+
+        @if (!useImageUrl()) {
+        <div class="file-upload">
+          <button mat-stroked-button type="button" (click)="articleImageInput.click()" [disabled]="!hasMediaServers()">
+            <mat-icon>upload</mat-icon>
+            Choose article image
+          </button>
+          <input #articleImageInput type="file" hidden (change)="onFileSelected($event)" accept="image/*" />
+          @if (previewImage()) {
+          <span>File selected</span>
+          }
+        </div>
+        } @else {
         <mat-form-field appearance="outline" class="full-width">
+          <mat-icon matPrefix>image</mat-icon>
           <mat-label>Image URL</mat-label>
-          <input matInput [value]="article().image" (input)="updateImage($any($event.target).value)"
+          <input matInput type="text" [value]="article().imageUrl || article().image"
+            (input)="updateImage($any($event.target).value)" (blur)="onImageUrlChange()"
             placeholder="https://example.com/image.jpg" />
+          <mat-icon matSuffix>link</mat-icon>
         </mat-form-field>
+        }
+      </div>
+
+      <div class="two-column-layout">
+        <div></div> <!-- Empty div to maintain layout -->
 
         <div class="dTag-field-container">
           <mat-form-field appearance="outline" class="full-width">
@@ -189,5 +174,30 @@
       </div>
     </div>
   </mat-expansion-panel>
+
+  <!-- Action Buttons -->
+  <div class="action-buttons">
+    @if (isPublishing()) {
+    <mat-progress-bar mode="indeterminate" class="publish-progress"></mat-progress-bar>
+    }
+
+    <button mat-icon-button (click)="navigateToDrafts()" matTooltip="View all drafts">
+      <mat-icon>edit_document</mat-icon>
+    </button>
+
+    <button mat-button (click)="cancel()" [disabled]="isPublishing()">
+      Cancel
+    </button>
+
+    <button mat-button (click)="saveDraft()" [disabled]="!isDraftValid() || isPublishing()">
+      <mat-icon>save</mat-icon>
+      <span class="button-label">Save Draft</span>
+    </button>
+
+    <button mat-flat-button color="primary" (click)="publish()" [disabled]="!isValid() || isPublishing()">
+      <mat-icon>publish</mat-icon>
+      <span class="button-label">Publish</span>
+    </button>
+  </div>
 </div>
 }

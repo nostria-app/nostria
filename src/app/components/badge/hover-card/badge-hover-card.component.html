@@ -1,0 +1,68 @@
+<mat-card class="badge-hover-card">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner [diameter]="40"></mat-spinner>
+  </div>
+  } @else if (error()) {
+  <div class="error-container">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
+  } @else if (parsedBadge()) {
+  <div class="card-content">
+    <!-- Badge Image with Gradient Background -->
+    <div class="badge-image-container">
+      <div class="badge-image-wrapper">
+        @if (parsedBadge()!.image || parsedBadge()!.thumb) {
+        <img [src]="parsedBadge()!.image || parsedBadge()!.thumb" [alt]="parsedBadge()!.name" class="badge-image" />
+        } @else {
+        <div class="badge-placeholder">
+          <mat-icon>military_tech</mat-icon>
+        </div>
+        }
+      </div>
+    </div>
+
+    <!-- Badge Info Section -->
+    <div class="badge-info">
+      <!-- Badge Name/Title -->
+      <h2 class="badge-title">{{ parsedBadge()!.name }}</h2>
+
+      <!-- Issuer Info -->
+      @if (issuerName()) {
+      <div class="issuer-info">
+        <mat-icon class="issuer-icon">account_circle</mat-icon>
+        <span>{{ issuerName() }} created this badge</span>
+      </div>
+      }
+
+      <!-- Description -->
+      @if (parsedBadge()!.description) {
+      <div class="badge-description">
+        <p>{{ parsedBadge()!.description }}</p>
+      </div>
+      }
+
+      <!-- Tags Section -->
+      @if (parsedBadge()!.tags && parsedBadge()!.tags.length > 0) {
+      <div class="badge-tags">
+        @for (tag of parsedBadge()!.tags.slice(0, 5); track tag) {
+        <span class="badge-tag">
+          <mat-icon class="tag-icon">label</mat-icon>
+          {{ tag }}
+        </span>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- View Badge Button -->
+    <div class="card-actions">
+      <a mat-flat-button color="primary" [routerLink]="['/p', npub() || pubkey(), 'badges']" class="view-button">
+        <mat-icon>visibility</mat-icon>
+        View Badge Details
+      </a>
+    </div>
+  </div>
+  }
+</mat-card>

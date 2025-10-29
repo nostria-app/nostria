@@ -1,124 +1,169 @@
 @let item = parsed();
 
-@if (item) {
-  <mat-card [class]="'badge-card ' + layout()">
-    @if (layout() === 'vertical') {
-      <mat-card-header>
-        @if (item.thumb) {
-          <img [src]="item.thumb" alt="Badge thumbnail" mat-card-avatar />
-        }
+<mat-card [class]="'badge-card ' + layout()">
+  @if (item) {
+  @if (layout() === 'vertical') {
+  <mat-card-header>
+    @if (item.thumb) {
+    <img [src]="item.thumb" alt="Badge thumbnail" mat-card-avatar />
+    }
 
-        @if (error()) {
-          <mat-card-title>{{ error() }}</mat-card-title>
+    @if (error()) {
+    <mat-card-title>{{ error() }}</mat-card-title>
+    } @else {
+    <mat-card-title>{{ item.name }}</mat-card-title>
+    }
+
+    <mat-card-subtitle>
+      @for (type of item.tags; track type) {
+      <span class="badge-type">{{ type }}</span>
+      }
+    </mat-card-subtitle>
+  </mat-card-header>
+
+  @if (item.image) {
+  <img [src]="item.image" alt="Badge image" mat-card-image />
+  }
+
+  <mat-card-content>
+    <p>{{ item.description }}</p>
+
+    @if (issuerName()) {
+    <div class="badge-metadata">
+      <mat-icon>person</mat-icon>
+      <span>Awarded by: {{ issuerName() }}</span>
+    </div>
+    }
+
+    @if (awardDate()) {
+    <div class="badge-metadata">
+      <mat-icon>calendar_today</mat-icon>
+      <span>Awarded: {{ badge().created_at * 1000 | date: 'medium' }}</span>
+    </div>
+    }
+  </mat-card-content>
+
+  @if (showActions()) {
+  <mat-card-actions align="end">
+    <button mat-button color="primary" (click)="onView($event)">
+      <mat-icon>visibility</mat-icon>
+      View
+    </button>
+    @if (isAccepted()) {
+    <button mat-raised-button color="warn" [disabled]="isUpdating()" (click)="onRemove($event)">
+      @if (isUpdating()) {
+      <mat-spinner diameter="20"></mat-spinner>
+      } @else {
+      <mat-icon>remove_circle</mat-icon>
+      }
+      Remove
+    </button>
+    } @else {
+    <button mat-raised-button color="accent" [disabled]="isUpdating()" (click)="onAccept($event)">
+      @if (isUpdating()) {
+      <mat-spinner diameter="20"></mat-spinner>
+      } @else {
+      <mat-icon>check_circle</mat-icon>
+      }
+      Accept
+    </button>
+    }
+  </mat-card-actions>
+  }
+  }
+
+  @if (layout() === 'horizontal') {
+  <mat-card-content class="badge-card-content">
+    <div class="badge-thumbnail">
+      @if (item.thumb) {
+      <img [src]="item.thumb" alt="Badge thumbnail" />
+      } @else {
+      <div class="placeholder-thumbnail">
+        <mat-icon>military_tech</mat-icon>
+      </div>
+      }
+    </div>
+
+    <div class="badge-details">
+      <h3>{{ item.name }}</h3>
+      <p>{{ item.description }}</p>
+
+      @if (issuerName()) {
+      <div class="badge-metadata">
+        <mat-icon>person</mat-icon>
+        <span>Awarded by: {{ issuerName() }}</span>
+      </div>
+      }
+
+      @if (recipientName()) {
+      <div class="badge-metadata">
+        <mat-icon>person</mat-icon>
+        <span>Awarded to: {{ recipientName() }}</span>
+      </div>
+      }
+
+      @if (awardDate()) {
+      <div class="badge-metadata">
+        <mat-icon>calendar_today</mat-icon>
+        <span>Awarded: {{ badge().created_at * 1000 | date: 'medium' }}</span>
+      </div>
+      }
+    </div>
+
+    @if (showActions()) {
+    <div class="badge-actions">
+      <button mat-button color="primary" (click)="onView($event)">
+        <mat-icon>visibility</mat-icon>
+        View
+      </button>
+      @if (isAccepted()) {
+      <button mat-raised-button color="warn" [disabled]="isUpdating()" (click)="onRemove($event)">
+        @if (isUpdating()) {
+        <mat-spinner diameter="20"></mat-spinner>
         } @else {
-          <mat-card-title>{{ item.name }}</mat-card-title>
+        <mat-icon>remove_circle</mat-icon>
         }
-
-        <mat-card-subtitle>
-          @for (type of item.tags; track type) {
-            <span class="badge-type">{{ type }}</span>
-          }
-        </mat-card-subtitle>
-      </mat-card-header>
-
-      @if (item.image) {
-        <img [src]="item.image" alt="Badge image" mat-card-image />
+        Remove
+      </button>
+      } @else {
+      <button mat-raised-button color="accent" [disabled]="isUpdating()" (click)="onAccept($event)">
+        @if (isUpdating()) {
+        <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+        <mat-icon>check_circle</mat-icon>
+        }
+        Accept
+      </button>
       }
+    </div>
+    }
+  </mat-card-content>
+  }
+  } @else {
+  <!-- Fallback for failed badge definitions -->
+  <mat-card-header>
+    <mat-card-title>Failed to Load Badge</mat-card-title>
+    <mat-card-subtitle>Badge definition could not be loaded</mat-card-subtitle>
+  </mat-card-header>
 
-      <mat-card-content>
-        <p>{{ item.description }}</p>
+  <mat-card-content>
+    <p>This badge's definition is unavailable or could not be loaded from the relays.</p>
+    @if (error()) {
+    <p class="error-message">Error: {{ error() }}</p>
+    }
+  </mat-card-content>
 
-        @if (issuerName()) {
-          <div class="badge-metadata">
-            <mat-icon>person</mat-icon>
-            <span>Awarded by: {{ issuerName() }}</span>
-          </div>
-        }
-
-        @if (awardDate()) {
-          <div class="badge-metadata">
-            <mat-icon>calendar_today</mat-icon>
-            <span>Awarded: {{ badge().created_at * 1000 | date: 'medium' }}</span>
-          </div>
-        }
-      </mat-card-content>
-
-      @if (showActions()) {
-        <mat-card-actions align="end">
-          <button mat-button color="primary" (click)="onView($event)">
-            <mat-icon>visibility</mat-icon>
-            View
-          </button>
-          <button
-            mat-raised-button
-            color="accent"
-            [disabled]="isAccepted() || isUpdating()"
-            (click)="onAccept($event)"
-          >
-            @if (isUpdating()) {
-              <mat-spinner diameter="20"></mat-spinner>
-            } @else {
-              <mat-icon>check_circle</mat-icon>
-            }
-            {{ isAccepted() ? 'Accepted' : 'Accept' }}
-          </button>
-        </mat-card-actions>
+  @if (showActions() && isAccepted()) {
+  <mat-card-actions align="end">
+    <button mat-raised-button color="warn" [disabled]="isUpdating()" (click)="onRemove($event)">
+      @if (isUpdating()) {
+      <mat-spinner diameter="20"></mat-spinner>
+      } @else {
+      <mat-icon>remove_circle</mat-icon>
       }
-    }
-
-    @if (layout() === 'horizontal') {
-      <mat-card-content class="badge-card-content">
-        <div class="badge-thumbnail">
-          @if (item.thumb) {
-            <img [src]="item.thumb" alt="Badge thumbnail" />
-          } @else {
-            <div class="placeholder-thumbnail">
-              <mat-icon>military_tech</mat-icon>
-            </div>
-          }
-        </div>
-
-        <div class="badge-details">
-          <h3>{{ item.name }}</h3>
-          <p>{{ item.description }}</p>
-
-          @if (issuerName()) {
-            <div class="badge-metadata">
-              <mat-icon>person</mat-icon>
-              <span>Awarded by: {{ issuerName() }}</span>
-            </div>
-          }
-
-          @if (awardDate()) {
-            <div class="badge-metadata">
-              <mat-icon>calendar_today</mat-icon>
-              <span>Awarded: {{ badge().created_at * 1000 | date: 'medium' }}</span>
-            </div>
-          }
-        </div>
-
-        @if (showActions()) {
-          <div class="badge-actions">
-            <button mat-button color="primary" (click)="onView($event)">
-              <mat-icon>visibility</mat-icon>
-              View
-            </button>
-            <button
-              mat-raised-button
-              color="accent"
-              [disabled]="isAccepted() || isUpdating()"
-              (click)="onAccept($event)"
-            >
-              @if (isUpdating()) {
-                <mat-spinner diameter="20"></mat-spinner>
-              } @else {
-                <mat-icon>check_circle</mat-icon>
-              }
-              {{ isAccepted() ? 'Accepted' : 'Accept' }}
-            </button>
-          </div>
-        }
-      </mat-card-content>
-    }
-  </mat-card>
-}
+      Remove
+    </button>
+  </mat-card-actions>
+  }
+  }
+</mat-card>

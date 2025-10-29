@@ -21,6 +21,8 @@ import { DataService } from './data.service';
 import { BadgeService } from './badge.service';
 import { SleepModeService } from './sleep-mode.service';
 import { FavoritesService } from './favorites.service';
+import { ContentNotificationService } from './content-notification.service';
+import { AccountLocalStateService } from './account-local-state.service';
 
 @Injectable({
   providedIn: 'root',
@@ -37,7 +39,9 @@ export class ApplicationService {
   theme = inject(ThemeService);
   notificationService = inject(NotificationService);
   dataService = inject(DataService);
+  contentNotificationService = inject(ContentNotificationService);
   private readonly localStorage = inject(LocalStorageService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly favorites = inject(FavoritesService);
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
@@ -59,6 +63,7 @@ export class ApplicationService {
   previousPubKey = '';
 
   constructor() {
+    // Effect for profile processing when following list changes
     effect(async () => {
       const followingList = this.accountState.followingList();
       // const initialize = this.appState.
@@ -73,7 +78,14 @@ export class ApplicationService {
           try {
             // Check if profile discovery has already been done for this account
             if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
-              await this.accountState.startProfileProcessing(followingList, this.dataService);
+              await this.accountState.startProfileProcessing(
+                followingList,
+                this.dataService,
+                () => {
+                  // Callback: After profile processing completes, check for first-time notifications
+                  this.checkFirstTimeNotifications();
+                }
+              );
               this.accountState.markProfileDiscoveryDone(pubkey);
             } else {
               const currentState = this.accountState.profileProcessingState();
@@ -91,6 +103,39 @@ export class ApplicationService {
           }
         });
       }
+    });
+
+    // Effect for checking notifications when account changes
+    effect(() => {
+      const isAuthenticated = this.authenticated();
+      const pubkey = this.accountState.pubkey();
+      const isInitialized = this.contentNotificationService.initialized();
+
+      // Only proceed if we're authenticated, have a pubkey, and service is initialized
+      if (!isAuthenticated || !pubkey || !isInitialized) {
+        return;
+      }
+
+      untracked(async () => {
+        const lastCheck = this.contentNotificationService.lastCheckTimestamp();
+        const isFirstTime = lastCheck === 0;
+
+        // Only check for returning users here
+        // First-time checks are handled after profile processing completes
+        if (!isFirstTime) {
+          this.logger.info(
+            `[ApplicationService] Account changed - checking notifications for returning user (lastCheck: ${lastCheck})`
+          );
+          try {
+            await this.contentNotificationService.checkForNewNotifications();
+            this.logger.info('[ApplicationService] Notification check completed after account change');
+          } catch (error) {
+            this.logger.error('[ApplicationService] Failed to check notifications after account change', error);
+          }
+        } else {
+          this.logger.debug('[ApplicationService] First-time user - notification check will happen after profile processing');
+        }
+      });
     });
   }
 
@@ -139,12 +184,24 @@ export class ApplicationService {
       this.appState.WALLETS_KEY,
       this.appState.USERNAMES_STORAGE_KEY,
       this.favorites.STORAGE_KEY,
-      'nostria-active-feed', // FeedsCollectionService.ACTIVE_FEED_KEY (avoid circular dependency)
+
+      'nostria-notification-filters',
+      'nostria-poll-drafts',
+      'nostria-polls',
+      'nostria-subscriptions',
+      'nostria-settings'
+
+      // Delete auto-drafts, example:
+      // article-auto-draft-ad755dd2d56d4bff21d0d2670ed6fc13ef9fae1fb78b75e81b98b5dbcc22fd27
+      // note-auto-draft-ad755dd2d56d4bff21d0d2670ed6fc13ef9fae1fb78b75e81b98b5dbcc22fd27
     ];
 
-    for (let i = 0; i < keysToRemove.length; i++) {
-      this.localStorage.removeItem(keysToRemove[i]);
+    for (const key of keysToRemove) {
+      this.localStorage.removeItem(key);
     }
+
+    // Clear all per-account state (nostria-state with all pubkeys)
+    this.accountLocalState.clearAllStates();
 
     // Clear notifications from memory
     this.notificationService.clearNotifications();
@@ -159,6 +216,33 @@ export class ApplicationService {
     if (window) {
       // Reload the application
       window.location.reload();
+    }
+  }
+
+  /**
+   * Check if this is the first time loading notifications for this account
+   * and trigger a 30-day limited fetch if so.
+   * This is called after profile pre-caching completes.
+   */
+  private checkFirstTimeNotifications(): void {
+    if (!this.authenticated()) {
+      return;
+    }
+
+    const lastCheck = this.contentNotificationService.lastCheckTimestamp();
+
+    // Only trigger for first-time users (lastCheck === 0)
+    if (lastCheck === 0) {
+      this.logger.info(
+        '[ApplicationService] Profile processing complete - triggering first-time notification check (30 days)'
+      );
+      this.contentNotificationService.checkForNewNotifications(30).catch(error => {
+        this.logger.error('[ApplicationService] Failed to check notifications after profile processing', error);
+      });
+    } else {
+      this.logger.debug(
+        `[ApplicationService] Not first-time (lastCheck: ${lastCheck}), skipping notification check after profile processing`
+      );
     }
   }
 }

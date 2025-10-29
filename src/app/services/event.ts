@@ -17,7 +17,11 @@ import {
   NoteEditorDialogComponent,
   NoteEditorDialogData,
 } from '../components/note-editor-dialog/note-editor-dialog.component';
-import { MatDialog } from '@angular/material/dialog';
+import {
+  CommentEditorDialogComponent,
+  CommentEditorDialogData,
+} from '../components/comment-editor-dialog/comment-editor-dialog.component';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 
 export interface Reaction {
   emoji: string;
@@ -794,6 +798,9 @@ export class EventService {
     // Open note editor dialog
     const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
       panelClass: 'responsive-dialog',
+      width: '680px',
+      maxWidth: '680px',
+      disableClose: true,
       data,
     });
 
@@ -802,5 +809,48 @@ export class EventService {
         console.log('Note published successfully:', result.event);
       }
     });
+  }
+
+  createComment(rootEvent: Event): MatDialogRef<CommentEditorDialogComponent> {
+    // Open comment editor dialog for NIP-22 comments
+    const dialogRef = this.dialog.open(CommentEditorDialogComponent, {
+      panelClass: 'responsive-dialog',
+      width: '600px',
+      maxWidth: '90vw',
+      disableClose: true,
+      data: {
+        rootEvent,
+      } as CommentEditorDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.published) {
+        console.log('Comment published successfully:', result.event);
+      }
+    });
+
+    return dialogRef;
+  }
+
+  createCommentReply(rootEvent: Event, parentComment: Event): MatDialogRef<CommentEditorDialogComponent> {
+    // Open comment editor dialog for replying to a comment
+    const dialogRef = this.dialog.open(CommentEditorDialogComponent, {
+      panelClass: 'responsive-dialog',
+      width: '600px',
+      maxWidth: '90vw',
+      disableClose: true,
+      data: {
+        rootEvent,
+        parentComment,
+      } as CommentEditorDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result?.published) {
+        console.log('Comment reply published successfully:', result.event);
+      }
+    });
+
+    return dialogRef;
   }
 }

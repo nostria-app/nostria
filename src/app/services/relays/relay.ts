@@ -1,4 +1,4 @@
-import { inject, signal, Signal } from '@angular/core';
+import { inject, signal, Signal, Injector } from '@angular/core';
 import { LoggerService } from '../logger.service';
 import { Event, SimplePool } from 'nostr-tools';
 import { RelaysService } from './relays';
@@ -17,6 +17,7 @@ export abstract class RelayServiceBase {
   protected logger = inject(LoggerService);
   protected relaysService = inject(RelaysService);
   protected utilities = inject(UtilitiesService);
+  protected injector = inject(Injector);
   protected useOptimizedRelays = false;
 
   // Activity tracking
@@ -644,8 +645,44 @@ export abstract class RelayServiceBase {
       const publishResults = this.#pool.publish(urls, event);
       this.logger.debug('Publish results:', publishResults);
 
-      const result1 = await publishResults[0];
-      console.log('Publish result for first relay:', result1);
+      // Lazy-load NotificationService to avoid circular dependency
+      // This only creates the notification if NotificationService is available
+      try {
+        // Dynamically import to break circular dependency at module load time
+        const { NotificationService } = await import('../notification.service');
+        const notificationService = this.injector.get(NotificationService);
+
+        // Create relay promises map for notification tracking
+        const relayPromises = new Map<Promise<string>, string>();
+
+        this.logger.debug(`Creating notification for ${publishResults.length} relay promises`);
+
+        publishResults.forEach((promise, index) => {
+          const relayUrl = urls[index];
+          this.logger.debug(`Adding relay promise for: ${relayUrl}`);
+          const wrappedPromise = promise
+            .then(() => {
+              this.logger.debug(`Relay ${relayUrl} resolved successfully`);
+              return relayUrl;
+            })
+            .catch((error: unknown) => {
+              const errorMsg = error instanceof Error ? error.message : 'Failed';
+              this.logger.error(`Relay ${relayUrl} failed: ${errorMsg}`);
+              throw new Error(`${relayUrl}: ${errorMsg}`);
+            });
+          relayPromises.set(wrappedPromise, relayUrl);
+        });
+
+        this.logger.debug(`Created relay promises map with ${relayPromises.size} entries`);
+
+        // Create notification for tracking (don't await to not block publish)
+        notificationService.addRelayPublishingNotification(event, relayPromises).catch(err => {
+          this.logger.warn('Failed to create publish notification', err);
+        });
+      } catch (notifError) {
+        // If notification service is not available or fails, just log and continue
+        this.logger.debug('Could not create publish notification', notifError);
+      }
 
       // Update lastUsed for all relays used in this publish operation
       urls.forEach((url) => this.updateRelayLastUsed(url));

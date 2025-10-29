@@ -206,3 +206,29 @@
   vertical-align: middle;
   line-height: 1;
 }
+
+// Event mention card styling
+.event-mention-card {
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary, #6200ea);
+    outline-offset: 2px;
+  }
+}
+
+.dark .event-mention-card {
+  &:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  }
+}

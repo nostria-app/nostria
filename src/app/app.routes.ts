@@ -47,6 +47,7 @@ import { DraftsComponent } from './pages/drafts/drafts.component';
 import { ProfileOpenComponent } from './pages/profile/profile-open.component';
 import { DeleteEventComponent } from './pages/delete-event/delete-event.component';
 import { DeleteAccountComponent } from './pages/delete-account/delete-account.component';
+import { InviteComponent } from './pages/invite/invite.component';
 
 const profileChildren: Routes = [
   {
@@ -69,6 +70,7 @@ const profileChildren: Routes = [
   { path: 'following', component: FollowingComponent, title: 'Following' },
   { path: 'relays', component: ProfileRelaysComponent, title: 'Relays' },
   { path: 'details', component: DetailsComponent, title: 'Details' },
+  { path: 'badges', component: BadgesComponent, title: 'Badges' },
 ];
 
 export const routes: Routes = [
@@ -197,17 +199,17 @@ export const routes: Routes = [
       import('./components/zap-history/zap-history.component').then(m => m.ZapHistoryComponent),
     title: 'Zap History',
   },
-  {
-    path: 'drafts',
-    component: DraftsComponent,
-    data: { isRoot: true },
-    title: 'Drafts',
-  },
   { path: 'article/create', component: EditorComponent, title: 'New Article' },
   {
     path: 'article/edit/:id',
     component: EditorComponent,
     title: 'Edit Article',
+  },
+  {
+    path: 'article/drafts',
+    component: DraftsComponent,
+    data: { isRoot: true },
+    title: 'Drafts',
   },
   {
     path: 'a/:id',
@@ -311,5 +313,10 @@ export const routes: Routes = [
     title: 'Storage Debug',
   },
   { path: 'login', component: LoginDialogComponent },
+  {
+    path: 'invite/:nprofile',
+    component: InviteComponent,
+    title: 'Join Nostria',
+  },
   { path: '**', redirectTo: '/' }, // Update to redirect to root instead of /home
 ];

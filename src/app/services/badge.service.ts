@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal, NgZone } from '@angular/core';
 import { StorageService } from './storage.service';
 import { NostrService } from './nostr.service';
 import { Event, kinds, NostrEvent } from 'nostr-tools';
@@ -17,6 +17,14 @@ export interface ParsedBadge {
   image: string;
   thumb: string;
   tags: string[];
+}
+
+export interface AcceptedBadge {
+  aTag: string[];
+  eTag: string[];
+  id: string;
+  pubkey: string;
+  slug: string;
 }
 
 interface ParsedReward {
@@ -43,6 +51,7 @@ export class BadgeService implements NostriaService {
   private readonly logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
   private readonly data = inject(DataService);
+  private readonly ngZone = inject(NgZone);
 
   // Signals to store different types of badges
   badgeDefinitions = signal<Event[]>([]);
@@ -52,18 +61,11 @@ export class BadgeService implements NostriaService {
   });
 
   profileBadgesEvent = signal<NostrEvent | null>(null);
-  acceptedBadges = signal<
-    {
-      aTag: string[];
-      eTag: string[];
-      id: string;
-      pubkey: string;
-      slug: string;
-    }[]
-  >([]);
+  acceptedBadges = signal<AcceptedBadge[]>([]);
   issuedBadges = signal<NostrEvent[]>([]);
   receivedBadges = signal<NostrEvent[]>([]);
   badgeIssuers = signal<Record<string, any>>({});
+  badgeRecipients = signal<Record<string, any>>({});
 
   // Loading states
   isLoadingAccepted = signal<boolean>(false);
@@ -74,7 +76,9 @@ export class BadgeService implements NostriaService {
   getBadgeDefinition(pubkey: string, slug: string): Event | undefined {
     const badge = this.badgeDefinitions().find(badge => {
       const tags = badge.tags || [];
-      return tags.some(tag => badge.pubkey === pubkey && tag[0] === 'd' && tag[1] === slug);
+      const hasMatchingDTag = tags.some(tag => tag[0] === 'd' && tag[1] === slug);
+      const pubkeyMatches = badge.pubkey === pubkey;
+      return pubkeyMatches && hasMatchingDTag;
     });
 
     return badge;
@@ -82,15 +86,23 @@ export class BadgeService implements NostriaService {
 
   putBadgeDefinition(badge: Event): void {
     if (badge.kind === kinds.BadgeDefinition) {
+      // Update the signal directly instead of deferring with setTimeout
+      // The computed in profile-header already tracks this signal
       this.badgeDefinitions.update(badges => {
         const index = badges.findIndex(b => b.id === badge.id);
         if (index !== -1) {
-          badges[index] = badge;
+          // Return new array with updated badge
+          const newBadges = [...badges];
+          newBadges[index] = badge;
+          return newBadges;
         } else {
-          badges.push(badge);
+          // Return new array with added badge
+          return [...badges, badge];
         }
-        return badges;
       });
+
+      // Save to storage for persistence
+      this.storage.saveBadgeDefinition(badge);
     }
   }
 
@@ -99,7 +111,11 @@ export class BadgeService implements NostriaService {
   async loadAcceptedBadges(pubkey: string): Promise<void> {
     this.isLoadingAccepted.set(true);
     try {
-      const profileBadgesEvent = await this.accountRelay.getEventByPubkeyAndKind(
+      // Ensure relays are discovered for this pubkey first
+      await this.userRelayService.ensureRelaysForPubkey(pubkey);
+
+      // Use userRelayService to query the specific user's relays
+      const profileBadgesEvent = await this.userRelayService.getEventByPubkeyAndKind(
         pubkey,
         kinds.ProfileBadges
       );
@@ -108,11 +124,16 @@ export class BadgeService implements NostriaService {
       if (profileBadgesEvent) {
         this.parseBadgeTags(profileBadgesEvent.tags);
         await this.storage.saveEvent(profileBadgesEvent);
+      } else {
+        // Clear accepted badges if no profile badges event found
+        this.acceptedBadges.set([]);
       }
 
       this.profileBadgesEvent.set(profileBadgesEvent);
     } catch (err) {
       console.error('Error loading accepted badges:', err);
+      // Clear accepted badges on error
+      this.acceptedBadges.set([]);
     } finally {
       this.isLoadingAccepted.set(false);
     }
@@ -132,6 +153,9 @@ export class BadgeService implements NostriaService {
       }
 
       this.issuedBadges.set(badgeAwardEvents);
+
+      // Fetch recipient metadata
+      await this.fetchBadgeRecipients(badgeAwardEvents);
     } catch (err) {
       console.error('Error loading issued badges:', err);
     } finally {
@@ -143,13 +167,23 @@ export class BadgeService implements NostriaService {
   async loadBadgeDefinition(pubkey: string, slug: string) {
     let definition: NostrEvent | null | undefined = this.getBadgeDefinition(pubkey, slug);
 
+    // If not in memory, check storage
+    if (!definition) {
+      definition = await this.storage.getBadgeDefinition(pubkey, slug);
+
+      // If found in storage, add to memory
+      if (definition) {
+        this.putBadgeDefinition(definition);
+      }
+    }
+
+    // If still not found, fetch from relays
     if (!definition) {
       definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
         pubkey,
         kinds.BadgeDefinition,
         { key: 'd', value: slug }
       );
-      console.log('Badge definition not found in local storage, fetched from relay:', definition);
 
       // If the definition is not found on the user's relays, try to fetch from author's relays
       if (!definition) {
@@ -157,18 +191,27 @@ export class BadgeService implements NostriaService {
           // Ensure relays are discovered for this pubkey
           await this.userRelayService.ensureRelaysForPubkey(pubkey);
 
-          definition = await this.userRelayService.getEventByPubkeyAndKindAndTag(
-            pubkey,
-            kinds.BadgeDefinition,
-            { key: 'd', value: slug }
-          );
-          console.log(
-            'Badge definition not found on user relays, fetched from author relays:',
-            definition
-          );
+          // Check what relays were discovered
+          const authorRelays = this.userRelayService.getRelaysForPubkey(pubkey);
+
+          if (authorRelays.length === 0) {
+            this.logger.warn(`No relays found for badge author: ${pubkey.slice(0, 16)}...`);
+            // Try using global discovery relays as fallback
+            definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
+              pubkey,
+              kinds.BadgeDefinition,
+              { key: 'd', value: slug }
+            );
+          } else {
+            definition = await this.userRelayService.getEventByPubkeyAndKindAndTag(
+              pubkey,
+              kinds.BadgeDefinition,
+              { key: 'd', value: slug }
+            );
+          }
 
           if (!definition) {
-            this.logger.error('Badge definition not found on author relays.');
+            this.logger.error(`Badge definition not found for ${pubkey.slice(0, 16)}... slug: ${slug}`);
           }
         } catch (err) {
           this.logger.error('Error loading badge definition:', err);
@@ -179,7 +222,6 @@ export class BadgeService implements NostriaService {
     if (definition) {
       this.putBadgeDefinition(definition);
       await this.storage.saveEvent(definition);
-      // this.parseBadgeDefinition(definition);
     }
 
     return definition;
@@ -224,6 +266,15 @@ export class BadgeService implements NostriaService {
   async loadBadgeDefinitions(pubkey: string): Promise<void> {
     this.isLoadingDefinitions.set(true);
     try {
+      // First, load from storage
+      const cachedDefinitions = await this.storage.getBadgeDefinitionsByPubkey(pubkey);
+
+      // Add cached definitions to memory
+      for (const event of cachedDefinitions) {
+        this.putBadgeDefinition(event);
+      }
+
+      // Then fetch fresh from relays
       const badgeDefinitionEvents = await this.accountRelay.getEventsByPubkeyAndKind(
         pubkey,
         kinds.BadgeDefinition
@@ -301,6 +352,39 @@ export class BadgeService implements NostriaService {
     this.badgeIssuers.set(issuers);
   }
 
+  private async fetchBadgeRecipients(issuedBadges: NostrEvent[]): Promise<void> {
+    const recipients: Record<string, any> = {};
+
+    // Get unique recipient pubkeys from 'p' tags
+    const recipientPubkeys = new Set<string>();
+    for (const badge of issuedBadges) {
+      const pTags = badge.tags.filter(tag => tag[0] === 'p');
+      for (const pTag of pTags) {
+        if (pTag[1]) {
+          recipientPubkeys.add(pTag[1]);
+        }
+      }
+    }
+
+    // Fetch metadata for each recipient
+    for (const pubkey of recipientPubkeys) {
+      try {
+        const metadata = await this.data.getProfile(pubkey);
+
+        if (metadata) {
+          recipients[pubkey] = metadata.data;
+        } else {
+          recipients[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
+        }
+      } catch (err) {
+        console.error(`Error fetching metadata for ${pubkey}:`, err);
+        recipients[pubkey] = { name: this.utilities.getTruncatedNpub(pubkey) };
+      }
+    }
+
+    this.badgeRecipients.set(recipients);
+  }
+
   private parseBadgeTags(tags: string[][]): void {
     // Find the 'a' tags
     const aTags = tags.filter(tag => tag[0] === 'a');
@@ -329,6 +413,26 @@ export class BadgeService implements NostriaService {
 
     console.log('Parsed badge pairs:', pairs);
     this.acceptedBadges.set(pairs);
+
+    // Start loading badge definitions in the background
+    this.loadBadgeDefinitionsInBackground(pairs);
+  }
+
+  private async loadBadgeDefinitionsInBackground(
+    badges: { pubkey: string; slug: string }[]
+  ): Promise<void> {
+    console.log(`Starting background load of ${badges.length} badge definitions`);
+
+    for (const badge of badges) {
+      // Check if we already have this definition cached
+      const cached = this.getBadgeDefinition(badge.pubkey, badge.slug);
+      if (!cached) {
+        // Load in background without blocking
+        this.loadBadgeDefinition(badge.pubkey, badge.slug).catch(err => {
+          console.error(`Failed to load badge definition for ${badge.slug}:`, err);
+        });
+      }
+    }
   }
 
   isBadgeAccepted(badgeAward: NostrEvent): boolean {
@@ -406,5 +510,6 @@ export class BadgeService implements NostriaService {
     this.issuedBadges.set([]);
     this.receivedBadges.set([]);
     this.badgeIssuers.set({});
+    this.badgeRecipients.set({});
   }
 }

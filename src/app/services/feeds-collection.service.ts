@@ -2,6 +2,8 @@ import { Injectable, inject, signal, computed, effect, untracked } from '@angula
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { FeedService, FeedConfig, ColumnConfig } from './feed.service';
+import { AccountStateService } from './account-state.service';
+import { AccountLocalStateService } from './account-local-state.service';
 
 export interface ColumnDefinition {
   id: string;
@@ -10,6 +12,9 @@ export interface ColumnDefinition {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'custom';
   kinds: number[];
+  source?: 'following' | 'public' | 'custom' | 'for-you';
+  customUsers?: string[]; // Array of pubkeys for custom user selection
+  customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   relayConfig: 'account' | 'custom';
   customRelays?: string[];
   filters?: Record<string, unknown>;
@@ -35,6 +40,8 @@ export class FeedsCollectionService {
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
   private readonly feedService = inject(FeedService);
+  private readonly accountState = inject(AccountStateService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
 
   readonly ACTIVE_FEED_KEY = 'nostria-active-feed';
 
@@ -107,7 +114,12 @@ export class FeedsCollectionService {
    */
   private loadActiveFeed(): void {
     try {
-      const activeFeedId = this.localStorageService.getItem(this.ACTIVE_FEED_KEY);
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        return;
+      }
+
+      const activeFeedId = this.accountLocalState.getActiveFeed(pubkey);
       if (activeFeedId) {
         this._activeFeedId.set(activeFeedId);
       }
@@ -121,11 +133,16 @@ export class FeedsCollectionService {
    */
   private saveActiveFeed(): void {
     try {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        return;
+      }
+
       const activeFeedId = this._activeFeedId();
       if (activeFeedId) {
-        this.localStorageService.setItem(this.ACTIVE_FEED_KEY, activeFeedId);
+        this.accountLocalState.setActiveFeed(pubkey, activeFeedId);
       } else {
-        this.localStorageService.removeItem(this.ACTIVE_FEED_KEY);
+        this.accountLocalState.setActiveFeed(pubkey, null);
       }
     } catch (error) {
       this.logger.error('Error saving active feed to storage:', error);
@@ -203,8 +220,11 @@ export class FeedsCollectionService {
   resetToDefaults(): void {
     this.feedService.resetToDefaults();
 
-    // Clear active feed ID from local storage
-    this.localStorageService.removeItem(this.ACTIVE_FEED_KEY);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      // Clear active feed ID from centralized state
+      this.accountLocalState.setActiveFeed(pubkey, null);
+    }
 
     // Set first default feed as active
     const defaultFeeds = this.feeds();

@@ -1,0 +1,30 @@
+.comment-card {
+  margin-bottom: 16px;
+
+  &.nested {
+    margin-left: 32px;
+    margin-top: 8px;
+  }
+}
+
+.comment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+mat-card-header {
+  margin-bottom: 8px;
+
+  // Make the header content stretch full width
+  ::ng-deep .mat-mdc-card-header-text {
+    flex: 1;
+    width: 100%;
+  }
+
+  // Ensure event-header component stretches
+  ::ng-deep app-event-header {
+    display: block;
+    width: 100%;
+  }
+}

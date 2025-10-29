@@ -1,497 +1,404 @@
 <div class="zap-dialog" [class.confirmation-state]="currentState() === 'confirmation'">
   <!-- Input State -->
   @if (currentState() === 'input') {
-    <h2 mat-dialog-title>
-      <mat-icon>bolt</mat-icon>
-      Zap
-      @if (data.recipientName) {
-        to {{ data.recipientName }}
+  <h2 mat-dialog-title>
+    <mat-icon>bolt</mat-icon>
+    Zap
+    @if (data.recipientName) {
+    to {{ data.recipientName }}
+    }
+  </h2>
+
+  <mat-dialog-content>
+    @if (lnurlError()) {
+    <div class="error-message">
+      <mat-icon>error</mat-icon>
+      {{ lnurlError() }}
+    </div>
+    }
+
+    @if (isLoadingLnurlInfo()) {
+    <div class="loading-indicator">
+      <mat-spinner diameter="20"></mat-spinner>
+      <span>Loading payment information...</span>
+    </div>
+    }
+
+    @if (data.recipientPubkey) {
+    <div class="recipient-preview">
+      <h4>Zapping</h4>
+      <div class="recipient-info">
+        <app-user-profile [pubkey]="data.recipientPubkey"></app-user-profile>
+      </div>
+      @if (data.eventContent) {
+      <div class="event-context">
+        <mat-icon>{{ contentInfo().icon }}</mat-icon>
+        <span class="content-description">{{ contentInfo().display }}</span>
+      </div>
+      } @else if (!data.eventId) {
+      <div class="event-context">
+        <mat-icon>person</mat-icon>
+        <span>Profile zap</span>
+      </div>
       }
-    </h2>
+    </div>
+    }
 
-    <mat-dialog-content>
-      @if (lnurlError()) {
-        <div class="error-message">
-          <mat-icon>error</mat-icon>
-          {{ lnurlError() }}
-        </div>
-      }
-
-      @if (isLoadingLnurlInfo()) {
-        <div class="loading-indicator">
-          <mat-spinner diameter="20"></mat-spinner>
-          <span>Loading payment information...</span>
-        </div>
-      }
-
-      @if (data.recipientPubkey) {
-        <div class="recipient-preview">
-          <h4>Zapping</h4>
-          <div class="recipient-info">
-            <app-user-profile [pubkey]="data.recipientPubkey"></app-user-profile>
-          </div>
-          @if (data.eventContent) {
-            <div class="event-context">
-              <mat-icon>{{ contentInfo().icon }}</mat-icon>
-              <span class="content-description">{{ contentInfo().display }}</span>
-            </div>
-          } @else if (!data.eventId) {
-            <div class="event-context">
-              <mat-icon>person</mat-icon>
-              <span>Profile zap</span>
-            </div>
-          }
-        </div>
-      }
-
-      <form [formGroup]="zapForm" class="zap-form" [class.disabled]="isLoadingLnurlInfo()">
-        @if (availableWallets().length > 1) {
-          <div class="wallet-selection">
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Select Wallet</mat-label>
-              <mat-select formControlName="selectedWallet">
-                @for (wallet of availableWallets(); track wallet.id) {
-                  <mat-option [value]="wallet.id">
-                    <div class="wallet-option">
-                      <mat-icon>account_balance_wallet</mat-icon>
-                      <span class="wallet-name">{{ wallet.name }}</span>
-                      <span class="wallet-status" [class.connected]="wallet.connected">
-                        {{ wallet.connected ? 'Connected' : 'Disconnected' }}
-                      </span>
-                    </div>
-                  </mat-option>
-                }
-              </mat-select>
-              <mat-hint>Choose which wallet to use for this zap</mat-hint>
-            </mat-form-field>
-          </div>
-        }
-
-        <div class="amount-selection">
-          <h3>Select Amount</h3>
-          @if (amountLimits()) {
-            <p class="limits-info">
-              This recipient accepts {{ amountLimits()!.minSats }} -
-              {{ amountLimits()!.maxSats }} sats
-            </p>
-          } @else if (isLoadingLnurlInfo()) {
-            <p class="limits-info">Loading payment limits...</p>
-          } @else if (lnurlError()) {
-            <p class="limits-info error">Unable to load payment limits</p>
-          }
-          <div class="amount-buttons">
-            <button
-              type="button"
-              mat-raised-button
-              [class.selected]="zapForm.get('amount')?.value === 21"
-              [disabled]="!isAmountValid(21)"
-              (click)="selectAmount(21)"
-            >
-              <mat-icon>bolt</mat-icon>
-              21
-            </button>
-            <button
-              type="button"
-              mat-raised-button
-              [class.selected]="zapForm.get('amount')?.value === 210"
-              [disabled]="!isAmountValid(210)"
-              (click)="selectAmount(210)"
-            >
-              <mat-icon>bolt</mat-icon>
-              210
-            </button>
-            <button
-              type="button"
-              mat-raised-button
-              [class.selected]="zapForm.get('amount')?.value === 420"
-              [disabled]="!isAmountValid(420)"
-              (click)="selectAmount(420)"
-            >
-              <mat-icon>bolt</mat-icon>
-              420
-            </button>
-            <button
-              type="button"
-              mat-raised-button
-              [class.selected]="zapForm.get('amount')?.value === 1000"
-              [disabled]="!isAmountValid(1000)"
-              (click)="selectAmount(1000)"
-            >
-              <mat-icon>bolt</mat-icon>
-              1K
-            </button>
-            <button
-              type="button"
-              mat-raised-button
-              [class.selected]="zapForm.get('amount')?.value === 5000"
-              [disabled]="!isAmountValid(5000)"
-              (click)="selectAmount(5000)"
-            >
-              <mat-icon>bolt</mat-icon>
-              5K
-            </button>
-            <button
-              type="button"
-              mat-raised-button
-              [class.selected]="zapForm.get('amount')?.value === 10000"
-              [disabled]="!isAmountValid(10000)"
-              (click)="selectAmount(10000)"
-            >
-              <mat-icon>bolt</mat-icon>
-              10K
-            </button>
-            <button
-              type="button"
-              mat-raised-button
-              [class.selected]="zapForm.get('amount')?.value === 100000"
-              [disabled]="!isAmountValid(100000)"
-              (click)="selectAmount(100000)"
-            >
-              <mat-icon>bolt</mat-icon>
-              100K
-            </button>
-            <button
-              type="button"
-              mat-raised-button
-              [class.selected]="zapForm.get('amount')?.value === 'custom'"
-              (click)="selectAmount('custom')"
-            >
-              <mat-icon>bolt</mat-icon>
-              Custom
-            </button>
-          </div>
-        </div>
-
-        @if (zapForm.get('amount')?.value === 'custom') {
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Custom Amount (sats)</mat-label>
-            <input
-              matInput
-              formControlName="customAmount"
-              type="number"
-              [min]="amountLimits()?.minSats || 1"
-              [max]="amountLimits()?.maxSats || 1000000"
-              placeholder="Enter custom amount"
-            />
-            @if (zapForm.get('customAmount')?.hasError('required')) {
-              <mat-error>Custom amount is required</mat-error>
-            }
-            @if (zapForm.get('customAmount')?.hasError('min')) {
-              <mat-error>Amount must be at least {{ amountLimits()?.minSats || 1 }} sats</mat-error>
-            }
-            @if (zapForm.get('customAmount')?.hasError('max')) {
-              <mat-error
-                >Amount must be at most {{ amountLimits()?.maxSats || 1000000 }} sats</mat-error
-              >
-            }
-            @if (amountLimits()) {
-              <mat-hint
-                >{{ amountLimits()!.minSats }} - {{ amountLimits()!.maxSats }} sats
-                allowed</mat-hint
-              >
-            } @else {
-              <mat-hint>Loading amount limits...</mat-hint>
-            }
-          </mat-form-field>
-        }
-
+    <form [formGroup]="zapForm" class="zap-form" [class.disabled]="isLoadingLnurlInfo()">
+      @if (availableWallets().length > 1) {
+      <div class="wallet-selection">
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Message (optional)</mat-label>
-          <textarea
-            matInput
-            [maxlength]="commentLimit() || 200"
-            formControlName="message"
-            placeholder="Add a message with your zap..."
-            rows="3"
-          ></textarea>
-          @if (commentLimit() !== null) {
-            <mat-hint
-              >{{ zapForm.get('message')?.value?.length || 0 }}/{{
-                commentLimit()
-              }}
-              characters</mat-hint
-            >
-          } @else {
-            <mat-hint
-              >{{ zapForm.get('message')?.value?.length || 0 }}/200 characters (loading
-              limits...)</mat-hint
-            >
-          }
-          @if (zapForm.get('message')?.hasError('maxlength')) {
-            <mat-error>Message is too long (max {{ commentLimit() || 200 }} characters)</mat-error>
-          }
-          @if (commentLimit() === 0) {
-            <mat-hint>This recipient does not allow comments with zaps</mat-hint>
-          }
+          <mat-label>Select Wallet</mat-label>
+          <mat-select formControlName="selectedWallet">
+            @for (wallet of availableWallets(); track wallet.id) {
+            <mat-option [value]="wallet.id">
+              <div class="wallet-option">
+                <mat-icon>account_balance_wallet</mat-icon>
+                <span class="wallet-name">{{ wallet.name }}</span>
+                <span class="wallet-status" [class.connected]="wallet.connected">
+                  {{ wallet.connected ? 'Connected' : 'Disconnected' }}
+                </span>
+              </div>
+            </mat-option>
+            }
+          </mat-select>
+          <mat-hint>Choose which wallet to use for this zap</mat-hint>
         </mat-form-field>
-      </form>
-
-      @if (errorMessage()) {
-        <div class="error-message">
-          <mat-icon>error</mat-icon>
-          {{ errorMessage() }}
-        </div>
+      </div>
       }
-    </mat-dialog-content>
 
-    <mat-dialog-actions align="end">
-      <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
-      <button
-        mat-raised-button
-        color="primary"
-        (click)="proceedToConfirmation()"
-        [disabled]="isProcessing() || !zapForm.valid"
-      >
-        Continue ({{ getFinalAmount() }} sats)
-      </button>
-    </mat-dialog-actions>
+      <div class="amount-selection">
+        <h3>Select Amount</h3>
+        @if (amountLimits()) {
+        <p class="limits-info">
+          This recipient accepts {{ amountLimits()!.minSats }} -
+          {{ amountLimits()!.maxSats }} sats
+        </p>
+        } @else if (isLoadingLnurlInfo()) {
+        <p class="limits-info">Loading payment limits...</p>
+        } @else if (lnurlError()) {
+        <p class="limits-info error">Unable to load payment limits</p>
+        }
+        <div class="amount-buttons">
+          <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 21"
+            [disabled]="!isAmountValid(21)" (click)="selectAmount(21)">
+            <mat-icon>bolt</mat-icon>
+            21
+          </button>
+          <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 210"
+            [disabled]="!isAmountValid(210)" (click)="selectAmount(210)">
+            <mat-icon>bolt</mat-icon>
+            210
+          </button>
+          <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 420"
+            [disabled]="!isAmountValid(420)" (click)="selectAmount(420)">
+            <mat-icon>bolt</mat-icon>
+            420
+          </button>
+          <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 1000"
+            [disabled]="!isAmountValid(1000)" (click)="selectAmount(1000)">
+            <mat-icon>bolt</mat-icon>
+            1K
+          </button>
+          <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 5000"
+            [disabled]="!isAmountValid(5000)" (click)="selectAmount(5000)">
+            <mat-icon>bolt</mat-icon>
+            5K
+          </button>
+          <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 10000"
+            [disabled]="!isAmountValid(10000)" (click)="selectAmount(10000)">
+            <mat-icon>bolt</mat-icon>
+            10K
+          </button>
+          <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 100000"
+            [disabled]="!isAmountValid(100000)" (click)="selectAmount(100000)">
+            <mat-icon>bolt</mat-icon>
+            100K
+          </button>
+          <button type="button" mat-raised-button [class.selected]="zapForm.get('amount')?.value === 'custom'"
+            (click)="selectAmount('custom')">
+            <mat-icon>bolt</mat-icon>
+            Custom
+          </button>
+        </div>
+      </div>
+
+      @if (zapForm.get('amount')?.value === 'custom') {
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Custom Amount (sats)</mat-label>
+        <input matInput formControlName="customAmount" type="number" [min]="amountLimits()?.minSats || 1"
+          [max]="amountLimits()?.maxSats || 1000000" placeholder="Enter custom amount" />
+        @if (zapForm.get('customAmount')?.hasError('required')) {
+        <mat-error>Custom amount is required</mat-error>
+        }
+        @if (zapForm.get('customAmount')?.hasError('min')) {
+        <mat-error>Amount must be at least {{ amountLimits()?.minSats || 1 }} sats</mat-error>
+        }
+        @if (zapForm.get('customAmount')?.hasError('max')) {
+        <mat-error>Amount must be at most {{ amountLimits()?.maxSats || 1000000 }} sats</mat-error>
+        }
+        @if (amountLimits()) {
+        <mat-hint>{{ amountLimits()!.minSats }} - {{ amountLimits()!.maxSats }} sats
+          allowed</mat-hint>
+        } @else {
+        <mat-hint>Loading amount limits...</mat-hint>
+        }
+      </mat-form-field>
+      }
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Message (optional)</mat-label>
+        <textarea matInput [maxlength]="commentLimit() || 200" formControlName="message"
+          placeholder="Add a message with your zap..." rows="3" [disabled]="!commentsAllowed()"></textarea>
+        @if (commentLimit() === 0) {
+        <mat-hint>This recipient does not allow comments with zaps</mat-hint>
+        } @else if (commentLimit() !== null) {
+        <mat-hint>{{ zapForm.get('message')?.value?.length || 0 }}/{{
+          commentLimit()
+          }}
+          characters</mat-hint>
+        } @else {
+        <mat-hint>{{ zapForm.get('message')?.value?.length || 0 }}/200 characters (loading
+          limits...)</mat-hint>
+        }
+        @if (zapForm.get('message')?.hasError('maxlength')) {
+        <mat-error>Message is too long (max {{ commentLimit() || 200 }} characters)</mat-error>
+        }
+      </mat-form-field>
+    </form>
+
+    @if (errorMessage()) {
+    <div class="error-message">
+      <mat-icon>error</mat-icon>
+      {{ errorMessage() }}
+    </div>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
+    <button mat-raised-button color="primary" (click)="proceedToConfirmation()"
+      [disabled]="isProcessing() || !zapForm.valid">
+      Continue ({{ getFinalAmount() }} sats)
+    </button>
+  </mat-dialog-actions>
   }
 
   <!-- Confirmation State -->
   @if (currentState() === 'confirmation') {
-    <h2 mat-dialog-title>
-      <mat-icon>bolt</mat-icon>
-      Confirm Lightning Zap
-    </h2>
+  <h2 mat-dialog-title>
+    <mat-icon>bolt</mat-icon>
+    Confirm Lightning Zap
+  </h2>
 
-    <mat-dialog-content>
-      <div class="confirmation-content">
-        <!-- Recipient Info -->
-        <div class="section recipient-section">
-          <h3>Zapping</h3>
-          <div class="recipient-info">
-            <app-user-profile [pubkey]="data.recipientPubkey"></app-user-profile>
-          </div>
-          @if (data.eventContent) {
-            <div class="event-context">
-              <mat-icon>{{ contentInfo().icon }}</mat-icon>
-              <span class="content-description">{{ contentInfo().display }}</span>
-            </div>
-          } @else if (!data.eventId) {
-            <div class="event-context">
-              <mat-icon>person</mat-icon>
-              <span>Profile zap</span>
-            </div>
-          }
+  <mat-dialog-content>
+    <div class="confirmation-content">
+      <!-- Recipient Info -->
+      <div class="section recipient-section">
+        <h3>Zapping</h3>
+        <div class="recipient-info">
+          <app-user-profile [pubkey]="data.recipientPubkey"></app-user-profile>
         </div>
-
-        <mat-divider></mat-divider>
-
-        <!-- Amount -->
-        <div class="section amount-section">
-          <h3>Amount</h3>
-          <div class="amount-display">
-            <mat-icon>bolt</mat-icon>
-            <span class="amount">{{ formatAmount(getFinalAmount()) }}</span>
-            <span class="unit">sats</span>
-          </div>
+        @if (data.eventContent) {
+        <div class="event-context">
+          <mat-icon>{{ contentInfo().icon }}</mat-icon>
+          <span class="content-description">{{ contentInfo().display }}</span>
         </div>
-
-        @if (zapForm.get('message')?.value) {
-          <mat-divider></mat-divider>
-          <div class="section message-section">
-            <h3>Message</h3>
-            <div class="message-content">
-              <mat-icon>message</mat-icon>
-              <p>{{ zapForm.get('message')?.value }}</p>
-            </div>
-          </div>
+        } @else if (!data.eventId) {
+        <div class="event-context">
+          <mat-icon>person</mat-icon>
+          <span>Profile zap</span>
+        </div>
         }
+      </div>
 
-        <mat-divider></mat-divider>
+      <mat-divider></mat-divider>
 
-        <!-- Payment Method Selection -->
-        <div class="section payment-method-section">
-          <h3>Choose Payment Method</h3>
-
-          <div class="payment-method-buttons">
-            <button
-              mat-raised-button
-              (click)="selectPaymentMethod('nwc')"
-              [class.selected]="selectedPaymentMethod() === 'nwc'"
-            >
-              <mat-icon>account_balance_wallet</mat-icon>
-              Wallet Connect
-            </button>
-
-            <button
-              mat-raised-button
-              (click)="selectPaymentMethod('native')"
-              [class.selected]="selectedPaymentMethod() === 'native'"
-            >
-              <mat-icon>smartphone</mat-icon>
-              Lightning Wallet
-            </button>
-
-            <button
-              mat-raised-button
-              (click)="selectPaymentMethod('manual')"
-              [class.selected]="selectedPaymentMethod() === 'manual'"
-            >
-              <mat-icon>qr_code</mat-icon>
-              QR Code
-            </button>
-          </div>
-
-          <div class="payment-method-content">
-            <!-- NWC Content -->
-            @if (selectedPaymentMethod() === 'nwc') {
-              <div class="wallet-info">
-                <mat-icon>account_balance_wallet</mat-icon>
-                <span>{{ getSelectedWalletName() }}</span>
-              </div>
-              <p class="method-description">
-                Use your connected Nostr Wallet Connect (NWC) wallet to pay automatically.
-              </p>
-
-              @if (!hasNwcWallet()) {
-                <div class="no-wallet-warning">
-                  <mat-icon class="warning-icon">warning</mat-icon>
-                  <div>
-                    <p>No NWC wallet connected.</p>
-                    <p>
-                      Please add your NWC connection string on the
-                      <button mat-button color="primary" (click)="openCredentials()">
-                        Credentials
-                      </button>
-                      page.
-                    </p>
-                  </div>
-                </div>
-              }
-
-              @if (isProcessing() && selectedPaymentMethod() === 'nwc') {
-                <div class="processing-indicator">
-                  <mat-spinner diameter="20"></mat-spinner>
-                  <span>Processing payment...</span>
-                </div>
-              }
-            }
-
-            <!-- Native (Open Lightning) Content -->
-            @if (selectedPaymentMethod() === 'native') {
-              @if (invoiceUrl()) {
-                <div class="native-wallet-section">
-                  <p class="method-description">
-                    Open your mobile Lightning wallet app to pay this invoice.
-                  </p>
-                  <button
-                    mat-raised-button
-                    color="primary"
-                    (click)="openLightningWallet()"
-                    class="open-wallet-btn"
-                  >
-                    <mat-icon>open_in_new</mat-icon>
-                    Open Lightning Wallet
-                  </button>
-                  <p class="wallet-hint">
-                    If your wallet doesn't open automatically, copy the invoice manually.
-                  </p>
-                </div>
-              } @else if (isProcessing() && selectedPaymentMethod() === 'native') {
-                <div class="processing-indicator">
-                  <mat-spinner diameter="20"></mat-spinner>
-                  <span>Generating invoice...</span>
-                </div>
-              } @else {
-                <p class="method-description">
-                  Click "Generate Invoice" to create a Lightning invoice for your mobile wallet.
-                </p>
-              }
-            }
-
-            <!-- Manual (QR Code) Content -->
-            @if (selectedPaymentMethod() === 'manual') {
-              @if (invoiceUrl()) {
-                <div class="qr-code-section">
-                  <p class="method-description">
-                    Scan this QR code with any Lightning wallet to pay.
-                  </p>
-                  <div class="qr-code-container">
-                    <qr-code [qrdata]="invoiceUrl()!" [width]="200" [height]="200"></qr-code>
-                  </div>
-                  <div class="invoice-details">
-                    <p class="invoice-label">Lightning Invoice:</p>
-                    <button
-                      class="invoice-text"
-                      (click)="copyInvoice()"
-                      (keydown.enter)="copyInvoice()"
-                      (keydown.space)="copyInvoice()"
-                      type="button"
-                      aria-label="Copy invoice to clipboard"
-                    >
-                      <span class="invoice-value">{{ truncateInvoice(invoiceUrl()!) }}</span>
-                      <mat-icon class="copy-icon">content_copy</mat-icon>
-                    </button>
-                  </div>
-                </div>
-              } @else if (isProcessing() && selectedPaymentMethod() === 'manual') {
-                <div class="processing-indicator">
-                  <mat-spinner diameter="20"></mat-spinner>
-                  <span>Generating QR code...</span>
-                </div>
-              } @else {
-                <p class="method-description">
-                  Click "Generate QR Code" to create a QR code for manual payment.
-                </p>
-              }
-            }
-          </div>
+      <!-- Amount -->
+      <div class="section amount-section">
+        <h3>Amount</h3>
+        <div class="amount-display">
+          <mat-icon>bolt</mat-icon>
+          <span class="amount">{{ formatAmount(getFinalAmount()) }}</span>
+          <span class="unit">sats</span>
         </div>
       </div>
-    </mat-dialog-content>
 
-    <mat-dialog-actions>
-      <button mat-button (click)="backToInput()" [disabled]="isProcessing()">Back</button>
-
-      @if (selectedPaymentMethod() === 'nwc') {
-        <button
-          mat-flat-button
-          color="primary"
-          (click)="confirmNwcPayment()"
-          class="confirm-button"
-          [disabled]="isProcessing() || !hasNwcWallet()"
-        >
-          @if (isProcessing()) {
-            <ng-container>
-              <mat-spinner diameter="18"></mat-spinner>
-              Processing...
-            </ng-container>
-          } @else {
-            <ng-container>
-              <mat-icon>bolt</mat-icon>
-              Send Zap
-            </ng-container>
-          }
-        </button>
-      } @else if (selectedPaymentMethod() === 'native' || selectedPaymentMethod() === 'manual') {
-        @if (!invoiceUrl()) {
-          <button
-            mat-flat-button
-            color="primary"
-            (click)="generateInvoice()"
-            class="confirm-button"
-            [disabled]="isProcessing()"
-          >
-            @if (isProcessing()) {
-              <ng-container>
-                <mat-spinner diameter="18"></mat-spinner>
-                Generating...
-              </ng-container>
-            } @else {
-              <ng-container>
-                <mat-icon>receipt</mat-icon>
-                {{ selectedPaymentMethod() === 'native' ? 'Generate Invoice' : 'Generate QR Code' }}
-              </ng-container>
-            }
-          </button>
-        } @else {
-          <button mat-flat-button color="accent" (click)="markAsPaid()" class="confirm-button">
-            <mat-icon>check</mat-icon>
-            I've Paid
-          </button>
-        }
+      @if (zapForm.get('message')?.value) {
+      <mat-divider></mat-divider>
+      <div class="section message-section">
+        <h3>Message</h3>
+        <div class="message-content">
+          <mat-icon>message</mat-icon>
+          <p>{{ zapForm.get('message')?.value }}</p>
+        </div>
+      </div>
       }
-    </mat-dialog-actions>
+
+      <mat-divider></mat-divider>
+
+      <!-- Payment Method Selection -->
+      <div class="section payment-method-section">
+        <h3>Choose Payment Method</h3>
+
+        <div class="payment-method-buttons">
+          <button mat-raised-button (click)="selectPaymentMethod('nwc')"
+            [class.selected]="selectedPaymentMethod() === 'nwc'">
+            <mat-icon>account_balance_wallet</mat-icon>
+            Wallet Connect
+          </button>
+
+          <button mat-raised-button (click)="selectPaymentMethod('native')"
+            [class.selected]="selectedPaymentMethod() === 'native'">
+            <mat-icon>smartphone</mat-icon>
+            Lightning Wallet
+          </button>
+
+          <button mat-raised-button (click)="selectPaymentMethod('manual')"
+            [class.selected]="selectedPaymentMethod() === 'manual'">
+            <mat-icon>qr_code</mat-icon>
+            QR Code
+          </button>
+        </div>
+
+        <div class="payment-method-content">
+          <!-- NWC Content -->
+          @if (selectedPaymentMethod() === 'nwc') {
+          <div class="wallet-info">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <span>{{ getSelectedWalletName() }}</span>
+          </div>
+          <p class="method-description">
+            Use your connected Nostr Wallet Connect (NWC) wallet to pay automatically.
+          </p>
+
+          @if (!hasNwcWallet()) {
+          <div class="no-wallet-warning">
+            <mat-icon class="warning-icon">warning</mat-icon>
+            <div>
+              <p>No NWC wallet connected.</p>
+              <p>
+                Please add your NWC connection string on the
+                <button mat-button color="primary" (click)="openCredentials()">
+                  Credentials
+                </button>
+                page.
+              </p>
+            </div>
+          </div>
+          }
+
+          @if (isProcessing() && selectedPaymentMethod() === 'nwc') {
+          <div class="processing-indicator">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Processing payment...</span>
+          </div>
+          }
+          }
+
+          <!-- Native (Open Lightning) Content -->
+          @if (selectedPaymentMethod() === 'native') {
+          @if (invoiceUrl()) {
+          <div class="native-wallet-section">
+            <p class="method-description">
+              Open your mobile Lightning wallet app to pay this invoice.
+            </p>
+            <button mat-raised-button color="primary" (click)="openLightningWallet()" class="open-wallet-btn">
+              <mat-icon>open_in_new</mat-icon>
+              Open Lightning Wallet
+            </button>
+            <p class="wallet-hint">
+              If your wallet doesn't open automatically, copy the invoice manually.
+            </p>
+          </div>
+          } @else if (isProcessing() && selectedPaymentMethod() === 'native') {
+          <div class="processing-indicator">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Generating invoice...</span>
+          </div>
+          } @else {
+          <p class="method-description">
+            Click "Generate Invoice" to create a Lightning invoice for your mobile wallet.
+          </p>
+          }
+          }
+
+          <!-- Manual (QR Code) Content -->
+          @if (selectedPaymentMethod() === 'manual') {
+          @if (invoiceUrl()) {
+          <div class="qr-code-section">
+            <p class="method-description">
+              Scan this QR code with any Lightning wallet to pay.
+            </p>
+            <div class="qr-code-container">
+              <qr-code [qrdata]="invoiceUrl()!" [width]="200" [height]="200"></qr-code>
+            </div>
+            <div class="invoice-details">
+              <p class="invoice-label">Lightning Invoice:</p>
+              <button class="invoice-text" (click)="copyInvoice()" (keydown.enter)="copyInvoice()"
+                (keydown.space)="copyInvoice()" type="button" aria-label="Copy invoice to clipboard">
+                <span class="invoice-value">{{ truncateInvoice(invoiceUrl()!) }}</span>
+                <mat-icon class="copy-icon">content_copy</mat-icon>
+              </button>
+            </div>
+          </div>
+          } @else if (isProcessing() && selectedPaymentMethod() === 'manual') {
+          <div class="processing-indicator">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Generating QR code...</span>
+          </div>
+          } @else {
+          <p class="method-description">
+            Click "Generate QR Code" to create a QR code for manual payment.
+          </p>
+          }
+          }
+        </div>
+      </div>
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions>
+    <button mat-button (click)="backToInput()" [disabled]="isProcessing()">Back</button>
+
+    @if (selectedPaymentMethod() === 'nwc') {
+    <button mat-flat-button color="primary" (click)="confirmNwcPayment()" class="confirm-button"
+      [disabled]="isProcessing() || !hasNwcWallet()">
+      @if (isProcessing()) {
+      <ng-container>
+        <mat-spinner diameter="18"></mat-spinner>
+        Processing...
+      </ng-container>
+      } @else {
+      <ng-container>
+        <mat-icon>bolt</mat-icon>
+        Send Zap
+      </ng-container>
+      }
+    </button>
+    } @else if (selectedPaymentMethod() === 'native' || selectedPaymentMethod() === 'manual') {
+    @if (!invoiceUrl()) {
+    <button mat-flat-button color="primary" (click)="generateInvoice()" class="confirm-button"
+      [disabled]="isProcessing()">
+      @if (isProcessing()) {
+      <ng-container>
+        <mat-spinner diameter="18"></mat-spinner>
+        Generating...
+      </ng-container>
+      } @else {
+      <ng-container>
+        <mat-icon>receipt</mat-icon>
+        {{ selectedPaymentMethod() === 'native' ? 'Generate Invoice' : 'Generate QR Code' }}
+      </ng-container>
+      }
+    </button>
+    } @else {
+    <button mat-flat-button color="accent" (click)="markAsPaid()" class="confirm-button">
+      <mat-icon>check</mat-icon>
+      I've Paid
+    </button>
+    }
+    }
+  </mat-dialog-actions>
   }
 </div>

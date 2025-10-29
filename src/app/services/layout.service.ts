@@ -580,6 +580,7 @@ export class LayoutService implements OnDestroy {
     const dialogRef = this.dialog.open(LoginDialogComponent, {
       // width: '400px',
       // maxWidth: '95vw',
+      panelClass: 'responsive-dialog',
       disableClose: true,
       // panelClass: 'welcome-dialog'
     });
@@ -603,6 +604,7 @@ export class LayoutService implements OnDestroy {
   /**
    * Opens the login dialog with specific step and blur backdrop
    * @param step - The specific login step to navigate to (optional)
+   * @returns Promise that resolves when the dialog closes
    */
   async showLoginDialogWithStep(step?: string): Promise<void> {
     this.logger.debug('showLoginDialogWithStep called', { step });
@@ -631,10 +633,13 @@ export class LayoutService implements OnDestroy {
       });
     }
 
-    // Handle dialog close
-    dialogRef.afterClosed().subscribe(async () => {
-      this.logger.debug('Login dialog closed');
-      document.body.classList.remove('blur-backdrop');
+    // Return a promise that resolves when the dialog closes
+    return new Promise<void>((resolve) => {
+      dialogRef.afterClosed().subscribe(async () => {
+        this.logger.debug('Login dialog closed');
+        document.body.classList.remove('blur-backdrop');
+        resolve();
+      });
     });
   }
 
@@ -1131,7 +1136,7 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-  shareProfileUrl(npub: string | null | undefined, username?: string | null): void {
+  copyProfileUrl(npub: string | null | undefined, username?: string | null): void {
     if (!npub && !username) {
       return;
     }

@@ -291,11 +291,17 @@
     @if (currentStep() === LoginStep.NSEC_LOGIN) {
     <p class="dialog-subtitle">Enter your nsec private key:</p>
 
-    <mat-form-field appearance="fill" class="full-width">
-      <mat-label>Private Key (nsec...)</mat-label>
-      <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1..." autocomplete="off" autocorrect="off"
-        spellcheck="false" />
-    </mat-form-field>
+    <div class="nsec-input-container">
+      <mat-form-field appearance="fill" class="nsec-input">
+        <mat-label>Private Key (nsec...)</mat-label>
+        <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1..." autocomplete="off"
+          autocorrect="off" spellcheck="false" />
+      </mat-form-field>
+
+      <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNsec()" matTooltip="Scan QR code">
+        <mat-icon>qr_code_scanner</mat-icon>
+      </button>
+    </div>
 
     <div class="file-upload-section">
       <p>Or load from backup file:</p>

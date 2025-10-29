@@ -17,10 +17,13 @@
   flex-direction: row;
   gap: 1.5rem; // Space between the two divs
 
-  // First div should always be 168px width
+  // First div (avatar wrapper) should always be 168px width
   >div:first-child {
     flex: 0 0 168px; // Don't grow or shrink, always 168px
     width: 168px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
   }
 
   // Second div should take remaining space
@@ -49,6 +52,18 @@
     align-items: center;
     top: -60px;
     position: relative;
+
+    // Avatar wrapper should maintain width and show avatar + badges horizontally
+    >div:first-child {
+      flex-direction: row;
+      align-items: center;
+      /* Center badges vertically with avatar */
+      gap: 12px;
+      width: auto;
+      /* Allow wrapper to expand for badges */
+      flex: 0 0 auto;
+      /* Don't grow or shrink based on content */
+    }
   }
 
   &.compact {
@@ -104,6 +119,8 @@
   justify-content: center;
   align-items: center;
   z-index: 2;
+  flex-shrink: 0;
+  /* Prevent avatar from shrinking */
 
   &.clickable {
     cursor: pointer;
@@ -119,6 +136,8 @@
 
   .mobile & {
     top: 0px;
+    flex-shrink: 0;
+    /* Ensure avatar doesn't shrink on mobile */
   }
 
   .compact & {
@@ -374,6 +393,83 @@
   align-items: center;
 }
 
+.profile-badges {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  /* Remove gap to allow stacking */
+  flex-wrap: nowrap;
+  /* Prevent wrapping */
+  justify-content: center;
+  margin-top: -12px;
+  /* Pull badges closer to avatar with negative margin */
+
+  // Mobile: show inline to the right of avatar
+  .mobile & {
+    margin-top: 0;
+    margin-left: 8px;
+    /* Space from avatar on mobile */
+    justify-content: flex-start;
+    flex-direction: row;
+    /* Ensure horizontal on mobile */
+    flex-shrink: 0;
+    /* Prevent badges from shrinking */
+  }
+
+  .badge-item {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-sys-surface);
+    border: 2px solid var(--mat-sys-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s ease, box-shadow 0.2s ease, z-index 0s;
+    cursor: pointer;
+    position: relative;
+    z-index: 1;
+    text-decoration: none;
+
+    /* Stack badges with overlap */
+    &:not(:first-child) {
+      margin-left: -12px;
+      /* Negative margin to create overlap */
+    }
+
+    &:hover {
+      transform: scale(1.15) translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      z-index: 10;
+      /* Bring to front on hover */
+    }
+
+    .badge-image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .badge-placeholder,
+    .badge-loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+  }
+}
+
 .inline-error {
   display: inline-flex;
   align-items: center;
@@ -452,10 +548,10 @@
     transition: all 0.3s ease;
   }
 
-  .bio-expand-btn {
-    // margin-top: 0.5rem;
-    // color: var(--mat-sys-primary);
-    // min-width: auto;
-    // padding: 0;
-  }
+  // .bio-expand-btn {
+  //   margin-top: 0.5rem;
+  //   color: var(--mat-sys-primary);
+  //   min-width: auto;
+  //   padding: 0;
+  // }
 }
