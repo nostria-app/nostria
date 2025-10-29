@@ -71,6 +71,7 @@ import { FeedsCollectionService } from './services/feeds-collection.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
 import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
+import { RouteDataService } from './services/route-data.service';
 
 interface NavItem {
   path: string;
@@ -148,6 +149,7 @@ export class App implements OnInit {
   snackBar = inject(MatSnackBar);
   eventService = inject(EventService);
   feedsCollectionService = inject(FeedsCollectionService);
+  routeDataService = inject(RouteDataService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -938,6 +940,14 @@ export class App implements OnInit {
       disableClose: true,
       panelClass: 'welcome-dialog',
     });
+  }
+
+  /**
+   * Navigate to home and clear navigation history
+   */
+  navigateToHome(): void {
+    this.routeDataService.clearHistory();
+    this.router.navigate(['/']);
   }
 
   exitFullscreen(): void {

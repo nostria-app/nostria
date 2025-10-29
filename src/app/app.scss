@@ -106,6 +106,27 @@ mat-sidenav-content {
   display: inline-flex;
   align-items: center;
   cursor: pointer;
+
+  .title-button {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+    outline: none;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    &:focus-visible {
+      outline: 2px solid currentColor;
+      outline-offset: 2px;
+      border-radius: 2px;
+    }
+  }
 }
 
 .content-wrapper {

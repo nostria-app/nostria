@@ -108,6 +108,12 @@ export class RouteDataService implements OnDestroy {
   private updateNavigationHistory(event: NavigationEnd) {
     const currentHistory = this.navigationHistory();
 
+    // Clear history when navigating to root/home
+    if (event.url === '/' || event.url.startsWith('/?')) {
+      this.clearHistory();
+      return;
+    }
+
     // Get title from current route configuration first, then fallback to title service
     const routeTitle = this.getRouteTitle(event.url);
     const currentTitle = routeTitle || this.titleService.getTitle() || 'Page';
@@ -382,6 +388,13 @@ export class RouteDataService implements OnDestroy {
   // Helper method to check if we can go back using browser history
   private canUseBrowserBack(): boolean {
     return this.canUseBrowserHistory() && this.navigationHistory().length > 1;
+  }
+
+  // Clear navigation history (used when navigating to home/root)
+  clearHistory(): void {
+    this.navigationHistory.set([]);
+    // Reinitialize with current route
+    setTimeout(() => this.initializeHistory(), 0);
   }
 
   // Cleanup method for destroying the service
