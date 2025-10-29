@@ -539,30 +539,33 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         eventToSign = this.nostrService.createEvent(1, this.content().trim(), tags);
       }
 
+      // Use the centralized publishing service which handles relay distribution
+      // This ensures replies, quotes, and mentions are published to all relevant relays
+      const success = await this.nostrService.signAndPublish(eventToSign);
+
+      if (!success) {
+        throw new Error('Failed to publish event');
+      }
+
+      // Get the signed event for navigation (we need the actual event with id)
       const signedEvent = await this.nostrService.signEvent(eventToSign);
 
-      if (signedEvent) {
-        await this.accountRelay.publish(signedEvent);
+      // Clear auto-draft after successful publish
+      this.clearAutoDraft();
 
-        // Clear auto-draft after successful publish
-        this.clearAutoDraft();
+      this.snackBar.open('Note published successfully!', 'Close', {
+        duration: 3000,
+      });
+      this.dialogRef.close({ published: true, event: signedEvent });
 
-        this.snackBar.open('Note published successfully!', 'Close', {
-          duration: 3000,
-        });
-        this.dialogRef.close({ published: true, event: signedEvent });
-
-        // We don't do "note" much, we want URLs that embeds the autor.
-        // const note = nip19.noteEncode(signedEvent.id);
-        // this.router.navigate(['/e', note]); // Navigate to the published event
-        const nevent = nip19.neventEncode({
-          id: signedEvent.id,
-          author: signedEvent.pubkey,
-        });
-        this.router.navigate(['/e', nevent], { state: { event: signedEvent } }); // Navigate to the published event
-      } else {
-        throw new Error('Failed to sign event');
-      }
+      // We don't do "note" much, we want URLs that embeds the autor.
+      // const note = nip19.noteEncode(signedEvent.id);
+      // this.router.navigate(['/e', note]); // Navigate to the published event
+      const nevent = nip19.neventEncode({
+        id: signedEvent.id,
+        author: signedEvent.pubkey,
+      });
+      this.router.navigate(['/e', nevent], { state: { event: signedEvent } }); // Navigate to the published event
     } catch (error) {
       console.error('Error publishing note:', error);
       this.snackBar.open('Failed to publish note. Please try again.', 'Close', {
@@ -637,6 +640,13 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     if (this.data?.quote) {
       const relay = ''; // TODO: provide relay for the quoted note
       tags.push(['q', this.data.quote.id, relay, this.data.quote.pubkey]);
+
+      // According to NIP-18, also add a p-tag for the quoted author
+      // This ensures proper notifications
+      const existingPubkeys = tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
+      if (!existingPubkeys.includes(this.data.quote.pubkey)) {
+        tags.push(['p', this.data.quote.pubkey]);
+      }
     }
 
     // Add mention tags (avoid duplicates with existing p tags)

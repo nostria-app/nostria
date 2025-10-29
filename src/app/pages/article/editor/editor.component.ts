@@ -637,12 +637,15 @@ export class EditorComponent implements OnInit, OnDestroy {
         throw new Error('Failed to create event');
       }
 
-      // Sign the event
+      // Use the centralized publishing service which handles relay distribution
+      // This ensures articles with mentions are published to all mentioned users' relays
+      const success = await this.nostrService.signAndPublish(event);
+      if (!success) {
+        throw new Error('Failed to publish event');
+      }
+
+      // Get signed event for navigation
       const signedEvent = await this.nostrService.signEvent(event);
-      if (!signedEvent) {
-        throw new Error('Failed to sign event');
-      } // Publish to relays
-      await this.accountRelay.publish(signedEvent);
 
       const action = kind === 30024 ? 'Draft saved' : 'Article published';
       this.snackBar.open(`${action} successfully`, 'Close', { duration: 3000 });
