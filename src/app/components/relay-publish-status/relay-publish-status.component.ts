@@ -1,4 +1,5 @@
 import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,7 +14,6 @@ import { RelayPublishingNotification, RelayPublishPromise } from '../../services
 
 @Component({
   selector: 'app-relay-publish-status',
-  standalone: true,
   imports: [
     MatCardModule,
     MatButtonModule,
@@ -23,6 +23,7 @@ import { RelayPublishingNotification, RelayPublishPromise } from '../../services
     MatChipsModule,
     MatTooltipModule,
     RouterModule,
+    DecimalPipe,
   ],
   templateUrl: './relay-publish-status.component.html',
   styleUrls: ['./relay-publish-status.component.scss'],
@@ -70,5 +71,14 @@ export class RelayPublishStatusComponent {
 
   trackByRelayUrl(index: number, item: RelayPublishPromise): string {
     return item.relayUrl;
+  }
+
+  getErrorMessage(error: unknown): string {
+    if (!error) return 'Unknown error';
+    if (typeof error === 'string') return error;
+    if (error && typeof error === 'object' && 'message' in error) {
+      return String(error.message);
+    }
+    return 'Failed to publish';
   }
 }
