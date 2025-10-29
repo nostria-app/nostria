@@ -394,10 +394,13 @@ export class FeedService {
 
     // Build filter based on column configuration
     if (column.filters) {
+      // Exclude powMinDifficulty from relay filter since it's a client-side filter
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { powMinDifficulty, ...relayFilters } = column.filters;
       item.filter = {
         limit: 6,
         kinds: column.kinds,
-        ...column.filters,
+        ...relayFilters,
       };
     } else {
       item.filter = {
