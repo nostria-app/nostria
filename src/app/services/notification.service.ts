@@ -196,10 +196,11 @@ export class NotificationService {
         `Persisting notification ${notification.id} with recipientPubkey: ${notification.recipientPubkey || 'undefined'}`
       );
 
-      // If this is a relay publishing notification, strip out the promise objects
-      // as they cannot be serialized to IndexedDB
+      // Strip out non-serializable data before storing
       let notificationToStore = notification;
+
       if (notification.type === NotificationType.RELAY_PUBLISHING) {
+        // If this is a relay publishing notification, strip out the promise objects
         const relayNotification = notification as RelayPublishingNotification;
         notificationToStore = {
           ...relayNotification,
@@ -210,6 +211,11 @@ export class NotificationService {
             // Explicitly exclude the promise property - it cannot be cloned for IndexedDB
           })),
         } as RelayPublishingNotification;
+      } else if ('action' in notification && notification.action) {
+        // Strip out callback functions from action property
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { action, ...notificationWithoutAction } = notification;
+        notificationToStore = notificationWithoutAction;
       }
 
       await this.storage.saveNotification(notificationToStore);
