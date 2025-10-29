@@ -30,6 +30,7 @@ export interface FeedItem {
   column: ColumnConfig;
   events: WritableSignal<Event[]>;
   filter: {
+    ids?: string[];
     kinds?: number[];
     authors?: string[];
     '#e'?: string[];
@@ -251,20 +252,12 @@ export class FeedService {
   /**
    * Check if an event meets the minimum PoW difficulty requirement
    */
-  private meetsPoWRequirement(event: Event, minDifficulty: number): boolean {
-    if (minDifficulty === 0) {
-      return true; // No filter applied
-    }
-
-    // Check for nonce tag
-    const nonceTag = event.tags.find(tag => tag[0] === 'nonce');
-    if (!nonceTag) {
-      return false; // No PoW, doesn't meet requirement
-    }
-
-    // Calculate actual difficulty from event ID
-    const actualDifficulty = this.powService.countLeadingZeroBits(event.id);
-    return actualDifficulty >= minDifficulty;
+  /**
+   * Generate ID prefixes for filtering by PoW difficulty
+   * @deprecated PoW filtering removed - nostr-tools no longer supports prefix filtering
+   */
+  private getPrefixesForDifficulty(_difficulty: number): string[] {
+    return [];
   }
 
   // Public getter to expose reactive feed data map for components
@@ -332,6 +325,12 @@ export class FeedService {
   async setActiveFeed(feedId: string | null): Promise<void> {
     const previousActiveFeedId = this._activeFeedId();
 
+    // If same feed is already active, do nothing
+    if (previousActiveFeedId === feedId) {
+      this.logger.debug(`Feed ${feedId} is already active, skipping resubscribe`);
+      return;
+    }
+
     // Unsubscribe from previous active feed
     if (previousActiveFeedId) {
       this.unsubscribeFromFeed(previousActiveFeedId);
@@ -394,13 +393,10 @@ export class FeedService {
 
     // Build filter based on column configuration
     if (column.filters) {
-      // Exclude powMinDifficulty from relay filter since it's a client-side filter
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { powMinDifficulty, ...relayFilters } = column.filters;
       item.filter = {
         limit: 6,
         kinds: column.kinds,
-        ...relayFilters,
+        ...column.filters,
       };
     } else {
       item.filter = {
@@ -411,12 +407,16 @@ export class FeedService {
 
     // If the source is following, load only from following list (strict)
     if (column.source === 'following') {
+      console.log(`📍 Loading FOLLOWING feed for column ${column.id}`);
       await this.loadFollowingStrictFeed(item);
     } else if (column.source === 'for-you') {
+      console.log(`📍 Loading FOR-YOU feed for column ${column.id}`);
       await this.loadForYouFeed(item);
     } else if (column.source === 'custom') {
+      console.log(`📍 Loading CUSTOM feed for column ${column.id}`);
       await this.loadCustomFeed(item);
     } else {
+      console.log(`📍 Loading GLOBAL/OTHER feed for column ${column.id}, source:`, column.source);
       // Choose relay service based on column.relayConfig
       let relayService: AccountRelayService | UserRelayService;
 
@@ -437,23 +437,24 @@ export class FeedService {
         relayService = this.accountRelay;
       }
 
-      // Get PoW minimum difficulty filter if set
-      const powMinDifficulty = (column.filters?.['powMinDifficulty'] as number) || 0;
+      console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
+      console.log(`🚀 Using relay service:`, relayService.constructor.name);
 
       // Subscribe to relay events using the selected relay service
       let sub: { unsubscribe: () => void } | { close: () => void } | null;
       if (relayService instanceof UserRelayService) {
+        console.log(`🚀 Using UserRelayService.subscribe`);
         // UserRelayService requires pubkey parameter
         sub = await relayService.subscribe(this.accountState.pubkey(), item.filter, (event: Event) => {
+          console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
+
           // Filter out live events that are muted.
           if (this.accountState.muted(event)) {
+            console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
 
-          // Apply PoW filter if configured
-          if (!this.meetsPoWRequirement(event, powMinDifficulty)) {
-            return;
-          }
+          // Note: PoW filtering is done relay-side via ids prefix filter, no client-side check needed
 
           // Add event and maintain chronological order (newest first)
           item.events.update((events: Event[]) => {
@@ -463,17 +464,18 @@ export class FeedService {
           this.logger.debug(`Column event received for ${column.id}:`, event);
         }) as { unsubscribe: () => void } | { close: () => void } | null;
       } else {
+        console.log(`🚀 Using AccountRelayService.subscribe`);
         // AccountRelayService uses the old signature
         sub = relayService.subscribe(item.filter, (event: Event) => {
+          console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
+
           // Filter out live events that are muted.
           if (this.accountState.muted(event)) {
+            console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
 
-          // Apply PoW filter if configured
-          if (!this.meetsPoWRequirement(event, powMinDifficulty)) {
-            return;
-          }
+          // Note: PoW filtering is done relay-side via ids prefix filter, no client-side check needed
 
           // Add event and maintain chronological order (newest first)
           item.events.update((events: Event[]) => {
@@ -485,6 +487,7 @@ export class FeedService {
       }
 
       item.subscription = sub;
+      console.log(`✅ Subscription created and stored:`, sub ? 'YES' : 'NO');
     }
 
     this.data.set(column.id, item);
@@ -773,13 +776,13 @@ export class FeedService {
         processedUsers++;
 
         // Update UI incrementally every time we get events from a user
-        this.updateFeedIncremental(userEventsMap, feedData, processedUsers, totalUsers, powMinDifficulty);
+        this.updateFeedIncremental(userEventsMap, feedData, processedUsers, totalUsers);
       } catch (error) {
         this.logger.error(`Error fetching events for user ${pubkey}:`, error);
         processedUsers++;
 
         // Still update UI even if this user failed
-        this.updateFeedIncremental(userEventsMap, feedData, processedUsers, totalUsers, powMinDifficulty);
+        this.updateFeedIncremental(userEventsMap, feedData, processedUsers, totalUsers);
       }
     });
 
@@ -787,7 +790,7 @@ export class FeedService {
     await Promise.all(fetchPromises);
 
     // Final update to ensure everything is properly sorted
-    this.finalizeIncrementalFeed(userEventsMap, feedData, powMinDifficulty);
+    this.finalizeIncrementalFeed(userEventsMap, feedData);
   }
 
   /**
@@ -798,15 +801,15 @@ export class FeedService {
     feedData: FeedItem,
     processedUsers: number,
     totalUsers: number,
-    powMinDifficulty = 0
+
   ) {
     // Update UI immediately if we have events from any user
     // if (userEventsMap.size === 0) {
     //   return;
     // }
 
-    // Aggregate current events with PoW filter
-    const currentEvents = this.aggregateAndSortEvents(userEventsMap, powMinDifficulty);
+    // Aggregate current events
+    const currentEvents = this.aggregateAndSortEvents(userEventsMap);
 
     if (currentEvents.length > 0) {
       // Update the feed with current events
@@ -824,9 +827,9 @@ export class FeedService {
   /**
    * Finalize the incremental feed with a final sort and cleanup
    */
-  private finalizeIncrementalFeed(userEventsMap: Map<string, Event[]>, feedData: FeedItem, powMinDifficulty = 0) {
+  private finalizeIncrementalFeed(userEventsMap: Map<string, Event[]>, feedData: FeedItem,) {
     // Final aggregation and sort with PoW filter
-    const finalEvents = this.aggregateAndSortEvents(userEventsMap, powMinDifficulty);
+    const finalEvents = this.aggregateAndSortEvents(userEventsMap);
 
     // Update feed data with final aggregated events
     feedData.events.set(finalEvents);
@@ -845,7 +848,7 @@ export class FeedService {
    * Aggregate and sort events ensuring diversity and recency
    * Optionally filters by minimum PoW difficulty
    */
-  private aggregateAndSortEvents(userEventsMap: Map<string, Event[]>, powMinDifficulty = 0): Event[] {
+  private aggregateAndSortEvents(userEventsMap: Map<string, Event[]>): Event[] {
     const result: Event[] = [];
     const usedUsers = new Set<string>();
 
@@ -853,11 +856,8 @@ export class FeedService {
     for (const [pubkey, events] of userEventsMap) {
       if (events.length > 0) {
         const event = events[0]; // Most recent event from this user
-        // Apply PoW filter
-        if (this.meetsPoWRequirement(event, powMinDifficulty)) {
-          result.push(event);
-          usedUsers.add(pubkey);
-        }
+        result.push(event);
+        usedUsers.add(pubkey);
       }
     }
 
@@ -865,10 +865,7 @@ export class FeedService {
     for (const [, events] of userEventsMap) {
       for (let i = 1; i < events.length; i++) {
         const event = events[i];
-        // Apply PoW filter
-        if (this.meetsPoWRequirement(event, powMinDifficulty)) {
-          result.push(event);
-        }
+        result.push(event);
       }
     }
 
@@ -1010,9 +1007,6 @@ export class FeedService {
     const eventsPerUser = 3; // Reduced from 5 to 3 for better performance
     const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days for older content
 
-    // Get PoW minimum difficulty filter if set
-    const powMinDifficulty = (feedData.column.filters?.['powMinDifficulty'] as number) || 0;
-
     const userEventsMap = new Map<string, Event[]>();
     let processedUsers = 0;
     const totalUsers = pubkeys.length;
@@ -1051,8 +1045,7 @@ export class FeedService {
           feedData,
           existingEvents,
           processedUsers,
-          totalUsers,
-          powMinDifficulty
+          totalUsers
         );
       } catch (error) {
         this.logger.error(`Error fetching older events for user ${pubkey}:`, error);
@@ -1064,8 +1057,7 @@ export class FeedService {
           feedData,
           existingEvents,
           processedUsers,
-          totalUsers,
-          powMinDifficulty
+          totalUsers
         );
       }
     });
@@ -1074,7 +1066,7 @@ export class FeedService {
     await Promise.all(fetchPromises);
 
     // Final update for pagination
-    this.finalizePaginationIncremental(userEventsMap, feedData, existingEvents, powMinDifficulty);
+    this.finalizePaginationIncremental(userEventsMap, feedData, existingEvents);
   }
 
   /**
@@ -1085,8 +1077,7 @@ export class FeedService {
     feedData: FeedItem,
     existingEvents: Event[],
     processedUsers: number,
-    totalUsers: number,
-    powMinDifficulty = 0
+    totalUsers: number
   ) {
     // Only update UI if we have events and either:
     // 1. We've processed at least 2 users (get some initial content quickly)
@@ -1096,7 +1087,7 @@ export class FeedService {
     }
 
     // Aggregate current older events with PoW filter
-    const olderEvents = this.aggregateAndSortEvents(userEventsMap, powMinDifficulty);
+    const olderEvents = this.aggregateAndSortEvents(userEventsMap);
 
     if (olderEvents.length > 0) {
       // Append to existing events
@@ -1119,10 +1110,10 @@ export class FeedService {
     userEventsMap: Map<string, Event[]>,
     feedData: FeedItem,
     existingEvents: Event[],
-    powMinDifficulty = 0
+
   ) {
     // Final aggregation and sort of older events with PoW filter
-    const finalOlderEvents = this.aggregateAndSortEvents(userEventsMap, powMinDifficulty);
+    const finalOlderEvents = this.aggregateAndSortEvents(userEventsMap);
 
     // Append to existing events if we have any
     if (finalOlderEvents.length > 0) {
@@ -1382,9 +1373,6 @@ export class FeedService {
     const newEvents: Event[] = [];
     const column = feedData.column;
 
-    // Get PoW minimum difficulty filter if set
-    const powMinDifficulty = (column.filters?.['powMinDifficulty'] as number) || 0;
-
     // Fetch latest events from each user since the last check
     const fetchPromises = pubkeys.map(async pubkey => {
       try {
@@ -1399,12 +1387,7 @@ export class FeedService {
           { timeout: 2500 }
         );
 
-        // Filter by PoW if needed
-        const filteredEvents = powMinDifficulty > 0
-          ? events.filter(event => this.meetsPoWRequirement(event, powMinDifficulty))
-          : events;
-
-        return filteredEvents;
+        return events;
       } catch (error) {
         this.logger.error(`Error fetching new events for user ${pubkey}:`, error);
         return [];
@@ -1916,11 +1899,24 @@ export class FeedService {
 
     const column = columnData.column;
     console.log(`📊 Column found: ${column.label}, unsubscribing and resubscribing...`);
+    console.log(`📊 Column filters BEFORE refresh:`, column.filters);
+    console.log(`📊 Column powMinDifficulty:`, column.filters?.['powMinDifficulty']);
 
-    // Unsubscribe from the column
+    // Unsubscribe from the column (this removes it from data map)
     this.unsubscribeFromColumn(columnId);
 
-    // Resubscribe to the column
+    // Verify the column is fully removed
+    if (this.data.has(columnId)) {
+      console.warn(`⚠️ Column ${columnId} still in data map after unsubscribe, forcing removal`);
+      this.data.delete(columnId);
+      this._feedData.update(map => {
+        const newMap = new Map(map);
+        newMap.delete(columnId);
+        return newMap;
+      });
+    }
+
+    // Resubscribe to the column (this will rebuild the filter with current PoW settings)
     await this.subscribeToColumn(column);
 
     this.logger.debug(`Refreshed column: ${columnId}`);

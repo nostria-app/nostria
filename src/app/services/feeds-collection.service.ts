@@ -58,6 +58,23 @@ export class FeedsCollectionService {
   constructor() {
     this.loadActiveFeed();
 
+    // Reload active feed when account changes
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+
+      untracked(() => {
+        if (pubkey) {
+          // Load the active feed for this account
+          const activeFeedId = this.accountLocalState.getActiveFeed(pubkey);
+          if (activeFeedId) {
+            this._activeFeedId.set(activeFeedId);
+            // Sync with FeedService
+            this.feedService.setActiveFeed(activeFeedId);
+          }
+        }
+      });
+    });
+
     // Sync with FeedService - if FeedService has feeds but we don't have an active feed, set one
     effect(() => {
       const feeds = this.feeds();
