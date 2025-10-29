@@ -53,8 +53,8 @@
       <div class="badges-list" cdkDropList (cdkDropListDropped)="onBadgeDropped($event)">
         @for (badge of accepted(); track badge.aTag) {
         <div cdkDrag class="badge-drag-container">
-          <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [isUpdating]="isUpdating()"
-            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)"
+          <app-badge [badge]="badge" layout="horizontal" [showActions]="isViewingOwnProfile()"
+            [isUpdating]="isUpdating()" [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)"
             (removeClicked)="removeBadge(badge)">
           </app-badge>
           <div class="badge-drag-placeholder" *cdkDragPlaceholder></div>
@@ -83,7 +83,7 @@
       } @else {
       <div class="badges-list">
         @for (badge of received(); track badge.id) {
-        <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [issuerName]="
+        <app-badge [badge]="badge" layout="horizontal" [showActions]="isViewingOwnProfile()" [issuerName]="
                   badgeIssuers()[badge.pubkey]?.name ||
                   badgeIssuers()[badge.pubkey]?.display_name ||
                   'Unknown User'
