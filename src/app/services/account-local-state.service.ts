@@ -26,6 +26,8 @@ interface AccountLocalState {
   peopleScrollPosition?: number;
   bookmarksViewMode?: string;
   activeProfileTab?: string;
+  powEnabled?: boolean;
+  powTargetDifficulty?: number;
 }
 
 /**
@@ -225,6 +227,36 @@ export class AccountLocalStateService {
    */
   setActiveProfileTab(pubkey: string, tabId: string | null | undefined): void {
     this.updateAccountState(pubkey, { activeProfileTab: tabId || undefined });
+  }
+
+  /**
+   * Get Proof-of-Work enabled state for an account
+   */
+  getPowEnabled(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.powEnabled || false;
+  }
+
+  /**
+   * Set Proof-of-Work enabled state for an account
+   */
+  setPowEnabled(pubkey: string, enabled: boolean): void {
+    this.updateAccountState(pubkey, { powEnabled: enabled });
+  }
+
+  /**
+   * Get Proof-of-Work target difficulty for an account
+   */
+  getPowTargetDifficulty(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.powTargetDifficulty || 20; // Default to 20
+  }
+
+  /**
+   * Set Proof-of-Work target difficulty for an account
+   */
+  setPowTargetDifficulty(pubkey: string, difficulty: number): void {
+    this.updateAccountState(pubkey, { powTargetDifficulty: difficulty });
   }
 
   /**
