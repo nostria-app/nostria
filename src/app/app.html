@@ -34,7 +34,7 @@
     @if (!layout.search()) {
     <app-navigation></app-navigation>
     <span class="app-title title-font hide-small">
-      <span [routerLink]="['/']">{{ title }}</span>
+      <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
     </span>
     }
     <span class="toolbar-spacer">

@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { map } from 'rxjs';
 import { RouteDataService } from '../../services/route-data.service';
 import { CommonModule } from '@angular/common';
@@ -19,6 +19,7 @@ export class NavigationComponent {
   });
 
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
 
   // Convert route data to signal
   routeData = toSignal(this.route.data.pipe(map(data => data)), {
@@ -43,6 +44,14 @@ export class NavigationComponent {
   // Regular click - go back
   goBack() {
     this.routeDataService.goBack();
+  }
+
+  /**
+   * Navigate to home and clear navigation history
+   */
+  navigateToHome(): void {
+    this.routeDataService.clearHistory();
+    this.router.navigate(['/']);
   }
 
   // Right click - show context menu
