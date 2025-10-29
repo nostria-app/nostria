@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, OnInit } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -65,7 +65,7 @@ export type ViewMode = 'tiles' | 'content';
   templateUrl: './bookmarks.component.html',
   styleUrl: './bookmarks.component.scss',
 })
-export class BookmarksComponent {
+export class BookmarksComponent implements OnInit {
   private logger = inject(LoggerService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -175,6 +175,11 @@ export class BookmarksComponent {
     // effect(() => {
     //   this.logger.debug('Bookmarks updated:', this.bookmarks());
     // });
+  }
+
+  ngOnInit(): void {
+    // Scroll to top when bookmarks page is opened
+    this.layout.scrollToTop();
   }
 
   // private extractTitleFromUrl(url: string): string {

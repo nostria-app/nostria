@@ -11,6 +11,7 @@ import { Title } from '@angular/platform-browser';
 import { ApplicationService } from '../../services/application.service';
 import { WebRequest } from '../../services/web-request';
 import { AccountStateService } from '../../services/account-state.service';
+import { LayoutService } from '../../services/layout.service';
 
 interface SettingsSection {
   id: string;
@@ -43,6 +44,7 @@ export class SettingsComponent implements OnInit {
   private activatedRoute = inject(ActivatedRoute);
   web = inject(WebRequest);
   accountState = inject(AccountStateService);
+  private layout = inject(LayoutService);
 
   // Track active section
   activeSection = signal('general');
@@ -78,7 +80,7 @@ export class SettingsComponent implements OnInit {
       const currentRoute = this.router.url.split('/').pop() || 'general';
       this.activeSection.set(currentRoute);
       // Scroll to top when navigating between settings sections
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      this.layout.scrollToTop();
     });
 
     // Set initial active section
@@ -104,7 +106,7 @@ export class SettingsComponent implements OnInit {
 
   ngOnInit(): void {
     // Scroll to top when settings page is opened
-    window.scrollTo({ top: 0, behavior: 'auto' });
+    this.layout.scrollToTop();
   }
 
   selectSection(sectionId: string): void {
