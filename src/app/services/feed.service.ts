@@ -51,7 +51,7 @@ export interface ColumnConfig {
   label: string;
   icon: string;
   path?: string;
-  type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'custom';
+  type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
   source?: 'following' | 'public' | 'custom' | 'for-you';
   customUsers?: string[]; // Array of pubkeys for custom user selection
@@ -110,6 +110,12 @@ const COLUMN_TYPES = {
     icon: 'music_note',
     kinds: [32100],
     description: 'Music playlists (.m3u)',
+  },
+  polls: {
+    label: 'Polls',
+    icon: 'poll',
+    kinds: [1068],
+    description: 'Polls and surveys',
   },
   custom: {
     label: 'Custom',

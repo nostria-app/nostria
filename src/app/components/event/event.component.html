@@ -43,6 +43,10 @@
         @else if (targetItem.event.kind === 30023) {
         <app-article-event [event]="targetItem.event"></app-article-event>
         }
+        <!-- Polls (kind 1068) -->
+        @else if (targetItem.event.kind === 1068) {
+        <app-poll-event [event]="targetItem.event"></app-poll-event>
+        }
         <!-- M3U Playlists (kind 32100) -->
         @else if (targetItem.event.kind === 32100) {
         <app-playlist-event [event]="targetItem.event"></app-playlist-event>
@@ -97,6 +101,10 @@
           <!-- Articles (kind 30023) -->
           @else if (rootRecordData.event.kind === 30023) {
           <app-article-event [event]="rootRecordData.event"></app-article-event>
+          }
+          <!-- Polls (kind 1068) -->
+          @else if (rootRecordData.event.kind === 1068) {
+          <app-poll-event [event]="rootRecordData.event"></app-poll-event>
           }
           <!-- M3U Playlists (kind 32100) -->
           @else if (rootRecordData.event.kind === 32100) {
@@ -159,6 +167,10 @@
           @else if (parentRecordData.event.kind === 30023) {
           <app-article-event [event]="parentRecordData.event"></app-article-event>
           }
+          <!-- Polls (kind 1068) -->
+          @else if (parentRecordData.event.kind === 1068) {
+          <app-poll-event [event]="parentRecordData.event"></app-poll-event>
+          }
           <!-- M3U Playlists (kind 32100) -->
           @else if (parentRecordData.event.kind === 32100) {
           <app-playlist-event [event]="parentRecordData.event"></app-playlist-event>
@@ -209,7 +221,12 @@
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {
     <app-article-event [event]="item.event"></app-article-event>
-    } @else if (item.event.kind === 3) {
+    }
+    <!-- Polls (kind 1068) -->
+    @else if (item.event.kind === 1068) {
+    <app-poll-event [event]="item.event"></app-poll-event>
+    }
+    @else if (item.event.kind === 3) {
     <div class="following-event">
       <mat-icon>people</mat-icon>
       <span>Following {{ followingCount() }} accounts</span>
@@ -254,7 +271,12 @@
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {
     <app-article-event [event]="item.event"></app-article-event>
-    } @else if (item.event.kind === 3) {
+    }
+    <!-- Polls (kind 1068) -->
+    @else if (item.event.kind === 1068) {
+    <app-poll-event [event]="item.event"></app-poll-event>
+    }
+    @else if (item.event.kind === 3) {
     <div class="following-event">
       <mat-icon>people</mat-icon>
       <span>Following {{ followingCount() }} accounts</span>
