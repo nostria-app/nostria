@@ -1147,3 +1147,22 @@ app-media-queue .media-list mat-list {
     color: var(--mat-sys-primary-container);
   }
 }
+
+.nostr-loading {
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+  opacity: 0.7;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}

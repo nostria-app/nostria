@@ -308,6 +308,134 @@ export class FormatService {
     return result;
   }
 
+  /**
+   * Process Nostr tokens without blocking on preview fetches
+   * Returns content immediately with placeholders, and fetches previews in background
+   */
+  private processNostrTokensNonBlocking(
+    content: string,
+    onPreviewLoaded?: (original: string, replacement: string) => void
+  ): string {
+    const nostrRegex =
+      /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
+
+    // Find all matches first
+    const matches = Array.from(content.matchAll(nostrRegex));
+    let result = content;
+
+    // Process each match
+    for (const match of matches) {
+      try {
+        // Parse Nostr URI synchronously (this is fast)
+        this.parsingService.parseNostrUri(match[0]).then(nostrData => {
+          if (nostrData) {
+            let replacement = '';
+
+            // Generate replacements based on type
+            switch (nostrData.type) {
+              case 'npub':
+              case 'nprofile': {
+                // For user profiles, create @username mention with proper link
+                const pubkey = nostrData.data?.pubkey || nostrData.data;
+                const username = nostrData.displayName;
+                const npub = this.utilities.getNpubFromPubkey(pubkey);
+                replacement = `<a href="/p/${npub}" class="nostr-mention" data-pubkey="${pubkey}" data-type="profile" title="View @${username}'s profile">@${username}</a>`;
+                if (onPreviewLoaded) {
+                  onPreviewLoaded(match[0], replacement);
+                }
+                break;
+              }
+
+              case 'note': {
+                // For notes, show placeholder first then fetch preview in background
+                const noteId = nostrData.data;
+                const noteRef = nostrData.displayName || `note${noteId.substring(0, 8)}`;
+                const noteEncoded = nip19.noteEncode(noteId);
+
+                // Immediate fallback link
+                replacement = `<a href="/e/${noteEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`;
+                if (onPreviewLoaded) {
+                  onPreviewLoaded(match[0], replacement);
+                }
+
+                // Fetch preview in background
+                this.fetchEventPreview(noteId).then(preview => {
+                  if (preview && onPreviewLoaded) {
+                    onPreviewLoaded(match[0], preview);
+                  }
+                });
+                break;
+              }
+
+              case 'nevent': {
+                // For events, show placeholder first then fetch preview in background
+                const eventId = nostrData.data?.id || nostrData.data;
+                const authorPubkey = nostrData.data?.author || nostrData.data?.pubkey;
+                const relayHints = nostrData.data?.relays;
+                const eventRef = nostrData.displayName || `event${eventId.substring(0, 8)}`;
+                const neventEncoded = nip19.neventEncode(nostrData.data);
+
+                // Immediate fallback link
+                replacement = `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${eventId}" data-type="event" title="View event">📝 ${eventRef}</a>`;
+                if (onPreviewLoaded) {
+                  onPreviewLoaded(match[0], replacement);
+                }
+
+                // Fetch preview in background
+                this.fetchEventPreview(eventId, authorPubkey, relayHints).then(preview => {
+                  if (preview && onPreviewLoaded) {
+                    onPreviewLoaded(match[0], preview);
+                  }
+                });
+                break;
+              }
+
+              case 'naddr': {
+                // For addresses, create immediate preview
+                const identifier = nostrData.data?.identifier || '';
+                const kind = nostrData.data?.kind || '';
+                const authorPubkey = nostrData.data?.pubkey || '';
+                const addrRef =
+                  nostrData.displayName || identifier || `${kind}:${authorPubkey.substring(0, 8)}`;
+                const naddrEncoded = nip19.naddrEncode(nostrData.data);
+
+                replacement = `<div class="nostr-embed-preview" data-naddr="${naddrEncoded}" data-identifier="${identifier}" data-kind="${kind}" data-pubkey="${authorPubkey}">
+                    <a href="/a/${naddrEncoded}" class="nostr-embed-link">
+                      <div class="nostr-embed-icon">
+                        <span class="embed-icon">📄</span>
+                      </div>
+                      <div class="nostr-embed-content">
+                        <div class="nostr-embed-title">${this.escapeHtml(addrRef)}</div>
+                        <div class="nostr-embed-meta">Article · Kind ${kind}</div>
+                      </div>
+                    </a>
+                  </div>`;
+                if (onPreviewLoaded) {
+                  onPreviewLoaded(match[0], replacement);
+                }
+                break;
+              }
+
+              default:
+                replacement = `<span class="nostr-mention" title="Nostr reference">${nostrData.displayName || match[0]}</span>`;
+                if (onPreviewLoaded) {
+                  onPreviewLoaded(match[0], replacement);
+                }
+            }
+          }
+        });
+
+        // Replace with placeholder immediately (the token itself as a link)
+        const placeholder = `<span class="nostr-loading">${this.escapeHtml(match[0])}</span>`;
+        result = result.replace(match[0], placeholder);
+      } catch (error) {
+        this.logger.error('Error parsing Nostr URI:', error);
+      }
+    }
+
+    return result;
+  }
+
   async markdownToHtml(rawMarkdown: string): Promise<SafeHtml> {
     try {
       // First, preprocess content to convert image URLs to markdown image syntax
@@ -332,6 +460,91 @@ export class FormatService {
       const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
 
       // Set the sanitized HTML content
+      return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
+    } catch (error) {
+      this.logger.error('Error parsing markdown:', error);
+      // Fallback to plain text
+      const sanitizedHtmlContent = DOMPurify.sanitize(rawMarkdown.replace(/\n/g, '<br>'));
+      return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
+    }
+  }
+
+  /**
+   * Non-blocking version of markdownToHtml that renders content immediately
+   * and loads previews asynchronously in the background
+   */
+  markdownToHtmlNonBlocking(
+    rawMarkdown: string,
+    onUpdate?: (html: SafeHtml) => void
+  ): SafeHtml {
+    try {
+      // Track updates for this specific content
+      const updates = new Map<string, string>();
+
+      // Callback for when previews are loaded
+      const handlePreviewLoaded = (original: string, replacement: string) => {
+        updates.set(original, replacement);
+
+        // Reprocess content with all updates so far
+        let updatedContent = rawMarkdown;
+        for (const [orig, repl] of updates.entries()) {
+          updatedContent = updatedContent.replace(orig, repl);
+        }
+
+        // Convert to markdown and sanitize
+        imageUrlsToMarkdown(updatedContent).then(content => {
+          marked.use({
+            renderer: markdownRenderer,
+            gfm: true,
+            breaks: true,
+            pedantic: false,
+          });
+
+          const htmlContent = marked.parse(content) as string;
+          const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
+          const safeHtml = this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
+
+          if (onUpdate) {
+            onUpdate(safeHtml);
+          }
+        });
+      };
+
+      // Process Nostr tokens with non-blocking approach
+      const initialContent = this.processNostrTokensNonBlocking(
+        rawMarkdown,
+        handlePreviewLoaded
+      );
+
+      // Convert images to markdown and render immediately
+      imageUrlsToMarkdown(initialContent).then(content => {
+        marked.use({
+          renderer: markdownRenderer,
+          gfm: true,
+          breaks: true,
+          pedantic: false,
+        });
+
+        const htmlContent = marked.parse(content) as string;
+        const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
+        const safeHtml = this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
+
+        if (onUpdate) {
+          onUpdate(safeHtml);
+        }
+      });
+
+      // Return initial content immediately (with placeholders)
+      marked.use({
+        renderer: markdownRenderer,
+        gfm: true,
+        breaks: true,
+        pedantic: false,
+      });
+
+      const htmlContent = marked.parse(initialContent) as string;
+      const sanitizedHtmlContent = DOMPurify.sanitize(htmlContent);
+
       return this.sanitizer.bypassSecurityTrustHtml(sanitizedHtmlContent);
     } catch (error) {
       this.logger.error('Error parsing markdown:', error);

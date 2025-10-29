@@ -50,7 +50,7 @@ export class ArticleEventComponent {
   jsonData = signal<Record<string, unknown> | unknown[] | null>(null);
 
   constructor() {
-    effect(async () => {
+    effect(() => {
       const event = this.event();
       if (!event || !event.content) return;
 
@@ -68,13 +68,27 @@ export class ArticleEventComponent {
       this.isJsonContent.set(false);
       this.jsonData.set(null);
 
+      // Use non-blocking markdown rendering for immediate content display
+      // Preview content (truncated)
       if (event.content.length > this.MAX_LENGTH) {
-        this.previewContent.set(
-          await this.formatService.markdownToHtml(`${event.content.substring(0, this.MAX_LENGTH)}…`)
+        const truncatedContent = `${event.content.substring(0, this.MAX_LENGTH)}…`;
+        const initialPreview = this.formatService.markdownToHtmlNonBlocking(
+          truncatedContent,
+          (updatedHtml) => {
+            this.previewContent.set(updatedHtml);
+          }
         );
+        this.previewContent.set(initialPreview);
       }
 
-      this.articleContent.set(await this.formatService.markdownToHtml(event.content));
+      // Full article content - render immediately with placeholders, update as previews load
+      const initialContent = this.formatService.markdownToHtmlNonBlocking(
+        event.content,
+        (updatedHtml) => {
+          this.articleContent.set(updatedHtml);
+        }
+      );
+      this.articleContent.set(initialContent);
     });
   }
 
