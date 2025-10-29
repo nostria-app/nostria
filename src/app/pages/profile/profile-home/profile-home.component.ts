@@ -1,4 +1,4 @@
-import { Component, inject, effect, untracked } from '@angular/core';
+import { Component, inject } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule, NavigationEnd } from '@angular/router';
@@ -47,7 +47,7 @@ export class ProfileHomeComponent {
       .subscribe(() => {
         const currentPubkey = this.accountState.pubkey();
         const profilePubkey = this.getPubkey();
-        const currentPath = this.route.firstChild?.snapshot.url[0]?.path ?? 'notes';
+        const currentPath = this.route.firstChild?.snapshot?.url[0]?.path ?? 'notes';
 
         if (currentPubkey && profilePubkey) {
           // Save the active tab for this profile
@@ -65,7 +65,7 @@ export class ProfileHomeComponent {
       // Check if this saved tab is for the current profile
       if (savedTab && savedTab.startsWith(`${profilePubkey}:`)) {
         const tabPath = savedTab.split(':')[1];
-        const currentPath = this.route.firstChild?.snapshot.url[0]?.path ?? '';
+        const currentPath = this.route.firstChild?.snapshot?.url[0]?.path ?? '';
 
         // Only navigate if we're at the default route (empty or 'notes') and the saved tab is different
         if ((currentPath === '' || currentPath === 'notes') && tabPath !== 'notes' && tabPath !== '') {
@@ -76,7 +76,7 @@ export class ProfileHomeComponent {
   }
 
   isLinkActive(path: string, isActive: boolean): boolean {
-    const firstChild = this.route.firstChild?.snapshot.url[0]?.path ?? '';
+    const firstChild = this.route.firstChild?.snapshot?.url[0]?.path ?? '';
     return isActive || (path === 'notes' && firstChild === '');
   }
 
