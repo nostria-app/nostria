@@ -29,6 +29,7 @@ import { MediaService } from '../../services/media.service';
 import { LocalStorageService } from '../../services/local-storage.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ContentComponent } from '../content/content.component';
 import { Router } from '@angular/router';
 import { nip19, Event as NostrEvent, UnsignedEvent } from 'nostr-tools';
@@ -101,6 +102,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private localStorage = inject(LocalStorageService);
   private localSettings = inject(LocalSettingsService);
   private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private snackBar = inject(MatSnackBar);
   private sanitizer = inject(DomSanitizer);
   private router = inject(Router);
@@ -277,6 +279,15 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   constructor() {
     // Set default value for addClientTag from user's local settings
     this.addClientTag.set(this.localSettings.addClientTag());
+
+    // Load PoW settings from account state
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      const powEnabled = this.accountLocalState.getPowEnabled(pubkey);
+      const powDifficulty = this.accountLocalState.getPowTargetDifficulty(pubkey);
+      this.powEnabled.set(powEnabled);
+      this.powTargetDifficulty.set(powDifficulty);
+    }
 
     // Initialize content with quote if provided
     if (this.data?.quote) {
@@ -486,10 +497,44 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     try {
       let eventToSign: UnsignedEvent;
 
-      // Use the mined event if PoW is enabled and we have a result
-      if (this.powEnabled() && this.powMinedEvent()) {
-        eventToSign = this.powMinedEvent()!;
+      // If PoW is enabled, ensure we have a mined event
+      if (this.powEnabled()) {
+        // If we don't have a mined event yet, or content has changed, mine it now
+        if (!this.powMinedEvent() || this.powMinedEvent()?.content !== this.content().trim()) {
+          // Build the base event for mining
+          const tags = this.buildTags();
+          const baseEvent = this.nostrService.createEvent(1, this.content().trim(), tags);
+
+          // Start mining
+          this.snackBar.open('Mining Proof-of-Work before publishing...', '', { duration: 2000 });
+
+          const result = await this.powService.mineEvent(
+            baseEvent,
+            this.powTargetDifficulty(),
+            (progress: PowProgress) => {
+              this.powProgress.set(progress);
+            }
+          );
+
+          if (result && result.event) {
+            this.powMinedEvent.set(result.event);
+            eventToSign = result.event;
+          } else if (!this.powService.isRunning()) {
+            // Mining was stopped or failed
+            this.snackBar.open('Proof-of-Work mining was stopped or failed', 'Close', {
+              duration: 5000,
+            });
+            this.isPublishing.set(false);
+            return;
+          } else {
+            throw new Error('Failed to mine Proof-of-Work');
+          }
+        } else {
+          // Use existing mined event
+          eventToSign = this.powMinedEvent()!;
+        }
       } else {
+        // PoW is not enabled, create event normally
         const tags = this.buildTags();
         eventToSign = this.nostrService.createEvent(1, this.content().trim(), tags);
       }
@@ -1190,6 +1235,13 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   // Proof of Work methods
   onPowToggle(enabled: boolean): void {
     this.powEnabled.set(enabled);
+
+    // Persist to account state
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setPowEnabled(pubkey, enabled);
+    }
+
     if (!enabled) {
       this.stopPow();
       this.powMinedEvent.set(null);
@@ -1202,6 +1254,12 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     const difficulty = parseInt(target.value, 10);
     if (!isNaN(difficulty) && difficulty >= 0) {
       this.powTargetDifficulty.set(difficulty);
+
+      // Persist to account state
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.accountLocalState.setPowTargetDifficulty(pubkey, difficulty);
+      }
     }
   }
 

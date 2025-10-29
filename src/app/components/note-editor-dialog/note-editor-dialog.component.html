@@ -310,6 +310,13 @@
   </div>
 
   <div mat-dialog-actions class="dialog-actions">
+    @if (powEnabled() && isPowMining()) {
+    <div class="pow-progress-indicator">
+      <mat-icon class="pow-icon spinning">auto_awesome</mat-icon>
+      <span class="pow-text">Mining PoW: {{ powDifficulty() }}/{{ powTargetDifficulty() }} bits</span>
+    </div>
+    }
+
     <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
 
     <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish()" class="publish-button">
