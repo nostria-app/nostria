@@ -223,11 +223,13 @@ export class App implements OnInit {
     });
   });
 
-  // Computed signal to get content notifications only (excluding technical/system notifications)
+  // Computed signal to get unread content notifications only (excluding technical/system notifications)
   contentNotifications = computed(() => {
     return this.notificationService
       .notifications()
-      .filter(notification => this.contentNotificationTypes.includes(notification.type))
+      .filter(notification =>
+        !notification.read && this.contentNotificationTypes.includes(notification.type)
+      )
       .sort((a, b) => b.timestamp - a.timestamp);
   });
 
