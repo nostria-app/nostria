@@ -16,7 +16,6 @@ import { MatChipInputEvent } from '@angular/material/chips';
 import { MatAutocompleteSelectedEvent } from '@angular/material/autocomplete';
 import { FeedService, ColumnConfig } from '../../../services/feed.service';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
-import { MatSliderModule } from '@angular/material/slider';
 import { AccountStateService } from '../../../services/account-state.service';
 import { Followset, StarterPack } from '../../../services/followset';
 import { DataService } from '../../../services/data.service';
@@ -85,7 +84,6 @@ const NOSTR_KINDS = [
     MatDividerModule,
     ReactiveFormsModule,
     MatButtonToggleModule,
-    MatSliderModule,
   ],
   templateUrl: './new-column-dialog.component.html',
   styleUrls: ['./new-column-dialog.component.scss'],
@@ -107,7 +105,6 @@ export class NewColumnDialogComponent {
     relayConfig: [this.data.column?.relayConfig || 'account'],
     customRelays: [this.data.column?.customRelays || []],
     type: [this.data.column?.type || 'custom'],
-    powMinDifficulty: [this.data.column?.filters?.['powMinDifficulty'] as number || 0],
   });
 
   // Signals and state
@@ -117,7 +114,6 @@ export class NewColumnDialogComponent {
   customRelays = signal<string[]>(this.data.column?.customRelays || []);
   selectedRelayConfig = signal<string>(this.data.column?.relayConfig || 'account');
   showCustomRelays = computed(() => this.selectedRelayConfig() === 'custom');
-  powMinDifficulty = signal<number>((this.data.column?.filters?.['powMinDifficulty'] as number) || 0);
 
   // Custom source signals
   selectedUsers = signal<UserProfile[]>([]);
@@ -355,11 +351,8 @@ export class NewColumnDialogComponent {
     if (this.columnForm.valid) {
       const formValue = this.columnForm.value;
 
-      // Build filters object
+      // Build filters object (empty for now, PoW filtering removed)
       const filters: Record<string, unknown> = {};
-      if (formValue.powMinDifficulty && formValue.powMinDifficulty > 0) {
-        filters['powMinDifficulty'] = formValue.powMinDifficulty;
-      }
 
       // Create column config
       const columnConfig: ColumnConfig = {
@@ -380,21 +373,6 @@ export class NewColumnDialogComponent {
 
       this.dialogRef.close(columnConfig);
     }
-  }
-
-  onPowDifficultyChange(value: number): void {
-    this.powMinDifficulty.set(value);
-    this.columnForm.patchValue({ powMinDifficulty: value });
-  }
-
-  getPowLabel(difficulty: number): string {
-    if (difficulty === 0) return 'No filter';
-    if (difficulty < 10) return 'Very weak';
-    if (difficulty < 16) return 'Weak';
-    if (difficulty < 20) return 'Moderate';
-    if (difficulty < 25) return 'Strong';
-    if (difficulty < 30) return 'Very Strong';
-    return 'Extreme';
   }
 
   // Custom source methods

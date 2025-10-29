@@ -743,6 +743,7 @@ export abstract class RelayServiceBase {
     filter: {
       kinds?: number[];
       authors?: string[];
+      ids?: string[]; // Add IDs filter support for NIP-01 prefix matching
       '#e'?: string[];
       '#p'?: string[];
       since?: number;
