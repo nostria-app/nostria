@@ -162,6 +162,16 @@
 .notification-list {
   display: flex;
   flex-direction: column;
+  height: calc(100vh - 320px); // Account for header, tabs, and padding
+  min-height: 400px;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  .notification-item {
+    height: auto;
+    min-height: fit-content;
+  }
 }
 
 .notification-item {
