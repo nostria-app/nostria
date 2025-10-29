@@ -749,7 +749,7 @@ export class EventComponent implements AfterViewChecked {
     'gossip': 'logos/clients/gossip.png',
     'freefrom': 'logos/clients/freefrom.png',
     'habla.news': 'logos/clients/habla.png',
-    'nostrudel': 'logos/clients/nostrudel.png',
+    'nostrudel': 'logos/clients/nostrudel.svg',
     'yakihonne': 'logos/clients/yakihonne.png',
     'lume': 'logos/clients/lume.png',
     'nostur': 'logos/clients/nostur.png',
