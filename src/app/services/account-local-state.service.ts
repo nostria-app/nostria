@@ -23,6 +23,7 @@ interface AccountLocalState {
   peopleViewMode?: string;
   peopleSortOption?: string;
   peopleFilters?: PeopleFilters;
+  peopleScrollPosition?: number;
   bookmarksViewMode?: string;
   activeProfileTab?: string;
 }
@@ -179,6 +180,21 @@ export class AccountLocalStateService {
    */
   setPeopleFilters(pubkey: string, filters: PeopleFilters | null | undefined): void {
     this.updateAccountState(pubkey, { peopleFilters: filters || undefined });
+  }
+
+  /**
+   * Get people scroll position for an account
+   */
+  getPeopleScrollPosition(pubkey: string): number | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.peopleScrollPosition;
+  }
+
+  /**
+   * Set people scroll position for an account
+   */
+  setPeopleScrollPosition(pubkey: string, position: number | null | undefined): void {
+    this.updateAccountState(pubkey, { peopleScrollPosition: position || undefined });
   }
 
   /**
