@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, Injector } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { EncryptionPermissionService } from './encryption-permission.service';
@@ -6,6 +6,7 @@ import { hexToBytes } from '@noble/hashes/utils.js';
 import { Event, nip04 } from 'nostr-tools';
 import { v2 } from 'nostr-tools/nip44';
 import { UtilitiesService } from './utilities.service';
+import { NostrService } from './nostr.service';
 
 export interface EncryptionResult {
   content: string;
@@ -24,7 +25,19 @@ export class EncryptionService {
   private logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private accountState = inject(AccountStateService);
-  private encryptionPermission = inject(EncryptionPermissionService); /**
+  private encryptionPermission = inject(EncryptionPermissionService);
+  private injector = inject(Injector);
+  private nostrService?: NostrService; // Lazy inject to avoid circular dependency
+
+  /**
+   * Get NostrService lazily to avoid circular dependency
+   */
+  private getNostrService(): NostrService {
+    if (!this.nostrService) {
+      this.nostrService = this.injector.get(NostrService);
+    }
+    return this.nostrService;
+  } /**
    * Encrypt a message using NIP-04 (legacy, less secure)
    * Uses AES-256-CBC encryption
    */
@@ -41,8 +54,16 @@ export class EncryptionService {
         throw new Error('Private key not available for encryption');
       }
 
+      // Get the decrypted private key (handles both encrypted and plaintext keys)
+      const nostrService = this.getNostrService();
+      const decryptedPrivkey = await nostrService.getDecryptedPrivateKeyWithPrompt(account);
+
+      if (!decryptedPrivkey) {
+        throw new Error('Failed to decrypt private key');
+      }
+
       // Use nostr-tools nip04 encryption
-      const privateKeyBytes = hexToBytes(account.privkey);
+      const privateKeyBytes = hexToBytes(decryptedPrivkey);
       return await nip04.encrypt(privateKeyBytes, recipientPubkey, plaintext);
     } catch (error) {
       this.logger.error('Failed to encrypt with NIP-04', error);
@@ -66,8 +87,16 @@ export class EncryptionService {
         throw new Error('Private key not available for decryption');
       }
 
+      // Get decrypted private key (handles both encrypted and plaintext keys)
+      const nostrService = this.getNostrService();
+      const decryptedPrivkey = await nostrService.getDecryptedPrivateKeyWithPrompt(account);
+
+      if (!decryptedPrivkey) {
+        throw new Error('Failed to decrypt private key');
+      }
+
       // Use nostr-tools nip04 decryption
-      const privateKeyBytes = hexToBytes(account.privkey);
+      const privateKeyBytes = hexToBytes(decryptedPrivkey);
       return await nip04.decrypt(privateKeyBytes, pubkey, ciphertext);
     } catch (error: any) {
       this.logger.error('Failed to decrypt with NIP-04', error);
@@ -90,8 +119,16 @@ export class EncryptionService {
         throw new Error('Private key not available for encryption');
       }
 
+      // Get decrypted private key (handles both encrypted and plaintext keys)
+      const nostrService = this.getNostrService();
+      const decryptedPrivkey = await nostrService.getDecryptedPrivateKeyWithPrompt(account);
+
+      if (!decryptedPrivkey) {
+        throw new Error('Failed to decrypt private key');
+      }
+
       // Use nostr-tools nip44 v2 encryption
-      const privateKeyBytes = hexToBytes(account.privkey);
+      const privateKeyBytes = hexToBytes(decryptedPrivkey);
       const conversationKey = v2.utils.getConversationKey(privateKeyBytes, recipientPubkey);
 
       return v2.encrypt(plaintext, conversationKey);
@@ -117,8 +154,16 @@ export class EncryptionService {
         throw new Error('Private key not available for decryption');
       }
 
+      // Get decrypted private key (handles both encrypted and plaintext keys)
+      const nostrService = this.getNostrService();
+      const decryptedPrivkey = await nostrService.getDecryptedPrivateKeyWithPrompt(account);
+
+      if (!decryptedPrivkey) {
+        throw new Error('Failed to decrypt private key');
+      }
+
       // Use nostr-tools nip44 v2 decryption
-      const privateKeyBytes = hexToBytes(account.privkey);
+      const privateKeyBytes = hexToBytes(decryptedPrivkey);
       const conversationKey = v2.utils.getConversationKey(privateKeyBytes, senderPubkey);
 
       return v2.decrypt(ciphertext, conversationKey);
