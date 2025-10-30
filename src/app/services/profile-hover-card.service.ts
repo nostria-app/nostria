@@ -1,5 +1,5 @@
 import { Injectable, inject, signal, OnDestroy } from '@angular/core';
-import { Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Router, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
@@ -94,41 +94,187 @@ export class ProfileHoverCardService implements OnDestroy {
       return;
     }
 
+    // Get element position and viewport dimensions
+    const rect = element.getBoundingClientRect();
+    const viewportHeight = window.innerHeight;
+    const viewportWidth = window.innerWidth;
+
+    // Calculate available space
+    const spaceBelow = viewportHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    const spaceRight = viewportWidth - rect.left;
+    const spaceLeft = rect.right;
+
+    // Estimated hover card dimensions (based on typical size)
+    const cardHeight = 400; // Approximate height of hover card
+    const cardWidth = 320; // Width from the component
+
+    // Determine best vertical position (prefer below unless insufficient space)
+    const preferAbove = spaceBelow < cardHeight && spaceAbove > spaceBelow;
+
+    // Determine best horizontal position
+    const preferLeft = spaceRight < cardWidth && spaceLeft > spaceRight;
+
+    // Build position array with intelligent ordering
+    const positions: ConnectedPosition[] = [];
+
+    if (preferAbove) {
+      // Show above when there's more space above
+      if (preferLeft) {
+        positions.push(
+          {
+            originX: 'end',
+            originY: 'top',
+            overlayX: 'end',
+            overlayY: 'bottom',
+            offsetY: -8,
+          },
+          {
+            originX: 'start',
+            originY: 'top',
+            overlayX: 'start',
+            overlayY: 'bottom',
+            offsetY: -8,
+          }
+        );
+      } else {
+        positions.push(
+          {
+            originX: 'start',
+            originY: 'top',
+            overlayX: 'start',
+            overlayY: 'bottom',
+            offsetY: -8,
+          },
+          {
+            originX: 'end',
+            originY: 'top',
+            overlayX: 'end',
+            overlayY: 'bottom',
+            offsetY: -8,
+          }
+        );
+      }
+
+      // Fallback to below
+      if (preferLeft) {
+        positions.push(
+          {
+            originX: 'end',
+            originY: 'bottom',
+            overlayX: 'end',
+            overlayY: 'top',
+            offsetY: 8,
+          },
+          {
+            originX: 'start',
+            originY: 'bottom',
+            overlayX: 'start',
+            overlayY: 'top',
+            offsetY: 8,
+          }
+        );
+      } else {
+        positions.push(
+          {
+            originX: 'start',
+            originY: 'bottom',
+            overlayX: 'start',
+            overlayY: 'top',
+            offsetY: 8,
+          },
+          {
+            originX: 'end',
+            originY: 'bottom',
+            overlayX: 'end',
+            overlayY: 'top',
+            offsetY: 8,
+          }
+        );
+      }
+    } else {
+      // Show below when there's more space below (default)
+      if (preferLeft) {
+        positions.push(
+          {
+            originX: 'end',
+            originY: 'bottom',
+            overlayX: 'end',
+            overlayY: 'top',
+            offsetY: 8,
+          },
+          {
+            originX: 'start',
+            originY: 'bottom',
+            overlayX: 'start',
+            overlayY: 'top',
+            offsetY: 8,
+          }
+        );
+      } else {
+        positions.push(
+          {
+            originX: 'start',
+            originY: 'bottom',
+            overlayX: 'start',
+            overlayY: 'top',
+            offsetY: 8,
+          },
+          {
+            originX: 'end',
+            originY: 'bottom',
+            overlayX: 'end',
+            overlayY: 'top',
+            offsetY: 8,
+          }
+        );
+      }
+
+      // Fallback to above
+      if (preferLeft) {
+        positions.push(
+          {
+            originX: 'end',
+            originY: 'top',
+            overlayX: 'end',
+            overlayY: 'bottom',
+            offsetY: -8,
+          },
+          {
+            originX: 'start',
+            originY: 'top',
+            overlayX: 'start',
+            overlayY: 'bottom',
+            offsetY: -8,
+          }
+        );
+      } else {
+        positions.push(
+          {
+            originX: 'start',
+            originY: 'top',
+            overlayX: 'start',
+            overlayY: 'bottom',
+            offsetY: -8,
+          },
+          {
+            originX: 'end',
+            originY: 'top',
+            overlayX: 'end',
+            overlayY: 'bottom',
+            offsetY: -8,
+          }
+        );
+      }
+    }
+
     const positionStrategy = this.overlay
       .position()
       .flexibleConnectedTo(element)
-      .withPositions([
-        {
-          originX: 'start',
-          originY: 'bottom',
-          overlayX: 'start',
-          overlayY: 'top',
-          offsetY: 8,
-        },
-        {
-          originX: 'end',
-          originY: 'bottom',
-          overlayX: 'end',
-          overlayY: 'top',
-          offsetY: 8,
-        },
-        {
-          originX: 'start',
-          originY: 'top',
-          overlayX: 'start',
-          overlayY: 'bottom',
-          offsetY: -8,
-        },
-        {
-          originX: 'end',
-          originY: 'top',
-          overlayX: 'end',
-          overlayY: 'bottom',
-          offsetY: -8,
-        },
-      ])
+      .withPositions(positions)
       .withViewportMargin(16)
-      .withPush(true);
+      .withPush(true)
+      .withFlexibleDimensions(true);
 
     this.overlayRef = this.overlay.create({
       positionStrategy,
