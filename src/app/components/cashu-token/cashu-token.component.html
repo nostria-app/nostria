@@ -1,0 +1,31 @@
+<mat-card class="cashu-token-card">
+  <div class="cashu-header">
+    <div class="cashu-icon">
+      <mat-icon>account_balance_wallet</mat-icon>
+    </div>
+    <div class="cashu-info">
+      <div class="cashu-title">Cashu Ecash</div>
+      @if (amount(); as amt) {
+      <div class="cashu-amount">{{ amt }} {{ unit() }}</div>
+      }
+    </div>
+  </div>
+
+  <div class="cashu-details">
+    <div class="detail-row">
+      <span class="detail-label">Mint:</span>
+      <span class="detail-value">{{ getMintDomain() }}</span>
+    </div>
+  </div>
+
+  <div class="cashu-actions">
+    <button mat-raised-button color="primary" (click)="openInWallet()" matTooltip="Open token in cashu wallet">
+      <mat-icon>open_in_new</mat-icon>
+      <span>Open in Wallet</span>
+    </button>
+    <button mat-stroked-button (click)="copyToken()" matTooltip="Copy token to clipboard">
+      <mat-icon>content_copy</mat-icon>
+      <span>Copy</span>
+    </button>
+  </div>
+</mat-card>

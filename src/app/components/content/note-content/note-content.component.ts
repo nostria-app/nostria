@@ -11,11 +11,12 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ProfileHoverCardComponent } from '../../user-profile/hover-card/profile-hover-card.component';
+import { CashuTokenComponent } from '../../cashu-token/cashu-token.component';
 
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [MatIconModule, MatProgressSpinnerModule],
+  imports: [MatIconModule, MatProgressSpinnerModule, CashuTokenComponent],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })
