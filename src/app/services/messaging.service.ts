@@ -99,6 +99,14 @@ export class MessagingService implements NostriaService {
     const currentMap = this.chatsMap();
     const chatId = message.encryptionType === 'nip04' ? `${pubkey}-nip04` : `${pubkey}-nip44`;
 
+    // Check if this message already exists in any chat to prevent duplicates
+    for (const existingChat of currentMap.values()) {
+      if (existingChat.messages.has(message.id)) {
+        // Message already exists, don't add it again
+        return;
+      }
+    }
+
     // Create a new Map to ensure signal reactivity
     const newMap = new Map(currentMap);
 
