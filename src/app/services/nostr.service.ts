@@ -402,9 +402,19 @@ export class NostrService implements NostriaService {
         info = {};
       }
 
-      // CRITICAL: Always fetch fresh metadata from relay first
-      // This prevents using stale profile data from storage
-      const metadataEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+      debugger;
+      // CRITICAL: Fetch all account data (profile, following list, mute list) in a single query
+      // This is more efficient than 3 separate queries
+      this.logger.info('Fetching account data from relay', { pubkey });
+      const accountEvents = await this.accountRelay.getMany({
+        authors: [pubkey],
+        kinds: [kinds.Metadata, kinds.Contacts, kinds.Mutelist], // kind 0, 3, 10000
+      });
+
+      // Separate events by kind
+      const metadataEvent = accountEvents.find(e => e.kind === kinds.Metadata);
+      const followingEvent = accountEvents.find(e => e.kind === kinds.Contacts);
+      const muteListEvent = accountEvents.find(e => e.kind === kinds.Mutelist);
 
       let metadata: NostrRecord | null | undefined = null;
 
@@ -432,9 +442,12 @@ export class NostrService implements NostriaService {
         }
       }
 
-      // After loading the relays and setting them, we load the following list:
-      await this.loadAccountFollowing(pubkey);
-      await this.loadAccountMuteList(pubkey);
+      // Process following list
+      await this.processFollowingList(pubkey, followingEvent);
+
+      // Process mute list
+      await this.processMuteList(pubkey, muteListEvent);
+
       await this.subscribeToAccountMetadata(pubkey);
 
       // await this.bookmark.initialize();
@@ -582,6 +595,59 @@ export class NostrService implements NostriaService {
     };
 
     this.accountSubscription = this.accountRelay.subscribe(filter, onEvent, onEose);
+  }
+
+  /**
+   * Process following list event (kind 3) from relay or storage fallback
+   */
+  private async processFollowingList(pubkey: string, followingEvent?: Event) {
+    let eventToProcess = followingEvent;
+
+    if (!eventToProcess) {
+      // Fallback to storage only if relay fetch completely fails
+      this.logger.warn('Could not fetch following list from relay, falling back to storage');
+      const storedEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      eventToProcess = storedEvent || undefined;
+    }
+
+    if (eventToProcess) {
+      // Save the event to storage
+      await this.storage.saveEvent(eventToProcess);
+
+      const followingTags = this.getTags(eventToProcess, 'p');
+      this.accountState.followingList.set(followingTags);
+
+      this.logger.info('Loaded following list', {
+        pubkey,
+        followingCount: followingTags.length,
+      });
+    }
+  }
+
+  /**
+   * Process mute list event (kind 10000) from relay or storage fallback
+   */
+  private async processMuteList(pubkey: string, muteListEvent?: Event) {
+    let eventToProcess = muteListEvent;
+
+    if (!eventToProcess) {
+      // Fallback to storage only if relay fetch completely fails
+      this.logger.warn('Could not fetch mute list from relay, falling back to storage');
+      const storedEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+      eventToProcess = storedEvent || undefined;
+    }
+
+    if (eventToProcess) {
+      // Save the event to storage
+      await this.storage.saveEvent(eventToProcess);
+
+      this.accountState.muteList.set(eventToProcess);
+
+      this.logger.info('Loaded mute list', {
+        pubkey,
+        mutedCount: eventToProcess.tags.filter(t => t[0] === 'p').length,
+      });
+    }
   }
 
   private async loadAccountFollowing(pubkey: string) {
