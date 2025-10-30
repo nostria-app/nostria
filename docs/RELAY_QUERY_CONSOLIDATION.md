@@ -1,82 +1,134 @@
-# Relay Query Consolidation
+# Live Subscription for Account Data
 
 ## Overview
-Consolidated 6 separate relay queries during account initialization into a single efficient batch query, reducing network overhead by 83% and significantly improving account load performance.
+Replaced the initial batch query + separate subscription pattern with a single live subscription that handles both initial data load and real-time updates. This eliminates redundant queries and ensures the app is always connected to fresh data.
 
-## Problem
-When loading account data, the application was making 6 individual relay queries:
-1. Profile metadata (kind 0)
-2. Following list (kind 3)
-3. Mute list (kind 10000)
-4. Relay list (kind 10002)
-5. Bookmark list (kind 10003)
-6. Media server list (kind 10063)
+## Evolution
 
-Each query created separate network round-trips, causing slow account initialization.
+### Phase 1: Consolidated Initial Query (Previous)
+- Merged 6 separate queries into 1 batch query
+- Added real-time subscription for updates
+- **Problem**: Still fetching same data twice (once in load(), once in subscription)
 
-Additionally, after the initial load, two services were making duplicate queries:
-- **BookmarkService.initialize()** - Re-querying kind 10003
-- **NostrService.getMediaServers()** - Re-querying kind 10063
+### Phase 2: Live Subscription Only (Current)
+- Removed redundant initial batch query
+- Single subscription handles both initial data AND updates
+- Loads cached data from storage first for instant display
+- Fresh data arrives via subscription within milliseconds
 
-This resulted in **8 total queries** for data that could be fetched once.
+## Implementation
 
-## Solution
-Merged all 6 queries into a single `getMany()` call:
-
+### Old Approach (Deprecated)
 ```typescript
-const accountEvents = await this.accountRelay.getMany({
-  authors: [pubkey],
-  kinds: [
-    kinds.Metadata,      // 0 - profile
-    kinds.Contacts,      // 3 - following list
-    kinds.Mutelist,      // 10000 - mutes
-    kinds.RelayList,     // 10002 - relays
-    kinds.BookmarkList,  // 10003 - bookmarks
-    10063,               // Media servers
-  ],
-});
+async load() {
+  // 1. Fetch all 6 kinds in batch query
+  const accountEvents = await this.accountRelay.getMany({...});
+  
+  // 2. Process each event type
+  processMetadata(metadataEvent);
+  processFollowing(followingEvent);
+  // ... etc
+  
+  // 3. Start subscription (duplicates the same data)
+  await this.subscribeToAccountMetadata(pubkey);
+}
 ```
 
-## Implementation Details
-
-### Event Processing
-Each event type is extracted and processed with storage fallbacks:
-
-- **Profile (kind 0)**: Processed via existing `processAccountMetadata()`
-- **Following List (kind 3)**: New `processFollowingList()` method with storage fallback
-- **Mute List (kind 10000)**: New `processMuteList()` method with storage fallback
-- **Relay List (kind 10002)**: Direct storage save with relay count logging
-- **Bookmark List (kind 10003)**: Direct storage save with bookmark count logging
-- **Media Servers (kind 10063)**: Direct storage save with server count logging
-
-### Real-time Subscription
-Updated `subscribeToAccountMetadata()` to include all 6 kinds for live updates:
-
+### New Approach (Current)
 ```typescript
-const filter = {
-  authors: [pubkey],
-  kinds: [
-    kinds.Metadata,
-    kinds.Contacts,
-    kinds.Mutelist,
-    kinds.RelayList,
-    kinds.BookmarkList,
-    10063,
-  ],
-};
+async load() {
+  // 1. Load cached data from storage immediately (instant display)
+  const storedMetadata = await this.storage.getEventByPubkeyAndKind(...);
+  const storedFollowing = await this.storage.getEventByPubkeyAndKind(...);
+  // Display cached data instantly
+  
+  // 2. Start live subscription (fetches fresh data + keeps updated)
+  await this.subscribeToAccountMetadata(pubkey);
+  // Subscription handles everything:
+  // - Fetches latest data from relays
+  // - Processes each event type
+  // - Saves to storage
+  // - Updates UI state
+  // - Stays connected for real-time updates
+}
+```
+
+### Subscription Handler
+```typescript
+private async subscribeToAccountMetadata(pubkey: string) {
+  const filter = {
+    kinds: [0, 3, 10000, 10002, 10003, 10063],
+    authors: [pubkey],
+  };
+
+  const onEvent = async (event: Event) => {
+    // Save to storage
+    await this.storage.saveEvent(event);
+    
+    // Process by kind
+    switch (event.kind) {
+      case kinds.Metadata: /* update profile */
+      case kinds.Contacts: /* update following */
+      case kinds.Mutelist: /* update mutes */
+      // ... etc
+    }
+  };
+
+  const onEose = () => {
+    // Initial data fully loaded from relays
+    this.appState.isLoading.set(false);
+    this.appState.showSuccess.set(true);
+  };
+
+  this.accountSubscription = this.accountRelay.subscribe(filter, onEvent, onEose);
+}
 ```
 
 ### Removed Code
 - Duplicate relay list fetch from `discoveryRelay.getEventByPubkeyAndKind()`
 - Individual `loadAccountFollowing()` call
 - Individual `loadAccountMuteList()` call
+- Helper methods: `processFollowingList()` and `processMuteList()`
+- Redundant batch query in `load()` method
 - **BookmarkService**: Changed `initialize()` from relay query to storage-only fetch
 - **NostrService**: Changed `getMediaServers()` from relay query to storage-only fetch
 
+## Benefits
+
+### Performance
+- **Instant UI**: Cached data displays immediately on load
+- **Fresh Data**: Live subscription fetches latest data in parallel
+- **No Redundancy**: Data fetched only once via subscription
+- **Real-time Updates**: Always connected for instant updates
+
+### Architecture
+- **Simpler Code**: Removed helper methods and redundant fetching logic
+- **Single Source of Truth**: Subscription is the only data fetcher
+- **Better UX**: Shows cached data instantly, updates when fresh data arrives
+- **Live Connection**: No need to refresh - updates arrive automatically
+
 ## Performance Impact
-- **Before**: 8 relay queries (6 initial + 2 duplicate) = ~8× network latency
-- **After**: 1 consolidated query = ~1× network latency
-- **Improvement**: ~8× faster account loading, 87.5% reduction in relay requests
+- **Before Phase 1**: 8 queries (6 initial + 2 duplicates)
+- **After Phase 1**: 1 batch query + 1 subscription = 2 fetches
+- **After Phase 2 (Current)**: 1 live subscription = **1 persistent connection**
+- **Overall Improvement**: 87.5% reduction in queries (8 → 1)
+- **Added Benefit**: Real-time updates included at no extra cost
+
+## Data Flow
+
+### On Account Load
+1. **Instant Display** (0ms): Load cached data from IndexedDB
+2. **Connect** (~50ms): Open subscription to account relay
+3. **Stream Events** (~100-500ms): Events arrive as relay responds
+4. **EOSE** (~500-1000ms): All initial data received, loading complete
+5. **Stay Connected**: Subscription remains open for live updates
+
+### On Data Change (from another client)
+1. New event published to relay
+2. Subscription receives event immediately
+3. Event processed and saved to storage
+4. UI state updated automatically
+5. User sees change in real-time
 
 ## Testing Checklist
 - [ ] Profile metadata loads correctly
@@ -88,8 +140,15 @@ const filter = {
 - [ ] Real-time updates work for all event types
 - [ ] Storage fallbacks function when events not found
 
-## Related Files
-- `src/app/services/nostr.service.ts` - Main implementation, `getMediaServers()` updated
-- `src/app/services/bookmark.service.ts` - `initialize()` updated to use storage
-- `src/app/services/account-relay.service.ts` - Relay service used
-- `src/app/services/storage.service.ts` - Storage fallback layer
+## Files Modified
+- `src/app/services/nostr.service.ts`:
+  - Simplified `load()` to use storage + subscription only
+  - Enhanced `subscribeToAccountMetadata()` to handle all event processing
+  - Removed `processFollowingList()` and `processMuteList()` helper methods
+  - Moved loading state management into subscription EOSE handler
+  
+- `src/app/services/bookmark.service.ts`: 
+  - Changed to storage-only fetch (data pre-loaded by subscription)
+  
+- `src/app/services/media.service.ts`:
+  - Uses `getMediaServers()` which now reads from storage (data pre-loaded by subscription)
