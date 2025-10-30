@@ -77,7 +77,21 @@ token.type === 'nostr-mention' &&
 token.type === 'nostr-mention' &&
 (token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note')
 ) {
-@if (getEventPreview(token.id); as preview) {
+@if (getEventLoadingState(token.id) === 'loading') {
+<div class="nostr-event-placeholder loading">
+  <div class="placeholder-content">
+    <mat-spinner diameter="20"></mat-spinner>
+    <span class="placeholder-text">Loading referenced event...</span>
+  </div>
+</div>
+} @else if (getEventLoadingState(token.id) === 'failed') {
+<div class="nostr-event-placeholder failed">
+  <div class="placeholder-content">
+    <mat-icon>error_outline</mat-icon>
+    <span class="placeholder-text">Unable to load referenced event</span>
+  </div>
+</div>
+} @else if (getEventPreview(token.id); as preview) {
 <div class="nostr-event-preview" [innerHTML]="preview"></div>
 } @else {
 &nbsp;<a class="nostr-reference">{{ token.nostrData?.displayName }}</a>&nbsp;

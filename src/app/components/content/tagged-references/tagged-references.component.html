@@ -6,6 +6,36 @@
   <div class="articles-section">
     <div class="articles-list">
       @for (article of articles(); track article.kind + ':' + article.pubkey + ':' + article.identifier) {
+
+      @if (getArticleLoadingState(article) === 'loading') {
+      <!-- Loading state -->
+      <div class="article-preview-card loading">
+        <mat-card>
+          <div class="preview-content">
+            <div class="loading-content">
+              <mat-spinner diameter="24"></mat-spinner>
+              <span class="loading-text">Loading {{ getKindDisplayName(article.kind) }}...</span>
+            </div>
+          </div>
+        </mat-card>
+      </div>
+      } @else if (getArticleLoadingState(article) === 'failed') {
+      <!-- Failed state -->
+      <div class="article-preview-card failed">
+        <mat-card>
+          <div class="preview-content">
+            <div class="failed-content">
+              <mat-icon>error_outline</mat-icon>
+              <div class="failed-text">
+                <div class="failed-title">Unable to load {{ getKindDisplayName(article.kind) }}</div>
+                <div class="failed-subtitle">{{ article.identifier }}</div>
+              </div>
+            </div>
+          </div>
+        </mat-card>
+      </div>
+      } @else {
+      <!-- Loaded state -->
       <a class="article-preview-card" (click)="onArticleClick(article)" (keydown.enter)="onArticleClick(article)"
         (keydown.space)="onArticleClick(article)" tabindex="0" role="button"
         [attr.aria-label]="'Open ' + getKindDisplayName(article.kind) + ': ' + getArticleTitle(article)">
@@ -44,6 +74,8 @@
           </div>
         </mat-card>
       </a>
+      }
+
       }
     </div>
   </div>

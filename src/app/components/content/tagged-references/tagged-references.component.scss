@@ -279,3 +279,71 @@
     }
   }
 }
+// Loading and failed states
+.article-preview-card.loading,
+.article-preview-card.failed {
+  cursor: default;
+  pointer-events: none;
+
+  mat-card {
+    box-shadow: none;
+  }
+
+  .preview-content {
+    min-height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.loading-content,
+.failed-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-spinner {
+    flex-shrink: 0;
+  }
+
+  mat-icon {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    font-size: 24px;
+  }
+
+  .loading-text,
+  .failed-text {
+    font-size: 0.875rem;
+  }
+}
+
+.article-preview-card.failed {
+  mat-card {
+    background: var(--mat-sys-error-container, rgba(244, 67, 54, 0.1));
+    border: 1px solid var(--mat-sys-error, rgba(244, 67, 54, 0.3));
+  }
+
+  .failed-content {
+    color: var(--mat-sys-on-error-container, #c62828);
+
+    mat-icon {
+      color: var(--mat-sys-error, #f44336);
+    }
+
+    .failed-title {
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+
+    .failed-subtitle {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      word-break: break-all;
+    }
+  }
+}
