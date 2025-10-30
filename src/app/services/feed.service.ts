@@ -24,7 +24,6 @@ import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
 import { Followset } from './followset';
 import { RegionService } from './region.service';
-import { PowService } from './pow.service';
 
 export interface FeedItem {
   column: ColumnConfig;
@@ -209,7 +208,6 @@ export class FeedService {
   private readonly onDemandUserData = inject(OnDemandUserDataService);
   private readonly followset = inject(Followset);
   private readonly regionService = inject(RegionService);
-  private readonly powService = inject(PowService);
 
   private readonly algorithms = inject(Algorithms);
 
@@ -248,17 +246,6 @@ export class FeedService {
   // Use a signal to track feed data for reactivity
   private readonly _feedData = signal(new Map<string, FeedItem>());
   readonly data = new Map<string, FeedItem>();
-
-  /**
-   * Check if an event meets the minimum PoW difficulty requirement
-   */
-  /**
-   * Generate ID prefixes for filtering by PoW difficulty
-   * @deprecated PoW filtering removed - nostr-tools no longer supports prefix filtering
-   */
-  private getPrefixesForDifficulty(_difficulty: number): string[] {
-    return [];
-  }
 
   // Public getter to expose reactive feed data map for components
   get feedDataReactive(): Signal<Map<string, FeedItem>> {
@@ -454,8 +441,6 @@ export class FeedService {
             return;
           }
 
-          // Note: PoW filtering is done relay-side via ids prefix filter, no client-side check needed
-
           // Add event and maintain chronological order (newest first)
           item.events.update((events: Event[]) => {
             const newEvents = [...events, event];
@@ -474,8 +459,6 @@ export class FeedService {
             console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
             return;
           }
-
-          // Note: PoW filtering is done relay-side via ids prefix filter, no client-side check needed
 
           // Add event and maintain chronological order (newest first)
           item.events.update((events: Event[]) => {
@@ -743,9 +726,6 @@ export class FeedService {
     const daysBack = isArticlesFeed ? 90 : 7; // Look further back for articles
     const timeCutoff = now - daysBack * 24 * 60 * 60; // subtract days in seconds
 
-    // Get PoW minimum difficulty filter if set
-    const powMinDifficulty = (feedData.column.filters?.['powMinDifficulty'] as number) || 0;
-
     const userEventsMap = new Map<string, Event[]>();
     let processedUsers = 0;
     const totalUsers = pubkeys.length;
@@ -829,7 +809,7 @@ export class FeedService {
    * Finalize the incremental feed with a final sort and cleanup
    */
   private finalizeIncrementalFeed(userEventsMap: Map<string, Event[]>, feedData: FeedItem,) {
-    // Final aggregation and sort with PoW filter
+    // Final aggregation and sort
     const finalEvents = this.aggregateAndSortEvents(userEventsMap);
 
     // Update feed data with final aggregated events
@@ -847,7 +827,6 @@ export class FeedService {
 
   /**
    * Aggregate and sort events ensuring diversity and recency
-   * Optionally filters by minimum PoW difficulty
    */
   private aggregateAndSortEvents(userEventsMap: Map<string, Event[]>): Event[] {
     const result: Event[] = [];
@@ -1087,7 +1066,7 @@ export class FeedService {
       return;
     }
 
-    // Aggregate current older events with PoW filter
+    // Aggregate current older events
     const olderEvents = this.aggregateAndSortEvents(userEventsMap);
 
     if (olderEvents.length > 0) {
@@ -1113,7 +1092,7 @@ export class FeedService {
     existingEvents: Event[],
 
   ) {
-    // Final aggregation and sort of older events with PoW filter
+    // Final aggregation and sort of older events
     const finalOlderEvents = this.aggregateAndSortEvents(userEventsMap);
 
     // Append to existing events if we have any
@@ -1901,7 +1880,6 @@ export class FeedService {
     const column = columnData.column;
     console.log(`📊 Column found: ${column.label}, unsubscribing and resubscribing...`);
     console.log(`📊 Column filters BEFORE refresh:`, column.filters);
-    console.log(`📊 Column powMinDifficulty:`, column.filters?.['powMinDifficulty']);
 
     // Unsubscribe from the column (this removes it from data map)
     this.unsubscribeFromColumn(columnId);
@@ -1917,7 +1895,7 @@ export class FeedService {
       });
     }
 
-    // Resubscribe to the column (this will rebuild the filter with current PoW settings)
+    // Resubscribe to the column (this will rebuild the filter with current settings)
     await this.subscribeToColumn(column);
 
     this.logger.debug(`Refreshed column: ${columnId}`);
