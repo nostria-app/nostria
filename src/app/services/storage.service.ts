@@ -1655,7 +1655,7 @@ export class StorageService {
       }
 
       await this.db.put('observedRelays', stats);
-      this.logger.debug(`Saved observed relay stats for: ${stats.url}`);
+      // Removed debug log to reduce console noise - saves are now throttled
     } catch (error) {
       this.logger.error(`Error saving observed relay stats for ${stats.url}`, error);
     }
