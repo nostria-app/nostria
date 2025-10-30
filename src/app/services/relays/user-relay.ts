@@ -292,14 +292,16 @@ export class UserRelayService {
    * Publish an event to relays for a specific pubkey
    */
   async publish(pubkey: string, event: Event): Promise<void> {
-    await this.ensureRelaysForPubkey(pubkey);
-    const relayUrls = this.getEffectiveRelayUrls(this.getRelaysForPubkey(pubkey));
+    // Use getUserRelaysForPublishing to get ALL relays (not optimized/limited)
+    // This ensures maximum distribution for important events like DMs
+    const relayUrls = await this.userRelaysService.getUserRelaysForPublishing(pubkey);
 
     if (relayUrls.length === 0) {
       this.logger.warn(`[UserRelayService] No relays available for publishing for pubkey: ${pubkey.slice(0, 16)}...`);
       return;
     }
 
+    this.logger.info(`[UserRelayService] Publishing to ${relayUrls.length} relays for pubkey: ${pubkey.slice(0, 16)}...`);
     this.pool.publish(relayUrls, event);
   }
 

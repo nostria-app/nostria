@@ -887,11 +887,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Sign the gift wrap with the ephemeral key
       // const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
 
-      // Publish the gift wrap to relays of the recipient
-      await this.publishToUserRelays(signedGiftWrap, receiverPubkey);
-
-      // Publish the gift wrap to account relays, so the chat can be discovered on other devices.
-      await this.publishToAccountRelays(signedGiftWrap2);
+      // Publish both gift wraps to both the receiver's relays and your own account relays
+      // This ensures maximum delivery reliability
+      await Promise.allSettled([
+        this.publishToUserRelays(signedGiftWrap, receiverPubkey),
+        this.publishToAccountRelays(signedGiftWrap),
+        this.publishToUserRelays(signedGiftWrap2, myPubkey),
+        this.publishToAccountRelays(signedGiftWrap2),
+      ]);
 
       // Return the message object based on the original rumor
       return {
