@@ -9,6 +9,7 @@ import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
 import type { SafeResourceUrl } from '@angular/platform-browser';
 import { MediaPlayerService } from './media-player.service';
+import { getDecodedToken } from '@cashu/cashu-ts';
 
 export interface NostrData {
   type: string;
@@ -34,11 +35,18 @@ export interface ContentToken {
   | 'emoji'
   | 'base64-image'
   | 'base64-audio'
-  | 'base64-video';
+  | 'base64-video'
+  | 'cashu';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
   processedUrl?: SafeResourceUrl; // For YouTube embed URLs that are pre-processed
+  cashuData?: {
+    token: string;
+    mint?: string;
+    amount?: number;
+    unit?: string;
+  };
 }
 
 @Injectable({
@@ -288,6 +296,9 @@ export class ParsingService {
     const nostrRegex =
       /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
     const emojiRegex = /(:[a-zA-Z_]+:)/g;
+    // Cashu regex: matches cashuA or cashuB tokens, which can span multiple lines
+    // Must handle tokens that may be split across linebreaks or continue on same line
+    const cashuRegex = /(cashu[AB][a-zA-Z0-9+/=_-]+)/g;
 
     // Base64 data URL regex - matches data URLs for images, audio, and video
     const base64ImageRegex = /(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+)(?=\s|##LINEBREAK##|$)/g;
@@ -307,6 +318,12 @@ export class ParsingService {
       nostrData?: NostrData;
       emoji?: string;
       processedUrl?: SafeResourceUrl;
+      cashuData?: {
+        token: string;
+        mint?: string;
+        amount?: number;
+        unit?: string;
+      };
     }[] = [];
 
     // Find emoji codes first (highest priority after nostr)
@@ -376,6 +393,34 @@ export class ParsingService {
           type: 'nostr-mention',
           nostrData,
         });
+      }
+    }
+
+    // Find Cashu tokens (ecash)
+    cashuRegex.lastIndex = 0;
+    while ((match = cashuRegex.exec(processedContent)) !== null) {
+      try {
+        const tokenString = match[0];
+        const decoded = getDecodedToken(tokenString);
+
+        // Calculate total amount from all proofs
+        const totalAmount = decoded.proofs.reduce((sum: number, proof: { amount: number }) => sum + proof.amount, 0);
+
+        matches.push({
+          start: match.index,
+          end: match.index + match[0].length,
+          content: tokenString,
+          type: 'cashu',
+          cashuData: {
+            token: tokenString,
+            mint: decoded.mint,
+            amount: totalAmount,
+            unit: decoded.unit || 'sat',
+          },
+        });
+      } catch (error) {
+        console.warn('Error parsing cashu token:', match[0], error);
+        // If parsing fails, treat it as regular text
       }
     }
 
@@ -526,6 +571,10 @@ export class ParsingService {
 
       if (match.processedUrl) {
         token.processedUrl = match.processedUrl;
+      }
+
+      if (match.cashuData) {
+        token.cashuData = match.cashuData;
       }
 
       tokens.push(token);

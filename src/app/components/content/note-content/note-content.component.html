@@ -5,6 +5,12 @@
 <br />
 } @else if (token.type === 'emoji') {
 <span class="emoji-token" [title]="token.content">{{ token.emoji }}</span>
+} @else if (token.type === 'cashu') {
+<div class="cashu-container">
+  <app-cashu-token [token]="token.content" [mint]="token.cashuData?.mint" [amount]="token.cashuData?.amount"
+    [unit]="token.cashuData?.unit || 'sat'">
+  </app-cashu-token>
+</div>
 } @else if (token.type === 'url') {
 &nbsp;<a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>&nbsp;
 } @else if (token.type === 'youtube') {
