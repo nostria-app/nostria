@@ -391,135 +391,51 @@ export class NostrService implements NostriaService {
 
     try {
       const pubkey = account.pubkey;
-      // When the account changes, check what data we have and get if missing.
-      this.logger.info('Account changed, loading data for new account', {
-        pubkey,
-      });
+      this.logger.info('Account changed, loading data for new account', { pubkey });
 
       let info: any = await this.storage.getInfo(pubkey, 'user');
-
       if (!info) {
         info = {};
       }
 
-      // CRITICAL: Fetch all account data in a single query for efficiency
-      // This consolidates what were previously 6 separate queries:
-      // 1. kinds.Metadata (0) - profile
-      // 2. kinds.Contacts (3) - following list
-      // 3. kinds.Mutelist (10000) - mute list
-      // 4. kinds.RelayList (10002) - relay configuration
-      // 5. kinds.BookmarkList (10003) - bookmarks
-      // 6. 10063 - media server list (BUD-03)
-      this.logger.info('Fetching all account data from relay in single query', { pubkey });
-      const accountEvents = await this.accountRelay.getMany({
-        authors: [pubkey],
-        kinds: [
-          kinds.Metadata,      // 0
-          kinds.Contacts,      // 3
-          kinds.Mutelist,      // 10000
-          kinds.RelayList,     // 10002
-          kinds.BookmarkList,  // 10003
-          10063,               // Media server list (BUD-03)
-        ],
-      });
+      // Load cached data from storage immediately for instant display
+      this.logger.info('Loading cached account data from storage', { pubkey });
 
-      // Separate events by kind
-      const metadataEvent = accountEvents.find(e => e.kind === kinds.Metadata);
-      const followingEvent = accountEvents.find(e => e.kind === kinds.Contacts);
-      const muteListEvent = accountEvents.find(e => e.kind === kinds.Mutelist);
-      const relayListEvent = accountEvents.find(e => e.kind === kinds.RelayList);
-      const bookmarkListEvent = accountEvents.find(e => e.kind === kinds.BookmarkList);
-      const mediaServerEvent = accountEvents.find(e => e.kind === 10063);
-
-      let metadata: NostrRecord | null | undefined = null;
-
-      if (metadataEvent) {
-        metadata = this.data.toRecord(metadataEvent);
-
+      const storedMetadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+      if (storedMetadata) {
+        const metadata = this.data.toRecord(storedMetadata);
         this.accountState.addToCache(metadata.event.pubkey, metadata);
         this.accountState.profile.set(metadata);
-
-        this.logger.info('Found user metadata from relay', { metadata });
         this.appState.loadingMessage.set('Found your profile! 👍');
-        await this.storage.saveEvent(metadata.event);
-      } else {
-        // Fallback to storage only if relay fetch completely fails
-        this.logger.warn('Could not fetch metadata from relay, falling back to storage');
-        const storedMetadataEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
-
-        if (storedMetadataEvent) {
-          metadata = this.data.toRecord(storedMetadataEvent);
-          this.accountState.addToCache(metadata.event.pubkey, metadata);
-          this.accountState.profile.set(metadata);
-          this.logger.info('Using stored metadata as fallback');
-        } else {
-          this.logger.warn('No metadata found for user in relay or storage');
-        }
       }
 
-      // Process following list
-      await this.processFollowingList(pubkey, followingEvent);
-
-      // Process mute list
-      await this.processMuteList(pubkey, muteListEvent);
-
-      // Process relay list - save to storage for background use
-      if (relayListEvent) {
-        await this.storage.saveEvent(relayListEvent);
-        this.logger.info('Saved relay list from initial fetch', {
-          pubkey,
-          relayCount: relayListEvent.tags.filter(t => t[0] === 'r').length,
-        });
+      const storedFollowing = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      if (storedFollowing) {
+        const followingTags = this.getTags(storedFollowing, 'p');
+        this.accountState.followingList.set(followingTags);
       }
 
-      // Process bookmark list - save to storage for bookmark service
-      if (bookmarkListEvent) {
-        await this.storage.saveEvent(bookmarkListEvent);
-        this.logger.info('Saved bookmark list from initial fetch', {
-          pubkey,
-          bookmarkCount: bookmarkListEvent.tags.length,
-        });
+      const storedMuteList = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+      if (storedMuteList) {
+        this.accountState.muteList.set(storedMuteList);
       }
 
-      // Process media server list - save to storage
-      if (mediaServerEvent) {
-        await this.storage.saveEvent(mediaServerEvent);
-        this.logger.info('Saved media server list from initial fetch', {
-          pubkey,
-          serverCount: mediaServerEvent.tags.filter(t => t[0] === 'server').length,
-        });
-      }
-
+      // Start live subscription - this will fetch fresh data from relays
+      // and keep us updated with any changes in real-time
       await this.subscribeToAccountMetadata(pubkey);
 
-      // await this.bookmark.initialize();
-
-      this.appState.loadingMessage.set('Loading completed!');
-      this.logger.info('Data loading process completed');
-
       await this.storage.saveInfo(pubkey, 'user', info);
-
-      // Note: Relay list is now fetched in the main query above, no need for separate background fetch
 
       if (!this.initialized()) {
         this.initialized.set(true);
       }
 
-      this.appState.isLoading.set(false);
-      this.appState.showSuccess.set(true);
-      this.accountState.initialized.set(true);
-
-      // Hide success animation after 1.5 seconds
-      setTimeout(() => {
-        this.appState.showSuccess.set(false);
-      }, 1500);
+      // The subscription will handle setting isLoading to false in its EOSE handler
     } catch (error) {
       this.logger.error('Error during account data loading', error);
-      // Ensure loading state is cleared even on error
       this.appState.isLoading.set(false);
       this.appState.loadingMessage.set('Error loading account data');
 
-      // Still mark as initialized to prevent the app from being stuck
       if (!this.initialized()) {
         this.initialized.set(true);
       }
@@ -603,95 +519,101 @@ export class NostrService implements NostriaService {
   private async subscribeToAccountMetadata(pubkey: string) {
     this.logger.info('subscribeToAccountMetadata', { pubkey });
 
-    // Subscribe to all account metadata kinds for real-time updates
-    const filter =
-    {
+    // Subscribe to all account metadata kinds for both initial data and real-time updates
+    const filter = {
       kinds: [
-        kinds.Metadata,      // 0 - profile updates
-        kinds.Contacts,      // 3 - following list updates
-        kinds.Mutelist,      // 10000 - mute list updates
-        kinds.RelayList,     // 10002 - relay configuration updates
-        kinds.BookmarkList,  // 10003 - bookmark updates
-        10063,               // Media server list updates (BUD-03)
+        kinds.Metadata,      // 0 - profile
+        kinds.Contacts,      // 3 - following list
+        kinds.Mutelist,      // 10000 - mute list
+        kinds.RelayList,     // 10002 - relay configuration
+        kinds.BookmarkList,  // 10003 - bookmarks
+        10063,               // Media server list (BUD-03)
       ],
       authors: [pubkey],
     };
 
     const onEvent = async (event: Event) => {
-      console.log('Received event on the account subscription:', event);
+      console.log('Received event on account subscription:', event);
 
-      // Save all events received from subscription
-      // try {
-      //   await this.storage.saveEvent(event);
-      //   this.logger.debug(`Saved event from account subscription: ${event.id} (kind: ${event.kind})`);
-      // } catch (error) {
-      //   this.logger.warn(`Failed to save event from account subscription: ${event.id}`, error);
-      // }
+      // Save all events to storage
+      try {
+        await this.storage.saveEvent(event);
+        this.logger.debug(`Saved event from account subscription: ${event.id} (kind: ${event.kind})`);
+      } catch (error) {
+        this.logger.warn(`Failed to save event from account subscription: ${event.id}`, error);
+      }
 
-      if (event.kind === kinds.Contacts) {
-        // Refresh the following list in the account state
-        this.accountState.parseFollowingList(event);
+      // Process each event type
+      switch (event.kind) {
+        case kinds.Metadata: {
+          const metadata = this.data.toRecord(event);
+          this.accountState.addToCache(metadata.event.pubkey, metadata);
+          this.accountState.profile.set(metadata);
+          this.logger.info('Updated profile metadata from subscription', { pubkey });
+          break;
+        }
+
+        case kinds.Contacts: {
+          const followingTags = this.getTags(event, 'p');
+          this.accountState.followingList.set(followingTags);
+          this.logger.info('Updated following list from subscription', {
+            pubkey,
+            followingCount: followingTags.length,
+          });
+          break;
+        }
+
+        case kinds.Mutelist: {
+          this.accountState.muteList.set(event);
+          this.logger.info('Updated mute list from subscription', {
+            pubkey,
+            mutedCount: event.tags.filter(t => t[0] === 'p').length,
+          });
+          break;
+        }
+
+        case kinds.RelayList: {
+          this.logger.info('Updated relay list from subscription', {
+            pubkey,
+            relayCount: event.tags.filter(t => t[0] === 'r').length,
+          });
+          break;
+        }
+
+        case kinds.BookmarkList: {
+          this.logger.info('Updated bookmark list from subscription', {
+            pubkey,
+            bookmarkCount: event.tags.length,
+          });
+          break;
+        }
+
+        case 10063: {
+          this.logger.info('Updated media server list from subscription', {
+            pubkey,
+            serverCount: event.tags.filter(t => t[0] === 'server').length,
+          });
+          break;
+        }
       }
     };
 
     const onEose = () => {
-      console.log('onEose on account subscription.');
+      console.log('EOSE on account subscription - initial data loaded');
+      this.logger.info('Account subscription EOSE - fresh data loaded from relays');
+
+      this.appState.loadingMessage.set('Loading completed!');
+      this.appState.isLoading.set(false);
+      this.appState.showSuccess.set(true);
+      this.accountState.initialized.set(true);
+
+      // Hide success animation after 1.5 seconds
+      setTimeout(() => {
+        this.appState.showSuccess.set(false);
+      }, 1500);
     };
 
     this.accountSubscription = this.accountRelay.subscribe(filter, onEvent, onEose);
-  }
-
-  /**
-   * Process following list event (kind 3) from relay or storage fallback
-   */
-  private async processFollowingList(pubkey: string, followingEvent?: Event) {
-    let eventToProcess = followingEvent;
-
-    if (!eventToProcess) {
-      // Fallback to storage only if relay fetch completely fails
-      this.logger.warn('Could not fetch following list from relay, falling back to storage');
-      const storedEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
-      eventToProcess = storedEvent || undefined;
-    }
-
-    if (eventToProcess) {
-      // Save the event to storage
-      await this.storage.saveEvent(eventToProcess);
-
-      const followingTags = this.getTags(eventToProcess, 'p');
-      this.accountState.followingList.set(followingTags);
-
-      this.logger.info('Loaded following list', {
-        pubkey,
-        followingCount: followingTags.length,
-      });
-    }
-  }
-
-  /**
-   * Process mute list event (kind 10000) from relay or storage fallback
-   */
-  private async processMuteList(pubkey: string, muteListEvent?: Event) {
-    let eventToProcess = muteListEvent;
-
-    if (!eventToProcess) {
-      // Fallback to storage only if relay fetch completely fails
-      this.logger.warn('Could not fetch mute list from relay, falling back to storage');
-      const storedEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
-      eventToProcess = storedEvent || undefined;
-    }
-
-    if (eventToProcess) {
-      // Save the event to storage
-      await this.storage.saveEvent(eventToProcess);
-
-      this.accountState.muteList.set(eventToProcess);
-
-      this.logger.info('Loaded mute list', {
-        pubkey,
-        mutedCount: eventToProcess.tags.filter(t => t[0] === 'p').length,
-      });
-    }
   }
 
   private async loadAccountFollowing(pubkey: string) {
@@ -1005,7 +927,7 @@ export class NostrService implements NostriaService {
     // Media server list (kind 10063) is already fetched in the consolidated account query
     // in the load() method, so we just retrieve from storage
     const event = await this.storage.getEventByPubkeyAndKind(pubkey, 10063);
-    
+
     if (!event) {
       this.logger.warn('No media server list found in storage for pubkey:', pubkey);
     }
