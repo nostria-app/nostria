@@ -7,6 +7,7 @@ import { LayoutService } from './layout.service';
 import { Event, kinds } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
+import { StorageService } from './storage.service';
 
 // Define bookmark types
 export type BookmarkType = 'e' | 'a' | 'r' | 't';
@@ -28,6 +29,7 @@ export class BookmarkService {
   accountState = inject(AccountStateService);
   snackBar = inject(MatSnackBar);
   layout = inject(LayoutService);
+  storage = inject(StorageService);
 
   bookmarkEvent = signal<Event | null>(null);
 
@@ -72,10 +74,12 @@ export class BookmarkService {
   }
 
   async initialize() {
-    const bookmarksEvent = await this.accountRelay.get({
-      authors: [this.accountState.pubkey()!],
-      kinds: [kinds.BookmarkList],
-    });
+    // Bookmark list (kind 10003) is already fetched in the consolidated account query
+    // in nostr.service.ts, so we just load from storage
+    const bookmarksEvent = await this.storage.getEventByPubkeyAndKind(
+      this.accountState.pubkey()!,
+      kinds.BookmarkList
+    );
     this.bookmarkEvent.set(bookmarksEvent);
   }
 
