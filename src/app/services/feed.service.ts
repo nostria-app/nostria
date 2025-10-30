@@ -690,7 +690,8 @@ export class FeedService {
 
       // 1. Add popular starter pack pubkeys (fetch from 'popular' starter pack)
       try {
-        const starterPacks = await this.followset.fetchStarterPacks();
+        // Fetch only the 'popular' starter pack - cache-first with background refresh
+        const starterPacks = await this.followset.fetchStarterPacks('popular');
         const popularPack = starterPacks.find(pack => pack.dTag === 'popular');
 
         if (popularPack) {

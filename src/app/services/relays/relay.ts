@@ -462,14 +462,14 @@ export abstract class RelayServiceBase {
       // TODO: Handle npub format if needed
     }
 
-    // Only log for non-metadata requests to reduce console noise
-    if (!filter.kinds?.includes(0)) {
-      this.logger.debug(
-        `[${this.constructor.name}] Getting events with filters (explicit relays):`,
-        filter,
-        urls
-      );
-    }
+    // Reduced logging - only log for non-metadata and when needed
+    // if (!filter.kinds?.includes(0)) {
+    //   this.logger.debug(
+    //     `[${this.constructor.name}] Getting events with filters (explicit relays):`,
+    //     filter,
+    //     urls
+    //   );
+    // }
 
     if (urls.length === 0) {
       this.logger.warn(`[${this.constructor.name}] No relays available for query`);
@@ -492,14 +492,8 @@ export abstract class RelayServiceBase {
       // Default timeout is 5 seconds if not specified
       const timeout = options.timeout || 5000;
 
-      this.logger.debug(
-        `[${this.constructor.name}] Executing query - Request ID: ${requestId}, Timeout: ${timeout}ms`,
-        {
-          filter,
-          relayCount: urls.length,
-          poolInstance: this.poolInstanceId,
-        }
-      );
+      // Reduced logging - only log for non-metadata and when needed
+      // this.logger.debug(`[${this.constructor.name}] Executing query - Request ID: ${requestId}`, {...});
 
       // Execute the query
       const event = (await this.#pool.get(urls, filter, {
@@ -514,9 +508,10 @@ export abstract class RelayServiceBase {
         return null; // Don't return expired events
       }
 
-      if (!filter.kinds?.includes(0)) {
-        this.logger.debug(`[${this.constructor.name}] Received event from query`, event);
-      }
+      // Reduced logging - removed "Received event from query" as it's too verbose
+      // if (!filter.kinds?.includes(0)) {
+      //   this.logger.debug(`[${this.constructor.name}] Received event from query`, event);
+      // }
 
       // Update lastUsed for all relays used in this query
       if (event) {
@@ -606,10 +601,10 @@ export abstract class RelayServiceBase {
       // TODO: Handle npub format if needed
     }
 
-    // Only log for non-metadata requests to reduce console noise
-    if (!filter.kinds?.includes(0)) {
-      this.logger.debug('Getting events with filters (explicit relays):', filter, urls);
-    }
+    // Reduced logging - only log for non-metadata and when needed
+    // if (!filter.kinds?.includes(0)) {
+    //   this.logger.debug('Getting events with filters (explicit relays):', filter, urls);
+    // }
 
     if (urls.length === 0) {
       this.logger.warn('No relays available for query');
