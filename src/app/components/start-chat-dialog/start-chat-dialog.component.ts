@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatDialogRef } from '@angular/material/dialog';
 import { MatDialogModule } from '@angular/material/dialog';
@@ -83,7 +83,7 @@ export class StartChatDialogComponent {
     effect(() => {
       const query = this.searchQuery().trim();
       if (query.length >= 2) {
-        const results = this.accountState.searchProfiles(query);
+        const results = untracked(() => this.accountState.searchProfiles(query));
         this.searchResults.set(results.slice(0, 10)); // Limit to 10 results
       } else {
         this.searchResults.set([]);

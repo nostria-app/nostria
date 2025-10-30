@@ -726,7 +726,6 @@ export class AccountStateService implements OnDestroy {
 
   // Method to search cached profiles
   searchProfiles(query: string): NostrRecord[] {
-    console.log('searchProfiles called with query:', query);
     if (!query || query.length < 1) {
       return [];
     }
@@ -741,7 +740,6 @@ export class AccountStateService implements OnDestroy {
       pubkeysToSearch.push(currentPubkey);
     }
 
-    console.log('Searching through pubkeys:', pubkeysToSearch.length);
     const results: NostrRecord[] = [];
     const lowercaseQuery = query.toLowerCase();
 

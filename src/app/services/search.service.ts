@@ -40,7 +40,7 @@ export class SearchService {
 
       if (searchValue) {
         // First, search in cached profiles
-        const cachedResults = this.accountState.searchProfiles(searchValue);
+        const cachedResults = untracked(() => this.accountState.searchProfiles(searchValue));
         console.log(
           'Cached search results:',
           cachedResults.length,
