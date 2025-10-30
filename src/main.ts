@@ -3,6 +3,7 @@ import { appConfig } from './app/app.config';
 import { App } from './app/app';
 import { registerLocaleData } from '@angular/common';
 import { loadTranslations } from '@angular/localize';
+import { initializeDebugUtils } from './app/utils/debug-utils';
 
 console.log('[BOOTSTRAP] Starting application bootstrap');
 
@@ -20,6 +21,11 @@ if (typeof window !== 'undefined') {
 // Init provided language
 initLanguage(appLang)
   .then(() => bootstrapApplication(App, appConfig))
+  .then((appRef) => {
+    console.log('[BOOTSTRAP] Application bootstrapped successfully');
+    // Initialize debug utilities
+    initializeDebugUtils(appRef);
+  })
   .catch(err => {
     console.error('[BOOTSTRAP ERROR] Failed to bootstrap application', err);
   });
