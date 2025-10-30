@@ -402,19 +402,34 @@ export class NostrService implements NostriaService {
         info = {};
       }
 
-      debugger;
-      // CRITICAL: Fetch all account data (profile, following list, mute list) in a single query
-      // This is more efficient than 3 separate queries
-      this.logger.info('Fetching account data from relay', { pubkey });
+      // CRITICAL: Fetch all account data in a single query for efficiency
+      // This consolidates what were previously 6 separate queries:
+      // 1. kinds.Metadata (0) - profile
+      // 2. kinds.Contacts (3) - following list
+      // 3. kinds.Mutelist (10000) - mute list
+      // 4. kinds.RelayList (10002) - relay configuration
+      // 5. kinds.BookmarkList (10003) - bookmarks
+      // 6. 10063 - media server list (BUD-03)
+      this.logger.info('Fetching all account data from relay in single query', { pubkey });
       const accountEvents = await this.accountRelay.getMany({
         authors: [pubkey],
-        kinds: [kinds.Metadata, kinds.Contacts, kinds.Mutelist], // kind 0, 3, 10000
+        kinds: [
+          kinds.Metadata,      // 0
+          kinds.Contacts,      // 3
+          kinds.Mutelist,      // 10000
+          kinds.RelayList,     // 10002
+          kinds.BookmarkList,  // 10003
+          10063,               // Media server list (BUD-03)
+        ],
       });
 
       // Separate events by kind
       const metadataEvent = accountEvents.find(e => e.kind === kinds.Metadata);
       const followingEvent = accountEvents.find(e => e.kind === kinds.Contacts);
       const muteListEvent = accountEvents.find(e => e.kind === kinds.Mutelist);
+      const relayListEvent = accountEvents.find(e => e.kind === kinds.RelayList);
+      const bookmarkListEvent = accountEvents.find(e => e.kind === kinds.BookmarkList);
+      const mediaServerEvent = accountEvents.find(e => e.kind === 10063);
 
       let metadata: NostrRecord | null | undefined = null;
 
@@ -448,6 +463,33 @@ export class NostrService implements NostriaService {
       // Process mute list
       await this.processMuteList(pubkey, muteListEvent);
 
+      // Process relay list - save to storage for background use
+      if (relayListEvent) {
+        await this.storage.saveEvent(relayListEvent);
+        this.logger.info('Saved relay list from initial fetch', {
+          pubkey,
+          relayCount: relayListEvent.tags.filter(t => t[0] === 'r').length,
+        });
+      }
+
+      // Process bookmark list - save to storage for bookmark service
+      if (bookmarkListEvent) {
+        await this.storage.saveEvent(bookmarkListEvent);
+        this.logger.info('Saved bookmark list from initial fetch', {
+          pubkey,
+          bookmarkCount: bookmarkListEvent.tags.length,
+        });
+      }
+
+      // Process media server list - save to storage
+      if (mediaServerEvent) {
+        await this.storage.saveEvent(mediaServerEvent);
+        this.logger.info('Saved media server list from initial fetch', {
+          pubkey,
+          serverCount: mediaServerEvent.tags.filter(t => t[0] === 'server').length,
+        });
+      }
+
       await this.subscribeToAccountMetadata(pubkey);
 
       // await this.bookmark.initialize();
@@ -457,13 +499,7 @@ export class NostrService implements NostriaService {
 
       await this.storage.saveInfo(pubkey, 'user', info);
 
-      // Schedule a refresh of the relays in the background. For now this won't be reflected until
-      // the user refreshes the app.
-      this.discoveryRelay.getEventByPubkeyAndKind(pubkey, kinds.RelayList).then(async evt => {
-        if (evt) {
-          this.storage.saveEvent(evt);
-        }
-      });
+      // Note: Relay list is now fetched in the main query above, no need for separate background fetch
 
       if (!this.initialized()) {
         this.initialized.set(true);
@@ -567,9 +603,17 @@ export class NostrService implements NostriaService {
   private async subscribeToAccountMetadata(pubkey: string) {
     this.logger.info('subscribeToAccountMetadata', { pubkey });
 
+    // Subscribe to all account metadata kinds for real-time updates
     const filter =
     {
-      kinds: [kinds.Metadata, kinds.Contacts, kinds.RelayList],
+      kinds: [
+        kinds.Metadata,      // 0 - profile updates
+        kinds.Contacts,      // 3 - following list updates
+        kinds.Mutelist,      // 10000 - mute list updates
+        kinds.RelayList,     // 10002 - relay configuration updates
+        kinds.BookmarkList,  // 10003 - bookmark updates
+        10063,               // Media server list updates (BUD-03)
+      ],
       authors: [pubkey],
     };
 
@@ -958,17 +1002,12 @@ export class NostrService implements NostriaService {
 
   /** Get the BUD-03: User Server List */
   async getMediaServers(pubkey: string): Promise<Event | null> {
-    // CRITICAL: Fetch from relay first to get latest media server list
-    let event = await this.accountRelay.getEventByPubkeyAndKind(pubkey, 10063); // BUD-03: User Server List
-
-    if (event) {
-      // Save fresh data to storage
-      this.storage.saveEvent(event as Event);
-      this.logger.info('Loaded fresh media servers from relay');
-    } else {
-      // Fallback to storage only if relay fetch fails
-      this.logger.warn('Could not fetch media servers from relay, falling back to storage');
-      event = await this.storage.getEventByPubkeyAndKind(pubkey, 10063);
+    // Media server list (kind 10063) is already fetched in the consolidated account query
+    // in the load() method, so we just retrieve from storage
+    const event = await this.storage.getEventByPubkeyAndKind(pubkey, 10063);
+    
+    if (!event) {
+      this.logger.warn('No media server list found in storage for pubkey:', pubkey);
     }
 
     return event;
