@@ -413,17 +413,21 @@ export class EventComponent implements AfterViewChecked {
     effect(() => {
       const replyId = this.replyEventId();
       const rootId = this.rootEventId();
+      const currentEvent = this.event() || this.record()?.event;
 
-      if (this.isReply()) {
+      if (this.isReply() && currentEvent) {
         untracked(async () => {
+          // Get event tags which includes author and relay information
+          const eventTags = this.eventService.getEventTags(currentEvent);
+
           // Load immediate parent (reply)
           if (replyId) {
-            await this.loadParentEvent(replyId);
+            await this.loadParentEvent(replyId, eventTags);
           }
 
           // Load root event if it's different from reply
           if (rootId && rootId !== replyId) {
-            await this.loadRootEvent(rootId);
+            await this.loadRootEvent(rootId, eventTags);
           }
         });
       } else {
@@ -500,12 +504,23 @@ export class EventComponent implements AfterViewChecked {
     }
   }
 
-  async loadParentEvent(parentId: string) {
+  async loadParentEvent(parentId: string, eventTags: ReturnType<typeof this.eventService.getEventTags>) {
     if (!parentId) return;
 
     this.isLoadingParent.set(true);
     try {
-      const parentEvent = await this.eventService.loadEvent(parentId);
+      // Create nevent with author for outbox discovery if we have the author pubkey
+      // Check if parentId is a hex string (64 chars, only hex characters)
+      let nevent = parentId;
+      if (eventTags.author && /^[a-f0-9]{64}$/i.test(parentId)) {
+        nevent = nip19.neventEncode({
+          id: parentId,
+          author: eventTags.author,
+          relays: eventTags.replyRelays.length > 0 ? eventTags.replyRelays : undefined
+        }) as string;
+      }
+
+      const parentEvent = await this.eventService.loadEvent(nevent);
       this.parentEvent.set(parentEvent);
     } catch (error) {
       console.error('Error loading parent event:', error);
@@ -515,11 +530,22 @@ export class EventComponent implements AfterViewChecked {
     }
   }
 
-  async loadRootEvent(rootId: string) {
+  async loadRootEvent(rootId: string, eventTags: ReturnType<typeof this.eventService.getEventTags>) {
     if (!rootId) return;
 
     try {
-      const rootEvent = await this.eventService.loadEvent(rootId);
+      // Create nevent with author for outbox discovery if we have the author pubkey
+      // Check if rootId is a hex string (64 chars, only hex characters)
+      let nevent = rootId;
+      if (eventTags.author && /^[a-f0-9]{64}$/i.test(rootId)) {
+        nevent = nip19.neventEncode({
+          id: rootId,
+          author: eventTags.author,
+          relays: eventTags.rootRelays.length > 0 ? eventTags.rootRelays : undefined
+        }) as string;
+      }
+
+      const rootEvent = await this.eventService.loadEvent(nevent);
       this.rootEvent.set(rootEvent);
     } catch (error) {
       console.error('Error loading root event:', error);
