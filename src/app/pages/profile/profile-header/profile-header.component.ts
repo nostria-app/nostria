@@ -122,11 +122,20 @@ export class ProfileHeaderComponent {
   parsedBadges = computed(() => {
     // Include badgeDefinitions in the dependency graph so computed re-runs when definitions load
     this.badgeService.badgeDefinitions();
+    // Also include failedBadgeDefinitions to react when badges fail to load
+    this.badgeService.failedBadgeDefinitions();
 
     return this.topBadges().map(badge => {
       const badgeDefinition = this.getBadgeDefinition(badge);
       return this.parseBadgeDefinition(badgeDefinition);
     });
+  });
+
+  // Computed to check if a badge failed to load
+  isBadgeFailed = computed(() => {
+    return this.topBadges().map(badge =>
+      this.badgeService.isBadgeDefinitionFailed(badge.pubkey, badge.slug)
+    );
   });  // Computed property to check if bio needs expansion
   shouldShowExpander = computed(() => {
     const about = this.profile()?.data.about;
@@ -791,6 +800,15 @@ export class ProfileHeaderComponent {
 
   // Badge hover card
   private badgeHoverElement?: HTMLElement;
+
+  /**
+   * Hides badge image when it fails to load
+   */
+  onBadgeImageError(event: Event): void {
+    const img = event.target as HTMLImageElement;
+    // Hide the image element
+    img.style.display = 'none';
+  }
 
   /**
    * Shows badge hover card on mouse enter
