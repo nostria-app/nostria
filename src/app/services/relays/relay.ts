@@ -3,6 +3,7 @@ import { LoggerService } from '../logger.service';
 import { Event, SimplePool } from 'nostr-tools';
 import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
+import { SubscriptionManagerService } from './subscription-manager';
 
 export interface Relay {
   url: string;
@@ -18,7 +19,11 @@ export abstract class RelayServiceBase {
   protected relaysService = inject(RelaysService);
   protected utilities = inject(UtilitiesService);
   protected injector = inject(Injector);
+  protected subscriptionManager = inject(SubscriptionManagerService);
   protected useOptimizedRelays = false;
+
+  // Pool instance identifier for tracking
+  protected poolInstanceId: string;
 
   // Activity tracking
   protected lastActivityTime = Date.now();
@@ -41,6 +46,9 @@ export abstract class RelayServiceBase {
 
   constructor(pool: SimplePool) {
     this.#pool = pool;
+    // Generate unique identifier for this pool instance
+    this.poolInstanceId = `${this.constructor.name}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    this.logger.debug(`[${this.constructor.name}] Created pool instance: ${this.poolInstanceId}`);
   }
 
   getPool(): SimplePool {
@@ -456,13 +464,24 @@ export abstract class RelayServiceBase {
 
     // Only log for non-metadata requests to reduce console noise
     if (!filter.kinds?.includes(0)) {
-      this.logger.debug('Getting events with filters (explicit relays):', filter, urls);
+      this.logger.debug(
+        `[${this.constructor.name}] Getting events with filters (explicit relays):`,
+        filter,
+        urls
+      );
     }
 
     if (urls.length === 0) {
-      this.logger.warn('No relays available for query');
+      this.logger.warn(`[${this.constructor.name}] No relays available for query`);
       return null;
     }
+
+    // Register the request with the subscription manager
+    const requestId = this.subscriptionManager.registerRequest(
+      urls,
+      this.constructor.name,
+      this.poolInstanceId
+    );
 
     await this.acquireSemaphore();
 
@@ -473,6 +492,15 @@ export abstract class RelayServiceBase {
       // Default timeout is 5 seconds if not specified
       const timeout = options.timeout || 5000;
 
+      this.logger.debug(
+        `[${this.constructor.name}] Executing query - Request ID: ${requestId}, Timeout: ${timeout}ms`,
+        {
+          filter,
+          relayCount: urls.length,
+          poolInstance: this.poolInstanceId,
+        }
+      );
+
       // Execute the query
       const event = (await this.#pool.get(urls, filter, {
         maxWait: timeout,
@@ -480,11 +508,15 @@ export abstract class RelayServiceBase {
 
       // Check if event has expired according to NIP-40
       if (event && this.utilities.isEventExpired(event)) {
-        this.logger.debug(`Dropping expired event from relay: ${event.id} (kind: ${event.kind})`);
+        this.logger.debug(
+          `[${this.constructor.name}] Dropping expired event from relay: ${event.id} (kind: ${event.kind})`
+        );
         return null; // Don't return expired events
       }
 
-      this.logger.debug(`Received event from query`, event);
+      if (!filter.kinds?.includes(0)) {
+        this.logger.debug(`[${this.constructor.name}] Received event from query`, event);
+      }
 
       // Update lastUsed for all relays used in this query
       if (event) {
@@ -493,22 +525,25 @@ export abstract class RelayServiceBase {
           // Track relay statistics: mark as connected and increment event count
           this.relaysService.updateRelayConnection(url, true);
           this.relaysService.incrementEventCount(url);
+          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
       } else {
         // No event received, but relays were contacted
         urls.forEach((url) => {
           this.relaysService.updateRelayConnection(url, true);
+          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
       }
 
       return event;
     } catch (error) {
-      this.logger.error('Error fetching events', error);
+      this.logger.error(`[${this.constructor.name}] Error fetching events`, error);
 
       // Track connection retries for failed connections
       urls.forEach((url) => {
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
+        this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
       });
 
       return null;
@@ -516,6 +551,8 @@ export abstract class RelayServiceBase {
       this.releaseSemaphore();
       // Remove pending request tracking
       this.decrementPendingRequests();
+      // Unregister the request
+      this.subscriptionManager.unregisterRequest(requestId, urls);
     }
   }
 
@@ -753,7 +790,7 @@ export abstract class RelayServiceBase {
     onEvent: (event: T) => void,
     onEose?: () => void,
   ) {
-    this.logger.debug('Creating subscription with filters:', filter);
+    this.logger.debug(`[${this.constructor.name}] Creating subscription with filters:`, filter);
 
     let urls = this.relayUrls;
 
@@ -762,35 +799,88 @@ export abstract class RelayServiceBase {
     }
 
     if (!this.#pool) {
-      this.logger.error('Cannot subscribe: user pool is not initialized');
+      this.logger.error(`[${this.constructor.name}] Cannot subscribe: user pool is not initialized`);
       return {
         unsubscribe: () => {
-          this.logger.debug('No subscription to unsubscribe from');
+          this.logger.debug(`[${this.constructor.name}] No subscription to unsubscribe from`);
         },
       };
     }
 
     // Use provided relay URLs or default to the user's relays
     if (urls.length === 0) {
-      this.logger.warn('No relays available for subscription');
+      this.logger.warn(`[${this.constructor.name}] No relays available for subscription`);
       return {
         unsubscribe: () => {
-          this.logger.debug('No subscription to unsubscribe from (no relays)');
+          this.logger.debug(`[${this.constructor.name}] No subscription to unsubscribe from (no relays)`);
+        },
+      };
+    }
+
+    // Generate subscription ID
+    const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Check for duplicate subscriptions
+    const duplicateId = this.subscriptionManager.hasDuplicateSubscription(filter, urls);
+    if (duplicateId) {
+      this.logger.warn(
+        `[${this.constructor.name}] Duplicate subscription detected, reusing existing: ${duplicateId}`,
+        {
+          filter,
+          relayUrls: urls,
+        }
+      );
+      // Still return a valid subscription object but log the duplication
+    }
+
+    // Try to register the subscription
+    const registered = this.subscriptionManager.registerSubscription(
+      subscriptionId,
+      filter,
+      urls,
+      this.constructor.name,
+      this.poolInstanceId
+    );
+
+    if (!registered) {
+      this.logger.error(
+        `[${this.constructor.name}] Cannot create subscription: limits reached or relay constraints violated`,
+        {
+          subscriptionId,
+          filter,
+          relayUrls: urls,
+        }
+      );
+      return {
+        close: () => {
+          this.logger.debug(`[${this.constructor.name}] Attempted to close rejected subscription`);
         },
       };
     }
 
     try {
+      this.logger.info(`[${this.constructor.name}] Creating subscription`, {
+        subscriptionId,
+        poolInstance: this.poolInstanceId,
+        relayCount: urls.length,
+        filter,
+      });
+
       // Create the subscription
       const sub = this.#pool.subscribeMany(urls, filter, {
         onevent: (evt) => {
           // Check if event has expired according to NIP-40
           if (this.utilities.isEventExpired(evt)) {
-            this.logger.debug(`Dropping expired event from relay: ${evt.id} (kind: ${evt.kind})`);
+            this.logger.debug(
+              `[${this.constructor.name}] Dropping expired event from relay: ${evt.id} (kind: ${evt.kind})`
+            );
             return; // Don't process expired events
           }
 
-          this.logger.debug(`Received event of kind ${evt.kind}`);
+          this.logger.debug(`[${this.constructor.name}] Received event of kind ${evt.kind}`, {
+            subscriptionId,
+            eventId: evt.id,
+          });
 
           // Update the lastUsed timestamp for all relays (since we don't know which relay sent this event)
           urls.forEach((url) => {
@@ -798,39 +888,57 @@ export abstract class RelayServiceBase {
             // Track relay statistics: mark as connected and increment event count
             this.relaysService.updateRelayConnection(url, true);
             this.relaysService.incrementEventCount(url);
+            this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
           });
 
           // Call the provided event handler
           onEvent(evt as T);
         },
         onclose: (reasons) => {
-          console.log('Pool closed', reasons);
+          this.logger.info(`[${this.constructor.name}] Subscription closed`, {
+            subscriptionId,
+            reasons,
+          });
           if (onEose) {
-            this.logger.debug('End of stored events reached');
+            this.logger.debug(`[${this.constructor.name}] End of stored events reached`, {
+              subscriptionId,
+            });
             onEose();
           }
-          // Also changed this to an arrow function for consistency
+          // Unregister the subscription
+          this.subscriptionManager.unregisterSubscription(subscriptionId);
         },
         oneose: () => {
           if (onEose) {
-            this.logger.debug('End of stored events reached');
+            this.logger.debug(`[${this.constructor.name}] End of stored events reached`, {
+              subscriptionId,
+            });
             onEose();
           }
         },
       });
 
+      // Track the subscription
+      this.addActiveSubscription(subscriptionId);
+
       // Return an object with close method
       return {
         close: () => {
-          this.logger.debug('Close from events');
+          this.logger.info(`[${this.constructor.name}] Closing subscription`, {
+            subscriptionId,
+          });
           sub.close();
+          this.removeActiveSubscription(subscriptionId);
+          this.subscriptionManager.unregisterSubscription(subscriptionId);
         },
       };
     } catch (error) {
-      this.logger.error('Error creating subscription', error);
+      this.logger.error(`[${this.constructor.name}] Error creating subscription`, error);
+      // Make sure to unregister if subscription creation failed
+      this.subscriptionManager.unregisterSubscription(subscriptionId);
       return {
         close: () => {
-          this.logger.debug('Error subscription close called');
+          this.logger.debug(`[${this.constructor.name}] Error subscription close called`);
         },
       };
     }

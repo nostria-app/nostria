@@ -312,7 +312,7 @@ export class EventService {
           const event = await this.userDataService.getEventById(decoded.data.author, hex, { cache: true, ttl: minutes.five });
 
           if (event) {
-            this.logger.info('Loaded event from storage or relays:', event.event.id);
+            // this.logger.info('Loaded event from storage or relays:', event.event.id);
             return event.event;
           }
         } catch (error) {
@@ -325,7 +325,7 @@ export class EventService {
           const event = await this.data.getEventById(hex, { cache: true, ttl: minutes.five });
 
           if (event) {
-            this.logger.info('Loaded event from storage or relays:', event.event.id);
+            // this.logger.info('Loaded event from storage or relays:', event.event.id);
             return event.event;
           }
         } catch (error) {

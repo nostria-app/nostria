@@ -1,6 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { SimplePool, Event, Filter } from 'nostr-tools';
 import { RelaysService, RelayStats } from './relays';
+import { SubscriptionManagerService } from './subscription-manager';
+import { LoggerService } from '../logger.service';
 
 @Injectable({
   providedIn: 'root'
@@ -8,6 +10,11 @@ import { RelaysService, RelayStats } from './relays';
 export class RelayPoolService {
   #pool = new SimplePool();
   private readonly relaysService = inject(RelaysService);
+  private readonly subscriptionManager = inject(SubscriptionManagerService);
+  private readonly logger = inject(LoggerService);
+
+  // Pool instance identifier
+  private readonly poolInstanceId = `RelayPoolService_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   /**
    * Add relays to the pool and register them with RelaysService
@@ -37,6 +44,20 @@ export class RelayPoolService {
     // Add any new relays to the pool
     this.addRelays(relayUrls);
 
+    // Register the request
+    const requestId = this.subscriptionManager.registerRequest(
+      relayUrls,
+      'RelayPoolService',
+      this.poolInstanceId
+    );
+
+    this.logger.debug('[RelayPoolService] Executing get request', {
+      requestId,
+      relayCount: relayUrls.length,
+      filter,
+      timeout: timeoutMs,
+    });
+
     try {
       const event = await this.#pool.get(relayUrls, filter, { maxWait: timeoutMs });
 
@@ -44,19 +65,27 @@ export class RelayPoolService {
       if (event) {
         relayUrls.forEach(url => {
           this.relaysService.incrementEventCount(url);
+          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
+        });
+      } else {
+        relayUrls.forEach(url => {
+          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
       }
 
       return event;
     } catch (error) {
-      console.error('Error fetching events:', error);
+      this.logger.error('[RelayPoolService] Error fetching events:', error);
 
       // Record connection issues for all relays
       relayUrls.forEach(url => {
         this.relaysService.recordConnectionRetry(url);
+        this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
       });
 
       return null;
+    } finally {
+      this.subscriptionManager.unregisterRequest(requestId, relayUrls);
     }
   }
 
@@ -71,6 +100,20 @@ export class RelayPoolService {
     // Add any new relays to the pool
     this.addRelays(relayUrls);
 
+    // Register the request
+    const requestId = this.subscriptionManager.registerRequest(
+      relayUrls,
+      'RelayPoolService',
+      this.poolInstanceId
+    );
+
+    this.logger.debug('[RelayPoolService] Executing query request', {
+      requestId,
+      relayCount: relayUrls.length,
+      filter,
+      timeout: timeoutMs,
+    });
+
     try {
       const events = await this.#pool.querySync(relayUrls, filter, { maxWait: timeoutMs });
 
@@ -78,19 +121,27 @@ export class RelayPoolService {
       if (events.length > 0) {
         relayUrls.forEach(url => {
           this.relaysService.incrementEventCount(url);
+          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
+        });
+      } else {
+        relayUrls.forEach(url => {
+          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
       }
 
       return events;
     } catch (error) {
-      console.error('Error fetching events:', error);
+      this.logger.error('[RelayPoolService] Error fetching events:', error);
 
       // Record connection issues for all relays
       relayUrls.forEach(url => {
         this.relaysService.recordConnectionRetry(url);
+        this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
       });
 
       return [];
+    } finally {
+      this.subscriptionManager.unregisterRequest(requestId, relayUrls);
     }
   }
 
@@ -101,21 +152,65 @@ export class RelayPoolService {
     // Add any new relays to the pool
     this.addRelays(relayUrls);
 
+    // Generate subscription ID
+    const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Try to register the subscription
+    const registered = this.subscriptionManager.registerSubscription(
+      subscriptionId,
+      filter,
+      relayUrls,
+      'RelayPoolService',
+      this.poolInstanceId
+    );
+
+    if (!registered) {
+      this.logger.error('[RelayPoolService] Cannot create subscription: limits reached', {
+        subscriptionId,
+        filter,
+        relayUrls,
+      });
+      return {
+        close: () => {
+          this.logger.debug('[RelayPoolService] Attempted to close rejected subscription');
+        },
+      };
+    }
+
+    this.logger.info('[RelayPoolService] Creating subscription', {
+      subscriptionId,
+      relayCount: relayUrls.length,
+      filter,
+    });
+
     const sub = this.#pool.subscribe(relayUrls, filter, {
       onevent: (event) => {
         // Track event received for all relays in this subscription
         // Note: We don't know which specific relay sent this event, so we increment all
         relayUrls.forEach(url => {
           this.relaysService.incrementEventCount(url);
+          this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
         onEvent(event);
       },
       onclose: (reason) => {
-        console.log('Subscription closed:', reason);
+        this.logger.info('[RelayPoolService] Subscription closed', {
+          subscriptionId,
+          reason,
+        });
+        this.subscriptionManager.unregisterSubscription(subscriptionId);
       }
     });
 
-    return sub;
+    return {
+      close: () => {
+        this.logger.info('[RelayPoolService] Closing subscription', {
+          subscriptionId,
+        });
+        sub.close();
+        this.subscriptionManager.unregisterSubscription(subscriptionId);
+      },
+    };
   }
 
   /**
