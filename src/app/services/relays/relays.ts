@@ -79,6 +79,11 @@ export class RelaysService {
   readonly userRelaysSignal = signal<Map<string, string[]>>(new Map());
   readonly observedRelaysSignal = signal<ObservedRelayStats[]>([]);
 
+  // Throttling for storage saves
+  private readonly SAVE_THROTTLE_MS = 5000; // Save at most once every 5 seconds per relay
+  private pendingSaves = new Map<string, NodeJS.Timeout>();
+  private lastSaveTime = new Map<string, number>();
+
   constructor() {
     // Initialize with preferred relays
     this.initializePreferredRelays();
@@ -370,9 +375,39 @@ export class RelaysService {
   }
 
   /**
-   * Save relay statistics to IndexedDB
+   * Save relay statistics to IndexedDB with throttling
+   * This method batches saves to avoid excessive storage writes
    */
   private async saveRelayStatsToStorage(stats: RelayStats): Promise<void> {
+    const url = stats.url;
+    const now = Date.now();
+    const lastSave = this.lastSaveTime.get(url) || 0;
+    const timeSinceLastSave = now - lastSave;
+
+    // Clear any existing pending save for this relay
+    const existingTimeout = this.pendingSaves.get(url);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    // If we saved recently, schedule a delayed save
+    if (timeSinceLastSave < this.SAVE_THROTTLE_MS) {
+      const timeout = setTimeout(() => {
+        this.performSave(stats);
+        this.pendingSaves.delete(url);
+      }, this.SAVE_THROTTLE_MS - timeSinceLastSave);
+
+      this.pendingSaves.set(url, timeout);
+    } else {
+      // Enough time has passed, save immediately
+      await this.performSave(stats);
+    }
+  }
+
+  /**
+   * Perform the actual save operation
+   */
+  private async performSave(stats: RelayStats): Promise<void> {
     try {
       const existing = await this.storage.getObservedRelay(stats.url);
       const observedStats = this.toObservedRelayStats(stats);
@@ -384,6 +419,7 @@ export class RelaysService {
       }
 
       await this.storage.saveObservedRelay(observedStats);
+      this.lastSaveTime.set(stats.url, Date.now());
 
       // Update the signal with fresh data
       this.loadObservedRelays();
