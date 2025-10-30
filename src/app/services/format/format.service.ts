@@ -87,9 +87,24 @@ export class FormatService {
         }
       }
 
-      // 3. If still no event, try from cache or storage
+      // 3. If still no event and we have author, try using account relays as fallback
+      if (!event && authorPubkey) {
+        this.logger.debug('[fetchEventPreview] Trying account relays as fallback');
+        try {
+          const record = await this.dataService.getEventById(eventId, { cache: true, save: true });
+          event = record?.event || null;
+
+          if (event) {
+            this.logger.debug('[fetchEventPreview] Event found via account relays/storage');
+          }
+        } catch (error) {
+          this.logger.debug('[fetchEventPreview] Failed to get event from account relays:', error);
+        }
+      }
+
+      // 4. If still no event, try from cache or storage one more time
       if (!event) {
-        this.logger.debug('[fetchEventPreview] Trying cache/storage');
+        this.logger.debug('[fetchEventPreview] Trying cache/storage as final fallback');
         const record = await this.dataService.getEventById(eventId, { cache: true, save: true });
         event = record?.event || null;
 

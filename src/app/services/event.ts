@@ -54,6 +54,9 @@ export interface EventTags {
   rootRelays: string[];
   replyRelays: string[];
   mentionIds: string[]; // Event IDs that are mentioned (not replies)
+  quoteId: string | null; // Event ID from q tag (NIP-18)
+  quoteAuthor: string | null; // Author pubkey from q tag
+  quoteRelays: string[]; // Relay hints from q tag
 }
 
 export interface ThreadData {
@@ -164,7 +167,35 @@ export class EventService {
       }
     }
 
-    return { author, rootId, replyId, pTags, rootRelays, replyRelays, mentionIds };
+    // Extract quote information from q tag (NIP-18)
+    // q tag format: ["q", <event-id>, <relay-url>, <pubkey>]
+    let quoteId: string | null = null;
+    let quoteAuthor: string | null = null;
+    const quoteRelays: string[] = [];
+
+    const qTag = event.tags.find((tag) => tag[0] === 'q');
+    if (qTag) {
+      quoteId = qTag[1] || null;
+
+      // Extract relay URL from q tag if present (3rd element)
+      if (qTag[2] && qTag[2].trim() !== '') {
+        quoteRelays.push(qTag[2]);
+      }
+
+      // Extract author pubkey from q tag if present (4th element)
+      quoteAuthor = qTag[3] || null;
+
+      // If we don't have a rootId from e-tags but we have a quote, use the quote as root
+      if (!rootId && quoteId) {
+        rootId = quoteId;
+        author = quoteAuthor;
+        if (quoteRelays.length > 0) {
+          rootRelays.push(...quoteRelays);
+        }
+      }
+    }
+
+    return { author, rootId, replyId, pTags, rootRelays, replyRelays, mentionIds, quoteId, quoteAuthor, quoteRelays };
   }
 
   /**
