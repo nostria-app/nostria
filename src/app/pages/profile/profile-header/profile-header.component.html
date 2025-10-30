@@ -31,14 +31,15 @@
         <a [routerLink]="['/p', npub() || pubkey(), 'badges']" class="badge-item"
           (mouseenter)="onBadgeMouseEnter($event, badge)" (mouseleave)="onBadgeMouseLeave()">
           @if (parsedBadge.thumb || parsedBadge.image) {
-          <img [src]="parsedBadge.thumb || parsedBadge.image" class="badge-image" loading="lazy" />
+          <img [src]="parsedBadge.thumb || parsedBadge.image" [alt]="parsedBadge.name" [title]="parsedBadge.name"
+            class="badge-image" loading="lazy" (error)="onBadgeImageError($event)" />
           } @else {
           <div class="badge-placeholder" [title]="parsedBadge.name">
             <mat-icon>military_tech</mat-icon>
           </div>
           }
         </a>
-        } @else {
+        } @else if (!isBadgeFailed()[$index]) {
         <a [routerLink]="['/p', npub() || pubkey(), 'badges']" class="badge-item">
           <div class="badge-loading" title="Loading badge...">
             <mat-spinner diameter="32"></mat-spinner>

@@ -73,6 +73,9 @@ export class BadgeService implements NostriaService {
   isLoadingIssued = signal<boolean>(false);
   isLoadingDefinitions = signal<boolean>(false);
 
+  // Track failed badge definitions (pubkey:slug format)
+  failedBadgeDefinitions = signal<Set<string>>(new Set());
+
   getBadgeDefinition(pubkey: string, slug: string): Event | undefined {
     const badge = this.badgeDefinitions().find(badge => {
       const tags = badge.tags || [];
@@ -82,6 +85,11 @@ export class BadgeService implements NostriaService {
     });
 
     return badge;
+  }
+
+  isBadgeDefinitionFailed(pubkey: string, slug: string): boolean {
+    const badgeKey = `${pubkey}:${slug}`;
+    return this.failedBadgeDefinitions().has(badgeKey);
   }
 
   putBadgeDefinition(badge: Event): void {
@@ -165,6 +173,8 @@ export class BadgeService implements NostriaService {
 
   /** Attempts to discovery a badge definition. */
   async loadBadgeDefinition(pubkey: string, slug: string) {
+    const badgeKey = `${pubkey}:${slug}`;
+
     let definition: NostrEvent | null | undefined = this.getBadgeDefinition(pubkey, slug);
 
     // If not in memory, check storage
@@ -212,9 +222,21 @@ export class BadgeService implements NostriaService {
 
           if (!definition) {
             this.logger.error(`Badge definition not found for ${pubkey.slice(0, 16)}... slug: ${slug}`);
+            // Mark this badge as failed
+            this.failedBadgeDefinitions.update(failed => {
+              const newSet = new Set(failed);
+              newSet.add(badgeKey);
+              return newSet;
+            });
           }
         } catch (err) {
           this.logger.error('Error loading badge definition:', err);
+          // Mark this badge as failed
+          this.failedBadgeDefinitions.update(failed => {
+            const newSet = new Set(failed);
+            newSet.add(badgeKey);
+            return newSet;
+          });
         }
       }
     }
@@ -511,5 +533,6 @@ export class BadgeService implements NostriaService {
     this.receivedBadges.set([]);
     this.badgeIssuers.set({});
     this.badgeRecipients.set({});
+    this.failedBadgeDefinitions.set(new Set());
   }
 }
