@@ -251,6 +251,25 @@
     }
   }
 
+  .trust-rank {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    background: var(--surface-variant);
+    border-radius: 16px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-primary);
+
+    mat-icon {
+      font-size: 1.125rem;
+      width: 1.125rem;
+      height: 1.125rem;
+      color: var(--mat-sys-color-primary);
+    }
+  }
+
   // .compact & {
   //     font-size: 18px;
   //     margin-bottom: 4px;

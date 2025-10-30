@@ -62,6 +62,7 @@ export class SettingsComponent implements OnInit {
       icon: 'security',
       authenticated: true,
     },
+    { id: 'trust', title: 'Trust', icon: 'verified_user', authenticated: true },
     { id: 'backup', title: 'Backup', icon: 'archive', authenticated: true, premium: true },
     { id: 'premium', title: 'Premium', icon: 'diamond', authenticated: true },
     { id: 'logs', title: 'Logs', icon: 'article', authenticated: false },

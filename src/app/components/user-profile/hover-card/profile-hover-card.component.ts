@@ -24,6 +24,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { StorageService } from '../../../services/storage.service';
 import { UserDataService } from '../../../services/user-data.service';
 import { nip19 } from 'nostr-tools';
+import { TrustService } from '../../../services/trust.service';
 
 interface ProfileData {
   data?: {
@@ -61,6 +62,7 @@ export class ProfileHoverCardComponent {
   private layout = inject(LayoutService);
   private storage = inject(StorageService);
   private userDataService = inject(UserDataService);
+  private trustService = inject(TrustService);
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);
@@ -71,6 +73,9 @@ export class ProfileHoverCardComponent {
   mutualFollowing = signal<string[]>([]);
   mutualFollowingProfiles = signal<ProfileData[]>([]);
   isMenuOpen = signal(false);
+  trustRank = signal<number | undefined>(undefined);
+
+  trustEnabled = computed(() => this.trustService.isEnabled());
 
   npubValue = computed<string>(() => {
     const pubkey = this.pubkey();
@@ -99,6 +104,7 @@ export class ProfileHoverCardComponent {
           this.loadProfile(pubkey);
           this.checkFollowingStatus(pubkey);
           this.loadMutualFollowing(pubkey);
+          this.loadTrustMetrics(pubkey);
         });
       }
     });
@@ -175,6 +181,19 @@ export class ProfileHoverCardComponent {
       }
     } catch (error) {
       console.error('Failed to load mutual following:', error);
+    }
+  }
+
+  private async loadTrustMetrics(pubkey: string): Promise<void> {
+    if (!this.trustService.isEnabled()) {
+      return;
+    }
+
+    try {
+      const metrics = await this.trustService.fetchMetrics(pubkey);
+      this.trustRank.set(metrics?.rank);
+    } catch (error) {
+      console.error('Failed to load trust metrics for hover card:', error);
     }
   }
 
