@@ -227,9 +227,18 @@ export class NotificationService {
 
   /**
    * Add a notification
+   * Checks for duplicates by ID to prevent duplicate entries
    */
   addNotification(notification: Notification): void {
-    this._notifications.update(notifications => [notification, ...notifications]);
+    this._notifications.update(notifications => {
+      // Check if notification with this ID already exists
+      const exists = notifications.some(n => n.id === notification.id);
+      if (exists) {
+        this.logger.debug(`Skipping duplicate notification ${notification.id}`);
+        return notifications;
+      }
+      return [notification, ...notifications];
+    });
     this.logger.debug('Added notification', notification);
   }
 
