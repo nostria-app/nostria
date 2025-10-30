@@ -57,6 +57,11 @@ export class SubscriptionManagerService {
   // Signals for reactive updates
   readonly metricsSignal = signal<RelayMetrics>(this.computeMetrics());
 
+  // Throttling for connection status updates
+  private readonly CONNECTION_STATUS_THROTTLE_MS = 1000; // 1 second
+  private lastConnectionUpdate = new Map<string, number>();
+  private pendingConnectionUpdates = new Map<string, NodeJS.Timeout>();
+
   /**
    * Register a new subscription
    */
@@ -207,14 +212,8 @@ export class SubscriptionManagerService {
     // Track pool instance
     this.poolInstances.add(poolInstance);
 
-    this.logger.debug(`[SubscriptionManager] Registered request`, {
-      requestId,
-      source,
-      relayCount: relayUrls.length,
-      relayUrls,
-      poolInstance,
-      totalPendingRequests: this.getTotalPendingRequests(),
-    });
+    // Reduced logging - only log summary periodically instead of every request
+    // this.logger.debug(`[SubscriptionManager] Registered request`, {...});
 
     this.updateMetrics();
     return requestId;
@@ -242,19 +241,46 @@ export class SubscriptionManagerService {
       }
     }
 
-    this.logger.debug(`[SubscriptionManager] Unregistered request`, {
-      requestId,
-      relayCount: relayUrls.length,
-      totalPendingRequests: this.getTotalPendingRequests(),
-    });
+    // Reduced logging - only log summary periodically instead of every unregister
+    // this.logger.debug(`[SubscriptionManager] Unregistered request`, {...});
 
     this.updateMetrics();
   }
 
   /**
-   * Update connection status for a relay
+   * Update connection status for a relay with throttling
    */
   updateConnectionStatus(relayUrl: string, isConnected: boolean, poolInstance: string): void {
+    const now = Date.now();
+    const lastUpdate = this.lastConnectionUpdate.get(relayUrl) || 0;
+    const timeSinceLastUpdate = now - lastUpdate;
+
+    // Clear any pending update for this relay
+    const existingTimeout = this.pendingConnectionUpdates.get(relayUrl);
+    if (existingTimeout) {
+      clearTimeout(existingTimeout);
+    }
+
+    // Throttle connection status updates
+    if (timeSinceLastUpdate < this.CONNECTION_STATUS_THROTTLE_MS) {
+      // Schedule a delayed update
+      const timeout = setTimeout(() => {
+        this.performConnectionUpdate(relayUrl, isConnected, poolInstance);
+        this.pendingConnectionUpdates.delete(relayUrl);
+      }, this.CONNECTION_STATUS_THROTTLE_MS - timeSinceLastUpdate);
+
+      this.pendingConnectionUpdates.set(relayUrl, timeout);
+      return;
+    }
+
+    // Update immediately
+    this.performConnectionUpdate(relayUrl, isConnected, poolInstance);
+  }
+
+  /**
+   * Perform the actual connection status update
+   */
+  private performConnectionUpdate(relayUrl: string, isConnected: boolean, poolInstance: string): void {
     const conn = this.connections.get(relayUrl);
     if (conn) {
       conn.isConnected = isConnected;
@@ -272,12 +298,10 @@ export class SubscriptionManagerService {
       });
     }
 
-    this.logger.debug(`[SubscriptionManager] Updated connection status`, {
-      relayUrl,
-      isConnected,
-      poolInstance,
-    });
+    // Only log connection status updates occasionally to reduce noise
+    // Removed debug log here as it's called very frequently
 
+    this.lastConnectionUpdate.set(relayUrl, Date.now());
     this.updateMetrics();
   }
 

@@ -69,8 +69,10 @@ export class Followset {
    * 
    * The OnDemandUserDataService already handles cache/storage via { cache: true, save: true }
    * so we just need to trigger a background refresh after returning cached data.
+   * 
+   * @param dTagFilter Optional d-tag to filter for a specific starter pack (e.g., 'popular')
    */
-  async fetchStarterPacks(): Promise<StarterPack[]> {
+  async fetchStarterPacks(dTagFilter?: string): Promise<StarterPack[]> {
     this.isLoading.set(true);
     this.error.set(null);
 
@@ -92,7 +94,10 @@ export class Followset {
           events.forEach(record => {
             const starterPack = this.parseStarterPackEvent(record.event);
             if (starterPack) {
-              starterPacks.push(starterPack);
+              // Filter by d-tag if specified
+              if (!dTagFilter || starterPack.dTag === dTagFilter) {
+                starterPacks.push(starterPack);
+              }
             }
           });
         } catch (error) {
@@ -101,11 +106,11 @@ export class Followset {
       }
 
       this.starterPacks.set(starterPacks);
-      this.logger.info(`Fetched ${starterPacks.length} starter packs from cache/storage`);
+      this.logger.info(`Fetched ${starterPacks.length} starter packs from cache/storage${dTagFilter ? ` (filtered by d-tag: ${dTagFilter})` : ''}`);
 
       // Trigger background refresh from relays for next time
       // This happens asynchronously and doesn't block the return
-      this.refreshStarterPacksInBackground();
+      this.refreshStarterPacksInBackground(dTagFilter);
 
       return starterPacks;
     } catch (error) {
@@ -123,12 +128,14 @@ export class Followset {
    * 
    * Uses invalidateCache: true to force fetching fresh data from relays,
    * bypassing cache and storage to ensure we get the latest updates
+   * 
+   * @param dTagFilter Optional d-tag to filter for a specific starter pack (e.g., 'popular')
    */
-  private refreshStarterPacksInBackground(): void {
+  private refreshStarterPacksInBackground(dTagFilter?: string): void {
     // Use queueMicrotask to ensure this happens asynchronously
     queueMicrotask(async () => {
       try {
-        this.logger.debug('Starting background refresh of starter packs from relays');
+        this.logger.debug(`Starting background refresh of starter packs from relays${dTagFilter ? ` (filtered by d-tag: ${dTagFilter})` : ''}`);
 
         const refreshedPacks: StarterPack[] = [];
 
@@ -151,7 +158,10 @@ export class Followset {
             events.forEach(record => {
               const starterPack = this.parseStarterPackEvent(record.event);
               if (starterPack) {
-                refreshedPacks.push(starterPack);
+                // Filter by d-tag if specified
+                if (!dTagFilter || starterPack.dTag === dTagFilter) {
+                  refreshedPacks.push(starterPack);
+                }
               }
             });
           } catch (error) {
@@ -164,7 +174,7 @@ export class Followset {
         if (refreshedPacks.length > 0) {
           this.starterPacks.set(refreshedPacks);
           this.logger.debug(
-            `Background refresh completed: Updated ${refreshedPacks.length} starter packs from relays`
+            `Background refresh completed: Updated ${refreshedPacks.length} starter packs from relays${dTagFilter ? ` (filtered by d-tag: ${dTagFilter})` : ''}`
           );
         }
 
