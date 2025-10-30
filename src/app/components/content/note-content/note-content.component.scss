@@ -139,3 +139,52 @@
     }
   }
 }
+// Placeholder UI for loading and failed states
+.nostr-event-placeholder {
+  margin: 1rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-low, #ffffff);
+  border: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+  padding: 16px;
+
+  .placeholder-content {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--mat-sys-on-surface-variant, #666666);
+
+    mat-icon {
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      font-size: 20px;
+    }
+
+    .placeholder-text {
+      font-size: 0.875rem;
+      flex: 1;
+    }
+  }
+
+  &.loading {
+    .placeholder-content {
+      mat-spinner {
+        flex-shrink: 0;
+      }
+    }
+  }
+
+  &.failed {
+    background: var(--mat-sys-error-container, rgba(244, 67, 54, 0.1));
+    border-color: var(--mat-sys-error, rgba(244, 67, 54, 0.3));
+
+    .placeholder-content {
+      color: var(--mat-sys-on-error-container, #c62828);
+
+      mat-icon {
+        color: var(--mat-sys-error, #f44336);
+      }
+    }
+  }
+}

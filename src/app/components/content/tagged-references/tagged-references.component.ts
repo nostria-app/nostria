@@ -4,6 +4,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Event, nip19 } from 'nostr-tools';
 import { ProfileDisplayNameComponent } from '../../user-profile/display-name/profile-display-name.component';
 import { LayoutService } from '../../../services/layout.service';
@@ -35,6 +36,7 @@ interface ParsedArticle {
     MatIconModule,
     MatButtonModule,
     MatChipsModule,
+    MatProgressSpinnerModule,
     ProfileDisplayNameComponent,
   ],
   templateUrl: './tagged-references.component.html',
@@ -107,11 +109,21 @@ export class TaggedReferencesComponent {
   // Track which articles have been loaded
   articleData = signal<Map<string, NostrRecord | null>>(new Map());
 
+  // Track loading state for each article
+  articleLoadingState = signal<Map<string, 'loading' | 'loaded' | 'failed'>>(new Map());
+
   // Load article data when needed
   private async loadArticleData(article: ParsedArticle): Promise<void> {
     const key = `${article.kind}:${article.pubkey}:${article.identifier}`;
 
     if (this.articleData().has(key)) return;
+
+    // Mark as loading
+    this.articleLoadingState.update(map => {
+      const newMap = new Map(map);
+      newMap.set(key, 'loading');
+      return newMap;
+    });
 
     try {
       const eventData = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
@@ -156,11 +168,23 @@ export class TaggedReferencesComponent {
         newMap.set(key, eventData);
         return newMap;
       });
+
+      this.articleLoadingState.update(map => {
+        const newMap = new Map(map);
+        newMap.set(key, eventData ? 'loaded' : 'failed');
+        return newMap;
+      });
     } catch (error) {
       console.error('Failed to load article data:', error);
       this.articleData.update(map => {
         const newMap = new Map(map);
         newMap.set(key, null);
+        return newMap;
+      });
+
+      this.articleLoadingState.update(map => {
+        const newMap = new Map(map);
+        newMap.set(key, 'failed');
         return newMap;
       });
     }
@@ -298,6 +322,11 @@ export class TaggedReferencesComponent {
       default:
         return 'description';
     }
+  }
+
+  getArticleLoadingState(article: ParsedArticle): 'loading' | 'loaded' | 'failed' | undefined {
+    const key = `${article.kind}:${article.pubkey}:${article.identifier}`;
+    return this.articleLoadingState().get(key);
   }
 
   shouldShowReferences = computed<boolean>(() => {

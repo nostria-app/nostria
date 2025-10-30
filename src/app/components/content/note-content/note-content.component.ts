@@ -3,6 +3,7 @@ import { Router } from '@angular/router';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { ImageDialogComponent } from '../../image-dialog/image-dialog.component';
 import { ContentToken } from '../../../services/parsing.service';
 import { FormatService } from '../../../services/format/format.service';
@@ -14,7 +15,7 @@ import { ProfileHoverCardComponent } from '../../user-profile/hover-card/profile
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [MatIconModule],
+  imports: [MatIconModule, MatProgressSpinnerModule],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })
@@ -30,6 +31,9 @@ export class NoteContentComponent {
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
+
+  // Track loading state for each event preview
+  private eventLoadingMap = signal<Map<number, 'loading' | 'loaded' | 'failed'>>(new Map());
 
   // Track last processed tokens to prevent redundant re-execution
   private lastProcessedTokens: ContentToken[] = [];
@@ -79,7 +83,22 @@ export class NoteContentComponent {
 
   private async loadEventPreviews(tokens: ContentToken[]): Promise<void> {
     const previewsMap = new Map<number, SafeHtml>();
+    const loadingMap = new Map<number, 'loading' | 'loaded' | 'failed'>();
 
+    // Mark all event previews as loading
+    for (const token of tokens) {
+      if (token.type === 'nostr-mention' && token.nostrData) {
+        const { type } = token.nostrData;
+        if (type === 'nevent' || type === 'note') {
+          loadingMap.set(token.id, 'loading');
+        }
+      }
+    }
+
+    // Update loading state immediately
+    this.eventLoadingMap.set(loadingMap);
+
+    // Fetch previews
     for (const token of tokens) {
       if (token.type === 'nostr-mention' && token.nostrData) {
         const { type, data } = token.nostrData;
@@ -98,19 +117,29 @@ export class NoteContentComponent {
 
             if (previewHtml) {
               previewsMap.set(token.id, this.sanitizer.bypassSecurityTrustHtml(previewHtml));
+              loadingMap.set(token.id, 'loaded');
+            } else {
+              loadingMap.set(token.id, 'failed');
             }
           } catch (error) {
             console.error(`[NoteContent] Error loading preview for token ${token.id}:`, error);
+            loadingMap.set(token.id, 'failed');
           }
+
+          // Update state after each preview attempt
+          this.eventPreviewsMap.set(new Map(previewsMap));
+          this.eventLoadingMap.set(new Map(loadingMap));
         }
       }
     }
-
-    this.eventPreviewsMap.set(previewsMap);
   }
 
   getEventPreview(tokenId: number): SafeHtml | undefined {
     return this.eventPreviewsMap().get(tokenId);
+  }
+
+  getEventLoadingState(tokenId: number): 'loading' | 'loaded' | 'failed' | undefined {
+    return this.eventLoadingMap().get(tokenId);
   }
 
   onNostrMentionClick(token: ContentToken) {
