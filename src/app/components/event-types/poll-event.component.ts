@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, inject, input, signal, ChangeDetectionStrategy, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -28,7 +28,7 @@ import { ApplicationService } from '../../services/application.service';
   styleUrl: './poll-event.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class PollEventComponent {
+export class PollEventComponent implements OnInit {
   private pollService = inject(PollService);
   private app = inject(ApplicationService);
 
@@ -70,7 +70,7 @@ export class PollEventComponent {
     return !this.isExpired() && !this.hasVoted();
   });
 
-  constructor() {
+  ngOnInit(): void {
     // Load poll results when component initializes
     this.loadPollResults();
   }
