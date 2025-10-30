@@ -265,7 +265,10 @@ export class SharedRelayService {
             events.push(event as T);
           },
           onclose: (reasons) => {
-            console.log('Subscriptions closed', reasons);
+            if (!reasons.includes('closed automatically on eose')) {
+              this.logger.error('Subscriptions closed unexpectedly', reasons);
+            }
+
             resolve(events);
           },
         });

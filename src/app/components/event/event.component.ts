@@ -510,12 +510,15 @@ export class EventComponent implements AfterViewChecked {
     this.isLoadingParent.set(true);
     try {
       // Create nevent with author for outbox discovery if we have the author pubkey
+      // Use eventTags.author if available, otherwise fall back to first p-tag
+      const authorPubkey = eventTags.author || (eventTags.pTags.length > 0 ? eventTags.pTags[0] : null);
+
       // Check if parentId is a hex string (64 chars, only hex characters)
       let nevent = parentId;
-      if (eventTags.author && /^[a-f0-9]{64}$/i.test(parentId)) {
+      if (authorPubkey && /^[a-f0-9]{64}$/i.test(parentId)) {
         nevent = nip19.neventEncode({
           id: parentId,
-          author: eventTags.author,
+          author: authorPubkey,
           relays: eventTags.replyRelays.length > 0 ? eventTags.replyRelays : undefined
         }) as string;
       }
@@ -535,12 +538,15 @@ export class EventComponent implements AfterViewChecked {
 
     try {
       // Create nevent with author for outbox discovery if we have the author pubkey
+      // Use eventTags.author if available, otherwise fall back to first p-tag
+      const authorPubkey = eventTags.author || (eventTags.pTags.length > 0 ? eventTags.pTags[0] : null);
+
       // Check if rootId is a hex string (64 chars, only hex characters)
       let nevent = rootId;
-      if (eventTags.author && /^[a-f0-9]{64}$/i.test(rootId)) {
+      if (authorPubkey && /^[a-f0-9]{64}$/i.test(rootId)) {
         nevent = nip19.neventEncode({
           id: rootId,
-          author: eventTags.author,
+          author: authorPubkey,
           relays: eventTags.rootRelays.length > 0 ? eventTags.rootRelays : undefined
         }) as string;
       }
