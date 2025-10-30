@@ -1,0 +1,72 @@
+.setting-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--divider-color);
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.setting-description {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.full-width {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+.relay-option {
+  padding: 0.25rem 0;
+}
+
+.relay-name {
+  font-weight: 500;
+}
+
+.relay-description {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.25rem;
+}
+
+.info-card {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: var(--surface-variant);
+  border-radius: 8px;
+  margin-top: 1.5rem;
+
+  mat-icon {
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+
+  strong {
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+  }
+}
+
+h2 {
+  margin-top: 2rem;
+  margin-bottom: 0.5rem;
+
+  &:first-child {
+    margin-top: 0;
+  }
+}

@@ -9,6 +9,8 @@ export interface LocalSettings {
   maxRelaysPerUser: number;
   addClientTag: boolean;
   showClientTag: boolean;
+  trustEnabled: boolean;
+  trustRelay: string;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -18,6 +20,8 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   maxRelaysPerUser: 3,
   addClientTag: true,
   showClientTag: true,
+  trustEnabled: true,
+  trustRelay: 'wss://nip85.brainstorm.world',
 };
 
 /**
@@ -42,6 +46,8 @@ export class LocalSettingsService {
   readonly maxRelaysPerUser = computed(() => this.settings().maxRelaysPerUser);
   readonly addClientTag = computed(() => this.settings().addClientTag);
   readonly showClientTag = computed(() => this.settings().showClientTag);
+  readonly trustEnabled = computed(() => this.settings().trustEnabled);
+  readonly trustRelay = computed(() => this.settings().trustRelay);
 
   constructor() {
     this.loadSettings();
@@ -145,6 +151,20 @@ export class LocalSettingsService {
    */
   setShowClientTag(showClientTag: boolean): void {
     this.updateSettings({ showClientTag });
+  }
+
+  /**
+   * Set trust enabled preference
+   */
+  setTrustEnabled(trustEnabled: boolean): void {
+    this.updateSettings({ trustEnabled });
+  }
+
+  /**
+   * Set trust relay URL
+   */
+  setTrustRelay(trustRelay: string): void {
+    this.updateSettings({ trustRelay });
   }
 
   /**

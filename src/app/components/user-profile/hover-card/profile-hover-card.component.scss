@@ -167,6 +167,31 @@
   }
 }
 
+.trust-rank {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 16px;
+  margin: 0 16px 12px;
+  background: var(--mat-app-surface-variant);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+
+  .trust-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    color: var(--mat-sys-primary);
+  }
+
+  .trust-value {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
 .about {
   padding: 0 16px;
   margin-bottom: 16px;

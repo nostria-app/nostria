@@ -45,6 +45,7 @@ import { BadgeHoverCardService } from '../../../services/badge-hover-card.servic
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import type { Event as NostrEvent } from 'nostr-tools';
+import { TrustService } from '../../../services/trust.service';
 
 @Component({
   selector: 'app-profile-header',
@@ -89,6 +90,7 @@ export class ProfileHeaderComponent {
   badgeService = inject(BadgeService);
   private badgeHoverCardService = inject(BadgeHoverCardService);
   private router = inject(Router);
+  private trustService = inject(TrustService);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -242,6 +244,12 @@ export class ProfileHeaderComponent {
   // Signal to track the username of the profile being viewed
   profileUsername = signal<string | null>(null);
 
+  // Signal for trust rank
+  trustRank = signal<number | undefined>(undefined);
+
+  // Computed to check if trust is enabled
+  trustEnabled = computed(() => this.trustService.isEnabled());
+
   // Computed to check if user has premium subscription
   isPremium = computed(() => {
     const tier = this.premiumTier();
@@ -298,6 +306,23 @@ export class ProfileHeaderComponent {
         // Clear badges first to prevent showing stale data from previous profile
         this.badgeService.clear();
         await this.badgeService.loadAcceptedBadges(currentPubkey);
+      }
+    });
+
+    // Load trust metrics when pubkey changes and trust is enabled
+    effect(async () => {
+      const currentPubkey = this.pubkey();
+      const enabled = this.trustService.isEnabled();
+
+      if (currentPubkey && enabled) {
+        const metrics = await this.trustService.fetchMetrics(currentPubkey);
+        untracked(() => {
+          this.trustRank.set(metrics?.rank);
+        });
+      } else {
+        untracked(() => {
+          this.trustRank.set(undefined);
+        });
       }
     });
 

@@ -43,6 +43,7 @@ import { GeneralSettingsComponent } from './pages/settings/general/general.compo
 import { Calendar } from './pages/calendar/calendar';
 import { AlgorithmComponent } from './pages/settings/algorithm/algorithm';
 import { RelaysComponent } from './pages/settings/relays/relays.component';
+import { TrustSettingsComponent } from './pages/settings/trust/trust.component';
 import { DraftsComponent } from './pages/drafts/drafts.component';
 import { ProfileOpenComponent } from './pages/profile/profile-open.component';
 import { DeleteEventComponent } from './pages/delete-event/delete-event.component';
@@ -159,6 +160,7 @@ export const routes: Routes = [
         component: PrivacySettingsComponent,
         title: 'Privacy & Safety',
       },
+      { path: 'trust', component: TrustSettingsComponent, title: 'Trust' },
       { path: 'backup', component: BackupComponent, title: 'Backup' },
       { path: 'premium', component: PremiumSettings, title: 'Premium' },
       { path: 'logs', component: LogsSettingsComponent, title: 'Logs' },

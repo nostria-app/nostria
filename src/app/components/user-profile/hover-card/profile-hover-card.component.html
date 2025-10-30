@@ -60,6 +60,14 @@
       </a>
     </div>
 
+    <!-- Trust Rank -->
+    @if (trustEnabled() && trustRank()) {
+    <div class="trust-rank">
+      <mat-icon class="trust-icon">verified_user</mat-icon>
+      <span class="trust-value">Trust Rank: {{ trustRank() }}/100</span>
+    </div>
+    }
+
     <!-- About -->
     @if (profile()?.data?.about) {
     <div class="about">
