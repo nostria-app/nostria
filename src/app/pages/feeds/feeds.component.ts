@@ -971,7 +971,6 @@ export class FeedsComponent implements OnDestroy {
   async refreshColumn(column: ColumnDefinition): Promise<void> {
     console.log('🔄 Refreshing column:', column.label, `(${column.id})`);
     await this.feedsCollectionService.refreshColumn(column.id);
-    this.notificationService.notify(`Column "${column.label}" refreshed`);
   }
   pauseColumn(column: ColumnDefinition): void {
     console.log('⏸️ Pausing column:', column.label, `(${column.id})`);

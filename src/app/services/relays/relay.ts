@@ -632,7 +632,11 @@ export abstract class RelayServiceBase {
             events.push(event as T);
           },
           onclose: (reasons) => {
-            console.log('Subscriptions closed', reasons);
+            // Check the reasons is other than "closed automatically on eose", if it is, log the error as error.
+            if (!reasons.includes('closed automatically on eose')) {
+              this.logger.error('Subscriptions closed unexpectedly', reasons);
+            }
+
             // Update lastUsed for all relays used in this query if we received events
             if (events.length > 0) {
               urls.forEach((url) => this.updateRelayLastUsed(url));
