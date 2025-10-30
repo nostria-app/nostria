@@ -119,31 +119,27 @@
         }
       </div>
 
-      <div class="two-column-layout">
-        <div></div> <!-- Empty div to maintain layout -->
-
-        <div class="dTag-field-container">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Article ID (d tag) *</mat-label>
-            <input matInput [value]="article().dTag" (input)="updateDTag($any($event.target).value)"
-              placeholder="unique-article-identifier" required [readonly]="autoDTagEnabled()" />
-            @if (autoDTagEnabled()) {
-            <mat-hint>Auto-ID is enabled. ID will update based on title.</mat-hint>
-            } @else {
-            <mat-hint>Unique identifier for your article. Used in URLs.</mat-hint>
-            }
-          </mat-form-field>
-          <div class="dTag-controls">
-            <button mat-icon-button color="primary" (click)="toggleAutoDTagMode()"
-              [matTooltip]="autoDTagEnabled() ? 'Disable Auto-ID' : 'Enable Auto-ID'">
-              <mat-icon>{{ autoDTagEnabled() ? 'auto_awesome' : 'auto_awesome_off' }}</mat-icon>
-            </button>
-            @if (suggestedDTag() && autoDTagEnabled()) {
-            <button mat-icon-button matTooltip="Apply suggested ID: {{ suggestedDTag() }}" (click)="applyAutoDTag()">
-              <mat-icon>refresh</mat-icon>
-            </button>
-            }
-          </div>
+      <div class="dTag-field-container">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Article ID (d tag) *</mat-label>
+          <input matInput [value]="article().dTag" (input)="updateDTag($any($event.target).value)"
+            placeholder="unique-article-identifier" required [readonly]="autoDTagEnabled()" />
+          @if (autoDTagEnabled()) {
+          <mat-hint>Auto-ID is enabled. ID will update based on title.</mat-hint>
+          } @else {
+          <mat-hint>Unique identifier for your article. Used in URLs.</mat-hint>
+          }
+        </mat-form-field>
+        <div class="dTag-controls">
+          <button mat-icon-button color="primary" (click)="toggleAutoDTagMode()"
+            [matTooltip]="autoDTagEnabled() ? 'Disable Auto-ID' : 'Enable Auto-ID'">
+            <mat-icon>{{ autoDTagEnabled() ? 'auto_awesome' : 'auto_awesome_off' }}</mat-icon>
+          </button>
+          @if (suggestedDTag() && autoDTagEnabled()) {
+          <button mat-icon-button matTooltip="Apply suggested ID: {{ suggestedDTag() }}" (click)="applyAutoDTag()">
+            <mat-icon>refresh</mat-icon>
+          </button>
+          }
         </div>
       </div>
 
