@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,6 +26,7 @@ import { ApplicationService } from '../../services/application.service';
   ],
   templateUrl: './poll-event.component.html',
   styleUrl: './poll-event.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class PollEventComponent {
   private pollService = inject(PollService);
