@@ -402,11 +402,10 @@ export class EventComponent implements AfterViewChecked {
         this.record.set(record);
 
         if (record.event.kind == kinds.ShortTextNote) {
-          this.loadReactions();
+          // Load all event interactions in a single optimized query
+          this.loadAllInteractions();
           this.loadZaps();
-          this.loadReposts();
           this.loadQuotes();
-          this.loadReports();
         }
       });
     });
@@ -467,6 +466,11 @@ export class EventComponent implements AfterViewChecked {
     });
   }
 
+  /**
+   * Load reports for an event
+   * Note: For initial loads, prefer using loadAllInteractions() which is more efficient.
+   * Use this method only when you need to refresh reports independently.
+   */
   async loadReports(invalidateCache = false) {
     const record = this.record();
     if (!record) return;
@@ -486,6 +490,42 @@ export class EventComponent implements AfterViewChecked {
     }
   }
 
+  /**
+   * Load all event interactions (reactions, reposts, reports) in a single optimized query
+   * This is more efficient than calling loadReactions, loadReposts, and loadReports separately
+   */
+  async loadAllInteractions(invalidateCache = false) {
+    const record = this.record();
+    if (!record) return;
+
+    const userPubkey = this.accountState.pubkey();
+    if (!userPubkey) return;
+
+    this.isLoadingReactions.set(true);
+    try {
+      const interactions = await this.eventService.loadEventInteractions(
+        record.event.id,
+        record.event.kind,
+        userPubkey,
+        invalidateCache
+      );
+
+      // Update all three states from the single query result
+      this.reactions.set(interactions.reactions);
+      this.reposts.set(interactions.reposts);
+      this.reports.set(interactions.reports);
+    } catch (error) {
+      console.error('Error loading event interactions:', error);
+    } finally {
+      this.isLoadingReactions.set(false);
+    }
+  }
+
+  /**
+   * Load reactions for an event
+   * Note: For initial loads, prefer using loadAllInteractions() which is more efficient.
+   * Use this method only when you need to refresh reactions independently (e.g., after liking).
+   */
   async loadReactions(invalidateCache = false) {
     const record = this.record();
     if (!record) return;
@@ -590,6 +630,11 @@ export class EventComponent implements AfterViewChecked {
     }
   }
 
+  /**
+   * Load reposts for an event
+   * Note: For initial loads, prefer using loadAllInteractions() which is more efficient.
+   * Use this method only when you need to refresh reposts independently.
+   */
   async loadReposts() {
     const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return;

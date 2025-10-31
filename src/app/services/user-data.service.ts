@@ -462,4 +462,61 @@ export class UserDataService {
 
     return records;
   }
+
+  /**
+   * Get events by multiple kinds and event tag (optimized for fetching reactions, reposts, reports in one query)
+   */
+  async getEventsByKindsAndEventTag(
+    pubkey: string,
+    kinds: number[],
+    eventTag: string,
+    options?: CacheOptions & DataOptions,
+  ): Promise<NostrRecord[]> {
+    const cacheKey = `${kinds.join(',')}-${eventTag}-all`;
+    let events: Event[] = [];
+    let records: NostrRecord[] = [];
+
+    if (options?.cache && !options?.invalidateCache) {
+      const records = this.cache.get<NostrRecord[]>(cacheKey);
+
+      if (records) {
+        return records;
+      }
+    }
+
+    // If invalidateCache is true, skip storage and fetch directly from relays
+    // Otherwise, check storage first if save option is enabled
+    if (events.length === 0 && options?.save && !options?.invalidateCache) {
+      // Fetch from storage for all requested kinds
+      const kindEvents = await Promise.all(kinds.map(kind => this.storage.getEventsByKind(kind)));
+      events = kindEvents.flat().filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
+    }
+
+    // Fetch from relays if we don't have events yet (or invalidateCache forced relay fetch)
+    if (events.length === 0) {
+      const relayEvents = await this.userRelayEx.getEventsByKindsAndEventTag(pubkey, kinds, eventTag);
+      if (relayEvents && relayEvents.length > 0) {
+        events = relayEvents;
+      }
+    }
+
+    if (events.length === 0) {
+      return [];
+    }
+
+    records = events.map((event) => this.toRecord(event));
+
+    if (options?.cache || options?.invalidateCache) {
+      this.cache.set(cacheKey, records, options);
+    }
+
+    if (options?.save) {
+      for (const event of events) {
+        await this.storage.saveEvent(event);
+      }
+    }
+
+    return records;
+  }
 }
+
