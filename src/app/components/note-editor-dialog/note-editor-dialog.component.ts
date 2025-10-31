@@ -541,14 +541,13 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
       // Use the centralized publishing service which handles relay distribution
       // This ensures replies, quotes, and mentions are published to all relevant relays
-      const success = await this.nostrService.signAndPublish(eventToSign);
+      const result = await this.nostrService.signAndPublish(eventToSign);
 
-      if (!success) {
+      if (!result.success || !result.event) {
         throw new Error('Failed to publish event');
       }
 
-      // Get the signed event for navigation (we need the actual event with id)
-      const signedEvent = await this.nostrService.signEvent(eventToSign);
+      const signedEvent = result.event;
 
       // Clear auto-draft after successful publish
       this.clearAutoDraft();

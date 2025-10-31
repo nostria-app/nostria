@@ -639,13 +639,12 @@ export class EditorComponent implements OnInit, OnDestroy {
 
       // Use the centralized publishing service which handles relay distribution
       // This ensures articles with mentions are published to all mentioned users' relays
-      const success = await this.nostrService.signAndPublish(event);
-      if (!success) {
+      const result = await this.nostrService.signAndPublish(event);
+      if (!result.success || !result.event) {
         throw new Error('Failed to publish event');
       }
 
-      // Get signed event for navigation
-      const signedEvent = await this.nostrService.signEvent(event);
+      const signedEvent = result.event;
 
       const action = kind === 30024 ? 'Draft saved' : 'Article published';
       this.snackBar.open(`${action} successfully`, 'Close', { duration: 3000 });

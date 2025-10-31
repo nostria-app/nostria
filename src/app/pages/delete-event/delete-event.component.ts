@@ -182,9 +182,9 @@ export class DeleteEventComponent implements OnInit {
         deleteEvent.content = reason.trim();
       }
 
-      const published = await this.nostrService.signAndPublish(deleteEvent);
+      const result = await this.nostrService.signAndPublish(deleteEvent);
 
-      if (published) {
+      if (result.success) {
         this.snackBar.open('Event deletion request published successfully', 'Dismiss', {
           duration: 5000,
         });

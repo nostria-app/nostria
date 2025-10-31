@@ -17,13 +17,13 @@ export class RepostService {
   async repostNote(event: Event): Promise<boolean> {
     const repostEvent = this.createRepostEvent(event);
 
-    const published = await this.nostrService.signAndPublish(repostEvent);
-    if (published) {
+    const result = await this.nostrService.signAndPublish(repostEvent);
+    if (result.success) {
       this.snackBar.open('Note reposted successfully!', 'Dismiss', {
         duration: 3000,
       });
     }
-    return published;
+    return result.success;
   }
 
   decodeRepost(event: Event): NostrRecord {
@@ -38,13 +38,13 @@ export class RepostService {
     // Create the event
     const deleteEvent = this.nostrService.createRetractionEvent(event);
 
-    const published = await this.nostrService.signAndPublish(deleteEvent);
-    if (published) {
+    const result = await this.nostrService.signAndPublish(deleteEvent);
+    if (result.success) {
       this.snackBar.open('Repost deletion was requested', 'Dismiss', {
         duration: 3000,
       });
     }
-    return published;
+    return result.success;
   }
 
   private createRepostEvent(event: Event): UnsignedEvent {

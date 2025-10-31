@@ -240,8 +240,8 @@ export class DeleteAccountComponent implements OnInit {
           try {
             // Create deletion event (NIP-09)
             const deleteEvent = this.nostrService.createRetractionEvent(event);
-            await this.nostrService.signAndPublish(deleteEvent);
-            return true;
+            const result = await this.nostrService.signAndPublish(deleteEvent);
+            return result.success;
           } catch (error) {
             console.error(`Failed to delete event ${event.id}:`, error);
             return false;
