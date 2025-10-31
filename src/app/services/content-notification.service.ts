@@ -148,6 +148,11 @@ export class ContentNotificationService {
       this.logger.debug(`Found ${events.length} potential follow events`);
 
       for (const event of events) {
+        // Skip if the follower is the current user (don't notify yourself)
+        if (event.pubkey === pubkey) {
+          continue;
+        }
+
         // Get all 'p' tags (follows) from the contact list
         const pTags = event.tags.filter(tag => tag[0] === 'p');
 
@@ -192,6 +197,11 @@ export class ContentNotificationService {
       this.logger.debug(`Found ${events.length} potential mention events`);
 
       for (const event of events) {
+        // Skip if the author is the current user (don't notify yourself)
+        if (event.pubkey === pubkey) {
+          continue;
+        }
+
         // Filter out replies (which have 'e' tags referencing the original note)
         // and only keep pure mentions
         const hasReplyTag = event.tags.some(
@@ -235,6 +245,11 @@ export class ContentNotificationService {
       this.logger.debug(`Found ${events.length} repost events`);
 
       for (const event of events) {
+        // Skip if the reposter is the current user (don't notify yourself)
+        if (event.pubkey === pubkey) {
+          continue;
+        }
+
         await this.createContentNotification({
           type: NotificationType.REPOST,
           title: 'Reposted your note',
@@ -266,6 +281,11 @@ export class ContentNotificationService {
       this.logger.debug(`Found ${events.length} potential reply events`);
 
       for (const event of events) {
+        // Skip if the replier is the current user (don't notify yourself)
+        if (event.pubkey === pubkey) {
+          continue;
+        }
+
         // Only include events that have a reply marker
         const hasReplyTag = event.tags.some(
           tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
@@ -308,6 +328,11 @@ export class ContentNotificationService {
       this.logger.debug(`Found ${events.length} reaction events`);
 
       for (const event of events) {
+        // Skip if the reactor is the current user (don't notify yourself)
+        if (event.pubkey === pubkey) {
+          continue;
+        }
+
         const reactionContent = event.content || '👍';
 
         // Extract the event being reacted to from the 'e' tag
@@ -398,6 +423,11 @@ export class ContentNotificationService {
               this.logger.warn('Fallback amount parsing also failed', fallbackError);
             }
           }
+        }
+
+        // Skip if the zapper is the current user (don't notify yourself)
+        if (zapperPubkey === pubkey) {
+          continue;
         }
 
         await this.createContentNotification({
