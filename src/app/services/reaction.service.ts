@@ -17,8 +17,8 @@ export class ReactionService {
     ]);
 
     const result = await this.nostrService.signAndPublish(reactionEvent);
-    console.log('Reaction added:', { content, eventId: event.id, success: result });
-    return result;
+    console.log('Reaction added:', { content, eventId: event.id, success: result.success });
+    return result.success;
   }
 
   async addLike(event: Event): Promise<boolean> {
@@ -32,7 +32,7 @@ export class ReactionService {
   async deleteReaction(event: Event): Promise<boolean> {
     const deleteEvent = this.nostrService.createRetractionEvent(event);
     const result = await this.nostrService.signAndPublish(deleteEvent);
-    console.log('Reaction deleted:', { eventId: event.id, success: result });
-    return result;
+    console.log('Reaction deleted:', { eventId: event.id, success: result.success });
+    return result.success;
   }
 }

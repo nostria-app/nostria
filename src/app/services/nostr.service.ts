@@ -781,7 +781,7 @@ export class NostrService implements NostriaService {
     return signedEvent as Event;
   }
 
-  async signAndPublish(event: UnsignedEvent): Promise<boolean> {
+  async signAndPublish(event: UnsignedEvent): Promise<{ success: boolean; event?: Event }> {
     if (!event) {
       throw new Error('Event parameter must not be null or undefined.');
     }
@@ -797,10 +797,10 @@ export class NostrService implements NostriaService {
 
       const result = await this.publishService.publish(signedEvent, options);
 
-      return result.success;
+      return { success: result.success, event: signedEvent };
     } catch (error) {
       this.logger.error('[NostrService] Error in signAndPublish', error);
-      return false;
+      return { success: false };
     }
   }
 
