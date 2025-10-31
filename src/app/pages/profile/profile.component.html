@@ -1,103 +1,88 @@
 <div class="profile-page">
   @if (isLoading()) {
-    <div class="profile-loading-container">
-      <div class="profile-loading-content">
-        <!-- Profile skeleton -->
-        <div class="profile-loading-skeleton">
-          <!-- Banner skeleton -->
-          <div class="banner-skeleton"></div>
+  <div class="profile-loading-container">
+    <div class="profile-loading-content">
+      <!-- Profile skeleton -->
+      <div class="profile-loading-skeleton">
+        <!-- Banner skeleton -->
+        <div class="banner-skeleton"></div>
 
-          <!-- Avatar and info skeleton -->
-          <div class="profile-info-skeleton">
-            <div class="avatar-skeleton"></div>
-            <div class="profile-details-skeleton">
-              <div class="name-skeleton"></div>
-              <div class="npub-skeleton"></div>
-              <div class="bio-skeleton"></div>
-            </div>
-          </div>
-
-          <!-- Actions skeleton -->
-          <div class="actions-skeleton">
-            <div class="action-button-skeleton"></div>
-            <div class="action-button-skeleton"></div>
+        <!-- Avatar and info skeleton -->
+        <div class="profile-info-skeleton">
+          <div class="avatar-skeleton"></div>
+          <div class="profile-details-skeleton">
+            <div class="name-skeleton"></div>
+            <div class="npub-skeleton"></div>
+            <div class="bio-skeleton"></div>
           </div>
         </div>
 
-        <!-- Loading spinner and message -->
-        <div class="loading-spinner-section">
-          <mat-spinner diameter="48"></mat-spinner>
-          <p class="loading-message">Loading profile...</p>
-          <p class="loading-submessage">Fetching user data from the network</p>
+        <!-- Actions skeleton -->
+        <div class="actions-skeleton">
+          <div class="action-button-skeleton"></div>
+          <div class="action-button-skeleton"></div>
         </div>
       </div>
+
+      <!-- Loading spinner and message -->
+      <div class="loading-spinner-section">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p class="loading-message">Loading profile...</p>
+        <p class="loading-submessage">Fetching user data from the network</p>
+      </div>
     </div>
+  </div>
   } @else if (error()) {
-    <div class="error-container">
-      <mat-icon>error</mat-icon>
-      <h2>{{ error() }}</h2>
-      <p>The profile you're looking for couldn't be loaded or doesn't exist.</p>
-      <p>
-        The user is likely not found on your Discovery Relays. You can add
-        <a [routerLink]="['/settings']">additional ones</a> and try again.
-      </p>
-      <p class="profile-link-container">
-        @if (utilities.isValidPubkey(pubkey())) {
-          <a
-            class="wrap-link"
-            [href]="'https://nostr.at/' + getSafeFormattedNpub()"
-            target="_blank"
-            rel="noopener noreferrer"
-            >https://nostr.at/{{ getSafeFormattedNpub() }}</a
-          >
-        } @else {
-          <span class="invalid-pubkey">Invalid pubkey: {{ pubkey() }}</span>
-        }
-      </p>
-    </div>
+  <div class="error-container">
+    <mat-icon>error</mat-icon>
+    <h2>{{ error() }}</h2>
+    <p>The profile you're looking for couldn't be loaded or doesn't exist.</p>
+    <p>
+      The user is likely not found on your Discovery Relays. You can add
+      <a [routerLink]="['/settings']">additional ones</a> and try again.
+    </p>
+    <p class="profile-link-container">
+      @if (utilities.isValidPubkey(pubkey())) {
+      <a class="wrap-link" [href]="'https://nostr.at/' + getSafeFormattedNpub()" target="_blank"
+        rel="noopener noreferrer">https://nostr.at/{{ getSafeFormattedNpub() }}</a>
+      } @else {
+      <span class="invalid-pubkey">Invalid pubkey: {{ pubkey() }}</span>
+      }
+    </p>
+  </div>
   }
   @if (!isLoading() && !error()) {
-    <!-- Blocked Profile Overlay -->
-    @if (isProfileBlocked() && !isBlockedProfileRevealed()) {
-      <div class="blocked-profile-overlay">
-        <div class="blocked-profile-content">
-          <mat-icon class="blocked-icon">block</mat-icon>
-          <h2>Profile Blocked</h2>
-          <p>You have blocked this user. Their profile and content are hidden from view.</p>
-          <div class="blocked-profile-actions">
-            <button mat-raised-button color="primary" (click)="revealBlockedProfile()">
-              <mat-icon>visibility</mat-icon>
-              Reveal Profile
-            </button>
-          </div>
-        </div>
+  <!-- Blocked Profile Overlay -->
+  @if (isProfileBlocked() && !isBlockedProfileRevealed()) {
+  <div class="blocked-profile-overlay">
+    <div class="blocked-profile-content">
+      <mat-icon class="blocked-icon">block</mat-icon>
+      <h2>Profile Blocked</h2>
+      <p>You have blocked this user. Their profile and content are hidden from view.</p>
+      <div class="blocked-profile-actions">
+        <button mat-raised-button color="primary" (click)="revealBlockedProfile()">
+          <mat-icon>visibility</mat-icon>
+          Reveal Profile
+        </button>
       </div>
-    }
+    </div>
+  </div>
+  }
 
-    <!-- Normal Profile Content (only shown when not blocked or revealed) -->
-    @if (!isProfileBlocked() || isBlockedProfileRevealed()) {
-      <div class="profile-header" [class.compact-header]="isCompactHeader()">
-        <!-- Show banner only when not in compact mode -->
-        @if (!isCompactHeader()) {
-          <div
-            class="profile-banner"
-            [style.background-image]="
-              userMetadata()?.data.banner
-                ? 'url(' + userMetadata()!.data.banner + ')'
-                : getDefaultBanner()
-            "
-          ></div>
-        }
-        <app-profile-header
-          [profile]="userMetadata()"
-          [pubkey]="pubkey()"
-          [compact]="isCompactHeader()"
-        ></app-profile-header>
-      </div>
+  <!-- Normal Profile Content (only shown when not blocked or revealed) -->
+  @if (!isProfileBlocked() || isBlockedProfileRevealed()) {
+  <div class="profile-header">
+    <div class="profile-banner" [style.background-image]="
+            userMetadata()?.data.banner
+              ? 'url(' + userMetadata()!.data.banner + ')'
+              : getDefaultBanner()
+          "></div>
+    <app-profile-header [profile]="userMetadata()" [pubkey]="pubkey()"></app-profile-header>
+  </div>
 
-      <div class="profile-outlet" [class.mobile]="layoutService.isHandset()">
-        <router-outlet></router-outlet>
-      </div>
-    }
+  <div class="profile-outlet" [class.mobile]="layoutService.isHandset()">
+    <router-outlet></router-outlet>
+  </div>
+  }
   }
 </div>
