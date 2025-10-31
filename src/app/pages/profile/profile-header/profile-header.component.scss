@@ -2,12 +2,6 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-
-  // &.compact {
-  //     display: flex;
-  //     align-items: center;
-  //     padding: 1rem;
-  // }
 }
 
 .profile-info-container {
@@ -31,21 +25,6 @@
     flex: 1;
   }
 
-  // Switch to vertical layout on smaller screens
-  // @media (max-width: 768px) {
-  //     flex-direction: column;
-  //     position: relative;
-  //     top: -120px;
-  //     // gap: 0;
-
-  //     // First div still maintains 168px width even in vertical layout
-  //     >div:first-child {
-  //         align-self: center; // Center align the div horizontally
-  //         margin: 0 auto; // Alternative centering approach
-  //         top: 0px;
-  //     }
-  // }
-
   &.mobile {
     flex-direction: column;
     gap: 0;
@@ -63,21 +42,6 @@
       /* Allow wrapper to expand for badges */
       flex: 0 0 auto;
       /* Don't grow or shrink based on content */
-    }
-  }
-
-  &.compact {
-    // When compact class is applied
-    flex-direction: row;
-    position: initial;
-
-    // First div should be fixed at 80px in compact mode
-    >div:first-child {
-      flex: 0 0 80px !important; // Don't grow or shrink, always 80px
-      width: 80px !important;
-      align-self: auto;
-      margin: 0;
-      top: 0;
     }
   }
 }
@@ -100,10 +64,6 @@
     &:active {
       filter: brightness(0.9);
     }
-  }
-
-  .compact & {
-    height: 80px;
   }
 }
 
@@ -139,29 +99,6 @@
     flex-shrink: 0;
     /* Ensure avatar doesn't shrink on mobile */
   }
-
-  .compact & {
-    // position: relative;
-    width: 80px !important;
-    height: 80px !important;
-    // left: 0;
-    // bottom: 0;
-    // margin-right: 16px;
-  }
-
-  // @media (max-width: 768px) {
-  //     width: 140px;
-  //     height: 140px;
-  //     left: 24px;
-  //     bottom: -70px;
-  // }
-
-  // @media (max-width: 480px) {
-  //     width: 120px;
-  //     height: 120px;
-  //     left: 16px;
-  //     bottom: -60px;
-  // }
 }
 
 .avatar-image {
@@ -175,12 +112,6 @@
   width: 120px;
   height: 120px;
   color: var(--mat-divider-color, #ccc);
-
-  // .compact & {
-  //     font-size: 60px;
-  //     width: 60px;
-  //     height: 60px;
-  // }
 }
 
 .profile-info {
@@ -188,16 +119,6 @@
   width: 100%;
   max-width: 100%;
   overflow: hidden;
-
-  // &.compact {
-  //     margin-top: 0;
-  //     padding: 0;
-  //     flex: 1;
-  // }
-
-  // @media (max-width: 768px) {}
-
-  // @media (max-width: 480px) {}
 }
 
 .profile-bio {
@@ -269,11 +190,6 @@
       color: var(--mat-sys-color-primary);
     }
   }
-
-  // .compact & {
-  //     font-size: 18px;
-  //     margin-bottom: 4px;
-  // }
 }
 
 @keyframes pulse {
@@ -381,14 +297,6 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  // top: 16px;
-  // right: 16px;
-
-  // .compact & {
-  //     top: auto;
-  //     right: 0;
-  //     background-color: transparent;
-  // }
 }
 
 .verified-icon {
