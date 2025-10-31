@@ -50,11 +50,13 @@
         <p>Loading accepted badges...</p>
       </div>
       } @else {
+      <!-- Enable drag-and-drop only for own profile -->
+      @if (isViewingOwnProfile()) {
       <div class="badges-list" cdkDropList (cdkDropListDropped)="onBadgeDropped($event)">
         @for (badge of accepted(); track badge.aTag) {
         <div cdkDrag class="badge-drag-container">
-          <app-badge [badge]="badge" layout="horizontal" [showActions]="isViewingOwnProfile()"
-            [isUpdating]="isUpdating()" [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)"
+          <app-badge [badge]="badge" layout="horizontal" [showActions]="true" [isUpdating]="isUpdating()"
+            [isAccepted]="true" (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)"
             (removeClicked)="removeBadge(badge)">
           </app-badge>
           <div class="badge-drag-placeholder" *cdkDragPlaceholder></div>
@@ -68,6 +70,25 @@
         </div>
         }
       </div>
+      } @else {
+      <!-- No drag-and-drop for other users' profiles -->
+      <div class="badges-list no-drag">
+        @for (badge of accepted(); track badge.aTag) {
+        <div class="badge-container">
+          <app-badge [badge]="badge" layout="horizontal" [showActions]="false" [isUpdating]="false" [isAccepted]="true"
+            (viewClicked)="viewBadgeDetailsById(badge.id, badge.slug)">
+          </app-badge>
+        </div>
+        }
+
+        @if (accepted().length === 0) {
+        <div class="no-badges-message">
+          <mat-icon>verified</mat-icon>
+          <p>No accepted badges</p>
+        </div>
+        }
+      </div>
+      }
       }
     </mat-tab>
     <mat-tab>

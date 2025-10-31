@@ -136,6 +136,22 @@
   }
 }
 
+// Non-draggable container for viewing other users' badges
+// Uses default cursor and styling
+
+.badges-list.no-drag {
+
+  // Disable hover effects on badges when drag-and-drop is disabled
+  ::ng-deep .badge-card {
+    cursor: default;
+
+    &:hover {
+      transform: none;
+      box-shadow: var(--mat-sys-level1);
+    }
+  }
+}
+
 .badge-drag-placeholder {
   background: var(--mat-sys-surface-container);
   border: 2px dashed var(--mat-sys-outline);
