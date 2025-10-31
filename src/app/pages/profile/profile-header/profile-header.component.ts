@@ -73,7 +73,6 @@ export class ProfileHeaderComponent {
   nostr = inject(NostrService);
   npub = signal<string | undefined>(undefined);
   logger = inject(LoggerService);
-  compact = input<boolean>(false);
   profileState = inject(ProfileStateService);
   accountState = inject(AccountStateService);
   utilities = inject(UtilitiesService);
@@ -139,7 +138,7 @@ export class ProfileHeaderComponent {
   });  // Computed property to check if bio needs expansion
   shouldShowExpander = computed(() => {
     const about = this.profile()?.data.about;
-    if (!about || this.compact()) return false;
+    if (!about) return false;
 
     // Split by actual newlines to count lines
     const lines = about.split('\n');
@@ -162,7 +161,7 @@ export class ProfileHeaderComponent {
   // Computed property for displayed bio text
   displayedBio = computed(() => {
     const about = this.profile()?.data.about;
-    if (!about || this.compact() || this.isBioExpanded() || !this.shouldShowExpander()) {
+    if (!about || this.isBioExpanded() || !this.shouldShowExpander()) {
       return about;
     }
 
