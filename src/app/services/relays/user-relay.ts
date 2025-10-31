@@ -150,6 +150,34 @@ export class UserRelayService {
   }
 
   /**
+   * Get events by multiple kinds and event tag (optimized for fetching reactions, reposts, reports in one query)
+   */
+  async getEventsByKindsAndEventTag(pubkey: string | string[], kinds: number[], eventTag: string | string[]): Promise<Event[]> {
+    // For multiple pubkeys, we need to get relays for each one
+    const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    const allRelayUrls = new Set<string>();
+
+    for (const pk of pubkeys) {
+      await this.ensureRelaysForPubkey(pk);
+      const relayUrls = this.getRelaysForPubkey(pk);
+      relayUrls.forEach(url => allRelayUrls.add(url));
+    }
+
+    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+
+    if (relayUrls.length === 0) {
+      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
+      return [];
+    }
+
+    const events = Array.isArray(eventTag) ? eventTag : [eventTag];
+
+    this.logger.debug(`[UserRelayService] Searching for kinds ${kinds.join(', ')} events across ${relayUrls.length} relays`);
+
+    return this.getEventsWithSubscription(relayUrls, { '#e': events, kinds });
+  }
+
+  /**
    * Get a single event by pubkey, kind and tag
    */
   async getEventByPubkeyAndKindAndTag(

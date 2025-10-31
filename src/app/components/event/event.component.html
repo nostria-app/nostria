@@ -329,7 +329,7 @@
 
       <!-- Repost -->
       <div class="reaction-group">
-        <app-repost-button [event]="targetItem.event"></app-repost-button>
+        <app-repost-button [event]="targetItem.event" [repostsFromParent]="reposts()"></app-repost-button>
         @if (!compact()) {
         <button mat-button class="count-button" (click)="openReactionsDialog('reposts'); $event.stopPropagation()">
           <span>{{ repostCount() }}</span>

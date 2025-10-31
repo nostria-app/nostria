@@ -38,6 +38,9 @@ export class RepostButtonComponent {
 
   event = input.required<Event>();
   view = input<ViewMode>('icon');
+  // Accept reposts from parent to avoid duplicate queries
+  // If not provided, component will load independently
+  repostsFromParent = input<NostrRecord[] | null>(null);
 
   repostByCurrentAccount = computed<NostrRecord | undefined>(() => {
     const event = this.event();
@@ -46,13 +49,27 @@ export class RepostButtonComponent {
   });
 
   constructor() {
+    // Watch for parent reposts and use them when available
+    effect(() => {
+      const parentReposts = this.repostsFromParent();
+
+      // If parent provides reposts (even empty array), use them
+      if (parentReposts !== null) {
+        this.reposts.set(parentReposts);
+      }
+    });
+
+    // Fallback: Load reposts independently only if parent doesn't provide them
+    // This handles standalone usage of the component
     effect(() => {
       const event = this.event();
+      const parentReposts = this.repostsFromParent();
 
-      if (!event) {
+      if (!event || parentReposts !== null) {
         return;
       }
 
+      // Load independently only if no parent data is being managed
       untracked(async () => {
         this.loadReposts();
       });

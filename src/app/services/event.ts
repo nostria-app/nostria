@@ -38,6 +38,12 @@ export interface ReportEvents {
   data: Map<string, number>;
 }
 
+export interface EventInteractions {
+  reactions: ReactionEvents;
+  reposts: NostrRecord[];
+  reports: ReportEvents;
+}
+
 export interface ThreadedEvent {
   event: Event;
   replies: ThreadedEvent[];
@@ -373,7 +379,113 @@ export class EventService {
   }
 
   /**
+   * Load event interactions (reactions, reposts, reports) in a single optimized query
+   * This is more efficient than calling loadReactions, loadReposts, and loadReports separately
+   */
+  async loadEventInteractions(
+    eventId: string,
+    eventKind: number,
+    pubkey: string,
+    invalidateCache = false,
+  ): Promise<EventInteractions> {
+    this.logger.info('loadEventInteractions called with eventId:', eventId, 'pubkey:', pubkey);
+
+    // Handle cache invalidation if requested
+    if (invalidateCache) {
+      this.subscriptionCache.invalidateEventCache([eventId]);
+    }
+
+    // Use subscription cache to prevent duplicate subscriptions
+    const cacheKey = `interactions-${eventId}-${pubkey}`;
+    const cachedResult = await this.subscriptionCache.getOrCreateSubscription<EventInteractions>(
+      cacheKey,
+      [eventId], // eventIds array
+      'interactions', // subscription type
+      async () => {
+        try {
+          // Determine the repost kind based on the event kind
+          const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
+
+          // Fetch all interaction types in a single query
+          const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
+            pubkey,
+            [kinds.Reaction, repostKind, kinds.Report],
+            eventId,
+            {
+              cache: true,
+              ttl: minutes.five,
+              invalidateCache,
+            },
+          );
+
+          // Separate events by kind
+          const reactionRecords = allRecords.filter((r) => r.event.kind === kinds.Reaction);
+          const repostRecords = allRecords.filter((r) => r.event.kind === repostKind);
+          const reportRecords = allRecords.filter((r) => r.event.kind === kinds.Report);
+
+          // Process reactions
+          const reactionCounts = new Map<string, number>();
+          reactionRecords.forEach((record: NostrRecord) => {
+            const event = record.event;
+            if (event.content && event.content.trim()) {
+              const emoji = event.content.trim();
+              reactionCounts.set(emoji, (reactionCounts.get(emoji) || 0) + 1);
+            }
+          });
+
+          // Process reports
+          const reportCounts = new Map<string, number>();
+          reportRecords.forEach((record: NostrRecord) => {
+            const event = record.event;
+            const eTags = event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
+            eTags.forEach((tag: string[]) => {
+              const reportType = tag[2];
+              if (reportType && reportType.trim()) {
+                reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
+              }
+            });
+          });
+
+          this.logger.info(
+            'Successfully loaded event interactions:',
+            eventId,
+            'reactions:',
+            reactionRecords.length,
+            'reposts:',
+            repostRecords.length,
+            'reports:',
+            reportRecords.length,
+          );
+
+          return {
+            reactions: {
+              events: reactionRecords,
+              data: reactionCounts,
+            },
+            reposts: repostRecords,
+            reports: {
+              events: reportRecords,
+              data: reportCounts,
+            },
+          };
+        } catch (error) {
+          this.logger.error('Error loading event interactions:', error);
+          return {
+            reactions: { events: [], data: new Map() },
+            reposts: [],
+            reports: { events: [], data: new Map() },
+          };
+        }
+      },
+    );
+
+    return cachedResult;
+  }
+
+  /**
    * Load reactions for an event
+   * Note: For better performance when loading multiple interaction types,
+   * consider using loadEventInteractions() which fetches reactions, reposts, and reports in a single query.
    */
   async loadReactions(
     eventId: string,
@@ -442,6 +554,8 @@ export class EventService {
 
   /**
    * Load reports for an event
+   * Note: For better performance when loading multiple interaction types,
+   * consider using loadEventInteractions() which fetches reactions, reposts, and reports in a single query.
    */
   async loadReports(
     eventId: string,
@@ -777,6 +891,8 @@ export class EventService {
 
   /**
    * Load reposts for an event by a specific user
+   * Note: For better performance when loading multiple interaction types,
+   * consider using loadEventInteractions() which fetches reactions, reposts, and reports in a single query.
    */
   async loadReposts(
     eventId: string,
