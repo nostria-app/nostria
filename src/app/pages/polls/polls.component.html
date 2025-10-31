@@ -13,22 +13,6 @@
         </button>
       </div>
     </div>
-
-    <!-- Tabs -->
-    <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="switchTab($event)">
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon>dynamic_feed</mat-icon>
-          Feed
-        </ng-template>
-      </mat-tab>
-      <mat-tab>
-        <ng-template mat-tab-label>
-          <mat-icon>person</mat-icon>
-          Your Polls
-        </ng-template>
-      </mat-tab>
-    </mat-tab-group>
   </header>
 
   <main class="polls-content">
@@ -39,8 +23,8 @@
       <p>Loading polls...</p>
     </div>
     } @else {
-    <!-- Drafts Section (only in "Your Polls" tab) -->
-    @if (selectedTab() === 'yours' && drafts().length > 0) {
+    <!-- Drafts Section -->
+    @if (drafts().length > 0) {
     <section class="drafts-section">
       <h2>Drafts</h2>
       <div class="poll-grid" [class.list-view]="selectedView() === 'list'">
@@ -78,27 +62,17 @@
     <!-- Polls Section -->
     <section class="polls-section">
       <div class="section-header">
-        <h2>{{ selectedTab() === 'feed' ? 'Feed Polls' : 'Your Polls' }}</h2>
-        @if (selectedTab() === 'feed') {
-          <button mat-icon-button (click)="refreshFeed()" [disabled]="isLoading()" matTooltip="Refresh feed">
-            <mat-icon>refresh</mat-icon>
-          </button>
-        }
+        <h2>Your Polls</h2>
       </div>
       @if (getDisplayedPolls().length === 0) {
       <div class="empty-state">
         <mat-icon class="empty-icon">poll</mat-icon>
-        @if (selectedTab() === 'feed') {
-          <h3>No polls in feed</h3>
-          <p>Polls from people you follow will appear here</p>
-        } @else {
-          <h3>No polls yet</h3>
-          <p>Create your first poll to get started</p>
-          <button mat-flat-button color="primary" (click)="createNewPoll()">
-            <mat-icon>add</mat-icon>
-            Create Poll
-          </button>
-        }
+        <h3>No polls yet</h3>
+        <p>Create your first poll to get started</p>
+        <button mat-flat-button color="primary" (click)="createNewPoll()">
+          <mat-icon>add</mat-icon>
+          Create Poll
+        </button>
       </div>
       } @else {
       <div class="poll-grid" [class.list-view]="selectedView() === 'list'">

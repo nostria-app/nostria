@@ -30,6 +30,7 @@ import {
   PlaylistEventComponent,
   StarterPackEventComponent,
   VideoEventComponent,
+  PollEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -69,6 +70,7 @@ type EventCardAppearance = 'card' | 'plain';
     ArticleEventComponent,
     PlaylistEventComponent,
     StarterPackEventComponent,
+    PollEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,

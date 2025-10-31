@@ -11,7 +11,6 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatTabsModule } from '@angular/material/tabs';
 import { nip19 } from 'nostr-tools';
 import { PollService } from '../../services/poll.service';
 import { ApplicationService } from '../../services/application.service';
@@ -32,7 +31,6 @@ import { PollDetailsDialogComponent } from '../../components/poll-details-dialog
     MatProgressSpinnerModule,
     MatChipsModule,
     MatProgressBarModule,
-    MatTabsModule,
     PollCardComponent,
   ],
   templateUrl: './polls.component.html',
@@ -51,11 +49,7 @@ export class PollsComponent {
 
   // Local state
   selectedView = signal<'grid' | 'list'>('grid');
-  selectedTab = signal<'feed' | 'yours'>('yours'); // Default to "Your Polls"
-  selectedTabIndex = signal<number>(1); // 0 = feed, 1 = yours
   isLoading = signal(false);
-  feedPolls = signal<Poll[]>([]);
-  feedPollsLoaded = signal(false); // Track if feed polls have been loaded
   pollResults = signal<Map<string, { responses: PollResponse[], results: PollResults }>>(new Map());
 
   constructor() {
@@ -64,7 +58,6 @@ export class PollsComponent {
       const pubkey = this.app.accountState.pubkey();
       if (pubkey) {
         this.loadYourPolls(pubkey);
-        // Don't load feed polls automatically, load on tab switch
       }
     });
   }
@@ -96,91 +89,6 @@ export class PollsComponent {
    */
   private async loadYourPolls(pubkey: string): Promise<void> {
     await this.loadPolls(pubkey);
-  }
-
-  /**
-   * Load polls from people you follow (feed)
-   * Optimized: Uses SharedRelayService with incremental updates like FeedService
-   */
-  private async loadFeedPolls(): Promise<void> {
-    const currentUser = this.app.accountState.account();
-    if (!currentUser) return;
-
-    this.isLoading.set(true);
-    try {
-      // Get following list
-      const contactList = await this.app.storage.getEventByPubkeyAndKind(
-        [currentUser.pubkey],
-        3 // kind 3 is contact list
-      );
-
-      if (!contactList) {
-        console.log('No contact list found');
-        this.snackBar.open('No following list found. Follow some users first!', 'Close', {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
-        this.isLoading.set(false);
-        return;
-      }
-
-      // Extract pubkeys from p tags
-      const followingPubkeys = contactList.tags
-        .filter(tag => tag[0] === 'p')
-        .map(tag => tag[1]);
-
-      console.log(`Loading polls from ${followingPubkeys.length} followed users`);
-
-      if (followingPubkeys.length === 0) {
-        this.feedPollsLoaded.set(true);
-        this.isLoading.set(false);
-        return;
-      }
-
-      // Fetch polls with INCREMENTAL updates (show results as they arrive)
-      await this.fetchPollsWithIncrementalUpdates(followingPubkeys);
-
-      this.feedPollsLoaded.set(true);
-    } catch (error) {
-      console.error('Failed to load feed polls:', error);
-      this.snackBar.open('Failed to load feed polls', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
-    } finally {
-      this.isLoading.set(false);
-    }
-  }
-
-  /**
-   * Fetch polls with incremental UI updates (like FeedService does)
-   * Shows polls as they arrive instead of waiting for all
-   */
-  private async fetchPollsWithIncrementalUpdates(pubkeys: string[]): Promise<void> {
-    // Use the optimized method from PollService (uses SharedRelayService)
-    const pollsFromAllUsers = await this.pollService.fetchPollsForMultiplePubkeysOptimized(pubkeys);
-    
-    // Sort by creation time
-    pollsFromAllUsers.sort((a: Poll, b: Poll) => b.created_at - a.created_at);
-    
-    // Update UI with all polls
-    this.feedPolls.set(pollsFromAllUsers);
-
-    console.log(`Loaded ${pollsFromAllUsers.length} polls from ${pubkeys.length} users`);
-    
-    // Load responses in batch
-    const responsesMap = await this.pollService.fetchPollResponsesBatch(pollsFromAllUsers);
-    
-    // Update results
-    const currentMap = this.pollResults();
-    pollsFromAllUsers.forEach(poll => {
-      const responses = responsesMap.get(poll.id) || [];
-      const results = this.pollService.calculateResults(poll, responses);
-      currentMap.set(poll.id, { responses, results });
-    });
-    this.pollResults.set(new Map(currentMap));
   }
 
   /**
@@ -298,23 +206,8 @@ export class PollsComponent {
     this.selectedView.update(view => view === 'grid' ? 'list' : 'grid');
   }
 
-  switchTab(index: number): void {
-    this.selectedTabIndex.set(index);
-    this.selectedTab.set(index === 0 ? 'feed' : 'yours');
-    
-    // Load feed polls when switching to feed tab for the first time
-    if (index === 0 && !this.feedPollsLoaded()) {
-      this.loadFeedPolls();
-    }
-  }
-
   getDisplayedPolls(): Poll[] {
-    return this.selectedTab() === 'feed' ? this.feedPolls() : this.polls();
-  }
-
-  refreshFeed(): void {
-    this.feedPollsLoaded.set(false);
-    this.loadFeedPolls();
+    return this.polls();
   }
 
   isPollEnded(poll: Poll): boolean {
