@@ -130,7 +130,6 @@ export class ProfileComponent {
   showLightningQR = signal(false);
   lightningQrCode = signal<string>('');
   followingList = signal<string[]>([]); // This would be dynamically updated with real data
-  isCompactHeader = signal<boolean>(false); // New signal to track compact header mode
 
   // Convert route params to a signal
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
@@ -306,16 +305,8 @@ export class ProfileComponent {
     // Add effect to monitor router events for sub-route changes
     this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
-        // Check if current route is one that should use compact header
-        const currentUrl = event.urlAfterRedirects;
-        const shouldBeCompact = this.shouldUseCompactHeader(currentUrl);
-
-        // Only update if the value changes to avoid unnecessary renders
-        if (this.isCompactHeader() !== shouldBeCompact) {
-          this.isCompactHeader.set(shouldBeCompact);
-        }
-
         // Check if we're navigating to a profile route
+        const currentUrl = event.urlAfterRedirects;
         const isProfileRoute = currentUrl.match(/^\/(p|u)\//);
         if (isProfileRoute) {
           // Extract the profile ID from the URL
@@ -355,23 +346,6 @@ export class ProfileComponent {
         }
       }
     });
-
-    // Also check the current URL on initial load/reload
-    const currentUrl = this.router.url;
-    const shouldBeCompact = this.shouldUseCompactHeader(currentUrl);
-    this.isCompactHeader.set(shouldBeCompact);
-  }
-
-  // Helper method to determine if the current route should use compact header
-  private shouldUseCompactHeader(url: string): boolean {
-    // Check if URL contains these paths that require compact header
-    return (
-      url.includes('/following') ||
-      url.includes('/about') ||
-      url.includes('/details') ||
-      url.includes('/relays') ||
-      url.includes('/media')
-    );
   }
 
   /**
