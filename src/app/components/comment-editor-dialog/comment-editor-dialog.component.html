@@ -24,15 +24,17 @@
 
   <mat-dialog-actions align="end">
     <button mat-button (click)="onCancel()" [disabled]="isPublishing()">Cancel</button>
-    <button mat-flat-button color="primary" (click)="onPublish()" [disabled]="!content().trim() || isPublishing()">
-      @if (isPublishing()) {
+    @if (isPublishing()) {
+    <button mat-flat-button color="primary" [disabled]="true">
       <mat-icon>hourglass_empty</mat-icon>
       Publishing...
-      } @else {
+    </button>
+    } @else {
+    <button mat-flat-button color="primary" (click)="onPublish()" [disabled]="!content().trim()">
       <mat-icon>send</mat-icon>
       Publish Comment
-      }
     </button>
+    }
   </mat-dialog-actions>
 
   @if (isPublishing()) {
