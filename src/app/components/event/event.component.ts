@@ -99,6 +99,7 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   private intersectionObserver?: IntersectionObserver;
   private hasLoadedInteractions = signal<boolean>(false);
   private elementRef = inject(ElementRef);
+  private observedEventId?: string; // Track which event we're observing for
 
   data = inject(DataService);
   record = signal<NostrRecord | null>(null);
@@ -408,6 +409,10 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
 
         console.log('📝 [Event Setup] Record created for event:', event.id.substring(0, 8), '| Kind:', event.kind);
 
+        // Reset the loaded interactions flag when event changes
+        // This ensures each new event loads its own interactions
+        this.hasLoadedInteractions.set(false);
+
         // Interactions will be loaded lazily via IntersectionObserver in ngAfterViewInit
         // No longer loading immediately to reduce relay requests for off-screen events
       });
@@ -481,16 +486,34 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
     this.intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting && !this.hasLoadedInteractions()) {
-          console.log('👁️ [Lazy Load] Event became visible:', this.record()?.event.id.substring(0, 8));
+          // CRITICAL: Capture the current event at the moment of intersection
+          // This prevents loading interactions for the wrong event
+          const currentRecord = this.record();
+          const currentEventId = currentRecord?.event.id;
+
+          if (!currentRecord || !currentEventId) {
+            console.warn('⚠️ [Lazy Load] No record available when event became visible');
+            return;
+          }
+
+          console.log('👁️ [Lazy Load] Event became visible:', currentEventId.substring(0, 8));
+
+          // Store which event we're loading for to prevent cross-contamination
+          this.observedEventId = currentEventId;
           this.hasLoadedInteractions.set(true);
 
-          // Load interactions when event becomes visible
-          const record = this.record();
-          if (record && record.event.kind === kinds.ShortTextNote) {
-            console.log('🚀 [Lazy Load] Loading interactions for visible event:', record.event.id.substring(0, 8));
-            this.loadAllInteractions();
-            this.loadZaps();
-            this.loadQuotes();
+          // Load interactions for the specific event that became visible
+          if (currentRecord.event.kind === kinds.ShortTextNote) {
+            console.log('🚀 [Lazy Load] Loading interactions for visible event:', currentEventId.substring(0, 8));
+
+            // Double-check event ID before loading to prevent race conditions
+            if (this.record()?.event.id === currentEventId) {
+              this.loadAllInteractions();
+              this.loadZaps();
+              this.loadQuotes();
+            } else {
+              console.warn('⚠️ [Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
+            }
           }
         }
       });
@@ -546,14 +569,33 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) return;
 
+    // Capture the event ID we're loading for to prevent race conditions
+    const targetEventId = record.event.id;
+
+    console.log('📊 [Loading Interactions] Starting load for event:', targetEventId.substring(0, 8));
+
     this.isLoadingReactions.set(true);
     try {
       const interactions = await this.eventService.loadEventInteractions(
-        record.event.id,
+        targetEventId,
         record.event.kind,
         userPubkey,
         invalidateCache
       );
+
+      // CRITICAL: Verify we're still showing the same event before updating state
+      // This prevents interactions from one event being applied to another
+      const currentRecord = this.record();
+      if (currentRecord?.event.id !== targetEventId) {
+        console.warn('⚠️ [Loading Interactions] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
+        console.warn('⚠️ [Loading Interactions] Current event is now:', currentRecord?.event.id.substring(0, 8));
+        return;
+      }
+
+      console.log('✅ [Loading Interactions] Successfully loaded for event:', targetEventId.substring(0, 8));
+      console.log('   - Reactions:', interactions.reactions.events.length);
+      console.log('   - Reposts:', interactions.reposts.length);
+      console.log('   - Reports:', interactions.reports.events.length);
 
       // Update all three states from the single query result
       this.reactions.set(interactions.reactions);
@@ -650,8 +692,22 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
     const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return;
 
+    // Capture the event ID we're loading for to prevent race conditions
+    const targetEventId = currentEvent.id;
+
+    console.log('⚡ [Loading Zaps] Starting load for event:', targetEventId.substring(0, 8));
+
     try {
-      const zapReceipts = await this.zapService.getZapsForEvent(currentEvent.id);
+      const zapReceipts = await this.zapService.getZapsForEvent(targetEventId);
+
+      // CRITICAL: Verify we're still showing the same event before updating state
+      const stillCurrentEvent = this.event() || this.record()?.event;
+      if (stillCurrentEvent?.id !== targetEventId) {
+        console.warn('⚠️ [Loading Zaps] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
+        console.warn('⚠️ [Loading Zaps] Current event is now:', stillCurrentEvent?.id.substring(0, 8));
+        return;
+      }
+
       const parsedZaps = [];
 
       for (const receipt of zapReceipts) {
@@ -669,6 +725,7 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
         }
       }
 
+      console.log('✅ [Loading Zaps] Successfully loaded', parsedZaps.length, 'zaps for event:', targetEventId.substring(0, 8));
       this.zaps.set(parsedZaps);
     } catch (error) {
       console.error('Error loading zaps:', error);
@@ -704,10 +761,21 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
     const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return;
 
+    // Capture the event ID we're loading for to prevent race conditions
+    const targetEventId = currentEvent.id;
+
     try {
       // For now, quotes are complex to find - they're regular notes that reference this event
       // This would require a more complex query to find notes with 'q' tags referencing this event
       // TODO: Implement proper quotes loading when EventService supports it
+
+      // CRITICAL: Verify we're still showing the same event before updating state
+      const stillCurrentEvent = this.event() || this.record()?.event;
+      if (stillCurrentEvent?.id !== targetEventId) {
+        console.warn('⚠️ [Loading Quotes] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
+        return;
+      }
+
       this.quotes.set([]);
     } catch (error) {
       console.error('Error loading quotes:', error);
