@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, untracked, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked, ViewChild, ElementRef, AfterViewChecked, AfterViewInit, OnDestroy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -80,7 +80,7 @@ type EventCardAppearance = 'card' | 'plain';
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
 })
-export class EventComponent implements AfterViewChecked {
+export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestroy {
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
   event = input<Event | null | undefined>(null);
@@ -94,6 +94,11 @@ export class EventComponent implements AfterViewChecked {
 
   @ViewChild('rootContent') rootContentRef?: ElementRef<HTMLElement>;
   @ViewChild('parentContent') parentContentRef?: ElementRef<HTMLElement>;
+
+  // IntersectionObserver for lazy loading interactions
+  private intersectionObserver?: IntersectionObserver;
+  private hasLoadedInteractions = signal<boolean>(false);
+  private elementRef = inject(ElementRef);
 
   data = inject(DataService);
   record = signal<NostrRecord | null>(null);
@@ -403,14 +408,8 @@ export class EventComponent implements AfterViewChecked {
 
         console.log('📝 [Event Setup] Record created for event:', event.id.substring(0, 8), '| Kind:', event.kind);
 
-        // Load interactions immediately for kind 1 events (ShortTextNote)
-        if (record.event.kind == kinds.ShortTextNote) {
-          console.log('🚀 [Loading] Starting immediate interaction load for event:', event.id.substring(0, 8));
-          this.loadAllInteractions();
-          this.loadZaps();
-          this.loadQuotes();
-          console.log('✨ [Loading] All interactions initiated for event:', event.id.substring(0, 8));
-        }
+        // Interactions will be loaded lazily via IntersectionObserver in ngAfterViewInit
+        // No longer loading immediately to reduce relay requests for off-screen events
       });
     });
 
@@ -468,6 +467,48 @@ export class EventComponent implements AfterViewChecked {
         }
       }
     });
+  }
+
+  ngAfterViewInit(): void {
+    // Set up IntersectionObserver to lazy load interactions when event becomes visible
+    // Using rootMargin to trigger slightly before element enters viewport for seamless UX
+    const options: IntersectionObserverInit = {
+      root: null, // Use viewport as root
+      rootMargin: '200px', // Start loading 200px before entering viewport
+      threshold: 0.01, // Trigger when at least 1% is visible
+    };
+
+    this.intersectionObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting && !this.hasLoadedInteractions()) {
+          console.log('👁️ [Lazy Load] Event became visible:', this.record()?.event.id.substring(0, 8));
+          this.hasLoadedInteractions.set(true);
+
+          // Load interactions when event becomes visible
+          const record = this.record();
+          if (record && record.event.kind === kinds.ShortTextNote) {
+            console.log('🚀 [Lazy Load] Loading interactions for visible event:', record.event.id.substring(0, 8));
+            this.loadAllInteractions();
+            this.loadZaps();
+            this.loadQuotes();
+          }
+        }
+      });
+    }, options);
+
+    // Start observing the component's root element
+    const element = this.elementRef.nativeElement;
+    if (element) {
+      this.intersectionObserver.observe(element);
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Clean up IntersectionObserver to prevent memory leaks
+    if (this.intersectionObserver) {
+      this.intersectionObserver.disconnect();
+      this.intersectionObserver = undefined;
+    }
   }
 
   /**
