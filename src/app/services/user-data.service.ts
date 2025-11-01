@@ -411,6 +411,63 @@ export class UserDataService {
     return records;
   }
 
+  /**
+   * Get events by pubkey and kind with pagination support for infinite scroll
+   * @param pubkey User's public key
+   * @param kind Event kind
+   * @param until Fetch events older than this timestamp (for pagination)
+   * @param limit Number of events to fetch per request
+   * @param options Cache and storage options
+   */
+  async getEventsByPubkeyAndKindPaginated(
+    pubkey: string | string[],
+    kind: number,
+    until?: number,
+    limit = 20,
+    options?: CacheOptions & DataOptions,
+  ): Promise<NostrRecord[]> {
+    console.log('[UserDataService] getEventsByPubkeyAndKindPaginated called:', {
+      pubkey: Array.isArray(pubkey) ? pubkey.map(p => p.slice(0, 8)) : pubkey.slice(0, 8),
+      kind,
+      until: until ? new Date(until * 1000).toISOString() : 'none',
+      limit
+    });
+
+    // Validate pubkey parameter
+    if (!pubkey || (Array.isArray(pubkey) && pubkey.length === 0)) {
+      this.logger.warn('getEventsByPubkeyAndKindPaginated called with invalid pubkey:', pubkey);
+      return [];
+    }
+
+    if (Array.isArray(pubkey) && pubkey.some((pk) => !pk || pk === 'undefined')) {
+      this.logger.warn('getEventsByPubkeyAndKindPaginated called with invalid pubkey in array:', pubkey);
+      return [];
+    }
+
+    if (typeof pubkey === 'string' && (pubkey === 'undefined' || !pubkey.trim())) {
+      this.logger.warn('getEventsByPubkeyAndKindPaginated called with invalid pubkey string:', pubkey);
+      return [];
+    }
+
+    // Don't cache paginated requests as they depend on the until parameter
+    // Fetch directly from relays with pagination support
+    const events = await this.userRelayEx.getEventsByPubkeyAndKindPaginated(pubkey, kind, until, limit);
+
+    if (events.length === 0) {
+      return [];
+    }
+
+    const records = events.map((event) => this.toRecord(event));
+
+    if (options?.save) {
+      for (const event of events) {
+        await this.storage.saveEvent(event);
+      }
+    }
+
+    return records;
+  }
+
   async getEventsByKindAndEventTag(
     pubkey: string,
     kind: number,

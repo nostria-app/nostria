@@ -29,4 +29,12 @@ export class OnDemandUserDataService {
   getEventsByPubkeyAndKind(pubkey: string, kind: number) {
     return this.userDataService.getEventsByPubkeyAndKind(pubkey, kind, { cache: true, save: true });
   }
+
+  /**
+   * Fetch events with pagination support for infinite scroll
+   */
+  getEventsByPubkeyAndKindPaginated(pubkey: string, kind: number, until?: number, limit = 20) {
+    console.log('[OnDemandUserData] getEventsByPubkeyAndKindPaginated called:', { pubkey: pubkey.slice(0, 8), kind, until, limit });
+    return this.userDataService.getEventsByPubkeyAndKindPaginated(pubkey, kind, until, limit, { save: true });
+  }
 }
