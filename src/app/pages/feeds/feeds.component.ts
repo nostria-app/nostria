@@ -887,7 +887,7 @@ export class FeedsComponent implements OnDestroy {
           [result.id]: false,
         }));
 
-        this.notificationService.notify(`Feed "${result.label}" added to "${activeFeed.label}"`);
+        // this.notificationService.notify(`Feed "${result.label}" added to "${activeFeed.label}"`);
       }
     });
   }
@@ -939,7 +939,7 @@ export class FeedsComponent implements OnDestroy {
         };
 
         await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
-        this.notificationService.notify(`Column "${result.label}" updated`);
+        // this.notificationService.notify(`Column "${result.label}" updated`);
       }
     });
   }
