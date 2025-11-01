@@ -837,8 +837,8 @@ export class FeedsComponent implements OnDestroy {
 
     const dialogRef = this.dialog.open(NewColumnDialogComponent, {
       width: '900px',
-      // maxWidth: '95vw',
-      // maxHeight: '90vh',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
       panelClass: 'responsive-dialog',
       data: {
         icons: [
