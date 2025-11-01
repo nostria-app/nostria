@@ -100,7 +100,6 @@ export class NewColumnDialogComponent {
 
   // Form controls
   columnForm = this.fb.group({
-    icon: [this.data.column?.icon || 'chat'],
     kinds: [this.data.column?.kinds || []],
     source: [this.data.column?.source || 'following'],
     relayConfig: [this.data.column?.relayConfig || 'account'],
@@ -244,13 +243,6 @@ export class NewColumnDialogComponent {
         this.selectedKinds.set(columnType.kinds);
         this.columnForm.patchValue({ kinds: columnType.kinds });
       }
-
-      // Update icon if not in edit mode
-      if (!this.isEditMode()) {
-        this.columnForm.patchValue({
-          icon: columnType.icon,
-        });
-      }
     }
   }
 
@@ -359,7 +351,7 @@ export class NewColumnDialogComponent {
       const columnConfig: ColumnConfig = {
         id: this.data.column?.id || crypto.randomUUID(),
         label: '',
-        icon: formValue.icon!,
+        icon: this.data.column?.icon || 'chat', // Default icon (not displayed in UI)
         type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
         source: formValue.source || 'public',
         kinds: this.selectedKinds(),

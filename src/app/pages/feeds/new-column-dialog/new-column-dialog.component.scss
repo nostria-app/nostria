@@ -4,6 +4,10 @@
   max-width: 100%;
 }
 
+.column-type-section {
+  margin-bottom: 1rem;
+}
+
 .column-type-cards {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));

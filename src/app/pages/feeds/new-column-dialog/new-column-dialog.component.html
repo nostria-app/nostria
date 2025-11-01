@@ -27,24 +27,6 @@
       </div>
       }
 
-      <!-- Basic Information -->
-      <div class="section basic-info-section">
-        <h3>Basic Information</h3>
-        <div class="form-row">
-          <mat-form-field>
-            <mat-label>Icon</mat-label>
-            <mat-select formControlName="icon">
-              @for (icon of data.icons; track icon) {
-              <mat-option [value]="icon">
-                <mat-icon>{{ icon }}</mat-icon>
-              </mat-option>
-              }
-            </mat-select>
-            <mat-icon matSuffix>{{ columnForm.get('icon')?.value || 'widgets' }}</mat-icon>
-          </mat-form-field>
-        </div>
-      </div>
-
       <!-- Content Configuration -->
       <div class="section content-config-section">
         <!-- Event Kinds Selection -->
