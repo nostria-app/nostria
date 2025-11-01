@@ -646,8 +646,8 @@ export class FeedService {
         return;
       }
 
-      // Limit to 50 users for performance - prioritize recent follows
-      const maxUsers = 50;
+      // Limit to 20 users for performance - prioritize recent follows
+      const maxUsers = 20; // Reduced from 50 to 20 for faster initial load
       const limitedUsers = followingList.length > maxUsers
         ? followingList.slice(-maxUsers) // Get most recent follows
         : followingList;
