@@ -240,7 +240,12 @@ export class FeedService {
 
   constructor() {
     effect(() => {
-      if (this.accountState.initialized()) {
+      // Watch for pubkey changes to reload feeds when account switches
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const pubkey = this.accountState.pubkey();
+      const initialized = this.accountState.initialized();
+
+      if (initialized) {
         untracked(async () => {
           await this.loadFeeds();
           this.loadRelays();
