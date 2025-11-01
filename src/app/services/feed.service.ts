@@ -684,8 +684,10 @@ export class FeedService {
         const popularPack = starterPacks.find(pack => pack.dTag === 'popular');
 
         if (popularPack) {
-          popularPack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
-          this.logger.debug(`Added ${popularPack.pubkeys.length} popular starter pack users from popular pack`);
+          // Limit starter pack users to first 5 for faster initial load
+          const limitedStarterPackUsers = popularPack.pubkeys.slice(0, 5);
+          limitedStarterPackUsers.forEach(pubkey => allPubkeys.add(pubkey));
+          this.logger.debug(`Added ${limitedStarterPackUsers.length} popular starter pack users from popular pack (out of ${popularPack.pubkeys.length} total)`);
         } else {
           this.logger.warn('Popular starter pack not found');
         }
@@ -693,15 +695,15 @@ export class FeedService {
         this.logger.error('Error fetching popular starter pack:', error);
       }      // 2. Add algorithm-recommended users
       const topEngagedUsers = isArticlesFeed
-        ? await this.algorithms.getRecommendedUsersForArticles(20)
-        : await this.algorithms.getRecommendedUsers(10);
+        ? await this.algorithms.getRecommendedUsersForArticles(10) // Reduced from 20 to 10
+        : await this.algorithms.getRecommendedUsers(5); // Reduced from 10 to 5
 
       topEngagedUsers.forEach(user => allPubkeys.add(user.pubkey));
       this.logger.debug(`Added ${topEngagedUsers.length} algorithm-recommended users`);
 
       // 3. Add subset of following accounts (limit for performance)
       const followingList = this.accountState.followingList();
-      const maxFollowingToAdd = 30; // Limit to 30 most recent follows
+      const maxFollowingToAdd = 10; // Reduced from 30 to 10 for faster initial load
       const limitedFollowing = followingList.length > maxFollowingToAdd
         ? followingList.slice(-maxFollowingToAdd)
         : followingList;
@@ -903,19 +905,21 @@ export class FeedService {
           const popularPack = starterPacks.find(pack => pack.dTag === 'popular');
 
           if (popularPack) {
-            popularPack.pubkeys.forEach(pubkey => allPubkeys.add(pubkey));
+            // Use same limit as initial load for consistency
+            const limitedStarterPackUsers = popularPack.pubkeys.slice(0, 5);
+            limitedStarterPackUsers.forEach(pubkey => allPubkeys.add(pubkey));
           }
         } catch (error) {
           this.logger.error('Error fetching popular starter pack for pagination:', error);
         }        // Add algorithm-recommended users
         const topEngagedUsers = isArticlesFeed
-          ? await this.algorithms.getRecommendedUsersForArticles(20)
-          : await this.algorithms.getRecommendedUsers(10);
+          ? await this.algorithms.getRecommendedUsersForArticles(10) // Match initial load
+          : await this.algorithms.getRecommendedUsers(5); // Match initial load
         topEngagedUsers.forEach(user => allPubkeys.add(user.pubkey));
 
         // Add subset of following accounts (limit for performance)
         const followingList = this.accountState.followingList();
-        const maxFollowingToAdd = 30;
+        const maxFollowingToAdd = 10; // Match initial load
         const limitedFollowing = followingList.length > maxFollowingToAdd
           ? followingList.slice(-maxFollowingToAdd)
           : followingList;
