@@ -1,12 +1,15 @@
 <div class="dialog-container">
-  <div class="dialog-header">
-    <h2 mat-dialog-title>
+  <div mat-dialog-title class="dialog-header">
+    <span>
       <mat-icon>{{ isEditMode() ? 'edit' : 'stacks' }}</mat-icon>
       {{ isEditMode() ? 'Edit Feed' : 'Create New Feed' }}
-    </h2>
+    </span>
+    <button mat-icon-button mat-dialog-close class="close-button">
+      <mat-icon>close</mat-icon>
+    </button>
   </div>
 
-  <div class="dialog-content">
+  <div mat-dialog-content class="dialog-content">
     <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
       <!-- Basic Feed Configuration -->
       <div class="basic-config">
