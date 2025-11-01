@@ -110,12 +110,23 @@ export class RelayPoolService {
     this.logger.debug('[RelayPoolService] Executing query request', {
       requestId,
       relayCount: relayUrls.length,
-      filter,
+      filter: JSON.stringify(filter),
       timeout: timeoutMs,
     });
 
     try {
       const events = await this.#pool.querySync(relayUrls, filter, { maxWait: timeoutMs });
+
+      // Debug: Log pagination results
+      if (filter.until) {
+        const untilDate = new Date(filter.until * 1000).toISOString();
+        this.logger.debug(`[RelayPoolService] Pagination query returned ${events.length} events (until: ${untilDate})`);
+        if (events.length > 0) {
+          const oldestEvent = events.reduce((oldest, e) => (e.created_at || 0) < (oldest.created_at || 0) ? e : oldest);
+          const newestEvent = events.reduce((newest, e) => (e.created_at || 0) > (newest.created_at || 0) ? e : newest);
+          this.logger.debug(`[RelayPoolService] Event range: ${new Date((oldestEvent.created_at || 0) * 1000).toISOString()} to ${new Date((newestEvent.created_at || 0) * 1000).toISOString()}`);
+        }
+      }
 
       // Track successful event retrieval
       if (events.length > 0) {

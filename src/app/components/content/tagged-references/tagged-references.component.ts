@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -87,9 +87,7 @@ export class TaggedReferencesComponent {
           marker: tag[3] || undefined,
         };
 
-        // Try to load and cache the article data
-        this.loadArticleData(article);
-
+        // Don't load data here - will be done in effect
         return article;
       })
       .filter((article): article is ParsedArticle => article !== null);
@@ -111,6 +109,19 @@ export class TaggedReferencesComponent {
 
   // Track loading state for each article
   articleLoadingState = signal<Map<string, 'loading' | 'loaded' | 'failed'>>(new Map());
+
+  constructor() {
+    // Effect to load article data when articles list changes
+    effect(() => {
+      const articles = this.articles();
+
+      untracked(() => {
+        articles.forEach(article => {
+          this.loadArticleData(article);
+        });
+      });
+    });
+  }
 
   // Load article data when needed
   private async loadArticleData(article: ParsedArticle): Promise<void> {

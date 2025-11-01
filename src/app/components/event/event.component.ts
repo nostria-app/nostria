@@ -401,11 +401,15 @@ export class EventComponent implements AfterViewChecked {
         const record = this.data.toRecord(event);
         this.record.set(record);
 
+        console.log('📝 [Event Setup] Record created for event:', event.id.substring(0, 8), '| Kind:', event.kind);
+
+        // Load interactions immediately for kind 1 events (ShortTextNote)
         if (record.event.kind == kinds.ShortTextNote) {
-          // Load all event interactions in a single optimized query
+          console.log('🚀 [Loading] Starting immediate interaction load for event:', event.id.substring(0, 8));
           this.loadAllInteractions();
           this.loadZaps();
           this.loadQuotes();
+          console.log('✨ [Loading] All interactions initiated for event:', event.id.substring(0, 8));
         }
       });
     });

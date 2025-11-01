@@ -498,10 +498,10 @@ export class FeedService {
    * This method implements an optimized feed loading strategy:
    * 1. Gets top 10 most engaged users from the algorithm
    * 2. Fetches latest 5 events from each user using the outbox model
-   * 3. Filters out events older than 7 days for initial load
-   * 4. Aggregates events ensuring diversity (at least one from each user)
-   * 5. Sorts by creation time with newest first
-   * 6. Tracks lastTimestamp for pagination
+   * 3. Aggregates events ensuring diversity (at least one from each user)
+   * 4. Sorts by creation time with newest first
+   * 5. Tracks lastTimestamp for pagination
+   * 6. Supports infinite scrolling with no time restrictions
    */
   private async loadFollowingFeed(feedData: FeedItem) {
     try {
@@ -728,9 +728,10 @@ export class FeedService {
   private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
     const eventsPerUser = isArticlesFeed ? 5 : 3; // Reduced from 10/5 to 5/3 for better performance
-    const now = Math.floor(Date.now() / 1000); // current timestamp in seconds
-    const daysBack = isArticlesFeed ? 90 : 7; // Look further back for articles
-    const timeCutoff = now - daysBack * 24 * 60 * 60; // subtract days in seconds
+
+    // Removed time cutoff to allow infinite scrolling - events are now only limited by relay availability
+    // Previously: const daysBack = isArticlesFeed ? 90 : 7;
+    // Previously: const timeCutoff = now - daysBack * 24 * 60 * 60;
 
     const userEventsMap = new Map<string, Event[]>();
     let processedUsers = 0;
@@ -739,14 +740,17 @@ export class FeedService {
     // Process users in parallel but update UI incrementally
     const fetchPromises = pubkeys.map(async pubkey => {
       try {
+        const filterConfig = {
+          authors: [pubkey],
+          kinds: feedData.filter?.kinds,
+          limit: eventsPerUser,
+        };
+
+        // Don't add 'since' filter to allow fetching older content
+
         const events = await this.sharedRelayEx.getMany(
           pubkey,
-          {
-            authors: [pubkey],
-            kinds: feedData.filter?.kinds,
-            limit: eventsPerUser,
-            since: timeCutoff,
-          },
+          filterConfig,
           { timeout: 2500 }
         );
 
@@ -863,6 +867,8 @@ export class FeedService {
    * Load more events for pagination (called when user scrolls)
    */
   async loadMoreEvents(columnId: string) {
+    console.log('[FeedService] loadMoreEvents called for column:', columnId);
+
     const feedData = this.data.get(columnId);
     if (!feedData || !feedData.isLoadingMore || !feedData.hasMore) {
       this.logger.warn(`Cannot load more events for column ${columnId}: feedData not found or missing loading states`);
@@ -871,10 +877,12 @@ export class FeedService {
 
     // Prevent multiple simultaneous loads
     if (feedData.isLoadingMore() || !feedData.hasMore()) {
+      console.log(`[FeedService] Skipping load more: isLoading=${feedData.isLoadingMore()}, hasMore=${feedData.hasMore()}`);
       this.logger.debug(`Skipping load more for column ${columnId}: already loading or no more data`);
       return;
     }
 
+    console.log('[FeedService] Starting pagination load...');
     feedData.isLoadingMore.set(true);
 
     try {
@@ -991,35 +999,62 @@ export class FeedService {
    */
   private async fetchOlderEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
     const eventsPerUser = 3; // Reduced from 5 to 3 for better performance
-    const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days for older content
+
+    // Removed maxAge limit to allow infinite scrolling
+    // Previously: const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days for older content
 
     const userEventsMap = new Map<string, Event[]>();
     let processedUsers = 0;
     const totalUsers = pubkeys.length;
     const existingEvents = feedData.events(); // Get current events
 
+    // Calculate the oldest timestamp from existing events (in seconds for Nostr)
+    const oldestTimestamp = existingEvents.length > 0
+      ? Math.floor(Math.min(...existingEvents.map(e => (e.created_at || 0))) - 1)
+      : undefined;
+
+    // Debug: Log pagination details
+    if (oldestTimestamp) {
+      const oldestDate = new Date(oldestTimestamp * 1000).toISOString();
+      this.logger.debug(`[Feed Pagination] Loading older events for ${pubkeys.length} users, until: ${oldestDate} (${oldestTimestamp})`);
+      this.logger.debug(`[Feed Pagination] Current feed has ${existingEvents.length} events`);
+    } else {
+      this.logger.debug(`[Feed Pagination] Initial load for ${pubkeys.length} users (no until parameter)`);
+    }
+
     // Process users in parallel with incremental updates
     const fetchPromises = pubkeys.map(async pubkey => {
       try {
-        // One-shot fetch via on-demand pooled instance (auto released)
-        const recordResults = await this.onDemandUserData.getEventsByPubkeyAndKind(
+        // Use paginated fetch with 'until' parameter for infinite scroll
+        // This tells relays to fetch events OLDER than the oldest timestamp
+        const recordResults = await this.onDemandUserData.getEventsByPubkeyAndKindPaginated(
           pubkey,
-          feedData.filter?.kinds?.[0] || kinds.ShortTextNote
+          feedData.filter?.kinds?.[0] || kinds.ShortTextNote,
+          oldestTimestamp, // Fetch events older than this
+          eventsPerUser    // Limit per user
         );
-        const events = recordResults.map(r => r.event);
+        const events = recordResults.map((r: { event: Event }) => r.event);
+
+        this.logger.debug(`[Pagination] User ${pubkey.slice(0, 8)}... returned ${events.length} events, oldest: ${events.length > 0 ? new Date(Math.min(...events.map(e => (e.created_at || 0))) * 1000).toISOString() : 'none'}`);
 
         if (events.length > 0) {
-          // Filter events to exclude already loaded ones and ensure they're not too old
+          // Filter events to exclude already loaded ones (just in case)
           const olderEvents = events
             .filter((event: Event) => {
               const eventTime = (event.created_at || 0) * 1000;
-              const eventAge = Date.now() - eventTime;
-              return eventTime < (feedData.lastTimestamp || Date.now()) && eventAge <= maxAge;
+              const isOlder = eventTime < (feedData.lastTimestamp || Date.now());
+              if (!isOlder) {
+                this.logger.debug(`[Pagination] Filtering out event ${event.id?.slice(0, 8)} - not older than lastTimestamp`);
+              }
+              return isOlder;
             })
             .slice(0, eventsPerUser);
 
           if (olderEvents.length > 0) {
+            this.logger.debug(`[Pagination] User ${pubkey.slice(0, 8)}... added ${olderEvents.length} events to feed`);
             userEventsMap.set(pubkey, olderEvents);
+          } else {
+            this.logger.debug(`[Pagination] User ${pubkey.slice(0, 8)}... - all events filtered out (not older than existing)`);
           }
         }
 
@@ -1115,10 +1150,13 @@ export class FeedService {
     }
 
     // Check if we should mark hasMore as false
-    // If we got fewer events than expected from users, assume no more data
+    // Only stop if we got NO events at all from this pagination request
     const totalEventsFromUsers = Array.from(userEventsMap.values()).flat().length;
-    if (totalEventsFromUsers < userEventsMap.size * 2) { // Less than 2 events per user on average
+    if (totalEventsFromUsers === 0) {
+      this.logger.debug('[Feed Pagination] No more events available, setting hasMore to false');
       feedData.hasMore?.set(false);
+    } else {
+      this.logger.debug(`[Feed Pagination] Got ${totalEventsFromUsers} events from ${userEventsMap.size} users, can load more`);
     }
   } /**
    * Unsubscribe from a single feed (unsubscribes from all its columns)

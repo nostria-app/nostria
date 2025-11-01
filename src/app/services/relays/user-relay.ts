@@ -122,6 +122,59 @@ export class UserRelayService {
   }
 
   /**
+   * Get events by pubkey and kind with pagination support (until parameter for infinite scroll)
+   */
+  async getEventsByPubkeyAndKindPaginated(
+    pubkey: string | string[],
+    kind: number,
+    until?: number,
+    limit = 20
+  ): Promise<Event[]> {
+    const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    const allRelayUrls = new Set<string>();
+
+    for (const pk of pubkeys) {
+      await this.ensureRelaysForPubkey(pk);
+      const relayUrls = this.getRelaysForPubkey(pk);
+      relayUrls.forEach(url => allRelayUrls.add(url));
+    }
+
+    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+
+    if (relayUrls.length === 0) {
+      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
+      return [];
+    }
+
+    const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+    const filter = { authors, kinds: [kind], limit };
+
+    // Add until parameter if provided for pagination
+    if (until !== undefined) {
+      (filter as { until?: number }).until = until;
+      // Debug: Log pagination request
+      const untilDate = new Date(until * 1000).toISOString();
+      this.logger.debug(`[Pagination] Fetching kind ${kind} for ${pubkeys.length} users until ${untilDate} (timestamp: ${until})`);
+    } else {
+      this.logger.debug(`[Pagination] Fetching recent kind ${kind} events (no until parameter)`);
+    }
+
+    const events = await this.getEventsWithSubscription(relayUrls, filter);
+
+    if (events.length > 0) {
+      const oldestEvent = events.reduce((oldest, e) =>
+        (e.created_at || 0) < (oldest.created_at || 0) ? e : oldest
+      );
+      const oldestDate = new Date((oldestEvent.created_at || 0) * 1000).toISOString();
+      this.logger.debug(`[Pagination] Received ${events.length} events, oldest: ${oldestDate}`);
+    } else {
+      this.logger.debug(`[Pagination] No events received from relays`);
+    }
+
+    return events;
+  }
+
+  /**
    * Get events by kind and event tag (using broader relay set for better discovery)
    */
   async getEventsByKindAndEventTag(pubkey: string | string[], kind: number, eventTag: string | string[]): Promise<Event[]> {

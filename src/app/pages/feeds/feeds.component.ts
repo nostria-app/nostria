@@ -406,8 +406,14 @@ export class FeedsComponent implements OnDestroy {
    * Set up scroll listeners for each column to detect when user scrolls to bottom
    */
   private setupColumnScrollListeners(columns: ColumnDefinition[]) {
+    console.log('[ScrollListeners] Setting up scroll listeners for', columns.length, 'columns');
+
     columns.forEach(column => {
-      const columnElement = document.querySelector(`[data-column-id="${column.id}"] .column-scroll-container`);
+      // FIX: Changed selector from .column-scroll-container to .column-content
+      const columnElement = document.querySelector(`[data-column-id="${column.id}"] .column-content`);
+
+      console.log(`[ScrollListeners] Column ${column.id}:`, columnElement ? 'FOUND' : 'NOT FOUND');
+
       if (columnElement) {
         // Remove any existing listener to prevent duplicates
         const existingListener = (columnElement as HTMLElement & { __scrollListener?: () => void }).__scrollListener;
