@@ -144,26 +144,26 @@
     padding-left: 12px;
   }
 
-  .thread-indicator {
-    display: flex;
-    align-items: center;
-    margin: 1.5rem 0;
+  // .thread-indicator {
+  //   display: flex;
+  //   align-items: center;
+  //   margin: 1.5rem 0;
 
-    hr {
-      flex: 1;
-      border: none;
-      height: 1px;
-      background-color: var(--mat-sys-outline-variant);
-    }
+  //   hr {
+  //     flex: 1;
+  //     border: none;
+  //     height: 1px;
+  //     background-color: var(--mat-sys-outline-variant);
+  //   }
 
-    span {
-      margin: 0 1rem;
-      font-size: 0.75rem;
-      color: var(--mat-sys-on-surface-variant);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-  }
+  //   span {
+  //     margin: 0 1rem;
+  //     font-size: 0.75rem;
+  //     color: var(--mat-sys-on-surface-variant);
+  //     text-transform: uppercase;
+  //     letter-spacing: 0.5px;
+  //   }
+  // }
 }
 
 .reactions {
