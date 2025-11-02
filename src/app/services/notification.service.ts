@@ -317,12 +317,30 @@ export class NotificationService {
    * Clear all notifications
    */
   clearNotifications(): void {
-    this._notifications.set([]);
+    const pubkey = this.accountState.pubkey();
 
-    // Clear from storage
-    this.storage
-      .clearAllNotifications()
-      .catch(error => this.logger.error('Failed to clear notifications from storage', error));
+    // Clear notifications from in-memory signal
+    if (pubkey) {
+      // Only clear notifications for the current account
+      this._notifications.update(notifications =>
+        notifications.filter(n => n.recipientPubkey !== pubkey)
+      );
+
+      // Delete each notification for this account from storage
+      this.storage.getAllNotificationsForPubkey(pubkey)
+        .then(notifications => {
+          return Promise.all(
+            notifications.map(n => this.storage.deleteNotification(n.id))
+          );
+        })
+        .catch(error => this.logger.error('Failed to clear notifications from storage', error));
+    } else {
+      // No account, clear all (legacy behavior)
+      this._notifications.set([]);
+      this.storage
+        .clearAllNotifications()
+        .catch(error => this.logger.error('Failed to clear notifications from storage', error));
+    }
   }
 
   /**

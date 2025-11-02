@@ -22,6 +22,9 @@ import { ContentNotification } from '../../services/storage.service';
 import { nip19 } from 'nostr-tools';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { LocalStorageService } from '../../services/local-storage.service';
+import { ContentNotificationService } from '../../services/content-notification.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 
 /**
  * Local storage key for notification filter preferences
@@ -52,6 +55,9 @@ export class NotificationsComponent implements OnInit {
   private accountRelay = inject(AccountRelayService);
   private router = inject(Router);
   private localStorage = inject(LocalStorageService);
+  private contentNotificationService = inject(ContentNotificationService);
+  private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
 
   notifications = this.notificationService.notifications;
   notificationType = NotificationType;
@@ -151,6 +157,13 @@ export class NotificationsComponent implements OnInit {
 
   clearNotifications(): void {
     this.notificationService.clearNotifications();
+
+    // Update the notification last check timestamp to now to prevent re-fetching cleared notifications
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+      this.accountLocalState.setNotificationLastCheck(pubkey, now);
+    }
   }
 
   removeNotification(id: string): void {
@@ -166,6 +179,13 @@ export class NotificationsComponent implements OnInit {
       if (!notification.read) {
         this.markAsRead(notification.id);
       }
+    }
+
+    // Update the notification last check timestamp to now to prevent re-showing read notifications
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+      this.accountLocalState.setNotificationLastCheck(pubkey, now);
     }
   }
 
