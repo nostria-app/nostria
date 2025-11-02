@@ -165,10 +165,8 @@ export class EventPageComponent {
 
       // If parent events have finished loading and we have parent events and a main event
       if (!isLoadingParents && parentEvents.length > 0 && event) {
-        // Delay to ensure DOM is updated
-        setTimeout(() => {
-          this.scrollToMainEvent();
-        }, 300);
+        // Use requestAnimationFrame and multiple retries to ensure DOM is fully rendered
+        this.scrollToMainEventWithRetry();
       }
     });
   }
@@ -272,6 +270,37 @@ export class EventPageComponent {
         block: 'start',
         inline: 'nearest',
       });
+    }
+  }
+
+  /**
+   * Scrolls to the main event with retry logic to handle async content loading
+   * Retries multiple times with increasing delays to ensure DOM is fully rendered
+   */
+  private scrollToMainEventWithRetry(attempt = 0, maxAttempts = 5): void {
+    const mainEventElement = document.getElementById('main-event');
+
+    if (mainEventElement) {
+      // Wait for next animation frame to ensure rendering is complete
+      requestAnimationFrame(() => {
+        // Additional timeout to ensure all content (including images) has loaded
+        setTimeout(() => {
+          const mainEventElement = document.getElementById('main-event');
+          if (mainEventElement) {
+            mainEventElement.scrollIntoView({
+              behavior: attempt === 0 ? 'auto' : 'smooth', // First attempt instant, subsequent smooth
+              block: 'start',
+              inline: 'nearest',
+            });
+          }
+        }, 250);
+      });
+    } else if (attempt < maxAttempts) {
+      // Element not found yet, retry with exponential backoff
+      const delay = Math.min(200 * Math.pow(1.5, attempt), 1000); // Max 1 second
+      setTimeout(() => {
+        this.scrollToMainEventWithRetry(attempt + 1, maxAttempts);
+      }, delay);
     }
   }
 
