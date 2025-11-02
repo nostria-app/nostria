@@ -50,6 +50,9 @@ export class LayoutService implements OnDestroy {
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
   localStorage = inject(LocalStorageService);
 
+  // Scroll position management for feeds
+  private feedScrollPositions = new Map<string, number>();
+
   /**
    * Signal that indicates whether the content wrapper is scrolled to the top
    *
@@ -1216,5 +1219,187 @@ export class LayoutService implements OnDestroy {
         panelClass: 'error-snackbar',
       });
     }
+  }
+
+  /**
+   * Save the current scroll position for a feed
+   * @param feedId - The feed identifier
+   * @param scrollPosition - The scroll position in pixels (optional, will read from content wrapper if not provided)
+   */
+  saveFeedScrollPosition(feedId: string, scrollPosition?: number): void {
+    if (!feedId) return;
+
+    let position = scrollPosition;
+    if (position === undefined) {
+      // Look for feed column content containers (multi-column layout)
+      const columnContents = document.querySelectorAll('.column-content');
+
+      if (columnContents.length > 0) {
+        // Find the first column with actual scroll
+        for (const column of Array.from(columnContents)) {
+          if (column.scrollTop > 0) {
+            position = column.scrollTop;
+            console.log(`📍 Found scroll in column-content:`, position, 'px');
+            break;
+          }
+        }
+
+        // If no column has scrolled yet, use the first visible column
+        if (position === undefined) {
+          const firstColumn = columnContents[0];
+          if (firstColumn && firstColumn.scrollHeight > firstColumn.clientHeight) {
+            position = firstColumn.scrollTop;
+            console.log(`📍 Using first column-content:`, position, 'px');
+          }
+        }
+      }
+
+      // Fallback to other possible containers if column-content not found
+      if (position === undefined) {
+        const matDrawerContent = document.querySelector('mat-drawer-content');
+        const matSidenavContent = document.querySelector('mat-sidenav-content');
+        const elements = [matDrawerContent, matSidenavContent, document.documentElement, document.body];
+
+        for (const element of elements) {
+          if (element && element.scrollHeight > element.clientHeight) {
+            position = element.scrollTop;
+            console.log(`📍 Using fallback element ${element.className || element.tagName}:`, position, 'px');
+            break;
+          }
+        }
+      }
+
+      if (position === undefined) {
+        console.warn('⚠️ No scrollable container found');
+        return;
+      }
+    }
+
+    this.feedScrollPositions.set(feedId, position);
+    console.log(`✅ SAVED scroll position for feed ${feedId}:`, position, 'px');
+    this.logger.debug(`Saved scroll position for feed ${feedId}:`, position);
+  }
+
+  /**
+   * Restore the scroll position for a feed
+   * @param feedId - The feed identifier
+   * @param behavior - Scroll behavior ('auto' or 'smooth')
+   */
+  restoreFeedScrollPosition(feedId: string, behavior: ScrollBehavior = 'auto'): void {
+    if (!feedId) return;
+
+    const position = this.feedScrollPositions.get(feedId);
+    if (position === undefined) {
+      console.log(`ℹ️ No saved scroll position for feed ${feedId}`);
+      this.logger.debug(`No saved scroll position for feed ${feedId}`);
+      return;
+    }
+
+    console.log(`🔄 ATTEMPTING to restore scroll position for feed ${feedId}: ${position}px`);
+
+    // Retry mechanism to wait for content to be fully rendered
+    let attempts = 0;
+    const maxAttempts = 15; // Try for up to 3 seconds (15 * 200ms)
+    let lastScrollHeight = 0;
+    let stableHeightCount = 0;
+
+    const attemptRestore = () => {
+      // Look for feed column content containers (multi-column layout)
+      const columnContents = document.querySelectorAll('.column-content');
+      let scrollContainer: Element | null = null;
+
+      if (columnContents.length > 0) {
+        // Use the first visible column
+        scrollContainer = columnContents[0];
+        console.log(`📍 Found column-content for restoration`);
+      } else {
+        // Fallback to other possible containers
+        const matDrawerContent = document.querySelector('mat-drawer-content');
+        const matSidenavContent = document.querySelector('mat-sidenav-content');
+        const elements = [matDrawerContent, matSidenavContent];
+
+        for (const element of elements) {
+          if (element && element.scrollHeight > element.clientHeight) {
+            scrollContainer = element;
+            console.log(`📍 Found fallback scrollable container: ${element.className || element.tagName}`);
+            break;
+          }
+        }
+      }
+
+      if (!scrollContainer) {
+        if (attempts < maxAttempts) {
+          attempts++;
+          console.log(`⏳ Waiting for scrollable container (attempt ${attempts}/${maxAttempts})...`);
+          setTimeout(attemptRestore, 200);
+        } else {
+          console.error('❌ No scrollable container found for scroll restoration after multiple attempts');
+          this.logger.warn('No scrollable container found for scroll restoration after multiple attempts');
+        }
+        return;
+      }
+
+      const scrollHeight = scrollContainer.scrollHeight;
+      const clientHeight = scrollContainer.clientHeight;
+      const hasContent = scrollHeight > clientHeight;
+
+      console.log(`📏 Content check (attempt ${attempts + 1}): scrollHeight=${scrollHeight}px, clientHeight=${clientHeight}px, hasContent=${hasContent}`);
+
+      // Check if scroll height has stabilized (content finished loading)
+      if (scrollHeight === lastScrollHeight) {
+        stableHeightCount++;
+      } else {
+        stableHeightCount = 0;
+        lastScrollHeight = scrollHeight;
+      }
+
+      // Wait for content to render AND stabilize (no height changes for 2 consecutive checks)
+      // This ensures images and other dynamic content have loaded
+      if ((!hasContent || stableHeightCount < 2) && attempts < maxAttempts) {
+        attempts++;
+        const reason = !hasContent ? 'no content yet' : 'content still loading';
+        console.log(`⏳ Waiting for stable content (${reason}, attempt ${attempts}/${maxAttempts})...`);
+        this.logger.debug(`Waiting for content to render (attempt ${attempts}/${maxAttempts})...`);
+        setTimeout(attemptRestore, 200);
+        return;
+      }
+
+      // Restore scroll position
+      scrollContainer.scrollTo({
+        top: position,
+        behavior: behavior,
+      });
+      console.log(`✅ RESTORED scroll position for feed ${feedId}: ${position}px on ${scrollContainer.className || scrollContainer.tagName} (after ${attempts} attempts)`);
+      this.logger.debug(`Restored scroll position for feed ${feedId}: ${position}px (after ${attempts} attempts)`);
+    };
+
+    // Start attempting to restore after initial delay
+    setTimeout(attemptRestore, 300);
+  }
+
+  /**
+   * Get the saved scroll position for a feed
+   * @param feedId - The feed identifier
+   * @returns The saved scroll position or undefined if not found
+   */
+  getFeedScrollPosition(feedId: string): number | undefined {
+    return this.feedScrollPositions.get(feedId);
+  }
+
+  /**
+   * Clear the saved scroll position for a feed
+   * @param feedId - The feed identifier
+   */
+  clearFeedScrollPosition(feedId: string): void {
+    this.feedScrollPositions.delete(feedId);
+    this.logger.debug(`Cleared scroll position for feed ${feedId}`);
+  }
+
+  /**
+   * Clear all saved scroll positions
+   */
+  clearAllFeedScrollPositions(): void {
+    this.feedScrollPositions.clear();
+    this.logger.debug('Cleared all feed scroll positions');
   }
 }
