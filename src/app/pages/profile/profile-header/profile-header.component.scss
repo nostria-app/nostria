@@ -394,6 +394,11 @@
         height: 22px;
       }
     }
+
+    .badge-placeholder.badge-failed {
+      color: var(--mat-sys-error);
+      opacity: 0.6;
+    }
   }
 }
 

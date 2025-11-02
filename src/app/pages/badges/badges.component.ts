@@ -101,8 +101,8 @@ export class BadgesComponent {
 
         // Run the loading logic untracked to prevent infinite loops
         untracked(async () => {
-          this.isInitialLoading.set(true);
-
+          // Set initial loading to false immediately after getting profile
+          // to allow UI to render with loading states per tab
           try {
             // Use pubkey from route/query params if provided, otherwise use current user's pubkey
             const targetPubkey = pubkeyParam || this.accountState.pubkey();
@@ -112,10 +112,13 @@ export class BadgesComponent {
             const profile = await this.dataService.getProfile(targetPubkey);
             this.viewingProfile.set(profile);
 
+            // Stop showing initial loading - let individual tabs show their loading states
+            this.isInitialLoading.set(false);
+
+            // Load badges in the background (non-blocking for UI)
             await this.badgeService.loadAllBadges(targetPubkey);
           } catch (err) {
             console.error('Error loading badges:', err);
-          } finally {
             this.isInitialLoading.set(false);
           }
         });

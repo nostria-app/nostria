@@ -25,25 +25,31 @@
       @if (hasAcceptedBadges()) {
       <div class="profile-badges">
         @for (badge of topBadges(); track $index) {
-        @if (parsedBadges()[$index]; as parsedBadge) {
+        @let parsedBadge = parsedBadges()[$index];
         <a [routerLink]="['/p', npub() || pubkey(), 'badges']" class="badge-item"
           (mouseenter)="onBadgeMouseEnter($event, badge)" (mouseleave)="onBadgeMouseLeave()">
-          @if (parsedBadge.thumb || parsedBadge.image) {
-          <img [src]="parsedBadge.thumb || parsedBadge.image" class="badge-image" loading="lazy"
+          @if (isBadgeFailed()[$index]) {
+          <!-- Show failed badge placeholder -->
+          <div class="badge-placeholder badge-failed" title="Failed to load badge">
+            <mat-icon>error_outline</mat-icon>
+          </div>
+          } @else if (parsedBadge && (parsedBadge.thumb || parsedBadge.image)) {
+          <!-- Show badge image when loaded -->
+          <img [src]="parsedBadge.thumb || parsedBadge.image" [alt]="parsedBadge.name || 'Badge'"
+            [title]="parsedBadge.name || 'Badge'" class="badge-image" loading="lazy"
             (error)="onBadgeImageError($event)" />
+          } @else if (isBadgeLoading()[$index]) {
+          <!-- Show loading spinner while badge is loading -->
+          <div class="badge-loading" title="Loading badge...">
+            <mat-spinner diameter="32"></mat-spinner>
+          </div>
           } @else {
-          <div class="badge-placeholder" [title]="parsedBadge.name">
+          <!-- Show default placeholder -->
+          <div class="badge-placeholder" [title]="parsedBadge?.name || 'Badge'">
             <mat-icon>military_tech</mat-icon>
           </div>
           }
         </a>
-        } @else if (!isBadgeFailed()[$index]) {
-        <a [routerLink]="['/p', npub() || pubkey(), 'badges']" class="badge-item">
-          <div class="badge-loading" title="Loading badge...">
-            <mat-spinner diameter="32"></mat-spinner>
-          </div>
-        </a>
-        }
         }
       </div>
       }
