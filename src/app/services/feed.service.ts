@@ -238,6 +238,10 @@ export class FeedService {
   // Feed type definitions
   readonly feedTypes = COLUMN_TYPES;
 
+  // Cache constants
+  private readonly CACHE_STORAGE_KEY = 'nostria-feed-cache';
+  private readonly CACHE_SIZE = 5; // Top 5 events per column
+
   constructor() {
     effect(() => {
       // Watch for pubkey changes to reload feeds when account switches
@@ -253,6 +257,81 @@ export class FeedService {
       }
     });
   }
+
+  /**
+   * Get the entire cache structure for the current account
+   */
+  private getAccountCache(): Record<string, Event[]> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return {};
+
+    try {
+      const allCache = this.localStorageService.getObject<Record<string, Record<string, Event[]>>>(
+        this.CACHE_STORAGE_KEY
+      );
+      if (!allCache || !allCache[pubkey]) return {};
+
+      return allCache[pubkey];
+    } catch (error) {
+      this.logger.error('Error loading account cache:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Load cached events for a column - synchronous operation
+   */
+  private loadCachedEvents(columnId: string): Event[] {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return [];
+
+    try {
+      const accountCache = this.getAccountCache();
+      const cachedEvents = accountCache[columnId] || [];
+
+      if (cachedEvents.length > 0) {
+        this.logger.info(`✅ Loaded ${cachedEvents.length} cached events for column ${columnId}`);
+      }
+      return cachedEvents;
+    } catch (error) {
+      this.logger.error('Error loading cached events:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Save top events to cache for a column
+   */
+  private saveCachedEvents(columnId: string, events: Event[]): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    try {
+      // Get all cache data (structure: { pubkey: { columnId: events[] } })
+      const allCache = this.localStorageService.getObject<Record<string, Record<string, Event[]>>>(
+        this.CACHE_STORAGE_KEY
+      ) || {};
+
+      // Ensure account cache exists
+      if (!allCache[pubkey]) {
+        allCache[pubkey] = {};
+      }
+
+      // Get top 5 events (sorted by created_at, newest first)
+      const topEvents = [...events]
+        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
+        .slice(0, this.CACHE_SIZE);
+
+      // Save to cache
+      allCache[pubkey][columnId] = topEvents;
+
+      this.localStorageService.setObject(this.CACHE_STORAGE_KEY, allCache);
+      this.logger.debug(`💾 Saved ${topEvents.length} events to cache for column ${columnId}`);
+    } catch (error) {
+      this.logger.error('Error saving cached events:', error);
+    }
+  }
+
 
   // Use a signal to track feed data for reactivity
   private readonly _feedData = signal(new Map<string, FeedItem>());
@@ -377,10 +456,13 @@ export class FeedService {
       return;
     }
 
+    // Load cached events for instant display - synchronous operation
+    const cachedEvents = this.loadCachedEvents(column.id);
+
     const item: FeedItem = {
       column,
       filter: null,
-      events: signal<Event[]>([]),
+      events: signal<Event[]>(cachedEvents), // Initialize with cached events
       subscription: null,
       lastTimestamp: Date.now(), // Initialize with current timestamp
       isLoadingMore: signal<boolean>(false),
@@ -388,6 +470,20 @@ export class FeedService {
       pendingEvents: signal<Event[]>([]),
       lastCheckTimestamp: Math.floor(Date.now() / 1000), // Initialize with current timestamp in seconds
     };
+
+    // Add to data map IMMEDIATELY so UI can render cached events
+    this.data.set(column.id, item);
+
+    // Update the reactive signal IMMEDIATELY
+    this._feedData.update(map => {
+      const newMap = new Map(map);
+      newMap.set(column.id, item);
+      return newMap;
+    });
+
+    if (cachedEvents.length > 0) {
+      this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for column ${column.id}`);
+    }
 
     // Build filter based on column configuration
     if (column.filters) {
@@ -403,6 +499,7 @@ export class FeedService {
       };
     }
 
+    // Now start async loading of fresh events
     // If the source is following, load only from following list (strict)
     if (column.source === 'following') {
       console.log(`📍 Loading FOLLOWING feed for column ${column.id}`);
@@ -455,7 +552,10 @@ export class FeedService {
           // Add event and maintain chronological order (newest first)
           item.events.update((events: Event[]) => {
             const newEvents = [...events, event];
-            return newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            // Save to cache after updating
+            this.saveCachedEvents(column.id, sortedEvents);
+            return sortedEvents;
           });
           this.logger.debug(`Column event received for ${column.id}:`, event);
         }) as { unsubscribe: () => void } | { close: () => void } | null;
@@ -474,7 +574,10 @@ export class FeedService {
           // Add event and maintain chronological order (newest first)
           item.events.update((events: Event[]) => {
             const newEvents = [...events, event];
-            return newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            // Save to cache after updating
+            this.saveCachedEvents(column.id, sortedEvents);
+            return sortedEvents;
           });
           this.logger.debug(`Column event received for ${column.id}:`, event);
         });
@@ -484,17 +587,8 @@ export class FeedService {
       console.log(`✅ Subscription created and stored:`, sub ? 'YES' : 'NO');
     }
 
-    this.data.set(column.id, item);
-
-    // Update the reactive signal
-    this._feedData.update(map => {
-      const newMap = new Map(map);
-      newMap.set(column.id, item);
-      return newMap;
-    });
-
-    // Reduced logging to prevent console spam
-    this.logger.debug(`Subscribed to column: ${column.id}`);
+    // Note: item was already added to data map at the beginning of this method
+    // for instant rendering of cached events
   }
 
   /**
@@ -813,6 +907,9 @@ export class FeedService {
       // Update the feed with current events
       feedData.events.set(currentEvents);
 
+      // Save to cache after updating
+      this.saveCachedEvents(feedData.column.id, currentEvents);
+
       // Update last timestamp for pagination
       feedData.lastTimestamp = Math.min(...currentEvents.map(e => (e.created_at || 0) * 1000));
 
@@ -831,6 +928,9 @@ export class FeedService {
 
     // Update feed data with final aggregated events
     feedData.events.set(finalEvents);
+
+    // Save to cache after final update
+    this.saveCachedEvents(feedData.column.id, finalEvents);
 
     // Update last timestamp for pagination
     if (finalEvents.length > 0) {

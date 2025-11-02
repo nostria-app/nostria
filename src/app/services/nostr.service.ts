@@ -406,7 +406,7 @@ export class NostrService implements NostriaService {
         const metadata = this.data.toRecord(storedMetadata);
         this.accountState.addToCache(metadata.event.pubkey, metadata);
         this.accountState.profile.set(metadata);
-        this.appState.loadingMessage.set('Found your profile! 👍');
+        // Removed loading message to improve perceived performance
       }
 
       const storedFollowing = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
@@ -602,15 +602,9 @@ export class NostrService implements NostriaService {
       console.log('EOSE on account subscription - initial data loaded');
       this.logger.info('Account subscription EOSE - fresh data loaded from relays');
 
-      this.appState.loadingMessage.set('Loading completed!');
+      // Mark as initialized without showing loading overlay
       this.appState.isLoading.set(false);
-      this.appState.showSuccess.set(true);
       this.accountState.initialized.set(true);
-
-      // Hide success animation after 1.5 seconds
-      setTimeout(() => {
-        this.appState.showSuccess.set(false);
-      }, 1500);
     };
 
     this.accountSubscription = this.accountRelay.subscribe(filter, onEvent, onEose);
