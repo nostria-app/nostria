@@ -1114,4 +1114,72 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
       this.layout.openEvent(currentEvent.id, currentEvent);
     }
   }
+
+  /**
+   * Handle clicks on the root event card
+   */
+  onRootEventClick(event: MouseEvent) {
+    event.stopPropagation(); // Prevent the main card click handler
+
+    const target = event.target as HTMLElement;
+
+    // Allow expand/collapse buttons to work normally
+    const isButton = target.closest('button');
+    if (isButton) {
+      return;
+    }
+
+    // Check if the click is on other interactive elements
+    const isInteractiveElement = target.closest(
+      'img, a, mat-menu, [mat-menu-trigger-for], input, textarea, select, .user-profile-avatar, .user-profile-name, .date-link'
+    );
+
+    if (isInteractiveElement) {
+      return;
+    }
+
+    // Navigate to the root event
+    const rootRecordData = this.rootRecord();
+    if (rootRecordData) {
+      this.layout.openEvent(rootRecordData.event.id, rootRecordData.event);
+    }
+  }
+
+  /**
+   * Handle clicks on the parent event card
+   */
+  onParentEventClick(event: MouseEvent) {
+    event.stopPropagation(); // Prevent the main card click handler
+
+    const target = event.target as HTMLElement;
+
+    // Allow expand/collapse buttons to work normally
+    const isButton = target.closest('button');
+    if (isButton) {
+      return;
+    }
+
+    // Check if the click is on other interactive elements
+    const isInteractiveElement = target.closest(
+      'img, a, mat-menu, [mat-menu-trigger-for], input, textarea, select, .user-profile-avatar, .user-profile-name, .date-link'
+    );
+
+    if (isInteractiveElement) {
+      return;
+    }
+
+    // Navigate to the parent event
+    const parentRecordData = this.parentRecord();
+    if (parentRecordData) {
+      this.layout.openEvent(parentRecordData.event.id, parentRecordData.event);
+    }
+  }
+
+  /**
+   * Handle expand/collapse button clicks
+   */
+  onExpandClick(event: MouseEvent, expandedSignal: typeof this.isRootEventExpanded, expand: boolean) {
+    event.stopPropagation(); // Prevent card click
+    expandedSignal.set(expand);
+  }
 }
