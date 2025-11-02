@@ -1,9 +1,8 @@
 .content-container {
-  //   margin-bottom: 1rem;
   margin: 1rem 0rem;
   line-height: 1.6;
   word-break: break-word;
-  min-height: 20px; // Ensure there's at least some space to detect visibility
+  min-height: 2px;
 
   mat-card {
     margin-top: 1rem;
