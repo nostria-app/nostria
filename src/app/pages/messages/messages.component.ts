@@ -949,10 +949,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Publish both gift wraps to both the receiver's relays and your own account relays
       // This ensures maximum delivery reliability
       await Promise.allSettled([
-        this.publishToUserRelays(signedGiftWrap, receiverPubkey),
-        this.publishToAccountRelays(signedGiftWrap),
-        this.publishToUserRelays(signedGiftWrap2, myPubkey),
-        this.publishToAccountRelays(signedGiftWrap2),
+        this.publishToUserRelays(signedGiftWrap, receiverPubkey), // Gift wrap for receiver → receiver's relays
+        this.publishToAccountRelays(signedGiftWrap), // Gift wrap for receiver → account relays (backup)
+        this.publishToAccountRelays(signedGiftWrap2), // Gift wrap for sender (self) → account relays
       ]);
 
       // Return the message object based on the original rumor
