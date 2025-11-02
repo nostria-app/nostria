@@ -1,5 +1,6 @@
 import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
+import { Location } from '@angular/common';
 import { LoggerService } from './logger.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -32,6 +33,7 @@ export class LayoutService implements OnDestroy {
   query = signal<string | null>(null);
   search = signal(false);
   router = inject(Router);
+  location = inject(Location);
   private logger = inject(LoggerService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -49,6 +51,9 @@ export class LayoutService implements OnDestroy {
   private readonly platformId = inject(PLATFORM_ID);
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
   localStorage = inject(LocalStorageService);
+
+  // Track currently open event dialog for back button handling
+  private currentEventDialogRef: ReturnType<MatDialog['open']> | null = null;
 
   // Scroll position management for feeds
   private feedScrollPositions = new Map<string, number>();
@@ -137,6 +142,17 @@ export class LayoutService implements OnDestroy {
     this.breakpointObserver.observe('(min-width: 1200px)').subscribe(result => {
       this.isWideScreen.set(result.matches);
     });
+
+    // Handle browser back button when event dialog is open
+    if (isPlatformBrowser(this.platformId)) {
+      window.addEventListener('popstate', () => {
+        if (this.currentEventDialogRef) {
+          this.currentEventDialogRef.close();
+          this.currentEventDialogRef = null;
+        }
+      });
+    }
+
     effect(() => {
       if (this.isBrowser() && this.accountStateService.initialized()) {
         // Initialize scroll monitoring after a longer delay to ensure DOM is fully rendered
@@ -833,7 +849,47 @@ export class LayoutService implements OnDestroy {
   }
 
   openGenericEvent(naddr: string, event?: Event): void {
-    this.router.navigate(['/e', naddr], { state: { event } });
+    // Check if we're currently on the feeds page
+    const currentUrl = this.router.url;
+    const isOnFeedsPage = currentUrl === '/' || currentUrl.startsWith('/f/');
+
+    if (isOnFeedsPage) {
+      // Open in dialog to preserve feeds state
+      this.openEventInDialog(naddr, event);
+    } else {
+      // Navigate normally for direct links or other contexts
+      this.router.navigate(['/e', naddr], { state: { event } });
+    }
+  }
+
+  private openEventInDialog(eventId: string, event?: Event): void {
+    // Close existing dialog if any
+    if (this.currentEventDialogRef) {
+      this.currentEventDialogRef.close();
+    }
+
+    // Update URL without navigation to support back button
+    const previousUrl = this.location.path();
+    this.location.go(`/e/${eventId}`);
+
+    // Import and open dialog
+    import('../pages/event/event-dialog/event-dialog.component').then(m => {
+      this.currentEventDialogRef = this.dialog.open(m.EventDialogComponent, {
+        data: { eventId, event },
+        width: '100%',
+        maxWidth: '800px',
+        height: '100vh',
+        panelClass: 'event-dialog-container',
+        hasBackdrop: true,
+        autoFocus: false,
+      });
+
+      // Restore URL when dialog is closed
+      this.currentEventDialogRef.afterClosed().subscribe(() => {
+        this.location.go(previousUrl);
+        this.currentEventDialogRef = null;
+      });
+    });
   }
 
   openArticle(naddr: string, event?: Event): void {

@@ -1166,3 +1166,25 @@ app-media-queue .media-list mat-list {
     opacity: 1;
   }
 }
+
+// Event dialog styles
+.event-dialog-container {
+  .mat-mdc-dialog-container {
+    padding: 0;
+
+    .mdc-dialog__surface {
+      border-radius: 0;
+    }
+  }
+}
+
+// Event dialog styles
+.event-dialog-container {
+  .mat-mdc-dialog-container {
+    padding: 0;
+
+    .mdc-dialog__surface {
+      border-radius: 0;
+    }
+  }
+}
