@@ -1,21 +1,11 @@
 @if (view() === 'full') {
-  <button
-    mat-icon-button
-    [matMenuTriggerFor]="menu"
-    aria-label="More options"
-    (click)="$event.stopPropagation()"
-  >
-    <mat-icon>more_vert</mat-icon>
-  </button>
+<button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" (click)="$event.stopPropagation()">
+  <mat-icon>more_vert</mat-icon>
+</button>
 } @else {
-  <button
-    mat-icon-button
-    [matMenuTriggerFor]="menu"
-    aria-label="More options"
-    (click)="$event.stopPropagation()"
-  >
-    <mat-icon>more_vert</mat-icon>
-  </button>
+<button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options" (click)="$event.stopPropagation()">
+  <mat-icon>more_vert</mat-icon>
+</button>
 }
 
 <mat-menu #menu="matMenu">
@@ -24,10 +14,22 @@
     Copy
   </button>
   @if (isOurEvent()) {
-    <button mat-menu-item (click)="deleteEvent()">
-      <mat-icon>delete</mat-icon>
-      Delete Event
-    </button>
+  <button mat-menu-item (click)="deleteEvent()">
+    <mat-icon>delete</mat-icon>
+    Delete Event
+  </button>
+  }
+  @if (showPinOptions()) {
+  <button mat-menu-item (click)="onPinClick($event)">
+    <mat-icon [matTooltip]="pinned.getPinTooltip(event().id)" matTooltipPosition="below">
+      {{ pinned.getPinIcon(event().id) }}
+    </mat-icon>
+    @if (pinned.isPinned(event().id)) {
+    Unpin Note
+    } @else {
+    Pin Note
+    }
+  </button>
   }
   <mat-divider></mat-divider>
   <button mat-menu-item (click)="layout.shareEvent(event())">
@@ -39,9 +41,9 @@
       {{ bookmark.getBookmarkIcon(event().id) }}
     </mat-icon>
     @if (bookmark.isBookmarked(event().id)) {
-      Remove Bookmark
+    Remove Bookmark
     } @else {
-      Add Bookmark
+    Add Bookmark
     }
   </button>
   <button mat-menu-item (click)="layout.publishEvent(event())">
@@ -54,10 +56,10 @@
     Report Content
   </button>
   @if (event().pubkey !== accountState.pubkey()) {
-    <button mat-menu-item (click)="accountState.mutePubkey(event().pubkey)">
-      <mat-icon>block</mat-icon>
-      <span>Block User</span>
-    </button>
+  <button mat-menu-item (click)="accountState.mutePubkey(event().pubkey)">
+    <mat-icon>block</mat-icon>
+    <span>Block User</span>
+  </button>
   }
 </mat-menu>
 

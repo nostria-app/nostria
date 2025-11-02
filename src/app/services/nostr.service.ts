@@ -525,6 +525,7 @@ export class NostrService implements NostriaService {
         kinds.Metadata,      // 0 - profile
         kinds.Contacts,      // 3 - following list
         kinds.Mutelist,      // 10000 - mute list
+        10001,               // 10001 - pinned notes
         kinds.RelayList,     // 10002 - relay configuration
         kinds.BookmarkList,  // 10003 - bookmarks
         10063,               // Media server list (BUD-03)

@@ -13,6 +13,11 @@ import { FormsModule } from '@angular/forms';
 import { LayoutService } from '../../../services/layout.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { EventComponent } from '../../../components/event/event.component';
+import { PinnedService } from '../../../services/pinned.service';
+import { StorageService } from '../../../services/storage.service';
+import { NostrRecord } from '../../../interfaces';
+import { DataService } from '../../../services/data.service';
+import { UserRelayService } from '../../../services/relays/user-relay';
 
 @Component({
   selector: 'app-profile-notes',
@@ -38,13 +43,43 @@ export class ProfileNotesComponent {
   profileState = inject(ProfileStateService);
   bookmark = inject(BookmarkService);
   layout = inject(LayoutService);
+  pinned = inject(PinnedService);
+  storage = inject(StorageService);
+  data = inject(DataService);
+  userRelay = inject(UserRelayService);
+
   isLoading = signal<boolean>(false);
   error = signal<string | null>(null);
+  pinnedNotes = signal<NostrRecord[]>([]);
+  isLoadingPinned = signal<boolean>(false);
 
   constructor() {
     if (!this.layout.isBrowser()) {
       return;
     }
+
+    // Effect to load pinned notes when profile changes
+    effect(async () => {
+      const currentPubkey = this.profileState.pubkey();
+
+      if (currentPubkey) {
+        await this.loadPinnedNotes(currentPubkey);
+      } else {
+        this.pinnedNotes.set([]);
+      }
+    });
+
+    // Effect to reload pinned notes when the pinned service updates
+    effect(async () => {
+      // React to changes in the pinned service's pinnedEvent signal
+      const pinnedEvent = this.pinned.pinnedEvent();
+      const currentPubkey = this.profileState.pubkey();
+
+      if (currentPubkey && pinnedEvent) {
+        this.logger.info('Pinned event changed, reloading pinned notes');
+        await this.loadPinnedNotes(currentPubkey);
+      }
+    });
 
     // Effect to load initial notes if none are present and profile is loaded
     effect(() => {
@@ -72,6 +107,75 @@ export class ProfileNotesComponent {
         this.loadMoreNotes();
       }
     });
+  }
+
+  /**
+   * Load pinned notes for the current profile
+   */
+  async loadPinnedNotes(pubkey: string): Promise<void> {
+    this.isLoadingPinned.set(true);
+    try {
+      const pinnedEventIds = await this.pinned.getPinnedNotesForUser(pubkey);
+      this.logger.info(`Found ${pinnedEventIds.length} pinned notes for ${pubkey}`, pinnedEventIds);
+
+      if (pinnedEventIds.length === 0) {
+        this.pinnedNotes.set([]);
+        this.isLoadingPinned.set(false);
+        return;
+      }
+
+      // Fetch the actual events from storage
+      this.logger.info('Fetching pinned events from storage:', pinnedEventIds);
+      const eventPromises = pinnedEventIds.map(id => this.storage.getEventById(id));
+      const events = await Promise.all(eventPromises);
+
+      this.logger.info('Retrieved events from storage:', events.filter(e => e !== null).length, 'of', pinnedEventIds.length);
+
+      // For any events not found in storage, try to fetch from user relays
+      const missingEventIds = pinnedEventIds.filter((id, index) => events[index] === null);
+      if (missingEventIds.length > 0) {
+        this.logger.info('Fetching missing events from user relays:', missingEventIds);
+        const relayEventPromises = missingEventIds.map(id => this.userRelay.getEventById(pubkey, id));
+        const relayEvents = await Promise.all(relayEventPromises);
+
+        // Save found events to storage and merge with existing events
+        for (let i = 0; i < relayEvents.length; i++) {
+          const event = relayEvents[i];
+          if (event) {
+            await this.storage.saveEvent(event);
+            // Replace the null entry with the found event
+            const originalIndex = pinnedEventIds.indexOf(missingEventIds[i]);
+            events[originalIndex] = event;
+          }
+        }
+
+        this.logger.info('After relay fetch, have', events.filter(e => e !== null).length, 'events');
+      }
+
+      // Filter out nulls and convert to records
+      const validEvents = events.filter(e => e !== null);
+
+      if (validEvents.length === 0) {
+        this.logger.warn('No valid events found for pinned notes');
+        this.pinnedNotes.set([]);
+        this.isLoadingPinned.set(false);
+        return;
+      }
+
+      const records = this.data.toRecords(validEvents);
+
+      // Sort them in the order from pinnedEventIds (most recent first)
+      const sortedRecords = pinnedEventIds
+        .map(id => records.find(r => r.event.id === id))
+        .filter(r => r !== undefined) as NostrRecord[];
+
+      this.pinnedNotes.set(sortedRecords);
+      this.logger.debug(`Loaded ${sortedRecords.length} pinned note records`);
+    } catch (err) {
+      this.logger.error('Failed to load pinned notes', err);
+    } finally {
+      this.isLoadingPinned.set(false);
+    }
   }
 
   /**
