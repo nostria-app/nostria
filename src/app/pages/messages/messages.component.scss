@@ -183,9 +183,11 @@
     box-shadow: var(--mat-sys-level1);
     word-wrap: break-word;
     overflow-wrap: break-word;
+    word-break: break-word;
     -webkit-hyphens: auto;
     hyphens: auto;
     white-space: pre-wrap;
+    overflow: hidden;
 
     &.outgoing {
       background-color: var(--mat-sys-on-primary-container);
