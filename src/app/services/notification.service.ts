@@ -389,17 +389,28 @@ export class NotificationService {
   /**
    * Update the status of a relay publish promise
    */
-  private updateRelayPromiseStatus(
+  private async updateRelayPromiseStatus(
     notificationId: string,
     relayUrl: string,
     status: 'pending' | 'success' | 'failed',
     error?: unknown
-  ): void {
+  ): Promise<void> {
     this.logger.debug(
       `Updating relay promise status for notification ${notificationId}, relay ${relayUrl} to ${status}`
     );
     if (error) {
       this.logger.debug('Error details:', error);
+    }
+
+    // First, check storage for the most up-to-date version to preserve the read status
+    let readStatusFromStorage: boolean | undefined;
+    try {
+      const storedNotification = await this.storage.getNotification(notificationId);
+      if (storedNotification) {
+        readStatusFromStorage = storedNotification.read;
+      }
+    } catch (error) {
+      this.logger.warn('Could not fetch notification from storage, using in-memory version', error);
     }
 
     this._notifications.update(notifications => {
@@ -443,6 +454,8 @@ export class NotificationService {
             ...relayNotification,
             relayPromises: updatedRelayPromises,
             complete: allResolved,
+            // Preserve the read status from storage if available, otherwise use current in-memory value
+            read: readStatusFromStorage !== undefined ? readStatusFromStorage : relayNotification.read,
           };
 
           // Persist the updated notification to storage
