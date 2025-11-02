@@ -90,7 +90,7 @@
       } @else {
       <h4 class="thread-label">Replying to</h4>
       }
-      <mat-card appearance="outlined" class="root-event">
+      <mat-card appearance="outlined" class="root-event" (click)="onRootEventClick($event)">
         <app-event-header [event]="rootRecordData.event"></app-event-header>
         <mat-card-content #rootContent [class.collapsed]="!isRootEventExpanded()">
           @if (rootRecordData.event.kind === 20) {
@@ -126,12 +126,12 @@
           }
         </mat-card-content>
         @if (!isRootEventExpanded() && rootContentNeedsTruncation()) {
-        <button mat-button class="show-more-btn" (click)="isRootEventExpanded.set(true)">
+        <button mat-button class="show-more-btn" (click)="onExpandClick($event, isRootEventExpanded, true)">
           <mat-icon>expand_more</mat-icon>
           Show more
         </button>
         } @else if (isRootEventExpanded()) {
-        <button mat-button class="show-less-btn" (click)="isRootEventExpanded.set(false)">
+        <button mat-button class="show-less-btn" (click)="onExpandClick($event, isRootEventExpanded, false)">
           <mat-icon>expand_less</mat-icon>
           Show less
         </button>
@@ -156,7 +156,7 @@
       @if (isThreadedReply()) {
       <h4 class="thread-label">Replying to</h4>
       }
-      <mat-card appearance="outlined" class="parent-event">
+      <mat-card appearance="outlined" class="parent-event" (click)="onParentEventClick($event)">
         <app-event-header [event]="parentRecordData.event"></app-event-header>
         <mat-card-content #parentContent [class.collapsed]="!isParentEventExpanded()">
           @if (parentRecordData.event.kind === 20) {
@@ -194,12 +194,12 @@
           }
         </mat-card-content>
         @if (!isParentEventExpanded() && parentContentNeedsTruncation()) {
-        <button mat-button class="show-more-btn" (click)="isParentEventExpanded.set(true)">
+        <button mat-button class="show-more-btn" (click)="onExpandClick($event, isParentEventExpanded, true)">
           <mat-icon>expand_more</mat-icon>
           Show more
         </button>
         } @else if (isParentEventExpanded()) {
-        <button mat-button class="show-less-btn" (click)="isParentEventExpanded.set(false)">
+        <button mat-button class="show-less-btn" (click)="onExpandClick($event, isParentEventExpanded, false)">
           <mat-icon>expand_less</mat-icon>
           Show less
         </button>

@@ -280,6 +280,12 @@
 .root-event {
   margin-bottom: 12px;
   border-left: 3px solid var(--mat-sys-tertiary);
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container);
+  }
 
   mat-card-content {
     padding-bottom: 8px;
@@ -320,6 +326,12 @@
 .parent-event {
   margin-bottom: 16px;
   border-left: 3px solid var(--mat-sys-primary);
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container);
+  }
 
   mat-card-content {
     padding-bottom: 8px;
