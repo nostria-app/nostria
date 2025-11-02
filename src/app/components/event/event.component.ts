@@ -141,6 +141,11 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
 
   // Check if this event is currently the one being displayed on the event page
   isCurrentlySelected = computed<boolean>(() => {
+    // If navigation is disabled, treat as selected (e.g., in thread view or dialog)
+    if (this.navigationDisabled()) {
+      return true;
+    }
+
     const currentEvent = this.event() || this.record()?.event;
     if (!currentEvent) return false;
 
