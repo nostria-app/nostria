@@ -6,6 +6,7 @@ import {
   TransferState,
   untracked,
   computed,
+  input,
 } from '@angular/core';
 import { LayoutService } from '../../services/layout.service';
 import { NostrService } from '../../services/nostr.service';
@@ -53,6 +54,10 @@ import { Title } from '@angular/platform-browser';
   styleUrl: './event.component.scss',
 })
 export class EventPageComponent {
+  // Input for dialog mode - when provided, uses this instead of route params
+  dialogEventId = input<string | undefined>(undefined);
+  dialogEvent = input<Event | undefined>(undefined);
+
   event = signal<Event | undefined>(undefined);
   private readonly utilities = inject(UtilitiesService);
   isLoading = signal(false);
@@ -108,9 +113,25 @@ export class EventPageComponent {
       this.event.set(navigation.extras.state['event'] as Event);
     }
 
-    // Effect to load event when route parameter changes
+    // Effect to load event when in dialog mode with direct event ID input
     effect(() => {
-      if (this.app.initialized() && this.routeParams()) {
+      const dialogEventId = this.dialogEventId();
+      const dialogEvent = this.dialogEvent();
+
+      if (dialogEventId) {
+        untracked(async () => {
+          // Set the event if provided
+          if (dialogEvent) {
+            this.event.set(dialogEvent);
+          }
+          await this.loadEvent(dialogEventId);
+        });
+      }
+    });
+
+    // Effect to load event when route parameter changes (normal routing mode)
+    effect(() => {
+      if (this.app.initialized() && this.routeParams() && !this.dialogEventId()) {
         untracked(async () => {
           const id = this.routeParams()?.get('id');
           if (id) {
