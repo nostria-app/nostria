@@ -46,6 +46,10 @@ export class ReportingService {
   // Override signals for showing blocked content
   private contentOverrides = signal<Set<string>>(new Set());
 
+  // Signal to notify when a new report is published
+  // Contains the event ID and timestamp of the report
+  private reportPublished = signal<{ eventId: string; timestamp: number } | null>(null);
+
   // Computed signals for mute list items
   mutedPubkeys = computed(() => {
     const muteList = this.accountState.muteList();
@@ -203,6 +207,22 @@ export class ReportingService {
       }
       return newOverrides;
     });
+  }
+
+  /**
+   * Get the signal tracking newly published reports
+   * Components can use this to reactively update when new reports are published
+   */
+  getReportPublishedSignal() {
+    return this.reportPublished.asReadonly();
+  }
+
+  /**
+   * Notify that a report has been published for a specific event
+   * This triggers a signal update that listening components can react to
+   */
+  notifyReportPublished(eventId: string): void {
+    this.reportPublished.set({ eventId, timestamp: Date.now() });
   }
 
   /**

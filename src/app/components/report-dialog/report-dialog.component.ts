@@ -233,17 +233,29 @@ export class ReportDialogComponent {
       }
 
       // Wait for all publish attempts to complete
-      await Promise.allSettled(
+      const results = await Promise.allSettled(
         publishPromises.map(async (promise, index) => {
           try {
             await promise;
             this.updatePublishResult(targetRelays[index], 'success', 'Published successfully');
+            return { success: true };
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             this.updatePublishResult(targetRelays[index], 'error', errorMessage);
+            return { success: false };
           }
         })
       );
+
+      // Check if at least one publish succeeded
+      const successCount = results.filter(
+        r => r.status === 'fulfilled' && r.value.success
+      ).length;
+
+      if (successCount > 0 && this.data.target.eventId) {
+        // Notify that a new report was published for this event
+        this.reportingService.notifyReportPublished(this.data.target.eventId);
+      }
 
       // Show success message
       this.snackBar.open('Report submitted successfully', 'Dismiss', {
