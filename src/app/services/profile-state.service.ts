@@ -36,6 +36,9 @@ export class ProfileStateService {
   // Signal to force reload even with same pubkey
   private reloadTrigger = signal<number>(0);
 
+  // Track the currently loading pubkey to prevent race conditions
+  private currentlyLoadingPubkey = signal<string>('');
+
   // Loading states
   isLoadingMoreNotes = signal<boolean>(false);
   hasMoreNotes = signal<boolean>(true);
@@ -132,9 +135,19 @@ export class ProfileStateService {
   );
 
   async loadUserData(pubkey: string) {
+    // Set the currently loading pubkey to track this request
+    this.currentlyLoadingPubkey.set(pubkey);
+    this.logger.info(`Starting to load profile data for: ${pubkey}`);
+
     // Subscribe to contacts separately since they need special handling (only 1 per user, potentially older)
     // Try user-specific relays first
     const event = await this.userRelayService.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+
+    // Check if we're still loading this profile (user didn't switch to another profile)
+    if (this.currentlyLoadingPubkey() !== pubkey) {
+      this.logger.info(`Profile switched during contacts load. Discarding results for: ${pubkey}`);
+      return;
+    }
 
     if (event && event.kind === kinds.Contacts) {
       const followingList = this.utilities.getPTagsValuesFromEvent(event);
@@ -145,12 +158,25 @@ export class ProfileStateService {
     // Also try to get contacts from global/discovery relays as fallback
     // This is needed because contacts might be on different relays than recent content
     setTimeout(async () => {
+      // Check if we're still on the same profile
+      if (this.currentlyLoadingPubkey() !== pubkey) {
+        this.logger.info(`Profile switched before fallback contacts load. Skipping for: ${pubkey}`);
+        return;
+      }
+
       // Check if we still don't have a following list after initial attempt
       if (this.followingList().length === 0) {
         console.log('No contacts found on user relays, trying discovery relays as fallback');
         try {
           // Try to get contacts event by searching author + kind
           const contactsEvents = await this.userRelayService.getEventsByPubkeyAndKind(pubkey, kinds.Contacts);
+
+          // Verify we're still on the same profile after async operation
+          if (this.currentlyLoadingPubkey() !== pubkey) {
+            this.logger.info(`Profile switched during fallback contacts load. Discarding results for: ${pubkey}`);
+            return;
+          }
+
           if (contactsEvents && contactsEvents.length > 0) {
             const contactsEvent = contactsEvents[0]; // Get the most recent one
             const followingList = this.utilities.getPTagsValuesFromEvent(contactsEvent);
@@ -169,6 +195,12 @@ export class ProfileStateService {
       authors: [pubkey],
       limit: 20,
     });
+
+    // Critical check: verify we're still loading data for this pubkey
+    if (this.currentlyLoadingPubkey() !== pubkey) {
+      this.logger.info(`Profile switched during events query. Discarding ${events?.length || 0} results for: ${pubkey}`);
+      return;
+    }
 
     for (const event of events || []) {
       console.log('Initial content event received', event);
@@ -351,6 +383,12 @@ export class ProfileStateService {
         limit: 15, // Increased limit to get more timeline content
       });
 
+      // Check if profile was switched during the query
+      if (this.currentlyLoadingPubkey() !== pubkey) {
+        this.logger.info(`Profile switched during loadMoreNotes. Discarding ${events?.length || 0} results for: ${pubkey}`);
+        return [];
+      }
+
       // Process all returned events
       for (const event of events || []) {
         // Handle different event types
@@ -513,6 +551,12 @@ export class ProfileStateService {
         limit: 10, // Load 10 more articles at a time
       });
 
+      // Check if profile was switched during the query
+      if (this.currentlyLoadingPubkey() !== pubkey) {
+        this.logger.info(`Profile switched during loadMoreArticles. Discarding ${events?.length || 0} results for: ${pubkey}`);
+        return [];
+      }
+
       // Process all returned events
       for (const event of events || []) {
         if (event.kind === kinds.LongFormArticle) {
@@ -608,6 +652,12 @@ export class ProfileStateService {
         until: oldestTimestamp,
         limit: 15, // Load 15 more media items at a time
       });
+
+      // Check if profile was switched during the query
+      if (this.currentlyLoadingPubkey() !== pubkey) {
+        this.logger.info(`Profile switched during loadMoreMedia. Discarding ${events?.length || 0} results for: ${pubkey}`);
+        return [];
+      }
 
       // Process all returned events
       for (const event of events || []) {
