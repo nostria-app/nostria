@@ -109,6 +109,10 @@
 
 .source-toggle,
 .relay-toggle {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+
   mat-button-toggle {
     display: flex;
     align-items: center;
@@ -116,11 +120,30 @@
     padding: 8px 16px;
     min-width: 140px;
     justify-content: flex-start;
+    flex: 1 1 auto;
 
     mat-icon {
       font-size: 1.2rem;
       width: 1.2rem;
       height: 1.2rem;
+    }
+  }
+
+  // Responsive adjustments for smaller screens
+  @media screen and (max-width: 600px) {
+    mat-button-toggle {
+      min-width: 100px;
+      padding: 8px 12px;
+      gap: 6px;
+    }
+  }
+
+  @media screen and (max-width: 420px) {
+    mat-button-toggle {
+      min-width: unset;
+      padding: 8px;
+      justify-content: center;
+      flex: 1 1 25%;
     }
   }
 }
