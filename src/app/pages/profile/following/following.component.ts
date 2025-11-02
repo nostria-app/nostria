@@ -103,9 +103,7 @@ export class FollowingComponent {
   constructor() {
     effect(async () => {
       const list = this.profileState.followingList();
-      if (list && list.length > 0) {
-        await this.loadFollowingList(list);
-      }
+      await this.loadFollowingList(list);
     });
   }
 
