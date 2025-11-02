@@ -95,6 +95,7 @@
   display: flex;
   overflow: hidden;
   height: 100%;
+  width: 100%;
 }
 
 .virtual-scroll-viewport {
@@ -163,6 +164,7 @@
   height: 100%;
   text-align: center;
   padding: 2rem;
+  width: 100%;
 
   mat-icon {
     font-size: 48px;
