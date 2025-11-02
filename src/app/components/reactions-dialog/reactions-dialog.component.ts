@@ -139,7 +139,7 @@ export interface ReactionsDialogData {
                 </div>
               } @else {
                 <mat-list>
-                  @for (repost of reposts(); track repost.event.id) {
+                  @for (repost of sortedReposts(); track repost.event.id) {
                     <mat-list-item class="reaction-item">
                       <div class="reaction-content">
                         <app-user-profile
@@ -409,6 +409,10 @@ export class ReactionsDialogComponent {
 
   sortedZaps = computed(() => {
     return [...this.zaps()].sort((a, b) => (b.amount || 0) - (a.amount || 0));
+  });
+
+  sortedReposts = computed(() => {
+    return [...this.reposts()].sort((a, b) => b.event.created_at - a.event.created_at);
   });
 
   onTabChange(index: number): void {
