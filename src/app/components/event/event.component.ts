@@ -473,6 +473,20 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
         }
       }
     });
+
+    // Effect to reload reports when a new report is published for this event
+    effect(() => {
+      const reportNotification = this.reportingService.getReportPublishedSignal()();
+      const currentEvent = this.event() || this.record()?.event;
+
+      if (reportNotification && currentEvent && reportNotification.eventId === currentEvent.id) {
+        untracked(async () => {
+          console.log('🚨 [Report Notification] New report detected for event:', currentEvent.id.substring(0, 8));
+          // Reload reports with cache invalidation to get the fresh data
+          await this.loadReports(true);
+        });
+      }
+    });
   }
 
   ngAfterViewInit(): void {

@@ -35,6 +35,20 @@ export class ReportedContentComponent {
         });
       }
     });
+
+    // Effect to reload reports when a new report is published for this event
+    effect(() => {
+      const reportNotification = this.reportingService.getReportPublishedSignal()();
+      const currentEvent = this.event();
+
+      if (reportNotification && currentEvent && reportNotification.eventId === currentEvent.id) {
+        untracked(async () => {
+          console.log('🚨 [Report Notification] New report detected for reported content:', currentEvent.id.substring(0, 8));
+          // Reload reports to get the fresh data
+          await this.loadReports(currentEvent);
+        });
+      }
+    });
   }
 
   private async loadReports(event: Event): Promise<void> {
