@@ -62,11 +62,10 @@ export class StateService implements NostriaService {
 
     await this.media.load();
 
-    // Load chats after relays are set up
-    await this.messaging.loadChats();
-  }
-
-  clear() {
+    // NOTE: We don't automatically load chats here anymore
+    // Chats are loaded on-demand when the user navigates to the messages page
+    // This saves bandwidth and improves privacy
+  } clear() {
     this.accountState.clear();
     this.messaging.clear();
     this.nostr.clear();
