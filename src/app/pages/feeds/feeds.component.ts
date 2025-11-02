@@ -212,6 +212,12 @@ export class FeedsComponent implements OnDestroy {
   // Cache to store events during drag operations
   private _eventCache = new Map<string, Event[]>();
 
+  // Track the last active feed ID for scroll restoration
+  private lastActiveFeedId: string | null = null;
+
+  // Scroll position auto-save
+  private scrollSaveInterval?: number;
+
   // Computed signal for column events that respects drag state
   columnEvents = computed(() => {
     const columns = this.columns();
@@ -345,6 +351,54 @@ export class FeedsComponent implements OnDestroy {
           }
         });
       }
+    });
+
+    // Set up automatic scroll position saving
+    effect(() => {
+      if (this.layoutService.isBrowser()) {
+        // Clear any existing interval
+        if (this.scrollSaveInterval) {
+          clearInterval(this.scrollSaveInterval);
+        }
+
+        // Save scroll position every 2 seconds while user is on the feeds page
+        this.scrollSaveInterval = window.setInterval(() => {
+          const currentFeedId = this.feedsCollectionService.activeFeedId();
+          if (currentFeedId) {
+            console.log('💾 Auto-saving scroll position for feed:', currentFeedId);
+            this.layoutService.saveFeedScrollPosition(currentFeedId);
+          }
+        }, 2000);
+      }
+    });
+
+    // Monitor active feed changes for scroll position save/restore
+    effect(() => {
+      const currentFeedId = this.feedsCollectionService.activeFeedId();
+
+      console.log('🔄 Feed change detected. Current:', currentFeedId, 'Previous:', this.lastActiveFeedId);
+
+      untracked(() => {
+        // Save scroll position of the previous feed
+        if (this.lastActiveFeedId && this.lastActiveFeedId !== currentFeedId) {
+          console.log('💾 Saving scroll position for previous feed:', this.lastActiveFeedId);
+          this.layoutService.saveFeedScrollPosition(this.lastActiveFeedId);
+          this.logger.debug('Saved scroll position for previous feed:', this.lastActiveFeedId);
+        }
+
+        // Update tracking
+        this.lastActiveFeedId = currentFeedId;
+
+        // Restore scroll position for the new feed
+        if (currentFeedId) {
+          console.log('📍 Scheduling restore for feed:', currentFeedId, 'in 1000ms');
+          this.logger.debug('Active feed changed to:', currentFeedId);
+          setTimeout(() => {
+            console.log('⏰ Restore timeout fired for feed:', currentFeedId);
+            this.layoutService.restoreFeedScrollPosition(currentFeedId);
+          }, 1000); // Increased delay to ensure content is loaded
+        }
+      });
     });
 
     // Handle route parameters for feed navigation
@@ -1028,7 +1082,22 @@ export class FeedsComponent implements OnDestroy {
   }
 
   ngOnDestroy() {
+    console.log('🧹 FeedsComponent destroying...');
     this.logger.debug('Cleaning up resources...');
+
+    // Clear scroll save interval
+    if (this.scrollSaveInterval) {
+      clearInterval(this.scrollSaveInterval);
+    }
+
+    // Save the current scroll position for the active feed before destroying
+    const currentFeedId = this.lastActiveFeedId || this.feedsCollectionService.activeFeedId();
+    if (currentFeedId) {
+      console.log('💾 Saving scroll position on destroy for feed:', currentFeedId);
+      this.layoutService.saveFeedScrollPosition(currentFeedId);
+      this.logger.debug('Saved scroll position on component destroy for feed:', currentFeedId);
+    }
+
     this.feedService.unsubscribe();
   }
   // Helper methods for content rendering
