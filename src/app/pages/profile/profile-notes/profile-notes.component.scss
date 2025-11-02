@@ -83,6 +83,9 @@
   border: 1px solid var(--mat-sys-outline-variant);
   overflow: hidden;
   transition: all 0.2s ease;
+  max-height: 280px;
+  cursor: pointer;
+  position: relative;
 
   &:hover {
     box-shadow: var(--mat-sys-level2);
@@ -90,11 +93,25 @@
     border-color: var(--mat-sys-primary);
   }
 
+  // Add a fade-out gradient at the bottom if content is truncated
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: linear-gradient(to bottom, transparent, var(--mat-sys-surface-container-low));
+    pointer-events: none;
+  }
+
   // Override event component styles for compact display
   ::ng-deep {
     app-event {
       .event-container {
         padding: 0.75rem !important;
+        max-height: 280px;
+        overflow: hidden;
       }
 
       .event-header {
@@ -115,12 +132,13 @@
       .event-content {
         font-size: 0.875rem !important;
         line-height: 1.4 !important;
-        max-height: 120px;
+        max-height: 160px;
         overflow: hidden;
         display: -webkit-box;
-        -webkit-line-clamp: 4;
-        line-clamp: 4;
+        -webkit-line-clamp: 6;
+        line-clamp: 6;
         -webkit-box-orient: vertical;
+        word-wrap: break-word;
       }
 
       .event-actions {

@@ -90,6 +90,7 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   compact = input<boolean>(false);
   hideComments = input<boolean>(false);
   showOverlay = input<boolean>(false);
+  hideParentEvent = input<boolean>(false);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   @ViewChild('rootContent') rootContentRef?: ElementRef<HTMLElement>;

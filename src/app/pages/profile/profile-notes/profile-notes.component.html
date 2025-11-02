@@ -20,7 +20,7 @@
         <div class="pinned-notes-container">
           @for (note of pinnedNotes(); track note.event.id) {
           <div class="pinned-note-wrapper">
-            <app-event [event]="note.event" appearance="plain" [compact]="true"></app-event>
+            <app-event [event]="note.event" appearance="plain" [compact]="true" [hideParentEvent]="true"></app-event>
           </div>
           }
         </div>

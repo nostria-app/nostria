@@ -82,7 +82,7 @@
   }
   <mat-card-content>
     <!-- Show thread context only in timeline mode -->
-    @if (mode() === 'timeline') {
+    @if (mode() === 'timeline' && !hideParentEvent()) {
     <!-- Show root event if this is a threaded reply OR a direct reply to root -->
     @if ((isThreadedReply() && rootRecordData && parentRecordData) || (!isThreadedReply() && rootRecordData)) {
     <!-- Root event (original post) -->
@@ -153,7 +153,7 @@
 
     <!-- Immediate parent event (what this is replying to) -->
     <!-- Only show parent if it exists and is different from root -->
-    @if (parentRecordData && isThreadedReply()) {
+    @if (parentRecordData && isThreadedReply() && !hideParentEvent()) {
     <div class="reply-context">
       @if (isThreadedReply()) {
       <h4 class="thread-label">Replying to</h4>
