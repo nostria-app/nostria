@@ -104,6 +104,12 @@ export class PinnedService {
         id: '',
         sig: '',
       };
+    } else {
+      // Create a copy to avoid mutating the existing event
+      event = {
+        ...event,
+        tags: [...event.tags],
+      };
     }
 
     // Check if the note is already pinned
@@ -128,14 +134,17 @@ export class PinnedService {
    * @param eventId The event ID to unpin
    */
   async unpinNote(eventId: string) {
-    const event = this.pinnedEvent();
+    const existingEvent = this.pinnedEvent();
 
-    if (!event) {
+    if (!existingEvent) {
       return;
     }
 
-    // Remove the event from the tags
-    event.tags = event.tags.filter(tag => !(tag[0] === 'e' && tag[1] === eventId));
+    // Create a copy to avoid mutating the existing event
+    const event = {
+      ...existingEvent,
+      tags: existingEvent.tags.filter(tag => !(tag[0] === 'e' && tag[1] === eventId)),
+    };
 
     // Publish the updated event
     await this.publish(event);
@@ -174,6 +183,9 @@ export class PinnedService {
 
     // Sign the event
     const signedEvent = await this.nostr.signEvent(event);
+
+    // Save to storage immediately for instant local updates
+    await this.storage.saveEvent(signedEvent);
 
     // Update the local pinned event with the signed event
     this.pinnedEvent.set(signedEvent);

@@ -75,9 +75,13 @@ export class ProfileNotesComponent {
       const pinnedEvent = this.pinned.pinnedEvent();
       const currentPubkey = this.profileState.pubkey();
 
-      if (currentPubkey && pinnedEvent) {
+      // Only reload if we're on our own profile and the pubkey matches
+      if (currentPubkey && pinnedEvent && pinnedEvent.pubkey === currentPubkey) {
         this.logger.info('Pinned event changed, reloading pinned notes');
-        await this.loadPinnedNotes(currentPubkey);
+        // Small delay to ensure the event is saved to storage
+        setTimeout(async () => {
+          await this.loadPinnedNotes(currentPubkey);
+        }, 100);
       }
     });
 

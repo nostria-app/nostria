@@ -72,8 +72,20 @@
   gap: 0.75rem;
 
   @media (min-width: 768px) {
-    grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
+    grid-template-columns: repeat(3, 1fr); // Default to 3 columns
+
+    // If only 1 item, take full width
+    &:has(.pinned-note-wrapper:only-child) {
+      grid-template-columns: 1fr;
+    }
+
+    // If exactly 2 items, split in half
+    &:has(.pinned-note-wrapper:nth-child(2):last-child) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    // If 3 or more items, divide by 3 (already set as default)
   }
 }
 

@@ -13,12 +13,7 @@
     <mat-icon>content_copy</mat-icon>
     Copy
   </button>
-  @if (isOurEvent()) {
-  <button mat-menu-item (click)="deleteEvent()">
-    <mat-icon>delete</mat-icon>
-    Delete Event
-  </button>
-  }
+  <mat-divider></mat-divider>
   @if (showPinOptions()) {
   <button mat-menu-item (click)="onPinClick($event)">
     <mat-icon [matTooltip]="pinned.getPinTooltip(event().id)" matTooltipPosition="below">
@@ -31,7 +26,6 @@
     }
   </button>
   }
-  <mat-divider></mat-divider>
   <button mat-menu-item (click)="layout.shareEvent(event())">
     <mat-icon>share</mat-icon>
     Share Event
@@ -51,6 +45,12 @@
     Publish Event
   </button>
   <mat-divider></mat-divider>
+  @if (isOurEvent()) {
+  <button mat-menu-item (click)="deleteEvent()">
+    <mat-icon>delete</mat-icon>
+    Delete Event
+  </button>
+  }
   <button mat-menu-item (click)="reportContent()">
     <mat-icon>warning</mat-icon>
     Report Content
