@@ -99,7 +99,7 @@ export class DiscoverComponent implements OnInit {
       // Follow the profile immediately - accountState.follow handles publishing to relays
       await this.accountState.follow(profileId);
 
-      this.notificationService.notify(`Following new account.`);
+      // this.notificationService.notify(`Following new account.`);
 
       // Only refresh following feeds if we're on the feeds page
       if (this.router.url.startsWith('/feeds')) {
