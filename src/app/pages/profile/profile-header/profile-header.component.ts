@@ -123,9 +123,24 @@ export class ProfileHeaderComponent {
     this.badgeService.badgeDefinitions();
     // Also include failedBadgeDefinitions to react when badges fail to load
     this.badgeService.failedBadgeDefinitions();
+    // Include loadingBadgeDefinitions to react to loading state changes
+    this.badgeService.loadingBadgeDefinitions();
 
     return this.topBadges().map(badge => {
       const badgeDefinition = this.getBadgeDefinition(badge);
+
+      // Return partial data immediately if definition is not loaded yet
+      if (!badgeDefinition) {
+        return {
+          slug: badge.slug,
+          name: 'Loading...',
+          description: '',
+          image: '',
+          thumb: '',
+          tags: [],
+        };
+      }
+
       return this.parseBadgeDefinition(badgeDefinition);
     });
   });
@@ -134,6 +149,13 @@ export class ProfileHeaderComponent {
   isBadgeFailed = computed(() => {
     return this.topBadges().map(badge =>
       this.badgeService.isBadgeDefinitionFailed(badge.pubkey, badge.slug)
+    );
+  });
+
+  // Computed to check if a badge is currently loading
+  isBadgeLoading = computed(() => {
+    return this.topBadges().map(badge =>
+      this.badgeService.isBadgeDefinitionLoading(badge.pubkey, badge.slug)
     );
   });  // Computed property to check if bio needs expansion
   shouldShowExpander = computed(() => {

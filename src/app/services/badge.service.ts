@@ -76,6 +76,9 @@ export class BadgeService implements NostriaService {
   // Track failed badge definitions (pubkey:slug format)
   failedBadgeDefinitions = signal<Set<string>>(new Set());
 
+  // Track loading badge definitions (pubkey:slug format)
+  loadingBadgeDefinitions = signal<Set<string>>(new Set());
+
   getBadgeDefinition(pubkey: string, slug: string): Event | undefined {
     const badge = this.badgeDefinitions().find(badge => {
       const tags = badge.tags || [];
@@ -90,6 +93,11 @@ export class BadgeService implements NostriaService {
   isBadgeDefinitionFailed(pubkey: string, slug: string): boolean {
     const badgeKey = `${pubkey}:${slug}`;
     return this.failedBadgeDefinitions().has(badgeKey);
+  }
+
+  isBadgeDefinitionLoading(pubkey: string, slug: string): boolean {
+    const badgeKey = `${pubkey}:${slug}`;
+    return this.loadingBadgeDefinitions().has(badgeKey);
   }
 
   putBadgeDefinition(badge: Event): void {
@@ -175,53 +183,70 @@ export class BadgeService implements NostriaService {
   async loadBadgeDefinition(pubkey: string, slug: string) {
     const badgeKey = `${pubkey}:${slug}`;
 
-    let definition: NostrEvent | null | undefined = this.getBadgeDefinition(pubkey, slug);
+    // Mark as loading
+    this.loadingBadgeDefinitions.update(loading => {
+      const newSet = new Set(loading);
+      newSet.add(badgeKey);
+      return newSet;
+    });
 
-    // If not in memory, check storage
-    if (!definition) {
-      definition = await this.storage.getBadgeDefinition(pubkey, slug);
+    try {
+      let definition: NostrEvent | null | undefined = this.getBadgeDefinition(pubkey, slug);
 
-      // If found in storage, add to memory
-      if (definition) {
-        this.putBadgeDefinition(definition);
-      }
-    }
-
-    // If still not found, fetch from relays
-    if (!definition) {
-      definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
-        pubkey,
-        kinds.BadgeDefinition,
-        { key: 'd', value: slug }
-      );
-
-      // If the definition is not found on the user's relays, try to fetch from author's relays
+      // If not in memory, check storage
       if (!definition) {
-        try {
-          // Ensure relays are discovered for this pubkey
-          await this.userRelayService.ensureRelaysForPubkey(pubkey);
+        definition = await this.storage.getBadgeDefinition(pubkey, slug);
 
-          // Check what relays were discovered
-          const authorRelays = this.userRelayService.getRelaysForPubkey(pubkey);
+        // If found in storage, add to memory
+        if (definition) {
+          this.putBadgeDefinition(definition);
+        }
+      }
 
-          if (authorRelays.length === 0) {
-            this.logger.warn(`No relays found for badge author: ${pubkey.slice(0, 16)}...`);
-            // Try using global discovery relays as fallback
-            definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
-              pubkey,
-              kinds.BadgeDefinition,
-              { key: 'd', value: slug }
-            );
-          } else {
-            definition = await this.userRelayService.getEventByPubkeyAndKindAndTag(
-              pubkey,
-              kinds.BadgeDefinition,
-              { key: 'd', value: slug }
-            );
-          }
+      // If still not found, fetch from relays
+      if (!definition) {
+        definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
+          pubkey,
+          kinds.BadgeDefinition,
+          { key: 'd', value: slug }
+        );
 
-          if (!definition) {
-            this.logger.error(`Badge definition not found for ${pubkey.slice(0, 16)}... slug: ${slug}`);
+        // If the definition is not found on the user's relays, try to fetch from author's relays
+        if (!definition) {
+          try {
+            // Ensure relays are discovered for this pubkey
+            await this.userRelayService.ensureRelaysForPubkey(pubkey);
+
+            // Check what relays were discovered
+            const authorRelays = this.userRelayService.getRelaysForPubkey(pubkey);
+
+            if (authorRelays.length === 0) {
+              this.logger.warn(`No relays found for badge author: ${pubkey.slice(0, 16)}...`);
+              // Try using global discovery relays as fallback
+              definition = await this.accountRelay.getEventByPubkeyAndKindAndTag(
+                pubkey,
+                kinds.BadgeDefinition,
+                { key: 'd', value: slug }
+              );
+            } else {
+              definition = await this.userRelayService.getEventByPubkeyAndKindAndTag(
+                pubkey,
+                kinds.BadgeDefinition,
+                { key: 'd', value: slug }
+              );
+            }
+
+            if (!definition) {
+              this.logger.error(`Badge definition not found for ${pubkey.slice(0, 16)}... slug: ${slug}`);
+              // Mark this badge as failed
+              this.failedBadgeDefinitions.update(failed => {
+                const newSet = new Set(failed);
+                newSet.add(badgeKey);
+                return newSet;
+              });
+            }
+          } catch (err) {
+            this.logger.error('Error loading badge definition:', err);
             // Mark this badge as failed
             this.failedBadgeDefinitions.update(failed => {
               const newSet = new Set(failed);
@@ -229,24 +254,23 @@ export class BadgeService implements NostriaService {
               return newSet;
             });
           }
-        } catch (err) {
-          this.logger.error('Error loading badge definition:', err);
-          // Mark this badge as failed
-          this.failedBadgeDefinitions.update(failed => {
-            const newSet = new Set(failed);
-            newSet.add(badgeKey);
-            return newSet;
-          });
         }
       }
-    }
 
-    if (definition) {
-      this.putBadgeDefinition(definition);
-      await this.storage.saveEvent(definition);
-    }
+      if (definition) {
+        this.putBadgeDefinition(definition);
+        await this.storage.saveEvent(definition);
+      }
 
-    return definition;
+      return definition;
+    } finally {
+      // Remove from loading state
+      this.loadingBadgeDefinitions.update(loading => {
+        const newSet = new Set(loading);
+        newSet.delete(badgeKey);
+        return newSet;
+      });
+    }
   }
 
   async parseReward(rewardEvent: NostrEvent) {
@@ -335,16 +359,20 @@ export class BadgeService implements NostriaService {
   }
 
   async loadAllBadges(pubkey: string): Promise<void> {
-    // First load the badge definitions of the account.
-    await this.loadBadgeDefinitions(pubkey);
+    // Start loading badge definitions in the background (non-blocking)
+    // This will be triggered later when accepted badges are parsed
+    // We don't await this to avoid blocking the UI
+    this.loadBadgeDefinitions(pubkey).catch(err => {
+      console.error('Error loading badge definitions:', err);
+    });
 
-    // Then load all issued badges.
+    // Load issued badges (these are needed for the Issued tab)
     await this.loadIssuedBadges(pubkey);
 
-    // Load the profile badges event.
+    // Load the profile badges event (this will trigger background definition loading)
     await this.loadAcceptedBadges(pubkey);
 
-    // Finally load the received badges.
+    // Load received badges (these are needed for the Received tab)
     await this.loadReceivedBadges(pubkey);
   }
 
@@ -445,16 +473,38 @@ export class BadgeService implements NostriaService {
   ): Promise<void> {
     console.log(`Starting background load of ${badges.length} badge definitions`);
 
-    for (const badge of badges) {
-      // Check if we already have this definition cached
-      const cached = this.getBadgeDefinition(badge.pubkey, badge.slug);
-      if (!cached) {
-        // Load in background without blocking
-        this.loadBadgeDefinition(badge.pubkey, badge.slug).catch(err => {
-          console.error(`Failed to load badge definition for ${badge.slug}:`, err);
-        });
+    // Load in batches to avoid overwhelming the network
+    const BATCH_SIZE = 10;
+    const BATCH_DELAY = 100; // ms between batches
+
+    for (let i = 0; i < badges.length; i += BATCH_SIZE) {
+      const batch = badges.slice(i, i + BATCH_SIZE);
+
+      // Load batch in parallel
+      await Promise.allSettled(
+        batch.map(async badge => {
+          // Check if we already have this definition cached or if it's already loading
+          const cached = this.getBadgeDefinition(badge.pubkey, badge.slug);
+          const isLoading = this.isBadgeDefinitionLoading(badge.pubkey, badge.slug);
+          const isFailed = this.isBadgeDefinitionFailed(badge.pubkey, badge.slug);
+
+          if (!cached && !isLoading && !isFailed) {
+            try {
+              await this.loadBadgeDefinition(badge.pubkey, badge.slug);
+            } catch (err) {
+              console.error(`Failed to load badge definition for ${badge.slug}:`, err);
+            }
+          }
+        })
+      );
+
+      // Add a small delay between batches to prevent UI blocking
+      if (i + BATCH_SIZE < badges.length) {
+        await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
       }
     }
+
+    console.log(`Completed background load of ${badges.length} badge definitions`);
   }
 
   isBadgeAccepted(badgeAward: NostrEvent): boolean {
@@ -534,5 +584,6 @@ export class BadgeService implements NostriaService {
     this.badgeIssuers.set({});
     this.badgeRecipients.set({});
     this.failedBadgeDefinitions.set(new Set());
+    this.loadingBadgeDefinitions.set(new Set());
   }
 }

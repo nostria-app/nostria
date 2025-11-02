@@ -89,8 +89,25 @@ export class BadgeComponent {
 
   async parseBadge(event: NostrEvent | any) {
     if (event.slug) {
-      const definition = await this.loadBadgeDefinition(event.pubkey, event.slug);
-      this.definition.set(definition);
+      // Check if definition is already loaded
+      const definition = this.badgeService.getBadgeDefinition(event.pubkey, event.slug);
+
+      if (definition) {
+        // Definition already in memory, use it immediately
+        this.definition.set(definition);
+      } else {
+        // Set definition to null to show loading state
+        this.definition.set(null);
+
+        // Load definition in background (non-blocking)
+        this.loadBadgeDefinition(event.pubkey, event.slug).then(def => {
+          this.definition.set(def || undefined);
+        }).catch(err => {
+          console.error('Error loading badge definition:', err);
+          this.error.set('Failed to load badge');
+          this.definition.set(undefined);
+        });
+      }
     } else if (event.kind === kinds.BadgeDefinition) {
       this.definition.set(event);
 
@@ -140,7 +157,18 @@ export class BadgeComponent {
       const parsedBadge = this.badgeService.parseDefinition(this.definition()!);
       console.log('Parsed Badge:', parsedBadge);
       this.parsed.set(parsedBadge);
+    } else if (this.definition() === null) {
+      // null means loading, set a loading placeholder
+      this.parsed.set({
+        slug: '',
+        name: 'Loading...',
+        description: 'Loading badge definition...',
+        image: '',
+        thumb: '',
+        tags: [],
+      });
     } else {
+      // undefined means failed to load
       this.error.set('Failed to parse badge data');
     }
   }

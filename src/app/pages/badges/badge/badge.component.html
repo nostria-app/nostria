@@ -75,7 +75,12 @@
   @if (layout() === 'horizontal') {
   <mat-card-content class="badge-card-content">
     <div class="badge-thumbnail">
-      @if (item.thumb) {
+      @if (definition() === null) {
+      <!-- Loading state -->
+      <div class="placeholder-thumbnail loading">
+        <mat-spinner diameter="24"></mat-spinner>
+      </div>
+      } @else if (item?.thumb) {
       <img [src]="item.thumb" alt="Badge thumbnail" />
       } @else {
       <div class="placeholder-thumbnail">
