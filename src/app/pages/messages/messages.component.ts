@@ -269,13 +269,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     });
 
-    effect(async () => {
+    effect(() => {
       const account = this.accountState.account();
       const currentPubkey = account?.pubkey || null;
       const previousPubkey = this.lastAccountPubkey();
 
       if (account) {
-        untracked(async () => {
+        untracked(() => {
           // Only clear state if the account ACTUALLY changed (different pubkey)
           // This prevents clearing state on effect re-runs with the same account
           if (currentPubkey !== previousPubkey) {
@@ -285,9 +285,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.lastAccountPubkey.set(currentPubkey);
 
             // Clear local state when account changes
-            // The StateService will handle reloading chats after setting up relays
             this.messages.set([]);
             this.selectedChatId.set(null);
+
+            // Reload chats for the new account (only if user is on messages page)
+            // This is component-level loading, not global
+            this.logger.debug('Reloading chats for new account on messages page');
+
+            // Use setTimeout to ensure the call happens after the current effect cycle
+            setTimeout(() => {
+              this.logger.debug('Calling loadChats after account change');
+              this.messaging.loadChats();
+            }, 0);
 
             // Navigate back to messages list (without chat ID) if we're on a specific chat route
             if (this.router.url.startsWith('/messages/') && this.router.url !== '/messages') {
@@ -300,6 +309,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
+    // Load chats when the messages component initializes
+    // This is on-demand loading - only when user visits the messages page
+    if (!this.messaging.isLoading() && this.messaging.sortedChats().length === 0) {
+      this.logger.debug('Loading chats on messages component init');
+      this.messaging.loadChats();
+    }
+
     // Check for route parameters to start a new chat
     this.route.queryParams.subscribe(params => {
       const pubkey = params['pubkey'];
