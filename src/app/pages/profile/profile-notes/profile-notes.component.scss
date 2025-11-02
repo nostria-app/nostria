@@ -37,6 +37,122 @@
   }
 }
 
+// Pinned notes section
+.pinned-notes-section {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+}
+
+.pinned-notes-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  color: var(--mat-sys-on-surface-variant);
+
+  .pin-icon {
+    font-size: 1.25rem;
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  h3 {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+}
+
+.pinned-notes-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+}
+
+.pinned-note-wrapper {
+  background-color: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+  border: 1px solid var(--mat-sys-outline-variant);
+  overflow: hidden;
+  transition: all 0.2s ease;
+
+  &:hover {
+    box-shadow: var(--mat-sys-level2);
+    transform: translateY(-2px);
+    border-color: var(--mat-sys-primary);
+  }
+
+  // Override event component styles for compact display
+  ::ng-deep {
+    app-event {
+      .event-container {
+        padding: 0.75rem !important;
+      }
+
+      .event-header {
+        margin-bottom: 0.5rem !important;
+      }
+
+      .user-profile {
+        .avatar {
+          width: 28px !important;
+          height: 28px !important;
+        }
+
+        .profile-display-name {
+          font-size: 0.875rem !important;
+        }
+      }
+
+      .event-content {
+        font-size: 0.875rem !important;
+        line-height: 1.4 !important;
+        max-height: 120px;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 4;
+        line-clamp: 4;
+        -webkit-box-orient: vertical;
+      }
+
+      .event-actions {
+        margin-top: 0.5rem !important;
+        gap: 0.5rem !important;
+
+        button {
+          padding: 4px !important;
+          min-width: unset !important;
+
+          mat-icon {
+            font-size: 1rem !important;
+            width: 1rem !important;
+            height: 1rem !important;
+          }
+
+          .count {
+            font-size: 0.75rem !important;
+          }
+        }
+      }
+
+      // Hide media in compact view
+      .media-grid,
+      .video-container,
+      .article-preview {
+        display: none !important;
+      }
+    }
+  }
+}
+
 .options-section {
   background-color: var(--mat-sys-surface-container-lowest);
   border-radius: 8px;

@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { type Event, nip19 } from 'nostr-tools';
+import { type Event, nip19, kinds } from 'nostr-tools';
 import { firstValueFrom } from 'rxjs';
 import type { NostrRecord } from '../../../interfaces';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -20,6 +20,8 @@ import { LayoutService } from '../../../services/layout.service';
 import type { ReportTarget } from '../../../services/reporting.service';
 import { CommonModule } from '@angular/common';
 import { BookmarkService } from '../../../services/bookmark.service';
+import { PinnedService } from '../../../services/pinned.service';
+import { ProfileStateService } from '../../../services/profile-state.service';
 
 @Component({
   selector: 'app-event-menu',
@@ -38,11 +40,13 @@ import { BookmarkService } from '../../../services/bookmark.service';
 export class EventMenuComponent {
   layout = inject(LayoutService);
   accountState = inject(AccountStateService);
+  profileState = inject(ProfileStateService);
   dialog = inject(MatDialog);
   data = inject(DataService);
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
   bookmark = inject(BookmarkService);
+  pinned = inject(PinnedService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -56,6 +60,23 @@ export class EventMenuComponent {
     }
 
     return event.pubkey === this.accountState.pubkey();
+  });
+
+  // Check if we're on our own profile page
+  isOnOwnProfile = computed<boolean>(() => {
+    const profilePubkey = this.profileState.pubkey();
+    return profilePubkey === this.accountState.pubkey();
+  });
+
+  // Check if this is a kind:1 event (text note)
+  isTextNote = computed<boolean>(() => {
+    const event = this.event();
+    return event?.kind === kinds.ShortTextNote;
+  });
+
+  // Check if pin/unpin options should be shown
+  showPinOptions = computed<boolean>(() => {
+    return this.isOnOwnProfile() && this.isTextNote() && this.isOurEvent();
   });
 
   onBookmarkClick(event: MouseEvent) {
@@ -140,5 +161,21 @@ export class EventMenuComponent {
     };
 
     this.layout.showReportDialog(reportTarget);
+  }
+
+  async onPinClick(event: MouseEvent) {
+    event.stopPropagation();
+    const targetEvent = this.event();
+    if (!targetEvent) {
+      return;
+    }
+
+    if (this.pinned.isPinned(targetEvent.id)) {
+      await this.pinned.unpinNote(targetEvent.id);
+      this.snackBar.open('Note unpinned', 'Close', { duration: 3000 });
+    } else {
+      await this.pinned.pinNote(targetEvent.id);
+      this.snackBar.open('Note pinned to profile', 'Close', { duration: 3000 });
+    }
   }
 }
