@@ -1,6 +1,6 @@
 .tagged-references-container {
-  margin-top: 16px;
-  padding: 16px 0;
+  // margin-top: 16px;
+  // padding: 16px 0;
   // border-top: 1px solid var(--mat-sys-outline-variant);
 }
 
@@ -73,6 +73,7 @@
 
 // Articles styling
 .articles-section {
+  margin-top: 1rem;
   margin-bottom: 24px;
 
   &:last-child {
