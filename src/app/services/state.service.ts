@@ -61,6 +61,9 @@ export class StateService implements NostriaService {
     }
 
     await this.media.load();
+
+    // Load chats after relays are set up
+    await this.messaging.loadChats();
   }
 
   clear() {

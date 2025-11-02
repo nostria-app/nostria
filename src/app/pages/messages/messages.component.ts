@@ -153,8 +153,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   selectedChat = computed(() => {
     const chatId = this.selectedChatId();
+    this.logger.debug('selectedChat computed - chatId:', chatId);
     if (!chatId) return null;
-    return this.messaging.getChat(chatId) || null;
+    const chat = this.messaging.getChat(chatId);
+    this.logger.debug('selectedChat computed - chat found:', chat ? 'yes' : 'no');
+    return chat || null;
   });
 
   // activePubkey = computed(() => this.selectedChat()?.pubkey || '');
@@ -165,6 +168,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private lastSelectedChatId = signal<string | null>(null);
   // Track if we're currently loading more messages to avoid scrolling
   private isLoadingMoreMessages = signal<boolean>(false);
+  // Track the previous account pubkey to detect actual account changes
+  private lastAccountPubkey = signal<string | null>(null);
 
   // Computed helpers
   hasChats = computed(() => this.messaging.sortedChats().length > 0);
@@ -196,13 +201,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('messagesWrapper', { static: false })
   messagesWrapper?: ElementRef<HTMLDivElement>;
 
+  // ViewChild for message input to auto-focus
+  @ViewChild('messageInput', { static: false })
+  messageInput?: ElementRef<HTMLInputElement>;
+
   // Throttling for scroll handler
   private scrollThrottleTimeout: any = null;
 
   constructor() {
+    // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
+    this.lastAccountPubkey.set(this.accountState.account()?.pubkey || null);
+
     // Set up effect to handle chat selection and message updates
     effect(() => {
       const chat = this.selectedChat();
+      this.logger.debug('Effect triggered - selectedChat:', chat ? chat.id : 'null');
 
       if (chat) {
         untracked(() => {
@@ -211,6 +224,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           const currentMessages = this.messages();
 
           if (isNewChat) {
+            this.logger.debug('New chat selected in effect:', chat.id);
             // New chat selected - load all messages and scroll to bottom
             this.lastSelectedChatId.set(chat.id);
             this.messages.set(chatMessages || []);
@@ -221,6 +235,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             setTimeout(() => {
               this.setupScrollListener();
             }, 200);
+
+            // Auto-focus the message input field
+            setTimeout(() => {
+              this.messageInput?.nativeElement?.focus();
+            }, 300);
 
             // Mark this chat as read when selected
             // TODO: FIX, this will trigger selectedChat signal and cause infinite loop
@@ -251,11 +270,30 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     });
 
     effect(async () => {
-      if (this.accountState.account()) {
+      const account = this.accountState.account();
+      const currentPubkey = account?.pubkey || null;
+      const previousPubkey = this.lastAccountPubkey();
+
+      if (account) {
         untracked(async () => {
-          this.messages.set([]);
-          this.selectedChatId.set(null);
-          await this.messaging.loadChats();
+          // Only clear state if the account ACTUALLY changed (different pubkey)
+          // This prevents clearing state on effect re-runs with the same account
+          if (currentPubkey !== previousPubkey) {
+            this.logger.debug('Account changed from', previousPubkey, 'to', currentPubkey);
+
+            // Update tracked pubkey
+            this.lastAccountPubkey.set(currentPubkey);
+
+            // Clear local state when account changes
+            // The StateService will handle reloading chats after setting up relays
+            this.messages.set([]);
+            this.selectedChatId.set(null);
+
+            // Navigate back to messages list (without chat ID) if we're on a specific chat route
+            if (this.router.url.startsWith('/messages/') && this.router.url !== '/messages') {
+              this.router.navigate(['/messages']);
+            }
+          }
         });
       }
     });
@@ -266,14 +304,27 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.route.queryParams.subscribe(params => {
       const pubkey = params['pubkey'];
       if (pubkey) {
-        // Start a new chat with the specified pubkey
-        this.startChatWithPubkey(pubkey);
-        // Remove the pubkey from the URL
-        this.router.navigate([], {
-          relativeTo: this.route,
-          queryParams: { pubkey: null },
-          queryParamsHandling: 'merge',
-        });
+        this.logger.debug('Query param pubkey detected:', pubkey);
+
+        // Wait for chats to finish loading before trying to find existing chat
+        // This ensures we don't create a duplicate chat when one already exists
+        if (this.messaging.isLoading()) {
+          this.logger.debug('Chats are still loading, waiting...');
+
+          // Use an effect to wait for loading to complete
+          const waitEffect = effect(() => {
+            if (!this.messaging.isLoading()) {
+              this.logger.debug('Chats finished loading, starting chat with pubkey');
+              untracked(() => {
+                this.startChatWithPubkey(pubkey);
+                waitEffect.destroy(); // Clean up the effect
+              });
+            }
+          });
+        } else {
+          // Chats already loaded, start immediately
+          this.startChatWithPubkey(pubkey);
+        }
       }
     });
   }
@@ -456,7 +507,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Select a chat from the list
    */
   selectChat(chat: Chat): void {
+    this.logger.debug('selectChat called with chat:', chat.id, 'pubkey:', chat.pubkey);
+    this.logger.debug('Before set - selectedChatId:', this.selectedChatId());
     this.selectedChatId.set(chat.id);
+    this.logger.debug('After set - selectedChatId:', this.selectedChatId());
+    this.logger.debug('selectedChat computed:', this.selectedChat());
 
     // Only hide the chat list on mobile devices
     if (this.layout.isHandset()) {
@@ -466,7 +521,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Mark chat as read when selected
     this.markChatAsRead(chat.id);
 
-    this.router.navigate(['/messages', chat.id]);
+    // Navigate to the chat, clearing any query params
+    this.logger.debug('Navigating to /messages/' + chat.id);
+    this.router.navigate(['/messages', chat.id], {
+      queryParams: {},
+    });
   }
 
   /**
@@ -568,20 +627,20 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       }
 
       // Success: update the message to remove the pending state
+      const updatedMessage = {
+        ...finalMessage,
+        pending: false,
+        received: true,
+      };
+
       this.messages.update(msgs =>
         msgs.map(msg =>
-          msg.id === pendingId
-            ? {
-              ...finalMessage,
-              pending: false,
-              received: true,
-            }
-            : msg
+          msg.id === pendingId ? updatedMessage : msg
         )
       );
 
-      // Update the last message for this chat in the chat list
-      // this.updateChatLastMessage(selectedChat.id, finalMessage);
+      // Add the message to the messaging service to update the chat's lastMessage
+      this.messaging.addMessageToChat(receiverPubkey, updatedMessage);
 
       this.isSending.set(false);
 
@@ -943,17 +1002,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private async startChatWithUser(pubkey: string, isLegacy: boolean): Promise<void> {
     try {
       // Create a chat ID based on encryption type
-      const chatId = isLegacy ? `nip04${pubkey}` : `nip44${pubkey}`;
+      // IMPORTANT: This format must match the format in messaging.service.ts addMessageToChat()
+      const chatId = isLegacy ? `${pubkey}-nip04` : `${pubkey}-nip44`;
+      this.logger.debug('startChatWithUser - chatId:', chatId);
 
-      // Check if chat already exists
-      const existingChat = this.messaging.getChat(chatId);
+      // Check if chat already exists with requested encryption type
+      let existingChat = this.messaging.getChat(chatId);
+
+      // If not found, also check the other encryption type
+      if (!existingChat) {
+        const alternativeChatId = isLegacy ? `${pubkey}-nip44` : `${pubkey}-nip04`;
+        this.logger.debug('Chat not found with requested encryption, checking alternative:', alternativeChatId);
+        existingChat = this.messaging.getChat(alternativeChatId);
+
+        if (existingChat) {
+          this.logger.debug('Found existing chat with different encryption type');
+        }
+      }
+
       if (existingChat) {
+        this.logger.debug('Chat already exists, selecting it');
         // Chat already exists, just select it
         this.selectChat(existingChat);
-        this.snackBar.open('Chat already exists', 'Close', { duration: 3000 });
         return;
       }
 
+      this.logger.debug('Creating new temporary chat');
       // For now, just switch to the chat view and let the user send the first message
       // The chat will be created when the first message is sent
 
@@ -970,16 +1044,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       };
 
       // Add the temporary chat to the messaging service's chatsMap
+      this.logger.debug('Adding chat to messaging service');
       this.messaging.addChat(tempChat);
 
+      // Verify it was added
+      const verifyChat = this.messaging.getChat(chatId);
+      this.logger.debug('Chat verification after add:', verifyChat ? 'Found' : 'Not found');
+
       // Select the chat (this will show the chat interface)
+      this.logger.debug('Calling selectChat');
       this.selectChat(tempChat);
 
       // Show success message
-      const chatType = isLegacy ? 'Legacy (NIP-04)' : 'Modern (NIP-44)';
-      this.snackBar.open(`Ready to start ${chatType} chat`, 'Close', {
-        duration: 3000,
-      });
+      // const chatType = isLegacy ? 'Legacy (NIP-04)' : 'Modern (NIP-44)';
+      // this.snackBar.open(`Ready to start ${chatType} chat`, 'Close', {
+      //   duration: 3000,
+      // });
     } catch (error) {
       console.error('Error starting chat:', error);
       this.snackBar.open('Failed to start chat', 'Close', { duration: 3000 });
