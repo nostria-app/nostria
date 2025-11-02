@@ -781,7 +781,7 @@ export class FeedsComponent implements OnDestroy {
         }
       }
 
-      this.notificationService.notify('Column order changed');
+      // this.notificationService.notify('Column order changed');
       this.logger.debug(
         'Column order changed',
         columns.map(col => col.id)
@@ -1025,7 +1025,7 @@ export class FeedsComponent implements OnDestroy {
       }
     }
 
-    this.notificationService.notify(`Column "${column.label}" removed`);
+    // this.notificationService.notify(`Column "${column.label}" removed`);
   }
 
   async refreshColumn(column: ColumnDefinition): Promise<void> {
@@ -1036,14 +1036,14 @@ export class FeedsComponent implements OnDestroy {
     console.log('⏸️ Pausing column:', column.label, `(${column.id})`);
     console.log('📊 Column status before pause:', this.getColumnStatus(column.id));
     this.feedsCollectionService.pauseColumn(column.id);
-    this.notificationService.notify(`Column "${column.label}" paused`);
+    // this.notificationService.notify(`Column "${column.label}" paused`);
     console.log('📊 Column status after pause:', this.getColumnStatus(column.id));
   }
   async continueColumn(column: ColumnDefinition): Promise<void> {
     console.log('▶️ Continue column:', column.label, `(${column.id})`);
     console.log('📊 Column status before continue:', this.getColumnStatus(column.id));
     await this.feedsCollectionService.continueColumn(column.id);
-    this.notificationService.notify(`Column "${column.label}" continued`);
+    // this.notificationService.notify(`Column "${column.label}" continued`);
     console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
   }
 

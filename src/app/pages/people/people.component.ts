@@ -550,7 +550,7 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
       // Follow all selected profiles in a single batch operation
       await this.accountState.follow(followsToAdd);
 
-      this.notificationService.notify(`Welcome! Following ${followsToAdd.length} accounts.`);
+      // this.notificationService.notify(`Welcome! Following ${followsToAdd.length} accounts.`);
 
       // Update local state
       this.selectedInterests.set(selectedInterests);
