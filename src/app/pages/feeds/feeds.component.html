@@ -273,8 +273,18 @@
       </div>
       }
 
+      <!-- Loading indicator while initializing -->
+      @if (!app.initialized() || !accountState.initialized()) {
+      <div class="empty-columns-state">
+        <div class="empty-state-content">
+          <mat-spinner diameter="48"></mat-spinner>
+          <div class="loading-text">Loading feeds...</div>
+        </div>
+      </div>
+      }
+
       <!-- Zero state when no boards are available -->
-      @if (feeds().length === 0) {
+      @else if (feeds().length === 0) {
       <div class="empty-columns-state">
         <div class="empty-state-content">
           <mat-icon class="empty-state-icon">dynamic_feed</mat-icon>

@@ -95,7 +95,7 @@ export class FeedsComponent implements OnDestroy {
   protected repostService = inject(RepostService);
   private snackBar = inject(MatSnackBar);
   protected app = inject(ApplicationService);
-  private accountState = inject(AccountStateService);
+  protected accountState = inject(AccountStateService);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');

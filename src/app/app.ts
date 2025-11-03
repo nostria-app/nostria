@@ -23,7 +23,6 @@ import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NostrService } from './services/nostr.service';
-import { LoadingOverlayComponent } from './components/loading-overlay/loading-overlay.component';
 import { FeatureLevel, LoggerService } from './services/logger.service';
 import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
@@ -105,7 +104,6 @@ interface NavItem {
     MatDialogModule,
     MatDividerModule,
     MatMenuModule,
-    LoadingOverlayComponent,
     FormsModule,
     MatFormFieldModule,
     NPubPipe,
@@ -552,8 +550,6 @@ export class App implements OnInit {
         // If this is a permanent failure, stop loading
         const storageInfo = this.storage.storageInfo();
         if (storageInfo.isPermanentFailure) {
-          this.appState.isLoading.set(false);
-          this.appState.loadingMessage.set('Database Error');
           // Don't continue initialization for permanent failures
           return;
         }
