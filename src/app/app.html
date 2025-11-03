@@ -210,6 +210,13 @@
         <mat-icon>publish</mat-icon>
         <span>Publish Event</span>
       </button>
+      @if (installService.shouldShowInstallOption()) {
+      <mat-divider></mat-divider>
+      <button mat-menu-item (click)="openInstallDialog()">
+        <mat-icon>download</mat-icon>
+        <span>Install App</span>
+      </button>
+      }
     </mat-menu>
 
     @if (!layout.search()) {

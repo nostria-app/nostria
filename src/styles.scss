@@ -49,6 +49,8 @@ body {
   margin: 0;
   font-family: Roboto, 'Helvetica Neue', sans-serif;
   overscroll-behavior: none;
+  padding-bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 // Scrollbar styling
