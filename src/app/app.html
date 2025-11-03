@@ -3,11 +3,6 @@
   <app-media-player></app-media-player>
   <!-- <app-video-player></app-video-player> -->
 
-  <!-- Loading overlay -->
-  @if (appState.isLoading()) {
-  <app-loading-overlay [message]="appState.loadingMessage()"></app-loading-overlay>
-  }
-
   <!-- Success overlay with checkmark -->
   @if (appState.showSuccess()) {
   <div class="success-overlay">

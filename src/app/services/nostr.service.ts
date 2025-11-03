@@ -317,7 +317,6 @@ export class NostrService implements NostriaService {
 
       if (accounts.length === 0) {
         // Show success animation instead of waiting
-        this.appState.isLoading.set(false);
         this.appState.showSuccess.set(false);
         this.initialized.set(true);
         return;
@@ -369,7 +368,6 @@ export class NostrService implements NostriaService {
       // If no account, finish the loading.
       if (!account) {
         // Show success animation instead of waiting
-        this.appState.isLoading.set(false);
         this.appState.showSuccess.set(false);
         this.initialized.set(true);
       } else {
@@ -381,11 +379,9 @@ export class NostrService implements NostriaService {
   }
 
   async load() {
-    this.appState.isLoading.set(true);
     const account = this.accountState.account();
 
     if (!account) {
-      this.appState.isLoading.set(false);
       return;
     }
 
@@ -430,11 +426,9 @@ export class NostrService implements NostriaService {
         this.initialized.set(true);
       }
 
-      // The subscription will handle setting isLoading to false in its EOSE handler
+      // The subscription will handle setting loading state in its EOSE handler
     } catch (error) {
       this.logger.error('Error during account data loading', error);
-      this.appState.isLoading.set(false);
-      this.appState.loadingMessage.set('Error loading account data');
 
       if (!this.initialized()) {
         this.initialized.set(true);
@@ -604,7 +598,6 @@ export class NostrService implements NostriaService {
       this.logger.info('Account subscription EOSE - fresh data loaded from relays');
 
       // Mark as initialized without showing loading overlay
-      this.appState.isLoading.set(false);
       this.accountState.initialized.set(true);
     };
 

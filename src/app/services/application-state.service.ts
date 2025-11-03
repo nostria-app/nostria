@@ -9,10 +9,8 @@ import { isPlatformBrowser } from '@angular/common';
 export class ApplicationStateService {
   router = inject(Router);
   logger = inject(LoggerService);
-  loadingMessage = signal('Starting Nostria...');
 
   showSuccess = signal(false);
-  isLoading = signal(true);
   isOnline = signal(navigator.onLine);
   isPublishing = signal(false); // Track when events are being published
   private document = inject(DOCUMENT);
