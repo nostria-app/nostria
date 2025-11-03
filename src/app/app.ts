@@ -72,6 +72,7 @@ import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-d
 import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
 import { RouteDataService } from './services/route-data.service';
+import { InstallService } from './services/install.service';
 
 interface NavItem {
   path: string;
@@ -150,6 +151,7 @@ export class App implements OnInit {
   eventService = inject(EventService);
   feedsCollectionService = inject(FeedsCollectionService);
   routeDataService = inject(RouteDataService);
+  installService = inject(InstallService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -896,6 +898,10 @@ export class App implements OnInit {
 
   openCreateOptions(): void {
     this.bottomSheet.open(CreateOptionsSheetComponent);
+  }
+
+  openInstallDialog(): void {
+    this.installService.openInstallDialog();
   }
 
   openFeedEditDialog(feedId: string): void {
