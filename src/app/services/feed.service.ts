@@ -62,6 +62,7 @@ export interface ColumnConfig {
   filters?: Record<string, unknown>;
   createdAt: number;
   updatedAt: number;
+  lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
 }
 
 export interface FeedConfig {
@@ -514,12 +515,11 @@ export class FeedService {
       };
     }
 
-    // For thread columns (filters with '#e' tag), add 'since' parameter based on cached events
-    // This prevents re-fetching old events when reopening a thread
-    if (cachedEvents.length > 0 && item.filter && item.filter['#e']) {
-      const newestCachedTimestamp = Math.max(...cachedEvents.map(e => e.created_at || 0));
-      item.filter.since = newestCachedTimestamp;
-      this.logger.info(`📅 Thread column ${column.id}: Using since=${newestCachedTimestamp} to fetch only new replies`);
+    // Add 'since' parameter based on lastRetrieved timestamp to prevent re-fetching old events
+    // Use lastRetrieved instead of event.created_at since users can set arbitrary timestamps
+    if (column.lastRetrieved && item.filter) {
+      item.filter.since = column.lastRetrieved;
+      this.logger.info(`📅 Column ${column.id}: Using since=${column.lastRetrieved} (lastRetrieved) to fetch only new events`);
     }
 
     // Now start async loading of fresh events
@@ -873,12 +873,10 @@ export class FeedService {
           limit: eventsPerUser,
         };
 
-        // Add 'since' parameter based on cached events to avoid re-fetching old content
-        // Only fetch events newer than what's already cached
-        const cachedEvents = feedData.events();
-        if (cachedEvents.length > 0) {
-          const newestCachedTimestamp = Math.max(...cachedEvents.map(e => e.created_at || 0));
-          filterConfig.since = newestCachedTimestamp;
+        // Add 'since' parameter based on column's lastRetrieved timestamp
+        // This prevents re-fetching old events when reopening the column
+        if (feedData.column.lastRetrieved) {
+          filterConfig.since = feedData.column.lastRetrieved;
         }
 
         const events = await this.sharedRelayEx.getMany(
@@ -969,6 +967,9 @@ export class FeedService {
 
       // Update last timestamp for pagination
       feedData.lastTimestamp = Math.min(...mergedEvents.map((e: Event) => (e.created_at || 0) * 1000));
+
+      // Update lastRetrieved timestamp (current time in seconds) and save to localStorage
+      this.updateColumnLastRetrieved(feedData.column.id);
 
       this.logger.debug(
         `Final update: ${mergedEvents.length} total events (${newEvents.length} new from ${userEventsMap.size} users)`
@@ -1748,6 +1749,55 @@ export class FeedService {
       this.logger.debug('Saved feeds to storage for pubkey', pubkey, this._feeds());
     } catch (error) {
       this.logger.error('Error saving feeds to storage:', error);
+    }
+  }
+
+  /**
+   * Update the lastRetrieved timestamp for a column and save to localStorage
+   */
+  private updateColumnLastRetrieved(columnId: string): void {
+    try {
+      const currentTimestamp = Math.floor(Date.now() / 1000); // Nostr uses seconds
+
+      // Find the feed that contains this column
+      const feeds = this._feeds();
+      let updated = false;
+
+      for (const feed of feeds) {
+        const columnIndex = feed.columns.findIndex(col => col.id === columnId);
+        if (columnIndex !== -1) {
+          // Update the column's lastRetrieved timestamp
+          this._feeds.update(currentFeeds => {
+            return currentFeeds.map(f => {
+              if (f.id === feed.id) {
+                const updatedColumns = [...f.columns];
+                updatedColumns[columnIndex] = {
+                  ...updatedColumns[columnIndex],
+                  lastRetrieved: currentTimestamp,
+                };
+                return {
+                  ...f,
+                  columns: updatedColumns,
+                  updatedAt: Date.now(),
+                };
+              }
+              return f;
+            });
+          });
+
+          updated = true;
+          this.logger.debug(`Updated lastRetrieved for column ${columnId} to ${currentTimestamp}`);
+          break;
+        }
+      }
+
+      if (updated) {
+        this.saveFeeds();
+      } else {
+        this.logger.warn(`Column ${columnId} not found for lastRetrieved update`);
+      }
+    } catch (error) {
+      this.logger.error('Error updating lastRetrieved:', error);
     }
   }
 

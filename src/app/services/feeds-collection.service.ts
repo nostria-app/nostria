@@ -20,6 +20,7 @@ export interface ColumnDefinition {
   filters?: Record<string, unknown>;
   createdAt: number;
   updatedAt: number;
+  lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
 }
 
 export interface FeedDefinition {
