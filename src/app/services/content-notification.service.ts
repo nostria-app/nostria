@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
-import { ContentNotification, NotificationType } from './storage.service';
+import { ContentNotification, NotificationType, StorageService } from './storage.service';
 import { kinds, nip57 } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
@@ -35,6 +35,7 @@ export class ContentNotificationService {
   private accountRelay = inject(AccountRelayService);
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
+  private storage = inject(StorageService);
 
   // Track the last check timestamp to avoid duplicate notifications
   private _lastCheckTimestamp = signal<number>(0);
@@ -96,7 +97,9 @@ export class ContentNotificationService {
 
     try {
       this.logger.info('Checking for new content notifications');
-      let since = this._lastCheckTimestamp();
+      // CRITICAL: Always read from storage for the current account, not from in-memory signal
+      // The signal is not account-specific and can be stale after account switches
+      let since = await this.getLastCheckTimestamp();
       const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
 
       // If limitDays is specified, use it to limit how far back we look
@@ -106,6 +109,8 @@ export class ContentNotificationService {
         since = Math.max(since, limitTimestamp);
         this.logger.info(`Limiting notification fetch to last ${limitDays} days (since ${new Date(since * 1000).toISOString()})`);
       }
+
+      this.logger.debug(`Fetching notifications since timestamp: ${since} (${new Date(since * 1000).toISOString()})`);
 
       // Check for all notification types in parallel
       // Pass the pubkey to each check function
@@ -488,6 +493,14 @@ export class ContentNotificationService {
       notificationId = `content-${data.type}-${data.authorPubkey}-${data.timestamp}`;
     }
 
+    // Check if notification already exists in storage to prevent duplicates
+    // This is a defensive check in case we re-fetch old events
+    const existingNotification = await this.storage.getNotification(notificationId);
+    if (existingNotification) {
+      this.logger.debug(`Skipping duplicate notification: ${notificationId} (already exists in storage)`);
+      return;
+    }
+
     const notification: ContentNotification = {
       id: notificationId,
       type: data.type,
@@ -521,7 +534,7 @@ export class ContentNotificationService {
       }
 
       const timestamp = this.accountLocalState.getNotificationLastCheck(pubkey);
-      this.logger.debug(`Loaded last check timestamp for account: ${timestamp}`);
+      this.logger.info(`[getLastCheckTimestamp] Loaded last check timestamp for account ${pubkey.slice(0, 8)}: ${timestamp} (${new Date(timestamp * 1000).toISOString()})`);
       return timestamp;
     } catch (error) {
       this.logger.error('Failed to get last check timestamp', error);
@@ -542,7 +555,7 @@ export class ContentNotificationService {
       }
 
       this.accountLocalState.setNotificationLastCheck(pubkey, timestamp);
-      this.logger.debug(`Updated last check timestamp for account to ${timestamp}`);
+      this.logger.info(`[updateLastCheckTimestamp] Updated last check timestamp for account ${pubkey.slice(0, 8)} to ${timestamp} (${new Date(timestamp * 1000).toISOString()})`);
     } catch (error) {
       this.logger.error('Failed to update last check timestamp', error);
     }
