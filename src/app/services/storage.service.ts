@@ -207,6 +207,16 @@ export interface PubkeyRelayMapping {
   eventCount: number; // Number of events seen from this pubkey on this relay
 }
 
+// Interface for cached feed events stored in IndexedDB
+export interface CachedFeedEvent {
+  id: string; // composite key: accountPubkey::columnId::eventId
+  accountPubkey: string; // The pubkey of the account viewing this feed
+  columnId: string; // The column ID this event belongs to
+  eventId: string; // The event ID
+  event: Event; // The actual event data
+  cachedAt: number; // Timestamp when this was cached
+}
+
 // Schema for the IndexedDB database
 interface NostriaDBSchema extends DBSchema {
   relays: {
@@ -282,6 +292,15 @@ interface NostriaDBSchema extends DBSchema {
       'by-updated': number;
     };
   };
+  eventsCache: {
+    key: string; // composite key: accountPubkey::columnId::eventId
+    value: CachedFeedEvent;
+    indexes: {
+      'by-account-column': [string, string]; // [accountPubkey, columnId] for efficient column queries
+      'by-cached-at': number; // For cleanup operations
+      'by-account': string; // For account-wide operations
+    };
+  };
 }
 
 @Injectable({
@@ -292,7 +311,7 @@ export class StorageService {
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria';
-  private readonly DB_VERSION = 7;
+  private readonly DB_VERSION = 8; // Updated for events-cache table
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -513,6 +532,17 @@ export class StorageService {
           badgeDefinitionsStore.createIndex('by-pubkey', 'pubkey');
           badgeDefinitionsStore.createIndex('by-updated', 'created_at');
           this.logger.debug('Created badgeDefinitions object store');
+        }
+
+        // Create events cache object store for feed caching
+        if (!db.objectStoreNames.contains('eventsCache')) {
+          const eventsCacheStore = db.createObjectStore('eventsCache', {
+            keyPath: 'id',
+          });
+          eventsCacheStore.createIndex('by-account-column', ['accountPubkey', 'columnId']);
+          eventsCacheStore.createIndex('by-cached-at', 'cachedAt');
+          eventsCacheStore.createIndex('by-account', 'accountPubkey');
+          this.logger.debug('Created eventsCache object store');
         }
       },
       blocked: (currentVersion, blockedVersion, event) => {
@@ -1936,5 +1966,402 @@ export class StorageService {
     } catch (error) {
       this.logger.error(`Error deleting badge definition ${pubkey}::${slug}`, error);
     }
+  }
+
+  // Methods for feed event caching
+
+  /**
+   * Save cached events for a feed column
+   * Limits to approximately 200 events per column to prevent unbounded growth
+   */
+  async saveCachedEvents(
+    accountPubkey: string,
+    columnId: string,
+    events: Event[]
+  ): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Database not initialized, cannot save cached events');
+        return;
+      }
+
+      const CACHE_LIMIT = 200;
+      const cachedAt = Date.now();
+
+      // Sort events by created_at (newest first) and take the top CACHE_LIMIT
+      const eventsToCache = [...events]
+        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
+        .slice(0, CACHE_LIMIT);
+
+      // First, delete existing cached events for this column
+      await this.deleteCachedEventsForColumn(accountPubkey, columnId);
+
+      // Then save the new events
+      const tx = this.db.transaction('eventsCache', 'readwrite');
+      const store = tx.objectStore('eventsCache');
+
+      for (const event of eventsToCache) {
+        const cachedEvent: CachedFeedEvent = {
+          id: `${accountPubkey}::${columnId}::${event.id}`,
+          accountPubkey,
+          columnId,
+          eventId: event.id,
+          event,
+          cachedAt,
+        };
+
+        await store.put(cachedEvent);
+      }
+
+      await tx.done;
+
+      this.logger.debug(
+        `💾 Saved ${eventsToCache.length} events to cache for column ${columnId}`
+      );
+    } catch (error) {
+      this.logger.error('Error saving cached events:', error);
+    }
+  }
+
+  /**
+   * Load cached events for a feed column
+   */
+  async loadCachedEvents(accountPubkey: string, columnId: string): Promise<Event[]> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Database not initialized, cannot load cached events');
+        return [];
+      }
+
+      const index = this.db
+        .transaction('eventsCache', 'readonly')
+        .objectStore('eventsCache')
+        .index('by-account-column');
+
+      const cachedEvents = await index.getAll([accountPubkey, columnId]);
+
+      // Extract and sort events by created_at (newest first)
+      const events = cachedEvents
+        .map(cached => cached.event)
+        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+      if (events.length > 0) {
+        this.logger.info(
+          `✅ Loaded ${events.length} cached events for column ${columnId}`
+        );
+      }
+
+      return events;
+    } catch (error) {
+      this.logger.error('Error loading cached events:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete cached events for a specific column
+   */
+  async deleteCachedEventsForColumn(
+    accountPubkey: string,
+    columnId: string
+  ): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        return;
+      }
+
+      const index = this.db
+        .transaction('eventsCache', 'readonly')
+        .objectStore('eventsCache')
+        .index('by-account-column');
+
+      const cachedEvents = await index.getAllKeys([accountPubkey, columnId]);
+
+      if (cachedEvents.length === 0) {
+        return;
+      }
+
+      const tx = this.db.transaction('eventsCache', 'readwrite');
+      const store = tx.objectStore('eventsCache');
+
+      for (const key of cachedEvents) {
+        await store.delete(key);
+      }
+
+      await tx.done;
+
+      this.logger.debug(
+        `Deleted ${cachedEvents.length} cached events for column ${columnId}`
+      );
+    } catch (error) {
+      this.logger.error('Error deleting cached events for column:', error);
+    }
+  }
+
+  /**
+   * Delete all cached events for an account
+   */
+  async deleteCachedEventsForAccount(accountPubkey: string): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        return;
+      }
+
+      const index = this.db
+        .transaction('eventsCache', 'readonly')
+        .objectStore('eventsCache')
+        .index('by-account');
+
+      const cachedEvents = await index.getAllKeys(accountPubkey);
+
+      if (cachedEvents.length === 0) {
+        return;
+      }
+
+      const tx = this.db.transaction('eventsCache', 'readwrite');
+      const store = tx.objectStore('eventsCache');
+
+      for (const key of cachedEvents) {
+        await store.delete(key);
+      }
+
+      await tx.done;
+
+      this.logger.debug(
+        `Deleted ${cachedEvents.length} cached events for account ${accountPubkey}`
+      );
+    } catch (error) {
+      this.logger.error('Error deleting cached events for account:', error);
+    }
+  }
+
+  /**
+   * Clean up old cached events across all accounts
+   * This method is called periodically to prevent unbounded growth
+   * Keeps only the most recent 200 events per column
+   */
+  async cleanupCachedEvents(): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        return;
+      }
+
+      this.logger.info('Starting cleanup of cached events');
+
+      // Get all cached events
+      const allCachedEvents = await this.db.getAll('eventsCache');
+
+      // Group by account and column
+      const eventsByAccountColumn = new Map<string, CachedFeedEvent[]>();
+
+      for (const cached of allCachedEvents) {
+        const key = `${cached.accountPubkey}::${cached.columnId}`;
+        if (!eventsByAccountColumn.has(key)) {
+          eventsByAccountColumn.set(key, []);
+        }
+        eventsByAccountColumn.get(key)!.push(cached);
+      }
+
+      let totalDeleted = 0;
+      const CACHE_LIMIT = 200;
+
+      // For each account-column combination, keep only the newest CACHE_LIMIT events
+      for (const [key, events] of eventsByAccountColumn) {
+        if (events.length > CACHE_LIMIT) {
+          // Sort by event creation time (newest first)
+          events.sort((a, b) => (b.event.created_at || 0) - (a.event.created_at || 0));
+
+          // Delete events beyond the limit
+          const eventsToDelete = events.slice(CACHE_LIMIT);
+
+          const tx = this.db.transaction('eventsCache', 'readwrite');
+          const store = tx.objectStore('eventsCache');
+
+          for (const cached of eventsToDelete) {
+            await store.delete(cached.id);
+            totalDeleted++;
+          }
+
+          await tx.done;
+
+          this.logger.debug(
+            `Cleaned up ${eventsToDelete.length} old events for ${key}`
+          );
+        }
+      }
+
+      if (totalDeleted > 0) {
+        this.logger.info(`Cleanup complete: removed ${totalDeleted} old cached events`);
+      } else {
+        this.logger.debug('Cleanup complete: no old events to remove');
+      }
+    } catch (error) {
+      this.logger.error('Error cleaning up cached events:', error);
+    }
+  }
+
+  /**
+   * Get the total count of cached events
+   */
+  async getCachedEventsCount(): Promise<number> {
+    try {
+      if (!this.initialized()) {
+        return 0;
+      }
+
+      return await this.db.count('eventsCache');
+    } catch (error) {
+      this.logger.error('Error getting cached events count:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get cached events statistics for debugging
+   */
+  async getCachedEventsStats(): Promise<{
+    totalEvents: number;
+    eventsByAccount: Map<string, number>;
+    eventsByColumn: Map<string, number>;
+  }> {
+    try {
+      if (!this.initialized()) {
+        return {
+          totalEvents: 0,
+          eventsByAccount: new Map(),
+          eventsByColumn: new Map(),
+        };
+      }
+
+      const allCachedEvents = await this.db.getAll('eventsCache');
+      const eventsByAccount = new Map<string, number>();
+      const eventsByColumn = new Map<string, number>();
+
+      for (const cached of allCachedEvents) {
+        // Count by account
+        const accountCount = eventsByAccount.get(cached.accountPubkey) || 0;
+        eventsByAccount.set(cached.accountPubkey, accountCount + 1);
+
+        // Count by column (with account prefix)
+        const columnKey = `${cached.accountPubkey}::${cached.columnId}`;
+        const columnCount = eventsByColumn.get(columnKey) || 0;
+        eventsByColumn.set(columnKey, columnCount + 1);
+      }
+
+      return {
+        totalEvents: allCachedEvents.length,
+        eventsByAccount,
+        eventsByColumn,
+      };
+    } catch (error) {
+      this.logger.error('Error getting cached events stats:', error);
+      return {
+        totalEvents: 0,
+        eventsByAccount: new Map(),
+        eventsByColumn: new Map(),
+      };
+    }
+  }
+
+  /**
+   * Migrate feed cache from localStorage to IndexedDB
+   * This is a one-time migration for existing users
+   */
+  async migrateFeedCacheFromLocalStorage(): Promise<{
+    success: boolean;
+    migratedAccounts: number;
+    migratedColumns: number;
+    migratedEvents: number;
+    errors: string[];
+  }> {
+    const result = {
+      success: true,
+      migratedAccounts: 0,
+      migratedColumns: 0,
+      migratedEvents: 0,
+      errors: [] as string[],
+    };
+
+    try {
+      const CACHE_STORAGE_KEY = 'nostria-feed-cache';
+      const MIGRATION_COMPLETE_KEY = 'nostria-feed-cache-migrated';
+
+      // Check if migration already completed
+      const migrationComplete = localStorage.getItem(MIGRATION_COMPLETE_KEY);
+      if (migrationComplete === 'true') {
+        this.logger.info('Feed cache migration already completed, skipping');
+        return result;
+      }
+
+      // Get old cache data from localStorage
+      const oldCacheJson = localStorage.getItem(CACHE_STORAGE_KEY);
+      if (!oldCacheJson) {
+        this.logger.info('No feed cache data found in localStorage, marking migration complete');
+        localStorage.setItem(MIGRATION_COMPLETE_KEY, 'true');
+        return result;
+      }
+
+      this.logger.info('Starting feed cache migration from localStorage to IndexedDB');
+
+      // Parse old cache structure: { pubkey: { columnId: Event[] } }
+      let oldCache: Record<string, Record<string, Event[]>>;
+      try {
+        oldCache = JSON.parse(oldCacheJson);
+      } catch (parseError) {
+        const errorMsg = 'Failed to parse localStorage cache data';
+        this.logger.error(errorMsg, parseError);
+        result.errors.push(errorMsg);
+        result.success = false;
+        return result;
+      }
+
+      // Migrate each account's cached events
+      for (const [accountPubkey, columnData] of Object.entries(oldCache)) {
+        result.migratedAccounts++;
+
+        for (const [columnId, events] of Object.entries(columnData)) {
+          if (!Array.isArray(events) || events.length === 0) {
+            continue;
+          }
+
+          result.migratedColumns++;
+
+          try {
+            // Save to IndexedDB using the new cache method
+            await this.saveCachedEvents(accountPubkey, columnId, events);
+            result.migratedEvents += events.length;
+
+            this.logger.debug(
+              `Migrated ${events.length} events for account ${accountPubkey}, column ${columnId}`
+            );
+          } catch (error) {
+            const errorMsg = `Failed to migrate column ${columnId} for account ${accountPubkey}`;
+            this.logger.error(errorMsg, error);
+            result.errors.push(errorMsg);
+            result.success = false;
+          }
+        }
+      }
+
+      // Mark migration as complete
+      localStorage.setItem(MIGRATION_COMPLETE_KEY, 'true');
+
+      // Clean up old localStorage cache
+      localStorage.removeItem(CACHE_STORAGE_KEY);
+
+      this.logger.info('Feed cache migration completed', {
+        accounts: result.migratedAccounts,
+        columns: result.migratedColumns,
+        events: result.migratedEvents,
+        errors: result.errors.length,
+      });
+    } catch (error) {
+      const errorMsg = 'Unexpected error during feed cache migration';
+      this.logger.error(errorMsg, error);
+      result.errors.push(errorMsg);
+      result.success = false;
+    }
+
+    return result;
   }
 }

@@ -72,6 +72,7 @@ import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
 import { RouteDataService } from './services/route-data.service';
 import { InstallService } from './services/install.service';
+import { CacheCleanupService } from './services/cache-cleanup.service';
 
 interface NavItem {
   path: string;
@@ -150,6 +151,7 @@ export class App implements OnInit {
   feedsCollectionService = inject(FeedsCollectionService);
   routeDataService = inject(RouteDataService);
   installService = inject(InstallService);
+  cacheCleanup = inject(CacheCleanupService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -520,6 +522,25 @@ export class App implements OnInit {
       await Promise.race([storageInitPromise, timeoutPromise]);
       this.logger.info('[App] Storage initialized successfully');
 
+      // Migrate feed cache from localStorage to IndexedDB (one-time operation)
+      this.logger.info('[App] Checking for feed cache migration');
+      try {
+        const migrationResult = await this.storage.migrateFeedCacheFromLocalStorage();
+        if (migrationResult.migratedEvents > 0) {
+          this.logger.info('[App] Feed cache migration completed', {
+            accounts: migrationResult.migratedAccounts,
+            columns: migrationResult.migratedColumns,
+            events: migrationResult.migratedEvents,
+          });
+        }
+        if (migrationResult.errors.length > 0) {
+          this.logger.warn('[App] Feed cache migration had errors:', migrationResult.errors);
+        }
+      } catch (error) {
+        this.logger.error('[App] Feed cache migration failed:', error);
+        // Don't block app initialization if migration fails
+      }
+
       // Persist relay statistics that were added during initialization
       try {
         await this.relaysService.persistInitialRelayStats();
@@ -584,6 +605,15 @@ export class App implements OnInit {
       }, 5 * 60 * 1000); // 5 minutes
     } catch (error) {
       this.logger.error('[App] Failed to initialize content notification service', error);
+    }
+
+    // Start cache cleanup service
+    this.logger.info('[App] Starting cache cleanup service');
+    try {
+      this.cacheCleanup.start();
+      this.logger.info('[App] Cache cleanup service started successfully');
+    } catch (error) {
+      this.logger.error('[App] Failed to start cache cleanup service', error);
     }
 
     this.logger.info('[App] ==> ngOnInit completed');
