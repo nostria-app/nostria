@@ -169,9 +169,10 @@ export interface InstallDialogData {
 
           .install-hint {
             display: flex;
-            align-items: center;
+            align-items: flex-start;
             gap: 8px;
             padding: 12px;
+            margin-top: 16px;
             background-color: var(--mat-sys-surface-container-high);
             border-radius: 4px;
             color: var(--mat-sys-on-surface);
@@ -181,6 +182,8 @@ export interface InstallDialogData {
               font-size: 20px;
               width: 20px;
               height: 20px;
+              flex-shrink: 0;
+              margin-top: 2px;
             }
           }
 
