@@ -66,43 +66,41 @@ export class ApplicationService {
     // Effect for profile processing when following list changes
     effect(async () => {
       const followingList = this.accountState.followingList();
-      // const initialize = this.appState.
-
-      // Auto-trigger profile processing when following list changes, but only once per account
       const pubkey = this.accountState.pubkey();
 
-      // For reasons unable to figure out,
-      // this is triggered twice on app start.
-      if (pubkey && followingList.length > 0) {
-        untracked(async () => {
-          try {
-            // Check if profile discovery has already been done for this account
-            if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
-              await this.accountState.startProfileProcessing(
-                followingList,
-                this.dataService,
-                () => {
-                  // Callback: After profile processing completes, check for first-time notifications
-                  this.checkFirstTimeNotifications();
-                }
-              );
-              this.accountState.markProfileDiscoveryDone(pubkey);
-            } else {
-              const currentState = this.accountState.profileProcessingState();
-              if (!currentState.isProcessing) {
-                // Profile discovery has been done, load profiles from storage into cache
-                await this.accountState.loadProfilesFromStorageToCache(
-                  pubkey,
-                  this.dataService,
-                  this.storage
-                );
-              }
-            }
-          } catch (error) {
-            this.logger.error('Error during profile processing:', error);
-          }
-        });
+      // Don't process if there's no account
+      if (!this.accountState.account() || !pubkey || followingList.length === 0) {
+        return;
       }
+
+      untracked(async () => {
+        try {
+          // Check if profile discovery has already been done for this account
+          if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
+            await this.accountState.startProfileProcessing(
+              followingList,
+              this.dataService,
+              () => {
+                // Callback: After profile processing completes, check for first-time notifications
+                this.checkFirstTimeNotifications();
+              }
+            );
+            this.accountState.markProfileDiscoveryDone(pubkey);
+          } else {
+            const currentState = this.accountState.profileProcessingState();
+            if (!currentState.isProcessing) {
+              // Profile discovery has been done, load profiles from storage into cache
+              await this.accountState.loadProfilesFromStorageToCache(
+                pubkey,
+                this.dataService,
+                this.storage
+              );
+            }
+          }
+        } catch (error) {
+          this.logger.error('Error during profile processing:', error);
+        }
+      });
     });
 
     // Effect for checking notifications when account changes
