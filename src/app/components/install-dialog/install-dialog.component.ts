@@ -36,6 +36,8 @@ export interface InstallDialogData {
                 <strong>Chrome/Edge:</strong> Look for the install icon <mat-icon inline style="vertical-align: middle;">download</mat-icon> in the address bar<br>
                 <strong>Safari:</strong> File menu → Add to Dock
               </span>
+              } @else if (data.platformInfo.isAndroid) {
+              <span>Tap the menu (⋮) in Chrome, then select "Add to Home screen" or "Install app"</span>
               } @else {
               <span>Look for the install icon <mat-icon inline style="vertical-align: middle;">download</mat-icon> in your browser's address bar (right side)</span>
               }
@@ -255,11 +257,13 @@ export class InstallDialogComponent {
   }
 
   showPWAInstall(): boolean {
-    // Show PWA install section for Windows, Linux, and Mac
+    // Show PWA install section for Windows, Linux, Mac, and Android
+    // Android Chrome supports beforeinstallprompt and direct PWA installation
     return (
       this.data.platformInfo.isWindows ||
       this.data.platformInfo.isLinux ||
-      this.data.platformInfo.isMacOS
+      this.data.platformInfo.isMacOS ||
+      this.data.platformInfo.isAndroid
     );
   }
 
