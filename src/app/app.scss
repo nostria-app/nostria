@@ -60,7 +60,7 @@ mat-sidenav-content {
 
   // Adjust for mobile navigation
   @media (max-width: 599px) {
-    padding-bottom: 56px; // Height of mobile nav
+    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); // Height of mobile nav + safe area
   }
 }
 
@@ -147,7 +147,8 @@ mat-sidenav-content {
   display: flex;
   justify-content: space-around;
   z-index: 1000;
-  height: 56px;
+  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 
   background-color: var(--mat-sys-background);
   justify-content: space-around;
