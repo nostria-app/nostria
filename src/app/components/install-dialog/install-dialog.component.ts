@@ -212,7 +212,7 @@ export interface InstallDialogData {
         background-color: var(--mat-sys-primary-container);
         padding: 16px;
         border-radius: 8px;
-        margin: -16px 0 0 0;
+        margin: 0 0 0 0;
 
         > mat-icon {
           color: var(--mat-sys-on-primary-container);
