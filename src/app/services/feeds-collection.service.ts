@@ -79,9 +79,16 @@ export class FeedsCollectionService {
     effect(() => {
       const feeds = this.feeds();
       const activeFeedId = this._activeFeedId();
+      const hasAccount = this.accountState.account() !== null;
 
       // Use untracked to prevent reactive loops when updating signals
       untracked(() => {
+        // Only set active feed if there's an account
+        if (!hasAccount) {
+          this.logger.debug('No active account - skipping feed sync');
+          return;
+        }
+
         if (feeds.length > 0 && !activeFeedId) {
           this._activeFeedId.set(feeds[0].id);
           this.saveActiveFeed();

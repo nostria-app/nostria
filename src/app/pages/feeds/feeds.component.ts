@@ -355,7 +355,7 @@ export class FeedsComponent implements OnDestroy {
 
     // Set up automatic scroll position saving
     effect(() => {
-      if (this.layoutService.isBrowser()) {
+      if (this.layoutService.isBrowser() && this.accountState.account()) {
         // Clear any existing interval
         if (this.scrollSaveInterval) {
           clearInterval(this.scrollSaveInterval);
@@ -375,6 +375,11 @@ export class FeedsComponent implements OnDestroy {
     // Monitor active feed changes for scroll position save/restore
     effect(() => {
       const currentFeedId = this.feedsCollectionService.activeFeedId();
+
+      // Only process feed changes if there's an active account
+      if (!this.accountState.account()) {
+        return;
+      }
 
       console.log('🔄 Feed change detected. Current:', currentFeedId, 'Previous:', this.lastActiveFeedId);
 
@@ -436,6 +441,12 @@ export class FeedsComponent implements OnDestroy {
     // Set up scroll listeners for columns after they're rendered
     effect(() => {
       const columns = this.columns();
+
+      // Only set up scroll listeners if there's an active account
+      if (!this.accountState.account()) {
+        return;
+      }
+
       if (columns.length > 0 && this.layoutService.isBrowser()) {
         // Wait for columns to be rendered
         setTimeout(() => {

@@ -183,20 +183,12 @@ export class InstallService {
   shouldShowInstallOption(): boolean {
     // Don't show if already installed
     if (this.isInstalled()) {
-      this.logger.debug('[InstallService] Not showing install option - app is already installed');
       return false;
     }
 
     // Show if PWA can be installed or if on a platform with store options
     const info = this.platformInfo();
     const shouldShow = info.canInstallPWA || info.isWindows || info.isAndroid || info.isIOS;
-
-    this.logger.debug('[InstallService] Should show install option:', shouldShow, {
-      canInstallPWA: info.canInstallPWA,
-      isWindows: info.isWindows,
-      isAndroid: info.isAndroid,
-      isIOS: info.isIOS,
-    });
 
     return shouldShow;
   }

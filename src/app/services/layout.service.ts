@@ -1285,6 +1285,11 @@ export class LayoutService implements OnDestroy {
   saveFeedScrollPosition(feedId: string, scrollPosition?: number): void {
     if (!feedId) return;
 
+    // Check if there's an active account before saving scroll position
+    if (!this.accountStateService.account()) {
+      return;
+    }
+
     let position = scrollPosition;
     if (position === undefined) {
       // Look for feed column content containers (multi-column layout)
@@ -1343,6 +1348,11 @@ export class LayoutService implements OnDestroy {
    */
   restoreFeedScrollPosition(feedId: string, behavior: ScrollBehavior = 'auto'): void {
     if (!feedId) return;
+
+    // Check if there's an active account before restoring scroll position
+    if (!this.accountStateService.account()) {
+      return;
+    }
 
     const position = this.feedScrollPositions.get(feedId);
     if (position === undefined) {

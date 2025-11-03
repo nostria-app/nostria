@@ -353,6 +353,12 @@ export class FeedService {
   });
 
   async subscribe() {
+    // Don't subscribe if there's no active account
+    if (!this.accountState.account()) {
+      this.logger.debug('No active account - skipping feed subscription');
+      return;
+    }
+
     this.data.clear();
     this._feedData.set(new Map());
 
@@ -400,6 +406,12 @@ export class FeedService {
    * Set the active feed and manage subscriptions
    */
   async setActiveFeed(feedId: string | null): Promise<void> {
+    // Don't set active feed if there's no active account
+    if (!this.accountState.account()) {
+      this.logger.debug('No active account - skipping setActiveFeed');
+      return;
+    }
+
     const previousActiveFeedId = this._activeFeedId();
 
     // If same feed is already active, do nothing
@@ -1628,7 +1640,10 @@ export class FeedService {
       this.saveFeeds();
     }
 
-    await this.subscribe();
+    // Only subscribe if there's an active account
+    if (this.accountState.account()) {
+      await this.subscribe();
+    }
   }
 
   /**
