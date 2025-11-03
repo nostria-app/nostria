@@ -365,7 +365,6 @@ export class FeedsComponent implements OnDestroy {
         this.scrollSaveInterval = window.setInterval(() => {
           const currentFeedId = this.feedsCollectionService.activeFeedId();
           if (currentFeedId) {
-            console.log('💾 Auto-saving scroll position for feed:', currentFeedId);
             this.layoutService.saveFeedScrollPosition(currentFeedId);
           }
         }, 2000);

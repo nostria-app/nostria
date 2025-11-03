@@ -289,19 +289,42 @@ export class FeedService {
     }
   }
 
+  // Track pending cache saves to prevent duplicates
+  private pendingCacheSaves = new Map<string, Promise<void>>();
+
   /**
-   * Save events to cache for a column
+   * Save events to cache for a column (debounced to prevent duplicates)
    */
   private async saveCachedEvents(columnId: string, events: Event[]): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
-    try {
-      await this.storage.saveCachedEvents(pubkey, columnId, events);
-      this.logger.debug(`💾 Saved ${events.length} events to cache for column ${columnId}`);
-    } catch (error) {
-      this.logger.error('Error saving cached events:', error);
+    // Create cache key
+    const cacheKey = `${pubkey}::${columnId}`;
+
+    // If a save is already pending for this column, wait for it instead of duplicating
+    const pendingSave = this.pendingCacheSaves.get(cacheKey);
+    if (pendingSave) {
+      this.logger.debug(`⏭️ Skipping duplicate cache save for column ${columnId}`);
+      return pendingSave;
     }
+
+    // Create the save promise
+    const savePromise = (async () => {
+      try {
+        await this.storage.saveCachedEvents(pubkey, columnId, events);
+        this.logger.debug(`💾 Saved ${events.length} events to cache for column ${columnId}`);
+      } catch (error) {
+        this.logger.error('Error saving cached events:', error);
+      } finally {
+        // Clean up the pending save after a short delay
+        setTimeout(() => this.pendingCacheSaves.delete(cacheKey), 100);
+      }
+    })();
+
+    // Track the pending save
+    this.pendingCacheSaves.set(cacheKey, savePromise);
+    return savePromise;
   }
 
 
@@ -491,6 +514,14 @@ export class FeedService {
       };
     }
 
+    // For thread columns (filters with '#e' tag), add 'since' parameter based on cached events
+    // This prevents re-fetching old events when reopening a thread
+    if (cachedEvents.length > 0 && item.filter && item.filter['#e']) {
+      const newestCachedTimestamp = Math.max(...cachedEvents.map(e => e.created_at || 0));
+      item.filter.since = newestCachedTimestamp;
+      this.logger.info(`📅 Thread column ${column.id}: Using since=${newestCachedTimestamp} to fetch only new replies`);
+    }
+
     // Now start async loading of fresh events
     // If the source is following, load only from following list (strict)
     if (column.source === 'following') {
@@ -545,8 +576,7 @@ export class FeedService {
           item.events.update((events: Event[]) => {
             const newEvents = [...events, event];
             const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-            // Save to cache after updating
-            this.saveCachedEvents(column.id, sortedEvents);
+            // Don't save to cache on every live event - cache is saved during finalize
             return sortedEvents;
           });
           this.logger.debug(`Column event received for ${column.id}:`, event);
@@ -567,8 +597,7 @@ export class FeedService {
           item.events.update((events: Event[]) => {
             const newEvents = [...events, event];
             const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-            // Save to cache after updating
-            this.saveCachedEvents(column.id, sortedEvents);
+            // Don't save to cache on every live event - cache is saved during finalize
             return sortedEvents;
           });
           this.logger.debug(`Column event received for ${column.id}:`, event);
@@ -833,13 +862,24 @@ export class FeedService {
     // Process users in parallel but update UI incrementally
     const fetchPromises = pubkeys.map(async pubkey => {
       try {
-        const filterConfig = {
+        const filterConfig: {
+          authors: string[];
+          kinds?: number[];
+          limit: number;
+          since?: number;
+        } = {
           authors: [pubkey],
           kinds: feedData.filter?.kinds,
           limit: eventsPerUser,
         };
 
-        // Don't add 'since' filter to allow fetching older content
+        // Add 'since' parameter based on cached events to avoid re-fetching old content
+        // Only fetch events newer than what's already cached
+        const cachedEvents = feedData.events();
+        if (cachedEvents.length > 0) {
+          const newestCachedTimestamp = Math.max(...cachedEvents.map(e => e.created_at || 0));
+          filterConfig.since = newestCachedTimestamp;
+        }
 
         const events = await this.sharedRelayEx.getMany(
           pubkey,
@@ -898,8 +938,7 @@ export class FeedService {
       // Update the feed with merged events
       feedData.events.set(mergedEvents);
 
-      // Save to cache after updating
-      this.saveCachedEvents(feedData.column.id, mergedEvents);
+      // Don't save to cache here - wait for finalization to avoid duplicate saves
 
       // Update last timestamp for pagination
       feedData.lastTimestamp = Math.min(...mergedEvents.map((e: Event) => (e.created_at || 0) * 1000));
