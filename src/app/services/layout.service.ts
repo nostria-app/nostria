@@ -1310,7 +1310,6 @@ export class LayoutService implements OnDestroy {
           const firstColumn = columnContents[0];
           if (firstColumn && firstColumn.scrollHeight > firstColumn.clientHeight) {
             position = firstColumn.scrollTop;
-            console.log(`📍 Using first column-content:`, position, 'px');
           }
         }
       }
@@ -1324,21 +1323,17 @@ export class LayoutService implements OnDestroy {
         for (const element of elements) {
           if (element && element.scrollHeight > element.clientHeight) {
             position = element.scrollTop;
-            console.log(`📍 Using fallback element ${element.className || element.tagName}:`, position, 'px');
             break;
           }
         }
       }
 
       if (position === undefined) {
-        console.warn('⚠️ No scrollable container found');
         return;
       }
     }
 
     this.feedScrollPositions.set(feedId, position);
-    console.log(`✅ SAVED scroll position for feed ${feedId}:`, position, 'px');
-    this.logger.debug(`Saved scroll position for feed ${feedId}:`, position);
   }
 
   /**
@@ -1356,12 +1351,8 @@ export class LayoutService implements OnDestroy {
 
     const position = this.feedScrollPositions.get(feedId);
     if (position === undefined) {
-      console.log(`ℹ️ No saved scroll position for feed ${feedId}`);
-      this.logger.debug(`No saved scroll position for feed ${feedId}`);
       return;
     }
-
-    console.log(`🔄 ATTEMPTING to restore scroll position for feed ${feedId}: ${position}px`);
 
     // Retry mechanism to wait for content to be fully rendered
     let attempts = 0;
@@ -1377,7 +1368,6 @@ export class LayoutService implements OnDestroy {
       if (columnContents.length > 0) {
         // Use the first visible column
         scrollContainer = columnContents[0];
-        console.log(`📍 Found column-content for restoration`);
       } else {
         // Fallback to other possible containers
         const matDrawerContent = document.querySelector('mat-drawer-content');
@@ -1387,7 +1377,6 @@ export class LayoutService implements OnDestroy {
         for (const element of elements) {
           if (element && element.scrollHeight > element.clientHeight) {
             scrollContainer = element;
-            console.log(`📍 Found fallback scrollable container: ${element.className || element.tagName}`);
             break;
           }
         }
@@ -1396,10 +1385,8 @@ export class LayoutService implements OnDestroy {
       if (!scrollContainer) {
         if (attempts < maxAttempts) {
           attempts++;
-          console.log(`⏳ Waiting for scrollable container (attempt ${attempts}/${maxAttempts})...`);
           setTimeout(attemptRestore, 200);
         } else {
-          console.error('❌ No scrollable container found for scroll restoration after multiple attempts');
           this.logger.warn('No scrollable container found for scroll restoration after multiple attempts');
         }
         return;
@@ -1408,8 +1395,6 @@ export class LayoutService implements OnDestroy {
       const scrollHeight = scrollContainer.scrollHeight;
       const clientHeight = scrollContainer.clientHeight;
       const hasContent = scrollHeight > clientHeight;
-
-      console.log(`📏 Content check (attempt ${attempts + 1}): scrollHeight=${scrollHeight}px, clientHeight=${clientHeight}px, hasContent=${hasContent}`);
 
       // Check if scroll height has stabilized (content finished loading)
       if (scrollHeight === lastScrollHeight) {
@@ -1423,9 +1408,6 @@ export class LayoutService implements OnDestroy {
       // This ensures images and other dynamic content have loaded
       if ((!hasContent || stableHeightCount < 2) && attempts < maxAttempts) {
         attempts++;
-        const reason = !hasContent ? 'no content yet' : 'content still loading';
-        console.log(`⏳ Waiting for stable content (${reason}, attempt ${attempts}/${maxAttempts})...`);
-        this.logger.debug(`Waiting for content to render (attempt ${attempts}/${maxAttempts})...`);
         setTimeout(attemptRestore, 200);
         return;
       }
@@ -1435,8 +1417,6 @@ export class LayoutService implements OnDestroy {
         top: position,
         behavior: behavior,
       });
-      console.log(`✅ RESTORED scroll position for feed ${feedId}: ${position}px on ${scrollContainer.className || scrollContainer.tagName} (after ${attempts} attempts)`);
-      this.logger.debug(`Restored scroll position for feed ${feedId}: ${position}px (after ${attempts} attempts)`);
     };
 
     // Start attempting to restore after initial delay

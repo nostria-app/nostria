@@ -62,17 +62,17 @@
 
   <div class="bookmarks-list" [attr.data-view]="viewMode()">
     @if (selectedCategory() === 'events') {
-    @for (bookmark of bookmarkService.bookmarkEvents(); track $index) {
+    @for (bookmark of bookmarkService.bookmarkEvents(); track bookmark.id) {
     <app-event [id]="bookmark.id" [compact]="viewMode() === 'tiles'"></app-event>
     }
     } @else if (selectedCategory() === 'articles') {
-    @for (bookmark of bookmarkService.bookmarkArticles(); track $index) {
+    @for (bookmark of bookmarkService.bookmarkArticles(); track bookmark.id) {
     @let bm = bookmarkService.parseArticleId(bookmark.id);
     <app-article [pubkey]="bm.id" [kind]="bm.kind" [slug]="bm.slug" mode="card" [showAuthor]="true"
       [showMetadata]="true" [showActions]="false" [clickable]="true"></app-article>
     }
     } @else if (selectedCategory() === 'websites') {
-    @for (bookmark of bookmarkService.bookmarkUrls(); track $index) {
+    @for (bookmark of bookmarkService.bookmarkUrls(); track bookmark.id) {
     @if (viewMode() === 'content') {
     <div class="bookmark-url-card">
       <mat-icon>link</mat-icon>

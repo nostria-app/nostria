@@ -56,7 +56,7 @@
 
     <!-- Indicator dots -->
     <div class="carousel-indicators">
-      @for (imageUrl of imageUrls(); track $index) {
+      @for (imageUrl of imageUrls(); track imageUrl) {
       <button class="indicator-dot" [class.active]="currentCarouselIndex() === $index" (click)="goToIndex($index)"
         [attr.aria-label]="'Go to photo ' + ($index + 1)" title="Go to photo {{ $index + 1 }}">
         <span class="sr-only">Go to photo {{ $index + 1 }}</span>
