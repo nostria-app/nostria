@@ -386,14 +386,22 @@ export class FeedService {
 
     const previousActiveFeedId = this._activeFeedId();
 
-    // If same feed is already active, do nothing
-    if (previousActiveFeedId === feedId) {
-      this.logger.debug(`Feed ${feedId} is already active, skipping resubscribe`);
-      return;
+    // If same feed is already active AND has active subscriptions, do nothing
+    if (previousActiveFeedId === feedId && feedId) {
+      // Check if feed actually has active subscriptions (data is loaded)
+      const feed = this.getFeedById(feedId);
+      const hasActiveSubscriptions = feed?.columns.every(col => this.data.has(col.id));
+
+      if (hasActiveSubscriptions) {
+        this.logger.debug(`Feed ${feedId} is already active with subscriptions, skipping resubscribe`);
+        return;
+      } else {
+        this.logger.debug(`Feed ${feedId} is marked active but has no subscriptions, resubscribing`);
+      }
     }
 
     // Unsubscribe from previous active feed
-    if (previousActiveFeedId) {
+    if (previousActiveFeedId && previousActiveFeedId !== feedId) {
       this.unsubscribeFromFeed(previousActiveFeedId);
       this.logger.debug(`Unsubscribed from previous active feed: ${previousActiveFeedId}`);
     }
@@ -879,26 +887,25 @@ export class FeedService {
     totalUsers: number,
 
   ) {
-    // Update UI immediately if we have events from any user
-    // if (userEventsMap.size === 0) {
-    //   return;
-    // }
+    // Aggregate current events from the user events map
+    const newEvents = this.aggregateAndSortEvents(userEventsMap);
 
-    // Aggregate current events
-    const currentEvents = this.aggregateAndSortEvents(userEventsMap);
+    if (newEvents.length > 0) {
+      // MERGE new events with existing events instead of replacing
+      const existingEvents = feedData.events();
+      const mergedEvents = this.mergeEvents(existingEvents, newEvents);
 
-    if (currentEvents.length > 0) {
-      // Update the feed with current events
-      feedData.events.set(currentEvents);
+      // Update the feed with merged events
+      feedData.events.set(mergedEvents);
 
       // Save to cache after updating
-      this.saveCachedEvents(feedData.column.id, currentEvents);
+      this.saveCachedEvents(feedData.column.id, mergedEvents);
 
       // Update last timestamp for pagination
-      feedData.lastTimestamp = Math.min(...currentEvents.map(e => (e.created_at || 0) * 1000));
+      feedData.lastTimestamp = Math.min(...mergedEvents.map((e: Event) => (e.created_at || 0) * 1000));
 
       this.logger.debug(
-        `Incremental update: ${processedUsers}/${totalUsers} users processed, ${currentEvents.length} events`
+        `Incremental update: ${processedUsers}/${totalUsers} users processed, ${mergedEvents.length} total events (${newEvents.length} new)`
       );
     }
   }
@@ -907,22 +914,57 @@ export class FeedService {
    * Finalize the incremental feed with a final sort and cleanup
    */
   private finalizeIncrementalFeed(userEventsMap: Map<string, Event[]>, feedData: FeedItem,) {
-    // Final aggregation and sort
-    const finalEvents = this.aggregateAndSortEvents(userEventsMap);
+    // Final aggregation of new events
+    const newEvents = this.aggregateAndSortEvents(userEventsMap);
 
-    // Update feed data with final aggregated events
-    feedData.events.set(finalEvents);
+    if (newEvents.length > 0) {
+      // MERGE new events with existing events instead of replacing
+      const existingEvents = feedData.events();
+      const mergedEvents = this.mergeEvents(existingEvents, newEvents);
 
-    // Save to cache after final update
-    this.saveCachedEvents(feedData.column.id, finalEvents);
+      // Update feed data with merged events
+      feedData.events.set(mergedEvents);
 
-    // Update last timestamp for pagination
-    if (finalEvents.length > 0) {
-      feedData.lastTimestamp = Math.min(...finalEvents.map(e => (e.created_at || 0) * 1000));
+      // Save to cache after final update
+      this.saveCachedEvents(feedData.column.id, mergedEvents);
+
+      // Update last timestamp for pagination
+      feedData.lastTimestamp = Math.min(...mergedEvents.map((e: Event) => (e.created_at || 0) * 1000));
+
+      this.logger.debug(
+        `Final update: ${mergedEvents.length} total events (${newEvents.length} new from ${userEventsMap.size} users)`
+      );
+    } else {
+      // No new events received, but keep existing cached events
+      const existingEvents = feedData.events();
+      if (existingEvents.length > 0) {
+        this.logger.debug(
+          `No new events received, keeping ${existingEvents.length} cached events`
+        );
+      }
+    }
+  }
+
+  /**
+   * Merge new events with existing events, removing duplicates and maintaining sort order
+   */
+  private mergeEvents(existingEvents: Event[], newEvents: Event[]): Event[] {
+    // Create a map of existing events by ID for quick lookup
+    const eventMap = new Map<string, Event>();
+
+    // Add all existing events
+    for (const event of existingEvents) {
+      eventMap.set(event.id, event);
     }
 
-    this.logger.debug(
-      `Final update: ${finalEvents.length} total events from ${userEventsMap.size} users`
+    // Add new events (will replace if duplicate ID exists)
+    for (const event of newEvents) {
+      eventMap.set(event.id, event);
+    }
+
+    // Convert back to array and sort by created_at (newest first)
+    return Array.from(eventMap.values()).sort(
+      (a, b) => (b.created_at || 0) - (a.created_at || 0)
     );
   }
 
@@ -1204,12 +1246,12 @@ export class FeedService {
     const olderEvents = this.aggregateAndSortEvents(userEventsMap);
 
     if (olderEvents.length > 0) {
-      // Append to existing events
-      const updatedEvents = [...existingEvents, ...olderEvents];
+      // Merge with existing events (avoiding duplicates)
+      const updatedEvents = this.mergeEvents(existingEvents, olderEvents);
       feedData.events.set(updatedEvents);
 
       // Update last timestamp
-      feedData.lastTimestamp = Math.min(...olderEvents.map(e => (e.created_at || 0) * 1000));
+      feedData.lastTimestamp = Math.min(...olderEvents.map((e: Event) => (e.created_at || 0) * 1000));
 
       this.logger.debug(
         `Pagination incremental update: ${processedUsers}/${totalUsers} users processed, ${olderEvents.length} older events`
@@ -1229,13 +1271,13 @@ export class FeedService {
     // Final aggregation and sort of older events
     const finalOlderEvents = this.aggregateAndSortEvents(userEventsMap);
 
-    // Append to existing events if we have any
+    // Merge with existing events if we have any (avoiding duplicates)
     if (finalOlderEvents.length > 0) {
-      const updatedEvents = [...existingEvents, ...finalOlderEvents];
+      const updatedEvents = this.mergeEvents(existingEvents, finalOlderEvents);
       feedData.events.set(updatedEvents);
 
       // Update last timestamp
-      feedData.lastTimestamp = Math.min(...finalOlderEvents.map(e => (e.created_at || 0) * 1000));
+      feedData.lastTimestamp = Math.min(...finalOlderEvents.map((e: Event) => (e.created_at || 0) * 1000));
 
       this.logger.debug(
         `Final pagination update: ${finalOlderEvents.length} older events from ${userEventsMap.size} users`
