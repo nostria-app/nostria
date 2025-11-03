@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
+import { StorageService } from './storage.service';
 import { Event, kinds } from 'nostr-tools';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
@@ -201,6 +202,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
 export class FeedService {
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
+  private readonly storage = inject(StorageService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
@@ -239,8 +241,7 @@ export class FeedService {
   readonly feedTypes = COLUMN_TYPES;
 
   // Cache constants
-  private readonly CACHE_STORAGE_KEY = 'nostria-feed-cache';
-  private readonly CACHE_SIZE = 5; // Top 5 events per column
+  private readonly CACHE_SIZE = 200; // Cache 200 events per column
 
   constructor() {
     effect(() => {
@@ -260,34 +261,23 @@ export class FeedService {
 
   /**
    * Get the entire cache structure for the current account
+   * NOTE: This method is deprecated - use loadCachedEvents instead
    */
   private getAccountCache(): Record<string, Event[]> {
-    const pubkey = this.accountState.pubkey();
-    if (!pubkey) return {};
-
-    try {
-      const allCache = this.localStorageService.getObject<Record<string, Record<string, Event[]>>>(
-        this.CACHE_STORAGE_KEY
-      );
-      if (!allCache || !allCache[pubkey]) return {};
-
-      return allCache[pubkey];
-    } catch (error) {
-      this.logger.error('Error loading account cache:', error);
-      return {};
-    }
+    // This method is no longer used with IndexedDB
+    // Keeping for backward compatibility during migration
+    return {};
   }
 
   /**
-   * Load cached events for a column - synchronous operation
+   * Load cached events for a column - async operation using IndexedDB
    */
-  private loadCachedEvents(columnId: string): Event[] {
+  private async loadCachedEvents(columnId: string): Promise<Event[]> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return [];
 
     try {
-      const accountCache = this.getAccountCache();
-      const cachedEvents = accountCache[columnId] || [];
+      const cachedEvents = await this.storage.loadCachedEvents(pubkey, columnId);
 
       if (cachedEvents.length > 0) {
         this.logger.info(`✅ Loaded ${cachedEvents.length} cached events for column ${columnId}`);
@@ -300,33 +290,15 @@ export class FeedService {
   }
 
   /**
-   * Save top events to cache for a column
+   * Save events to cache for a column
    */
-  private saveCachedEvents(columnId: string, events: Event[]): void {
+  private async saveCachedEvents(columnId: string, events: Event[]): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
     try {
-      // Get all cache data (structure: { pubkey: { columnId: events[] } })
-      const allCache = this.localStorageService.getObject<Record<string, Record<string, Event[]>>>(
-        this.CACHE_STORAGE_KEY
-      ) || {};
-
-      // Ensure account cache exists
-      if (!allCache[pubkey]) {
-        allCache[pubkey] = {};
-      }
-
-      // Get top 5 events (sorted by created_at, newest first)
-      const topEvents = [...events]
-        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
-        .slice(0, this.CACHE_SIZE);
-
-      // Save to cache
-      allCache[pubkey][columnId] = topEvents;
-
-      this.localStorageService.setObject(this.CACHE_STORAGE_KEY, allCache);
-      this.logger.debug(`💾 Saved ${topEvents.length} events to cache for column ${columnId}`);
+      await this.storage.saveCachedEvents(pubkey, columnId, events);
+      this.logger.debug(`💾 Saved ${events.length} events to cache for column ${columnId}`);
     } catch (error) {
       this.logger.error('Error saving cached events:', error);
     }
@@ -468,8 +440,8 @@ export class FeedService {
       return;
     }
 
-    // Load cached events for instant display - synchronous operation
-    const cachedEvents = this.loadCachedEvents(column.id);
+    // Load cached events for instant display - async operation from IndexedDB
+    const cachedEvents = await this.loadCachedEvents(column.id);
 
     const item: FeedItem = {
       column,
