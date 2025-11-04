@@ -109,37 +109,43 @@ export class WhatsNewDialogComponent {
     {
       version: '1.1.0',
       date: 'November 2025',
-      title: 'Big Upgrades',
+      title: 'Major update',
       description: 'Notifications, Publishing, Feeds, Lists, Polls, Badges.',
       features: [
         {
           title: 'Notifications',
           description:
-            '',
+            'Comprehensive notification system with support for activity notifications, content notifications, and relay publishing status. Configure which types of notifications you want to receive in the settings.',
         },
         {
           title: 'Publishing',
           description:
-            '',
+            'Enhanced publishing experience with real-time relay publishing status. Track which relays successfully received your events and identify any failures immediately.',
         },
         {
           title: 'Feeds',
           description:
-            '',
+            'Improved feed management with better performance and caching. Create custom feeds with multiple columns, configure filters, and organize your content exactly how you want.',
         },
         {
           title: 'Lists',
           description:
-            '',
+            'Full support for creating and managing Nostr lists. Organize people, content, and references into curated collections that can be shared and followed by others.',
         },
         {
           title: 'Polls',
           description:
-            '',
-        }, {
+            'Create and participate in polls directly within Nostria. View poll results in real-time and see how the community votes on various topics.',
+        },
+        {
           title: 'Badges',
           description:
-            '',
+            'Browse, create, and award badges to recognize community members. View all your earned badges on your profile and discover new badges to collect.',
+        },
+        {
+          title: 'Trust',
+          description:
+            'New option in settings that is enabled by default, will retrieve the trust score for each profile within the app.',
         },
       ],
     },
