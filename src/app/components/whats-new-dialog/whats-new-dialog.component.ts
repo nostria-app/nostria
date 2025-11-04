@@ -107,6 +107,56 @@ export class WhatsNewDialogComponent {
   // Sample updates - replace with real data
   updates: FeatureUpdate[] = [
     {
+      version: '1.1.0',
+      date: 'November 2025',
+      title: 'Big Upgrades',
+      description: 'Notifications, Publishing, Feeds, Lists, Polls, Badges.',
+      features: [
+        {
+          title: 'Notifications',
+          description:
+            '',
+        },
+        {
+          title: 'Publishing',
+          description:
+            '',
+        },
+        {
+          title: 'Feeds',
+          description:
+            '',
+        },
+        {
+          title: 'Lists',
+          description:
+            '',
+        },
+        {
+          title: 'Polls',
+          description:
+            '',
+        }, {
+          title: 'Badges',
+          description:
+            '',
+        },
+      ],
+    },
+    {
+      version: '1.0.8',
+      date: 'October 2025',
+      title: 'Many new features',
+      description: 'Proof-of-Work on notes, and lots more',
+      features: [
+        {
+          title: 'Enable proof of work in the advanced options',
+          description:
+            'You can now enable proof of work for your notes in the advanced options, this will be applied every time you post.',
+        },
+      ],
+    },
+    {
       version: '1.0.7',
       date: 'October 2025',
       title: 'Quality of Life Improvements',
@@ -148,7 +198,7 @@ export class WhatsNewDialogComponent {
               alt: 'Search Person',
               width: 963,
               height: 682,
-            },{
+            }, {
               src: '/screenshots/2025-10-14-people-add-person-follow.jpg',
               alt: 'Follow Person',
               width: 654,
