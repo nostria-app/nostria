@@ -41,6 +41,16 @@
     height: 80px;
     margin-bottom: 16px;
   }
+
+  .app-icon-floating {
+    position: absolute;
+    top: 0;
+    right: 16px;
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+    z-index: 10;
+  }
 }
 
 .dialog-subtitle {
