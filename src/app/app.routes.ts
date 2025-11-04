@@ -49,6 +49,7 @@ import { ProfileOpenComponent } from './pages/profile/profile-open.component';
 import { DeleteEventComponent } from './pages/delete-event/delete-event.component';
 import { DeleteAccountComponent } from './pages/delete-account/delete-account.component';
 import { InviteComponent } from './pages/invite/invite.component';
+import { NotesComponent } from './pages/notes/notes.component';
 
 const profileChildren: Routes = [
   {
@@ -193,6 +194,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./pages/bookmarks/bookmarks.component').then(m => m.BookmarksComponent),
     title: 'Bookmarks',
+  },
+  {
+    path: 'notes',
+    component: NotesComponent,
+    data: { isRoot: true },
+    title: 'Notes',
   },
   {
     path: 'zaps',
