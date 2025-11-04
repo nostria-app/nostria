@@ -34,6 +34,12 @@
   width: 100%;
   display: flex;
   justify-content: flex-end;
+
+  // Reduce height when window-controls-overlay is active since buttons sit in titlebar area
+  @media (display-mode: window-controls-overlay) {
+    height: 0;
+    min-height: 0;
+  }
 }
 
 .welcome-theme-button {
@@ -68,12 +74,12 @@
   padding: 1rem;
 
   // Layout for wizard steps
-  > div:first-child {
+  >div:first-child {
     width: 30%;
     flex-shrink: 0;
   }
 
-  > div:last-child {
+  >div:last-child {
     width: 70%;
     flex-shrink: 0;
   }
@@ -88,6 +94,12 @@
   align-items: center;
   padding: 0 1rem;
   position: relative;
+
+  // Add padding when window-controls-overlay is active to prevent buttons being cut off
+  @media (display-mode: window-controls-overlay) {
+    padding-bottom: calc(1rem + env(titlebar-area-height, 33px));
+    min-height: calc(60px + env(titlebar-area-height, 33px));
+  }
 }
 
 // Wizard step content
@@ -134,6 +146,7 @@
 }
 
 @keyframes gentle-pulse {
+
   0%,
   100% {
     transform: scale(1);
@@ -254,8 +267,8 @@
     flex-direction: column;
     padding: 0.5rem;
 
-    > div:first-child,
-    > div:last-child {
+    >div:first-child,
+    >div:last-child {
       width: 100%;
     }
   }
@@ -310,12 +323,12 @@
 // Medium screen adjustments
 @media screen and (min-width: 600px) and (max-width: 960px) {
   .welcome-content-container {
-    > div:first-child {
+    >div:first-child {
       width: 40%;
       min-width: 200px;
     }
 
-    > div:last-child {
+    >div:last-child {
       width: 60%;
     }
   }
@@ -324,7 +337,7 @@
 // Large screen adjustments
 @media screen and (min-width: 961px) {
   .welcome-content-container {
-    > div:first-child {
+    >div:first-child {
       min-width: 250px;
     }
   }
