@@ -407,7 +407,7 @@ export class NotificationService {
   /**
    * Update the status of a relay publish promise
    */
-  private async updateRelayPromiseStatus(
+  async updateRelayPromiseStatus(
     notificationId: string,
     relayUrl: string,
     status: 'pending' | 'success' | 'failed',

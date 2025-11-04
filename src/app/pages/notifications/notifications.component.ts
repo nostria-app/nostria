@@ -155,6 +155,38 @@ export class NotificationsComponent implements OnInit {
     );
   }
 
+  async onRepublish(notificationId: string): Promise<void> {
+    const notification = this.notifications().find(n => n.id === notificationId);
+
+    if (!notification || notification.type !== NotificationType.RELAY_PUBLISHING) {
+      console.error('Cannot republish: notification not found or wrong type');
+      return;
+    }
+
+    const relayNotification = notification as RelayPublishingNotification;
+    const allRelayUrls = relayNotification.relayPromises?.map(rp => rp.relayUrl) || [];
+
+    if (allRelayUrls.length === 0) {
+      console.error('Cannot republish: no relay URLs found');
+      return;
+    }
+
+    // Reset all relay statuses to pending
+    for (const relayUrl of allRelayUrls) {
+      await this.notificationService.updateRelayPromiseStatus(notificationId, relayUrl, 'pending');
+    }
+
+    // Republish to all relays
+    for (const relayUrl of allRelayUrls) {
+      try {
+        await this.accountRelay.publishToRelay(relayNotification.event, relayUrl);
+        await this.notificationService.updateRelayPromiseStatus(notificationId, relayUrl, 'success');
+      } catch (error) {
+        await this.notificationService.updateRelayPromiseStatus(notificationId, relayUrl, 'failed', error);
+      }
+    }
+  }
+
   clearNotifications(): void {
     this.notificationService.clearNotifications();
 

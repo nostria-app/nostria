@@ -3,7 +3,7 @@
     <mat-card-title>
       <div class="status-header">
         <mat-icon [class.spinning]="pendingCount > 0">{{ pendingCount > 0 ? 'sync' : 'cloud_done' }}</mat-icon>
-        <span>Publishing Event</span>
+        <span>{{ pendingCount > 0 ? 'Publishing Event' : 'Event Published' }}</span>
         <div class="status-indicators">
           <span class="status-chip success" matTooltip="Successful relays">
             <mat-icon>check_circle</mat-icon> {{ successCount }}
@@ -60,14 +60,12 @@
 
   <mat-card-actions align="end">
     @if (hasFailures) {
-    <button mat-raised-button color="warn" (click)="onRetry()">
+    <button mat-raised-button color="warn" (click)="onRepublish()">
       <mat-icon>refresh</mat-icon> RETRY {{ failedCount }} FAILED
     </button>
     }
-    @if (pendingCount === 0 && !hasFailures) {
-    <button mat-button color="primary">
-      <mat-icon>check</mat-icon> ALL RELAYS SUCCESSFUL
+    <button mat-button color="primary" (click)="onRepublish()">
+      <mat-icon>refresh</mat-icon> REPUBLISH TO ALL RELAYS
     </button>
-    }
   </mat-card-actions>
 </mat-card>
