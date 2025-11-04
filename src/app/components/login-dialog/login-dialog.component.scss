@@ -11,7 +11,7 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  // min-width: 480px;
+  min-width: 480px;
 }
 
 :host ::ng-deep .mat-mdc-dialog-content {
@@ -869,10 +869,12 @@
   flex-direction: column;
   align-items: center;
   padding: 24px 0;
+  min-width: 400px;
 
   .loading-text {
     margin-top: 16px;
     color: var(--mat-text-secondary-color);
+    white-space: nowrap;
   }
 }
 
