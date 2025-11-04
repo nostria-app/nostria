@@ -31,6 +31,7 @@ import { RelayPublishingNotification, RelayPublishPromise } from '../../services
 export class RelayPublishStatusComponent {
   @Input() notification!: RelayPublishingNotification;
   @Output() retry = new EventEmitter<string>();
+  @Output() republish = new EventEmitter<string>();
 
   private nostrService = inject(NostrService);
 
@@ -70,6 +71,10 @@ export class RelayPublishStatusComponent {
 
   onRetry(): void {
     this.retry.emit(this.notification.id);
+  }
+
+  onRepublish(): void {
+    this.republish.emit(this.notification.id);
   }
 
   getRelayName(url: string): string {

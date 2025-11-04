@@ -164,7 +164,8 @@
 
               @if (isRelayPublishingNotification(notification)) {
               <div class="notification-extra">
-                <app-relay-publish-status [notification]="notification" (retry)="onRetryPublish($event)">
+                <app-relay-publish-status [notification]="notification" (retry)="onRetryPublish($event)"
+                  (republish)="onRepublish($event)">
                 </app-relay-publish-status>
               </div>
               }
