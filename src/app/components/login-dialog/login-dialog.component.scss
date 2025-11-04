@@ -344,7 +344,7 @@
 }
 
 .region-info-container {
-  margin: 1.5rem 0;
+  margin: 0.75rem 0;
   text-align: center;
 }
 
@@ -416,8 +416,8 @@
 // Profile setup styles (similar to welcome component)
 .profile-setup-section {
   margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  // padding-top: 2rem;
+  // border-top: 1px solid var(--mat-sys-outline-variant);
 
   h3 {
     margin-bottom: 0.5rem;
@@ -435,7 +435,7 @@
 .profile-setup-form {
   display: flex;
   align-items: flex-start;
-  gap: 1.5rem;
+  gap: 0.5rem;
 
   @media (max-width: 500px) {
     flex-direction: column;
@@ -540,7 +540,7 @@
 }
 
 .continue-button-container {
-  margin-top: 2rem;
+  margin-top: 1rem;
   text-align: center;
 }
 
