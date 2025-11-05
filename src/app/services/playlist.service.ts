@@ -50,11 +50,21 @@ export class PlaylistService implements OnInitialized {
         this.initialize();
       }
     });
+
+    // Clean up playlists when account changes
+    effect(() => {
+      const pubkey = this.app.accountState.pubkey();
+      if (pubkey) {
+        this.cleanupPlaylists();
+      }
+    });
   }
 
   initialize(): void {
     this.loadPlaylistsFromStorage();
     this.loadDraftsFromStorage();
+    // Clean up playlists to remove those from other accounts and duplicates
+    this.cleanupPlaylists();
   }
 
   /**
@@ -109,6 +119,58 @@ export class PlaylistService implements OnInitialized {
         console.error('Failed to load playlists from storage:', error);
         this._playlists.set([]);
       }
+    }
+  }
+
+  /**
+   * Clean up playlists to:
+   * 1. Remove playlists from other accounts (keep only current user's playlists and local ones)
+   * 2. Remove duplicate playlists (for replaceable events with same kind:pubkey:dtag, keep only the newest)
+   */
+  private cleanupPlaylists(): void {
+    const currentPubkey = this.getCurrentUserPubkey();
+    if (!currentPubkey) {
+      console.warn('No current user pubkey available for playlist cleanup');
+      return;
+    }
+
+    const playlists = this._playlists();
+    console.log(`Cleaning up ${playlists.length} playlists for pubkey:`, currentPubkey);
+
+    // Step 1: Filter out playlists from other accounts
+    const filteredPlaylists = playlists.filter(playlist =>
+      playlist.isLocal || playlist.pubkey === currentPubkey
+    );
+
+    console.log(`After filtering by account: ${filteredPlaylists.length} playlists`);
+
+    // Step 2: Remove duplicates based on kind:pubkey:dtag (replaceable events)
+    // For each unique combination of pubkey and id (d-tag), keep only the newest event
+    const playlistMap = new Map<string, Playlist>();
+
+    for (const playlist of filteredPlaylists) {
+      // Generate unique key: kind:pubkey:dtag
+      // For kind 32100 (playlist) events, the unique identifier is pubkey:dtag
+      const key = `${playlist.pubkey}:${playlist.id}`;
+
+      const existing = playlistMap.get(key);
+      if (!existing || playlist.created_at > existing.created_at) {
+        playlistMap.set(key, playlist);
+      } else {
+        console.log(`Removing duplicate playlist: ${playlist.title} (older version)`);
+      }
+    }
+
+    // Convert map back to array
+    const cleanedPlaylists = Array.from(playlistMap.values());
+
+    console.log(`After deduplication: ${cleanedPlaylists.length} playlists`);
+
+    // Update state if anything changed
+    if (cleanedPlaylists.length !== playlists.length) {
+      this._playlists.set(cleanedPlaylists);
+      this.savePlaylistsToStorage();
+      console.log(`Cleaned up playlists: removed ${playlists.length - cleanedPlaylists.length} entries`);
     }
   }
 
