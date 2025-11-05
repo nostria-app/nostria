@@ -1141,6 +1141,9 @@ export class App implements OnInit {
     event.preventDefault();
     event.stopPropagation();
 
+    // Mark notification as read
+    this.notificationService.markAsRead(notification.id);
+
     // Close the menu
     this.notificationMenuTrigger?.closeMenu();
 
