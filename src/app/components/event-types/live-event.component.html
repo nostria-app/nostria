@@ -115,9 +115,10 @@
       </button>
       }
 
+      @let detailsUrl = altUrl();
       <button mat-button (click)="openEventPage()">
         <mat-icon>open_in_new</mat-icon>
-        View Details
+        {{ detailsUrl ? 'View on Platform' : 'View Details' }}
       </button>
     </div>
   </div>
