@@ -739,7 +739,7 @@ export class AccountStateService implements OnDestroy {
 
       // Only update if the new profile is newer
       if (newTimestamp <= existingTimestamp) {
-        console.log(`⏭️ [Cache] Skipping older/same profile for ${pubkey.substring(0, 8)}... (existing: ${existingTimestamp}, new: ${newTimestamp})`);
+        // console.log(`⏭️ [Cache] Skipping older/same profile for ${pubkey.substring(0, 8)}... (existing: ${existingTimestamp}, new: ${newTimestamp})`);
         return; // Don't update, existing profile is newer or same age
       }
       console.log(`🔄 [Cache] Updating profile for ${pubkey.substring(0, 8)}... (${existingTimestamp} → ${newTimestamp})`);
