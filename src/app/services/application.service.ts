@@ -68,15 +68,22 @@ export class ApplicationService {
       const followingList = this.accountState.followingList();
       const pubkey = this.accountState.pubkey();
 
+      console.log(`🔍 [Profile Loading Effect] Triggered - Account: ${pubkey?.substring(0, 8) || 'none'}..., Following: ${followingList.length}`);
+
       // Don't process if there's no account
       if (!this.accountState.account() || !pubkey || followingList.length === 0) {
+        console.log('⏭️ [Profile Loading Effect] Skipping - no account or empty following list');
         return;
       }
 
       untracked(async () => {
         try {
           // Check if profile discovery has already been done for this account
-          if (!this.accountState.hasProfileDiscoveryBeenDone(pubkey)) {
+          const hasDiscoveryBeenDone = this.accountState.hasProfileDiscoveryBeenDone(pubkey);
+          console.log(`🔍 [Profile Loading Effect] Discovery status for ${pubkey.substring(0, 8)}...: ${hasDiscoveryBeenDone ? 'DONE' : 'NOT DONE'}`);
+
+          if (!hasDiscoveryBeenDone) {
+            console.log(`🆕 [Profile Loading Effect] First time load - fetching ${followingList.length} profiles from relays`);
             await this.accountState.startProfileProcessing(
               followingList,
               this.dataService,
@@ -86,19 +93,23 @@ export class ApplicationService {
               }
             );
             this.accountState.markProfileDiscoveryDone(pubkey);
+            console.log(`✅ [Profile Loading Effect] Marked discovery as done for ${pubkey.substring(0, 8)}...`);
           } else {
             const currentState = this.accountState.profileProcessingState();
             if (!currentState.isProcessing) {
+              console.log(`📂 [Profile Loading Effect] Loading ${followingList.length} profiles from storage`);
               // Profile discovery has been done, load profiles from storage into cache
               await this.accountState.loadProfilesFromStorageToCache(
                 pubkey,
                 this.dataService,
                 this.storage
               );
+            } else {
+              console.log('⚠️ [Profile Loading Effect] Skipping - processing already in progress');
             }
           }
         } catch (error) {
-          this.logger.error('Error during profile processing:', error);
+          this.logger.error('❌ [Profile Loading Effect] Error during profile processing:', error);
         }
       });
     });

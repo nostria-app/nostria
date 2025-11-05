@@ -28,7 +28,7 @@ export class Cache {
   private readonly cache = new Map<string, CacheEntry<any>>();
 
   private readonly defaultOptions: Required<CacheOptions> = {
-    maxSize: 200,
+    maxSize: 10000, // Increased to support large following lists
     ttl: 5 * 60 * 1000, // 5 minutes
     persistent: false,
   };
