@@ -292,7 +292,7 @@ export class EventService {
    * Load a single event by ID or nevent using outbox model.
    */
   async loadEvent(nevent: string, item?: EventData): Promise<Event | null> {
-    this.logger.info('loadEvent called with nevent:', nevent);
+    // this.logger.info('loadEvent called with nevent:', nevent);
 
     // Handle hex string input
     if (this.utilities.isHex(nevent)) {
@@ -303,7 +303,7 @@ export class EventService {
 
     const decoded = this.utilities.decode(nevent) as DecodedNevent;
     const hex = decoded.data.id;
-    this.logger.info('Decoded event ID:', hex, 'Author:', decoded.data.author);
+    // this.logger.info('Decoded event ID:', hex, 'Author:', decoded.data.author);
 
     // Check if we have cached event in item
     if (item?.event && item.event.id === hex) {

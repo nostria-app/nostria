@@ -172,7 +172,7 @@ export class EventPageComponent {
   }
 
   async loadEvent(nevent: string) {
-    this.logger.info('loadEvent called with nevent:', nevent);
+    // this.logger.info('loadEvent called with nevent:', nevent);
 
     try {
       this.isLoading.set(true);

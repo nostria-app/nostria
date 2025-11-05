@@ -415,7 +415,7 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
         const record = this.data.toRecord(event);
         this.record.set(record);
 
-        console.log('📝 [Event Setup] Record created for event:', event.id.substring(0, 8), '| Kind:', event.kind);
+        // console.log('📝 [Event Setup] Record created for event:', event.id.substring(0, 8), '| Kind:', event.kind);
 
         // Reset the loaded interactions flag when event changes
         // This ensures each new event loads its own interactions

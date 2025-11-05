@@ -151,7 +151,6 @@ export class ProfileStateService {
 
     if (event && event.kind === kinds.Contacts) {
       const followingList = this.utilities.getPTagsValuesFromEvent(event);
-      console.log('Following list extracted:', followingList);
       this.followingList.set(followingList);
     }
 
