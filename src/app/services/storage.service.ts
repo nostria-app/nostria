@@ -217,6 +217,24 @@ export interface CachedFeedEvent {
   cachedAt: number; // Timestamp when this was cached
 }
 
+// Interface for stored direct messages
+export interface StoredDirectMessage {
+  id: string; // composite key: accountPubkey::chatId::messageId
+  accountPubkey: string; // The pubkey of the account that owns this message
+  chatId: string; // The chat ID (format: otherPubkey-nip04 or otherPubkey-nip44)
+  messageId: string; // The original event ID
+  pubkey: string; // The author's pubkey
+  created_at: number; // Timestamp in seconds
+  content: string; // Decrypted message content
+  isOutgoing: boolean; // Whether this is an outgoing message
+  tags: string[][]; // Original event tags
+  encryptionType: 'nip04' | 'nip44'; // Which encryption was used
+  read: boolean; // Whether the message has been read
+  received: boolean; // Whether the message was successfully received
+  pending?: boolean; // Whether the message is still being sent
+  failed?: boolean; // Whether the message failed to send
+}
+
 // Schema for the IndexedDB database
 interface NostriaDBSchema extends DBSchema {
   relays: {
@@ -301,6 +319,16 @@ interface NostriaDBSchema extends DBSchema {
       'by-account': string; // For account-wide operations
     };
   };
+  messages: {
+    key: string; // composite key: accountPubkey::chatId::messageId
+    value: StoredDirectMessage;
+    indexes: {
+      'by-account-chat': [string, string]; // [accountPubkey, chatId] for efficient chat queries
+      'by-created': number; // For sorting by timestamp
+      'by-account': string; // For account-wide operations
+      'by-chat': string; // For chat-wide operations
+    };
+  };
 }
 
 @Injectable({
@@ -311,7 +339,7 @@ export class StorageService {
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
   private readonly DB_NAME = 'nostria';
-  private readonly DB_VERSION = 8; // Updated for events-cache table
+  private readonly DB_VERSION = 9; // Updated for messages table
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -543,6 +571,18 @@ export class StorageService {
           eventsCacheStore.createIndex('by-cached-at', 'cachedAt');
           eventsCacheStore.createIndex('by-account', 'accountPubkey');
           this.logger.debug('Created eventsCache object store');
+        }
+
+        // Create messages object store for direct message persistence
+        if (!db.objectStoreNames.contains('messages')) {
+          const messagesStore = db.createObjectStore('messages', {
+            keyPath: 'id',
+          });
+          messagesStore.createIndex('by-account-chat', ['accountPubkey', 'chatId']);
+          messagesStore.createIndex('by-created', 'created_at');
+          messagesStore.createIndex('by-account', 'accountPubkey');
+          messagesStore.createIndex('by-chat', 'chatId');
+          this.logger.debug('Created messages object store');
         }
       },
       blocked: (currentVersion, blockedVersion, event) => {
@@ -2363,5 +2403,283 @@ export class StorageService {
     }
 
     return result;
+  }
+
+  // ============================================================================
+  // Direct Messages Storage Methods
+  // ============================================================================
+
+  /**
+   * Save a direct message to the database
+   */
+  async saveDirectMessage(message: StoredDirectMessage): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Storage not initialized, cannot save direct message');
+        return;
+      }
+
+      await this.db.put('messages', message);
+      this.logger.debug(`Saved direct message ${message.messageId} to database`);
+    } catch (error) {
+      this.logger.error('Error saving direct message:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save multiple direct messages in batch
+   */
+  async saveDirectMessages(messages: StoredDirectMessage[]): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Storage not initialized, cannot save direct messages');
+        return;
+      }
+
+      const tx = this.db.transaction('messages', 'readwrite');
+      await Promise.all([...messages.map(msg => tx.store.put(msg)), tx.done]);
+
+      this.logger.debug(`Saved ${messages.length} direct messages to database`);
+    } catch (error) {
+      this.logger.error('Error saving direct messages:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get all messages for a specific chat
+   */
+  async getMessagesForChat(
+    accountPubkey: string,
+    chatId: string
+  ): Promise<StoredDirectMessage[]> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Storage not initialized, cannot get messages');
+        return [];
+      }
+
+      const messages = await this.db.getAllFromIndex('messages', 'by-account-chat', [
+        accountPubkey,
+        chatId,
+      ]);
+
+      return messages.sort((a, b) => a.created_at - b.created_at);
+    } catch (error) {
+      this.logger.error('Error getting messages for chat:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get all chats for an account (returns unique chat IDs with message counts)
+   */
+  async getChatsForAccount(accountPubkey: string): Promise<
+    {
+      chatId: string;
+      messageCount: number;
+      lastMessageTime: number;
+      unreadCount: number;
+    }[]
+  > {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Storage not initialized, cannot get chats');
+        return [];
+      }
+
+      const messages = await this.db.getAllFromIndex('messages', 'by-account', accountPubkey);
+
+      // Group messages by chat
+      const chatMap = new Map<
+        string,
+        {
+          messageCount: number;
+          lastMessageTime: number;
+          unreadCount: number;
+        }
+      >();
+
+      for (const message of messages) {
+        const existing = chatMap.get(message.chatId);
+        if (!existing) {
+          chatMap.set(message.chatId, {
+            messageCount: 1,
+            lastMessageTime: message.created_at,
+            unreadCount: !message.read && !message.isOutgoing ? 1 : 0,
+          });
+        } else {
+          existing.messageCount++;
+          existing.lastMessageTime = Math.max(existing.lastMessageTime, message.created_at);
+          if (!message.read && !message.isOutgoing) {
+            existing.unreadCount++;
+          }
+        }
+      }
+
+      return Array.from(chatMap.entries()).map(([chatId, stats]) => ({
+        chatId,
+        ...stats,
+      }));
+    } catch (error) {
+      this.logger.error('Error getting chats for account:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Mark a message as read
+   */
+  async markMessageAsRead(accountPubkey: string, chatId: string, messageId: string): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Storage not initialized, cannot mark message as read');
+        return;
+      }
+
+      const id = `${accountPubkey}::${chatId}::${messageId}`;
+      const message = await this.db.get('messages', id);
+
+      if (message) {
+        message.read = true;
+        await this.db.put('messages', message);
+        this.logger.debug(`Marked message ${messageId} as read`);
+      }
+    } catch (error) {
+      this.logger.error('Error marking message as read:', error);
+    }
+  }
+
+  /**
+   * Mark all messages in a chat as read
+   */
+  async markChatAsRead(accountPubkey: string, chatId: string): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Storage not initialized, cannot mark chat as read');
+        return;
+      }
+
+      const messages = await this.getMessagesForChat(accountPubkey, chatId);
+      const unreadMessages = messages.filter(msg => !msg.read && !msg.isOutgoing);
+
+      if (unreadMessages.length === 0) {
+        return;
+      }
+
+      const tx = this.db.transaction('messages', 'readwrite');
+      await Promise.all([
+        ...unreadMessages.map(msg => {
+          msg.read = true;
+          return tx.store.put(msg);
+        }),
+        tx.done,
+      ]);
+
+      this.logger.debug(`Marked ${unreadMessages.length} messages as read in chat ${chatId}`);
+    } catch (error) {
+      this.logger.error('Error marking chat as read:', error);
+    }
+  }
+
+  /**
+   * Delete a specific message
+   */
+  async deleteDirectMessage(accountPubkey: string, chatId: string, messageId: string): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Storage not initialized, cannot delete message');
+        return;
+      }
+
+      const id = `${accountPubkey}::${chatId}::${messageId}`;
+      await this.db.delete('messages', id);
+      this.logger.debug(`Deleted message ${messageId}`);
+    } catch (error) {
+      this.logger.error('Error deleting message:', error);
+    }
+  }
+
+  /**
+   * Delete all messages for a specific chat
+   */
+  async deleteChat(accountPubkey: string, chatId: string): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Storage not initialized, cannot delete chat');
+        return;
+      }
+
+      const messages = await this.getMessagesForChat(accountPubkey, chatId);
+
+      const tx = this.db.transaction('messages', 'readwrite');
+      await Promise.all([...messages.map(msg => tx.store.delete(msg.id)), tx.done]);
+
+      this.logger.debug(`Deleted ${messages.length} messages from chat ${chatId}`);
+    } catch (error) {
+      this.logger.error('Error deleting chat:', error);
+    }
+  }
+
+  /**
+   * Delete all messages for an account
+   */
+  async deleteAllMessagesForAccount(accountPubkey: string): Promise<void> {
+    try {
+      if (!this.initialized()) {
+        this.logger.warn('Storage not initialized, cannot delete messages');
+        return;
+      }
+
+      const messages = await this.db.getAllFromIndex('messages', 'by-account', accountPubkey);
+
+      const tx = this.db.transaction('messages', 'readwrite');
+      await Promise.all([...messages.map(msg => tx.store.delete(msg.id)), tx.done]);
+
+      this.logger.debug(`Deleted ${messages.length} messages for account ${accountPubkey}`);
+    } catch (error) {
+      this.logger.error('Error deleting messages for account:', error);
+    }
+  }
+
+  /**
+   * Get the most recent message timestamp for an account (used for pagination)
+   */
+  async getMostRecentMessageTimestamp(accountPubkey: string): Promise<number> {
+    try {
+      if (!this.initialized()) {
+        return 0;
+      }
+
+      const messages = await this.db.getAllFromIndex('messages', 'by-account', accountPubkey);
+
+      if (messages.length === 0) {
+        return 0;
+      }
+
+      return Math.max(...messages.map(msg => msg.created_at));
+    } catch (error) {
+      this.logger.error('Error getting most recent message timestamp:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Check if a message already exists in the database
+   */
+  async messageExists(accountPubkey: string, chatId: string, messageId: string): Promise<boolean> {
+    try {
+      if (!this.initialized()) {
+        return false;
+      }
+
+      const id = `${accountPubkey}::${chatId}::${messageId}`;
+      const message = await this.db.get('messages', id);
+      return !!message;
+    } catch (error) {
+      this.logger.error('Error checking if message exists:', error);
+      return false;
+    }
   }
 }

@@ -17,6 +17,8 @@ import { EncryptionPermissionService } from './encryption-permission.service';
 import { NostriaService } from '../interfaces';
 import { bytesToHex } from 'nostr-tools/utils';
 import { AccountRelayService } from './relays/account-relay';
+import { StorageService, StoredDirectMessage } from './storage.service';
+import { AccountLocalStateService } from './account-local-state.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -55,6 +57,8 @@ export class MessagingService implements NostriaService {
   readonly utilities = inject(UtilitiesService);
   private readonly encryption = inject(EncryptionService);
   private readonly encryptionPermission = inject(EncryptionPermissionService);
+  private readonly storage = inject(StorageService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   isLoading = signal<boolean>(false);
   isLoadingMoreChats = signal<boolean>(false);
   hasMoreChats = signal<boolean>(true);
@@ -146,6 +150,41 @@ export class MessagingService implements NostriaService {
 
     // Set the new map to trigger signal reactivity
     this.chatsMap.set(newMap);
+
+    // Save message to storage asynchronously
+    this.saveMessageToStorage(message, chatId);
+  }
+
+  /**
+   * Save a message to IndexedDB storage
+   */
+  private async saveMessageToStorage(message: DirectMessage, chatId: string): Promise<void> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) return;
+
+    try {
+      const storedMessage: StoredDirectMessage = {
+        id: `${myPubkey}::${chatId}::${message.id}`,
+        accountPubkey: myPubkey,
+        chatId: chatId,
+        messageId: message.id,
+        pubkey: message.pubkey,
+        created_at: message.created_at,
+        content: message.content,
+        isOutgoing: message.isOutgoing,
+        tags: message.tags,
+        encryptionType: message.encryptionType!,
+        read: message.read || false,
+        received: message.received || false,
+        pending: message.pending,
+        failed: message.failed,
+      };
+
+      await this.storage.saveDirectMessage(storedMessage);
+      this.logger.debug(`Saved message ${message.id} to storage`);
+    } catch (error) {
+      this.logger.error('Error saving message to storage:', error);
+    }
   }
 
   // Helper method to get the latest message from a messages map
@@ -169,7 +208,81 @@ export class MessagingService implements NostriaService {
     this.oldestChatTimestamp.set(null);
   }
 
-  async load() { }
+  async load() {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      this.logger.warn('Cannot load messages: no account pubkey');
+      return;
+    }
+
+    this.logger.info('Loading messages from storage...');
+
+    try {
+      // Load messages from IndexedDB first for instant display
+      const storedChats = await this.storage.getChatsForAccount(myPubkey);
+
+      this.logger.info(`Found ${storedChats.length} stored chats`);
+
+      // Build chat map from stored messages
+      for (const chatSummary of storedChats) {
+        const messages = await this.storage.getMessagesForChat(myPubkey, chatSummary.chatId);
+
+        if (messages.length === 0) continue;
+
+        // Extract pubkey and encryption type from chatId (format: pubkey-nip04 or pubkey-nip44)
+        const parts = chatSummary.chatId.split('-');
+        const encryptionType = parts[parts.length - 1] as 'nip04' | 'nip44';
+        const pubkey = parts.slice(0, -1).join('-');
+
+        // Convert stored messages to DirectMessage format
+        const messagesMap = new Map<string, DirectMessage>();
+        let lastMessage: DirectMessage | null = null;
+
+        for (const storedMsg of messages) {
+          const dm: DirectMessage = {
+            id: storedMsg.messageId,
+            pubkey: storedMsg.pubkey,
+            created_at: storedMsg.created_at,
+            content: storedMsg.content,
+            isOutgoing: storedMsg.isOutgoing,
+            tags: storedMsg.tags,
+            pending: storedMsg.pending,
+            failed: storedMsg.failed,
+            received: storedMsg.received,
+            read: storedMsg.read,
+            encryptionType: storedMsg.encryptionType,
+          };
+
+          messagesMap.set(dm.id, dm);
+
+          if (!lastMessage || dm.created_at > lastMessage.created_at) {
+            lastMessage = dm;
+          }
+        }
+
+        // Create the chat object
+        const chat: Chat = {
+          id: chatSummary.chatId,
+          pubkey: pubkey,
+          unreadCount: chatSummary.unreadCount,
+          lastMessage: lastMessage,
+          encryptionType: encryptionType,
+          isLegacy: encryptionType === 'nip04',
+          messages: messagesMap,
+        };
+
+        this.chatsMap.update(map => {
+          const newMap = new Map(map);
+          newMap.set(chatSummary.chatId, chat);
+          return newMap;
+        });
+      }
+
+      this.logger.info(`Loaded ${storedChats.length} chats from storage`);
+    } catch (error) {
+      this.logger.error('Error loading messages from storage:', error);
+    }
+  }
 
   async createNip44Message(messageText: string, receiverPubkey: string, myPubkey: string) {
     try {
@@ -274,17 +387,27 @@ export class MessagingService implements NostriaService {
         return;
       }
 
+      // Load messages from storage first
+      await this.load();
+
       // For extension users, we'll let the individual decryption requests handle permission
       // Don't block chat loading - just log the info
       if (this.encryptionPermission.needsPermission()) {
         this.logger.info('Extension user - decryption requests will be queued for permission');
       }
 
+      // Get the last check timestamp to only fetch new messages
+      const lastCheck = this.accountLocalState.getMessagesLastCheck(myPubkey);
+      const since = lastCheck || undefined;
+
+      this.logger.info(`Loading messages since: ${since ? new Date(since * 1000).toISOString() : 'beginning'}`);
+
       // This contains both incoming and outgoing messages for Giftwrapped messages.
       const filterReceived: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
         '#p': [myPubkey],
         limit: this.MESSAGE_SIZE,
+        since: since,
       };
 
       const filterSent: Filter = {
@@ -591,6 +714,10 @@ export class MessagingService implements NostriaService {
 
           // Update the oldest timestamp for loading more chats
           this.oldestChatTimestamp.set(oldestTimestamp);
+
+          // Update the last check timestamp
+          const now = Math.floor(Date.now() / 1000);
+          this.accountLocalState.setMessagesLastCheck(myPubkey, now);
 
           // ...existing code...
 
