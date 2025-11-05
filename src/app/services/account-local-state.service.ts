@@ -18,6 +18,7 @@ export interface PeopleFilters {
  */
 interface AccountLocalState {
   notificationLastCheck?: number;
+  messagesLastCheck?: number;
   activeFeed?: string;
   favorites?: string[];
   peopleViewMode?: string;
@@ -107,6 +108,21 @@ export class AccountLocalStateService {
    */
   setNotificationLastCheck(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { notificationLastCheck: timestamp });
+  }
+
+  /**
+   * Get messages last check timestamp for an account
+   */
+  getMessagesLastCheck(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.messagesLastCheck || 0;
+  }
+
+  /**
+   * Set messages last check timestamp for an account
+   */
+  setMessagesLastCheck(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { messagesLastCheck: timestamp });
   }
 
   /**
