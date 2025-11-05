@@ -152,16 +152,17 @@ export class TaggedReferencesComponent {
         const imageTag = event.tags?.find(tag => tag[0] === 'image');
         const bannerTag = event.tags?.find(tag => tag[0] === 'banner');
         const pictureTag = event.tags?.find(tag => tag[0] === 'picture');
+        const thumbTag = event.tags?.find(tag => tag[0] === 'thumb');
 
-        if (imageTag?.[1]) {
+        if (thumbTag?.[1]) {
+          article.image = thumbTag[1];
+        } else if (imageTag?.[1]) {
           article.image = imageTag[1];
         } else if (bannerTag?.[1]) {
           article.image = bannerTag[1];
         } else if (pictureTag?.[1]) {
           article.image = pictureTag[1];
-        }
-
-        // Look for title
+        }        // Look for title
         const titleTag = event.tags?.find(tag => tag[0] === 'title');
         if (titleTag?.[1]) {
           article.title = titleTag[1];
@@ -280,6 +281,8 @@ export class TaggedReferencesComponent {
     switch (kind) {
       case 30023:
         return 'Article';
+      case 30311:
+        return 'Live Event';
       case 32100:
         return 'Playlist';
       case 39089:
@@ -300,6 +303,12 @@ export class TaggedReferencesComponent {
     const eventData = this.articleData().get(key);
 
     if (eventData?.event) {
+      // Try to get thumb from tags (for live events)
+      const thumbTag = eventData.event.tags.find(tag => tag[0] === 'thumb');
+      if (thumbTag?.[1]) {
+        return thumbTag[1];
+      }
+
       // Try to get image from tags
       const imageTag = eventData.event.tags.find(tag => tag[0] === 'image');
       if (imageTag?.[1]) {
@@ -326,6 +335,8 @@ export class TaggedReferencesComponent {
     switch (kind) {
       case 30023:
         return 'article';
+      case 30311:
+        return 'sensors';
       case 32100:
         return 'queue_music';
       case 39089:
