@@ -55,10 +55,13 @@
 .message-threads-load-more {
   height: 80px;
   flex-shrink: 0;
-
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
+  z-index: 10; // Ensure it appears above other content
+  background-color: var(--mat-sys-color-surface);
+  border-top: 1px solid var(--mat-sys-color-outline-variant);
 }
 
 .messages-right {
