@@ -29,24 +29,8 @@
   </div>
   } @else {
   <div class="filters-container">
-    <!-- <mat-form-field appearance="outline" class="search-field">
-        <mat-label>Search Bookmarks</mat-label>
-        <input matInput type="text" [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Search by title, URL, or description" />
-        @if (searchQuery()) {
-          <button matSuffix mat-icon-button aria-label="Clear" (click)="searchQuery.set('')">
-            <mat-icon>close</mat-icon>
-          </button>
-        }
-        <mat-icon matPrefix>search</mat-icon>
-      </mat-form-field> -->
-
     <div class="categories-container">
-      <!-- <div class="categories-header">
-          <h3>Categories</h3>
-          <button mat-icon-button (click)="openManageCategories()" matTooltip="Manage Categories">
-            <mat-icon>settings</mat-icon>
-          </button>
-        </div> -->
+
       <div class="categories-list">
         @for (category of categories(); track category.id) {
         <div class="category-chip" [class.selected]="selectedCategory() === category.id" [style.background-color]="
@@ -119,7 +103,7 @@
     </div>
     }
     }
-    } -->
+    }
   </div>
   }
 </div>

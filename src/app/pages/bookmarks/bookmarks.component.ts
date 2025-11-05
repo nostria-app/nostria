@@ -80,44 +80,6 @@ export class BookmarksComponent implements OnInit {
   // Loading states
   loading = signal(false);
 
-  // Bookmark data from service
-  // bookmarks = computed(() => {
-  //   const events = this.bookmarkService.bookmarkEvents().map(b => ({
-  //     id: b.id,
-  //     title: `Event ${b.id.substring(0, 8)}...`,
-  //     url: `/e/${b.id}`,
-  //     description: 'Nostr event bookmark',
-  //     categories: ['all', 'events'],
-  //     type: 'e' as BookmarkType,
-  //     createdAt: Date.now(),
-  //     updatedAt: Date.now()
-  //   }));
-
-  //   const articles = this.bookmarkService.bookmarkArticles().map(b => ({
-  //     id: b.id,
-  //     title: `Article ${b.id.substring(0, 8)}...`,
-  //     url: `/a/${b.id}`,
-  //     description: 'Nostr article bookmark',
-  //     categories: ['all', 'articles'],
-  //     type: 'a' as BookmarkType,
-  //     createdAt: Date.now(),
-  //     updatedAt: Date.now()
-  //   }));
-
-  //   const urls = this.bookmarkService.bookmarkUrls().map(b => ({
-  //     id: b.id,
-  //     title: this.extractTitleFromUrl(b.id),
-  //     url: b.id,
-  //     description: 'Website bookmark',
-  //     categories: ['all', 'websites'],
-  //     type: 'r' as BookmarkType,
-  //     createdAt: Date.now(),
-  //     updatedAt: Date.now()
-  //   }));
-
-  //   return [...events, ...articles, ...urls];
-  // });
-
   // Default categories with types
   categories = signal<BookmarkCategory[]>([
     { id: 'events', name: 'Events', color: '#2196f3' },
@@ -129,30 +91,6 @@ export class BookmarksComponent implements OnInit {
   searchQuery = signal('');
   selectedCategory = signal('events');
   viewMode = signal<ViewMode>('content');
-
-  // Computed state for filtered bookmarks
-  // filteredBookmarks = computed(() => {
-  //   const search = this.searchQuery().toLowerCase().trim();
-  //   const category = this.selectedCategory();
-
-  //   return this.bookmarks().filter(bookmark => {
-  //     // First filter by category
-  //     if (category !== 'all' && !bookmark.categories.includes(category)) {
-  //       return false;
-  //     }
-
-  //     // Then filter by search query if present
-  //     if (search) {
-  //       return (
-  //         bookmark.title.toLowerCase().includes(search) ||
-  //         bookmark.url.toLowerCase().includes(search) ||
-  //         (bookmark.description?.toLowerCase().includes(search) ?? false)
-  //       );
-  //     }
-
-  //     return true;
-  //   });
-  // });
 
   constructor() {
     // Load categories and view preference from storage
@@ -170,33 +108,12 @@ export class BookmarksComponent implements OnInit {
       this.logger.debug('View mode changed:', this.viewMode());
       this.saveViewMode();
     });
-
-    // Log bookmark changes
-    // effect(() => {
-    //   this.logger.debug('Bookmarks updated:', this.bookmarks());
-    // });
   }
 
   ngOnInit(): void {
     // Scroll to top when bookmarks page is opened
     this.layout.scrollToTop();
   }
-
-  // private extractTitleFromUrl(url: string): string {
-  //   try {
-  //     const urlObj = new URL(url);
-  //     const hostname = urlObj.hostname.replace('www.', '');
-  //     const pathSegments = urlObj.pathname.split('/').filter(segment => segment);
-
-  //     if (pathSegments.length > 0) {
-  //       return `${hostname}/${pathSegments[0]}`;
-  //     }
-
-  //     return hostname;
-  //   } catch {
-  //     return url.length > 30 ? url.substring(0, 30) + '...' : url;
-  //   }
-  // }
 
   private loadFromStorage(): void {
     this.logger.debug('Loading categories from storage');
