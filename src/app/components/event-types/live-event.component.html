@@ -1,0 +1,124 @@
+<div class="live-event-container">
+  @let statusValue = status();
+  @let thumbnailUrl = thumbnail();
+  @let streamUrl = streamingUrl();
+  @let startsTime = starts();
+  @let endsTime = ends();
+
+  <!-- Thumbnail -->
+  @if (thumbnailUrl) {
+  <div class="live-thumbnail-container">
+    <img [src]="thumbnailUrl" alt="{{ title() }}" class="live-thumbnail" loading="lazy" />
+
+    <!-- Status badge overlay -->
+    <div class="status-badge" [class]="statusValue">
+      <mat-icon class="status-icon">{{ statusIcon() }}</mat-icon>
+      <span class="status-text">{{ statusValue | uppercase }}</span>
+    </div>
+  </div>
+  }
+
+  <!-- Live event details -->
+  <div class="live-details">
+    <!-- Title -->
+    <h3 class="live-title">
+      <mat-icon class="title-icon">sensors</mat-icon>
+      {{ title() }}
+    </h3>
+
+    <!-- Summary/Description -->
+    @if (summary()) {
+    <p class="live-summary">{{ summary() }}</p>
+    }
+
+    <!-- Time information -->
+    <div class="live-time-info">
+      @if (startsTime) {
+      <div class="time-item">
+        <mat-icon class="time-icon">event</mat-icon>
+        <span class="time-label">Starts:</span>
+        <span class="time-value">{{ startsTime * 1000 | date: 'medium' }}</span>
+      </div>
+      }
+      @if (endsTime && statusValue === 'ended') {
+      <div class="time-item">
+        <mat-icon class="time-icon">event_available</mat-icon>
+        <span class="time-label">Ended:</span>
+        <span class="time-value">{{ endsTime * 1000 | date: 'medium' }}</span>
+      </div>
+      }
+    </div>
+
+    <!-- Participants count -->
+    @if (currentParticipants() || totalParticipants()) {
+    <div class="participants-count">
+      <mat-icon class="participants-icon">people</mat-icon>
+      @if (currentParticipants()) {
+      <span>{{ currentParticipants() }} watching</span>
+      }
+      @if (totalParticipants() && statusValue === 'ended') {
+      <span>{{ totalParticipants() }} total participants</span>
+      }
+    </div>
+    }
+
+    <!-- Participants list (hosts, speakers) -->
+    @let participantsList = participants();
+    @if (participantsList.length > 0) {
+    <div class="participants-list">
+      <div class="participants-header">
+        <mat-icon>badge</mat-icon>
+        <span>Participants</span>
+      </div>
+      <div class="participants-chips">
+        @for (participant of participantsList; track participant.pubkey) {
+        <div class="participant-chip">
+          <app-profile-display-name [pubkey]="participant.pubkey"></app-profile-display-name>
+          @if (participant.role) {
+          <span class="participant-role">{{ participant.role }}</span>
+          }
+        </div>
+        }
+      </div>
+    </div>
+    }
+
+    <!-- Hashtags -->
+    @let tags = hashtags();
+    @if (tags.length > 0) {
+    <div class="hashtags">
+      @for (tag of tags; track tag) {
+      <mat-chip class="hashtag-chip">
+        <mat-icon matChipAvatar>tag</mat-icon>
+        {{ tag }}
+      </mat-chip>
+      }
+    </div>
+    }
+
+    <!-- Actions -->
+    <div class="live-actions">
+      @if (isLive() && streamUrl) {
+      <button mat-raised-button color="accent" class="stream-button" (click)="openStream()">
+        <mat-icon>play_circle</mat-icon>
+        Watch Live
+      </button>
+      } @else if (statusValue === 'planned' && startsTime) {
+      <button mat-button color="primary" disabled>
+        <mat-icon>schedule</mat-icon>
+        Scheduled
+      </button>
+      } @else if (statusValue === 'ended') {
+      <button mat-button disabled>
+        <mat-icon>stop_circle</mat-icon>
+        Stream Ended
+      </button>
+      }
+
+      <button mat-button (click)="openEventPage()">
+        <mat-icon>open_in_new</mat-icon>
+        View Details
+      </button>
+    </div>
+  </div>
+</div>
