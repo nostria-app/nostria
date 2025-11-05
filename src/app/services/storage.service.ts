@@ -805,17 +805,17 @@ export class StorageService {
         // Add the new event
         await this.db.put('events', event);
         this.logger.debug(
-          `Replaced older event with newer event ${event.id} (kind: ${event.kind})`
+          `✅ [Storage] Replaced older event with newer event ${event.id} (kind: ${event.kind}, pubkey: ${event.pubkey.substring(0, 8)}..., old: ${existingEvents[0].created_at}, new: ${event.created_at})`
         );
       } else {
         this.logger.debug(
-          `Skipped saving older replaceable event ${event.id} (kind: ${event.kind})`
+          `⏭️ [Storage] Skipped saving older replaceable event ${event.id} (kind: ${event.kind}, pubkey: ${event.pubkey.substring(0, 8)}..., existing: ${existingEvents[0].created_at}, received: ${event.created_at})`
         );
       }
     } else {
       // No existing event, just add this one
       await this.db.put('events', event);
-      this.logger.debug(`Saved new replaceable event ${event.id} (kind: ${event.kind})`);
+      this.logger.debug(`✅ [Storage] Saved new replaceable event ${event.id} (kind: ${event.kind}, pubkey: ${event.pubkey.substring(0, 8)}...)`);
     }
   }
 

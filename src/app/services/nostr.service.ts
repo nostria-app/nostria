@@ -400,8 +400,16 @@ export class NostrService implements NostriaService {
       const storedMetadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
       if (storedMetadata) {
         const metadata = this.data.toRecord(storedMetadata);
-        this.accountState.addToCache(metadata.event.pubkey, metadata);
-        this.accountState.profile.set(metadata);
+
+        // Check if this is newer than current profile before updating
+        const currentProfile = this.accountState.profile();
+        const shouldUpdate = !currentProfile ||
+          (storedMetadata.created_at > (currentProfile.event.created_at || 0));
+
+        if (shouldUpdate) {
+          this.accountState.addToCache(metadata.event.pubkey, metadata);
+          this.accountState.profile.set(metadata);
+        }
         // Removed loading message to improve perceived performance
       }
 
@@ -542,9 +550,27 @@ export class NostrService implements NostriaService {
       switch (event.kind) {
         case kinds.Metadata: {
           const metadata = this.data.toRecord(event);
-          this.accountState.addToCache(metadata.event.pubkey, metadata);
-          this.accountState.profile.set(metadata);
-          this.logger.info('Updated profile metadata from subscription', { pubkey });
+
+          // Check if this is a newer version before updating
+          const currentProfile = this.accountState.profile();
+          const shouldUpdate = !currentProfile ||
+            (event.created_at > (currentProfile.event.created_at || 0));
+
+          if (shouldUpdate) {
+            this.accountState.addToCache(metadata.event.pubkey, metadata);
+            this.accountState.profile.set(metadata);
+            this.logger.info('Updated profile metadata from subscription', {
+              pubkey,
+              timestamp: event.created_at,
+              wasNewer: true
+            });
+          } else {
+            this.logger.info('Skipped older profile metadata from subscription', {
+              pubkey,
+              receivedTimestamp: event.created_at,
+              currentTimestamp: currentProfile.event.created_at,
+            });
+          }
           break;
         }
 

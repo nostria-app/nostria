@@ -618,6 +618,10 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
+    console.log('🔄 [Profile Loading] Starting profile processing');
+    console.log(`📊 [Profile Loading] Total profiles to load: ${pubkeys.length}`);
+    console.log(`👤 [Profile Loading] Account: ${this.pubkey()?.substring(0, 8)}...`);
+
     this.profileProcessingState.set({
       isProcessing: true,
       total: pubkeys.length,
@@ -625,6 +629,11 @@ export class AccountStateService implements OnDestroy {
       currentProfile: '',
       startedAt: Date.now(),
     });
+
+    const startTime = Date.now();
+    let successCount = 0;
+    let failureCount = 0;
+    let skippedCount = 0;
 
     try {
       // Use parallel processing with the optimized discovery queue
@@ -640,6 +649,10 @@ export class AccountStateService implements OnDestroy {
 
             if (profile) {
               this.addToCache(pubkey, profile);
+              successCount++;
+            } else {
+              skippedCount++;
+              console.warn(`⚠️ [Profile Loading] No profile found for ${pubkey.substring(0, 8)}...`);
             }
 
             this.profileProcessingState.update(state => ({
@@ -647,7 +660,8 @@ export class AccountStateService implements OnDestroy {
               processed: state.processed + 1,
             }));
           } catch (error) {
-            console.error(`Failed to cache profile for ${pubkey}:`, error);
+            failureCount++;
+            console.error(`❌ [Profile Loading] Failed to cache profile for ${pubkey.substring(0, 8)}...:`, error);
             this.profileProcessingState.update(state => ({
               ...state,
               processed: state.processed + 1,
@@ -655,8 +669,13 @@ export class AccountStateService implements OnDestroy {
           }
         })
       );
+
+      const duration = Date.now() - startTime;
+      console.log(`✅ [Profile Loading] Profile processing completed in ${duration}ms`);
+      console.log(`📈 [Profile Loading] Results: ${successCount} succeeded, ${failureCount} failed, ${skippedCount} skipped`);
+      console.log(`💾 [Profile Loading] Total cached profiles: ${this.cache.keys().filter(k => k.startsWith('metadata-')).length}`);
     } catch (error) {
-      console.error('Failed to start profile processing:', error);
+      console.error('❌ [Profile Loading] Failed to start profile processing:', error);
     } finally {
       // Mark processing as complete only if we're still in the processing state
       // This prevents race conditions with restart attempts
@@ -699,8 +718,12 @@ export class AccountStateService implements OnDestroy {
       }
     }
 
-    // Add to cache
-    this.cache.set(cacheKey, profile);
+    // Add to cache with persistent options (no expiration, no size limit eviction)
+    // Following profiles should stay in cache for the entire session
+    this.cache.set(cacheKey, profile, {
+      persistent: true,
+      maxSize: Infinity, // No limit for followed profiles
+    });
   }
 
   // Method to add profile to user cache
@@ -716,12 +739,20 @@ export class AccountStateService implements OnDestroy {
 
       // Only update if the new profile is newer
       if (newTimestamp <= existingTimestamp) {
+        console.log(`⏭️ [Cache] Skipping older/same profile for ${pubkey.substring(0, 8)}... (existing: ${existingTimestamp}, new: ${newTimestamp})`);
         return; // Don't update, existing profile is newer or same age
       }
+      console.log(`🔄 [Cache] Updating profile for ${pubkey.substring(0, 8)}... (${existingTimestamp} → ${newTimestamp})`);
+    } else {
+      console.log(`➕ [Cache] Adding new profile for ${pubkey.substring(0, 8)}...`);
     }
 
-    // Add to cache
-    this.cache.set(cacheKey, profile);
+    // Add to cache with persistent options (no expiration, no size limit eviction)
+    // Following profiles should stay in cache for the entire session
+    this.cache.set(cacheKey, profile, {
+      persistent: true,
+      maxSize: Infinity, // No limit for followed profiles
+    });
   }
 
   // Method to search cached profiles
@@ -729,6 +760,8 @@ export class AccountStateService implements OnDestroy {
     if (!query || query.length < 1) {
       return [];
     }
+
+    console.log(`🔍 [Profile Search] Searching for: "${query}"`);
 
     // Since we can't iterate over cache keys with the injected cache service,
     // we'll search through the following list and additional known pubkeys
@@ -740,14 +773,22 @@ export class AccountStateService implements OnDestroy {
       pubkeysToSearch.push(currentPubkey);
     }
 
+    console.log(`📊 [Profile Search] Searching through ${pubkeysToSearch.length} pubkeys`);
+
     const results: NostrRecord[] = [];
     const lowercaseQuery = query.toLowerCase();
+    let cachedCount = 0;
+    let notCachedCount = 0;
 
     for (const pubkey of pubkeysToSearch) {
       const cacheKey = `metadata-${pubkey}`;
       const profile = this.cache.get<NostrRecord>(cacheKey);
-      if (!profile) continue;
+      if (!profile) {
+        notCachedCount++;
+        continue;
+      }
 
+      cachedCount++;
       const data = profile.data;
 
       // Search in display name, name, about, and nip05
@@ -767,6 +808,13 @@ export class AccountStateService implements OnDestroy {
 
       // Limit results to prevent overwhelming UI
       if (results.length >= 20) break;
+    }
+
+    console.log(`📈 [Profile Search] Results: ${results.length} matches found`);
+    console.log(`💾 [Profile Search] Cache stats: ${cachedCount} cached, ${notCachedCount} not cached out of ${pubkeysToSearch.length} total`);
+
+    if (notCachedCount > 0) {
+      console.warn(`⚠️ [Profile Search] ${notCachedCount} profiles from following list are not in cache!`);
     }
 
     return results.sort((a, b) => {
@@ -873,32 +921,46 @@ export class AccountStateService implements OnDestroy {
     storageService: StorageService
   ): Promise<void> {
     if (!this.hasProfileDiscoveryBeenDone(pubkey)) {
+      console.log(`⏭️ [Profile Loading] Skipping storage load - discovery not done for ${pubkey.substring(0, 8)}...`);
       return; // Don't load if discovery hasn't been done
     }
 
     try {
       const followingList = this.followingList();
       if (followingList.length === 0) {
+        console.log('⏭️ [Profile Loading] Skipping storage load - no following list');
         return; // No following list to load profiles for
       }
 
-      console.log('Loading profiles from storage to cache for account:', pubkey);
-      console.log('Following list size:', followingList.length);
+      console.log(`📂 [Profile Loading] Loading profiles from storage for account: ${pubkey.substring(0, 8)}...`);
+      console.log(`📊 [Profile Loading] Following list size: ${followingList.length}`);
+
+      const startTime = Date.now();
 
       // Load metadata events from storage for all following users
       const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
       const records = dataService.toRecords(events);
 
-      console.log('Found metadata records in storage:', records.length);
+      console.log(`💾 [Profile Loading] Found ${records.length} metadata records in storage`);
 
       // Add all found profiles to cache
+      let addedCount = 0;
       for (const record of records) {
         this.addToCache(record.event.pubkey, record);
+        addedCount++;
       }
 
-      console.log('Profile cache populated with', records.length, 'profiles from storage');
+      const duration = Date.now() - startTime;
+      const missingCount = followingList.length - records.length;
+
+      console.log(`✅ [Profile Loading] Storage load completed in ${duration}ms`);
+      console.log(`📈 [Profile Loading] Added ${addedCount} profiles to cache`);
+      if (missingCount > 0) {
+        console.warn(`⚠️ [Profile Loading] Missing ${missingCount} profiles from storage (${followingList.length - records.length}/${followingList.length})`);
+      }
+      console.log(`💾 [Profile Loading] Total cached profiles now: ${this.cache.keys().filter(k => k.startsWith('metadata-')).length}`);
     } catch (error) {
-      console.error('Failed to load profiles from storage to cache:', error);
+      console.error('❌ [Profile Loading] Failed to load profiles from storage to cache:', error);
     }
   }
 
