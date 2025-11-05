@@ -143,6 +143,19 @@ export class LiveEventComponent {
       .map(tag => tag[1]);
   });
 
+  // Extract URL from alt tag
+  altUrl = computed(() => {
+    const event = this.event();
+    if (!event) return null;
+
+    const altTag = event.tags.find(tag => tag[0] === 'alt');
+    if (!altTag?.[1]) return null;
+
+    // Extract URL from the alt text (format: "Watch live on <URL>")
+    const urlMatch = altTag[1].match(/https?:\/\/[^\s]+/);
+    return urlMatch?.[0] || null;
+  });
+
   // Status badge color
   statusColor = computed(() => {
     const status = this.status();
@@ -182,11 +195,19 @@ export class LiveEventComponent {
     }
   }
 
-  // Open event page
+  // Open event page or alt URL
   openEventPage(): void {
-    const event = this.event();
-    if (event) {
-      this.router.navigate(['/e', event.id]);
+    const altUrlValue = this.altUrl();
+
+    if (altUrlValue) {
+      // If alt URL exists, open that instead
+      window.open(altUrlValue, '_blank', 'noopener,noreferrer');
+    } else {
+      // Fallback to event page
+      const event = this.event();
+      if (event) {
+        this.router.navigate(['/e', event.id]);
+      }
     }
   }
 }
