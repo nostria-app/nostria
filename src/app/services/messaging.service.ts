@@ -163,6 +163,13 @@ export class MessagingService implements NostriaService {
     if (!myPubkey) return;
 
     try {
+      // Check if message already exists in storage to avoid duplicates
+      const exists = await this.storage.messageExists(myPubkey, chatId, message.id);
+      if (exists) {
+        this.logger.debug(`Message ${message.id} already in storage, skipping save`);
+        return;
+      }
+
       const storedMessage: StoredDirectMessage = {
         id: `${myPubkey}::${chatId}::${message.id}`,
         accountPubkey: myPubkey,
@@ -375,18 +382,28 @@ export class MessagingService implements NostriaService {
   }
 
   async loadChats() {
-    this.clear();
+    // Don't clear if we're doing an incremental sync
+    // Only clear if this is a fresh load (no stored messages)
+    const myPubkey = this.accountState.pubkey();
+    
+    if (!myPubkey) {
+      this.error.set('You need to be logged in to view messages');
+      this.isLoading.set(false);
+      return;
+    }
+
+    // Check if we have any stored messages
+    const lastCheck = this.accountLocalState.getMessagesLastCheck(myPubkey);
+    const isIncrementalSync = lastCheck && lastCheck > 0;
+
+    if (!isIncrementalSync) {
+      // First time load - clear everything
+      this.clear();
+    }
+
     this.isLoading.set(true);
 
     try {
-      const myPubkey = this.accountState.pubkey();
-
-      if (!myPubkey) {
-        this.error.set('You need to be logged in to view messages');
-        this.isLoading.set(false);
-        return;
-      }
-
       // Load messages from storage first
       await this.load();
 
@@ -397,10 +414,9 @@ export class MessagingService implements NostriaService {
       }
 
       // Get the last check timestamp to only fetch new messages
-      const lastCheck = this.accountLocalState.getMessagesLastCheck(myPubkey);
       const since = lastCheck || undefined;
 
-      this.logger.info(`Loading messages since: ${since ? new Date(since * 1000).toISOString() : 'beginning'}`);
+      this.logger.info(`Loading messages since: ${since ? new Date(since * 1000).toISOString() : 'beginning'} (incremental: ${isIncrementalSync})`);
 
       // This contains both incoming and outgoing messages for Giftwrapped messages.
       const filterReceived: Filter = {
@@ -414,6 +430,7 @@ export class MessagingService implements NostriaService {
         kinds: [kinds.EncryptedDirectMessage],
         authors: [myPubkey],
         limit: this.MESSAGE_SIZE,
+        since: since, // Add since filter to outgoing messages too
       };
 
       // Store pubkeys of people who've messaged us
