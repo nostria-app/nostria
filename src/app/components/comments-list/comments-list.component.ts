@@ -93,12 +93,27 @@ export class CommentsListComponent implements AfterViewInit {
         return;
       }
 
-      // Query for initial batch of comments (most recent 30)
-      const commentEvents = await this.sharedRelay.getMany(userPubkey, {
+      // Determine filter based on event kind
+      // For addressable events (like articles, kind 30023), query by 'A' tag
+      // For regular events, query by 'e' tag
+      const isAddressable = event.kind >= 30000 && event.kind < 40000;
+      const filter: Record<string, unknown> = {
         kinds: [1111],
-        '#e': [event.id],
         limit: this.INITIAL_LIMIT,
-      });
+      };
+
+      if (isAddressable) {
+        // Get the 'd' tag (identifier) for addressable events
+        const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+        filter['#A'] = [aTagValue];
+      } else {
+        // Regular events use event ID
+        filter['#e'] = [event.id];
+      }
+
+      // Query for initial batch of comments (most recent 30)
+      const commentEvents = await this.sharedRelay.getMany(userPubkey, filter);
 
       if (!commentEvents || commentEvents.length === 0) {
         this.hasMore.set(false);
@@ -145,13 +160,24 @@ export class CommentsListComponent implements AfterViewInit {
         return;
       }
 
-      // Query for older comments using until timestamp
-      const commentEvents = await this.sharedRelay.getMany(userPubkey, {
+      // Determine filter based on event kind
+      const isAddressable = event.kind >= 30000 && event.kind < 40000;
+      const filter: Record<string, unknown> = {
         kinds: [1111],
-        '#e': [event.id],
-        until: this.oldestCommentTimestamp - 1, // Get events before the oldest we have
+        until: this.oldestCommentTimestamp - 1,
         limit: this.LOAD_MORE_LIMIT,
-      });
+      };
+
+      if (isAddressable) {
+        const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+        filter['#A'] = [aTagValue];
+      } else {
+        filter['#e'] = [event.id];
+      }
+
+      // Query for older comments using until timestamp
+      const commentEvents = await this.sharedRelay.getMany(userPubkey, filter);
 
       if (!commentEvents || commentEvents.length === 0) {
         this.hasMore.set(false);

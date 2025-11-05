@@ -156,11 +156,6 @@
 
       <app-repost-button [event]="article" [view]="'full'"></app-repost-button>
 
-      <button mat-button color="primary">
-        <mat-icon>comment</mat-icon>
-        Comment
-      </button>
-
       <!-- Text-to-Speech Controls -->
       @if (!isSpeaking()) {
       <button mat-button color="primary" (click)="startSpeech()" title="Read article aloud">
@@ -188,6 +183,11 @@
       <app-event-menu [event]="article" [view]="'full'"></app-event-menu>
     </div>
   </footer>
+
+  <!-- Comments Section -->
+  <section class="article-comments">
+    <app-comments-list [event]="article"></app-comments-list>
+  </section>
 </div>
 } @else {
 <!-- Loading or Empty State -->

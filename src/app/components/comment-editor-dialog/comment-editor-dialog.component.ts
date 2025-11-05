@@ -126,10 +126,21 @@ export class CommentEditorDialogComponent implements AfterViewInit {
     // Determine if replying to a comment or the root event
     const isReplyingToComment = !!parentComment;
 
+    // Check if root event is addressable (kind >= 30000 and < 40000)
+    const isRootAddressable = rootEvent.kind >= 30000 && rootEvent.kind < 40000;
+
     if (isReplyingToComment && parentComment) {
       // Replying to a comment
       // Root scope tags (uppercase) - point to original event
-      tags.push(['E', rootEvent.id, '', rootEvent.pubkey]);
+      if (isRootAddressable) {
+        // Use A tag for addressable events (like articles)
+        const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        const aTagValue = `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}`;
+        tags.push(['A', aTagValue, '', rootEvent.pubkey]);
+      } else {
+        // Use E tag for regular events
+        tags.push(['E', rootEvent.id, '', rootEvent.pubkey]);
+      }
       tags.push(['K', rootEvent.kind.toString()]);
       tags.push(['P', rootEvent.pubkey]);
 
@@ -140,12 +151,26 @@ export class CommentEditorDialogComponent implements AfterViewInit {
     } else {
       // Top-level comment on the event
       // Root scope tags (uppercase)
-      tags.push(['E', rootEvent.id, '', rootEvent.pubkey]);
+      if (isRootAddressable) {
+        // Use A tag for addressable events (like articles)
+        const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        const aTagValue = `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}`;
+        tags.push(['A', aTagValue, '', rootEvent.pubkey]);
+      } else {
+        // Use E tag for regular events
+        tags.push(['E', rootEvent.id, '', rootEvent.pubkey]);
+      }
       tags.push(['K', rootEvent.kind.toString()]);
       tags.push(['P', rootEvent.pubkey]);
 
       // Parent scope tags (lowercase) - same as root for top-level
-      tags.push(['e', rootEvent.id, '', rootEvent.pubkey]);
+      if (isRootAddressable) {
+        const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        const aTagValue = `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}`;
+        tags.push(['a', aTagValue, '', rootEvent.pubkey]);
+      } else {
+        tags.push(['e', rootEvent.id, '', rootEvent.pubkey]);
+      }
       tags.push(['k', rootEvent.kind.toString()]);
       tags.push(['p', rootEvent.pubkey]);
     }
