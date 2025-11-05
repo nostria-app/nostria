@@ -259,6 +259,8 @@ export class NotificationsComponent implements OnInit {
   viewAuthorProfile(notification: Notification): void {
     const contentNotif = notification as ContentNotification;
     if (contentNotif.authorPubkey) {
+      // Mark notification as read
+      this.markAsRead(notification.id);
       this.router.navigate(['/p', contentNotif.authorPubkey]);
     }
   }
@@ -268,6 +270,9 @@ export class NotificationsComponent implements OnInit {
    */
   viewEvent(notification: Notification): void {
     const contentNotif = notification as ContentNotification;
+
+    // Mark notification as read
+    this.markAsRead(notification.id);
 
     // For new follower notifications, navigate to the follower's profile
     if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
