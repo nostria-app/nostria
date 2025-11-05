@@ -36,6 +36,7 @@ import { LoggerService } from '../../services/logger.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { UserDataService } from '../../services/user-data.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { CommentsListComponent } from '../../components/comments-list/comments-list.component';
 
 @Component({
   selector: 'app-article',
@@ -54,6 +55,7 @@ import { UtilitiesService } from '../../services/utilities.service';
     RepostButtonComponent,
     EventMenuComponent,
     MentionHoverDirective,
+    CommentsListComponent,
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',

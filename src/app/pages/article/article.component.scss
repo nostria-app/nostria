@@ -572,6 +572,18 @@
   }
 }
 
+// Comments section
+.article-comments {
+  margin-top: 48px;
+  padding-top: 32px;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+
+  @media (max-width: 768px) {
+    margin-top: 32px;
+    padding-top: 24px;
+  }
+}
+
 // Print-specific styles for articles
 @media print {
   .article-container {
