@@ -55,6 +55,10 @@
         @else if (targetItem.event.kind === 39089) {
         <app-starter-pack-event [event]="targetItem.event"></app-starter-pack-event>
         }
+        <!-- Live Events (kind 30311) -->
+        @else if (targetItem.event.kind === 30311) {
+        <app-live-event [event]="targetItem.event"></app-live-event>
+        }
         <!-- Profile events (kind 0) -->
         @else if (targetItem.event.kind === 0) {
         <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
@@ -119,6 +123,10 @@
           <!-- Starter Packs (kind 39089) -->
           @else if (rootRecordData.event.kind === 39089) {
           <app-starter-pack-event [event]="rootRecordData.event"></app-starter-pack-event>
+          }
+          <!-- Live Events (kind 30311) -->
+          @else if (rootRecordData.event.kind === 30311) {
+          <app-live-event [event]="rootRecordData.event"></app-live-event>
           }
           <!-- Profile events (kind 0) -->
           @else if (rootRecordData.event.kind === 0) {
@@ -187,6 +195,10 @@
           <!-- Starter Packs (kind 39089) -->
           @else if (parentRecordData.event.kind === 39089) {
           <app-starter-pack-event [event]="parentRecordData.event"></app-starter-pack-event>
+          }
+          <!-- Live Events (kind 30311) -->
+          @else if (parentRecordData.event.kind === 30311) {
+          <app-live-event [event]="parentRecordData.event"></app-live-event>
           }
           <!-- Profile events (kind 0) -->
           @else if (parentRecordData.event.kind === 0) {
@@ -297,6 +309,9 @@
     } @else if (item.event.kind === 39089) {
     <!-- Starter Packs (kind 39089) -->
     <app-starter-pack-event [event]="item.event"></app-starter-pack-event>
+    } @else if (item.event.kind === 30311) {
+    <!-- Live Events (kind 30311) -->
+    <app-live-event [event]="item.event"></app-live-event>
     } @else if (item.event.kind === 8) {
     <app-badge [badge]="targetItem.event"></app-badge>
     }
