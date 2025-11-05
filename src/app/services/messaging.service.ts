@@ -385,7 +385,7 @@ export class MessagingService implements NostriaService {
     // Don't clear if we're doing an incremental sync
     // Only clear if this is a fresh load (no stored messages)
     const myPubkey = this.accountState.pubkey();
-    
+
     if (!myPubkey) {
       this.error.set('You need to be logged in to view messages');
       this.isLoading.set(false);
