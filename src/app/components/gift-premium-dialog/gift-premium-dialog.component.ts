@@ -17,6 +17,7 @@ import { Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { QrCodeComponent } from '../qr-code/qr-code.component';
 import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
 import { environment } from '../../../environments/environment';
@@ -91,6 +92,7 @@ type PaymentMethod = 'nwc' | 'native' | 'manual';
     MatTooltipModule,
     ReactiveFormsModule,
     UserProfileComponent,
+    QrCodeComponent,
   ],
   templateUrl: './gift-premium-dialog.component.html',
   styleUrls: ['./gift-premium-dialog.component.scss'],
@@ -278,13 +280,146 @@ export class GiftPremiumDialogComponent {
     this.currentState.set('confirmation');
   }
 
+  selectPaymentMethod(method: PaymentMethod): void {
+    this.selectedPaymentMethod.set(method);
+  }
+
+  async generateInvoice(): Promise<void> {
+    this.isProcessing.set(true);
+    try {
+      const amountInSats = this.totalAmount();
+      const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;
+      const duration = this.giftForm.get('duration')?.value as Duration;
+      const message = this.giftForm.get('message')?.value || '';
+
+      // Create clear text format for zap content
+      const zapContentLines = [
+        '🎁 Nostria Premium Gift',
+        this.data.recipientPubkey,
+        premiumType,
+        duration.toString(),
+      ];
+
+      if (message) {
+        zapContentLines.push(message);
+      }
+
+      const zapContent = zapContentLines.join('\n');
+
+      // Use ZapService to generate the actual invoice for Nostria Premium
+      const invoice = await this.zapService.generateInvoiceForManualPayment(
+        NOSTRIA_PREMIUM_PUBKEY,
+        amountInSats,
+        zapContent,
+        undefined,
+        { lud16: NOSTRIA_PREMIUM_LIGHTNING_ADDRESS }
+      );
+
+      this.invoiceUrl.set(invoice);
+    } catch (error) {
+      console.error('Failed to generate invoice:', error);
+      this.snackBar.open('Failed to generate invoice. Please try again.', 'Dismiss', {
+        duration: 3000,
+      });
+    } finally {
+      this.isProcessing.set(false);
+    }
+  }
+
+  openLightningWallet(): void {
+    const invoice = this.invoiceUrl();
+    if (!invoice) return;
+
+    // Create lightning URL for mobile wallets
+    const lightningUrl = `lightning:${invoice}`;
+
+    // Try to open native lightning wallet
+    if (this.isMobile().matches) {
+      window.location.href = lightningUrl;
+    } else {
+      // For desktop, copy invoice to clipboard and show instructions
+      this.copyInvoice();
+      this.snackBar.open(
+        'Invoice copied to clipboard. Open your Lightning wallet and paste it.',
+        'Dismiss',
+        {
+          duration: 5000,
+        }
+      );
+    }
+  }
+
+  copyInvoice(): void {
+    const invoice = this.invoiceUrl();
+    if (!invoice) return;
+
+    navigator.clipboard
+      .writeText(invoice)
+      .then(() => {
+        this.snackBar.open('Invoice copied to clipboard!', 'Dismiss', {
+          duration: 2000,
+        });
+      })
+      .catch(() => {
+        this.snackBar.open('Failed to copy invoice. Please select and copy manually.', 'Dismiss', {
+          duration: 3000,
+        });
+      });
+  }
+
+  truncateInvoice(invoice: string): string {
+    if (invoice.length <= 20) return invoice;
+    return `${invoice.substring(0, 10)}...${invoice.substring(invoice.length - 10)}`;
+  }
+
+  getSelectedWalletName(): string {
+    const selectedWalletId = this.giftForm.get('selectedWallet')?.value;
+    const selectedWallet = this.availableWallets().find(w => w.id === selectedWalletId);
+    return selectedWallet?.name || 'No Wallet';
+  }
+
+  openCredentials(): void {
+    // Navigate to credentials page where user can paste NWC connection string
+    try {
+      this.dialogRef.close({ success: false });
+      this.router.navigate(['/credentials']);
+    } catch {
+      // If navigation fails, fallback to opening new window with #/credentials
+      window.location.href = '#/credentials';
+    }
+  }
+
+  markAsPaid(): void {
+    const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;
+    const duration = this.giftForm.get('duration')?.value as Duration;
+
+    this.snackBar.open(
+      `Payment initiated for ${this.getPremiumTypeName(premiumType)} gift (${this.getDurationText(duration)})!`,
+      'Dismiss',
+      {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      }
+    );
+
+    this.dialogRef.close({ success: true });
+  }
+
   backToInput(): void {
     this.currentState.set('input');
+    this.invoiceUrl.set(null);
+    this.isProcessing.set(false);
     this.errorMessage.set(null);
   }
 
   async confirmGift(): Promise<void> {
     if (!this.giftForm.valid || this.isProcessing()) {
+      return;
+    }
+
+    // Only NWC payment method proceeds with automatic payment
+    if (this.selectedPaymentMethod() !== 'nwc') {
       return;
     }
 

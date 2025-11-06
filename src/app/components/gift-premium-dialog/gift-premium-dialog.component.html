@@ -152,22 +152,12 @@
       {{ errorMessage() }}
     </div>
     }
-
-    @if (!hasNwcWallet()) {
-    <div class="warning-message">
-      <mat-icon>warning</mat-icon>
-      <span>No wallet connected. You'll need to configure a wallet to send this gift.</span>
-      <button mat-button color="primary" (click)="openWalletSettings()">
-        Configure Wallet
-      </button>
-    </div>
-    }
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
     <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
     <button mat-raised-button color="primary" (click)="proceedToConfirmation()"
-      [disabled]="isProcessing() || !giftForm.valid || !hasNwcWallet()">
+      [disabled]="isProcessing() || !giftForm.valid">
       Continue
     </button>
   </mat-dialog-actions>
@@ -232,6 +222,127 @@
         </div>
       </div>
 
+      <mat-divider></mat-divider>
+
+      <!-- Payment Method Selection -->
+      <div class="section payment-method-section">
+        <h3>Choose Payment Method</h3>
+
+        <div class="payment-method-buttons">
+          <button mat-raised-button (click)="selectPaymentMethod('nwc')"
+            [class.selected]="selectedPaymentMethod() === 'nwc'">
+            <mat-icon>account_balance_wallet</mat-icon>
+            Wallet Connect
+          </button>
+
+          <button mat-raised-button (click)="selectPaymentMethod('native')"
+            [class.selected]="selectedPaymentMethod() === 'native'">
+            <mat-icon>smartphone</mat-icon>
+            Lightning Wallet
+          </button>
+
+          <button mat-raised-button (click)="selectPaymentMethod('manual')"
+            [class.selected]="selectedPaymentMethod() === 'manual'">
+            <mat-icon>qr_code</mat-icon>
+            QR Code
+          </button>
+        </div>
+
+        <div class="payment-method-content">
+          <!-- NWC Content -->
+          @if (selectedPaymentMethod() === 'nwc') {
+          <div class="wallet-info">
+            <mat-icon>account_balance_wallet</mat-icon>
+            <span>{{ getSelectedWalletName() }}</span>
+          </div>
+          <p class="method-description">
+            Use your connected Nostr Wallet Connect (NWC) wallet to pay automatically.
+          </p>
+
+          @if (!hasNwcWallet()) {
+          <div class="no-wallet-warning">
+            <mat-icon class="warning-icon">warning</mat-icon>
+            <div>
+              <p>No NWC wallet connected.</p>
+              <p>
+                Please add your NWC connection string on the
+                <button mat-button color="primary" (click)="openCredentials()">
+                  Credentials
+                </button>
+                page.
+              </p>
+            </div>
+          </div>
+          }
+
+          @if (isProcessing() && selectedPaymentMethod() === 'nwc') {
+          <div class="processing-indicator">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Processing payment...</span>
+          </div>
+          }
+          }
+
+          <!-- Native (Open Lightning) Content -->
+          @if (selectedPaymentMethod() === 'native') {
+          @if (invoiceUrl()) {
+          <div class="native-wallet-section">
+            <p class="method-description">
+              Open your mobile Lightning wallet app to pay this invoice.
+            </p>
+            <button mat-raised-button color="primary" (click)="openLightningWallet()" class="open-wallet-btn">
+              <mat-icon>open_in_new</mat-icon>
+              Open Lightning Wallet
+            </button>
+            <p class="wallet-hint">
+              If your wallet doesn't open automatically, copy the invoice manually.
+            </p>
+          </div>
+          } @else if (isProcessing() && selectedPaymentMethod() === 'native') {
+          <div class="processing-indicator">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Generating invoice...</span>
+          </div>
+          } @else {
+          <p class="method-description">
+            Click "Generate Invoice" to create a Lightning invoice for your mobile wallet.
+          </p>
+          }
+          }
+
+          <!-- Manual (QR Code) Content -->
+          @if (selectedPaymentMethod() === 'manual') {
+          @if (invoiceUrl()) {
+          <div class="qr-code-section">
+            <p class="method-description">
+              Scan this QR code with any Lightning wallet to pay.
+            </p>
+            <div class="qr-code-container">
+              <qr-code [qrdata]="invoiceUrl()!" [width]="200" [height]="200"></qr-code>
+            </div>
+            <div class="invoice-details">
+              <p class="invoice-label">Lightning Invoice:</p>
+              <button class="invoice-text" (click)="copyInvoice()" (keydown.enter)="copyInvoice()"
+                (keydown.space)="copyInvoice()" type="button" aria-label="Copy invoice to clipboard">
+                <span class="invoice-value">{{ truncateInvoice(invoiceUrl()!) }}</span>
+                <mat-icon class="copy-icon">content_copy</mat-icon>
+              </button>
+            </div>
+          </div>
+          } @else if (isProcessing() && selectedPaymentMethod() === 'manual') {
+          <div class="processing-indicator">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Generating QR code...</span>
+          </div>
+          } @else {
+          <p class="method-description">
+            Click "Generate QR Code" to create a QR code for manual payment.
+          </p>
+          }
+          }
+        </div>
+      </div>
+
       @if (errorMessage()) {
       <div class="error-message">
         <mat-icon>error</mat-icon>
@@ -241,21 +352,47 @@
     </div>
   </mat-dialog-content>
 
-  <mat-dialog-actions align="end">
+  <mat-dialog-actions>
     <button mat-button (click)="backToInput()" [disabled]="isProcessing()">Back</button>
-    <button mat-raised-button color="primary" (click)="confirmGift()" [disabled]="isProcessing()">
+
+    @if (selectedPaymentMethod() === 'nwc') {
+    <button mat-flat-button color="primary" (click)="confirmGift()" class="confirm-button"
+      [disabled]="isProcessing() || !hasNwcWallet()">
       @if (isProcessing()) {
       <ng-container>
-        <mat-spinner [diameter]="20"></mat-spinner>
-        <span>Processing...</span>
+        <mat-spinner diameter="18"></mat-spinner>
+        Processing...
       </ng-container>
       } @else {
       <ng-container>
         <mat-icon>send</mat-icon>
-        <span>Send Gift</span>
+        Send Gift
       </ng-container>
       }
     </button>
+    } @else if (selectedPaymentMethod() === 'native' || selectedPaymentMethod() === 'manual') {
+    @if (!invoiceUrl()) {
+    <button mat-flat-button color="primary" (click)="generateInvoice()" class="confirm-button"
+      [disabled]="isProcessing()">
+      @if (isProcessing()) {
+      <ng-container>
+        <mat-spinner diameter="18"></mat-spinner>
+        Generating...
+      </ng-container>
+      } @else {
+      <ng-container>
+        <mat-icon>receipt</mat-icon>
+        {{ selectedPaymentMethod() === 'native' ? 'Generate Invoice' : 'Generate QR Code' }}
+      </ng-container>
+      }
+    </button>
+    } @else {
+    <button mat-flat-button color="accent" (click)="markAsPaid()" class="confirm-button">
+      <mat-icon>check</mat-icon>
+      I've Paid
+    </button>
+    }
+    }
   </mat-dialog-actions>
   }
 </div>
