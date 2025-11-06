@@ -86,6 +86,13 @@
         @if (hasLightningAddress()) {
         <app-zap-button [recipientPubkey]="pubkey()" class="hide-tiny"> </app-zap-button>
         }
+
+        <!-- Gift Premium Button - Always visible, payment goes to Nostria -->
+        <button class="hide-tiny" [matTooltip]="'Gift Premium subscription'" mat-icon-button (click)="giftPremium()">
+          <mat-icon>card_giftcard</mat-icon>
+        </button>
+
+
         }
 
         <button mat-icon-button class="profile-menu-button" [matMenuTriggerFor]="profileMenu">
@@ -238,6 +245,12 @@
           <span>Zap</span>
         </button>
         }
+
+        <!-- Gift Premium - Always available, payment goes to Nostria -->
+        <button mat-menu-item (click)="giftPremium()">
+          <mat-icon>card_giftcard</mat-icon>
+          <span>Gift Premium</span>
+        </button>
         }
 
         @if (isOwnProfile()) {

@@ -10,6 +10,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
@@ -68,6 +69,7 @@ const VIDEO_HOSTING_DOMAINS = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.t
     MatIconModule,
     MatProgressSpinnerModule,
     MatDividerModule,
+    MatTooltipModule,
     ReactiveFormsModule,
     UserProfileComponent,
     QrCodeComponent,
@@ -604,6 +606,10 @@ export class ZapDialogComponent {
   }
 
   onCancel(): void {
+    this.dialogRef.close();
+  }
+
+  close(): void {
     this.dialogRef.close();
   }
 }

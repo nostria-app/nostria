@@ -1,5 +1,6 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterLink } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,12 +8,16 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Event } from 'nostr-tools';
 import { ZapService } from '../../services/zap.service';
 import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { LayoutService } from '../../services/layout.service';
 
 interface ZapHistoryEntry {
   type: 'sent' | 'received';
@@ -29,6 +34,7 @@ interface ZapHistoryEntry {
   selector: 'app-zap-history',
   imports: [
     CommonModule,
+    RouterLink,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
@@ -36,6 +42,7 @@ interface ZapHistoryEntry {
     MatChipsModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    MatMenuModule,
     AgoPipe,
     UserProfileComponent,
   ],
@@ -114,19 +121,39 @@ interface ZapHistoryEntry {
                           >
                             {{ zap.timestamp | ago }}
                           </div>
+                          <button
+                            mat-icon-button
+                            [matMenuTriggerFor]="zapMenu"
+                            class="zap-menu-button"
+                            matTooltip="More options"
+                          >
+                            <mat-icon>more_vert</mat-icon>
+                          </button>
+                          <mat-menu #zapMenu="matMenu">
+                            <button mat-menu-item (click)="copyEventData(zap)">
+                              <mat-icon>content_copy</mat-icon>
+                              <span>Copy Event Data</span>
+                            </button>
+                            <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                              <mat-icon>publish</mat-icon>
+                              <span>Publish Event</span>
+                            </button>
+                          </mat-menu>
                         </div>
 
                         @if (zap.comment) {
                           <div class="zap-comment">
                             <mat-icon class="comment-icon">format_quote</mat-icon>
-                            <span class="comment-text">{{ zap.comment }}</span>
+                            <span class="comment-text" style="white-space: pre-wrap;">{{ zap.comment }}</span>
                           </div>
                         }
 
                         @if (zap.eventId) {
                           <div class="zap-context">
                             <mat-icon class="context-icon">note</mat-icon>
-                            <span class="context-text">For event {{ zap.eventId.substring(0, 8) }}...</span>
+                            <a [routerLink]="['/e', zap.eventId]" class="context-link">
+                              For event {{ zap.eventId.substring(0, 8) }}...
+                            </a>
                           </div>
                         }
                       </div>
@@ -174,19 +201,39 @@ interface ZapHistoryEntry {
                           >
                             {{ zap.timestamp | ago }}
                           </div>
+                          <button
+                            mat-icon-button
+                            [matMenuTriggerFor]="sentZapMenu"
+                            class="zap-menu-button"
+                            matTooltip="More options"
+                          >
+                            <mat-icon>more_vert</mat-icon>
+                          </button>
+                          <mat-menu #sentZapMenu="matMenu">
+                            <button mat-menu-item (click)="copyEventData(zap)">
+                              <mat-icon>content_copy</mat-icon>
+                              <span>Copy Event Data</span>
+                            </button>
+                            <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                              <mat-icon>publish</mat-icon>
+                              <span>Publish Event</span>
+                            </button>
+                          </mat-menu>
                         </div>
 
                         @if (zap.comment) {
                           <div class="zap-comment">
                             <mat-icon class="comment-icon">format_quote</mat-icon>
-                            <span class="comment-text">{{ zap.comment }}</span>
+                            <span class="comment-text" style="white-space: pre-wrap;">{{ zap.comment }}</span>
                           </div>
                         }
 
                         @if (zap.eventId) {
                           <div class="zap-context">
                             <mat-icon class="context-icon">note</mat-icon>
-                            <span class="context-text">For event {{ zap.eventId.substring(0, 8) }}...</span>
+                            <a [routerLink]="['/e', zap.eventId]" class="context-link">
+                              For event {{ zap.eventId.substring(0, 8) }}...
+                            </a>
                           </div>
                         }
                       </div>
@@ -231,19 +278,39 @@ interface ZapHistoryEntry {
                           >
                             {{ zap.timestamp | ago }}
                           </div>
+                          <button
+                            mat-icon-button
+                            [matMenuTriggerFor]="receivedZapMenu"
+                            class="zap-menu-button"
+                            matTooltip="More options"
+                          >
+                            <mat-icon>more_vert</mat-icon>
+                          </button>
+                          <mat-menu #receivedZapMenu="matMenu">
+                            <button mat-menu-item (click)="copyEventData(zap)">
+                              <mat-icon>content_copy</mat-icon>
+                              <span>Copy Event Data</span>
+                            </button>
+                            <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                              <mat-icon>publish</mat-icon>
+                              <span>Publish Event</span>
+                            </button>
+                          </mat-menu>
                         </div>
 
                         @if (zap.comment) {
                           <div class="zap-comment">
                             <mat-icon class="comment-icon">format_quote</mat-icon>
-                            <span class="comment-text">{{ zap.comment }}</span>
+                            <span class="comment-text" style="white-space: pre-wrap;">{{ zap.comment }}</span>
                           </div>
                         }
 
                         @if (zap.eventId) {
                           <div class="zap-context">
                             <mat-icon class="context-icon">note</mat-icon>
-                            <span class="context-text">For event {{ zap.eventId.substring(0, 8) }}...</span>
+                            <a [routerLink]="['/e', zap.eventId]" class="context-link">
+                              For event {{ zap.eventId.substring(0, 8) }}...
+                            </a>
                           </div>
                         }
                       </div>
@@ -418,6 +485,11 @@ interface ZapHistoryEntry {
         text-align: right;
       }
 
+      .zap-menu-button {
+        margin-left: 8px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
       .zap-comment {
         display: flex;
         align-items: flex-start;
@@ -459,6 +531,19 @@ interface ZapHistoryEntry {
       .context-text {
         color: var(--mat-sys-on-surface);
         line-height: 1.4;
+      }
+
+      .context-link {
+        color: var(--mat-sys-primary);
+        text-decoration: none;
+        line-height: 1.4;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+
+      .context-link:hover {
+        color: var(--mat-sys-primary-fixed-dim);
+        text-decoration: underline;
       }
 
       .empty-state {
@@ -510,11 +595,14 @@ interface ZapHistoryEntry {
     `,
   ],
 })
-export class ZapHistoryComponent implements OnInit, OnDestroy {
+export class ZapHistoryComponent implements OnDestroy {
   // Services
   private zapService = inject(ZapService);
   private accountState = inject(AccountStateService);
   private data = inject(DataService);
+  private snackBar = inject(MatSnackBar);
+  private accountRelay = inject(AccountRelayService);
+  layout = inject(LayoutService);
 
   // State
   isLoading = signal(false);
@@ -538,8 +626,17 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
     return this.totalReceived() - this.totalSent();
   });
 
-  async ngOnInit(): Promise<void> {
-    await this.loadZapHistory();
+  constructor() {
+    // Effect to reload zap history when account changes
+    effect(() => {
+      const account = this.accountState.account();
+      if (account) {
+        // Clear existing history and load for new account
+        this.allZaps.set([]);
+        this.prefetchedProfiles.set({});
+        this.loadZapHistory();
+      }
+    });
   }
 
   ngOnDestroy(): void {
@@ -565,10 +662,30 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
       const sentZapReceipts = await this.zapService.getZapsSentByUser(userPubkey);
 
       const zapHistory: ZapHistoryEntry[] = [];
+      // Track processed receipt IDs to avoid duplicates
+      const processedReceiptIds = new Set<string>();
 
       // Process received zaps
       for (const receipt of receivedZapReceipts) {
+        // Skip if already processed
+        if (processedReceiptIds.has(receipt.id)) {
+          continue;
+        }
+
         const parsed = this.zapService.parseZapReceipt(receipt);
+
+        // Debug logging for troubleshooting
+        console.debug('Processing received zap receipt:', {
+          id: receipt.id,
+          parsed: {
+            hasZapRequest: !!parsed.zapRequest,
+            hasAmount: !!parsed.amount,
+            amount: parsed.amount,
+            comment: parsed.comment,
+          },
+          tags: receipt.tags,
+        });
+
         if (parsed.zapRequest && parsed.amount) {
           const eventTag = receipt.tags.find(tag => tag[0] === 'e');
           zapHistory.push({
@@ -581,11 +698,23 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
             timestamp: receipt.created_at,
             eventId: eventTag?.[1],
           });
+          processedReceiptIds.add(receipt.id);
+        } else {
+          console.warn('Skipping received zap - missing zapRequest or amount:', {
+            id: receipt.id,
+            hasZapRequest: !!parsed.zapRequest,
+            hasAmount: !!parsed.amount,
+          });
         }
       }
 
       // Process sent zaps - receipts whose embedded zapRequest.pubkey === current user
       for (const receipt of sentZapReceipts) {
+        // Skip if already processed (prevents duplicates when receipt has both p and P tags)
+        if (processedReceiptIds.has(receipt.id)) {
+          continue;
+        }
+
         const parsed = this.zapService.parseZapReceipt(receipt);
         if (parsed.zapRequest && parsed.amount) {
           // Determine the recipient pubkey from the zapRequest tags (p tag)
@@ -603,6 +732,7 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
             timestamp: receipt.created_at,
             eventId: eventTag?.[1],
           });
+          processedReceiptIds.add(receipt.id);
         }
       }
 
@@ -655,6 +785,26 @@ export class ZapHistoryComponent implements OnInit, OnDestroy {
       return `${(amount / 1000).toFixed(1)}K`;
     }
     return amount.toString();
+  }
+
+
+
+  /**
+   * Copy zap receipt event data to clipboard
+   */
+  async copyEventData(zap: ZapHistoryEntry): Promise<void> {
+    try {
+      const eventData = JSON.stringify(zap.zapReceipt, null, 2);
+      await navigator.clipboard.writeText(eventData);
+      this.snackBar.open('Event data copied to clipboard', 'Dismiss', {
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Failed to copy event data:', error);
+      this.snackBar.open('Failed to copy event data', 'Dismiss', {
+        duration: 3000,
+      });
+    }
   }
 
   async refreshHistory(): Promise<void> {

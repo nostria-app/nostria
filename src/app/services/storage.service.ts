@@ -897,9 +897,9 @@ export class StorageService {
           `Replaced older parameterized event with newer event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
         );
       } else {
-        this.logger.debug(
-          `Skipped saving older parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
-        );
+        // this.logger.debug(
+        //   `Skipped saving older parameterized replaceable event ${event.id} (kind: ${event.kind}, d: ${dTagValue})`
+        // );
       }
     } else {
       // No existing event, just add this one
