@@ -434,6 +434,48 @@ export class AccountStateService implements OnDestroy {
     this.subscriptions.set(currentSubscriptions);
   }
 
+  /**
+   * Force refresh subscription data from the API, bypassing cache
+   * Use this when you need the latest subscription status (e.g., when viewing premium pages)
+   * @returns Promise that resolves when the subscription has been refreshed
+   */
+  async refreshSubscription(): Promise<void> {
+    const pubkey = this.pubkey();
+    if (!this.account() || !pubkey) {
+      return;
+    }
+
+    return new Promise((resolve, reject) => {
+      this.accountService
+        .getAccount(pubkey, new HttpContext().set(USE_NIP98, true))
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: accountObj => {
+            // Create a copy with retrieved timestamp
+            const accountWithTimestamp = { ...accountObj, retrieved: Date.now() };
+
+            // Update the subscription in local storage and signal
+            this.addSubscription(accountWithTimestamp);
+            resolve();
+          },
+          error: err => {
+            console.error('Failed to refresh subscription:', err);
+
+            // Save error state to prevent repeated requests
+            const subscription = this.subscription() || { pubkey };
+            const errorSubscription = {
+              ...subscription,
+              retrieved: Date.now(),
+              error: 'Failed to fetch account'
+            } as any;
+
+            this.addSubscription(errorSubscription);
+            reject(err);
+          },
+        });
+    });
+  }
+
   private loadData() {
     const pubkey = this.pubkey();
 
