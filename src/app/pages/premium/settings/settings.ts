@@ -3,9 +3,11 @@ import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatDialog } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { AccountStateService } from '../../../services/account-state.service';
 import { DatePipe } from '@angular/common';
+import { SetUsernameDialogComponent } from '../set-username-dialog/set-username-dialog.component';
 
 @Component({
   selector: 'app-premium-settings',
@@ -15,6 +17,7 @@ import { DatePipe } from '@angular/common';
 })
 export class PremiumSettings implements OnInit {
   accountState = inject(AccountStateService);
+  private dialog = inject(MatDialog);
 
   async ngOnInit() {
     // Refresh subscription status when the premium settings page is opened
@@ -23,5 +26,19 @@ export class PremiumSettings implements OnInit {
     } catch (error) {
       console.error('Failed to refresh subscription on premium settings page load:', error);
     }
+  }
+
+  openSetUsernameDialog(): void {
+    const dialogRef = this.dialog.open(SetUsernameDialogComponent, {
+      width: '500px',
+      disableClose: false,
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Username was set successfully, refresh handled by dialog
+        console.log('Username set successfully');
+      }
+    });
   }
 }
