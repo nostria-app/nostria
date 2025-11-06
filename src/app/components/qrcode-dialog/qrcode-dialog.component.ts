@@ -78,7 +78,7 @@ export class QRCodeDialogComponent implements AfterViewInit {
 
   onToggleGroupChange() {
     if (this.qrStyle == 'profile') {
-      this.generateQR(`https://profile.ariton.app/?did=${this.data.did}`);
+      this.generateQR(`https://nostria.app/p/${this.data.did}`);
     } else {
       this.generateQR(this.data.did);
     }

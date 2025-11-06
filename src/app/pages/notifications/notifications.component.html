@@ -91,6 +91,10 @@
               <div class="notification-message">{{ notification.message }}</div>
               }
 
+              @if (getZapContent(notification)) {
+              <div class="notification-message zap-content">{{ getZapContent(notification) }}</div>
+              }
+
               <div class="notification-meta">
                 <mat-icon class="time-icon">schedule</mat-icon>
                 <span class="notification-time">{{ (notification.timestamp / 1000) | ago }}</span>

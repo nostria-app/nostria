@@ -412,4 +412,15 @@ export class NotificationsComponent implements OnInit {
       NotificationType.ZAP,
     ];
   }
+
+  /**
+   * Get the zap content/message from a notification's metadata
+   */
+  getZapContent(notification: Notification): string | undefined {
+    if (this.isContentNotificationWithData(notification)) {
+      const contentNotif = notification as ContentNotification;
+      return contentNotif.metadata?.content;
+    }
+    return undefined;
+  }
 }

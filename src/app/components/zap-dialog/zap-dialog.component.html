@@ -2,11 +2,18 @@
   <!-- Input State -->
   @if (currentState() === 'input') {
   <h2 mat-dialog-title>
-    <mat-icon>bolt</mat-icon>
-    Zap
-    @if (data.recipientName) {
-    to {{ data.recipientName }}
-    }
+    <div class="dialog-title-content">
+      <div class="title-text">
+        <mat-icon>bolt</mat-icon>
+        Zap
+        @if (data.recipientName) {
+        to {{ data.recipientName }}
+        }
+      </div>
+      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
   </h2>
 
   <mat-dialog-content>
@@ -187,8 +194,15 @@
   <!-- Confirmation State -->
   @if (currentState() === 'confirmation') {
   <h2 mat-dialog-title>
-    <mat-icon>bolt</mat-icon>
-    Confirm Lightning Zap
+    <div class="dialog-title-content">
+      <div class="title-text">
+        <mat-icon>bolt</mat-icon>
+        Confirm Lightning Zap
+      </div>
+      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
   </h2>
 
   <mat-dialog-content>

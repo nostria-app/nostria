@@ -414,6 +414,26 @@ h2[mat-dialog-title] {
   color: var(--mat-sys-primary);
 }
 
+.dialog-title-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 16px;
+}
+
+.title-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+}
+
+.close-button {
+  margin-left: auto;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 mat-dialog-actions {
   display: flex;
   justify-content: flex-end;
