@@ -447,7 +447,7 @@ export class AccountStateService implements OnDestroy {
 
     return new Promise((resolve, reject) => {
       this.accountService
-        .getAccount(pubkey, new HttpContext().set(USE_NIP98, true))
+        .getAccount({}, new HttpContext().set(USE_NIP98, true))
         .pipe(takeUntil(this.destroy$))
         .subscribe({
           next: accountObj => {
@@ -506,7 +506,7 @@ export class AccountStateService implements OnDestroy {
     }
 
     this.accountService
-      .getAccount(pubkey, new HttpContext().set(USE_NIP98, true))
+      .getAccount({}, new HttpContext().set(USE_NIP98, true))
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: accountObj => {
