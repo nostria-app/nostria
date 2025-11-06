@@ -1,46 +1,41 @@
-@if (!accountState.subscription()) {
-  <div class="premium-container">
-    <div class="premium-header">
-      <h1 class="premium-title title-font">Nostria Premium</h1>
-      <p class="premium-subtitle">Unlock the full potential of your Nostr experience</p>
+@if (!accountState.subscription()?.expires) {
+<div class="premium-container">
+  <div class="premium-header">
+    <h1 class="premium-title title-font">Nostria Premium</h1>
+    <p class="premium-subtitle">Unlock the full potential of your Nostr experience</p>
 
-      <div class="cta-container">
-        <button
-          mat-flat-button
-          color="primary"
-          class="premium-cta-button"
-          [routerLink]="['/premium/upgrade']"
-        >
-          <mat-icon>stars</mat-icon>
-          Upgrade to Premium
-        </button>
-      </div>
-      <p>
-        <br />
-        <a href="https://www.nostria.app/premium" target="_blank" rel="noopener noreferrer" mat-flat-button>Learn more</a>
-      </p>
+    <div class="cta-container">
+      <button mat-flat-button color="primary" class="premium-cta-button" [routerLink]="['/premium/upgrade']">
+        <mat-icon>stars</mat-icon>
+        Upgrade to Premium
+      </button>
     </div>
+    <p>
+      <br />
+      <a href="https://www.nostria.app/premium" target="_blank" rel="noopener noreferrer" mat-flat-button>Learn more</a>
+    </p>
   </div>
+</div>
 } @else {
-  <div class="content-medium">
-    <h1>Nostria Premium</h1>
+<div class="content-medium">
+  <h1>Nostria Premium</h1>
 
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>Your subscription</mat-card-title>
-      </mat-card-header>
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Your subscription</mat-card-title>
+    </mat-card-header>
 
-      <mat-card-content>
-        <mat-list role="list">
-          <mat-list-item role="listitem">
-            Plan: {{ accountState.subscription()?.tier }}
-          </mat-list-item>
-          <mat-list-item role="listitem">
-            Expiry date:
-            {{ accountState.subscription()?.expires | date: 'short' }}
-          </mat-list-item>
-        </mat-list>
-      </mat-card-content>
-    </mat-card>
-  </div>
+    <mat-card-content>
+      <mat-list role="list">
+        <mat-list-item role="listitem">
+          Plan: {{ accountState.subscription()?.tier }}
+        </mat-list-item>
+        <mat-list-item role="listitem">
+          Expiry date:
+          {{ accountState.subscription()?.expires | date: 'short' }}
+        </mat-list-item>
+      </mat-list>
+    </mat-card-content>
+  </mat-card>
+</div>
 }

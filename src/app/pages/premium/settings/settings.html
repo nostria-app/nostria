@@ -1,6 +1,7 @@
 <div class="content-medium">
   <h2>Nostria Premium</h2>
 
+  @if (accountState.subscription()?.expires) {
   <mat-card>
     <mat-card-header>
       <mat-card-title>Your subscription</mat-card-title>
@@ -17,4 +18,19 @@
       </mat-list>
     </mat-card-content>
   </mat-card>
+  } @else {
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>No active subscription</mat-card-title>
+    </mat-card-header>
+
+    <mat-card-content>
+      <p>You don't currently have an active premium subscription.</p>
+      <button mat-flat-button color="primary" [routerLink]="['/premium/upgrade']">
+        <mat-icon>stars</mat-icon>
+        Upgrade to Premium
+      </button>
+    </mat-card-content>
+  </mat-card>
+  }
 </div>

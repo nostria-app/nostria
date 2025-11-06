@@ -273,7 +273,8 @@ export class App implements OnInit {
       }
 
       // Filter out items that should be hidden when subscribed
-      if (item.hideOnSubscribed && subscription) {
+      // Only hide if there's a valid subscription with an expiry date
+      if (item.hideOnSubscribed && subscription?.expires) {
         this.logger.info('Hiding item due to subscription:', item.label);
         return false;
       }
