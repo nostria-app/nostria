@@ -15,6 +15,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
@@ -110,12 +111,22 @@ export class GiftPremiumDialogComponent {
   errorMessage = signal<string | null>(null);
   selectedPaymentMethod = signal<PaymentMethod>('nwc');
   invoiceUrl = signal<string | null>(null);
-  isMobile = signal(false);
   bitcoinPrice = signal<BitcoinPrice | null>(null);
   loadingPrice = signal(true);
 
-  // Track form changes for reactive updates
-  private formChanged = signal(0);
+  // Form and reactive state
+  giftForm = new FormGroup({
+    premiumType: new FormControl<PremiumType>('premium', [Validators.required]),
+    duration: new FormControl<Duration>(1, [Validators.required]),
+    message: new FormControl('', [Validators.maxLength(100)]),
+    selectedWallet: new FormControl<string>(''),
+  });
+
+  // Convert observables to signals for automatic cleanup
+  private formChanges = toSignal(this.giftForm.valueChanges, { initialValue: null });
+  isMobile = toSignal(this.breakpointObserver.observe('(max-width: 768px)'), {
+    initialValue: { matches: false, breakpoints: {} },
+  });
 
   // Computed property for available wallets
   availableWallets = computed(() => {
@@ -146,7 +157,7 @@ export class GiftPremiumDialogComponent {
   // Computed amount based on selected premium type and duration
   totalAmount = computed(() => {
     // Track form changes to trigger reactivity
-    this.formChanged();
+    this.formChanges();
 
     const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;
     const duration = this.giftForm.get('duration')?.value as Duration;
@@ -171,7 +182,7 @@ export class GiftPremiumDialogComponent {
   // Computed pricing display text
   pricingInfo = computed<{ sats: number; usd: string } | null>(() => {
     // Track form changes to trigger reactivity
-    this.formChanged();
+    this.formChanges();
 
     const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;
     const duration = this.giftForm.get('duration')?.value as Duration;
@@ -195,21 +206,9 @@ export class GiftPremiumDialogComponent {
     };
   });
 
-  giftForm = new FormGroup({
-    premiumType: new FormControl<PremiumType>('premium', [Validators.required]),
-    duration: new FormControl<Duration>(1, [Validators.required]),
-    message: new FormControl('', [Validators.maxLength(100)]),
-    selectedWallet: new FormControl<string>(''),
-  });
-
   constructor() {
     // Fetch Bitcoin price
     this.fetchBitcoinPrice();
-
-    // Subscribe to form changes to trigger computed updates
-    this.giftForm.valueChanges.subscribe(() => {
-      this.formChanged.update(v => v + 1);
-    });
 
     // Set default wallet if only one is available
     const wallets = this.availableWallets();
@@ -222,11 +221,6 @@ export class GiftPremiumDialogComponent {
         this.giftForm.get('selectedWallet')?.setValue(connectedWallet.id);
       }
     }
-
-    // Check if on mobile device
-    this.breakpointObserver.observe('(max-width: 768px)').subscribe(result => {
-      this.isMobile.set(result.matches);
-    });
   }
 
   async fetchBitcoinPrice(): Promise<void> {
