@@ -1,7 +1,7 @@
-import { Component, inject, signal, OnDestroy } from '@angular/core';
+import { Component, inject, signal, OnDestroy, computed } from '@angular/core';
 import { FormBuilder, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -14,6 +14,10 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { UsernameService } from '../../../services/username';
 import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from '../../../services/interceptors/nip98Auth';
+
+export interface SetUsernameDialogData {
+  currentUsername?: string | null;
+}
 
 @Component({
   selector: 'app-set-username-dialog',
@@ -30,10 +34,10 @@ import { USE_NIP98 } from '../../../services/interceptors/nip98Auth';
     MatTooltipModule,
   ],
   template: `
-    <h2 mat-dialog-title>Set Your Premium Username</h2>
+    <h2 mat-dialog-title>{{ dialogTitle() }}</h2>
     <mat-dialog-content>
       <p class="dialog-description">
-        Choose your unique username for Nostria Premium. This will be your identity across the platform.
+        {{ dialogDescription() }}
       </p>
 
       <form [formGroup]="usernameFormGroup">
@@ -195,9 +199,21 @@ export class SetUsernameDialogComponent implements OnDestroy {
   private accountService = inject(AccountService);
   private accountState = inject(AccountStateService);
   private dialogRef = inject(MatDialogRef<SetUsernameDialogComponent>);
+  private dialogData = inject<SetUsernameDialogData>(MAT_DIALOG_DATA, { optional: true });
 
   isCheckingUsername = signal<boolean>(false);
   isSaving = signal<boolean>(false);
+  isEditMode = signal<boolean>(false);
+
+  dialogTitle = computed(() =>
+    this.isEditMode() ? 'Change Your Premium Username' : 'Set Your Premium Username'
+  );
+
+  dialogDescription = computed(() =>
+    this.isEditMode()
+      ? 'Change your unique username for Nostria Premium. Your new username will be your identity across the platform.'
+      : 'Choose your unique username for Nostria Premium. This will be your identity across the platform.'
+  );
 
   usernameFormGroup = this.formBuilder.group({
     username: [
@@ -207,6 +223,13 @@ export class SetUsernameDialogComponent implements OnDestroy {
   });
 
   constructor() {
+    // Check if we're editing an existing username
+    const currentUsername = this.dialogData?.currentUsername;
+    if (currentUsername) {
+      this.isEditMode.set(true);
+      this.usernameFormGroup.patchValue({ username: currentUsername });
+    }
+
     // Setup username validation
     this.usernameFormGroup
       .get('username')
@@ -215,6 +238,12 @@ export class SetUsernameDialogComponent implements OnDestroy {
         debounceTime(500),
         switchMap(username => {
           if (!username || username.length < 3) {
+            this.isCheckingUsername.set(false);
+            return of(null);
+          }
+
+          // Skip validation if username hasn't changed from the current one
+          if (currentUsername && username === currentUsername) {
             this.isCheckingUsername.set(false);
             return of(null);
           }

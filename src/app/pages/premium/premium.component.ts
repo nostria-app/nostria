@@ -12,7 +12,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { MatListModule } from '@angular/material/list';
 import { CommonModule } from '@angular/common';
 import { environment } from '../../../environments/environment';
-import { SetUsernameDialogComponent } from './set-username-dialog/set-username-dialog.component';
+import { SetUsernameDialogComponent, SetUsernameDialogData } from './set-username-dialog/set-username-dialog.component';
 
 @Component({
   selector: 'app-premium',
@@ -47,15 +47,21 @@ export class PremiumComponent implements OnInit {
   }
 
   openSetUsernameDialog(): void {
-    const dialogRef = this.dialog.open(SetUsernameDialogComponent, {
-      width: '500px',
-      disableClose: false,
-    });
+    const currentUsername = this.accountState.subscription()?.username;
+
+    const dialogRef = this.dialog.open<SetUsernameDialogComponent, SetUsernameDialogData>(
+      SetUsernameDialogComponent,
+      {
+        width: '500px',
+        disableClose: false,
+        data: { currentUsername },
+      }
+    );
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        // Username was set successfully, refresh handled by dialog
-        console.log('Username set successfully');
+        // Username was set/changed successfully, refresh handled by dialog
+        console.log('Username operation completed successfully');
       }
     });
   }
