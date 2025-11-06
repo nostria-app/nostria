@@ -224,7 +224,7 @@ interface ZapHistoryEntry {
                         @if (zap.comment) {
                           <div class="zap-comment">
                             <mat-icon class="comment-icon">format_quote</mat-icon>
-                            <span class="comment-text" [innerHTML]="formatComment(zap.comment)"></span>
+                            <span class="comment-text" style="white-space: pre-wrap;">{{ zap.comment }}</span>
                           </div>
                         }
 
