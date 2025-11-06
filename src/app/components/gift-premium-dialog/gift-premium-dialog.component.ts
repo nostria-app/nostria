@@ -24,7 +24,7 @@ import { environment } from '../../../environments/environment';
 
 // Hardcoded Nostria Premium receiver
 const NOSTRIA_PREMIUM_PUBKEY = '3e5b8d197f4a9279278fd61d9d033058e13d62f6652e3f868dcab54fac8c9658';
-const NOSTRIA_PREMIUM_LIGHTNING_ADDRESS = 'rudeshears26@walletofsatoshi.com';
+const NOSTRIA_PREMIUM_LIGHTNING_ADDRESS = 'nostriapayment@coinos.io';
 
 // Bitcoin price API
 const BITCOIN_PRICE_API = 'https://pay.ariton.app/price';
