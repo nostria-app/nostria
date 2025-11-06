@@ -144,7 +144,7 @@ interface ZapHistoryEntry {
                         @if (zap.comment) {
                           <div class="zap-comment">
                             <mat-icon class="comment-icon">format_quote</mat-icon>
-                            <span class="comment-text" [innerHTML]="formatComment(zap.comment)"></span>
+                            <span class="comment-text" style="white-space: pre-wrap;">{{ zap.comment }}</span>
                           </div>
                         }
 
@@ -301,7 +301,7 @@ interface ZapHistoryEntry {
                         @if (zap.comment) {
                           <div class="zap-comment">
                             <mat-icon class="comment-icon">format_quote</mat-icon>
-                            <span class="comment-text" [innerHTML]="formatComment(zap.comment)"></span>
+                            <span class="comment-text" style="white-space: pre-wrap;">{{ zap.comment }}</span>
                           </div>
                         }
 
@@ -787,20 +787,7 @@ export class ZapHistoryComponent implements OnDestroy {
     return amount.toString();
   }
 
-  /**
-   * Format comment text with newlines converted to <br> tags
-   */
-  formatComment(comment: string): string {
-    if (!comment) return '';
-    // Escape HTML to prevent XSS, then replace newlines with <br>
-    return comment
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;')
-      .replace(/\n/g, '<br>');
-  }
+
 
   /**
    * Copy zap receipt event data to clipboard
