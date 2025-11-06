@@ -87,10 +87,12 @@
         <app-zap-button [recipientPubkey]="pubkey()" class="hide-tiny"> </app-zap-button>
         }
 
-        <!-- Gift Premium Button - Always visible, payment goes to Nostria -->
-        <button class="hide-tiny" [matTooltip]="'Gift Premium subscription'" mat-icon-button (click)="giftPremium()">
+        <!-- Gift Premium Button - Only show if user doesn't have premium -->
+        @if (!isPremium()) {
+        <button class="hide-tiny" matTooltip="Gift Premium subscription" mat-icon-button (click)="giftPremium()">
           <mat-icon>card_giftcard</mat-icon>
         </button>
+        }
 
 
         }
@@ -246,11 +248,13 @@
         </button>
         }
 
-        <!-- Gift Premium - Always available, payment goes to Nostria -->
+        <!-- Gift Premium - Only show if user doesn't have premium -->
+        @if (!isPremium()) {
         <button mat-menu-item (click)="giftPremium()">
           <mat-icon>card_giftcard</mat-icon>
           <span>Gift Premium</span>
         </button>
+        }
         }
 
         @if (isOwnProfile()) {
