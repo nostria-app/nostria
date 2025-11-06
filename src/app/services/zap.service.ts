@@ -1216,8 +1216,8 @@ export class ZapService {
         throw new Error('Gift receiver does not match recipient pubkey');
       }
 
-      if (giftData.message.length > 200) {
-        throw new Error('Gift message exceeds 200 character limit');
+      if (giftData.message.length > 100) {
+        throw new Error('Gift message exceeds 100 character limit');
       }
 
       // Serialize gift data to JSON string for zap content
