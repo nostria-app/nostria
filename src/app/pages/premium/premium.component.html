@@ -34,7 +34,24 @@
           Expiry date:
           {{ accountState.subscription()?.expires | date: 'short' }}
         </mat-list-item>
+        @if (accountState.subscription()?.username) {
+        <mat-list-item role="listitem">
+          Username: {{ accountState.subscription()?.username }}@nostria.app
+        </mat-list-item>
+        }
       </mat-list>
+
+      @if (!accountState.subscription()?.username) {
+      <div class="username-prompt">
+        <p class="username-prompt-text">
+          You haven't set your premium username yet. Set it now to claim your unique identity!
+        </p>
+        <button mat-flat-button color="primary" (click)="openSetUsernameDialog()">
+          <mat-icon>alternate_email</mat-icon>
+          Set Username
+        </button>
+      </div>
+      }
     </mat-card-content>
   </mat-card>
 </div>
