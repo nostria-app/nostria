@@ -436,10 +436,23 @@ export class ProfileHeaderComponent {
 
     this.dialog.open(ZapDialogComponent, {
       data: dialogData,
-      width: '400px',
-      maxWidth: '95vw',
-      disableClose: false,
+      width: '500px',
+      disableClose: true,
+      panelClass: 'responsive-dialog',
     });
+  }
+
+  giftPremium(): void {
+    const pubkey = this.pubkey();
+    const profileData = this.profile()?.event?.content
+      ? JSON.parse(this.profile()!.event!.content)
+      : null;
+
+    this.layout.openGiftPremiumDialog(
+      pubkey,
+      this.name(),
+      profileData
+    );
   }
 
   copyProfileData(): void {

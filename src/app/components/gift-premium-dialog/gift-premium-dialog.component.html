@@ -1,0 +1,261 @@
+<div class="gift-premium-dialog" [class.confirmation-state]="currentState() === 'confirmation'">
+  <!-- Input State -->
+  @if (currentState() === 'input') {
+  <h2 mat-dialog-title>
+    <div class="dialog-title-content">
+      <div class="title-text">
+        <mat-icon>card_giftcard</mat-icon>
+        Gift Premium Subscription
+      </div>
+      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </h2>
+
+  <mat-dialog-content>
+    @if (data.recipientPubkey) {
+    <div class="recipient-preview">
+      <h4>Gift to</h4>
+      <div class="recipient-info">
+        <app-user-profile [pubkey]="data.recipientPubkey" [view]="'list'"></app-user-profile>
+      </div>
+    </div>
+    }
+
+    <form [formGroup]="giftForm" class="gift-form">
+      @if (availableWallets().length > 1) {
+      <div class="wallet-selection">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Select Wallet</mat-label>
+          <mat-select formControlName="selectedWallet">
+            @for (wallet of availableWallets(); track wallet.id) {
+            <mat-option [value]="wallet.id">
+              <div class="wallet-option">
+                <mat-icon>account_balance_wallet</mat-icon>
+                <span class="wallet-name">{{ wallet.name }}</span>
+                <span class="wallet-status" [class.connected]="wallet.connected">
+                  {{ wallet.connected ? 'Connected' : 'Disconnected' }}
+                </span>
+              </div>
+            </mat-option>
+            }
+          </mat-select>
+          <mat-hint>Choose which wallet to use for this gift</mat-hint>
+        </mat-form-field>
+      </div>
+      }
+
+      <div class="premium-type-selection">
+        <h3>Select Subscription Type</h3>
+        <mat-radio-group formControlName="premiumType" class="premium-type-group">
+          <mat-card class="premium-option-card" (click)="giftForm.get('premiumType')?.setValue('premium')">
+            <mat-radio-button value="premium">
+              <div class="premium-option-content">
+                <div class="premium-header">
+                  <mat-icon class="premium-icon">workspace_premium</mat-icon>
+                  <span class="premium-name">Premium</span>
+                </div>
+                <div class="premium-description">
+                  Enhanced features
+                </div>
+              </div>
+            </mat-radio-button>
+          </mat-card>
+
+          <mat-card class="premium-option-card premium-plus"
+            (click)="giftForm.get('premiumType')?.setValue('premium-plus')">
+            <mat-radio-button value="premium-plus">
+              <div class="premium-option-content">
+                <div class="premium-header">
+                  <mat-icon class="premium-icon">stars</mat-icon>
+                  <span class="premium-name">Premium+</span>
+                </div>
+                <div class="premium-description">
+                  All Premium features plus exclusive benefits
+                </div>
+              </div>
+            </mat-radio-button>
+          </mat-card>
+        </mat-radio-group>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <div class="duration-selection">
+        <h3>Select Duration</h3>
+        <mat-radio-group formControlName="duration" class="duration-group">
+          <mat-card class="duration-option-card" (click)="giftForm.get('duration')?.setValue(1)">
+            <mat-radio-button [value]="1">
+              <div class="duration-option-content">
+                <span class="duration-text">1 Month</span>
+                <span class="duration-price">
+                  @if (loadingPrice()) {
+                  Loading...
+                  } @else if (giftForm.get('premiumType')?.value === 'premium') {
+                  {{ (getDollarAmount('premium', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+                  } @else {
+                  {{ (getDollarAmount('premium-plus', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+                  }
+                </span>
+              </div>
+            </mat-radio-button>
+          </mat-card>
+
+          <mat-card class="duration-option-card" (click)="giftForm.get('duration')?.setValue(3)">
+            <mat-radio-button [value]="3">
+              <div class="duration-option-content">
+                <span class="duration-text">3 Months</span>
+                <span class="duration-price">
+                  @if (loadingPrice()) {
+                  Loading...
+                  } @else if (giftForm.get('premiumType')?.value === 'premium') {
+                  {{ (getDollarAmount('premium', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+                  } @else {
+                  {{ (getDollarAmount('premium-plus', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+                  }
+                </span>
+              </div>
+            </mat-radio-button>
+          </mat-card>
+        </mat-radio-group>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <mat-form-field appearance="outline" class="full-width message-field">
+        <mat-label>Personal Message (optional)</mat-label>
+        <textarea matInput maxlength="100" formControlName="message"
+          placeholder="Add a personal message to your gift..." rows="3"></textarea>
+        <mat-hint>{{ giftForm.get('message')?.value?.length || 0 }}/100 characters</mat-hint>
+        @if (giftForm.get('message')?.hasError('maxlength')) {
+        <mat-error>Message is too long (max 100 characters)</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="total-amount-display">
+        <h3>Total Amount</h3>
+        <div class="amount-details">
+          @if (loadingPrice()) {
+          <span class="amount-loading">Loading price...</span>
+          } @else {
+          <span class="amount-sats">{{ totalAmount().toLocaleString() }} sats</span>
+          <span class="amount-usd">({{ pricingInfo()?.usd }})</span>
+          }
+        </div>
+      </div>
+    </form>
+
+    @if (errorMessage()) {
+    <div class="error-message">
+      <mat-icon>error</mat-icon>
+      {{ errorMessage() }}
+    </div>
+    }
+
+    @if (!hasNwcWallet()) {
+    <div class="warning-message">
+      <mat-icon>warning</mat-icon>
+      <span>No wallet connected. You'll need to configure a wallet to send this gift.</span>
+      <button mat-button color="primary" (click)="openWalletSettings()">
+        Configure Wallet
+      </button>
+    </div>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
+    <button mat-raised-button color="primary" (click)="proceedToConfirmation()"
+      [disabled]="isProcessing() || !giftForm.valid || !hasNwcWallet()">
+      Continue
+    </button>
+  </mat-dialog-actions>
+  }
+
+  <!-- Confirmation State -->
+  @if (currentState() === 'confirmation') {
+  <h2 mat-dialog-title>
+    <div class="dialog-title-content">
+      <div class="title-text">
+        <mat-icon>card_giftcard</mat-icon>
+        Confirm Gift
+      </div>
+      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </h2>
+
+  <mat-dialog-content>
+    <div class="confirmation-content">
+      <!-- Recipient Info -->
+      <div class="section recipient-section">
+        <h3>Gifting to</h3>
+        <div class="recipient-info">
+          <app-user-profile [pubkey]="data.recipientPubkey" [view]="'list'"></app-user-profile>
+        </div>
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Gift Details -->
+      <div class="section gift-details-section">
+        <h3>Gift Details</h3>
+        <div class="detail-row">
+          <span class="detail-label">Subscription:</span>
+          <span class="detail-value">{{ getPremiumTypeName(giftForm.get('premiumType')?.value) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Duration:</span>
+          <span class="detail-value">{{ getDurationText(giftForm.get('duration')?.value) }}</span>
+        </div>
+        @if (giftForm.get('message')?.value) {
+        <div class="detail-row message-row">
+          <span class="detail-label">Message:</span>
+          <span class="detail-value message-preview">"{{ giftForm.get('message')?.value }}"</span>
+        </div>
+        }
+      </div>
+
+      <mat-divider></mat-divider>
+
+      <!-- Payment Details -->
+      <div class="section payment-section">
+        <h3>Payment</h3>
+        <div class="payment-amount">
+          <mat-icon class="payment-icon">bolt</mat-icon>
+          <div class="payment-details">
+            <span class="payment-sats">{{ totalAmount().toLocaleString() }} sats</span>
+            <span class="payment-usd">({{ pricingInfo()?.usd }})</span>
+          </div>
+        </div>
+      </div>
+
+      @if (errorMessage()) {
+      <div class="error-message">
+        <mat-icon>error</mat-icon>
+        {{ errorMessage() }}
+      </div>
+      }
+    </div>
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    <button mat-button (click)="backToInput()" [disabled]="isProcessing()">Back</button>
+    <button mat-raised-button color="primary" (click)="confirmGift()" [disabled]="isProcessing()">
+      @if (isProcessing()) {
+      <ng-container>
+        <mat-spinner [diameter]="20"></mat-spinner>
+        <span>Processing...</span>
+      </ng-container>
+      } @else {
+      <ng-container>
+        <mat-icon>send</mat-icon>
+        <span>Send Gift</span>
+      </ng-container>
+      }
+    </button>
+  </mat-dialog-actions>
+  }
+</div>

@@ -1119,6 +1119,38 @@ export class LayoutService implements OnDestroy {
     });
   }
 
+  /**
+   * Open gift premium dialog for a user
+   * @param pubkey - The recipient's public key
+   * @param recipientName - Optional display name for the recipient
+   * @param recipientMetadata - Optional metadata object for the recipient
+   */
+  async openGiftPremiumDialog(
+    pubkey: string,
+    recipientName?: string,
+    recipientMetadata?: Record<string, unknown>
+  ): Promise<void> {
+    // No lightning address validation needed - payments go to Nostria, not the recipient
+
+    // Dynamically import the dialog component
+    const { GiftPremiumDialogComponent } = await import(
+      '../components/gift-premium-dialog/gift-premium-dialog.component'
+    );
+
+    const dialogData = {
+      recipientPubkey: pubkey,
+      recipientName: recipientName,
+      recipientMetadata: recipientMetadata,
+    };
+
+    this.dialog.open(GiftPremiumDialogComponent, {
+      data: dialogData,
+      width: '500px',
+      disableClose: true,
+      panelClass: 'responsive-dialog',
+    });
+  }
+
   openProfileBanner(profile: NostrRecord): void {
     if (profile?.data.banner) {
       const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {

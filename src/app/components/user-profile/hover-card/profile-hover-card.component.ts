@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog } from '@angular/material/dialog';
 import { RouterModule } from '@angular/router';
 import { DataService } from '../../../services/data.service';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -34,6 +35,9 @@ interface ProfileData {
     nip05?: string;
     about?: string;
     banner?: string;
+    lud16?: string;
+    lud06?: string;
+    [key: string]: unknown;
   };
   isEmpty?: boolean;
 }
@@ -63,6 +67,7 @@ export class ProfileHoverCardComponent {
   private storage = inject(StorageService);
   private userDataService = inject(UserDataService);
   private trustService = inject(TrustService);
+  private dialog = inject(MatDialog);
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);

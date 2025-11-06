@@ -8,6 +8,7 @@ import { Wallets } from './wallets';
 import { LoggerService } from './logger.service';
 import { AccountRelayService } from './relays/account-relay';
 import { ZapMetricsService } from './zap-metrics.service';
+import { UtilitiesService } from './utilities.service';
 
 interface LnurlPayResponse {
   callback: string;
@@ -38,6 +39,13 @@ interface RetryOptions {
   backoffMultiplier: number;
 }
 
+export interface GiftPremiumData {
+  receiver: string;
+  message: string;
+  subscription: 'premium' | 'premium-plus';
+  duration: 1 | 3;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -49,6 +57,7 @@ export class ZapService {
   private logger = inject(LoggerService);
   private accountRelay = inject(AccountRelayService);
   private zapMetrics = inject(ZapMetricsService);
+  private utilities = inject(UtilitiesService);
 
   // Cache for LNURL pay endpoints
   private lnurlCache = new Map<string, LnurlPayResponse>();
@@ -132,6 +141,8 @@ export class ZapService {
       'no active account',
       'no connected wallets',
       'wallet not found',
+      'insufficient funds', // Don't retry on insufficient funds
+      'insufficient balance', // Alternative wording
     ];
 
     return nonRecoverableMessages.some(msg => message.includes(msg));
@@ -142,6 +153,24 @@ export class ZapService {
    */
   private enhanceError(error: Error): ZapError {
     const message = error.message.toLowerCase();
+
+    if (message.includes('insufficient funds') || message.includes('insufficient balance')) {
+      // Extract amount details if present in the error message
+      const match = error.message.match(/⚡️(\d+)\s*\/\s*(\d+)/);
+      if (match) {
+        const [, available, required] = match;
+        return this.createZapError(
+          'INSUFFICIENT_FUNDS',
+          `Insufficient funds. Available: ${available} sats, Required: ${required} sats`,
+          false
+        );
+      }
+      return this.createZapError(
+        'INSUFFICIENT_FUNDS',
+        'Insufficient funds in your wallet. Please add more funds and try again.',
+        false
+      );
+    }
 
     if (message.includes('network') || message.includes('fetch')) {
       return this.createZapError(
@@ -284,6 +313,62 @@ export class ZapService {
   }
 
   /**
+   * Get the recipient's relay URLs for including in zap requests
+   * The Lightning service provider needs these to know where to publish the zap receipt
+   */
+  private async getRecipientRelays(recipientPubkey: string): Promise<string[]> {
+    try {
+      // Try to get relay list event (kind 10002) for the recipient
+      const relayListEvents = await this.accountRelay.getMany({
+        kinds: [10002], // NIP-65 relay list
+        authors: [recipientPubkey],
+        limit: 1,
+      });
+
+      if (relayListEvents.length > 0) {
+        const relays = this.utilities.getRelayUrls(relayListEvents[0]);
+        if (relays.length > 0) {
+          this.logger.debug('Found relay list for recipient:', relays.slice(0, 5));
+          return relays.slice(0, 10); // Limit to 10 relays
+        }
+      }
+
+      // Fallback: Try to get contacts event (kind 3) which may contain relay info
+      const contactsEvents = await this.accountRelay.getMany({
+        kinds: [3], // Contacts list
+        authors: [recipientPubkey],
+        limit: 1,
+      });
+
+      if (contactsEvents.length > 0) {
+        const relays = this.utilities.getRelayUrlsFromFollowing(contactsEvents[0]);
+        if (relays.length > 0) {
+          this.logger.debug('Found relays from contacts for recipient:', relays.slice(0, 5));
+          return relays.slice(0, 10); // Limit to 10 relays
+        }
+      }
+
+      // Last resort: Use sender's relays as fallback
+      this.logger.warn('Could not find recipient relays, using sender relays as fallback');
+      const connectedRelays = this.relayService.getConnectedRelays();
+      if (Array.isArray(connectedRelays)) {
+        return connectedRelays.slice(0, 5);
+      }
+
+      // Absolute fallback: Use common relays
+      return ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.snort.social'];
+    } catch (error) {
+      this.logger.error('Error fetching recipient relays:', error);
+      // Return fallback relays on error
+      const connectedRelays = this.relayService.getConnectedRelays();
+      if (Array.isArray(connectedRelays)) {
+        return connectedRelays.slice(0, 5);
+      }
+      return ['wss://relay.damus.io', 'wss://nos.lol', 'wss://relay.snort.social'];
+    }
+  }
+
+  /**
    * Create a zap request event (kind 9734)
    */
   async createZapRequest(
@@ -391,8 +476,6 @@ export class ZapService {
       // For now, use the first available wallet
       const [, wallet] = walletEntries[0];
       const connectionString = wallet.connections[0];
-
-      this.logger.debug('Using wallet connection string:', connectionString);
 
       // Use Alby SDK to handle the NWC payment
       const ln = new LN(connectionString);
@@ -552,17 +635,32 @@ export class ZapService {
           // Convert lightning address to LNURL for the request
           const lnurl = this.lightningAddressToLnurl(lightningAddress);
 
+          // Fetch recipient's relays so the Lightning service knows where to publish the zap receipt
+          const recipientRelays = await this.getRecipientRelays(recipientPubkey);
+          this.logger.debug('Recipient relays for zap request:', recipientRelays);
+
           // Create zap request (usually succeeds, so no retry needed)
           const zapRequest = await this.createZapRequest(
             recipientPubkey,
             amountMsats,
             message,
             eventId,
-            lnurl
+            lnurl,
+            recipientRelays
           );
 
           // Sign the zap request
           const signedZapRequest = await this.nostr.signEvent(zapRequest);
+
+          // Publish the zap request to relays so it can be queried later
+          // This allows the user to see their sent zaps in history
+          try {
+            await this.accountRelay.publish(signedZapRequest);
+            this.logger.debug('Published zap request to relays:', signedZapRequest.id);
+          } catch (publishError) {
+            // Don't fail the zap if publishing fails - the payment can still proceed
+            this.logger.warn('Failed to publish zap request to relays:', publishError);
+          }
 
           // Request invoice from LNURL service with retry
           const zapPayment = await this.withRetry(
@@ -699,7 +797,35 @@ export class ZapService {
       }
 
       // Parse the zap request from the description
-      const zapRequest = JSON.parse(descriptionTag[1]) as Event;
+      // The description may contain unescaped newlines, so we need to handle that
+      let descriptionJson = descriptionTag[1];
+
+      // Try to parse as-is first
+      let zapRequest: Event;
+      try {
+        zapRequest = JSON.parse(descriptionJson) as Event;
+      } catch (firstError) {
+        // If parsing fails, try to fix common issues with control characters
+        // Replace literal newlines in content strings with escaped newlines
+        try {
+          // This is a heuristic approach: find the content field and escape newlines within it
+          descriptionJson = descriptionJson.replace(
+            /"content":"([^"]*)"/g,
+            (match, content) => {
+              const escapedContent = content
+                .replace(/\n/g, '\\n')
+                .replace(/\r/g, '\\r')
+                .replace(/\t/g, '\\t');
+              return `"content":"${escapedContent}"`;
+            }
+          );
+          zapRequest = JSON.parse(descriptionJson) as Event;
+          this.logger.debug('Successfully parsed zap request after escaping control characters');
+        } catch (secondError) {
+          this.logger.error('Failed to parse zap receipt description after attempting fixes:', secondError);
+          throw firstError; // Throw the original error for clarity
+        }
+      }
 
       // Extract amount from bolt11 invoice
       const bolt11Tag = zapReceipt.tags.find(tag => tag[0] === 'bolt11');
@@ -756,12 +882,24 @@ export class ZapService {
    */
   async getZapsForUser(pubkey: string): Promise<Event[]> {
     try {
+      this.logger.debug(`Fetching zap receipts for user: ${pubkey}`);
+
       // Query for zap receipts (kind 9735) that reference this user
+      // Remove limit to get all zaps
       const zapReceipts = await this.accountRelay.getMany({
         kinds: [9735],
         '#p': [pubkey],
-        limit: 100,
       });
+
+      this.logger.debug(`Found ${zapReceipts.length} zap receipts for user`);
+
+      // If we got no results, try logging more details
+      if (zapReceipts.length === 0) {
+        this.logger.warn(`No zap receipts found for pubkey ${pubkey}. Check if:
+          1. The user has received any zaps
+          2. The relays have the zap receipt events
+          3. The events have the proper #p tag`);
+      }
 
       return zapReceipts;
     } catch (error) {
@@ -773,44 +911,34 @@ export class ZapService {
   /**
    * Get zap receipts that correspond to zaps sent by a user.
    *
-   * There is no direct indexed tag for the zap *sender* inside the
-   * zap receipt (the description contains the original zap request), so
-   * we fetch recent zap receipts and filter by the embedded zapRequest.pubkey.
-   * This is best-effort and limited by the relay query limit.
+   * Strategy: Query zap receipts (kind 9735) with uppercase 'P' tag matching the sender's pubkey.
+   * According to NIP-57:
+   * - lowercase 'p' tag = recipient pubkey
+   * - uppercase 'P' tag = sender pubkey (from the zap request)
    */
-  async getZapsSentByUser(pubkey: string, limit = 200): Promise<Event[]> {
+  async getZapsSentByUser(pubkey: string): Promise<Event[]> {
     try {
-      // Fetch recent zap receipts (kind 9735) and filter those whose embedded
-      // zap request was authored by the provided pubkey.
+      this.logger.debug(`Fetching sent zaps with sender pubkey (P tag): ${pubkey}`);
+
+      // Query for zap receipts where the uppercase 'P' tag matches the sender
+      // Use type assertion to allow uppercase P tag (nostr-tools types don't include it)
       const receipts = await this.accountRelay.getMany({
-        kinds: [9735],
-        authors: [pubkey],
-        limit,
-      });
+        kinds: [9735], // Zap receipt kind
+        '#P': [pubkey], // Uppercase P = sender pubkey
+      } as unknown as Parameters<typeof this.accountRelay.getMany>[0]);
 
-      const sent: Event[] = [];
+      this.logger.debug(`Found ${receipts.length} sent zap receipts for user`);
 
-      for (const receipt of receipts) {
-        try {
-          const descriptionTag = receipt.tags.find(t => t[0] === 'description');
-          if (!descriptionTag || !descriptionTag[1]) {
-            continue;
-          }
-
-          const zapRequest = JSON.parse(descriptionTag[1]) as Event;
-          if (zapRequest && zapRequest.pubkey === pubkey) {
-            sent.push(receipt);
-          }
-        } catch (err) {
-          // ignore parse errors for individual receipts
-          this.logger.debug(
-            'Failed to parse zap receipt description while filtering sent zaps',
-            err
-          );
-        }
+      // Log sample receipt for debugging
+      if (receipts.length > 0) {
+        this.logger.debug('Sample sent zap receipt:', {
+          id: receipts[0].id,
+          pubkey: receipts[0].pubkey,
+          pTags: receipts[0].tags.filter(t => t[0] === 'p' || t[0] === 'P'),
+        });
       }
 
-      return sent;
+      return receipts;
     } catch (error) {
       this.logger.error('Error fetching zaps sent by user:', error as Error);
       return [];
@@ -1060,4 +1188,175 @@ export class ZapService {
     }
     return undefined;
   }
+
+  /**
+   * Send a gift premium zap with custom JSON content
+   */
+  async sendGiftPremiumZap(
+    recipientPubkey: string,
+    amount: number, // in sats
+    giftData: GiftPremiumData,
+    recipientMetadata?: Record<string, unknown>
+  ): Promise<void> {
+    try {
+      // Validate recipient has lightning address
+      if (!recipientMetadata) {
+        throw new Error('No recipient metadata available');
+      }
+
+      const lightningAddress = this.getLightningAddress(recipientMetadata);
+      if (!lightningAddress) {
+        throw new Error('Recipient has no Lightning address');
+      }
+
+      // Validate gift data
+      if (giftData.receiver !== recipientPubkey) {
+        throw new Error('Gift receiver does not match recipient pubkey');
+      }
+
+      if (giftData.message.length > 200) {
+        throw new Error('Gift message exceeds 200 character limit');
+      }
+
+      // Serialize gift data to JSON string for zap content
+      const zapContent = JSON.stringify(giftData);
+
+      this.logger.debug('Sending gift premium zap:', {
+        recipient: recipientPubkey,
+        amount: amount,
+        subscription: giftData.subscription,
+        duration: giftData.duration,
+      });
+
+      // Use the standard sendZap method with the JSON content
+      await this.sendZap(recipientPubkey, amount, zapContent, undefined, recipientMetadata);
+
+      this.logger.info('Gift premium zap sent successfully');
+    } catch (error) {
+      this.logger.error('Failed to send gift premium zap:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Parse gift premium data from zap receipt
+   */
+  parseGiftPremiumFromZap(zapReceipt: Event): GiftPremiumData | null {
+    try {
+      const parsed = this.parseZapReceipt(zapReceipt);
+      if (!parsed.zapRequest) {
+        return null;
+      }
+
+      const content = parsed.zapRequest.content;
+      if (!content) {
+        return null;
+      }
+
+      // Try new clear text format first (line-based, order is important)
+      // Line 1: Gift type identifier (🎁 Nostria Premium Gift)
+      // Line 2: Receiver pubkey
+      // Line 3: Subscription type (premium or premium-plus)
+      // Line 4: Duration in months (1 or 3)
+      // Line 5+: Optional user message
+      const lines = content.split('\n');
+
+      if (lines.length >= 4 && lines[0] === '🎁 Nostria Premium Gift') {
+        const receiver = lines[1];
+        const subscription = lines[2] as 'premium' | 'premium-plus';
+        const duration = parseInt(lines[3], 10) as 1 | 3;
+        const message = lines.slice(4).join('\n'); // Join remaining lines as message
+
+        // Validate the parsed data
+        if (
+          receiver &&
+          (subscription === 'premium' || subscription === 'premium-plus') &&
+          (duration === 1 || duration === 3)
+        ) {
+          return {
+            receiver,
+            subscription,
+            duration,
+            message: message || '',
+          };
+        }
+      }
+
+      // Fall back to old JSON format for backwards compatibility
+      try {
+        const giftData = JSON.parse(content) as GiftPremiumData;
+
+        // Validate the structure
+        if (
+          typeof giftData.receiver === 'string' &&
+          typeof giftData.message === 'string' &&
+          (giftData.subscription === 'premium' || giftData.subscription === 'premium-plus') &&
+          (giftData.duration === 1 || giftData.duration === 3)
+        ) {
+          return giftData;
+        }
+      } catch {
+        // Not JSON, continue
+      }
+
+      return null;
+    } catch {
+      // Not a gift premium zap or invalid format
+      return null;
+    }
+  }
+
+  /**
+   * Check if a zap receipt is a gift premium zap
+   */
+  isGiftPremiumZap(zapReceipt: Event): boolean {
+    return this.parseGiftPremiumFromZap(zapReceipt) !== null;
+  }
+
+  /**
+   * Get gift premium zaps received by a user
+   */
+  async getGiftPremiumZapsForUser(
+    pubkey: string
+  ): Promise<
+    {
+      zapReceipt: Event;
+      giftData: GiftPremiumData;
+      amount: number | null;
+    }[]
+  > {
+    try {
+      const allZaps = await this.getZapsForUser(pubkey);
+
+      const giftZaps = allZaps
+        .map(zapReceipt => {
+          const giftData = this.parseGiftPremiumFromZap(zapReceipt);
+          if (!giftData) {
+            return null;
+          }
+
+          const parsed = this.parseZapReceipt(zapReceipt);
+          return {
+            zapReceipt,
+            giftData,
+            amount: parsed.amount,
+          };
+        })
+        .filter(
+          (
+            item
+          ): item is {
+            zapReceipt: Event;
+            giftData: GiftPremiumData;
+            amount: number | null;
+          } => item !== null
+        );
+
+      return giftZaps;
+    } catch (error) {
+      this.logger.error('Failed to get gift premium zaps for user:', error);
+      return [];
+    }
+  }
 }
+

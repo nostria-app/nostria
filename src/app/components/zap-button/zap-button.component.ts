@@ -189,6 +189,8 @@ export class ZapButtonComponent {
     const dialogRef = this.dialog.open(ZapDialogComponent, {
       width: '500px',
       data: dialogData,
+      disableClose: true,
+      panelClass: 'responsive-dialog',
     });
 
     dialogRef.afterClosed().subscribe(result => {

@@ -384,12 +384,18 @@ export class ContentNotificationService {
         const descriptionTag = event.tags.find(tag => tag[0] === 'description');
         let zapperPubkey = event.pubkey; // Fallback to LNURL service pubkey
         let zapRequestEventId: string | undefined;
+        let zapContent: string | undefined;
 
         if (descriptionTag && descriptionTag[1]) {
           try {
             const zapRequest = JSON.parse(descriptionTag[1]);
             if (zapRequest && zapRequest.pubkey) {
               zapperPubkey = zapRequest.pubkey; // This is the actual zapper
+
+              // Extract the content/message from the zap request
+              if (zapRequest.content && typeof zapRequest.content === 'string') {
+                zapContent = zapRequest.content.trim();
+              }
 
               // Extract the event that was zapped (if any)
               const eTag = zapRequest.tags?.find((t: string[]) => t[0] === 'e');
@@ -448,6 +454,7 @@ export class ContentNotificationService {
             zappedEventId: zapRequestEventId, // Store which event was zapped
             zapReceiptId: event.id, // Store the zap receipt ID for reference
             recipientPubkey: pubkey, // Store recipient for profile zap navigation
+            content: zapContent, // Store the zap message/comment
           },
         });
       }

@@ -44,6 +44,7 @@ app.get('/.well-known/nostr.json', async (req, res) => {
   // Handle hard-coded values
   const hardCodedUsers: Record<string, string> = {
     support: 'd884f41487d7e4b596a2fc5b064fe211632fc9c4459a238539729ff1b06d7fc7',
+    payment: '3e5b8d197f4a9279278fd61d9d033058e13d62f6652e3f868dcab54fac8c9658',
     _: 'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b',
   };
 
