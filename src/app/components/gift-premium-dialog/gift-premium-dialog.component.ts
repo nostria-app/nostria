@@ -264,19 +264,6 @@ export class GiftPremiumDialogComponent {
       return;
     }
 
-    // Validate that recipient has lightning address
-    const lightningAddress = this.zapService.getLightningAddress(
-      this.data.recipientMetadata || {}
-    );
-
-    if (!lightningAddress) {
-      this.errorMessage.set('Recipient does not have a Lightning address configured');
-      this.snackBar.open('Recipient does not have a Lightning address configured', 'Dismiss', {
-        duration: 4000,
-      });
-      return;
-    }
-
     this.currentState.set('confirmation');
   }
 
