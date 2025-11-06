@@ -74,7 +74,7 @@ import { USE_NIP98 } from '../../../services/interceptors/nip98Auth';
 
         @if (usernameFormGroup.valid && usernameFormGroup.get('username')?.value) {
           <div class="username-preview">
-            <p><strong>Your username will be:</strong></p>
+            <p class="preview-title"><strong>Your username will be:</strong></p>
             <p class="preview-text">
               <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
               <span class="domain-part">@nostria.app</span>
@@ -116,7 +116,7 @@ import { USE_NIP98 } from '../../../services/interceptors/nip98Auth';
   styles: [`
     .dialog-description {
       margin-bottom: 24px;
-      color: var(--text-secondary, rgba(0, 0, 0, 0.6));
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .full-width {
@@ -126,7 +126,8 @@ import { USE_NIP98 } from '../../../services/interceptors/nip98Auth';
     .username-preview {
       margin: 16px 0;
       padding: 16px;
-      background-color: var(--background-secondary, rgba(0, 0, 0, 0.03));
+      background-color: var(--mat-sys-surface-container-high);
+      border: 1px solid var(--mat-sys-outline-variant);
       border-radius: 8px;
     }
 
@@ -134,18 +135,23 @@ import { USE_NIP98 } from '../../../services/interceptors/nip98Auth';
       margin: 8px 0;
     }
 
+    .username-preview .preview-title {
+      color: var(--mat-sys-on-surface);
+    }
+
     .preview-text {
       font-family: monospace;
       font-size: 14px;
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .username-part {
-      font-weight: bold;
-      color: var(--primary-color, #1976d2);
+      font-weight: 500;
+      color: var(--mat-sys-primary);
     }
 
     .domain-part {
-      color: var(--text-secondary, rgba(0, 0, 0, 0.6));
+      color: var(--mat-sys-on-surface-variant);
     }
 
     .info-box {
@@ -153,20 +159,20 @@ import { USE_NIP98 } from '../../../services/interceptors/nip98Auth';
       gap: 12px;
       padding: 12px;
       margin-top: 16px;
-      background-color: var(--info-background, rgba(33, 150, 243, 0.1));
+      background-color: var(--mat-sys-primary-container);
       border-radius: 8px;
       align-items: flex-start;
     }
 
     .info-box mat-icon {
-      color: var(--info-color, #2196f3);
+      color: var(--mat-sys-on-primary-container);
       flex-shrink: 0;
     }
 
     .info-box p {
       margin: 0;
       font-size: 14px;
-      color: var(--text-secondary, rgba(0, 0, 0, 0.7));
+      color: var(--mat-sys-on-primary-container);
     }
 
     mat-dialog-content {
