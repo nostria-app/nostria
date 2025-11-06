@@ -64,7 +64,10 @@ export class SearchService {
         // If query looks like an email (NIP-05), also try NIP-05 lookup
         if (searchValue.indexOf('@') > -1) {
           let nip05Value = searchValue;
-          if (!nip05Value.startsWith('_')) {
+          // Only prefix with "_" if the query starts with "@" (domain-only, no username)
+          // e.g., "@nostria.app" becomes "_@nostria.app"
+          // But "sondreb@nostria.app" stays as is
+          if (searchValue.startsWith('@') && !nip05Value.startsWith('_')) {
             nip05Value = '_' + nip05Value;
           }
 
