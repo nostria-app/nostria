@@ -28,7 +28,8 @@ const NOSTRIA_PREMIUM_LIGHTNING_ADDRESS = 'rudeshears26@walletofsatoshi.com';
 const BITCOIN_PRICE_API = 'https://pay.ariton.app/price';
 
 // Development mode pricing multiplier (10x cheaper in dev mode)
-const PRICE_MULTIPLIER = environment.production ? 1 : 0.1;
+// const PRICE_MULTIPLIER = environment.production ? 1 : 0.1;
+const PRICE_MULTIPLIER = environment.production ? 1 : 1;
 
 interface BitcoinPrice {
   usd: number;
@@ -323,14 +324,26 @@ export class GiftPremiumDialogComponent {
       // Get the amount in sats
       const amountInSats = this.totalAmount();
 
+      // Fetch BOTH the gift recipient's relays AND Nostria Premium's relays
+      // This ensures the Lightning provider publishes the zap receipt to both sets of relays
+      const [giftRecipientRelays, nostriaPremiumRelays] = await Promise.all([
+        this.zapService.getRecipientRelays(this.data.recipientPubkey),
+        this.zapService.getRecipientRelays(NOSTRIA_PREMIUM_PUBKEY),
+      ]);
+
+      // Combine both sets of relays, removing duplicates
+      const combinedRelays = [...new Set([...giftRecipientRelays, ...nostriaPremiumRelays])];
+
       // Send the zap to the hardcoded Nostria Premium receiver
       // The payment goes to Nostria, not to the recipient
+      // But we include BOTH the gift recipient's and Nostria's relays in the zap request
       await this.zapService.sendZap(
         NOSTRIA_PREMIUM_PUBKEY, // Always send to Nostria Premium pubkey
         amountInSats,
         zapContent, // Pass the serialized JSON as the message
         undefined, // No event ID
-        { lud16: NOSTRIA_PREMIUM_LIGHTNING_ADDRESS } // Use hardcoded lightning address
+        { lud16: NOSTRIA_PREMIUM_LIGHTNING_ADDRESS }, // Use hardcoded lightning address
+        combinedRelays // Include both gift recipient's and Nostria's relays
       );
 
       this.snackBar.open(

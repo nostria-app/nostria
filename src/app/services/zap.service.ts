@@ -316,7 +316,7 @@ export class ZapService {
    * Get the recipient's relay URLs for including in zap requests
    * The Lightning service provider needs these to know where to publish the zap receipt
    */
-  private async getRecipientRelays(recipientPubkey: string): Promise<string[]> {
+  async getRecipientRelays(recipientPubkey: string): Promise<string[]> {
     try {
       // Try to get relay list event (kind 10002) for the recipient
       const relayListEvents = await this.accountRelay.getMany({
@@ -576,7 +576,8 @@ export class ZapService {
     amount: number, // in sats
     message = '',
     eventId?: string,
-    recipientMetadata?: Record<string, unknown>
+    recipientMetadata?: Record<string, unknown>,
+    customRelays?: string[] // Optional: custom relays for the zap request (e.g., for gift subscriptions)
   ): Promise<void> {
     const startTime = Date.now();
 
@@ -636,7 +637,8 @@ export class ZapService {
           const lnurl = this.lightningAddressToLnurl(lightningAddress);
 
           // Fetch recipient's relays so the Lightning service knows where to publish the zap receipt
-          const recipientRelays = await this.getRecipientRelays(recipientPubkey);
+          // Use custom relays if provided (for gift subscriptions), otherwise fetch recipient's relays
+          const recipientRelays = customRelays || await this.getRecipientRelays(recipientPubkey);
           this.logger.debug('Recipient relays for zap request:', recipientRelays);
 
           // Create zap request (usually succeeds, so no retry needed)

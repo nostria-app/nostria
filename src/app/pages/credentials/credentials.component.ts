@@ -291,7 +291,6 @@ export class CredentialsComponent implements OnInit {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return '';
 
-    console.debug('LOCATION 2:', pubkey);
     return this.utilities.getNpubFromPubkey(pubkey);
   }
 
