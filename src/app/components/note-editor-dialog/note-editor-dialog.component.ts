@@ -543,6 +543,12 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       // This ensures replies, quotes, and mentions are published to all relevant relays
       const result = await this.nostrService.signAndPublish(eventToSign);
 
+      console.log('[NoteEditorDialog] Publish result:', {
+        success: result.success,
+        hasEvent: !!result.event,
+        eventId: result.event?.id
+      });
+
       if (!result.success || !result.event) {
         throw new Error('Failed to publish event');
       }
@@ -571,6 +577,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         duration: 5000,
       });
     } finally {
+      console.log('[NoteEditorDialog] Finally block - resetting isPublishing');
       this.isPublishing.set(false);
     }
   }

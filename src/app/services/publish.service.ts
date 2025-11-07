@@ -104,6 +104,8 @@ export class PublishService {
 
       if (relayUrls.length === 0) {
         this.logger.warn('[PublishService] No relays available for publishing');
+        // Reset publishing state before returning
+        this.appState.isPublishing.set(false);
         return result;
       }
 
@@ -111,11 +113,17 @@ export class PublishService {
       const relayPromises = new Map<Promise<string>, string>();
       const publishPromises: Promise<string>[] = [];
 
+      // Get timeout for individual relay publishes (use half of total timeout per relay)
+      const timeout = options.timeout || 10000;
+      const perRelayTimeout = Math.max(5000, Math.floor(timeout / 2));
+
       // Publish to each relay individually so we can track status
       for (const relayUrl of relayUrls) {
-        const publishPromise = this.pool.publish([relayUrl], event)
+        const publishPromise = this.pool.publish([relayUrl], event, perRelayTimeout)
           .then(() => relayUrl)
           .catch(error => {
+            // Log but don't throw - we want to track partial failures
+            this.logger.debug('[PublishService] Relay publish failed', { relayUrl, error });
             throw new Error(`${relayUrl}: ${error.message || 'Failed'}`);
           });
 
@@ -129,23 +137,35 @@ export class PublishService {
         relayPromises
       );
 
-      // Process results with timeout
-      const timeout = options.timeout || 10000;
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Publish timeout')), timeout)
+      // Process results with overall timeout
+      // Create a proper timeout that we can await
+      let settledResults: PromiseSettledResult<string>[];
+
+      const allSettledPromise = Promise.allSettled(publishPromises);
+      const timeoutPromise = new Promise<'timeout'>((resolve) =>
+        setTimeout(() => resolve('timeout'), timeout)
       );
 
-      const settledResults = await Promise.race([
-        Promise.allSettled(publishPromises),
-        timeoutPromise
-      ]).catch(error => {
-        // If timeout occurs, mark all as failed
-        this.logger.warn('[PublishService] Publish timed out', { timeout, error });
-        return publishPromises.map(() => ({
-          status: 'rejected' as const,
-          reason: new Error('Timeout')
-        }));
-      });
+      const raceResult = await Promise.race([allSettledPromise, timeoutPromise]);
+
+      if (raceResult === 'timeout') {
+        // Timeout occurred - collect whatever results we have so far
+        this.logger.warn('[PublishService] Publish timed out, collecting current results', { timeout });
+
+        // Give promises a tiny bit more time to settle
+        await new Promise(resolve => setTimeout(resolve, 100));
+        settledResults = await Promise.allSettled(publishPromises);
+
+        this.logger.debug('[PublishService] Results after timeout', {
+          settled: settledResults.length,
+          fulfilled: settledResults.filter(r => r.status === 'fulfilled').length,
+          rejected: settledResults.filter(r => r.status === 'rejected').length,
+        });
+      } else {
+        // All settled before timeout
+        settledResults = raceResult;
+        this.logger.debug('[PublishService] All publishes completed before timeout');
+      }
 
       settledResults.forEach((promiseResult, index) => {
         const relayUrl = relayUrls[index] || 'unknown';
@@ -168,14 +188,27 @@ export class PublishService {
         success: result.success,
         relayCount: relayUrls.length,
         successCount: Array.from(result.relayResults.values()).filter(r => r.success).length,
+        relayResults: Array.from(result.relayResults.entries()).map(([url, r]) => ({
+          url,
+          success: r.success,
+          error: r.error
+        }))
       });
 
       return result;
     } catch (error) {
       this.logger.error('[PublishService] Error during publish', error);
+      // Ensure we still set result.success based on any successful relays
+      result.success = Array.from(result.relayResults.values()).some(r => r.success);
       return result;
     } finally {
+      // CRITICAL: Always reset publishing state, even if there were errors
       this.appState.isPublishing.set(false);
+
+      this.logger.debug('[PublishService] Publishing state reset', {
+        finalSuccess: result.success,
+        relayResultsCount: result.relayResults.size
+      });
     }
   }
 
