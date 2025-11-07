@@ -294,7 +294,7 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     setTimeout(() => this.layout.scrollMainContentToTop(), 100);
-    
+
     // Capture the previous URL from navigation state or history
     const navigation = this.router.getCurrentNavigation();
     if (navigation?.extras?.state?.['from']) {
