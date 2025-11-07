@@ -8,6 +8,12 @@
   }
 }
 
+// Override margin for preview mode (used in article editor)
+:host-context(.editor-container) .article-container {
+  margin: 0 auto;
+  padding: 0;
+}
+
 // Article header
 .article-header {
   margin-bottom: 32px;
