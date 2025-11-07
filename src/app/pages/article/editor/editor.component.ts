@@ -185,6 +185,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   previewImage = signal<string | null>(null);
   hasMediaServers = computed(() => this.media.mediaServers().length > 0);
   showArticleImage = signal(false);
+  showPreview = signal(false);
 
   constructor() {
     // Check if we're editing an existing article
@@ -842,6 +843,10 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   toggleArticleImageSection(): void {
     this.showArticleImage.update(show => !show);
+  }
+
+  togglePreview(): void {
+    this.showPreview.update(show => !show);
   }
 
   applyAutoDTag(): void {

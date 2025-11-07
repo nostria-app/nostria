@@ -11,11 +11,16 @@
 <div class="editor-container">
   <!-- Medium-style Editor -->
   <div class="medium-editor">
-    <!-- Article Image Toggle Button -->
-    <div class="image-toggle-button-container">
+    <!-- Top Action Buttons -->
+    <div class="top-action-buttons">
       <button mat-icon-button (click)="toggleArticleImageSection()"
         [matTooltip]="showArticleImage() ? 'Hide featured image' : 'Add featured image'">
         <mat-icon>{{ showArticleImage() ? 'image' : 'add_photo_alternate' }}</mat-icon>
+      </button>
+      <button mat-icon-button (click)="togglePreview()"
+        [matTooltip]="showPreview() ? 'Edit' : 'Preview'"
+        [class.active]="showPreview()">
+        <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
     </div>
 
@@ -73,51 +78,52 @@
     }
 
     <!-- Title Input -->
+    @if (!showPreview()) {
     <input type="text" class="title-input" placeholder="Title" [value]="article().title"
       (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
 
     <!-- Summary Input -->
     <textarea class="summary-input" placeholder="Summary (optional)" [value]="article().summary"
       (input)="updateSummary($any($event.target).value)"></textarea>
+    }
 
-    <!-- Content Editor -->
-    <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">
-      <mat-tab label="Write">
-        <div class="write-tab">
-          <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)">
-          </app-rich-text-editor>
+    <!-- Content Editor or Preview -->
+    @if (!showPreview()) {
+    <!-- Write Mode -->
+    <div class="write-tab">
+      <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)">
+      </app-rich-text-editor>
+    </div>
+    } @else {
+    <!-- Preview Mode -->
+    <div class="preview-tab">
+      @if (article().content.trim()) {
+      <div class="preview-content">
+        <h1 class="preview-title">
+          {{ article().title || 'Untitled' }}
+        </h1>
+        @if (article().summary) {
+        <p class="preview-summary">{{ article().summary }}</p>
+        }
+        @if (article().image) {
+        <img [src]="article().image" [attr.alt]="article().title || 'Article featured image'"
+          [attr.title]="article().title || 'Article featured image'" class="preview-image" loading="lazy" />
+        }
+        <div class="preview-markdown" appMentionHover>
+          <div [innerHTML]="markdownHtml()"></div>
         </div>
-      </mat-tab>
-
-      <mat-tab label="Preview">
-        <div class="preview-tab">
-          @if (article().content.trim()) {
-          <div class="preview-content">
-            <h1 class="preview-title">
-              {{ article().title || 'Untitled' }}
-            </h1>
-            @if (article().summary) {
-            <p class="preview-summary">{{ article().summary }}</p>
-            }
-            @if (article().image) {
-            <img [src]="article().image" [attr.alt]="article().title || 'Article featured image'"
-              [attr.title]="article().title || 'Article featured image'" class="preview-image" loading="lazy" />
-            }
-            <div class="preview-markdown" appMentionHover>
-              <div [innerHTML]="markdownHtml()"></div>
-            </div>
-          </div>
-          } @else {
-          <div class="empty-preview">
-            <mat-icon>preview</mat-icon>
-            <p>Write some content to see the preview</p>
-          </div>
-          }
-        </div>
-      </mat-tab>
-    </mat-tab-group>
+      </div>
+      } @else {
+      <div class="empty-preview">
+        <mat-icon>preview</mat-icon>
+        <p>Write some content to see the preview</p>
+      </div>
+      }
+    </div>
+    }
   </div>
 
+  @if (!showPreview()) {
   <!-- Article Metadata -->
   <div class="metadata-section">
     <div class="dTag-field-container">
@@ -169,6 +175,7 @@
       }
     </div>
   </div>
+  }
 
   <!-- Action Buttons -->
   <div class="action-buttons">
