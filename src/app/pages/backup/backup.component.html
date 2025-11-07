@@ -1,10 +1,5 @@
-<div class="content-medium has-premium-badge">
-  <div class="premium-badge">
-    <mat-icon class="premium-icon">diamond</mat-icon>
-    <span>Premium</span>
-  </div>
-
-  <ng-template #discoveryRelaysInfoContent>
+<div class="content-medium">
+   <ng-template #discoveryRelaysInfoContent>
     <mat-card-header>
       <mat-card-title>
         <div class="info-title">
@@ -33,7 +28,7 @@
   </ng-template>
 
   <h2>
-    Backup & Restore
+    Backup & Restore <mat-icon class="premium-icon">diamond</mat-icon>
     <app-info-tooltip
       [content]="discoveryRelaysInfoContent"
       ariaLabel="Learn how backup work"
