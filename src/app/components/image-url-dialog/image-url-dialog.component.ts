@@ -43,7 +43,7 @@ import { MatInputModule } from '@angular/material/input';
 })
 export class ImageUrlDialogComponent {
   private dialogRef = inject(MatDialogRef<ImageUrlDialogComponent>);
-  
+
   imageUrl = '';
 
   onCancel(): void {
