@@ -76,6 +76,9 @@ import { CacheCleanupService } from './services/cache-cleanup.service';
 import { AccountLocalStateService } from './services/account-local-state.service';
 import { NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { WebPushService } from './services/webpush.service';
+import { PushNotificationPromptComponent } from './components/push-notification-prompt/push-notification-prompt.component';
+import { isPlatformBrowser } from '@angular/common';
 
 interface NavItem {
   path: string;
@@ -159,12 +162,16 @@ export class App implements OnInit {
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly webPushService = inject(WebPushService);
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
   @ViewChild('notificationMenuTrigger') notificationMenuTrigger!: MatMenuTrigger;
+
+  // Track if push notification prompt has been shown
+  private pushPromptShown = signal(false);
 
   // Content notification types (social interactions that users care about)
   private readonly contentNotificationTypes = [
@@ -564,6 +571,29 @@ export class App implements OnInit {
         this.logger.debug('[App] Start on last route is disabled, not restoring');
       }
     }, { allowSignalWrites: true });
+
+    // Handle launch counter and push notification prompt for authenticated users
+    effect(() => {
+      const authenticated = this.app.authenticated();
+      const initialized = this.app.initialized();
+      const pubkey = this.accountState.pubkey();
+
+      if (authenticated && initialized && pubkey && !this.pushPromptShown()) {
+        const launchCount = this.accountLocalState.incrementLaunchCount(pubkey);
+        this.logger.info(`[App] Launch count for user: ${launchCount}`);
+
+        // Check if user has already dismissed the dialog
+        const hasBeenDismissed = this.accountLocalState.getDismissedPushNotificationDialog(pubkey);
+
+        // Show push notification prompt after 5 launches (only once per session and if not previously dismissed)
+        if (launchCount > 3 && !this.isPushNotificationEnabled() && !hasBeenDismissed) {
+          // Delay showing the prompt to avoid overwhelming the user on startup
+          setTimeout(() => {
+            this.showPushNotificationPrompt();
+          }, 3000); // 3 second delay
+        }
+      }
+    });
 
     this.logger.debug('AppComponent constructor completed'); // Register a one-time callback after the first render
     afterNextRender(() => {
@@ -1253,5 +1283,66 @@ export class App implements OnInit {
 
     // For system notifications or content notifications without eventId, go to notifications page
     this.router.navigate(['/notifications']);
+  }
+
+  /**
+   * Check if push notifications are enabled
+   */
+  isPushNotificationEnabled(): boolean {
+    if (!isPlatformBrowser(this.platform)) {
+      return false;
+    }
+
+    // Check if service worker push is supported and enabled
+    return this.webPushService.push.isEnabled;
+  }
+
+  /**
+   * Navigate to notification settings to enable push notifications
+   */
+  enablePushNotifications(): void {
+    this.router.navigate(['/notifications/settings']);
+  }
+
+  /**
+   * Show push notification prompt bottom sheet
+   */
+  private showPushNotificationPrompt(): void {
+    this.pushPromptShown.set(true);
+
+    this.bottomSheet.open(PushNotificationPromptComponent, {
+      disableClose: false,
+      hasBackdrop: true,
+    });
+  }
+
+  /**
+   * Get icon for notification type (used in template)
+   */
+  getNotificationIcon(type: NotificationType): string {
+    switch (type) {
+      case NotificationType.NEW_FOLLOWER:
+        return 'person_add';
+      case NotificationType.MENTION:
+        return 'alternate_email';
+      case NotificationType.REPOST:
+        return 'repeat';
+      case NotificationType.REPLY:
+        return 'reply';
+      case NotificationType.REACTION:
+        return 'favorite';
+      case NotificationType.ZAP:
+        return 'bolt';
+      case NotificationType.SUCCESS:
+        return 'check_circle';
+      case NotificationType.WARNING:
+        return 'warning';
+      case NotificationType.ERROR:
+        return 'error';
+      case NotificationType.RELAY_PUBLISHING:
+        return 'sync';
+      default:
+        return 'notifications';
+    }
   }
 }
