@@ -160,8 +160,8 @@
       font-family: 'JetBrains Mono', 'Fira Code', 'Monaco', 'Consolas', monospace;
       font-size: 14px;
       line-height: 1.6;
-      overflow: hidden; // Hide scrollbar since we auto-resize
       box-sizing: border-box;
+      field-sizing: content;
     }
   }
 
