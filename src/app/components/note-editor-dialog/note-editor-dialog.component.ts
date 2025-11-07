@@ -1227,9 +1227,10 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Replace NIP-19 identifiers with nostr: prefix if not already present
     // This regex matches NIP-19 identifiers that don't already have nostr: prefix
+    // and are not part of a URL (preceded by /)
     const processedText = text.replace(
-      /(?<!nostr:)\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)([a-zA-Z0-9]+)\b/g,
-      'nostr:$1$2'
+      /(?<!nostr:)(?<!\/)(\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)([a-zA-Z0-9]+)\b)/g,
+      'nostr:$1'
     );
 
     // Insert the processed text at cursor position
