@@ -15,9 +15,16 @@
     <div class="top-action-buttons">
       <div class="left-buttons">
         @if (!article().image) {
-        <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" matTooltip="Add featured image">
-          <mat-icon>add_photo_alternate</mat-icon>
-        </button>
+        <div class="featured-image-drop-zone" [class.drag-over]="isFeaturedImageDragOver()"
+          (dragenter)="onFeaturedImageDragEnter($event)" (dragover)="onFeaturedImageDragOver($event)"
+          (dragleave)="onFeaturedImageDragLeave($event)" (drop)="onFeaturedImageDrop($event)">
+          <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" matTooltip="Add featured image">
+            <mat-icon>add_photo_alternate</mat-icon>
+          </button>
+          @if (isFeaturedImageDragOver()) {
+          <span class="drop-hint">Drop image here</span>
+          }
+        </div>
         <mat-menu #featuredImageMenu="matMenu">
           <button mat-menu-item (click)="openFeaturedImageUpload()">
             <mat-icon>upload</mat-icon>

@@ -49,6 +49,37 @@
         color: var(--mat-sys-primary);
         background-color: var(--mat-sys-primary-container);
       }
+
+      .featured-image-drop-zone {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px;
+        border-radius: 8px;
+        transition: all 0.2s ease-in-out;
+
+        &.drag-over {
+          background-color: var(--mat-sys-primary-container);
+          border: 2px dashed var(--mat-sys-primary);
+          padding: 2px;
+
+          .drop-hint {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .drop-hint {
+          font-size: 12px;
+          color: var(--mat-sys-primary);
+          font-weight: 500;
+          white-space: nowrap;
+          opacity: 0;
+          transform: translateX(-10px);
+          transition: all 0.2s ease-in-out;
+        }
+      }
     }
 
     .article-image-section {
