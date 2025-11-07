@@ -414,12 +414,21 @@ export class NotificationsComponent implements OnInit {
   }
 
   /**
-   * Get the zap content/message from a notification's metadata
+   * Get the zap content/message from a notification's metadata (only for zaps)
+   * Returns undefined for non-zap notifications to avoid showing duplicate content
    */
   getZapContent(notification: Notification): string | undefined {
     if (this.isContentNotificationWithData(notification)) {
       const contentNotif = notification as ContentNotification;
-      return contentNotif.metadata?.content;
+      // Only show metadata content for ZAP notifications
+      // For other notification types, the message field already contains the content
+      if (contentNotif.type === NotificationType.ZAP) {
+        const content = contentNotif.metadata?.content;
+        if (content) {
+          // Truncate long zap messages to 200 characters
+          return content.length > 200 ? content.substring(0, 200) + '...' : content;
+        }
+      }
     }
     return undefined;
   }
