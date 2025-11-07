@@ -786,7 +786,7 @@ export class AccountStateService implements OnDestroy {
       }
       console.log(`🔄 [Cache] Updating profile for ${pubkey.substring(0, 8)}... (${existingTimestamp} → ${newTimestamp})`);
     } else {
-      console.log(`➕ [Cache] Adding new profile for ${pubkey.substring(0, 8)}...`);
+      // console.log(`➕ [Cache] Adding new profile for ${pubkey.substring(0, 8)}...`);
     }
 
     // Add to cache with persistent options (no expiration, no size limit eviction)
