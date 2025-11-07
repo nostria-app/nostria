@@ -30,6 +30,8 @@ interface AccountLocalState {
   powEnabled?: boolean;
   powTargetDifficulty?: number;
   lastRoute?: string;
+  launchCount?: number;
+  dismissedPushNotificationDialog?: boolean;
 }
 
 /**
@@ -289,6 +291,39 @@ export class AccountLocalStateService {
    */
   setLastRoute(pubkey: string, route: string | null | undefined): void {
     this.updateAccountState(pubkey, { lastRoute: route || undefined });
+  }
+
+  /**
+   * Get launch count for an account
+   */
+  getLaunchCount(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.launchCount || 0;
+  }
+
+  /**
+   * Increment launch count for an account
+   */
+  incrementLaunchCount(pubkey: string): number {
+    const currentCount = this.getLaunchCount(pubkey);
+    const newCount = currentCount + 1;
+    this.updateAccountState(pubkey, { launchCount: newCount });
+    return newCount;
+  }
+
+  /**
+   * Get dismissed push notification dialog status for an account
+   */
+  getDismissedPushNotificationDialog(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.dismissedPushNotificationDialog || false;
+  }
+
+  /**
+   * Set dismissed push notification dialog status for an account
+   */
+  setDismissedPushNotificationDialog(pubkey: string, dismissed: boolean): void {
+    this.updateAccountState(pubkey, { dismissedPushNotificationDialog: dismissed });
   }
 
   /**

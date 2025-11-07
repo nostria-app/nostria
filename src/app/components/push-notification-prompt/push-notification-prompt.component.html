@@ -1,0 +1,23 @@
+<div class="push-notification-prompt">
+  <div class="prompt-content">
+    <div class="prompt-header">
+      <mat-icon class="notification-icon">notifications_active</mat-icon>
+      <h3>Stay Updated with Nostria</h3>
+    </div>
+
+    <p class="prompt-message">
+      Enable push notifications to receive real-time updates about follows, replies, mentions, zaps, and more - even
+      when the app is closed.
+    </p>
+
+    <div class="prompt-actions">
+      <button mat-button (click)="dismiss()">
+        Maybe Later
+      </button>
+      <button mat-raised-button color="primary" (click)="enableNotifications()">
+        <mat-icon>notifications</mat-icon>
+        Enable Notifications
+      </button>
+    </div>
+  </div>
+</div>
