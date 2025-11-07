@@ -116,11 +116,11 @@
 
     @if (isRichTextMode()) {
     <div #editorContent class="rich-text-content" contenteditable="true" (input)="onRichTextContentChange()"
-      (mouseup)="onTextSelection()" (keyup)="onTextSelection()" [attr.placeholder]="'Write your article content...'">
+      (mouseup)="onTextSelection()" (keyup)="onTextSelection()" [attr.placeholder]="'Start writing...'">
     </div>
     } @else {
     <textarea #markdownTextarea class="markdown-content" [value]="markdownContent()"
-      (input)="onMarkdownContentChange($event)" placeholder="Write your article content in Markdown..." rows="20">
+      (input)="onMarkdownContentChange($event)" placeholder="Start writing your article content in Markdown..." rows="20">
       </textarea>
     }
   </div>

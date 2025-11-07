@@ -374,6 +374,15 @@
         margin-right: 4px;
       }
     }
+
+    .reset-button {
+      margin-right: auto;
+      color: var(--mat-sys-error);
+
+      &:hover {
+        background-color: var(--mat-sys-error-container);
+      }
+    }
   }
 
   .metadata-form {
