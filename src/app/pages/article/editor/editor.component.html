@@ -11,7 +11,16 @@
 <div class="editor-container">
   <!-- Medium-style Editor -->
   <div class="medium-editor">
+    <!-- Article Image Toggle Button -->
+    <div class="image-toggle-button-container">
+      <button mat-icon-button (click)="toggleArticleImageSection()" 
+        [matTooltip]="showArticleImage() ? 'Hide article image' : 'Add article image'">
+        <mat-icon>{{ showArticleImage() ? 'image' : 'add_photo_alternate' }}</mat-icon>
+      </button>
+    </div>
+
     <!-- Article Image Section -->
+    @if (showArticleImage()) {
     <div class="article-image-section">
       <div class="section-label">Article Image</div>
       <div class="image-toggle">
@@ -59,6 +68,7 @@
       </div>
       }
     </div>
+    }
 
     <!-- Title Input -->
     <input type="text" class="title-input" placeholder="Title" [value]="article().title"
@@ -107,69 +117,57 @@
   </div>
 
   <!-- Article Metadata -->
-  <mat-expansion-panel class="metadata-panel">
-    <mat-expansion-panel-header>
-      <mat-panel-title>
-        <mat-icon>description</mat-icon>
-        Article Metadata
-      </mat-panel-title>
-      <mat-panel-description>
-        Summary, image, tags, and other article information
-      </mat-panel-description>
-    </mat-expansion-panel-header>
-
-    <div class="metadata-form">
-      <div class="dTag-field-container">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Article ID (d tag) *</mat-label>
-          <input matInput [value]="article().dTag" (input)="updateDTag($any($event.target).value)"
-            placeholder="unique-article-identifier" required [readonly]="autoDTagEnabled()" />
-          @if (autoDTagEnabled()) {
-          <mat-hint>Auto-ID is enabled. ID will update based on title.</mat-hint>
-          } @else {
-          <mat-hint>Unique identifier for your article. Used in URLs.</mat-hint>
-          }
-        </mat-form-field>
-        <div class="dTag-controls">
-          <button mat-icon-button color="primary" (click)="toggleAutoDTagMode()"
-            [matTooltip]="autoDTagEnabled() ? 'Disable Auto-ID' : 'Enable Auto-ID'">
-            <mat-icon>{{ autoDTagEnabled() ? 'auto_awesome' : 'auto_awesome_off' }}</mat-icon>
-          </button>
-          @if (suggestedDTag() && autoDTagEnabled()) {
-          <button mat-icon-button matTooltip="Apply suggested ID: {{ suggestedDTag() }}" (click)="applyAutoDTag()">
-            <mat-icon>refresh</mat-icon>
-          </button>
-          }
-        </div>
-      </div>
-
-      <!-- Tags Section -->
-      <div class="tags-section">
-        <h3>Tags</h3>
-        <div class="tag-input-container">
-          <mat-form-field appearance="outline" class="tag-input">
-            <mat-label>Add tag</mat-label>
-            <input matInput [value]="newTag()" (input)="newTag.set($any($event.target).value)"
-              (keypress)="onTagKeyPress($event)" placeholder="Enter a tag" />
-          </mat-form-field>
-          <button mat-icon-button (click)="addTag()" [disabled]="!newTag().trim()">
-            <mat-icon>add</mat-icon>
-          </button>
-        </div>
-
-        @if (article().tags.length > 0) {
-        <div class="tags-container">
-          @for (tag of article().tags; track tag) {
-          <mat-chip class="tag-chip" [removable]="true" (removed)="removeTag(tag)">
-            {{ tag }}
-            <mat-icon matChipRemove>cancel</mat-icon>
-          </mat-chip>
-          }
-        </div>
+  <div class="metadata-section">
+    <div class="dTag-field-container">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Article ID (d tag) *</mat-label>
+        <input matInput [value]="article().dTag" (input)="updateDTag($any($event.target).value)"
+          placeholder="unique-article-identifier" required [readonly]="autoDTagEnabled()" />
+        @if (autoDTagEnabled()) {
+        <mat-hint>Auto-ID is enabled. ID will update based on title.</mat-hint>
+        } @else {
+        <mat-hint>Unique identifier for your article. Used in URLs.</mat-hint>
+        }
+      </mat-form-field>
+      <div class="dTag-controls">
+        <button mat-icon-button color="primary" (click)="toggleAutoDTagMode()"
+          [matTooltip]="autoDTagEnabled() ? 'Disable Auto-ID' : 'Enable Auto-ID'">
+          <mat-icon>{{ autoDTagEnabled() ? 'auto_awesome' : 'auto_awesome_off' }}</mat-icon>
+        </button>
+        @if (suggestedDTag() && autoDTagEnabled()) {
+        <button mat-icon-button matTooltip="Apply suggested ID: {{ suggestedDTag() }}" (click)="applyAutoDTag()">
+          <mat-icon>refresh</mat-icon>
+        </button>
         }
       </div>
     </div>
-  </mat-expansion-panel>
+
+    <!-- Tags Section -->
+    <div class="tags-section">
+      <h3>Tags</h3>
+      <div class="tag-input-container">
+        <mat-form-field appearance="outline" class="tag-input">
+          <mat-label>Add tag</mat-label>
+          <input matInput [value]="newTag()" (input)="newTag.set($any($event.target).value)"
+            (keypress)="onTagKeyPress($event)" placeholder="Enter a tag" />
+        </mat-form-field>
+        <button mat-icon-button (click)="addTag()" [disabled]="!newTag().trim()">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      @if (article().tags.length > 0) {
+      <div class="tags-container">
+        @for (tag of article().tags; track tag) {
+        <mat-chip class="tag-chip" [removable]="true" (removed)="removeTag(tag)">
+          {{ tag }}
+          <mat-icon matChipRemove>cancel</mat-icon>
+        </mat-chip>
+        }
+      </div>
+      }
+    </div>
+  </div>
 
   <!-- Action Buttons -->
   <div class="action-buttons">
