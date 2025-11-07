@@ -1,6 +1,6 @@
-<div class="editor-header">
+<!-- <div class="editor-header">
   <h2>{{ isEditMode() ? 'Edit Article' : 'New Article' }}</h2>
-</div>
+</div> -->
 
 @if (isLoading()) {
 <div class="loading-container">
@@ -14,6 +14,10 @@
     <!-- Title Input -->
     <input type="text" class="title-input" placeholder="Title" [value]="article().title"
       (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
+
+    <!-- Summary Input -->
+    <textarea class="summary-input" placeholder="Summary (optional)" [value]="article().summary"
+      (input)="updateSummary($any($event.target).value)"></textarea>
 
     <!-- Content Editor -->
     <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">
@@ -66,13 +70,6 @@
     </mat-expansion-panel-header>
 
     <div class="metadata-form">
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Summary</mat-label>
-        <textarea matInput [value]="article().summary" (input)="updateSummary($any($event.target).value)"
-          placeholder="Brief description of your article" rows="3">
-          </textarea>
-      </mat-form-field>
-
       <!-- Article Image Section -->
       <div class="file-upload-section">
         <div class="section-header">
