@@ -19,11 +19,12 @@
     @if (availableTags().length > 0) {
     <div class="tag-filters">
       <span class="filter-label">Filter by tags:</span>
-      <mat-chip-set>
+      <mat-chip-listbox multiple (change)="onTagSelectionChange($any($event.value))">
         @for (tag of availableTags(); track $index) {
-          <mat-chip-option (click)="filterByTag(tag)" [class.selected]="selectedTag() === tag" class="tag-chip">{{ tag }}</mat-chip-option>
+        <mat-chip-option [value]="tag" [selected]="selectedTags().includes(tag)" class="tag-chip">{{ tag
+          }}</mat-chip-option>
         }
-      </mat-chip-set>
+      </mat-chip-listbox>
     </div>
     }
   </div>
@@ -41,10 +42,10 @@
   </div>
   } @else if (filteredDrafts().length === 0) {
   <div class="empty-state">
-    @if (selectedTag()) {
+    @if (selectedTags().length > 0) {
     <mat-icon>filter_list_off</mat-icon>
-    <h2>No drafts found with tag "{{ selectedTag() }}"</h2>
-    <p>Try clearing the filter or selecting a different tag.</p>
+    <h2>No drafts found with selected tags</h2>
+    <p>Try clearing the filter or selecting different tags.</p>
     <button mat-raised-button (click)="clearTagFilter()">Clear Filter</button>
     } @else {
     <mat-icon>draft</mat-icon>
