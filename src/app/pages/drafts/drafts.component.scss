@@ -1,7 +1,11 @@
 .drafts-container {
   width: 100%;
-  margin: 0 auto;
   padding: 24px;
+
+  // Ensure drafts list stretches full width
+  .drafts-list {
+    width: 100%;
+  }
 }
 
 .drafts-header {
@@ -58,11 +62,6 @@
 
       &:hover {
         box-shadow: var(--mat-sys-level2);
-      }
-
-      &.selected {
-        background-color: var(--mat-sys-primary);
-        color: var(--mat-sys-on-primary);
       }
     }
 
@@ -147,11 +146,14 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  width: 100%;
 }
 
 .draft-card {
   cursor: pointer;
   transition: all 0.2s ease;
+  width: 100%;
+  max-width: none;
 
   &:hover {
     box-shadow: var(--mat-sys-level3);

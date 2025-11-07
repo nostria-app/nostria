@@ -6,9 +6,9 @@
         My Drafts
       </h1>
       <div class="header-actions">
-        <button mat-raised-button color="primary" (click)="createNewDraft()">
-          <mat-icon>add</mat-icon>
-          New Draft
+        <button mat-flat-button (click)="createNewDraft()">
+          <mat-icon>article</mat-icon>
+          Editor
         </button>
         <button mat-icon-button (click)="refreshDrafts()" matTooltip="Refresh drafts">
           <mat-icon>refresh</mat-icon>
@@ -21,15 +21,7 @@
       <span class="filter-label">Filter by tags:</span>
       <mat-chip-set>
         @for (tag of availableTags(); track $index) {
-        <mat-chip (click)="filterByTag(tag)" [class.selected]="selectedTag() === tag" class="tag-chip">
-          {{ tag }}
-        </mat-chip>
-        }
-        @if (selectedTag()) {
-        <mat-chip (click)="clearTagFilter()" class="clear-filter-chip">
-          <mat-icon>clear</mat-icon>
-          Clear filter
-        </mat-chip>
+          <mat-chip-option (click)="filterByTag(tag)" [class.selected]="selectedTag() === tag" class="tag-chip">{{ tag }}</mat-chip-option>
         }
       </mat-chip-set>
     </div>
@@ -83,7 +75,8 @@
                 Last modified {{ draft.lastModified | ago }} • Created {{ draft.createdAt | ago }}
               </p>
             </div>
-            <button mat-icon-button (click)="deleteDraft(draft, $event)" matTooltip="Delete draft" class="delete-button">
+            <button mat-icon-button (click)="deleteDraft(draft, $event)" matTooltip="Delete draft"
+              class="delete-button">
               <mat-icon>delete</mat-icon>
             </button>
           </div>
