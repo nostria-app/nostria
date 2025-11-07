@@ -23,7 +23,6 @@ import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { DomSanitizer } from '@angular/platform-browser';
 import { marked } from 'marked';
-import { MatExpansionModule } from '@angular/material/expansion';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
 import { NostrService } from '../../../services/nostr.service';
@@ -82,7 +81,6 @@ interface ArticleAutoDraft {
     MatDialogModule,
     MatCardModule,
     RichTextEditorComponent,
-    MatExpansionModule,
     MatTooltipModule,
     MentionHoverDirective,
     MatSlideToggleModule,
@@ -186,6 +184,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   useImageUrl = signal(true); // Default to URL mode
   previewImage = signal<string | null>(null);
   hasMediaServers = computed(() => this.media.mediaServers().length > 0);
+  showArticleImage = signal(false);
 
   constructor() {
     // Check if we're editing an existing article
@@ -206,6 +205,14 @@ export class EditorComponent implements OnInit, OnDestroy {
             this.loadAutoDraft();
           }
         }, 0);
+      }
+    });
+
+    // Show article image section if there's an image
+    effect(() => {
+      const image = this.article().image;
+      if (image && image.trim()) {
+        this.showArticleImage.set(true);
       }
     });
 
@@ -831,6 +838,10 @@ export class EditorComponent implements OnInit, OnDestroy {
     if (this.autoDTagEnabled() && this.suggestedDTag()) {
       this.applyAutoDTag();
     }
+  }
+
+  toggleArticleImageSection(): void {
+    this.showArticleImage.update(show => !show);
   }
 
   applyAutoDTag(): void {
