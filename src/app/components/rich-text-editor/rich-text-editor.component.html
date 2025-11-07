@@ -6,6 +6,54 @@
 
   <div class="editor-toolbar">
     <div class="editor-actions">
+      <button mat-icon-button (click)="applyBold()" [disabled]="!isRichTextMode()" matTooltip="Bold">
+        <mat-icon>format_bold</mat-icon>
+      </button>
+
+      <button mat-icon-button (click)="applyItalic()" [disabled]="!isRichTextMode()" matTooltip="Italic">
+        <mat-icon>format_italic</mat-icon>
+      </button>
+
+      <mat-divider [vertical]="true"></mat-divider>
+
+      <button mat-icon-button (click)="applyHeading(1)" [disabled]="!isRichTextMode()" matTooltip="Heading 1">
+        <mat-icon>looks_one</mat-icon>
+      </button>
+
+      <button mat-icon-button (click)="applyHeading(2)" [disabled]="!isRichTextMode()" matTooltip="Heading 2">
+        <mat-icon>looks_two</mat-icon>
+      </button>
+
+      <button mat-icon-button (click)="applyHeading(3)" [disabled]="!isRichTextMode()" matTooltip="Heading 3">
+        <mat-icon>looks_3</mat-icon>
+      </button>
+
+      <mat-divider [vertical]="true"></mat-divider>
+
+      <button mat-icon-button (click)="applyQuote()" [disabled]="!isRichTextMode()" matTooltip="Quote">
+        <mat-icon>format_quote</mat-icon>
+      </button>
+
+      <button mat-icon-button (click)="applyUnorderedList()" [disabled]="!isRichTextMode()" matTooltip="Bullet List">
+        <mat-icon>format_list_bulleted</mat-icon>
+      </button>
+
+      <button mat-icon-button (click)="applyOrderedList()" [disabled]="!isRichTextMode()" matTooltip="Numbered List">
+        <mat-icon>format_list_numbered</mat-icon>
+      </button>
+
+      <mat-divider [vertical]="true"></mat-divider>
+
+      <button mat-icon-button (click)="applyLink()" [disabled]="!isRichTextMode()" matTooltip="Insert Link">
+        <mat-icon>link</mat-icon>
+      </button>
+
+      <button mat-icon-button (click)="insertCode()" [disabled]="!isRichTextMode()" matTooltip="Format as Code">
+        <mat-icon>code</mat-icon>
+      </button>
+
+      <mat-divider [vertical]="true"></mat-divider>
+
       <button mat-icon-button (click)="openFileDialog()" [disabled]="isUploading()" matTooltip="Upload Files">
         @if (isUploading()) {
         <mat-icon>hourglass_empty</mat-icon>
@@ -61,6 +109,5 @@
   <!-- Floating Toolbar -->
   <app-floating-toolbar [visible]="showFloatingToolbar()" [position]="floatingToolbarPosition()" (bold)="applyBold()"
     (italic)="applyItalic()" (link)="applyLink()" (heading1)="applyHeading(1)" (heading2)="applyHeading(2)"
-    (heading3)="applyHeading(3)" (quote)="applyQuote()" (bulletList)="applyUnorderedList()"
-    (orderedList)="applyOrderedList()" (code)="insertCode()" (uploadFiles)="openFileDialog()" />
+    (heading3)="applyHeading(3)" (quote)="applyQuote()" />
 </div>

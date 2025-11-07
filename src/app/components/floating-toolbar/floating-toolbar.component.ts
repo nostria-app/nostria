@@ -32,10 +32,6 @@ export class FloatingToolbarComponent {
   heading2 = output<void>();
   heading3 = output<void>();
   quote = output<void>();
-  bulletList = output<void>();
-  orderedList = output<void>();
-  code = output<void>();
-  uploadFiles = output<void>();
 
   @ViewChild('toolbar') toolbar?: ElementRef<HTMLDivElement>;
 
@@ -65,21 +61,5 @@ export class FloatingToolbarComponent {
 
   onQuote() {
     this.quote.emit();
-  }
-
-  onBulletList() {
-    this.bulletList.emit();
-  }
-
-  onOrderedList() {
-    this.orderedList.emit();
-  }
-
-  onCode() {
-    this.code.emit();
-  }
-
-  onUploadFiles() {
-    this.uploadFiles.emit();
   }
 }

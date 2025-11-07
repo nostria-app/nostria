@@ -2,7 +2,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--mat-sys-outline-variant);
+  border: none;
   border-radius: 4px;
   background-color: var(--mat-sys-surface);
   min-height: 400px;
@@ -27,7 +27,6 @@
     justify-content: space-between;
     padding: 8px;
     border-bottom: 1px solid var(--mat-sys-outline-variant);
-    background-color: var(--mat-sys-surface-variant);
     gap: 8px;
 
     .editor-actions {
@@ -38,8 +37,13 @@
 
       button {
         &:hover {
-          background-color: var(--mat-sys-surface);
+          background-color: var(--mat-sys-surface-variant);
         }
+      }
+
+      mat-divider {
+        height: 24px;
+        margin: 0 4px;
       }
     }
 
