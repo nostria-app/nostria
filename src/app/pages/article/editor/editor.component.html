@@ -132,6 +132,11 @@
     <mat-progress-bar mode="indeterminate" class="publish-progress"></mat-progress-bar>
     }
 
+    <button mat-button (click)="resetDraft()" [disabled]="isPublishing()" class="reset-button">
+      <mat-icon>refresh</mat-icon>
+      <span class="button-label">Reset Draft</span>
+    </button>
+
     <button mat-button (click)="cancel()" [disabled]="isPublishing()">
       Cancel
     </button>

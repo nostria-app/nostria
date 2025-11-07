@@ -42,6 +42,7 @@ import { MentionHoverDirective } from '../../../directives/mention-hover.directi
 import { MediaService } from '../../../services/media.service';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ImageUrlDialogComponent } from '../../../components/image-url-dialog/image-url-dialog.component';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import type { ArticleData } from '../../../components/article-display/article-display.component';
 import { ArticleDisplayComponent } from '../../../components/article-display/article-display.component';
 
@@ -731,6 +732,52 @@ export class EditorComponent implements OnInit, OnDestroy {
     }
 
     this.router.navigate(['/articles']);
+  }
+
+  resetDraft(): void {
+    const article = this.article();
+    const hasContent = article.title.trim() || article.content.trim() || article.summary.trim() || article.image.trim();
+
+    if (hasContent) {
+      const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Reset Draft',
+          message: 'Are you sure you want to reset the draft? All current content will be lost.',
+          confirmText: 'Reset',
+          cancelText: 'Cancel',
+          confirmColor: 'warn' as const,
+        },
+      });
+
+      dialogRef.afterClosed().subscribe((confirmed) => {
+        if (confirmed) {
+          this.performReset();
+        }
+      });
+    } else {
+      this.performReset();
+    }
+  }
+
+  private performReset(): void {
+    // Reset article to initial state
+    this.article.set({
+      title: '',
+      summary: '',
+      image: '',
+      content: '',
+      tags: [],
+      dTag: this.generateUniqueId(),
+    });
+
+    // Clear auto-draft from storage
+    this.clearAutoDraft();
+
+    // Show confirmation
+    this.snackBar.open('Draft reset successfully', 'Dismiss', {
+      duration: 3000,
+      panelClass: 'success-snackbar',
+    });
   }
 
   navigateToDrafts(): void {
