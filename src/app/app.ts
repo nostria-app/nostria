@@ -73,6 +73,9 @@ import { DatabaseErrorDialogComponent } from './components/database-error-dialog
 import { RouteDataService } from './services/route-data.service';
 import { InstallService } from './services/install.service';
 import { CacheCleanupService } from './services/cache-cleanup.service';
+import { AccountLocalStateService } from './services/account-local-state.service';
+import { NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 interface NavItem {
   path: string;
@@ -155,6 +158,7 @@ export class App implements OnInit {
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
+  private readonly accountLocalState = inject(AccountLocalStateService);
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
@@ -178,6 +182,9 @@ export class App implements OnInit {
 
   // Signal to track expanded menu items
   expandedMenuItems = signal<Record<string, boolean>>({});
+
+  // Track if we've already restored the route for the current session
+  private hasRestoredRoute = false;
 
   // Computed signal for account profiles with reactive updates
   accountProfilesMap = computed(() => {
@@ -490,6 +497,73 @@ export class App implements OnInit {
       //   }
       // });
     }
+
+    // Track route changes to save last route for each account
+    this.router.events
+      .pipe(filter(event => event instanceof NavigationEnd))
+      .subscribe((event: NavigationEnd) => {
+        const pubkey = this.accountState.pubkey();
+        if (pubkey && event.urlAfterRedirects) {
+          this.accountLocalState.setLastRoute(pubkey, event.urlAfterRedirects);
+          this.logger.debug(`[App] Saved last route for account: ${event.urlAfterRedirects}`);
+        }
+      });
+
+    // Track account changes to reset the restoration flag
+    let lastPubkey: string | undefined = undefined;
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey !== lastPubkey) {
+        this.logger.debug(`[App] Account changed from ${lastPubkey?.substring(0, 8)} to ${pubkey?.substring(0, 8)}, resetting route restoration flag`);
+        lastPubkey = pubkey;
+        this.hasRestoredRoute = false;
+      }
+    });
+
+    // Effect to restore last route when account is loaded
+    effect(() => {
+      const authenticated = this.app.authenticated();
+      const initialized = this.app.initialized();
+      const pubkey = this.accountState.pubkey();
+      const startOnLastRoute = this.localSettings.startOnLastRoute();
+
+      this.logger.debug(`[App] Route restoration effect triggered - authenticated: ${authenticated}, initialized: ${initialized}, pubkey: ${pubkey?.substring(0, 8)}, hasRestored: ${this.hasRestoredRoute}, startOnLastRoute: ${startOnLastRoute}`);
+
+      // Only restore if the setting is enabled
+      if (authenticated && initialized && pubkey && !this.hasRestoredRoute && startOnLastRoute) {
+        // Mark as restored immediately to prevent re-triggering
+        this.hasRestoredRoute = true;
+
+        // Use untracked to avoid triggering the effect again
+        const currentUrl = this.router.url;
+        const isRootOrFeeds = currentUrl === '/' || currentUrl.startsWith('/?') || currentUrl === '';
+
+        this.logger.debug(`[App] Route restoration check - currentUrl: ${currentUrl}, isRootOrFeeds: ${isRootOrFeeds}`);
+
+        if (isRootOrFeeds) {
+          const lastRoute = this.accountLocalState.getLastRoute(pubkey);
+          this.logger.debug(`[App] Last route from storage: ${lastRoute}`);
+
+          if (lastRoute && lastRoute !== '/' && lastRoute !== currentUrl) {
+            this.logger.info(`[App] Restoring last route: ${lastRoute}`);
+            // Use setTimeout to avoid navigation during change detection
+            setTimeout(() => {
+              this.router.navigateByUrl(lastRoute).catch(err => {
+                this.logger.error('[App] Failed to restore last route', err);
+              });
+            }, 100);
+          } else {
+            this.logger.debug('[App] No last route to restore or already on that route');
+          }
+        } else {
+          this.logger.debug(`[App] Not restoring last route - already on a specific route: ${currentUrl}`);
+        }
+      } else if (authenticated && initialized && pubkey && !this.hasRestoredRoute && !startOnLastRoute) {
+        // Mark as "restored" even though we're not restoring, to prevent checking again
+        this.hasRestoredRoute = true;
+        this.logger.debug('[App] Start on last route is disabled, not restoring');
+      }
+    }, { allowSignalWrites: true });
 
     this.logger.debug('AppComponent constructor completed'); // Register a one-time callback after the first render
     afterNextRender(() => {

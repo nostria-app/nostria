@@ -11,6 +11,7 @@ export interface LocalSettings {
   showClientTag: boolean;
   trustEnabled: boolean;
   trustRelay: string;
+  startOnLastRoute: boolean;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -22,6 +23,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   showClientTag: true,
   trustEnabled: true,
   trustRelay: 'wss://nip85.brainstorm.world',
+  startOnLastRoute: true,
 };
 
 /**
@@ -48,6 +50,7 @@ export class LocalSettingsService {
   readonly showClientTag = computed(() => this.settings().showClientTag);
   readonly trustEnabled = computed(() => this.settings().trustEnabled);
   readonly trustRelay = computed(() => this.settings().trustRelay);
+  readonly startOnLastRoute = computed(() => this.settings().startOnLastRoute);
 
   constructor() {
     this.loadSettings();
@@ -68,9 +71,13 @@ export class LocalSettingsService {
 
       if (stored) {
         // Merge with defaults to ensure all properties exist
+        // For existing users, new properties will get their default values
         const mergedSettings: LocalSettings = {
           ...DEFAULT_LOCAL_SETTINGS,
           ...stored,
+          // Explicitly ensure startOnLastRoute defaults to true for existing users
+          // who don't have this property yet
+          startOnLastRoute: stored.startOnLastRoute !== undefined ? stored.startOnLastRoute : true,
         };
 
         this.settings.set(mergedSettings);
@@ -165,6 +172,13 @@ export class LocalSettingsService {
    */
   setTrustRelay(trustRelay: string): void {
     this.updateSettings({ trustRelay });
+  }
+
+  /**
+   * Set start on last route preference
+   */
+  setStartOnLastRoute(startOnLastRoute: boolean): void {
+    this.updateSettings({ startOnLastRoute });
   }
 
   /**

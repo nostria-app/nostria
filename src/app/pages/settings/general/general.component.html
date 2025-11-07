@@ -52,6 +52,17 @@
     <p class="setting-description">Show what client that authors are using</p>
   </div>
 
+  <div>
+    <h2>Navigation</h2>
+
+    <div class="setting-item">
+      <span>Start on Last Page</span>
+      <mat-slide-toggle [checked]="localSettings.startOnLastRoute()" (change)="toggleStartOnLastRoute()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description">When opening the app, restore the last page you were viewing.</p>
+  </div>
+
   @if (accountState.hasActiveSubscription()) {
   <div>
     <h2 i18n="@@settings.release-channel">
