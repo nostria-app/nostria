@@ -24,6 +24,7 @@ import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { DomSanitizer } from '@angular/platform-browser';
 import { marked } from 'marked';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 
 import { NostrService } from '../../../services/nostr.service';
 import { DataService } from '../../../services/data.service';
@@ -40,6 +41,7 @@ import { NostrRecord } from '../../../interfaces';
 import { MentionHoverDirective } from '../../../directives/mention-hover.directive';
 import { MediaService } from '../../../services/media.service';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { ImageUrlDialogComponent } from '../../../components/image-url-dialog/image-url-dialog.component';
 
 interface ArticleDraft {
   title: string;
@@ -84,6 +86,7 @@ interface ArticleAutoDraft {
     MatTooltipModule,
     MentionHoverDirective,
     MatSlideToggleModule,
+    MatMenuModule,
   ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
@@ -843,6 +846,60 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   toggleArticleImageSection(): void {
     this.showArticleImage.update(show => !show);
+  }
+
+  openFeaturedImageUpload(): void {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (event: Event) => this.onFeaturedImageSelected(event);
+    input.click();
+  }
+
+  openFeaturedImageUrl(): void {
+    const dialogRef = this.dialog.open(ImageUrlDialogComponent, {
+      width: '500px',
+    });
+
+    dialogRef.afterClosed().subscribe((url: string | undefined) => {
+      if (url) {
+        this.article.update(art => ({ ...art, image: url }));
+        this.showArticleImage.set(true);
+      }
+    });
+  }
+
+  onFeaturedImageSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+
+      if (!file.type.includes('image/')) {
+        this.snackBar.open('Please select a valid image file', 'Close', {
+          duration: 3000,
+        });
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = e => {
+        const result = e.target?.result as string;
+        this.article.update(art => ({ ...art, image: result, selectedImageFile: file }));
+        this.showArticleImage.set(true);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  clearFeaturedImage(): void {
+    this.article.update(art => ({
+      ...art,
+      image: '',
+      imageUrl: '',
+      selectedImageFile: undefined,
+    }));
+    this.previewImage.set(null);
+    this.showArticleImage.set(false);
   }
 
   togglePreview(): void {

@@ -21,8 +21,10 @@ import { FormsModule } from '@angular/forms';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
+import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { DomSanitizer } from '@angular/platform-browser';
 import { MediaService } from '../../services/media.service';
+import { ImageUrlDialogComponent } from '../image-url-dialog/image-url-dialog.component';
 import {
   FloatingToolbarComponent,
   FloatingToolbarPosition,
@@ -42,6 +44,7 @@ import {
     MatButtonToggleModule,
     MatProgressBarModule,
     MatSnackBarModule,
+    MatDialogModule,
     FloatingToolbarComponent,
   ],
   templateUrl: './rich-text-editor.component.html',
@@ -67,6 +70,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   private sanitizer = inject(DomSanitizer);
   private mediaService = inject(MediaService);
   private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   ngAfterViewInit() {
     this.setContent(this.content || '');
@@ -372,11 +376,16 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   }
 
   insertImageFromUrl(): void {
-    const url = prompt('Enter image URL:', 'https://');
-    if (url && url.trim()) {
-      const markdown = `\n![Image](${url})\n`;
-      this.insertMarkdown(markdown);
-    }
+    const dialogRef = this.dialog.open(ImageUrlDialogComponent, {
+      width: '500px',
+    });
+
+    dialogRef.afterClosed().subscribe((url: string | undefined) => {
+      if (url) {
+        const markdown = `\n![Image](${url})\n`;
+        this.insertMarkdown(markdown);
+      }
+    });
   }
 
   private insertMarkdown(markdown: string): void {

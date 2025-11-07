@@ -13,67 +13,35 @@
   <div class="medium-editor">
     <!-- Top Action Buttons -->
     <div class="top-action-buttons">
-      <button mat-icon-button (click)="toggleArticleImageSection()"
-        [matTooltip]="showArticleImage() ? 'Hide featured image' : 'Add featured image'">
-        <mat-icon>{{ showArticleImage() ? 'image' : 'add_photo_alternate' }}</mat-icon>
+      @if (!article().image) {
+      <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" matTooltip="Add featured image">
+        <mat-icon>add_photo_alternate</mat-icon>
       </button>
-      <button mat-icon-button (click)="togglePreview()"
-        [matTooltip]="showPreview() ? 'Edit' : 'Preview'"
+      <mat-menu #featuredImageMenu="matMenu">
+        <button mat-menu-item (click)="openFeaturedImageUpload()">
+          <mat-icon>upload</mat-icon>
+          <span>Upload Image</span>
+        </button>
+        <button mat-menu-item (click)="openFeaturedImageUrl()">
+          <mat-icon>link</mat-icon>
+          <span>Image from URL</span>
+        </button>
+      </mat-menu>
+      }
+      <button mat-icon-button (click)="togglePreview()" [matTooltip]="showPreview() ? 'Edit' : 'Preview'"
         [class.active]="showPreview()">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
     </div>
 
-    <!-- Article Image Section -->
-    @if (showArticleImage()) {
-    <div class="article-image-section">
-      <div class="section-header">
-        <div class="section-label">Featured Image</div>
-        <div class="image-toggle">
-          <span>File</span>
-          <mat-slide-toggle [checked]="useImageUrl()" (change)="toggleImageInputMethod()" color="primary">
-          </mat-slide-toggle>
-          <span>URL</span>
-        </div>
-      </div>
-
-      <!-- No media servers warning for file upload mode -->
-      @if (!useImageUrl() && !hasMediaServers()) {
-      <div class="media-server-warning">
-        <mat-icon color="warn">warning</mat-icon>
-        <span>You need to configure a media server to upload image files</span>
-        <button mat-flat-button color="primary" type="button" (click)="navigateToMediaSettings()">
-          Configure Media Server
-        </button>
-      </div>
-      }
-
-      @if (!useImageUrl()) {
-      <div class="file-upload">
-        <button mat-stroked-button type="button" (click)="articleImageInput.click()" [disabled]="!hasMediaServers()">
-          <mat-icon>image</mat-icon>
-          Choose Image
-        </button>
-        <input #articleImageInput type="file" hidden (change)="onFileSelected($event)" accept="image/*" />
-        @if (previewImage()) {
-        <span class="file-name">{{ previewImage() }}</span>
-        }
-      </div>
-      } @else {
-      <div class="url-input-container">
-        <mat-icon>link</mat-icon>
-        <input type="text" class="image-url-input" placeholder="https://example.com/image.jpg"
-          [value]="article().imageUrl || article().image" (input)="updateImage($any($event.target).value)"
-          (blur)="onImageUrlChange()" />
-      </div>
-      }
-
-      @if (article().image) {
-      <div class="image-preview">
-        <img [src]="article().image" [attr.alt]="article().title || 'Article image'"
-          [attr.title]="article().title || 'Article image'" loading="lazy" />
-      </div>
-      }
+    <!-- Featured Image Preview -->
+    @if (article().image && !showPreview()) {
+    <div class="featured-image-preview">
+      <img [src]="article().image" [attr.alt]="article().title || 'Featured image'"
+        [attr.title]="article().title || 'Featured image'" loading="lazy" />
+      <button mat-icon-button class="clear-image-button" (click)="clearFeaturedImage()" matTooltip="Remove image">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
     }
 
