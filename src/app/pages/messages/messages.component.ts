@@ -161,7 +161,29 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   });
 
   // activePubkey = computed(() => this.selectedChat()?.pubkey || '');
-  messages = signal<DirectMessage[]>([]);
+  // Track pending/local messages that haven't been persisted yet
+  private pendingMessages = signal<DirectMessage[]>([]);
+
+  // Computed signal for messages - merges persisted messages with pending ones
+  messages = computed(() => {
+    const chatId = this.selectedChatId();
+    if (!chatId) return [];
+
+    const persistedMessages = this.messaging.getChatMessages(chatId);
+    const pending = this.pendingMessages().filter(m => {
+      // Filter pending messages for this chat
+      const chat = this.selectedChat();
+      if (!chat) return false;
+
+      // Check if message is for this chat (based on tags for outgoing messages)
+      const pTags = m.tags.filter(tag => tag[0] === 'p');
+      return pTags.some(tag => tag[1] === chat.pubkey);
+    });
+
+    // Merge and sort by timestamp
+    return [...persistedMessages, ...pending].sort((a, b) => a.created_at - b.created_at);
+  });
+
   newMessageText = signal<string>('');
   hasMoreMessages = signal<boolean>(false);
   // Track the last selected chat to determine if we should scroll to bottom
@@ -214,20 +236,29 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Set up effect to handle chat selection and message updates
     effect(() => {
-      const chat = this.selectedChat();
-      this.logger.debug('Effect triggered - selectedChat:', chat ? chat.id : 'null');
+      // Only watch the chatId to avoid triggering on unreadCount changes
+      const chatId = this.selectedChatId();
+      this.logger.debug('Effect triggered - selectedChatId:', chatId);
 
-      if (chat) {
+      if (chatId) {
         untracked(() => {
-          const isNewChat = this.lastSelectedChatId() !== chat.id;
-          const chatMessages = this.messaging.getChatMessages(chat.id);
+          // Get the chat inside untracked to avoid watching its properties
+          const chat = this.messaging.getChat(chatId);
+          if (!chat) {
+            this.logger.warn('Chat not found for id:', chatId);
+            return;
+          }
+
+          const isNewChat = this.lastSelectedChatId() !== chatId;
+          const chatMessages = this.messaging.getChatMessages(chatId);
           const currentMessages = this.messages();
 
           if (isNewChat) {
-            this.logger.debug('New chat selected in effect:', chat.id);
+            this.logger.debug('New chat selected in effect:', chatId);
             // New chat selected - load all messages and scroll to bottom
-            this.lastSelectedChatId.set(chat.id);
-            this.messages.set(chatMessages || []);
+            this.lastSelectedChatId.set(chatId);
+            // Clear pending messages when switching chats
+            this.pendingMessages.set([]);
             this.hasMoreMessages.set(true);
             this.scrollToBottom();
 
@@ -240,19 +271,14 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             setTimeout(() => {
               this.messageInput?.nativeElement?.focus();
             }, 300);
-
-            // Mark this chat as read when selected
-            // TODO: FIX, this will trigger selectedChat signal and cause infinite loop
-            // this.markChatAsRead(chat.id);
           } else if (!this.isLoadingMoreMessages() && chatMessages.length > 0) {
             // Same chat but check for new messages
             const latestLocalTimestamp =
-              currentMessages.length > 0 ? Math.max(...currentMessages.map(m => m.created_at)) : 0;
+              this.messages().length > 0 ? Math.max(...this.messages().map(m => m.created_at)) : 0;
             const latestChatTimestamp = Math.max(...chatMessages.map(m => m.created_at));
 
-            // If the chat has newer messages than what we're showing, update and scroll
+            // If the chat has newer messages than what we're showing, scroll to bottom
             if (latestChatTimestamp > latestLocalTimestamp) {
-              this.messages.set(chatMessages);
               this.scrollToBottom();
             }
           }
@@ -285,7 +311,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             this.lastAccountPubkey.set(currentPubkey);
 
             // Clear local state when account changes
-            this.messages.set([]);
+            this.pendingMessages.set([]);
             this.selectedChatId.set(null);
 
             // Reload chats for the new account (only if user is on messages page)
@@ -483,15 +509,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.logger.debug(`Loaded ${olderMessages.length} older messages`);
 
-      // if (olderMessages.length === 0) {
-      //     this.logger.debug('No more messages available, setting hasMoreMessages to false');
-      //     this.hasMoreMessages.set(false);
-      // } else {
-      // Get the updated messages from the messaging service (includes decrypted content)
-      const updatedChatMessages = this.messaging.getChatMessages(selectedChat.id);
-      this.messages.set(updatedChatMessages);
-
-      // Restore scroll position after DOM update
+      // Messages are automatically updated via the computed signal
+      // Just need to restore scroll position after DOM update
       setTimeout(() => {
         if (scrollElement) {
           const newScrollHeight = scrollElement.scrollHeight;
@@ -522,7 +541,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Select a chat from the list
    */
-  selectChat(chat: Chat): void {
+  async selectChat(chat: Chat): Promise<void> {
     this.logger.debug('selectChat called with chat:', chat.id, 'pubkey:', chat.pubkey);
     this.logger.debug('Before set - selectedChatId:', this.selectedChatId());
     this.selectedChatId.set(chat.id);
@@ -535,7 +554,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     // Mark chat as read when selected
-    this.markChatAsRead(chat.id);
+    await this.markChatAsRead(chat.id);
 
     // Navigate to the chat, clearing any query params
     this.logger.debug('Navigating to /messages/' + chat.id);
@@ -547,26 +566,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   /**
    * Mark a chat as read
    */
-  markChatAsRead(chatId: string): void {
-    // Update the chat's unread count
-    // this.chats.update(chats =>
-    //     chats.map(chat =>
-    //         chat.id === chatId
-    //             ? { ...chat, unreadCount: 0 }
-    //             : chat
-    //     )
-    // );
-    // // In a real implementation, we would also send read receipts for the messages
-    // const chat = this.chats().find(c => c.id === chatId);
-    // if (chat && this.messages().length > 0) {
-    //     // Send read receipts for all messages from this pubkey
-    //     const messageIds = this.messages()
-    //         .filter(m => !m.isOutgoing && !m.read)
-    //         .map(m => m.id);
-    //     if (messageIds.length > 0) {
-    //         this.sendReadReceipts(messageIds);
-    //     }
-    // }
+  async markChatAsRead(chatId: string): Promise<void> {
+    // Call the messaging service to mark the chat as read
+    // Messages are automatically updated via the computed signal
+    await this.messaging.markChatAsRead(chatId);
   }
 
   /**
@@ -611,8 +614,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         encryptionType: this.supportsModernEncryption(this.selectedChat()!) ? 'nip44' : 'nip04',
       };
 
-      // Add to the messages immediately so the user sees feedback
-      this.messages.update(msgs => [...msgs, pendingMessage]);
+      // Add to the pending messages so the user sees feedback
+      this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
 
       // Scroll to bottom for new outgoing messages
       this.scrollToBottom();
@@ -642,20 +645,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         );
       }
 
-      // Success: update the message to remove the pending state
+      // Success: remove the pending message and add the final message to the messaging service
+      this.pendingMessages.update(msgs =>
+        msgs.filter(msg => msg.id !== pendingId)
+      );
+
+      // Add the message to the messaging service to update the chat's lastMessage
       const updatedMessage = {
         ...finalMessage,
         pending: false,
         received: true,
       };
 
-      this.messages.update(msgs =>
-        msgs.map(msg =>
-          msg.id === pendingId ? updatedMessage : msg
-        )
-      );
-
-      // Add the message to the messaging service to update the chat's lastMessage
       this.messaging.addMessageToChat(receiverPubkey, updatedMessage);
 
       this.isSending.set(false);
@@ -669,8 +670,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch (err) {
       this.logger.error('Failed to send message', err);
 
-      // Show error state for the message
-      this.messages.update(msgs =>
+      // Show error state for the pending message
+      this.pendingMessages.update(msgs =>
         msgs.map(msg =>
           msg.id.startsWith('pending-') ? { ...msg, pending: false, failed: true } : msg
         )
@@ -693,8 +694,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Retry sending a failed message
    */
   retryMessage(message: DirectMessage): void {
-    // Remove the failed message
-    this.messages.update(msgs => msgs.filter(msg => msg.id !== message.id));
+    // Remove the failed message from pending
+    this.pendingMessages.update(msgs => msgs.filter(msg => msg.id !== message.id));
 
     // Then set its content to the input field so the user can try again
     this.newMessageText.set(message.content);

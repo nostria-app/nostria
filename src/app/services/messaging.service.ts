@@ -1403,4 +1403,55 @@ export class MessagingService implements NostriaService {
     newMap.set(chat.id, chat);
     this.chatsMap.set(newMap);
   }
+
+  /**
+   * Mark all unread messages in a chat as read
+   */
+  async markChatAsRead(chatId: string): Promise<void> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      this.logger.warn('Cannot mark chat as read: no account pubkey');
+      return;
+    }
+
+    const chat = this.getChat(chatId);
+    if (!chat) {
+      this.logger.warn(`Cannot mark chat as read: chat ${chatId} not found`);
+      return;
+    }
+
+    // If chat already has 0 unread count, nothing to do
+    if (chat.unreadCount === 0) {
+      return;
+    }
+
+    try {
+      // Mark all messages as read in storage
+      await this.storage.markChatAsRead(myPubkey, chatId);
+
+      // Update the in-memory chat's unread count and mark messages as read
+      const currentMap = this.chatsMap();
+      const newMap = new Map(currentMap);
+
+      const updatedMessagesMap = new Map(chat.messages);
+      for (const [msgId, message] of updatedMessagesMap.entries()) {
+        if (!message.isOutgoing && !message.read) {
+          updatedMessagesMap.set(msgId, { ...message, read: true });
+        }
+      }
+
+      const updatedChat: Chat = {
+        ...chat,
+        unreadCount: 0,
+        messages: updatedMessagesMap,
+      };
+
+      newMap.set(chatId, updatedChat);
+      this.chatsMap.set(newMap);
+
+      this.logger.debug(`Marked chat ${chatId} as read`);
+    } catch (error) {
+      this.logger.error('Error marking chat as read:', error);
+    }
+  }
 }
