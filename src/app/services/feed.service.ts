@@ -224,6 +224,7 @@ export class FeedService {
   private readonly _feeds = signal<FeedConfig[]>([]);
   private readonly _userRelays = signal<RelayConfig[]>([]);
   private readonly _discoveryRelays = signal<RelayConfig[]>([]);
+  private readonly _feedsLoaded = signal<boolean>(false);
 
   // Active feed subscription management
   private readonly _activeFeedId = signal<string | null>(null);
@@ -237,6 +238,7 @@ export class FeedService {
   readonly userRelays = computed(() => this._userRelays());
   readonly discoveryRelays = computed(() => this._discoveryRelays());
   readonly activeFeedId = computed(() => this._activeFeedId());
+  readonly feedsLoaded = computed(() => this._feedsLoaded());
 
   // Feed type definitions
   readonly feedTypes = COLUMN_TYPES;
@@ -253,6 +255,8 @@ export class FeedService {
 
       if (initialized) {
         untracked(async () => {
+          // Reset feedsLoaded before loading new feeds
+          this._feedsLoaded.set(false);
           await this.loadFeeds();
           this.loadRelays();
         });
@@ -1669,6 +1673,7 @@ export class FeedService {
         this.logger.warn('No pubkey found, using defaults');
         const defaultFeeds = await this.initializeDefaultFeeds();
         this._feeds.set(defaultFeeds);
+        this._feedsLoaded.set(true);
         this.saveFeeds();
         return;
       }
@@ -1679,18 +1684,21 @@ export class FeedService {
       const storedFeeds = feedsByAccount && feedsByAccount[pubkey];
       if (storedFeeds && Array.isArray(storedFeeds) && storedFeeds.length > 0) {
         this._feeds.set(storedFeeds);
+        this._feedsLoaded.set(true);
         this.logger.debug('Loaded feeds from storage for pubkey', pubkey, storedFeeds);
       } else {
         const feedsByAccount: Record<string, FeedConfig[]> = {};
         const defaultFeeds = await this.initializeDefaultFeeds();
         feedsByAccount[pubkey] = defaultFeeds;
         this._feeds.set(defaultFeeds);
+        this._feedsLoaded.set(true);
         this.saveFeeds();
         this.logger.debug('No feeds found for pubkey, using defaults', pubkey);
       }
     } catch (error) {
       this.logger.error('Error loading feeds from storage:', error);
       this._feeds.set(DEFAULT_FEEDS);
+      this._feedsLoaded.set(true);
       this.saveFeeds();
     }
 

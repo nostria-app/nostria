@@ -274,7 +274,7 @@
       }
 
       <!-- Loading indicator while initializing -->
-      @if (!app.initialized() || !accountState.initialized()) {
+      @if (!app.initialized() || !accountState.initialized() || !feedService.feedsLoaded()) {
       <div class="empty-columns-state">
         <div class="empty-state-content">
           <mat-spinner diameter="48"></mat-spinner>
