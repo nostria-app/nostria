@@ -99,6 +99,10 @@ export class GeneralSettingsComponent {
     this.localSettings.setShowClientTag(!this.localSettings.showClientTag());
   }
 
+  toggleStartOnLastRoute(): void {
+    this.localSettings.setStartOnLastRoute(!this.localSettings.startOnLastRoute());
+  }
+
   resetNotificationsCache(): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',

@@ -29,6 +29,7 @@ interface AccountLocalState {
   activeProfileTab?: string;
   powEnabled?: boolean;
   powTargetDifficulty?: number;
+  lastRoute?: string;
 }
 
 /**
@@ -273,6 +274,21 @@ export class AccountLocalStateService {
    */
   setPowTargetDifficulty(pubkey: string, difficulty: number): void {
     this.updateAccountState(pubkey, { powTargetDifficulty: difficulty });
+  }
+
+  /**
+   * Get last route for an account
+   */
+  getLastRoute(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.lastRoute;
+  }
+
+  /**
+   * Set last route for an account
+   */
+  setLastRoute(pubkey: string, route: string | null | undefined): void {
+    this.updateAccountState(pubkey, { lastRoute: route || undefined });
   }
 
   /**
