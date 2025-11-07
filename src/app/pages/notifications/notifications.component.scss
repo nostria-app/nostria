@@ -403,6 +403,16 @@
       word-break: break-word; // Break long words
       overflow-wrap: break-word; // Break long URLs/text
       overflow: hidden; // Hide overflow
+
+      &.zap-content {
+        font-style: italic;
+        opacity: 0.9;
+        padding: 8px 12px;
+        margin-top: 4px;
+        border-left: 3px solid #f7931a;
+        background: var(--mat-sys-surface-container-low);
+        border-radius: 4px;
+      }
     }
 
     .notification-meta {
