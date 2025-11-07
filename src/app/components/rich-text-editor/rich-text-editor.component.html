@@ -58,28 +58,28 @@
 
       <mat-divider [vertical]="true"></mat-divider>
 
-      <button mat-icon-button [matMenuTriggerFor]="uploadMenu" [disabled]="isUploading()" matTooltip="Upload">
+      <button mat-icon-button [matMenuTriggerFor]="imageMenu" [disabled]="isUploading()" matTooltip="Insert Image">
         @if (isUploading()) {
         <mat-icon>hourglass_empty</mat-icon>
         } @else {
-        <mat-icon>upload</mat-icon>
+        <mat-icon>image</mat-icon>
         }
       </button>
 
-      <mat-menu #uploadMenu="matMenu">
+      <mat-menu #imageMenu="matMenu">
         <button mat-menu-item (click)="openImageDialog()">
-          <mat-icon>image</mat-icon>
+          <mat-icon>upload</mat-icon>
           <span>Upload Image</span>
-        </button>
-        <button mat-menu-item (click)="openAnyFileDialog()">
-          <mat-icon>attach_file</mat-icon>
-          <span>Upload File</span>
         </button>
         <button mat-menu-item (click)="insertImageFromUrl()">
           <mat-icon>link</mat-icon>
           <span>Image from URL</span>
         </button>
       </mat-menu>
+
+      <button mat-icon-button (click)="openAnyFileDialog()" [disabled]="isUploading()" matTooltip="Upload File">
+        <mat-icon>attach_file</mat-icon>
+      </button>
     </div>
     <div class="editor-mode-toggle">
       <mat-button-toggle-group [value]="isRichTextMode() ? 'rich' : 'markdown'">

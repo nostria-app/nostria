@@ -264,15 +264,15 @@ export class LayoutService implements OnDestroy {
     const currentAtBottom = this.scrolledToBottom();
     if (isAtBottom !== currentAtBottom && this.isScrollMonitoringReady()) {
       this.scrolledToBottom.set(isAtBottom);
-      this.logger.debug('Scroll position - at bottom changed:', {
-        isAtBottom,
-        wasAtBottom: currentAtBottom,
-        scrollTop,
-        clientHeight,
-        scrollHeight,
-        calculated: scrollTop + clientHeight,
-        targetThreshold: scrollHeight - threshold,
-      });
+      // this.logger.debug('Scroll position - at bottom changed:', {
+      //   isAtBottom,
+      //   wasAtBottom: currentAtBottom,
+      //   scrollTop,
+      //   clientHeight,
+      //   scrollHeight,
+      //   calculated: scrollTop + clientHeight,
+      //   targetThreshold: scrollHeight - threshold,
+      // });
     }
   }
 

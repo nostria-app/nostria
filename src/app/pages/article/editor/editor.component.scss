@@ -39,10 +39,16 @@
       padding-bottom: 32px;
       border-bottom: 1px solid var(--mat-sys-outline-variant);
 
+      .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+
       .section-label {
         font-size: 14px;
         color: var(--mat-sys-on-surface-variant);
-        margin-bottom: 12px;
         font-weight: 500;
         text-transform: uppercase;
         letter-spacing: 0.5px;
@@ -52,7 +58,6 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 16px;
         font-size: 14px;
         color: var(--mat-sys-on-surface-variant);
       }
