@@ -225,9 +225,12 @@ export class RelayPoolService {
   }
 
   /**
-   * Publish an event to relays
+   * Publish an event to relays with timeout support
+   * @param relayUrls Array of relay URLs to publish to
+   * @param event Event to publish
+   * @param timeoutMs Timeout in milliseconds (default: 10000)
    */
-  async publish(relayUrls: string[], event: Event): Promise<void> {
+  async publish(relayUrls: string[], event: Event, timeoutMs = 10000): Promise<void> {
     if (relayUrls.length === 0) {
       throw new Error('No relays provided');
     }
@@ -237,6 +240,7 @@ export class RelayPoolService {
       relayUrls: relayUrls,
       eventKind: event.kind,
       eventId: event.id,
+      timeout: timeoutMs,
     });
 
     // Add any new relays to the pool
@@ -249,7 +253,25 @@ export class RelayPoolService {
         promiseCount: publishPromises.length,
       });
 
-      const results = await Promise.allSettled(publishPromises);
+      // Add timeout to the publish operation
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Publish timeout')), timeoutMs)
+      );
+
+      const results = await Promise.race([
+        Promise.allSettled(publishPromises),
+        timeoutPromise
+      ]).catch(async () => {
+        // Timeout occurred - collect whatever results we have
+        this.logger.warn('[RelayPoolService] Publish timeout, collecting results', {
+          timeout: timeoutMs,
+          relayCount: relayUrls.length
+        });
+
+        // Give a small grace period to collect results
+        await new Promise(resolve => setTimeout(resolve, 100));
+        return await Promise.allSettled(publishPromises);
+      });
 
       console.log('[RelayPoolService] DEBUG: Publish results:', {
         totalResults: results.length,
