@@ -484,6 +484,14 @@ export class ContentNotificationService {
       recipientPubkey?: string; // For profile zaps, the recipient's pubkey
     };
   }): Promise<void> {
+    // CRITICAL: Filter out notifications from muted/blocked accounts
+    // Don't create or store notifications from muted users at all
+    const mutedAccounts = this.accountState.mutedAccounts();
+    if (mutedAccounts.includes(data.authorPubkey)) {
+      this.logger.debug(`Skipping notification from muted account: ${data.authorPubkey}`);
+      return;
+    }
+
     // Generate unique notification ID
     // For zaps, always use the zap receipt ID (unique per zap) to avoid duplicates
     // For other notification types, use eventId if available

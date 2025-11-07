@@ -396,6 +396,47 @@
       }
     }
 
+    .notification-author {
+      margin-top: 8px;
+      margin-bottom: 4px;
+
+      ::ng-deep .user-profile.tiny {
+        gap: 8px;
+        padding: 4px 8px;
+        border-radius: 8px;
+        transition: background-color 0.2s ease;
+        cursor: pointer;
+        width: fit-content;
+
+        &:hover {
+          background-color: var(--mat-sys-surface-container);
+        }
+
+        .user-profile-avatar {
+          width: 32px;
+          height: 32px;
+          min-width: 32px;
+          min-height: 32px;
+
+          .user-avatar {
+            width: 32px;
+            height: 32px;
+          }
+
+          .default-user-avatar {
+            font-size: 32px;
+            width: 32px;
+            height: 32px;
+          }
+        }
+
+        .user-profile-name {
+          font-size: 14px;
+          font-weight: 500;
+        }
+      }
+    }
+
     .notification-message {
       font-size: 14px;
       opacity: 0.8;
