@@ -55,6 +55,32 @@
         outline: none;
       }
     }
+
+    .summary-input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      font-size: 21px;
+      line-height: 1.4;
+      padding: 0;
+      margin: 0 0 32px 0;
+      color: var(--mat-sys-on-surface-variant);
+      font-family: inherit;
+      resize: none;
+      overflow: hidden;
+      min-height: 1.4em;
+      field-sizing: content;
+
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.5;
+      }
+
+      &:focus {
+        outline: none;
+      }
+    }
   }
 
   .metadata-panel {
@@ -413,6 +439,10 @@
 
       .title-input {
         font-size: 32px;
+      }
+
+      .summary-input {
+        font-size: 18px;
       }
     }
 
