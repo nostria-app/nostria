@@ -16,6 +16,10 @@ import {
   ConfirmDialogComponent,
   type ConfirmDialogData,
 } from '../../confirm-dialog/confirm-dialog.component';
+import {
+  EventDetailsDialogComponent,
+  type EventDetailsDialogData,
+} from '../../event-details-dialog/event-details-dialog.component';
 import { LayoutService } from '../../../services/layout.service';
 import type { ReportTarget } from '../../../services/reporting.service';
 import { CommonModule } from '@angular/common';
@@ -177,5 +181,21 @@ export class EventMenuComponent {
       await this.pinned.pinNote(targetEvent.id);
       this.snackBar.open('Note pinned to profile', 'Close', { duration: 3000 });
     }
+  }
+
+  openEventDetails() {
+    const event = this.event();
+    if (!event) {
+      return;
+    }
+
+    this.dialog.open(EventDetailsDialogComponent, {
+      data: {
+        event: event,
+      } as EventDetailsDialogData,
+      width: '80vw',
+      maxWidth: '800px',
+      maxHeight: '90vh',
+    });
   }
 }
