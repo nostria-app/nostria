@@ -179,6 +179,39 @@
       }
     }
 
+    .featured-image-preview {
+      position: relative;
+      margin-bottom: 32px;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--mat-sys-level1);
+
+      img {
+        width: 100%;
+        max-width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      .clear-image-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background-color: rgba(0, 0, 0, 0.6);
+        color: white;
+        
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.8);
+        }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+    }
+
     .title-input {
       width: 100%;
       border: none;
