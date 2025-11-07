@@ -13,8 +13,8 @@
   <div class="medium-editor">
     <!-- Article Image Toggle Button -->
     <div class="image-toggle-button-container">
-      <button mat-icon-button (click)="toggleArticleImageSection()" 
-        [matTooltip]="showArticleImage() ? 'Hide article image' : 'Add article image'">
+      <button mat-icon-button (click)="toggleArticleImageSection()"
+        [matTooltip]="showArticleImage() ? 'Hide featured image' : 'Add featured image'">
         <mat-icon>{{ showArticleImage() ? 'image' : 'add_photo_alternate' }}</mat-icon>
       </button>
     </div>
@@ -22,12 +22,14 @@
     <!-- Article Image Section -->
     @if (showArticleImage()) {
     <div class="article-image-section">
-      <div class="section-label">Article Image</div>
-      <div class="image-toggle">
-        <span>File</span>
-        <mat-slide-toggle [checked]="useImageUrl()" (change)="toggleImageInputMethod()" color="primary">
-        </mat-slide-toggle>
-        <span>URL</span>
+      <div class="section-header">
+        <div class="section-label">Featured Image</div>
+        <div class="image-toggle">
+          <span>File</span>
+          <mat-slide-toggle [checked]="useImageUrl()" (change)="toggleImageInputMethod()" color="primary">
+          </mat-slide-toggle>
+          <span>URL</span>
+        </div>
       </div>
 
       <!-- No media servers warning for file upload mode -->
@@ -147,7 +149,6 @@
       <h3>Tags</h3>
       <div class="tag-input-container">
         <mat-form-field appearance="outline" class="tag-input">
-          <mat-label>Add tag</mat-label>
           <input matInput [value]="newTag()" (input)="newTag.set($any($event.target).value)"
             (keypress)="onTagKeyPress($event)" placeholder="Enter a tag" />
         </mat-form-field>
