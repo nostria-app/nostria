@@ -39,17 +39,15 @@
       justify-content: space-between;
       margin-bottom: 16px;
 
-      button {
-        mat-icon {
-          font-size: 28px;
-          width: 28px;
-          height: 28px;
-        }
+      .left-buttons,
+      .right-buttons {
+        display: flex;
+        gap: 8px;
+      }
 
-        &.active {
-          color: var(--mat-sys-primary);
-          background-color: var(--mat-sys-primary-container);
-        }
+      button.active {
+        color: var(--mat-sys-primary);
+        background-color: var(--mat-sys-primary-container);
       }
     }
 
@@ -199,7 +197,7 @@
         right: 8px;
         background-color: rgba(0, 0, 0, 0.6);
         color: white;
-        
+
         &:hover {
           background-color: rgba(0, 0, 0, 0.8);
         }

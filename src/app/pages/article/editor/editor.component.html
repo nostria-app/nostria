@@ -13,25 +13,29 @@
   <div class="medium-editor">
     <!-- Top Action Buttons -->
     <div class="top-action-buttons">
-      @if (!article().image) {
-      <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" matTooltip="Add featured image">
-        <mat-icon>add_photo_alternate</mat-icon>
-      </button>
-      <mat-menu #featuredImageMenu="matMenu">
-        <button mat-menu-item (click)="openFeaturedImageUpload()">
-          <mat-icon>upload</mat-icon>
-          <span>Upload Image</span>
+      <div class="left-buttons">
+        @if (!article().image) {
+        <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" matTooltip="Add featured image">
+          <mat-icon>add_photo_alternate</mat-icon>
         </button>
-        <button mat-menu-item (click)="openFeaturedImageUrl()">
-          <mat-icon>link</mat-icon>
-          <span>Image from URL</span>
+        <mat-menu #featuredImageMenu="matMenu">
+          <button mat-menu-item (click)="openFeaturedImageUpload()">
+            <mat-icon>upload</mat-icon>
+            <span>Upload Image</span>
+          </button>
+          <button mat-menu-item (click)="openFeaturedImageUrl()">
+            <mat-icon>link</mat-icon>
+            <span>Image from URL</span>
+          </button>
+        </mat-menu>
+        }
+      </div>
+      <div class="right-buttons">
+        <button mat-icon-button (click)="togglePreview()" [matTooltip]="showPreview() ? 'Edit' : 'Preview'"
+          [class.active]="showPreview()">
+          <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
         </button>
-      </mat-menu>
-      }
-      <button mat-icon-button (click)="togglePreview()" [matTooltip]="showPreview() ? 'Edit' : 'Preview'"
-        [class.active]="showPreview()">
-        <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
-      </button>
+      </div>
     </div>
 
     <!-- Featured Image Preview -->
