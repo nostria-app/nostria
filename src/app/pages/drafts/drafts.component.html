@@ -65,49 +65,49 @@
     }
   </div>
   } @else {
-  <div class="drafts-grid">
+  <div class="drafts-list">
     @for (draft of filteredDrafts(); track draft.id) {
     <mat-card class="draft-card" (click)="openDraft(draft)">
-      <mat-card-header>
-        <mat-card-title>{{ draft.title }}</mat-card-title>
-        <mat-card-subtitle>
-          Last modified {{ draft.lastModified | ago }}
-        </mat-card-subtitle>
-        <div class="card-actions">
-          <button mat-icon-button (click)="deleteDraft(draft, $event)" matTooltip="Delete draft" class="delete-button">
-            <mat-icon>delete</mat-icon>
-          </button>
-        </div>
-      </mat-card-header>
-
-      @if (draft.imageUrl) {
-      <div class="draft-image">
-        <img [src]="draft.imageUrl" alt="{{ draft.title }}" title="{{ draft.title }}" />
-      </div>
-      }
-
-      <mat-card-content>
-        <p class="draft-summary">{{ draft.summary }}</p>
-
-        @if (draft.tags.length > 0) {
-        <div class="draft-tags">
-          <mat-chip-set>
-            @for (tag of draft.tags; track $index) {
-            <mat-chip class="tag-chip">{{ tag }}</mat-chip>
-            }
-          </mat-chip-set>
+      <div class="draft-card-content">
+        @if (draft.imageUrl) {
+        <div class="draft-image">
+          <img [src]="draft.imageUrl" alt="{{ draft.title }}" title="{{ draft.title }}" />
         </div>
         }
-      </mat-card-content>
 
-      <mat-card-actions>
-        <button mat-button (click)="openDraft(draft)">
-          <mat-icon>edit</mat-icon>
-          Continue Writing
-        </button>
-        <span class="spacer"></span>
-        <small class="created-date"> Created {{ draft.createdAt | ago }} </small>
-      </mat-card-actions>
+        <div class="draft-details">
+          <div class="draft-header">
+            <div class="draft-title-section">
+              <h3 class="draft-title">{{ draft.title }}</h3>
+              <p class="draft-meta">
+                Last modified {{ draft.lastModified | ago }} • Created {{ draft.createdAt | ago }}
+              </p>
+            </div>
+            <button mat-icon-button (click)="deleteDraft(draft, $event)" matTooltip="Delete draft" class="delete-button">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <p class="draft-summary">{{ draft.summary }}</p>
+
+          @if (draft.tags.length > 0) {
+          <div class="draft-tags">
+            <mat-chip-set>
+              @for (tag of draft.tags; track $index) {
+              <mat-chip class="tag-chip">{{ tag }}</mat-chip>
+              }
+            </mat-chip-set>
+          </div>
+          }
+
+          <div class="draft-actions">
+            <button mat-button (click)="openDraft(draft)">
+              <mat-icon>edit</mat-icon>
+              Continue Writing
+            </button>
+          </div>
+        </div>
+      </div>
     </mat-card>
     }
   </div>

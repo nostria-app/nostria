@@ -11,6 +11,7 @@ import {
 
 import { FormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
+import { Location } from '@angular/common';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatButtonModule } from '@angular/material/button';
@@ -98,6 +99,7 @@ interface ArticleAutoDraft {
 export class EditorComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private location = inject(Location);
   private nostrService = inject(NostrService);
   private dataService = inject(DataService);
   private accountRelay = inject(AccountRelayService);
@@ -109,6 +111,9 @@ export class EditorComponent implements OnInit, OnDestroy {
   private localStorage = inject(LocalStorageService);
   private cache = inject(Cache);
   private media = inject(MediaService);
+
+  // Track where we came from
+  private previousUrl = '/articles';
 
   // Auto-save configuration
   private readonly AUTO_SAVE_INTERVAL = 2000; // Save every 2 seconds
@@ -289,6 +294,19 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     setTimeout(() => this.layout.scrollMainContentToTop(), 100);
+    
+    // Capture the previous URL from navigation state or history
+    const navigation = this.router.getCurrentNavigation();
+    if (navigation?.extras?.state?.['from']) {
+      this.previousUrl = navigation.extras.state['from'];
+    } else {
+      // Try to get the previous URL from browser history
+      const historyState = this.location.getState() as { navigationId?: number };
+      if (historyState?.navigationId && historyState.navigationId > 1) {
+        // If we have navigation history, we can go back
+        this.previousUrl = 'back';
+      }
+    }
   }
 
   ngOnDestroy() {
@@ -748,7 +766,12 @@ export class EditorComponent implements OnInit, OnDestroy {
       });
     }
 
-    this.router.navigate(['/articles']);
+    // Navigate back to where we came from
+    if (this.previousUrl === 'back') {
+      this.location.back();
+    } else {
+      this.router.navigate([this.previousUrl]);
+    }
   }
 
   resetDraft(): void {
