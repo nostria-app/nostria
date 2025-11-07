@@ -56,6 +56,11 @@ Never set the font-weight in CSS. The current font for headlines does not suppor
 - Use the `inject()` function instead of constructor injection
 
 
+## Styling
+
+- The app supports dark and light mode, so make sure your styles work well in both modes.
+- Don't add hardcoded colors. Use CSS variables defined in styles.scss and theme.scss
+
 Don't make documentation for every change, only important and hard to understand fixes.
 
 When you generate markdown documentation of what you have done, place those documents into the "docs" folder.

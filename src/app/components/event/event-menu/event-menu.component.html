@@ -13,6 +13,10 @@
     <mat-icon>content_copy</mat-icon>
     Copy
   </button>
+  <button mat-menu-item (click)="openEventDetails()">
+    <mat-icon>info</mat-icon>
+    Details
+  </button>
   <mat-divider></mat-divider>
   @if (showPinOptions()) {
   <button mat-menu-item (click)="onPinClick($event)">

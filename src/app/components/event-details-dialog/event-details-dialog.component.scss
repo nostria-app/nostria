@@ -1,0 +1,88 @@
+.event-details-dialog {
+  min-width: 600px;
+  max-width: 90vw;
+
+  mat-dialog-content {
+    padding: 0;
+    margin: 0;
+    max-height: 70vh;
+    overflow: hidden;
+  }
+
+  .tab-content {
+    padding: 16px;
+    max-height: 60vh;
+    overflow-y: auto;
+  }
+
+  .monospace {
+    font-family: 'Courier New', monospace;
+    word-break: break-all;
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .subtitle {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.8;
+  }
+
+  .no-data {
+    text-align: center;
+    color: var(--mat-sys-on-surface-variant);
+    font-style: italic;
+    margin: 20px 0;
+  }
+
+  .tag-value {
+    margin-right: 8px;
+    margin-bottom: 4px;
+  }
+
+  .json-content {
+    background-color: var(--mat-sys-surface-container);
+    padding: 12px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.875rem;
+    line-height: 1.4;
+    white-space: pre-wrap;
+    word-break: break-all;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid var(--mat-sys-outline-variant);
+    color: var(--mat-sys-on-surface);
+  }
+
+  .spacer {
+    flex: 1;
+  }
+
+  mat-card {
+    margin-bottom: 16px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+
+  mat-card-header {
+    margin-bottom: 16px;
+  }
+
+  mat-list-item {
+    height: auto;
+    min-height: 56px;
+    padding: 8px 0;
+
+    .mat-mdc-list-item-content {
+      padding: 0 16px;
+    }
+  }
+
+  mat-chip {
+    height: 24px;
+    font-size: 0.75rem;
+  }
+}
