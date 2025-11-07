@@ -70,7 +70,8 @@
     @if (!showPreview()) {
     <!-- Write Mode -->
     <div class="write-tab">
-      <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)">
+      <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)"
+        [richTextMode]="editorIsRichTextMode()" (richTextModeChange)="onEditorModeChange($event)">
       </app-rich-text-editor>
     </div>
     } @else {

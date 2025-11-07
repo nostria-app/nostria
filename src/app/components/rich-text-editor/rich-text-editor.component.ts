@@ -23,6 +23,7 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { DomSanitizer } from '@angular/platform-browser';
+import { marked } from 'marked';
 import { MediaService } from '../../services/media.service';
 import { ImageUrlDialogComponent } from '../image-url-dialog/image-url-dialog.component';
 import {
@@ -53,6 +54,11 @@ import {
 export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   @Input() content = '';
   @Output() contentChange = new EventEmitter<string>();
+
+  @Input() set richTextMode(value: boolean) {
+    this.isRichTextMode.set(value);
+  }
+  @Output() richTextModeChange = new EventEmitter<boolean>();
 
   @ViewChild('editorContent') editorContent!: ElementRef;
   @ViewChild('fileInput') fileInput!: ElementRef;
@@ -99,6 +105,9 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     // If in rich text mode, render the markdown as HTML
     if (this.isRichTextMode()) {
       this.renderMarkdownToEditor(content);
+    } else {
+      // If in markdown mode, resize the textarea after content is set
+      setTimeout(() => this.autoResizeTextarea(), 0);
     }
   }
 
@@ -116,10 +125,15 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
 
     this.isRichTextMode.update(mode => !mode);
 
+    // Emit mode change to parent component
+    this.richTextModeChange.emit(this.isRichTextMode());
+
     // Set up paste handlers for the newly active editor
     setTimeout(() => {
       if (!this.isRichTextMode() && this.markdownTextarea) {
         this.markdownTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
+        // Auto-resize when switching to markdown mode
+        this.autoResizeTextarea();
       }
     }, 100);
   }
@@ -132,6 +146,18 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     this.markdownContent.set(value);
     // Emit the change event with the raw markdown
     this.contentChange.emit(value);
+    // Auto-resize the textarea
+    this.autoResizeTextarea();
+  }
+
+  private autoResizeTextarea() {
+    if (!this.markdownTextarea) return;
+    
+    const textarea = this.markdownTextarea.nativeElement;
+    // Reset height to auto to get the correct scrollHeight
+    textarea.style.height = 'auto';
+    // Set height to scrollHeight to fit content
+    textarea.style.height = textarea.scrollHeight + 'px';
   }
 
   onRichTextContentChange() {
@@ -149,63 +175,16 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       return;
     }
 
-    // More comprehensive markdown to HTML conversion
-    let html = markdown
-      // Handle images - convert ![alt](url) to <img> tags (must come before links)
-      .replace(
-        /!\[([^\]]*)\]\(([^\)]+)\)/g,
-        '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />'
-      )
+    // Use marked with the same configuration as the preview
+    // This ensures consistency between editor and preview
+    marked.use({
+      gfm: true,
+      breaks: true, // Enable line breaks like in the preview
+      pedantic: false,
+    });
 
-      // Handle headings FIRST to avoid paragraph wrapping
-      .replace(/^### (.*?)$/gm, '<h3>$1</h3>')
-      .replace(/^## (.*?)$/gm, '<h2>$1</h2>')
-      .replace(/^# (.*?)$/gm, '<h1>$1</h1>')
-
-      // Handle blockquotes
-      .replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>')
-
-      // Handle unordered lists - collect consecutive list items
-      .replace(/(?:^|\n)- (.*?)(?=\n(?!- )|$)/gs, function (match: string, item: string) {
-        return '<ul><li>' + item.trim() + '</li></ul>';
-      })
-
-      // Handle ordered lists - collect consecutive list items
-      .replace(
-        /(?:^|\n)(\d+)\. (.*?)(?=\n(?!\d+\. )|$)/gs,
-        function (match: string, num: string, item: string) {
-          return '<ol><li>' + item.trim() + '</li></ol>';
-        }
-      )
-
-      // Handle text formatting - non-greedy to prevent overlapping tags
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      .replace(/~~(.*?)~~/g, '<del>$1</del>')
-      .replace(/`([^`]+)`/g, '<code>$1</code>')
-
-      // Handle links (after images to avoid conflict)
-      .replace(/\[([^\[]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')
-
-      // Handle paragraphs more intelligently - only wrap actual paragraph text
-      .replace(/\n\n/g, '</p><p>')
-
-      // Handle remaining single newlines
-      .replace(/\n/g, '<br>');
-
-    // Only wrap in paragraph tags if the content is not already a block element
-    const isBlockElement = html.match(/^<(h[1-6]|blockquote|ul|ol|div|p)\b/);
-    if (!isBlockElement && html.trim()) {
-      html = '<p>' + html + '</p>';
-    }
-
-    // Clean up any empty paragraphs or malformed tags
-    html = html
-      .replace(/<p><\/p>/g, '') // Remove empty paragraphs
-      .replace(/<p>(<h[1-6][^>]*>.*?<\/h[1-6]>)<\/p>/gi, '$1') // Remove p tags around headings
-      .replace(/<p>(<blockquote[^>]*>.*?<\/blockquote>)<\/p>/gi, '$1') // Remove p tags around blockquotes
-      .replace(/<p>(<ul[^>]*>.*?<\/ul>)<\/p>/gi, '$1') // Remove p tags around lists
-      .replace(/<p>(<ol[^>]*>.*?<\/ol>)<\/p>/gi, '$1'); // Remove p tags around ordered lists
+    // Parse markdown to HTML using marked
+    const html = marked.parse(markdown) as string;
 
     // Set content safely
     setTimeout(() => {
@@ -220,30 +199,35 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
 
     let html = this.editorContent.nativeElement.innerHTML;
 
-    // Clean up extra divs and spans that might be inserted by the contenteditable
+    // First, normalize browser-specific paragraph handling
+    // Different browsers use different elements for paragraphs in contenteditable:
+    // - Chrome/Edge use <div> elements
+    // - marked.parse() creates <p> elements
+    // We need to treat both as paragraph separators
+
+    // Convert <div> elements to <p> for consistent handling
+    // BUT preserve <div><br></div> as they represent blank lines
     html = html
-      .replace(/<div><br><\/div>/g, '\n')
-      .replace(/<div>(.*?)<\/div>/g, '\n$1')
-      .replace(/<span[^>]*>(.*?)<\/span>/gi, '$1');
+      .replace(/<div><br><\/div>/gi, '<p><br></p>') // Blank line
+      .replace(/<div([^>]*)>(.*?)<\/div>/gi, '<p$1>$2</p>'); // Regular div to p
 
-    // Convert HTML to Markdown
+    // Clean up spans that might be inserted by contenteditable
+    html = html.replace(/<span[^>]*>(.*?)<\/span>/gi, '$1');
+
+    // Convert HTML to Markdown with proper line break handling
     let markdown = html
-      // Handle newlines and paragraphs - more robust approach
-      .replace(/<br\s*\/?>/gi, '\n')
-      .replace(/<p[^>]*>(.*?)<\/p>/gi, '$1\n\n')
-
       // Handle images BEFORE links (images have similar syntax)
       .replace(/<img[^>]+src="([^"]*)"[^>]*alt="([^"]*)"[^>]*>/gi, '![$2]($1)')
       .replace(/<img[^>]+alt="([^"]*)"[^>]*src="([^"]*)"[^>]*>/gi, '![$1]($2)')
       .replace(/<img[^>]+src="([^"]*)"[^>]*>/gi, '![]($1)')
 
       // Handle headings
-      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n\n')
-      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n\n')
-      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n\n')
-      .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n\n')
-      .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n\n')
-      .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n\n')
+      .replace(/<h1[^>]*>(.*?)<\/h1>/gi, '# $1\n')
+      .replace(/<h2[^>]*>(.*?)<\/h2>/gi, '## $1\n')
+      .replace(/<h3[^>]*>(.*?)<\/h3>/gi, '### $1\n')
+      .replace(/<h4[^>]*>(.*?)<\/h4>/gi, '#### $1\n')
+      .replace(/<h5[^>]*>(.*?)<\/h5>/gi, '##### $1\n')
+      .replace(/<h6[^>]*>(.*?)<\/h6>/gi, '###### $1\n')
 
       // Handle text formatting
       .replace(/<strong[^>]*>(.*?)<\/strong>/gi, '**$1**')
@@ -253,9 +237,6 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       .replace(/<del[^>]*>(.*?)<\/del>/gi, '~~$1~~')
       .replace(/<code[^>]*>(.*?)<\/code>/gi, '`$1`')
 
-      // Handle blockquotes
-      .replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gi, '> $1\n\n')
-
       // Handle links (after images to avoid conflict)
       .replace(/<a[^>]+href="([^"]*)"[^>]*>(.*?)<\/a>/gi, '[$2]($1)')
 
@@ -264,15 +245,42 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
         const items = content
           .split(/<li[^>]*>(.*?)<\/li>/gi)
           .filter((item: string, i: number) => i % 2 === 1);
-        return items.map((item: string) => `- ${item.trim()}`).join('\n') + '\n\n';
+        return items.map((item: string) => `- ${item.trim()}`).join('\n') + '\n';
       })
       .replace(/<ol[^>]*>(.*?)<\/ol>/gi, function (match: string, content: string) {
         const items = content
           .split(/<li[^>]*>(.*?)<\/li>/gi)
           .filter((item: string, i: number) => i % 2 === 1);
-        return (
-          items.map((item: string, i: number) => `${i + 1}. ${item.trim()}`).join('\n') + '\n\n'
-        );
+        return items.map((item: string, i: number) => `${i + 1}. ${item.trim()}`).join('\n') + '\n';
+      })
+
+      // Handle blockquotes - MUST be done before handling <p> tags
+      // because marked wraps blockquote content in <p> tags
+      .replace(/<blockquote[^>]*>(.*?)<\/blockquote>/gis, function (match: string, content: string) {
+        // Remove any <p> tags inside the blockquote first
+        const cleanContent = content
+          .replace(/<p[^>]*>(.*?)<\/p>/gis, '$1')
+          .replace(/<br\s*\/?>/gi, '\n')
+          .trim();
+        // Split by newlines and prefix each line with >
+        const lines = cleanContent.split('\n');
+        return lines.map(line => `> ${line.trim()}`).join('\n') + '\n';
+      })
+
+      // Handle line breaks - CRITICAL for preserving single line breaks
+      // Convert <br> tags to single newlines
+      .replace(/<br\s*\/?>/gi, '\n')
+
+      // Handle paragraphs - convert to double newlines for paragraph separation
+      // Note: marked adds \n after </p> tags, so we end up with content\n\n\n which gets collapsed
+      .replace(/<p[^>]*>(.*?)<\/p>/gis, function (match: string, content: string) {
+        // Trim whitespace from inside the paragraph but preserve the content
+        const trimmed = content.trim();
+        // Empty paragraphs (or paragraphs with just whitespace/newlines) become blank lines
+        if (!trimmed || trimmed === '\n') {
+          return '\n\n';
+        }
+        return trimmed + '\n\n';
       })
 
       // Clean up any remaining HTML entities
@@ -284,14 +292,13 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       .replace(/&apos;/g, "'");
 
     // CRITICAL: Remove ANY remaining HTML tags that might have slipped through
-    // This is a comprehensive cleanup to ensure no HTML tags remain
     markdown = markdown.replace(/<[^>]*>/g, '');
 
-    // Clean up any extra whitespace and blank lines
+    // Clean up whitespace while preserving intentional line breaks
     markdown = markdown
-      .replace(/\s+\n/g, '\n') // Remove trailing spaces on lines
-      .replace(/\n\s+/g, '\n') // Remove leading spaces on lines
-      .replace(/\n\n\n+/g, '\n\n') // Replace multiple newlines with double newlines
+      .replace(/ +\n/g, '\n') // Remove trailing spaces before newlines
+      .replace(/\n +/g, '\n') // Remove leading spaces after newlines
+      .replace(/\n\n\n+/g, '\n\n') // Collapse multiple blank lines to double newlines
       .trim();
 
     return markdown;
@@ -602,22 +609,13 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   }
 
   private convertMarkdownToHtml(markdown: string): string {
-    // Simple markdown to HTML conversion for individual pieces
-    return (
-      markdown
-        // Handle images first (before links)
-        .replace(
-          /!\[([^\]]*)\]\(([^\)]+)\)/g,
-          '<img src="$2" alt="$1" style="max-width: 100%; height: auto; border-radius: 4px;" />'
-        )
-        // Handle links
-        .replace(/\[([^\[]+)\]\(([^\)]+)\)/g, '<a href="$2">$1</a>')
-        // Handle text formatting
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/~~(.*?)~~/g, '<del>$1</del>')
-        .replace(/`([^`]+)`/g, '<code>$1</code>')
-    );
+    // Use marked for consistency with the editor and preview
+    marked.use({
+      gfm: true,
+      breaks: true,
+      pedantic: false,
+    });
+    return marked.parse(markdown) as string;
   }
 
   private insertMarkdownIntoTextarea(markdown: string): void {

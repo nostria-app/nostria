@@ -175,6 +175,13 @@ export class EditorComponent implements OnInit, OnDestroy {
     if (!content.trim()) return this.sanitizer.bypassSecurityTrustHtml('');
 
     try {
+      // Configure marked with the same options used throughout the app
+      marked.use({
+        gfm: true,
+        breaks: true, // Enable line breaks for consistency
+        pedantic: false,
+      });
+
       // First, parse markdown to HTML
       let html = marked.parse(content) as string;
 
@@ -217,6 +224,9 @@ export class EditorComponent implements OnInit, OnDestroy {
   hasMediaServers = computed(() => this.media.mediaServers().length > 0);
   showArticleImage = signal(false);
   showPreview = signal(false);
+
+  // Track editor mode to restore after preview
+  editorIsRichTextMode = signal(true);
 
   // Drag and drop state for featured image
   isFeaturedImageDragOver = signal(false);
@@ -1082,6 +1092,10 @@ export class EditorComponent implements OnInit, OnDestroy {
 
   togglePreview(): void {
     this.showPreview.update(show => !show);
+  }
+
+  onEditorModeChange(isRichTextMode: boolean): void {
+    this.editorIsRichTextMode.set(isRichTextMode);
   }
 
   applyAutoDTag(): void {
