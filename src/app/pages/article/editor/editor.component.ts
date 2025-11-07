@@ -247,6 +247,19 @@ export class EditorComponent implements OnInit, OnDestroy {
       }
     });
 
+    // Effect to reload draft when account changes
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+
+      // Only load draft if we have an account and we're not in edit mode
+      if (pubkey && !this.isEditMode() && !this.isLoadingArticle()) {
+        untracked(() => {
+          // Clear current article and load the new account's draft
+          this.loadAutoDraft();
+        });
+      }
+    });
+
     // Auto-save effect - disabled to prevent cursor jumping issues
     // Auto-save is now handled directly in the scheduleAutoSave method
     // effect(() => {
