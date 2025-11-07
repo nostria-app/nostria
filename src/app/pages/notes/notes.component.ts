@@ -25,10 +25,14 @@ import { NotesDownloadDialogComponent } from './notes-download-dialog/notes-down
     InfoTooltipComponent,
   ],
   template: `
+
+
     <div class="notes-container">
+
       <header class="notes-header">
         <h1>
           Notes 
+          <mat-icon class="premium-icon">diamond</mat-icon>
           <app-info-tooltip [content]="notesInfoContent" ariaLabel="Learn about Notes privacy" />
         </h1>
         <div class="header-actions">
@@ -109,7 +113,6 @@ import { NotesDownloadDialogComponent } from './notes-download-dialog/notes-down
 
     .notes-header h1 {
       margin: 0;
-      font-size: 32px;
       display: flex;
       align-items: center;
       gap: 8px;
