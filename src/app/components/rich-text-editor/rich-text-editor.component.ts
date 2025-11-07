@@ -16,6 +16,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatMenuModule } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -36,6 +37,7 @@ import {
     MatIconModule,
     MatTooltipModule,
     MatDividerModule,
+    MatMenuModule,
     FormsModule,
     MatButtonToggleModule,
     MatProgressBarModule,
@@ -336,6 +338,10 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     }
   }
 
+  insertHorizontalRule() {
+    this.execCommand('insertHorizontalRule');
+  }
+
   private execCommand(command: string, value = '') {
     document.execCommand(command, false, value);
     this.onRichTextContentChange();
@@ -353,6 +359,57 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
 
   openFileDialog(): void {
     this.fileInput.nativeElement.click();
+  }
+
+  openImageDialog(): void {
+    this.fileInput.nativeElement.accept = 'image/*';
+    this.fileInput.nativeElement.click();
+  }
+
+  openAnyFileDialog(): void {
+    this.fileInput.nativeElement.accept = 'image/*,video/*,audio/*,.pdf,.doc,.docx,.txt,.zip,.rar';
+    this.fileInput.nativeElement.click();
+  }
+
+  insertImageFromUrl(): void {
+    const url = prompt('Enter image URL:', 'https://');
+    if (url && url.trim()) {
+      const markdown = `\n![Image](${url})\n`;
+      this.insertMarkdown(markdown);
+    }
+  }
+
+  private insertMarkdown(markdown: string): void {
+    if (this.isRichTextMode()) {
+      // In rich text mode, insert at cursor or end
+      const editor = this.editorContent.nativeElement;
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = this.convertMarkdownToHtml(markdown);
+        range.deleteContents();
+        range.insertNode(tempDiv.firstChild || document.createTextNode(markdown));
+      } else {
+        editor.innerHTML += this.convertMarkdownToHtml(markdown);
+      }
+      this.onRichTextContentChange();
+    } else {
+      // In markdown mode, insert at cursor position
+      const textarea = this.markdownTextarea.nativeElement;
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const currentValue = this.markdownContent();
+      const newValue = currentValue.substring(0, start) + markdown + currentValue.substring(end);
+      this.markdownContent.set(newValue);
+      textarea.value = newValue;
+      this.contentChange.emit(newValue);
+      // Set cursor position after inserted content
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + markdown.length;
+        textarea.focus();
+      });
+    }
   }
 
   onDragEnter(event: DragEvent): void {

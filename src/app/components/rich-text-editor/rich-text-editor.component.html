@@ -52,15 +52,34 @@
         <mat-icon>code</mat-icon>
       </button>
 
+      <button mat-icon-button (click)="insertHorizontalRule()" [disabled]="!isRichTextMode()" matTooltip="Divider">
+        <mat-icon>horizontal_rule</mat-icon>
+      </button>
+
       <mat-divider [vertical]="true"></mat-divider>
 
-      <button mat-icon-button (click)="openFileDialog()" [disabled]="isUploading()" matTooltip="Upload Files">
+      <button mat-icon-button [matMenuTriggerFor]="uploadMenu" [disabled]="isUploading()" matTooltip="Upload">
         @if (isUploading()) {
         <mat-icon>hourglass_empty</mat-icon>
         } @else {
-        <mat-icon>attach_file</mat-icon>
+        <mat-icon>upload</mat-icon>
         }
       </button>
+
+      <mat-menu #uploadMenu="matMenu">
+        <button mat-menu-item (click)="openImageDialog()">
+          <mat-icon>image</mat-icon>
+          <span>Upload Image</span>
+        </button>
+        <button mat-menu-item (click)="openAnyFileDialog()">
+          <mat-icon>attach_file</mat-icon>
+          <span>Upload File</span>
+        </button>
+        <button mat-menu-item (click)="insertImageFromUrl()">
+          <mat-icon>link</mat-icon>
+          <span>Image from URL</span>
+        </button>
+      </mat-menu>
     </div>
     <div class="editor-mode-toggle">
       <mat-button-toggle-group [value]="isRichTextMode() ? 'rich' : 'markdown'">
