@@ -195,6 +195,27 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
+  {
+    id: 'default-feed-articles',
+    label: 'Articles',
+    icon: 'newsmode',
+    description: 'Long-form articles from your network',
+    columns: [
+      {
+        id: 'articles-column',
+        label: '',
+        icon: 'article',
+        type: 'articles',
+        kinds: [30023], // Long-form content
+        source: 'for-you',
+        relayConfig: 'account',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    ],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
 ];
 
 @Injectable({
