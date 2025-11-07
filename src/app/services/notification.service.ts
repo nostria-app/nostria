@@ -1,4 +1,4 @@
-import { Injectable, effect, inject, signal } from '@angular/core';
+import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { LoggerService } from './logger.service';
 import {
   GeneralNotification,
@@ -7,6 +7,7 @@ import {
   RelayPublishingNotification,
   RelayPublishPromise,
   StorageService,
+  ContentNotification,
 } from './storage.service';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
@@ -29,6 +30,9 @@ export class NotificationService {
   private _notificationsLoaded = signal(false);
   readonly notificationsLoaded = this._notificationsLoaded.asReadonly();
 
+  // Track previously seen muted accounts to detect new mutes
+  private _previousMutedAccounts = signal<string[]>([]);
+
   constructor() {
     this.logger.info('NotificationService initialized');
 
@@ -47,6 +51,36 @@ export class NotificationService {
         this.logger.info(`Account changed to ${pubkey}, reloading notifications`);
         this.loadNotifications();
       }
+    });
+
+    // Set up effect to clean up notifications when accounts are muted
+    effect(() => {
+      const currentMutedAccounts = this.accountState.mutedAccounts();
+
+      // Use untracked to read previous value without creating dependency
+      const previousMutedAccounts = untracked(() => this._previousMutedAccounts());
+
+      // Find newly muted accounts
+      const newlyMutedAccounts = currentMutedAccounts.filter(
+        pubkey => !previousMutedAccounts.includes(pubkey)
+      );
+
+      // Clean up notifications from newly muted accounts
+      if (newlyMutedAccounts.length > 0) {
+        this.logger.info(`Cleaning up notifications from ${newlyMutedAccounts.length} newly muted accounts`);
+
+        // Use untracked to prevent this write from triggering the effect again
+        untracked(() => {
+          newlyMutedAccounts.forEach(pubkey => {
+            this.removeNotificationsFromAuthor(pubkey);
+          });
+        });
+      }
+
+      // Update the previous muted accounts (use untracked to prevent re-triggering)
+      untracked(() => {
+        this._previousMutedAccounts.set([...currentMutedAccounts]);
+      });
     });
   }
 
@@ -78,11 +112,36 @@ export class NotificationService {
       }
 
       if (storedNotifications && storedNotifications.length > 0) {
-        // Sort by timestamp (newest first)
-        storedNotifications.sort((a, b) => b.timestamp - a.timestamp);
+        // CRITICAL: Filter out notifications from muted/blocked accounts
+        // This handles cases where user muted accounts AFTER notifications were stored
+        const mutedAccounts = this.accountState.mutedAccounts();
+        const filteredNotifications = storedNotifications.filter(notification => {
+          // System notifications (relay publishing, errors, etc.) are not filtered
+          if (notification.type === NotificationType.RELAY_PUBLISHING ||
+            notification.type === NotificationType.GENERAL ||
+            notification.type === NotificationType.ERROR ||
+            notification.type === NotificationType.SUCCESS ||
+            notification.type === NotificationType.WARNING) {
+            return true;
+          }
 
-        this.logger.info(`Loaded ${storedNotifications.length} notifications from storage`);
-        this._notifications.set(storedNotifications);
+          // Content notifications - check if author is muted
+          const contentNotification = notification as ContentNotification;
+          if (contentNotification.authorPubkey && mutedAccounts.includes(contentNotification.authorPubkey)) {
+            this.logger.debug(`Filtering out notification from muted account: ${contentNotification.authorPubkey}`);
+            return false;
+          }
+
+          return true;
+        });
+
+        this.logger.info(`Filtered ${storedNotifications.length - filteredNotifications.length} notifications from muted accounts`);
+
+        // Sort by timestamp (newest first)
+        filteredNotifications.sort((a, b) => b.timestamp - a.timestamp);
+
+        this.logger.info(`Loaded ${filteredNotifications.length} notifications from storage`);
+        this._notifications.set(filteredNotifications);
       } else {
         this.logger.info('No notifications found in storage');
         this._notifications.set([]);
@@ -488,5 +547,57 @@ export class NotificationService {
     });
 
     // Storage is updated inline above
+  }
+
+  /**
+   * Remove all notifications from a specific author (used when muting an account)
+   * CRITICAL: This removes notifications from both memory and storage
+   */
+  async removeNotificationsFromAuthor(authorPubkey: string): Promise<void> {
+    this.logger.info(`Removing all notifications from author: ${authorPubkey}`);
+
+    // Get current notifications
+    const currentNotifications = this._notifications();
+
+    // Find notification IDs to remove
+    const notificationIdsToRemove: string[] = [];
+
+    currentNotifications.forEach(notification => {
+      // Only check content notifications (not system notifications)
+      if (notification.type === NotificationType.RELAY_PUBLISHING ||
+        notification.type === NotificationType.GENERAL ||
+        notification.type === NotificationType.ERROR ||
+        notification.type === NotificationType.SUCCESS ||
+        notification.type === NotificationType.WARNING) {
+        return; // Skip system notifications
+      }
+
+      const contentNotification = notification as ContentNotification;
+      if (contentNotification.authorPubkey === authorPubkey) {
+        notificationIdsToRemove.push(notification.id);
+      }
+    });
+
+    if (notificationIdsToRemove.length === 0) {
+      this.logger.debug('No notifications found from this author');
+      return;
+    }
+
+    this.logger.info(`Found ${notificationIdsToRemove.length} notifications to remove from author ${authorPubkey}`);
+
+    // Remove from memory
+    this._notifications.update(notifications =>
+      notifications.filter(n => !notificationIdsToRemove.includes(n.id))
+    );
+
+    // Remove from storage
+    try {
+      await Promise.all(
+        notificationIdsToRemove.map(id => this.storage.deleteNotification(id))
+      );
+      this.logger.info(`Successfully removed ${notificationIdsToRemove.length} notifications from storage`);
+    } catch (error) {
+      this.logger.error(`Failed to remove notifications from storage`, error);
+    }
   }
 }

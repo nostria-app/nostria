@@ -25,6 +25,7 @@ import { LocalStorageService } from '../../services/local-storage.service';
 import { ContentNotificationService } from '../../services/content-notification.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 
 /**
  * Local storage key for notification filter preferences
@@ -46,6 +47,7 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     MatTooltipModule,
     RouterModule,
     AgoPipe,
+    UserProfileComponent,
   ],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
@@ -118,8 +120,23 @@ export class NotificationsComponent implements OnInit {
 
   contentNotifications = computed(() => {
     const filters = this.notificationFilters();
+    const mutedAccounts = this.accountState.mutedAccounts();
+
     return this.notifications()
-      .filter(n => this.isContentNotification(n.type) && filters[n.type])
+      .filter(n => {
+        // Filter by notification type
+        if (!this.isContentNotification(n.type) || !filters[n.type]) {
+          return false;
+        }
+
+        // CRITICAL: Filter out notifications from muted/blocked accounts
+        const contentNotif = n as ContentNotification;
+        if (contentNotif.authorPubkey && mutedAccounts.includes(contentNotif.authorPubkey)) {
+          return false;
+        }
+
+        return true;
+      })
       .sort((a, b) => b.timestamp - a.timestamp);
   });
 

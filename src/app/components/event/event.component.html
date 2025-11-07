@@ -9,6 +9,8 @@
   <mat-spinner diameter="32"></mat-spinner>
   <p class="loading-text">Loading event...</p>
 </div>
+} @else if (isAuthorMuted()) {
+<!-- Don't render events from muted/blocked accounts at all -->
 } @else if (targetItem && item) {
 <mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined" [class.selected]="isCurrentlySelected()"
   [attr.tabindex]="isCurrentlySelected() ? null : 0" [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"

@@ -124,6 +124,16 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
+  // Computed to check if event author is muted/blocked
+  // CRITICAL: Filter out muted content from rendering
+  isAuthorMuted = computed<boolean>(() => {
+    const currentEvent = this.event() || this.record()?.event;
+    if (!currentEvent) return false;
+
+    const mutedAccounts = this.accountState.mutedAccounts();
+    return mutedAccounts.includes(currentEvent.pubkey);
+  });
+
   // Loading states
   isLoadingEvent = signal<boolean>(false);
   isLoadingThread = signal<boolean>(false);
@@ -254,7 +264,18 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   repostedRecord = computed<NostrRecord | null>(() => {
     const event = this.event();
     if (!event || (event.kind !== kinds.Repost && event.kind !== kinds.GenericRepost)) return null;
-    return this.repostService.decodeRepost(event);
+
+    const repostedContent = this.repostService.decodeRepost(event);
+
+    // CRITICAL: Filter out reposted content from muted accounts
+    if (repostedContent?.event) {
+      const mutedAccounts = this.accountState.mutedAccounts();
+      if (mutedAccounts.includes(repostedContent.event.pubkey)) {
+        return null;
+      }
+    }
+
+    return repostedContent;
   });
 
   // Check if this event is a reply (has e-tags that are replies, not just mentions)
@@ -296,16 +317,32 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   });
 
   // Get parent record for display (immediate parent)
+  // Filter out muted accounts
   parentRecord = computed<NostrRecord | null>(() => {
     const parent = this.parentEvent();
     if (!parent) return null;
+
+    // CRITICAL: Filter out parent events from muted accounts
+    const mutedAccounts = this.accountState.mutedAccounts();
+    if (mutedAccounts.includes(parent.pubkey)) {
+      return null;
+    }
+
     return this.data.toRecord(parent);
   });
 
   // Get root record for display
+  // Filter out muted accounts
   rootRecord = computed<NostrRecord | null>(() => {
     const root = this.rootEvent();
     if (!root) return null;
+
+    // CRITICAL: Filter out root events from muted accounts
+    const mutedAccounts = this.accountState.mutedAccounts();
+    if (mutedAccounts.includes(root.pubkey)) {
+      return null;
+    }
+
     return this.data.toRecord(root);
   });
 
@@ -619,10 +656,43 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
       console.log('   - Reposts:', interactions.reposts.length);
       console.log('   - Reports:', interactions.reports.events.length);
 
-      // Update all three states from the single query result
-      this.reactions.set(interactions.reactions);
-      this.reposts.set(interactions.reposts);
-      this.reports.set(interactions.reports);
+      // CRITICAL: Filter out interactions from muted accounts
+      const mutedAccounts = this.accountState.mutedAccounts();
+
+      // Filter reactions
+      const filteredReactionEvents = interactions.reactions.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
+      const filteredReactionData = new Map<string, number>();
+      for (const event of filteredReactionEvents) {
+        const emoji = event.event.content || '+';
+        filteredReactionData.set(emoji, (filteredReactionData.get(emoji) || 0) + 1);
+      }
+
+      // Filter reposts
+      const filteredReposts = interactions.reposts.filter(r => !mutedAccounts.includes(r.event.pubkey));
+
+      // Filter reports
+      const filteredReportEvents = interactions.reports.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
+      const filteredReportData = new Map<string, number>();
+      for (const event of filteredReportEvents) {
+        const reportType = event.event.content || 'other';
+        filteredReportData.set(reportType, (filteredReportData.get(reportType) || 0) + 1);
+      }
+
+      console.log('🔒 [Mute Filter] Filtered interactions from', mutedAccounts.length, 'muted accounts');
+      console.log('   - Reactions after filter:', filteredReactionEvents.length);
+      console.log('   - Reposts after filter:', filteredReposts.length);
+      console.log('   - Reports after filter:', filteredReportEvents.length);
+
+      // Update all three states from the filtered results
+      this.reactions.set({
+        events: filteredReactionEvents,
+        data: filteredReactionData
+      });
+      this.reposts.set(filteredReposts);
+      this.reports.set({
+        events: filteredReportEvents,
+        data: filteredReportData
+      });
     } catch (error) {
       console.error('Error loading event interactions:', error);
     } finally {
@@ -649,7 +719,22 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
         userPubkey,
         invalidateCache
       );
-      this.reactions.set(reactions);
+
+      // CRITICAL: Filter out reactions from muted accounts
+      const mutedAccounts = this.accountState.mutedAccounts();
+      const filteredEvents = reactions.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
+
+      // Rebuild the data map with filtered events
+      const filteredData = new Map<string, number>();
+      for (const event of filteredEvents) {
+        const emoji = event.event.content || '+';
+        filteredData.set(emoji, (filteredData.get(emoji) || 0) + 1);
+      }
+
+      this.reactions.set({
+        events: filteredEvents,
+        data: filteredData
+      });
     } finally {
       this.isLoadingReactions.set(false);
     }
@@ -773,7 +858,12 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
         userPubkey,
         false
       );
-      this.reposts.set(reposts);
+
+      // CRITICAL: Filter out reposts from muted accounts
+      const mutedAccounts = this.accountState.mutedAccounts();
+      const filteredReposts = reposts.filter(r => !mutedAccounts.includes(r.event.pubkey));
+
+      this.reposts.set(filteredReposts);
     } catch (error) {
       console.error('Error loading reposts:', error);
     }

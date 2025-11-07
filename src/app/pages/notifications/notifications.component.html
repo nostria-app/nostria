@@ -79,6 +79,11 @@
               [attr.tabindex]="getEventId(notification) ? 0 : null"
               [attr.role]="getEventId(notification) ? 'button' : null">
               <div class="notification-header">
+                              @if (getAuthorPubkey(notification)) {
+              <div class="notification-author">
+                <app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'compact'"></app-user-profile>
+              </div>
+              }
                 <span class="notification-title">{{ notification.title }}</span>
                 @if (!notification.read) {
                 <span class="new-indicator">NEW</span>
@@ -96,14 +101,6 @@
               <div class="notification-meta">
                 <mat-icon class="time-icon">schedule</mat-icon>
                 <span class="notification-time">{{ (notification.timestamp / 1000) | ago }}</span>
-                @if (getAuthorPubkey(notification)) {
-                <span class="divider">•</span>
-                <button mat-button class="author-link"
-                  (click)="viewAuthorProfile(notification); $event.stopPropagation()" matTooltip="View profile">
-                  <mat-icon>person</mat-icon>
-                  View Profile
-                </button>
-                }
               </div>
             </div>
 
