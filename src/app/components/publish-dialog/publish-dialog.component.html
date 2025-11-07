@@ -13,8 +13,8 @@
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Event JSON</mat-label>
       <textarea matInput [ngModel]="customEventJson()" (ngModelChange)="onCustomEventChange($event)"
-        placeholder='{"kind":1,"created_at":1234567890,"tags":[],"content":"Hello Nostr!"}'
-        rows="12" class="event-json-input"></textarea>
+        placeholder='{"kind":1,"created_at":1234567890,"tags":[],"content":"Hello Nostr!"}' rows="12"
+        class="event-json-input"></textarea>
       @if (customEventError()) {
       <mat-error>{{ customEventError() }}</mat-error>
       }

@@ -77,7 +77,7 @@ export class PublishDialogComponent {
   customMode = signal<boolean>(false);
   customEventJson = signal<string>('');
   customEventError = signal<string>('');
-  
+
   // Cached parsed event to avoid re-parsing during template rendering
   private cachedParsedEvent: { json: string; event: Event | UnsignedEvent | null } = { json: '', event: null };
 
@@ -152,7 +152,7 @@ export class PublishDialogComponent {
   /** Get the parsed custom event without side effects (for template rendering) */
   private getParsedEvent(): Event | UnsignedEvent | null {
     const jsonString = this.customEventJson().trim();
-    
+
     // Use cached version if JSON hasn't changed
     if (this.cachedParsedEvent.json === jsonString) {
       return this.cachedParsedEvent.event;
@@ -183,10 +183,10 @@ export class PublishDialogComponent {
       }
 
       const event = parsed as Event | UnsignedEvent;
-      
+
       // Cache the result
       this.cachedParsedEvent = { json: jsonString, event };
-      
+
       return event;
     } catch {
       return null;
@@ -356,14 +356,14 @@ export class PublishDialogComponent {
 
       // Check if the event needs signing (missing id or sig)
       const needsSigning = !('id' in parsedEvent) || !('sig' in parsedEvent);
-      
+
       if (needsSigning) {
         console.log('Event needs signing - triggering signature process');
         try {
           // Sign the event using NostrService
           eventToPublish = await this.nostrService.signEvent(parsedEvent);
           console.log('Event signed successfully:', eventToPublish);
-          
+
           // Update the custom event JSON to show the signed version
           this.customEventJson.set(JSON.stringify(eventToPublish, null, 2));
         } catch (error) {
@@ -465,12 +465,12 @@ export class PublishDialogComponent {
 
       this.customEventError.set('');
       console.log('Event parsed successfully:', parsed);
-      
+
       const event = parsed as Event | UnsignedEvent;
-      
+
       // Update cache
       this.cachedParsedEvent = { json: jsonString, event };
-      
+
       return event;
     } catch (error) {
       this.customEventError.set('Invalid JSON: ' + (error instanceof Error ? error.message : 'Unknown error'));
