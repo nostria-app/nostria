@@ -68,44 +68,7 @@
     </div>
     } @else {
     <!-- Preview Mode -->
-    <div class="preview-container">
-      <!-- Header Section -->
-      <header class="article-header">
-        @if (article().image) {
-        <div class="article-hero-image">
-          <img [src]="article().image" [attr.alt]="article().title || 'Article featured image'"
-            [attr.title]="article().title || 'Article featured image'" loading="lazy" />
-        </div>
-        }
-
-        <div class="article-header-content">
-          <h1 class="article-title">{{ article().title || 'Untitled Article' }}</h1>
-
-          @if (article().summary) {
-          <p class="article-summary">{{ article().summary }}</p>
-          }
-
-          @if (article().tags.length > 0) {
-          <div class="article-meta">
-            <div class="article-hashtags">
-              <mat-chip-set>
-                @for (tag of article().tags; track tag) {
-                <mat-chip highlighted>
-                  {{ tag }}
-                </mat-chip>
-                }
-              </mat-chip-set>
-            </div>
-          </div>
-          }
-        </div>
-      </header>
-
-      <!-- Article Content -->
-      <main class="article-content">
-        <div class="markdown-content" [innerHTML]="markdownHtml()" appMentionHover></div>
-      </main>
-    </div>
+    <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
     }
   </div>
 
