@@ -130,13 +130,7 @@
       }
       <mat-divider></mat-divider>
 
-      @if (!isPushNotificationEnabled()) {
-      <button mat-menu-item (click)="enablePushNotifications()">
-        <mat-icon>notifications_active</mat-icon>
-        <span>Enable Push Notifications</span>
-      </button>
-      <mat-divider></mat-divider>
-      }
+
 
       <button mat-menu-item (click)="openWhatsNewDialog()">
         <mat-icon>campaign</mat-icon>
@@ -144,6 +138,13 @@
       </button>
 
       <mat-divider></mat-divider>
+
+      <!-- @if (!isPushNotificationEnabled()) {
+      <button mat-menu-item (click)="enablePushNotifications()">
+        <mat-icon>notifications_active</mat-icon>
+        <span>Enable Push Notifications</span>
+      </button>
+      } -->
 
       <button mat-menu-item routerLink="/notifications/settings">
         <mat-icon>settings</mat-icon>
