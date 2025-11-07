@@ -213,6 +213,10 @@ export class EditorComponent implements OnInit, OnDestroy {
   showArticleImage = signal(false);
   showPreview = signal(false);
 
+  // Drag and drop state for featured image
+  isFeaturedImageDragOver = signal(false);
+  private featuredImageDragCounter = 0;
+
   constructor() {
     // Check if we're editing an existing article
     effect(() => {
@@ -969,6 +973,60 @@ export class EditorComponent implements OnInit, OnDestroy {
     }));
     this.previewImage.set(null);
     this.showArticleImage.set(false);
+  }
+
+  // Drag and drop handlers for featured image
+  onFeaturedImageDragEnter(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.featuredImageDragCounter++;
+    if (this.featuredImageDragCounter === 1) {
+      this.isFeaturedImageDragOver.set(true);
+    }
+  }
+
+  onFeaturedImageDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+  }
+
+  onFeaturedImageDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.featuredImageDragCounter--;
+    if (this.featuredImageDragCounter <= 0) {
+      this.featuredImageDragCounter = 0;
+      this.isFeaturedImageDragOver.set(false);
+    }
+  }
+
+  onFeaturedImageDrop(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.featuredImageDragCounter = 0;
+    this.isFeaturedImageDragOver.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (files && files.length > 0) {
+      const file = files[0];
+
+      // Check if it's an image
+      if (!file.type.includes('image/')) {
+        this.snackBar.open('Please drop a valid image file', 'Close', {
+          duration: 3000,
+        });
+        return;
+      }
+
+      // Process the dropped image
+      const reader = new FileReader();
+      reader.onload = e => {
+        const result = e.target?.result as string;
+        this.article.update(art => ({ ...art, image: result, selectedImageFile: file }));
+        this.showArticleImage.set(true);
+      };
+      reader.readAsDataURL(file);
+    }
   }
 
   togglePreview(): void {
