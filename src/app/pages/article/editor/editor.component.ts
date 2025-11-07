@@ -42,6 +42,8 @@ import { MentionHoverDirective } from '../../../directives/mention-hover.directi
 import { MediaService } from '../../../services/media.service';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ImageUrlDialogComponent } from '../../../components/image-url-dialog/image-url-dialog.component';
+import type { ArticleData } from '../../../components/article-display/article-display.component';
+import { ArticleDisplayComponent } from '../../../components/article-display/article-display.component';
 
 interface ArticleDraft {
   title: string;
@@ -87,6 +89,7 @@ interface ArticleAutoDraft {
     MentionHoverDirective,
     MatSlideToggleModule,
     MatMenuModule,
+    ArticleDisplayComponent,
   ],
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
@@ -178,6 +181,25 @@ export class EditorComponent implements OnInit, OnDestroy {
       console.error('Error parsing markdown:', error);
       return this.sanitizer.bypassSecurityTrustHtml('<p>Error parsing markdown</p>');
     }
+  });
+
+  // Computed property for preview - creates ArticleData from current draft
+  previewArticleData = computed<ArticleData>(() => {
+    const art = this.article();
+    return {
+      title: art.title || 'Untitled Article',
+      summary: art.summary,
+      image: art.image,
+      parsedContent: this.markdownHtml(),
+      hashtags: art.tags,
+      authorPubkey: this.accountState.pubkey() || '',
+      publishedAt: null,
+      publishedAtTimestamp: 0,
+      link: '',
+      id: '',
+      isJsonContent: false,
+      jsonData: null,
+    };
   });
 
   // Tag input

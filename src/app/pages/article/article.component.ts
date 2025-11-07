@@ -10,25 +10,20 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
-import { MatChipsModule } from '@angular/material/chips';
 import { MatDialog } from '@angular/material/dialog';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import type { SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute, type ParamMap, RouterModule } from '@angular/router';
+import { ActivatedRoute, type ParamMap } from '@angular/router';
 import { type Event, kinds, nip19 } from 'nostr-tools';
 import type { Subscription } from 'rxjs';
-import { DateToggleComponent } from '../../components/date-toggle/date-toggle.component';
-import { EventMenuComponent } from '../../components/event/event-menu/event-menu.component';
+import type { ArticleData } from '../../components/article-display/article-display.component';
+import { ArticleDisplayComponent } from '../../components/article-display/article-display.component';
 import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
-import { RepostButtonComponent } from '../../components/event/repost-button/repost-button.component';
-import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import type { NostrRecord } from '../../interfaces';
 import { AccountStateService } from '../../services/account-state.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { Cache } from '../../services/cache';
-import { MentionHoverDirective } from '../../directives/mention-hover.directive';
 import { DataService } from '../../services/data.service';
 import { FormatService } from '../../services/format/format.service';
 import { LayoutService } from '../../services/layout.service';
@@ -36,7 +31,6 @@ import { LoggerService } from '../../services/logger.service';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { UserDataService } from '../../services/user-data.service';
 import { UtilitiesService } from '../../services/utilities.service';
-import { CommentsListComponent } from '../../components/comments-list/comments-list.component';
 
 @Component({
   selector: 'app-article',
@@ -45,17 +39,9 @@ import { CommentsListComponent } from '../../components/comments-list/comments-l
     MatCardModule,
     MatButtonModule,
     MatIconModule,
-    MatChipsModule,
-    MatDividerModule,
     MatProgressSpinnerModule,
-    UserProfileComponent,
-    DateToggleComponent,
     CommonModule,
-    RouterModule,
-    RepostButtonComponent,
-    EventMenuComponent,
-    MentionHoverDirective,
-    CommentsListComponent,
+    ArticleDisplayComponent,
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
@@ -338,6 +324,23 @@ export class ArticleComponent implements OnDestroy {
       this.setupImageClickListeners();
     }, 0);
   });
+
+  // Computed property to create ArticleData for ArticleDisplayComponent
+  articleData = computed<ArticleData>(() => ({
+    event: this.event(),
+    title: this.title(),
+    summary: this.summary(),
+    image: this.image(),
+    publishedAt: this.publishedAt(),
+    publishedAtTimestamp: this.publishedAtTimestamp(),
+    hashtags: this.hashtags(),
+    authorPubkey: this.authorPubkey(),
+    isJsonContent: this.isJsonContent(),
+    jsonData: this.jsonData(),
+    parsedContent: this.parsedContent(),
+    id: this.id(),
+    link: this.link,
+  }));
 
   authorPubkey = computed(() => {
     const ev = this.event();

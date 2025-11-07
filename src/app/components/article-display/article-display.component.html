@@ -1,0 +1,169 @@
+<div class="article-container">
+  <!-- Header Section -->
+  <header class="article-header">
+    @if (image()) {
+    <div class="article-hero-image">
+      <img [src]="image()" [alt]="title()" [title]="title()" loading="lazy" />
+    </div>
+    }
+
+    <div class="article-header-content">
+      <h1 class="article-title">{{ title() || 'Untitled Article' }}</h1>
+
+      @if (summary()) {
+      <p class="article-summary">{{ summary() }}</p>
+      }
+
+      <div class="article-meta">
+        @if (mode() === 'full') {
+        <div class="publish-date">
+          <mat-icon>schedule</mat-icon>
+          <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
+        </div>
+        }
+
+        @if (hashtags().length > 0) {
+        <div class="article-hashtags">
+          <mat-chip-set>
+            @for (hashtag of hashtags(); track hashtag) {
+            <mat-chip highlighted>
+              {{ hashtag }}
+            </mat-chip>
+            }
+          </mat-chip-set>
+        </div>
+        }
+
+        <!-- Text-to-Speech Controls (Header) - only in full mode -->
+        @if (mode() === 'full') {
+        <div class="article-tts-controls">
+          @if (!isSpeaking()) {
+          <button mat-icon-button color="primary" (click)="startSpeech.emit()" title="Read article aloud">
+            <mat-icon>volume_up</mat-icon>
+          </button>
+          } @else {
+          @if (isPaused()) {
+          <button mat-icon-button color="primary" (click)="resumeSpeech.emit()" title="Resume reading">
+            <mat-icon>play_arrow</mat-icon>
+          </button>
+          } @else {
+          <button mat-icon-button color="primary" (click)="pauseSpeech.emit()" title="Pause reading">
+            <mat-icon>pause</mat-icon>
+          </button>
+          }
+          <button mat-icon-button color="primary" (click)="stopSpeech.emit()" title="Stop reading">
+            <mat-icon>stop</mat-icon>
+          </button>
+          }
+        </div>
+        }
+      </div>
+    </div>
+  </header>
+
+  <!-- Author Section (only in full mode) -->
+  @if (mode() === 'full') {
+  <section class="article-author">
+    <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
+  </section>
+  }
+
+  <!-- Article Content -->
+  <main class="article-content">
+    @if (isJsonContent()) {
+    <div class="json-content">
+      @if (jsonData(); as data) {
+      @if (getObjectKeys(data).length > 0) {
+      <div class="json-object">
+        @for (key of getObjectKeys(data); track key) {
+        <div class="json-property">
+          <span class="json-key">{{ key }}</span>
+          <span class="json-separator">:</span>
+          @if (isPrimitive(getObjectValue(data, key))) {
+          <span class="json-value">{{ formatJsonValue(getObjectValue(data, key)) }}</span>
+          } @else {
+          <pre class="json-complex-value">{{ stringifyValue(getObjectValue(data, key)) }}</pre>
+          }
+        </div>
+        }
+      </div>
+      } @else {
+      <pre class="json-raw">{{ stringifyValue(data) }}</pre>
+      }
+      }
+    </div>
+    } @else {
+    <div class="markdown-content" [innerHTML]="parsedContent()" appMentionHover></div>
+    }
+  </main>
+
+  <!-- Footer Actions (only in full mode) -->
+  @if (mode() === 'full') {
+  <footer class="article-footer">
+    <div class="article-actions">
+      @if (accountState.isCurrentUser(authorPubkey())) {
+      <button mat-button color="primary" routerLink="/article/edit/{{ link() }}" title="Edit Article">
+        <mat-icon>edit</mat-icon>
+        Edit
+      </button>
+      }
+
+      @if (bookmark.isBookmarked(id(), 'a')) {
+      <button mat-button color="primary" title="Remove bookmark" (click)="bookmark.toggleBookmark(id(), 'a')">
+        <mat-icon title="Remove bookmark">bookmark_remove</mat-icon>
+        Bookmark
+      </button>
+      } @else {
+      <button mat-button color="primary" title="Add bookmark" (click)="bookmark.toggleBookmark(id(), 'a')">
+        <mat-icon title="Add bookmark">bookmark_add</mat-icon>
+        Bookmark
+      </button>
+      }
+
+      <button mat-button color="primary" (click)="share.emit()">
+        <mat-icon>share</mat-icon>
+        Share
+      </button>
+
+      @if (event()) {
+      <app-repost-button [event]="event()!" [view]="'full'"></app-repost-button>
+      }
+
+      <!-- Text-to-Speech Controls -->
+      @if (!isSpeaking()) {
+      <button mat-button color="primary" (click)="startSpeech.emit()" title="Read article aloud">
+        <mat-icon>volume_up</mat-icon>
+        Read Aloud
+      </button>
+      } @else {
+      @if (isPaused()) {
+      <button mat-button color="primary" (click)="resumeSpeech.emit()" title="Resume reading">
+        <mat-icon>play_arrow</mat-icon>
+        Resume
+      </button>
+      } @else {
+      <button mat-button color="primary" (click)="pauseSpeech.emit()" title="Pause reading">
+        <mat-icon>pause</mat-icon>
+        Pause
+      </button>
+      }
+      <button mat-button color="primary" (click)="stopSpeech.emit()" title="Stop reading">
+        <mat-icon>stop</mat-icon>
+        Stop
+      </button>
+      }
+
+      @if (event()) {
+      <app-event-menu [event]="event()!" [view]="'full'"></app-event-menu>
+      }
+    </div>
+  </footer>
+  }
+
+  <!-- Comments Section (only in full mode) -->
+  @if (mode() === 'full' && event()) {
+  <section class="article-comments">
+    <app-comments-list [event]="event()!"></app-comments-list>
+  </section>
+  }
+</div>
