@@ -105,9 +105,6 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     // If in rich text mode, render the markdown as HTML
     if (this.isRichTextMode()) {
       this.renderMarkdownToEditor(content);
-    } else {
-      // If in markdown mode, resize the textarea after content is set
-      setTimeout(() => this.autoResizeTextarea(), 0);
     }
   }
 
@@ -132,8 +129,6 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     setTimeout(() => {
       if (!this.isRichTextMode() && this.markdownTextarea) {
         this.markdownTextarea.nativeElement.addEventListener('paste', this.handlePaste.bind(this));
-        // Auto-resize when switching to markdown mode
-        this.autoResizeTextarea();
       }
     }, 100);
   }
@@ -146,18 +141,6 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     this.markdownContent.set(value);
     // Emit the change event with the raw markdown
     this.contentChange.emit(value);
-    // Auto-resize the textarea
-    this.autoResizeTextarea();
-  }
-
-  private autoResizeTextarea() {
-    if (!this.markdownTextarea) return;
-    
-    const textarea = this.markdownTextarea.nativeElement;
-    // Reset height to auto to get the correct scrollHeight
-    textarea.style.height = 'auto';
-    // Set height to scrollHeight to fit content
-    textarea.style.height = textarea.scrollHeight + 'px';
   }
 
   onRichTextContentChange() {
