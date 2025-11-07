@@ -11,16 +11,9 @@
 <div class="editor-container">
   <!-- Medium-style Editor -->
   <div class="medium-editor">
-    <!-- Title Input -->
-    <input type="text" class="title-input" placeholder="Title" [value]="article().title"
-      (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
-
-    <!-- Summary Input -->
-    <textarea class="summary-input" placeholder="Summary (optional)" [value]="article().summary"
-      (input)="updateSummary($any($event.target).value)"></textarea>
-
     <!-- Article Image Section -->
     <div class="article-image-section">
+      <div class="section-label">Article Image</div>
       <div class="image-toggle">
         <span>File</span>
         <mat-slide-toggle [checked]="useImageUrl()" (change)="toggleImageInputMethod()" color="primary">
@@ -43,17 +36,20 @@
       <div class="file-upload">
         <button mat-stroked-button type="button" (click)="articleImageInput.click()" [disabled]="!hasMediaServers()">
           <mat-icon>image</mat-icon>
-          Article Image
+          Choose Image
         </button>
         <input #articleImageInput type="file" hidden (change)="onFileSelected($event)" accept="image/*" />
         @if (previewImage()) {
-        <span>{{ previewImage() }}</span>
+        <span class="file-name">{{ previewImage() }}</span>
         }
       </div>
       } @else {
-      <input type="text" class="image-url-input" placeholder="https://example.com/image.jpg"
-        [value]="article().imageUrl || article().image" (input)="updateImage($any($event.target).value)"
-        (blur)="onImageUrlChange()" />
+      <div class="url-input-container">
+        <mat-icon>link</mat-icon>
+        <input type="text" class="image-url-input" placeholder="https://example.com/image.jpg"
+          [value]="article().imageUrl || article().image" (input)="updateImage($any($event.target).value)"
+          (blur)="onImageUrlChange()" />
+      </div>
       }
 
       @if (article().image) {
@@ -63,6 +59,14 @@
       </div>
       }
     </div>
+
+    <!-- Title Input -->
+    <input type="text" class="title-input" placeholder="Title" [value]="article().title"
+      (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
+
+    <!-- Summary Input -->
+    <textarea class="summary-input" placeholder="Summary (optional)" [value]="article().summary"
+      (input)="updateSummary($any($event.target).value)"></textarea>
 
     <!-- Content Editor -->
     <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="content-tabs">
