@@ -234,6 +234,10 @@ export class NoteContentComponent {
     if (this.hoverTimeout) {
       clearTimeout(this.hoverTimeout);
     }
+    if (this.closeTimeout) {
+      clearTimeout(this.closeTimeout);
+      this.closeTimeout = undefined;
+    }
     this.isMouseOverTrigger.set(true);
 
     // Only show hover card for npub/nprofile mentions
@@ -251,6 +255,11 @@ export class NoteContentComponent {
     if (!pubkey) {
       console.log('[NoteContent] No pubkey found');
       return;
+    }
+
+    // Close existing hover card immediately when moving to a different user
+    if (this.overlayRef) {
+      this.closeHoverCard();
     }
 
     this.hoverTimeout = setTimeout(() => {
@@ -274,11 +283,6 @@ export class NoteContentComponent {
    */
   private showMentionHoverCard(element: HTMLElement, pubkey: string): void {
     console.log('[NoteContent] showMentionHoverCard called with pubkey:', pubkey);
-
-    if (this.overlayRef) {
-      console.log('[NoteContent] Overlay already exists, skipping');
-      return;
-    }
 
     const positionStrategy = this.overlay
       .position()
