@@ -176,11 +176,15 @@ export class DraftsComponent {
       kind: 30024,
     });
 
-    this.router.navigate(['/article/edit', naddr]);
+    this.router.navigate(['/article/edit', naddr], {
+      state: { from: '/article/drafts' }
+    });
   }
 
   createNewDraft(): void {
-    this.router.navigate(['/article/create']);
+    this.router.navigate(['/article/create'], {
+      state: { from: '/article/drafts' }
+    });
   }
 
   async deleteDraft(draft: Draft, event?: MouseEvent): Promise<void> {
