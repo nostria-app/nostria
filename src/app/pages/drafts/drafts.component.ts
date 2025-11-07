@@ -68,7 +68,7 @@ export class DraftsComponent {
   isLoading = signal(true);
   drafts = signal<Draft[]>([]);
   error = signal<string | null>(null);
-  selectedTag = signal<string | null>(null);
+  selectedTags = signal<string[]>([]);
 
   // Extract unique tags from all drafts
   availableTags = computed(() => {
@@ -79,11 +79,13 @@ export class DraftsComponent {
     return Array.from(tagSet);
   });
 
-  // Filter drafts based on selected tag
+  // Filter drafts based on selected tags
   filteredDrafts = computed(() => {
-    const tag = this.selectedTag();
-    if (!tag) return this.drafts();
-    return this.drafts().filter(draft => draft.tags.includes(tag));
+    const tags = this.selectedTags();
+    if (tags.length === 0) return this.drafts();
+    return this.drafts().filter(draft =>
+      tags.some(tag => draft.tags.includes(tag))
+    );
   });
 
   constructor() {
@@ -228,12 +230,12 @@ export class DraftsComponent {
     }
   }
 
-  filterByTag(tag: string): void {
-    this.selectedTag.set(this.selectedTag() === tag ? null : tag);
+  onTagSelectionChange(selectedTags: string[]): void {
+    this.selectedTags.set(selectedTags);
   }
 
   clearTagFilter(): void {
-    this.selectedTag.set(null);
+    this.selectedTags.set([]);
   }
 
   async refreshDrafts(): Promise<void> {
