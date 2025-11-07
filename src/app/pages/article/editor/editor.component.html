@@ -68,29 +68,43 @@
     </div>
     } @else {
     <!-- Preview Mode -->
-    <div class="preview-tab">
-      @if (article().content.trim()) {
-      <div class="preview-content">
-        <h1 class="preview-title">
-          {{ article().title || 'Untitled' }}
-        </h1>
-        @if (article().summary) {
-        <p class="preview-summary">{{ article().summary }}</p>
-        }
+    <div class="preview-container">
+      <!-- Header Section -->
+      <header class="article-header">
         @if (article().image) {
-        <img [src]="article().image" [attr.alt]="article().title || 'Article featured image'"
-          [attr.title]="article().title || 'Article featured image'" class="preview-image" loading="lazy" />
-        }
-        <div class="preview-markdown" appMentionHover>
-          <div [innerHTML]="markdownHtml()"></div>
+        <div class="article-hero-image">
+          <img [src]="article().image" [attr.alt]="article().title || 'Article featured image'"
+            [attr.title]="article().title || 'Article featured image'" loading="lazy" />
         </div>
-      </div>
-      } @else {
-      <div class="empty-preview">
-        <mat-icon>preview</mat-icon>
-        <p>Write some content to see the preview</p>
-      </div>
-      }
+        }
+
+        <div class="article-header-content">
+          <h1 class="article-title">{{ article().title || 'Untitled Article' }}</h1>
+
+          @if (article().summary) {
+          <p class="article-summary">{{ article().summary }}</p>
+          }
+
+          @if (article().tags.length > 0) {
+          <div class="article-meta">
+            <div class="article-hashtags">
+              <mat-chip-set>
+                @for (tag of article().tags; track tag) {
+                <mat-chip highlighted>
+                  {{ tag }}
+                </mat-chip>
+                }
+              </mat-chip-set>
+            </div>
+          </div>
+          }
+        </div>
+      </header>
+
+      <!-- Article Content -->
+      <main class="article-content">
+        <div class="markdown-content" [innerHTML]="markdownHtml()" appMentionHover></div>
+      </main>
     </div>
     }
   </div>
@@ -154,10 +168,6 @@
     @if (isPublishing()) {
     <mat-progress-bar mode="indeterminate" class="publish-progress"></mat-progress-bar>
     }
-
-    <button mat-icon-button (click)="navigateToDrafts()" matTooltip="View all drafts">
-      <mat-icon>edit_document</mat-icon>
-    </button>
 
     <button mat-button (click)="cancel()" [disabled]="isPublishing()">
       Cancel
