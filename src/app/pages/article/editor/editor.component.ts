@@ -1000,7 +1000,7 @@ export class EditorComponent implements OnInit, OnDestroy {
     }
   }
 
-  onFeaturedImageDrop(event: DragEvent): void {
+  async onFeaturedImageDrop(event: DragEvent): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
     this.featuredImageDragCounter = 0;
@@ -1018,14 +1018,29 @@ export class EditorComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Process the dropped image
-      const reader = new FileReader();
-      reader.onload = e => {
-        const result = e.target?.result as string;
-        this.article.update(art => ({ ...art, image: result, selectedImageFile: file }));
-        this.showArticleImage.set(true);
-      };
-      reader.readAsDataURL(file);
+      // Upload the dropped image
+      try {
+        await this.media.load();
+        const result = await this.media.uploadFile(file, false, this.media.mediaServers());
+
+        if (result.status === 'success' && result.item) {
+          this.article.update(art => ({ ...art, image: result.item!.url }));
+          this.showArticleImage.set(true);
+          this.snackBar.open('Featured image uploaded successfully', 'Close', {
+            duration: 3000,
+          });
+        } else {
+          this.snackBar.open('Failed to upload image: ' + result.message, 'Close', {
+            duration: 5000,
+          });
+        }
+      } catch (error) {
+        this.snackBar.open(
+          'Upload failed: ' + (error instanceof Error ? error.message : 'Unknown error'),
+          'Close',
+          { duration: 5000 }
+        );
+      }
     }
   }
 
