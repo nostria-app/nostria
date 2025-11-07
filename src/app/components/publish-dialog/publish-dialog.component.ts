@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -10,7 +10,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
-import { Event } from 'nostr-tools';
+import { Event, UnsignedEvent } from 'nostr-tools';
 import { NostrService } from '../../services/nostr.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
@@ -77,6 +77,9 @@ export class PublishDialogComponent {
   customMode = signal<boolean>(false);
   customEventJson = signal<string>('');
   customEventError = signal<string>('');
+  
+  // Cached parsed event to avoid re-parsing during template rendering
+  private cachedParsedEvent: { json: string; event: Event | UnsignedEvent | null } = { json: '', event: null };
 
   publishOptions: PublishOption[] = [
     {
@@ -110,35 +113,84 @@ export class PublishDialogComponent {
     }
 
     // Load author's relays when component initializes
-    effect(async () => {
-      if (this.data?.event?.pubkey) {
-        this.loadingAuthorRelays.set(true);
-        try {
-          const relays = await this.discoveryRelay.getUserRelayUrls(this.data.event.pubkey);
+    if (this.data?.event?.pubkey) {
+      this.loadAuthorRelays();
+    }
+  }
 
-          this.authorRelays.set(relays || []);
-        } catch (error) {
-          console.error('Error loading author relays:', error);
-          this.authorRelays.set([]);
-        } finally {
-          this.loadingAuthorRelays.set(false);
-        }
-      }
-    });
+  private async loadAuthorRelays(): Promise<void> {
+    if (!this.data?.event?.pubkey) {
+      return;
+    }
+
+    this.loadingAuthorRelays.set(true);
+    try {
+      const relays = await this.discoveryRelay.getUserRelayUrls(this.data.event.pubkey);
+      this.authorRelays.set(relays || []);
+    } catch (error) {
+      console.error('Error loading author relays:', error);
+      this.authorRelays.set([]);
+    } finally {
+      this.loadingAuthorRelays.set(false);
+    }
   }
 
   /** Get all mentioned pubkeys from p-tags in the event */
   getMentionedPubkeys(): string[] {
-    const event = this.customMode() ? this.parseCustomEvent() : this.data.event;
+    const event = this.customMode() ? this.getParsedEvent() : this.data.event;
     if (!event) {
       return [];
     }
 
-    const pTags = event.tags.filter(tag => tag[0] === 'p' && tag[1]);
-    const pubkeys = pTags.map(tag => tag[1]);
+    const pTags = event.tags.filter((tag: string[]) => tag[0] === 'p' && tag[1]);
+    const pubkeys = pTags.map((tag: string[]) => tag[1]);
 
     // Remove duplicates
-    return [...new Set(pubkeys)];
+    return [...new Set(pubkeys)] as string[];
+  }
+
+  /** Get the parsed custom event without side effects (for template rendering) */
+  private getParsedEvent(): Event | UnsignedEvent | null {
+    const jsonString = this.customEventJson().trim();
+    
+    // Use cached version if JSON hasn't changed
+    if (this.cachedParsedEvent.json === jsonString) {
+      return this.cachedParsedEvent.event;
+    }
+
+    if (!jsonString) {
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(jsonString);
+
+      // Basic validation without side effects
+      if (parsed.pubkey && typeof parsed.pubkey !== 'string') {
+        return null;
+      }
+      if (typeof parsed.created_at !== 'number') {
+        return null;
+      }
+      if (typeof parsed.kind !== 'number') {
+        return null;
+      }
+      if (!Array.isArray(parsed.tags)) {
+        return null;
+      }
+      if (typeof parsed.content !== 'string') {
+        return null;
+      }
+
+      const event = parsed as Event | UnsignedEvent;
+      
+      // Cache the result
+      this.cachedParsedEvent = { json: jsonString, event };
+      
+      return event;
+    } catch {
+      return null;
+    }
   }
 
   /** Check if the event has any mentioned users (p-tags) */
@@ -301,7 +353,28 @@ export class PublishDialogComponent {
         console.log('Failed to parse custom event');
         return;
       }
-      eventToPublish = parsedEvent;
+
+      // Check if the event needs signing (missing id or sig)
+      const needsSigning = !('id' in parsedEvent) || !('sig' in parsedEvent);
+      
+      if (needsSigning) {
+        console.log('Event needs signing - triggering signature process');
+        try {
+          // Sign the event using NostrService
+          eventToPublish = await this.nostrService.signEvent(parsedEvent);
+          console.log('Event signed successfully:', eventToPublish);
+          
+          // Update the custom event JSON to show the signed version
+          this.customEventJson.set(JSON.stringify(eventToPublish, null, 2));
+        } catch (error) {
+          console.error('Error signing event:', error);
+          alert('Failed to sign event: ' + (error instanceof Error ? error.message : 'Unknown error'));
+          return;
+        }
+      } else {
+        console.log('Event already signed, using as-is');
+        eventToPublish = parsedEvent as Event;
+      }
     } else {
       console.log('Normal mode - using provided event');
       if (!this.data.event) {
@@ -349,7 +422,7 @@ export class PublishDialogComponent {
     }
   }
 
-  parseCustomEvent(): Event | null {
+  parseCustomEvent(): Event | UnsignedEvent | null {
     const jsonString = this.customEventJson().trim();
     console.log('Parsing custom event, JSON length:', jsonString.length);
 
@@ -362,15 +435,11 @@ export class PublishDialogComponent {
       const parsed = JSON.parse(jsonString);
       console.log('JSON parsed successfully:', parsed);
 
-      // Validate required event fields
-      if (!parsed.id || typeof parsed.id !== 'string') {
-        this.customEventError.set('Event must have a valid "id" field');
-        console.log('Validation failed: id is missing or not a string', parsed.id);
-        return null;
-      }
-      if (!parsed.pubkey || typeof parsed.pubkey !== 'string') {
-        this.customEventError.set('Event must have a valid "pubkey" field');
-        console.log('Validation failed: pubkey is missing or not a string', parsed.pubkey);
+      // Validate required event fields with error reporting
+      // Note: id and sig are now optional - they will be added during signing
+      if (parsed.pubkey && typeof parsed.pubkey !== 'string') {
+        this.customEventError.set('Event "pubkey" field must be a string (or omitted for signing)');
+        console.log('Validation failed: pubkey is not a string', parsed.pubkey);
         return null;
       }
       if (typeof parsed.created_at !== 'number') {
@@ -393,15 +462,16 @@ export class PublishDialogComponent {
         console.log('Validation failed: content is not a string', typeof parsed.content);
         return null;
       }
-      if (!parsed.sig || typeof parsed.sig !== 'string') {
-        this.customEventError.set('Event must have a valid "sig" field');
-        console.log('Validation failed: sig is missing or not a string', parsed.sig);
-        return null;
-      }
 
       this.customEventError.set('');
       console.log('Event parsed successfully:', parsed);
-      return parsed as Event;
+      
+      const event = parsed as Event | UnsignedEvent;
+      
+      // Update cache
+      this.cachedParsedEvent = { json: jsonString, event };
+      
+      return event;
     } catch (error) {
       this.customEventError.set('Invalid JSON: ' + (error instanceof Error ? error.message : 'Unknown error'));
       return null;
@@ -454,7 +524,7 @@ export class PublishDialogComponent {
 
   getEventJson(): string {
     if (this.customMode()) {
-      const parsed = this.parseCustomEvent();
+      const parsed = this.getParsedEvent();
       return parsed ? JSON.stringify(parsed, null, 2) : this.customEventJson();
     }
     return JSON.stringify(this.data.event, null, 2);
