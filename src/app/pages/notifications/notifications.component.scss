@@ -90,6 +90,17 @@
 .notifications-tabs {
   height: 100%;
 
+  // Prevent double scrollbar on Activity tab (which uses virtual scroll)
+  // The virtual scroll viewport handles scrolling internally
+  ::ng-deep .mat-mdc-tab-body-content:has(.notification-viewport) {
+    overflow: hidden !important;
+  }
+
+  // System tab needs to scroll normally
+  ::ng-deep .mat-mdc-tab-body-content:has(.notification-list) {
+    overflow-y: auto;
+  }
+
   .tab-label {
     display: flex;
     align-items: center;
