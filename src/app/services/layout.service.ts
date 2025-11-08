@@ -1129,7 +1129,7 @@ export class LayoutService implements OnDestroy {
     pubkey: string,
     recipientName?: string,
     recipientMetadata?: Record<string, unknown>
-  ): Promise<void> {
+  ) {
     // No lightning address validation needed - payments go to Nostria, not the recipient
 
     // Dynamically import the dialog component
@@ -1143,7 +1143,7 @@ export class LayoutService implements OnDestroy {
       recipientMetadata: recipientMetadata,
     };
 
-    this.dialog.open(GiftPremiumDialogComponent, {
+    return this.dialog.open(GiftPremiumDialogComponent, {
       data: dialogData,
       width: '500px',
       disableClose: true,
