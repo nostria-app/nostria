@@ -477,7 +477,16 @@ export class ProfileHeaderComponent {
       pubkey,
       this.name(),
       profileData
-    );
+    ).then(dialogRef => {
+      dialogRef.afterClosed().subscribe(result => {
+        if (result?.success) {
+          // Wait 2 seconds for backend to process the gift, then refresh premium status
+          setTimeout(() => {
+            this.fetchPremiumStatus(pubkey);
+          }, 2000);
+        }
+      });
+    });
   }
 
   copyProfileData(): void {
