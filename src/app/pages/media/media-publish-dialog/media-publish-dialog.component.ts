@@ -109,7 +109,7 @@ export class MediaPublishDialogComponent {
   }
 
   addHashtag(): void {
-    const tag = this.hashtagInput().trim();
+    const tag = this.hashtagInput().trim().toLowerCase();
     if (tag && !this.hashtags().includes(tag)) {
       this.hashtags.set([...this.hashtags(), tag]);
       this.hashtagInput.set('');

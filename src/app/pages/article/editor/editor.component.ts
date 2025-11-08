@@ -556,7 +556,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   addTag(): void {
-    const tag = this.newTag().trim();
+    const tag = this.newTag().trim().toLowerCase();
     if (tag && !this.article().tags.includes(tag)) {
       this.article.update(art => ({
         ...art,

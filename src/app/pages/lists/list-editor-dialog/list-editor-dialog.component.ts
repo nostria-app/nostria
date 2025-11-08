@@ -122,9 +122,14 @@ export class ListEditorDialogComponent implements OnInit {
    */
   addItem() {
     const tag = this.newItemTag().trim();
-    const value = this.newItemValue().trim();
+    let value = this.newItemValue().trim();
 
     if (!tag || !value) return;
+
+    // Convert value to lowercase if it's a 't' (hashtag) tag
+    if (tag === 't') {
+      value = value.toLowerCase();
+    }
 
     const item: ListItem = {
       tag,
