@@ -105,8 +105,12 @@
       <h1 class="profile-name">
         {{ name() }}
         @if (isPremium()) {
-        <mat-icon class="premium-indicator"
-          matTooltip="This user is a Nostria Premium or Premium+ subscriber">star</mat-icon>
+        @if (isPremiumPlus()) {
+        <mat-icon class="premium-indicator premium-plus"
+          matTooltip="This user is a Nostria Premium+ subscriber">workspace_premium</mat-icon>
+        } @else {
+        <mat-icon class="premium-indicator" matTooltip="This user is a Nostria Premium subscriber">star</mat-icon>
+        }
         }
         @if (isFavorite()) {
         <mat-icon class="favorite-indicator" matTooltip="Favorite User">star</mat-icon>

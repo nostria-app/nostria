@@ -170,6 +170,20 @@
       animation: premiumPulse 2s ease-in-out infinite;
       z-index: -1;
     }
+
+    &.premium-plus {
+      background: linear-gradient(145deg, #f39c12, #e74c3c, #8e44ad);
+      -webkit-background-clip: text;
+      background-clip: text;
+      font-size: 1.75rem;
+      animation: premiumPlusGlow 3s ease-in-out infinite;
+
+      &::before {
+        background: linear-gradient(145deg, #f39c12, #e74c3c, #8e44ad);
+        animation: premiumPlusPulse 2s ease-in-out infinite;
+        left: 2px;
+      }
+    }
   }
 
   .trust-rank {
@@ -233,6 +247,41 @@
 
   100% {
     opacity: 0.3;
+    transform: scale(1);
+  }
+}
+
+@keyframes premiumPlusGlow {
+  0% {
+    filter: brightness(1) hue-rotate(0deg);
+  }
+
+  33% {
+    filter: brightness(1.3) hue-rotate(15deg);
+  }
+
+  66% {
+    filter: brightness(1.1) hue-rotate(-10deg);
+  }
+
+  100% {
+    filter: brightness(1) hue-rotate(0deg);
+  }
+}
+
+@keyframes premiumPlusPulse {
+  0% {
+    opacity: 0.4;
+    transform: scale(1);
+  }
+
+  50% {
+    opacity: 0.7;
+    transform: scale(1.15);
+  }
+
+  100% {
+    opacity: 0.4;
     transform: scale(1);
   }
 }
