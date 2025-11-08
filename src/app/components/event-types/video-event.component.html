@@ -17,22 +17,18 @@
   <!-- Video Thumbnail (Initial State) -->
   <div class="video-thumbnail-container" tabindex="0" role="button" (click)="expandVideo($any($event))"
     (keyup.enter)="expandVideo($any($event))" (keyup.space)="expandVideo($any($event))">
-    @if (videoInfo.blurhash && !videoInfo.thumbnail && blurhashUrl) {
-    <img [src]="blurhashUrl" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
-      [title]="videoInfo.title || 'Video thumbnail'" />
-    } @else if (videoInfo.thumbnail) {
+    @if (videoInfo.thumbnail) {
+    <!-- Use provided thumbnail image -->
     <img [src]="videoInfo.thumbnail" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
       [title]="videoInfo.title || 'Video thumbnail'" loading="lazy" />
+    } @else if (videoInfo.blurhash && blurhashUrl) {
+    <!-- Use blurhash as fallback -->
+    <img [src]="blurhashUrl" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
+      [title]="videoInfo.title || 'Video thumbnail'" />
     } @else {
-    <div class="video-thumbnail-placeholder">
-      <mat-icon class="video-placeholder-icon">videocam</mat-icon>
-    </div>
+    <!-- Use video element with preload="metadata" to show first frame -->
+    <video [src]="videoInfo.url" preload="metadata" class="video-thumbnail"></video>
     }
-
-    <!-- Play button overlay -->
-    <div class="video-play-overlay">
-      <mat-icon class="play-button">play_circle_filled</mat-icon>
-    </div>
 
     @if (videoInfo.duration) {
     <div class="video-duration">
