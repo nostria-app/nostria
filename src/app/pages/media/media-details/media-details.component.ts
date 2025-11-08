@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaPublishDialogComponent, MediaPublishOptions } from '../media-publish-dialog/media-publish-dialog.component';
 import { NostrService } from '../../../services/nostr.service';
 import { PublishService } from '../../../services/publish.service';
+import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-media-details',
@@ -295,8 +296,16 @@ export class MediaDetailsComponent {
 
       if (publishResult.success) {
         this.snackBar.open('Successfully published to Nostr!', 'Close', {
-          duration: 5000,
+          duration: 3000,
         });
+
+        // Navigate to the published event
+        const neventId = nip19.neventEncode({
+          id: signedEvent.id,
+          author: signedEvent.pubkey,
+          kind: signedEvent.kind,
+        });
+        this.router.navigate(['/e', neventId], { state: { event: signedEvent } });
       } else {
         this.snackBar.open('Failed to publish to some relays', 'Close', {
           duration: 5000,
@@ -308,9 +317,7 @@ export class MediaDetailsComponent {
         duration: 3000,
       });
     }
-  }
-
-  private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
+  } private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
     const tags: string[][] = [];
 
     // Add title tag (required)
