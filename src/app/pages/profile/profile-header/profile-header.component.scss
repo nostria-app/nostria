@@ -315,6 +315,16 @@
   // margin-left: 4px;
 }
 
+.verified-favicon {
+  width: 24px;
+  height: 24px;
+  margin-left: 6px;
+  border-radius: 3px;
+  object-fit: cover;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
 .profile-extra-info {
   display: flex;
   align-items: center;
