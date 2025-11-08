@@ -250,9 +250,9 @@ export class BadgeEditorComponent {
   // Tag management
   addTag(event: Event): void {
     event.preventDefault();
-    const value = this.tagInput();
-    if (value.trim() !== '') {
-      this.tags.update(currentTags => [...currentTags, value.trim()]);
+    const value = this.tagInput().trim().toLowerCase();
+    if (value !== '') {
+      this.tags.update(currentTags => [...currentTags, value]);
       this.tagInput.set('');
     }
   }

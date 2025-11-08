@@ -166,7 +166,7 @@ export class PlaylistEditorComponent implements OnInit {
   }
 
   addTag(): void {
-    const tagValue = this.newTag().trim();
+    const tagValue = this.newTag().trim().toLowerCase();
     if (!tagValue) return;
 
     const playlist = this.currentPlaylist();

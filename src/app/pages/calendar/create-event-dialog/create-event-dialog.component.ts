@@ -90,7 +90,7 @@ export class CreateEventDialogComponent {
 
   addHashtag(): void {
     const hashtagControl = this.eventForm.get('hashtag');
-    const hashtag = hashtagControl?.value?.trim();
+    const hashtag = hashtagControl?.value?.trim().toLowerCase();
 
     if (hashtag && !this.hashtags().includes(hashtag)) {
       this.hashtags.update(tags => [...tags, hashtag]);
