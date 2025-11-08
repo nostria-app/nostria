@@ -1060,6 +1060,9 @@ export class MediaComponent {
     // Add x tag with hash for queryability
     tags.push(['x', item.sha256]);
 
+    // Add client tag (Nostria)
+    tags.push(['client', 'nostria']);
+
     // Create the event
     const event = this.nostr.createEvent(
       options.kind,
