@@ -188,6 +188,30 @@
   }
 }
 
+.geohash-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  opacity: 0.7;
+  border-radius: 12px;
+  background-color: var(--mat-sys-surface-variant);
+  transition: opacity 0.2s ease-in-out, background-color 0.2s ease-in-out;
+  text-decoration: none;
+
+  &:hover {
+    opacity: 1;
+    background-color: var(--mat-sys-tertiary-container);
+  }
+
+  mat-icon {
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--mat-sys-tertiary);
+  }
+}
+
 .pow-indicator {
   display: inline-flex;
   align-items: center;
