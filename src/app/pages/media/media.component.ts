@@ -36,6 +36,7 @@ import { RelayPingResultsDialogComponent } from '../settings/relays/relay-ping-r
 import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
 import { MediaPublishDialogComponent, MediaPublishOptions } from './media-publish-dialog/media-publish-dialog.component';
 import { PublishService } from '../../services/publish.service';
+import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-media',
@@ -844,14 +845,16 @@ export class MediaComponent {
 
       let successCount = 0;
       let failCount = 0;
+      let lastSuccessfulEventId: string | null = null;
 
       for (const itemId of itemsToPublish) {
         const item = await this.mediaService.getFileById(itemId);
         if (!item) continue;
 
-        const result = await this.publishSingleItem(item);
-        if (result) {
+        const eventId = await this.publishSingleItemWithoutNavigation(item);
+        if (eventId) {
           successCount++;
+          lastSuccessfulEventId = eventId;
         } else {
           failCount++;
         }
@@ -863,6 +866,11 @@ export class MediaComponent {
           'Close',
           { duration: 5000 }
         );
+
+        // Navigate to the last successfully published event
+        if (lastSuccessfulEventId) {
+          this.router.navigate(['/e', lastSuccessfulEventId]);
+        }
       } else {
         this.snackBar.open('Failed to publish items', 'Close', { duration: 3000 });
       }
@@ -879,6 +887,45 @@ export class MediaComponent {
 
   async publishSingleItemFromCard(item: MediaItem): Promise<void> {
     await this.publishSingleItem(item);
+  }
+
+  private async publishSingleItemWithoutNavigation(item: MediaItem): Promise<string | null> {
+    // Open the publish dialog
+    const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
+      data: { mediaItem: item },
+      maxWidth: '650px',
+      width: '100%',
+    });
+
+    const result: MediaPublishOptions | null = await dialogRef.afterClosed().toPromise();
+
+    if (!result) {
+      return null; // User cancelled
+    }
+
+    try {
+      // Build the event
+      const event = await this.buildMediaEvent(item, result);
+
+      // Sign and publish the event
+      const signedEvent = await this.nostr.signEvent(event);
+      const publishResult = await this.publishService.publish(signedEvent);
+
+      if (publishResult.success) {
+        // Return the nevent ID for navigation
+        const neventId = nip19.neventEncode({
+          id: signedEvent.id,
+          author: signedEvent.pubkey,
+          kind: signedEvent.kind,
+        });
+        return neventId;
+      } else {
+        return null;
+      }
+    } catch (error) {
+      console.error('Error publishing media:', error);
+      return null;
+    }
   }
 
   private async publishSingleItem(item: MediaItem): Promise<boolean> {
@@ -908,8 +955,17 @@ export class MediaComponent {
 
       if (publishResult.success) {
         this.snackBar.open('Successfully published to Nostr!', 'Close', {
-          duration: 5000,
+          duration: 3000,
         });
+
+        // Navigate to the published event
+        const neventId = nip19.neventEncode({
+          id: signedEvent.id,
+          author: signedEvent.pubkey,
+          kind: signedEvent.kind,
+        });
+        this.router.navigate(['/e', neventId], { state: { event: signedEvent } });
+
         return true;
       } else {
         this.snackBar.open('Failed to publish to some relays', 'Close', {
@@ -924,9 +980,7 @@ export class MediaComponent {
       });
       return false;
     }
-  }
-
-  private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
+  } private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
     const tags: string[][] = [];
 
     // Add title tag (required)
