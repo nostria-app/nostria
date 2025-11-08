@@ -26,7 +26,6 @@ import { DomSanitizer } from '@angular/platform-browser';
 import { marked } from 'marked';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
-
 import { NostrService } from '../../../services/nostr.service';
 import { DataService } from '../../../services/data.service';
 import { LocalStorageService } from '../../../services/local-storage.service';
@@ -39,7 +38,6 @@ import { DecodedNaddr } from 'nostr-tools/nip19';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { Cache } from '../../../services/cache';
 import { NostrRecord } from '../../../interfaces';
-import { MentionHoverDirective } from '../../../directives/mention-hover.directive';
 import { MediaService } from '../../../services/media.service';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { ImageUrlDialogComponent } from '../../../components/image-url-dialog/image-url-dialog.component';
@@ -88,7 +86,6 @@ interface ArticleAutoDraft {
     MatCardModule,
     RichTextEditorComponent,
     MatTooltipModule,
-    MentionHoverDirective,
     MatSlideToggleModule,
     MatMenuModule,
     ArticleDisplayComponent,
