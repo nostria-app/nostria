@@ -14,55 +14,59 @@
     <!-- Left side: Media -->
     <div class="media-side">
       @if (title()) {
-        <h3 class="media-title">{{ title() }}</h3>
+      <h3 class="media-title">{{ title() }}</h3>
       }
 
       @if (isPhoto()) {
-        <!-- Photo Carousel -->
-        <div class="photo-carousel">
-          <div class="photo-container clickable" (click)="openImagePreview()">
-            <img [src]="currentImageUrl()" [alt]="title() || 'Photo'" [title]="title() || 'Photo'" class="photo-item" loading="lazy" />
-          </div>
+      <!-- Photo Carousel -->
+      <div class="photo-carousel">
+        <div class="photo-container clickable" (click)="openImagePreview()">
+          <img [src]="currentImageUrl()" [alt]="title() || 'Photo'" [title]="title() || 'Photo'" class="photo-item"
+            loading="lazy" />
+        </div>
 
-          @if (hasMultipleImages()) {
-            <!-- Navigation buttons -->
-            @if (canGoToPrevious()) {
-              <button mat-icon-button class="carousel-nav-button carousel-nav-left" (click)="goToPrevious(); $event.stopPropagation()" aria-label="Previous photo">
-                <mat-icon>chevron_left</mat-icon>
-              </button>
-            }
+        @if (hasMultipleImages()) {
+        <!-- Navigation buttons -->
+        @if (canGoToPrevious()) {
+        <button mat-icon-button class="carousel-nav-button carousel-nav-left"
+          (click)="goToPrevious(); $event.stopPropagation()" aria-label="Previous photo">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+        }
 
-            @if (canGoToNext()) {
-              <button mat-icon-button class="carousel-nav-button carousel-nav-right" (click)="goToNext(); $event.stopPropagation()" aria-label="Next photo">
-                <mat-icon>chevron_right</mat-icon>
-              </button>
-            }
+        @if (canGoToNext()) {
+        <button mat-icon-button class="carousel-nav-button carousel-nav-right"
+          (click)="goToNext(); $event.stopPropagation()" aria-label="Next photo">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+        }
 
-            <!-- Indicator dots -->
-            <div class="carousel-indicators">
-              @for (imageUrl of imageUrls(); track imageUrl) {
-                <button class="indicator-dot" [class.active]="currentImageIndex() === $index" (click)="goToIndex($index); $event.stopPropagation()"
-                  [attr.aria-label]="'Go to photo ' + ($index + 1)" [title]="'Go to photo ' + ($index + 1)">
-                </button>
-              }
-            </div>
+        <!-- Indicator dots -->
+        <div class="carousel-indicators">
+          @for (imageUrl of imageUrls(); track imageUrl) {
+          <button class="indicator-dot" [class.active]="currentImageIndex() === $index"
+            (click)="goToIndex($index); $event.stopPropagation()" [attr.aria-label]="'Go to photo ' + ($index + 1)"
+            [title]="'Go to photo ' + ($index + 1)">
+          </button>
           }
         </div>
-      } @else if (isVideo()) {
-        <!-- Video Player -->
-        @let videoInfo = videoData();
-        @if (videoInfo) {
-          <div class="video-container">
-            <video controls class="video-player" autoplay [poster]="videoInfo.thumbnail">
-              <source [src]="videoInfo.url" [type]="videoMimeType()" />
-              Your browser does not support the video tag.
-            </video>
-          </div>
         }
+      </div>
+      } @else if (isVideo()) {
+      <!-- Video Player -->
+      @let videoInfo = videoData();
+      @if (videoInfo) {
+      <div class="video-container">
+        <video controls class="video-player" autoplay [poster]="videoInfo.thumbnail">
+          <source [src]="videoInfo.url" [type]="videoMimeType()" />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+      }
       }
 
       @if (description()) {
-        <p class="media-description">{{ description() }}</p>
+      <p class="media-description">{{ description() }}</p>
       }
     </div>
 

@@ -64,7 +64,7 @@ export class MediaWithCommentsDialogComponent {
   });
 
   currentImageIndex = signal(0);
-  
+
   currentImageUrl = computed(() => {
     const urls = this.imageUrls();
     const index = this.currentImageIndex();
@@ -157,7 +157,7 @@ export class MediaWithCommentsDialogComponent {
     } else if (imageUrls.length === 1) {
       // Single image - use ImageDialogComponent
       this.dialog.open(ImageDialogComponent, {
-        data: { 
+        data: {
           imageUrl: imageUrls[0],
           alt: this.title() || 'Photo'
         },
