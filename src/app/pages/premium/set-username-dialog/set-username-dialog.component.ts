@@ -8,12 +8,14 @@ import { MatInputModule } from '@angular/material/input';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { debounceTime, firstValueFrom, of, Subject, switchMap, takeUntil } from 'rxjs';
 import { AccountService } from '../../../api/services';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UsernameService } from '../../../services/username';
 import { HttpContext } from '@angular/common/http';
 import { USE_NIP98 } from '../../../services/interceptors/nip98Auth';
+import { Profile } from '../../../services/profile';
 
 export interface SetUsernameDialogData {
   currentUsername?: string | null;
@@ -32,6 +34,7 @@ export interface SetUsernameDialogData {
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
+    MatCheckboxModule,
   ],
   template: `
     <h2 mat-dialog-title>{{ dialogTitle() }}</h2>
@@ -87,6 +90,32 @@ export interface SetUsernameDialogData {
               <span class="domain-part">https://nostria.app/u/</span>
               <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
             </p>
+          </div>
+
+          <div class="nip05-section">
+            @if (hasExistingNip05()) {
+              <div class="existing-nip05">
+                <mat-icon>info</mat-icon>
+                <div>
+                  <p class="nip05-label">Current NIP-05:</p>
+                  <p class="nip05-value">{{ existingNip05() }}</p>
+                </div>
+              </div>
+              <mat-checkbox
+                [(ngModel)]="shouldUpdateNip05"
+                color="primary"
+              >
+                Update NIP-05 to <strong>{{ usernameFormGroup.get('username')?.value }}@nostria.app</strong>
+              </mat-checkbox>
+            } @else {
+              <div class="nip05-auto-set">
+                <mat-icon color="primary">verified</mat-icon>
+                <p>
+                  Your NIP-05 identifier will be automatically set to
+                  <strong>{{ usernameFormGroup.get('username')?.value }}@nostria.app</strong>
+                </p>
+              </div>
+            }
           </div>
         }
       </form>
@@ -179,6 +208,58 @@ export interface SetUsernameDialogData {
       color: var(--mat-sys-on-primary-container);
     }
 
+    .nip05-section {
+      margin: 16px 0;
+      padding: 16px;
+      background-color: var(--mat-sys-surface-container);
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 8px;
+    }
+
+    .existing-nip05 {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .existing-nip05 mat-icon {
+      color: var(--mat-sys-on-surface-variant);
+      flex-shrink: 0;
+    }
+
+    .nip05-label {
+      margin: 0 0 4px 0;
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .nip05-value {
+      margin: 0;
+      font-family: monospace;
+      font-size: 14px;
+      color: var(--mat-sys-on-surface);
+      font-weight: 500;
+    }
+
+    .nip05-auto-set {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .nip05-auto-set mat-icon {
+      flex-shrink: 0;
+    }
+
+    .nip05-auto-set p {
+      margin: 0;
+      font-size: 14px;
+      color: var(--mat-sys-on-surface);
+    }
+
     mat-dialog-content {
       min-width: 400px;
       max-width: 500px;
@@ -198,12 +279,20 @@ export class SetUsernameDialogComponent implements OnDestroy {
   private usernameService = inject(UsernameService);
   private accountService = inject(AccountService);
   private accountState = inject(AccountStateService);
+  private profileService = inject(Profile);
   private dialogRef = inject(MatDialogRef<SetUsernameDialogComponent>);
   private dialogData = inject<SetUsernameDialogData>(MAT_DIALOG_DATA, { optional: true });
 
   isCheckingUsername = signal<boolean>(false);
   isSaving = signal<boolean>(false);
   isEditMode = signal<boolean>(false);
+  existingNip05 = signal<string | null>(null);
+  shouldUpdateNip05 = false;
+
+  hasExistingNip05 = computed(() => {
+    const nip05 = this.existingNip05();
+    return nip05 !== null && nip05.trim() !== '';
+  });
 
   dialogTitle = computed(() =>
     this.isEditMode() ? 'Change Your Premium Username' : 'Set Your Premium Username'
@@ -228,6 +317,14 @@ export class SetUsernameDialogComponent implements OnDestroy {
     if (currentUsername) {
       this.isEditMode.set(true);
       this.usernameFormGroup.patchValue({ username: currentUsername });
+    }
+
+    // Get existing NIP-05 from profile
+    const currentProfile = this.accountState.profile();
+    if (currentProfile?.data?.nip05) {
+      this.existingNip05.set(currentProfile.data.nip05);
+      // Default to updating NIP-05 if user already has one
+      this.shouldUpdateNip05 = true;
     }
 
     // Setup username validation
@@ -296,6 +393,36 @@ export class SetUsernameDialogComponent implements OnDestroy {
 
       // Refresh the subscription to get updated account data
       await this.accountState.refreshSubscription();
+
+      // Update NIP-05 in profile if needed
+      const shouldUpdateProfile = !this.hasExistingNip05() || this.shouldUpdateNip05;
+
+      if (shouldUpdateProfile) {
+        const currentProfile = this.accountState.profile();
+        const newNip05 = `${username}@nostria.app`;
+
+        // Get existing profile data or create new one
+        const profileData = currentProfile?.data ? { ...currentProfile.data } : {};
+        profileData.nip05 = newNip05;
+
+        // Update the profile with new NIP-05
+        const profileResult = await this.profileService.updateProfile({
+          profileData,
+          skipMediaServerCheck: true,
+        });
+
+        if (!profileResult.success) {
+          // Profile update failed, but username was set successfully
+          // Show a warning but don't fail the whole operation
+          this.snackBar.open(
+            `Username set successfully, but failed to update NIP-05: ${profileResult.error}`,
+            'OK',
+            { duration: 5000 }
+          );
+          this.dialogRef.close(true);
+          return;
+        }
+      }
 
       this.snackBar.open('Username set successfully!', 'OK', {
         duration: 3000,
