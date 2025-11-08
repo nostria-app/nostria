@@ -83,6 +83,9 @@ export class MediaComponent {
   activeTab = signal<'images' | 'videos' | 'files' | 'servers'>('images');
   selectedItems = signal<string[]>([]);
 
+  // Store thumbnail URLs for videos by SHA256 hash
+  private videoThumbnails = new Map<string, string>();
+
   // For automatic media server setup
   isSettingUpMediaServer = signal(false);
 
@@ -187,12 +190,36 @@ export class MediaComponent {
           // Set uploading state to true
           this.mediaService.uploading.set(true);
 
+          // Upload thumbnail first if it exists (for videos)
+          let thumbnailUrl: string | undefined;
+          if (result.thumbnailFile) {
+            try {
+              const thumbnailResult = await this.mediaService.uploadFile(
+                result.thumbnailFile,
+                false, // Always optimize thumbnails
+                result.servers
+              );
+
+              if (thumbnailResult.status === 'success' && thumbnailResult.item) {
+                thumbnailUrl = thumbnailResult.item.url;
+              }
+            } catch (error) {
+              console.error('Failed to upload thumbnail:', error);
+              // Continue with main upload even if thumbnail fails
+            }
+          }
+
           // Pass the selected servers to the uploadFile method
           const uploadResult = await this.mediaService.uploadFile(
             result.file,
             result.uploadOriginal,
             result.servers
           );
+
+          // Store thumbnail URL if we have one
+          if (thumbnailUrl && uploadResult.item) {
+            this.videoThumbnails.set(uploadResult.item.sha256, thumbnailUrl);
+          }
 
           // Set the uploading state to false
           this.mediaService.uploading.set(false);
@@ -892,7 +919,10 @@ export class MediaComponent {
   private async publishSingleItemWithoutNavigation(item: MediaItem): Promise<string | null> {
     // Open the publish dialog
     const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
-      data: { mediaItem: item },
+      data: {
+        mediaItem: item,
+        thumbnailUrl: this.videoThumbnails.get(item.sha256)
+      },
       maxWidth: '650px',
       width: '100%',
     });
@@ -931,7 +961,10 @@ export class MediaComponent {
   private async publishSingleItem(item: MediaItem): Promise<boolean> {
     // Open the publish dialog
     const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
-      data: { mediaItem: item },
+      data: {
+        mediaItem: item,
+        thumbnailUrl: this.videoThumbnails.get(item.sha256)
+      },
       maxWidth: '650px',
       width: '100%',
     });
@@ -983,6 +1016,25 @@ export class MediaComponent {
   } private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
     const tags: string[][] = [];
 
+    // Upload thumbnail blob if provided (for videos)
+    let thumbnailUrl = options.thumbnailUrl;
+    if (options.thumbnailBlob && (options.kind === 21 || options.kind === 22)) {
+      try {
+        const thumbnailFile = new File([options.thumbnailBlob], 'thumbnail.jpg', { type: 'image/jpeg' });
+        const uploadResult = await this.mediaService.uploadFile(
+          thumbnailFile,
+          false,
+          this.mediaService.mediaServers()
+        );
+
+        if (uploadResult.status === 'success' && uploadResult.item) {
+          thumbnailUrl = uploadResult.item.url;
+        }
+      } catch (error) {
+        console.error('Failed to upload thumbnail during publish:', error);
+      }
+    }
+
     // Add title tag (required)
     tags.push(['title', options.title]);
 
@@ -1008,6 +1060,31 @@ export class MediaComponent {
     // Add alt text if provided
     if (options.alt) {
       imetaTag.push(`alt ${options.alt}`);
+    }
+
+    // Add dimensions if provided (for images or video thumbnails)
+    if (options.imageDimensions && options.kind === 20) {
+      imetaTag.push(`dim ${options.imageDimensions.width}x${options.imageDimensions.height}`);
+    }
+
+    // Add blurhash for images if provided
+    if (options.blurhash && options.kind === 20) {
+      imetaTag.push(`blurhash ${options.blurhash}`);
+    }
+
+    // For videos, add thumbnail image URL if provided (NIP-71)
+    if (thumbnailUrl && (options.kind === 21 || options.kind === 22)) {
+      imetaTag.push(`image ${thumbnailUrl}`);
+      
+      // Add thumbnail dimensions if available
+      if (options.thumbnailDimensions) {
+        imetaTag.push(`dim ${options.thumbnailDimensions.width}x${options.thumbnailDimensions.height}`);
+      }
+    }
+
+    // For videos, add blurhash if provided (NIP-71)
+    if (options.blurhash && (options.kind === 21 || options.kind === 22)) {
+      imetaTag.push(`blurhash ${options.blurhash}`);
     }
 
     // For videos, add duration if provided

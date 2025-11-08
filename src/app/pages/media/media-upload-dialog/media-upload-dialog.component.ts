@@ -42,6 +42,11 @@ export class MediaUploadDialogComponent {
   isDragging = signal<boolean>(false);
   isUploading = signal<boolean>(false);
 
+  // Video thumbnail support
+  videoThumbnailUrl = signal<string | null>(null);
+  videoThumbnailFile = signal<File | null>(null);
+  extractingThumbnail = signal<boolean>(false);
+
   // Add signals for servers
   availableServers = signal<string[]>([]);
   selectedServers = signal<string[]>([]);
@@ -87,6 +92,10 @@ export class MediaUploadDialogComponent {
         this.previewUrl.set(reader.result as string);
       };
       reader.readAsDataURL(file);
+    } else if (this.isVideo()) {
+      // Extract thumbnail from video
+      this.extractVideoThumbnail(file);
+      this.previewUrl.set(null);
     } else {
       this.previewUrl.set(null);
     }
@@ -96,6 +105,103 @@ export class MediaUploadDialogComponent {
     this.selectedFile.set(null);
     this.previewUrl.set(null);
     this.showOriginalOption.set(false);
+    this.videoThumbnailUrl.set(null);
+    this.videoThumbnailFile.set(null);
+  }
+
+  async extractVideoThumbnail(videoFile: File): Promise<void> {
+    this.extractingThumbnail.set(true);
+
+    try {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+
+      const videoUrl = URL.createObjectURL(videoFile);
+      video.src = videoUrl;
+
+      // Wait for video to load metadata
+      await new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error('Failed to load video'));
+      });
+
+      // Seek to 1 second or 10% of duration, whichever is smaller
+      const seekTime = Math.min(1, video.duration * 0.1);
+      video.currentTime = seekTime;
+
+      // Wait for seek to complete
+      await new Promise<void>(resolve => {
+        video.onseeked = () => resolve();
+      });
+
+      // Create canvas and draw the video frame
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert canvas to blob and create a file
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(blob => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create thumbnail blob'));
+          }
+        }, 'image/jpeg', 0.9);
+      });
+
+      const thumbnailFile = new File([blob], 'thumbnail.jpg', { type: 'image/jpeg' });
+      this.videoThumbnailFile.set(thumbnailFile);
+
+      // Create preview URL
+      this.videoThumbnailUrl.set(URL.createObjectURL(blob));
+
+      // Clean up
+      URL.revokeObjectURL(videoUrl);
+    } catch (error) {
+      console.error('Failed to extract video thumbnail:', error);
+      this.videoThumbnailUrl.set(null);
+      this.videoThumbnailFile.set(null);
+    } finally {
+      this.extractingThumbnail.set(false);
+    }
+  }
+
+  onThumbnailFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files[0]) {
+      const file = input.files[0];
+
+      if (!file.type.startsWith('image/')) {
+        console.error('Only image files are allowed for thumbnails');
+        return;
+      }
+
+      this.videoThumbnailFile.set(file);
+
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = () => {
+        this.videoThumbnailUrl.set(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  }
+
+  clearThumbnail(): void {
+    if (this.videoThumbnailUrl()) {
+      URL.revokeObjectURL(this.videoThumbnailUrl()!);
+    }
+    this.videoThumbnailUrl.set(null);
+    this.videoThumbnailFile.set(null);
   }
 
   toggleServerSelection(server: string): void {
@@ -120,6 +226,7 @@ export class MediaUploadDialogComponent {
         uploadOriginal: this.uploadForm.value.uploadOriginal,
         servers: this.selectedServers(),
         isUploading: this.isUploading, // Pass the signal to the parent component
+        thumbnailFile: this.videoThumbnailFile(), // Include the thumbnail file for videos
       });
     }
   }

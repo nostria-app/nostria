@@ -400,7 +400,8 @@ export class MediaService implements NostriaService {
   async uploadFile(
     file: File,
     uploadOriginal: boolean,
-    servers: string[]
+    servers: string[],
+    thumbnailUrl?: string
   ): Promise<{
     item: MediaItem | null;
     status: 'success' | 'duplicate' | 'error';

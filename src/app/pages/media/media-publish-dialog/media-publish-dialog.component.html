@@ -7,13 +7,83 @@
       @if (isImage()) {
       <img [src]="data.mediaItem.url" [alt]="title() || 'Media preview'" />
       } @else if (isVideo()) {
-      <video [src]="data.mediaItem.url" controls></video>
+      <video [src]="data.mediaItem.url" controls #videoElement></video>
       } @else {
       <div class="generic-preview">
         <mat-icon>insert_drive_file</mat-icon>
       </div>
       }
     </div>
+
+    <!-- Thumbnail Management (videos only) -->
+    @if (isVideo()) {
+    <div class="thumbnail-section">
+      <div class="thumbnail-header">
+        <h3>Video Thumbnail</h3>
+        <button mat-icon-button [matMenuTriggerFor]="thumbnailMenu" matTooltip="Add thumbnail">
+          <mat-icon>add_photo_alternate</mat-icon>
+        </button>
+        <mat-menu #thumbnailMenu="matMenu">
+          <button mat-menu-item (click)="fileInput.click()">
+            <mat-icon>upload_file</mat-icon>
+            <span>Upload File</span>
+          </button>
+          <button mat-menu-item (click)="extractThumbnailFromVideo()">
+            <mat-icon>screenshot</mat-icon>
+            <span>Extract from Video</span>
+          </button>
+          <button mat-menu-item (click)="thumbnailUrlInput.set('')">
+            <mat-icon>link</mat-icon>
+            <span>Enter URL</span>
+          </button>
+        </mat-menu>
+        <input #fileInput type="file" accept="image/*" (change)="onThumbnailFileSelected($event)" hidden />
+      </div>
+
+      @if (extractingThumbnail()) {
+      <div class="thumbnail-loading">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span>Extracting thumbnail...</span>
+      </div>
+      }
+
+      @if (thumbnailUrlInput() !== null && thumbnailUrlInput() === '') {
+      <mat-form-field appearance="outline" class="thumbnail-url-field">
+        <mat-label>Thumbnail URL</mat-label>
+        <input matInput [(ngModel)]="thumbnailUrlInputValue" placeholder="https://example.com/thumbnail.jpg" />
+        <button mat-icon-button matSuffix (click)="setThumbnailFromUrl()" [disabled]="!thumbnailUrlInputValue"
+          matTooltip="Set thumbnail">
+          <mat-icon>check</mat-icon>
+        </button>
+      </mat-form-field>
+      }
+
+      @if (thumbnailUrl()) {
+      <div class="thumbnail-preview">
+        <img [src]="thumbnailUrl()!" alt="Thumbnail" class="thumbnail-image" />
+        <div class="thumbnail-actions">
+          <button mat-icon-button (click)="generateBlurhash()" [disabled]="generatingBlurhash()"
+            matTooltip="Generate blurhash">
+            @if (generatingBlurhash()) {
+            <mat-spinner diameter="20"></mat-spinner>
+            } @else {
+            <mat-icon>blur_on</mat-icon>
+            }
+          </button>
+          <button mat-icon-button (click)="removeThumbnail()" matTooltip="Remove thumbnail" class="remove-btn">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+        @if (blurhash()) {
+        <div class="blurhash-display">
+          <mat-icon>blur_on</mat-icon>
+          <span class="blurhash-value">{{ blurhash() }}</span>
+        </div>
+        }
+      </div>
+      }
+    </div>
+    }
 
     <!-- Event Kind Selection (only shown for videos) -->
     @if (isVideo()) {

@@ -83,6 +83,12 @@
       width: 64px;
       color: var(--mat-sys-color-on-surface-variant);
     }
+
+    .extracting-text {
+      margin-top: 8px;
+      font-size: 14px;
+      color: var(--mat-sys-color-on-surface-variant);
+    }
   }
 
   .file-info {
@@ -105,6 +111,12 @@
     .file-size {
       color: var(--mat-sys-color-on-surface-variant);
       font-size: 14px;
+    }
+
+    .thumbnail-inline-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
     }
 
     button {
@@ -213,4 +225,70 @@
   padding: 2px 6px;
   border-radius: 12px;
   margin-left: 8px;
+}
+
+.thumbnail-section {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--mat-sys-color-surface-container-lowest);
+  border-radius: 8px;
+
+  h3 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--mat-sys-color-on-surface);
+  }
+
+  .extracting-thumbnail {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px;
+    justify-content: center;
+    color: var(--mat-sys-color-on-surface-variant);
+  }
+
+  .thumbnail-preview {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .thumbnail-image {
+      width: 100%;
+      max-height: 200px;
+      object-fit: contain;
+      border-radius: 4px;
+      background-color: var(--mat-sys-color-surface-container);
+    }
+
+    .thumbnail-actions {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+  }
+
+  .no-thumbnail {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 24px;
+    background-color: var(--mat-sys-color-surface-container);
+    border-radius: 4px;
+
+    mat-icon {
+      font-size: 48px;
+      height: 48px;
+      width: 48px;
+      color: var(--mat-sys-color-on-surface-variant);
+    }
+
+    p {
+      margin: 0;
+      color: var(--mat-sys-color-on-surface-variant);
+      font-size: 14px;
+    }
+  }
 }

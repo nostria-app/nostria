@@ -1230,11 +1230,6 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
       return;
     }
 
-    // Don't navigate if showOverlay is enabled (media grid view)
-    if (this.showOverlay()) {
-      return;
-    }
-
     // Don't navigate if this event is currently selected/displayed
     if (this.isCurrentlySelected()) {
       return;
@@ -1242,6 +1237,11 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
 
     // Prevent navigation if clicking on interactive elements
     const target = event.target as HTMLElement;
+
+    // In overlay mode (media grid), prevent card navigation entirely - only media click handlers should work
+    if (this.showOverlay()) {
+      return;
+    }
 
     // Check if the click is on an interactive element or its children
     const isInteractiveElement = target.closest(

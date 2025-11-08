@@ -2,95 +2,103 @@
 <mat-dialog-content>
   <div class="upload-container">
     @if (!selectedFile()) {
-      <div
-        class="drop-zone"
-        [class.dragging]="isDragging()"
-        (click)="fileInput.click()"
-        (dragover)="onDragOver($event)"
-        (dragleave)="onDragLeave($event)"
-        (drop)="onDrop($event)"
-      >
-        <input #fileInput type="file" hidden (change)="onFileSelected($event)" />
-        <mat-icon>cloud_upload</mat-icon>
-        <p>Drag & drop a file here or click to browse</p>
-        <!-- <p class="file-types">Supports images and videos</p> -->
-      </div>
+    <div class="drop-zone" [class.dragging]="isDragging()" (click)="fileInput.click()" (dragover)="onDragOver($event)"
+      (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+      <input #fileInput type="file" hidden (change)="onFileSelected($event)" />
+      <mat-icon>cloud_upload</mat-icon>
+      <p>Drag & drop a file here or click to browse</p>
+      <!-- <p class="file-types">Supports images and videos</p> -->
+    </div>
     } @else {
-      <div class="file-preview">
-        @if (previewUrl()) {
-          <img [src]="previewUrl()" alt="Preview" class="image-preview" />
-        } @else {
-          <div class="generic-preview">
-            <mat-icon>{{ getFileTypeIcon(selectedFile()!) }}</mat-icon>
-          </div>
-        }
-        <div class="file-info">
-          <p class="file-name">{{ selectedFile()!.name }}</p>
-          <p class="file-size">{{ formatFileSize(selectedFile()!.size) }}</p>
-          <button mat-icon-button color="warn" (click)="clearFile()" [disabled]="isUploading()">
-            <mat-icon>close</mat-icon>
+    <div class="file-preview">
+      @if (previewUrl()) {
+      <img [src]="previewUrl()" alt="Preview" class="image-preview" />
+      } @else if (isVideo() && videoThumbnailUrl()) {
+      <!-- Show video thumbnail instead of generic icon -->
+      <img [src]="videoThumbnailUrl()" alt="Video thumbnail" class="image-preview" />
+      } @else if (isVideo() && extractingThumbnail()) {
+      <!-- Show loading state while extracting thumbnail -->
+      <div class="generic-preview">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p class="extracting-text">Extracting thumbnail...</p>
+      </div>
+      } @else {
+      <div class="generic-preview">
+        <mat-icon>{{ getFileTypeIcon(selectedFile()!) }}</mat-icon>
+      </div>
+      }
+      <div class="file-info">
+        <p class="file-name">{{ selectedFile()!.name }}</p>
+        <p class="file-size">{{ formatFileSize(selectedFile()!.size) }}</p>
+        @if (isVideo() && videoThumbnailUrl()) {
+        <!-- Thumbnail actions inline -->
+        <div class="thumbnail-inline-actions">
+          <input #thumbnailInput type="file" accept="image/*" hidden (change)="onThumbnailFileSelected($event)" />
+          <button mat-icon-button (click)="thumbnailInput.click()" [disabled]="isUploading()" 
+            matTooltip="Change thumbnail">
+            <mat-icon>image</mat-icon>
+          </button>
+          <button mat-icon-button color="warn" (click)="clearThumbnail()" [disabled]="isUploading()"
+            matTooltip="Remove thumbnail">
+            <mat-icon>no_photography</mat-icon>
           </button>
         </div>
+        }
+        <button mat-icon-button color="warn" (click)="clearFile()" [disabled]="isUploading()">
+          <mat-icon>close</mat-icon>
+        </button>
       </div>
+    </div>
 
-      <form [formGroup]="uploadForm" class="upload-form">
-        @if (showOriginalOption()) {
-          <mat-checkbox formControlName="uploadOriginal" [disabled]="isUploading()">
-            Upload original (no optimization)
-          </mat-checkbox>
-        }
+    <form [formGroup]="uploadForm" class="upload-form">
+      @if (showOriginalOption()) {
+      <mat-checkbox formControlName="uploadOriginal" [disabled]="isUploading()">
+        Upload original (no optimization)
+      </mat-checkbox>
+      }
 
-        @if (showServerSelection() && availableServers().length > 0) {
-          <div class="server-selection">
-            <h3>Upload to servers:</h3>
-            <div class="server-checkboxes">
-              @for (server of availableServers(); track server; let i = $index) {
-                <mat-checkbox
-                  [checked]="isServerSelected(server)"
-                  (change)="toggleServerSelection(server)"
-                  [disabled]="isUploading()"
-                >
-                  {{ server.replace('https://', '') }}
-                  @if (i === 0) {
-                    <span class="primary-badge">Primary</span>
-                  }
-                </mat-checkbox>
-              }
-            </div>
-            @if (selectedServers().length === 0) {
-              <div class="server-warning">
-                <mat-icon color="warn">warning</mat-icon>
-                <span>Please select at least one server</span>
-              </div>
+      @if (showServerSelection() && availableServers().length > 0) {
+      <div class="server-selection">
+        <h3>Upload to servers:</h3>
+        <div class="server-checkboxes">
+          @for (server of availableServers(); track server; let i = $index) {
+          <mat-checkbox [checked]="isServerSelected(server)" (change)="toggleServerSelection(server)"
+            [disabled]="isUploading()">
+            {{ server.replace('https://', '') }}
+            @if (i === 0) {
+            <span class="primary-badge">Primary</span>
             }
-          </div>
-        } @else if (availableServers().length === 0) {
-          <div class="no-servers">
-            <p>No media servers configured. Upload will be skipped.</p>
-          </div>
+          </mat-checkbox>
+          }
+        </div>
+        @if (selectedServers().length === 0) {
+        <div class="server-warning">
+          <mat-icon color="warn">warning</mat-icon>
+          <span>Please select at least one server</span>
+        </div>
         }
-      </form>
+      </div>
+      } @else if (availableServers().length === 0) {
+      <div class="no-servers">
+        <p>No media servers configured. Upload will be skipped.</p>
+      </div>
+      }
+    </form>
     }
   </div>
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()" [disabled]="isUploading()">Cancel</button>
-  <button
-    mat-raised-button
-    color="primary"
-    [disabled]="
+  <button mat-raised-button color="primary" [disabled]="
       !selectedFile() || isUploading() || (showServerSelection() && selectedServers().length === 0)
-    "
-    (click)="onSubmit()"
-    class="upload-button"
-  >
+    " (click)="onSubmit()" class="upload-button">
     @if (isUploading()) {
-      <div class="spinner-container">
-        <mat-spinner diameter="16"></mat-spinner>
-      </div>
-      <span>Uploading...</span>
+    <div class="spinner-container">
+      <mat-spinner diameter="16"></mat-spinner>
+    </div>
+    <span>Uploading...</span>
     } @else {
-      <span>Upload</span>
+    <span>Upload</span>
     }
   </button>
 </mat-dialog-actions>

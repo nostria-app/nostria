@@ -7,12 +7,16 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { FormsModule } from '@angular/forms';
-import { MediaItem } from '../../../services/media.service';
+import { MediaItem, MediaService } from '../../../services/media.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { encode } from 'blurhash';
 
 export interface MediaPublishDialogData {
   mediaItem: MediaItem;
+  thumbnailUrl?: string; // Optional thumbnail URL for videos
 }
 
 export interface MediaPublishOptions {
@@ -25,6 +29,11 @@ export interface MediaPublishOptions {
   location?: string;
   geohash?: string;
   duration?: number; // For videos (in seconds)
+  thumbnailUrl?: string; // Thumbnail URL for videos
+  thumbnailBlob?: Blob; // Thumbnail blob for videos (to be uploaded)
+  thumbnailDimensions?: { width: number; height: number }; // Thumbnail dimensions
+  blurhash?: string; // Blurhash of thumbnail or image
+  imageDimensions?: { width: number; height: number }; // Image dimensions for pictures
 }
 
 @Component({
@@ -41,12 +50,15 @@ export interface MediaPublishOptions {
     FormsModule,
     MatProgressSpinnerModule,
     MatCheckboxModule,
+    MatMenuModule,
+    MatTooltipModule,
   ],
   templateUrl: './media-publish-dialog.component.html',
   styleUrls: ['./media-publish-dialog.component.scss'],
 })
 export class MediaPublishDialogComponent {
   private dialogRef = inject(MatDialogRef<MediaPublishDialogComponent>);
+  private mediaService = inject(MediaService);
   data: MediaPublishDialogData = inject(MAT_DIALOG_DATA);
 
   // Form fields
@@ -60,9 +72,26 @@ export class MediaPublishDialogComponent {
   geohash = signal('');
   duration = signal<number | undefined>(undefined);
 
+  // Thumbnail management
+  thumbnailUrl = signal<string | undefined>(this.data.thumbnailUrl);
+  thumbnailBlob = signal<Blob | undefined>(undefined); // Store extracted thumbnail blob
+  thumbnailDimensions = signal<{ width: number; height: number } | undefined>(undefined);
+  thumbnailUrlInput = signal<string | null>(null);
+  thumbnailUrlInputValue = ''; // For ngModel binding
+  blurhash = signal<string | undefined>(undefined);
+  generatingBlurhash = signal(false);
+  extractingThumbnail = signal(false);
+
   // UI state
   hashtagInput = signal('');
   publishing = signal(false);
+
+  constructor() {
+    // Auto-generate blurhash for images on init
+    if (this.isImage()) {
+      this.loadImageAndGenerateBlurhash(this.data.mediaItem.url);
+    }
+  }
 
   // Computed
   isImage = (): boolean => {
@@ -133,6 +162,221 @@ export class MediaPublishDialogComponent {
     this.duration.set(value ? parseFloat(value) : undefined);
   }
 
+  // Thumbnail management methods
+  async extractThumbnailFromVideo(): Promise<void> {
+    if (!this.isVideo()) return;
+
+    this.extractingThumbnail.set(true);
+
+    try {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+      video.crossOrigin = 'anonymous';
+
+      const videoUrl = this.data.mediaItem.url;
+      video.src = videoUrl;
+
+      // Wait for video to load metadata
+      await new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error('Failed to load video'));
+      });
+
+      // Seek to 1 second or 10% of duration
+      const seekTime = Math.min(1, video.duration * 0.1);
+      video.currentTime = seekTime;
+
+      // Wait for seek to complete
+      await new Promise<void>(resolve => {
+        video.onseeked = () => resolve();
+      });
+
+      // Create canvas and draw the video frame
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(blob => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create thumbnail blob'));
+          }
+        }, 'image/jpeg', 0.9);
+      });
+
+      // Store blob and dimensions (don't upload yet)
+      this.thumbnailBlob.set(blob);
+      this.thumbnailDimensions.set({ width: canvas.width, height: canvas.height });
+      
+      // Create object URL for preview
+      const objectUrl = URL.createObjectURL(blob);
+      this.thumbnailUrl.set(objectUrl);
+
+      // Auto-generate blurhash
+      await this.generateBlurhashFromCanvas(canvas);
+    } catch (error) {
+      console.error('Failed to extract thumbnail:', error);
+    } finally {
+      this.extractingThumbnail.set(false);
+    }
+  }
+
+  async onThumbnailFileSelected(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+
+    if (!file.type.startsWith('image/')) {
+      console.error('Only image files are allowed for thumbnails');
+      return;
+    }
+
+    try {
+      // Store blob for later upload
+      this.thumbnailBlob.set(file);
+      
+      // Create object URL for preview
+      const objectUrl = URL.createObjectURL(file);
+      this.thumbnailUrl.set(objectUrl);
+
+      // Read dimensions and auto-generate blurhash
+      await this.loadImageAndGenerateBlurhash(objectUrl);
+    } catch (error) {
+      console.error('Failed to process thumbnail:', error);
+    }
+  }
+
+  setThumbnailFromUrl(): void {
+    const url = this.thumbnailUrlInputValue.trim();
+    if (url) {
+      this.thumbnailUrl.set(url);
+      this.thumbnailBlob.set(undefined); // Clear blob since we're using URL
+      this.thumbnailUrlInputValue = '';
+      this.thumbnailUrlInput.set(null);
+      
+      // Auto-generate blurhash from URL
+      this.loadImageAndGenerateBlurhash(url);
+    }
+  }
+
+  removeThumbnail(): void {
+    this.thumbnailUrl.set(undefined);
+    this.thumbnailBlob.set(undefined);
+    this.thumbnailDimensions.set(undefined);
+    this.blurhash.set(undefined);
+  }
+
+  // Helper method to generate blurhash from canvas
+  private async generateBlurhashFromCanvas(canvas: HTMLCanvasElement): Promise<void> {
+    try {
+      this.generatingBlurhash.set(true);
+
+      // Create a smaller canvas for blurhash
+      const smallCanvas = document.createElement('canvas');
+      const width = 32;
+      const height = Math.floor((canvas.height / canvas.width) * width);
+      
+      smallCanvas.width = width;
+      smallCanvas.height = height;
+
+      const ctx = smallCanvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+
+      ctx.drawImage(canvas, 0, 0, width, height);
+
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, width, height);
+      
+      // Generate blurhash
+      const hash = encode(
+        imageData.data,
+        width,
+        height,
+        4, // componentX
+        3  // componentY
+      );
+
+      this.blurhash.set(hash);
+    } catch (error) {
+      console.error('Failed to generate blurhash from canvas:', error);
+    } finally {
+      this.generatingBlurhash.set(false);
+    }
+  }
+
+  // Helper method to load image and generate blurhash
+  private async loadImageAndGenerateBlurhash(url: string): Promise<void> {
+    try {
+      this.generatingBlurhash.set(true);
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = url;
+      });
+
+      // Store dimensions
+      this.thumbnailDimensions.set({ width: img.width, height: img.height });
+
+      // Create canvas and draw image
+      const canvas = document.createElement('canvas');
+      const width = 32; // Smaller size for blurhash
+      const height = Math.floor((img.height / img.width) * width);
+      
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, width, height);
+      
+      // Generate blurhash
+      const hash = encode(
+        imageData.data,
+        width,
+        height,
+        4, // componentX
+        3  // componentY
+      );
+
+      this.blurhash.set(hash);
+    } catch (error) {
+      console.error('Failed to generate blurhash:', error);
+    } finally {
+      this.generatingBlurhash.set(false);
+    }
+  }
+
+  async generateBlurhash(): Promise<void> {
+    const url = this.thumbnailUrl();
+    if (!url) return;
+
+    await this.loadImageAndGenerateBlurhash(url);
+  }
+
   cancel(): void {
     this.dialogRef.close(null);
   }
@@ -168,6 +412,31 @@ export class MediaPublishDialogComponent {
 
     if (this.duration() !== undefined && this.duration()! > 0) {
       options.duration = this.duration();
+    }
+
+    // Include thumbnail URL if set
+    if (this.thumbnailUrl()) {
+      options.thumbnailUrl = this.thumbnailUrl();
+    }
+
+    // Include thumbnail blob if available (for upload during publish)
+    if (this.thumbnailBlob()) {
+      options.thumbnailBlob = this.thumbnailBlob();
+    }
+
+    // Include thumbnail dimensions if available
+    if (this.thumbnailDimensions()) {
+      options.thumbnailDimensions = this.thumbnailDimensions();
+    }
+
+    // Include blurhash if generated
+    if (this.blurhash()) {
+      options.blurhash = this.blurhash();
+    }
+
+    // For images, include dimensions if we have them
+    if (this.isImage() && this.thumbnailDimensions()) {
+      options.imageDimensions = this.thumbnailDimensions();
     }
 
     this.dialogRef.close(options);
