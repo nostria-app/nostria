@@ -1,0 +1,89 @@
+.publish-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 500px;
+  max-width: 600px;
+}
+
+.media-preview {
+  width: 100%;
+  max-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-variant);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 8px;
+
+  img,
+  video {
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: contain;
+  }
+
+  .generic-preview {
+    padding: 60px;
+
+    mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: var(--on-surface-variant);
+    }
+  }
+}
+
+.kind-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .kind-label {
+    font-weight: 500;
+  }
+
+  .kind-description {
+    font-size: 0.875rem;
+    color: var(--on-surface-variant);
+  }
+}
+
+.hashtag-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  .hashtag-input {
+    width: 100%;
+  }
+
+  .hashtag-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
+mat-dialog-content {
+  padding: 20px 24px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+mat-dialog-actions {
+  padding: 16px 24px;
+
+  button {
+    mat-icon {
+      margin-right: 8px;
+    }
+
+    mat-spinner {
+      display: inline-block;
+      margin-right: 8px;
+    }
+  }
+}
