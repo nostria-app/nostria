@@ -218,13 +218,13 @@ export class MediaPublishDialogComponent {
       // Store blob and dimensions (don't upload yet)
       this.thumbnailBlob.set(blob);
       this.thumbnailDimensions.set({ width: canvas.width, height: canvas.height });
-      
+
       // Create object URL for preview
       const objectUrl = URL.createObjectURL(blob);
       this.thumbnailUrl.set(objectUrl);
 
-      // Auto-generate blurhash
-      await this.generateBlurhashFromCanvas(canvas);
+      // Auto-generate blurhash from the object URL (same as manual generation)
+      await this.loadImageAndGenerateBlurhash(objectUrl);
     } catch (error) {
       console.error('Failed to extract thumbnail:', error);
     } finally {
@@ -246,7 +246,7 @@ export class MediaPublishDialogComponent {
     try {
       // Store blob for later upload
       this.thumbnailBlob.set(file);
-      
+
       // Create object URL for preview
       const objectUrl = URL.createObjectURL(file);
       this.thumbnailUrl.set(objectUrl);
@@ -265,7 +265,7 @@ export class MediaPublishDialogComponent {
       this.thumbnailBlob.set(undefined); // Clear blob since we're using URL
       this.thumbnailUrlInputValue = '';
       this.thumbnailUrlInput.set(null);
-      
+
       // Auto-generate blurhash from URL
       this.loadImageAndGenerateBlurhash(url);
     }
@@ -276,46 +276,6 @@ export class MediaPublishDialogComponent {
     this.thumbnailBlob.set(undefined);
     this.thumbnailDimensions.set(undefined);
     this.blurhash.set(undefined);
-  }
-
-  // Helper method to generate blurhash from canvas
-  private async generateBlurhashFromCanvas(canvas: HTMLCanvasElement): Promise<void> {
-    try {
-      this.generatingBlurhash.set(true);
-
-      // Create a smaller canvas for blurhash
-      const smallCanvas = document.createElement('canvas');
-      const width = 32;
-      const height = Math.floor((canvas.height / canvas.width) * width);
-      
-      smallCanvas.width = width;
-      smallCanvas.height = height;
-
-      const ctx = smallCanvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Failed to get canvas context');
-      }
-
-      ctx.drawImage(canvas, 0, 0, width, height);
-
-      // Get image data
-      const imageData = ctx.getImageData(0, 0, width, height);
-      
-      // Generate blurhash
-      const hash = encode(
-        imageData.data,
-        width,
-        height,
-        4, // componentX
-        3  // componentY
-      );
-
-      this.blurhash.set(hash);
-    } catch (error) {
-      console.error('Failed to generate blurhash from canvas:', error);
-    } finally {
-      this.generatingBlurhash.set(false);
-    }
   }
 
   // Helper method to load image and generate blurhash
@@ -339,7 +299,7 @@ export class MediaPublishDialogComponent {
       const canvas = document.createElement('canvas');
       const width = 32; // Smaller size for blurhash
       const height = Math.floor((img.height / img.width) * width);
-      
+
       canvas.width = width;
       canvas.height = height;
 
@@ -352,7 +312,7 @@ export class MediaPublishDialogComponent {
 
       // Get image data
       const imageData = ctx.getImageData(0, 0, width, height);
-      
+
       // Generate blurhash
       const hash = encode(
         imageData.data,

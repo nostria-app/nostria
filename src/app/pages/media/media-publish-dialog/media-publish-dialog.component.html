@@ -13,6 +13,11 @@
         <mat-icon>insert_drive_file</mat-icon>
       </div>
       }
+      @if (thumbnailDimensions()) {
+      <div class="dimensions-badge">
+        {{ thumbnailDimensions()!.width }} × {{ thumbnailDimensions()!.height }}
+      </div>
+      }
     </div>
 
     <!-- Thumbnail Management (videos only) -->
@@ -60,7 +65,14 @@
 
       @if (thumbnailUrl()) {
       <div class="thumbnail-preview">
-        <img [src]="thumbnailUrl()!" alt="Thumbnail" class="thumbnail-image" />
+        <div class="thumbnail-image-wrapper">
+          <img [src]="thumbnailUrl()!" alt="Thumbnail" class="thumbnail-image" />
+          @if (thumbnailDimensions()) {
+          <div class="thumbnail-dimensions">
+            {{ thumbnailDimensions()!.width }} × {{ thumbnailDimensions()!.height }}
+          </div>
+          }
+        </div>
         <div class="thumbnail-actions">
           <button mat-icon-button (click)="generateBlurhash()" [disabled]="generatingBlurhash()"
             matTooltip="Generate blurhash">

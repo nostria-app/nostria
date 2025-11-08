@@ -16,6 +16,7 @@
   border-radius: 8px;
   overflow: hidden;
   margin-bottom: 8px;
+  position: relative;
 
   img,
   video {
@@ -33,6 +34,18 @@
       height: 64px;
       color: var(--on-surface-variant);
     }
+  }
+
+  .dimensions-badge {
+    position: absolute;
+    bottom: 8px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-family: monospace;
   }
 }
 
@@ -74,12 +87,30 @@
     flex-direction: column;
     gap: 8px;
 
-    .thumbnail-image {
+    .thumbnail-image-wrapper {
+      position: relative;
       width: 100%;
-      max-height: 200px;
-      object-fit: contain;
-      border-radius: 4px;
-      background: var(--surface);
+
+      .thumbnail-image {
+        width: 100%;
+        max-height: 200px;
+        object-fit: contain;
+        border-radius: 4px;
+        background: var(--surface);
+        display: block;
+      }
+
+      .thumbnail-dimensions {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-family: monospace;
+      }
     }
 
     .thumbnail-actions {
