@@ -93,6 +93,7 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   hideComments = input<boolean>(false);
   showOverlay = input<boolean>(false);
   hideParentEvent = input<boolean>(false);
+  hideFooter = input<boolean>(false);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   @ViewChild('rootContent') rootContentRef?: ElementRef<HTMLElement>;
@@ -1226,6 +1227,11 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   onCardClick(event: MouseEvent) {
     // Don't navigate if navigation is explicitly disabled
     if (this.navigationDisabled()) {
+      return;
+    }
+
+    // Don't navigate if showOverlay is enabled (media grid view)
+    if (this.showOverlay()) {
       return;
     }
 

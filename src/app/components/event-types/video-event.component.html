@@ -5,32 +5,18 @@
 </div>
 }
 
-@if (title()) {
+@if (title() && !showOverlay()) {
 <h3 class="media-title">{{ title() }}</h3>
 }
 
 @let videoInfo = videoData();
 @let blurhashUrl = blurhashDataUrl();
 @if (videoInfo) {
-<div class="video-container" [class.has-overlay]="showOverlay()">
-  @if (showOverlay()) {
-  <div class="event-overlay">
-    <div class="overlay-actions">
-      <button mat-raised-button class="overlay-button" (click)="expandVideo()" title="View video">
-        <mat-icon>play_circle</mat-icon>
-        <span>View Media</span>
-      </button>
-      <button mat-raised-button class="overlay-button" (click)="openEventPage()" title="Open full event">
-        <mat-icon>open_in_new</mat-icon>
-        <span>Open Event</span>
-      </button>
-    </div>
-  </div>
-  }
+<div class="video-container" [class.clickable]="showOverlay()">
   @if (!isExpanded()) {
   <!-- Video Thumbnail (Initial State) -->
-  <div class="video-thumbnail-container" tabindex="0" role="button" (click)="expandVideo()"
-    (keyup.enter)="expandVideo()" (keyup.space)="expandVideo()">
+  <div class="video-thumbnail-container" tabindex="0" role="button" (click)="expandVideo($any($event))"
+    (keyup.enter)="expandVideo($any($event))" (keyup.space)="expandVideo($any($event))">
     @if (videoInfo.blurhash && !videoInfo.thumbnail && blurhashUrl) {
     <img [src]="blurhashUrl" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
       [title]="videoInfo.title || 'Video thumbnail'" />
@@ -38,9 +24,9 @@
     <img [src]="videoInfo.thumbnail" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
       [title]="videoInfo.title || 'Video thumbnail'" loading="lazy" />
     } @else {
-    <!-- <div class="video-thumbnail-placeholder">
-      <mat-icon class="video-placeholder-icon">play_circle_outline</mat-icon>
-    </div> -->
+    <div class="video-thumbnail-placeholder">
+      <mat-icon class="video-placeholder-icon">videocam</mat-icon>
+    </div>
     }
 
     <!-- Play button overlay -->
@@ -69,7 +55,7 @@
 </div>
 }
 
-@if (description()) {
+@if (description() && !showOverlay()) {
 <p class="video-description">
   {{ description() }}
 </p>

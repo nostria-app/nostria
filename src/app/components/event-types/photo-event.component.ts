@@ -4,10 +4,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
-import { Event, nip19 } from 'nostr-tools';
+import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
+import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/media-with-comments-dialog.component';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 @Component({
@@ -170,7 +171,29 @@ export class PhotoEventComponent {
     }
   }
 
-  openImageDialog(imageUrl: string, alt: string): void {
+  openImageDialog(imageUrl: string, alt: string, event?: MouseEvent | KeyboardEvent): void {
+    // Prevent navigation when opening dialog in overlay mode
+    if (this.showOverlay() && event) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+
+    // If showOverlay is true, open the split-view dialog with comments
+    if (this.showOverlay()) {
+      const nostrEvent = this.event();
+      if (nostrEvent) {
+        this.dialog.open(MediaWithCommentsDialogComponent, {
+          data: { event: nostrEvent },
+          maxWidth: '95vw',
+          maxHeight: '95vh',
+          width: '1400px',
+          height: '90vh',
+          panelClass: 'media-with-comments-dialog',
+        });
+      }
+      return;
+    }
+
     const imageUrls = this.imageUrls();
     const altTexts = this.altTexts();
 
@@ -208,7 +231,19 @@ export class PhotoEventComponent {
   openEventPage(): void {
     const event = this.event();
     if (event) {
-      this.router.navigate(['/e', event.id]);
+      // If showOverlay is true, open the split-view dialog
+      if (this.showOverlay()) {
+        this.dialog.open(MediaWithCommentsDialogComponent, {
+          data: { event },
+          maxWidth: '95vw',
+          maxHeight: '95vh',
+          width: '1400px',
+          height: '90vh',
+          panelClass: 'media-with-comments-dialog',
+        });
+      } else {
+        this.router.navigate(['/e', event.id]);
+      }
     }
   }
 

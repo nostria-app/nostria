@@ -3,9 +3,11 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
+import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/media-with-comments-dialog.component';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 interface VideoData {
@@ -30,6 +32,7 @@ export class VideoEventComponent {
   showOverlay = input<boolean>(false);
 
   private router = inject(Router);
+  private dialog = inject(MatDialog);
 
   // Video expansion state
   isExpanded = signal(false);
@@ -90,8 +93,29 @@ export class VideoEventComponent {
     return this.removeHashtagsFromContent(event.content);
   });
 
-  expandVideo(): void {
-    this.isExpanded.set(true);
+  expandVideo(clickEvent?: MouseEvent | KeyboardEvent): void {
+    // Prevent navigation when opening dialog in overlay mode
+    if (this.showOverlay() && clickEvent) {
+      clickEvent.stopPropagation();
+      clickEvent.preventDefault();
+    }
+
+    // If showOverlay is true, open the split-view dialog with comments
+    if (this.showOverlay()) {
+      const event = this.event();
+      if (event) {
+        this.dialog.open(MediaWithCommentsDialogComponent, {
+          data: { event },
+          maxWidth: '95vw',
+          maxHeight: '95vh',
+          width: '1400px',
+          height: '90vh',
+          panelClass: 'media-with-comments-dialog',
+        });
+      }
+    } else {
+      this.isExpanded.set(true);
+    }
   }
 
   collapseVideo(): void {
@@ -101,7 +125,19 @@ export class VideoEventComponent {
   openEventPage(): void {
     const event = this.event();
     if (event) {
-      this.router.navigate(['/e', event.id]);
+      // If showOverlay is true, open the split-view dialog
+      if (this.showOverlay()) {
+        this.dialog.open(MediaWithCommentsDialogComponent, {
+          data: { event },
+          maxWidth: '95vw',
+          maxHeight: '95vh',
+          width: '1400px',
+          height: '90vh',
+          panelClass: 'media-with-comments-dialog',
+        });
+      } else {
+        this.router.navigate(['/e', event.id]);
+      }
     }
   }
 

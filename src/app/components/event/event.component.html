@@ -333,6 +333,7 @@
   <app-zap-display [eventId]="targetItem.event.id"></app-zap-display>
   } -->
 
+  @if (!hideFooter()) {
   <mat-card-actions class="note-footer">
     @if (item.event.kind === 1) {
     <div class="reactions-row" [class.compact]="compact()">
@@ -430,6 +431,7 @@
       </button>
     </div>
   </mat-card-actions>
+  }
 </mat-card>
 } @else if (id() && !isLoadingEvent()) {
 <div class="event-content">
