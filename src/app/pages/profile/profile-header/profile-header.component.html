@@ -146,6 +146,10 @@
         <mat-icon class="verified-icon verified-icon-error">verified_off</mat-icon>
         }
         <span [class.strikethrough]="!verifiedId.valid">{{ verifiedId.value }}</span>
+
+        @if (verifiedFaviconUrl() && faviconVisible()) {
+        <img [src]="verifiedFaviconUrl()" alt="favicon" class="verified-favicon" (error)="onFaviconError($event)" />
+        }
       </div>
       }
 

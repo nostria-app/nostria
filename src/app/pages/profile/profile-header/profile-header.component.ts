@@ -219,6 +219,23 @@ export class ProfileHeaderComponent {
     status: string;
   }>({ value: '', valid: false, status: '' });
 
+  // Computed favicon URL for the verified NIP-05 identifier (tries /favicon.ico)
+  verifiedFaviconUrl = computed(() => {
+    const value = this.verifiedIdentifier().value;
+    if (!value) return '';
+
+    // Extract domain from possible formats like 'user@domain.com' or 'domain.com'
+    const domain = value.includes('@') ? value.split('@')[1] : value;
+    if (!domain) return '';
+
+    // Normalize domain and remove any path fragments
+    const clean = domain.replace(/^https?:\/\//, '').replace(/\/.*/, '');
+    return this.getFaviconUrl(clean);
+  });
+
+  // Track favicon visibility to hide if loading fails
+  faviconVisible = signal<boolean>(true);
+
   name = computed(() => {
     const profileData = this.profile();
     if (!profileData) {
@@ -354,6 +371,14 @@ export class ProfileHeaderComponent {
           this.trustRank.set(undefined);
         });
       }
+    });
+
+    // Reset favicon visibility whenever the verified identifier value changes
+    effect(() => {
+      // Touch the signal so the effect depends on it
+      this.verifiedIdentifier();
+      // Show favicon optimistically; if it fails to load, onFaviconError will hide it
+      this.faviconVisible.set(true);
     });
 
     // Load favorites from localStorage
@@ -585,6 +610,47 @@ export class ProfileHeaderComponent {
   getDefaultBanner(): string {
     // Return a default gradient for users without a banner
     return 'linear-gradient(135deg, #8e44ad, #3498db)';
+  }
+
+  // Helper to get favicon via Google s2 service
+  // Extract the base registered domain (strip subdomains) using a small heuristic
+  private extractBaseDomain(domain: string): string {
+    if (!domain) return domain;
+
+    // Remove port if present
+    const host = domain.split(':')[0].toLowerCase();
+
+    // If it's an IP address, return as-is
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(host)) return host;
+
+    const parts = host.split('.').filter(Boolean);
+    if (parts.length <= 2) return host; // no subdomain to strip
+
+    // Common second-level domains where base includes three parts (example.co.uk)
+    const secondLevel = new Set([
+      'co.uk',
+      'org.uk',
+      'ac.uk',
+      'gov.uk',
+      'com.au',
+      'net.au',
+      'co.nz',
+      'co.jp',
+    ]);
+
+    const lastTwo = parts.slice(-2).join('.');
+    if (secondLevel.has(lastTwo) && parts.length >= 3) {
+      // Return last 3 parts (example.co.uk)
+      return parts.slice(-3).join('.');
+    }
+
+    // Default: return last 2 parts (example.com)
+    return parts.slice(-2).join('.');
+  }
+
+  getFaviconUrl(domain: string): string {
+    const base = this.extractBaseDomain(domain);
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(base)}&sz=64`;
   }
 
   private async getVerifiedIdentifier(): Promise<{
@@ -842,6 +908,17 @@ export class ProfileHeaderComponent {
     const img = event.target as HTMLImageElement;
     // Hide the image element
     img.style.display = 'none';
+  }
+
+  /**
+   * Hide favicon if it fails to load and mark as not visible
+   */
+  onFaviconError(event: Event): void {
+    this.faviconVisible.set(false);
+    const img = event.target as HTMLImageElement | null;
+    if (img) {
+      img.style.display = 'none';
+    }
   }
 
   /**
