@@ -180,21 +180,25 @@
   overflow-x: hidden;
 
   .notification-item {
-    height: auto;
-    min-height: fit-content;
+    height: 120px; // Fixed height for virtual scrolling
+    min-height: 120px;
+    max-height: 120px;
   }
 }
 
 .notification-item {
   display: flex;
   align-items: flex-start;
-  padding: 20px 24px;
+  padding: 10px 10px;
   gap: 16px;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   transition: background-color 0.2s;
   min-width: 0; // Enable proper flex shrinking
   overflow: hidden; // Prevent horizontal overflow
   position: relative;
+  height: 110px; // Fixed height for virtual scrolling
+  min-height: 110px;
+  max-height: 110px;
 
   // Left accent border based on notification type
   &::before {
@@ -362,9 +366,9 @@
         font-size: 16px;
         flex: 1;
         min-width: 0; // Allow text to shrink
-        word-break: break-word; // Break long words
-        overflow-wrap: break-word; // Break long URLs/text
+        white-space: nowrap; // Prevent wrapping
         overflow: hidden; // Hide overflow
+        text-overflow: ellipsis; // Show ellipsis for overflow
       }
 
       .new-indicator {
@@ -397,8 +401,10 @@
     }
 
     .notification-author {
-      margin-top: 8px;
+      margin-top: 4px;
       margin-bottom: 4px;
+      max-height: 40px; // Constrain height for fixed notification size
+      overflow: hidden; // Prevent expansion
 
       ::ng-deep .user-profile.tiny {
         gap: 8px;
@@ -407,6 +413,7 @@
         transition: background-color 0.2s ease;
         cursor: pointer;
         width: fit-content;
+        max-width: 100%; // Prevent overflow
 
         &:hover {
           background-color: var(--mat-sys-surface-container);
@@ -433,6 +440,9 @@
         .user-profile-name {
           font-size: 14px;
           font-weight: 500;
+          white-space: nowrap; // Prevent wrapping
+          overflow: hidden; // Hide overflow
+          text-overflow: ellipsis; // Show ellipsis
         }
       }
     }
@@ -441,9 +451,9 @@
       font-size: 14px;
       opacity: 0.8;
       line-height: 1.4;
-      word-break: break-word; // Break long words
-      overflow-wrap: break-word; // Break long URLs/text
+      white-space: nowrap; // Prevent wrapping
       overflow: hidden; // Hide overflow
+      text-overflow: ellipsis; // Show ellipsis for overflow
 
       &.zap-content {
         font-style: italic;
