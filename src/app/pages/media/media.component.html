@@ -58,6 +58,10 @@
             Actions
           </button>
           <mat-menu #selectedActionsMenu="matMenu">
+            <button mat-menu-item (click)="publishSelected()">
+              <mat-icon>send</mat-icon>
+              <span>Publish</span>
+            </button>
             <button mat-menu-item (click)="downloadSelected()">
               <mat-icon>download</mat-icon>
               <span>Download</span>
@@ -113,6 +117,10 @@
                     <mat-icon>info</mat-icon>
                     <span>Details</span>
                   </button>
+                  <button mat-menu-item (click)="publishSingleItemFromCard(item)">
+                    <mat-icon>send</mat-icon>
+                    <span>Publish</span>
+                  </button>
                   <button mat-menu-item (click)="downloadSelected(item.sha256)">
                     <mat-icon>download</mat-icon>
                     <span>Download</span>
@@ -153,6 +161,10 @@
             Actions
           </button>
           <mat-menu #selectedActionsMenu="matMenu">
+            <button mat-menu-item (click)="publishSelected()">
+              <mat-icon>send</mat-icon>
+              <span>Publish</span>
+            </button>
             <button mat-menu-item (click)="downloadSelected()">
               <mat-icon>download</mat-icon>
               <span>Download</span>
@@ -212,6 +224,10 @@
                     <mat-icon>info</mat-icon>
                     <span>Details</span>
                   </button>
+                  <button mat-menu-item (click)="publishSingleItemFromCard(item)">
+                    <mat-icon>send</mat-icon>
+                    <span>Publish</span>
+                  </button>
                   <button mat-menu-item (click)="downloadSelected(item.sha256)">
                     <mat-icon>download</mat-icon>
                     <span>Download</span>
@@ -252,6 +268,10 @@
             Actions
           </button>
           <mat-menu #selectedActionsMenu="matMenu">
+            <button mat-menu-item (click)="publishSelected()">
+              <mat-icon>send</mat-icon>
+              <span>Publish</span>
+            </button>
             <button mat-menu-item (click)="downloadSelected()">
               <mat-icon>download</mat-icon>
               <span>Download</span>

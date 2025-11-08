@@ -1,0 +1,137 @@
+<h2 mat-dialog-title>Publish to Nostr</h2>
+
+<mat-dialog-content>
+  <div class="publish-form">
+    <!-- Media Preview -->
+    <div class="media-preview">
+      @if (isImage()) {
+      <img [src]="data.mediaItem.url" [alt]="title() || 'Media preview'" />
+      } @else if (isVideo()) {
+      <video [src]="data.mediaItem.url" controls></video>
+      } @else {
+      <div class="generic-preview">
+        <mat-icon>insert_drive_file</mat-icon>
+      </div>
+      }
+    </div>
+
+    <!-- Event Kind Selection (only shown for videos) -->
+    @if (isVideo()) {
+    <mat-form-field appearance="outline">
+      <mat-label>Event Type</mat-label>
+      <mat-select [value]="kind()" (selectionChange)="kind.set($event.value)">
+        @for (kindOption of getAvailableKinds(); track kindOption.value) {
+        <mat-option [value]="kindOption.value">
+          <div class="kind-option">
+            <span class="kind-label">{{ kindOption.label }}</span>
+            <span class="kind-description">{{ kindOption.description }}</span>
+          </div>
+        </mat-option>
+        }
+      </mat-select>
+      <mat-hint>Choose the type of video event to publish</mat-hint>
+    </mat-form-field>
+    }
+
+    <!-- Title (required) -->
+    <mat-form-field appearance="outline">
+      <mat-label>Title *</mat-label>
+      <input matInput [value]="title()" (input)="title.set($any($event.target).value)"
+        placeholder="Enter a title for your {{ isImage() ? 'picture' : 'video' }}" required />
+      <mat-hint>A short, descriptive title</mat-hint>
+    </mat-form-field>
+
+    <!-- Content/Description -->
+    <mat-form-field appearance="outline">
+      <mat-label>Description</mat-label>
+      <textarea matInput [value]="content()" (input)="content.set($any($event.target).value)"
+        placeholder="Describe your {{ isImage() ? 'picture' : 'video' }}..." rows="4"></textarea>
+      <mat-hint>Optional description or caption</mat-hint>
+    </mat-form-field>
+
+    <!-- Alt Text (accessibility) -->
+    <mat-form-field appearance="outline">
+      <mat-label>Alt Text</mat-label>
+      <input matInput [value]="alt()" (input)="alt.set($any($event.target).value)"
+        placeholder="Describe the content for accessibility" />
+      <mat-hint>Screen reader description (recommended)</mat-hint>
+    </mat-form-field>
+
+    <!-- Duration (for videos only) -->
+    @if (isVideo()) {
+    <mat-form-field appearance="outline">
+      <mat-label>Duration (seconds)</mat-label>
+      <input matInput type="number" step="0.01" [value]="duration() ?? ''" (input)="onDurationInput($event)"
+        placeholder="Video duration in seconds" />
+      <mat-hint>Optional but recommended for video events</mat-hint>
+    </mat-form-field>
+    }
+
+    <!-- Content Warning -->
+    <mat-form-field appearance="outline">
+      <mat-label>Content Warning</mat-label>
+      <input matInput [value]="contentWarning()" (input)="contentWarning.set($any($event.target).value)"
+        placeholder="e.g., NSFW, violence, etc." />
+      <mat-hint>Optional warning about sensitive content</mat-hint>
+    </mat-form-field>
+
+    <!-- Hashtags -->
+    <div class="hashtag-section">
+      <mat-form-field appearance="outline" class="hashtag-input">
+        <mat-label>Add Hashtags</mat-label>
+        <input matInput [value]="hashtagInput()" (input)="hashtagInput.set($any($event.target).value)"
+          (keydown)="onHashtagInputKeydown($event)" placeholder="Type hashtag and press Enter" />
+        <button mat-icon-button matSuffix (click)="addHashtag()" [disabled]="!hashtagInput().trim()">
+          <mat-icon>add</mat-icon>
+        </button>
+        <mat-hint>Press Enter or click + to add</mat-hint>
+      </mat-form-field>
+
+      @if (hashtags().length > 0) {
+      <mat-chip-set class="hashtag-chips">
+        @for (tag of hashtags(); track tag) {
+        <mat-chip (removed)="removeHashtag(tag)">
+          #{{ tag }}
+          <button matChipRemove>
+            <mat-icon>cancel</mat-icon>
+          </button>
+        </mat-chip>
+        }
+      </mat-chip-set>
+      }
+    </div>
+
+    <!-- Location -->
+    <mat-form-field appearance="outline">
+      <mat-label>Location</mat-label>
+      <input matInput [value]="location()" (input)="location.set($any($event.target).value)"
+        placeholder="e.g., New York, NY, USA" />
+      <mat-hint>Optional location (city, state, country)</mat-hint>
+    </mat-form-field>
+
+    <!-- Geohash -->
+    <mat-form-field appearance="outline">
+      <mat-label>Geohash</mat-label>
+      <input matInput [value]="geohash()" (input)="geohash.set($any($event.target).value)"
+        placeholder="e.g., dr5regw" />
+      <mat-hint>Optional geohash for precise location</mat-hint>
+    </mat-form-field>
+  </div>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()" [disabled]="publishing()">
+    Cancel
+  </button>
+  @if (publishing()) {
+  <button mat-flat-button [disabled]="true">
+    <mat-spinner diameter="20"></mat-spinner>
+    Publishing...
+  </button>
+  } @else {
+  <button mat-flat-button (click)="publish()" [disabled]="!canPublish()">
+    <mat-icon>send</mat-icon>
+    Publish
+  </button>
+  }
+</mat-dialog-actions>

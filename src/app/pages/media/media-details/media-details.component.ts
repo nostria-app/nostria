@@ -13,6 +13,9 @@ import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { MediaPreviewDialogComponent } from '../../../components/media-preview-dialog/media-preview.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MediaPublishDialogComponent, MediaPublishOptions } from '../media-publish-dialog/media-publish-dialog.component';
+import { NostrService } from '../../../services/nostr.service';
+import { PublishService } from '../../../services/publish.service';
 
 @Component({
   selector: 'app-media-details',
@@ -36,6 +39,8 @@ export class MediaDetailsComponent {
   private mediaService = inject(MediaService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private nostr = inject(NostrService);
+  private publishService = inject(PublishService);
 
   loading = signal(true);
   error = signal<string | null>(null);
@@ -125,7 +130,7 @@ export class MediaDetailsComponent {
     );
   }
 
-  hasTextFileExtension(mimeType: string): boolean {
+  hasTextFileExtension(_mimeType: string): boolean {
     // For files where MIME type may not be correctly set,
     // check URL for common text file extensions
     const item = this.mediaItem();
@@ -258,6 +263,141 @@ export class MediaDetailsComponent {
     } catch (error) {
       this.snackBar.open('Failed to mirror media', 'Close', { duration: 3000 });
     }
+  }
+
+  async publishMedia(): Promise<void> {
+    const item = this.mediaItem();
+    if (!item) return;
+
+    // Open the publish dialog
+    const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
+      data: { mediaItem: item },
+      maxWidth: '650px',
+      width: '100%',
+    });
+
+    const result: MediaPublishOptions | null = await dialogRef.afterClosed().toPromise();
+
+    if (!result) {
+      return; // User cancelled
+    }
+
+    try {
+      // Show publishing message
+      this.snackBar.open('Publishing to Nostr...', '', { duration: 2000 });
+
+      // Build the event
+      const event = await this.buildMediaEvent(item, result);
+
+      // Sign and publish the event
+      const signedEvent = await this.nostr.signEvent(event);
+      const publishResult = await this.publishService.publish(signedEvent);
+
+      if (publishResult.success) {
+        this.snackBar.open('Successfully published to Nostr!', 'Close', {
+          duration: 5000,
+        });
+      } else {
+        this.snackBar.open('Failed to publish to some relays', 'Close', {
+          duration: 5000,
+        });
+      }
+    } catch (error) {
+      console.error('Error publishing media:', error);
+      this.snackBar.open('Failed to publish media', 'Close', {
+        duration: 3000,
+      });
+    }
+  }
+
+  private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
+    const tags: string[][] = [];
+
+    // Add title tag (required)
+    tags.push(['title', options.title]);
+
+    // Build imeta tag according to NIP-92/94
+    const imetaTag = ['imeta'];
+
+    // Add URL
+    imetaTag.push(`url ${item.url}`);
+
+    // Add MIME type
+    if (item.type) {
+      imetaTag.push(`m ${item.type}`);
+    }
+
+    // Add SHA-256 hash
+    imetaTag.push(`x ${item.sha256}`);
+
+    // Add file size
+    if (item.size) {
+      imetaTag.push(`size ${item.size}`);
+    }
+
+    // Add alt text if provided
+    if (options.alt) {
+      imetaTag.push(`alt ${options.alt}`);
+    }
+
+    // For videos, add duration if provided
+    if (options.duration !== undefined && (options.kind === 21 || options.kind === 22)) {
+      imetaTag.push(`duration ${options.duration}`);
+    }
+
+    // Add mirror URLs as fallback
+    if (item.mirrors && item.mirrors.length > 0) {
+      item.mirrors.forEach(mirrorUrl => {
+        imetaTag.push(`fallback ${mirrorUrl}`);
+      });
+    }
+
+    tags.push(imetaTag);
+
+    // Add published_at timestamp
+    tags.push(['published_at', Math.floor(Date.now() / 1000).toString()]);
+
+    // Add alt tag separately if provided (for accessibility)
+    if (options.alt) {
+      tags.push(['alt', options.alt]);
+    }
+
+    // Add content warning if provided
+    if (options.contentWarning) {
+      tags.push(['content-warning', options.contentWarning]);
+    }
+
+    // Add hashtags
+    options.hashtags.forEach(tag => {
+      tags.push(['t', tag]);
+    });
+
+    // Add location if provided
+    if (options.location) {
+      tags.push(['location', options.location]);
+    }
+
+    // Add geohash if provided
+    if (options.geohash) {
+      tags.push(['g', options.geohash]);
+    }
+
+    // Add MIME type as m tag for filtering (for images)
+    if (item.type && options.kind === 20) {
+      tags.push(['m', item.type]);
+    }
+
+    // Add x tag with hash for queryability
+    tags.push(['x', item.sha256]);
+
+    // Create the event
+    const event = this.nostr.createEvent(
+      options.kind,
+      options.content,
+      tags
+    );
+
+    return event;
   }
 
   goBack(): void {

@@ -34,6 +34,8 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { LoggerService } from '../../services/logger.service';
 import { RelayPingResultsDialogComponent } from '../settings/relays/relay-ping-results-dialog.component';
 import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
+import { MediaPublishDialogComponent, MediaPublishOptions } from './media-publish-dialog/media-publish-dialog.component';
+import { PublishService } from '../../services/publish.service';
 
 @Component({
   selector: 'app-media',
@@ -74,6 +76,7 @@ export class MediaComponent {
   private readonly regionService = inject(RegionService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly logger = inject(LoggerService);
+  private readonly publishService = inject(PublishService);
 
   // View state
   activeTab = signal<'images' | 'videos' | 'files' | 'servers'>('images');
@@ -819,5 +822,197 @@ export class MediaComponent {
     if (!url) return 'Unknown';
     const urlParts = url.split('/');
     return urlParts[urlParts.length - 1];
+  }
+
+  async publishSelected(): Promise<void> {
+    const itemsToPublish = this.selectedItems();
+    if (itemsToPublish.length === 0) return;
+
+    // Fetch the first item to show in the dialog
+    const firstItem = await this.mediaService.getFileById(itemsToPublish[0]);
+    if (!firstItem) {
+      this.snackBar.open('Failed to load media item', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // For now, if multiple items are selected, publish them one by one
+    if (itemsToPublish.length > 1) {
+      const confirmed = confirm(
+        `You have selected ${itemsToPublish.length} items. Do you want to publish them one by one?`
+      );
+      if (!confirmed) return;
+
+      let successCount = 0;
+      let failCount = 0;
+
+      for (const itemId of itemsToPublish) {
+        const item = await this.mediaService.getFileById(itemId);
+        if (!item) continue;
+
+        const result = await this.publishSingleItem(item);
+        if (result) {
+          successCount++;
+        } else {
+          failCount++;
+        }
+      }
+
+      if (successCount > 0) {
+        this.snackBar.open(
+          `Published ${successCount} item(s)${failCount > 0 ? `, ${failCount} failed` : ''}`,
+          'Close',
+          { duration: 5000 }
+        );
+      } else {
+        this.snackBar.open('Failed to publish items', 'Close', { duration: 3000 });
+      }
+
+      this.selectedItems.set([]);
+    } else {
+      // Single item - show dialog and publish
+      const result = await this.publishSingleItem(firstItem);
+      if (result) {
+        this.selectedItems.set([]);
+      }
+    }
+  }
+
+  async publishSingleItemFromCard(item: MediaItem): Promise<void> {
+    await this.publishSingleItem(item);
+  }
+
+  private async publishSingleItem(item: MediaItem): Promise<boolean> {
+    // Open the publish dialog
+    const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
+      data: { mediaItem: item },
+      maxWidth: '650px',
+      width: '100%',
+    });
+
+    const result: MediaPublishOptions | null = await dialogRef.afterClosed().toPromise();
+
+    if (!result) {
+      return false; // User cancelled
+    }
+
+    try {
+      // Show publishing message
+      this.snackBar.open('Publishing to Nostr...', '', { duration: 2000 });
+
+      // Build the event
+      const event = await this.buildMediaEvent(item, result);
+
+      // Sign and publish the event
+      const signedEvent = await this.nostr.signEvent(event);
+      const publishResult = await this.publishService.publish(signedEvent);
+
+      if (publishResult.success) {
+        this.snackBar.open('Successfully published to Nostr!', 'Close', {
+          duration: 5000,
+        });
+        return true;
+      } else {
+        this.snackBar.open('Failed to publish to some relays', 'Close', {
+          duration: 5000,
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Error publishing media:', error);
+      this.snackBar.open('Failed to publish media', 'Close', {
+        duration: 3000,
+      });
+      return false;
+    }
+  }
+
+  private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
+    const tags: string[][] = [];
+
+    // Add title tag (required)
+    tags.push(['title', options.title]);
+
+    // Build imeta tag according to NIP-92/94
+    const imetaTag = ['imeta'];
+
+    // Add URL
+    imetaTag.push(`url ${item.url}`);
+
+    // Add MIME type
+    if (item.type) {
+      imetaTag.push(`m ${item.type}`);
+    }
+
+    // Add SHA-256 hash
+    imetaTag.push(`x ${item.sha256}`);
+
+    // Add file size
+    if (item.size) {
+      imetaTag.push(`size ${item.size}`);
+    }
+
+    // Add alt text if provided
+    if (options.alt) {
+      imetaTag.push(`alt ${options.alt}`);
+    }
+
+    // For videos, add duration if provided
+    if (options.duration !== undefined && (options.kind === 21 || options.kind === 22)) {
+      imetaTag.push(`duration ${options.duration}`);
+    }
+
+    // Add mirror URLs as fallback
+    if (item.mirrors && item.mirrors.length > 0) {
+      item.mirrors.forEach(mirrorUrl => {
+        imetaTag.push(`fallback ${mirrorUrl}`);
+      });
+    }
+
+    tags.push(imetaTag);
+
+    // Add published_at timestamp
+    tags.push(['published_at', Math.floor(Date.now() / 1000).toString()]);
+
+    // Add alt tag separately if provided (for accessibility)
+    if (options.alt) {
+      tags.push(['alt', options.alt]);
+    }
+
+    // Add content warning if provided
+    if (options.contentWarning) {
+      tags.push(['content-warning', options.contentWarning]);
+    }
+
+    // Add hashtags
+    options.hashtags.forEach(tag => {
+      tags.push(['t', tag]);
+    });
+
+    // Add location if provided
+    if (options.location) {
+      tags.push(['location', options.location]);
+    }
+
+    // Add geohash if provided
+    if (options.geohash) {
+      tags.push(['g', options.geohash]);
+    }
+
+    // Add MIME type as m tag for filtering (for images)
+    if (item.type && options.kind === 20) {
+      tags.push(['m', item.type]);
+    }
+
+    // Add x tag with hash for queryability
+    tags.push(['x', item.sha256]);
+
+    // Create the event
+    const event = this.nostr.createEvent(
+      options.kind,
+      options.content,
+      tags
+    );
+
+    return event;
   }
 }
