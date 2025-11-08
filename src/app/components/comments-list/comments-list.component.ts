@@ -26,6 +26,7 @@ import { SharedRelayService } from '../../services/relays/shared-relay';
 })
 export class CommentsListComponent implements AfterViewInit {
   event = input.required<Event>();
+  autoExpand = input<boolean>(false);
 
   @ViewChild('commentsContainer') commentsContainer?: ElementRef<HTMLElement>;
 
@@ -50,6 +51,12 @@ export class CommentsListComponent implements AfterViewInit {
   commentCount = computed(() => this.comments().length);
 
   ngAfterViewInit(): void {
+    // Auto-expand if requested
+    if (this.autoExpand()) {
+      this.isExpanded.set(true);
+      this.loadComments();
+    }
+
     // Set up scroll listener for infinite scroll
     if (this.commentsContainer) {
       const container = this.commentsContainer.nativeElement;

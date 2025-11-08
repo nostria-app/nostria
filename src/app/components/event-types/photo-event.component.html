@@ -5,27 +5,12 @@
 </div>
 }
 
-@if (title()) {
+@if (title() && !showOverlay()) {
 <h3 class="media-title">{{ title() }}</h3>
 }
 
 <div class="photo-carousel-container" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)"
-  [class.has-overlay]="showOverlay()">
-  @if (showOverlay()) {
-  <div class="event-overlay">
-    <div class="overlay-actions">
-      <button mat-raised-button class="overlay-button" (click)="openImageDialog(currentImageUrl(), currentAltText())"
-        title="View media in fullscreen">
-        <mat-icon>fullscreen</mat-icon>
-        <span>View Media</span>
-      </button>
-      <button mat-raised-button class="overlay-button" (click)="openEventPage()" title="Open full event">
-        <mat-icon>open_in_new</mat-icon>
-        <span>Open Event</span>
-      </button>
-    </div>
-  </div>
-  }
+  [class.clickable]="showOverlay()" (click)="showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $event) : null">
   <div class="photo-carousel">
     <div class="photo-container">
       @if (currentBlurhashDataUrl()) {
@@ -34,9 +19,9 @@
       }
       <img [src]="currentImageUrl()" [alt]="currentAltText()" [title]="currentAltText()" title="{{ currentAltText() }}"
         class="photo-item main-image" loading="lazy" (load)="onImageLoad($event)"
-        (click)="openImageDialog(currentImageUrl(), currentAltText())" tabindex="0" role="button"
-        (keyup.enter)="openImageDialog(currentImageUrl(), currentAltText())"
-        (keyup.space)="openImageDialog(currentImageUrl(), currentAltText())" />
+        (click)="!showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $any($event)) : null" tabindex="0" role="button"
+        (keyup.enter)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))"
+        (keyup.space)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))" />
     </div>
 
     @if (hasMultipleImages()) {
@@ -67,7 +52,7 @@
   </div>
 </div>
 
-@if (description()) {
+@if (description() && !showOverlay()) {
 <p class="photo-description">
   {{ description() }}
 </p>

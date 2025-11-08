@@ -1057,6 +1057,37 @@ app-media-queue .media-list mat-list {
   }
 }
 
+// Media with Comments Dialog - Instagram-style split view
+.media-with-comments-dialog {
+  .mat-mdc-dialog-container {
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+@media (max-width: 900px) {
+  .media-with-comments-dialog.cdk-overlay-pane {
+    max-width: 100vw !important;
+    width: 100vw !important;
+    max-height: 100vh !important;
+    height: 100vh !important;
+  }
+
+  .cdk-global-overlay-wrapper:has(.media-with-comments-dialog) {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  .media-with-comments-dialog .mat-mdc-dialog-container {
+    max-width: 100vw !important;
+    width: 100vw !important;
+    max-height: 100vh !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    border-radius: 0 !important;
+  }
+}
+
 .user-profile-name-right {
   float: right;
 }

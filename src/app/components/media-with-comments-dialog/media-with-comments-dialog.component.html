@@ -1,0 +1,79 @@
+<div class="dialog-container">
+  <!-- Header with close and bookmark buttons -->
+  <div class="dialog-header">
+    <button mat-icon-button class="bookmark-button" (click)="toggleBookmark($event)"
+      [matTooltip]="bookmark.getBookmarkTooltip(event().id)" matTooltipPosition="below">
+      <mat-icon>{{ bookmark.getBookmarkIcon(event().id) }}</mat-icon>
+    </button>
+    <button mat-icon-button class="close-button" (click)="close()" aria-label="Close">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
+
+  <div class="split-view">
+    <!-- Left side: Media -->
+    <div class="media-side">
+      @if (title()) {
+        <h3 class="media-title">{{ title() }}</h3>
+      }
+
+      @if (isPhoto()) {
+        <!-- Photo Carousel -->
+        <div class="photo-carousel">
+          <div class="photo-container clickable" (click)="openImagePreview()">
+            <img [src]="currentImageUrl()" [alt]="title() || 'Photo'" [title]="title() || 'Photo'" class="photo-item" loading="lazy" />
+          </div>
+
+          @if (hasMultipleImages()) {
+            <!-- Navigation buttons -->
+            @if (canGoToPrevious()) {
+              <button mat-icon-button class="carousel-nav-button carousel-nav-left" (click)="goToPrevious(); $event.stopPropagation()" aria-label="Previous photo">
+                <mat-icon>chevron_left</mat-icon>
+              </button>
+            }
+
+            @if (canGoToNext()) {
+              <button mat-icon-button class="carousel-nav-button carousel-nav-right" (click)="goToNext(); $event.stopPropagation()" aria-label="Next photo">
+                <mat-icon>chevron_right</mat-icon>
+              </button>
+            }
+
+            <!-- Indicator dots -->
+            <div class="carousel-indicators">
+              @for (imageUrl of imageUrls(); track imageUrl) {
+                <button class="indicator-dot" [class.active]="currentImageIndex() === $index" (click)="goToIndex($index); $event.stopPropagation()"
+                  [attr.aria-label]="'Go to photo ' + ($index + 1)" [title]="'Go to photo ' + ($index + 1)">
+                </button>
+              }
+            </div>
+          }
+        </div>
+      } @else if (isVideo()) {
+        <!-- Video Player -->
+        @let videoInfo = videoData();
+        @if (videoInfo) {
+          <div class="video-container">
+            <video controls class="video-player" autoplay [poster]="videoInfo.thumbnail">
+              <source [src]="videoInfo.url" [type]="videoMimeType()" />
+              Your browser does not support the video tag.
+            </video>
+          </div>
+        }
+      }
+
+      @if (description()) {
+        <p class="media-description">{{ description() }}</p>
+      }
+    </div>
+
+    <!-- Right side: Comments -->
+    <div class="comments-side">
+      <div class="comments-header">
+        <h2>Comments</h2>
+      </div>
+      <div class="comments-content">
+        <app-comments-list [event]="event()" [autoExpand]="true"></app-comments-list>
+      </div>
+    </div>
+  </div>
+</div>
