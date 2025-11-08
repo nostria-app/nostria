@@ -303,6 +303,12 @@ export class ProfileHeaderComponent {
     return tier === 'premium' || tier === 'premium_plus';
   });
 
+  // Computed to check if user has premium plus subscription
+  isPremiumPlus = computed(() => {
+    const tier = this.premiumTier();
+    return tier === 'premium_plus';
+  });
+
   // Computed to check if the profile has a Lightning Address configured
   hasLightningAddress = computed(() => {
     const profileData = this.profile()?.data;
