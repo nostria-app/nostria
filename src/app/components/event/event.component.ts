@@ -1123,6 +1123,32 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   }
 
   /**
+   * Check if an event has a geohash tag
+   */
+  hasGeohash(event: Event | null | undefined): boolean {
+    if (!event || !event.tags) return false;
+    return event.tags.some(tag => tag[0] === 'g');
+  }
+
+  /**
+   * Get the geohash value from an event
+   */
+  getGeohash(event: Event | null | undefined): string | null {
+    if (!event || !event.tags) return null;
+    const geohashTag = event.tags.find(tag => tag[0] === 'g');
+    return geohashTag?.[1] || null;
+  }
+
+  /**
+   * Get the geohash URL for an event
+   */
+  getGeohashUrl(event: Event | null | undefined): string | null {
+    const geohash = this.getGeohash(event);
+    if (!geohash) return null;
+    return `https://geohash.softeng.co/${geohash}`;
+  }
+
+  /**
    * Check if an event has Proof-of-Work
    */
   hasProofOfWork(event: Event | null | undefined): boolean {

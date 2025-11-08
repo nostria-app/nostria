@@ -398,6 +398,14 @@
     </div>
     }
 
+    @if (hasGeohash(targetItem.event)) {
+    <a [href]="getGeohashUrl(targetItem.event)" target="_blank" rel="noopener noreferrer" class="note-footer-right geohash-link"
+      [matTooltip]="'Location: ' + getGeohash(targetItem.event)" matTooltipPosition="below"
+      (click)="$event.stopPropagation()">
+      <mat-icon>location_on</mat-icon>
+    </a>
+    }
+
     @if (hasProofOfWork(targetItem.event)) {
     <div class="note-footer-right pow-indicator" [matTooltip]="getProofOfWorkTooltip(targetItem.event)"
       matTooltipPosition="below">
