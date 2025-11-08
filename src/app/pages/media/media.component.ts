@@ -83,9 +83,6 @@ export class MediaComponent {
   activeTab = signal<'images' | 'videos' | 'files' | 'servers'>('images');
   selectedItems = signal<string[]>([]);
 
-  // Store thumbnail URLs for videos by SHA256 hash
-  private videoThumbnails = new Map<string, string>();
-
   // For automatic media server setup
   isSettingUpMediaServer = signal(false);
 
@@ -190,36 +187,12 @@ export class MediaComponent {
           // Set uploading state to true
           this.mediaService.uploading.set(true);
 
-          // Upload thumbnail first if it exists (for videos)
-          let thumbnailUrl: string | undefined;
-          if (result.thumbnailFile) {
-            try {
-              const thumbnailResult = await this.mediaService.uploadFile(
-                result.thumbnailFile,
-                false, // Always optimize thumbnails
-                result.servers
-              );
-
-              if (thumbnailResult.status === 'success' && thumbnailResult.item) {
-                thumbnailUrl = thumbnailResult.item.url;
-              }
-            } catch (error) {
-              console.error('Failed to upload thumbnail:', error);
-              // Continue with main upload even if thumbnail fails
-            }
-          }
-
           // Pass the selected servers to the uploadFile method
           const uploadResult = await this.mediaService.uploadFile(
             result.file,
             result.uploadOriginal,
             result.servers
           );
-
-          // Store thumbnail URL if we have one
-          if (thumbnailUrl && uploadResult.item) {
-            this.videoThumbnails.set(uploadResult.item.sha256, thumbnailUrl);
-          }
 
           // Set the uploading state to false
           this.mediaService.uploading.set(false);
@@ -921,7 +894,6 @@ export class MediaComponent {
     const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
       data: {
         mediaItem: item,
-        thumbnailUrl: this.videoThumbnails.get(item.sha256)
       },
       maxWidth: '650px',
       width: '100%',
@@ -963,7 +935,6 @@ export class MediaComponent {
     const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
       data: {
         mediaItem: item,
-        thumbnailUrl: this.videoThumbnails.get(item.sha256)
       },
       maxWidth: '650px',
       width: '100%',
@@ -1075,7 +1046,7 @@ export class MediaComponent {
     // For videos, add thumbnail image URL if provided (NIP-71)
     if (thumbnailUrl && (options.kind === 21 || options.kind === 22)) {
       imetaTag.push(`image ${thumbnailUrl}`);
-      
+
       // Add thumbnail dimensions if available
       if (options.thumbnailDimensions) {
         imetaTag.push(`dim ${options.thumbnailDimensions.width}x${options.thumbnailDimensions.height}`);

@@ -13,15 +13,6 @@
     <div class="file-preview">
       @if (previewUrl()) {
       <img [src]="previewUrl()" alt="Preview" class="image-preview" />
-      } @else if (isVideo() && videoThumbnailUrl()) {
-      <!-- Show video thumbnail instead of generic icon -->
-      <img [src]="videoThumbnailUrl()" alt="Video thumbnail" class="image-preview" />
-      } @else if (isVideo() && extractingThumbnail()) {
-      <!-- Show loading state while extracting thumbnail -->
-      <div class="generic-preview">
-        <mat-spinner diameter="48"></mat-spinner>
-        <p class="extracting-text">Extracting thumbnail...</p>
-      </div>
       } @else {
       <div class="generic-preview">
         <mat-icon>{{ getFileTypeIcon(selectedFile()!) }}</mat-icon>
@@ -30,20 +21,6 @@
       <div class="file-info">
         <p class="file-name">{{ selectedFile()!.name }}</p>
         <p class="file-size">{{ formatFileSize(selectedFile()!.size) }}</p>
-        @if (isVideo() && videoThumbnailUrl()) {
-        <!-- Thumbnail actions inline -->
-        <div class="thumbnail-inline-actions">
-          <input #thumbnailInput type="file" accept="image/*" hidden (change)="onThumbnailFileSelected($event)" />
-          <button mat-icon-button (click)="thumbnailInput.click()" [disabled]="isUploading()" 
-            matTooltip="Change thumbnail">
-            <mat-icon>image</mat-icon>
-          </button>
-          <button mat-icon-button color="warn" (click)="clearThumbnail()" [disabled]="isUploading()"
-            matTooltip="Remove thumbnail">
-            <mat-icon>no_photography</mat-icon>
-          </button>
-        </div>
-        }
         <button mat-icon-button color="warn" (click)="clearFile()" [disabled]="isUploading()">
           <mat-icon>close</mat-icon>
         </button>
