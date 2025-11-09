@@ -80,6 +80,27 @@
   }
 }
 
+// Right side buttons container (event menu + close)
+.header-buttons-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
+
+  app-event-menu {
+    ::ng-deep button {
+      background: rgba(0, 0, 0, 0.6);
+      color: white;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.8);
+      }
+    }
+  }
+}
+
 // Geohash button positioned before close button
 .geohash-button {
   background: rgba(0, 0, 0, 0.6);
@@ -336,6 +357,7 @@
   background: var(--mat-sys-surface);
   border-left: 1px solid var(--mat-sys-outline-variant);
   overflow: hidden;
+  height: 100%; // Ensure it fills the full height
 }
 
 .comments-header {

@@ -48,8 +48,15 @@ export class SettingsService {
 
   constructor() {
     effect(async () => {
-      if (this.accountState.account()) {
+      const account = this.accountState.account();
+      if (account) {
+        // Reset to defaults first to ensure clean state
+        this.settings.set({ ...DEFAULT_SETTINGS });
+        // Then load settings for this account
         await this.loadSettings(this.accountState.pubkey());
+      } else {
+        // No account, reset to defaults
+        this.settings.set({ ...DEFAULT_SETTINGS });
       }
     });
   }
@@ -68,14 +75,16 @@ export class SettingsService {
       if (event && event.content) {
         try {
           const parsedContent = JSON.parse(event.content);
-          this.settings.update(currentSettings => ({
+          // Merge in correct order: defaults first, then loaded settings
+          const mergedSettings = {
             ...DEFAULT_SETTINGS,
-            ...currentSettings,
             ...parsedContent,
-          }));
+          };
+          this.settings.set(mergedSettings);
           this.logger.info('Settings loaded successfully', this.settings());
         } catch (error) {
           this.logger.error('Failed to parse settings content', error);
+          this.settings.set({ ...DEFAULT_SETTINGS });
         }
       } else {
         this.logger.info('No settings found, using defaults', DEFAULT_SETTINGS);

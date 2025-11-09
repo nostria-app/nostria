@@ -24,9 +24,12 @@
     </div>
     }
 
-    <button mat-icon-button class="close-button" (click)="close()" aria-label="Close">
-      <mat-icon>close</mat-icon>
-    </button>
+    <div class="header-buttons-right">
+      <app-event-menu [event]="event()" view="icon"></app-event-menu>
+      <button mat-icon-button class="close-button" (click)="close()" aria-label="Close">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
   </div>
 
   <div class="split-view" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
