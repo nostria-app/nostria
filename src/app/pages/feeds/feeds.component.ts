@@ -1231,8 +1231,6 @@ export class FeedsComponent implements OnDestroy {
       data: { imageUrl },
       maxWidth: '95vw',
       maxHeight: '95vh',
-      width: '100%',
-      height: '100%',
       panelClass: 'image-dialog',
     });
   }

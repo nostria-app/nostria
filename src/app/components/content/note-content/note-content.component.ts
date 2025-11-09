@@ -221,8 +221,6 @@ export class NoteContentComponent {
       data: { imageUrl },
       maxWidth: '95vw',
       maxHeight: '95vh',
-      width: '100%',
-      height: '100%',
       panelClass: ['image-dialog', 'responsive-dialog'],
     });
   }
