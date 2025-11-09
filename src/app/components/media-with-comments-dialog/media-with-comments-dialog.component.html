@@ -1,16 +1,36 @@
-<div class="dialog-container">
+<div class="dialog-container" (keydown)="onKeyDown($event)" tabindex="0">
   <!-- Header with close and bookmark buttons -->
   <div class="dialog-header">
     <button mat-icon-button class="bookmark-button" (click)="toggleBookmark($event)"
       [matTooltip]="bookmark.getBookmarkTooltip(event().id)" matTooltipPosition="below">
       <mat-icon>{{ bookmark.getBookmarkIcon(event().id) }}</mat-icon>
     </button>
+
+    <!-- Navigation buttons for media items -->
+    @if (hasNavigation()) {
+    <div class="header-navigation">
+      <button mat-icon-button class="media-nav-button media-nav-left" (click)="goToPreviousMedia()"
+        [disabled]="!canGoPrevious()" [matTooltip]="'Previous media (←)'" matTooltipPosition="below"
+        aria-label="Previous media">
+        <mat-icon>chevron_left</mat-icon>
+      </button>
+      <div class="media-counter">
+        {{ currentIndex() + 1 }} / {{ allEvents().length }}
+      </div>
+      <button mat-icon-button class="media-nav-button media-nav-right" (click)="goToNextMedia()"
+        [disabled]="!canGoNext()" [matTooltip]="'Next media (→)'" matTooltipPosition="below"
+        aria-label="Next media">
+        <mat-icon>chevron_right</mat-icon>
+      </button>
+    </div>
+    }
+
     <button mat-icon-button class="close-button" (click)="close()" aria-label="Close">
       <mat-icon>close</mat-icon>
     </button>
   </div>
 
-  <div class="split-view">
+  <div class="split-view" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
     <!-- Left side: Media -->
     <div class="media-side">
       @if (title()) {

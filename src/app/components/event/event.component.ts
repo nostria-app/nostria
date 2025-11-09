@@ -94,6 +94,9 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   showOverlay = input<boolean>(false);
   hideParentEvent = input<boolean>(false);
   hideFooter = input<boolean>(false);
+  // Media navigation context (for Media tab grid)
+  allMediaEvents = input<Event[]>([]);
+  mediaEventIndex = input<number | undefined>(undefined);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   @ViewChild('rootContent') rootContentRef?: ElementRef<HTMLElement>;

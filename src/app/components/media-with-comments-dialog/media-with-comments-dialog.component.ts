@@ -12,6 +12,9 @@ import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-previ
 
 interface MediaWithCommentsDialogData {
   event: Event;
+  // Optional: for navigation between media items
+  allEvents?: Event[];
+  currentIndex?: number;
 }
 
 interface VideoData {
@@ -44,6 +47,21 @@ export class MediaWithCommentsDialogComponent {
   bookmark = inject(BookmarkService);
 
   event = signal<Event>(this.data.event);
+
+  // Navigation support
+  allEvents = signal<Event[]>(this.data.allEvents || [this.data.event]);
+  currentIndex = signal<number>(this.data.currentIndex ?? 0);
+
+  hasNavigation = computed(() => this.allEvents().length > 1);
+  canGoPrevious = computed(() => this.currentIndex() > 0);
+  canGoNext = computed(() => this.currentIndex() < this.allEvents().length - 1);
+
+  // Touch gesture support
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private touchEndX = 0;
+  private touchEndY = 0;
+  private minSwipeDistance = 50;
 
   // Determine media type from event kind
   isPhoto = computed(() => {
@@ -165,6 +183,66 @@ export class MediaWithCommentsDialogComponent {
         maxHeight: '95vh',
         panelClass: 'image-dialog-panel',
       });
+    }
+  }
+
+  // Navigation between media items
+  goToPreviousMedia(): void {
+    if (this.canGoPrevious()) {
+      const newIndex = this.currentIndex() - 1;
+      this.currentIndex.set(newIndex);
+      this.event.set(this.allEvents()[newIndex]);
+      this.currentImageIndex.set(0); // Reset to first image in carousel
+    }
+  }
+
+  goToNextMedia(): void {
+    if (this.canGoNext()) {
+      const newIndex = this.currentIndex() + 1;
+      this.currentIndex.set(newIndex);
+      this.event.set(this.allEvents()[newIndex]);
+      this.currentImageIndex.set(0); // Reset to first image in carousel
+    }
+  }
+
+  // Touch/swipe gesture handlers
+  onTouchStart(event: TouchEvent): void {
+    this.touchStartX = event.changedTouches[0].screenX;
+    this.touchStartY = event.changedTouches[0].screenY;
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    this.touchEndX = event.changedTouches[0].screenX;
+    this.touchEndY = event.changedTouches[0].screenY;
+    this.handleSwipe();
+  }
+
+  private handleSwipe(): void {
+    const deltaX = this.touchEndX - this.touchStartX;
+    const deltaY = this.touchEndY - this.touchStartY;
+
+    // Only handle horizontal swipes (ignore vertical scrolling)
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > this.minSwipeDistance) {
+      if (deltaX > 0) {
+        // Swipe right - go to previous
+        this.goToPreviousMedia();
+      } else {
+        // Swipe left - go to next
+        this.goToNextMedia();
+      }
+    }
+  }
+
+  // Keyboard navigation
+  onKeyDown(event: KeyboardEvent): void {
+    if (!this.hasNavigation()) return;
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      this.goToPreviousMedia();
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      this.goToNextMedia();
     }
   }
 
