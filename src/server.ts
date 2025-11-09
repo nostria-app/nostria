@@ -119,11 +119,18 @@ app.use(
 app.use((req, res, next) => {
   angularApp
     .handle(req)
-    .then(response => (response ? writeResponseToNodeResponse(response, res) : next()))
-    .catch(next);
-});
-
-/**
+    .then(response => {
+      if (response) {
+        console.log(`[SSR] Rendered: ${req.url}`);
+        return writeResponseToNodeResponse(response, res);
+      }
+      return next();
+    })
+    .catch(err => {
+      console.error(`[SSR] Error:`, err.message);
+      next(err);
+    });
+});/**
  * Start the server if this module is the main entry point.
  * The server listens on the port defined by the `PORT` environment variable, or defaults to 4000.
  */

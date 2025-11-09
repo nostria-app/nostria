@@ -1,8 +1,8 @@
-import { Component, OnInit, OnDestroy, Renderer2, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, Renderer2, inject, signal, PLATFORM_ID } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { NavigationHistoryItem, RouteDataService } from '../../services/route-data.service';
-import { DOCUMENT } from '@angular/common';
+import { DOCUMENT, isPlatformBrowser } from '@angular/common';
 
 @Component({
   selector: 'app-navigation-context-menu',
@@ -14,6 +14,7 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
   private renderer = inject(Renderer2);
   private document = inject(DOCUMENT);
   private routeDataService = inject(RouteDataService);
+  private platformId = inject(PLATFORM_ID);
 
   // Menu state
   isVisible = signal<boolean>(false);
@@ -23,6 +24,11 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
   private onItemSelected: ((index: number) => void) | null = null;
 
   ngOnInit() {
+    // Only add event listeners in browser environment
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
     // Listen for the custom event from navigation component
     window.addEventListener('show-navigation-context-menu', this.handleShowContextMenu.bind(this));
 
@@ -31,6 +37,11 @@ export class NavigationContextMenuComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    // Only remove event listeners in browser environment
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
     window.removeEventListener(
       'show-navigation-context-menu',
       this.handleShowContextMenu.bind(this)
