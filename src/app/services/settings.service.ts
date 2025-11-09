@@ -49,12 +49,14 @@ export class SettingsService {
   constructor() {
     effect(async () => {
       const account = this.accountState.account();
-      if (account) {
+      const initialized = this.accountState.initialized();
+      
+      if (account && initialized) {
         // Reset to defaults first to ensure clean state
         this.settings.set({ ...DEFAULT_SETTINGS });
         // Then load settings for this account
         await this.loadSettings(this.accountState.pubkey());
-      } else {
+      } else if (!account) {
         // No account, reset to defaults
         this.settings.set({ ...DEFAULT_SETTINGS });
       }
