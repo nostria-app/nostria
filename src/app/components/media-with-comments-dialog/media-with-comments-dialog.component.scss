@@ -213,7 +213,9 @@
   display: grid;
   grid-template-columns: 1fr 400px;
   height: 100%;
+  width: 100%;
   overflow: hidden;
+  flex: 1; // Take remaining space in dialog-container
 }
 
 // Media side (left)
