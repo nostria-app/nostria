@@ -155,6 +155,17 @@
   }
 }
 
+// Hashtags container
+.hashtags-container {
+  width: 100%;
+  padding: 0.5rem 1rem;
+  box-sizing: border-box;
+
+  mat-chip-set {
+    --mdc-chip-label-text-size: 0.8125rem;
+  }
+}
+
 // Close button positioned at top-right
 .close-button {
   background: rgba(0, 0, 0, 0.6);

@@ -4,6 +4,7 @@ import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule, MatDialog } from '@angu
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatChipsModule } from '@angular/material/chips';
 import { Event } from 'nostr-tools';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { BookmarkService } from '../../services/bookmark.service';
@@ -36,6 +37,7 @@ interface VideoData {
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    MatChipsModule,
     CommentsListComponent,
     EventMenuComponent,
   ],
@@ -125,6 +127,16 @@ export class MediaWithCommentsDialogComponent {
     const event = this.event();
     if (!event || !event.content) return null;
     return event.content.replace(/#\w+/g, '').trim();
+  });
+
+  // Hashtags
+  hashtags = computed(() => {
+    const event = this.event();
+    if (!event) return [];
+
+    return event.tags
+      .filter(tag => tag[0] === 't')
+      .map(tag => tag[1]);
   });
 
   // Navigation methods for photo carousel
