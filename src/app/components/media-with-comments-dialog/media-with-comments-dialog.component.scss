@@ -143,8 +143,7 @@
   justify-content: center;
   background: var(--mat-sys-surface-container-lowest);
   overflow: auto;
-  padding: 2rem;
-  padding-top: 5rem; // Extra top padding to avoid overlap with header buttons
+  padding: 5rem 2rem 2rem 2rem; // Top padding on all screen sizes to avoid header overlap
   gap: 1rem;
 }
 
