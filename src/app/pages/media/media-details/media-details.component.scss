@@ -164,4 +164,18 @@
   .url-value {
     overflow-wrap: break-word;
   }
+
+  .mirror-servers-list {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    .mirror-server {
+      span {
+        word-break: break-word;
+        overflow-wrap: break-word;
+      }
+    }
+  }
 }
