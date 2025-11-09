@@ -71,16 +71,16 @@
           }
         </div>
         <div class="thumbnail-actions">
+          @if (blurhash()) {
+          <div class="blurhash-display">
+            <mat-icon>blur_on</mat-icon>
+            <span class="blurhash-value">{{ blurhash() }}</span>
+          </div>
+          }
           <button mat-icon-button (click)="removeThumbnail()" matTooltip="Remove thumbnail" class="remove-btn">
             <mat-icon>delete</mat-icon>
           </button>
         </div>
-        @if (blurhash()) {
-        <div class="blurhash-display">
-          <mat-icon>blur_on</mat-icon>
-          <span class="blurhash-value">{{ blurhash() }}</span>
-        </div>
-        }
       </div>
       }
     </div>
