@@ -9,10 +9,7 @@ npm run build
 # 2. Start SSR server
 node dist/app/server/server.mjs
 
-# 3. In another terminal, test with debugging script
-.\debug-ssr.ps1 "/e/nevent1..."
-
-# Or use Node.js inspector
+# 3. In another terminal, test with inspector
 node inspect-ssr.js /e/nevent1...
 
 # Or test manually
@@ -25,13 +22,12 @@ curl http://localhost:4000/e/nevent1... | Select-String "og:title"
 - Custom `<title>` tag (not just "Nostria")
 - `<meta property="og:title">` with dynamic content
 - `<meta name="twitter:card">` present
-- Server logs show "[SSR] Rendering..."
-- Server logs show "[DataResolver] Loading social metadata..."
+- Server logs show "[SSR] Rendered: ..."
 
 ### ✗ Broken SSR
 - Generic "Nostria" title only
 - No Open Graph tags
-- Server logs show "[DataResolver] Skipping - running in browser"
+- Server logs show "[SSR] Error:"
 - Errors in server console
 
 ## Common Issues & Fixes
@@ -55,19 +51,13 @@ curl http://localhost:4000/e/nevent1... | Select-String "og:title"
 
 ### Good Signs
 ```
-[SSR] Rendering: GET /e/nevent1...
-[DataResolver] Resolving route: e/nevent1...
-[DataResolver] Is browser? false
-[DataResolver] Loading social metadata for: nevent1...
-[MetaService] Updating social metadata: { title: '...', ... }
-[SSR] Successfully rendered: /e/nevent1...
+[SSR] Rendered: /e/nevent1...
 ```
 
 ### Warning Signs
 ```
-[DataResolver] Is browser? true  ← Shouldn't happen on server
-[DataResolver] Skipping - running in browser  ← Platform detection issue
-[SSR] Error rendering  ← Something failed
+[SSR] Error: ...  ← SSR failed
+[SSR] Failed to load metadata: ...  ← API call failed
 ```
 
 ## Testing Commands

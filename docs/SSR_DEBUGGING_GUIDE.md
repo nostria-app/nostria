@@ -41,8 +41,8 @@ npm run build
 # Start the SSR server
 node dist/app/server/server.mjs
 
-# Test with curl (in separate terminal)
-curl http://localhost:4000/e/nevent1... -v
+# Test with Node.js inspector (in separate terminal)
+node inspect-ssr.js /e/nevent1...
 ```
 
 Look for:
@@ -55,22 +55,13 @@ Look for:
 With the logging we added, you'll see:
 
 ```
-[SSR] Rendering: GET /e/nevent1...
-[DataResolver] Resolving route: e/nevent1...
-[DataResolver] Is browser? false
-[DataResolver] Processing ID: nevent1...
-[DataResolver] Loading social metadata for: nevent1...
-[MetaService] Updating social metadata: { title: '...', description: '...', ... }
-[MetaService] Meta tags updated successfully
-[DataResolver] Metadata loaded successfully
-[DataResolver] Setting transfer state with data: { ... }
-[SSR] Successfully rendered: /e/nevent1...
+[SSR] Rendered: /e/nevent1...
 ```
 
 **What to look for:**
-- ❌ "Is browser? true" → Resolver not running server-side
-- ❌ Errors in metadata loading → API call failures
-- ❌ "Skipping - running in browser" → Platform detection issue
+- ✅ Successfully rendered message
+- ❌ `[SSR] Error:` messages → SSR failed
+- ❌ `[SSR] Failed to load metadata:` → API call failures
 
 ### Step 3: Test with Social Media Debuggers
 
@@ -94,8 +85,8 @@ Use these tools to verify meta tags:
 # Get the raw HTML
 curl http://localhost:4000/e/nevent1... > output.html
 
-# Open in text editor to inspect
-code output.html
+# Or use the inspector
+node inspect-ssr.js /e/nevent1...
 ```
 
 Search for these tags:
