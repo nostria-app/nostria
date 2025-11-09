@@ -31,7 +31,10 @@
   overflow: hidden;
   position: relative;
   background-color: var(--mat-sys-color-surface-container-lowest);
-  user-select: none; /* Prevent text selection during drag */
+  -webkit-user-select: none;
+  /* Prevent text selection during drag */
+  user-select: none;
+  /* Prevent text selection during drag */
 
   img {
     max-width: 100%;
