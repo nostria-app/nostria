@@ -794,8 +794,8 @@ export class MediaService implements NostriaService {
           // Get the mirrored media item from the response
           const mirroredMedia = await response.json();
 
-          // Extract the server URL from the mirrored media's URL
-          const mirrorServerUrl = this.extractServerUrl(mirroredMedia.url);
+          // Store the full URL as the mirror URL (not just the server base URL)
+          const mirrorUrl = mirroredMedia.url;
 
           // Update the media item by adding the mirror URL to its mirrors array
           this._mediaItems.update(items => {
@@ -807,10 +807,10 @@ export class MediaService implements NostriaService {
                 }
 
                 // Only add the mirror if it doesn't already exist in the mirrors array
-                if (!item.mirrors.includes(mirrorServerUrl)) {
+                if (!item.mirrors.includes(mirrorUrl)) {
                   return {
                     ...item,
-                    mirrors: [...item.mirrors, mirrorServerUrl],
+                    mirrors: [...item.mirrors, mirrorUrl],
                   };
                 }
               }
@@ -897,7 +897,7 @@ export class MediaService implements NostriaService {
 
             // Update the media item with the new mirror
             const mirroredMedia = await response.json();
-            const mirrorServerUrl = this.extractServerUrl(mirroredMedia.url);
+            const mirrorUrl = mirroredMedia.url; // Store full URL, not just server base
 
             // Update the media item's mirrors array
             this._mediaItems.update(mediaItems => {
@@ -909,10 +909,10 @@ export class MediaService implements NostriaService {
                   }
 
                   // Add new mirror if it doesn't exist
-                  if (!mediaItem.mirrors.includes(mirrorServerUrl)) {
+                  if (!mediaItem.mirrors.includes(mirrorUrl)) {
                     return {
                       ...mediaItem,
-                      mirrors: [...mediaItem.mirrors, mirrorServerUrl],
+                      mirrors: [...mediaItem.mirrors, mirrorUrl],
                     };
                   }
                 }
