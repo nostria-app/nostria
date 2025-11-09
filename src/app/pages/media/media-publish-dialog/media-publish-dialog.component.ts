@@ -81,6 +81,7 @@ export class MediaPublishDialogComponent {
   blurhash = signal<string | undefined>(undefined);
   generatingBlurhash = signal(false);
   extractingThumbnail = signal(false);
+  thumbnailExtractOffset = signal(0); // Track how many times extraction was called
 
   // UI state
   hashtagInput = signal('');
@@ -188,9 +189,14 @@ export class MediaPublishDialogComponent {
         video.onerror = () => reject(new Error('Failed to load video'));
       });
 
-      // Seek to 1 second or 10% of duration
-      const seekTime = Math.min(1, video.duration * 0.1);
+      // Calculate seek time: start at 1s or 10%, then add 1s for each subsequent extraction
+      const currentOffset = this.thumbnailExtractOffset();
+      const baseSeekTime = Math.min(1, video.duration * 0.1);
+      const seekTime = Math.min(baseSeekTime + currentOffset, video.duration - 0.5);
       video.currentTime = seekTime;
+
+      // Increment offset for next extraction
+      this.thumbnailExtractOffset.set(currentOffset + 1);
 
       // Wait for seek to complete
       await new Promise<void>(resolve => {
@@ -253,6 +259,9 @@ export class MediaPublishDialogComponent {
     }
 
     try {
+      // Reset extraction offset since user is uploading their own thumbnail
+      this.thumbnailExtractOffset.set(0);
+
       // Store blob for later upload
       this.thumbnailBlob.set(file);
 
@@ -274,6 +283,9 @@ export class MediaPublishDialogComponent {
   onThumbnailUrlBlur(): void {
     const url = this.thumbnailUrlInputValue.trim();
     if (url) {
+      // Reset extraction offset since user is using a URL
+      this.thumbnailExtractOffset.set(0);
+
       this.thumbnailUrl.set(url);
       this.thumbnailBlob.set(undefined); // Clear blob since we're using URL
       this.thumbnailUrlInputValue = '';
@@ -289,6 +301,7 @@ export class MediaPublishDialogComponent {
     this.thumbnailBlob.set(undefined);
     this.thumbnailDimensions.set(undefined);
     this.blurhash.set(undefined);
+    this.thumbnailExtractOffset.set(0); // Reset offset when removing thumbnail
   }
 
   // Helper method to load image and generate blurhash

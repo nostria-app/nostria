@@ -897,6 +897,7 @@ export class MediaComponent {
       },
       maxWidth: '650px',
       width: '100%',
+      panelClass: 'responsive-dialog',
     });
 
     const result: MediaPublishOptions | null = await dialogRef.afterClosed().toPromise();
@@ -938,6 +939,7 @@ export class MediaComponent {
       },
       maxWidth: '650px',
       width: '100%',
+      panelClass: 'responsive-dialog',
     });
 
     const result: MediaPublishOptions | null = await dialogRef.afterClosed().toPromise();
