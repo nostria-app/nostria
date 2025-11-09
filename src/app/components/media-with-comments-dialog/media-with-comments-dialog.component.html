@@ -103,6 +103,16 @@
         </a>
       </div>
       }
+
+      @if (hashtags().length > 0) {
+      <div class="hashtags-container">
+        <mat-chip-set>
+          @for (tag of hashtags(); track tag) {
+          <mat-chip>#{{ tag }}</mat-chip>
+          }
+        </mat-chip-set>
+      </div>
+      }
     </div>
 
     <!-- Right side: Comments -->
