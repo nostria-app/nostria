@@ -11,6 +11,12 @@
   &:focus {
     outline: none;
   }
+
+  // On mobile, allow the container to scroll
+  @media (max-width: 900px) {
+    overflow-y: auto;
+    height: 100%;
+  }
 }
 
 // Header with buttons
@@ -312,17 +318,28 @@
 @media (max-width: 900px) {
   .split-view {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto auto; // Both sections take natural height
+    height: auto; // Allow natural height, not constrained to viewport
+    overflow: visible; // No scrolling on split-view itself
   }
 
   .media-side {
     padding: 4rem 0 0 0; // Only top padding, no side padding on mobile
+    overflow: visible; // No scrolling on media side
+    height: auto; // Natural height based on content
   }
 
   .comments-side {
     border-left: none;
     border-top: 1px solid var(--mat-sys-outline-variant);
-    max-height: 50vh;
+    max-height: none; // Remove max-height restriction
+    height: auto; // Natural height
+    overflow: visible; // No scrolling on comments side
+  }
+
+  .comments-content {
+    overflow-y: visible; // No scrolling on comments content
+    flex: none; // Don't flex, just take natural height
   }
 }
 
