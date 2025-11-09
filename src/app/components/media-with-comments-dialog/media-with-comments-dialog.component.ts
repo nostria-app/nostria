@@ -46,11 +46,16 @@ export class MediaWithCommentsDialogComponent {
   data: MediaWithCommentsDialogData = inject(MAT_DIALOG_DATA);
   bookmark = inject(BookmarkService);
 
-  event = signal<Event>(this.data.event);
-
   // Navigation support
   allEvents = signal<Event[]>(this.data.allEvents || [this.data.event]);
   currentIndex = signal<number>(this.data.currentIndex ?? 0);
+
+  // Initialize event from the correct index in allEvents array
+  event = signal<Event>(
+    this.data.allEvents && this.data.currentIndex !== undefined
+      ? this.data.allEvents[this.data.currentIndex]
+      : this.data.event
+  );
 
   hasNavigation = computed(() => this.allEvents().length > 1);
   canGoPrevious = computed(() => this.currentIndex() > 0);
