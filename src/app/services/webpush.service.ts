@@ -1,4 +1,4 @@
-import { inject, Injectable, signal } from '@angular/core';
+import { inject, Injectable, signal, PLATFORM_ID } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { kinds } from 'nostr-tools';
 import { SwPush } from '@angular/service-worker';
@@ -7,6 +7,7 @@ import { AccountStateService } from './account-state.service';
 import { UserNotificationType, DeviceNotificationPreferences } from './storage.service';
 import { environment } from './../../environments/environment';
 import { WebRequest } from './web-request';
+import { isPlatformBrowser } from '@angular/common';
 
 export interface Device {
   deviceId: string;
@@ -31,10 +32,18 @@ export class WebPushService {
   tempDevicePreferences = signal<DeviceNotificationPreferences[]>([]);
   devicesLoaded = signal(false);
   webRequest = inject(WebRequest);
+  private platformId = inject(PLATFORM_ID);
 
   constructor() {
-    // Load preferences from server/storage on service initialization
-    this.loadPreferencesFromServer();
+    // Only load preferences in browser environment when user is authenticated
+    if (isPlatformBrowser(this.platformId)) {
+      // Delay to ensure account state is initialized
+      setTimeout(() => {
+        if (this.accountState.pubkey()) {
+          this.loadPreferencesFromServer();
+        }
+      }, 100);
+    }
   }
 
   // Load devices when needed (on-demand)
@@ -116,8 +125,14 @@ export class WebPushService {
     }
   } // Load preferences from server (with localStorage fallback)
   async loadPreferencesFromServer(): Promise<void> {
+    // Only load preferences if we have an authenticated user
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
     try {
-      const url = `${this.server}api/subscription/settings/${this.accountState.pubkey()}`;
+      const url = `${this.server}api/subscription/settings/${pubkey}`;
 
       const result = await this.webRequest.fetchJson(
         url,
