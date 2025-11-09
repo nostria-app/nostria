@@ -991,6 +991,7 @@ export class MediaComponent {
 
     // Upload thumbnail blob if provided (for videos)
     let thumbnailUrl = options.thumbnailUrl;
+    const thumbnailUrls: string[] = []; // Collect all thumbnail URLs (main + mirrors)
     if (options.thumbnailBlob && (options.kind === 21 || options.kind === 22)) {
       try {
         const thumbnailFile = new File([options.thumbnailBlob], 'thumbnail.jpg', { type: 'image/jpeg' });
@@ -1002,10 +1003,19 @@ export class MediaComponent {
 
         if (uploadResult.status === 'success' && uploadResult.item) {
           thumbnailUrl = uploadResult.item.url;
+          
+          // Collect all thumbnail URLs: main URL + all mirrors
+          thumbnailUrls.push(uploadResult.item.url);
+          if (uploadResult.item.mirrors && uploadResult.item.mirrors.length > 0) {
+            thumbnailUrls.push(...uploadResult.item.mirrors);
+          }
         }
       } catch (error) {
         console.error('Failed to upload thumbnail during publish:', error);
       }
+    } else if (thumbnailUrl) {
+      // If thumbnail URL is provided but no blob was uploaded, use just that URL
+      thumbnailUrls.push(thumbnailUrl);
     }
 
     // Add title tag (required)
@@ -1045,9 +1055,11 @@ export class MediaComponent {
       imetaTag.push(`blurhash ${options.blurhash}`);
     }
 
-    // For videos, add thumbnail image URL if provided (NIP-71)
-    if (thumbnailUrl && (options.kind === 21 || options.kind === 22)) {
-      imetaTag.push(`image ${thumbnailUrl}`);
+    // For videos, add all thumbnail image URLs if provided (NIP-71)
+    if (thumbnailUrls.length > 0 && (options.kind === 21 || options.kind === 22)) {
+      thumbnailUrls.forEach(url => {
+        imetaTag.push(`image ${url}`);
+      });
 
       // Add thumbnail dimensions if available
       if (options.thumbnailDimensions) {
