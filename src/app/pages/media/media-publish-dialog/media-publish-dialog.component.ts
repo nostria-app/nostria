@@ -223,6 +223,10 @@ export class MediaPublishDialogComponent {
       const objectUrl = URL.createObjectURL(blob);
       this.thumbnailUrl.set(objectUrl);
 
+      // Hide URL input if it was visible
+      this.thumbnailUrlInput.set(null);
+      this.thumbnailUrlInputValue = '';
+
       // Auto-generate blurhash from the object URL (same as manual generation)
       await this.loadImageAndGenerateBlurhash(objectUrl);
     } catch (error) {
@@ -250,6 +254,10 @@ export class MediaPublishDialogComponent {
       // Create object URL for preview
       const objectUrl = URL.createObjectURL(file);
       this.thumbnailUrl.set(objectUrl);
+
+      // Hide URL input if it was visible
+      this.thumbnailUrlInput.set(null);
+      this.thumbnailUrlInputValue = '';
 
       // Read dimensions and auto-generate blurhash
       await this.loadImageAndGenerateBlurhash(objectUrl);

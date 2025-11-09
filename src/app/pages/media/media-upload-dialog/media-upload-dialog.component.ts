@@ -42,6 +42,10 @@ export class MediaUploadDialogComponent {
   isDragging = signal<boolean>(false);
   isUploading = signal<boolean>(false);
 
+  // Video thumbnail preview (for display only, not uploaded)
+  videoThumbnailUrl = signal<string | null>(null);
+  extractingThumbnail = signal<boolean>(false);
+
   // Add signals for servers
   availableServers = signal<string[]>([]);
   selectedServers = signal<string[]>([]);
@@ -87,8 +91,11 @@ export class MediaUploadDialogComponent {
         this.previewUrl.set(reader.result as string);
       };
       reader.readAsDataURL(file);
+    } else if (this.isVideo()) {
+      // For videos, extract thumbnail for preview only
+      this.extractVideoThumbnail(file);
+      this.previewUrl.set(null);
     } else {
-      // For videos and other files, don't generate preview
       this.previewUrl.set(null);
     }
   }
@@ -97,6 +104,69 @@ export class MediaUploadDialogComponent {
     this.selectedFile.set(null);
     this.previewUrl.set(null);
     this.showOriginalOption.set(false);
+    this.videoThumbnailUrl.set(null);
+  }
+
+  async extractVideoThumbnail(videoFile: File): Promise<void> {
+    this.extractingThumbnail.set(true);
+
+    try {
+      const video = document.createElement('video');
+      video.preload = 'metadata';
+      video.muted = true;
+
+      const videoUrl = URL.createObjectURL(videoFile);
+      video.src = videoUrl;
+
+      // Wait for video to load metadata
+      await new Promise<void>((resolve, reject) => {
+        video.onloadedmetadata = () => resolve();
+        video.onerror = () => reject(new Error('Failed to load video'));
+      });
+
+      // Seek to 1 second or 10% of duration, whichever is smaller
+      const seekTime = Math.min(1, video.duration * 0.1);
+      video.currentTime = seekTime;
+
+      // Wait for seek to complete
+      await new Promise<void>(resolve => {
+        video.onseeked = () => resolve();
+      });
+
+      // Create canvas and draw the video frame
+      const canvas = document.createElement('canvas');
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Convert canvas to blob
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(blob => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create thumbnail blob'));
+          }
+        }, 'image/jpeg', 0.9);
+      });
+
+      // Create preview URL (for display only, not saved)
+      this.videoThumbnailUrl.set(URL.createObjectURL(blob));
+
+      // Clean up
+      URL.revokeObjectURL(videoUrl);
+    } catch (error) {
+      console.error('Failed to extract video thumbnail:', error);
+      this.videoThumbnailUrl.set(null);
+    } finally {
+      this.extractingThumbnail.set(false);
+    }
   }
 
   toggleServerSelection(server: string): void {

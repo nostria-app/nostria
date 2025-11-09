@@ -13,6 +13,15 @@
     <div class="file-preview">
       @if (previewUrl()) {
       <img [src]="previewUrl()" alt="Preview" class="image-preview" />
+      } @else if (isVideo() && videoThumbnailUrl()) {
+      <!-- Show video thumbnail preview -->
+      <img [src]="videoThumbnailUrl()" alt="Video preview" class="image-preview" />
+      } @else if (isVideo() && extractingThumbnail()) {
+      <!-- Show loading state while extracting thumbnail -->
+      <div class="generic-preview">
+        <mat-spinner diameter="48"></mat-spinner>
+        <p class="extracting-text">Extracting thumbnail...</p>
+      </div>
       } @else {
       <div class="generic-preview">
         <mat-icon>{{ getFileTypeIcon(selectedFile()!) }}</mat-icon>
@@ -66,7 +75,7 @@
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button (click)="cancel()" [disabled]="isUploading()">Cancel</button>
-  <button mat-raised-button color="primary" [disabled]="
+  <button mat-flat-button [disabled]="
       !selectedFile() || isUploading() || (showServerSelection() && selectedServers().length === 0)
     " (click)="onSubmit()" class="upload-button">
     @if (isUploading()) {
