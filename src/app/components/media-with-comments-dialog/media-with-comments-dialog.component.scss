@@ -80,6 +80,60 @@
   }
 }
 
+// Geohash button positioned before close button
+.geohash-button {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  text-decoration: none;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+// Geohash container in description area
+.geohash-container {
+  width: 100%;
+  padding: 0 1rem;
+  box-sizing: border-box;
+  margin-top: 0.5rem;
+}
+
+.geohash-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  color: var(--mat-sys-primary);
+  text-decoration: none;
+  transition: background 0.2s ease;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  span {
+    font-size: 14px;
+    font-weight: 500;
+  }
+}
+
 // Close button positioned at top-right
 .close-button {
   background: rgba(0, 0, 0, 0.6);

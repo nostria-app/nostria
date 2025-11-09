@@ -90,6 +90,16 @@
       @if (description()) {
       <p class="media-description">{{ description() }}</p>
       }
+
+      @if (hasGeohash()) {
+      <div class="geohash-container">
+        <a [href]="getGeohashUrl()" target="_blank" rel="noopener noreferrer" class="geohash-link"
+          [matTooltip]="'Location: ' + getGeohash()" matTooltipPosition="above">
+          <mat-icon>location_on</mat-icon>
+          <span>View location</span>
+        </a>
+      </div>
+      }
     </div>
 
     <!-- Right side: Comments -->

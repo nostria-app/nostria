@@ -354,4 +354,32 @@ export class MediaWithCommentsDialogComponent {
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   }
+
+  /**
+   * Check if the current event has a geohash tag
+   */
+  hasGeohash(): boolean {
+    const ev = this.event();
+    if (!ev || !ev.tags) return false;
+    return ev.tags.some(tag => tag[0] === 'g');
+  }
+
+  /**
+   * Get the geohash value from the current event
+   */
+  getGeohash(): string | null {
+    const ev = this.event();
+    if (!ev || !ev.tags) return null;
+    const geohashTag = ev.tags.find(tag => tag[0] === 'g');
+    return geohashTag?.[1] || null;
+  }
+
+  /**
+   * Get the geohash URL for the current event
+   */
+  getGeohashUrl(): string | null {
+    const geohash = this.getGeohash();
+    if (!geohash) return null;
+    return `https://geohash.softeng.co/${geohash}`;
+  }
 }

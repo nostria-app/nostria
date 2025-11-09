@@ -58,7 +58,8 @@
 
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Media Display Mode</mat-label>
-      <mat-select [ngModel]="settings.settings()?.mediaPrivacy || 'show-always'" (selectionChange)="setMediaPrivacy($event.value)">
+      <mat-select [ngModel]="settings.settings()?.mediaPrivacy || 'show-always'"
+        (selectionChange)="setMediaPrivacy($event.value)">
         <mat-option value="show-always">Always Show Media</mat-option>
         <mat-option value="blur-non-following">Blur Media from Non-Following</mat-option>
         <mat-option value="blur-always">Always Blur Media</mat-option>
