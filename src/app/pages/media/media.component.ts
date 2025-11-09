@@ -1003,12 +1003,16 @@ export class MediaComponent {
 
         if (uploadResult.status === 'success' && uploadResult.item) {
           thumbnailUrl = uploadResult.item.url;
-          
-          // Collect all thumbnail URLs: main URL + all mirrors
-          thumbnailUrls.push(uploadResult.item.url);
+
+          // Collect all thumbnail URLs: main URL + all mirrors (deduplicated)
+          const allUrls = [uploadResult.item.url];
           if (uploadResult.item.mirrors && uploadResult.item.mirrors.length > 0) {
-            thumbnailUrls.push(...uploadResult.item.mirrors);
+            allUrls.push(...uploadResult.item.mirrors);
           }
+
+          // Deduplicate URLs
+          const uniqueUrls = [...new Set(allUrls)];
+          thumbnailUrls.push(...uniqueUrls);
         }
       } catch (error) {
         console.error('Failed to upload thumbnail during publish:', error);

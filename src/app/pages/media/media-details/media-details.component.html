@@ -116,7 +116,7 @@
             <div class="mirror-servers-list">
               @for (mirror of mediaItem()!.mirrors; track $index) {
               <div class="mirror-server">
-                <span>{{ mirror }}</span>
+                <span>{{ getFullMirrorUrl(mirror, mediaItem()!.url) }}</span>
               </div>
               }
             </div>

@@ -194,15 +194,12 @@ export class MediaService implements NostriaService {
           // Process each item to handle mirroring
           for (const item of data) {
             if (itemsByHash[item.sha256]) {
-              // This is a mirrored item, add the server URL to the mirrors array
-              const serverUrl = this.extractServerUrl(item.url);
+              // This is a mirrored item, add the full file URL to the mirrors array
               if (!itemsByHash[item.sha256].mirrors) {
-                itemsByHash[item.sha256].mirrors = [
-                  this.extractServerUrl(itemsByHash[item.sha256].url),
-                ];
+                itemsByHash[item.sha256].mirrors = [];
               }
-              if (!itemsByHash[item.sha256].mirrors!.includes(serverUrl)) {
-                itemsByHash[item.sha256].mirrors!.push(serverUrl);
+              if (!itemsByHash[item.sha256].mirrors!.includes(item.url)) {
+                itemsByHash[item.sha256].mirrors!.push(item.url);
               }
             } else {
               // This is a new item
@@ -555,8 +552,15 @@ export class MediaService implements NostriaService {
       }
 
       if (uploadedMedia) {
-        // Update the media items list with the new item
-        this._mediaItems.update(items => [...items, uploadedMedia!]);
+        // Update the media items list with the new item (only if it doesn't already exist)
+        this._mediaItems.update(items => {
+          const exists = items.some(item => item.sha256 === uploadedMedia!.sha256);
+          if (exists) {
+            // Item already exists, don't add it again
+            return items;
+          }
+          return [...items, uploadedMedia!];
+        });
 
         this.logger.info('File uploaded successfully:', uploadedMedia);
 
@@ -571,6 +575,12 @@ export class MediaService implements NostriaService {
           }
 
           await this.mirrorFile(uploadedMedia.sha256, uploadedMedia.url, otherServers, headers);
+
+          // After mirroring, get the updated item from the signal to include mirrors
+          const updatedItem = this.getFileByHash(uploadedMedia.sha256);
+          if (updatedItem) {
+            uploadedMedia = updatedItem;
+          }
         }
 
         return { item: uploadedMedia, status: 'success' };
@@ -754,9 +764,9 @@ export class MediaService implements NostriaService {
     }
 
     try {
-      // Try each server until mirror succeeds
-      let mirrorSuccessful = false;
-      let firstError: Error | null = null;
+      // Mirror to all servers in the list
+      let atLeastOneMirrorSuccessful = false;
+      const errors: Error[] = [];
 
       for (const server of servers) {
         try {
@@ -818,21 +828,19 @@ export class MediaService implements NostriaService {
             });
           });
 
-          mirrorSuccessful = true;
-          break;
+          atLeastOneMirrorSuccessful = true;
         } catch (err) {
           this.logger.error(`Failed to mirror on server ${server}:`, err);
-
-          if (!firstError) {
-            firstError = err instanceof Error ? err : new Error('Unknown error occurred');
-          }
+          errors.push(err instanceof Error ? err : new Error('Unknown error occurred'));
         }
       }
 
-      if (!mirrorSuccessful && firstError) {
-        throw firstError;
-      } else if (!mirrorSuccessful) {
-        throw new Error('Failed to mirror file on any server');
+      if (!atLeastOneMirrorSuccessful) {
+        if (errors.length > 0) {
+          throw errors[0];
+        } else {
+          throw new Error('Failed to mirror file on any server');
+        }
       }
     } catch (err) {
       this._error.set(err instanceof Error ? err.message : 'Unknown error occurred');

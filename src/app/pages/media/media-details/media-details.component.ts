@@ -454,4 +454,43 @@ export class MediaDetailsComponent {
       return 'Unknown Server';
     }
   }
+
+  // Helper method to get full mirror URLs
+  // If a mirror is already a full URL, return it as-is
+  // If it's a relative path, reconstruct it using the server base and the filename from the main URL
+  getFullMirrorUrl(mirror: string, mainUrl: string): string {
+    // Check if it's already a full URL
+    try {
+      new URL(mirror);
+      return mirror; // Already a full URL
+    } catch {
+      // It's a relative path, reconstruct the full URL
+      // Extract the filename from the main URL
+      const filename = mainUrl.substring(mainUrl.lastIndexOf('/') + 1);
+
+      // If mirror starts with '/', it's an absolute path
+      if (mirror.startsWith('/')) {
+        // Find the server from the configured media servers that matches this path
+        const servers = this.mediaService.mediaServers();
+        for (const server of servers) {
+          const serverBase = server.endsWith('/') ? server.slice(0, -1) : server;
+          const fullUrl = serverBase + mirror;
+
+          // Verify this URL makes sense (contains the filename)
+          if (fullUrl.includes(filename)) {
+            return fullUrl;
+          }
+        }
+
+        // Fallback: use the first server if no match found
+        if (servers.length > 0) {
+          const serverBase = servers[0].endsWith('/') ? servers[0].slice(0, -1) : servers[0];
+          return serverBase + mirror;
+        }
+      }
+
+      // Fallback: return the mirror as-is if we can't reconstruct it
+      return mirror;
+    }
+  }
 }

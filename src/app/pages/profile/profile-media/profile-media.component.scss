@@ -81,12 +81,23 @@
         .video-container {
           margin: 0 !important;
           padding: 0 !important;
+          height: 100%;
         }
 
         .photo-carousel,
         .photo-container {
           margin: 0 !important;
           padding: 0 !important;
+        }
+
+        // Ensure video thumbnail container fills the space
+        .video-thumbnail-container {
+          height: 100% !important;
+          aspect-ratio: unset !important;
+
+          .video-thumbnail {
+            object-fit: cover !important;
+          }
         }
       }
 
