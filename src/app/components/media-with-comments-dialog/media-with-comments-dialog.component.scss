@@ -140,10 +140,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start; // Changed from center to flex-start for better scrolling
   background: var(--mat-sys-surface-container-lowest);
   overflow: auto;
-  padding: 5rem 2rem 2rem 2rem; // Top padding on all screen sizes to avoid header overlap
+  padding: 4rem 2rem 2rem 2rem; // Top padding to avoid header overlap
   gap: 1rem;
 }
 
@@ -312,7 +312,7 @@
   }
 
   .media-side {
-    padding: 1rem;
+    padding: 4rem 1rem 1rem 1rem; // Keep top padding on mobile for header clearance
   }
 
   .comments-side {
