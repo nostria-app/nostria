@@ -50,7 +50,7 @@ export class SettingsService {
     effect(async () => {
       const account = this.accountState.account();
       const initialized = this.accountState.initialized();
-      
+
       if (account && initialized) {
         // Reset to defaults first to ensure clean state
         this.settings.set({ ...DEFAULT_SETTINGS });

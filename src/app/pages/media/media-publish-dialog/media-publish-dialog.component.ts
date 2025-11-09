@@ -109,7 +109,7 @@ export class MediaPublishDialogComponent {
   };
 
   canPublish = (): boolean => {
-    return this.title().trim().length > 0 && !this.publishing();
+    return !this.publishing();
   };
 
   private getDefaultKind(): 20 | 21 | 22 {
@@ -323,8 +323,9 @@ export class MediaPublishDialogComponent {
 
       // Create canvas and draw image
       const canvas = document.createElement('canvas');
-      // Increased size for better quality blurhash (was 32)
-      const width = 64;
+      // Increased size for even better quality blurhash (was 32, then 64)
+      // Higher resolution provides more accurate color sampling for encoding
+      const width = 128;
       const height = Math.floor((img.height / img.width) * width);
 
       canvas.width = width;
@@ -340,15 +341,16 @@ export class MediaPublishDialogComponent {
       // Get image data
       const imageData = ctx.getImageData(0, 0, width, height);
 
-      // Generate blurhash with higher component counts for more detail
+      // Generate blurhash with maximum component counts for highest quality
       // componentX and componentY can be between 1-9 (higher = more detail but longer hash)
-      // Using 6x4 for a good balance of detail and hash size
+      // Using 9x9 for maximum detail and best visual quality
+      // This creates a richer color representation with better gradients
       const hash = encode(
         imageData.data,
         width,
         height,
-        6, // componentX (was 4)
-        4  // componentY (was 3)
+        9, // componentX (maximum detail)
+        9  // componentY (maximum detail)
       );
 
       this.blurhash.set(hash);
