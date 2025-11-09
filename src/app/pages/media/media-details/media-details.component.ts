@@ -275,6 +275,7 @@ export class MediaDetailsComponent {
       data: { mediaItem: item },
       maxWidth: '650px',
       width: '100%',
+      panelClass: 'responsive-dialog',
     });
 
     const result: MediaPublishOptions | null = await dialogRef.afterClosed().toPromise();

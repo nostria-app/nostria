@@ -4,6 +4,11 @@
   gap: 16px;
   min-width: 500px;
   max-width: 600px;
+
+  @media (max-width: 600px) {
+    min-width: 100%;
+    max-width: 100%;
+  }
 }
 
 .media-preview {
@@ -18,21 +23,39 @@
   margin-bottom: 8px;
   position: relative;
 
+  @media (max-width: 600px) {
+    max-height: 200px;
+  }
+
   img,
   video {
     max-width: 100%;
     max-height: 300px;
     object-fit: contain;
+
+    @media (max-width: 600px) {
+      max-height: 200px;
+    }
   }
 
   .generic-preview {
     padding: 60px;
+
+    @media (max-width: 600px) {
+      padding: 40px;
+    }
 
     mat-icon {
       font-size: 64px;
       width: 64px;
       height: 64px;
       color: var(--on-surface-variant);
+
+      @media (max-width: 600px) {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+      }
     }
   }
 
@@ -56,6 +79,11 @@
   padding: 16px;
   background: var(--surface-variant);
   border-radius: 8px;
+
+  @media (max-width: 600px) {
+    padding: 12px;
+    gap: 10px;
+  }
 
   .thumbnail-header {
     display: flex;
@@ -98,6 +126,10 @@
         border-radius: 4px;
         background: var(--surface);
         display: block;
+
+        @media (max-width: 600px) {
+          max-height: 150px;
+        }
       }
 
       .thumbnail-dimensions {
@@ -144,6 +176,11 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+
+        @media (max-width: 600px) {
+          white-space: normal;
+          word-break: break-all;
+        }
       }
     }
   }
@@ -184,10 +221,25 @@ mat-dialog-content {
   padding: 20px 24px;
   max-height: 70vh;
   overflow-y: auto;
+
+  @media (max-width: 600px) {
+    padding: 16px;
+    max-height: calc(100vh - 200px);
+  }
 }
 
 mat-dialog-actions {
   padding: 16px 24px;
+
+  @media (max-width: 600px) {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 8px;
+
+    button {
+      width: 100%;
+    }
+  }
 
   button {
     mat-icon {
