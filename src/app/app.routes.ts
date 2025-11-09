@@ -31,7 +31,6 @@ import { NotificationManageComponent } from './pages/notifications/manage/manage
 import { PollsComponent } from './pages/polls/polls.component';
 import { PollEditorComponent } from './pages/polls/poll-editor/poll-editor.component';
 import { DataResolver } from './data-resolver';
-import { UsernameResolver } from './usernameResolver';
 import { ArticleResolver } from './articleResolver';
 import { MessagesMain } from './pages/messages/main/main';
 import { MessagesList } from './pages/messages/list/list';
@@ -247,7 +246,7 @@ export const routes: Routes = [
   {
     path: 'u/:username',
     component: ProfileComponent,
-    resolve: { data: UsernameResolver },
+    resolve: { data: DataResolver },
     children: profileChildren,
   },
   {

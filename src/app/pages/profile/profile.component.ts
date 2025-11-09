@@ -141,13 +141,13 @@ export class ProfileComponent {
   private previousProfilePubkey: string | null = null;
 
   constructor() {
+    // Log if running in SSR context
     if (!this.app.isBrowser()) {
-      console.warn('Profile component can only be used in browser context');
-      return;
+      this.logger.info('[ProfileComponent] Running in SSR context');
     }
 
-    // Check for router navigation state
-    const navigation = this.router.getCurrentNavigation();
+    // Check for router navigation state (browser only)
+    const navigation = this.app.isBrowser() ? this.router.getCurrentNavigation() : null;
     if (navigation?.extras.state?.['event']) {
       console.log('Router state event data for profile:', navigation.extras.state['event']);
       // Handle the event data as needed for profile context
@@ -198,17 +198,30 @@ export class ProfileComponent {
 
     // React to changes in route parameters and app initialization
     effect(async () => {
-      // Only proceed if app is initialized and route params are available
-      if (this.app.initialized() && this.routeParams() && this.routeData()) {
+      // During SSR, we don't need full app initialization (storage/nostr)
+      // In browser, wait for full initialization
+      const canProceed = this.app.isBrowser() ? this.app.initialized() : true;
+
+      // Only proceed if conditions are met and route params are available
+      if (canProceed && this.routeParams() && this.routeData()) {
         untracked(async () => {
           let id, username;
 
-          // Check if component renders /u/username and we have pubkey resolved from username
-          const pubkeyForUsername = this.routeData()?.['data']?.id;
-          if (pubkeyForUsername) {
-            id = pubkeyForUsername;
-            username = this.routeData()?.['data']?.username;
+          // For username routes (/u/:username), get username from params and resolve to pubkey
+          username = this.routeParams()?.get('username');
+          if (username) {
+            // In browser, resolve username to pubkey
+            // In SSR, this was already done by DataResolver
+            if (this.app.isBrowser()) {
+              id = await this.username.getPubkey(username);
+              this.logger.info('[ProfileComponent] Resolved username in browser:', { username, id });
+            } else {
+              // During SSR, we don't have the id here, but the component will still render
+              // and the metadata is already loaded by DataResolver
+              this.logger.info('[ProfileComponent] Username route in SSR:', username);
+            }
           } else {
+            // For /p/:id routes, get id directly from params
             id = this.routeParams()?.get('id');
           }
 
@@ -288,11 +301,14 @@ export class ProfileComponent {
             // Always attempt to load user profile and check if own profile, regardless of relay status
             await this.loadUserProfile(this.pubkey());
 
-            await this.metrics.incrementMetric(this.pubkey(), 'viewed');
+            // Browser-only: Track metrics and profile views
+            if (this.app.isBrowser()) {
+              await this.metrics.incrementMetric(this.pubkey(), 'viewed');
 
-            // Track profile view (but not for own profile)
-            if (!this.isOwnProfile()) {
-              await this.profileTracking.trackProfileView(this.pubkey());
+              // Track profile view (but not for own profile)
+              if (!this.isOwnProfile()) {
+                await this.profileTracking.trackProfileView(this.pubkey());
+              }
             }
           } else {
             this.error.set('No user ID provided');
@@ -357,6 +373,13 @@ export class ProfileComponent {
   }
 
   private async loadUserProfile(pubkey: string): Promise<void> {
+    // Skip profile loading during SSR as it requires browser-specific storage
+    if (!this.app.isBrowser()) {
+      this.logger.info('[ProfileComponent] Skipping profile loading in SSR');
+      this.isLoading.set(false);
+      return;
+    }
+
     // Validate pubkey parameter
     if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
       this.logger.warn('loadUserProfile called with invalid pubkey:', pubkey);
