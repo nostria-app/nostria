@@ -143,7 +143,7 @@
   justify-content: flex-start; // Changed from center to flex-start for better scrolling
   background: var(--mat-sys-surface-container-lowest);
   overflow: auto;
-  padding: 4rem 2rem 2rem 2rem; // Top padding to avoid header overlap
+  padding: 4rem 0 0 0; // Only top padding for header, no side padding
   gap: 1rem;
 }
 
@@ -152,6 +152,9 @@
   font-size: 1.25rem;
   color: var(--mat-sys-on-surface);
   align-self: flex-start;
+  padding: 0 1rem; // Add horizontal padding so title doesn't touch edges
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .media-description {
@@ -159,14 +162,16 @@
   line-height: 1.5;
   color: var(--mat-sys-on-surface);
   align-self: flex-start;
+  padding: 0 1rem; // Add horizontal padding so description doesn't touch edges
+  width: 100%;
+  box-sizing: border-box;
 }
 
 // Photo carousel styles
 .photo-carousel {
   position: relative;
   width: 100%;
-  max-width: 800px;
-  border-radius: 8px;
+  border-radius: 0; // Remove border radius so it goes to edges
   overflow: hidden;
   background-color: var(--mat-sys-surface-container-lowest);
 }
@@ -255,13 +260,12 @@
 // Video styles
 .video-container {
   width: 100%;
-  max-width: 800px;
 }
 
 .video-player {
   width: 100%;
   height: auto;
-  border-radius: 8px;
+  border-radius: 0; // Remove border radius so it goes to edges
   max-height: 70vh;
 }
 
@@ -312,7 +316,7 @@
   }
 
   .media-side {
-    padding: 4rem 1rem 1rem 1rem; // Keep top padding on mobile for header clearance
+    padding: 4rem 0 0 0; // Only top padding, no side padding on mobile
   }
 
   .comments-side {
