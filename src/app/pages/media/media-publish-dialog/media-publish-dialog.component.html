@@ -55,11 +55,8 @@
       @if (thumbnailUrlInput() !== null && thumbnailUrlInput() === '') {
       <mat-form-field appearance="outline" class="thumbnail-url-field">
         <mat-label>Thumbnail URL</mat-label>
-        <input matInput [(ngModel)]="thumbnailUrlInputValue" placeholder="https://example.com/thumbnail.jpg" />
-        <button mat-icon-button matSuffix (click)="setThumbnailFromUrl()" [disabled]="!thumbnailUrlInputValue"
-          matTooltip="Set thumbnail">
-          <mat-icon>check</mat-icon>
-        </button>
+        <input matInput [(ngModel)]="thumbnailUrlInputValue" placeholder="https://example.com/thumbnail.jpg" 
+          (blur)="onThumbnailUrlBlur()" />
       </mat-form-field>
       }
 
@@ -74,14 +71,6 @@
           }
         </div>
         <div class="thumbnail-actions">
-          <button mat-icon-button (click)="generateBlurhash()" [disabled]="generatingBlurhash()"
-            matTooltip="Generate blurhash">
-            @if (generatingBlurhash()) {
-            <mat-spinner diameter="20"></mat-spinner>
-            } @else {
-            <mat-icon>blur_on</mat-icon>
-            }
-          </button>
           <button mat-icon-button (click)="removeThumbnail()" matTooltip="Remove thumbnail" class="remove-btn">
             <mat-icon>delete</mat-icon>
           </button>

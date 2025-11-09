@@ -91,7 +91,7 @@ export class MediaPublishDialogComponent {
     if (this.isImage()) {
       this.loadImageAndGenerateBlurhash(this.data.mediaItem.url);
     }
-    
+
     // Auto-extract thumbnail for videos on init
     if (this.isVideo()) {
       this.extractThumbnailFromVideo();
@@ -271,7 +271,7 @@ export class MediaPublishDialogComponent {
     }
   }
 
-  setThumbnailFromUrl(): void {
+  onThumbnailUrlBlur(): void {
     const url = this.thumbnailUrlInputValue.trim();
     if (url) {
       this.thumbnailUrl.set(url);
@@ -341,13 +341,6 @@ export class MediaPublishDialogComponent {
     } finally {
       this.generatingBlurhash.set(false);
     }
-  }
-
-  async generateBlurhash(): Promise<void> {
-    const url = this.thumbnailUrl();
-    if (!url) return;
-
-    await this.loadImageAndGenerateBlurhash(url);
   }
 
   cancel(): void {
