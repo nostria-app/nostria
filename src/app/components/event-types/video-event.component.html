@@ -12,22 +12,37 @@
 @let videoInfo = videoData();
 @let blurhashUrl = blurhashDataUrl();
 @if (videoInfo) {
-<div class="video-container" [class.clickable]="showOverlay()">
+<div class="video-container" [class.clickable]="showOverlay()" [class.blurred]="shouldBlurMedia()" [class.revealing]="!shouldBlurMedia() && isRevealed()">
   @if (!isExpanded()) {
   <!-- Video Thumbnail (Initial State) -->
   <div class="video-thumbnail-container" tabindex="0" role="button" (click)="expandVideo($any($event))"
     (keyup.enter)="expandVideo($any($event))" (keyup.space)="expandVideo($any($event))">
+    <!-- Video icon indicator (shown in grid view) -->
+    @if (showOverlay()) {
+    <div class="video-indicator">
+      <mat-icon>play_circle_filled</mat-icon>
+    </div>
+    }
+
     @if (videoInfo.thumbnail) {
     <!-- Use provided thumbnail image -->
     <img [src]="videoInfo.thumbnail" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
-      [title]="videoInfo.title || 'Video thumbnail'" loading="lazy" />
+      [title]="videoInfo.title || 'Video thumbnail'" loading="lazy" [class.hidden]="shouldBlurMedia()" />
     } @else if (videoInfo.blurhash && blurhashUrl) {
     <!-- Use blurhash as fallback -->
-    <img [src]="blurhashUrl" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
+    <img [src]="blurhashUrl" class="video-thumbnail blurhash-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
       [title]="videoInfo.title || 'Video thumbnail'" />
     } @else {
     <!-- Use video element with preload="metadata" to show first frame -->
-    <video [src]="videoInfo.url" preload="metadata" class="video-thumbnail"></video>
+    <video [src]="videoInfo.url" preload="metadata" class="video-thumbnail" [class.hidden]="shouldBlurMedia()"></video>
+    }
+
+    <!-- Reveal overlay for blurred media -->
+    @if (shouldBlurMedia()) {
+    <div class="reveal-overlay" (click)="revealMedia()">
+      <mat-icon>visibility</mat-icon>
+      <span>Click to reveal</span>
+    </div>
     }
 
     @if (videoInfo.duration) {

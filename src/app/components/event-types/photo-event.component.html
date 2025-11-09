@@ -13,16 +13,24 @@
   [class.clickable]="showOverlay()"
   (click)="showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $event) : null">
   <div class="photo-carousel">
-    <div class="photo-container">
+    <div class="photo-container" [class.blurred]="shouldBlurMedia()" [class.revealing]="!shouldBlurMedia() && isRevealed()">
       @if (currentBlurhashDataUrl()) {
       <img [src]="currentBlurhashDataUrl()!" class="photo-item blurhash-placeholder" [alt]="currentAltText()"
         [title]="currentAltText()" aria-hidden="true" />
       }
       <img [src]="currentImageUrl()" [alt]="currentAltText()" [title]="currentAltText()" title="{{ currentAltText() }}"
-        class="photo-item main-image" loading="lazy" (load)="onImageLoad($event)"
+        class="photo-item main-image" [class.hidden]="shouldBlurMedia()" loading="lazy" (load)="onImageLoad($event)"
         (click)="!showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $any($event)) : null"
         tabindex="0" role="button" (keyup.enter)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))"
         (keyup.space)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))" />
+      
+      <!-- Click to reveal overlay for blurred images -->
+      @if (shouldBlurMedia()) {
+      <div class="reveal-overlay" (click)="revealMedia()">
+        <mat-icon>visibility</mat-icon>
+        <span>Click to reveal</span>
+      </div>
+      }
     </div>
 
     @if (hasMultipleImages()) {

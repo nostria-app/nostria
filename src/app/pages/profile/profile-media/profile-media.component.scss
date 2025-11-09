@@ -42,6 +42,14 @@
     height: 100%;
     overflow: hidden;
     border-radius: 8px;
+    position: relative;
+    cursor: pointer;
+    transition: opacity 0.2s ease;
+
+    // Dim on hover
+    &:hover {
+      opacity: 0.85;
+    }
 
     // Override event component styles for grid display
     ::ng-deep app-event {

@@ -53,6 +53,63 @@
   align-items: center;
   justify-content: center;
   background-color: #000;
+
+  // Blur state
+  &.blurred {
+    .blurhash-placeholder {
+      opacity: 1 !important;
+      filter: blur(20px);
+    }
+  }
+
+  // Revealing animation
+  &.revealing {
+    .blurhash-placeholder {
+      opacity: 0;
+      transition: opacity 0.6s ease-out;
+    }
+
+    .main-image {
+      opacity: 1;
+      transition: opacity 0.6s ease-out;
+    }
+  }
+}
+
+// Reveal overlay for blurred images
+.reveal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  transition: background-color 0.3s ease;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.7);
+  }
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 8px;
+  }
+
+  span {
+    font-size: 16px;
+    font-weight: 500;
+  }
 }
 
 .photo-item {
@@ -64,6 +121,12 @@
     cursor: pointer;
     position: relative;
     z-index: 2;
+    opacity: 1;
+    transition: opacity 0.3s ease;
+
+    &.hidden {
+      opacity: 0;
+    }
 
     &:focus {
       outline: 2px solid var(--mat-sys-primary);

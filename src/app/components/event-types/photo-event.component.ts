@@ -10,6 +10,8 @@ import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/media-with-comments-dialog.component';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
+import { SettingsService } from '../../services/settings.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 @Component({
   selector: 'app-photo-event',
@@ -28,6 +30,8 @@ export class PhotoEventComponent {
 
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private settings = inject(SettingsService);
+  private accountState = inject(AccountStateService);
 
   // Current carousel index for inline navigation
   currentCarouselIndex = signal(0);
@@ -36,6 +40,28 @@ export class PhotoEventComponent {
   private touchStartX = 0;
   private touchEndX = 0;
   private readonly SWIPE_THRESHOLD = 50;
+
+  // Track if media has been revealed (for blur-to-show animation)
+  isRevealed = signal(false);
+
+  // Computed: Should media be blurred based on privacy settings?
+  shouldBlurMedia = computed(() => {
+    const mediaPrivacy = this.settings.settings().mediaPrivacy || 'show-always';
+    const event = this.event();
+    
+    if (mediaPrivacy === 'show-always') {
+      return false;
+    }
+    
+    if (mediaPrivacy === 'blur-always') {
+      return !this.isRevealed();
+    }
+    
+    // blur-non-following
+    const authorPubkey = event.pubkey;
+    const isFollowing = this.accountState.followingList().includes(authorPubkey);
+    return !isFollowing && !this.isRevealed();
+  });
 
   // Computed image URLs from the event
   imageUrls = computed(() => {
@@ -150,6 +176,11 @@ export class PhotoEventComponent {
     }
   }
 
+  // Reveal blurred media with animation
+  revealMedia(): void {
+    this.isRevealed.set(true);
+  }
+
   // Touch event handlers for swipe
   onTouchStart(event: TouchEvent): void {
     this.touchStartX = event.changedTouches[0].screenX;
@@ -175,6 +206,16 @@ export class PhotoEventComponent {
   }
 
   openImageDialog(imageUrl: string, alt: string, event?: MouseEvent | KeyboardEvent): void {
+    // If media is blurred, reveal it instead of opening dialog
+    if (this.shouldBlurMedia()) {
+      this.revealMedia();
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
+      return;
+    }
+
     // Prevent navigation when opening dialog in overlay mode
     if (this.showOverlay() && event) {
       event.stopPropagation();
