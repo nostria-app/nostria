@@ -1,3 +1,11 @@
+// Ensure dialog and all parents can shrink their children
+:host,
+.dialog-container,
+::ng-deep mat-dialog-content {
+  min-height: 0;
+  min-width: 0;
+}
+
 // Dialog container styling
 .dialog-container {
   display: flex;
@@ -7,6 +15,8 @@
   position: relative;
   background: var(--mat-sys-surface);
   outline: none; // Remove focus outline when focused for keyboard events
+  min-height: 0;
+  min-width: 0;
 
   &:focus {
     outline: none;
@@ -219,14 +229,17 @@
   white-space: nowrap;
 }
 
-// Split view layout
+// Split view layout - true grid with minmax
 .split-view {
   display: grid;
-  grid-template-columns: 1fr 400px;
+  grid-template-columns: minmax(0, 2fr) minmax(300px, 1fr);
+  gap: 0;
   height: 100%;
   width: 100%;
   overflow: hidden;
   flex: 1; // Take remaining space in dialog-container
+  min-height: 0; // Critical - allows children to shrink
+  min-width: 0;
 }
 
 // Media side (left)
@@ -234,11 +247,13 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: flex-start; // Changed from center to flex-start for better scrolling
+  justify-content: flex-start;
   background: var(--mat-sys-surface-container-lowest);
-  overflow: auto;
+  overflow: auto; // Keep media scrollable
   padding: 4rem 0 0 0; // Only top padding for header, no side padding
   gap: 1rem;
+  min-width: 0;
+  min-height: 0;
 }
 
 .media-title {
@@ -363,13 +378,15 @@
   max-height: 70vh;
 }
 
-// Comments side (right)
+// Comments side (right) - 3-row grid layout
 .comments-side {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: auto 1fr auto; // header / scrollable content / footer
   background: var(--mat-sys-surface);
   border-left: 1px solid var(--mat-sys-outline-variant);
-  overflow: hidden;
+  overflow: hidden; // Scrolling happens in .comments-content
+  min-width: 0;
+  min-height: 0;
   height: 100%; // Ensure it fills the full height
 }
 
@@ -385,8 +402,8 @@
 }
 
 .comments-content {
-  flex: 1;
-  overflow-y: auto;
+  overflow: auto; // The only scrollable region
+  min-height: 0; // Allow shrinking
   padding: 1rem;
 
   // Auto-expand comments in dialog
@@ -403,10 +420,22 @@
   }
 }
 
+.comments-footer {
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  padding: 0.75rem 1rem;
+}
+
+// Tablet layout
+@media (max-width: 1200px) and (min-width: 901px) {
+  .split-view {
+    grid-template-columns: minmax(0, 2fr) minmax(280px, 1fr);
+  }
+}
+
 // Mobile responsive layout
 @media (max-width: 900px) {
   .split-view {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr; // Stack in one column
     grid-template-rows: auto auto; // Both sections take natural height
     height: auto; // Allow natural height, not constrained to viewport
     overflow: visible; // No scrolling on split-view itself
@@ -421,20 +450,11 @@
   .comments-side {
     border-left: none;
     border-top: 1px solid var(--mat-sys-outline-variant);
-    max-height: none; // Remove max-height restriction
     height: auto; // Natural height
     overflow: visible; // No scrolling on comments side
   }
 
   .comments-content {
     overflow-y: visible; // No scrolling on comments content
-    flex: none; // Don't flex, just take natural height
-  }
-}
-
-// Tablet layout
-@media (max-width: 1200px) and (min-width: 901px) {
-  .split-view {
-    grid-template-columns: 1fr 350px;
   }
 }

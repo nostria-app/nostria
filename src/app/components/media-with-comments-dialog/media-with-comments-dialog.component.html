@@ -116,13 +116,18 @@
     </div>
 
     <!-- Right side: Comments -->
-    <div class="comments-side">
+    <div class="comments-side" aria-label="Comments">
       <div class="comments-header">
         <h2>Comments</h2>
       </div>
-      <div class="comments-content">
+
+      <div class="comments-content" cdkScrollable>
         <app-comments-list [event]="event()" [autoExpand]="true"></app-comments-list>
       </div>
+
+      @if (false) {
+      <div class="comments-footer"><!-- placeholder for composer --></div>
+      }
     </div>
   </div>
 </div>
