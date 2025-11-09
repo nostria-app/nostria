@@ -36,6 +36,24 @@
   align-items: center;
   gap: 8px;
   pointer-events: auto;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+// On larger screens with split view, position navigation in the center of the left section
+@media (min-width: 901px) {
+  .header-navigation {
+    left: calc((100% - 400px) / 2); // Center in left section (total width - comments width) / 2
+    transform: translateX(-50%);
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
+  .header-navigation {
+    left: calc((100% - 350px) / 2); // Center in left section for tablet
+    transform: translateX(-50%);
+  }
 }
 
 // Bookmark button positioned at top-left
@@ -126,6 +144,7 @@
   background: var(--mat-sys-surface-container-lowest);
   overflow: auto;
   padding: 2rem;
+  padding-top: 5rem; // Extra top padding to avoid overlap with header buttons
   gap: 1rem;
 }
 
