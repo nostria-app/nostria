@@ -75,19 +75,26 @@ export class UsernameService {
     if (pubkey) return pubkey;
 
     try {
+      this.logger.info('[UsernameService] Fetching pubkey for username:', username);
       const publicProfile = await firstValueFrom(
         this.accountService.getPublicAccount({ pubkeyOrUsername: username })
       );
 
+      this.logger.info('[UsernameService] API response for username', username, ':', publicProfile);
+
       if (publicProfile && publicProfile.success && publicProfile.result) {
         const pubkey = publicProfile.result.pubkey || '';
         this.saveUsernameToCache(username, pubkey);
+        this.logger.info('[UsernameService] Successfully resolved username', username, 'to pubkey:', pubkey);
         return pubkey;
+      } else {
+        this.logger.warn('[UsernameService] API returned unsuccessful response for username:', username, publicProfile);
       }
     } catch (error) {
-      this.logger.error('Failed to fetch pubkey for username:', username, error);
+      this.logger.error('[UsernameService] Failed to fetch pubkey for username:', username, error);
     }
 
+    this.logger.warn('[UsernameService] Returning empty string for username:', username);
     return '';
   }
 

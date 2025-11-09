@@ -78,7 +78,7 @@ export const appConfig: ApplicationConfig = {
     {
       provide: ApiConfiguration,
       useValue: {
-        rootUrl: new URL('api', environment.backendUrl),
+        rootUrl: new URL('api', environment.backendUrl).toString(),
       },
     },
     {
