@@ -1,7 +1,5 @@
 .comments-section {
-  margin-top: 16px;
   border-top: 1px solid var(--border-color);
-  padding-top: 16px;
 }
 
 .comments-header {
@@ -19,7 +17,6 @@
 
 .comments-content {
   margin-top: 16px;
-  max-height: 600px;
   overflow-y: auto;
   padding-right: 8px;
 
