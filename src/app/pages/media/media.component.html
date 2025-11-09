@@ -1,6 +1,12 @@
 <div class="media-container">
   <div class="media-header">
-    <h1>Media Library</h1>
+    <div class="media-header-left">
+      <h1>Media Library</h1>
+      <div class="storage-info">
+        <mat-icon>storage</mat-icon>
+        <span>{{ formatFileSize(totalStorageBytes()) }} total</span>
+      </div>
+    </div>
     <div class="media-actions">
       @if (mediaService.uploading()) {
       <div class="spinner-wrapper uploading">
@@ -46,7 +52,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">image</mat-icon>
-        <span>Images ({{ images().length }})</span>
+        <span class="hide-tiny">Images ({{ images().length }})</span>
       </ng-template>
       <div class="tab-content">
         @if (selectedItems().length > 0) {
@@ -149,7 +155,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">videocam</mat-icon>
-        <span>Videos ({{ videos().length }})</span>
+        <span class="hide-tiny">Videos ({{ videos().length }})</span>
       </ng-template>
       <div class="tab-content">
         @if (selectedItems().length > 0) {
@@ -256,7 +262,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">folder</mat-icon>
-        <span>Files ({{ files().length }})</span>
+        <span class="hide-tiny">Files ({{ files().length }})</span>
       </ng-template>
       <div class="tab-content">
         @if (selectedItems().length > 0) {
@@ -407,7 +413,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">storage</mat-icon>
-        <span>Media Servers</span>
+        <span class="hide-tiny">Media Servers</span>
       </ng-template>
       <div class="tab-content">
         <div class="server-header">

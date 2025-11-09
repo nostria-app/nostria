@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, computed } from '@angular/core';
 
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -90,6 +90,12 @@ export class MediaComponent {
   images = signal<MediaItem[]>([]);
   videos = signal<MediaItem[]>([]);
   files = signal<MediaItem[]>([]);
+
+  // Computed total storage used
+  totalStorageBytes = computed(() => {
+    const allMedia = this.mediaService.mediaItems();
+    return allMedia.reduce((total, item) => total + (item.size || 0), 0);
+  });
 
   // Table columns for files display
   displayedColumns: string[] = ['select', 'name', 'mirrors', 'type', 'size', 'uploaded', 'actions'];
@@ -1022,8 +1028,10 @@ export class MediaComponent {
       thumbnailUrls.push(thumbnailUrl);
     }
 
-    // Add title tag (required)
-    tags.push(['title', options.title]);
+    // Add title tag if provided
+    if (options.title && options.title.trim().length > 0) {
+      tags.push(['title', options.title]);
+    }
 
     // Build imeta tag according to NIP-92/94
     const imetaTag = ['imeta'];
