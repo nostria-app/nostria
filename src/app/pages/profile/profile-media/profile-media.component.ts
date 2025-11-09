@@ -24,6 +24,9 @@ export class ProfileMediaComponent {
   isLoadingMore = computed(() => this.profileState.isLoadingMoreMedia());
   hasMore = computed(() => this.profileState.hasMoreMedia());
 
+  // Extract just events for navigation
+  mediaEvents = computed(() => this.media().map(m => m.event));
+
   onScroll() {
     // Check if we're near the bottom of the page
     const scrollPosition = window.innerHeight + window.scrollY;

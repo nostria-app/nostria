@@ -22,6 +22,9 @@ export class PhotoEventComponent {
   event = input.required<Event>();
   hideComments = input<boolean>(false);
   showOverlay = input<boolean>(false);
+  // Media navigation context (for Media tab grid)
+  allMediaEvents = input<Event[]>([]);
+  mediaEventIndex = input<number | undefined>(undefined);
 
   private dialog = inject(MatDialog);
   private router = inject(Router);
@@ -183,7 +186,11 @@ export class PhotoEventComponent {
       const nostrEvent = this.event();
       if (nostrEvent) {
         this.dialog.open(MediaWithCommentsDialogComponent, {
-          data: { event: nostrEvent },
+          data: {
+            event: nostrEvent,
+            allEvents: this.allMediaEvents().length > 0 ? this.allMediaEvents() : undefined,
+            currentIndex: this.mediaEventIndex()
+          },
           maxWidth: '95vw',
           maxHeight: '95vh',
           width: '1400px',
@@ -234,7 +241,11 @@ export class PhotoEventComponent {
       // If showOverlay is true, open the split-view dialog
       if (this.showOverlay()) {
         this.dialog.open(MediaWithCommentsDialogComponent, {
-          data: { event },
+          data: {
+            event,
+            allEvents: this.allMediaEvents().length > 0 ? this.allMediaEvents() : undefined,
+            currentIndex: this.mediaEventIndex()
+          },
           maxWidth: '95vw',
           maxHeight: '95vh',
           width: '1400px',

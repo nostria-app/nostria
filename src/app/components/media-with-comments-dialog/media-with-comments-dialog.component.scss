@@ -6,6 +6,11 @@
   width: 100%;
   position: relative;
   background: var(--mat-sys-surface);
+  outline: none; // Remove focus outline when focused for keyboard events
+
+  &:focus {
+    outline: none;
+  }
 }
 
 // Header with buttons
@@ -23,6 +28,14 @@
   button {
     pointer-events: auto;
   }
+}
+
+// Header navigation (middle section with nav buttons and counter)
+.header-navigation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  pointer-events: auto;
 }
 
 // Bookmark button positioned at top-left
@@ -59,6 +72,41 @@
     width: 24px;
     height: 24px;
   }
+}
+
+.media-nav-button {
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+
+  &:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.8);
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+// Media counter
+.media-counter {
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
 }
 
 // Split view layout

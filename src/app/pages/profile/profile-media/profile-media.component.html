@@ -7,11 +7,11 @@
   } @else {
   <div class="media-grid">
     <mat-grid-list cols="3" rowHeight="1:1" gutterSize="8px">
-      @for (mediaItem of media(); track mediaItem.event.id) {
+      @for (mediaItem of media(); track mediaItem.event.id; let i = $index) {
       <mat-grid-tile>
         <div class="media-item">
           <app-event [event]="mediaItem.event" appearance="plain" [navigationDisabled]="false" [hideComments]="true"
-            [showOverlay]="true" [hideFooter]="true">
+            [showOverlay]="true" [hideFooter]="true" [allMediaEvents]="mediaEvents()" [mediaEventIndex]="i">
           </app-event>
         </div>
       </mat-grid-tile>
