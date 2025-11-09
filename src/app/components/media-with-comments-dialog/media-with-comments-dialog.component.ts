@@ -9,6 +9,7 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 import { BookmarkService } from '../../services/bookmark.service';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
+import { EventMenuComponent } from '../event/event-menu/event-menu.component';
 
 interface MediaWithCommentsDialogData {
   event: Event;
@@ -36,6 +37,7 @@ interface VideoData {
     MatIconModule,
     MatTooltipModule,
     CommentsListComponent,
+    EventMenuComponent,
   ],
   templateUrl: './media-with-comments-dialog.component.html',
   styleUrl: './media-with-comments-dialog.component.scss',
