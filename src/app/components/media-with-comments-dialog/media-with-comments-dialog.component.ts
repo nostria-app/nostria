@@ -53,8 +53,23 @@ export class MediaWithCommentsDialogComponent {
   currentIndex = signal<number>(this.data.currentIndex ?? 0);
 
   hasNavigation = computed(() => this.allEvents().length > 1);
-  canGoPrevious = computed(() => this.currentIndex() > 0);
-  canGoNext = computed(() => this.currentIndex() < this.allEvents().length - 1);
+  canGoPrevious = computed(() => {
+    const result = this.currentIndex() > 0;
+    console.log('canGoPrevious computed:', {
+      currentIndex: this.currentIndex(),
+      result
+    });
+    return result;
+  });
+  canGoNext = computed(() => {
+    const result = this.currentIndex() < this.allEvents().length - 1;
+    console.log('canGoNext computed:', {
+      currentIndex: this.currentIndex(),
+      allEventsLength: this.allEvents().length,
+      result
+    });
+    return result;
+  });
 
   // Touch gesture support
   private touchStartX = 0;
@@ -188,8 +203,15 @@ export class MediaWithCommentsDialogComponent {
 
   // Navigation between media items
   goToPreviousMedia(): void {
+    console.log('goToPreviousMedia called', {
+      currentIndex: this.currentIndex(),
+      canGoPrevious: this.canGoPrevious(),
+      allEventsLength: this.allEvents().length
+    });
+
     if (this.canGoPrevious()) {
       const newIndex = this.currentIndex() - 1;
+      console.log('Moving to previous:', newIndex);
       this.currentIndex.set(newIndex);
       this.event.set(this.allEvents()[newIndex]);
       this.currentImageIndex.set(0); // Reset to first image in carousel
@@ -197,8 +219,15 @@ export class MediaWithCommentsDialogComponent {
   }
 
   goToNextMedia(): void {
+    console.log('goToNextMedia called', {
+      currentIndex: this.currentIndex(),
+      canGoNext: this.canGoNext(),
+      allEventsLength: this.allEvents().length
+    });
+
     if (this.canGoNext()) {
       const newIndex = this.currentIndex() + 1;
+      console.log('Moving to next:', newIndex);
       this.currentIndex.set(newIndex);
       this.event.set(this.allEvents()[newIndex]);
       this.currentImageIndex.set(0); // Reset to first image in carousel
