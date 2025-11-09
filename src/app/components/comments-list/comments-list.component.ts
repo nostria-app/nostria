@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal, ElementRef, ViewChild, AfterViewInit } from '@angular/core';
+import { Component, computed, inject, input, signal, ElementRef, ViewChild, AfterViewInit, effect, untracked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -50,11 +50,33 @@ export class CommentsListComponent implements AfterViewInit {
   // Computed count of comments
   commentCount = computed(() => this.comments().length);
 
+  constructor() {
+    // Reset and reload comments when event changes
+    effect(() => {
+      const event = this.event(); // Track event changes
+      const autoExpand = this.autoExpand(); // Track autoExpand
+
+      // Use untracked to prevent infinite loops when updating signals
+      untracked(() => {
+        // Reset state
+        this.comments.set([]);
+        this.hasLoadedInitial.set(false);
+        this.hasMore.set(true);
+        this.oldestCommentTimestamp = null;
+
+        // Reload comments if auto-expanded
+        if (autoExpand && event) {
+          this.loadComments();
+        }
+      });
+    });
+  }
+
   ngAfterViewInit(): void {
     // Auto-expand if requested
     if (this.autoExpand()) {
       this.isExpanded.set(true);
-      this.loadComments();
+      // Comments will be loaded by the effect in constructor
     }
 
     // Set up scroll listener for infinite scroll
