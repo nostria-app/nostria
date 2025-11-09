@@ -53,6 +53,33 @@
   </div>
 
   <div>
+    <h2>Media Privacy</h2>
+    <p class="setting-description">Control how media content is displayed based on your following status</p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Media Display Mode</mat-label>
+      <mat-select [ngModel]="settings.settings()?.mediaPrivacy || 'show-always'" (selectionChange)="setMediaPrivacy($event.value)">
+        <mat-option value="show-always">Always Show Media</mat-option>
+        <mat-option value="blur-non-following">Blur Media from Non-Following</mat-option>
+        <mat-option value="blur-always">Always Blur Media</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <p>
+      @switch (settings.settings()?.mediaPrivacy || 'show-always') {
+      @case ('show-always') {
+      All media content will be displayed immediately without blurring.
+      }
+      @case ('blur-non-following') {
+      Media from accounts you don't follow will be blurred. Click to reveal.
+      }
+      @case ('blur-always') {
+      All media will be blurred by default. Click to reveal individual items.
+      }
+      }
+    </p>
+  </div>
+
+  <div>
     <h2>Navigation</h2>
 
     <div class="setting-item">
