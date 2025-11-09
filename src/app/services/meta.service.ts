@@ -46,6 +46,11 @@ export class MetaService {
    * @param url The canonical URL
    */
   setCanonicalUrl(url: string): void {
+    // Skip if not in browser environment (SSR)
+    if (typeof document === 'undefined') {
+      return;
+    }
+
     let link: HTMLLinkElement | null = this.getLinkElement('canonical');
 
     if (!link) {
@@ -90,14 +95,15 @@ export class MetaService {
         content: config.description,
       });
     if (config.image) this.meta.updateTag({ name: 'twitter:image', content: config.image });
-  }
-
-  /**
+  }  /**
    * Gets a link element if it exists
    * @param rel The rel attribute to look for
    * @returns The link element or null if not found
    */
   private getLinkElement(rel: string): HTMLLinkElement | null {
+    if (typeof document === 'undefined') {
+      return null;
+    }
     return document.querySelector(`link[rel='${rel}']`);
   }
 

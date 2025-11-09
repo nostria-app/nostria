@@ -24,7 +24,7 @@ export class DataResolver implements Resolve<EventData | null> {
   metaService = inject(MetaService);
   meta = inject(Meta);
 
-  constructor() {}
+  constructor() { }
 
   async resolve(route: ActivatedRouteSnapshot): Promise<EventData | null> {
     if (this.layout.isBrowser()) {
@@ -48,7 +48,7 @@ export class DataResolver implements Resolve<EventData | null> {
         data.event = metadataWithoutAuthor;
       }
     } catch (error) {
-      console.error('Error processing Nostr event:', error);
+      console.error('[SSR] Failed to load metadata:', error);
       data.title = 'Nostr Event (Error)';
       data.description = 'Error loading event content';
     }
