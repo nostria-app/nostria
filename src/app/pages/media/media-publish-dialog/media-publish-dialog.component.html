@@ -29,13 +29,13 @@
           <mat-icon>add_photo_alternate</mat-icon>
         </button>
         <mat-menu #thumbnailMenu="matMenu">
-          <button mat-menu-item (click)="fileInput.click()">
-            <mat-icon>upload_file</mat-icon>
-            <span>Upload File</span>
-          </button>
           <button mat-menu-item (click)="extractThumbnailFromVideo()">
             <mat-icon>screenshot</mat-icon>
             <span>Extract from Video</span>
+          </button>
+          <button mat-menu-item (click)="fileInput.click()">
+            <mat-icon>upload_file</mat-icon>
+            <span>Upload File</span>
           </button>
           <button mat-menu-item (click)="thumbnailUrlInput.set('')">
             <mat-icon>link</mat-icon>
@@ -55,7 +55,7 @@
       @if (thumbnailUrlInput() !== null && thumbnailUrlInput() === '') {
       <mat-form-field appearance="outline" class="thumbnail-url-field">
         <mat-label>Thumbnail URL</mat-label>
-        <input matInput [(ngModel)]="thumbnailUrlInputValue" placeholder="https://example.com/thumbnail.jpg" 
+        <input matInput [(ngModel)]="thumbnailUrlInputValue" placeholder="https://example.com/thumbnail.jpg"
           (blur)="onThumbnailUrlBlur()" />
       </mat-form-field>
       }
