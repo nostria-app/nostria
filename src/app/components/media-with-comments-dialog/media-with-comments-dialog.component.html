@@ -18,8 +18,7 @@
         {{ currentIndex() + 1 }} / {{ allEvents().length }}
       </div>
       <button mat-icon-button class="media-nav-button media-nav-right" (click)="goToNextMedia()"
-        [disabled]="!canGoNext()" [matTooltip]="'Next media (→)'" matTooltipPosition="below"
-        aria-label="Next media">
+        [disabled]="!canGoNext()" [matTooltip]="'Next media (→)'" matTooltipPosition="below" aria-label="Next media">
         <mat-icon>chevron_right</mat-icon>
       </button>
     </div>
