@@ -9,6 +9,8 @@ import { Event } from 'nostr-tools';
 import { decode } from 'blurhash';
 import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/media-with-comments-dialog.component';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
+import { SettingsService } from '../../services/settings.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 interface VideoData {
   url: string;
@@ -36,6 +38,30 @@ export class VideoEventComponent {
 
   private router = inject(Router);
   private dialog = inject(MatDialog);
+  private settings = inject(SettingsService);
+  private accountState = inject(AccountStateService);
+
+  // Media privacy state
+  isRevealed = signal(false);
+
+  shouldBlurMedia = computed(() => {
+    const privacy = this.settings.settings()?.mediaPrivacy;
+    if (!privacy || privacy === 'show-always') {
+      return false;
+    }
+
+    if (privacy === 'blur-always') {
+      return !this.isRevealed();
+    }
+
+    // blur-non-following mode
+    const currentEvent = this.event();
+    const authorPubkey = currentEvent.pubkey;
+    const followingList = this.accountState.followingList();
+
+    const isFollowing = followingList.includes(authorPubkey);
+    return !isFollowing && !this.isRevealed();
+  });
 
   // Video expansion state
   isExpanded = signal(false);
@@ -97,6 +123,16 @@ export class VideoEventComponent {
   });
 
   expandVideo(clickEvent?: MouseEvent | KeyboardEvent): void {
+    // Check if media should be blurred - reveal instead of opening dialog
+    if (this.shouldBlurMedia()) {
+      if (clickEvent) {
+        clickEvent.stopPropagation();
+        clickEvent.preventDefault();
+      }
+      this.revealMedia();
+      return;
+    }
+
     // Prevent navigation when opening dialog in overlay mode
     if (this.showOverlay() && clickEvent) {
       clickEvent.stopPropagation();
@@ -127,6 +163,10 @@ export class VideoEventComponent {
 
   collapseVideo(): void {
     this.isExpanded.set(false);
+  }
+
+  revealMedia(): void {
+    this.isRevealed.set(true);
   }
 
   openEventPage(): void {
