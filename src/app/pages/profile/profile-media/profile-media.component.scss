@@ -84,6 +84,15 @@
           display: block;
         }
 
+        // Ensure blurhash placeholders are visible
+        img.blurhash-placeholder,
+        img.blurhash-thumbnail {
+          position: absolute;
+          top: 0;
+          left: 0;
+          z-index: 1;
+        }
+
         // Remove any padding from photo/video containers
         .photo-carousel-container,
         .video-container {

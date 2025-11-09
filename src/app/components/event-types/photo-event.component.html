@@ -27,7 +27,7 @@
 
       <!-- Click to reveal overlay for blurred images -->
       @if (shouldBlurMedia()) {
-      <div class="reveal-overlay" (click)="revealMedia()">
+      <div class="reveal-overlay" (click)="revealMedia(); $event.stopPropagation()">
         <mat-icon>visibility</mat-icon>
         <span>Click to reveal</span>
       </div>
