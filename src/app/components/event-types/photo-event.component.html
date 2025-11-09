@@ -13,7 +13,8 @@
   [class.clickable]="showOverlay()"
   (click)="showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $event) : null">
   <div class="photo-carousel">
-    <div class="photo-container" [class.blurred]="shouldBlurMedia()" [class.revealing]="!shouldBlurMedia() && isRevealed()">
+    <div class="photo-container" [class.blurred]="shouldBlurMedia()"
+      [class.revealing]="!shouldBlurMedia() && isRevealed()">
       @if (currentBlurhashDataUrl()) {
       <img [src]="currentBlurhashDataUrl()!" class="photo-item blurhash-placeholder" [alt]="currentAltText()"
         [title]="currentAltText()" aria-hidden="true" />
@@ -23,7 +24,7 @@
         (click)="!showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $any($event)) : null"
         tabindex="0" role="button" (keyup.enter)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))"
         (keyup.space)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))" />
-      
+
       <!-- Click to reveal overlay for blurred images -->
       @if (shouldBlurMedia()) {
       <div class="reveal-overlay" (click)="revealMedia()">

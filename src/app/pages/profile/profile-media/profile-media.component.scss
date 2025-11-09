@@ -44,11 +44,11 @@
     border-radius: 8px;
     position: relative;
     cursor: pointer;
-    transition: opacity 0.2s ease;
+    transition: filter 0.2s ease;
 
-    // Dim on hover
+    // Dim on hover - use filter instead of opacity for consistent darkening
     &:hover {
-      opacity: 0.85;
+      filter: brightness(0.7);
     }
 
     // Override event component styles for grid display

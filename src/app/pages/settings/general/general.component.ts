@@ -13,6 +13,7 @@ import { ThemeService } from '../../../services/theme.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
+import { SettingsService } from '../../../services/settings.service';
 import { StorageStatsComponent } from '../../../components/storage-stats/storage-stats.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -49,6 +50,7 @@ export class GeneralSettingsComponent {
   app = inject(ApplicationService);
   dialog = inject(MatDialog);
   localSettings = inject(LocalSettingsService);
+  settings = inject(SettingsService);
   accountState = inject(AccountStateService);
   storage = inject(StorageService);
   notificationService = inject(NotificationService);
@@ -101,6 +103,10 @@ export class GeneralSettingsComponent {
 
   toggleStartOnLastRoute(): void {
     this.localSettings.setStartOnLastRoute(!this.localSettings.startOnLastRoute());
+  }
+
+  setMediaPrivacy(value: 'blur-non-following' | 'blur-always' | 'show-always'): void {
+    this.settings.updateSettings({ mediaPrivacy: value });
   }
 
   resetNotificationsCache(): void {

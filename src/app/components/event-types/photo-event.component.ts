@@ -48,15 +48,15 @@ export class PhotoEventComponent {
   shouldBlurMedia = computed(() => {
     const mediaPrivacy = this.settings.settings().mediaPrivacy || 'show-always';
     const event = this.event();
-    
+
     if (mediaPrivacy === 'show-always') {
       return false;
     }
-    
+
     if (mediaPrivacy === 'blur-always') {
       return !this.isRevealed();
     }
-    
+
     // blur-non-following
     const authorPubkey = event.pubkey;
     const isFollowing = this.accountState.followingList().includes(authorPubkey);
