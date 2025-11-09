@@ -91,6 +91,11 @@ export class MediaPublishDialogComponent {
     if (this.isImage()) {
       this.loadImageAndGenerateBlurhash(this.data.mediaItem.url);
     }
+    
+    // Auto-extract thumbnail for videos on init
+    if (this.isVideo()) {
+      this.extractThumbnailFromVideo();
+    }
   }
 
   // Computed
