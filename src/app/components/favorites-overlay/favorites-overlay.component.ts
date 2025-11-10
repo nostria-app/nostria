@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Router } from '@angular/router';
 import { FavoritesService } from '../../services/favorites.service';
 import { DataService } from '../../services/data.service';
@@ -20,6 +21,7 @@ import { ImageCacheService } from '../../services/image-cache.service';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
+    DragDropModule,
   ],
   templateUrl: './favorites-overlay.component.html',
   styleUrl: './favorites-overlay.component.scss',
@@ -131,7 +133,15 @@ export class FavoritesOverlayComponent {
   // Split following into favorites and non-favorites for the overlay
   favoritesInOverlay = computed(() => {
     const favPubkeys = this.favorites();
-    return this.followingWithProfiles().filter(item => favPubkeys.includes(item.pubkey));
+    const following = this.followingWithProfiles();
+    
+    // Create a map for quick lookup
+    const followingMap = new Map(following.map(item => [item.pubkey, item]));
+    
+    // Return items in the order they appear in favorites array
+    return favPubkeys
+      .map(pubkey => followingMap.get(pubkey))
+      .filter((item): item is { pubkey: string; profile?: NostrRecord } => item !== undefined);
   });
 
   nonFavoritesInOverlay = computed(() => {
@@ -216,5 +226,22 @@ export class FavoritesOverlayComponent {
     if (parts.length === 0) return '?';
     if (parts.length === 1) return parts[0][0].toUpperCase();
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+
+  // Drag and drop handler for reordering favorites
+  onFavoriteDrop(event: CdkDragDrop<{ pubkey: string; profile?: NostrRecord }[]>): void {
+    if (event.previousIndex === event.currentIndex) {
+      return; // No change in position
+    }
+
+    // Get current favorites list (just the pubkeys)
+    const currentFavorites = this.favorites();
+    const reorderedFavorites = [...currentFavorites];
+    
+    // Move the item in the array
+    moveItemInArray(reorderedFavorites, event.previousIndex, event.currentIndex);
+    
+    // Update the favorites with the new order
+    this.favoritesService.reorderFavorites(reorderedFavorites);
   }
 }

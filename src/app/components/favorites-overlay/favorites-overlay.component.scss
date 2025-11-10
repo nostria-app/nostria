@@ -369,3 +369,34 @@
     border-color: var(--mat-sys-surface-dim);
   }
 }
+// Drag and drop styles
+.favorites-grid.cdk-drop-list-dragging .favorite-item:not(.cdk-drag-placeholder) {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.favorite-item.cdk-drag-preview {
+  box-sizing: border-box;
+  border-radius: 8px;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+  opacity: 0.9;
+  cursor: grabbing;
+}
+
+.favorite-item.cdk-drag-placeholder {
+  opacity: 0.4;
+  background-color: var(--mat-sys-surface-variant);
+  border: 2px dashed var(--mat-sys-outline);
+}
+
+.favorite-item.cdk-drag-animating {
+  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+// Add cursor feedback when dragging is possible
+.favorites-grid .favorite-item {
+  cursor: grab;
+  
+  &:active {
+    cursor: grabbing;
+  }
+}

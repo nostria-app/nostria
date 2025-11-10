@@ -57,11 +57,21 @@
         <mat-icon>star</mat-icon>
         Favorites
       </h4>
-      <div class="favorites-grid">
+      <div 
+        class="favorites-grid"
+        cdkDropList
+        (cdkDropListDropped)="onFavoriteDrop($event)"
+      >
         @for (item of favoritesInOverlay(); track item.pubkey) {
-        <button class="favorite-item" (click)="navigateToProfile(item.pubkey); $event.stopPropagation()"
-          (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
-          [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)">
+        <button 
+          class="favorite-item" 
+          cdkDrag
+          (click)="navigateToProfile(item.pubkey); $event.stopPropagation()"
+          (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" 
+          (mouseleave)="onAvatarMouseLeave()" 
+          type="button"
+          [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)"
+        >
           <div class="favorite-avatar-large">
             @if (getAvatarUrl(item.profile)) {
             <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)"
