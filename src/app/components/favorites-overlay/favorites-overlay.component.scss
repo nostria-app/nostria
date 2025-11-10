@@ -4,9 +4,7 @@
   align-items: center;
   margin-right: 0.5rem;
 
-  @media (max-width: 599px) {
-    display: none; // Hide on mobile to avoid cluttering the toolbar
-  }
+  // Always show at least the "..." button on mobile
 }
 
 .favorites-preview {
@@ -14,6 +12,20 @@
   align-items: center;
   gap: 6px;
   padding: 4px;
+
+  // On mobile, hide individual avatars but keep the more button
+  @media (max-width: 599px) {
+    .favorite-avatar:not(.more-button) {
+      display: none;
+    }
+  }
+
+  // At tablet width (720px), show only 3 favorites + more button
+  @media (max-width: 720px) {
+    .favorite-avatar:nth-child(n+4):not(.more-button) {
+      display: none;
+    }
+  }
 }
 
 .favorite-avatar {
@@ -52,7 +64,7 @@
 
   &.more-button {
     background-color: var(--mat-sys-primary-container);
-    
+
     mat-icon {
       font-size: 20px;
       width: 20px;
@@ -62,7 +74,7 @@
 
     &:hover {
       background-color: var(--mat-sys-primary);
-      
+
       mat-icon {
         color: var(--mat-sys-on-primary);
       }
@@ -90,6 +102,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -117,6 +130,32 @@
     border-radius: 0;
     top: 56px;
     padding: 1rem;
+    max-height: calc(100dvh - 116px); // Account for top toolbar (56px) + mobile menu (60px)
+    bottom: 60px; // Leave room for mobile menu
+  }
+}
+
+.overlay-section {
+  &:not(:last-child) {
+    margin-bottom: 24px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
   }
 }
 
@@ -125,6 +164,7 @@
     opacity: 0;
     transform: translateX(30px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -148,7 +188,7 @@
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 1.25rem;
   padding: 0;
-  
+
   @media (max-width: 599px) {
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
     gap: 1rem;

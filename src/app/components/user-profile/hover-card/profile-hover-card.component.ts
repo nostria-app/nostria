@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
 import { RouterModule } from '@angular/router';
 import { DataService } from '../../../services/data.service';
@@ -26,6 +27,7 @@ import { StorageService } from '../../../services/storage.service';
 import { UserDataService } from '../../../services/user-data.service';
 import { nip19 } from 'nostr-tools';
 import { TrustService } from '../../../services/trust.service';
+import { FavoritesService } from '../../../services/favorites.service';
 
 interface ProfileData {
   data?: {
@@ -51,6 +53,7 @@ interface ProfileData {
     MatButtonModule,
     MatProgressSpinnerModule,
     MatMenuModule,
+    MatDividerModule,
     RouterModule,
   ],
   templateUrl: './profile-hover-card.component.html',
@@ -68,6 +71,7 @@ export class ProfileHoverCardComponent {
   private userDataService = inject(UserDataService);
   private trustService = inject(TrustService);
   private dialog = inject(MatDialog);
+  private favoritesService = inject(FavoritesService);
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);
@@ -79,6 +83,10 @@ export class ProfileHoverCardComponent {
   mutualFollowingProfiles = signal<ProfileData[]>([]);
   isMenuOpen = signal(false);
   trustRank = signal<number | undefined>(undefined);
+
+  isFavorite = computed(() => {
+    return this.favoritesService.isFavorite(this.pubkey());
+  });
 
   trustEnabled = computed(() => this.trustService.isEnabled());
 
@@ -248,6 +256,21 @@ export class ProfileHoverCardComponent {
     }
   }
 
+  toggleFavorite(): void {
+    const pubkey = this.pubkey();
+    // Check state BEFORE toggling to show correct message
+    const wasFavorite = this.favoritesService.isFavorite(pubkey);
+    const success = this.favoritesService.toggleFavorite(pubkey);
+
+    if (success) {
+      if (wasFavorite) {
+        this.layout.toast('Removed from favorites');
+      } else {
+        this.layout.toast('Added to favorites');
+      }
+    }
+  }
+
   getOptimizedImageUrl(url: string): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
       return url;
@@ -292,5 +315,23 @@ export class ProfileHoverCardComponent {
         return `Also follows ${names[0]}, ${names[1]} and ${remaining} other${remaining !== 1 ? 's' : ''}`;
       }
     }
+  }
+
+  truncateContent(content: string): string {
+    if (!content) return '';
+    const maxLength = 140;
+    if (content.length <= maxLength) return content;
+    return content.substring(0, maxLength) + '...';
+  }
+
+  getTimeAgo(timestamp: number): string {
+    const now = Math.floor(Date.now() / 1000);
+    const diff = now - timestamp;
+
+    if (diff < 60) return 'just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return `${Math.floor(diff / 604800)}w ago`;
   }
 }

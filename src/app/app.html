@@ -46,6 +46,9 @@
         </button>
         <app-search-results></app-search-results>
       </div>
+      } @else if (app.authenticated()) {
+      <!-- Centered favorites overlay when not searching -->
+      <app-favorites-overlay></app-favorites-overlay>
       }
     </span>
 
@@ -79,9 +82,6 @@
       aria-label="Publishing in progress">
       <mat-icon class="spinning-icon">sync</mat-icon>
     </button>
-    }
-    @if (app.authenticated() && !layout.search()) {
-    <app-favorites-overlay></app-favorites-overlay>
     }
     @if (app.authenticated() && !layout.search()) {
     <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"

@@ -1,0 +1,43 @@
+<mat-card class="timeline-hover-card">
+  <!-- Header with profile info -->
+  <div class="timeline-header">
+    <a [routerLink]="['/p', npubValue()]" class="profile-link">
+      @if (getAvatarUrl()) {
+      <img [src]="getAvatarUrl()!" alt="Avatar" class="avatar" />
+      } @else {
+      <mat-icon class="default-avatar">account_circle</mat-icon>
+      }
+      <div class="profile-name">{{ getDisplayName() }}</div>
+    </a>
+  </div>
+
+  <!-- Timeline content -->
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner [diameter]="40"></mat-spinner>
+    <span>Loading timeline...</span>
+  </div>
+  } @else if (recentNotes().length > 0) {
+  <div class="timeline-content">
+    @for (note of recentNotes(); track note.event.id) {
+    <button class="note-item" (click)="navigateToEvent(note.event.id)" type="button">
+      <div class="note-content">{{ truncateContent(note.data) }}</div>
+      <div class="note-time">{{ getTimeAgo(note.event.created_at) }}</div>
+    </button>
+    }
+  </div>
+  } @else {
+  <div class="no-posts">
+    <mat-icon>article</mat-icon>
+    <span>No recent posts</span>
+  </div>
+  }
+
+  <!-- Footer -->
+  <div class="timeline-footer">
+    <a [routerLink]="['/p', npubValue()]" mat-stroked-button>
+      <mat-icon>visibility</mat-icon>
+      View Full Profile
+    </a>
+  </div>
+</mat-card>

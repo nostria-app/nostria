@@ -1,79 +1,100 @@
-<div class="favorites-container"
-  (mouseenter)="layout.isHandset() ? null : showOverlay()"
-  (mouseleave)="layout.isHandset() ? null : hideOverlay()">
-  
+<div class="favorites-container" (mouseenter)="onContainerMouseEnter()" (mouseleave)="onContainerMouseLeave()">
+
   <!-- Top 5 favorites preview -->
   <div class="favorites-preview">
     @for (item of topFavorites(); track item.pubkey) {
-      <button
-        class="favorite-avatar"
-        [matTooltip]="getDisplayName(item.profile)"
-        (click)="navigateToProfile(item.pubkey)"
-        type="button">
-        @if (getAvatarUrl(item.profile)) {
-          <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)" [title]="getDisplayName(item.profile)" />
-        } @else {
-          <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
-        }
-      </button>
+    <button class="favorite-avatar" (click)="navigateToProfile(item.pubkey)"
+      (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
+      [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)">
+      @if (getAvatarUrl(item.profile)) {
+      <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)"
+        [title]="getDisplayName(item.profile)" />
+      } @else {
+      <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
+      }
+    </button>
     }
-    
-    <!-- Show "..." button if there are more favorites -->
-    @if (hasMoreFavorites()) {
-      <button
-        class="favorite-avatar more-button"
-        matTooltip="Show all favorites"
-        (click)="toggleOverlay()"
-        type="button">
-        <mat-icon>more_horiz</mat-icon>
-      </button>
+
+    <!-- Show "..." button to show all following -->
+    @if (hasFollowing()) {
+    <button class="favorite-avatar more-button" (click)="toggleOverlay()" type="button" aria-label="Show all following">
+      <mat-icon>more_horiz</mat-icon>
+    </button>
     }
   </div>
 
   <!-- Full overlay (shown on hover on desktop, click on mobile) -->
-  @if (isVisible() && favoritesWithProfiles().length > 0) {
-    <!-- Backdrop for mobile -->
-    @if (layout.isHandset()) {
-      <div 
-        class="overlay-backdrop"
-        (click)="hideOverlay()"
-        (keydown.escape)="hideOverlay()"
-        role="button"
-        tabindex="0"
-        aria-label="Close favorites overlay">
-      </div>
-    }
-    
-    <div 
-      class="favorites-overlay" 
-      role="dialog"
-      tabindex="0"
-      (click)="layout.isHandset() ? hideOverlay() : null"
-      (keydown.escape)="hideOverlay()">
-      <div class="overlay-header">
-        <h3>Favorites</h3>
-        <button mat-icon-button (click)="hideOverlay()" type="button">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-      
+  @if (isVisible() && followingWithProfiles().length > 0) {
+  <!-- Backdrop for mobile -->
+  @if (layout.isHandset()) {
+  <div class="overlay-backdrop" (click)="hideOverlay()" (keydown.escape)="hideOverlay()" role="button" tabindex="0"
+    aria-label="Close following overlay">
+  </div>
+  }
+
+  <div class="favorites-overlay" role="dialog" tabindex="0" (mouseenter)="onOverlayMouseEnter()"
+    (mouseleave)="onOverlayMouseLeave()" (click)="layout.isHandset() ? hideOverlay() : null"
+    (keydown.escape)="hideOverlay()">
+    <div class="overlay-header">
+      <h3>Following</h3>
+      <button mat-icon-button (click)="hideOverlay()" type="button">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <!-- Favorites Section -->
+    @if (favoritesInOverlay().length > 0) {
+    <div class="overlay-section">
+      <h4 class="section-title">
+        <mat-icon>star</mat-icon>
+        Favorites
+      </h4>
       <div class="favorites-grid">
-        @for (item of favoritesWithProfiles(); track item.pubkey) {
-          <button
-            class="favorite-item"
-            (click)="navigateToProfile(item.pubkey); $event.stopPropagation()"
-            type="button">
-            <div class="favorite-avatar-large">
-              @if (getAvatarUrl(item.profile)) {
-                <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)" [title]="getDisplayName(item.profile)" />
-              } @else {
-                <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
-              }
-            </div>
-            <span class="favorite-name">{{ getDisplayName(item.profile) }}</span>
-          </button>
+        @for (item of favoritesInOverlay(); track item.pubkey) {
+        <button class="favorite-item" (click)="navigateToProfile(item.pubkey); $event.stopPropagation()"
+          (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
+          [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)">
+          <div class="favorite-avatar-large">
+            @if (getAvatarUrl(item.profile)) {
+            <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)"
+              [title]="getDisplayName(item.profile)" />
+            } @else {
+            <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
+            }
+          </div>
+          <span class="favorite-name">{{ getDisplayName(item.profile) }}</span>
+        </button>
         }
       </div>
     </div>
+    }
+
+    <!-- Other Following Section -->
+    @if (nonFavoritesInOverlay().length > 0) {
+    <div class="overlay-section">
+      <h4 class="section-title">
+        <mat-icon>people</mat-icon>
+        Following
+      </h4>
+      <div class="favorites-grid">
+        @for (item of nonFavoritesInOverlay(); track item.pubkey) {
+        <button class="favorite-item" (click)="navigateToProfile(item.pubkey); $event.stopPropagation()"
+          (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
+          [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)">
+          <div class="favorite-avatar-large">
+            @if (getAvatarUrl(item.profile)) {
+            <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)"
+              [title]="getDisplayName(item.profile)" />
+            } @else {
+            <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
+            }
+          </div>
+          <span class="favorite-name">{{ getDisplayName(item.profile) }}</span>
+        </button>
+        }
+      </div>
+    </div>
+    }
+  </div>
   }
 </div>
