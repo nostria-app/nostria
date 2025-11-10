@@ -1,5 +1,6 @@
-import { Component, input, inject, effect, signal, ViewContainerRef } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, input, inject, effect, signal, ViewContainerRef, OnDestroy } from '@angular/core';
+import { Router, NavigationStart } from '@angular/router';
+import { filter, Subscription } from 'rxjs';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,7 +21,7 @@ import { CashuTokenComponent } from '../../cashu-token/cashu-token.component';
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })
-export class NoteContentComponent {
+export class NoteContentComponent implements OnDestroy {
   contentTokens = input<ContentToken[]>([]);
   private router = inject(Router);
   private utilities = inject(UtilitiesService);
@@ -46,6 +47,7 @@ export class NoteContentComponent {
   private closeTimeout?: number;
   private isMouseOverTrigger = signal(false);
   private isMouseOverCard = signal(false);
+  private routerSubscription?: Subscription;
 
   constructor() {
     // When tokens change, fetch event previews for nevent/note types
@@ -58,6 +60,13 @@ export class NoteContentComponent {
         this.loadEventPreviews(tokens);
       }
     });
+
+    // Close hover card on navigation
+    this.routerSubscription = this.router.events
+      .pipe(filter(event => event instanceof NavigationStart))
+      .subscribe(() => {
+        this.closeHoverCard();
+      });
   }
 
   /**
@@ -385,5 +394,13 @@ export class NoteContentComponent {
       this.overlayRef = null;
       this.hoverCardComponentRef = null;
     }
+  }
+
+  /**
+   * Clean up on component destruction
+   */
+  ngOnDestroy(): void {
+    this.closeHoverCard();
+    this.routerSubscription?.unsubscribe();
   }
 }
