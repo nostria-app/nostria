@@ -25,6 +25,7 @@
   // On mobile, allow the container to scroll
   @media (max-width: 900px) {
     overflow-y: auto;
+    overflow-x: hidden;
     height: 100%;
   }
 }
@@ -435,26 +436,84 @@
 // Mobile responsive layout
 @media (max-width: 900px) {
   .split-view {
-    grid-template-columns: 1fr; // Stack in one column
-    grid-template-rows: auto auto; // Both sections take natural height
-    height: auto; // Allow natural height, not constrained to viewport
-    overflow: visible; // No scrolling on split-view itself
+    display: flex; // Change from grid to flex
+    flex-direction: column; // Stack vertically
+    height: auto;
+    overflow: visible;
+    gap: 0; // No gap, let borders handle separation
   }
 
   .media-side {
-    padding: 4rem 0 0 0; // Only top padding, no side padding on mobile
-    overflow: visible; // No scrolling on media side
-    height: auto; // Natural height based on content
+    padding: 4rem 0 0 0; // Top padding for header only
+    overflow: hidden; // Contain the media content properly
+    height: auto;
+    flex-shrink: 0; // Don't shrink
+    border-bottom: 1px solid var(--mat-sys-outline-variant); // Add separator
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  // Keep carousel container with overflow hidden for nav buttons
+  .photo-carousel {
+    overflow: hidden; // Keep hidden to contain nav buttons and prevent overflow
+    flex-shrink: 0;
+  }
+
+  .photo-container {
+    overflow: hidden; // Keep image contained
+  }
+
+  .photo-item {
+    max-height: none; // Remove max-height restriction
+    flex-shrink: 0;
+  }
+
+  .video-container {
+    flex-shrink: 0;
+  }
+
+  .video-player {
+    max-height: none;
+  }
+
+  // Ensure text elements don't overflow
+  .media-title,
+  .media-description,
+  .geohash-container,
+  .hashtags-container {
+    flex-shrink: 0;
+    overflow: visible;
   }
 
   .comments-side {
     border-left: none;
-    border-top: 1px solid var(--mat-sys-outline-variant);
-    height: auto; // Natural height
-    overflow: visible; // No scrolling on comments side
+    border-top: none; // Already have border on media-side
+    height: auto;
+    overflow: visible;
+    display: block; // Change from grid to block
+    flex-shrink: 0;
+    min-height: 50vh; // Ensure comments section has reasonable space
   }
 
   .comments-content {
-    overflow-y: visible; // No scrolling on comments content
+    overflow: visible !important;
+    min-height: 0;
+    height: auto;
+  }
+
+  .comments-header {
+    position: static;
+  }
+
+  // Account for window-controls-overlay on mobile
+  @media (display-mode: window-controls-overlay) {
+    .dialog-header {
+      top: calc(env(titlebar-area-height, 33px) + 12px);
+    }
+
+    .media-side {
+      padding-top: calc(env(titlebar-area-height, 33px) + 4rem);
+    }
   }
 }

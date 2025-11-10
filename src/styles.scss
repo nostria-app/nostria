@@ -1085,6 +1085,8 @@ app-media-queue .media-list mat-list {
     height: 100vh !important;
     margin: 0 !important;
     border-radius: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
   }
 }
 
@@ -1146,10 +1148,11 @@ app-media-queue .media-list mat-list {
 // Ensure dialogs are not hidden behind the custom frame controls
 @media (display-mode: window-controls-overlay) {
 
-  // For full-screen dialogs (image, image-panel, event), adjust position and height to account for titlebar
+  // For full-screen dialogs (image, image-panel, event, media-with-comments), adjust position and height to account for titlebar
   .image-dialog .mat-mdc-dialog-container,
   .image-dialog-panel .mat-mdc-dialog-container,
-  .event-dialog-container .mat-mdc-dialog-container {
+  .event-dialog-container .mat-mdc-dialog-container,
+  .media-with-comments-dialog .mat-mdc-dialog-container {
     margin-top: env(titlebar-area-height, 33px) !important;
     max-height: calc(100vh - env(titlebar-area-height, 33px)) !important;
   }
@@ -1157,7 +1160,8 @@ app-media-queue .media-list mat-list {
   // Ensure the overlay pane itself respects max height
   .image-dialog.cdk-overlay-pane,
   .image-dialog-panel.cdk-overlay-pane,
-  .event-dialog-container.cdk-overlay-pane {
+  .event-dialog-container.cdk-overlay-pane,
+  .media-with-comments-dialog.cdk-overlay-pane {
     max-height: 100vh !important;
   }
 
