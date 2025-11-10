@@ -1,6 +1,7 @@
 <div class="favorites-container">
 
   <!-- Top 5 favorites preview -->
+  @if (favorites().length > 0) {
   <div class="favorites-preview">
     @for (item of topFavorites(); track item.pubkey) {
     <button class="favorite-avatar" (click)="navigateToProfile(item.pubkey)"
@@ -21,6 +22,7 @@
     </button>
     }
   </div>
+  }
 
   <!-- Full overlay (shown on hover on desktop, click on mobile) -->
   @if (isVisible() && followingWithProfiles().length > 0) {
