@@ -501,6 +501,9 @@ export class FeedService {
     // Load cached events for instant display - async operation from IndexedDB
     const cachedEvents = await this.loadCachedEvents(column.id);
 
+    // Track if we started with cached events (for queueing logic)
+    const hadCachedEvents = cachedEvents.length > 0;
+
     const item: FeedItem = {
       column,
       filter: null,
@@ -511,7 +514,7 @@ export class FeedService {
       hasMore: signal<boolean>(true),
       pendingEvents: signal<Event[]>([]),
       lastCheckTimestamp: Math.floor(Date.now() / 1000), // Initialize with current timestamp in seconds
-      initialLoadComplete: false, // Track initial loading state
+      initialLoadComplete: hadCachedEvents, // If we have cache, mark as complete immediately
     };
 
     // Add to data map IMMEDIATELY so UI can render cached events
@@ -599,9 +602,9 @@ export class FeedService {
             return;
           }
 
-          // If initial load is complete, queue all new events to prevent UI jumps
+          // Queue events if initial load is complete (either had cache or timeout elapsed)
           if (item.initialLoadComplete) {
-            console.log(`📥 Queuing new event (post-initial-load) for column ${column.id}: ${event.id.substring(0, 8)}...`);
+            console.log(`📥 Queuing relay event for column ${column.id}: ${event.id.substring(0, 8)}...`);
             item.pendingEvents?.update((pending: Event[]) => {
               // Avoid duplicates
               if (pending.some(e => e.id === event.id)) {
@@ -611,8 +614,8 @@ export class FeedService {
               return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
             });
           } else {
-            // During initial load, add to main events array
-            console.log(`➕ Adding event to main array (initial load) for column ${column.id}: ${event.id.substring(0, 8)}...`);
+            // Initial load not complete - render relay events directly (empty feed scenario)
+            console.log(`➕ Adding relay event to empty feed for column ${column.id}: ${event.id.substring(0, 8)}...`);
             item.events.update((events: Event[]) => {
               // Avoid duplicates
               if (events.some(e => e.id === event.id)) {
@@ -638,9 +641,9 @@ export class FeedService {
             return;
           }
 
-          // If initial load is complete, queue all new events to prevent UI jumps
+          // Queue events if initial load is complete (either had cache or timeout elapsed)
           if (item.initialLoadComplete) {
-            console.log(`📥 Queuing new event (post-initial-load) for column ${column.id}: ${event.id.substring(0, 8)}...`);
+            console.log(`📥 Queuing relay event for column ${column.id}: ${event.id.substring(0, 8)}...`);
             item.pendingEvents?.update((pending: Event[]) => {
               // Avoid duplicates
               if (pending.some(e => e.id === event.id)) {
@@ -650,8 +653,8 @@ export class FeedService {
               return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
             });
           } else {
-            // During initial load, add to main events array
-            console.log(`➕ Adding event to main array (initial load) for column ${column.id}: ${event.id.substring(0, 8)}...`);
+            // Initial load not complete - render relay events directly (empty feed scenario)
+            console.log(`➕ Adding relay event to empty feed for column ${column.id}: ${event.id.substring(0, 8)}...`);
             item.events.update((events: Event[]) => {
               // Avoid duplicates
               if (events.some(e => e.id === event.id)) {
@@ -670,14 +673,16 @@ export class FeedService {
       item.subscription = sub;
       console.log(`✅ Subscription created and stored:`, sub ? 'YES' : 'NO');
 
-      // For relay subscriptions (global/public feeds), mark initial load complete after a delay
-      // This allows time for the initial burst of events to arrive
-      setTimeout(() => {
-        if (!item.initialLoadComplete) {
-          item.initialLoadComplete = true;
-          this.logger.info(`✅ Initial load complete (timeout) for column ${column.id} - new events will be queued`);
-        }
-      }, 3000); // 3 seconds should be enough for initial EOSE
+      // For empty feeds, mark initial load as complete after 2 seconds
+      // This allows initial burst of events to render, then subsequent events queue
+      if (!hadCachedEvents) {
+        setTimeout(() => {
+          if (!item.initialLoadComplete) {
+            item.initialLoadComplete = true;
+            this.logger.info(`✅ Initial relay load complete for column ${column.id} - new events will be queued`);
+          }
+        }, 2000); // 2 seconds for initial events on empty feeds
+      }
     }
 
     // Note: item was already added to data map at the beginning of this method
