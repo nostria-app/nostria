@@ -68,6 +68,7 @@ import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep
 import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
 import { FeedsCollectionService } from './services/feeds-collection.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
+import { FavoritesOverlayComponent } from './components/favorites-overlay/favorites-overlay.component';
 import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
 import { RouteDataService } from './services/route-data.service';
@@ -123,6 +124,7 @@ interface NavItem {
     NavigationComponent,
     NavigationContextMenuComponent,
     SleepModeOverlayComponent,
+    FavoritesOverlayComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',

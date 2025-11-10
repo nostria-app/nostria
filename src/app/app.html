@@ -81,6 +81,9 @@
     </button>
     }
     @if (app.authenticated() && !layout.search()) {
+    <app-favorites-overlay></app-favorites-overlay>
+    }
+    @if (app.authenticated() && !layout.search()) {
     <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
       #notificationMenuTrigger="matMenuTrigger">
       <mat-icon [class.pulsing-icon]="hasActivePendingNotifications()"
