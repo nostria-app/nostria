@@ -50,6 +50,7 @@ export class EventHeaderComponent {
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
   event = input.required<Event>();
+  compact = input<boolean>(false);
   record = signal<NostrRecord | null>(null);
 
   isOurEvent = computed<boolean>(() => {

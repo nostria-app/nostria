@@ -326,7 +326,7 @@
     padding-bottom: 8px;
 
     &.collapsed {
-      max-height: 6em; // Approximately 4 lines at 1.5em line height
+      max-height: 4.5em; // Fixed height: 3 lines at 1.5em line height
       overflow: hidden;
       position: relative;
 
@@ -372,7 +372,7 @@
     padding-bottom: 8px;
 
     &.collapsed {
-      max-height: 6em; // Approximately 4 lines at 1.5em line height
+      max-height: 4.5em; // Fixed height: 3 lines at 1.5em line height
       overflow: hidden;
       position: relative;
 

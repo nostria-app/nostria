@@ -1,5 +1,19 @@
 mat-card-header {
   padding-right: 8px;
+
+  &.compact {
+    padding: 4px 8px;
+    min-height: 0;
+
+    ::ng-deep .user-profile-container {
+      gap: 6px;
+    }
+
+    .date-link {
+      font-size: 0.75rem;
+      opacity: 0.7;
+    }
+  }
 }
 
 .date-link {

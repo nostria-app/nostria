@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, untracked, ViewChild, ElementRef, AfterViewChecked, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, untracked, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatDialog } from '@angular/material/dialog';
@@ -82,7 +82,7 @@ type EventCardAppearance = 'card' | 'plain';
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
 })
-export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestroy {
+export class EventComponent implements AfterViewInit, OnDestroy {
   id = input<string | null | undefined>();
   type = input<'e' | 'a' | 'r' | 't'>('e');
   event = input<Event | null | undefined>(null);
@@ -98,9 +98,6 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   allMediaEvents = input<Event[]>([]);
   mediaEventIndex = input<number | undefined>(undefined);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
-
-  @ViewChild('rootContent') rootContentRef?: ElementRef<HTMLElement>;
-  @ViewChild('parentContent') parentContentRef?: ElementRef<HTMLElement>;
 
   // IntersectionObserver for lazy loading interactions
   private intersectionObserver?: IntersectionObserver;
@@ -152,8 +149,6 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   // Expansion state for thread context in timeline mode
   isRootEventExpanded = signal<boolean>(false);
   isParentEventExpanded = signal<boolean>(false);
-  rootContentNeedsTruncation = signal<boolean>(false);
-  parentContentNeedsTruncation = signal<boolean>(false);
 
   // Check if this event is currently the one being displayed on the event page
   isCurrentlySelected = computed<boolean>(() => {
@@ -423,26 +418,6 @@ export class EventComponent implements AfterViewChecked, AfterViewInit, OnDestro
   shouldHideContentOverall = computed<boolean>(() => {
     return this.shouldHideContent() || this.shouldHideContentDueToWarning();
   });
-
-  ngAfterViewChecked(): void {
-    // Check if root content needs truncation
-    if (this.rootContentRef?.nativeElement) {
-      const element = this.rootContentRef.nativeElement;
-      const needsTruncation = element.scrollHeight > element.clientHeight + 1; // +1 for rounding
-      if (this.rootContentNeedsTruncation() !== needsTruncation) {
-        this.rootContentNeedsTruncation.set(needsTruncation);
-      }
-    }
-
-    // Check if parent content needs truncation
-    if (this.parentContentRef?.nativeElement) {
-      const element = this.parentContentRef.nativeElement;
-      const needsTruncation = element.scrollHeight > element.clientHeight + 1; // +1 for rounding
-      if (this.parentContentNeedsTruncation() !== needsTruncation) {
-        this.parentContentNeedsTruncation.set(needsTruncation);
-      }
-    }
-  }
 
   constructor() {
     effect(() => {
