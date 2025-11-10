@@ -172,9 +172,9 @@
             </div>
           </div>
 
-          <!-- New posts notification button -->
+          <!-- Floating new posts button -->
           @if (getPendingEventsCount(column.id) > 0) {
-          <div class="new-posts-notification">
+          <div class="new-posts-floating">
             <button mat-raised-button color="primary" (click)="loadNewPosts(column.id)" class="new-posts-button">
               <mat-icon>arrow_upward</mat-icon>
               {{ getPendingEventsCount(column.id) }} new {{ getPendingEventsCount(column.id) === 1 ? 'post' : 'posts' }}
@@ -248,7 +248,7 @@
             <div class="load-more-rendered-events">
               <button mat-stroked-button (click)="loadMoreRenderedEvents(column.id)" class="load-more-button">
                 <mat-icon>expand_more</mat-icon>
-                Show more ({{ getRenderedEventCount(column.id) }} of {{ getTotalEventCount(column.id) }})
+                Show more
               </button>
             </div>
             }
