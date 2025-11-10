@@ -124,6 +124,31 @@
   padding: 1.5rem;
   animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
+  // Docked state styling
+  &.docked {
+    width: 220px; // Narrower to fit only 2 profiles per line
+    border-radius: 0; // No rounded corners when docked
+    box-shadow:
+      -2px 0 8px rgba(0, 0, 0, 0.1),
+      var(--mat-sys-level2);
+    border-left: 2px solid var(--mat-sys-primary);
+    padding: 0.75rem; // Less padding when docked
+    max-height: calc(100dvh - 64px); // Full height minus toolbar
+
+    // Add a subtle indicator that it's pinned
+    &::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 2px;
+      height: 100%;
+      background: linear-gradient(to bottom,
+          var(--mat-sys-primary) 0%,
+          transparent 100%);
+    }
+  }
+
   @media (max-width: 599px) {
     width: 100%;
     max-width: 100%;
@@ -132,6 +157,12 @@
     padding: 1rem;
     max-height: calc(100dvh - 116px); // Account for top toolbar (56px) + mobile menu (60px)
     bottom: 60px; // Leave room for mobile menu
+
+    // Keep as overlay on mobile even when docked
+    &.docked {
+      width: 100%;
+      position: fixed;
+    }
   }
 }
 
@@ -152,10 +183,21 @@
   font-weight: 500;
   color: var(--mat-sys-on-surface-variant);
 
+  .docked & {
+    font-size: 13px;
+    gap: 6px;
+  }
+
   mat-icon {
     font-size: 18px;
     width: 18px;
     height: 18px;
+
+    .docked & {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
   }
 }
 
@@ -180,6 +222,25 @@
   h3 {
     margin: 0;
     font-size: 1.25rem;
+
+    .docked & {
+      font-size: 1.125rem;
+    }
+  }
+}
+
+.overlay-actions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+
+  .docked-icon {
+    color: var(--mat-sys-primary);
+
+    mat-icon {
+      transform: rotate(45deg);
+      transition: transform 0.2s ease;
+    }
   }
 }
 
@@ -188,6 +249,12 @@
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 1.25rem;
   padding: 0;
+
+  // More compact grid when in docked sidebar - 2 columns
+  .docked & {
+    grid-template-columns: repeat(2, 1fr); // Exactly 2 columns
+    gap: 0.75rem;
+  }
 
   @media (max-width: 599px) {
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
@@ -207,6 +274,12 @@
   background: transparent;
   border: none;
   width: 100%;
+
+  // Reduce padding when docked for compact layout
+  .docked & {
+    padding: 0.5rem;
+    gap: 0.4rem;
+  }
 
   &:hover {
     background-color: var(--mat-sys-surface-variant);
@@ -230,6 +303,13 @@
   justify-content: center;
   transition: all 0.2s ease;
 
+  // Smaller avatars when docked - optimized for 2 columns
+  .docked & {
+    width: 48px;
+    height: 48px;
+    border-width: 2px;
+  }
+
   @media (max-width: 599px) {
     width: 60px;
     height: 60px;
@@ -246,6 +326,10 @@
     font-size: 1.75rem;
     font-weight: 500;
     color: var(--mat-sys-on-surface-variant);
+
+    .docked & {
+      font-size: 1.125rem;
+    }
 
     @media (max-width: 599px) {
       font-size: 1.5rem;
@@ -268,6 +352,11 @@
   max-width: 100%;
   color: var(--mat-sys-on-surface);
   line-height: 1.3;
+
+  // Smaller text when docked
+  .docked & {
+    font-size: 0.7rem;
+  }
 }
 
 // Dark theme adjustments

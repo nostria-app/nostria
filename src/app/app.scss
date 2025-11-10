@@ -57,6 +57,16 @@ mat-sidenav-content {
   display: flex;
   flex-direction: column;
   height: 100%;
+  transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  // Add margin when following sidebar is docked
+  &.following-sidebar-docked {
+    margin-right: 220px; // Width of docked sidebar (reduced from 320px)
+
+    @media (max-width: 599px) {
+      margin-right: 0; // No margin on mobile, keep as overlay
+    }
+  }
 
   // Adjust for mobile navigation
   @media (max-width: 599px) {
@@ -276,18 +286,20 @@ mat-sidenav-content {
   }
 }
 
-// Ensure the sidenav container doesn't resize when profile sidenav opens
+// Ensure the sidenav container doesn't resize when right-side sidenavs open
 .sidenav-container.mat-sidenav-container {
-  transform: none !important;
+  // Don't prevent transforms on the container - let left sidenav work normally
 
-  // Prevent content from shifting when right sidenav opens
-  .mat-sidenav-content {
-    margin-right: 0 !important;
-    transform: none !important;
-    transition: none !important;
+  // Only prevent right sidenav from pushing content
+  mat-sidenav[position="end"] {
+
+    // Right sidenavs should overlay, not push
+    &.mat-drawer-over {
+      z-index: 1002 !important;
+    }
   }
 
-  // Ensure right sidenav has proper backdrop behavior
+  // Ensure backdrop appears correctly
   .mat-sidenav-backdrop {
     position: fixed !important;
   }

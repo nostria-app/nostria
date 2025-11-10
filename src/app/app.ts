@@ -171,6 +171,7 @@ export class App implements OnInit {
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
   @ViewChild('notificationMenuTrigger') notificationMenuTrigger!: MatMenuTrigger;
+  @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
 
   // Track if push notification prompt has been shown
   private pushPromptShown = signal(false);

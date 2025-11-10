@@ -6,8 +6,8 @@
     <button class="favorite-avatar" (click)="navigateToProfile(item.pubkey)"
       (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
       [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)">
-      @if (getAvatarUrl(item.profile)) {
-      <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)" />
+      @if (getPreviewAvatarUrl(item.profile)) {
+      <img [src]="getPreviewAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)" />
       } @else {
       <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
       }
@@ -24,18 +24,30 @@
 
   <!-- Full overlay (shown on hover on desktop, click on mobile) -->
   @if (isVisible() && followingWithProfiles().length > 0) {
-  <!-- Backdrop to allow clicking outside to dismiss -->
+  <!-- Backdrop to allow clicking outside to dismiss (hidden when docked) -->
+  @if (!isDocked()) {
   <div class="overlay-backdrop" (click)="hideOverlay()" (keydown.escape)="hideOverlay()" role="button" tabindex="0"
     aria-label="Close following overlay">
   </div>
+  }
 
-  <div class="favorites-overlay" role="dialog" tabindex="0" (click)="$event.stopPropagation()"
+  <div class="favorites-overlay" [class.docked]="isDocked()" role="dialog" tabindex="0"
     (keydown.escape)="hideOverlay()">
     <div class="overlay-header">
       <h3>Following</h3>
-      <button mat-icon-button (click)="hideOverlay()" type="button">
-        <mat-icon>close</mat-icon>
-      </button>
+      <div class="overlay-actions">
+        <!-- @if (!layout.isHandset()) {
+        <button mat-icon-button (click)="toggleDock(); $event.stopPropagation()" type="button"
+          [matTooltip]="isDocked() ? 'Unpin sidebar' : 'Pin sidebar'"
+          [attr.aria-label]="isDocked() ? 'Unpin sidebar' : 'Pin sidebar'" [class.docked-icon]="isDocked()">
+          <mat-icon [fontIcon]="isDocked() ? 'push_pin' : 'push_pin'"></mat-icon>
+        </button>
+        } -->
+        <button mat-icon-button (click)="hideOverlay(); $event.stopPropagation()" type="button" [matTooltip]="'Close'"
+          aria-label="Close">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
     </div>
 
     <!-- Favorites Section -->
