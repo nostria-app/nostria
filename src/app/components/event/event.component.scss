@@ -31,6 +31,7 @@
 }
 
 .note-card {
+  margin-bottom: 0.4rem;
   // Solid card background similar to Facebook UI
   background-color: var(--mat-sys-surface-container-low);
   // border: none !important;
@@ -55,7 +56,7 @@
 
   &.selected {
     // Disable hover effects for selected events
-    background-color: var(--mat-sys-surface-container-low);
+    background-color: transparent;
     transform: none;
     cursor: default;
   }
@@ -360,7 +361,6 @@
 
 .parent-event {
   margin-bottom: 16px;
-  border-left: 3px solid var(--mat-sys-primary);
   cursor: pointer;
   transition: background-color 0.2s ease-in-out;
 
