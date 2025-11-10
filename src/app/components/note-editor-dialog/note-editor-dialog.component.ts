@@ -1088,6 +1088,46 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         try {
           console.log(`Uploading file: ${file.name}, type: ${file.type}, size: ${file.size}`);
 
+          // Pre-extract thumbnail for videos using the local file
+          let thumbnailData:
+            | {
+              blob: Blob;
+              dimensions: { width: number; height: number };
+              blurhash: string;
+            }
+            | undefined;
+
+          if (file.type.startsWith('video/')) {
+            try {
+              this.snackBar.open('Extracting video thumbnail...', '', { duration: 2000 });
+
+              // Create object URL from the local file for thumbnail extraction
+              const localVideoUrl = URL.createObjectURL(file);
+
+              // Extract thumbnail from the local video file
+              const thumbnailResult = await this.utilities.extractThumbnailFromVideo(localVideoUrl, 1);
+
+              // Generate blurhash from the thumbnail
+              const thumbnailFile = new File([thumbnailResult.blob], 'thumbnail.jpg', {
+                type: 'image/jpeg',
+              });
+              const blurhashResult = await this.utilities.generateBlurhash(thumbnailFile);
+
+              thumbnailData = {
+                blob: thumbnailResult.blob,
+                dimensions: thumbnailResult.dimensions,
+                blurhash: blurhashResult.blurhash,
+              };
+
+              // Clean up the local object URL
+              URL.revokeObjectURL(localVideoUrl);
+              URL.revokeObjectURL(thumbnailResult.objectUrl);
+            } catch (error) {
+              console.error('Failed to extract video thumbnail:', error);
+              // Continue with upload even if thumbnail extraction fails
+            }
+          }
+
           const result = await this.mediaService.uploadFile(
             file,
             this.uploadOriginal(),
@@ -1104,7 +1144,8 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
               file,
               result.item.url,
               result.item.sha256,
-              result.item.mirrors // Pass mirror URLs for fallback support
+              result.item.mirrors, // Pass mirror URLs for fallback support
+              thumbnailData // Pass pre-extracted thumbnail data for videos
             );
             if (metadata) {
               this.mediaMetadata.set([...this.mediaMetadata(), metadata]);
@@ -1258,8 +1299,23 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
    * Extract media metadata for NIP-92 imeta tags
    * Generates blurhash and dimensions for images
    * For videos: extracts thumbnail, generates blurhash from thumbnail
+   * @param file Original file object
+   * @param url Uploaded media URL
+   * @param sha256 SHA-256 hash of the media
+   * @param mirrors Mirror URLs for the media
+   * @param thumbnailData Optional pre-extracted thumbnail data for videos
    */
-  private async extractMediaMetadata(file: File, url: string, sha256?: string, mirrors?: string[]): Promise<MediaMetadata | null> {
+  private async extractMediaMetadata(
+    file: File,
+    url: string,
+    sha256?: string,
+    mirrors?: string[],
+    thumbnailData?: {
+      blob: Blob;
+      dimensions: { width: number; height: number };
+      blurhash: string;
+    }
+  ): Promise<MediaMetadata | null> {
     try {
       const metadata: MediaMetadata = {
         url,
@@ -1278,18 +1334,13 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         return result;
       }
 
-      // Handle videos - extract thumbnail and generate blurhash
-      if (file.type.startsWith('video/')) {
+      // Handle videos - use pre-extracted thumbnail data if available
+      if (file.type.startsWith('video/') && thumbnailData) {
         try {
-          // Extract thumbnail from the uploaded video
-          const thumbnailResult = await this.utilities.extractThumbnailFromVideo(url, 1);
-
           // Upload the thumbnail blob to get a permanent URL
-          const thumbnailFile = new File([thumbnailResult.blob], 'thumbnail.jpg', {
+          const thumbnailFile = new File([thumbnailData.blob], 'thumbnail.jpg', {
             type: 'image/jpeg',
           });
-
-          this.snackBar.open('Generating video thumbnail...', '', { duration: 2000 });
 
           const uploadResult = await this.mediaService.uploadFile(
             thumbnailFile,
@@ -1298,26 +1349,20 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
           );
 
           if (uploadResult.status === 'success' && uploadResult.item) {
-            // Generate blurhash from the thumbnail file
-            const blurhashResult = await this.utilities.generateBlurhash(thumbnailFile);
-
             // Use 'image' field for preview capture (NIP-94)
             metadata.image = uploadResult.item.url;
-            metadata.blurhash = blurhashResult.blurhash;
-            metadata.dimensions = blurhashResult.dimensions;
+            metadata.blurhash = thumbnailData.blurhash;
+            metadata.dimensions = thumbnailData.dimensions;
 
             // Add thumbnail mirrors if available
             if (uploadResult.item.mirrors && uploadResult.item.mirrors.length > 0) {
               metadata.imageMirrors = uploadResult.item.mirrors;
             }
-
-            // Clean up the temporary object URL
-            URL.revokeObjectURL(thumbnailResult.objectUrl);
           } else {
             console.warn('Failed to upload video thumbnail:', uploadResult.message);
           }
         } catch (error) {
-          console.error('Failed to extract video thumbnail:', error);
+          console.error('Failed to upload video thumbnail:', error);
           // Continue without thumbnail - basic metadata is still useful
         }
       }
