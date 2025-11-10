@@ -1,0 +1,242 @@
+.favorites-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-right: 0.5rem;
+
+  @media (max-width: 599px) {
+    display: none; // Hide on mobile to avoid cluttering the toolbar
+  }
+}
+
+.favorites-preview {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+}
+
+.favorite-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid var(--mat-sys-surface);
+  background-color: var(--mat-sys-surface-variant);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+
+  &:hover {
+    transform: scale(1.15);
+    border-color: var(--mat-sys-primary);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    z-index: 10;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-initials {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  &.more-button {
+    background-color: var(--mat-sys-primary-container);
+    
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--mat-sys-on-primary-container);
+    }
+
+    &:hover {
+      background-color: var(--mat-sys-primary);
+      
+      mat-icon {
+        color: var(--mat-sys-on-primary);
+      }
+    }
+  }
+}
+
+// Backdrop for mobile overlay
+.overlay-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation: fadeIn 0.2s ease-out;
+
+  @media (min-width: 600px) {
+    display: none; // No backdrop on desktop since we use hover
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Overlay that appears on hover (desktop) or click (mobile)
+.favorites-overlay {
+  position: fixed;
+  top: 64px; // Below toolbar
+  right: 0;
+  width: 400px;
+  max-width: 90vw;
+  max-height: calc(100dvh - 80px);
+  background-color: var(--mat-sys-surface-container);
+  box-shadow: var(--mat-sys-level4);
+  border-radius: 12px 0 0 12px;
+  z-index: 1000;
+  overflow-y: auto;
+  padding: 1.5rem;
+  animation: slideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+  @media (max-width: 599px) {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    top: 56px;
+    padding: 1rem;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.overlay-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+
+  h3 {
+    margin: 0;
+    font-size: 1.25rem;
+  }
+}
+
+.favorites-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 1.25rem;
+  padding: 0;
+  
+  @media (max-width: 599px) {
+    grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+    gap: 1rem;
+  }
+}
+
+.favorite-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  cursor: pointer;
+  padding: 0.75rem;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  background: transparent;
+  border: none;
+  width: 100%;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-variant);
+    transform: translateY(-2px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+.favorite-avatar-large {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 3px solid var(--mat-sys-outline-variant);
+  background-color: var(--mat-sys-surface-variant);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  @media (max-width: 599px) {
+    width: 60px;
+    height: 60px;
+    border-width: 2px;
+  }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .avatar-initials {
+    font-size: 1.75rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface-variant);
+
+    @media (max-width: 599px) {
+      font-size: 1.5rem;
+    }
+  }
+}
+
+.favorite-item:hover .favorite-avatar-large {
+  border-color: var(--mat-sys-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.favorite-name {
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+  color: var(--mat-sys-on-surface);
+  line-height: 1.3;
+}
+
+// Dark theme adjustments
+.dark {
+  .favorites-overlay {
+    background-color: var(--mat-sys-surface-container);
+  }
+
+  .favorite-avatar {
+    border-color: var(--mat-sys-surface-dim);
+  }
+}
