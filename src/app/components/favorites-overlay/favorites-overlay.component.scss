@@ -249,6 +249,7 @@
   grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
   gap: 1.25rem;
   padding: 0;
+  position: relative;
 
   // More compact grid when in docked sidebar - 2 columns
   .docked & {
@@ -259,6 +260,15 @@
   @media (max-width: 599px) {
     grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
     gap: 1rem;
+  }
+
+  // Prevent visual shifting during drag
+  &.cdk-drop-list-dragging {
+    .favorite-item:not(.cdk-drag-placeholder) {
+      // No transition - items stay in place visually
+      transition: none !important;
+      transform: none !important;
+    }
   }
 }
 
@@ -369,34 +379,64 @@
     border-color: var(--mat-sys-surface-dim);
   }
 }
-// Drag and drop styles
-.favorites-grid.cdk-drop-list-dragging .favorite-item:not(.cdk-drag-placeholder) {
-  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-}
 
-.favorite-item.cdk-drag-preview {
-  box-sizing: border-box;
-  border-radius: 8px;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  opacity: 0.9;
-  cursor: grabbing;
-}
-
-.favorite-item.cdk-drag-placeholder {
-  opacity: 0.4;
-  background-color: var(--mat-sys-surface-variant);
-  border: 2px dashed var(--mat-sys-outline);
-}
-
-.favorite-item.cdk-drag-animating {
-  transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
-}
-
-// Add cursor feedback when dragging is possible
-.favorites-grid .favorite-item {
+// Drag and drop styles (native HTML5)
+.favorite-item {
   cursor: grab;
-  
-  &:active {
+  position: relative;
+
+  &[draggable="true"]:active {
     cursor: grabbing;
+  }
+
+  // Item being dragged
+  &.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+  }
+
+  // Drop target indicator
+  &.drop-target {
+    position: relative;
+
+    // Add a glowing border to show drop target
+    &::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border: 3px solid var(--mat-sys-primary);
+      border-radius: 12px;
+      background-color: var(--mat-sys-primary-container);
+      opacity: 0.4;
+      pointer-events: none;
+      animation: dropTargetPulse 1s ease-in-out infinite;
+    }
+
+    // Add a line indicator on the left
+    &::after {
+      content: '';
+      position: absolute;
+      left: -12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 4px;
+      height: 70%;
+      background-color: var(--mat-sys-primary);
+      border-radius: 2px;
+      box-shadow: 0 0 8px var(--mat-sys-primary);
+      pointer-events: none;
+    }
+  }
+}
+
+@keyframes dropTargetPulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+  }
+
+  50% {
+    opacity: 0.6;
   }
 }

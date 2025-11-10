@@ -3,7 +3,6 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { Router } from '@angular/router';
 import { FavoritesService } from '../../services/favorites.service';
 import { DataService } from '../../services/data.service';
@@ -21,7 +20,6 @@ import { ImageCacheService } from '../../services/image-cache.service';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
-    DragDropModule,
   ],
   templateUrl: './favorites-overlay.component.html',
   styleUrl: './favorites-overlay.component.scss',
@@ -40,6 +38,13 @@ export class FavoritesOverlayComponent {
 
   // Signal to track if overlay is docked/pinned
   isDocked = signal(false);
+
+  // Signal to track if currently dragging
+  isDragging = signal(false);
+
+  // Track drag state for custom drag-and-drop
+  draggedIndex = signal<number | null>(null);
+  dropTargetIndex = signal<number | null>(null);
 
   // Get favorites from the service
   favorites = this.favoritesService.favorites;
@@ -134,10 +139,10 @@ export class FavoritesOverlayComponent {
   favoritesInOverlay = computed(() => {
     const favPubkeys = this.favorites();
     const following = this.followingWithProfiles();
-    
+
     // Create a map for quick lookup
     const followingMap = new Map(following.map(item => [item.pubkey, item]));
-    
+
     // Return items in the order they appear in favorites array
     return favPubkeys
       .map(pubkey => followingMap.get(pubkey))
@@ -182,6 +187,10 @@ export class FavoritesOverlayComponent {
   }
 
   onAvatarMouseEnter(event: MouseEvent, pubkey: string): void {
+    // Don't show hover card while dragging
+    if (this.isDragging()) {
+      return;
+    }
     const element = event.currentTarget as HTMLElement;
     this.timelineHoverCardService.showHoverCard(element, pubkey);
   }
@@ -228,20 +237,98 @@ export class FavoritesOverlayComponent {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   }
 
-  // Drag and drop handler for reordering favorites
-  onFavoriteDrop(event: CdkDragDrop<{ pubkey: string; profile?: NostrRecord }[]>): void {
-    if (event.previousIndex === event.currentIndex) {
-      return; // No change in position
+  // Native HTML5 drag and drop handlers
+  onDragStart(event: DragEvent, index: number): void {
+    this.draggedIndex.set(index);
+    this.isDragging.set(true);
+    this.timelineHoverCardService.hideHoverCard();
+
+    // Create a custom drag image from the entire button element
+    if (event.dataTransfer && event.currentTarget) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', index.toString());
+
+      // Clone the button element to use as drag image
+      const draggedElement = event.currentTarget as HTMLElement;
+      const clone = draggedElement.cloneNode(true) as HTMLElement;
+
+      // Style the clone for better visibility
+      clone.style.position = 'absolute';
+      clone.style.top = '-9999px';
+      clone.style.width = draggedElement.offsetWidth + 'px';
+      clone.style.height = draggedElement.offsetHeight + 'px';
+      clone.style.opacity = '0.9';
+      clone.style.transform = 'rotate(3deg)';
+      clone.style.boxShadow = '0 5px 15px rgba(0, 0, 0, 0.3)';
+      clone.style.borderRadius = '12px';
+      clone.style.backgroundColor = 'var(--mat-sys-surface-container-high)';
+
+      document.body.appendChild(clone);
+
+      // Set the clone as the drag image
+      event.dataTransfer.setDragImage(clone, draggedElement.offsetWidth / 2, draggedElement.offsetHeight / 2);
+
+      // Remove the clone after a short delay
+      setTimeout(() => {
+        document.body.removeChild(clone);
+      }, 0);
+    }
+  }
+
+  onDragEnd(event: DragEvent): void {
+    event.preventDefault();
+    this.draggedIndex.set(null);
+    this.dropTargetIndex.set(null);
+    this.isDragging.set(false);
+  }
+
+  onDragOver(event: DragEvent, index: number): void {
+    event.preventDefault();
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
     }
 
-    // Get current favorites list (just the pubkeys)
+    const draggedIdx = this.draggedIndex();
+    if (draggedIdx !== null && draggedIdx !== index) {
+      this.dropTargetIndex.set(index);
+    }
+  }
+
+  onDragLeave(event: DragEvent): void {
+    // Only clear if we're leaving the grid entirely
+    const target = event.relatedTarget as HTMLElement;
+    if (!target || !target.closest('.favorite-item')) {
+      this.dropTargetIndex.set(null);
+    }
+  }
+
+  onDrop(event: DragEvent, dropIndex: number): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const draggedIdx = this.draggedIndex();
+
+    if (draggedIdx === null || draggedIdx === dropIndex) {
+      this.draggedIndex.set(null);
+      this.dropTargetIndex.set(null);
+      this.isDragging.set(false);
+      return;
+    }
+
+    // Get current favorites and reorder
     const currentFavorites = this.favorites();
     const reorderedFavorites = [...currentFavorites];
-    
-    // Move the item in the array
-    moveItemInArray(reorderedFavorites, event.previousIndex, event.currentIndex);
-    
+
+    // Remove dragged item and insert at drop position
+    const [draggedItem] = reorderedFavorites.splice(draggedIdx, 1);
+    reorderedFavorites.splice(dropIndex, 0, draggedItem);
+
     // Update the favorites with the new order
     this.favoritesService.reorderFavorites(reorderedFavorites);
+
+    // Clear drag state
+    this.draggedIndex.set(null);
+    this.dropTargetIndex.set(null);
+    this.isDragging.set(false);
   }
 }
