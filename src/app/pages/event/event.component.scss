@@ -157,6 +157,11 @@
     // margin-bottom: 0.5rem;
     border-left: 2px solid var(--mat-sys-primary);
     padding-left: 8px;
+
+    &:first-child {
+      border-left: none;
+      padding-left: 0;
+    }
   }
 
   // .thread-indicator {
@@ -200,7 +205,7 @@
 .threaded-reply {
   border-left: 2px solid var(--mat-sys-outline-variant);
   padding-left: 8px;
-  margin-bottom: 0.5rem;
+  // margin-bottom: 0.5rem;
 
   &:last-child {
     margin-bottom: 0;
