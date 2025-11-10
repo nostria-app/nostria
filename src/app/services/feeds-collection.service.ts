@@ -62,9 +62,10 @@ export class FeedsCollectionService {
     // Reload active feed when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
+      const feedsLoaded = this.feedService.feedsLoaded(); // Wait for feeds to be loaded
 
       untracked(() => {
-        if (pubkey) {
+        if (pubkey && feedsLoaded) {
           // Load the active feed for this account
           const activeFeedId = this.accountLocalState.getActiveFeed(pubkey);
           if (activeFeedId) {
