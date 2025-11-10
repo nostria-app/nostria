@@ -28,49 +28,47 @@
     </span>
     <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>
   </mat-card-header>
+
+  <app-event-header [event]="repostService.decodeRepost(item.event).event"></app-event-header>
   <mat-card-content>
-    <mat-card appearance="outlined">
-      <app-event-header [event]="repostService.decodeRepost(item.event).event"></app-event-header>
-      <mat-card-content>
-        @if (targetItem.event.kind === 20) {
-        <app-photo-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-          [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
-        }
-        <!-- Videos (NIP-71, kind 21/22) -->
-        @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22) {
-        <app-video-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-          [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
-        }
-        <!-- Articles (kind 30023) -->
-        @else if (targetItem.event.kind === 30023) {
-        <app-article-event [event]="targetItem.event"></app-article-event>
-        }
-        <!-- Polls (kind 1068) -->
-        @else if (targetItem.event.kind === 1068) {
-        <app-poll-event [event]="targetItem.event"></app-poll-event>
-        }
-        <!-- M3U Playlists (kind 32100) -->
-        @else if (targetItem.event.kind === 32100) {
-        <app-playlist-event [event]="targetItem.event"></app-playlist-event>
-        }
-        <!-- Starter Packs (kind 39089) -->
-        @else if (targetItem.event.kind === 39089) {
-        <app-starter-pack-event [event]="targetItem.event"></app-starter-pack-event>
-        }
-        <!-- Live Events (kind 30311) -->
-        @else if (targetItem.event.kind === 30311) {
-        <app-live-event [event]="targetItem.event"></app-live-event>
-        }
-        <!-- Profile events (kind 0) -->
-        @else if (targetItem.event.kind === 0) {
-        <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
-        } @else {
-        <app-content [content]="repostService.decodeRepost(item.event).data"
-          [event]="repostService.decodeRepost(item.event).event"></app-content>
-        }
-      </mat-card-content>
-    </mat-card>
+    @if (targetItem.event.kind === 20) {
+    <app-photo-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
+    }
+    <!-- Videos (NIP-71, kind 21/22) -->
+    @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22) {
+    <app-video-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
+    }
+    <!-- Articles (kind 30023) -->
+    @else if (targetItem.event.kind === 30023) {
+    <app-article-event [event]="targetItem.event"></app-article-event>
+    }
+    <!-- Polls (kind 1068) -->
+    @else if (targetItem.event.kind === 1068) {
+    <app-poll-event [event]="targetItem.event"></app-poll-event>
+    }
+    <!-- M3U Playlists (kind 32100) -->
+    @else if (targetItem.event.kind === 32100) {
+    <app-playlist-event [event]="targetItem.event"></app-playlist-event>
+    }
+    <!-- Starter Packs (kind 39089) -->
+    @else if (targetItem.event.kind === 39089) {
+    <app-starter-pack-event [event]="targetItem.event"></app-starter-pack-event>
+    }
+    <!-- Live Events (kind 30311) -->
+    @else if (targetItem.event.kind === 30311) {
+    <app-live-event [event]="targetItem.event"></app-live-event>
+    }
+    <!-- Profile events (kind 0) -->
+    @else if (targetItem.event.kind === 0) {
+    <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
+    } @else {
+    <app-content [content]="repostService.decodeRepost(item.event).data"
+      [event]="repostService.decodeRepost(item.event).event"></app-content>
+    }
   </mat-card-content>
+
   } @else if (isReply() && (parentRecordData || rootRecordData)) {
   <!-- Reply structure with thread context -->
   @if (mode() === 'timeline') {
@@ -86,9 +84,9 @@
     </span>
   </mat-card-header>
   }
+  <!-- Show thread context only in timeline mode -->
+  @if (mode() === 'timeline' && !hideParentEvent()) {
   <mat-card-content>
-    <!-- Show thread context only in timeline mode -->
-    @if (mode() === 'timeline' && !hideParentEvent()) {
     <!-- Show root event if this is a threaded reply OR a direct reply to root -->
     @if ((isThreadedReply() && rootRecordData && parentRecordData) || (!isThreadedReply() && rootRecordData)) {
     <!-- Root event (original post) -->
@@ -225,10 +223,12 @@
       </mat-card>
     </div>
     }
-    }
+  </mat-card-content>
+  }
 
-    <!-- Current event (the reply) -->
-    <app-event-header [event]="item.event"></app-event-header>
+  <!-- Current event (the reply) -->
+  <app-event-header [event]="item.event"></app-event-header>
+  <mat-card-content>
     @if (shouldHideContentDueToWarning()) {
     <app-content-warning [reason]="contentWarningReason()" (approve)="approveContentWarning()"></app-content-warning>
     } @else if (shouldHideContent()) {
@@ -275,6 +275,8 @@
     }
     }
   </mat-card-content>
+
+
   } @else {
   <!-- Normal event structure -->
   <app-event-header [event]="item.event"></app-event-header>

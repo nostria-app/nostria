@@ -2,6 +2,11 @@
   max-width: 680px;
   display: block;
   margin: 0 auto;
+
+  // Override Angular Material card content padding
+  ::ng-deep .mat-mdc-card-content:first-child {
+    padding-top: 8px;
+  }
 }
 
 .thread-loading {
@@ -105,6 +110,16 @@
   margin: 0;
 }
 
+#main-event {
+  margin-bottom: 1rem;
+
+  // Ensure main event has no left border
+  ::ng-deep app-event .note-card {
+    border-left: none !important;
+    padding-left: 0 !important;
+  }
+}
+
 // Progressive loading animations
 .parent-events {
   animation: fadeIn 0.3s ease-out;
@@ -127,21 +142,21 @@
 }
 
 .parent-events {
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 
   h3 {
     color: var(--mat-sys-on-surface-variant);
     font-size: 0.875rem;
     font-weight: 500;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
     text-transform: uppercase;
     letter-spacing: 0.5px;
   }
 
   .parent-event {
-    margin-bottom: 1rem;
-    border-left: 3px solid var(--mat-sys-primary);
-    padding-left: 12px;
+    // margin-bottom: 0.5rem;
+    border-left: 2px solid var(--mat-sys-primary);
+    padding-left: 8px;
   }
 
   // .thread-indicator {
@@ -179,21 +194,21 @@
 }
 
 .replies-section {
-  margin-top: 2rem;
+  margin-top: 1rem;
 }
 
 .threaded-reply {
   border-left: 2px solid var(--mat-sys-outline-variant);
-  padding-left: 12px;
-  margin-bottom: 1rem;
+  padding-left: 8px;
+  margin-bottom: 0.5rem;
 
   &:last-child {
     margin-bottom: 0;
   }
 
   app-event {
-    padding-bottom: 0.4rem;
-    margin-bottom: 0.4rem;
+    padding-bottom: 0.25rem;
+    margin-bottom: 0.25rem;
   }
 }
 
