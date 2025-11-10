@@ -19,6 +19,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatBadgeModule } from '@angular/material/badge';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
@@ -66,6 +67,7 @@ import { EventComponent } from '../../components/event/event.component';
     MatChipsModule,
     MatMenuModule,
     MatTooltipModule,
+    MatBadgeModule,
     DragDropModule,
     RouterModule,
     MatDialogModule,
@@ -1120,12 +1122,20 @@ export class FeedsComponent implements OnDestroy {
     const pendingCount = this.pendingEventsCount().get(columnId) || 0;
     this.feedService.loadPendingEvents(columnId);
 
-    // Reset rendered count to show new events at the top
-    // Show at least INITIAL_RENDER_COUNT or the number of new events, whichever is larger
+    // Only render initial batch (INITIAL_RENDER_COUNT) to improve performance
+    // The rest will load progressively as the user scrolls
     this.renderedEventCounts.update(counts => ({
       ...counts,
-      [columnId]: Math.max(this.INITIAL_RENDER_COUNT, pendingCount + this.INITIAL_RENDER_COUNT)
+      [columnId]: this.INITIAL_RENDER_COUNT
     }));
+
+    // Scroll the column to the top to show the new posts
+    setTimeout(() => {
+      const columnElement = document.querySelector(`[data-column-id="${columnId}"] .column-content`) as HTMLElement;
+      if (columnElement) {
+        columnElement.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    }, 0);
 
     if (pendingCount > 0) {
       this.notificationService.notify(`Loaded ${pendingCount} new ${pendingCount === 1 ? 'post' : 'posts'}`);
