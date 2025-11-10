@@ -323,7 +323,7 @@
   }
 
   mat-card-content {
-    padding-bottom: 8px;
+    padding-bottom: 4px;
 
     &.collapsed {
       max-height: 4.5em; // Fixed height: 3 lines at 1.5em line height
@@ -348,7 +348,7 @@
   .show-more-btn,
   .show-less-btn {
     width: 100%;
-    margin-top: 8px;
+    margin-top: 4px;
     color: var(--mat-sys-primary);
     justify-content: center;
 
@@ -369,7 +369,7 @@
   }
 
   mat-card-content {
-    padding-bottom: 8px;
+    padding-bottom: 4px;
 
     &.collapsed {
       max-height: 4.5em; // Fixed height: 3 lines at 1.5em line height
@@ -394,7 +394,7 @@
   .show-more-btn,
   .show-less-btn {
     width: 100%;
-    margin-top: 8px;
+    margin-top: 4px;
     color: var(--mat-sys-primary);
     justify-content: center;
 
