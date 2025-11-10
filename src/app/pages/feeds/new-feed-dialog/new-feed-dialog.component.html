@@ -16,7 +16,8 @@
         <div class="name-icon-row">
           <mat-form-field appearance="outline" class="name-field">
             <mat-label>Feed Name</mat-label>
-            <input matInput formControlName="label" placeholder="My Custom Feed" />
+            <input matInput formControlName="label" placeholder="My Custom Feed"
+              (keydown.enter)="$event.preventDefault(); onSubmit()" cdkFocusInitial />
             @if (feedForm.get('label')?.hasError('required')) {
             <mat-error>Feed name is required</mat-error>
             }
