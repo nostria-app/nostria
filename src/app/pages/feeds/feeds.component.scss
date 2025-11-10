@@ -2090,3 +2090,28 @@ h1 {
     color: var(--mat-sys-color-primary);
   }
 }
+
+// Load more rendered events button (virtual scroll)
+.load-more-rendered-events {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+  margin: 8px 0;
+
+  .load-more-button {
+    min-width: 200px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    opacity: 0.8;
+    transition: opacity 0.2s ease-in-out;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    mat-icon {
+      font-size: 20px;
+    }
+  }
+}

@@ -45,6 +45,7 @@ export interface FeedItem {
   hasMore?: WritableSignal<boolean>;
   pendingEvents?: WritableSignal<Event[]>;
   lastCheckTimestamp?: number;
+  initialLoadComplete?: boolean; // Track when initial relay loading is done
 }
 
 export interface ColumnConfig {
@@ -510,6 +511,7 @@ export class FeedService {
       hasMore: signal<boolean>(true),
       pendingEvents: signal<Event[]>([]),
       lastCheckTimestamp: Math.floor(Date.now() / 1000), // Initialize with current timestamp in seconds
+      initialLoadComplete: false, // Track initial loading state
     };
 
     // Add to data map IMMEDIATELY so UI can render cached events
@@ -597,13 +599,31 @@ export class FeedService {
             return;
           }
 
-          // Add event and maintain chronological order (newest first)
-          item.events.update((events: Event[]) => {
-            const newEvents = [...events, event];
-            const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-            // Don't save to cache on every live event - cache is saved during finalize
-            return sortedEvents;
-          });
+          // If initial load is complete, queue all new events to prevent UI jumps
+          if (item.initialLoadComplete) {
+            console.log(`📥 Queuing new event (post-initial-load) for column ${column.id}: ${event.id.substring(0, 8)}...`);
+            item.pendingEvents?.update((pending: Event[]) => {
+              // Avoid duplicates
+              if (pending.some(e => e.id === event.id)) {
+                return pending;
+              }
+              const newPending = [...pending, event];
+              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            });
+          } else {
+            // During initial load, add to main events array
+            console.log(`➕ Adding event to main array (initial load) for column ${column.id}: ${event.id.substring(0, 8)}...`);
+            item.events.update((events: Event[]) => {
+              // Avoid duplicates
+              if (events.some(e => e.id === event.id)) {
+                return events;
+              }
+              const newEvents = [...events, event];
+              const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              return sortedEvents;
+            });
+          }
+
           this.logger.debug(`Column event received for ${column.id}:`, event);
         }) as { unsubscribe: () => void } | { close: () => void } | null;
       } else {
@@ -618,19 +638,46 @@ export class FeedService {
             return;
           }
 
-          // Add event and maintain chronological order (newest first)
-          item.events.update((events: Event[]) => {
-            const newEvents = [...events, event];
-            const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-            // Don't save to cache on every live event - cache is saved during finalize
-            return sortedEvents;
-          });
+          // If initial load is complete, queue all new events to prevent UI jumps
+          if (item.initialLoadComplete) {
+            console.log(`📥 Queuing new event (post-initial-load) for column ${column.id}: ${event.id.substring(0, 8)}...`);
+            item.pendingEvents?.update((pending: Event[]) => {
+              // Avoid duplicates
+              if (pending.some(e => e.id === event.id)) {
+                return pending;
+              }
+              const newPending = [...pending, event];
+              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            });
+          } else {
+            // During initial load, add to main events array
+            console.log(`➕ Adding event to main array (initial load) for column ${column.id}: ${event.id.substring(0, 8)}...`);
+            item.events.update((events: Event[]) => {
+              // Avoid duplicates
+              if (events.some(e => e.id === event.id)) {
+                return events;
+              }
+              const newEvents = [...events, event];
+              const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              return sortedEvents;
+            });
+          }
+
           this.logger.debug(`Column event received for ${column.id}:`, event);
         });
       }
 
       item.subscription = sub;
       console.log(`✅ Subscription created and stored:`, sub ? 'YES' : 'NO');
+
+      // For relay subscriptions (global/public feeds), mark initial load complete after a delay
+      // This allows time for the initial burst of events to arrive
+      setTimeout(() => {
+        if (!item.initialLoadComplete) {
+          item.initialLoadComplete = true;
+          this.logger.info(`✅ Initial load complete (timeout) for column ${column.id} - new events will be queued`);
+        }
+      }, 3000); // 3 seconds should be enough for initial EOSE
     }
 
     // Note: item was already added to data map at the beginning of this method
@@ -1008,6 +1055,10 @@ export class FeedService {
         );
       }
     }
+
+    // Mark initial load as complete - any events arriving after this will be queued
+    feedData.initialLoadComplete = true;
+    this.logger.info(`✅ Initial load complete for column ${feedData.column.id} - new events will be queued`);
   }
 
   /**

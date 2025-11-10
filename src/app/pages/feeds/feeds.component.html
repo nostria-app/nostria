@@ -242,6 +242,16 @@
             @for (event of columnEventsData; track event.id) {
             <app-event [event]="event"></app-event>
             }
+
+            <!-- Show "Load More" button when there are more events in memory to render -->
+            @if (hasMoreEventsToRender(column.id)) {
+            <div class="load-more-rendered-events">
+              <button mat-stroked-button (click)="loadMoreRenderedEvents(column.id)" class="load-more-button">
+                <mat-icon>expand_more</mat-icon>
+                Show more ({{ getRenderedEventCount(column.id) }} of {{ getTotalEventCount(column.id) }})
+              </button>
+            </div>
+            }
             }
             <!-- @else {
                       <div class="no-events">
