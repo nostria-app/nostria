@@ -144,6 +144,47 @@ export class FavoritesService {
   }
 
   /**
+   * Reorder favorites for the current account
+   */
+  reorderFavorites(newOrder: string[]): boolean {
+    const currentPubkey = this.accountState.pubkey();
+    if (!currentPubkey) {
+      this.logger.warn('Cannot reorder favorites: no current account');
+      return false;
+    }
+
+    // Validate that newOrder contains the same pubkeys as current favorites
+    const currentFavorites = this.accountLocalState.getFavorites(currentPubkey);
+    if (newOrder.length !== currentFavorites.length) {
+      this.logger.warn('Cannot reorder favorites: length mismatch', {
+        current: currentFavorites.length,
+        new: newOrder.length,
+      });
+      return false;
+    }
+
+    // Verify all pubkeys are present
+    const currentSet = new Set(currentFavorites);
+    const newSet = new Set(newOrder);
+    if (currentSet.size !== newSet.size || !newOrder.every(pk => currentSet.has(pk))) {
+      this.logger.warn('Cannot reorder favorites: pubkey mismatch');
+      return false;
+    }
+
+    // Update the order
+    this.accountLocalState.setFavorites(currentPubkey, newOrder);
+
+    // Trigger reactivity
+    this.favoritesVersion.update(v => v + 1);
+
+    this.logger.debug('Reordered favorites', {
+      account: currentPubkey,
+      newOrder,
+    });
+    return true;
+  }
+
+  /**
    * Get favorites for a specific account (useful for debugging or admin purposes)
    */
   getFavoritesForAccount(accountPubkey: string): string[] {
