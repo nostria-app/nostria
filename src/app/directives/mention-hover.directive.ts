@@ -1,6 +1,8 @@
 import { Directive, ElementRef, inject, OnDestroy, ViewContainerRef } from '@angular/core';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
+import { Router, NavigationStart } from '@angular/router';
+import { filter, Subscription } from 'rxjs';
 import { ProfileHoverCardComponent } from '../components/user-profile/hover-card/profile-hover-card.component';
 
 /**
@@ -15,6 +17,7 @@ export class MentionHoverDirective implements OnDestroy {
   private el = inject(ElementRef);
   private overlay = inject(Overlay);
   private viewContainerRef = inject(ViewContainerRef);
+  private router = inject(Router);
 
   private overlayRef: OverlayRef | null = null;
   private hoverCardComponentRef: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -24,17 +27,26 @@ export class MentionHoverDirective implements OnDestroy {
 
   private isMouseOverTrigger = false;
   private isMouseOverCard = false;
+  private routerSubscription?: Subscription;
 
   constructor() {
     // Use event delegation to handle dynamically created mention links
     this.el.nativeElement.addEventListener('mouseenter', this.onMouseEnter.bind(this), true);
     this.el.nativeElement.addEventListener('mouseleave', this.onMouseLeave.bind(this), true);
+
+    // Close hover card on navigation
+    this.routerSubscription = this.router.events
+      .pipe(filter(event => event instanceof NavigationStart))
+      .subscribe(() => {
+        this.closeHoverCard();
+      });
   }
 
   ngOnDestroy(): void {
     this.cleanup();
     this.el.nativeElement.removeEventListener('mouseenter', this.onMouseEnter.bind(this), true);
     this.el.nativeElement.removeEventListener('mouseleave', this.onMouseLeave.bind(this), true);
+    this.routerSubscription?.unsubscribe();
   }
 
   private onMouseEnter(event: MouseEvent): void {
