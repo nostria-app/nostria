@@ -37,6 +37,11 @@
       </button>
 
       <mat-menu #menu="matMenu">
+        <button mat-menu-item (click)="toggleFavorite()">
+          <mat-icon>{{ isFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
+          <span>{{ isFavorite() ? 'Unfavorite' : 'Favorite' }}</span>
+        </button>
+        <mat-divider></mat-divider>
         <button mat-menu-item (click)="reportProfile()">
           <mat-icon>flag</mat-icon>
           <span>Report profile</span>
