@@ -34,11 +34,6 @@ export class FavoritesOverlayComponent {
   // Signal to track if overlay is visible
   isVisible = signal(false);
 
-  // Track mouse position over container and overlay
-  private isMouseOverContainer = signal(false);
-  private isMouseOverOverlay = signal(false);
-  private hideTimeout?: number;
-
   // Get favorites from the service
   favorites = this.favoritesService.favorites;
 
@@ -120,45 +115,6 @@ export class FavoritesOverlayComponent {
     const favPubkeys = this.favorites();
     return this.followingWithProfiles().filter(item => !favPubkeys.includes(item.pubkey));
   });
-
-  onContainerMouseEnter(): void {
-    this.isMouseOverContainer.set(true);
-    if (this.hideTimeout) {
-      window.clearTimeout(this.hideTimeout);
-      this.hideTimeout = undefined;
-    }
-  }
-
-  onContainerMouseLeave(): void {
-    this.isMouseOverContainer.set(false);
-    this.scheduleHide();
-  }
-
-  onOverlayMouseEnter(): void {
-    this.isMouseOverOverlay.set(true);
-    if (this.hideTimeout) {
-      window.clearTimeout(this.hideTimeout);
-      this.hideTimeout = undefined;
-    }
-  }
-
-  onOverlayMouseLeave(): void {
-    this.isMouseOverOverlay.set(false);
-    this.scheduleHide();
-  }
-
-  private scheduleHide(): void {
-    if (this.hideTimeout) {
-      window.clearTimeout(this.hideTimeout);
-    }
-
-    // Add 300ms delay before hiding to allow moving to hover card
-    this.hideTimeout = window.setTimeout(() => {
-      if (!this.isMouseOverContainer() && !this.isMouseOverOverlay()) {
-        this.isVisible.set(false);
-      }
-    }, 300);
-  }
 
   toggleOverlay(): void {
     this.isVisible.update(v => !v);

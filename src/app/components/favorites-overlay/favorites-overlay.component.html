@@ -1,4 +1,4 @@
-<div class="favorites-container" (mouseenter)="onContainerMouseEnter()" (mouseleave)="onContainerMouseLeave()">
+<div class="favorites-container">
 
   <!-- Top 5 favorites preview -->
   <div class="favorites-preview">
@@ -7,8 +7,7 @@
       (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
       [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)">
       @if (getAvatarUrl(item.profile)) {
-      <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)"
-        [title]="getDisplayName(item.profile)" />
+      <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)" />
       } @else {
       <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
       }
@@ -25,15 +24,12 @@
 
   <!-- Full overlay (shown on hover on desktop, click on mobile) -->
   @if (isVisible() && followingWithProfiles().length > 0) {
-  <!-- Backdrop for mobile -->
-  @if (layout.isHandset()) {
+  <!-- Backdrop to allow clicking outside to dismiss -->
   <div class="overlay-backdrop" (click)="hideOverlay()" (keydown.escape)="hideOverlay()" role="button" tabindex="0"
     aria-label="Close following overlay">
   </div>
-  }
 
-  <div class="favorites-overlay" role="dialog" tabindex="0" (mouseenter)="onOverlayMouseEnter()"
-    (mouseleave)="onOverlayMouseLeave()" (click)="layout.isHandset() ? hideOverlay() : null"
+  <div class="favorites-overlay" role="dialog" tabindex="0" (click)="$event.stopPropagation()"
     (keydown.escape)="hideOverlay()">
     <div class="overlay-header">
       <h3>Following</h3>

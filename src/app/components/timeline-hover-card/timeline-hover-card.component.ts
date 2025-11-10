@@ -149,7 +149,11 @@ export class TimelineHoverCardComponent {
   }
 
   navigateToEvent(eventId: string): void {
-    const noteId = nip19.noteEncode(eventId);
-    this.router.navigate(['/e', noteId]);
+    const pubkey = this.pubkey();
+    const neventId = nip19.neventEncode({
+      id: eventId,
+      author: pubkey,
+    });
+    this.router.navigate(['/e', neventId]);
   }
 }
