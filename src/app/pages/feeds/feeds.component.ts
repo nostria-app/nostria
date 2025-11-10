@@ -218,8 +218,15 @@ export class FeedsComponent implements OnDestroy {
   // Scroll position auto-save
   private scrollSaveInterval?: number;
 
-  // Computed signal for column events that respects drag state
-  columnEvents = computed(() => {
+  // Virtual list configuration
+  private readonly INITIAL_RENDER_COUNT = 10; // Render only 10 events initially
+  private readonly RENDER_BATCH_SIZE = 10; // Add 10 more events when scrolling
+
+  // Track rendered event counts per column (virtual list)
+  private renderedEventCounts = signal<Record<string, number>>({});
+
+  // Computed signal for ALL events (in-memory, not rendered)
+  allColumnEvents = computed(() => {
     const columns = this.columns();
     const isDragging = this.isDragging();
     const eventsMap = new Map<string, Event[]>();
@@ -245,9 +252,50 @@ export class FeedsComponent implements OnDestroy {
     return eventsMap;
   });
 
+  // Computed signal for RENDERED events (virtual list - limited subset)
+  columnEvents = computed(() => {
+    const allEvents = this.allColumnEvents();
+    const renderedCounts = this.renderedEventCounts();
+    const eventsMap = new Map<string, Event[]>();
+
+    allEvents.forEach((events, columnId) => {
+      const renderCount = renderedCounts[columnId] || this.INITIAL_RENDER_COUNT;
+      // Only render the first N events
+      eventsMap.set(columnId, events.slice(0, renderCount));
+    });
+
+    return eventsMap;
+  });
+
   // Helper method to get events for a specific column from the computed signal
   getEventsForColumn(columnId: string): Event[] {
     return this.columnEvents().get(columnId) || [];
+  }
+
+  // Get total event count for a column (for displaying "X of Y" info)
+  getTotalEventCount(columnId: string): number {
+    return this.allColumnEvents().get(columnId)?.length || 0;
+  }
+
+  // Get rendered event count for a column
+  getRenderedEventCount(columnId: string): number {
+    return this.columnEvents().get(columnId)?.length || 0;
+  }
+
+  // Check if there are more events to render in a column
+  hasMoreEventsToRender(columnId: string): boolean {
+    const total = this.getTotalEventCount(columnId);
+    const rendered = this.getRenderedEventCount(columnId);
+    return rendered < total;
+  }
+
+  // Load more events for rendering (virtual scroll)
+  loadMoreRenderedEvents(columnId: string): void {
+    this.renderedEventCounts.update(counts => {
+      const currentCount = counts[columnId] || this.INITIAL_RENDER_COUNT;
+      const newCount = currentCount + this.RENDER_BATCH_SIZE;
+      return { ...counts, [columnId]: newCount };
+    });
   }
 
   // Remove the old getEventsForColumn method
@@ -507,7 +555,15 @@ export class FeedsComponent implements OnDestroy {
           const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 100;
 
           if (scrolledToBottom) {
-            this.loadMoreForColumn(column.id);
+            // First, check if we need to render more events from the in-memory list (virtual scroll)
+            if (this.hasMoreEventsToRender(column.id)) {
+              console.log(`[VirtualScroll] Rendering more events for column ${column.id}`);
+              this.loadMoreRenderedEvents(column.id);
+            } else {
+              // If all in-memory events are rendered, fetch more from relay
+              console.log(`[ScrollToBottom] Loading more from relay for column ${column.id}`);
+              this.loadMoreForColumn(column.id);
+            }
           }
         };
 
@@ -1063,6 +1119,13 @@ export class FeedsComponent implements OnDestroy {
   loadNewPosts(columnId: string): void {
     const pendingCount = this.pendingEventsCount().get(columnId) || 0;
     this.feedService.loadPendingEvents(columnId);
+
+    // Reset rendered count to show new events at the top
+    // Show at least INITIAL_RENDER_COUNT or the number of new events, whichever is larger
+    this.renderedEventCounts.update(counts => ({
+      ...counts,
+      [columnId]: Math.max(this.INITIAL_RENDER_COUNT, pendingCount + this.INITIAL_RENDER_COUNT)
+    }));
 
     if (pendingCount > 0) {
       this.notificationService.notify(`Loaded ${pendingCount} new ${pendingCount === 1 ? 'post' : 'posts'}`);
