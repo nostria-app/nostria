@@ -37,6 +37,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { PowService, PowProgress } from '../../services/pow.service';
 import { MentionAutocompleteComponent, MentionSelection, MentionAutocompleteConfig } from '../mention-autocomplete/mention-autocomplete.component';
 import { MentionInputService, MentionDetectionResult } from '../../services/mention-input.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -51,6 +52,19 @@ export interface NoteEditorDialogData {
     content?: string;
   };
   mentions?: string[]; // Array of pubkeys to mention
+}
+
+interface MediaMetadata {
+  url: string;
+  mimeType?: string;
+  blurhash?: string;
+  dimensions?: { width: number; height: number };
+  alt?: string;
+  sha256?: string; // Optional hash as per NIP-94
+  image?: string; // Preview image URL (screen capture for videos)
+  imageMirrors?: string[]; // Mirror URLs for the preview image
+  fallbackUrls?: string[]; // Fallback URLs for the main media file
+  thumbnailBlob?: Blob; // Thumbnail blob to be uploaded (temporary, before upload)
 }
 
 interface NoteAutoDraft {
@@ -108,6 +122,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private router = inject(Router);
   private powService = inject(PowService);
   private mentionInputService = inject(MentionInputService);
+  private utilities = inject(UtilitiesService);
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -125,6 +140,9 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
   mentions = signal<string[]>(this.data?.mentions || []);
+
+  // Media metadata for imeta tags (NIP-92)
+  mediaMetadata = signal<MediaMetadata[]>([]);
 
   // Mention autocomplete state
   mentionConfig = signal<MentionAutocompleteConfig | null>(null);
@@ -681,7 +699,24 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       tags.push(['client', 'nostria']);
     }
 
+    // Add imeta tags for uploaded media (NIP-92)
+    this.mediaMetadata().forEach(metadata => {
+      const imetaTag = this.buildImetaTag(metadata);
+      if (imetaTag) {
+        tags.push(imetaTag);
+      }
+    });
+
     return tags;
+  }
+
+  /**
+   * Build an imeta tag from media metadata (NIP-92)
+   * Format: ["imeta", "url <url>", "m <mime-type>", "blurhash <hash>", "dim <widthxheight>", ...]
+   */
+  private buildImetaTag(metadata: MediaMetadata): string[] | null {
+    // Use the centralized utility service for building imeta tags
+    return this.utilities.buildImetaTag(metadata);
   }
 
   /**
@@ -1063,6 +1098,18 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
           if (result.status === 'success' && result.item) {
             this.insertFileUrl(result.item.url);
+
+            // Extract metadata for imeta tag (NIP-92)
+            const metadata = await this.extractMediaMetadata(
+              file,
+              result.item.url,
+              result.item.sha256,
+              result.item.mirrors // Pass mirror URLs for fallback support
+            );
+            if (metadata) {
+              this.mediaMetadata.set([...this.mediaMetadata(), metadata]);
+            }
+
             return { success: true, fileName: file.name };
           } else {
             console.error(`Upload failed for ${file.name}:`, result.message);
@@ -1205,6 +1252,86 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     // Additional check by file extension as fallback
     const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg|bmp|ico|tiff|avif|heic|heif)$/i;
     return imageExtensions.test(file.name);
+  }
+
+  /**
+   * Extract media metadata for NIP-92 imeta tags
+   * Generates blurhash and dimensions for images
+   * For videos: extracts thumbnail, generates blurhash from thumbnail
+   */
+  private async extractMediaMetadata(file: File, url: string, sha256?: string, mirrors?: string[]): Promise<MediaMetadata | null> {
+    try {
+      const metadata: MediaMetadata = {
+        url,
+        mimeType: file.type,
+        sha256, // Include SHA-256 hash if provided
+        fallbackUrls: mirrors && mirrors.length > 0 ? mirrors : undefined, // Add mirror URLs as fallbacks
+      };
+
+      // Handle images
+      if (file.type.startsWith('image/')) {
+        const result = await this.utilities.extractMediaMetadata(file, url);
+        // Add mirrors as fallback URLs
+        if (mirrors && mirrors.length > 0) {
+          result.fallbackUrls = mirrors;
+        }
+        return result;
+      }
+
+      // Handle videos - extract thumbnail and generate blurhash
+      if (file.type.startsWith('video/')) {
+        try {
+          // Extract thumbnail from the uploaded video
+          const thumbnailResult = await this.utilities.extractThumbnailFromVideo(url, 1);
+
+          // Upload the thumbnail blob to get a permanent URL
+          const thumbnailFile = new File([thumbnailResult.blob], 'thumbnail.jpg', {
+            type: 'image/jpeg',
+          });
+
+          this.snackBar.open('Generating video thumbnail...', '', { duration: 2000 });
+
+          const uploadResult = await this.mediaService.uploadFile(
+            thumbnailFile,
+            false, // Don't upload original for thumbnails
+            this.mediaService.mediaServers()
+          );
+
+          if (uploadResult.status === 'success' && uploadResult.item) {
+            // Generate blurhash from the thumbnail file
+            const blurhashResult = await this.utilities.generateBlurhash(thumbnailFile);
+
+            // Use 'image' field for preview capture (NIP-94)
+            metadata.image = uploadResult.item.url;
+            metadata.blurhash = blurhashResult.blurhash;
+            metadata.dimensions = blurhashResult.dimensions;
+
+            // Add thumbnail mirrors if available
+            if (uploadResult.item.mirrors && uploadResult.item.mirrors.length > 0) {
+              metadata.imageMirrors = uploadResult.item.mirrors;
+            }
+
+            // Clean up the temporary object URL
+            URL.revokeObjectURL(thumbnailResult.objectUrl);
+          } else {
+            console.warn('Failed to upload video thumbnail:', uploadResult.message);
+          }
+        } catch (error) {
+          console.error('Failed to extract video thumbnail:', error);
+          // Continue without thumbnail - basic metadata is still useful
+        }
+      }
+
+      return metadata;
+    } catch (error) {
+      console.error('Failed to extract media metadata:', error);
+      // Return basic metadata even if processing fails
+      return {
+        url,
+        mimeType: file.type,
+        fallbackUrls: mirrors && mirrors.length > 0 ? mirrors : undefined,
+      };
+    }
   }
 
   /**

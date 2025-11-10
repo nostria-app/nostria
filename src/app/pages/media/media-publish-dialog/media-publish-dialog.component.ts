@@ -12,7 +12,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { encode } from 'blurhash';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 export interface MediaPublishDialogData {
   mediaItem: MediaItem;
@@ -59,6 +59,7 @@ export interface MediaPublishOptions {
 export class MediaPublishDialogComponent {
   private dialogRef = inject(MatDialogRef<MediaPublishDialogComponent>);
   private mediaService = inject(MediaService);
+  private utilities = inject(UtilitiesService);
   data: MediaPublishDialogData = inject(MAT_DIALOG_DATA);
 
   // Form fields
@@ -175,71 +176,30 @@ export class MediaPublishDialogComponent {
     this.extractingThumbnail.set(true);
 
     try {
-      const video = document.createElement('video');
-      video.preload = 'metadata';
-      video.muted = true;
-      video.crossOrigin = 'anonymous';
-
       const videoUrl = this.data.mediaItem.url;
-      video.src = videoUrl;
 
-      // Wait for video to load metadata
-      await new Promise<void>((resolve, reject) => {
-        video.onloadedmetadata = () => resolve();
-        video.onerror = () => reject(new Error('Failed to load video'));
-      });
-
-      // Calculate seek time: start at 1s or 10%, then add 1s for each subsequent extraction
+      // Calculate seek time with offset for repeated extractions
       const currentOffset = this.thumbnailExtractOffset();
-      const baseSeekTime = Math.min(1, video.duration * 0.1);
-      const seekTime = Math.min(baseSeekTime + currentOffset, video.duration - 0.5);
-      video.currentTime = seekTime;
+      const baseSeekTime = 1; // Start at 1 second
+      const seekTime = baseSeekTime + currentOffset;
+
+      // Use centralized utility service for thumbnail extraction
+      const result = await this.utilities.extractThumbnailFromVideo(videoUrl, seekTime);
 
       // Increment offset for next extraction
       this.thumbnailExtractOffset.set(currentOffset + 1);
 
-      // Wait for seek to complete
-      await new Promise<void>(resolve => {
-        video.onseeked = () => resolve();
-      });
-
-      // Create canvas and draw the video frame
-      const canvas = document.createElement('canvas');
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Failed to get canvas context');
-      }
-
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-      // Convert canvas to blob
-      const blob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(blob => {
-          if (blob) {
-            resolve(blob);
-          } else {
-            reject(new Error('Failed to create thumbnail blob'));
-          }
-        }, 'image/jpeg', 0.9);
-      });
-
       // Store blob and dimensions (don't upload yet)
-      this.thumbnailBlob.set(blob);
-      this.thumbnailDimensions.set({ width: canvas.width, height: canvas.height });
-
-      // Create object URL for preview
-      const objectUrl = URL.createObjectURL(blob);
-      this.thumbnailUrl.set(objectUrl);
+      this.thumbnailBlob.set(result.blob);
+      this.thumbnailDimensions.set(result.dimensions);
+      this.thumbnailUrl.set(result.objectUrl);
 
       // Hide URL input if it was visible
       this.thumbnailUrlInput.set(null);
       this.thumbnailUrlInputValue = '';
 
-      // Auto-generate blurhash from the object URL (same as manual generation)
-      await this.loadImageAndGenerateBlurhash(objectUrl);
+      // Auto-generate blurhash from the object URL
+      await this.loadImageAndGenerateBlurhash(result.objectUrl);
     } catch (error) {
       console.error('Failed to extract thumbnail:', error);
     } finally {
@@ -309,50 +269,12 @@ export class MediaPublishDialogComponent {
     try {
       this.generatingBlurhash.set(true);
 
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
+      // Use centralized utility service for blurhash generation
+      const result = await this.utilities.generateBlurhash(url);
 
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve();
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = url;
-      });
-
-      // Store dimensions
-      this.thumbnailDimensions.set({ width: img.width, height: img.height });
-
-      // Create canvas and draw image
-      const canvas = document.createElement('canvas');
-      // Optimized size for good quality blurhash without excessive hash length
-      // Higher resolution provides more accurate color sampling for encoding
-      const width = 64;
-      const height = Math.floor((img.height / img.width) * width);
-
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        throw new Error('Failed to get canvas context');
-      }
-
-      ctx.drawImage(img, 0, 0, width, height);
-
-      // Get image data
-      const imageData = ctx.getImageData(0, 0, width, height);
-
-      // Generate blurhash with balanced component counts
-      // componentX and componentY can be between 1-9 (higher = more detail but longer hash)
-      // Using 6x4 for a good balance of visual quality and hash length
-      const hash = encode(
-        imageData.data,
-        width,
-        height,
-        6, // componentX (good horizontal detail)
-        4  // componentY (good vertical detail)
-      );
-
-      this.blurhash.set(hash);
+      // Store dimensions and blurhash
+      this.thumbnailDimensions.set(result.dimensions);
+      this.blurhash.set(result.blurhash);
     } catch (error) {
       console.error('Failed to generate blurhash:', error);
     } finally {

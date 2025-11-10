@@ -6,6 +6,7 @@ import { hexToBytes } from 'nostr-tools/utils';
 import { isPlatformBrowser } from '@angular/common';
 import { NostrTagKey } from '../standardized-tags';
 import { NostrRecord } from '../interfaces';
+import { encode } from 'blurhash';
 
 @Injectable({
   providedIn: 'root',
@@ -583,13 +584,13 @@ export class UtilitiesService {
    */
   isEventExpired(event: Event): boolean {
     const expirationTag = event.tags.find(tag => tag[0] === 'expiration');
-    
+
     if (!expirationTag || expirationTag.length < 2) {
       return false; // No expiration tag means the event doesn't expire
     }
 
     const expirationTimestamp = parseInt(expirationTag[1], 10);
-    
+
     if (isNaN(expirationTimestamp)) {
       return false; // Invalid expiration timestamp
     }
@@ -605,7 +606,7 @@ export class UtilitiesService {
    */
   getEventExpiration(event: Event): number | null {
     const expirationTag = event.tags.find(tag => tag[0] === 'expiration');
-    
+
     if (!expirationTag || expirationTag.length < 2) {
       return null;
     }
@@ -638,5 +639,313 @@ export class UtilitiesService {
     };
 
     return event;
+  }
+
+  // ============================================================================
+  // Media Utilities (NIP-92, NIP-94)
+  // ============================================================================
+
+  /**
+   * Extract thumbnail from video at a specific time offset
+   * @param videoUrl URL of the video file
+   * @param seekTime Time offset in seconds (default: 1s or 10% of duration)
+   * @returns Object containing blob, dimensions, and object URL
+   */
+  async extractThumbnailFromVideo(
+    videoUrl: string,
+    seekTime?: number
+  ): Promise<{
+    blob: Blob;
+    dimensions: { width: number; height: number };
+    objectUrl: string;
+  }> {
+    const video = document.createElement('video');
+    video.preload = 'metadata';
+    video.muted = true;
+    video.crossOrigin = 'anonymous';
+    video.src = videoUrl;
+
+    // Wait for video metadata to load
+    await new Promise<void>((resolve, reject) => {
+      video.onloadedmetadata = () => resolve();
+      video.onerror = () => reject(new Error('Failed to load video'));
+    });
+
+    // Calculate seek time if not provided
+    const calculatedSeekTime = seekTime ?? Math.min(1, video.duration * 0.1);
+    const clampedSeekTime = Math.min(calculatedSeekTime, video.duration - 0.5);
+    video.currentTime = clampedSeekTime;
+
+    // Wait for seek to complete
+    await new Promise<void>(resolve => {
+      video.onseeked = () => resolve();
+    });
+
+    // Create canvas and draw the video frame
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Failed to get canvas context');
+    }
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // Convert canvas to blob
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        blob => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create thumbnail blob'));
+          }
+        },
+        'image/jpeg',
+        0.9
+      );
+    });
+
+    const objectUrl = URL.createObjectURL(blob);
+
+    return {
+      blob,
+      dimensions: { width: canvas.width, height: canvas.height },
+      objectUrl,
+    };
+  }
+
+  /**
+   * Generate blurhash from an image URL or File
+   * @param source Image URL or File object
+   * @param componentX Horizontal components (1-9, default: 6)
+   * @param componentY Vertical components (1-9, default: 4)
+   * @returns Object containing blurhash and dimensions
+   */
+  async generateBlurhash(
+    source: string | File,
+    componentX = 6,
+    componentY = 4
+  ): Promise<{
+    blurhash: string;
+    dimensions: { width: number; height: number };
+  }> {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    let imageUrl: string;
+    let shouldRevokeUrl = false;
+
+    // Handle File or URL
+    if (source instanceof File) {
+      imageUrl = URL.createObjectURL(source);
+      shouldRevokeUrl = true;
+    } else {
+      imageUrl = source;
+    }
+
+    try {
+      // Load image
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = imageUrl;
+      });
+
+      const dimensions = { width: img.width, height: img.height };
+
+      // Create canvas for blurhash generation
+      const canvas = document.createElement('canvas');
+      const width = 64;
+      const height = Math.floor((img.height / img.width) * width);
+
+      canvas.width = width;
+      canvas.height = height;
+
+      const ctx = canvas.getContext('2d');
+      if (!ctx) {
+        throw new Error('Failed to get canvas context');
+      }
+
+      ctx.drawImage(img, 0, 0, width, height);
+      const imageData = ctx.getImageData(0, 0, width, height);
+
+      // Generate blurhash
+      const blurhash = encode(imageData.data, width, height, componentX, componentY);
+
+      return { blurhash, dimensions };
+    } finally {
+      // Clean up object URL if we created one
+      if (shouldRevokeUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    }
+  }
+
+  /**
+   * Get image dimensions from URL or File
+   * @param source Image URL or File object
+   * @returns Image dimensions
+   */
+  async getImageDimensions(
+    source: string | File
+  ): Promise<{ width: number; height: number }> {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    let imageUrl: string;
+    let shouldRevokeUrl = false;
+
+    // Handle File or URL
+    if (source instanceof File) {
+      imageUrl = URL.createObjectURL(source);
+      shouldRevokeUrl = true;
+    } else {
+      imageUrl = source;
+    }
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('Failed to load image'));
+        img.src = imageUrl;
+      });
+
+      return { width: img.width, height: img.height };
+    } finally {
+      if (shouldRevokeUrl) {
+        URL.revokeObjectURL(imageUrl);
+      }
+    }
+  }
+
+  /**
+   * Extract complete media metadata for NIP-92/NIP-94 compliance
+   * @param file File object
+   * @param url URL where the file is hosted
+   * @returns Complete metadata object
+   */
+  async extractMediaMetadata(
+    file: File,
+    url: string
+  ): Promise<{
+    url: string;
+    mimeType: string;
+    blurhash?: string;
+    dimensions?: { width: number; height: number };
+    fallbackUrls?: string[];
+  }> {
+    const metadata: {
+      url: string;
+      mimeType: string;
+      blurhash?: string;
+      dimensions?: { width: number; height: number };
+      fallbackUrls?: string[];
+    } = {
+      url,
+      mimeType: file.type,
+    };
+
+    // Only generate blurhash and dimensions for images
+    if (file.type.startsWith('image/')) {
+      try {
+        const result = await this.generateBlurhash(file);
+        metadata.blurhash = result.blurhash;
+        metadata.dimensions = result.dimensions;
+      } catch (error) {
+        this.logger.warn('Failed to generate blurhash for image:', error);
+        // Continue without blurhash
+      }
+    }
+
+    return metadata;
+  }
+
+  /**
+   * Build an imeta tag from media metadata (NIP-92)
+   * Format: ["imeta", "url <url>", "m <mime-type>", "blurhash <hash>", "dim <widthxheight>", ...]
+   * @param metadata Media metadata object
+   * @returns imeta tag array or null if invalid
+   */
+  buildImetaTag(metadata: {
+    url: string;
+    mimeType?: string;
+    blurhash?: string;
+    dimensions?: { width: number; height: number };
+    alt?: string;
+    sha256?: string;
+    size?: number;
+    duration?: number;
+    image?: string; // Preview image URL (for videos)
+    imageMirrors?: string[]; // Mirror URLs for the preview image
+    fallbackUrls?: string[]; // Fallback URLs for the main media file
+  }): string[] | null {
+    if (!metadata.url) {
+      return null;
+    }
+
+    const tag: string[] = ['imeta'];
+
+    // URL is required (NIP-92)
+    tag.push(`url ${metadata.url}`);
+
+    // Add MIME type if available (NIP-94)
+    if (metadata.mimeType) {
+      tag.push(`m ${metadata.mimeType}`);
+    }
+
+    // Add blurhash if available (NIP-94)
+    if (metadata.blurhash) {
+      tag.push(`blurhash ${metadata.blurhash}`);
+    }
+
+    // Add dimensions if available (NIP-94)
+    if (metadata.dimensions) {
+      tag.push(`dim ${metadata.dimensions.width}x${metadata.dimensions.height}`);
+    }
+
+    // Add alt text if available (NIP-94)
+    if (metadata.alt) {
+      tag.push(`alt ${metadata.alt}`);
+    }
+
+    // Add SHA-256 hash if available (NIP-94)
+    if (metadata.sha256) {
+      tag.push(`x ${metadata.sha256}`);
+    }
+
+    // Add file size if available (NIP-94)
+    if (metadata.size) {
+      tag.push(`size ${metadata.size}`);
+    }
+
+    // Add duration for videos if available (NIP-94)
+    if (metadata.duration !== undefined) {
+      tag.push(`duration ${metadata.duration}`);
+    }
+
+    // Add preview image URL if available (NIP-94)
+    // This is a regular screen capture for videos, not just a thumbnail
+    if (metadata.image) {
+      tag.push(`image ${metadata.image}`);
+    }
+
+    // Add preview image mirrors if available (NIP-94)
+    if (metadata.imageMirrors && metadata.imageMirrors.length > 0) {
+      metadata.imageMirrors.forEach(mirrorUrl => {
+        tag.push(`image ${mirrorUrl}`);
+      });
+    }
+
+    // Add fallback URLs for the main media file (NIP-94)
+    if (metadata.fallbackUrls && metadata.fallbackUrls.length > 0) {
+      metadata.fallbackUrls.forEach(fallbackUrl => {
+        tag.push(`fallback ${fallbackUrl}`);
+      });
+    }
+
+    return tag;
   }
 }
