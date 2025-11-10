@@ -1,4 +1,4 @@
-import { Injectable, computed, inject } from '@angular/core';
+import { Injectable, computed, inject, signal, effect } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
@@ -16,8 +16,14 @@ export class FavoritesService {
   private readonly logger = inject(LoggerService);
   readonly STORAGE_KEY = 'nostria-favorites';
 
+  // Internal signal to trigger reactivity when favorites change
+  private favoritesVersion = signal(0);
+
   // Computed signal for current account's favorites
   readonly favorites = computed(() => {
+    // Depend on version to trigger recomputation
+    this.favoritesVersion();
+
     const currentPubkey = this.accountState.pubkey();
     if (!currentPubkey) return [];
 
@@ -28,6 +34,12 @@ export class FavoritesService {
   constructor() {
     // Check for legacy favorites and migrate them on first load
     this.migrateLegacyFavorites();
+
+    // Watch for account changes and trigger refresh
+    effect(() => {
+      this.accountState.pubkey();
+      this.favoritesVersion.update(v => v + 1);
+    });
   }
 
   /**
@@ -81,6 +93,9 @@ export class FavoritesService {
     const currentFavorites = this.accountLocalState.getFavorites(currentPubkey);
     this.accountLocalState.setFavorites(currentPubkey, [...currentFavorites, userPubkey]);
 
+    // Trigger reactivity
+    this.favoritesVersion.update(v => v + 1);
+
     this.logger.debug('Added user to favorites', {
       userPubkey,
       account: currentPubkey,
@@ -106,6 +121,9 @@ export class FavoritesService {
     const currentFavorites = this.accountLocalState.getFavorites(currentPubkey);
     const updatedFavorites = currentFavorites.filter(pubkey => pubkey !== userPubkey);
     this.accountLocalState.setFavorites(currentPubkey, updatedFavorites);
+
+    // Trigger reactivity
+    this.favoritesVersion.update(v => v + 1);
 
     this.logger.debug('Removed user from favorites', {
       userPubkey,
