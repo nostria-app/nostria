@@ -303,15 +303,4 @@ export class EventPageComponent {
       }, delay);
     }
   }
-
-  onViewMoreReplies(data: ThreadedEvent): void {
-    // Navigate to the specific event to view deeper replies
-    if (data.deepestReplyId) {
-      const encoded = nip19.neventEncode({ id: data.deepestReplyId, author: data.event.pubkey });
-      this.router.navigate(['/e', encoded]);
-    } else {
-      const encoded = nip19.neventEncode({ id: data.event.id, author: data.event.pubkey });
-      this.router.navigate(['/e', encoded]);
-    }
-  }
 }
