@@ -10,6 +10,7 @@ import { NostrRecord } from '../../interfaces';
 import { LayoutService } from '../../services/layout.service';
 import { TimelineHoverCardService } from '../../services/timeline-hover-card.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { ImageCacheService } from '../../services/image-cache.service';
 
 @Component({
   selector: 'app-favorites-overlay',
@@ -29,10 +30,14 @@ export class FavoritesOverlayComponent {
   private data = inject(DataService);
   private timelineHoverCardService = inject(TimelineHoverCardService);
   private accountState = inject(AccountStateService);
+  private imageCacheService = inject(ImageCacheService);
   layout = inject(LayoutService);
 
   // Signal to track if overlay is visible
   isVisible = signal(false);
+
+  // Signal to track if overlay is docked/pinned
+  isDocked = signal(false);
 
   // Get favorites from the service
   favorites = this.favoritesService.favorites;
@@ -47,6 +52,24 @@ export class FavoritesOverlayComponent {
   followingWithProfiles = signal<{ pubkey: string; profile?: NostrRecord }[]>([]);
 
   constructor() {
+    // Load docked preference from localStorage
+    const savedDocked = localStorage.getItem('followingSidebarDocked');
+    if (savedDocked === 'true' && !this.layout.isHandset()) {
+      // Only restore docked state on desktop
+      this.isDocked.set(true);
+      this.isVisible.set(true);
+    }
+
+    // Monitor screen size changes and auto-undock if screen becomes small
+    effect(() => {
+      const isHandset = this.layout.isHandset();
+      if (isHandset && this.isDocked()) {
+        // Auto-undock when screen becomes small
+        this.isDocked.set(false);
+        localStorage.setItem('followingSidebarDocked', 'false');
+      }
+    });
+
     // Effect to load profiles when favorites change
     effect(() => {
       const favs = this.favorites();
@@ -125,7 +148,27 @@ export class FavoritesOverlayComponent {
   }
 
   hideOverlay(): void {
+    // Don't hide if docked
+    if (this.isDocked()) {
+      return;
+    }
     this.isVisible.set(false);
+  }
+
+  toggleDock(): void {
+    // Prevent docking on mobile
+    if (this.layout.isHandset()) {
+      return;
+    }
+
+    const newDocked = !this.isDocked();
+    this.isDocked.set(newDocked);
+    localStorage.setItem('followingSidebarDocked', String(newDocked));
+
+    // If docking, ensure overlay is visible
+    if (newDocked) {
+      this.isVisible.set(true);
+    }
   }
 
   onAvatarMouseEnter(event: MouseEvent, pubkey: string): void {
@@ -148,7 +191,21 @@ export class FavoritesOverlayComponent {
   }
 
   getAvatarUrl(profile?: NostrRecord): string | undefined {
-    return profile?.data?.picture;
+    const pictureUrl = profile?.data?.picture;
+    if (!pictureUrl) return undefined;
+
+    // Always use the same size regardless of dock state to prevent re-downloading
+    // Use 144px which works for both docked (56px display) and undocked (72px display)
+    // This is 2x for retina displays in both cases
+    return this.imageCacheService.getOptimizedImageUrl(pictureUrl, 144, 144);
+  }
+
+  getPreviewAvatarUrl(profile?: NostrRecord): string | undefined {
+    const pictureUrl = profile?.data?.picture;
+    if (!pictureUrl) return undefined;
+
+    // Preview avatars are 36px, use 72px for retina displays
+    return this.imageCacheService.getOptimizedImageUrl(pictureUrl, 72, 72);
   }
 
   getInitials(profile?: NostrRecord): string {
