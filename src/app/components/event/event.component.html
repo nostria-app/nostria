@@ -94,13 +94,13 @@
     <!-- Root event (original post) -->
     <div class="thread-context">
       @if (isThreadedReply()) {
-      <h4 class="thread-label">Original Post</h4>
+      <!-- <h4 class="thread-label">Original Post</h4> -->
       } @else {
-      <h4 class="thread-label">Replying to</h4>
+      <!-- <h4 class="thread-label">Replying to</h4> -->
       }
       <mat-card appearance="outlined" class="root-event" (click)="onRootEventClick($event)">
-        <app-event-header [event]="rootRecordData.event"></app-event-header>
-        <mat-card-content #rootContent [class.collapsed]="!isRootEventExpanded()">
+        <app-event-header [event]="rootRecordData.event" [compact]="true"></app-event-header>
+        <mat-card-content [class.collapsed]="!isRootEventExpanded()">
           @if (rootRecordData.event.kind === 20) {
           <app-photo-event [event]="rootRecordData.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
             [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
@@ -137,12 +137,12 @@
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"></app-content>
           }
         </mat-card-content>
-        @if (!isRootEventExpanded() && rootContentNeedsTruncation()) {
+        @if (!isRootEventExpanded()) {
         <button mat-button class="show-more-btn" (click)="onExpandClick($event, isRootEventExpanded, true)">
           <mat-icon>expand_more</mat-icon>
           Show more
         </button>
-        } @else if (isRootEventExpanded()) {
+        } @else {
         <button mat-button class="show-less-btn" (click)="onExpandClick($event, isRootEventExpanded, false)">
           <mat-icon>expand_less</mat-icon>
           Show less
@@ -152,13 +152,13 @@
     </div>
 
     <!-- Thread indicator (only show for threaded replies with both root and parent) -->
-    @if (isThreadedReply()) {
+    <!-- @if (isThreadedReply()) {
     <div class="thread-indicator">
       <hr />
       <span>Thread continues</span>
       <hr />
     </div>
-    }
+    } -->
     }
 
     <!-- Immediate parent event (what this is replying to) -->
@@ -166,11 +166,11 @@
     @if (parentRecordData && isThreadedReply() && !hideParentEvent()) {
     <div class="reply-context">
       @if (isThreadedReply()) {
-      <h4 class="thread-label">Replying to</h4>
+      <!-- <h4 class="thread-label">Replying to</h4> -->
       }
       <mat-card appearance="outlined" class="parent-event" (click)="onParentEventClick($event)">
-        <app-event-header [event]="parentRecordData.event"></app-event-header>
-        <mat-card-content #parentContent [class.collapsed]="!isParentEventExpanded()">
+        <app-event-header [event]="parentRecordData.event" [compact]="true"></app-event-header>
+        <mat-card-content [class.collapsed]="!isParentEventExpanded()">
           @if (parentRecordData.event.kind === 20) {
           <app-photo-event [event]="parentRecordData.event" [hideComments]="hideComments()"
             [showOverlay]="showOverlay()" [allMediaEvents]="allMediaEvents()"
@@ -211,12 +211,12 @@
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"></app-content>
           }
         </mat-card-content>
-        @if (!isParentEventExpanded() && parentContentNeedsTruncation()) {
+        @if (!isParentEventExpanded()) {
         <button mat-button class="show-more-btn" (click)="onExpandClick($event, isParentEventExpanded, true)">
           <mat-icon>expand_more</mat-icon>
           Show more
         </button>
-        } @else if (isParentEventExpanded()) {
+        } @else {
         <button mat-button class="show-less-btn" (click)="onExpandClick($event, isParentEventExpanded, false)">
           <mat-icon>expand_less</mat-icon>
           Show less
