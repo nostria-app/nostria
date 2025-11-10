@@ -90,12 +90,17 @@
                 }
               </div>
 
-              @if (notification.message) {
+              @if (notification.message && notification.type !== 'zap') {
               <div class="notification-message">{{ notification.message }}</div>
               }
 
-              @if (getZapContent(notification)) {
-              <div class="notification-message zap-content">{{ getZapContent(notification) }}</div>
+              @if (notification.message && notification.type === 'zap') {
+              <div class="notification-message">
+                {{ notification.message }}@if (getZapContent(notification)) {<span> · {{ getZapContent(notification)
+                  }}</span>}
+              </div>
+              } @else if (getZapContent(notification)) {
+              <div class="notification-message">{{ getZapContent(notification) }}</div>
               }
 
               <div class="notification-meta">
