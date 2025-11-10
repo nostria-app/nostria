@@ -660,37 +660,64 @@ export class UtilitiesService {
     objectUrl: string;
   }> {
     const video = document.createElement('video');
-    video.preload = 'metadata';
+    video.preload = 'auto';
     video.muted = true;
+    video.playsInline = true; // Important for mobile browsers
     video.crossOrigin = 'anonymous';
-    video.src = videoUrl;
 
-    // Wait for video metadata to load
+    // Load the video
+    video.src = videoUrl;
+    video.load();
+
+    // Wait for enough data to be loaded
     await new Promise<void>((resolve, reject) => {
-      video.onloadedmetadata = () => resolve();
+      video.oncanplay = () => resolve();
       video.onerror = () => reject(new Error('Failed to load video'));
+
+      // Timeout after 10 seconds
+      setTimeout(() => reject(new Error('Video loading timeout')), 10000);
     });
 
-    // Calculate seek time if not provided
+    // Calculate seek time
     const calculatedSeekTime = seekTime ?? Math.min(1, video.duration * 0.1);
-    const clampedSeekTime = Math.min(calculatedSeekTime, video.duration - 0.5);
+    const clampedSeekTime = Math.max(0, Math.min(calculatedSeekTime, video.duration - 0.5));
+
+    // Seek to the desired time
     video.currentTime = clampedSeekTime;
 
     // Wait for seek to complete
-    await new Promise<void>(resolve => {
+    await new Promise<void>((resolve, reject) => {
       video.onseeked = () => resolve();
+      video.onerror = () => reject(new Error('Failed to seek video'));
+
+      // Timeout
+      setTimeout(() => reject(new Error('Video seek timeout')), 5000);
     });
+
+    // Play for a brief moment to ensure frame is rendered, then pause
+    try {
+      await video.play();
+      await new Promise(resolve => setTimeout(resolve, 100)); // Wait 100ms
+      video.pause();
+    } catch (error) {
+      // Play might fail, but we can still try to capture
+      console.warn('Could not play video, attempting capture anyway:', error);
+    }
+
+    // Wait a bit more to ensure the frame is painted
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // Create canvas and draw the video frame
     const canvas = document.createElement('canvas');
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: false });
     if (!ctx) {
       throw new Error('Failed to get canvas context');
     }
 
+    // Draw the video frame
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     // Convert canvas to blob
