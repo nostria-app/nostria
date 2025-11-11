@@ -165,17 +165,6 @@
         </div>
       </div>
     </div>
-
-    <div class="continue-button-container">
-      <button mat-flat-button (click)="generateNewKey()" [disabled]="loading()">
-        @if (loading()) {
-        <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-        <span>Creating Account...</span>
-        } @else {
-        <span>Create account</span>
-        }
-      </button>
-    </div>
     }
     }
 
@@ -414,13 +403,26 @@
         </ul>
       </mat-card-content>
     </mat-card>
+    }
+  </div>
 
-    <div class="button-row">
-      <button mat-raised-button color="primary" (click)="usePreviewAccount(previewPubkey)" [disabled]="!previewPubkey">
-        <mat-icon>visibility</mat-icon>
-        <span>Preview Only</span>
-      </button>
-    </div>
+  <!-- Dialog Actions -->
+  <div mat-dialog-actions>
+    @if (currentStep() === LoginStep.REGION_SELECTION && !isDetectingRegion()) {
+    <button mat-flat-button (click)="generateNewKey()" [disabled]="loading()">
+      @if (loading()) {
+      <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
+      <span>Creating Account...</span>
+      } @else {
+      <span>Create account</span>
+      }
+    </button>
+    }
+    @if (currentStep() === LoginStep.PREVIEW) {
+    <button mat-raised-button color="primary" (click)="usePreviewAccount(previewPubkey)" [disabled]="!previewPubkey">
+      <mat-icon>visibility</mat-icon>
+      <span>Preview Only</span>
+    </button>
     }
   </div>
 </div>
