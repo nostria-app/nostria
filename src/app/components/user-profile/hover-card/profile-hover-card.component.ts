@@ -28,6 +28,8 @@ import { UserDataService } from '../../../services/user-data.service';
 import { nip19 } from 'nostr-tools';
 import { TrustService } from '../../../services/trust.service';
 import { FavoritesService } from '../../../services/favorites.service';
+import { PublishService } from '../../../services/publish.service';
+import { NostrService } from '../../../services/nostr.service';
 
 interface ProfileData {
   data?: {
@@ -72,6 +74,8 @@ export class ProfileHoverCardComponent {
   private trustService = inject(TrustService);
   private dialog = inject(MatDialog);
   private favoritesService = inject(FavoritesService);
+  private publishService = inject(PublishService);
+  private nostrService = inject(NostrService);
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);
@@ -237,8 +241,11 @@ export class ProfileHoverCardComponent {
         'Reported from profile hover card'
       );
 
-      // Publish using account state
-      this.accountState.publish.set(reportEvent);
+      // Publish using PublishService
+      await this.publishService.signAndPublishAuto(
+        reportEvent,
+        (event) => this.nostrService.signEvent(event)
+      );
       this.layout.toast('Profile reported');
     } catch (error) {
       console.error('Failed to report profile:', error);

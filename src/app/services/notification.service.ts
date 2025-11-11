@@ -11,6 +11,7 @@ import {
 } from './storage.service';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
+import { PublishEventBus } from './publish-event-bus.service';
 
 @Injectable({
   providedIn: 'root',
@@ -19,6 +20,7 @@ export class NotificationService {
   private logger = inject(LoggerService);
   private storage = inject(StorageService);
   private accountState = inject(AccountStateService);
+  private eventBus = inject(PublishEventBus);
 
   // Store all notifications
   private _notifications = signal<Notification[]>([]);
@@ -33,8 +35,14 @@ export class NotificationService {
   // Track previously seen muted accounts to detect new mutes
   private _previousMutedAccounts = signal<string[]>([]);
 
+  // Track active publishing notifications by event ID
+  private activePublishNotifications = new Map<string, string>(); // eventId -> notificationId
+
   constructor() {
     this.logger.info('NotificationService initialized');
+
+    // Subscribe to publish events from event bus
+    this.subscribeToPublishEvents();
 
     // Set up effect to persist notifications when they change
     effect(() => {
@@ -82,6 +90,122 @@ export class NotificationService {
         this._previousMutedAccounts.set([...currentMutedAccounts]);
       });
     });
+  }
+
+  /**
+   * Subscribe to publish events from the event bus
+   */
+  private subscribeToPublishEvents(): void {
+    // Handle publish started events
+    this.eventBus.on('started').subscribe(event => {
+      if (event.type === 'started') {
+        this.handlePublishStarted(event.event, event.relayUrls);
+      }
+    });
+
+    // Handle relay result events
+    this.eventBus.on('relay-result').subscribe(event => {
+      if (event.type === 'relay-result') {
+        this.handleRelayResult(event.event.id, event.relayUrl, event.success, event.error);
+      }
+    });
+
+    // Handle publish completed events
+    this.eventBus.on('completed').subscribe(event => {
+      if (event.type === 'completed') {
+        this.handlePublishCompleted(event.event.id);
+      }
+    });
+
+    // Handle publish error events
+    this.eventBus.on('error').subscribe(event => {
+      if (event.type === 'error') {
+        this.handlePublishError(event.event.id, event.error);
+      }
+    });
+  }
+
+  /**
+   * Handle publish started event
+   */
+  private handlePublishStarted(event: Event, relayUrls: string[]): void {
+    const notificationId = `publish-${event.id}-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+    this.logger.debug(`Creating relay publishing notification ${notificationId} for event ${event.id}`);
+
+    // Create relay promise tracking objects
+    const relayPromiseObjects: RelayPublishPromise[] = relayUrls.map(relayUrl => ({
+      relayUrl,
+      status: 'pending',
+    }));
+
+    const pubkey = this.accountState.pubkey();
+
+    const notification: RelayPublishingNotification = {
+      id: notificationId,
+      type: NotificationType.RELAY_PUBLISHING,
+      timestamp: Date.now(),
+      read: false,
+      title: 'Publishing to relays',
+      message: `Publishing event ${event.id.substring(0, 8)}... to ${relayUrls.length} relays`,
+      event,
+      relayPromises: relayPromiseObjects,
+      complete: false,
+      recipientPubkey: pubkey,
+    };
+
+    this.addNotification(notification);
+    this.activePublishNotifications.set(event.id, notificationId);
+
+    this.persistNotificationToStorage(notification);
+  }
+
+  /**
+   * Handle relay result event
+   */
+  private handleRelayResult(eventId: string, relayUrl: string, success: boolean, error?: string): void {
+    const notificationId = this.activePublishNotifications.get(eventId);
+    if (!notificationId) {
+      this.logger.warn(`No active notification found for event ${eventId}`);
+      return;
+    }
+
+    this.updateRelayPromiseStatus(
+      notificationId,
+      relayUrl,
+      success ? 'success' : 'failed',
+      error ? new Error(error) : undefined
+    );
+  }
+
+  /**
+   * Handle publish completed event
+   */
+  private handlePublishCompleted(eventId: string): void {
+    const notificationId = this.activePublishNotifications.get(eventId);
+    if (!notificationId) {
+      this.logger.warn(`No active notification found for event ${eventId}`);
+      return;
+    }
+
+    // All relay results have already been updated via handleRelayResult
+    // The notification complete flag is automatically set by updateRelayPromiseStatus
+    this.activePublishNotifications.delete(eventId);
+  }
+
+  /**
+   * Handle publish error event
+   */
+  private handlePublishError(eventId: string, error: Error): void {
+    const notificationId = this.activePublishNotifications.get(eventId);
+    if (notificationId) {
+      // Log the error
+      this.logger.error(`Publishing error for event ${eventId}: ${error.message}`);
+
+      // The error should have already been handled via relay-result events
+      // Just clean up the tracking
+      this.activePublishNotifications.delete(eventId);
+    }
   }
 
   /**

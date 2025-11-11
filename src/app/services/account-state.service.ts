@@ -15,6 +15,7 @@ import { UtilitiesService } from './utilities.service';
 import { Wallets } from './wallets';
 import { Cache } from './cache';
 import { AccountRelayService } from './relays/account-relay';
+import { PublishService } from './publish.service';
 
 interface ProfileProcessingState {
   isProcessing: boolean;
@@ -45,8 +46,41 @@ export class AccountStateService implements OnDestroy {
   private readonly wallets = inject(Wallets);
   private readonly cache = inject(Cache);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly publishService = inject(PublishService);
 
   private destroy$ = new Subject<void>();
+
+  // Function to sign events - must be set by NostrService to avoid circular dependency
+  private signFunction?: (event: UnsignedEvent) => Promise<Event>;
+
+  /**
+   * Set the signing function. Called by NostrService during initialization.
+   * This avoids circular dependency between AccountStateService and NostrService.
+   */
+  setSignFunction(signFn: (event: UnsignedEvent) => Promise<Event>): void {
+    this.signFunction = signFn;
+  }
+
+  /**
+   * Publish an event using the PublishService.
+   * Replaces the old publish signal pattern.
+   * 
+   * @param event The unsigned event to publish
+   * @param newlyFollowedPubkeys For kind 3 events, the newly followed pubkeys
+   */
+  private async publishEvent(event: UnsignedEvent, newlyFollowedPubkeys?: string[]): Promise<void> {
+    if (!this.signFunction) {
+      console.error('[AccountStateService] Sign function not set. Cannot publish event.');
+      return;
+    }
+
+    try {
+      await this.publishService.signAndPublishAuto(event, this.signFunction, newlyFollowedPubkeys);
+    } catch (error) {
+      console.error('[AccountStateService] Error publishing event:', error);
+      throw error;
+    }
+  }
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
@@ -127,14 +161,11 @@ export class AccountStateService implements OnDestroy {
     const state = this.profileProcessingState();
     if (state.total === 0) return 0;
     return Math.round((state.processed / state.total) * 100);
-  }); // nostr = inject(NostrService);
+  });
 
-  // Signal to publish event
-  publish = signal<Event | UnsignedEvent | undefined>(undefined);
-
-  // Signal to store newly followed pubkeys for the current publish operation
-  // This is used to notify only the newly followed users, not all followed users
-  newlyFollowedPubkeys = signal<string[]>([]);
+  // DEPRECATED: Legacy publish signal removed - use publishEvent() method instead
+  // publish = signal<Event | UnsignedEvent | undefined>(undefined);
+  // newlyFollowedPubkeys = signal<string[]>([]);
 
   constructor() {
     // Cache configuration is now handled by the injected cache service
@@ -213,7 +244,7 @@ export class AccountStateService implements OnDestroy {
 
     // Publish the event to update the following list
     try {
-      this.publish.set(newFollowingEvent);
+      await this.publishEvent(newFollowingEvent);
       console.log(`Unfollowed ${pubkey} successfully.`);
     } catch (error) {
       console.error(`Failed to unfollow ${pubkey}:`, error);
@@ -348,9 +379,6 @@ export class AccountStateService implements OnDestroy {
     // Add all new pubkeys to following list
     this.followingList.update(list => [...list, ...newPubkeys]);
 
-    // Store the newly followed pubkeys for the publish operation
-    this.newlyFollowedPubkeys.set(newPubkeys);
-
     console.log('[AccountStateService] DEBUG: About to publish follow event:', {
       newPubkeysCount: newPubkeys.length,
       newPubkeysList: newPubkeys.map(pk => pk.slice(0, 16)),
@@ -362,7 +390,7 @@ export class AccountStateService implements OnDestroy {
 
     // Publish the event to update the following list (single operation)
     try {
-      this.publish.set(newFollowingEvent);
+      await this.publishEvent(newFollowingEvent, newPubkeys);
       console.log(`Followed ${newPubkeys.length} pubkey(s) successfully:`, newPubkeys);
     } catch (error) {
       console.error(`Failed to follow pubkey(s):`, error);
@@ -1061,7 +1089,7 @@ export class AccountStateService implements OnDestroy {
     currentMuteList.tags.push(['p', pubkey]);
     this.updateMuteList(currentMuteList);
 
-    this.publish.set(currentMuteList);
+    await this.publishEvent(currentMuteList);
   }
 
   // Add a method to clean up subscriptions if needed

@@ -6,7 +6,7 @@ import { RelayPoolService } from './relays/relay-pool';
 import { AccountRelayService } from './relays/account-relay';
 import { UserRelaysService } from './relays/user-relays';
 import { ApplicationStateService } from './application-state.service';
-import { NotificationService } from './notification.service';
+import { PublishEventBus } from './publish-event-bus.service';
 
 /**
  * Options for publishing events
@@ -44,13 +44,12 @@ export interface PublishResult {
  * This service provides:
  * - Direct publishing methods with control over relay selection
  * - Special handling for different event kinds (e.g., kind 3 follows)
- * - Backwards compatibility with signal-based publishing pattern
  * - Avoids circular dependencies by being a standalone service
  * 
  * Usage:
  * 1. Direct: await publishService.publish(signedEvent, options)
- * 2. With signing: await publishService.signAndPublish(unsignedEvent, options)
- * 3. Legacy signal: accountState.publish.set(event) - automatically handled
+ * 2. With signing: await publishService.signAndPublish(unsignedEvent, signFn, options)
+ * 3. Auto-detect: await publishService.signAndPublishAuto(unsignedEvent, signFn, newlyFollowedPubkeys)
  */
 @Injectable({
   providedIn: 'root',
@@ -62,7 +61,7 @@ export class PublishService {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly userRelaysService = inject(UserRelaysService);
   private readonly appState = inject(ApplicationStateService);
-  private readonly notificationService = inject(NotificationService);
+  private readonly eventBus = inject(PublishEventBus);
 
   /**
    * Publish a signed event to relays.
@@ -109,6 +108,14 @@ export class PublishService {
         return result;
       }
 
+      // Emit started event
+      this.eventBus.emit({
+        type: 'started',
+        event,
+        relayUrls,
+        timestamp: Date.now(),
+      });
+
       // Create relay promises map for notification tracking
       const relayPromises = new Map<Promise<string>, string>();
       const publishPromises: Promise<string>[] = [];
@@ -120,8 +127,27 @@ export class PublishService {
       // Publish to each relay individually so we can track status
       for (const relayUrl of relayUrls) {
         const publishPromise = this.pool.publish([relayUrl], event, perRelayTimeout)
-          .then(() => relayUrl)
+          .then(() => {
+            // Emit success for this relay
+            this.eventBus.emit({
+              type: 'relay-result',
+              event,
+              relayUrl,
+              success: true,
+              timestamp: Date.now(),
+            });
+            return relayUrl;
+          })
           .catch(error => {
+            // Emit failure for this relay
+            this.eventBus.emit({
+              type: 'relay-result',
+              event,
+              relayUrl,
+              success: false,
+              error: error.message || 'Failed',
+              timestamp: Date.now(),
+            });
             // Log but don't throw - we want to track partial failures
             this.logger.debug('[PublishService] Relay publish failed', { relayUrl, error });
             throw new Error(`${relayUrl}: ${error.message || 'Failed'}`);
@@ -131,11 +157,11 @@ export class PublishService {
         publishPromises.push(publishPromise);
       }
 
-      // Create notification for tracking
-      await this.notificationService.addRelayPublishingNotification(
-        event,
-        relayPromises
-      );
+      // Create notification for tracking (removed to avoid circular dependency)
+      // The NotificationService creates a circular dependency:
+      // NotificationService -> AccountStateService -> PublishService -> NotificationService
+      // Publishing notifications can be added back through an event bus or other mechanism
+      // await this.notificationService.addRelayPublishingNotification(event, relayPromises);
 
       // Process results with overall timeout
       // Create a proper timeout that we can await
@@ -195,9 +221,27 @@ export class PublishService {
         }))
       });
 
+      // Emit completed event
+      this.eventBus.emit({
+        type: 'completed',
+        event,
+        relayResults: result.relayResults,
+        success: result.success,
+        timestamp: Date.now(),
+      });
+
       return result;
     } catch (error) {
       this.logger.error('[PublishService] Error during publish', error);
+
+      // Emit error event
+      this.eventBus.emit({
+        type: 'error',
+        event,
+        error: error instanceof Error ? error : new Error(String(error)),
+        timestamp: Date.now(),
+      });
+
       // Ensure we still set result.success based on any successful relays
       result.success = Array.from(result.relayResults.values()).some(r => r.success);
       return result;
@@ -237,6 +281,41 @@ export class PublishService {
         event: event as Event, // Type assertion for error case
       };
     }
+  }
+
+  /**
+   * Convenience method to sign and publish with automatic option detection.
+   * Automatically determines the best publishing strategy based on event type.
+   * 
+   * This is the replacement for the old accountState.publish signal pattern.
+   * 
+   * @param event The unsigned event to sign and publish
+   * @param signFn Function that signs the event
+   * @param newlyFollowedPubkeys For kind 3 events, the newly followed pubkeys (optional)
+   * @returns Promise with publish results
+   */
+  async signAndPublishAuto(
+    event: UnsignedEvent,
+    signFn: (event: UnsignedEvent) => Promise<Event>,
+    newlyFollowedPubkeys?: string[]
+  ): Promise<PublishResult> {
+    // Determine options based on event kind
+    const options: PublishOptions = {};
+
+    if (event.kind === kinds.Contacts) {
+      // Follow list: notify newly followed users
+      options.notifyFollowed = true;
+      options.useOptimizedRelays = false;
+      if (newlyFollowedPubkeys && newlyFollowedPubkeys.length > 0) {
+        options.newlyFollowedPubkeys = newlyFollowedPubkeys;
+      }
+    } else {
+      // All other events: notify mentioned users, use all relays
+      options.notifyMentioned = true;
+      options.useOptimizedRelays = false;
+    }
+
+    return this.signAndPublish(event, signFn, options);
   }
 
   /**

@@ -7,6 +7,7 @@ import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
 import { SettingsService } from './settings.service';
+import { PublishService } from './publish.service';
 
 export type ReportType =
   | 'nudity'
@@ -42,6 +43,7 @@ export class ReportingService {
   private logger = inject(LoggerService);
   private nostr = inject(NostrService);
   private settings = inject(SettingsService);
+  private publishService = inject(PublishService);
 
   // Override signals for showing blocked content
   private contentOverrides = signal<Set<string>>(new Set());
@@ -290,8 +292,11 @@ export class ReportingService {
     // Create a fresh mute list event with the user
     const freshMuteList = await this.createFreshMuteListEvent('user', pubkey);
     if (freshMuteList) {
-      // Publish the updated mute list to account relays
-      this.accountState.publish.set(freshMuteList);
+      // Publish the updated mute list to account relays using PublishService
+      await this.publishService.signAndPublishAuto(
+        freshMuteList,
+        (event) => this.nostr.signEvent(event)
+      );
       this.logger.debug('Blocked user and published mute list:', pubkey);
     }
   }
@@ -303,8 +308,11 @@ export class ReportingService {
     // Create a fresh mute list event without the user
     const freshMuteList = await this.createFreshMuteListWithoutUser(pubkey);
     if (freshMuteList) {
-      // Publish the updated mute list to account relays
-      this.accountState.publish.set(freshMuteList);
+      // Publish the updated mute list to account relays using PublishService
+      await this.publishService.signAndPublishAuto(
+        freshMuteList,
+        (event) => this.nostr.signEvent(event)
+      );
     }
   }
 
