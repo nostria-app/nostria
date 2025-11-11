@@ -328,7 +328,7 @@
     </mat-card>
 
     <div class="button-row">
-      <button mat-raised-button color="primary" (click)="loginWithNsec()" [disabled]="!nsecKey">
+      <button mat-raised-button color="primary" (click)="loginWithNsec()" [disabled]="!isNsecKeyValid() || loading()">
         <mat-icon>login</mat-icon>
         <span>Login</span>
       </button>

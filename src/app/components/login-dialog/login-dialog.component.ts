@@ -98,6 +98,26 @@ export class LoginDialogComponent {
     this.logger.debug('UnifiedLoginDialogComponent initialized');
   }
 
+  /**
+   * Validates if the nsecKey is in a valid format (nsec or 64-char hex)
+   */
+  isNsecKeyValid(): boolean {
+    const trimmedKey = this.nsecKey.trim();
+    if (!trimmedKey) {
+      return false;
+    }
+
+    // Check if it's an nsec format
+    if (trimmedKey.startsWith('nsec')) {
+      // Basic length check for nsec (should be around 63 characters)
+      return trimmedKey.length >= 60;
+    }
+
+    // Check if it's a valid 64-character hex string
+    const hexRegex = /^[0-9a-fA-F]{64}$/;
+    return hexRegex.test(trimmedKey);
+  }
+
   // Navigation methods
   goToStep(step: LoginStep): void {
     this.logger.debug('Changing login step', {
@@ -295,6 +315,8 @@ export class LoginDialogComponent {
 
   async loginWithNsec(): Promise<void> {
     this.logger.debug('Attempting login with nsec');
+    this.loading.set(true);
+
     try {
       await this.nostrService.loginWithNsec(this.nsecKey.trim());
       this.logger.debug('Login with nsec successful');
@@ -313,7 +335,15 @@ export class LoginDialogComponent {
       this.closeDialog();
     } catch (err) {
       this.logger.error('Login with nsec failed', err);
-      // Could add error handling here
+      this.loading.set(false);
+
+      // Show error message to user
+      const errorMessage = err instanceof Error ? err.message : 'Failed to login with private key';
+      this.snackBar.open(errorMessage, 'Close', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'top',
+      });
     }
   }
 
