@@ -276,6 +276,7 @@ app-user-profile {
 
         // Column content - now scrollable and contains the header
         .column-content {
+          scroll-behavior: smooth;
           flex: 1;
           display: flex;
           flex-direction: column;
@@ -870,6 +871,7 @@ app-user-profile {
     }
 
     .column-content {
+      scroll-behavior: smooth;
       flex: 1;
       overflow-y: auto;
       padding: 8px;
