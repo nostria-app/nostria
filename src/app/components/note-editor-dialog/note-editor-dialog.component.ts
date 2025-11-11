@@ -141,6 +141,9 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   showAdvancedOptions = signal(false);
   mentions = signal<string[]>(this.data?.mentions || []);
 
+  // Guard against double-click publishing
+  private publishInitiated = signal(false);
+
   // Media metadata for imeta tags (NIP-92)
   mediaMetadata = signal<MediaMetadata[]>([]);
 
@@ -508,7 +511,20 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   async publishNote(): Promise<void> {
-    if (!this.canPublish()) return;
+    // CRITICAL: Guard against double-click/double-submit
+    // Check publishInitiated first to prevent race conditions
+    if (this.publishInitiated()) {
+      console.warn('[NoteEditorDialog] Publish already initiated, ignoring duplicate call');
+      return;
+    }
+
+    this.publishInitiated.set(true);
+
+    // Double-check canPublish and isPublishing after setting publishInitiated
+    if (!this.canPublish() || this.isPublishing()) {
+      this.publishInitiated.set(false);
+      return;
+    }
 
     this.isPublishing.set(true);
 
@@ -595,8 +611,9 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         duration: 5000,
       });
     } finally {
-      console.log('[NoteEditorDialog] Finally block - resetting isPublishing');
+      console.log('[NoteEditorDialog] Finally block - resetting isPublishing and publishInitiated');
       this.isPublishing.set(false);
+      this.publishInitiated.set(false);
     }
   }
 

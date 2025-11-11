@@ -319,7 +319,7 @@
 
     <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
 
-    <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish()" class="publish-button">
+    <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish() || isPublishing()" class="publish-button">
       @if (isPublishing()) {
       <ng-container>
         <mat-icon class="spinning">hourglass_empty</mat-icon>
