@@ -3,6 +3,7 @@
 @use './app/components/whats-new-dialog/whats-new-dialog-global.scss';
 
 html {
+  scroll-behavior: smooth;
   --mat-success-color: #4caf50;
   /* Bitcoin / zap color used across the app */
   --nostria-bitcoin: #ff6b1a;
