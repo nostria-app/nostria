@@ -1456,20 +1456,33 @@ export class NostrService implements NostriaService {
     // Store the hex string representation of the private key
     const privkeyHex = bytesToHex(secretKey);
 
-    // Encrypt the private key with default PIN
-    const encryptedData = await this.crypto.encryptPrivateKey(privkeyHex, this.crypto.DEFAULT_PIN);
+    // Try to encrypt the private key with default PIN
+    // Fall back to plaintext storage if encryption fails (e.g., on HTTP connections)
+    let storedPrivkey: string;
+    let isEncrypted: boolean;
+
+    try {
+      const encryptedData = await this.crypto.encryptPrivateKey(privkeyHex, this.crypto.DEFAULT_PIN);
+      storedPrivkey = JSON.stringify(encryptedData);
+      isEncrypted = true;
+      this.logger.info('Private key encrypted successfully');
+    } catch (encryptError) {
+      this.logger.warn('Failed to encrypt private key, storing in plaintext. This may occur on HTTP connections.', encryptError);
+      storedPrivkey = privkeyHex;
+      isEncrypted = false;
+    }
 
     const newUser: NostrUser = {
       pubkey,
-      privkey: JSON.stringify(encryptedData),
+      privkey: storedPrivkey,
       source: 'nsec',
       lastUsed: Date.now(),
       region: region,
       hasActivated: false,
-      isEncrypted: true,
+      isEncrypted,
     };
 
-    this.logger.debug('New keypair generated successfully (encrypted)', { pubkey, region });
+    this.logger.debug(`New keypair generated successfully (${isEncrypted ? 'encrypted' : 'plaintext'})`, { pubkey, region });
 
     // Configure the discovery relay based on the user's region
     if (region) {
@@ -1748,24 +1761,44 @@ export class NostrService implements NostriaService {
       // Generate the public key from the private key
       const pubkey = getPublicKey(privkeyArray);
 
-      // Encrypt the private key with default PIN
-      const encryptedData = await this.crypto.encryptPrivateKey(privkeyHex, this.crypto.DEFAULT_PIN);
+      // Try to encrypt the private key with default PIN
+      // Fall back to plaintext storage if encryption fails (e.g., on HTTP connections)
+      let storedPrivkey: string;
+      let isEncrypted: boolean;
+
+      try {
+        const encryptedData = await this.crypto.encryptPrivateKey(privkeyHex, this.crypto.DEFAULT_PIN);
+        storedPrivkey = JSON.stringify(encryptedData);
+        isEncrypted = true;
+        this.logger.info('Private key encrypted successfully');
+      } catch (encryptError) {
+        this.logger.warn('Failed to encrypt private key, storing in plaintext. This may occur on HTTP connections.', encryptError);
+        storedPrivkey = privkeyHex;
+        isEncrypted = false;
+      }
 
       // Store the user info
       const newUser: NostrUser = {
         pubkey,
-        privkey: JSON.stringify(encryptedData),
+        privkey: storedPrivkey,
         source: 'nsec',
         lastUsed: Date.now(),
         hasActivated: true, // Assume activation is done via nsec
-        isEncrypted: true,
+        isEncrypted,
       };
 
-      this.logger.info('Login with nsec successful (encrypted)', { pubkey });
+      this.logger.info(`Login successful (${isEncrypted ? 'encrypted' : 'plaintext'})`, { pubkey });
       await this.setAccount(newUser);
     } catch (error) {
-      this.logger.error('Error decoding nsec:', error);
-      throw new Error('Invalid nsec key provided. Please check and try again.');
+      this.logger.error('Error during private key login:', error);
+
+      // Re-throw the original error if it's already an Error object with a message
+      if (error instanceof Error) {
+        throw error;
+      }
+
+      // Otherwise, wrap it with a generic message
+      throw new Error('Invalid private key. Please check and try again.');
     }
   }
 
