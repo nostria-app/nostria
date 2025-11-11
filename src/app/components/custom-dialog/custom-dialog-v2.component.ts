@@ -175,13 +175,13 @@ export class CustomDialogComponent implements AfterViewInit {
         // Use the visual viewport height which accounts for the keyboard
         const viewportHeight = visualViewport.height;
         const viewportOffsetTop = visualViewport.offsetTop;
-        
+
         // Calculate effective height: viewport height minus any offset from top
         const effectiveHeight = viewportHeight + viewportOffsetTop;
-        
+
         // Set the CSS variable on the container
         container.style.setProperty('--viewport-height', `${effectiveHeight}px`);
-        
+
         // Also set it on the backdrop so it resizes too
         const backdrop = container.closest('.dialog-backdrop') as HTMLElement;
         if (backdrop) {
