@@ -1,7 +1,15 @@
+.responsive-dialog {
+  height: 100%;
+  height: 100vh;
+  padding: 0 !important;
+  max-height: 100%;
+}
+
 .unified-login-dialog {
   padding: 16px 0;
   position: relative;
   max-height: 90vh;
+
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -23,7 +31,8 @@
   width: 100%;
 
   // Reduce padding on smaller/height-constrained screens
-  @media (max-width: 400px), (max-height: 700px) {
+  @media (max-width: 400px),
+  (max-height: 700px) {
     padding: 12px 16px;
     padding-bottom: 16px;
   }
@@ -146,7 +155,8 @@
   }
 
   // On very small or height-constrained screens, force single column
-  @media (max-width: 350px), (max-height: 600px) {
+  @media (max-width: 350px),
+  (max-height: 600px) {
     grid-template-columns: 1fr;
   }
 }
@@ -644,6 +654,7 @@
 
 .profile-name-field {
   width: 100%;
+  display: block;
 }
 
 .continue-button-container {

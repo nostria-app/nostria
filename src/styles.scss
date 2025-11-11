@@ -1112,6 +1112,11 @@ app-media-queue .media-list mat-list {
   }
 }
 
+.mat-mdc-dialog-surface {
+  max-height: 100%;
+  height: 100%;
+}
+
 // Responsive dialog styles for smaller screens
 @media (max-width: 600px) {
   .responsive-dialog .mat-mdc-dialog-container {
@@ -1122,7 +1127,6 @@ app-media-queue .media-list mat-list {
     border-radius: 0 !important;
     margin: 0 !important;
     padding: 0 !important;
-    border-radius: 0 !important;
   }
 
   .mat-mdc-dialog-surface {
