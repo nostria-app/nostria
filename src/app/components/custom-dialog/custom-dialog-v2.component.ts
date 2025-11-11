@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, Input, Output, EventEmitter, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -97,7 +97,7 @@ import { MatButtonModule } from '@angular/material/button';
   `,
   styleUrl: './custom-dialog.component.scss'
 })
-export class CustomDialogComponent implements AfterViewInit {
+export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   // Inputs
   @Input() title = '';
   @Input() headerIcon = '';
@@ -120,11 +120,26 @@ export class CustomDialogComponent implements AfterViewInit {
   ngAfterViewInit() {
     this.setupEnterKeyListener();
     this.setupKeyboardHandling();
+    this.disableBodyScroll();
 
     // Focus the dialog container for keyboard accessibility
     setTimeout(() => {
       this.dialogContainer?.nativeElement.focus();
     }, 100);
+  }
+
+  ngOnDestroy() {
+    this.enableBodyScroll();
+  }
+
+  private disableBodyScroll(): void {
+    if (typeof document === 'undefined') return;
+    document.body.style.overflow = 'hidden';
+  }
+
+  private enableBodyScroll(): void {
+    if (typeof document === 'undefined') return;
+    document.body.style.overflow = '';
   }
 
   private setupEnterKeyListener(): void {
@@ -159,40 +174,21 @@ export class CustomDialogComponent implements AfterViewInit {
   }
 
   private setupKeyboardHandling(): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !window.visualViewport) return;
 
-    // Handle visual viewport changes (mobile keyboard)
-    if ('visualViewport' in window) {
-      const visualViewport = window.visualViewport;
+    // Get the host element
+    const host = (this.dialogContainer?.nativeElement.closest('app-custom-dialog') ||
+      this.dialogContainer?.nativeElement.parentElement?.closest('app-custom-dialog')) as HTMLElement;
 
-      if (!visualViewport) return;
+    const updateHeight = () => {
+      if (host && window.visualViewport) {
+        host.style.height = `${window.visualViewport.height}px`;
+      }
+    };
 
-      const handleViewportResize = () => {
-        const container = this.dialogContainer?.nativeElement;
-        if (!container) return;
-
-        // When keyboard appears, viewport height decreases
-        // Use the visual viewport height which accounts for the keyboard
-        const viewportHeight = visualViewport.height;
-        const viewportOffsetTop = visualViewport.offsetTop;
-
-        // Calculate effective height: viewport height minus any offset from top
-        const effectiveHeight = viewportHeight + viewportOffsetTop;
-
-        // Set the CSS variable on the container
-        container.style.setProperty('--viewport-height', `${effectiveHeight}px`);
-
-        // Also set it on the backdrop so it resizes too
-        const backdrop = container.closest('.dialog-backdrop') as HTMLElement;
-        if (backdrop) {
-          backdrop.style.setProperty('--viewport-height', `${effectiveHeight}px`);
-        }
-      };
-
-      visualViewport.addEventListener('resize', handleViewportResize);
-      visualViewport.addEventListener('scroll', handleViewportResize);
-      handleViewportResize(); // Initial setup
-    }
+    window.visualViewport.addEventListener('resize', updateHeight);
+    window.visualViewport.addEventListener('scroll', updateHeight);
+    updateHeight(); // Initial setup
   }
 
   onBackdropClick(): void {
