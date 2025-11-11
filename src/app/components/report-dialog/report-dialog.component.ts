@@ -21,6 +21,7 @@ import { NostrService } from '../../services/nostr.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { LayoutService } from '../../services/layout.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { PublishService } from '../../services/publish.service';
 
 export interface ReportDialogData {
   target: ReportTarget;
@@ -71,6 +72,7 @@ export class ReportDialogComponent {
   private snackBar = inject(MatSnackBar);
   private layout = inject(LayoutService);
   private accountState = inject(AccountStateService);
+  private publishService = inject(PublishService);
 
   selectedReportType = signal<ReportType>('spam');
   reportDescription = signal<string>('');
@@ -309,7 +311,10 @@ export class ReportDialogComponent {
         // Create a fresh mute list event with the user
         const freshMuteList = await this.createFreshMuteListWithUser(this.data.target.pubkey);
         if (freshMuteList) {
-          this.accountState.publish.set(freshMuteList);
+          await this.publishService.signAndPublishAuto(
+            freshMuteList,
+            (event) => this.nostrService.signEvent(event)
+          );
         }
 
         this.snackBar.open('User blocked successfully', 'Dismiss', {
@@ -319,7 +324,10 @@ export class ReportDialogComponent {
         // Create a fresh mute list event with the event
         const freshMuteList = await this.createFreshMuteListWithEvent(this.data.target.eventId);
         if (freshMuteList) {
-          this.accountState.publish.set(freshMuteList);
+          await this.publishService.signAndPublishAuto(
+            freshMuteList,
+            (event) => this.nostrService.signEvent(event)
+          );
         }
 
         this.snackBar.open('Content blocked successfully', 'Dismiss', {

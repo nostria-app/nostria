@@ -168,6 +168,28 @@
   ::ng-deep .cdk-virtual-scroll-content-wrapper {
     width: 100%;
   }
+
+  // Fixed height for virtual scrolling items only
+  .notification-item {
+    height: 110px;
+    min-height: 110px;
+    max-height: 110px;
+    overflow: hidden; // Clip content vertically and horizontally to fixed height
+
+    // Constrain content to fit fixed height
+    .notification-content {
+      .notification-author {
+        max-height: 40px;
+        overflow: hidden;
+      }
+
+      .notification-message {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
 }
 
 .notification-list {
@@ -178,11 +200,167 @@
   width: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+}
 
-  .notification-item {
-    height: 120px; // Fixed height for virtual scrolling
-    min-height: 120px;
-    max-height: 120px;
+// System notification items - completely separate from activity items
+.notification-system-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px 12px;
+  gap: 16px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  transition: background-color 0.2s;
+  min-width: 0;
+  overflow-x: hidden; // Only prevent horizontal overflow
+  position: relative;
+  min-height: 60px;
+
+  &:hover {
+    background: var(--mat-sys-surface-container-high);
+  }
+
+  &.unread {
+    background: var(--mat-sys-surface-container-low);
+  }
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  // Icon wrapper styling (same as activity items)
+  .notification-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--mat-sys-primary-container);
+
+    .notification-bell {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+      color: var(--mat-sys-on-primary-container);
+    }
+  }
+
+  // Allow full vertical expansion for relay publish status cards
+  .notification-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+    overflow: visible; // Allow content to expand
+
+    .notification-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+
+      .notification-title {
+        font-size: 16px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      .new-indicator {
+        background: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+        padding: 4px 12px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        flex-shrink: 0;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        animation: pulse-glow 2s ease-in-out infinite;
+      }
+    }
+
+    .notification-message {
+      font-size: 14px;
+      opacity: 0.8;
+      line-height: 1.4;
+    }
+
+    .notification-meta {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0.6;
+      font-size: 14px;
+      flex-wrap: wrap;
+
+      .time-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  // Extra content area (relay publish status) should expand freely
+  .notification-extra {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+    width: 100%;
+
+    // Ensure relay status renders at full size
+    ::ng-deep app-relay-publish-status {
+      display: block;
+      width: 100%;
+      max-height: none !important;
+      height: auto !important;
+      overflow: visible !important;
+
+      .relay-status-card {
+        width: 100%;
+        margin-bottom: 0;
+        box-shadow: none;
+        border: 1px solid var(--mat-sys-outline-variant);
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+
+      .mat-mdc-card-content,
+      mat-card-content {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+
+      .relays-container {
+        max-height: none !important;
+        height: auto !important;
+        overflow: visible !important;
+      }
+    }
+  }
+
+  // Action buttons styling (same as activity items)
+  .notification-actions {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+
+    .action-icon-button {
+      width: 36px;
+      height: 36px;
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
   }
 }
 
@@ -194,11 +372,8 @@
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   transition: background-color 0.2s;
   min-width: 0; // Enable proper flex shrinking
-  overflow: hidden; // Prevent horizontal overflow
+  overflow-x: hidden; // Prevent horizontal overflow only
   position: relative;
-  height: 110px; // Fixed height for virtual scrolling
-  min-height: 110px;
-  max-height: 110px;
 
   // Left accent border based on notification type
   &::before {
@@ -403,8 +578,8 @@
     .notification-author {
       margin-top: 4px;
       margin-bottom: 4px;
-      max-height: 40px; // Constrain height for fixed notification size
-      overflow: hidden; // Prevent expansion
+      // No max-height constraint for regular list items
+      // (constraint is applied in .notification-viewport scope)
 
       ::ng-deep .user-profile.tiny {
         gap: 8px;
@@ -451,9 +626,8 @@
       font-size: 14px;
       opacity: 0.8;
       line-height: 1.4;
-      white-space: nowrap; // Prevent wrapping
-      overflow: hidden; // Hide overflow
-      text-overflow: ellipsis; // Show ellipsis for overflow
+      // No text truncation for regular list items
+      // (constraint is applied in .notification-viewport scope)
 
       &.zap-content {
         font-style: italic;
@@ -510,7 +684,20 @@
     }
 
     .notification-extra {
-      margin-top: 8px;
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--mat-sys-outline-variant);
+
+      // Ensure relay status card has proper spacing
+      ::ng-deep app-relay-publish-status {
+        display: block;
+
+        .relay-status-card {
+          margin-bottom: 0; // Remove bottom margin in notification context
+          box-shadow: none; // Remove shadow, use border instead
+          border: 1px solid var(--mat-sys-outline-variant);
+        }
+      }
     }
   }
 
