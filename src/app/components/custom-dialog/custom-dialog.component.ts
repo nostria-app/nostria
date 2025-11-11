@@ -1,4 +1,4 @@
-import { Component, signal, input, output, effect, ElementRef, inject, viewChild, AfterViewInit } from '@angular/core';
+import { Component, input, output, effect, ElementRef, inject, viewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,8 +12,11 @@ import { MatButtonModule } from '@angular/material/button';
  * - Enter key support: automatically triggers primary action
  * - Backdrop click to close (optional)
  * - Smooth animations
+ * - Body scroll prevention when open
  * 
- * Usage:
+ * Supports both modern signals and legacy @Input/@Output for compatibility
+ * 
+ * Usage with signals:
  * ```html
  * @if (showDialog()) {
  *   <app-custom-dialog
@@ -46,13 +49,13 @@ import { MatButtonModule } from '@angular/material/button';
         class="dialog-container" 
         (click)="$event.stopPropagation()"
         role="dialog"
-        [attr.aria-labelledby]="title() ? 'dialog-title' : null"
+        [attr.aria-labelledby]="getTitle() ? 'dialog-title' : null"
         tabindex="-1"
         #dialogContainer>
         
         <!-- Header -->
         <div class="dialog-header">
-          @if (showBackButton()) {
+          @if (getShowBackButton()) {
             <button 
               class="back-button" 
               (click)="onBackClick()"
@@ -62,7 +65,7 @@ import { MatButtonModule } from '@angular/material/button';
             </button>
           }
           
-          @if (showCloseButton()) {
+          @if (getShowCloseButton()) {
             <button 
               class="close-button" 
               (click)="onCloseClick()"
@@ -72,12 +75,12 @@ import { MatButtonModule } from '@angular/material/button';
             </button>
           }
           
-          @if (title()) {
-            <h2 class="dialog-title" id="dialog-title">{{ title() }}</h2>
+          @if (getTitle()) {
+            <h2 class="dialog-title" id="dialog-title">{{ getTitle() }}</h2>
           }
           
-          @if (headerIcon()) {
-            <img [src]="headerIcon()" [alt]="title() || 'Dialog'" class="header-icon" />
+          @if (getHeaderIcon()) {
+            <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
           }
         </div>
         
@@ -87,18 +90,16 @@ import { MatButtonModule } from '@angular/material/button';
         </div>
         
         <!-- Actions -->
-        @if (hasActions()) {
-          <div class="dialog-actions">
-            <ng-content select="[dialog-actions]"></ng-content>
-          </div>
-        }
+        <div class="dialog-actions">
+          <ng-content select="[dialog-actions]"></ng-content>
+        </div>
       </div>
     </div>
   `,
   styleUrl: './custom-dialog.component.scss'
 })
-export class CustomDialogComponent implements AfterViewInit {
-  // Inputs
+export class CustomDialogComponent implements AfterViewInit, OnDestroy {
+  // Modern signal-based inputs
   title = input<string>('');
   headerIcon = input<string>('');
   showBackButton = input<boolean>(false);
@@ -107,43 +108,73 @@ export class CustomDialogComponent implements AfterViewInit {
   width = input<string>('600px');
   maxWidth = input<string>('95vw');
 
-  // Outputs
+  // Modern signal-based outputs
   closed = output<void>();
   backdropClicked = output<void>();
   backClicked = output<void>();
 
-  // View children
+  // Modern viewChild
   dialogContainer = viewChild<ElementRef>('dialogContainer');
   dialogContent = viewChild<ElementRef>('dialogContent');
-
-  // Track if actions slot has content
-  hasActions = signal(false);
 
   private elementRef = inject(ElementRef);
 
   constructor() {
-    // Set up enter key listener
+    // Set up keyboard handling immediately
+    this.setupKeyboardHandling();
+
+    // Set up enter key listener when container is ready
     effect(() => {
       const container = this.dialogContainer();
       if (container) {
         this.setupEnterKeyListener();
-        this.checkForActions();
-        this.setupKeyboardHandling();
       }
     });
   }
 
   ngAfterViewInit() {
-    this.checkForActions();
+    this.disableBodyScroll();
+
     // Focus the dialog container for keyboard accessibility
     setTimeout(() => {
-      this.dialogContainer()?.nativeElement.focus();
+      const container = this.dialogContainer();
+      container?.nativeElement.focus();
     }, 100);
   }
 
-  private checkForActions(): void {
-    const actionsSlot = this.elementRef.nativeElement.querySelector('[dialog-actions]');
-    this.hasActions.set(!!actionsSlot && actionsSlot.children.length > 0);
+  ngOnDestroy() {
+    this.enableBodyScroll();
+  }
+
+  // Helper methods to support both signal and legacy inputs
+  getTitle(): string {
+    return this.title();
+  }
+
+  getHeaderIcon(): string {
+    return this.headerIcon();
+  }
+
+  getShowBackButton(): boolean {
+    return this.showBackButton();
+  }
+
+  getShowCloseButton(): boolean {
+    return this.showCloseButton();
+  }
+
+  getDisableClose(): boolean {
+    return this.disableClose();
+  }
+
+  private disableBodyScroll(): void {
+    if (typeof document === 'undefined') return;
+    document.body.style.overflow = 'hidden';
+  }
+
+  private enableBodyScroll(): void {
+    if (typeof document === 'undefined') return;
+    document.body.style.overflow = '';
   }
 
   private setupEnterKeyListener(): void {
@@ -159,7 +190,7 @@ export class CustomDialogComponent implements AfterViewInit {
           return;
         }
 
-        // Find primary action button (mat-raised-button or mat-flat-button with color="primary")
+        // Find primary action button
         const primaryButton = container.querySelector(
           '[dialog-actions] button[color="primary"], [dialog-actions] .primary-action'
         ) as HTMLButtonElement;
@@ -171,45 +202,36 @@ export class CustomDialogComponent implements AfterViewInit {
       }
 
       // Handle Escape key
-      if (event.key === 'Escape' && !this.disableClose()) {
+      if (event.key === 'Escape' && !this.getDisableClose()) {
         this.onCloseClick();
       }
     });
   }
 
   private setupKeyboardHandling(): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !window.visualViewport) return;
 
-    // Handle visual viewport changes (mobile keyboard)
-    if ('visualViewport' in window) {
-      const visualViewport = window.visualViewport;
+    const updateHeight = () => {
+      const host = this.elementRef.nativeElement as HTMLElement;
+      if (host && window.visualViewport) {
+        host.style.height = `${window.visualViewport.height}px`;
+      }
+    };
 
-      if (!visualViewport) return;
-
-      const handleViewportResize = () => {
-        const container = this.dialogContainer()?.nativeElement;
-        if (!container) return;
-
-        // When keyboard appears, viewport height decreases
-        // We use CSS custom properties to communicate with the stylesheet
-        const viewportHeight = visualViewport.height;
-        container.style.setProperty('--viewport-height', `${viewportHeight}px`);
-      };
-
-      visualViewport.addEventListener('resize', handleViewportResize);
-      handleViewportResize(); // Initial setup
-    }
+    window.visualViewport.addEventListener('resize', updateHeight);
+    window.visualViewport.addEventListener('scroll', updateHeight);
+    updateHeight(); // Initial setup
   }
 
   onBackdropClick(): void {
     this.backdropClicked.emit();
-    if (!this.disableClose()) {
+    if (!this.getDisableClose()) {
       this.closed.emit();
     }
   }
 
   onCloseClick(): void {
-    if (!this.disableClose()) {
+    if (!this.getDisableClose()) {
       this.closed.emit();
     }
   }

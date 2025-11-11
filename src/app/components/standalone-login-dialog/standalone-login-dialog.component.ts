@@ -1,5 +1,5 @@
 import { Component, inject, ViewChild, output, AfterViewInit } from '@angular/core';
-import { CustomDialogComponent } from '../custom-dialog/custom-dialog-v2.component';
+import { CustomDialogComponent } from '../custom-dialog/custom-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 import { LoggerService } from '../../services/logger.service';
 import { LayoutService } from '../../services/layout.service';
