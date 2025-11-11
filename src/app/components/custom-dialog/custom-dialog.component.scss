@@ -30,7 +30,12 @@
   @media (max-width: 600px),
   (max-height: 700px) {
     padding: 0;
-    align-items: flex-end;
+    align-items: stretch;
+    justify-content: flex-start; // Position dialog at top instead of centering
+    
+    // Match the viewport height on mobile to avoid showing background below
+    bottom: auto;
+    height: var(--viewport-height, 100dvh);
   }
 }
 
@@ -61,13 +66,10 @@
     width: 100%;
     max-width: 100%;
     border-radius: 0;
-    max-height: 100vh;
-    min-height: 100vh;
-
-    @supports (height: 100dvh) {
-      max-height: 100dvh;
-      min-height: 100dvh;
-    }
+    
+    // Use JavaScript-set viewport height (from Visual Viewport API)
+    height: var(--viewport-height, 100dvh);
+    max-height: none; // Remove max-height constraint on mobile
   }
 
   // Height-constrained screens (landscape mobile or short screens)
@@ -75,24 +77,10 @@
     width: 100%;
     max-width: 100%;
     border-radius: 0;
-    max-height: 100vh;
-    min-height: 100vh;
-
-    @supports (height: 100dvh) {
-      max-height: 100dvh;
-      min-height: 100dvh;
-    }
-  }
-
-  // Handle keyboard on mobile using visual viewport
-  @supports (height: 100dvh) {
-
-    @media (max-width: 600px),
-    (max-height: 700px) {
-      // Use CSS custom property set by JavaScript
-      max-height: var(--viewport-height, 100dvh);
-      min-height: var(--viewport-height, 100dvh);
-    }
+    
+    // Use JavaScript-set viewport height (from Visual Viewport API)
+    height: var(--viewport-height, 100dvh);
+    max-height: none; // Remove max-height constraint on mobile
   }
 }
 
