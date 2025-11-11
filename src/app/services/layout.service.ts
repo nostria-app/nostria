@@ -632,6 +632,7 @@ export class LayoutService implements OnDestroy {
 
     const dialogRef = this.dialog.open(LoginDialogComponent, {
       disableClose: true,
+      panelClass: 'responsive-dialog',
     });
 
     this.logger.debug('Login dialog opened with step', { step });
