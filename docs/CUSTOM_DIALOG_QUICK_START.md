@@ -70,12 +70,12 @@ import { FormsModule } from '@angular/forms';
         (closed)="closeDialog()">
         
         <div dialog-content>
-          <mat-form-field appearance="fill" class="full-width">
+          <mat-form-field class="full-width">
             <mat-label>Name</mat-label>
             <input matInput [(ngModel)]="name" placeholder="Enter your name" />
           </mat-form-field>
           
-          <mat-form-field appearance="fill" class="full-width">
+          <mat-form-field class="full-width">
             <mat-label>Bio</mat-label>
             <textarea matInput [(ngModel)]="bio" rows="3"></textarea>
           </mat-form-field>
