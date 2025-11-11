@@ -5,13 +5,12 @@
   display: flex;
   flex-direction: column;
   width: 100%;
-  padding: 16px 0;
-  position: relative;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  min-width: 480px;
+  min-width: 320px; // Reduced from 480px to support smaller screens
+
+  // Remove min-width on very small screens
+  @media (max-width: 400px) {
+    min-width: 280px;
+  }
 }
 
 :host ::ng-deep .mat-mdc-dialog-content {
@@ -22,6 +21,18 @@
   margin: 0;
   padding-bottom: 24px;
   width: 100%;
+
+  // Reduce padding on smaller/height-constrained screens
+  @media (max-width: 400px), (max-height: 700px) {
+    padding: 12px 16px;
+    padding-bottom: 16px;
+  }
+
+  @media (max-height: 600px) {
+    padding: 8px 12px;
+    padding-bottom: 12px;
+    max-height: 65vh;
+  }
 }
 
 :host ::ng-deep .cdk-overlay-pane {
@@ -36,10 +47,30 @@
   margin-bottom: 20px;
   position: relative;
 
+  @media (max-height: 700px) {
+    margin-bottom: 12px;
+  }
+
+  @media (max-height: 600px) {
+    margin-bottom: 8px;
+  }
+
   .app-icon {
     width: 80px;
     height: 80px;
     margin-bottom: 16px;
+
+    @media (max-height: 700px) {
+      width: 60px;
+      height: 60px;
+      margin-bottom: 12px;
+    }
+
+    @media (max-height: 600px) {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 8px;
+    }
   }
 
   .app-icon-floating {
@@ -50,6 +81,27 @@
     height: 48px;
     border-radius: 8px;
     z-index: 10;
+
+    @media (max-height: 700px) {
+      width: 40px;
+      height: 40px;
+    }
+
+    @media (max-height: 600px) {
+      width: 36px;
+      height: 36px;
+      right: 8px;
+    }
+  }
+
+  h2 {
+    @media (max-height: 700px) {
+      font-size: 1.3rem;
+    }
+
+    @media (max-height: 600px) {
+      font-size: 1.1rem;
+    }
   }
 }
 
@@ -57,6 +109,16 @@
   text-align: center;
   margin-bottom: 24px;
   font-size: 16px;
+
+  @media (max-height: 700px) {
+    margin-bottom: 16px;
+    font-size: 15px;
+  }
+
+  @media (max-height: 600px) {
+    margin-bottom: 12px;
+    font-size: 14px;
+  }
 }
 
 .back-button,
@@ -81,7 +143,11 @@
 
   @media (min-width: 400px) {
     grid-template-columns: repeat(2, 1fr);
-    /* Equal width columns */
+  }
+
+  // On very small or height-constrained screens, force single column
+  @media (max-width: 350px), (max-height: 600px) {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -94,12 +160,19 @@
   border: 1px solid var(--mat-divider-color, rgba(0, 0, 0, 0.05));
   overflow: hidden;
   position: relative;
-  /* Add these properties to ensure equal width */
   display: flex;
   flex: 1;
   min-width: 0;
-  /* Prevents overflow in flex containers */
   width: 100%;
+
+  // Reduce height on height-constrained screens
+  @media (max-height: 700px) {
+    height: 100px;
+  }
+
+  @media (max-height: 600px) {
+    height: 90px;
+  }
 
   &::after {
     content: '';
@@ -120,24 +193,28 @@
     }
   }
 
-  /* Update mat-card-content to take full width and height */
   .mat-mdc-card-content {
     display: flex;
     width: 100%;
     height: 100%;
     padding: 16px;
+
+    @media (max-height: 700px) {
+      padding: 12px;
+    }
+
+    @media (max-height: 600px) {
+      padding: 10px;
+    }
   }
 
-  /* Fix for card content alignment */
   .card-content {
     display: flex;
     flex-direction: column;
     width: 100%;
-    /* Take full width of container */
     height: 100%;
     align-items: center;
     justify-content: center;
-    /* Center content vertically */
 
     mat-icon {
       font-size: 32px;
@@ -148,13 +225,25 @@
       display: flex;
       align-items: center;
       justify-content: center;
+
+      @media (max-height: 700px) {
+        font-size: 28px;
+        width: 28px;
+        height: 28px;
+        margin-right: 12px;
+      }
+
+      @media (max-height: 600px) {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+        margin-right: 10px;
+      }
     }
 
     .card-text {
       width: 100%;
-      /* Ensure text takes full width */
       text-align: center;
-      /* Center text horizontally */
 
       h3 {
         margin: 0 0 8px;
@@ -163,7 +252,16 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        /* Center icon and text */
+
+        @media (max-height: 700px) {
+          font-size: 16px;
+          margin-bottom: 6px;
+        }
+
+        @media (max-height: 600px) {
+          font-size: 15px;
+          margin-bottom: 4px;
+        }
       }
 
       p {
@@ -173,6 +271,15 @@
         word-wrap: break-word;
         overflow-wrap: break-word;
         width: 100%;
+
+        @media (max-height: 700px) {
+          font-size: 13px;
+        }
+
+        @media (max-height: 600px) {
+          font-size: 12px;
+          line-height: 1.3;
+        }
       }
     }
   }
