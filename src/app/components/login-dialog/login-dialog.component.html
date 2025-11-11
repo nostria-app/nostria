@@ -214,13 +214,6 @@
         <p>Your private key will be stored locally on your device. Never share it with anyone.</p>
       </mat-card-content>
     </mat-card>
-
-    <div class="button-row">
-      <button mat-raised-button color="primary" (click)="loginWithNsec()" [disabled]="!isNsecKeyValid() || loading()">
-        <mat-icon>login</mat-icon>
-        <span>Login</span>
-      </button>
-    </div>
     }
 
     <!-- Nostr Connect -->
@@ -256,21 +249,6 @@
         <p>Use your private key from a separate device for enhanced security. Scan QR code from Nostria Signer app.</p>
       </mat-card-content>
     </mat-card>
-
-    <div class="button-row">
-      <button mat-raised-button color="primary" (click)="loginWithNostrConnect()"
-        [disabled]="!nostrConnectUrl() || nostrConnectUrl().length < 10 || nostrConnectLoading()">
-        @if (nostrConnectLoading()) {
-        <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
-        <span>Connecting...</span>
-        } @else {
-        <ng-container>
-          <mat-icon>phone_iphone</mat-icon>
-          <span>Connect</span>
-        </ng-container>
-        }
-      </button>
-    </div>
     }
 
     <!-- Preview Mode -->

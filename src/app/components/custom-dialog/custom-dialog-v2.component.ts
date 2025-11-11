@@ -172,12 +172,25 @@ export class CustomDialogComponent implements AfterViewInit {
         if (!container) return;
 
         // When keyboard appears, viewport height decreases
-        // We use CSS custom properties to communicate with the stylesheet
+        // Use the visual viewport height which accounts for the keyboard
         const viewportHeight = visualViewport.height;
-        container.style.setProperty('--viewport-height', `${viewportHeight}px`);
+        const viewportOffsetTop = visualViewport.offsetTop;
+        
+        // Calculate effective height: viewport height minus any offset from top
+        const effectiveHeight = viewportHeight + viewportOffsetTop;
+        
+        // Set the CSS variable on the container
+        container.style.setProperty('--viewport-height', `${effectiveHeight}px`);
+        
+        // Also set it on the backdrop so it resizes too
+        const backdrop = container.closest('.dialog-backdrop') as HTMLElement;
+        if (backdrop) {
+          backdrop.style.setProperty('--viewport-height', `${effectiveHeight}px`);
+        }
       };
 
       visualViewport.addEventListener('resize', handleViewportResize);
+      visualViewport.addEventListener('scroll', handleViewportResize);
       handleViewportResize(); // Initial setup
     }
   }
