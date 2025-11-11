@@ -184,6 +184,12 @@
     height: 90px;
   }
 
+  // Allow text wrapping on very small screens
+  @media (max-width: 350px) {
+    height: auto;
+    min-height: 90px;
+  }
+
   &::after {
     content: '';
     position: absolute;
@@ -278,6 +284,12 @@
         margin: 0;
         font-size: 14px;
         color: var(--mat-text-secondary-color);
+
+        @media (max-width: 350px) {
+          font-size: 12px;
+          word-wrap: break-word;
+        }
+
         word-wrap: break-word;
         overflow-wrap: break-word;
         width: 100%;
@@ -316,22 +328,6 @@
 
   &.preview::after {
     background: linear-gradient(90deg, #009688, #4caf50);
-  }
-}
-
-.terms-of-use-notice {
-  margin-top: 20px;
-  text-align: center;
-  font-size: 0.85rem;
-
-  a {
-    color: var(--mat-sys-primary);
-    text-decoration: none;
-    cursor: pointer;
-
-    &:hover {
-      text-decoration: underline;
-    }
   }
 }
 
@@ -650,6 +646,10 @@
 
 .profile-name-section {
   flex: 1;
+
+  @media (max-width: 500px) {
+    width: 100%;
+  }
 }
 
 .profile-name-field {

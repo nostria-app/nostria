@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, output } from '@angular/core';
 
 import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
@@ -13,7 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { NostrService, NostrUser } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
-import { TermsOfUseDialogComponent } from '../terms-of-use-dialog/terms-of-use-dialog.component';
+import { StandaloneTermsDialogComponent } from '../standalone-terms-dialog/standalone-terms-dialog.component';
 import { SetupNewAccountDialogComponent } from '../setup-new-account-dialog/setup-new-account-dialog.component';
 import { Region, RegionService } from '../../services/region.service';
 import { DiscoveryService, ServerInfo } from '../../services/discovery.service';
@@ -21,6 +21,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { Profile } from '../../services/profile';
 import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
+import { LayoutService } from '../../services/layout.service';
 
 // Define the login steps
 enum LoginStep {
@@ -48,12 +49,13 @@ enum LoginStep {
     MatProgressSpinnerModule,
     MatTooltipModule,
     FormsModule,
+    StandaloneTermsDialogComponent,
   ],
   templateUrl: './login-dialog.component.html',
   styleUrl: './login-dialog.component.scss',
 })
 export class LoginDialogComponent {
-  private dialogRef = inject(MatDialogRef<LoginDialogComponent>);
+  private dialogRef = inject(MatDialogRef<LoginDialogComponent>, { optional: true });
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   nostrService = inject(NostrService);
@@ -63,6 +65,10 @@ export class LoginDialogComponent {
   private profileService = inject(Profile);
   private accountState = inject(AccountStateService);
   private data = inject(DataService);
+  layout = inject(LayoutService);
+
+  // Event emitter for when dialog should close (used in standalone mode)
+  dialogClosed = output<void>();
 
   // Use signal for the current step
   currentStep = signal<LoginStep>(LoginStep.INITIAL);
@@ -607,10 +613,11 @@ export class LoginDialogComponent {
 
   openTermsOfUse(): void {
     this.logger.debug('Opening Terms of Use dialog');
-    this.dialog.open(TermsOfUseDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
-    });
+    this.layout.openTermsOfUse();
+  }
+
+  closeTermsDialog(): void {
+    this.layout.handleTermsDialogClose();
   }
 
   /**
@@ -642,6 +649,13 @@ export class LoginDialogComponent {
 
   closeDialog(): void {
     this.logger.debug('Closing unified login dialog');
-    this.dialogRef.close();
+
+    // If used inside MatDialog
+    if (this.dialogRef) {
+      this.dialogRef.close();
+    }
+
+    // If used standalone with custom dialog
+    this.dialogClosed.emit();
   }
 }

@@ -1117,6 +1117,22 @@ app-media-queue .media-list mat-list {
   height: 100%;
 }
 
+.terms-of-use-notice {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 0.85rem;
+
+  a {
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
 // Responsive dialog styles for smaller screens
 @media (max-width: 600px) {
   .responsive-dialog .mat-mdc-dialog-container {
