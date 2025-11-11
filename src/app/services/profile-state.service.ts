@@ -79,12 +79,16 @@ export class ProfileStateService {
   setCurrentProfilePubkey(pubkey: string): void {
     this.reset();
     this.currentProfileKey.set(pubkey);
+    // Reset the loading tracker to prevent race conditions
+    this.currentlyLoadingPubkey.set('');
   }
 
   // Force reload of profile data even if pubkey is the same
   forceReloadProfileData(pubkey: string): void {
     this.reset();
     this.currentProfileKey.set(pubkey);
+    // Reset the loading tracker to prevent race conditions
+    this.currentlyLoadingPubkey.set('');
     // Trigger the reload by incrementing the reload trigger
     this.reloadTrigger.update(val => val + 1);
   }
@@ -99,6 +103,8 @@ export class ProfileStateService {
   }
 
   reset() {
+    // Reset the loading tracker first to immediately invalidate any in-flight requests
+    this.currentlyLoadingPubkey.set('');
     this.followingList.set([]);
     this.notes.set([]);
     this.reposts.set([]);
@@ -149,6 +155,12 @@ export class ProfileStateService {
       return;
     }
 
+    // Double-check against the current pubkey
+    if (this.pubkey() !== pubkey) {
+      this.logger.info(`Current profile changed during contacts load. Discarding results for: ${pubkey}`);
+      return;
+    }
+
     if (event && event.kind === kinds.Contacts) {
       const followingList = this.utilities.getPTagsValuesFromEvent(event);
       this.followingList.set(followingList);
@@ -163,6 +175,12 @@ export class ProfileStateService {
         return;
       }
 
+      // Double-check against the current pubkey
+      if (this.pubkey() !== pubkey) {
+        this.logger.info(`Current profile changed before fallback contacts load. Skipping for: ${pubkey}`);
+        return;
+      }
+
       // Check if we still don't have a following list after initial attempt
       if (this.followingList().length === 0) {
         console.log('No contacts found on user relays, trying discovery relays as fallback');
@@ -173,6 +191,12 @@ export class ProfileStateService {
           // Verify we're still on the same profile after async operation
           if (this.currentlyLoadingPubkey() !== pubkey) {
             this.logger.info(`Profile switched during fallback contacts load. Discarding results for: ${pubkey}`);
+            return;
+          }
+
+          // Double-check against the current pubkey
+          if (this.pubkey() !== pubkey) {
+            this.logger.info(`Current profile changed during fallback contacts load. Discarding results for: ${pubkey}`);
             return;
           }
 
@@ -198,6 +222,12 @@ export class ProfileStateService {
     // Critical check: verify we're still loading data for this pubkey
     if (this.currentlyLoadingPubkey() !== pubkey) {
       this.logger.info(`Profile switched during events query. Discarding ${events?.length || 0} results for: ${pubkey}`);
+      return;
+    }
+
+    // Double-check against the current pubkey
+    if (this.pubkey() !== pubkey) {
+      this.logger.info(`Current profile changed during events query. Discarding ${events?.length || 0} results for: ${pubkey}`);
       return;
     }
 
@@ -388,6 +418,12 @@ export class ProfileStateService {
         return [];
       }
 
+      // Double-check against the current pubkey to ensure we're still on the same profile
+      if (this.pubkey() !== pubkey) {
+        this.logger.info(`Current profile changed during loadMoreNotes. Discarding ${events?.length || 0} results for: ${pubkey}`);
+        return [];
+      }
+
       // Process all returned events
       for (const event of events || []) {
         // Handle different event types
@@ -556,6 +592,12 @@ export class ProfileStateService {
         return [];
       }
 
+      // Double-check against the current pubkey to ensure we're still on the same profile
+      if (this.pubkey() !== pubkey) {
+        this.logger.info(`Current profile changed during loadMoreArticles. Discarding ${events?.length || 0} results for: ${pubkey}`);
+        return [];
+      }
+
       // Process all returned events
       for (const event of events || []) {
         if (event.kind === kinds.LongFormArticle) {
@@ -655,6 +697,12 @@ export class ProfileStateService {
       // Check if profile was switched during the query
       if (this.currentlyLoadingPubkey() !== pubkey) {
         this.logger.info(`Profile switched during loadMoreMedia. Discarding ${events?.length || 0} results for: ${pubkey}`);
+        return [];
+      }
+
+      // Double-check against the current pubkey to ensure we're still on the same profile
+      if (this.pubkey() !== pubkey) {
+        this.logger.info(`Current profile changed during loadMoreMedia. Discarding ${events?.length || 0} results for: ${pubkey}`);
         return [];
       }
 
