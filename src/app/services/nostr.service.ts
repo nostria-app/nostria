@@ -1735,7 +1735,13 @@ export class NostrService implements NostriaService {
         // Convert the private key bytes to hex string
         privkeyHex = bytesToHex(data);
       } else {
-        privkeyHex = nsec; // Assume it's already in hex format
+        // Validate hex format: must be 64 characters and valid hex
+        const hexRegex = /^[0-9a-fA-F]{64}$/;
+        if (!hexRegex.test(nsec)) {
+          throw new Error('Invalid private key format. Must be nsec or 64-character hex string.');
+        }
+
+        privkeyHex = nsec.toLowerCase(); // Normalize to lowercase
         privkeyArray = hexToBytes(privkeyHex);
       }
 
