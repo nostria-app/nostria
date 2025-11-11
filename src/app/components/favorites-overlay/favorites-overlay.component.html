@@ -4,11 +4,11 @@
   @if (favorites().length > 0) {
   <div class="favorites-preview">
     @for (item of topFavorites(); track item.pubkey) {
-    <button class="favorite-avatar" (click)="navigateToProfile(item.pubkey)"
+    <button class="favorite-avatar" (click)="navigateToProfile(item.pubkey)" (contextmenu)="$event.preventDefault()"
       (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
       [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)">
       @if (getPreviewAvatarUrl(item.profile)) {
-      <img [src]="getPreviewAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)" />
+      <img [src]="getPreviewAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)" draggable="false" />
       } @else {
       <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
       }
@@ -64,14 +64,15 @@
         <button class="favorite-item" [class.dragging]="draggedIndex() === i"
           [class.drop-target]="dropTargetIndex() === i" [attr.data-index]="i" draggable="true"
           (dragstart)="onDragStart($event, i)" (dragend)="onDragEnd($event)" (dragover)="onDragOver($event, i)"
-          (dragleave)="onDragLeave($event)" (drop)="onDrop($event, i)"
-          (click)="navigateToProfile(item.pubkey); $event.stopPropagation()"
+          (dragleave)="onDragLeave($event)" (drop)="onDrop($event, i)" (touchstart)="onTouchStart($event, i)"
+          (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)" (touchcancel)="onTouchCancel()"
+          (contextmenu)="$event.preventDefault()" (click)="navigateToProfile(item.pubkey); $event.stopPropagation()"
           (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
           [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)">
           <div class="favorite-avatar-large">
             @if (getAvatarUrl(item.profile)) {
             <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)"
-              [title]="getDisplayName(item.profile)" />
+              [title]="getDisplayName(item.profile)" draggable="false" />
             } @else {
             <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
             }
@@ -93,12 +94,13 @@
       <div class="favorites-grid">
         @for (item of nonFavoritesInOverlay(); track item.pubkey) {
         <button class="favorite-item" (click)="navigateToProfile(item.pubkey); $event.stopPropagation()"
-          (mouseenter)="onAvatarMouseEnter($event, item.pubkey)" (mouseleave)="onAvatarMouseLeave()" type="button"
+          (contextmenu)="$event.preventDefault()" (mouseenter)="onAvatarMouseEnter($event, item.pubkey)"
+          (mouseleave)="onAvatarMouseLeave()" type="button"
           [attr.aria-label]="'View profile of ' + getDisplayName(item.profile)">
           <div class="favorite-avatar-large">
             @if (getAvatarUrl(item.profile)) {
             <img [src]="getAvatarUrl(item.profile)" [alt]="getDisplayName(item.profile)"
-              [title]="getDisplayName(item.profile)" />
+              [title]="getDisplayName(item.profile)" draggable="false" />
             } @else {
             <span class="avatar-initials">{{ getInitials(item.profile) }}</span>
             }
