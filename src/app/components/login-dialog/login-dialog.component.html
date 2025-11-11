@@ -226,7 +226,7 @@
     }
 
     <div class="nostr-connect-input-container">
-      <mat-form-field appearance="fill" class="nostr-connect-input">
+      <mat-form-field class="nostr-connect-input">
         <mat-label>Nostr Connect URL</mat-label>
         <input matInput [ngModel]="nostrConnectUrl()" (ngModelChange)="nostrConnectUrl.set($event)"
           placeholder="bunker://..." [disabled]="nostrConnectLoading()" autocomplete="off" autocorrect="off"
@@ -254,7 +254,7 @@
     <!-- Preview Mode -->
     @if (currentStep() === LoginStep.PREVIEW) {
 
-    <mat-form-field appearance="fill" class="full-width">
+    <mat-form-field class="full-width">
       <mat-label>Public Key (npub...)</mat-label>
       <input matInput [(ngModel)]="previewPubkey" type="text" placeholder="npub1..." autocomplete="off"
         autocorrect="off" spellcheck="false" />
