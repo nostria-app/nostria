@@ -46,6 +46,13 @@ export class FavoritesOverlayComponent {
   draggedIndex = signal<number | null>(null);
   dropTargetIndex = signal<number | null>(null);
 
+  // Track touch drag state
+  private touchStartY = 0;
+  private touchStartX = 0;
+  private touchCurrentY = 0;
+  private touchCurrentX = 0;
+  private touchDragTimer: ReturnType<typeof setTimeout> | null = null;
+
   // Get favorites from the service
   favorites = this.favoritesService.favorites;
 
@@ -327,6 +334,164 @@ export class FavoritesOverlayComponent {
     this.favoritesService.reorderFavorites(reorderedFavorites);
 
     // Clear drag state
+    this.draggedIndex.set(null);
+    this.dropTargetIndex.set(null);
+    this.isDragging.set(false);
+  }
+
+  // Touch event handlers for mobile support
+  onTouchStart(event: TouchEvent, index: number): void {
+    const touch = event.touches[0];
+    this.touchStartY = touch.clientY;
+    this.touchStartX = touch.clientX;
+    this.touchCurrentY = touch.clientY;
+    this.touchCurrentX = touch.clientX;
+
+    // Clear any existing timer
+    if (this.touchDragTimer) {
+      clearTimeout(this.touchDragTimer);
+    }
+
+    // Reduced delay for better responsiveness (150ms instead of 300ms)
+    this.touchDragTimer = setTimeout(() => {
+      // Check if still touching roughly the same spot (not scrolling)
+      const deltaX = Math.abs(this.touchCurrentX - this.touchStartX);
+      const deltaY = Math.abs(this.touchCurrentY - this.touchStartY);
+
+      // More lenient threshold to make it easier to trigger
+      if (deltaX < 15 && deltaY < 15) {
+        this.draggedIndex.set(index);
+        this.isDragging.set(true);
+        // Initialize drop target to provide immediate visual feedback
+        this.dropTargetIndex.set(index);
+        this.timelineHoverCardService.hideHoverCard();
+
+        // Add haptic feedback if available
+        if ('vibrate' in navigator) {
+          navigator.vibrate(50);
+        }
+      }
+    }, 150);
+  }
+
+  onTouchMove(event: TouchEvent): void {
+    const touch = event.touches[0];
+    this.touchCurrentY = touch.clientY;
+    this.touchCurrentX = touch.clientX;
+
+    const draggedIdx = this.draggedIndex();
+
+    if (draggedIdx === null) {
+      return;
+    }
+
+    // Prevent scrolling while dragging - this is critical
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Find which element we're over
+    // The dragged element has pointer-events: none, so this will see through it
+    const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+
+    if (!elementAtPoint) {
+      return;
+    }
+
+    // Try to find the favorite-item button (could be the button itself or a child)
+    const favoriteItem = elementAtPoint.closest('.favorite-item[data-index]') as HTMLElement;
+
+    if (favoriteItem) {
+      const dropIndexStr = favoriteItem.getAttribute('data-index');
+      if (dropIndexStr !== null) {
+        const dropIndex = parseInt(dropIndexStr, 10);
+        if (!isNaN(dropIndex) && dropIndex >= 0) {
+          // Always update drop target to provide visual feedback
+          const currentDropTarget = this.dropTargetIndex();
+          if (currentDropTarget !== dropIndex) {
+            this.dropTargetIndex.set(dropIndex);
+            // Haptic feedback when crossing into a new drop zone
+            if ('vibrate' in navigator) {
+              navigator.vibrate(10);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    // Clear the drag timer if touch ends before it fires
+    if (this.touchDragTimer) {
+      clearTimeout(this.touchDragTimer);
+      this.touchDragTimer = null;
+    }
+
+    const draggedIdx = this.draggedIndex();
+
+    // If we never started dragging, this was just a tap - let the click handler take over
+    if (draggedIdx === null) {
+      return;
+    }
+
+    // Prevent click event from firing after drag
+    event.preventDefault();
+
+    // On touch end, try one more time to find the drop target
+    // This handles cases where touchmove didn't fire or was inconsistent
+    if (event.changedTouches && event.changedTouches.length > 0) {
+      const touch = event.changedTouches[0];
+      const elementAtPoint = document.elementFromPoint(touch.clientX, touch.clientY);
+
+      if (elementAtPoint) {
+        const favoriteItem = elementAtPoint.closest('.favorite-item[data-index]') as HTMLElement;
+
+        if (favoriteItem) {
+          const dropIndexStr = favoriteItem.getAttribute('data-index');
+          if (dropIndexStr !== null) {
+            const finalDropIndex = parseInt(dropIndexStr, 10);
+            if (!isNaN(finalDropIndex) && finalDropIndex >= 0) {
+              // Update drop target one final time
+              this.dropTargetIndex.set(finalDropIndex);
+            }
+          }
+        }
+      }
+    }
+
+    // Read drop index after potential update
+    const finalDropIdx = this.dropTargetIndex();
+
+    if (finalDropIdx !== null && draggedIdx !== finalDropIdx) {
+      // Perform the reorder
+      const currentFavorites = this.favorites();
+      const reorderedFavorites = [...currentFavorites];
+
+      // Remove dragged item and insert at drop position
+      const [draggedItem] = reorderedFavorites.splice(draggedIdx, 1);
+      reorderedFavorites.splice(finalDropIdx, 0, draggedItem);
+
+      // Update the favorites with the new order
+      this.favoritesService.reorderFavorites(reorderedFavorites);
+
+      // Haptic feedback for successful reorder
+      if ('vibrate' in navigator) {
+        navigator.vibrate(25);
+      }
+    }
+
+    // Clear drag state
+    this.draggedIndex.set(null);
+    this.dropTargetIndex.set(null);
+    this.isDragging.set(false);
+  }
+
+  onTouchCancel(): void {
+    // Clear the drag timer
+    if (this.touchDragTimer) {
+      clearTimeout(this.touchDragTimer);
+      this.touchDragTimer = null;
+    }
+
     this.draggedIndex.set(null);
     this.dropTargetIndex.set(null);
     this.isDragging.set(false);

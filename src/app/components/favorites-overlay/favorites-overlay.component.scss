@@ -42,6 +42,9 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; // Prevents iOS callout menu
 
   &:hover {
     transform: scale(1.15);
@@ -54,6 +57,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    pointer-events: none; // Prevent image from intercepting events
   }
 
   .avatar-initials {
@@ -250,6 +254,9 @@
   gap: 1.25rem;
   padding: 0;
   position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: pan-y; // Allow vertical scrolling but not horizontal
 
   // More compact grid when in docked sidebar - 2 columns
   .docked & {
@@ -330,6 +337,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    pointer-events: none; // Prevent image from intercepting events
   }
 
   .avatar-initials {
@@ -384,15 +392,31 @@
 .favorite-item {
   cursor: grab;
   position: relative;
+  -webkit-user-select: none;
+  user-select: none;
+  // Don't set touch-action here - let scrolling work normally
+  // Only prevent touch actions when actually dragging (handled in JS)
 
   &[draggable="true"]:active {
     cursor: grabbing;
   }
 
-  // Item being dragged
+  // Item being dragged - now we prevent touch actions
   &.dragging {
     opacity: 0.5;
     cursor: grabbing;
+    transform: scale(1.05);
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    z-index: 100;
+    touch-action: none; // Only prevent when actively dragging
+    pointer-events: none; // Allow touch to pass through to elements below
+
+    // Add a strong visual indicator on mobile
+    @media (max-width: 599px) {
+      opacity: 0.7;
+      transform: scale(1.1);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
   }
 
   // Drop target indicator
@@ -407,7 +431,7 @@
       border: 3px solid var(--mat-sys-primary);
       border-radius: 12px;
       background-color: var(--mat-sys-primary-container);
-      opacity: 0.4;
+      opacity: 0.5;
       pointer-events: none;
       animation: dropTargetPulse 1s ease-in-out infinite;
     }
@@ -433,10 +457,10 @@
 
   0%,
   100% {
-    opacity: 0.4;
+    opacity: 0.5;
   }
 
   50% {
-    opacity: 0.6;
+    opacity: 0.7;
   }
 }
