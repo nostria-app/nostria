@@ -408,8 +408,13 @@
     transform: scale(1.05);
     transition: transform 0.2s ease, opacity 0.2s ease;
     z-index: 100;
-    touch-action: none; // Only prevent when actively dragging
-    pointer-events: none; // Allow touch to pass through to elements below
+
+    // Only disable pointer events on touch devices
+    // This allows touch to pass through but keeps mouse drag working
+    @media (pointer: coarse) {
+      pointer-events: none;
+      touch-action: none;
+    }
 
     // Add a strong visual indicator on mobile
     @media (max-width: 599px) {

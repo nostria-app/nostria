@@ -142,18 +142,9 @@ export class FavoritesOverlayComponent {
     return this.following().length > 0;
   });
 
-  // Split following into favorites and non-favorites for the overlay
+  // Favorites in the overlay - same as favoritesWithProfiles but matches the name pattern
   favoritesInOverlay = computed(() => {
-    const favPubkeys = this.favorites();
-    const following = this.followingWithProfiles();
-
-    // Create a map for quick lookup
-    const followingMap = new Map(following.map(item => [item.pubkey, item]));
-
-    // Return items in the order they appear in favorites array
-    return favPubkeys
-      .map(pubkey => followingMap.get(pubkey))
-      .filter((item): item is { pubkey: string; profile?: NostrRecord } => item !== undefined);
+    return this.favoritesWithProfiles();
   });
 
   nonFavoritesInOverlay = computed(() => {
