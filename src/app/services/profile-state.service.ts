@@ -5,6 +5,7 @@ import { UserRelayService } from './relays/user-relay';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
+import { TimelineFilterOptions, DEFAULT_TIMELINE_FILTER } from '../interfaces/timeline-filter';
 
 @Injectable({
   providedIn: 'root',
@@ -21,6 +22,7 @@ export class ProfileStateService {
   replies = signal<NostrRecord[]>([]);
   articles = signal<NostrRecord[]>([]);
   media = signal<NostrRecord[]>([]);
+  reactions = signal<NostrRecord[]>([]);
 
   // Current profile pubkey
   currentProfileKey = signal<string>('');
@@ -50,6 +52,9 @@ export class ProfileStateService {
   // Loading states for media
   isLoadingMoreMedia = signal<boolean>(false);
   hasMoreMedia = signal<boolean>(true);
+
+  // Timeline filter options
+  timelineFilter = signal<TimelineFilterOptions>({ ...DEFAULT_TIMELINE_FILTER });
 
   constructor() {
     effect(async () => {
@@ -111,6 +116,7 @@ export class ProfileStateService {
     this.replies.set([]);
     this.articles.set([]);
     this.media.set([]);
+    this.reactions.set([]);
     this.hasMoreNotes.set(true);
     this.hasMoreArticles.set(true);
     this.hasMoreMedia.set(true);
@@ -121,12 +127,34 @@ export class ProfileStateService {
     [...this.notes(), ...this.reposts()].sort((a, b) => b.event.created_at - a.event.created_at)
   );
 
-  // Timeline combines notes, reposts, and replies
-  sortedTimeline = computed(() =>
-    [...this.notes(), ...this.reposts(), ...this.replies()].sort(
-      (a, b) => b.event.created_at - a.event.created_at
-    )
-  );
+  // Timeline combines notes, reposts, and replies with filtering
+  sortedTimeline = computed(() => {
+    const filter = this.timelineFilter();
+    const items: NostrRecord[] = [];
+
+    // Add notes (root posts) if enabled
+    if (filter.showNotes) {
+      items.push(...this.notes());
+    }
+
+    // Add reposts if enabled
+    if (filter.showReposts) {
+      items.push(...this.reposts());
+    }
+
+    // Add replies if enabled
+    if (filter.showReplies) {
+      items.push(...this.replies());
+    }
+
+    // Add reactions if enabled
+    if (filter.showReactions) {
+      items.push(...this.reactions());
+    }
+
+    // Sort by created_at timestamp descending (newest first)
+    return items.sort((a, b) => b.event.created_at - a.event.created_at);
+  });
 
   sortedReplies = computed(() =>
     [...this.replies()].sort((a, b) => b.event.created_at - a.event.created_at)
@@ -139,6 +167,16 @@ export class ProfileStateService {
   sortedMedia = computed(() =>
     [...this.media()].sort((a, b) => b.event.created_at - a.event.created_at)
   );
+
+  // Update timeline filter options
+  updateTimelineFilter(filter: Partial<TimelineFilterOptions>): void {
+    this.timelineFilter.update(current => ({ ...current, ...filter }));
+  }
+
+  // Reset timeline filter to defaults
+  resetTimelineFilter(): void {
+    this.timelineFilter.set({ ...DEFAULT_TIMELINE_FILTER });
+  }
 
   async loadUserData(pubkey: string) {
     // Set the currently loading pubkey to track this request
@@ -212,9 +250,27 @@ export class ProfileStateService {
       }
     }, 2000); // Wait 2 seconds before trying fallback
 
-    // Subscribe to content events (notes, articles, reposts, media)
+    // Build the kinds array based on filter options
+    const currentFilter = this.timelineFilter();
+    const kindsToQuery: number[] = [];
+
+    // Always query for basic types (we'll filter them in the computed signal)
+    kindsToQuery.push(
+      kinds.ShortTextNote,
+      kinds.LongFormArticle,
+      kinds.Repost,
+      kinds.GenericRepost,
+      20, 21, 22 // Media kinds
+    );
+
+    // Optionally add reactions if enabled
+    if (currentFilter.showReactions) {
+      kindsToQuery.push(kinds.Reaction); // Kind 7
+    }
+
+    // Subscribe to content events (notes, articles, reposts, media, and optionally reactions/highlights)
     const events = await this.userRelayService.query(pubkey, {
-      kinds: [kinds.ShortTextNote, kinds.LongFormArticle, kinds.Repost, kinds.GenericRepost, 20, 21, 22],
+      kinds: kindsToQuery,
       authors: [pubkey],
       limit: 20,
     });
@@ -294,6 +350,18 @@ export class ProfileStateService {
           }
           console.log('Adding new media:', event.id);
           return [...media, record];
+        });
+      } else if (event.kind === kinds.Reaction) {
+        // Handle reaction events (Kind 7)
+        const record = this.utilities.toRecord(event);
+        this.reactions.update(reactions => {
+          const exists = reactions.some(r => r.event.id === event.id);
+          if (exists) {
+            console.log('Duplicate reaction event prevented:', event.id);
+            return reactions;
+          }
+          console.log('Adding new reaction:', event.id);
+          return [...reactions, record];
         });
       }
     }
@@ -403,10 +471,20 @@ export class ProfileStateService {
       const newNotes: NostrRecord[] = [];
       const newReplies: NostrRecord[] = [];
       const newReposts: NostrRecord[] = [];
+      const newReactions: NostrRecord[] = [];
+
+      // Build the kinds array based on filter options
+      const currentFilter = this.timelineFilter();
+      const kindsToQuery: number[] = [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost];
+
+      // Optionally add reactions if enabled
+      if (currentFilter.showReactions) {
+        kindsToQuery.push(kinds.Reaction);
+      }
 
       // Query events using the async method
       const events = await this.userRelayService.query(pubkey, {
-        kinds: [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost],
+        kinds: kindsToQuery,
         authors: [pubkey],
         until: oldestTimestamp,
         limit: 15, // Increased limit to get more timeline content
@@ -469,11 +547,25 @@ export class ProfileStateService {
           if (!exists) {
             newReposts.push(record);
           }
+        } else if (event.kind === kinds.Reaction) {
+          // Handle reactions
+          const record: NostrRecord = {
+            event: event,
+            data: event.content,
+          };
+
+          // Check if we already have this reaction to avoid duplicates
+          const existingReactions = this.reactions();
+          const exists = existingReactions.some(r => r.event.id === event.id);
+
+          if (!exists) {
+            newReactions.push(record);
+          }
         }
       }
 
       this.logger.debug(
-        `Loaded ${newNotes.length} more notes, ${newReplies.length} more replies, and ${newReposts.length} more reposts`
+        `Loaded ${newNotes.length} more notes, ${newReplies.length} more replies, ${newReposts.length} more reposts, and ${newReactions.length} more reactions`
       );
 
       // Track if we added any new content
@@ -536,6 +628,25 @@ export class ProfileStateService {
         });
       }
 
+      // Add new reactions to the existing ones with final deduplication check
+      if (newReactions.length > 0) {
+        this.reactions.update(existing => {
+          const filtered = newReactions.filter(
+            newReaction =>
+              !existing.some(existingReaction => existingReaction.event.id === newReaction.event.id)
+          );
+          console.log(
+            `Adding ${filtered.length} new reactions (${newReactions.length - filtered.length} duplicates filtered)`
+          );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
+          return [...existing, ...filtered];
+        });
+      }
+
       // Only keep hasMoreNotes true if we actually added new content
       if (!addedAnyContent) {
         this.hasMoreNotes.set(false);
@@ -544,7 +655,7 @@ export class ProfileStateService {
       }
 
       this.isLoadingMoreNotes.set(false);
-      return [...newNotes, ...newReplies, ...newReposts];
+      return [...newNotes, ...newReplies, ...newReposts, ...newReactions];
     } catch (error) {
       this.logger.error('Failed to load more notes:', error);
       this.isLoadingMoreNotes.set(false);
