@@ -102,12 +102,14 @@
               <input type="text" matInput placeholder="Type to search users..." [matAutocomplete]="userAutocomplete"
                 #userInput [formControl]="userInputControl">
               <mat-autocomplete #userAutocomplete="matAutocomplete" (optionSelected)="onUserSelected($event)">
-                @for (user of filteredUsers(); track user.pubkey) {
-                <mat-option [value]="user.pubkey">
+                @for (profile of filteredUsers(); track profile.event.pubkey) {
+                <mat-option [value]="profile.event.pubkey">
                   <div class="user-option">
                     <div class="user-info">
-                      <span class="user-name">{{ user.name || 'Unknown' }}</span>
-                      (<span class="user-npub">{{ user.npub }}</span>)
+                      <span class="user-name">{{ profile.data.display_name || profile.data.name || 'Unknown' }}</span>
+                      @if (profile.data.nip05) {
+                      (<span class="user-npub">{{ profile.data.nip05 }}</span>)
+                      }
                     </div>
                   </div>
                 </mat-option>
@@ -120,9 +122,9 @@
             <div class="selected-items">
               <h6>Selected Users ({{ selectedUsers().length }})</h6>
               <div class="selected-chips">
-                @for (user of selectedUsers(); track user.pubkey) {
-                <mat-chip-row removable (removed)="removeUser(user)">
-                  {{ user.name || 'Unknown' }}
+                @for (profile of selectedUsers(); track profile.event.pubkey) {
+                <mat-chip-row removable (removed)="removeUser(profile)">
+                  {{ profile.data.display_name || profile.data.name || 'Unknown' }}
                   <mat-icon matChipRemove>cancel</mat-icon>
                 </mat-chip-row>
                 }
