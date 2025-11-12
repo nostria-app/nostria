@@ -1,4 +1,4 @@
-import { Component, inject, ViewChild, output, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, inject, ViewChild, output, AfterViewInit, ChangeDetectorRef, signal } from '@angular/core';
 import { CustomDialogComponent } from '../custom-dialog/custom-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 import { LoggerService } from '../../services/logger.service';
@@ -52,7 +52,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
       </div>
       
       <div dialog-actions>
-        @if (loginComponent) {
+        @if (viewInitialized() && loginComponent) {
           @if (loginComponent.currentStep() === loginComponent.LoginStep.REGION_SELECTION && !loginComponent.isDetectingRegion()) {
             <button mat-flat-button (click)="loginComponent.generateNewKey()" [disabled]="loginComponent.loading()">
               @if (loginComponent.loading()) {
@@ -102,10 +102,16 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
 
   @ViewChild(LoginDialogComponent) loginComponent?: LoginDialogComponent;
 
+  // Signal to track when the view is initialized
+  viewInitialized = signal(false);
+
   // Output event when dialog closes
   closed = output<void>();
 
   ngAfterViewInit() {
+    // Mark view as initialized
+    this.viewInitialized.set(true);
+
     // Check if there's an initial step to navigate to
     const initialStep = this.layout.loginDialogInitialStep();
 
@@ -126,9 +132,7 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
         this.cdr.detectChanges();
       });
     }
-  }
-
-  getCurrentTitle(): string {
+  } getCurrentTitle(): string {
     const step = this.loginComponent?.currentStep();
     const LoginStep = this.loginComponent?.LoginStep;
 
