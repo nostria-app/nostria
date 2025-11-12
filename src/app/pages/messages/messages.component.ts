@@ -233,12 +233,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('messagesWrapper', { static: false })
   messagesWrapper?: ElementRef<HTMLDivElement>;
 
+  // ViewChild for chat list scrolling
+  @ViewChild('messageThreads', { static: false })
+  messageThreads?: ElementRef<HTMLDivElement>;
+
   // ViewChild for message input to auto-focus
   @ViewChild('messageInput', { static: false })
   messageInput?: ElementRef<HTMLInputElement>;
 
   // Throttling for scroll handler
   private scrollThrottleTimeout: any = null;
+  private chatListScrollThrottleTimeout: any = null;
 
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
@@ -401,8 +406,59 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Set up scroll event listener for loading more messages with a delay to ensure DOM is ready
     setTimeout(() => {
       this.setupScrollListener();
+      this.setupChatListScrollListener();
     }, 100);
   }
+
+  /**
+   * Set up scroll event listener for chat list to auto-load more chats
+   */
+  private setupChatListScrollListener(): void {
+    const scrollElement = this.messageThreads?.nativeElement;
+    if (!scrollElement) {
+      this.logger.warn('Message threads element not found for scroll listener');
+      return;
+    }
+
+    this.logger.debug('Setting up scroll listener for chat list auto-load');
+
+    // Remove any existing listener to avoid duplicates
+    scrollElement.removeEventListener('scroll', this.chatListScrollHandler);
+
+    // Add the scroll event listener
+    scrollElement.addEventListener('scroll', this.chatListScrollHandler);
+  }
+
+  /**
+   * Chat list scroll event handler - loads more chats when scrolling near bottom
+   */
+  private chatListScrollHandler = () => {
+    // Throttle the scroll handler to prevent excessive calls
+    if (this.chatListScrollThrottleTimeout) {
+      return;
+    }
+
+    this.chatListScrollThrottleTimeout = setTimeout(() => {
+      this.chatListScrollThrottleTimeout = null;
+
+      const scrollElement = this.messageThreads?.nativeElement;
+      if (!scrollElement) return;
+
+      // Check if user is near the bottom
+      const { scrollTop, scrollHeight, clientHeight } = scrollElement;
+      const threshold = 200; // pixels from bottom
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+      if (
+        distanceFromBottom < threshold &&
+        this.messaging.hasMoreChats() &&
+        !this.messaging.isLoadingMoreChats()
+      ) {
+        this.logger.debug('Near bottom of chat list, loading more chats...');
+        this.loadMoreChats();
+      }
+    }, 150); // Throttle interval
+  };
 
   /**
    * Set up scroll event listener to detect when user scrolls near the top
@@ -479,10 +535,21 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       scrollElement.removeEventListener('scroll', this.scrollHandler);
     }
 
+    // Clean up chat list scroll listener
+    const chatListElement = this.messageThreads?.nativeElement;
+    if (chatListElement) {
+      chatListElement.removeEventListener('scroll', this.chatListScrollHandler);
+    }
+
     // Clean up throttle timeout
     if (this.scrollThrottleTimeout) {
       clearTimeout(this.scrollThrottleTimeout);
       this.scrollThrottleTimeout = null;
+    }
+
+    if (this.chatListScrollThrottleTimeout) {
+      clearTimeout(this.chatListScrollThrottleTimeout);
+      this.chatListScrollThrottleTimeout = null;
     }
 
     // Clean up subscriptions
