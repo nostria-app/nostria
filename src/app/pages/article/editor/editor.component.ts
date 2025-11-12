@@ -119,6 +119,7 @@ export class EditorComponent implements OnInit, OnDestroy {
   // Editor state
   isLoading = signal(false);
   isPublishing = signal(false);
+  private publishInitiated = false; // Guard against race conditions from double-clicks
   isEditMode = signal(false);
   selectedTabIndex = signal(0);
   autoDTagEnabled = signal(true);
@@ -606,13 +607,23 @@ export class EditorComponent implements OnInit, OnDestroy {
   }
 
   async publishArticle(kind = 30023): Promise<void> {
+    // Guard against double-clicks and race conditions
+    if (this.isPublishing() || this.publishInitiated) {
+      return;
+    }
+
+    // Set guard flag immediately
+    this.publishInitiated = true;
+
     // Use different validation for drafts vs final articles
     if (kind === 30023 && !this.isValid()) {
+      this.publishInitiated = false; // Reset on validation failure
       this.snackBar.open('Please fill in required fields', 'Close', {
         duration: 3000,
       });
       return;
     } else if (kind === 30024 && !this.isDraftValid()) {
+      this.publishInitiated = false; // Reset on validation failure
       this.snackBar.open('Please add some content to save as draft', 'Close', {
         duration: 3000,
       });
@@ -621,6 +632,7 @@ export class EditorComponent implements OnInit, OnDestroy {
 
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
+      this.publishInitiated = false; // Reset on validation failure
       this.snackBar.open('Please log in to publish', 'Close', {
         duration: 3000,
       });
@@ -722,14 +734,16 @@ export class EditorComponent implements OnInit, OnDestroy {
 
       const signedEvent = result.event;
 
+      // CRITICAL: Clear draft immediately after signing to prevent duplicate publishes
+      // If user clicks publish again while this is processing, there's no draft to republish
+      if (!this.isEditMode()) {
+        this.clearAutoDraft();
+      }
+
       const action = kind === 30024 ? 'Draft saved' : 'Article published';
       this.snackBar.open(`${action} successfully`, 'Close', { duration: 3000 });
 
       if (kind === 30023) {
-        // Clear auto-draft after successful publish
-        if (!this.isEditMode()) {
-          this.clearAutoDraft();
-        }
 
         // We don't do "note" much, we want URLs that embeds the autor.
         // const note = nip19.noteEncode(signedEvent.id);
@@ -749,15 +763,12 @@ export class EditorComponent implements OnInit, OnDestroy {
       });
     } finally {
       this.isPublishing.set(false);
+      this.publishInitiated = false; // Reset guard flag
     }
   }
 
   async publish(): Promise<void> {
     await this.publishArticle(30023);
-    // Clear auto-draft after successful publish
-    if (!this.isEditMode()) {
-      this.clearAutoDraft();
-    }
   }
 
   cancel(): void {

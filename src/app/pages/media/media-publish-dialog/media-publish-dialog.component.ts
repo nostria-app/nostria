@@ -87,6 +87,7 @@ export class MediaPublishDialogComponent {
   // UI state
   hashtagInput = signal('');
   publishing = signal(false);
+  private publishInitiated = false; // Guard against race conditions from double-clicks
 
   constructor() {
     // Auto-generate blurhash for images on init
@@ -110,7 +111,7 @@ export class MediaPublishDialogComponent {
   };
 
   canPublish = (): boolean => {
-    return !this.publishing();
+    return !this.publishing() && !this.publishInitiated;
   };
 
   private getDefaultKind(): 20 | 21 | 22 {
@@ -290,6 +291,9 @@ export class MediaPublishDialogComponent {
     if (!this.canPublish()) {
       return;
     }
+
+    // Set guard flag immediately to prevent race conditions
+    this.publishInitiated = true;
 
     const options: MediaPublishOptions = {
       kind: this.kind(),
