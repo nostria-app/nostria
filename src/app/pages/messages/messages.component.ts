@@ -170,7 +170,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!chatId) return [];
 
     const persistedMessages = this.messaging.getChatMessages(chatId);
+
+    // Get the IDs of all persisted messages
+    const persistedIds = new Set(persistedMessages.map(m => m.id));
+
+    // Only include pending messages that aren't already in persisted messages
     const pending = this.pendingMessages().filter(m => {
+      // Skip if this message is already persisted
+      if (persistedIds.has(m.id)) {
+        return false;
+      }
+
       // Filter pending messages for this chat
       const chat = this.selectedChat();
       if (!chat) return false;
@@ -233,6 +243,22 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
     this.lastAccountPubkey.set(this.accountState.account()?.pubkey || null);
+
+    // Effect to clean up pending messages once they're persisted
+    effect(() => {
+      const chatId = this.selectedChatId();
+      if (!chatId) return;
+
+      untracked(() => {
+        const persistedMessages = this.messaging.getChatMessages(chatId);
+        const persistedIds = new Set(persistedMessages.map(m => m.id));
+
+        // Remove any pending messages that are now persisted
+        this.pendingMessages.update(msgs =>
+          msgs.filter(msg => !persistedIds.has(msg.id))
+        );
+      });
+    });
 
     // Set up effect to handle chat selection and message updates
     effect(() => {
@@ -598,25 +624,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Ensure relays are discovered for the receiver
       await this.userRelayService.ensureRelaysForPubkey(receiverPubkey);
 
-      // Create a unique ID for the pending message
-      const pendingId = `pending-${Date.now()}-${Math.random()}`;
-
-      // Create a pending message to show immediately in the UI
-      const pendingMessage: DirectMessage = {
-        id: pendingId,
-        pubkey: myPubkey,
-        created_at: Math.floor(Date.now() / 1000),
-        content: messageText,
-        isOutgoing: true,
-        pending: true,
-        tags: [['p', receiverPubkey]],
-        received: false,
-        encryptionType: this.supportsModernEncryption(this.selectedChat()!) ? 'nip44' : 'nip04',
-      };
-
-      // Add to the pending messages so the user sees feedback
-      this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
-
       // Scroll to bottom for new outgoing messages
       this.scrollToBottom();
 
@@ -645,12 +652,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         );
       }
 
-      // Success: remove the pending message and add the final message to the messaging service
-      this.pendingMessages.update(msgs =>
-        msgs.filter(msg => msg.id !== pendingId)
-      );
+      // Create a pending message with the actual message ID to show immediately in the UI
+      const pendingMessage: DirectMessage = {
+        ...finalMessage,
+        pending: true,
+        received: false,
+      };
+
+      // Add to the pending messages so the user sees feedback
+      this.pendingMessages.update(msgs => [...msgs, pendingMessage]);
 
       // Add the message to the messaging service to update the chat's lastMessage
+      // This will be picked up by subscriptions later and the pending version will be removed
       const updatedMessage = {
         ...finalMessage,
         pending: false,
@@ -670,12 +683,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch (err) {
       this.logger.error('Failed to send message', err);
 
-      // Show error state for the pending message
-      this.pendingMessages.update(msgs =>
-        msgs.map(msg =>
-          msg.id.startsWith('pending-') ? { ...msg, pending: false, failed: true } : msg
-        )
-      );
+      // Clear any pending messages since the send failed
+      this.pendingMessages.set([]);
 
       this.isSending.set(false);
 
