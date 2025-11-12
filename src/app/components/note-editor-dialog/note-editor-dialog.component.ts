@@ -589,7 +589,8 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
       const signedEvent = result.event;
 
-      // Clear auto-draft after successful publish
+      // CRITICAL: Clear draft immediately after signing to prevent duplicate publishes
+      // If user clicks publish again while this is processing, there's no draft to republish
       this.clearAutoDraft();
 
       this.snackBar.open('Note published successfully!', 'Close', {
