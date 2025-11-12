@@ -80,6 +80,8 @@ import { filter } from 'rxjs/operators';
 import { WebPushService } from './services/webpush.service';
 import { PushNotificationPromptComponent } from './components/push-notification-prompt/push-notification-prompt.component';
 import { isPlatformBrowser } from '@angular/common';
+import { StandaloneLoginDialogComponent } from './components/standalone-login-dialog/standalone-login-dialog.component';
+import { StandaloneTermsDialogComponent } from './components/standalone-terms-dialog/standalone-terms-dialog.component';
 
 interface NavItem {
   path: string;
@@ -125,6 +127,8 @@ interface NavItem {
     NavigationContextMenuComponent,
     SleepModeOverlayComponent,
     FavoritesOverlayComponent,
+    StandaloneLoginDialogComponent,
+    StandaloneTermsDialogComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',

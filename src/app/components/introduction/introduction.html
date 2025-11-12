@@ -30,6 +30,13 @@
         </mat-card-content>
       </mat-card>
 
+      <div class="terms-of-use-notice">
+        <p>
+          By using Nostria, you agree to our
+          <a href="#" (click)="$event.preventDefault(); openTermsOfUse()">Terms of Use</a>.
+        </p>
+      </div>
+
       <!-- Learn more link button -->
       <div class="learn-more-section">
         <button mat-button class="learn-more-button" (click)="showWelcomeDialog()">

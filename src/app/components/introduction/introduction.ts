@@ -25,4 +25,8 @@ export class Introduction {
   showWelcomeDialog(): void {
     this.layout.showWelcomeDialog();
   }
+
+  openTermsOfUse(): void {
+    this.layout.openTermsOfUse();
+  }
 }

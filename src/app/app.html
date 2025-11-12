@@ -532,3 +532,12 @@
     <mat-icon>close</mat-icon>
   </button>
 </div>
+
+<!-- Standalone login dialog -->
+@if (layout.showStandaloneLogin()) {
+<app-standalone-login-dialog (closed)="layout.handleLoginDialogClose()" />
+}
+<!-- Terms of Use Dialog -->
+@if (layout.showTermsDialog()) {
+<app-standalone-terms-dialog (closed)="layout.handleTermsDialogClose()" />
+}
