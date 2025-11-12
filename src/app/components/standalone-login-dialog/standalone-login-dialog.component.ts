@@ -64,19 +64,19 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
             </button>
           }
           @if (loginComponent.currentStep() === loginComponent.LoginStep.NSEC_LOGIN) {
-            <button mat-raised-button color="primary" (click)="loginComponent.loginWithNsec()" [disabled]="!loginComponent.isNsecKeyValid() || loginComponent.loading()">
+            <button mat-flat-button (click)="loginComponent.loginWithNsec()" [disabled]="!loginComponent.isNsecKeyValid() || loginComponent.loading()">
               <mat-icon>login</mat-icon>
               <span>Login</span>
             </button>
           }
           @if (loginComponent.currentStep() === loginComponent.LoginStep.NOSTR_CONNECT) {
             @if (loginComponent.nostrConnectLoading()) {
-              <button mat-raised-button color="primary" [disabled]="true">
+              <button mat-flat-button [disabled]="true">
                 <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
                 <span>Connecting...</span>
               </button>
             } @else {
-              <button mat-raised-button color="primary" (click)="loginComponent.loginWithNostrConnect()"
+              <button mat-flat-button (click)="loginComponent.loginWithNostrConnect()"
                 [disabled]="!loginComponent.nostrConnectUrl() || loginComponent.nostrConnectUrl().length < 10">
                 <mat-icon>phone_iphone</mat-icon>
                 <span>Connect</span>
