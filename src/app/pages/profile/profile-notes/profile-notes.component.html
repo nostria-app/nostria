@@ -61,21 +61,99 @@
     </div>
 
     <div class="options-section">
-      <h3 class="options-title">Display Options</h3>
-      <div class="option-controls">
-        <!-- <mat-slide-toggle
-          [checked]="showNewestFirst()"
-          (change)="toggleSortOrder()"
-          color="primary">
-          Sort by Newest
-        </mat-slide-toggle>
-        <span class="option-description">
-          @if (showNewestFirst()) {
-            Showing newest notes first
-          } @else {
-            Showing oldest notes first
-          }
-        </span> -->
+      <!-- Mobile collapsible version -->
+      <mat-expansion-panel class="mobile-only" hideToggle>
+        <mat-expansion-panel-header>
+          <mat-panel-title>
+            <mat-icon>tune</mat-icon>
+            <span>Display Options</span>
+          </mat-panel-title>
+        </mat-expansion-panel-header>
+        <div class="option-controls">
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showNotes" (change)="updateFilter('showNotes', $event.checked)"
+              color="primary">
+              <mat-icon>description</mat-icon>
+              <span>Notes</span>
+            </mat-slide-toggle>
+            <span class="option-description">Short text posts</span>
+          </div>
+
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showReposts"
+              (change)="updateFilter('showReposts', $event.checked)" color="primary">
+              <mat-icon>repeat</mat-icon>
+              <span>Reposts</span>
+            </mat-slide-toggle>
+            <span class="option-description">Shared content from others</span>
+          </div>
+
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showReplies"
+              (change)="updateFilter('showReplies', $event.checked)" color="primary">
+              <mat-icon>reply</mat-icon>
+              <span>Replies</span>
+            </mat-slide-toggle>
+            <span class="option-description">Comments on other posts</span>
+          </div>
+
+          <div class="filter-divider"></div>
+
+          <div class="filter-option advanced-option">
+            <mat-slide-toggle [checked]="timelineFilter.showReactions"
+              (change)="updateFilter('showReactions', $event.checked)" color="accent"
+              matTooltip="Show reaction events (experimental)">
+              <mat-icon>favorite</mat-icon>
+              <span>Reactions</span>
+            </mat-slide-toggle>
+            <span class="option-description">Like and emoji reactions</span>
+          </div>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Desktop always-visible version -->
+      <div class="desktop-only">
+        <h3 class="options-title">Display Options</h3>
+        <div class="option-controls">
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showNotes" (change)="updateFilter('showNotes', $event.checked)"
+              color="primary">
+              <mat-icon>description</mat-icon>
+              <span>Notes</span>
+            </mat-slide-toggle>
+            <span class="option-description">Short text posts</span>
+          </div>
+
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showReposts"
+              (change)="updateFilter('showReposts', $event.checked)" color="primary">
+              <mat-icon>repeat</mat-icon>
+              <span>Reposts</span>
+            </mat-slide-toggle>
+            <span class="option-description">Shared content from others</span>
+          </div>
+
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showReplies"
+              (change)="updateFilter('showReplies', $event.checked)" color="primary">
+              <mat-icon>reply</mat-icon>
+              <span>Replies</span>
+            </mat-slide-toggle>
+            <span class="option-description">Comments on other posts</span>
+          </div>
+
+          <div class="filter-divider"></div>
+
+          <div class="filter-option advanced-option">
+            <mat-slide-toggle [checked]="timelineFilter.showReactions"
+              (change)="updateFilter('showReactions', $event.checked)" color="accent"
+              matTooltip="Show reaction events (experimental)">
+              <mat-icon>favorite</mat-icon>
+              <span>Reactions</span>
+            </mat-slide-toggle>
+            <span class="option-description">Like and emoji reactions</span>
+          </div>
+        </div>
       </div>
     </div>
   </div>

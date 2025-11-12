@@ -12,12 +12,14 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { LayoutService } from '../../../services/layout.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { EventComponent } from '../../../components/event/event.component';
 import { PinnedService } from '../../../services/pinned.service';
 import { StorageService } from '../../../services/storage.service';
 import { NostrRecord } from '../../../interfaces';
 import { DataService } from '../../../services/data.service';
 import { UserRelayService } from '../../../services/relays/user-relay';
+import { TimelineFilterOptions } from '../../../interfaces/timeline-filter';
 
 @Component({
   selector: 'app-profile-notes',
@@ -34,6 +36,7 @@ import { UserRelayService } from '../../../services/relays/user-relay';
     MatSlideToggleModule,
     FormsModule,
     MatProgressSpinnerModule,
+    MatExpansionModule,
   ],
   templateUrl: './profile-notes.component.html',
   styleUrl: './profile-notes.component.scss',
@@ -52,6 +55,11 @@ export class ProfileNotesComponent {
   error = signal<string | null>(null);
   pinnedNotes = signal<NostrRecord[]>([]);
   isLoadingPinned = signal<boolean>(false);
+
+  // Timeline filter - access the signal from profileState
+  get timelineFilter(): TimelineFilterOptions {
+    return this.profileState.timelineFilter();
+  }
 
   constructor() {
     if (!this.layout.isBrowser()) {
@@ -216,5 +224,12 @@ export class ProfileNotesComponent {
       this.logger.error('Failed to load more timeline content', err);
       this.error.set('Failed to load older timeline content. Please try again.');
     }
+  }
+
+  /**
+   * Update a specific filter option
+   */
+  updateFilter(key: keyof TimelineFilterOptions, value: boolean): void {
+    this.profileState.updateTimelineFilter({ [key]: value });
   }
 }
