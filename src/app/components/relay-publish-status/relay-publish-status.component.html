@@ -59,6 +59,9 @@
   </mat-card-content>
 
   <mat-card-actions align="end">
+    <button mat-button (click)="viewEventJson()" matTooltip="View the raw event JSON structure">
+      <mat-icon>code</mat-icon> VIEW EVENT JSON
+    </button>
     @if (hasFailures) {
     <button mat-raised-button color="warn" (click)="onRepublish()">
       <mat-icon>refresh</mat-icon> RETRY {{ failedCount }} FAILED
