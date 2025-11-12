@@ -211,9 +211,8 @@
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   transition: background-color 0.2s;
   min-width: 0;
-  overflow-x: hidden; // Only prevent horizontal overflow
   position: relative;
-  min-height: 60px;
+  width: 100%;
 
   &:hover {
     background: var(--mat-sys-surface-container-high);
