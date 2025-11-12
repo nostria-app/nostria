@@ -84,7 +84,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
             }
           }
           @if (loginComponent.currentStep() === loginComponent.LoginStep.PREVIEW) {
-            <button mat-raised-button color="primary" (click)="loginComponent.usePreviewAccount(loginComponent.previewPubkey)" [disabled]="!loginComponent.previewPubkey">
+            <button mat-flat-button (click)="loginComponent.usePreviewAccount(loginComponent.previewPubkey)" [disabled]="!loginComponent.previewPubkey">
               <mat-icon>visibility</mat-icon>
               <span>Preview Only</span>
             </button>
