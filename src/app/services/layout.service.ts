@@ -1,4 +1,4 @@
-import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID } from '@angular/core';
+import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { LoggerService } from './logger.service';
@@ -9,7 +9,6 @@ import { MediaPreviewDialogComponent } from '../components/media-preview-dialog/
 import { Event, kinds, nip19 } from 'nostr-tools';
 import { AddressPointer, EventPointer, ProfilePointer } from 'nostr-tools/nip19';
 import { ProfileStateService } from './profile-state.service';
-import { LoginDialogComponent } from '../components/login-dialog/login-dialog.component';
 import { NostrRecord } from '../interfaces';
 import { AccountStateService } from './account-state.service';
 import { isPlatformBrowser } from '@angular/common';
@@ -37,6 +36,7 @@ export class LayoutService implements OnDestroy {
   private logger = inject(LoggerService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private injector = inject(Injector);
   isHandset = signal(false);
   isWideScreen = signal(false);
   breakpointObserver = inject(BreakpointObserver);
@@ -593,72 +593,70 @@ export class LayoutService implements OnDestroy {
 
   async showLoginDialog(): Promise<void> {
     this.logger.debug('showLoginDialog called');
-    // Apply the blur class to the document body before opening the dialog
-    document.body.classList.add('blur-backdrop');
 
-    const dialogRef = this.dialog.open(LoginDialogComponent, {
-      // width: '400px',
-      // maxWidth: '95vw',
-      panelClass: 'responsive-dialog',
-      disableClose: true,
-      // panelClass: 'welcome-dialog'
-    });
+    // Set a signal to show the standalone login dialog
+    this.showStandaloneLogin.set(true);
 
-    this.logger.debug('Initial login dialog opened');
+    this.logger.debug('Standalone login dialog opened');
+  }
 
-    // Handle login completion and data loading
-    dialogRef.afterClosed().subscribe(async () => {
-      this.logger.debug('Login dialog closed');
-      document.body.classList.remove('blur-backdrop');
+  // Signal to control standalone login dialog visibility
+  showStandaloneLogin = signal(false);
 
-      // If user is logged in after dialog closes, simulate data loading
-      // if (this.nostrService.isLoggedIn()) {
-      //   this.logger.debug('User logged in, loading data');
-      // } else {
-      //   this.logger.debug('User not logged in after dialog closed');
-      // }
-    });
+  // Signal to store the initial step for the login dialog (accessible by StandaloneLoginDialogComponent)
+  loginDialogInitialStep = signal<string | undefined>(undefined);
+
+  // Signal to control Terms of Use dialog visibility
+  showTermsDialog = signal(false);
+
+  // Handle login dialog close
+  handleLoginDialogClose(): void {
+    this.logger.debug('Login dialog closed');
+    this.showStandaloneLogin.set(false);
+    this.loginDialogInitialStep.set(undefined);
+  }
+
+  // Open Terms of Use dialog
+  openTermsOfUse(): void {
+    this.logger.debug('Opening Terms of Use dialog');
+    this.showTermsDialog.set(true);
+  }
+
+  // Handle Terms dialog close
+  handleTermsDialogClose(): void {
+    this.logger.debug('Terms dialog closed');
+    this.showTermsDialog.set(false);
   }
 
   /**
-   * Opens the login dialog with specific step and blur backdrop
+   * Opens the login dialog with specific step
    * @param step - The specific login step to navigate to (optional)
    * @returns Promise that resolves when the dialog closes
    */
   async showLoginDialogWithStep(step?: string): Promise<void> {
     this.logger.debug('showLoginDialogWithStep called', { step });
-    // Apply the blur class to the document body before opening the dialog
-    document.body.classList.add('blur-backdrop');
 
-    const dialogRef = this.dialog.open(LoginDialogComponent, {
-      disableClose: true,
-      panelClass: 'responsive-dialog',
-    });
+    // Store the initial step so the standalone login dialog can use it
+    this.loginDialogInitialStep.set(step);
 
-    this.logger.debug('Login dialog opened with step', { step });
+    // Open the standalone login dialog
+    this.showStandaloneLogin.set(true);
 
-    // Navigate to specific step after dialog opens if provided
-    if (step) {
-      dialogRef.afterOpened().subscribe(() => {
-        const componentInstance = dialogRef.componentInstance;
-        if (step === 'new-user') {
-          setTimeout(() => {
-            componentInstance.startNewAccountFlow();
-          }, 100);
-        } else if (step === 'login') {
-          setTimeout(() => {
-            componentInstance.goToStep(componentInstance.LoginStep.LOGIN_OPTIONS);
-          }, 100);
-        }
-      });
-    }
+    this.logger.debug('Standalone login dialog opened with step', { step });
 
     // Return a promise that resolves when the dialog closes
     return new Promise<void>((resolve) => {
-      dialogRef.afterClosed().subscribe(async () => {
-        this.logger.debug('Login dialog closed');
-        document.body.classList.remove('blur-backdrop');
-        resolve();
+      // Set up an effect to watch for dialog close using runInInjectionContext
+      runInInjectionContext(this.injector, () => {
+        const cleanup = effect(() => {
+          if (!this.showStandaloneLogin()) {
+            this.logger.debug('Login dialog closed');
+            // Clear the initial step
+            this.loginDialogInitialStep.set(undefined);
+            resolve();
+            cleanup.destroy();
+          }
+        });
       });
     });
   }
