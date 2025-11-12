@@ -6,6 +6,7 @@ import {
   effect,
   inject,
   untracked,
+  ViewEncapsulation,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatCardModule } from '@angular/material/card';
@@ -60,6 +61,7 @@ interface ProfileData {
   ],
   templateUrl: './profile-hover-card.component.html',
   styleUrl: './profile-hover-card.component.scss',
+  encapsulation: ViewEncapsulation.None,
 })
 export class ProfileHoverCardComponent {
   private dataService = inject(DataService);
