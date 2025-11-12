@@ -18,19 +18,11 @@ import { FeedService, ColumnConfig } from '../../../services/feed.service';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { AccountStateService } from '../../../services/account-state.service';
 import { Followset, StarterPack } from '../../../services/followset';
-import { DataService } from '../../../services/data.service';
+import { NostrRecord } from '../../../interfaces';
 
 interface DialogData {
   icons: string[];
   column?: ColumnConfig;
-}
-
-interface UserProfile {
-  pubkey: string;
-  name?: string;
-  display_name?: string;
-  about?: string;
-  npub: string;
 }
 
 // Common Nostr event kinds
@@ -95,7 +87,6 @@ export class NewColumnDialogComponent {
   private feedService = inject(FeedService);
   private accountState = inject(AccountStateService);
   private followset = inject(Followset);
-  private dataService = inject(DataService);
   readonly data: DialogData = inject(MAT_DIALOG_DATA);
 
   // Form controls
@@ -116,10 +107,9 @@ export class NewColumnDialogComponent {
   showCustomRelays = computed(() => this.selectedRelayConfig() === 'custom');
 
   // Custom source signals
-  selectedUsers = signal<UserProfile[]>([]);
+  selectedUsers = signal<NostrRecord[]>([]);
   selectedStarterPacks = signal<StarterPack[]>([]);
   availableStarterPacks = signal<StarterPack[]>([]);
-  userProfiles = signal<Map<string, UserProfile>>(new Map()); // Cache for user profiles
 
   // Form controls for chips and autocomplete
   kindInputControl = new FormControl('');
@@ -139,28 +129,21 @@ export class NewColumnDialogComponent {
   columnTypes = signal(this.feedService.getFeedTypes());
   nostrKinds = signal(NOSTR_KINDS);
 
-  // Get following users from account state with real profile data
+  // Get following users from account state using cached profiles
+  // This uses the same cache as the global search for efficiency
   followingUsers = computed(() => {
     const followingPubkeys = this.accountState.followingList();
-    const profilesCache = this.userProfiles();
-
     if (!followingPubkeys || followingPubkeys.length === 0) return [];
 
-    return followingPubkeys.map(pubkey => {
-      const cachedProfile = profilesCache.get(pubkey);
-      if (cachedProfile) {
-        return cachedProfile;
+    const profiles: NostrRecord[] = [];
+    for (const pubkey of followingPubkeys) {
+      const cacheKey = `metadata-${pubkey}`;
+      const profile = this.accountState['cache'].get<NostrRecord>(cacheKey);
+      if (profile) {
+        profiles.push(profile);
       }
-
-      // Return placeholder while profile is loading
-      return {
-        pubkey,
-        name: `User ${pubkey.slice(0, 8)}...`, // Temporary placeholder
-        npub: pubkey, // TODO: Convert to npub format if needed
-        display_name: undefined,
-        about: undefined
-      };
-    }).filter(user => user); // Filter out any null/undefined results
+    }
+    return profiles;
   });
 
   // Filtered options for autocomplete
@@ -176,16 +159,22 @@ export class NewColumnDialogComponent {
     });
   });
 
-  // Filtered users for autocomplete
+  // Filtered users for autocomplete using the same search as global search
   filteredUsers = computed(() => {
-    const input = this.userInputValue().toLowerCase();
-    const following = this.followingUsers();
+    const input = this.userInputValue();
+    if (!input || input.length < 1) {
+      // Return all following users if no search input
+      return this.followingUsers().filter(profile => {
+        return !this.selectedUsers().some(selected => selected.event.pubkey === profile.event.pubkey);
+      });
+    }
+
+    // Use accountState.searchProfiles for consistent search behavior
+    const searchResults = this.accountState.searchProfiles(input);
     const selected = this.selectedUsers();
 
-    return following.filter(user => {
-      const matchesInput = user.name?.toLowerCase().includes(input) || user.pubkey.includes(input);
-      const notSelected = !selected.some(s => s.pubkey === user.pubkey);
-      return matchesInput && notSelected;
+    return searchResults.filter(profile => {
+      return !selected.some(s => s.event.pubkey === profile.event.pubkey);
     });
   });
 
@@ -219,9 +208,6 @@ export class NewColumnDialogComponent {
 
     // Load starter packs when component initializes
     this.loadStarterPacks();
-
-    // Load user profiles for following list
-    this.loadUserProfiles();
 
     // Initialize selected items if editing existing column
     if (this.data.column) {
@@ -357,7 +343,7 @@ export class NewColumnDialogComponent {
         kinds: this.selectedKinds(),
         relayConfig: formValue.relayConfig as 'account' | 'custom',
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
-        customUsers: formValue.source === 'custom' ? this.selectedUsers().map(u => u.pubkey) : undefined,
+        customUsers: formValue.source === 'custom' ? this.selectedUsers().map(u => u.event.pubkey) : undefined,
         customStarterPacks: formValue.source === 'custom' ? this.selectedStarterPacks().map(p => p.dTag) : undefined,
         filters: Object.keys(filters).length > 0 ? filters : {},
         createdAt: this.data.column?.createdAt || Date.now(),
@@ -378,71 +364,29 @@ export class NewColumnDialogComponent {
     }
   }
 
-  async loadUserProfiles(): Promise<void> {
-    try {
-      const followingPubkeys = this.accountState.followingList();
-      if (!followingPubkeys || followingPubkeys.length === 0) {
-        return;
-      }
 
-      // Load profiles in batches to avoid overwhelming the service
-      const batchSize = 20;
-      const profileMap = new Map<string, UserProfile>();
-
-      for (let i = 0; i < followingPubkeys.length; i += batchSize) {
-        const batch = followingPubkeys.slice(i, i + batchSize);
-
-        try {
-          const profiles = await this.dataService.getProfiles(batch);
-
-          if (profiles) {
-            profiles.forEach(record => {
-              if (record.event && record.data) {
-                const profileData = record.data as { name?: string; display_name?: string; about?: string; picture?: string };
-                const userProfile: UserProfile = {
-                  pubkey: record.event.pubkey,
-                  name: profileData.name || profileData.display_name,
-                  display_name: profileData.display_name,
-                  about: profileData.about,
-                  npub: record.event.pubkey // TODO: Convert to npub format if needed
-                };
-                profileMap.set(record.event.pubkey, userProfile);
-              }
-            });
-          }
-        } catch (error) {
-          console.error(`Error loading profiles for batch ${i}-${i + batchSize}:`, error);
-          // Continue with next batch even if this one fails
-        }
-      }
-
-      // Update the signal with all loaded profiles
-      this.userProfiles.set(profileMap);
-      console.log(`Loaded ${profileMap.size} user profiles from ${followingPubkeys.length} following`);
-
-    } catch (error) {
-      console.error('Failed to load user profiles:', error);
-    }
-  }
 
   initializeSelectedItems(): void {
     const column = this.data.column;
     if (!column) return;
 
     // Initialize selected users if customUsers exist
-    if (column.customUsers) {
-      const users = column.customUsers.map(pubkey => ({
-        pubkey,
-        name: `User ${pubkey.slice(0, 8)}...`,
-        npub: pubkey
-      }));
-      this.selectedUsers.set(users);
+    if (column.customUsers && column.customUsers.length > 0) {
+      const profiles: NostrRecord[] = [];
+      for (const pubkey of column.customUsers) {
+        const cacheKey = `metadata-${pubkey}`;
+        const profile = this.accountState['cache'].get<NostrRecord>(cacheKey);
+        if (profile) {
+          profiles.push(profile);
+        }
+      }
+      this.selectedUsers.set(profiles);
     }
 
     // Initialize selected starter packs if customStarterPacks exist
-    if (column.customStarterPacks) {
+    if (column.customStarterPacks && column.customStarterPacks.length > 0) {
       const packs = this.availableStarterPacks().filter(pack =>
-        column.customStarterPacks?.includes(pack.dTag)
+        column.customStarterPacks!.includes(pack.dTag)
       );
       this.selectedStarterPacks.set(packs);
     }
@@ -450,10 +394,10 @@ export class NewColumnDialogComponent {
 
   onUserSelected(event: MatAutocompleteSelectedEvent): void {
     const pubkey = event.option.value;
-    const user = this.followingUsers().find(u => u.pubkey === pubkey);
+    const profile = this.followingUsers().find(p => p.event.pubkey === pubkey);
 
-    if (user && !this.selectedUsers().some(u => u.pubkey === pubkey)) {
-      this.selectedUsers.update(users => [...users, user]);
+    if (profile && !this.selectedUsers().some(u => u.event.pubkey === pubkey)) {
+      this.selectedUsers.update(users => [...users, profile]);
     }
 
     // Clear the input
@@ -461,8 +405,8 @@ export class NewColumnDialogComponent {
     this.userInputValue.set('');
   }
 
-  removeUser(user: UserProfile): void {
-    this.selectedUsers.update(users => users.filter(u => u.pubkey !== user.pubkey));
+  removeUser(user: NostrRecord): void {
+    this.selectedUsers.update(users => users.filter(u => u.event.pubkey !== user.event.pubkey));
   }
 
   onStarterPackSelected(event: MatAutocompleteSelectedEvent): void {
