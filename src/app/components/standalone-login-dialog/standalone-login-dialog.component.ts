@@ -1,4 +1,4 @@
-import { Component, inject, ViewChild, output, AfterViewInit } from '@angular/core';
+import { Component, inject, ViewChild, output, AfterViewInit, ChangeDetectorRef } from '@angular/core';
 import { CustomDialogComponent } from '../custom-dialog/custom-dialog.component';
 import { LoginDialogComponent } from '../login-dialog/login-dialog.component';
 import { LoggerService } from '../../services/logger.service';
@@ -98,6 +98,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 export class StandaloneLoginDialogComponent implements AfterViewInit {
   private logger = inject(LoggerService);
   private layout = inject(LayoutService);
+  private cdr = inject(ChangeDetectorRef);
 
   @ViewChild(LoginDialogComponent) loginComponent?: LoginDialogComponent;
 
@@ -111,8 +112,8 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
     if (initialStep && this.loginComponent) {
       this.logger.debug('Navigating to initial step:', initialStep);
 
-      // Navigate to the specified step after a short delay to ensure component is ready
-      setTimeout(() => {
+      // Use queueMicrotask to avoid ExpressionChangedAfterItHasBeenCheckedError
+      queueMicrotask(() => {
         if (!this.loginComponent) return;
 
         if (initialStep === 'new-user') {
@@ -120,7 +121,10 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
         } else if (initialStep === 'login') {
           this.loginComponent.goToStep(this.loginComponent.LoginStep.LOGIN_OPTIONS);
         }
-      }, 100);
+
+        // Trigger change detection after signal changes
+        this.cdr.detectChanges();
+      });
     }
   }
 

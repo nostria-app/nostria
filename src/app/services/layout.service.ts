@@ -1,4 +1,4 @@
-import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID } from '@angular/core';
+import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { LoggerService } from './logger.service';
@@ -36,6 +36,7 @@ export class LayoutService implements OnDestroy {
   private logger = inject(LoggerService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
+  private injector = inject(Injector);
   isHandset = signal(false);
   isWideScreen = signal(false);
   breakpointObserver = inject(BreakpointObserver);
@@ -645,15 +646,17 @@ export class LayoutService implements OnDestroy {
 
     // Return a promise that resolves when the dialog closes
     return new Promise<void>((resolve) => {
-      // Set up an effect to watch for dialog close
-      const cleanup = effect(() => {
-        if (!this.showStandaloneLogin()) {
-          this.logger.debug('Login dialog closed');
-          // Clear the initial step
-          this.loginDialogInitialStep.set(undefined);
-          resolve();
-          cleanup.destroy();
-        }
+      // Set up an effect to watch for dialog close using runInInjectionContext
+      runInInjectionContext(this.injector, () => {
+        const cleanup = effect(() => {
+          if (!this.showStandaloneLogin()) {
+            this.logger.debug('Login dialog closed');
+            // Clear the initial step
+            this.loginDialogInitialStep.set(undefined);
+            resolve();
+            cleanup.destroy();
+          }
+        });
       });
     });
   }
