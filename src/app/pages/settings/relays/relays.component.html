@@ -66,11 +66,6 @@
               @for (relay of userRelays(); track relay.url) {
               <mat-list-item>
                 <div class="relay-item-container">
-                  <div class="status-icon">
-                    <mat-icon [ngClass]="getStatusColor(relay.status)">
-                      {{ getStatusIcon(relay.status) }}
-                    </mat-icon>
-                  </div>
                   <div class="relay-url">
                     {{ formatRelayUrl(relay.url) }}
                   </div>
@@ -202,11 +197,6 @@
               @for (relay of discoveryRelays(); track relay.url) {
               <mat-list-item>
                 <div class="relay-item-container">
-                  <div class="status-icon">
-                    <mat-icon [ngClass]="getStatusColor(relay.status)">
-                      {{ getStatusIcon(relay.status) }}
-                    </mat-icon>
-                  </div>
                   <div class="relay-url">
                     {{ formatRelayUrl(relay.url) }}
                   </div>
@@ -278,13 +268,8 @@
 
             <div class="relay-info">
               <div class="relay-icon">
-                <mat-icon [ngClass]="getStatusColor(
-                      relay.isConnected
-                        ? 'connected'
-                        : relay.isOffline
-                          ? 'error'
-                          : 'disconnected'
-                    )">
+                <mat-icon
+                  [ngClass]="relay.isConnected ? 'text-green-500' : relay.isOffline ? 'text-red-500' : 'text-orange-500'">
                   {{
                   relay.isConnected
                   ? 'wifi'

@@ -4,8 +4,6 @@ import {
   inject,
   signal,
   OnInit,
-  OnDestroy,
-  untracked,
   computed,
   ViewChild,
   TemplateRef,
@@ -64,7 +62,7 @@ import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
   templateUrl: './relays.component.html',
   styleUrl: './relays.component.scss',
 })
-export class RelaysComponent implements OnInit, OnDestroy {
+export class RelaysComponent implements OnInit {
   // relay = inject(RelayService);
   private nostr = inject(NostrService);
   private logger = inject(LoggerService);
@@ -96,10 +94,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
   userRelaysInfoContent!: TemplateRef<unknown>;
   @ViewChild('discoveryRelaysInfoContent')
   discoveryRelaysInfoContent!: TemplateRef<unknown>;
-
-  // Timer for connection status checking
-  private statusCheckTimer: any;
-  private readonly STATUS_CHECK_INTERVAL = 30000; // 30 seconds
 
   // Create signals that use the new relaysSignal from the base services
   userRelays = computed(() => {
@@ -167,14 +161,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
   isSettingUpNostriaRelays = signal(false);
 
   constructor() {
-    effect(() => {
-      if (this.app.authenticated()) {
-        untracked(() => {
-          // Start the connection status checking interval
-          this.startStatusChecking();
-        });
-      }
-    });
     // Effect to re-check following list when active pubkey changes
     effect(async () => {
       const pubkey = this.accountState.pubkey();
@@ -319,88 +305,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
         this.isCleaningFollowingList.set(false);
       }
     })();
-  }
-
-  ngOnDestroy() {
-    // Clean up the interval when component is destroyed
-    this.stopStatusChecking();
-  }
-
-  private startStatusChecking() {
-    // Clear any existing timer first
-    this.stopStatusChecking();
-
-    // Create new timer that runs every 10 seconds
-    this.statusCheckTimer = setInterval(() => {
-      this.checkRelayConnectionStatus();
-    }, this.STATUS_CHECK_INTERVAL);
-
-    // Make the initial check a little bit delayed, if user reloads on the relay page, they
-    // might return disconnected?
-    setTimeout(() => {
-      // Run an initial check immediately
-      this.checkRelayConnectionStatus();
-    }, 2000);
-
-    this.logger.debug('Started relay connection status checking');
-  }
-
-  private stopStatusChecking() {
-    if (this.statusCheckTimer) {
-      clearInterval(this.statusCheckTimer);
-      this.statusCheckTimer = null;
-      this.logger.debug('Stopped relay connection status checking');
-    }
-  }
-
-  /**
-   * Check connection status of all relays using the pool's listConnectionStatus method
-   */
-  private checkRelayConnectionStatus() {
-    const userPool = this.accountRelay.getPool();
-
-    if (!userPool) {
-      this.logger.warn('Cannot check relay status: user pool is not initialized');
-      return;
-    }
-
-    const connectionStatusMap = userPool.listConnectionStatus();
-    this.logger.debug('Retrieved relay connection statuses', connectionStatusMap);
-
-    console.log('SEEN ON!!');
-    console.log(userPool.seenOn);
-
-    // Update the status of each relay in our user relays list
-    this.userRelays().forEach(relay => {
-      // Check if this relay URL exists in the connection status map
-      if (connectionStatusMap.has(relay.url)) {
-        const isConnected = connectionStatusMap.get(relay.url);
-        const newStatus = isConnected ? 'connected' : 'disconnected';
-
-        // Only update if status has changed
-        if (relay.status !== newStatus) {
-          this.logger.debug(`Updating relay ${relay.url} status to ${newStatus}`);
-          this.accountRelay.updateRelayStatus(relay.url, newStatus);
-        }
-      }
-    });
-
-    // Also check discovery relays if we have a discovery pool
-    const discoveryPool = this.discoveryRelay.getPool();
-    if (discoveryPool) {
-      const discoveryConnectionStatusMap = discoveryPool.listConnectionStatus();
-      this.discoveryRelays().forEach(relay => {
-        if (discoveryConnectionStatusMap.has(relay.url)) {
-          const isConnected = discoveryConnectionStatusMap.get(relay.url);
-          const newStatus = isConnected ? 'connected' : 'disconnected';
-
-          if (relay.status !== newStatus) {
-            this.logger.debug(`Updating discovery relay ${relay.url} status to ${newStatus}`);
-            this.discoveryRelay.updateRelayStatus(relay.url, newStatus);
-          }
-        }
-      });
-    }
   }
 
   parseUrl(relayUrl: string) {
@@ -581,34 +485,6 @@ export class RelaysComponent implements OnInit, OnDestroy {
     this.discoveryRelay.removeRelay(url);
     this.showMessage('Discovery Relay removed');
     this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
-  }
-
-  getStatusIcon(status: Relay['status'] | undefined): string {
-    switch (status) {
-      case 'connected':
-        return 'check_circle';
-      case 'connecting':
-        return 'hourglass_empty';
-      case 'error':
-        return 'error';
-      case 'disconnected':
-      default:
-        return 'cancel'; // Changed from radio_button_unchecked to cancel for more serious look
-    }
-  }
-
-  getStatusColor(status: Relay['status'] | undefined): string {
-    switch (status) {
-      case 'connected':
-        return 'text-green-500';
-      case 'connecting':
-        return 'text-yellow-500';
-      case 'error':
-        return 'text-red-500';
-      case 'disconnected':
-      default:
-        return 'text-orange-500'; // Changed from text-gray-500 to text-orange-500 for more serious look
-    }
   }
 
   formatRelayUrl(url: string): string {

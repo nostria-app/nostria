@@ -1,6 +1,6 @@
 .relay-item-container {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: 1fr auto;
   grid-gap: 12px;
   align-items: center;
   width: 100%;
@@ -12,11 +12,6 @@ app-info-tooltip {
   top: 16px;
   right: 16px;
   z-index: 2;
-}
-
-.status-icon {
-  display: flex;
-  align-items: center;
 }
 
 .relay-item {
