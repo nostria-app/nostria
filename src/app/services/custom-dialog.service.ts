@@ -1,11 +1,11 @@
-import { Injectable, Component, Type, signal, effect, inject, ApplicationRef, createComponent, EnvironmentInjector, ComponentRef } from '@angular/core';
+import { Injectable, Type, signal, inject, ApplicationRef, createComponent, EnvironmentInjector, ComponentRef } from '@angular/core';
 import { CustomDialogComponent } from '../components/custom-dialog/custom-dialog.component';
 
 /**
  * Reference to a custom dialog instance
  */
-export class CustomDialogRef<T = unknown> {
-  private closedSubject = signal<T | undefined>(undefined);
+export class CustomDialogRef<T = unknown, R = unknown> {
+  private closedSubject = signal<R | undefined>(undefined);
   private hasBeenClosed = signal(false);
 
   /**
@@ -20,13 +20,13 @@ export class CustomDialogRef<T = unknown> {
 
   constructor(
     public componentInstance: T,
-    private onCloseCallback: (result?: T) => void
+    private onCloseCallback: (result?: R) => void
   ) { }
 
   /**
    * Close the dialog with an optional result
    */
-  close(result?: T): void {
+  close(result?: R): void {
     if (this.hasBeenClosed()) return;
 
     this.hasBeenClosed.set(true);
@@ -94,21 +94,20 @@ export class CustomDialogService {
   open<T, R = unknown>(
     component: Type<T>,
     config: CustomDialogConfig = {}
-  ): CustomDialogRef<R> {
+  ): CustomDialogRef<T, R> {
     // Create the dialog wrapper component
     const dialogRef = createComponent(CustomDialogComponent, {
       environmentInjector: this.injector
     });
 
-    // Set dialog configuration
-    const dialogInstance = dialogRef.instance;
-    if (config.title) dialogInstance.title.set?.(config.title) ?? (dialogInstance.title as any)(config.title);
-    if (config.headerIcon) dialogInstance.headerIcon.set?.(config.headerIcon) ?? (dialogInstance.headerIcon as any)(config.headerIcon);
-    if (config.showBackButton !== undefined) dialogInstance.showBackButton.set?.(config.showBackButton) ?? (dialogInstance.showBackButton as any)(config.showBackButton);
-    if (config.showCloseButton !== undefined) dialogInstance.showCloseButton.set?.(config.showCloseButton) ?? (dialogInstance.showCloseButton as any)(config.showCloseButton);
-    if (config.disableClose !== undefined) dialogInstance.disableClose.set?.(config.disableClose) ?? (dialogInstance.disableClose as any)(config.disableClose);
-    if (config.width) dialogInstance.width.set?.(config.width) ?? (dialogInstance.width as any)(config.width);
-    if (config.maxWidth) dialogInstance.maxWidth.set?.(config.maxWidth) ?? (dialogInstance.maxWidth as any)(config.maxWidth);
+    // Set dialog configuration using setInput
+    if (config.title) dialogRef.setInput('title', config.title);
+    if (config.headerIcon) dialogRef.setInput('headerIcon', config.headerIcon);
+    if (config.showBackButton !== undefined) dialogRef.setInput('showBackButton', config.showBackButton);
+    if (config.showCloseButton !== undefined) dialogRef.setInput('showCloseButton', config.showCloseButton);
+    if (config.disableClose !== undefined) dialogRef.setInput('disableClose', config.disableClose);
+    if (config.width) dialogRef.setInput('width', config.width);
+    if (config.maxWidth) dialogRef.setInput('maxWidth', config.maxWidth);
 
     // Create the content component
     const contentRef = createComponent(component, {
@@ -131,18 +130,17 @@ export class CustomDialogService {
     this.openDialogs.add(dialogRef);
 
     // Create dialog ref for external use
-    const customDialogRef = new CustomDialogRef<R>(
+    const customDialogRef = new CustomDialogRef<T, R>(
       contentRef.instance,
-      (result?: R) => {
+      () => {
         this.closeDialog(dialogRef, contentRef);
       }
     );
 
-    // Set up close handlers
-    const closedSubscription = effect(() => {
-      dialogInstance.closed.subscribe?.(() => {
-        customDialogRef.close();
-      });
+    // Set up close handler - subscribe to the dialog's closed output
+    const subscription = dialogRef.instance.closed.subscribe(() => {
+      customDialogRef.close();
+      subscription.unsubscribe();
     });
 
     return customDialogRef;

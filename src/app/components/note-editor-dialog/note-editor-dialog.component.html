@@ -1,32 +1,7 @@
 <div class="note-editor-dialog">
-  <div mat-dialog-title class="dialog-header">
-    <span>
-      @if (isReply()) {
-      Reply to Note
-      } @else if (isQuote()) {
-      Quote Note
-      } @else {
-      Create Note
-      }
-    </span>
-    <button mat-icon-button (click)="cancel()" class="close-button">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
-
-  <div mat-dialog-content class="dialog-content" (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
+  <!-- Current Account Display -->
+  <div dialog-content class="dialog-content-wrapper" (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
     (dragleave)="onDragLeave($event)" (drop)="onDrop($event)" [class.drag-over]="isDragOver()">
-    <!-- Drag overlay -->
-    @if (isDragOver()) {
-    <div class="drag-overlay">
-      <div class="drag-message">
-        <mat-icon class="drag-icon">cloud_upload</mat-icon>
-        <span>Drop files here to upload</span>
-      </div>
-    </div>
-    }
-
-    <!-- Current Account Display -->
     <div class="current-account-banner">
       <div class="current-account-info">
         <div class="current-account-avatar">
@@ -95,22 +70,6 @@
           [maxHeight]="400" (mentionSelected)="onMentionSelected($event)"
           (dismissed)="onMentionDismissed()"></app-mention-autocomplete>
         }
-      </div>
-
-      <!-- Upload actions -->
-      <div class="upload-actions">
-        <button mat-icon-button type="button" (click)="togglePreview()" [color]="showPreview() ? 'primary' : ''"
-          matTooltip="Toggle preview">
-          <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
-        </button>
-        <button mat-icon-button type="button" (click)="openFileDialog()" [disabled]="isUploading() || isPublishing()"
-          matTooltip="Upload image">
-          <mat-icon>image</mat-icon>
-        </button>
-        <button mat-icon-button type="button" (click)="toggleAdvancedOptions()"
-          [color]="showAdvancedOptions() ? 'primary' : ''" matTooltip="Advanced options">
-          <mat-icon>settings</mat-icon>
-        </button>
       </div>
 
       <!-- Hidden file input -->
@@ -300,6 +259,16 @@
     </div>
     }
 
+    <!-- Drag overlay -->
+    @if (isDragOver()) {
+    <div class="drag-overlay">
+      <div class="drag-message">
+        <mat-icon class="drag-icon">cloud_upload</mat-icon>
+        <span>Drop files here to upload</span>
+      </div>
+    </div>
+    }
+
     <!-- Character limit warning -->
     <!-- @if (isOverLimit()) {
     <div class="warning-message">
@@ -309,28 +278,48 @@
     } -->
   </div>
 
-  <div mat-dialog-actions class="dialog-actions">
-    @if (powEnabled() && isPowMining()) {
-    <div class="pow-progress-indicator">
-      <mat-icon class="pow-icon spinning">auto_awesome</mat-icon>
-      <span class="pow-text">Mining PoW: {{ powDifficulty() }}/{{ powTargetDifficulty() }} bits</span>
+  <div dialog-actions class="action-container" (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
+    (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+    <!-- Left side: Action buttons -->
+    <div class="left-actions">
+      <button mat-icon-button type="button" (click)="togglePreview()" [color]="showPreview() ? 'primary' : ''"
+        matTooltip="Toggle preview">
+        <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+      <button mat-icon-button type="button" (click)="openFileDialog()" [disabled]="isUploading() || isPublishing()"
+        matTooltip="Upload image">
+        <mat-icon>image</mat-icon>
+      </button>
+      <button mat-icon-button type="button" (click)="toggleAdvancedOptions()"
+        [color]="showAdvancedOptions() ? 'primary' : ''" matTooltip="Advanced options">
+        <mat-icon>settings</mat-icon>
+      </button>
     </div>
-    }
 
-    <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
-
-    <button mat-flat-button (click)="publishNote()" [disabled]="!canPublish() || isPublishing()" class="publish-button">
-      @if (isPublishing()) {
-      <ng-container>
-        <mat-icon class="spinning">hourglass_empty</mat-icon>
-        Publishing...
-      </ng-container>
-      } @else {
-      <ng-container>
-        <!-- <mat-icon>send</mat-icon> -->
-        Publish Note
-      </ng-container>
+    <!-- Right side: PoW indicator and primary actions -->
+    <div class="right-actions">
+      @if (powEnabled() && isPowMining()) {
+      <div class="pow-progress-indicator">
+        <mat-icon class="pow-icon spinning">auto_awesome</mat-icon>
+        <span class="pow-text">Mining PoW: {{ powDifficulty() }}/{{ powTargetDifficulty() }} bits</span>
+      </div>
       }
-    </button>
+
+      <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
+
+      <button mat-flat-button color="primary" (click)="publishNote()" [disabled]="!canPublish() || isPublishing()"
+        class="publish-button">
+        @if (isPublishing()) {
+        <ng-container>
+          <mat-icon class="spinning">hourglass_empty</mat-icon>
+          Publishing...
+        </ng-container>
+        } @else {
+        <ng-container>
+          Publish Note
+        </ng-container>
+        }
+      </button>
+    </div>
   </div>
 </div>

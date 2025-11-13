@@ -21,6 +21,7 @@ import {
   CommentEditorDialogComponent,
   CommentEditorDialogData,
 } from '../components/comment-editor-dialog/comment-editor-dialog.component';
+import { CustomDialogService, CustomDialogRef } from './custom-dialog.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 
 export interface Reaction {
@@ -88,6 +89,7 @@ export class EventService {
   private readonly onDemand = inject(OnDemandUserDataService);
   private readonly cache = inject(Cache);
   private readonly dialog = inject(MatDialog);
+  private readonly customDialog = inject(CustomDialogService);
   private readonly relays = inject(RelaysService);
   private readonly subscriptionCache = inject(SubscriptionCacheService);
 
@@ -942,20 +944,43 @@ export class EventService {
 
   // Handler methods for different creation types
   createNote(data: NoteEditorDialogData = {}): void {
-    // Open note editor dialog
-    const dialogRef = this.dialog.open(NoteEditorDialogComponent, {
-      panelClass: 'responsive-dialog',
-      width: '680px',
-      maxWidth: '680px',
-      disableClose: true,
-      data,
-    });
+    // Determine dialog title based on context
+    let title = 'Create Note';
+    if (data.replyTo) {
+      title = 'Reply to Note';
+    } else if (data.quote) {
+      title = 'Quote Note';
+    }
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result?.published) {
-        console.log('Note published successfully:', result.event);
+    // Open note editor dialog using custom dialog service
+    const dialogRef = this.customDialog.open<NoteEditorDialogComponent, { published: boolean; event?: Event }>(
+      NoteEditorDialogComponent,
+      {
+        title,
+        width: '680px',
+        maxWidth: '95vw',
+        disableClose: true,
+        data,
       }
-    });
+    );
+
+    // Set the dialogRef and data on the component instance
+    dialogRef.componentInstance.dialogRef = dialogRef;
+    dialogRef.componentInstance.data = data;
+
+    // Handle dialog close - using effect-like approach with signals
+    const checkClosed = () => {
+      const result = dialogRef.afterClosed()();
+      if (result !== undefined) {
+        if (result?.published) {
+          console.log('Note published successfully:', result.event);
+        }
+      } else {
+        // Keep checking if not closed yet
+        setTimeout(checkClosed, 100);
+      }
+    };
+    checkClosed();
   }
 
   createComment(rootEvent: Event): MatDialogRef<CommentEditorDialogComponent> {
