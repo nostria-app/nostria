@@ -82,6 +82,9 @@ import { MatButtonModule } from '@angular/material/button';
           @if (getHeaderIcon()) {
             <img [src]="getHeaderIcon()" [alt]="getTitle() || 'Dialog'" class="header-icon" />
           }
+          
+          <!-- Custom header content -->
+          <ng-content select="[dialog-header]"></ng-content>
         </div>
         
         <!-- Content -->

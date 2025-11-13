@@ -36,7 +36,7 @@
           } @else if (parsedBadge && (parsedBadge.thumb || parsedBadge.image)) {
           <!-- Show badge image when loaded -->
           <img [src]="parsedBadge.thumb || parsedBadge.image" [alt]="parsedBadge.name || 'Badge'"
-            [title]="parsedBadge.name || 'Badge'" class="badge-image" loading="lazy"
+             class="badge-image" loading="lazy"
             (error)="onBadgeImageError($event)" />
           } @else if (isBadgeLoading()[$index]) {
           <!-- Show loading spinner while badge is loading -->
