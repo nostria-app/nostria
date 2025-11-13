@@ -51,7 +51,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
         <app-unified-login-dialog (dialogClosed)="handleClose()" />
       </div>
       
-      <div dialog-actions>
+      <div dialog-actions style="display: flex; justify-content: flex-end; gap: 12px;">
         @if (viewInitialized() && loginComponent) {
           @if (loginComponent.currentStep() === loginComponent.LoginStep.REGION_SELECTION && !loginComponent.isDetectingRegion()) {
             <button mat-flat-button (click)="loginComponent.generateNewKey()" [disabled]="loginComponent.loading()">

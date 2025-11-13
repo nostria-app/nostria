@@ -73,12 +73,12 @@
   position: relative;
   // border-bottom: 1px solid var(--mat-sys-outline-variant);
   flex-shrink: 0;
-  gap: 16px;
+  gap: 12px;
 
   @media (max-width: 600px),
   (max-height: 700px) {
     padding: 16px 60px;
-    gap: 12px;
+    gap: 8px;
   }
 
   @media (max-height: 600px) {
@@ -88,8 +88,8 @@
 }
 
 .dialog-title {
-  margin: 0;
-  font-size: 20px;
+  margin: 4px 0 0 0;
+  font-size: 24px;
   font-weight: 500;
   color: var(--mat-sys-on-surface);
   text-align: center;
@@ -100,34 +100,39 @@
 
   @media (max-width: 600px),
   (max-height: 700px) {
-    font-size: 18px;
+    font-size: 20px;
+    margin: 3px 0 0 0;
   }
 
   @media (max-height: 600px) {
-    font-size: 16px;
+    font-size: 18px;
+    margin: 2px 0 0 0;
   }
 }
 
 .header-icon {
   position: absolute;
-  top: 50%;
-  right: 56px;
-  transform: translateY(-50%);
-  width: 32px;
-  height: 32px;
+  top: 12px;
+  right: 60px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
 
   @media (max-width: 600px),
   (max-height: 700px) {
-    width: 32px;
-    height: 32px;
-    right: 52px;
+    width: 36px;
+    height: 36px;
+    top: 10px;
+    right: 54px;
   }
 
   @media (max-height: 600px) {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
+    top: 8px;
+    right: 48px;
   }
 }
 
@@ -284,6 +289,7 @@
   padding: 0 24px;
   overflow: hidden;
   transition: max-height 0.3s ease, padding 0.3s ease, border-color 0.3s ease, min-height 0.3s ease;
+  isolation: isolate; // Create stacking context to prevent Material ripple from bleeding through
 
   // When it has visible child elements (buttons), expand
   // Using :has() to check for actual button/element children
@@ -294,6 +300,18 @@
     max-height: 500px;
     // border-top-color: var(--mat-sys-outline-variant);
     padding: 16px 24px 20px;
+  }
+
+  // Prevent Material button ripple effect from rendering behind the dialog
+  ::ng-deep .mat-mdc-button,
+  ::ng-deep .mat-mdc-raised-button,
+  ::ng-deep .mat-mdc-unelevated-button {
+    isolation: isolate;
+
+    .mat-ripple,
+    .mat-mdc-button-ripple {
+      z-index: 0;
+    }
   }
 
   @media (max-width: 600px),
@@ -314,6 +332,16 @@
       padding: 8px 20px 12px;
     }
   }
+}
+
+// Ensure Material tooltips appear above the dialog backdrop
+::ng-deep .mat-mdc-tooltip {
+  z-index: 1001 !important; // Higher than dialog's z-index of 1000
+}
+
+// Ensure tooltip backdrop/overlay appears above dialog
+::ng-deep .cdk-overlay-container {
+  z-index: 1002 !important;
 }
 
 // Animations
@@ -382,6 +410,13 @@
 
     button {
       color: var(--mat-sys-primary);
+    }
+
+    // Ensure Material icon buttons are properly aligned
+    ::ng-deep .mat-mdc-icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
     }
   }
 

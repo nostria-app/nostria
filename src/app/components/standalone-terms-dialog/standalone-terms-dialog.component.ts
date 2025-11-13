@@ -20,7 +20,7 @@ import { MatButtonModule } from '@angular/material/button';
         <app-terms-of-use-dialog-content />
       </div>
       
-      <div dialog-actions>
+      <div dialog-actions style="display: flex; justify-content: flex-end;">
         <button mat-flat-button (click)="handleClose()">
           Close
         </button>
