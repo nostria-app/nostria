@@ -293,7 +293,9 @@ export class MediaDetailsComponent {
 
       // Sign and publish the event
       const signedEvent = await this.nostr.signEvent(event);
-      const publishResult = await this.publishService.publish(signedEvent);
+      const publishResult = await this.publishService.publish(signedEvent, {
+        useOptimizedRelays: false, // Publish to ALL account relays for media events
+      });
 
       if (publishResult.success) {
         this.snackBar.open('Successfully published to Nostr!', 'Close', {
