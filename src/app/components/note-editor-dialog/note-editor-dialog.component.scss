@@ -123,6 +123,12 @@
   // because they need to apply to projected content via ::ng-deep
 }
 
+// Button disabled visibility enhancement
+.button-disabled-visible {
+  opacity: 0.3 !important;
+  pointer-events: none !important;
+}
+
 // Text color classes for character count
 .error-text {
   color: var(--mat-sys-error) !important;
