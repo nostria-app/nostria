@@ -66,20 +66,21 @@
 // Header
 .dialog-header {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  padding: 20px 24px 16px;
+  justify-content: center;
+  padding: 20px 64px 16px;
   position: relative;
   // border-bottom: 1px solid var(--mat-sys-outline-variant);
   flex-shrink: 0;
 
   @media (max-width: 600px),
   (max-height: 700px) {
-    padding: 16px 20px 12px;
+    padding: 16px 60px 12px;
   }
 
   @media (max-height: 600px) {
-    padding: 12px 20px 8px;
+    padding: 12px 60px 8px;
   }
 }
 
@@ -89,6 +90,7 @@
   font-weight: 500;
   color: var(--mat-sys-on-surface);
   text-align: center;
+  flex: 0 1 auto;
 
   @media (max-width: 600px),
   (max-height: 700px) {
@@ -102,32 +104,64 @@
 
 .header-icon {
   position: absolute;
-  top: 16px;
-  right: 56px; // Moved left to avoid overlapping close button
+  top: 50%;
+  left: 20px;
+  transform: translateY(-50%);
   width: 32px;
   height: 32px;
-  border-radius: 12px;
-  object-fit: contain;
+  border-radius: 50%;
+  object-fit: cover;
 
   @media (max-width: 600px),
   (max-height: 700px) {
     width: 32px;
     height: 32px;
-    top: 12px;
-    right: 52px; // Adjusted for smaller screens
+    left: 16px;
   }
 
   @media (max-height: 600px) {
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
   }
 }
 
-.back-button,
-.close-button {
+.back-button {
   position: absolute;
   top: 12px;
   left: 12px;
+  width: 40px;
+  height: 40px;
+  border: none;
+  background: transparent;
+  color: var(--mat-sys-on-surface-variant);
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+  padding: 0;
+  z-index: 10;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  &:active {
+    background-color: var(--mat-sys-surface-container-highest);
+  }
+
+  mat-icon {
+    font-size: 24px;
+    width: 24px;
+    height: 24px;
+  }
+}
+
+.close-button {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   width: 40px;
   height: 40px;
   border: none;

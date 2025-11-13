@@ -2,9 +2,11 @@
   <h3 class="sheet-title">Create</h3>
 
   @for (option of createOptions; track option.label) {
-    <a mat-list-item (click)="selectOption(option.action)">
-      <mat-icon matListItemIcon>{{ option.icon }}</mat-icon>
-      <span matListItemTitle>{{ option.label }}</span>
-    </a>
+  <a mat-list-item (click)="selectOption(option.action)"
+    (keydown.enter)="selectOption(option.action); $event.preventDefault()"
+    (keydown.space)="selectOption(option.action); $event.preventDefault()" tabindex="0">
+    <mat-icon matListItemIcon>{{ option.icon }}</mat-icon>
+    <span matListItemTitle>{{ option.label }}</span>
+  </a>
   }
 </mat-nav-list>
