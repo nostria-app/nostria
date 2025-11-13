@@ -1,7 +1,10 @@
 <!-- Content Area -->
 <div dialog-content class="note-editor-dialog">
-  <div class="dialog-content-wrapper" (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
-    (dragleave)="onDragLeave($event)" (drop)="onDrop($event)" [class.drag-over]="isDragOver()">
+  <div class="dialog-content-wrapper" [attr.data-drag-enabled]="!showPreview() && !showAdvancedOptions() || null"
+    (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
+    (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
+    (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
+    (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)" [class.drag-over]="isDragOver()">
 
     <!-- Error display -->
     @if (mediaService.error()) {
@@ -279,15 +282,19 @@
     } -->
   </div>
 
-  <div dialog-actions class="action-container" (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
-    (dragleave)="onDragLeave($event)" (drop)="onDrop($event)">
+  <div dialog-actions class="action-container"
+    (dragenter)="!showPreview() && !showAdvancedOptions() && onDragEnter($event)"
+    (dragover)="!showPreview() && !showAdvancedOptions() && onDragOver($event)"
+    (dragleave)="!showPreview() && !showAdvancedOptions() && onDragLeave($event)"
+    (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
     <!-- Left side: Action buttons -->
     <div class="left-actions">
       <button mat-icon-button type="button" (click)="togglePreview()" [color]="showPreview() ? 'primary' : ''"
         matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
-      <button mat-icon-button type="button" (click)="openFileDialog()" [disabled]="isUploading() || isPublishing()"
+      <button mat-icon-button type="button" (click)="openFileDialog()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         matTooltip="Upload image">
         <mat-icon>image</mat-icon>
       </button>
