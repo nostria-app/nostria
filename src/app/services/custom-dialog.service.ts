@@ -116,9 +116,38 @@ export class CustomDialogService {
 
     // Attach content to dialog
     const dialogElement = dialogRef.location.nativeElement;
+    const contentElement = contentRef.location.nativeElement;
+    
+    // Find elements with dialog-header, dialog-content, and dialog-actions attributes
+    const headerElements = contentElement.querySelectorAll('[dialog-header]');
+    const contentElements = contentElement.querySelectorAll('[dialog-content]');
+    const actionElements = contentElement.querySelectorAll('[dialog-actions]');
+    
+    // Get dialog slots
+    const headerSlot = dialogElement.querySelector('.dialog-header');
     const contentSlot = dialogElement.querySelector('.dialog-content');
-    if (contentSlot) {
-      contentSlot.appendChild(contentRef.location.nativeElement);
+    const actionsSlot = dialogElement.querySelector('.dialog-actions');
+    
+    // Append elements to their respective slots
+    if (headerSlot && headerElements.length > 0) {
+      headerElements.forEach((el: Element) => {
+        headerSlot.appendChild(el);
+      });
+    }
+    
+    if (contentSlot && contentElements.length > 0) {
+      contentElements.forEach((el: Element) => {
+        contentSlot.appendChild(el);
+      });
+    } else if (contentSlot) {
+      // If no dialog-content attribute found, append entire component to content
+      contentSlot.appendChild(contentElement);
+    }
+    
+    if (actionsSlot && actionElements.length > 0) {
+      actionElements.forEach((el: Element) => {
+        actionsSlot.appendChild(el);
+      });
     }
 
     // Attach dialog to the DOM

@@ -68,19 +68,22 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: center;
-  padding: 20px 64px 16px;
+  justify-content: space-between;
+  padding: 20px 64px;
   position: relative;
   // border-bottom: 1px solid var(--mat-sys-outline-variant);
   flex-shrink: 0;
+  gap: 16px;
 
   @media (max-width: 600px),
   (max-height: 700px) {
-    padding: 16px 60px 12px;
+    padding: 16px 60px;
+    gap: 12px;
   }
 
   @media (max-height: 600px) {
-    padding: 12px 60px 8px;
+    padding: 12px 60px;
+    gap: 8px;
   }
 }
 
@@ -90,7 +93,10 @@
   font-weight: 500;
   color: var(--mat-sys-on-surface);
   text-align: center;
-  flex: 0 1 auto;
+  flex: 0 0 auto;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 
   @media (max-width: 600px),
   (max-height: 700px) {
@@ -105,7 +111,7 @@
 .header-icon {
   position: absolute;
   top: 50%;
-  left: 20px;
+  right: 56px;
   transform: translateY(-50%);
   width: 32px;
   height: 32px;
@@ -116,7 +122,7 @@
   (max-height: 700px) {
     width: 32px;
     height: 32px;
-    left: 16px;
+    right: 52px;
   }
 
   @media (max-height: 600px) {
@@ -367,6 +373,61 @@
 // Focus state for accessibility - disabled to avoid visible outline
 .dialog-container:focus-visible {
   outline: none;
+}
+
+// Account banner styles (for note editor and similar dialogs)
+// Using ::ng-deep to allow styles to penetrate into projected content
+::ng-deep .account-banner {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+
+  .current-account-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    .current-account-avatar {
+      flex-shrink: 0;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      overflow: hidden;
+      background-color: var(--mat-sys-surface-variant);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      .account-avatar-img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .account-avatar-icon {
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+
+    .current-account-details {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      min-width: 0;
+
+      .current-account-name {
+        font-size: 13px;
+        color: var(--mat-sys-on-surface);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+    }
+  }
 }
 
 // Print styles

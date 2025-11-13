@@ -133,7 +133,7 @@ interface NavItem {
   templateUrl: './app.html',
   styleUrl: './app.scss',
   host: {
-    '(keydown)': 'onHostKeyDown($event)',
+    '(window:keydown)': 'onWindowKeyDown($event)',
   },
 })
 export class App implements OnInit {
@@ -1037,8 +1037,8 @@ export class App implements OnInit {
     }
   }
 
-  onHostKeyDown(event: KeyboardEvent): void {
-    // ALT+N shortcut to open create options
+  onWindowKeyDown(event: KeyboardEvent): void {
+    // ALT+N shortcut to open create options (global shortcut)
     if (event.altKey && event.key.toLowerCase() === 'n') {
       event.preventDefault();
       if (this.app.authenticated()) {

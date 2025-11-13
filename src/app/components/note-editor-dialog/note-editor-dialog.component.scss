@@ -3,57 +3,6 @@
   flex-direction: column;
   height: 100%;
 
-  .account-banner {
-    display: flex;
-    align-items: center;
-
-    .current-account-info {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-
-      .current-account-avatar {
-        flex-shrink: 0;
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        overflow: hidden;
-        background-color: var(--mat-sys-surface-variant);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-
-        .account-avatar-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-
-        .account-avatar-icon {
-          font-size: 24px;
-          width: 24px;
-          height: 24px;
-          color: var(--mat-sys-on-surface-variant);
-        }
-      }
-
-      .current-account-details {
-        display: flex;
-        flex-direction: column;
-        gap: 0;
-        min-width: 0;
-
-        .current-account-name {
-          font-size: 13px;
-          color: var(--mat-sys-on-surface);
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-      }
-    }
-  }
-
   .dialog-content-wrapper {
     position: relative;
     flex: 1;
