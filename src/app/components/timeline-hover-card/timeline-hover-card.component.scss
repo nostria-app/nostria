@@ -18,6 +18,10 @@
   padding: 16px;
   background-color: var(--mat-app-surface-variant);
   border-bottom: 1px solid var(--mat-sys-outline-variant);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 
   .profile-link {
     display: flex;
@@ -25,6 +29,8 @@
     gap: 12px;
     text-decoration: none;
     color: inherit;
+    flex: 1;
+    min-width: 0;
 
     &:hover {
       .profile-name {
@@ -39,6 +45,7 @@
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--mat-sys-outline-variant);
+    flex-shrink: 0;
   }
 
   .default-avatar {
@@ -46,12 +53,28 @@
     height: 40px;
     font-size: 40px;
     color: var(--mat-sys-on-surface-variant);
+    flex-shrink: 0;
   }
 
   .profile-name {
     font-size: 16px;
-    font-weight: 500;
     color: var(--mat-sys-on-surface);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .favorite-button {
+    flex-shrink: 0;
+    color: var(--mat-sys-on-surface-variant);
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+
+    mat-icon {
+      color: inherit;
+    }
   }
 }
 
