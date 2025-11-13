@@ -105,6 +105,9 @@ interface NoteAutoDraft {
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
   styleUrl: './note-editor-dialog.component.scss',
+  host: {
+    '(keydown)': 'onHostKeyDown($event)',
+  },
 })
 export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   dialogRef?: CustomDialogRef<NoteEditorDialogComponent, { published: boolean; event?: NostrEvent }>;
@@ -868,6 +871,16 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Check for mention trigger
     this.handleMentionInput(newContent, target.selectionStart || 0);
+  }
+
+  onHostKeyDown(event: KeyboardEvent): void {
+    // Alt+P shortcut to publish note
+    if (event.altKey && event.key.toLowerCase() === 'p') {
+      event.preventDefault();
+      if (this.canPublish() && !this.isPublishing()) {
+        this.publishNote();
+      }
+    }
   }
 
   onContentKeyDown(event: KeyboardEvent): void {
