@@ -360,6 +360,98 @@
   outline: none;
 }
 
+// Action container styles (for note editor and similar dialogs)
+// Using ::ng-deep to allow styles to penetrate into projected content
+::ng-deep .action-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+
+  .left-actions,
+  .right-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    flex: 1;
+  }
+
+  .left-actions {
+    justify-content: flex-start;
+
+    button {
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  .right-actions {
+    gap: 12px;
+    justify-content: flex-end;
+
+    .pow-progress-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      background-color: var(--mat-sys-primary-container);
+      border-radius: 16px;
+      color: var(--mat-sys-on-primary-container);
+
+      .pow-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--mat-sys-primary);
+      }
+
+      .pow-text {
+        font-size: 12px;
+        font-weight: 500;
+      }
+    }
+
+    .publish-button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      .spinning {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+
+  @media (max-width: 600px) {
+    gap: 8px;
+    flex-wrap: wrap;
+
+    .left-actions {
+      flex: 0 0 auto;
+    }
+
+    .right-actions {
+      gap: 8px;
+      flex: 1 1 auto;
+      min-width: 0;
+
+      button {
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
 // Print styles
 @media print {
   .dialog-backdrop {
