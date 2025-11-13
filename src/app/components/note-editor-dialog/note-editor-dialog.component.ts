@@ -305,6 +305,13 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Add paste event listener for clipboard image handling
     this.setupPasteHandler();
+
+    // Auto-focus the textarea
+    setTimeout(() => {
+      if (this.contentTextarea) {
+        this.contentTextarea.nativeElement.focus();
+      }
+    }, 100);
   }
 
   ngOnDestroy() {
