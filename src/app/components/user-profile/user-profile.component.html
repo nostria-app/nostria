@@ -32,31 +32,41 @@
 
     <!-- Avatar section - single image element -->
     @if (view() !== 'name' && view() !== 'tiny') {
-    <a [routerLink]="['/p', npubValue()]" class="user-profile-avatar"
-      [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
-      [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)" #avatarElement
-      (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()">
-      @if (isLoading()) {
-      <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
-      } @else if (profile()?.data?.picture && !imageLoadError()) {
-      @if (settingsService.settings().imageCacheEnabled) {
-      <img [src]="getOptimizedImageUrl(profile().data.picture)" (error)="onImageLoadError()" alt="User Avatar"
-        class="user-avatar" loading="lazy" />
-      } @else {
-      <img [src]="profile().data.picture" (error)="onImageLoadError()" alt="User Avatar" class="user-avatar"
-        loading="lazy" />
+    <div class="user-profile-avatar-container">
+      <a [routerLink]="['/p', npubValue()]" class="user-profile-avatar"
+        [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
+        [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)" #avatarElement
+        (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()">
+        @if (isLoading()) {
+        <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
+        } @else if (profile()?.data?.picture && !imageLoadError()) {
+        @if (settingsService.settings().imageCacheEnabled) {
+        <img [src]="getOptimizedImageUrl(profile().data.picture)" (error)="onImageLoadError()" alt="User Avatar"
+          class="user-avatar" loading="lazy" />
+        } @else {
+        <img [src]="profile().data.picture" (error)="onImageLoadError()" alt="User Avatar" class="user-avatar"
+          loading="lazy" />
+        }
+        } @else {
+        <mat-icon [ngClass]="[
+                'default-user-avatar',
+                isProfileNotFound() ? 'not-found-avatar' : '',
+                imageLoadError() ? 'error-avatar' : '',
+              ]" [style.font-size]="getDefaultAvatarSize()" [style.height]="getDefaultAvatarSize()"
+          [style.width]="getDefaultAvatarSize()">
+          {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
+        </mat-icon>
+        }
+      </a>
+
+      <!-- Trust rank badge -->
+      @if (trustEnabled() && trustRank() !== undefined && (view() === 'large' || view() === 'medium' || view() ===
+      'small')) {
+      <div class="trust-rank-badge" [class]="'trust-rank-' + view()" [matTooltip]="'Trust Rank: ' + trustRank()">
+        {{ trustRank() }}
+      </div>
       }
-      } @else {
-      <mat-icon [ngClass]="[
-              'default-user-avatar',
-              isProfileNotFound() ? 'not-found-avatar' : '',
-              imageLoadError() ? 'error-avatar' : '',
-            ]" [style.font-size]="getDefaultAvatarSize()" [style.height]="getDefaultAvatarSize()"
-        [style.width]="getDefaultAvatarSize()">
-        {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
-      </mat-icon>
-      }
-    </a>
+    </div>
     }
     <!-- Content section with conditional rendering based on view -->
 

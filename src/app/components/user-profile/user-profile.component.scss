@@ -58,6 +58,13 @@
     }
   }
 
+  // Avatar container with trust badge
+  .user-profile-avatar-container {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
   .user-profile-avatar {
     display: flex;
     align-items: center;
@@ -106,6 +113,44 @@
 
     mat-spinner {
       margin: 0;
+    }
+  }
+
+  // Trust rank badge
+  .trust-rank-badge {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, var(--mat-sys-primary) 0%, var(--mat-sys-secondary) 100%);
+    color: var(--mat-sys-on-primary);
+    border-radius: 50%;
+    font-weight: 600;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+    z-index: 1;
+
+    &.trust-rank-large {
+      top: -4px;
+      right: -4px;
+      width: 32px;
+      height: 32px;
+      font-size: 14px;
+    }
+
+    &.trust-rank-medium {
+      top: -3px;
+      right: -3px;
+      width: 24px;
+      height: 24px;
+      font-size: 11px;
+    }
+
+    &.trust-rank-small {
+      top: -2px;
+      right: -2px;
+      width: 20px;
+      height: 20px;
+      font-size: 10px;
     }
   }
 
