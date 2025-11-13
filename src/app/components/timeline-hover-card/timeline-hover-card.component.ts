@@ -16,6 +16,7 @@ import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { StorageService } from '../../services/storage.service';
 import { UserRelayService } from '../../services/relays/user-relay';
+import { FavoritesService } from '../../services/favorites.service';
 import { kinds } from 'nostr-tools';
 import { nip19 } from 'nostr-tools';
 import type { NostrRecord } from '../../interfaces';
@@ -39,6 +40,7 @@ export class TimelineHoverCardComponent {
   private utilities = inject(UtilitiesService);
   private storage = inject(StorageService);
   private userRelayService = inject(UserRelayService);
+  private favoritesService = inject(FavoritesService);
   private router = inject(Router);
 
   pubkey = input.required<string>();
@@ -47,6 +49,9 @@ export class TimelineHoverCardComponent {
   isLoading = signal(false);
 
   npubValue = signal<string>('');
+
+  // Expose isFavorite as a computed signal
+  isFavorite = () => this.favoritesService.isFavorite(this.pubkey());
 
   constructor() {
     effect(() => {
@@ -155,5 +160,11 @@ export class TimelineHoverCardComponent {
       author: pubkey,
     });
     this.router.navigate(['/e', neventId]);
+  }
+
+  toggleFavorite(event: Event): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.favoritesService.toggleFavorite(this.pubkey());
   }
 }
