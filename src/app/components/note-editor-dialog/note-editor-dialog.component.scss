@@ -217,20 +217,20 @@
     }
 
     @media (max-width: 600px) {
-      flex-direction: column;
-      align-items: stretch;
       gap: 8px;
+      flex-wrap: wrap;
 
       .left-actions {
-        justify-content: center;
+        flex: 0 0 auto;
       }
 
       .right-actions {
-        flex-direction: column-reverse;
         gap: 8px;
+        flex: 1 1 auto;
+        min-width: 0;
 
         button {
-          width: 100%;
+          white-space: nowrap;
         }
       }
     }

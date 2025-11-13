@@ -246,7 +246,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     const content = this.content();
 
-    if (!content.trim()) return '<span class="empty-preview">Nothing to preview...</span>';
+    if (!content.trim()) return 'Nothing to preview...';
 
     // const formatted = this.formatPreviewContent(content);
     return content;
@@ -702,6 +702,9 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     // This is optional according to NIP-27, but recommended for notifications
     this.extractNip27Tags(this.content(), tags);
 
+    // Extract hashtags from content and add as t-tags
+    this.extractHashtags(this.content(), tags);
+
     // Add expiration tag if enabled
     if (this.expirationEnabled()) {
       const expirationDateTime = this.getExpirationDateTime();
@@ -807,6 +810,28 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         console.warn('Failed to decode NIP-19 identifier:', fullIdentifier, error);
       }
     }
+  }
+
+  /**
+   * Extract hashtags from content and add as t-tags
+   * Hashtags are words prefixed with # (e.g., #nostr, #bitcoin)
+   */
+  private extractHashtags(content: string, tags: string[][]): void {
+    // Match hashtags: # followed by alphanumeric characters and underscores
+    // Use word boundary to ensure proper matching
+    const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
+    const hashtags = new Set<string>();
+
+    let match;
+    while ((match = hashtagRegex.exec(content)) !== null) {
+      const hashtag = match[1].toLowerCase(); // Store lowercase for consistency
+      hashtags.add(hashtag);
+    }
+
+    // Add unique hashtags as t-tags
+    hashtags.forEach(hashtag => {
+      tags.push(['t', hashtag]);
+    });
   }
 
   addMention(pubkey: string): void {
@@ -948,6 +973,15 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   cancel(): void {
+    if (this.isPublishing()) {
+      return;
+    }
+
+    // Stop PoW if running
+    if (this.isPowMining()) {
+      this.stopPow();
+    }
+
     // Check if there's meaningful content before closing
     const content = this.content().trim();
     if (content) {
