@@ -959,7 +959,7 @@ export class EventService {
         title,
         width: '680px',
         maxWidth: '95vw',
-        disableClose: true,
+        disableClose: false, // Allow close button to work
         data,
       }
     );
