@@ -9,14 +9,9 @@
       }
       <div class="profile-name">{{ getDisplayName() }}</div>
     </a>
-    <button
-      mat-icon-button
-      class="favorite-button"
-      (click)="toggleFavorite($event)"
-      [attr.aria-label]="isFavorite() ? 'Remove from favorites' : 'Add to favorites'"
-      type="button"
-    >
-      <mat-icon>{{ isFavorite() ? 'star' : 'star_outline' }}</mat-icon>
+    <button mat-icon-button class="favorite-button" [class.is-favorite]="isFavorite()" (click)="toggleFavorite($event)"
+      [attr.aria-label]="isFavorite() ? 'Remove from favorites' : 'Add to favorites'" type="button">
+      <mat-icon>star</mat-icon>
     </button>
   </div>
 
