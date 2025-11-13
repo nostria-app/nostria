@@ -204,8 +204,8 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
         }
       }
 
-      // Handle Escape key
-      if (event.key === 'Escape' && !this.getDisableClose()) {
+      // Handle Escape key - always allow ESC to close
+      if (event.key === 'Escape') {
         this.onCloseClick();
       }
     });

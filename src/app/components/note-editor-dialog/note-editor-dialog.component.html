@@ -37,7 +37,7 @@
     }
 
     <!-- Content editor with upload actions -->
-    @if (!showPreview()) {
+    @if (!showPreview() && !showAdvancedOptions()) {
     <div class="content-editor-section">
       <div class="textarea-container">
         <mat-form-field appearance="outline" class="content-field">
@@ -220,7 +220,7 @@
     }
 
     <!-- Preview section -->
-    @if (showPreview()) {
+    @if (showPreview() && !showAdvancedOptions()) {
     <div class="preview-section">
       <div class="preview-header">
         <mat-icon class="preview-icon">visibility</mat-icon>
@@ -232,7 +232,7 @@
     }
 
     <!-- Mentions -->
-    @if (mentions().length > 0) {
+    @if (mentions().length > 0 && !showAdvancedOptions()) {
     <div class="mentions-section">
       <span class="mentions-label">Mentioning:</span>
       <mat-chip-set class="mentions-chips">
@@ -247,7 +247,7 @@
     }
 
     <!-- Hashtags -->
-    @if (hashtags().length > 0) {
+    @if (hashtags().length > 0 && !showAdvancedOptions()) {
     <div class="hashtags-section">
       <span class="hashtags-label">Tags:</span>
       <mat-chip-set class="hashtags-chips">
