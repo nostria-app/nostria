@@ -1209,6 +1209,10 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   openFileDialog(): void {
+    if (!this.fileInput?.nativeElement) {
+      console.warn('File input not available. Make sure preview and advanced options are closed.');
+      return;
+    }
     this.fileInput.nativeElement.click();
   }
 
