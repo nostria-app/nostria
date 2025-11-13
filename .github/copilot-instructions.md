@@ -58,6 +58,8 @@ Never set the font-weight in CSS. The current font for headlines does not suppor
 
 ## Styling
 
+Always use "field-sizing: content" for textareas that grow with content. This is compatible with all modern browsers.
+
 - The app supports dark and light mode, so make sure your styles work well in both modes.
 - Don't add hardcoded colors. Use CSS variables defined in styles.scss and theme.scss
 

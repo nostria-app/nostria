@@ -114,12 +114,20 @@
 
   .content-field {
     width: 100%;
-    margin-bottom: 16px;
+
+    ::ng-deep .mat-mdc-form-field-infix {
+      overflow: visible;
+    }
+
+    ::ng-deep .mat-mdc-text-field-wrapper {
+      overflow: visible;
+    }
 
     .content-textarea {
-      resize: vertical;
       field-sizing: content;
-      min-height: 80px;
+      resize: none;
+      overflow: hidden;
+      min-height: 120px;
 
       &.over-limit {
         color: var(--mat-sys-error);
@@ -407,10 +415,12 @@
 
 // Preview section styles
 .preview-section {
-  margin-top: 16px;
+  margin-bottom: 16px;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 8px;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 
   .preview-header {
     display: flex;
@@ -441,8 +451,8 @@
     font-size: 14px;
     line-height: 1.5;
     word-break: break-word;
-    max-height: 200px;
-    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
 
     // Style links in preview
     .preview-link {

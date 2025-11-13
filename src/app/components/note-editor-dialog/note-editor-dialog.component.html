@@ -52,6 +52,7 @@
     }
 
     <!-- Content editor with upload actions -->
+    @if (!showPreview()) {
     <div class="content-editor-section">
       <div class="textarea-container">
         <mat-form-field appearance="outline" class="content-field">
@@ -76,6 +77,7 @@
       <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" multiple
         class="hidden-file-input" aria-label="Upload image files" />
     </div>
+    }
 
     <!-- Advanced Options -->
     @if (showAdvancedOptions()) {
