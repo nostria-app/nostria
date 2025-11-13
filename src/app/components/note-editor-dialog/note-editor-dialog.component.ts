@@ -916,32 +916,28 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   private calculateMentionPosition(textarea: HTMLTextAreaElement): { top: number; left: number } {
-    // Use viewport positioning to properly place the dropdown above the textarea
-    // This ensures it floats above the textarea regardless of container constraints
+    // Get cursor coordinates relative to the textarea
+    const cursorCoords = this.getCaretCoordinates(textarea);
 
     const textareaRect = textarea.getBoundingClientRect();
 
-    // Position above the textarea with adequate spacing
-    const autocompleteHeight = 300; // Approximate height of dropdown
-    const gap = 16; // Gap between dropdown and textarea
+    // Calculate absolute position of cursor in viewport
+    const cursorTop = textareaRect.top + cursorCoords.top;
+    const cursorLeft = textareaRect.left + cursorCoords.left;
 
-    // Calculate position above the textarea
-    let top = textareaRect.top - autocompleteHeight - gap;
-    let left = textareaRect.left;
-
-    // Ensure the dropdown doesn't go above the viewport
-    if (top < 10) {
-      // If not enough space above, position below the textarea instead
-      top = textareaRect.bottom + gap;
-    }
+    // Position dropdown below the cursor
+    const gap = 4; // Small gap below cursor
+    const top = cursorTop + cursorCoords.height + gap;
+    let left = cursorLeft;
 
     // Ensure horizontal positioning fits within viewport
     const viewportWidth = window.innerWidth;
-    const autocompleteWidth = 420; // Updated width from CSS
+    const autocompleteWidth = 420;
 
     if (left + autocompleteWidth > viewportWidth - 16) {
-      left = viewportWidth - autocompleteWidth - 16; // 16px margin from right edge
-    }    // Ensure minimum left position
+      left = viewportWidth - autocompleteWidth - 16;
+    }
+
     if (left < 16) {
       left = 16;
     }
@@ -950,6 +946,56 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       top: top,
       left: left
     };
+  }
+
+  private getCaretCoordinates(element: HTMLTextAreaElement): { top: number; left: number; height: number } {
+    // Create a mirror div to calculate caret position
+    const div = document.createElement('div');
+    const style = getComputedStyle(element);
+
+    // Copy textarea styles to div
+    const properties = [
+      'boxSizing', 'width', 'height', 'overflowX', 'overflowY',
+      'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth',
+      'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft',
+      'fontStyle', 'fontVariant', 'fontWeight', 'fontStretch', 'fontSize',
+      'fontSizeAdjust', 'lineHeight', 'fontFamily', 'textAlign', 'textTransform',
+      'textIndent', 'textDecoration', 'letterSpacing', 'wordSpacing'
+    ];
+
+    properties.forEach(prop => {
+      const key = prop as keyof CSSStyleDeclaration;
+      const value = style[key];
+      if (typeof value === 'string') {
+        div.style.setProperty(prop, value);
+      }
+    });
+
+    div.style.position = 'absolute';
+    div.style.visibility = 'hidden';
+    div.style.whiteSpace = 'pre-wrap';
+    div.style.wordWrap = 'break-word';
+
+    document.body.appendChild(div);
+
+    const position = element.selectionStart || 0;
+    const textBeforeCaret = element.value.substring(0, position);
+
+    div.textContent = textBeforeCaret;
+
+    const span = document.createElement('span');
+    span.textContent = element.value.substring(position) || '.';
+    div.appendChild(span);
+
+    const coordinates = {
+      top: span.offsetTop,
+      left: span.offsetLeft,
+      height: parseInt(style.lineHeight) || parseInt(style.fontSize) || 20
+    };
+
+    document.body.removeChild(div);
+
+    return coordinates;
   }
 
   onMentionSelected(selection: MentionSelection): void {
