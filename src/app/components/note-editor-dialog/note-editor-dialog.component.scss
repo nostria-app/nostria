@@ -126,10 +126,16 @@
     gap: 16px;
     flex-shrink: 0;
 
-    .left-actions {
+    .left-actions,
+    .right-actions {
       display: flex;
       gap: 4px;
       align-items: center;
+      flex: 1;
+    }
+
+    .left-actions {
+      justify-content: flex-start;
 
       button {
         color: var(--mat-sys-primary);
@@ -137,10 +143,7 @@
     }
 
     .right-actions {
-      display: flex;
       gap: 12px;
-      align-items: center;
-      flex: 1;
       justify-content: flex-end;
 
       .pow-progress-indicator {

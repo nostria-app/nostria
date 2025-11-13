@@ -227,16 +227,14 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   onBackdropClick(): void {
-    this.backdropClicked.emit();
     if (!this.getDisableClose()) {
+      this.backdropClicked.emit();
       this.closed.emit();
     }
   }
 
   onCloseClick(): void {
-    if (!this.getDisableClose()) {
-      this.closed.emit();
-    }
+    this.closed.emit();
   }
 
   onBackClick(): void {
