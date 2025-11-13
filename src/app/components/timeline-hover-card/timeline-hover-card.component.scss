@@ -66,14 +66,42 @@
 
   .favorite-button {
     flex-shrink: 0;
-    color: var(--mat-sys-on-surface-variant);
-
-    &:hover {
-      color: var(--mat-sys-primary);
-    }
+    transition: transform 0.2s ease;
 
     mat-icon {
-      color: inherit;
+      transition: all 0.2s ease;
+    }
+
+    &:hover {
+      transform: scale(1.1);
+    }
+
+    // When favorited - bright gold filled star
+    &.is-favorite {
+      mat-icon {
+        color: #ffd700;
+        text-shadow: 0 0 8px rgba(255, 215, 0, 0.5);
+      }
+
+      &:hover mat-icon {
+        color: #ffed4e;
+        text-shadow: 0 0 12px rgba(255, 215, 0, 0.7);
+      }
+    }
+
+    // When not favorited - outlined/stroked star effect
+    &:not(.is-favorite) {
+      mat-icon {
+        color: transparent;
+        -webkit-text-stroke: 1.5px var(--mat-sys-on-surface-variant);
+        opacity: 0.7;
+      }
+
+      &:hover mat-icon {
+        color: transparent;
+        -webkit-text-stroke: 1.5px var(--mat-sys-primary);
+        opacity: 1;
+      }
     }
   }
 }
