@@ -2,20 +2,8 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { LocalSettingsService } from './local-settings.service';
 import { LoggerService } from './logger.service';
 import { RelayPoolService } from './relays/relay-pool';
+import { StorageService, TrustMetrics } from './storage.service';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
-
-interface TrustMetrics {
-  rank?: number;
-  followers?: number;
-  postCount?: number;
-  zapAmtRecd?: number;
-  zapAmtSent?: number;
-  firstCreatedAt?: number;
-  replyCount?: number;
-  reactionsCount?: number;
-  zapCntRecd?: number;
-  zapCntSent?: number;
-}
 
 /**
  * Service for managing NIP-85 Web of Trust data
@@ -28,8 +16,9 @@ export class TrustService {
   private localSettings = inject(LocalSettingsService);
   private logger = inject(LoggerService);
   private relayPool = inject(RelayPoolService);
+  private storage = inject(StorageService);
 
-  // Cache of trust metrics by pubkey
+  // In-memory cache for quick access
   private metricsCache = new Map<string, TrustMetrics>();
 
   // Signal for tracking loaded pubkeys
@@ -51,18 +40,59 @@ export class TrustService {
 
   /**
    * Fetch trust metrics for a specific pubkey
-   * Returns cached data if available
+   * Returns cached data if available, otherwise fetches from relay and saves to database
    */
   async fetchMetrics(pubkey: string): Promise<TrustMetrics | null> {
     if (!this.isEnabled()) {
       return null;
     }
 
-    // Return cached data if available
+    // Check in-memory cache first
     if (this.metricsCache.has(pubkey)) {
-      return this.metricsCache.get(pubkey) || null;
+      const cached = this.metricsCache.get(pubkey);
+      if (cached) {
+        // Check if data is older than 24 hours
+        const age = Date.now() - (cached.lastUpdated || 0);
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+        if (age > TWENTY_FOUR_HOURS) {
+          // Refresh in background but return cached data immediately
+          this.refreshMetricsInBackground(pubkey);
+        }
+        return cached;
+      }
     }
 
+    // Check database cache
+    try {
+      const cachedMetrics = await this.storage.getTrustMetrics(pubkey);
+      if (cachedMetrics) {
+        // Cache in memory for quick access
+        this.metricsCache.set(pubkey, cachedMetrics);
+        this.loadedPubkeys.update(set => new Set(set).add(pubkey));
+        this.logger.debug(`Trust metrics loaded from database for ${pubkey}`);
+        
+        // Check if data is older than 24 hours
+        const age = Date.now() - (cachedMetrics.lastUpdated || 0);
+        const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+        if (age > TWENTY_FOUR_HOURS) {
+          this.logger.debug(`Trust metrics for ${pubkey} are stale (${Math.round(age / 1000 / 60 / 60)}h old), refreshing in background`);
+          this.refreshMetricsInBackground(pubkey);
+        }
+        
+        return cachedMetrics;
+      }
+    } catch (error) {
+      this.logger.error(`Failed to load trust metrics from database for ${pubkey}`, error);
+    }
+
+    // Fetch from relay if not in cache
+    return this.fetchMetricsFromRelay(pubkey);
+  }
+
+  /**
+   * Fetch metrics from relay and save to database
+   */
+  private async fetchMetricsFromRelay(pubkey: string): Promise<TrustMetrics | null> {
     try {
       const relay = this.trustRelayUrl();
       this.logger.debug(`Fetching trust metrics for ${pubkey} from ${relay}`);
@@ -86,16 +116,38 @@ export class TrustService {
       const event = events[0];
       const metrics = this.parseMetrics(event);
 
-      // Cache the metrics
+      // Debug: Log the full event and parsed metrics
+      console.log('Trust event received for', pubkey);
+      console.log('Event tags:', event.tags);
+      console.log('Parsed metrics:', metrics);
+
+      // Save to database
+      await this.storage.saveTrustMetrics(pubkey, metrics);
+
+      // Cache in memory
       this.metricsCache.set(pubkey, metrics);
       this.loadedPubkeys.update(set => new Set(set).add(pubkey));
 
-      this.logger.debug(`Trust metrics loaded for ${pubkey}:`, metrics);
+      this.logger.debug(`Trust metrics loaded from relay for ${pubkey}:`, metrics);
       return metrics;
     } catch (error) {
-      this.logger.error(`Failed to fetch trust metrics for ${pubkey}`, error);
+      this.logger.error(`Failed to fetch trust metrics from relay for ${pubkey}`, error);
       return null;
     }
+  }
+
+  /**
+   * Refresh metrics in background without blocking
+   */
+  private refreshMetricsInBackground(pubkey: string): void {
+    queueMicrotask(async () => {
+      try {
+        await this.fetchMetricsFromRelay(pubkey);
+        this.logger.debug(`Background refresh completed for ${pubkey}`);
+      } catch (error) {
+        this.logger.error(`Background refresh failed for ${pubkey}`, error);
+      }
+    });
   }
 
   /**
@@ -106,38 +158,71 @@ export class TrustService {
 
     for (const tag of event.tags) {
       const [tagName, value] = tag;
-      const numValue = parseInt(value, 10);
+      
+      // Skip the 'd' tag (pubkey identifier)
+      if (tagName === 'd') {
+        continue;
+      }
+
+      const numValue = parseFloat(value);
 
       switch (tagName) {
         case 'rank':
-          metrics.rank = numValue;
+          metrics.rank = parseInt(value, 10);
           break;
         case 'followers':
-          metrics.followers = numValue;
+          metrics.followers = parseInt(value, 10);
           break;
         case 'post_cnt':
-          metrics.postCount = numValue;
+          metrics.postCount = parseInt(value, 10);
           break;
         case 'zap_amt_recd':
-          metrics.zapAmtRecd = numValue;
+          metrics.zapAmtRecd = parseInt(value, 10);
           break;
         case 'zap_amt_sent':
-          metrics.zapAmtSent = numValue;
+          metrics.zapAmtSent = parseInt(value, 10);
           break;
         case 'first_created_at':
-          metrics.firstCreatedAt = numValue;
+          metrics.firstCreatedAt = parseInt(value, 10);
           break;
         case 'reply_cnt':
-          metrics.replyCount = numValue;
+          metrics.replyCount = parseInt(value, 10);
           break;
         case 'reactions_cnt':
-          metrics.reactionsCount = numValue;
+          metrics.reactionsCount = parseInt(value, 10);
           break;
         case 'zap_cnt_recd':
-          metrics.zapCntRecd = numValue;
+          metrics.zapCntRecd = parseInt(value, 10);
           break;
         case 'zap_cnt_sent':
-          metrics.zapCntSent = numValue;
+          metrics.zapCntSent = parseInt(value, 10);
+          break;
+        case 'hops':
+          metrics.hops = parseInt(value, 10);
+          break;
+        case 'personalizedGrapeRank_influence':
+          metrics.personalizedGrapeRank_influence = numValue;
+          break;
+        case 'personalizedGrapeRank_average':
+          metrics.personalizedGrapeRank_average = numValue;
+          break;
+        case 'personalizedGrapeRank_confidence':
+          metrics.personalizedGrapeRank_confidence = numValue;
+          break;
+        case 'personalizedGrapeRank_input':
+          metrics.personalizedGrapeRank_input = numValue;
+          break;
+        case 'personalizedPageRank':
+          metrics.personalizedPageRank = numValue;
+          break;
+        case 'verifiedFollowerCount':
+          metrics.verifiedFollowerCount = parseInt(value, 10);
+          break;
+        case 'verifiedMuterCount':
+          metrics.verifiedMuterCount = parseInt(value, 10);
+          break;
+        case 'verifiedReporterCount':
+          metrics.verifiedReporterCount = parseInt(value, 10);
           break;
       }
     }
@@ -160,12 +245,23 @@ export class TrustService {
   }
 
   /**
-   * Clear cached metrics
+   * Clear cached metrics (both in-memory and database)
    */
-  clearCache(): void {
+  async clearCache(): Promise<void> {
     this.metricsCache.clear();
     this.loadedPubkeys.set(new Set());
-    this.logger.debug('Trust metrics cache cleared');
+    // Note: Database entries are kept for persistence
+    // If you want to clear database too, call storage.deleteInfoByType('trust')
+    this.logger.debug('Trust metrics in-memory cache cleared');
+  }
+
+  /**
+   * Get pubkeys sorted by trust rank
+   * @param minRank Optional minimum rank filter (e.g., 95 for high-trust only)
+   * @param maxRank Optional maximum rank filter
+   */
+  async getPubkeysByTrustRank(minRank?: number, maxRank?: number): Promise<string[]> {
+    return this.storage.getPubkeysByTrustRank(minRank, maxRank);
   }
 
   /**
