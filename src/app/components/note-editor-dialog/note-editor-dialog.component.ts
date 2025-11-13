@@ -126,6 +126,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
+  @ViewChild(MentionAutocompleteComponent) mentionAutocomplete?: MentionAutocompleteComponent;
 
   // Auto-save configuration
   private readonly AUTO_SAVE_INTERVAL = 2000; // Save every 2 seconds
@@ -872,10 +873,51 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   onContentKeyDown(event: KeyboardEvent): void {
     const mentionConfig = this.mentionConfig();
 
-    // If mention autocomplete is open, let it handle arrow keys and enter
+    // If mention autocomplete is open, handle navigation keys
     if (mentionConfig) {
-      if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) {
-        // Let the autocomplete component handle these keys
+      if (event.key === 'Enter') {
+        // Prevent default behavior and stop propagation
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Manually trigger selection from the autocomplete component
+        if (this.mentionAutocomplete) {
+          const results = this.mentionAutocomplete.searchResults();
+          const focusedIndex = this.mentionAutocomplete.focusedIndex();
+          const focusedProfile = results[focusedIndex];
+          
+          if (focusedProfile) {
+            this.mentionAutocomplete.selectMention(focusedProfile);
+          }
+        }
+        return;
+      }
+      
+      if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
+        // Prevent default behavior and stop propagation
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Manually update focus index in autocomplete
+        if (this.mentionAutocomplete) {
+          const results = this.mentionAutocomplete.searchResults();
+          const currentIndex = this.mentionAutocomplete.focusedIndex();
+          
+          if (event.key === 'ArrowDown') {
+            const newIndex = Math.min(currentIndex + 1, results.length - 1);
+            this.mentionAutocomplete.setFocusedIndex(newIndex);
+          } else if (event.key === 'ArrowUp') {
+            const newIndex = Math.max(currentIndex - 1, 0);
+            this.mentionAutocomplete.setFocusedIndex(newIndex);
+          }
+        }
+        return;
+      }
+      
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        event.stopPropagation();
+        this.onMentionDismissed();
         return;
       }
     }
