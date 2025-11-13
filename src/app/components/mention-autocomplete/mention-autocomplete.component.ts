@@ -74,6 +74,7 @@ export interface MentionAutocompleteConfig {
               tabindex="0"
               role="button"
               [attr.aria-selected]="focusedIndex() === i"
+              #mentionItem
             >
               <div class="mention-item-avatar">
                 <app-user-profile
@@ -176,6 +177,16 @@ export class MentionAutocompleteComponent implements OnInit {
   //   }
   // });
 
+  // Scroll to focused item when index changes
+  private scrollEffect = effect(() => {
+    const index = this.focusedIndex();
+    const visible = this.isVisible();
+    
+    if (visible) {
+      this.scrollToFocusedItem(index);
+    }
+  });
+
   ngOnInit(): void {
     // Reset focused index when search results change
     effect(() => {
@@ -234,6 +245,22 @@ export class MentionAutocompleteComponent implements OnInit {
         this.dismissed.emit();
         break;
     }
+  }
+
+  private scrollToFocusedItem(index: number): void {
+    setTimeout(() => {
+      const container = this.autocompleteContainer()?.nativeElement;
+      const items = container?.querySelectorAll('.mention-item');
+      
+      if (items && items[index]) {
+        const item = items[index] as HTMLElement;
+        item.scrollIntoView({
+          behavior: 'smooth',
+          block: 'nearest',
+          inline: 'nearest'
+        });
+      }
+    }, 10);
   }
 
   setFocusedIndex(index: number): void {
