@@ -23,6 +23,7 @@ import {
 } from '../components/comment-editor-dialog/comment-editor-dialog.component';
 import { CustomDialogService, CustomDialogRef } from './custom-dialog.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { AccountStateService } from './account-state.service';
 
 export interface Reaction {
   emoji: string;
@@ -92,6 +93,7 @@ export class EventService {
   private readonly customDialog = inject(CustomDialogService);
   private readonly relays = inject(RelaysService);
   private readonly subscriptionCache = inject(SubscriptionCacheService);
+  private readonly accountState = inject(AccountStateService);
 
   /**
    * Parse event tags to extract thread information
@@ -957,9 +959,10 @@ export class EventService {
       NoteEditorDialogComponent,
       {
         title,
+        headerIcon: this.accountState.profile()?.data?.picture || '',
         width: '680px',
         maxWidth: '95vw',
-        disableClose: false, // Allow close button to work
+        disableClose: true,
         data,
       }
     );
