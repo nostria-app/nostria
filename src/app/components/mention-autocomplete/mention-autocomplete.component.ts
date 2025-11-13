@@ -223,6 +223,7 @@ export class MentionAutocompleteComponent implements OnInit {
     switch (event.key) {
       case 'ArrowDown':
         event.preventDefault();
+        event.stopPropagation();
         this.focusedIndex.update(index =>
           Math.min(index + 1, results.length - 1)
         );
@@ -230,11 +231,13 @@ export class MentionAutocompleteComponent implements OnInit {
 
       case 'ArrowUp':
         event.preventDefault();
+        event.stopPropagation();
         this.focusedIndex.update(index => Math.max(index - 1, 0));
         break;
 
       case 'Enter': {
         event.preventDefault();
+        event.stopPropagation();
         const focusedProfile = results[this.focusedIndex()];
         if (focusedProfile) {
           this.selectMention(focusedProfile);
@@ -242,6 +245,7 @@ export class MentionAutocompleteComponent implements OnInit {
         break;
       } case 'Escape':
         event.preventDefault();
+        event.stopPropagation();
         this.dismissed.emit();
         break;
     }
