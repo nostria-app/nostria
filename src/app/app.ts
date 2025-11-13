@@ -132,6 +132,9 @@ interface NavItem {
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
+  host: {
+    '(keydown)': 'onHostKeyDown($event)',
+  },
 })
 export class App implements OnInit {
   title = 'Nostria';
@@ -1031,6 +1034,16 @@ export class App implements OnInit {
 
     if (this.layout.isHandset()) {
       this.toggleSidenav();
+    }
+  }
+
+  onHostKeyDown(event: KeyboardEvent): void {
+    // ALT+N shortcut to open create options
+    if (event.altKey && event.key.toLowerCase() === 'n') {
+      event.preventDefault();
+      if (this.app.authenticated()) {
+        this.openCreateOptions();
+      }
     }
   }
 
