@@ -295,7 +295,7 @@
       </button>
       <button mat-icon-button type="button" (click)="openFileDialog()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        matTooltip="Upload image">
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Upload image">
         <mat-icon>image</mat-icon>
       </button>
       <button mat-icon-button type="button" (click)="toggleAdvancedOptions()"
