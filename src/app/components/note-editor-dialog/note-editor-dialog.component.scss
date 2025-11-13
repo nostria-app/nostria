@@ -3,49 +3,26 @@
   flex-direction: column;
   height: 100%;
 
-  .dialog-content-wrapper {
-    position: relative;
-    flex: 1;
-    overflow-y: auto;
+  .account-banner {
     display: flex;
-    flex-direction: column;
-
-    &.drag-over {
-      border: 0px dashed var(--mat-sys-primary);
-      border-radius: 8px;
-      background-color: rgba(var(--mat-sys-primary-rgb), 0.05);
-    }
-  }
-
-  .current-account-banner {
+    align-items: center;
     margin-bottom: 16px;
-    padding: 12px 16px;
-    background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
-    border-radius: 12px;
-    border: 2px solid var(--mat-sys-primary);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-    // Hide on small heights to save space
-    @media (max-height: 600px) {
-      display: none;
-    }
 
     .current-account-info {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
 
       .current-account-avatar {
         flex-shrink: 0;
-        width: 40px;
-        height: 40px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         overflow: hidden;
         background-color: var(--mat-sys-surface-variant);
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 2px solid var(--mat-sys-primary);
 
         .account-avatar-img {
           width: 100%;
@@ -54,9 +31,9 @@
         }
 
         .account-avatar-icon {
-          font-size: 32px;
-          width: 32px;
-          height: 32px;
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
           color: var(--mat-sys-on-surface-variant);
         }
       }
@@ -64,26 +41,32 @@
       .current-account-details {
         display: flex;
         flex-direction: column;
-        gap: 2px;
-        flex: 1;
+        gap: 0;
         min-width: 0;
 
-        .current-account-label {
-          font-size: 11px;
-          text-transform: uppercase;
-          letter-spacing: 0.5px;
-          color: var(--mat-sys-on-primary-container);
-          opacity: 0.8;
-        }
-
         .current-account-name {
-          font-size: 15px;
-          color: var(--mat-sys-on-primary-container);
+          font-size: 13px;
+          color: var(--mat-sys-on-surface);
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;
         }
       }
+    }
+  }
+
+  .dialog-content-wrapper {
+    position: relative;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 20px;
+
+    &.drag-over {
+      border: 0px dashed var(--mat-sys-primary);
+      border-radius: 8px;
+      background-color: rgba(var(--mat-sys-primary-rgb), 0.05);
     }
   }
 
@@ -115,12 +98,16 @@
   .content-field {
     width: 100%;
 
+    ::ng-deep .mat-mdc-text-field-wrapper {
+      overflow: visible;
+    }
+
     ::ng-deep .mat-mdc-form-field-infix {
       overflow: visible;
     }
 
-    ::ng-deep .mat-mdc-text-field-wrapper {
-      overflow: visible;
+    ::ng-deep .mdc-floating-label {
+      max-width: none;
     }
 
     .content-textarea {
@@ -146,6 +133,23 @@
     }
 
     .mentions-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+  }
+
+  .hashtags-section {
+    margin-bottom: 16px;
+
+    .hashtags-label {
+      display: block;
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      margin-bottom: 8px;
+    }
+
+    .hashtags-chips {
       display: flex;
       flex-wrap: wrap;
       gap: 4px;
@@ -293,9 +297,7 @@
     }
 
     .preview-section {
-      .preview-content {
-        max-height: 150px;
-      }
+      // No max-height constraint - let it expand naturally
     }
   }
 }
@@ -418,9 +420,6 @@
   margin-bottom: 16px;
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 8px;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
 
   .preview-header {
     display: flex;
@@ -451,8 +450,6 @@
     font-size: 14px;
     line-height: 1.5;
     word-break: break-word;
-    flex: 1;
-    min-height: 0;
 
     // Style links in preview
     .preview-link {

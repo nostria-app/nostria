@@ -2,7 +2,9 @@
   <!-- Current Account Display -->
   <div dialog-content class="dialog-content-wrapper" (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
     (dragleave)="onDragLeave($event)" (drop)="onDrop($event)" [class.drag-over]="isDragOver()">
-    <div class="current-account-banner">
+
+    <!-- Account info -->
+    <div class="account-banner">
       <div class="current-account-info">
         <div class="current-account-avatar">
           @if (currentAccountAvatar()) {
@@ -12,7 +14,6 @@
           }
         </div>
         <div class="current-account-details">
-          <span class="current-account-label">Publishing as</span>
           <span class="current-account-name">{{ currentAccountDisplayName() }}</span>
         </div>
       </div>
@@ -255,6 +256,20 @@
         <mat-chip removable (removed)="removeMention(mention)">
           {{ mention.slice(0, 16) }}...
           <mat-icon matChipRemove>cancel</mat-icon>
+        </mat-chip>
+        }
+      </mat-chip-set>
+    </div>
+    }
+
+    <!-- Hashtags -->
+    @if (hashtags().length > 0) {
+    <div class="hashtags-section">
+      <span class="hashtags-label">Tags:</span>
+      <mat-chip-set class="hashtags-chips">
+        @for (hashtag of hashtags(); track hashtag) {
+        <mat-chip>
+          #{{ hashtag }}
         </mat-chip>
         }
       </mat-chip-set>

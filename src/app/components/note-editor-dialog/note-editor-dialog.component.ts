@@ -140,6 +140,20 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   showAdvancedOptions = signal(false);
   mentions = signal<string[]>(this.data?.mentions || []);
 
+  // Computed hashtags from content
+  hashtags = computed(() => {
+    const content = this.content();
+    const hashtagRegex = /#([a-zA-Z0-9_]+)/g;
+    const hashtagSet = new Set<string>();
+
+    let match;
+    while ((match = hashtagRegex.exec(content)) !== null) {
+      hashtagSet.add(match[1].toLowerCase());
+    }
+
+    return Array.from(hashtagSet);
+  });
+
   // Guard against double-click publishing
   private publishInitiated = signal(false);
 
