@@ -130,24 +130,24 @@
     z-index: 1;
 
     &.trust-rank-large {
-      top: -4px;
-      right: -4px;
+      top: 2px;
+      right: 2px;
       width: 32px;
       height: 32px;
       font-size: 14px;
     }
 
     &.trust-rank-medium {
-      top: -3px;
-      right: -3px;
+      top: 1px;
+      right: 1px;
       width: 24px;
       height: 24px;
       font-size: 11px;
     }
 
     &.trust-rank-small {
-      top: -2px;
-      right: -2px;
+      top: 0px;
+      right: 0px;
       width: 20px;
       height: 20px;
       font-size: 10px;

@@ -34,12 +34,13 @@ import { Followset } from '../../services/followset';
 import { NotificationService } from '../../services/notification.service';
 import { FeedsCollectionService } from '../../services/feeds-collection.service';
 import { AccountLocalStateService, PeopleFilters } from '../../services/account-local-state.service';
+import { TrustService } from '../../services/trust.service';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
 
 // Define sorting options
-type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc';
+type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' | 'trust-asc' | 'trust-desc';
 
 @Component({
   selector: 'app-people',
@@ -80,6 +81,7 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
   private followsetService = inject(Followset);
   private notificationService = inject(NotificationService);
   private feedsCollectionService = inject(FeedsCollectionService);
+  private trustService = inject(TrustService);
 
   // People data signals
   people = signal<string[]>([]);
@@ -406,6 +408,32 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
             return scoreA - scoreB;
           } else {
             return scoreB - scoreA;
+          }
+        });
+        break;
+
+      case 'trust-asc':
+      case 'trust-desc':
+        // Get trust metrics for all users
+        const trustMetrics = new Map<string, number>();
+
+        for (const pubkey of result) {
+          try {
+            const metrics = await this.trustService.fetchMetrics(pubkey);
+            trustMetrics.set(pubkey, metrics?.rank || 0);
+          } catch (error) {
+            trustMetrics.set(pubkey, 0);
+          }
+        }
+
+        result.sort((a, b) => {
+          const rankA = trustMetrics.get(a) || 0;
+          const rankB = trustMetrics.get(b) || 0;
+
+          if (sortOption === 'trust-asc') {
+            return rankA - rankB;
+          } else {
+            return rankB - rankA;
           }
         });
         break;
