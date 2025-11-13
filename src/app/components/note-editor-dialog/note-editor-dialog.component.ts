@@ -8,7 +8,7 @@ import {
   AfterViewInit,
   OnDestroy,
 } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
+import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -88,7 +88,6 @@ interface NoteAutoDraft {
   imports: [
     CommonModule,
     FormsModule,
-    MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatFormFieldModule,
@@ -108,8 +107,8 @@ interface NoteAutoDraft {
   styleUrl: './note-editor-dialog.component.scss',
 })
 export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
-  private dialogRef = inject(MatDialogRef<NoteEditorDialogComponent>);
-  data = inject(MAT_DIALOG_DATA) as NoteEditorDialogData;
+  dialogRef?: CustomDialogRef<NoteEditorDialogComponent, { published: boolean; event?: NostrEvent }>;
+  data: NoteEditorDialogData = {};
   private nostrService = inject(NostrService);
   private accountRelay = inject(AccountRelayService);
   mediaService = inject(MediaService);
@@ -596,7 +595,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       this.snackBar.open('Note published successfully!', 'Close', {
         duration: 3000,
       });
-      this.dialogRef.close({ published: true, event: signedEvent });
+      this.dialogRef?.close({ published: true, event: signedEvent });
 
       // We don't do "note" much, we want URLs that embeds the autor.
       // const note = nip19.noteEncode(signedEvent.id);
@@ -962,7 +961,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       this.clearAutoDraft();
     }
 
-    this.dialogRef.close({ published: false });
+    this.dialogRef?.close({ published: false });
   }
 
   dismissError(): void {

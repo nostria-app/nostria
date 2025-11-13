@@ -1,186 +1,240 @@
 .note-editor-dialog {
-  min-width: 400px;
-  max-width: 680px;
-  width: 680px;
-  width: 100%;
-  max-height: 90vh;
   display: flex;
   flex-direction: column;
+  height: 100%;
 
-  .dialog-header {
+  .dialog-content-wrapper {
+    position: relative;
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+
+    &.drag-over {
+      border: 0px dashed var(--mat-sys-primary);
+      border-radius: 8px;
+      background-color: rgba(var(--mat-sys-primary-rgb), 0.05);
+    }
+  }
+
+  .current-account-banner {
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
+    border-radius: 12px;
+    border: 2px solid var(--mat-sys-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    // Hide on small heights to save space
+    @media (max-height: 600px) {
+      display: none;
+    }
+
+    .current-account-info {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+
+      .current-account-avatar {
+        flex-shrink: 0;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        overflow: hidden;
+        background-color: var(--mat-sys-surface-variant);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid var(--mat-sys-primary);
+
+        .account-avatar-img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .account-avatar-icon {
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
+          color: var(--mat-sys-on-surface-variant);
+        }
+      }
+
+      .current-account-details {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        flex: 1;
+        min-width: 0;
+
+        .current-account-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+          color: var(--mat-sys-on-primary-container);
+          opacity: 0.8;
+        }
+
+        .current-account-name {
+          font-size: 15px;
+          color: var(--mat-sys-on-primary-container);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+      }
+    }
+  }
+
+  .reply-context,
+  .quote-context {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 8px 12px;
+    background-color: var(--mat-sys-surface-variant);
+    border-radius: 8px;
+
+    .reply-icon,
+    .quote-icon {
+      color: var(--mat-sys-primary);
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    .reply-text,
+    .quote-text {
+      font-size: 14px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .content-field {
+    width: 100%;
+    margin-bottom: 16px;
+
+    .content-textarea {
+      resize: vertical;
+      field-sizing: content;
+      min-height: 80px;
+
+      &.over-limit {
+        color: var(--mat-sys-error);
+      }
+    }
+  }
+
+  .mentions-section {
+    margin-bottom: 16px;
+
+    .mentions-label {
+      display: block;
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      margin-bottom: 8px;
+    }
+
+    .mentions-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+    }
+  }
+
+  .warning-message {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--mat-sys-error);
+    font-size: 14px;
+    margin-top: 8px;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .action-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 0;
-    padding: 16px 24px 12px;
+    gap: 16px;
     flex-shrink: 0;
 
-    .close-button {
-      margin-left: auto;
+    .left-actions {
+      display: flex;
+      gap: 4px;
+      align-items: center;
+
+      button {
+        color: var(--mat-sys-primary);
+      }
     }
-  }
 
-  .dialog-content {
-    padding: 16px 24px;
-    overflow-y: auto;
-    flex: 1 1 auto;
-    min-height: 0;
+    .right-actions {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex: 1;
+      justify-content: flex-end;
 
-    .current-account-banner {
-      margin-bottom: 16px;
-      padding: 12px 16px;
-      background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
-      border-radius: 12px;
-      border: 2px solid var(--mat-sys-primary);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-
-      .current-account-info {
+      .pow-progress-indicator {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 6px;
+        padding: 4px 12px;
+        background-color: var(--mat-sys-primary-container);
+        border-radius: 16px;
+        color: var(--mat-sys-on-primary-container);
 
-        .current-account-avatar {
-          flex-shrink: 0;
-          width: 40px;
-          height: 40px;
-          border-radius: 50%;
-          overflow: hidden;
-          background-color: var(--mat-sys-surface-variant);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 2px solid var(--mat-sys-primary);
-
-          .account-avatar-img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-          }
-
-          .account-avatar-icon {
-            font-size: 32px;
-            width: 32px;
-            height: 32px;
-            color: var(--mat-sys-on-surface-variant);
-          }
+        .pow-icon {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: var(--mat-sys-primary);
         }
 
-        .current-account-details {
-          display: flex;
-          flex-direction: column;
-          gap: 2px;
-          flex: 1;
-          min-width: 0;
-
-          .current-account-label {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            color: var(--mat-sys-on-primary-container);
-            opacity: 0.8;
-          }
-
-          .current-account-name {
-            font-size: 15px;
-            color: var(--mat-sys-on-primary-container);
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-          }
+        .pow-text {
+          font-size: 12px;
+          font-weight: 500;
         }
       }
-    }
 
-    .reply-context,
-    .quote-context {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 16px;
-      padding: 8px 12px;
-      background-color: var(--mat-sys-surface-variant);
-      border-radius: 8px;
-
-      .reply-icon,
-      .quote-icon {
-        color: var(--mat-sys-primary);
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
-      }
-
-      .reply-text,
-      .quote-text {
-        font-size: 14px;
-        color: var(--mat-sys-on-surface-variant);
-      }
-    }
-
-    .content-field {
-      width: 100%;
-      margin-bottom: 16px;
-
-      .content-textarea {
-        resize: vertical;
-        field-sizing: content;
-        min-height: 80px;
-
-        &.over-limit {
-          color: var(--mat-sys-error);
-        }
-      }
-    }
-
-    .mentions-section {
-      margin-bottom: 16px;
-
-      .mentions-label {
-        display: block;
-        font-size: 12px;
-        color: var(--mat-sys-on-surface-variant);
-        margin-bottom: 8px;
-      }
-
-      .mentions-chips {
+      .publish-button {
         display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
+        align-items: center;
+        gap: 8px;
+
+        .spinning {
+          animation: spin 1s linear infinite;
+        }
       }
     }
 
-    .warning-message {
-      display: flex;
-      align-items: center;
+    @media (max-width: 600px) {
+      flex-direction: column;
+      align-items: stretch;
       gap: 8px;
-      color: var(--mat-sys-error);
-      font-size: 14px;
-      margin-top: 8px;
 
-      mat-icon {
-        font-size: 16px;
-        width: 16px;
-        height: 16px;
+      .left-actions {
+        justify-content: center;
+      }
+
+      .right-actions {
+        flex-direction: column-reverse;
+        gap: 8px;
+
+        button {
+          width: 100%;
+        }
       }
     }
   }
-
-  // .dialog-actions {
-  //   display: flex;
-  //   justify-content: flex-end;
-  //   gap: 8px;
-  //   padding: 16px 0 0 0;
-  //   flex-shrink: 0;
-
-  //   .publish-button {
-  //     display: flex;
-  //     align-items: center;
-  //     gap: 8px;
-
-  //     .spinning {
-  //       animation: spin 1s linear infinite;
-  //     }
-  //   }
-  // }
 }
 
 @keyframes spin {
@@ -329,8 +383,6 @@
 
 .content-editor-section {
   .textarea-container {
-    // Remove position relative since we're using fixed positioning for mentions
-
     .content-field {
       width: 100%;
       margin-bottom: 8px;
@@ -338,29 +390,18 @@
 
     // Mention autocomplete will use fixed positioning
     app-mention-autocomplete {
-      // Positioning is now handled via fixed position in the component
       pointer-events: auto;
     }
   }
 
-  .upload-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 16px;
-
-    button {
-      color: var(--mat-sys-primary);
-    }
-
-    .upload-hint {
-      font-size: 12px;
-      color: var(--mat-sys-on-surface-variant);
-    }
-  }
-
   .hidden-file-input {
-    display: none;
+    display: none !important;
+    visibility: hidden;
+    position: absolute;
+    width: 0;
+    height: 0;
+    opacity: 0;
+    pointer-events: none;
   }
 }
 
@@ -641,48 +682,6 @@
           }
         }
       }
-    }
-  }
-}
-
-// Dialog actions styles
-.dialog-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 24px 16px;
-  flex-shrink: 0;
-
-  .pow-progress-indicator {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    margin-right: auto;
-    padding: 4px 12px;
-    background-color: var(--mat-sys-primary-container);
-    border-radius: 16px;
-    color: var(--mat-sys-on-primary-container);
-
-    .pow-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      color: var(--mat-sys-primary);
-    }
-
-    .pow-text {
-      font-size: 12px;
-      font-weight: 500;
-    }
-  }
-
-  .publish-button {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    .spinning {
-      animation: spin 1s linear infinite;
     }
   }
 }
