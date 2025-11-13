@@ -32,6 +32,8 @@ import { SharedRelayService } from '../../services/relays/shared-relay';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { ProfileDisplayNameComponent } from './display-name/profile-display-name.component';
 import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
+import { TrustService } from '../../services/trust.service';
+import { MatBadgeModule } from '@angular/material/badge';
 
 @Component({
   selector: 'app-user-profile',
@@ -46,6 +48,7 @@ import { ProfileHoverCardService } from '../../services/profile-hover-card.servi
     MatTooltipModule,
     MatMenuModule,
     MatButtonModule,
+    MatBadgeModule,
     RouterModule,
   ],
   templateUrl: './user-profile.component.html',
@@ -65,6 +68,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private readonly sharedRelay = inject(SharedRelayService);
   private readonly imageCacheService = inject(ImageCacheService);
   private hoverCardService = inject(ProfileHoverCardService);
+  private trustService = inject(TrustService);
   layout = inject(LayoutService);
 
   publicKey = '';
@@ -85,6 +89,10 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    * Use this for grid/flow layouts (e.g. in people component).
    */
   hostWidthAuto = input<boolean>(false);
+
+  // Trust rank
+  trustRank = signal<number | undefined>(undefined);
+  trustEnabled = computed(() => this.trustService.isEnabled());
 
   // Flag to track if component is visible
   private isVisible = signal(false);
@@ -142,6 +150,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
           // Only load profile data when the component is visible and not scrolling
           if (this.isVisible() && !this.isScrolling() && !this.profile()) {
             this.debouncedLoadProfileData(pubkey);
+          }
+          
+          // Load trust rank if enabled
+          if (this.trustService.isEnabled()) {
+            this.loadTrustRank(pubkey);
           }
         });
       }
@@ -202,6 +215,21 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     this.disconnectObserver();
     this.clearDebounceTimer();
     this.clearScrollCheckTimer();
+  }
+
+  /**
+   * Load trust rank for the user
+   */
+  private async loadTrustRank(pubkey: string): Promise<void> {
+    try {
+      const metrics = await this.trustService.fetchMetrics(pubkey);
+      if (metrics?.rank !== undefined) {
+        this.trustRank.set(metrics.rank);
+      }
+    } catch (error) {
+      // Silently fail - trust rank is optional
+      this.logger.debug('Failed to load trust rank for', pubkey, error);
+    }
   }
 
   /**
