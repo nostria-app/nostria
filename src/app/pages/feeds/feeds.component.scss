@@ -226,7 +226,7 @@ app-user-profile {
       min-width: 100%;
       scrollbar-width: thin;
       scroll-behavior: smooth;
-      justify-content: center; // Center columns horizontally
+      justify-content: flex-start; // Align columns to the left to prevent clipping
 
       &::-webkit-scrollbar {
         height: 6px;
