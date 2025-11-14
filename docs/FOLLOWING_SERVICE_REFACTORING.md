@@ -43,8 +43,6 @@ The service provides filtered/sorted views without modifying the cache:
    - `hasRelayList` - Users with relay lists
    - `hasFollowingList` - Users with following lists
    - `hasNip05` - Users with verified NIP-05
-   - `hasPicture` - Users with profile pictures
-   - `hasBio` - Users with bio/about text
    - `favoritesOnly` - Only favorited users
 
 2. **getSortedProfiles()** - Sort by:
