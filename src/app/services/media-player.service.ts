@@ -78,6 +78,12 @@ export class MediaPlayerService implements OnInitialized {
   // Video element reference
   private videoElement?: HTMLVideoElement;
 
+  // HLS instance for live streaming
+  private hlsInstance?: any;
+
+  // Flag to track if video/HLS playback has been initialized for current item
+  private videoPlaybackInitialized = false;
+
   private _isFullscreen = signal(false);
 
   isFullscreen = this._isFullscreen.asReadonly();
@@ -365,12 +371,17 @@ export class MediaPlayerService implements OnInitialized {
     });
   }
 
-  private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' {
+  private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS' {
     if (!url) return 'Music';
 
     // Check for YouTube URLs
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       return 'YouTube';
+    }
+
+    // Check for HLS streams (.m3u8)
+    if (url.toLowerCase().includes('.m3u8')) {
+      return 'HLS';
     }
 
     // Check for video file extensions
@@ -386,10 +397,11 @@ export class MediaPlayerService implements OnInitialized {
 
   play(file: MediaItem) {
     this.layout.showMediaPlayer.set(true);
-    // this.media.set[];
+    // Add the file to the queue
     this.media.update(files => [...files, file]);
 
-    // this.stop();
+    // Set index to the newly added item (last in queue)
+    this.index = this.media().length - 1;
 
     this.start();
   }
@@ -473,6 +485,12 @@ export class MediaPlayerService implements OnInitialized {
     if (videoElement) {
       videoElement.addEventListener('ended', this.handleMediaEnded);
       console.log('Video element registered for current video');
+
+      // If we have a current video/HLS item that's waiting for the video element, set it up now
+      if (this.current && (this.current.type === 'Video' || this.current.type === 'HLS')) {
+        console.log('Setting up deferred video/HLS playback');
+        this.setupVideoPlayback(this.current);
+      }
     }
   }
 
@@ -538,6 +556,9 @@ export class MediaPlayerService implements OnInitialized {
 
     this.current = file;
 
+    // Reset video playback initialization flag for new media
+    this.videoPlaybackInitialized = false;
+
     this.layout.showMediaPlayer.set(true);
     if (file.type === 'YouTube') {
       this.videoMode.set(true);
@@ -550,42 +571,23 @@ export class MediaPlayerService implements OnInitialized {
       setTimeout(() => {
         this.initYouTubePlayer();
       }, 200);
-    } else if (file.type === 'Video') {
+    } else if (file.type === 'Video' || file.type === 'HLS') {
       this.videoMode.set(true);
       this.youtubeUrl.set(undefined);
 
-      console.log('Starting video, videoElement available:', !!this.videoElement);
+      console.log('Starting video/HLS, videoElement available:', !!this.videoElement);
 
-      // Set the new video URL first
-      this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
-
-      // If video element is available, handle playback
+      // If video element is available, handle playback immediately
       if (this.videoElement) {
-        try {
-          // Add ended event listener
-          this.videoElement.addEventListener('ended', this.handleMediaEnded);
-
-          // Add event listeners for when video is ready
-          const handleCanPlay = async () => {
-            if (this.videoElement) {
-              try {
-                await this.videoElement.play();
-                console.log('Video started playing');
-              } catch (error) {
-                console.error('Error playing video:', error);
-              }
-            }
-            this.videoElement?.removeEventListener('canplay', handleCanPlay);
-          };
-
-          this.videoElement.addEventListener('canplay', handleCanPlay, {
-            once: true,
-          });
-        } catch (error) {
-          console.error('Error setting up video:', error);
-        }
+        this.setupVideoPlayback(file);
       } else {
-        console.warn('Video element not available for video playback');
+        // Video element not available yet - it will be set up when registerVideoElement is called
+        console.log('Video element will be set up when it becomes available');
+
+        // For regular video, set the URL so the video element can load it
+        if (file.type === 'Video') {
+          this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
+        }
       }
     } else {
       this.videoMode.set(false);
@@ -619,13 +621,143 @@ export class MediaPlayerService implements OnInitialized {
     navigator.mediaSession.playbackState = 'playing';
   }
 
+  private setupVideoPlayback(file: MediaItem) {
+    if (!this.videoElement) {
+      console.warn('Cannot set up video playback: video element not available');
+      return;
+    }
+
+    // Prevent re-initialization if already set up for this item
+    if (this.videoPlaybackInitialized) {
+      console.log('Video playback already initialized for current item, skipping');
+      return;
+    }
+
+    console.log('Initializing video playback for:', file.type);
+    this.videoPlaybackInitialized = true;
+
+    try {
+      // Add ended event listener
+      this.videoElement.addEventListener('ended', this.handleMediaEnded);
+
+      if (file.type === 'HLS') {
+        // Handle HLS streaming
+        this.setupHLS(file.source, this.videoElement);
+      } else {
+        // Set the new video URL for regular video
+        this.videoUrl.set(this.utilities.sanitizeUrlAndBypassFrame(file.source));
+
+        // Add event listeners for when video is ready
+        const handleCanPlay = async () => {
+          if (this.videoElement) {
+            try {
+              await this.videoElement.play();
+              console.log('Video started playing');
+            } catch (error) {
+              console.error('Error playing video:', error);
+            }
+          }
+          this.videoElement?.removeEventListener('canplay', handleCanPlay);
+        };
+
+        this.videoElement.addEventListener('canplay', handleCanPlay, {
+          once: true,
+        });
+      }
+    } catch (error) {
+      console.error('Error setting up video:', error);
+    }
+  }
+
+  private async setupHLS(url: string, videoElement: HTMLVideoElement) {
+    console.log('Setting up HLS for:', url);
+
+    // Dynamically import HLS.js
+    try {
+      const Hls = (await import('hls.js')).default;
+
+      if (Hls.isSupported()) {
+        // Destroy previous HLS instance if it exists
+        if (this.hlsInstance) {
+          this.hlsInstance.destroy();
+        }
+
+        this.hlsInstance = new Hls({
+          enableWorker: true,
+          lowLatencyMode: true,
+        });
+
+        this.hlsInstance.loadSource(url);
+        this.hlsInstance.attachMedia(videoElement);
+
+        this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, async () => {
+          console.log('HLS manifest parsed, starting playback');
+          try {
+            await videoElement.play();
+            console.log('HLS stream started playing');
+          } catch (error) {
+            console.error('Error playing HLS stream:', error);
+          }
+        });
+
+        this.hlsInstance.on(Hls.Events.ERROR, (_event: any, data: any) => {
+          console.error('HLS error:', data);
+          if (data.fatal) {
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                console.error('Fatal network error, trying to recover');
+                this.hlsInstance?.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.error('Fatal media error, trying to recover');
+                this.hlsInstance?.recoverMediaError();
+                break;
+              default:
+                console.error('Fatal error, cannot recover');
+                this.hlsInstance?.destroy();
+                break;
+            }
+          }
+        });
+      } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+        // Native HLS support (Safari)
+        console.log('Using native HLS support');
+        videoElement.src = url;
+        try {
+          await videoElement.play();
+          console.log('HLS stream started playing (native)');
+        } catch (error) {
+          console.error('Error playing HLS stream:', error);
+        }
+      } else {
+        console.error('HLS is not supported in this browser');
+      }
+    } catch (error) {
+      console.error('Error loading HLS.js:', error);
+    }
+  }
+
   private cleanupCurrentMedia() {
+    // Reset initialization flag
+    this.videoPlaybackInitialized = false;
+
     // Stop and cleanup audio
     if (this.audio) {
       this.audio.pause();
       this.audio.currentTime = 0;
       // Remove event listeners
       this.audio.removeEventListener('ended', this.handleMediaEnded);
+    }
+
+    // Cleanup HLS instance
+    if (this.hlsInstance) {
+      try {
+        this.hlsInstance.destroy();
+        this.hlsInstance = undefined;
+        console.log('HLS instance destroyed');
+      } catch (error) {
+        console.error('Error destroying HLS instance:', error);
+      }
     }
 
     // Stop and cleanup video

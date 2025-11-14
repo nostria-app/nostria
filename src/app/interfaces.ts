@@ -13,7 +13,7 @@ export interface MediaItem {
   title: string;
   artist: string;
   source: string;
-  type: 'Music' | 'Podcast' | 'YouTube' | 'Video';
+  type: 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS';
 }
 
 // Playlist-related interfaces for Nostr kind 32100 events

@@ -7,6 +7,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { Event } from 'nostr-tools';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
+import { MediaPlayerService } from '../../services/media-player.service';
+import { MediaItem } from '../../interfaces';
 
 @Component({
   selector: 'app-live-event',
@@ -26,6 +28,7 @@ export class LiveEventComponent {
   event = input.required<Event>();
 
   private router = inject(Router);
+  private mediaPlayer = inject(MediaPlayerService);
 
   // Live event title
   title = computed(() => {
@@ -187,12 +190,26 @@ export class LiveEventComponent {
     return this.status() === 'live';
   });
 
-  // Navigate to streaming URL
+  // Play stream in media player
   openStream(): void {
     const url = this.streamingUrl();
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
+    if (!url) return;
+
+    const event = this.event();
+    const title = this.title() || 'Live Stream';
+    const thumbnail = this.thumbnail() || '/icons/icon-192x192.png';
+
+    // Create media item for the live stream
+    const mediaItem: MediaItem = {
+      source: url,
+      title: title,
+      artist: 'Live Stream',
+      artwork: thumbnail,
+      type: url.toLowerCase().includes('.m3u8') ? 'HLS' : 'Video',
+    };
+
+    // Play the stream in the media player
+    this.mediaPlayer.play(mediaItem);
   }
 
   // Open event page or alt URL
