@@ -12,7 +12,7 @@ import { AgoPipe } from '../../pipes/ago.pipe';
 
 export interface ReactionsDialogData {
   event: Event;
-  likes: NostrRecord[];
+  reactions: NostrRecord[]; // All reactions (likes, emojis, etc.)
   zaps: {
     receipt: Event;
     zapRequest: Event | null;
@@ -53,29 +53,34 @@ export interface ReactionsDialogData {
           [selectedIndex]="selectedTabIndex()"
           (selectedIndexChange)="onTabChange($event)"
         >
-          <!-- Likes Tab -->
+          <!-- Reactions Tab -->
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon>favorite</mat-icon>
-              <span>Likes ({{ likes().length }})</span>
+              <span>Reactions ({{ reactions().length }})</span>
             </ng-template>
 
             <div class="tab-content">
-              @if (likes().length === 0) {
+              @if (reactions().length === 0) {
                 <div class="empty-state">
                   <mat-icon>favorite_border</mat-icon>
-                  <p>No likes yet</p>
+                  <p>No reactions yet</p>
                 </div>
               } @else {
                 <mat-list>
-                  @for (like of likes(); track like.event.id) {
+                  @for (reaction of sortedReactions(); track reaction.event.id) {
                     <mat-list-item class="reaction-item">
                       <div class="reaction-content">
-                        <app-user-profile
-                          [pubkey]="like.event.pubkey"
-                          view="compact"
-                        ></app-user-profile>
-                        <span class="reaction-time">{{ like.event.created_at | ago }}</span>
+                        <div class="reaction-user-info">
+                          <app-user-profile
+                            [pubkey]="reaction.event.pubkey"
+                            view="compact"
+                          ></app-user-profile>
+                        </div>
+                        <div class="reaction-meta">
+                          <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
+                          <span class="reaction-time">{{ reaction.event.created_at | ago }}</span>
+                        </div>
                       </div>
                     </mat-list-item>
                   }
@@ -265,6 +270,25 @@ export interface ReactionsDialogData {
         align-items: center;
         justify-content: space-between;
         width: 100%;
+        gap: 12px;
+      }
+
+      .reaction-user-info {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+      }
+
+      .reaction-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-shrink: 0;
+      }
+
+      .reaction-emoji {
+        font-size: 20px;
+        line-height: 1;
       }
 
       .reaction-time {
@@ -389,7 +413,7 @@ export class ReactionsDialogComponent {
   private dialogRef = inject(MatDialogRef<ReactionsDialogComponent>);
   data = inject<ReactionsDialogData>(MAT_DIALOG_DATA);
 
-  likes = signal<NostrRecord[]>(this.data.likes || []);
+  reactions = signal<NostrRecord[]>(this.data.reactions || []);
   zaps = signal<ReactionsDialogData['zaps']>(this.data.zaps || []);
   reposts = signal<NostrRecord[]>(this.data.reposts || []);
   quotes = signal<NostrRecord[]>(this.data.quotes || []);
@@ -414,6 +438,21 @@ export class ReactionsDialogComponent {
   sortedReposts = computed(() => {
     return [...this.reposts()].sort((a, b) => b.event.created_at - a.event.created_at);
   });
+
+  sortedReactions = computed(() => {
+    return [...this.reactions()].sort((a, b) => b.event.created_at - a.event.created_at);
+  });
+
+  /**
+   * Get the display text for a reaction
+   * Converts '+' to heart emoji, otherwise displays the actual reaction content
+   */
+  getReactionDisplay(content: string): string {
+    if (!content || content === '+') {
+      return '❤️';
+    }
+    return content;
+  }
 
   onTabChange(index: number): void {
     this.selectedTabIndex.set(index);

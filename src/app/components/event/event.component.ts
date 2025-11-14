@@ -214,7 +214,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   likes = computed<NostrRecord[]>(() => {
     const event = this.event();
     if (!event) return [];
-    return this.reactions().events.filter(r => r.event.content === '+');
+    // Return all reactions, not just '+' reactions
+    return this.reactions().events;
   });
 
   likeReaction = computed<NostrRecord | undefined>(() => {
@@ -223,8 +224,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     if (!myLikes || !userPubkey) return undefined;
 
-    // Find the user's like reaction
-    return myLikes.find(r => r.event.pubkey === userPubkey && r.event.content === '+');
+    // Find the user's reaction (any content, not just '+')
+    return myLikes.find(r => r.event.pubkey === userPubkey);
   });
 
   // Zap-related state
@@ -893,7 +894,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       panelClass: 'responsive-dialog',
       data: {
         event: currentEvent,
-        likes: this.likes(),
+        reactions: this.likes(), // Now contains all reactions, not just '+'
         zaps: this.zaps(),
         reposts: this.reposts(),
         quotes: this.quotes(),
