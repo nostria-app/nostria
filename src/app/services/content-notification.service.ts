@@ -338,7 +338,9 @@ export class ContentNotificationService {
           continue;
         }
 
-        const reactionContent = event.content || '👍';
+        // Convert '+' to heart emoji for better display, otherwise use the actual reaction
+        const rawContent = event.content || '+';
+        const reactionContent = (!rawContent || rawContent === '+') ? '❤️' : rawContent;
 
         // Extract the event being reacted to from the 'e' tag
         const eTag = event.tags.find(tag => tag[0] === 'e');

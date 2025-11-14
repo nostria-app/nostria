@@ -431,6 +431,15 @@ export class NotificationsComponent implements OnInit {
   }
 
   /**
+   * Format notification title by replacing '+' with heart emoji
+   */
+  getFormattedNotificationTitle(notification: Notification): string {
+    if (!notification.title) return '';
+    // Replace 'Reacted +' with 'Reacted ❤️'
+    return notification.title.replace(/Reacted \+/g, 'Reacted ❤️');
+  }
+
+  /**
    * Get the zap content/message from a notification's metadata (only for zaps)
    * Returns undefined for non-zap notifications to avoid showing duplicate content
    */
