@@ -888,6 +888,14 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         this.publishNote();
       }
     }
+
+    // Alt+Enter shortcut to publish note
+    if (event.altKey && event.key === 'Enter') {
+      event.preventDefault();
+      if (this.canPublish() && !this.isPublishing()) {
+        this.publishNote();
+      }
+    }
   }
 
   onContentKeyDown(event: KeyboardEvent): void {
