@@ -403,6 +403,9 @@ export class MediaPlayerService implements OnInitialized {
     // Set index to the newly added item (last in queue)
     this.index = this.media().length - 1;
 
+    // Save the queue so it persists across app reloads
+    this.save();
+
     this.start();
   }
 
