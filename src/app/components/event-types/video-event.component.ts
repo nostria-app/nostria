@@ -1,4 +1,4 @@
-import { Component, computed, input, signal, inject } from '@angular/core';
+import { Component, computed, effect, input, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -11,6 +11,7 @@ import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 interface VideoData {
   url: string;
@@ -40,9 +41,26 @@ export class VideoEventComponent {
   private dialog = inject(MatDialog);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
+  private utilities = inject(UtilitiesService);
 
   // Media privacy state
   isRevealed = signal(false);
+
+  // Store generated blurhashes for thumbnails without blurhash
+  private generatedBlurhash = signal<string | null>(null);
+
+  constructor() {
+    // Generate blurhash on-the-fly when needed
+    effect(() => {
+      const shouldBlur = this.shouldBlurMedia();
+      const videoInfo = this.videoData();
+
+      // Only generate if we should blur, there's a thumbnail, and no existing blurhash
+      if (shouldBlur && videoInfo?.thumbnail && !videoInfo.blurhash && !this.generatedBlurhash()) {
+        this.generateBlurhashForThumbnail(videoInfo.thumbnail);
+      }
+    });
+  }
 
   shouldBlurMedia = computed(() => {
     const privacy = this.settings.settings()?.mediaPrivacy;
@@ -77,9 +95,19 @@ export class VideoEventComponent {
   // Computed blurhash data URL for performance
   blurhashDataUrl = computed(() => {
     const videoInfo = this.videoData();
-    if (!videoInfo?.blurhash) return null;
 
-    return this.generateBlurhashDataUrl(videoInfo.blurhash, 400, 225);
+    // Use tag blurhash if available
+    if (videoInfo?.blurhash) {
+      return this.generateBlurhashDataUrl(videoInfo.blurhash, 400, 225);
+    }
+
+    // Otherwise use generated blurhash if available
+    const generated = this.generatedBlurhash();
+    if (generated) {
+      return this.generateBlurhashDataUrl(generated, 400, 225);
+    }
+
+    return null;
   });
 
   // Computed MIME type based on file extension
@@ -323,5 +351,14 @@ export class VideoEventComponent {
 
     // Return the MIME type or default to mp4
     return mimeTypeMap[extension || ''] || 'video/mp4';
+  }
+
+  private async generateBlurhashForThumbnail(thumbnailUrl: string): Promise<void> {
+    try {
+      const result = await this.utilities.generateBlurhash(thumbnailUrl, 4, 3);
+      this.generatedBlurhash.set(result.blurhash);
+    } catch (error) {
+      console.warn('Failed to generate blurhash for video thumbnail:', thumbnailUrl, error);
+    }
   }
 }

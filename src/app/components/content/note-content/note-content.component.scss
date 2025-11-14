@@ -139,6 +139,7 @@
     }
   }
 }
+
 // Placeholder UI for loading and failed states
 .nostr-event-placeholder {
   margin: 1rem 0;
@@ -193,4 +194,98 @@
 .cashu-container {
   margin: 12px 0;
   display: block;
+}
+
+// Image and video container with blur support
+.image-container,
+.video-container {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  max-width: 100%;
+
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  .blurhash-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+
+  &.blurred {
+    .blurhash-placeholder {
+      opacity: 1 !important;
+      filter: blur(20px);
+    }
+
+    .hidden {
+      opacity: 0;
+    }
+  }
+
+  // Video containers without blurhash need a background when blurred
+  &.video-container.blurred {
+    background-color: var(--mat-sys-surface-container-highest);
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &.revealing {
+    .blurhash-placeholder {
+      opacity: 0;
+      transition: opacity 0.6s ease-out;
+    }
+
+    img:not(.blurhash-placeholder) {
+      opacity: 1;
+      transition: opacity 0.6s ease-out;
+    }
+  }
+
+  .reveal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 8px;
+    }
+
+    span {
+      font-size: 14px;
+      font-weight: 500;
+    }
+  }
 }

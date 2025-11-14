@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,6 +12,7 @@ import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-photo-event',
@@ -32,6 +33,7 @@ export class PhotoEventComponent {
   private router = inject(Router);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
+  private utilities = inject(UtilitiesService);
 
   // Current carousel index for inline navigation
   currentCarouselIndex = signal(0);
@@ -43,6 +45,28 @@ export class PhotoEventComponent {
 
   // Track if media has been revealed (for blur-to-show animation)
   isRevealed = signal(false);
+
+  // Store generated blurhashes for images without imeta blurhash
+  private generatedBlurhashes = signal<Map<string, string>>(new Map());
+
+  constructor() {
+    // Generate blurhashes on-the-fly when needed
+    effect(() => {
+      const shouldBlur = this.shouldBlurMedia();
+      const imageUrls = this.imageUrls();
+      const blurhashes = this.blurhashes();
+
+      // Only generate if we should blur and there are missing blurhashes
+      if (shouldBlur) {
+        imageUrls.forEach((url, index) => {
+          if (!blurhashes[index] && !this.generatedBlurhashes().has(url)) {
+            // Generate blurhash asynchronously
+            this.generateBlurhashForImage(url);
+          }
+        });
+      }
+    });
+  }
 
   // Computed: Should media be blurred based on privacy settings?
   shouldBlurMedia = computed(() => {
@@ -77,7 +101,16 @@ export class PhotoEventComponent {
     if (!event) return [];
 
     const imageUrls = this.imageUrls();
-    return imageUrls.map((_, index) => this.getBlurhash(event, index));
+    const generated = this.generatedBlurhashes();
+
+    return imageUrls.map((url, index) => {
+      // First try to get blurhash from event tags
+      const tagBlurhash = this.getBlurhash(event, index);
+      if (tagBlurhash) return tagBlurhash;
+
+      // Otherwise, use generated blurhash if available
+      return generated.get(url) || null;
+    });
   });
 
   // Computed blurhash data URLs for performance
@@ -418,5 +451,20 @@ export class PhotoEventComponent {
     }
 
     return parsed;
+  }
+
+  private async generateBlurhashForImage(url: string): Promise<void> {
+    try {
+      const result = await this.utilities.generateBlurhash(url, 4, 3);
+
+      // Update the map with the generated blurhash
+      this.generatedBlurhashes.update(map => {
+        const newMap = new Map(map);
+        newMap.set(url, result.blurhash);
+        return newMap;
+      });
+    } catch (error) {
+      console.warn('Failed to generate blurhash for image:', url, error);
+    }
   }
 }

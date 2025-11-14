@@ -1,10 +1,11 @@
-import { Component, input, inject, effect, signal, ViewContainerRef, OnDestroy } from '@angular/core';
+import { Component, input, inject, effect, signal, ViewContainerRef, OnDestroy, computed } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatButtonModule } from '@angular/material/button';
 import { ImageDialogComponent } from '../../image-dialog/image-dialog.component';
 import { ContentToken } from '../../../services/parsing.service';
 import { FormatService } from '../../../services/format/format.service';
@@ -13,16 +14,21 @@ import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ProfileHoverCardComponent } from '../../user-profile/hover-card/profile-hover-card.component';
 import { CashuTokenComponent } from '../../cashu-token/cashu-token.component';
+import { SettingsService } from '../../../services/settings.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { decode } from 'blurhash';
 
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [MatIconModule, MatProgressSpinnerModule, CashuTokenComponent],
+  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })
 export class NoteContentComponent implements OnDestroy {
   contentTokens = input<ContentToken[]>([]);
+  authorPubkey = input<string | undefined>(undefined);
+
   private router = inject(Router);
   private utilities = inject(UtilitiesService);
   private dialog = inject(MatDialog);
@@ -30,6 +36,8 @@ export class NoteContentComponent implements OnDestroy {
   private sanitizer = inject(DomSanitizer);
   private overlay = inject(Overlay);
   private viewContainerRef = inject(ViewContainerRef);
+  private settings = inject(SettingsService);
+  private accountState = inject(AccountStateService);
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
@@ -49,6 +57,30 @@ export class NoteContentComponent implements OnDestroy {
   private isMouseOverCard = signal(false);
   private routerSubscription?: Subscription;
 
+  // Image blur state
+  private generatedBlurhashes = signal<Map<string, string>>(new Map());
+  private revealedImages = signal<Set<string>>(new Set());
+
+  // Computed: Should blur images based on privacy settings
+  shouldBlurImages = computed(() => {
+    const mediaPrivacy = this.settings.settings().mediaPrivacy || 'show-always';
+
+    if (mediaPrivacy === 'show-always') {
+      return false;
+    }
+
+    if (mediaPrivacy === 'blur-always') {
+      return true;
+    }
+
+    // blur-non-following
+    const authorPubkey = this.authorPubkey();
+    if (!authorPubkey) return false;
+
+    const isFollowing = this.accountState.followingList().includes(authorPubkey);
+    return !isFollowing;
+  });
+
   constructor() {
     // When tokens change, fetch event previews for nevent/note types
     effect(() => {
@@ -58,6 +90,23 @@ export class NoteContentComponent implements OnDestroy {
       if (this.tokensHaveChanged(tokens)) {
         this.lastProcessedTokens = [...tokens];
         this.loadEventPreviews(tokens);
+      }
+    });
+
+    // Generate blurhashes for images when needed
+    effect(() => {
+      const shouldBlur = this.shouldBlurImages();
+      const tokens = this.contentTokens();
+
+      if (shouldBlur) {
+        for (const token of tokens) {
+          if ((token.type === 'image' || token.type === 'base64-image') && token.content) {
+            const imageUrl = token.content;
+            if (!this.generatedBlurhashes().has(imageUrl)) {
+              this.generateBlurhashForImage(imageUrl);
+            }
+          }
+        }
       }
     });
 
@@ -225,6 +274,12 @@ export class NoteContentComponent implements OnDestroy {
    * Opens an image dialog to view the image with zoom capabilities
    */
   openImageDialog(imageUrl: string): void {
+    // If image should be blurred and not revealed, reveal it instead
+    if (this.shouldBlurImages() && !this.isImageRevealed(imageUrl)) {
+      this.revealImage(imageUrl);
+      return;
+    }
+
     console.log('Opening image dialog for URL:', imageUrl);
     this.dialog.open(ImageDialogComponent, {
       data: { imageUrl },
@@ -232,6 +287,67 @@ export class NoteContentComponent implements OnDestroy {
       maxHeight: '95vh',
       panelClass: ['image-dialog', 'responsive-dialog'],
     });
+  }
+
+  /**
+   * Check if an image is revealed
+   */
+  isImageRevealed(imageUrl: string): boolean {
+    return this.revealedImages().has(imageUrl);
+  }
+
+  /**
+   * Reveal a blurred image
+   */
+  revealImage(imageUrl: string): void {
+    this.revealedImages.update(set => {
+      const newSet = new Set(set);
+      newSet.add(imageUrl);
+      return newSet;
+    });
+  }
+
+  /**
+   * Get blurhash data URL for an image
+   */
+  getBlurhashDataUrl(imageUrl: string): string | null {
+    const blurhash = this.generatedBlurhashes().get(imageUrl);
+    if (!blurhash) return null;
+
+    try {
+      const pixels = decode(blurhash, 400, 400);
+      const canvas = document.createElement('canvas');
+      canvas.width = 400;
+      canvas.height = 400;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return null;
+
+      const imageData = ctx.createImageData(400, 400);
+      imageData.data.set(pixels);
+      ctx.putImageData(imageData, 0, 0);
+
+      return canvas.toDataURL();
+    } catch (error) {
+      console.warn('Failed to decode blurhash:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Generate blurhash for an image
+   */
+  private async generateBlurhashForImage(url: string): Promise<void> {
+    try {
+      const result = await this.utilities.generateBlurhash(url, 4, 3);
+
+      this.generatedBlurhashes.update(map => {
+        const newMap = new Map(map);
+        newMap.set(url, result.blurhash);
+        return newMap;
+      });
+    } catch (error) {
+      console.warn('Failed to generate blurhash for image:', url, error);
+    }
   }
 
   /**
