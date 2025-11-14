@@ -86,7 +86,7 @@
     </div>
     }
 
-    @if (media.current?.type === 'Video') {
+    @if (media.current?.type === 'Video' || media.current?.type === 'HLS') {
     <div class="media-info">
       <div class="video-controls">
         <button matTooltip="Open video in window" (click)="media.pictureInPicture()" mat-icon-button>
@@ -96,7 +96,11 @@
           <mat-icon>tv</mat-icon>
         </button>
       </div>
-      @if (media.videoUrl()) {
+      @if (media.current?.type === 'HLS') {
+      <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" controls autoplay
+        preload="metadata" (loadeddata)="registerVideoElement()" (canplay)="registerVideoElement()"
+        (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
+      } @else if (media.videoUrl()) {
       <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" [src]="media.videoUrl()"
         controls autoplay preload="metadata" (loadeddata)="registerVideoElement()" (canplay)="registerVideoElement()"
         (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
