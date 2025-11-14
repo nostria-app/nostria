@@ -43,24 +43,18 @@
         </button>
       </mat-menu>
 
-      <!-- Filter button with menu -->
-      <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Filter options">
-        <mat-icon [class.active-filters]="hasActiveFilters()">filter_list</mat-icon>
+      <!-- Sort button with menu -->
+      <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort options">
+        <mat-icon>sort</mat-icon>
       </button>
 
-      <mat-menu #filterMenu="matMenu" class="filter-menu" [overlapTrigger]="false">
+      <mat-menu #sortMenu="matMenu" class="sort-menu" [overlapTrigger]="false">
         <div class="filter-menu-header" (click)="preventPropagation($event)">
-          <span>Filter Options</span>
-          @if (hasActiveFilters()) {
-          <button mat-button color="primary" (click)="resetFilters(); preventPropagation($event)">
-            Reset all
-          </button>
-          }
+          <span>Sort By</span>
         </div>
         <mat-divider></mat-divider>
 
         <div class="filter-section" (click)="preventPropagation($event)">
-          <h3>Sort By</h3>
           <mat-radio-group [value]="sortOption()" (change)="changeSortOption($event.value)">
             <mat-radio-button value="default" (click)="preventPropagation($event)">
               Default
@@ -82,7 +76,22 @@
             </mat-radio-button>
           </mat-radio-group>
         </div>
+      </mat-menu>
 
+      <!-- Filter button with menu -->
+      <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Filter options">
+        <mat-icon [class.active-filters]="hasActiveFilters()">filter_list</mat-icon>
+      </button>
+
+      <mat-menu #filterMenu="matMenu" class="filter-menu" [overlapTrigger]="false">
+        <div class="filter-menu-header" (click)="preventPropagation($event)">
+          <span>Filter Options</span>
+          @if (hasActiveFilters()) {
+          <button mat-button color="primary" (click)="resetFilters(); preventPropagation($event)">
+            Reset all
+          </button>
+          }
+        </div>
         <mat-divider></mat-divider>
 
         <div class="filter-section" (click)="preventPropagation($event)">
