@@ -186,10 +186,10 @@
             'details-list': viewMode() === 'details' || viewMode() === 'list',
           }">
         @for (pubkey of sortedPeople(); track pubkey) {
-        <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined" [pubkey]="pubkey"
-          [view]="$any(viewMode())" [hostWidthAuto]="
-                viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'
-              " [showRank]="filters().showRank"></app-user-profile>
+        <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
+          [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey" [view]="$any(viewMode())"
+          [hostWidthAuto]="viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
+          [showRank]="filters().showRank"></app-user-profile>
         }
       </div>
     </cdk-virtual-scroll-viewport>
