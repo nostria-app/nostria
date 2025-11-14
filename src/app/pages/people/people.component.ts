@@ -11,9 +11,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { RouterModule } from '@angular/router';
 import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
-import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
-import { StorageService, InfoRecord } from '../../services/storage.service';
 import { debounceTime } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
@@ -21,12 +19,10 @@ import { Router } from '@angular/router';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LocalStorageService } from '../../services/local-storage.service';
-import { Metrics } from '../../services/metrics';
 import { FavoritesService } from '../../services/favorites.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AddPersonDialogComponent } from './add-person-dialog.component';
 import {
-  FollowsetComponent,
   Interest,
   SuggestedProfile,
 } from '../../components/followset/followset.component';
@@ -34,7 +30,7 @@ import { Followset } from '../../services/followset';
 import { NotificationService } from '../../services/notification.service';
 import { FeedsCollectionService } from '../../services/feeds-collection.service';
 import { AccountLocalStateService, PeopleFilters } from '../../services/account-local-state.service';
-import { TrustService } from '../../services/trust.service';
+import { FollowingService } from '../../services/following.service';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
@@ -68,25 +64,17 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
   @ViewChild(CdkVirtualScrollViewport) viewport?: CdkVirtualScrollViewport;
 
   private router = inject(Router);
-  private nostr = inject(NostrService);
   private logger = inject(LoggerService);
-  private storage = inject(StorageService);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly accountLocalState = inject(AccountLocalStateService);
-  private metrics = inject(Metrics);
   private favoritesService = inject(FavoritesService);
   private dialog = inject(MatDialog);
   private followsetService = inject(Followset);
   private notificationService = inject(NotificationService);
   private feedsCollectionService = inject(FeedsCollectionService);
-  private trustService = inject(TrustService);
-
-  // People data signals
-  people = signal<string[]>([]);
-  isLoading = signal<boolean>(true);
-  error = signal<string | null>(null);
+  readonly followingService = inject(FollowingService);
 
   // Search functionality
   searchTerm = signal<string>('');
@@ -96,87 +84,55 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
   private scrollSaveTimeout?: number;
 
   // View mode
-  viewMode = signal<string | any>('medium');
+  viewMode = signal<string>('medium');
 
   // Filter options
   filters = signal<FilterOptions>({
     hasRelayList: false,
     hasFollowingList: false,
     hasNip05: false,
-    hasPicture: false,
-    hasBio: false,
     favoritesOnly: false,
+    showRank: true,
   });
 
   // Sorting options
   sortOption = signal<SortOption>('default');
 
-  // Cache for user info records
-  userInfoCache = signal<Map<string, InfoRecord>>(new Map());
+  // Computed signal for filtered and sorted people using FollowingService
+  filteredAndSortedProfiles = computed(() => {
+    const search = this.searchTerm();
+    const filters = this.filters();
+    const sortOption = this.sortOption();
+    const favorites = this.favoritesService.favorites();
 
-  // Computed signal for filtered people
-  filteredPeople = computed(() => {
-    const search = this.searchTerm().toLowerCase();
-    const activeFilters = this.filters();
+    // Start with search if applicable
+    let profiles = search
+      ? this.followingService.searchProfiles(search)
+      : this.followingService.profiles();
 
-    return this.people().filter(pubkey => {
-      // If there's a search term, filter by it first
-      if (search) {
-        const metadata = this.accountState.getCachedProfile(pubkey);
-        if (!metadata) return false;
+    // Apply filters on the search results
+    profiles = this.followingService.getFilteredProfiles(
+      {
+        ...filters,
+        favoritesList: favorites,
+      },
+      profiles
+    );
 
-        const name = metadata.data?.name || '';
-        const displayName = metadata.data?.display_name || '';
-        const nip05 = metadata.data?.nip05 || '';
-        const about = metadata.data?.about || '';
+    // Apply sorting
+    profiles = this.followingService.getSortedProfiles(profiles, sortOption);
 
-        const searchTerms = `${name} ${displayName} ${nip05} ${about}`.toLowerCase();
-        if (!searchTerms.includes(search)) return false;
-      }
-
-      // Apply advanced filters if any are active
-      if (this.hasActiveFilters()) {
-        // Get user info record
-        const userInfo = this.userInfoCache().get(pubkey);
-
-        // Get user metadata
-        const metadata = this.accountState.getCachedProfile(pubkey);
-
-        if (!metadata) {
-          return false;
-        }
-
-        // Apply filters
-        if (activeFilters.hasRelayList && (!userInfo || userInfo['hasRelayList'] !== true)) {
-          return false;
-        }
-
-        if (
-          activeFilters.hasFollowingList &&
-          (!userInfo || userInfo['hasFollowingListRelays'] !== true)
-        ) {
-          return false;
-        }
-
-        if (activeFilters.hasNip05 && !metadata.data.nip05) {
-          return false;
-        }
-
-        if (activeFilters.hasPicture && !metadata.data.picture) {
-          return false;
-        }
-
-        if (activeFilters.hasBio && (!metadata.data.about || metadata.data.about.trim() === '')) {
-          return false;
-        }
-      }
-
-      return true;
-    });
+    return profiles;
   });
 
-  // Signal for sorted people
-  sortedPeople = signal<string[]>([]);
+  // Extract pubkeys for rendering
+  sortedPeople = computed(() => {
+    return this.filteredAndSortedProfiles().map(p => p.pubkey);
+  });
+
+  // Loading and error states from FollowingService
+  isLoading = computed(() => this.followingService.isLoading());
+  error = signal<string | null>(null);
 
   // Virtual scrolling settings
   minBufferPx = 800;
@@ -198,10 +154,16 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
     }
   });
 
-  // Check if any filters are active
+  // Check if any filters are active (excluding display options like showRank)
   hasActiveFilters = computed(() => {
     const activeFilters = this.filters();
-    return Object.values(activeFilters).some(val => val === true);
+    // Exclude showRank from filter check as it's a display option, not a filter
+    return (
+      activeFilters.hasRelayList ||
+      activeFilters.hasFollowingList ||
+      activeFilters.hasNip05 ||
+      activeFilters.favoritesOnly
+    );
   });
 
   // Followset-related properties for new users
@@ -224,16 +186,11 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
       this.searchTerm.set(term);
     });
 
+    // If user has empty following, automatically show followset and load interests
     effect(async () => {
-      if (this.app.initialized()) {
-        // Load people data on component init
-        this.loadPeople();
-
-        // If user has empty following, automatically show followset and load interests
-        if (this.hasEmptyFollowingList() && this.availableInterests().length === 0) {
-          this.showFollowset.set(true);
-          await this.initializeFollowsetData();
-        }
+      if (this.app.initialized() && this.hasEmptyFollowingList() && this.availableInterests().length === 0) {
+        this.showFollowset.set(true);
+        await this.initializeFollowsetData();
       }
     });
 
@@ -284,11 +241,6 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
       if (pubkey) {
         this.accountLocalState.setPeopleSortOption(pubkey, this.sortOption());
       }
-    });
-
-    // Update sorted people when filtered people or sort option changes
-    effect(() => {
-      this.updateSortedPeople();
     });
   }
 
@@ -362,154 +314,6 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private async updateSortedPeople() {
-    const filtered = this.filteredPeople();
-    const sortOption = this.sortOption();
-
-    let result = [...filtered];
-
-    // Apply favorites filter if enabled
-    const activeFilters = this.filters();
-    if (activeFilters.favoritesOnly) {
-      const favorites = this.favoritesService.favorites();
-      result = result.filter(pubkey => favorites.includes(pubkey));
-    }
-
-    // Apply sorting
-    switch (sortOption) {
-      case 'default':
-        // Keep original order (added order)
-        break;
-
-      case 'reverse':
-        // Reverse the order
-        result.reverse();
-        break;
-
-      case 'engagement-asc':
-      case 'engagement-desc':
-        // Get metrics for all users
-        const userMetrics = new Map<string, number>();
-
-        for (const pubkey of result) {
-          try {
-            const metric = await this.metrics.getUserMetric(pubkey);
-            userMetrics.set(pubkey, metric?.engagementScore || 0);
-          } catch (error) {
-            userMetrics.set(pubkey, 0);
-          }
-        }
-
-        result.sort((a, b) => {
-          const scoreA = userMetrics.get(a) || 0;
-          const scoreB = userMetrics.get(b) || 0;
-
-          if (sortOption === 'engagement-asc') {
-            return scoreA - scoreB;
-          } else {
-            return scoreB - scoreA;
-          }
-        });
-        break;
-
-      case 'trust-asc':
-      case 'trust-desc':
-        // Get trust metrics for all users
-        const trustMetrics = new Map<string, number>();
-
-        for (const pubkey of result) {
-          try {
-            const metrics = await this.trustService.fetchMetrics(pubkey);
-            trustMetrics.set(pubkey, metrics?.rank || 0);
-          } catch (error) {
-            trustMetrics.set(pubkey, 0);
-          }
-        }
-
-        result.sort((a, b) => {
-          const rankA = trustMetrics.get(a) || 0;
-          const rankB = trustMetrics.get(b) || 0;
-
-          if (sortOption === 'trust-asc') {
-            return rankA - rankB;
-          } else {
-            return rankB - rankA;
-          }
-        });
-        break;
-    }
-
-    this.sortedPeople.set(result);
-  }
-
-  private async loadPeople() {
-    try {
-      this.isLoading.set(true);
-      this.error.set(null);
-
-      // Get following list from account state
-      const followingList = this.accountState.followingList();
-
-      if (followingList.length === 0) {
-        this.people.set([]);
-        this.isLoading.set(false);
-        return;
-      }
-
-      this.people.set(followingList);
-
-      // Load user info records for filtering
-      // await this.loadUserInfoRecords(followingList);
-
-      // Preload metadata for all people
-      // this.preloadMetadata(followingList);
-
-      this.isLoading.set(false);
-    } catch (err) {
-      this.logger.error('Failed to load people', err);
-      this.error.set('Failed to load people. Please try again later.');
-      this.isLoading.set(false);
-    }
-  }
-
-  // private async loadUserInfoRecords(pubkeys: string[]) {
-  //   try {
-  //     // Get user info records for filtering
-  //     const userInfoRecords = await this.storage.getInfoByType('user');
-
-  //     // Build cache map
-  //     const cache = new Map<string, InfoRecord>();
-  //     for (const record of userInfoRecords) {
-  //       if (pubkeys.includes(record.key)) {
-  //         cache.set(record.key, record);
-  //       }
-  //     }
-
-  //     this.userInfoCache.set(cache);
-  //   } catch (err) {
-  //     this.logger.error('Failed to load user info records', err);
-  //   }
-  // }
-
-  // private preloadMetadata(pubkeys: string[]) {
-  //   // Load metadata for the first 20 users to improve initial rendering
-  //   const initialBatch = pubkeys.slice(0, 20);
-
-  //   for (const pubkey of initialBatch) {
-  //     this.nostr.getMetadataForUser(pubkey).catch(err =>
-  //       this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
-  //   }
-
-  //   // Load the rest in the background
-  //   setTimeout(() => {
-  //     const remainingBatch = pubkeys.slice(20);
-  //     for (const pubkey of remainingBatch) {
-  //       this.nostr.getMetadataForUser(pubkey).catch(err =>
-  //         this.logger.error(`Failed to preload metadata for ${pubkey}`, err));
-  //     }
-  //   }, 1000);
-  // }
-
   updateSearch(term: string) {
     this.searchChanged.next(term);
   }
@@ -526,7 +330,7 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
     this.sortOption.set(option);
   }
 
-  toggleFilter(filterName: keyof FilterOptions, event?: Event | any) {
+  toggleFilter(filterName: keyof FilterOptions) {
     this.filters.update(current => ({
       ...current,
       [filterName]: !current[filterName],
@@ -538,13 +342,12 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
       hasRelayList: false,
       hasFollowingList: false,
       hasNip05: false,
-      hasPicture: false,
-      hasBio: false,
       favoritesOnly: false,
+      showRank: true,
     });
   }
 
-  preventPropagation(event: Event | any) {
+  preventPropagation(event: Event) {
     event.stopPropagation();
   }
 
@@ -564,8 +367,7 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         this.logger.info('Person added:', result);
-        // Reload people list to include the newly followed person
-        this.loadPeople();
+        // FollowingService will automatically reload when following list changes
       }
     });
   }
@@ -637,7 +439,7 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
       this.showFollowset.set(false);
 
       // Refresh the people list
-      await this.loadPeople();
+      // No need to loadPeople() anymore - FollowingService handles this automatically
 
       // Only refresh following feeds if we're on the feeds page
       if (this.router.url.startsWith('/feeds')) {

@@ -9,6 +9,7 @@ import { MessagingService } from './messaging.service';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { AccountRelayService } from './relays/account-relay';
 import { ReportingService } from './reporting.service';
+import { FollowingService } from './following.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -25,6 +26,7 @@ export class StateService implements NostriaService {
   discoveryRelay = inject(DiscoveryRelayService);
   accountRelay = inject(AccountRelayService);
   reporting = inject(ReportingService);
+  following = inject(FollowingService);
 
   constructor() {
     effect(async () => {
@@ -65,12 +67,15 @@ export class StateService implements NostriaService {
     // NOTE: We don't automatically load chats here anymore
     // Chats are loaded on-demand when the user navigates to the messages page
     // This saves bandwidth and improves privacy
-  } clear() {
+  }
+
+  clear() {
     this.accountState.clear();
     this.messaging.clear();
     this.nostr.clear();
     this.badge.clear();
     this.media.clear();
     this.reporting.clear();
+    this.following.clear();
   }
 }

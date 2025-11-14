@@ -8,9 +8,8 @@ export interface PeopleFilters {
   hasRelayList: boolean;
   hasFollowingList: boolean;
   hasNip05: boolean;
-  hasPicture: boolean;
-  hasBio: boolean;
   favoritesOnly: boolean;
+  showRank: boolean;
 }
 
 /**
