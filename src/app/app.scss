@@ -74,7 +74,7 @@ mat-sidenav-content {
 
   // Adjust for mobile navigation
   @media (max-width: 599px) {
-    padding-bottom: calc(56px + env(safe-area-inset-bottom, 0px)); // Height of mobile nav + safe area
+    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); // Height of mobile nav + safe area
   }
 }
 
@@ -164,12 +164,13 @@ mat-sidenav-content {
   display: flex;
   justify-content: space-around;
   z-index: 1000;
-  height: calc(56px + env(safe-area-inset-bottom, 0px));
+  height: 56px;
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-top: 4px;
 
   background-color: var(--mat-sys-background);
   justify-content: space-around;
-  align-items: center;
+  align-items: flex-start;
   box-shadow: var(--mat-sys-level3);
 
   /* Smooth transition for hide/show */
@@ -195,11 +196,11 @@ mat-sidenav-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 0;
-  min-width: unset;
-  line-height: normal;
-  height: 100%;
+  justify-content: flex-start;
+  padding: 6px 0 0 0;
+  min-width: 0;
+  height: 56px;
+  border-radius: 0;
   text-align: center;
 }
 
@@ -214,7 +215,7 @@ mat-sidenav-content {
 }
 
 .mobile-nav-label {
-  font-size: 11px;
+  font-size: 12px;
   line-height: 1;
   text-align: center;
   white-space: nowrap;
@@ -224,22 +225,6 @@ mat-sidenav-content {
   display: block;
   width: 100%;
   padding: 0 2px;
-}
-
-.mobile-nav-button {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4px 0;
-  min-width: 0;
-  height: 100%;
-  border-radius: 0;
-}
-
-.mobile-nav-label {
-  font-size: 12px;
   margin-top: 2px;
 }
 
