@@ -1,6 +1,5 @@
 import { Injectable, inject } from '@angular/core';
 import { Event, kinds, nip19 } from 'nostr-tools';
-import { DecodedNevent } from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
@@ -298,16 +297,79 @@ export class EventService {
   async loadEvent(nevent: string, item?: EventData): Promise<Event | null> {
     // this.logger.info('loadEvent called with nevent:', nevent);
 
+    // Check if the input is in addressable event format: kind:pubkey:d-tag
+    // This is used for parameterized replaceable events (kinds 30000-39999) like live events (30311)
+    const addressableEventPattern = /^(\d+):([0-9a-f]{64}):(.+)$/;
+    const addressableMatch = nevent.match(addressableEventPattern);
+
+    if (addressableMatch) {
+      const [, kindStr, pubkey, dTag] = addressableMatch;
+      const kind = parseInt(kindStr, 10);
+
+      this.logger.info('Input is addressable event format:', { kind, pubkey, dTag });
+
+      // Encode as naddr for addressable events
+      try {
+        nevent = nip19.naddrEncode({
+          kind,
+          pubkey,
+          identifier: dTag,
+        });
+        this.logger.info('Encoded to naddr:', nevent);
+      } catch (error) {
+        this.logger.error('Error encoding to naddr:', error);
+        return null;
+      }
+    }
+
     // Handle hex string input
     if (this.utilities.isHex(nevent)) {
       this.logger.info('Input is hex string, encoding to nevent');
-      nevent = nip19.neventEncode({ id: nevent }) as string;
-      this.logger.info('Encoded to nevent:', nevent);
+
+      try {
+        nevent = nip19.neventEncode({ id: nevent }) as string;
+        this.logger.info('Encoded to nevent:', nevent);
+      } catch (error) {
+        this.logger.error('Error encoding to nevent:', error);
+        return null;
+      }
     }
 
-    const decoded = this.utilities.decode(nevent) as DecodedNevent;
+    const decoded = this.utilities.decode(nevent);
+
+    // Handle addressable events (naddr)
+    if (decoded.type === 'naddr') {
+      const { kind, pubkey, identifier } = decoded.data;
+      this.logger.info('Loading addressable event:', { kind, pubkey, identifier });
+
+      try {
+        const event = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          kind,
+          identifier,
+          { cache: true, ttl: minutes.five, save: true }
+        );
+
+        if (event) {
+          this.logger.info('Loaded addressable event from storage or relays:', event.event.id);
+          return event.event;
+        }
+      } catch (error) {
+        this.logger.error('Error loading addressable event:', error);
+      }
+
+      return null;
+    }
+
+    // Handle regular events (nevent)
+    if (decoded.type !== 'nevent') {
+      this.logger.error('Unexpected decoded type:', decoded.type);
+      return null;
+    }
+
     const hex = decoded.data.id;
-    // this.logger.info('Decoded event ID:', hex, 'Author:', decoded.data.author);
+    const author = decoded.data.author;
+    // this.logger.info('Decoded event ID:', hex, 'Author:', author);
 
     // Check if we have cached event in item
     if (item?.event && item.event.id === hex) {
@@ -316,10 +378,10 @@ export class EventService {
     }
 
     try {
-      if (decoded.data.author) {
+      if (author) {
         // Try to get from user data service with author pubkey
         try {
-          const event = await this.userDataService.getEventById(decoded.data.author, hex, { cache: true, ttl: minutes.five });
+          const event = await this.userDataService.getEventById(author, hex, { cache: true, ttl: minutes.five });
 
           if (event) {
             // this.logger.info('Loaded event from storage or relays:', event.event.id);
