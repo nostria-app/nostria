@@ -12,6 +12,9 @@ export class Metrics {
   private readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
 
+  // In-memory cache for quick access
+  private metricsCache = new Map<string, UserMetric>();
+
   /**
    * Generate a composite key for account-specific metrics
    */
@@ -72,31 +75,42 @@ export class Metrics {
     }
 
     const metricsKey = this.generateMetricsKey(currentAccount, validHexPubkey);
+
+    // Check in-memory cache first
+    if (this.metricsCache.has(metricsKey)) {
+      return this.metricsCache.get(metricsKey)!;
+    }
+
+    // Fetch from storage
     const record = await this.storage.getInfo(metricsKey, 'metric');
-    return record ? this.mapRecordToMetric(record, currentAccount) : null;
+    const metric = record ? this.mapRecordToMetric(record, currentAccount) : null;
+
+    // Cache the result
+    if (metric) {
+      this.metricsCache.set(metricsKey, metric);
+    }
+
+    return metric;
   }
 
   /**
-   * Get metrics for multiple users
+   * Get metrics for multiple users (batch fetch)
    */
   async getUserMetrics(pubkeys: string[]): Promise<UserMetric[]> {
-    const metrics: UserMetric[] = [];
-
-    for (const pubkey of pubkeys) {
+    // Fetch all metrics in parallel
+    const metricsPromises = pubkeys.map(async (pubkey) => {
       // Validate each pubkey
       const validHexPubkey = this.utilities.safeGetHexPubkey(pubkey);
       if (!validHexPubkey) {
         console.warn('Invalid pubkey in getUserMetrics, skipping:', pubkey);
-        continue;
+        return null;
       }
 
-      const metric = await this.getUserMetric(validHexPubkey);
-      if (metric) {
-        metrics.push(metric);
-      }
-    }
+      return this.getUserMetric(validHexPubkey);
+    });
 
-    return metrics;
+    const results = await Promise.all(metricsPromises);
+    return results.filter((metric): metric is UserMetric => metric !== null);
   }
 
   /**
@@ -334,6 +348,11 @@ export class Metrics {
   private async saveMetric(metric: UserMetric): Promise<void> {
     const { accountPubkey, pubkey, ...data } = metric;
     const metricsKey = this.generateMetricsKey(accountPubkey, pubkey);
+
+    // Update in-memory cache
+    this.metricsCache.set(metricsKey, metric);
+
+    // Save to storage
     await this.storage.saveInfo(metricsKey, 'metric', { accountPubkey, ...data });
   }
 

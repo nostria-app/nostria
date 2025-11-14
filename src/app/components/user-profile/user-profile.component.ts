@@ -23,7 +23,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
-import { InfoRecord } from '../../services/storage.service';
+import { InfoRecord, TrustMetrics } from '../../services/storage.service';
 import { Event, nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';
@@ -76,6 +76,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   npub = signal<string | undefined>(undefined);
   event = input<Event | undefined>(undefined);
   info = input<InfoRecord | undefined>(undefined);
+  trust = input<TrustMetrics | undefined>(undefined);
   profile = signal<any>(null); // eslint-disable-line @typescript-eslint/no-explicit-any
   // Optional prefetched profile passed from parent to avoid duplicate fetches
   prefetchedProfile = input<unknown | null>(null);
@@ -90,8 +91,13 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   hostWidthAuto = input<boolean>(false);
 
-  // Trust rank
-  trustRank = signal<number | undefined>(undefined);
+  /**
+   * If true, the trust rank will be displayed (default: true).
+   */
+  showRank = input<boolean>(true);
+
+  // Trust rank - computed from trust input
+  trustRank = computed(() => this.trust()?.rank);
   trustEnabled = computed(() => this.trustService.isEnabled());
 
   // Flag to track if component is visible
@@ -150,11 +156,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
           // Only load profile data when the component is visible and not scrolling
           if (this.isVisible() && !this.isScrolling() && !this.profile()) {
             this.debouncedLoadProfileData(pubkey);
-          }
-          
-          // Load trust rank if enabled
-          if (this.trustService.isEnabled()) {
-            this.loadTrustRank(pubkey);
           }
         });
       }
@@ -220,17 +221,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   /**
    * Load trust rank for the user
    */
-  private async loadTrustRank(pubkey: string): Promise<void> {
-    try {
-      const metrics = await this.trustService.fetchMetrics(pubkey);
-      if (metrics?.rank !== undefined) {
-        this.trustRank.set(metrics.rank);
-      }
-    } catch (error) {
-      // Silently fail - trust rank is optional
-      this.logger.debug('Failed to load trust rank for', pubkey, error);
-    }
-  }
+
 
   /**
    * Sets up the scroll detection mechanism
