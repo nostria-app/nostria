@@ -19,10 +19,14 @@ nav {
   display: flex;
   flex-direction: column;
   margin-top: 0;
-  height: calc(100dvh);
+  height: 100dvh;
   overflow: hidden;
   width: 100%;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 }
 
 .premium-label {
