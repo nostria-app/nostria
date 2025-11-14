@@ -3,7 +3,7 @@
   <div class="people-header">
     <div class="title-section">
       <h1>People</h1>
-      <p>Explore the {{people().length}} people you follow</p>
+      <p>Explore the {{followingService.count()}} people you follow</p>
     </div>
 
     <div class="controls-section">
@@ -87,15 +87,15 @@
 
         <div class="filter-section" (click)="preventPropagation($event)">
           <h3>User Properties</h3>
-          <mat-checkbox [checked]="filters().hasRelayList" (change)="toggleFilter('hasRelayList', $event)"
+          <mat-checkbox [checked]="filters().hasRelayList" (change)="toggleFilter('hasRelayList')"
             (click)="preventPropagation($event)">
             Use Relay List
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasFollowingList" (change)="toggleFilter('hasFollowingList', $event)"
+          <mat-checkbox [checked]="filters().hasFollowingList" (change)="toggleFilter('hasFollowingList')"
             (click)="preventPropagation($event)">
             Has Following List
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasNip05" (change)="toggleFilter('hasNip05', $event)"
+          <mat-checkbox [checked]="filters().hasNip05" (change)="toggleFilter('hasNip05')"
             (click)="preventPropagation($event)">
             Has Verified NIP-05
           </mat-checkbox>
@@ -105,17 +105,21 @@
 
         <div class="filter-section" (click)="preventPropagation($event)">
           <h3>Display</h3>
-          <mat-checkbox [checked]="filters().hasPicture" (change)="toggleFilter('hasPicture', $event)"
+          <mat-checkbox [checked]="filters().hasPicture" (change)="toggleFilter('hasPicture')"
             (click)="preventPropagation($event)">
             Has Profile Picture
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasBio" (change)="toggleFilter('hasBio', $event)"
+          <mat-checkbox [checked]="filters().hasBio" (change)="toggleFilter('hasBio')"
             (click)="preventPropagation($event)">
             Has Bio
           </mat-checkbox>
-          <mat-checkbox [checked]="filters().favoritesOnly" (change)="toggleFilter('favoritesOnly', $event)"
+          <mat-checkbox [checked]="filters().favoritesOnly" (change)="toggleFilter('favoritesOnly')"
             (click)="preventPropagation($event)">
             Favorites Only
+          </mat-checkbox>
+          <mat-checkbox [checked]="filters().showRank" (change)="toggleFilter('showRank')"
+            (click)="preventPropagation($event)">
+            Show Trust Rank
           </mat-checkbox>
         </div>
       </mat-menu>
@@ -173,10 +177,9 @@
             'details-list': viewMode() === 'details' || viewMode() === 'list',
           }">
         @for (pubkey of sortedPeople(); track pubkey) {
-        <!-- {{ userInfoCache().get(pubkey) | json }} -->
-        <app-user-profile [info]="userInfoCache().get(pubkey)" [pubkey]="pubkey" [view]="viewMode()" [hostWidthAuto]="
+        <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined" [pubkey]="pubkey" [view]="$any(viewMode())" [hostWidthAuto]="
                 viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'
-              "></app-user-profile>
+              " [showRank]="filters().showRank"></app-user-profile>
         }
       </div>
     </cdk-virtual-scroll-viewport>

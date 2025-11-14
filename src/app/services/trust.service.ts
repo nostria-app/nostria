@@ -21,6 +21,12 @@ export class TrustService {
   // In-memory cache for quick access
   private metricsCache = new Map<string, TrustMetrics>();
 
+  // Cache for pending fetch promises to prevent duplicate concurrent requests
+  private pendingFetches = new Map<string, Promise<TrustMetrics | null>>();
+
+  // Track pubkeys that have no metrics (to avoid repeated relay queries)
+  private notFoundCache = new Set<string>();
+
   // Signal for tracking loaded pubkeys
   private loadedPubkeys = signal<Set<string>>(new Set());
 
@@ -62,6 +68,33 @@ export class TrustService {
       }
     }
 
+    // Check if there's already a pending fetch for this pubkey
+    if (this.pendingFetches.has(pubkey)) {
+      return this.pendingFetches.get(pubkey)!;
+    }
+
+    // Create a promise for this fetch
+    const fetchPromise = this.fetchMetricsInternal(pubkey);
+    this.pendingFetches.set(pubkey, fetchPromise);
+
+    try {
+      const result = await fetchPromise;
+      return result;
+    } finally {
+      // Clean up the pending fetch
+      this.pendingFetches.delete(pubkey);
+    }
+  }
+
+  /**
+   * Internal method to fetch metrics from database or relay
+   */
+  private async fetchMetricsInternal(pubkey: string): Promise<TrustMetrics | null> {
+    // Check if we've already determined this pubkey has no metrics
+    if (this.notFoundCache.has(pubkey)) {
+      return null;
+    }
+
     // Check database cache
     try {
       const cachedMetrics = await this.storage.getTrustMetrics(pubkey);
@@ -69,16 +102,14 @@ export class TrustService {
         // Cache in memory for quick access
         this.metricsCache.set(pubkey, cachedMetrics);
         this.loadedPubkeys.update(set => new Set(set).add(pubkey));
-        this.logger.debug(`Trust metrics loaded from database for ${pubkey}`);
-        
+
         // Check if data is older than 24 hours
         const age = Date.now() - (cachedMetrics.lastUpdated || 0);
         const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
         if (age > TWENTY_FOUR_HOURS) {
-          this.logger.debug(`Trust metrics for ${pubkey} are stale (${Math.round(age / 1000 / 60 / 60)}h old), refreshing in background`);
           this.refreshMetricsInBackground(pubkey);
         }
-        
+
         return cachedMetrics;
       }
     } catch (error) {
@@ -108,7 +139,8 @@ export class TrustService {
       const events = await this.relayPool.query([relay], filter);
 
       if (events.length === 0) {
-        this.logger.debug(`No trust metrics found for ${pubkey}`);
+        // Cache this as 'not found' to avoid repeated queries
+        this.notFoundCache.add(pubkey);
         return null;
       }
 
@@ -137,6 +169,41 @@ export class TrustService {
   }
 
   /**
+   * Get cached metrics synchronously (returns null if not in cache)
+   * Use this when you want to avoid async operations if data isn't immediately available
+   */
+  getCachedMetrics(pubkey: string): TrustMetrics | null {
+    if (!this.isEnabled()) {
+      return null;
+    }
+
+    return this.metricsCache.get(pubkey) || null;
+  }
+
+  /**
+   * Batch fetch trust metrics for multiple pubkeys
+   * More efficient than calling fetchMetrics multiple times
+   */
+  async fetchMetricsBatch(pubkeys: string[]): Promise<Map<string, TrustMetrics | null>> {
+    const results = new Map<string, TrustMetrics | null>();
+
+    // Fetch all metrics in parallel
+    await Promise.all(
+      pubkeys.map(async (pubkey) => {
+        try {
+          const metrics = await this.fetchMetrics(pubkey);
+          results.set(pubkey, metrics);
+        } catch (error) {
+          this.logger.error(`Failed to fetch metrics for ${pubkey}`, error);
+          results.set(pubkey, null);
+        }
+      })
+    );
+
+    return results;
+  }
+
+  /**
    * Refresh metrics in background without blocking
    */
   private refreshMetricsInBackground(pubkey: string): void {
@@ -158,7 +225,7 @@ export class TrustService {
 
     for (const tag of event.tags) {
       const [tagName, value] = tag;
-      
+
       // Skip the 'd' tag (pubkey identifier)
       if (tagName === 'd') {
         continue;
@@ -228,13 +295,6 @@ export class TrustService {
     }
 
     return metrics;
-  }
-
-  /**
-   * Get cached metrics for a pubkey (synchronous)
-   */
-  getCachedMetrics(pubkey: string): TrustMetrics | null {
-    return this.metricsCache.get(pubkey) || null;
   }
 
   /**
