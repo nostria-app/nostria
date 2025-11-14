@@ -106,9 +106,16 @@ export class UserRelayService {
   async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    // Filter out any undefined or invalid values
+    const validPubkeys = pubkeys.filter(pk => pk && typeof pk === 'string');
+    if (validPubkeys.length === 0) {
+      this.logger.warn('[UserRelayService] getEventsByPubkeyAndKind called with no valid pubkeys');
+      return [];
+    }
+
     const allRelayUrls = new Set<string>();
 
-    for (const pk of pubkeys) {
+    for (const pk of validPubkeys) {
       await this.ensureRelaysForPubkey(pk);
       const relayUrls = this.getRelaysForPubkey(pk);
       relayUrls.forEach(url => allRelayUrls.add(url));
@@ -117,12 +124,11 @@ export class UserRelayService {
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
 
     if (relayUrls.length === 0) {
-      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
+      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
       return [];
     }
 
-    const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
-    return this.getEventsWithSubscription(relayUrls, { authors, kinds: [kind] });
+    return this.getEventsWithSubscription(relayUrls, { authors: validPubkeys, kinds: [kind] });
   }
 
   /**
@@ -135,9 +141,17 @@ export class UserRelayService {
     limit = 20
   ): Promise<Event[]> {
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    // Filter out any undefined or invalid values
+    const validPubkeys = pubkeys.filter(pk => pk && typeof pk === 'string');
+
+    if (validPubkeys.length === 0) {
+      this.logger.warn('[UserRelayService] getEventsByPubkeyAndKindPaginated called with no valid pubkeys');
+      return [];
+    }
+
     const allRelayUrls = new Set<string>();
 
-    for (const pk of pubkeys) {
+    for (const pk of validPubkeys) {
       await this.ensureRelaysForPubkey(pk);
       const relayUrls = this.getRelaysForPubkey(pk);
       relayUrls.forEach(url => allRelayUrls.add(url));
@@ -146,19 +160,18 @@ export class UserRelayService {
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
 
     if (relayUrls.length === 0) {
-      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
+      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
       return [];
     }
 
-    const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
-    const filter = { authors, kinds: [kind], limit };
+    const filter = { authors: validPubkeys, kinds: [kind], limit };
 
     // Add until parameter if provided for pagination
     if (until !== undefined) {
       (filter as { until?: number }).until = until;
       // Debug: Log pagination request
       const untilDate = new Date(until * 1000).toISOString();
-      this.logger.debug(`[Pagination] Fetching kind ${kind} for ${pubkeys.length} users until ${untilDate} (timestamp: ${until})`);
+      this.logger.debug(`[Pagination] Fetching kind ${kind} for ${validPubkeys.length} users until ${untilDate} (timestamp: ${until})`);
     } else {
       this.logger.debug(`[Pagination] Fetching recent kind ${kind} events (no until parameter)`);
     }
@@ -212,9 +225,17 @@ export class UserRelayService {
   async getEventsByKindsAndEventTag(pubkey: string | string[], kinds: number[], eventTag: string | string[]): Promise<Event[]> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    // Filter out any undefined or invalid values
+    const validPubkeys = pubkeys.filter(pk => pk && typeof pk === 'string');
+
+    if (validPubkeys.length === 0) {
+      this.logger.warn('[UserRelayService] getEventsByKindsAndEventTag called with no valid pubkeys');
+      return [];
+    }
+
     const allRelayUrls = new Set<string>();
 
-    for (const pk of pubkeys) {
+    for (const pk of validPubkeys) {
       await this.ensureRelaysForPubkey(pk);
       const relayUrls = this.getRelaysForPubkey(pk);
       relayUrls.forEach(url => allRelayUrls.add(url));
@@ -223,7 +244,7 @@ export class UserRelayService {
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
 
     if (relayUrls.length === 0) {
-      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
+      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
       return [];
     }
 
@@ -244,9 +265,17 @@ export class UserRelayService {
   ): Promise<Event | null> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    // Filter out any undefined or invalid values
+    const validPubkeys = pubkeys.filter(pk => pk && typeof pk === 'string');
+
+    if (validPubkeys.length === 0) {
+      this.logger.warn('[UserRelayService] getEventByPubkeyAndKindAndTag called with no valid pubkeys');
+      return null;
+    }
+
     const allRelayUrls = new Set<string>();
 
-    for (const pk of pubkeys) {
+    for (const pk of validPubkeys) {
       await this.ensureRelaysForPubkey(pk);
       const relayUrls = this.getRelaysForPubkey(pk);
       relayUrls.forEach(url => allRelayUrls.add(url));
@@ -255,13 +284,12 @@ export class UserRelayService {
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
 
     if (relayUrls.length === 0) {
-      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${pubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
+      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
       return null;
     }
 
-    const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
     const filter = {
-      authors,
+      authors: validPubkeys,
       kinds: [kind],
     } as {
       authors: string[];

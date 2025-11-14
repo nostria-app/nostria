@@ -177,7 +177,8 @@ export class EventService {
     }
 
     // Extract quote information from q tag (NIP-18)
-    // q tag format: ["q", <event-id>, <relay-url>, <pubkey>]
+    // q tag format: ["q", <event-id or addressable-event>, <relay-url>, <pubkey>]
+    // For addressable events: "kind:pubkey:d-tag"
     let quoteId: string | null = null;
     let quoteAuthor: string | null = null;
     const quoteRelays: string[] = [];
@@ -193,6 +194,15 @@ export class EventService {
 
       // Extract author pubkey from q tag if present (4th element)
       quoteAuthor = qTag[3] || null;
+
+      // If quoteId is in addressable event format (kind:pubkey:d-tag), extract the pubkey
+      if (quoteId) {
+        const addressableMatch = quoteId.match(/^(\d+):([0-9a-f]{64}):(.+)$/);
+        if (addressableMatch && !quoteAuthor) {
+          // Extract pubkey from addressable event identifier
+          quoteAuthor = addressableMatch[2];
+        }
+      }
 
       // If we don't have a rootId from e-tags but we have a quote, use the quote as root
       if (!rootId && quoteId) {
@@ -726,29 +736,23 @@ export class EventService {
     try {
       // Load immediate parent (reply)
       if (replyId && replyId !== rootId) {
-        const replyEvent = await this.userDataService.getEventById(author, replyId, {
-          cache: true,
-          ttl: minutes.five,
-        });
+        const replyEvent = await this.loadParentEvent(replyId, author);
 
         if (replyEvent) {
-          parents.unshift(replyEvent.event);
+          parents.unshift(replyEvent);
 
           // Recursively load parents of the reply
-          const grandParents = await this.loadParentEvents(replyEvent.event);
+          const grandParents = await this.loadParentEvents(replyEvent);
           parents.unshift(...grandParents);
         }
       }
 
       // Load root event if different from reply
       if (rootId && rootId !== replyId) {
-        const rootEvent = await this.userDataService.getEventById(author, rootId, {
-          cache: true,
-          ttl: minutes.five,
-        });
+        const rootEvent = await this.loadParentEvent(rootId, author);
 
-        if (rootEvent && !parents.find((p) => p.id === rootEvent.event.id)) {
-          parents.unshift(rootEvent.event);
+        if (rootEvent && !parents.find((p) => p.id === rootEvent.id)) {
+          parents.unshift(rootEvent);
         }
       }
 
@@ -756,6 +760,39 @@ export class EventService {
     } catch (error) {
       console.error('Error loading parent events:', error);
       return [];
+    }
+  }
+
+  /**
+   * Load a parent event which could be either a regular event (hex ID) or an addressable event (kind:pubkey:d-tag)
+   */
+  private async loadParentEvent(eventRef: string, author: string): Promise<Event | null> {
+    // Check if this is an addressable event reference (kind:pubkey:d-tag)
+    const addressableMatch = eventRef.match(/^(\d+):([0-9a-f]{64}):(.+)$/);
+
+    if (addressableMatch) {
+      // This is an addressable event
+      const [, kindStr, pubkey, dTag] = addressableMatch;
+      const kind = parseInt(kindStr, 10);
+
+      this.logger.info('Loading addressable parent event:', { kind, pubkey, dTag });
+
+      const record = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+        pubkey,
+        kind,
+        dTag,
+        { cache: true, ttl: minutes.five, save: true }
+      );
+
+      return record?.event || null;
+    } else {
+      // This is a regular event ID
+      const record = await this.userDataService.getEventById(author, eventRef, {
+        cache: true,
+        ttl: minutes.five,
+      });
+
+      return record?.event || null;
     }
   }
 

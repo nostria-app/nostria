@@ -358,7 +358,14 @@ export abstract class RelayServiceBase {
 
   async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
     // Check if pubkey is already an array or a single string
-    const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+    const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    // Filter out any undefined or invalid values
+    const authors = pubkeys.filter(pk => pk && typeof pk === 'string');
+
+    if (authors.length === 0) {
+      this.logger.warn('getEventByPubkeyAndKind called with no valid pubkeys');
+      return null;
+    }
 
     return this.get({
       authors,
@@ -373,7 +380,14 @@ export abstract class RelayServiceBase {
   }
 
   async getEventsByKindAndPubKeyTag(pubkey: string | string[], kind: number): Promise<Event[]> {
-    const authors = Array.isArray(pubkey) ? pubkey : [pubkey];
+    const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    // Filter out any undefined or invalid values
+    const authors = pubkeys.filter(pk => pk && typeof pk === 'string');
+
+    if (authors.length === 0) {
+      this.logger.warn('getEventsByKindAndPubKeyTag called with no valid pubkeys');
+      return [];
+    }
 
     return this.getMany({
       '#p': authors,
@@ -456,7 +470,7 @@ export abstract class RelayServiceBase {
     // }
 
     // Check if the value of "authors" array starts with "npub" or not.
-    const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
+    const isNpub = filter.authors?.some((author) => author && author.startsWith('npub'));
 
     if (isNpub) {
       // TODO: Handle npub format if needed
