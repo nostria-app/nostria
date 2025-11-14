@@ -355,7 +355,7 @@ export class VideoEventComponent {
 
   private async generateBlurhashForThumbnail(thumbnailUrl: string): Promise<void> {
     try {
-      const result = await this.utilities.generateBlurhash(thumbnailUrl, 4, 3);
+      const result = await this.utilities.generateBlurhash(thumbnailUrl, 6, 4);
       this.generatedBlurhash.set(result.blurhash);
     } catch (error) {
       console.warn('Failed to generate blurhash for video thumbnail:', thumbnailUrl, error);

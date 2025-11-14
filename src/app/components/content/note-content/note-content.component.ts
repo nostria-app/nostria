@@ -338,7 +338,7 @@ export class NoteContentComponent implements OnDestroy {
    */
   private async generateBlurhashForImage(url: string): Promise<void> {
     try {
-      const result = await this.utilities.generateBlurhash(url, 4, 3);
+      const result = await this.utilities.generateBlurhash(url, 6, 4);
 
       this.generatedBlurhashes.update(map => {
         const newMap = new Map(map);
