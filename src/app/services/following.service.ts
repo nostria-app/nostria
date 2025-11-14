@@ -245,13 +245,13 @@ export class FollowingService {
       // Relay list filter
       if (filters.hasRelayList) {
         // Check if user has relay list (kind 10002 or kind 3 relay tags)
-        const hasRelays = (profile.info?.['relayCount'] as number | undefined) || 0 > 0;
+        const hasRelays = ((profile.info?.['relayCount'] as number | undefined) || 0) > 0;
         if (!hasRelays) return false;
       }
 
       // Following list filter
       if (filters.hasFollowingList) {
-        const hasFollowing = (profile.info?.['followingCount'] as number | undefined) || 0 > 0;
+        const hasFollowing = ((profile.info?.['followingCount'] as number | undefined) || 0) > 0;
         if (!hasFollowing) return false;
       }
 
