@@ -228,6 +228,11 @@ app-user-profile {
       scroll-behavior: smooth;
       justify-content: flex-start; // Align columns to the left to prevent clipping
 
+      // Center when there's only one column
+      &:has(.column-unit:only-child) {
+        justify-content: center;
+      }
+
       &::-webkit-scrollbar {
         height: 6px;
       }
