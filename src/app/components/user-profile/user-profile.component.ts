@@ -90,9 +90,15 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   hostWidthAuto = input<boolean>(false);
 
+  /**
+   * If true, the trust rank will be displayed (default: true).
+   */
+  showRank = input<boolean>(true);
+
   // Trust rank
   trustRank = signal<number | undefined>(undefined);
   trustEnabled = computed(() => this.trustService.isEnabled());
+  private loadedTrustRankFor = signal<string | null>(null);
 
   // Flag to track if component is visible
   private isVisible = signal(false);
@@ -151,9 +157,14 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
           if (this.isVisible() && !this.isScrolling() && !this.profile()) {
             this.debouncedLoadProfileData(pubkey);
           }
-          
-          // Load trust rank if enabled
-          if (this.trustService.isEnabled()) {
+
+          // Load trust rank if enabled, visible, not scrolling, and not already loaded for this pubkey
+          if (
+            this.trustService.isEnabled() &&
+            this.isVisible() &&
+            !this.isScrolling() &&
+            this.loadedTrustRankFor() !== pubkey
+          ) {
             this.loadTrustRank(pubkey);
           }
         });
@@ -222,9 +233,14 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   private async loadTrustRank(pubkey: string): Promise<void> {
     try {
+      // Mark this pubkey as loaded to prevent duplicate loads
+      this.loadedTrustRankFor.set(pubkey);
+
       const metrics = await this.trustService.fetchMetrics(pubkey);
       if (metrics?.rank !== undefined) {
         this.trustRank.set(metrics.rank);
+      } else {
+        this.trustRank.set(undefined);
       }
     } catch (error) {
       // Silently fail - trust rank is optional

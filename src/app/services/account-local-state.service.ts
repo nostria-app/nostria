@@ -11,6 +11,7 @@ export interface PeopleFilters {
   hasPicture: boolean;
   hasBio: boolean;
   favoritesOnly: boolean;
+  showRank: boolean;
 }
 
 /**
