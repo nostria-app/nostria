@@ -316,7 +316,7 @@
       <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
 
       <button mat-flat-button color="primary" (click)="publishNote()" [disabled]="!canPublish() || isPublishing()"
-        class="publish-button" matTooltip="Alt+P">
+        class="publish-button" matTooltip="Alt+P or Alt+Enter">
         @if (isPublishing()) {
         <ng-container>
           <mat-icon class="spinning">hourglass_empty</mat-icon>
