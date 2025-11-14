@@ -218,16 +218,19 @@ export class FollowingService {
    * Get profiles with specific filters applied
    * This creates a virtual view of the profiles
    */
-  getFilteredProfiles(filters: {
-    hasRelayList?: boolean;
-    hasFollowingList?: boolean;
-    hasNip05?: boolean;
-    hasPicture?: boolean;
-    hasBio?: boolean;
-    favoritesOnly?: boolean;
-    favoritesList?: string[];
-  }): FollowingProfile[] {
-    const allProfiles = this.profiles();
+  getFilteredProfiles(
+    filters: {
+      hasRelayList?: boolean;
+      hasFollowingList?: boolean;
+      hasNip05?: boolean;
+      hasPicture?: boolean;
+      hasBio?: boolean;
+      favoritesOnly?: boolean;
+      favoritesList?: string[];
+    },
+    profiles?: FollowingProfile[]
+  ): FollowingProfile[] {
+    const allProfiles = profiles ?? this.profiles();
 
     if (!filters || Object.keys(filters).length === 0) {
       return allProfiles;
