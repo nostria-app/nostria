@@ -7,6 +7,9 @@ import {
   untracked,
   OnInit,
   OnDestroy,
+  ViewChild,
+  ElementRef,
+  AfterViewInit,
 } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
@@ -93,7 +96,9 @@ interface ArticleAutoDraft {
   templateUrl: './editor.component.html',
   styleUrl: './editor.component.scss',
 })
-export class EditorComponent implements OnInit, OnDestroy {
+export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
+  @ViewChild('titleInput') titleInput?: ElementRef<HTMLInputElement>;
+
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private location = inject(Location);
@@ -315,6 +320,13 @@ export class EditorComponent implements OnInit, OnDestroy {
         this.previousUrl = 'back';
       }
     }
+  }
+
+  ngAfterViewInit() {
+    // Focus the title input when the editor opens
+    setTimeout(() => {
+      this.titleInput?.nativeElement.focus();
+    }, 0);
   }
 
   ngOnDestroy() {

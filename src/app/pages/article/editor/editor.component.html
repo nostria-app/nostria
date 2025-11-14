@@ -58,7 +58,7 @@
 
     <!-- Title Input -->
     @if (!showPreview()) {
-    <input type="text" class="title-input" placeholder="Title" [value]="article().title"
+    <input #titleInput type="text" class="title-input" placeholder="Title" [value]="article().title"
       (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
 
     <!-- Summary Input -->
