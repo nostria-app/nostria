@@ -8,14 +8,14 @@
       <button mat-icon-button (click)="zoomOut()" aria-label="Zoom out">
         <mat-icon>zoom_out</mat-icon>
       </button>
-      <button mat-icon-button (click)="resetView()" aria-label="Reset view">
+      <button mat-icon-button (click)="resetView()" aria-label="Reset view" class="hide-small">
         <mat-icon>refresh</mat-icon>
       </button>
-      <span class="zoom-level">{{ scale() * 100 }}%</span>
+      <span class="zoom-level hide-small">{{ scale() * 100 }}%</span>
       }
     </div>
 
-    <h2 class="preview-title">{{ currentMedia().title || 'Media' }}</h2>
+    <h2 class="preview-title hide-small">{{ currentMedia().title || 'Media' }}</h2>
 
     @if (hasMultipleItems()) {
     <div class="navigation-controls">
@@ -23,7 +23,7 @@
         <mat-icon>chevron_left</mat-icon>
       </button>
 
-      <span class="media-counter">
+      <span class="media-counter hide-small">
         {{ currentIndex() + 1 }} / {{ mediaItems().length }}
       </span>
 
