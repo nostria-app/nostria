@@ -1337,6 +1337,15 @@ export class App implements OnInit {
   }
 
   /**
+   * Format notification title by replacing '+' with heart emoji
+   */
+  getFormattedNotificationTitle(notification: Notification): string {
+    if (!notification.title) return '';
+    // Replace 'Reacted +' with 'Reacted ❤️'
+    return notification.title.replace(/Reacted \+/g, 'Reacted ❤️');
+  }
+
+  /**
    * Get icon for notification type (used in template)
    */
   getNotificationIcon(type: NotificationType): string {

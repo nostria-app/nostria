@@ -35,6 +35,7 @@ Never set the font-weight in CSS. The current font for headlines does not suppor
 - Prefer Reactive forms instead of Template-driven ones
 - Do NOT use `ngClass`, use `class` bindings instead
 - DO NOT use `ngStyle`, use `style` bindings instead
+- DO NOT put color="primary" on buttons, this is not supported in Material 3. Also for primary actions, use "mat-flat-button", not "flat-raised-button".
 
 ## State Management
 

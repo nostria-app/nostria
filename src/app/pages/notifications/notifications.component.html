@@ -84,7 +84,7 @@
                   <app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'compact'"></app-user-profile>
                 </div>
                 }
-                <span class="notification-title">{{ notification.title }}</span>
+                <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>
                 @if (!notification.read) {
                 <span class="new-indicator">NEW</span>
                 }
@@ -151,7 +151,7 @@
 
             <div class="notification-content">
               <div class="notification-header">
-                <span class="notification-title">{{ notification.title }}</span>
+                <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>
                 @if (!notification.read) {
                 <span class="new-indicator">NEW</span>
                 }

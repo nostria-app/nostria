@@ -184,7 +184,7 @@
 
   <mat-dialog-actions align="end">
     <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
-    <button mat-raised-button color="primary" (click)="proceedToConfirmation()"
+    <button mat-flat-button (click)="proceedToConfirmation()"
       [disabled]="isProcessing() || !zapForm.valid">
       Continue ({{ getFinalAmount() }} sats)
     </button>
