@@ -91,8 +91,6 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
     hasRelayList: false,
     hasFollowingList: false,
     hasNip05: false,
-    hasPicture: false,
-    hasBio: false,
     favoritesOnly: false,
     showRank: true,
   });
@@ -164,8 +162,6 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
       activeFilters.hasRelayList ||
       activeFilters.hasFollowingList ||
       activeFilters.hasNip05 ||
-      activeFilters.hasPicture ||
-      activeFilters.hasBio ||
       activeFilters.favoritesOnly
     );
   });
@@ -346,8 +342,6 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
       hasRelayList: false,
       hasFollowingList: false,
       hasNip05: false,
-      hasPicture: false,
-      hasBio: false,
       favoritesOnly: false,
       showRank: true,
     });

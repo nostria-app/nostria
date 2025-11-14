@@ -223,8 +223,6 @@ export class FollowingService {
       hasRelayList?: boolean;
       hasFollowingList?: boolean;
       hasNip05?: boolean;
-      hasPicture?: boolean;
-      hasBio?: boolean;
       favoritesOnly?: boolean;
       favoritesList?: string[];
     },
@@ -261,18 +259,6 @@ export class FollowingService {
       if (filters.hasNip05) {
         const hasNip05 = profile.profile?.data?.nip05 && profile.profile?.data?.nip05valid;
         if (!hasNip05) return false;
-      }
-
-      // Picture filter
-      if (filters.hasPicture) {
-        const hasPicture = profile.profile?.data?.picture && profile.profile.data.picture.trim() !== '';
-        if (!hasPicture) return false;
-      }
-
-      // Bio filter
-      if (filters.hasBio) {
-        const hasBio = profile.profile?.data?.about && profile.profile.data.about.trim() !== '';
-        if (!hasBio) return false;
       }
 
       return true;

@@ -94,7 +94,7 @@
         </div>
         <mat-divider></mat-divider>
 
-        <div class="filter-section" (click)="preventPropagation($event)">
+        <!-- <div class="filter-section" (click)="preventPropagation($event)">
           <h3>User Properties</h3>
           <mat-checkbox [checked]="filters().hasRelayList" (change)="toggleFilter('hasRelayList')"
             (click)="preventPropagation($event)">
@@ -110,18 +110,10 @@
           </mat-checkbox>
         </div>
 
-        <mat-divider></mat-divider>
+        <mat-divider></mat-divider> -->
 
         <div class="filter-section" (click)="preventPropagation($event)">
           <h3>Display</h3>
-          <mat-checkbox [checked]="filters().hasPicture" (change)="toggleFilter('hasPicture')"
-            (click)="preventPropagation($event)">
-            Has Profile Picture
-          </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasBio" (change)="toggleFilter('hasBio')"
-            (click)="preventPropagation($event)">
-            Has Bio
-          </mat-checkbox>
           <mat-checkbox [checked]="filters().favoritesOnly" (change)="toggleFilter('favoritesOnly')"
             (click)="preventPropagation($event)">
             Favorites Only
