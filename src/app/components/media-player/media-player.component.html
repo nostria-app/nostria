@@ -143,6 +143,26 @@
           <mat-icon>forward_10</mat-icon>
         </button>
         }
+
+        @if (media.videoMode()) {
+        <div class="media-audio-inline">
+          <button matTooltip="Queue" routerLink="/media-queue" class="hide-small" mat-icon-button>
+            <mat-icon>queue_music</mat-icon>
+          </button>
+
+          <button matTooltip="Fullscreen Media Player" (click)="toggleFullscreen()" mat-icon-button>
+            @if (!layout.fullscreenMediaPlayer()) {
+            <mat-icon>open_in_full</mat-icon>
+            } @else {
+            <mat-icon>close_fullscreen</mat-icon>
+            }
+          </button>
+
+          <button matTooltip="Exit Media Player" (click)="media.exit()" mat-icon-button>
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
+        }
       </div>
       @if (!media.videoMode()) {
       <div class="media-timeline">
@@ -161,52 +181,6 @@
       </div>
       }
     </div>
-
-    @if (media.videoMode()) {
-    <div class="media-audio">
-      <div class="media-audio-container">
-        <!-- @if(!expanded) {
-                <button (click)="expanded = true" class="hide-small" mat-icon-button>
-                    <mat-icon>expand_less</mat-icon>
-                </button>
-                }
-
-                @if(expanded) {
-                <button (click)="expanded = false" class="hide-small" mat-icon-button>
-                    <mat-icon>expand_more</mat-icon>
-                </button>
-                } -->
-
-        <!-- @if (!maximized) {
-                <button (click)="maximized = true" class="hide-small" mat-icon-button>
-                    <mat-icon>open_in_full</mat-icon>
-                </button>
-                }
-
-                @if (maximized) {
-                <button (click)="maximized = false" class="hide-small" mat-icon-button>
-                    <mat-icon>open_in_full</mat-icon>
-                </button>
-                } -->
-
-        <button matTooltip="Queue" routerLink="/media-queue" class="hide-small" mat-icon-button>
-          <mat-icon>queue_music</mat-icon>
-        </button>
-
-        <button matTooltip="Fullscreen Media Player" (click)="toggleFullscreen()" mat-icon-button>
-          @if (!layout.fullscreenMediaPlayer()) {
-          <mat-icon>open_in_full</mat-icon>
-          } @else {
-          <mat-icon>close_fullscreen</mat-icon>
-          }
-        </button>
-
-        <button matTooltip="Exit Media Player" (click)="media.exit()" mat-icon-button>
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-    </div>
-    }
 
     @if (!media.videoMode()) {
     <div class="media-audio">
