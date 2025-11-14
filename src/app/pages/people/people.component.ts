@@ -112,11 +112,14 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
       ? this.followingService.searchProfiles(search)
       : this.followingService.profiles();
 
-    // Apply filters
-    profiles = this.followingService.getFilteredProfiles({
-      ...filters,
-      favoritesList: favorites,
-    });
+    // Apply filters on the search results
+    profiles = this.followingService.getFilteredProfiles(
+      {
+        ...filters,
+        favoritesList: favorites,
+      },
+      profiles
+    );
 
     // Apply sorting
     profiles = this.followingService.getSortedProfiles(profiles, sortOption);
