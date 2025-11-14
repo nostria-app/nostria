@@ -907,30 +907,30 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         // Prevent default behavior and stop propagation
         event.preventDefault();
         event.stopPropagation();
-        
+
         // Manually trigger selection from the autocomplete component
         if (this.mentionAutocomplete) {
           const results = this.mentionAutocomplete.searchResults();
           const focusedIndex = this.mentionAutocomplete.focusedIndex();
           const focusedProfile = results[focusedIndex];
-          
+
           if (focusedProfile) {
             this.mentionAutocomplete.selectMention(focusedProfile);
           }
         }
         return;
       }
-      
+
       if (['ArrowDown', 'ArrowUp'].includes(event.key)) {
         // Prevent default behavior and stop propagation
         event.preventDefault();
         event.stopPropagation();
-        
+
         // Manually update focus index in autocomplete
         if (this.mentionAutocomplete) {
           const results = this.mentionAutocomplete.searchResults();
           const currentIndex = this.mentionAutocomplete.focusedIndex();
-          
+
           if (event.key === 'ArrowDown') {
             const newIndex = Math.min(currentIndex + 1, results.length - 1);
             this.mentionAutocomplete.setFocusedIndex(newIndex);
@@ -941,7 +941,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         }
         return;
       }
-      
+
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
