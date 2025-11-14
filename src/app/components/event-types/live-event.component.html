@@ -99,12 +99,12 @@
     <!-- Actions -->
     <div class="live-actions">
       @if (isLive() && streamUrl) {
-      <button mat-raised-button color="accent" class="stream-button" (click)="openStream()">
+      <button mat-flat-button class="stream-button" (click)="openStream()">
         <mat-icon>play_circle</mat-icon>
         Watch Live
       </button>
       } @else if (statusValue === 'planned' && startsTime) {
-      <button mat-button color="primary" disabled>
+      <button mat-button disabled>
         <mat-icon>schedule</mat-icon>
         Scheduled
       </button>
