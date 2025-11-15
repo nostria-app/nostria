@@ -20,6 +20,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { RouterModule } from '@angular/router';
 import { Router, NavigationEnd } from '@angular/router';
+import { Location } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MatSliderModule } from '@angular/material/slider';
@@ -74,6 +75,7 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   // maximized = false;
   private readonly renderer = inject(Renderer2);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
   private routerSub?: Subscription;
   private displayModeListener?: (event: MediaQueryListEvent) => void;
   // store the current page title shown in the titlebar
@@ -104,9 +106,9 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
         element.classList.add('exiting-fullscreen');
       }
 
-      // Navigate back to previous route
+      // Restore previous URL
       if (this.utilities.isBrowser() && window.history.state?.previousUrl) {
-        this.router.navigateByUrl(window.history.state.previousUrl);
+        this.location.replaceState(window.history.state.previousUrl);
       }
 
       // Wait for animation to complete before removing fullscreen mode
@@ -125,20 +127,11 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
       if (this.media.current?.isLiveStream && this.media.current?.liveEventData) {
         const encodedEvent = this.utilities.encodeEventForUrl(this.media.current.liveEventData);
 
-        // Store current URL to restore on exit
+        // Store current URL to restore on exit (store in history state)
         const previousUrl = this.router.url;
 
-        console.log('Navigating to stream URL:', `/stream/${encodedEvent.substring(0, 50)}...`);
-        console.log('Previous URL:', previousUrl);
-
-        this.router.navigate(['/stream', encodedEvent], {
-          state: { previousUrl }
-        });
-      } else {
-        console.log('Not a live stream or no event data:', {
-          isLiveStream: this.media.current?.isLiveStream,
-          hasEventData: !!this.media.current?.liveEventData
-        });
+        // Use replaceState to update URL without triggering navigation
+        this.location.replaceState(`/stream/${encodedEvent}`, '', { previousUrl });
       }
     }
   }
