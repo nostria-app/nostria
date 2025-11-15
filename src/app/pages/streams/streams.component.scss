@@ -95,7 +95,7 @@
 
 .streams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
   gap: 1.5rem;
   padding: 0.5rem 0;
 
@@ -105,7 +105,22 @@
 }
 
 .stream-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 500px;
+  overflow: hidden;
+
   mat-card-content {
     padding: 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    app-live-event {
+      display: flex;
+      flex: 1;
+      min-width: 0;
+    }
   }
 }
