@@ -641,7 +641,7 @@ export class NostrService implements NostriaService {
       case 'extension': {
         if (!window.nostr) {
           throw new Error(
-            'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension.'
+            'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension, or re-login with your nsec key.'
           );
         }
 

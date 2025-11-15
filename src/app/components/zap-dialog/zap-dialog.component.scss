@@ -142,6 +142,47 @@
   margin-bottom: 8px;
 }
 
+.split-recipients {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.split-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 8px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+}
+
+.split-recipient {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+
+  .split-weight {
+    font-size: 14px;
+    color: var(--mat-sys-primary);
+    padding: 4px 12px;
+    background: var(--mat-sys-primary-container);
+    border-radius: 12px;
+  }
+}
+
 .event-context {
   display: flex;
   align-items: center;
@@ -445,6 +486,12 @@ mat-dialog-actions {
   display: flex;
   align-items: center;
   gap: 8px;
+
+  .button-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
 }
 
 mat-divider {

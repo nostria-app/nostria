@@ -18,6 +18,8 @@ import { QrCodeComponent } from '../qr-code/qr-code.component';
 import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
 import { ZapErrorHandlerService } from '../../services/zap-error-handler.service';
+import { DataService } from '../../services/data.service';
+import { Event } from 'nostr-tools';
 
 export interface ZapDialogData {
   recipientPubkey: string;
@@ -25,6 +27,8 @@ export interface ZapDialogData {
   recipientMetadata?: Record<string, unknown>;
   eventId?: string;
   eventContent?: string;
+  zapSplits?: { pubkey: string; relay: string; weight: number }[];
+  event?: Event; // The actual event object for split zaps
 }
 
 export interface ZapDialogResult {
@@ -85,6 +89,7 @@ export class ZapDialogComponent {
   private errorHandler = inject(ZapErrorHandlerService);
   private router = inject(Router);
   private breakpointObserver = inject(BreakpointObserver);
+  private dataService = inject(DataService);
 
   data: ZapDialogData = inject(MAT_DIALOG_DATA);
 
@@ -213,6 +218,14 @@ export class ZapDialogComponent {
   }
 
   async fetchLnurlPayInfo(): Promise<void> {
+    // For zap splits, we don't need to validate LNURL info upfront
+    // Each recipient will be validated when the split zap is sent
+    if (this.data.zapSplits && this.data.zapSplits.length > 0) {
+      this.isLoadingLnurlInfo.set(false);
+      this.lnurlError.set(null);
+      return;
+    }
+
     if (!this.data.recipientMetadata) {
       this.lnurlError.set('No recipient metadata available');
       return;
@@ -342,6 +355,13 @@ export class ZapDialogComponent {
 
   async proceedToConfirmation(): Promise<void> {
     if (!this.zapForm.valid) {
+      return;
+    }
+
+    // Skip LNURL validation for zap splits - each recipient will be validated individually
+    if (this.data.zapSplits && this.data.zapSplits.length > 0) {
+      this.errorMessage.set(null);
+      this.currentState.set('confirmation');
       return;
     }
 
@@ -551,23 +571,61 @@ export class ZapDialogComponent {
       const amount = this.getFinalAmount();
       const message = this.zapForm.get('message')?.value || '';
 
-      await this.zapService.sendZap(
-        this.data.recipientPubkey,
-        amount,
-        message,
-        this.data.eventId,
-        this.data.recipientMetadata
-      );
+      // Check if this is a zap split
+      if (this.data.zapSplits && this.data.zapSplits.length > 0) {
+        // Get the event - either from data or load it
+        let event = this.data.event;
 
-      this.snackBar.open(
-        `⚡ Successfully sent ${amount} sats${this.data.recipientName ? ` to ${this.data.recipientName}` : ''}!`,
-        'Dismiss',
-        {
-          duration: 5000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom',
+        if (!event) {
+          if (!this.data.eventId) {
+            throw new Error('Event ID required for zap splits');
+          }
+
+          console.log('Loading event for split zap:', this.data.eventId);
+          const eventRecord = await this.dataService.getEventById(this.data.eventId);
+          console.log('Loaded event:', eventRecord);
+
+          if (!eventRecord?.event) {
+            console.error('Event data missing:', eventRecord);
+            throw new Error('Could not load event for zap split. The event may not be available yet.');
+          }
+
+          event = eventRecord.event;
         }
-      );
+
+        console.log('Sending split zap to', this.data.zapSplits.length, 'recipients');
+        // Send split zap
+        await this.zapService.sendSplitZap(event, amount, message);
+
+        this.snackBar.open(
+          `⚡ Successfully sent ${amount} sats split to ${this.data.zapSplits.length} recipients!`,
+          'Dismiss',
+          {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          }
+        );
+      } else {
+        // Regular single-recipient zap
+        await this.zapService.sendZap(
+          this.data.recipientPubkey,
+          amount,
+          message,
+          this.data.eventId,
+          this.data.recipientMetadata
+        );
+
+        this.snackBar.open(
+          `⚡ Successfully sent ${amount} sats${this.data.recipientName ? ` to ${this.data.recipientName}` : ''}!`,
+          'Dismiss',
+          {
+            duration: 5000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          }
+        );
+      }
 
       this.dialogRef.close({
         amount,
