@@ -7,8 +7,9 @@ import { MatChipsModule } from '@angular/material/chips';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterModule } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
-import { ZapService } from '../../services/zap.service';
+import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { DataService } from '../../services/data.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -287,7 +288,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 export class StreamInfoBarComponent {
   liveEvent = input.required<Event>();
 
-  private zapService = inject(ZapService);
+  private dialog = inject(MatDialog);
   private dataService = inject(DataService);
   private relayPool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
@@ -559,33 +560,43 @@ export class StreamInfoBarComponent {
       return;
     }
 
-    // TODO: Open zap dialog with event context
-    // For now, just call zap service with default amount
-    const defaultAmount = 1000; // 1000 sats
-    const message = `Zap for live stream: ${this.title()}`;
-
+    // Parse metadata content
+    let parsedMetadata: Record<string, unknown> | undefined;
     try {
-      // Parse metadata content (it's a JSON string)
-      const parsedMetadata = typeof metadata.event.content === 'string'
+      parsedMetadata = typeof metadata.event.content === 'string'
         ? JSON.parse(metadata.event.content)
         : metadata.event.content;
-
-      await this.zapService.sendZap(
-        recipientPubkey,
-        defaultAmount,
-        message,
-        event.id, // Reference the stream event
-        parsedMetadata as Record<string, unknown>
-      );
-
-      this.snackBar.open('Zap sent successfully!', 'Dismiss', {
-        duration: 3000,
-      });
     } catch (error) {
-      console.error('Error sending zap:', error);
-      this.snackBar.open('Failed to send zap', 'Dismiss', {
-        duration: 3000,
-      });
+      console.error('Error parsing metadata:', error);
     }
+
+    // Prepare dialog data
+    const dialogData: ZapDialogData = {
+      recipientPubkey,
+      recipientName:
+        (typeof parsedMetadata?.['name'] === 'string' ? parsedMetadata['name'] : undefined) ||
+        (typeof parsedMetadata?.['display_name'] === 'string' ? parsedMetadata['display_name'] : undefined) ||
+        undefined,
+      recipientMetadata: parsedMetadata,
+      eventId: event.id, // Reference the stream event
+      eventContent: `Live stream: ${this.title()}`,
+    };
+
+    // Open zap dialog
+    const dialogRef = this.dialog.open(ZapDialogComponent, {
+      width: '500px',
+      data: dialogData,
+      disableClose: true,
+      panelClass: 'responsive-dialog',
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Zap was sent successfully
+        this.snackBar.open('Zap sent successfully!', 'Dismiss', {
+          duration: 3000,
+        });
+      }
+    });
   }
 }
