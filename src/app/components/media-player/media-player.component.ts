@@ -17,6 +17,7 @@ import { ThemeService } from '../../services/theme.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { RouterModule } from '@angular/router';
 import { Router, NavigationEnd } from '@angular/router';
@@ -54,6 +55,7 @@ declare global {
     FormsModule,
     TimePipe,
     LiveChatComponent,
+    MatMenuModule,
   ],
   templateUrl: './media-player.component.html',
   styleUrl: './media-player.component.scss',
@@ -150,6 +152,21 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
 
   toggleChatVisibility(): void {
     this.chatVisible = !this.chatVisible;
+  }
+
+  copyEventData(): void {
+    if (this.media.current?.liveEventData) {
+      this.layout.copyToClipboard(this.media.current.liveEventData, 'json');
+    }
+  }
+
+  copyEventUrl(): void {
+    if (this.media.current?.liveEventData) {
+      const relayHints = this.feed.userRelays().map(r => r.url).slice(0, 5);
+      const nevent = this.utilities.encodeEventForUrl(this.media.current.liveEventData, relayHints);
+      const shareableUrl = `https://nostria.app/stream/${nevent}`;
+      this.layout.copyToClipboard(shareableUrl, 'event URL');
+    }
   }
 
   // Signals to track display mode state
