@@ -1,8 +1,18 @@
-.live-chat-container {
+:host {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.live-chat-container {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100%;
+  width: 100%;
   background: var(--mat-sys-surface-container);
+  overflow: hidden;
 }
 
 .chat-header {
@@ -12,7 +22,7 @@
   padding: 16px;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container-high);
-  flex-shrink: 0;
+  grid-row: 1;
 
   .chat-title {
     display: flex;
@@ -44,9 +54,17 @@
   }
 }
 
-.chat-messages {
-  flex: 1;
+.chat-content-wrapper {
+  grid-row: 2;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
+}
+
+.chat-messages {
+  grid-row: 1;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px;
@@ -54,6 +72,7 @@
   flex-direction: column;
   gap: 12px;
   scroll-behavior: smooth;
+  min-height: 0;
 
   .no-messages {
     flex: 1;
@@ -160,10 +179,10 @@
 }
 
 .chat-input-container {
+  grid-row: 2;
   padding: 12px;
   border-top: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container-high);
-  flex-shrink: 0;
 
   .chat-input-field {
     width: 100%;
@@ -193,11 +212,12 @@
 
 // Participants view
 .participants-view {
-  flex: 1;
-  min-height: 0;
+  grid-row: 2;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px;
+  min-height: 0;
+  height: 100%;
 
   .no-participants {
     flex: 1;

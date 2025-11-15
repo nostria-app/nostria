@@ -1,4 +1,4 @@
-<div class="live-chat-container">
+<div class="live-chat-container" [attr.data-view]="viewMode()">
   <!-- Chat Header -->
   <div class="chat-header">
     <div class="chat-title">
@@ -21,7 +21,8 @@
 
   <!-- Chat Messages -->
   @if (viewMode() === 'chat') {
-  <div class="chat-messages" #messagesContainer>
+  <div class="chat-content-wrapper">
+    <div class="chat-messages" #messagesContainer>
     @if (messages().length === 0) {
     <div class="no-messages">
       <mat-icon>chat_bubble_outline</mat-icon>
@@ -44,10 +45,10 @@
       </div>
     </div>
     }
-  </div>
+    </div>
 
-  <!-- Chat Input -->
-  <div class="chat-input-container">
+    <!-- Chat Input -->
+    <div class="chat-input-container">
     <mat-form-field class="chat-input-field" appearance="outline">
       <mat-label>Send a message...</mat-label>
       <input matInput [ngModel]="messageInput()" (ngModelChange)="messageInput.set($event)"
@@ -57,6 +58,7 @@
         <mat-icon>send</mat-icon>
       </button>
     </mat-form-field>
+    </div>
   </div>
   }
 
