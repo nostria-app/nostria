@@ -211,7 +211,7 @@ export class StreamViewerComponent implements OnInit {
       title,
       description,
       image: image || '/icons/icon-512x512.png',
-      url: `https://nostria.space/stream/${encodedEvent}`,
+      url: `https://nostria.app/stream/${encodedEvent}`,
     });
 
     console.log('[StreamViewer SSR] Meta tags updated');

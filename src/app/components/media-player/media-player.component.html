@@ -184,6 +184,12 @@
             <mat-icon>queue_music</mat-icon>
           </button>
 
+          @if (layout.fullscreenMediaPlayer() && media.current?.isLiveStream) {
+          <button matTooltip="More options" [matMenuTriggerFor]="liveStreamMenu" mat-icon-button>
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          }
+
           <button matTooltip="Fullscreen Media Player" (click)="toggleFullscreen()" mat-icon-button>
             @if (!layout.fullscreenMediaPlayer()) {
             <mat-icon>open_in_full</mat-icon>
@@ -252,3 +258,15 @@
   </div>
   }
 </div>
+
+<!-- Context menu for live streams -->
+<mat-menu #liveStreamMenu="matMenu">
+  <button mat-menu-item (click)="copyEventData()">
+    <mat-icon>code</mat-icon>
+    <span>Copy Event Data</span>
+  </button>
+  <button mat-menu-item (click)="copyEventUrl()">
+    <mat-icon>link</mat-icon>
+    <span>Copy Event URL</span>
+  </button>
+</mat-menu>
