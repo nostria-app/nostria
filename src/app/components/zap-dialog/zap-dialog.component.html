@@ -34,9 +34,26 @@
     @if (data.recipientPubkey) {
     <div class="recipient-preview">
       <h4>Zapping</h4>
+      @if (data.zapSplits && data.zapSplits.length > 0) {
+      <!-- Show split recipients -->
+      <div class="split-recipients">
+        <div class="split-header">
+          <mat-icon>people</mat-icon>
+          <span>Split between {{ data.zapSplits.length }} recipients</span>
+        </div>
+        @for (split of data.zapSplits; track split.pubkey) {
+        <div class="split-recipient">
+          <app-user-profile [pubkey]="split.pubkey" view="compact"></app-user-profile>
+          <span class="split-weight">{{ (split.weight * 100).toFixed(0) }}%</span>
+        </div>
+        }
+      </div>
+      } @else {
+      <!-- Single recipient -->
       <div class="recipient-info">
         <app-user-profile [pubkey]="data.recipientPubkey"></app-user-profile>
       </div>
+      }
       @if (data.eventContent) {
       <div class="event-context">
         <mat-icon>{{ contentInfo().icon }}</mat-icon>
@@ -184,8 +201,7 @@
 
   <mat-dialog-actions align="end">
     <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
-    <button mat-flat-button (click)="proceedToConfirmation()"
-      [disabled]="isProcessing() || !zapForm.valid">
+    <button mat-flat-button (click)="proceedToConfirmation()" [disabled]="isProcessing() || !zapForm.valid">
       Continue ({{ getFinalAmount() }} sats)
     </button>
   </mat-dialog-actions>
@@ -210,9 +226,26 @@
       <!-- Recipient Info -->
       <div class="section recipient-section">
         <h3>Zapping</h3>
+        @if (data.zapSplits && data.zapSplits.length > 0) {
+        <!-- Show split recipients -->
+        <div class="split-recipients">
+          <div class="split-header">
+            <mat-icon>people</mat-icon>
+            <span>Split between {{ data.zapSplits.length }} recipients</span>
+          </div>
+          @for (split of data.zapSplits; track split.pubkey) {
+          <div class="split-recipient">
+            <app-user-profile [pubkey]="split.pubkey" view="compact"></app-user-profile>
+            <span class="split-weight">{{ (split.weight * 100).toFixed(0) }}%</span>
+          </div>
+          }
+        </div>
+        } @else {
+        <!-- Single recipient -->
         <div class="recipient-info">
           <app-user-profile [pubkey]="data.recipientPubkey"></app-user-profile>
         </div>
+        }
         @if (data.eventContent) {
         <div class="event-context">
           <mat-icon>{{ contentInfo().icon }}</mat-icon>
@@ -379,15 +412,15 @@
     <button mat-flat-button color="primary" (click)="confirmNwcPayment()" class="confirm-button"
       [disabled]="isProcessing() || !hasNwcWallet()">
       @if (isProcessing()) {
-      <ng-container>
+      <span class="button-content">
         <mat-spinner diameter="18"></mat-spinner>
         Processing...
-      </ng-container>
+      </span>
       } @else {
-      <ng-container>
+      <span class="button-content">
         <mat-icon>bolt</mat-icon>
         Send Zap
-      </ng-container>
+      </span>
       }
     </button>
     } @else if (selectedPaymentMethod() === 'native' || selectedPaymentMethod() === 'manual') {
@@ -395,15 +428,15 @@
     <button mat-flat-button color="primary" (click)="generateInvoice()" class="confirm-button"
       [disabled]="isProcessing()">
       @if (isProcessing()) {
-      <ng-container>
+      <span class="button-content">
         <mat-spinner diameter="18"></mat-spinner>
         Generating...
-      </ng-container>
+      </span>
       } @else {
-      <ng-container>
+      <span class="button-content">
         <mat-icon>receipt</mat-icon>
         {{ selectedPaymentMethod() === 'native' ? 'Generate Invoice' : 'Generate QR Code' }}
-      </ng-container>
+      </span>
       }
     </button>
     } @else {

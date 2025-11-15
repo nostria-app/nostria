@@ -126,6 +126,18 @@ export class ZapButtonComponent {
       return;
     }
 
+    // Check if this event has zap splits (NIP-57 Appendix G)
+    const currentEvent = this.event();
+    if (currentEvent) {
+      const zapSplits = this.zapService.parseZapSplits(currentEvent);
+      if (zapSplits.length > 0) {
+        // Event has zap splits - show dialog with split info
+        this.openZapSplitDialog(currentEvent, zapSplits);
+        return;
+      }
+    }
+
+    // No zap splits - proceed with regular single-recipient zap
     // Get the recipient pubkey from either direct input or event
     const pubkey = this.recipientPubkey() || this.event()?.pubkey;
     if (!pubkey) {
@@ -196,6 +208,35 @@ export class ZapButtonComponent {
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
         // Zap was sent successfully
+        this.onZapSent(result.amount);
+      }
+    });
+  }
+
+  private openZapSplitDialog(
+    event: Event,
+    splits: Array<{ pubkey: string; relay: string; weight: number }>
+  ): void {
+    // Prepare dialog data for zap split
+    const dialogData: ZapDialogData = {
+      recipientPubkey: event.pubkey, // This will be overridden for splits
+      eventId: event.id,
+      eventContent: event.content ? this.truncateContent(event.content) : undefined,
+      zapSplits: splits, // Pass the split information
+      event: event, // Pass the actual event object
+    };
+
+    // Open zap dialog
+    const dialogRef = this.dialog.open(ZapDialogComponent, {
+      width: '500px',
+      data: dialogData,
+      disableClose: true,
+      panelClass: 'responsive-dialog',
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Split zap was sent successfully
         this.onZapSent(result.amount);
       }
     });

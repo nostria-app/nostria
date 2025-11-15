@@ -7,8 +7,11 @@ import { RelaysService } from './relays/relays';
 import { Wallets } from './wallets';
 import { LoggerService } from './logger.service';
 import { AccountRelayService } from './relays/account-relay';
+import { DiscoveryRelayService } from './relays/discovery-relay';
 import { ZapMetricsService } from './zap-metrics.service';
 import { UtilitiesService } from './utilities.service';
+import { DataService } from './data.service';
+import { NostrRecord } from '../interfaces';
 
 interface LnurlPayResponse {
   callback: string;
@@ -56,8 +59,10 @@ export class ZapService {
   private wallets = inject(Wallets);
   private logger = inject(LoggerService);
   private accountRelay = inject(AccountRelayService);
+  private discoveryRelay = inject(DiscoveryRelayService);
   private zapMetrics = inject(ZapMetricsService);
   private utilities = inject(UtilitiesService);
+  private dataService = inject(DataService);
 
   // Cache for LNURL pay endpoints
   private lnurlCache = new Map<string, LnurlPayResponse>();
@@ -318,12 +323,24 @@ export class ZapService {
    */
   async getRecipientRelays(recipientPubkey: string): Promise<string[]> {
     try {
-      // Try to get relay list event (kind 10002) for the recipient
-      const relayListEvents = await this.accountRelay.getMany({
+      // Try to get relay list event (kind 10002) for the recipient with timeout
+      // Use discoveryRelay to query for other users' data
+      const relayListPromise = this.discoveryRelay.getMany({
         kinds: [10002], // NIP-65 relay list
         authors: [recipientPubkey],
         limit: 1,
       });
+
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout fetching relay list')), 3000)
+      );
+
+      let relayListEvents: Event[] = [];
+      try {
+        relayListEvents = await Promise.race([relayListPromise, timeoutPromise]);
+      } catch {
+        relayListEvents = [];
+      }
 
       if (relayListEvents.length > 0) {
         const relays = this.utilities.getRelayUrls(relayListEvents[0]);
@@ -334,11 +351,21 @@ export class ZapService {
       }
 
       // Fallback: Try to get contacts event (kind 3) which may contain relay info
-      const contactsEvents = await this.accountRelay.getMany({
+      // Use discoveryRelay to query for other users' data
+      const contactsPromise = this.discoveryRelay.getMany({
         kinds: [3], // Contacts list
         authors: [recipientPubkey],
         limit: 1,
       });
+
+      let contactsEvents: Event[] = [];
+      try {
+        contactsEvents = await Promise.race([contactsPromise,
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Timeout')), 3000))
+        ]);
+      } catch {
+        contactsEvents = [];
+      }
 
       if (contactsEvents.length > 0) {
         const relays = this.utilities.getRelayUrlsFromFollowing(contactsEvents[0]);
@@ -565,6 +592,168 @@ export class ZapService {
     } catch (error) {
       this.logger.error('Error validating zap amount:', error);
       return false;
+    }
+  }
+
+  /**
+   * Parse zap split tags from an event (NIP-57 Appendix G)
+   * Returns array of recipients with their pubkeys, relays, and weights
+   */
+  parseZapSplits(event: Event): { pubkey: string; relay: string; weight: number }[] {
+    const zapTags = event.tags.filter(tag => tag[0] === 'zap' && tag.length >= 3);
+
+    if (zapTags.length === 0) {
+      return [];
+    }
+
+    const splits = zapTags.map(tag => ({
+      pubkey: tag[1],
+      relay: tag[2] || '',
+      weight: tag[3] ? parseFloat(tag[3]) : 0
+    }));
+
+    // Check if all weights are present
+    const allHaveWeights = splits.every(s => s.weight > 0);
+    const someHaveWeights = splits.some(s => s.weight > 0);
+
+    // If weights are only partially present, set missing weights to 0 (don't zap)
+    // If no weights are present, divide equally
+    if (!someHaveWeights) {
+      // No weights specified - divide equally
+      const equalWeight = 1 / splits.length;
+      splits.forEach(s => s.weight = equalWeight);
+    } else if (!allHaveWeights) {
+      // Partial weights - recipients without weights get 0
+      splits.forEach(s => {
+        if (s.weight === 0) {
+          s.weight = 0;
+        }
+      });
+    }
+
+    // Filter out zero-weight recipients
+    const activeRecipients = splits.filter(s => s.weight > 0);
+
+    // Normalize weights to percentages
+    const totalWeight = activeRecipients.reduce((sum, s) => sum + s.weight, 0);
+    if (totalWeight > 0) {
+      activeRecipients.forEach(s => s.weight = s.weight / totalWeight);
+    }
+
+    return activeRecipients;
+  }
+
+  /**
+   * Send a zap with splits to multiple recipients (NIP-57 Appendix G)
+   * This handles events that have zap tags specifying split payments
+   */
+  async sendSplitZap(
+    event: Event,
+    totalAmount: number, // Total amount in sats to split among recipients
+    message = ''
+  ): Promise<void> {
+    const splits = this.parseZapSplits(event);
+
+    if (splits.length === 0) {
+      throw new Error('No valid zap split recipients found in event');
+    }
+
+    this.logger.info(`Sending split zap to ${splits.length} recipients`, {
+      totalAmount,
+      splits: splits.map(s => ({ pubkey: s.pubkey.substring(0, 8), weight: s.weight }))
+    });
+
+    // Calculate individual amounts (rounding to nearest sat)
+    const splitPayments = splits.map(split => ({
+      ...split,
+      amount: Math.round(totalAmount * split.weight)
+    }));
+
+    // Ensure we're not losing sats due to rounding - adjust the largest recipient
+    const totalCalculated = splitPayments.reduce((sum, p) => sum + p.amount, 0);
+    if (totalCalculated !== totalAmount) {
+      const difference = totalAmount - totalCalculated;
+      const largestRecipient = splitPayments.reduce((max, p) => p.amount > max.amount ? p : max);
+      largestRecipient.amount += difference;
+    }
+
+    // Fetch metadata for all recipients in parallel with timeout
+    const metadataPromises = splitPayments.map(async payment => {
+      try {
+        const timeoutPromise = new Promise<NostrRecord | undefined>((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout fetching profile')), 5000)
+        );
+        const profilePromise = this.dataService.getProfile(payment.pubkey);
+        const profile = await Promise.race([profilePromise, timeoutPromise]);
+        return {
+          ...payment,
+          metadata: profile?.data || null
+        };
+      } catch (error) {
+        this.logger.warn(`Failed to get metadata for split recipient ${payment.pubkey}`, error);
+        return {
+          ...payment,
+          metadata: null
+        };
+      }
+    });
+
+    const paymentsWithMetadata = await Promise.all(metadataPromises);
+
+    // Filter out recipients without lightning addresses
+    const validPayments = paymentsWithMetadata.filter(p => {
+      if (!p.metadata) {
+        this.logger.warn(`Skipping split recipient ${p.pubkey} - no metadata`);
+        return false;
+      }
+      const lightningAddress = this.getLightningAddress(p.metadata);
+      if (!lightningAddress) {
+        this.logger.warn(`Skipping split recipient ${p.pubkey} - no lightning address`);
+        return false;
+      }
+      return true;
+    });
+
+    if (validPayments.length === 0) {
+      throw new Error('No recipients have valid lightning addresses configured');
+    }
+
+    // Send zaps to all recipients in parallel with timeout
+    const zapPromises = validPayments.map(async (payment) => {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error(`Timeout sending zap to ${payment.pubkey}`)), 30000)
+      );
+
+      const zapPromise = this.sendZap(
+        payment.pubkey,
+        payment.amount,
+        message,
+        event.id,
+        payment.metadata!,
+        payment.relay ? [payment.relay] : undefined
+      );
+
+      try {
+        await Promise.race([zapPromise, timeoutPromise]);
+        return true;
+      } catch (error) {
+        // Log error but don't fail the entire split zap
+        this.logger.error(`Failed to send split zap to ${payment.pubkey}`, error);
+        return null;
+      }
+    });
+
+    const results = await Promise.all(zapPromises);
+    const successCount = results.filter(r => r !== null).length;
+
+    if (successCount === 0) {
+      throw new Error('All split zap payments failed');
+    }
+
+    if (successCount < validPayments.length) {
+      this.logger.warn(`Only ${successCount}/${validPayments.length} split zaps succeeded`);
+    } else {
+      this.logger.info(`Successfully sent split zap to ${successCount} recipients`);
     }
   }
 
