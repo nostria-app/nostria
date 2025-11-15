@@ -1,0 +1,85 @@
+<div class="live-chat-container">
+  <!-- Chat Header -->
+  <div class="chat-header">
+    <div class="chat-title">
+      <mat-icon>{{ viewMode() === 'chat' ? 'chat' : 'people' }}</mat-icon>
+      <h3>{{ viewMode() === 'chat' ? 'Live Chat' : 'Participants' }}</h3>
+      @if (viewMode() === 'chat') {
+      <span class="message-count">({{ messages().length }})</span>
+      }
+    </div>
+
+    <mat-button-toggle-group [value]="viewMode()" (change)="toggleView($event.value)" class="chat-toggle">
+      <mat-button-toggle value="chat" matTooltip="Chat">
+        <mat-icon>chat</mat-icon>
+      </mat-button-toggle>
+      <mat-button-toggle value="participants" matTooltip="Participants">
+        <mat-icon>people</mat-icon>
+      </mat-button-toggle>
+    </mat-button-toggle-group>
+  </div>
+
+  <!-- Chat Messages -->
+  @if (viewMode() === 'chat') {
+  <div class="chat-messages" #messagesContainer>
+    @if (messages().length === 0) {
+    <div class="no-messages">
+      <mat-icon>chat_bubble_outline</mat-icon>
+      <p>No messages yet</p>
+      <span>Be the first to send a message!</span>
+    </div>
+    }
+
+    @for (message of messages(); track message.event.id) {
+    <div class="chat-message" [class.reply]="message.replyTo">
+      <app-user-profile [pubkey]="message.pubkey" view="compact" [hostWidthAuto]="true" />
+
+      <div class="message-content">
+        <div class="message-header">
+          <app-profile-display-name [pubkey]="message.pubkey" class="message-author"></app-profile-display-name>
+          <span class="message-time">{{ formatTimestamp(message.created_at) }}</span>
+        </div>
+
+        <div class="message-text">{{ message.content }}</div>
+      </div>
+    </div>
+    }
+  </div>
+
+  <!-- Chat Input -->
+  <div class="chat-input-container">
+    <mat-form-field class="chat-input-field" appearance="outline">
+      <mat-label>Send a message...</mat-label>
+      <input matInput [ngModel]="messageInput()" (ngModelChange)="messageInput.set($event)"
+        (keydown.enter)="sendMessage()" placeholder="Type your message" autocomplete="off" />
+      <button mat-icon-button matSuffix (click)="sendMessage()" [disabled]="!messageInput().trim()"
+        matTooltip="Send message">
+        <mat-icon>send</mat-icon>
+      </button>
+    </mat-form-field>
+  </div>
+  }
+
+  <!-- Participants View -->
+  @if (viewMode() === 'participants') {
+  <div class="participants-view">
+    @if (participants().length === 0) {
+    <div class="no-participants">
+      <mat-icon>people_outline</mat-icon>
+      <p>No participants yet</p>
+    </div>
+    }
+
+    <div class="participants-list">
+      @for (participant of participants(); track participant.pubkey) {
+      <div class="participant-item">
+        <app-user-profile [pubkey]="participant.pubkey" view="list" />
+        @if (participant.role && participant.role !== 'Participant') {
+        <span class="participant-role-badge">{{ participant.role }}</span>
+        }
+      </div>
+      }
+    </div>
+  </div>
+  }
+</div>

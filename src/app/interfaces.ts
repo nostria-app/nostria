@@ -14,6 +14,9 @@ export interface MediaItem {
   artist: string;
   source: string;
   type: 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS';
+  isLiveStream?: boolean; // Flag for live streaming content
+  participants?: Array<{ pubkey: string; role?: string }>; // Live stream participants
+  liveEventData?: Event; // Full Nostr event for live streams
 }
 
 // Playlist-related interfaces for Nostr kind 32100 events
