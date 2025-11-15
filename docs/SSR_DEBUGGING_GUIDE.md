@@ -43,6 +43,31 @@ node dist/app/server/server.mjs
 
 # Test with Node.js inspector (in separate terminal)
 node inspect-ssr.js /e/nevent1...
+
+# Test stream URLs
+node inspect-ssr.js /stream/nevent1...
+
+# Stream URLs fetch directly from relays, not metadata API
+# Look for these debug logs in the server console when testing stream URLs:
+# [SSR] StreamResolver: Starting resolve...
+# [SSR] StreamResolver: isBrowser? false
+# [SSR] StreamResolver: Processing stream route
+# [SSR] StreamResolver: Encoded event (first 50 chars): nevent1qgs...
+# [SSR] StreamResolver: Decoding nevent...
+# [SSR] StreamResolver: Successfully decoded nevent
+# [SSR] StreamResolver: Event ID: abc123...
+# [SSR] StreamResolver: Relay hints: ['wss://relay.damus.io', ...]
+# [SSR] StreamResolver: fetchEventFromRelays called
+# [SSR] StreamResolver: Using relays: ['wss://...']
+# [SSR] StreamResolver: Calling pool.get() with 10s timeout...
+# [SSR] StreamResolver: pool.get() completed in 2345 ms
+# [SSR] StreamResolver: Event received successfully
+# [SSR] StreamResolver: Extracted metadata:
+# [SSR] StreamResolver:   Title: My Live Stream
+# [SSR] StreamResolver:   Description: Watch this amazing stream
+# [SSR] StreamResolver: Updating social metadata...
+# [SSR] StreamResolver: Meta tags updated successfully
+# [SSR] StreamResolver: Resolve complete, returning data
 ```
 
 Look for:
@@ -117,6 +142,8 @@ Test that the metadata API is reachable from the server:
 ```powershell
 # Test from server environment
 curl https://metadata.nostria.app/e/nevent1...
+
+# Stream URLs fetch directly from relays, not metadata API
 ```
 
 Should return JSON with author, content, tags, etc.
@@ -169,6 +196,9 @@ curl http://localhost:4000/a/naddr1... | grep -i "og:title"
 
 # Test profile page
 curl http://localhost:4000/p/npub1... | grep -i "og:title"
+
+# Test stream page
+curl http://localhost:4000/stream/nevent1... | grep -i "og:title"
 ```
 
 ### 3. **Monitor Resolver Execution**

@@ -32,6 +32,7 @@ import { PollsComponent } from './pages/polls/polls.component';
 import { PollEditorComponent } from './pages/polls/poll-editor/poll-editor.component';
 import { DataResolver } from './data-resolver';
 import { ArticleResolver } from './articleResolver';
+import { streamResolver } from './stream-resolver';
 import { MessagesMain } from './pages/messages/main/main';
 import { MessagesList } from './pages/messages/list/list';
 import { PrivacySettingsComponent } from './pages/settings/privacy-settings/privacy-settings.component';
@@ -175,6 +176,7 @@ export const routes: Routes = [
     path: 'stream/:encodedEvent',
     component: StreamViewerComponent,
     title: 'Live Stream',
+    resolve: { streamData: streamResolver },
   },
   {
     path: 'streams',

@@ -1,10 +1,13 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, PLATFORM_ID, TransferState } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { FeedService } from '../../services/feed.service';
+import { MetaService } from '../../services/meta.service';
 import { Event } from 'nostr-tools';
+import { STREAM_STATE_KEY, StreamData } from '../../stream-resolver';
+import { isPlatformServer, isPlatformBrowser } from '@angular/common';
 
 @Component({
   selector: 'app-stream-viewer',
@@ -38,45 +41,86 @@ export class StreamViewerComponent implements OnInit {
   private layout = inject(LayoutService);
   private utilities = inject(UtilitiesService);
   private feed = inject(FeedService);
+  private metaService = inject(MetaService);
+  private transferState = inject(TransferState);
+  private platformId = inject(PLATFORM_ID);
 
   loading = false;
 
+  constructor() {
+    console.log('[StreamViewer] ===== CONSTRUCTOR CALLED =====');
+    console.log('[StreamViewer] Constructor - isPlatformServer:', isPlatformServer(this.platformId));
+  }
+
   async ngOnInit(): Promise<void> {
+    console.log('[StreamViewer] ngOnInit called - START');
+    console.log('[StreamViewer] isPlatformServer:', isPlatformServer(this.platformId));
+    console.log('[StreamViewer] isPlatformBrowser:', isPlatformBrowser(this.platformId));
+
     const encodedEvent = this.route.snapshot.paramMap.get('encodedEvent');
+    console.log('[StreamViewer] Encoded event:', encodedEvent?.substring(0, 50));
 
     if (!encodedEvent) {
-      // No event data, redirect to streams page
-      this.router.navigate(['/streams']);
+      console.warn('[StreamViewer] No encoded event in URL');
+      // Only navigate on browser
+      if (isPlatformBrowser(this.platformId)) {
+        this.router.navigate(['/streams']);
+      }
       return;
     }
 
     const eventPointer = this.utilities.decodeEventFromUrl(encodedEvent);
 
     if (!eventPointer) {
-      console.error('Failed to decode nevent from URL');
-      this.router.navigate(['/streams']);
+      console.error('[StreamViewer] Failed to decode nevent from URL');
+      // Only navigate on browser
+      if (isPlatformBrowser(this.platformId)) {
+        this.router.navigate(['/streams']);
+      }
       return;
     }
+
+    console.log('[StreamViewer] Event pointer decoded:', { id: eventPointer.id, relays: eventPointer.relays?.length });
 
     // Fetch the event from relays
     this.loading = true;
 
     try {
+      console.log('[StreamViewer] Calling fetchEventFromRelays...');
       const event = await this.fetchEventFromRelays(eventPointer.id, eventPointer.relays);
 
       if (!event) {
-        console.error('Failed to fetch event from relays');
-        this.router.navigate(['/streams']);
+        console.error('[StreamViewer] Event not found');
+        // Only navigate on browser
+        if (isPlatformBrowser(this.platformId)) {
+          this.router.navigate(['/streams']);
+        }
         return;
       }
 
-      this.loadStream(event);
+      console.log('[StreamViewer] Event fetched successfully');
+
+      // If on server, set meta tags for SSR
+      if (isPlatformServer(this.platformId)) {
+        console.log('[StreamViewer SSR] Setting meta tags...');
+        this.setMetaTags(event, encodedEvent);
+      }
+
+      // Only load stream on browser
+      if (isPlatformBrowser(this.platformId)) {
+        this.loadStream(event);
+      }
     } catch (error) {
-      console.error('Error fetching stream event:', error);
-      this.router.navigate(['/streams']);
+      console.error('[StreamViewer] Error fetching stream event:', error);
+      // Only navigate on browser
+      if (isPlatformBrowser(this.platformId)) {
+        this.router.navigate(['/streams']);
+      }
     } finally {
       this.loading = false;
     }
+
+    console.log('[StreamViewer] ngOnInit called - END');
   }
 
   private async fetchEventFromRelays(eventId: string, relayHints?: string[]): Promise<Event | null> {
@@ -147,5 +191,29 @@ export class StreamViewerComponent implements OnInit {
     setTimeout(() => {
       this.layout.fullscreenMediaPlayer.set(true);
     }, 100);
+  }
+
+  private setMetaTags(event: Event, encodedEvent: string): void {
+    const titleTag = event.tags.find((tag: string[]) => tag[0] === 'title');
+    const summaryTag = event.tags.find((tag: string[]) => tag[0] === 'summary');
+    const imageTag = event.tags.find((tag: string[]) => tag[0] === 'image');
+
+    const title = titleTag?.[1] || 'Live Stream';
+    const description = summaryTag?.[1] || 'Watch this live stream on Nostria';
+    const image = imageTag?.[1];
+
+    console.log('[StreamViewer SSR] Setting meta tags:');
+    console.log('[StreamViewer SSR]   Title:', title);
+    console.log('[StreamViewer SSR]   Description:', description);
+    console.log('[StreamViewer SSR]   Image:', image);
+
+    this.metaService.updateSocialMetadata({
+      title,
+      description,
+      image: image || '/icons/icon-512x512.png',
+      url: `https://nostria.space/stream/${encodedEvent}`,
+    });
+
+    console.log('[StreamViewer SSR] Meta tags updated');
   }
 }
