@@ -3,6 +3,9 @@
   flex-direction: column;
   gap: 1rem;
   padding: 0.5rem 0;
+  overflow: hidden;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .live-thumbnail-container {
@@ -88,6 +91,8 @@
   margin: 0;
   font-size: 1.25rem;
   font-weight: 500;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .title-icon {
@@ -98,6 +103,8 @@
   margin: 0;
   color: var(--mat-text-secondary);
   line-height: 1.5;
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .live-time-info {
@@ -126,6 +133,8 @@
 
 .time-value {
   color: var(--mat-text-primary);
+  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .participants-count {
