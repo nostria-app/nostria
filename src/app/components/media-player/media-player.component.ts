@@ -23,6 +23,7 @@ import { Router, NavigationEnd } from '@angular/router';
 import { Location } from '@angular/common';
 import { MatDialog } from '@angular/material/dialog';
 import { UtilitiesService } from '../../services/utilities.service';
+import { FeedService } from '../../services/feed.service';
 import { MatSliderModule } from '@angular/material/slider';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TimePipe } from '../../pipes/time.pipe';
@@ -76,6 +77,7 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   private readonly renderer = inject(Renderer2);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
+  private readonly feed = inject(FeedService);
   private routerSub?: Subscription;
   private displayModeListener?: (event: MediaQueryListEvent) => void;
   // store the current page title shown in the titlebar
@@ -125,13 +127,15 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
 
       // Update URL with encoded event data if it's a live stream
       if (this.media.current?.isLiveStream && this.media.current?.liveEventData) {
-        const encodedEvent = this.utilities.encodeEventForUrl(this.media.current.liveEventData);
+        // Get active relay URLs as hints
+        const relayHints = this.feed.userRelays().map(r => r.url).slice(0, 5); // Limit to 5 relays
+        const nevent = this.utilities.encodeEventForUrl(this.media.current.liveEventData, relayHints);
 
         // Store current URL to restore on exit (store in history state)
         const previousUrl = this.router.url;
 
         // Use replaceState to update URL without triggering navigation
-        this.location.replaceState(`/stream/${encodedEvent}`, '', { previousUrl });
+        this.location.replaceState(`/stream/${nevent}`, '', { previousUrl });
       }
     }
   }
