@@ -51,6 +51,7 @@ import { InviteComponent } from './pages/invite/invite.component';
 import { NotesComponent } from './pages/notes/notes.component';
 import { StreamsComponent } from './pages/streams/streams.component';
 import { MeetingsComponent } from './pages/meetings/meetings.component';
+import { StreamViewerComponent } from './pages/stream-viewer/stream-viewer.component';
 
 const profileChildren: Routes = [
   {
@@ -170,6 +171,11 @@ export const routes: Routes = [
     ],
   },
   { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
+  {
+    path: 'stream/:encodedEvent',
+    component: StreamViewerComponent,
+    title: 'Live Stream',
+  },
   {
     path: 'streams',
     component: StreamsComponent,

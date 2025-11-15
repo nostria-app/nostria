@@ -108,16 +108,8 @@
       <!-- Live stream sidebar (chat + participants) for fullscreen -->
       @let liveEvent = media.current?.liveEventData;
       @if (layout.fullscreenMediaPlayer() && media.current?.isLiveStream) {
-      <div class="live-stream-sidebar" #chatSidebar>
+      <div class="live-stream-sidebar" #chatSidebar [class.hidden]="!chatVisible">
         <app-live-chat [liveEvent]="liveEvent" #liveChat />
-      </div>
-
-      <!-- Chat toggle button overlay -->
-      <div class="chat-toggle-overlay">
-        <button mat-icon-button (click)="liveChat.toggleVisibility()"
-          [matTooltip]="liveChat.isVisible() ? 'Hide chat' : 'Show chat'" class="chat-toggle-button">
-          <mat-icon>{{liveChat.isVisible() ? 'chat' : 'chat_bubble_outline'}}</mat-icon>
-        </button>
       </div>
       }
 
@@ -181,6 +173,13 @@
 
         @if (media.videoMode()) {
         <div class="media-audio-inline">
+          @if (layout.fullscreenMediaPlayer() && media.current?.isLiveStream) {
+          <button [matTooltip]="chatVisible ? 'Hide chat' : 'Show chat'" (click)="toggleChatVisibility()"
+            mat-icon-button>
+            <mat-icon>{{chatVisible ? 'chat' : 'chat_bubble_outline'}}</mat-icon>
+          </button>
+          }
+
           <button matTooltip="Queue" routerLink="/media-queue" class="hide-small" mat-icon-button>
             <mat-icon>queue_music</mat-icon>
           </button>

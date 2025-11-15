@@ -36,6 +36,18 @@
 
     /* Add smooth transitions for fullscreen mode */
     transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+
+    /* Ensure footer is above mobile navigation and other UI elements */
+    z-index: 1600;
+
+    /* On mobile, use fixed positioning to ensure it's in the same stacking context as mobile-nav */
+    @media (max-width: 599px) {
+      position: fixed;
+      bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+      /* Above mobile nav */
+      left: 0;
+      right: 0;
+    }
   }
 
   /* Fullscreen mode - override footer-mode when both are active */
@@ -269,8 +281,7 @@ input {
   flex-shrink: 0;
   transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 
-  // Hide sidebar when chat is hidden
-  &:has(app-live-chat .live-chat-container[data-hidden="true"]) {
+  &.hidden {
     display: none;
   }
 
@@ -291,40 +302,6 @@ input {
     max-height: 50vh;
     border-left: none;
     border-top: 1px solid var(--mat-sys-outline-variant);
-
-    // On mobile, always show if not hidden
-    &:has(app-live-chat .live-chat-container:not([data-hidden="true"])) {
-      display: flex;
-    }
-  }
-}
-
-.chat-toggle-overlay {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  z-index: 100;
-  pointer-events: none;
-
-  .chat-toggle-button {
-    pointer-events: all;
-    background: var(--mat-sys-surface-container-high);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-    transition: all 0.2s ease;
-
-    &:hover {
-      background: var(--mat-sys-surface-container-highest);
-      transform: scale(1.05);
-    }
-
-    mat-icon {
-      color: var(--mat-sys-primary);
-    }
-  }
-
-  @media (max-width: 768px) {
-    top: 8px;
-    right: 8px;
   }
 }
 

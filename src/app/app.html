@@ -465,7 +465,8 @@
       </div>
     </mat-sidenav>
 
-    <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked()">
+    <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked()"
+      [class.media-player-shown]="layout.showMediaPlayer()">
       <!-- Page content -->
       <div class="content-wrapper">
         <router-outlet></router-outlet>
