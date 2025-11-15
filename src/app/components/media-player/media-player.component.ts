@@ -78,6 +78,10 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   private displayModeListener?: (event: MediaQueryListEvent) => void;
   // store the current page title shown in the titlebar
   pageTitle = '';
+
+  // Chat visibility state
+  chatVisible = true;
+
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
 
@@ -100,6 +104,11 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
         element.classList.add('exiting-fullscreen');
       }
 
+      // Navigate back to previous route
+      if (this.utilities.isBrowser() && window.history.state?.previousUrl) {
+        this.router.navigateByUrl(window.history.state.previousUrl);
+      }
+
       // Wait for animation to complete before removing fullscreen mode
       setTimeout(() => {
         this.layout.fullscreenMediaPlayer.set(false);
@@ -111,7 +120,25 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
     } else {
       // Entering fullscreen
       this.layout.fullscreenMediaPlayer.set(true);
+
+      // Update URL with encoded event data if it's a live stream
+      if (this.media.current?.isLiveStream && this.media.current?.liveEventData) {
+        const event = this.media.current.liveEventData;
+        const eventJson = JSON.stringify(event);
+        const encodedEvent = btoa(eventJson);
+
+        // Store current URL to restore on exit
+        const previousUrl = this.router.url;
+
+        this.router.navigate(['/stream', encodedEvent], {
+          state: { previousUrl }
+        });
+      }
     }
+  }
+
+  toggleChatVisibility(): void {
+    this.chatVisible = !this.chatVisible;
   }
 
   // Signals to track display mode state

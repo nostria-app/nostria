@@ -75,6 +75,11 @@ mat-sidenav-content {
   // Adjust for mobile navigation
   @media (max-width: 599px) {
     padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); // Height of mobile nav + safe area
+
+    // When media player is shown, add extra padding for it
+    &.media-player-shown {
+      padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px)); // Mobile nav (60px) + media player (80px)
+    }
   }
 }
 
