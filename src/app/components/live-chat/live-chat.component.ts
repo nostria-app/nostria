@@ -12,8 +12,10 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
-import { AccountService } from '../../api/services/account.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { NostrService } from '../../services/nostr.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 interface ChatMessage {
   event: Event;
@@ -43,8 +45,10 @@ interface ChatMessage {
 export class LiveChatComponent {
   private relayPool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
-  private accountService = inject(AccountService);
   private utilities = inject(UtilitiesService);
+  private nostrService = inject(NostrService);
+  private accountState = inject(AccountStateService);
+  private snackBar = inject(MatSnackBar);
 
   // Input: The live event data (kind 30311 or 30313)
   liveEvent = input<Event | undefined>(undefined);
@@ -151,9 +155,18 @@ export class LiveChatComponent {
       const relayTag = event.tags.find(tag => tag[0] === 'relays');
       const relayHint = relayTag && relayTag.length > 1 ? relayTag[1] : '';
 
+      // Get current user's pubkey
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.snackBar.open('Please log in to send messages', 'Close', { duration: 3000 });
+        this.messageInput.set(message);
+        return;
+      }
+
       // Create the chat message event
-      const chatEvent: Partial<Event> = {
+      const chatEvent = {
         kind: 1311,
+        pubkey: pubkey,
         tags: [
           ['a', address, relayHint, 'root'],
         ],
@@ -161,14 +174,33 @@ export class LiveChatComponent {
         created_at: Math.floor(Date.now() / 1000),
       };
 
-      // Sign and publish (this would need to be implemented through AccountService)
-      // For now, we'll just clear the input
+      // Clear input immediately for better UX
       this.messageInput.set('');
 
-      console.log('Would publish chat message:', chatEvent);
-      // await this.accountService.publishEvent(chatEvent);
+      // Sign and publish the event
+      const result = await this.nostrService.signAndPublish(chatEvent);
+
+      if (result.success) {
+        // Optionally add the message to the local list immediately
+        if (result.event) {
+          const newMessage: ChatMessage = {
+            event: result.event,
+            pubkey: result.event.pubkey,
+            content: result.event.content,
+            created_at: result.event.created_at,
+          };
+          this.messages.update(msgs => [...msgs, newMessage]);
+        }
+      } else {
+        // Restore the message if publish failed
+        this.messageInput.set(message);
+        this.snackBar.open('Failed to send message', 'Close', { duration: 3000 });
+      }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Restore the message on error
+      this.messageInput.set(message);
+      this.snackBar.open('Error sending message', 'Close', { duration: 3000 });
     }
   }
 
