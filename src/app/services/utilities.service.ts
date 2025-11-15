@@ -975,4 +975,58 @@ export class UtilitiesService {
 
     return tag;
   }
+
+  /**
+   * Encode a Nostr event to a URL-safe base64 string for sharing
+   * Handles Unicode characters properly by converting to UTF-8 first
+   * @param event The Nostr event to encode
+   * @returns Base64-encoded event string
+   */
+  encodeEventForUrl(event: Event): string {
+    const eventJson = JSON.stringify(event);
+    // Convert to UTF-8 bytes, then to base64
+    // Use TextEncoder to handle Unicode properly
+    if (this.isBrowser()) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(eventJson);
+      // Convert Uint8Array to binary string
+      let binary = '';
+      data.forEach(byte => binary += String.fromCharCode(byte));
+      return btoa(binary);
+    }
+    // Fallback for SSR (though this shouldn't be called server-side)
+    return btoa(eventJson);
+  }
+
+  /**
+   * Decode a URL-safe base64 string back to a Nostr event
+   * Handles Unicode characters properly by converting from UTF-8
+   * @param encodedEvent The base64-encoded event string
+   * @returns Decoded Nostr event or null if decoding fails
+   */
+  decodeEventFromUrl(encodedEvent: string): Event | null {
+    try {
+      if (this.isBrowser()) {
+        // Decode base64 to binary string
+        const binary = atob(encodedEvent);
+        // Convert binary string to Uint8Array
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        // Decode UTF-8 bytes to string
+        const decoder = new TextDecoder();
+        const eventJson = decoder.decode(bytes);
+        const event: Event = JSON.parse(eventJson);
+        return event;
+      }
+      // Fallback for SSR
+      const eventJson = atob(encodedEvent);
+      const event: Event = JSON.parse(eventJson);
+      return event;
+    } catch (error) {
+      this.logger.error('Failed to decode event from URL:', error);
+      return null;
+    }
+  }
 }
