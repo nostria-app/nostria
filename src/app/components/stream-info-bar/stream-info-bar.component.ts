@@ -297,8 +297,12 @@ export class StreamInfoBarComponent implements OnDestroy {
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
 
-  // Viewer count (tracked via status events)
-  viewerCount = signal(0);
+  // Viewer count (from current_participants tag in stream event)
+  viewerCount = computed(() => {
+    const event = this.liveEvent();
+    const participantsTag = event.tags.find(tag => tag[0] === 'current_participants');
+    return participantsTag?.[1] ? parseInt(participantsTag[1], 10) : 0;
+  });
 
   // Elapsed time tracking
   elapsedTime = signal('00:00:00');
@@ -401,14 +405,6 @@ export class StreamInfoBarComponent implements OnDestroy {
   });
 
   constructor() {
-    // Subscribe to viewer count updates
-    effect(() => {
-      const address = this.eventAddress();
-      if (address) {
-        this.subscribeToViewerUpdates(address);
-      }
-    });
-
     // Start elapsed time counter
     effect(() => {
       const startTimestamp = this.startTime();
@@ -583,55 +579,6 @@ export class StreamInfoBarComponent implements OnDestroy {
       return `${(sats / 1000).toFixed(1)}K`;
     }
     return sats.toString();
-  }
-
-  private async subscribeToViewerUpdates(eventAddress: string): Promise<void> {
-    // Query for kind 1312 status events to track viewers
-    const relayUrls = this.relaysService.getOptimalRelays(
-      this.utilities.preferredRelays
-    );
-
-    if (relayUrls.length === 0) {
-      console.warn('No relays available for viewer tracking');
-      return;
-    }
-
-    // Get recent status events (viewers are those who sent status in last 60 seconds)
-    const sixtySecondsAgo = Math.floor(Date.now() / 1000) - 60;
-
-    const filter = {
-      kinds: [1312],
-      '#a': [eventAddress],
-      since: sixtySecondsAgo,
-    };
-
-    try {
-      const events = await this.relayPool.query(relayUrls, filter, 5000);
-
-      // Count unique viewers (unique pubkeys)
-      const uniqueViewers = new Set(events.map(e => e.pubkey));
-      this.viewerCount.set(uniqueViewers.size);
-
-      // Poll for updates every 30 seconds
-      setInterval(async () => {
-        const now = Math.floor(Date.now() / 1000);
-        const recentFilter = {
-          kinds: [1312],
-          '#a': [eventAddress],
-          since: now - 60,
-        };
-
-        try {
-          const recentEvents = await this.relayPool.query(relayUrls, recentFilter, 5000);
-          const currentViewers = new Set(recentEvents.map(e => e.pubkey));
-          this.viewerCount.set(currentViewers.size);
-        } catch (error) {
-          console.error('Error updating viewer count:', error);
-        }
-      }, 30000);
-    } catch (error) {
-      console.error('Error subscribing to viewer updates:', error);
-    }
   }
 
   async openZapDialog(): Promise<void> {
