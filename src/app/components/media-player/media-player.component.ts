@@ -16,6 +16,7 @@ import { LayoutService } from '../../services/layout.service';
 import { ThemeService } from '../../services/theme.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { RouterModule } from '@angular/router';
 import { Router, NavigationEnd } from '@angular/router';
@@ -44,6 +45,7 @@ declare global {
   imports: [
     MatButtonModule,
     MatIconModule,
+    MatTooltipModule,
     RouterModule,
     MatSliderModule,
     ReactiveFormsModule,

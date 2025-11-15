@@ -108,8 +108,16 @@
       <!-- Live stream sidebar (chat + participants) for fullscreen -->
       @let liveEvent = media.current?.liveEventData;
       @if (layout.fullscreenMediaPlayer() && media.current?.isLiveStream) {
-      <div class="live-stream-sidebar">
-        <app-live-chat [liveEvent]="liveEvent" />
+      <div class="live-stream-sidebar" #chatSidebar>
+        <app-live-chat [liveEvent]="liveEvent" #liveChat />
+      </div>
+
+      <!-- Chat toggle button overlay -->
+      <div class="chat-toggle-overlay">
+        <button mat-icon-button (click)="liveChat.toggleVisibility()"
+          [matTooltip]="liveChat.isVisible() ? 'Hide chat' : 'Show chat'" class="chat-toggle-button">
+          <mat-icon>{{liveChat.isVisible() ? 'chat' : 'chat_bubble_outline'}}</mat-icon>
+        </button>
       </div>
       }
 
@@ -127,7 +135,7 @@
     </div>
     }
 
-    <div class="media-controls">
+    <div class="media-controls" [class.compact-controls]="layout.fullscreenMediaPlayer()">
       <div class="media-controls-container">
         @if (media.current?.type === 'Podcast') {
         <button matTooltip="Change speed" (click)="media.rate()" mat-icon-button>
