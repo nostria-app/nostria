@@ -49,6 +49,8 @@ import { DeleteEventComponent } from './pages/delete-event/delete-event.componen
 import { DeleteAccountComponent } from './pages/delete-account/delete-account.component';
 import { InviteComponent } from './pages/invite/invite.component';
 import { NotesComponent } from './pages/notes/notes.component';
+import { StreamsComponent } from './pages/streams/streams.component';
+import { MeetingsComponent } from './pages/meetings/meetings.component';
 
 const profileChildren: Routes = [
   {
@@ -168,6 +170,18 @@ export const routes: Routes = [
     ],
   },
   { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
+  {
+    path: 'streams',
+    component: StreamsComponent,
+    data: { isRoot: true },
+    title: 'Live Streams',
+  },
+  {
+    path: 'meetings',
+    component: MeetingsComponent,
+    data: { isRoot: true },
+    title: 'Meeting Spaces',
+  },
   { path: 'playlists', component: PlaylistsComponent, title: 'Playlists' },
   { path: 'playlists/edit/:id', component: PlaylistEditorComponent, title: 'Edit Playlist' },
   { path: 'polls', component: PollsComponent, title: 'Polls' },

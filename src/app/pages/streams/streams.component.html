@@ -1,0 +1,80 @@
+<div class="streams-container">
+  <div class="streams-header">
+    <h1>
+      <mat-icon>sensors</mat-icon>
+      Live Streams
+    </h1>
+    <button mat-icon-button (click)="refresh()" [disabled]="loading()">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">radio_button_checked</mat-icon>
+        Live Now
+        @if (liveStreams().length > 0) {
+        <span class="tab-count">{{ liveStreams().length }}</span>
+        }
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">schedule</mat-icon>
+        Scheduled
+        @if (plannedStreams().length > 0) {
+        <span class="tab-count">{{ plannedStreams().length }}</span>
+        }
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">stop_circle</mat-icon>
+        Ended
+        @if (endedStreams().length > 0) {
+        <span class="tab-count">{{ endedStreams().length }}</span>
+        }
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
+
+  <div class="streams-content">
+    @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading streams...</p>
+    </div>
+    } @else if (currentStreams().length === 0) {
+    <div class="empty-state">
+      <mat-icon>video_library</mat-icon>
+      <h2>No streams found</h2>
+      <p>
+        @if (selectedTabIndex() === 0) {
+        There are no live streams at the moment. Check back later or explore scheduled streams.
+        } @else if (selectedTabIndex() === 1) {
+        There are no scheduled streams. Check back later for upcoming events.
+        } @else {
+        There are no ended streams to display.
+        }
+      </p>
+      <button mat-flat-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+    } @else {
+    <div class="streams-grid">
+      @for (stream of currentStreams(); track stream.id) {
+      <mat-card class="stream-card">
+        <mat-card-content>
+          <app-live-event [event]="stream"></app-live-event>
+        </mat-card-content>
+      </mat-card>
+      }
+    </div>
+    }
+  </div>
+</div>
