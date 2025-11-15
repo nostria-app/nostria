@@ -621,6 +621,31 @@ export class NostrService implements NostriaService {
     }
   }
 
+  /**
+   * Wait for window.nostr to become available (browser extensions inject it asynchronously)
+   * Returns true if window.nostr becomes available, false if timeout
+   */
+  private async waitForNostrExtension(timeoutMs = 5000): Promise<boolean> {
+    if (window.nostr) {
+      return true;
+    }
+
+    return new Promise((resolve) => {
+      const checkInterval = setInterval(() => {
+        if (window.nostr) {
+          clearInterval(checkInterval);
+          clearTimeout(timeout);
+          resolve(true);
+        }
+      }, 100); // Check every 100ms
+
+      const timeout = setTimeout(() => {
+        clearInterval(checkInterval);
+        resolve(false);
+      }, timeoutMs);
+    });
+  }
+
   async signEvent(event: EventTemplate | UnsignedEvent) {
     return this.sign(event);
   }
@@ -639,6 +664,11 @@ export class NostrService implements NostriaService {
 
     switch (currentUser?.source) {
       case 'extension': {
+        // Wait for window.nostr to be available (extensions inject it asynchronously)
+        if (!window.nostr) {
+          await this.waitForNostrExtension();
+        }
+
         if (!window.nostr) {
           throw new Error(
             'Nostr extension not found. Please install Alby, nos2x, or another NIP-07 compatible extension, or re-login with your nsec key.'
