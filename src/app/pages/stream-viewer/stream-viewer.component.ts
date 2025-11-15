@@ -2,18 +2,15 @@ import { Component, OnInit, inject } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
-import { MediaPlayerComponent } from '../../components/media-player/media-player.component';
 import { UtilitiesService } from '../../services/utilities.service';
 import { FeedService } from '../../services/feed.service';
 import { Event } from 'nostr-tools';
 
 @Component({
   selector: 'app-stream-viewer',
-  imports: [MediaPlayerComponent],
+  imports: [],
   template: `
-    @if (streamLoaded) {
-      <app-media-player [footer]="true" />
-    } @else if (loading) {
+    @if (loading) {
       <div class="loading-container">
         <p>Loading stream...</p>
       </div>
@@ -42,7 +39,6 @@ export class StreamViewerComponent implements OnInit {
   private utilities = inject(UtilitiesService);
   private feed = inject(FeedService);
 
-  streamLoaded = false;
   loading = false;
 
   async ngOnInit(): Promise<void> {
@@ -146,8 +142,6 @@ export class StreamViewerComponent implements OnInit {
       isLiveStream: true,
       liveEventData: event,
     });
-
-    this.streamLoaded = true;
 
     // Enter fullscreen mode after a short delay to ensure media is loaded
     setTimeout(() => {
