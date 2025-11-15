@@ -5,6 +5,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatBadgeModule } from '@angular/material/badge';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { RouterModule } from '@angular/router';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { ZapService } from '../../services/zap.service';
@@ -22,6 +23,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     MatTooltipModule,
     MatChipsModule,
     MatBadgeModule,
+    MatProgressBarModule,
     RouterModule,
     UserProfileComponent,
   ],
@@ -62,6 +64,23 @@ import { MatSnackBar } from '@angular/material/snack-bar';
       @if (description()) {
       <div class="stream-description">
         {{ description() }}
+      </div>
+      }
+      
+      @if (zapGoalAmount() > 0) {
+      <div class="zap-goal">
+        <div class="zap-goal-header">
+          <span class="zap-goal-label">
+            <mat-icon>bolt</mat-icon>
+            Zap Goal: {{ formatSats(zapGoalAmount()) }}
+          </span>
+          <span class="zap-goal-progress">{{ formatSats(currentZapAmount()) }} / {{ formatSats(zapGoalAmount()) }}</span>
+        </div>
+        <mat-progress-bar 
+          mode="determinate" 
+          [value]="zapGoalProgress()"
+          class="zap-goal-bar">
+        </mat-progress-bar>
       </div>
       }
       
@@ -189,6 +208,48 @@ import { MatSnackBar } from '@angular/material/snack-bar';
       -webkit-box-orient: vertical;
     }
 
+    .zap-goal {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .zap-goal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.875rem;
+    }
+
+    .zap-goal-label {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: 600;
+      color: var(--mat-sys-on-surface);
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: #ffd700;
+      }
+    }
+
+    .zap-goal-progress {
+      font-weight: 600;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .zap-goal-bar {
+      height: 8px;
+      border-radius: 4px;
+      
+      ::ng-deep .mdc-linear-progress__bar-inner {
+        border-color: #ffd700 !important;
+      }
+    }
+
     .stream-tags {
       mat-chip-set {
         --mdc-chip-container-height: 28px;
@@ -236,6 +297,16 @@ export class StreamInfoBarComponent {
   // Viewer count (tracked via status events)
   viewerCount = signal(0);
 
+  // Zap goal tracking
+  zapGoalAmount = signal(0); // in sats
+  currentZapAmount = signal(0); // in sats
+  zapGoalProgress = computed(() => {
+    const goal = this.zapGoalAmount();
+    if (goal === 0) return 0;
+    const current = this.currentZapAmount();
+    return Math.min((current / goal) * 100, 100);
+  });
+
   // Stream title
   title = computed(() => {
     const event = this.liveEvent();
@@ -250,9 +321,12 @@ export class StreamInfoBarComponent {
     return summaryTag?.[1] || null;
   });
 
-  // Streamer pubkey
+  // Streamer pubkey - use host p tag if available, otherwise event pubkey
   streamerPubkey = computed(() => {
-    return this.liveEvent().pubkey;
+    const event = this.liveEvent();
+    // Find the p tag with "host" role
+    const hostTag = event.tags.find(tag => tag[0] === 'p' && tag[3] === 'host');
+    return hostTag?.[1] || event.pubkey;
   });
 
   // Streamer npub
@@ -285,6 +359,140 @@ export class StreamInfoBarComponent {
         this.subscribeToViewerUpdates(address);
       }
     });
+
+    // Fetch zap goal
+    effect(() => {
+      const event = this.liveEvent();
+      const goalTag = event.tags.find(tag => tag[0] === 'goal');
+      if (goalTag?.[1]) {
+        this.fetchZapGoal(goalTag[1]);
+      }
+    });
+
+    // Track zaps for this stream
+    effect(() => {
+      const event = this.liveEvent();
+      if (event.id) {
+        this.trackStreamZaps(event.id);
+      }
+    });
+  }
+
+  private async fetchZapGoal(goalEventId: string): Promise<void> {
+    const relayUrls = this.relaysService.getOptimalRelays(
+      this.utilities.preferredRelays
+    );
+
+    if (relayUrls.length === 0) {
+      console.warn('No relays available for fetching zap goal');
+      return;
+    }
+
+    try {
+      const events = await this.relayPool.query(
+        relayUrls,
+        { kinds: [9041], ids: [goalEventId] },
+        5000
+      );
+
+      if (events.length > 0) {
+        const goalEvent = events[0];
+        const amountTag = goalEvent.tags.find(tag => tag[0] === 'amount');
+        if (amountTag?.[1]) {
+          // Amount is in millisats, convert to sats
+          const amountInSats = Math.floor(parseInt(amountTag[1]) / 1000);
+          this.zapGoalAmount.set(amountInSats);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching zap goal:', error);
+    }
+  }
+
+  private async trackStreamZaps(streamEventId: string): Promise<void> {
+    const relayUrls = this.relaysService.getOptimalRelays(
+      this.utilities.preferredRelays
+    );
+
+    if (relayUrls.length === 0) {
+      console.warn('No relays available for tracking zaps');
+      return;
+    }
+
+    try {
+      // Query for kind 9735 zap receipts that reference this stream event
+      const events = await this.relayPool.query(
+        relayUrls,
+        { kinds: [9735], '#e': [streamEventId] },
+        5000
+      );
+
+      // Calculate total zaps
+      let totalSats = 0;
+      for (const zapReceipt of events) {
+        const boltTag = zapReceipt.tags.find(tag => tag[0] === 'bolt11');
+        if (boltTag?.[1]) {
+          const amountInSats = this.extractAmountFromBolt11(boltTag[1]);
+          totalSats += amountInSats;
+        }
+      }
+
+      this.currentZapAmount.set(totalSats);
+
+      // Poll for new zaps every 15 seconds
+      setInterval(async () => {
+        try {
+          const recentEvents = await this.relayPool.query(
+            relayUrls,
+            { kinds: [9735], '#e': [streamEventId] },
+            5000
+          );
+
+          let newTotal = 0;
+          for (const zapReceipt of recentEvents) {
+            const boltTag = zapReceipt.tags.find(tag => tag[0] === 'bolt11');
+            if (boltTag?.[1]) {
+              const amountInSats = this.extractAmountFromBolt11(boltTag[1]);
+              newTotal += amountInSats;
+            }
+          }
+
+          this.currentZapAmount.set(newTotal);
+        } catch (error) {
+          console.error('Error updating stream zaps:', error);
+        }
+      }, 15000);
+    } catch (error) {
+      console.error('Error tracking stream zaps:', error);
+    }
+  }
+
+  private extractAmountFromBolt11(bolt11: string): number {
+    // Extract amount from bolt11 invoice
+    // Format: lnbc{amount}{multiplier}...
+    const match = bolt11.match(/lnbc(\d+)([munp]?)/);
+    if (!match) return 0;
+
+    const amount = parseInt(match[1]);
+    const multiplier = match[2];
+
+    // Convert to sats based on multiplier
+    switch (multiplier) {
+      case 'm': return amount * 100000; // milli-btc
+      case 'u': return amount * 100; // micro-btc
+      case 'n': return amount / 10; // nano-btc
+      case 'p': return amount / 10000; // pico-btc
+      default: return amount * 100000000; // btc
+    }
+  }
+
+  formatSats(sats: number): string {
+    if (sats >= 1000000) {
+      return `${(sats / 1000000).toFixed(2)}M`;
+    } else if (sats >= 1000) {
+      return `${(sats / 1000).toFixed(1)}K`;
+    }
+    return sats.toString();
   }
 
   private async subscribeToViewerUpdates(eventAddress: string): Promise<void> {
@@ -338,7 +546,8 @@ export class StreamInfoBarComponent {
 
   async openZapDialog(): Promise<void> {
     const event = this.liveEvent();
-    const recipientPubkey = event.pubkey;
+    // Use the host pubkey for zaps
+    const recipientPubkey = this.streamerPubkey();
 
     // Get recipient metadata
     const metadata = await this.dataService.getProfile(recipientPubkey);
