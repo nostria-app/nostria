@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, OnDestroy } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,16 +36,17 @@ import { MatSnackBar } from '@angular/material/snack-bar';
           <div class="stream-meta">
             <app-user-profile [pubkey]="streamerPubkey()" />
             <span class="separator">•</span>
-            <div class="live-indicator">
-              <span class="live-dot"></span>
+            <div class="live-badge">
               <span class="live-text">LIVE</span>
             </div>
-            @if (viewerCount() > 0) {
+            <span class="viewer-count-badge">{{ viewerCount() }} viewers</span>
+            <span class="time-badge">{{ elapsedTime() }}</span>
+            @if (streamProvider()) {
             <span class="separator">•</span>
-            <span class="viewer-count">
-              <mat-icon>visibility</mat-icon>
-              {{ viewerCount() }} {{ viewerCount() === 1 ? 'viewer' : 'viewers' }}
-            </span>
+            <a [href]="streamProviderUrl()" target="_blank" rel="noopener noreferrer" class="provider-link">
+              <mat-icon>podcasts</mat-icon>
+              {{ streamProvider() }}
+            </a>
             }
           </div>
         </div>
@@ -141,37 +142,38 @@ import { MatSnackBar } from '@angular/material/snack-bar';
       opacity: 0.5;
     }
 
-    .live-indicator {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      color: var(--mat-sys-error);
-      font-weight: 600;
-    }
-
-    .live-dot {
-      width: 8px;
-      height: 8px;
+    .live-badge {
       background: var(--mat-sys-error);
-      border-radius: 50%;
-      animation: pulse 2s infinite;
-    }
-
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-
-    .live-text {
+      color: #fff;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-weight: 700;
       font-size: 0.75rem;
       letter-spacing: 0.5px;
     }
 
-    .viewer-count {
+    .viewer-count-badge,
+    .time-badge {
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface);
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .provider-link {
       display: flex;
       align-items: center;
       gap: 4px;
+      color: var(--mat-sys-on-surface-variant);
+      text-decoration: none;
+      transition: color 0.2s;
       
+      &:hover {
+        color: var(--mat-sys-primary);
+      }
+
       mat-icon {
         font-size: 16px;
         width: 16px;
@@ -285,7 +287,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     }
   `]
 })
-export class StreamInfoBarComponent {
+export class StreamInfoBarComponent implements OnDestroy {
   liveEvent = input.required<Event>();
 
   private dialog = inject(MatDialog);
@@ -297,6 +299,10 @@ export class StreamInfoBarComponent {
 
   // Viewer count (tracked via status events)
   viewerCount = signal(0);
+
+  // Elapsed time tracking
+  elapsedTime = signal('00:00:00');
+  private elapsedTimeInterval?: number;
 
   // Zap goal tracking
   zapGoalAmount = signal(0); // in sats
@@ -320,6 +326,48 @@ export class StreamInfoBarComponent {
     const event = this.liveEvent();
     const summaryTag = event.tags.find(tag => tag[0] === 'summary');
     return summaryTag?.[1] || null;
+  });
+
+  // Stream provider (from event pubkey metadata)
+  streamProvider = computed(() => {
+    const event = this.liveEvent();
+    // Try to extract provider from service tag or determine from pubkey
+    const serviceTag = event.tags.find(tag => tag[0] === 'service');
+    if (serviceTag?.[1]) {
+      const url = serviceTag[1];
+      if (url.includes('zap.stream')) return 'zap.stream';
+      // Extract domain from URL
+      try {
+        const domain = new URL(url).hostname;
+        return domain.replace('www.', '').replace('api-', '').replace(/^ca\./, '');
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
+
+  // Stream provider URL
+  streamProviderUrl = computed(() => {
+    const event = this.liveEvent();
+    const serviceTag = event.tags.find(tag => tag[0] === 'service');
+    if (serviceTag?.[1]) {
+      const url = serviceTag[1];
+      try {
+        const urlObj = new URL(url);
+        return `${urlObj.protocol}//${urlObj.hostname}`;
+      } catch {
+        return '#';
+      }
+    }
+    return '#';
+  });
+
+  // Start time from "starts" tag
+  startTime = computed(() => {
+    const event = this.liveEvent();
+    const startsTag = event.tags.find(tag => tag[0] === 'starts');
+    return startsTag?.[1] ? parseInt(startsTag[1], 10) : null;
   });
 
   // Streamer pubkey - use host p tag if available, otherwise event pubkey
@@ -361,6 +409,14 @@ export class StreamInfoBarComponent {
       }
     });
 
+    // Start elapsed time counter
+    effect(() => {
+      const startTimestamp = this.startTime();
+      if (startTimestamp) {
+        this.startElapsedTimeCounter(startTimestamp);
+      }
+    });
+
     // Fetch zap goal
     effect(() => {
       const event = this.liveEvent();
@@ -377,6 +433,39 @@ export class StreamInfoBarComponent {
         this.trackStreamZaps(event.id);
       }
     });
+  }
+
+  ngOnDestroy(): void {
+    if (this.elapsedTimeInterval) {
+      clearInterval(this.elapsedTimeInterval);
+    }
+  }
+
+  private startElapsedTimeCounter(startTimestamp: number): void {
+    // Clear existing interval if any
+    if (this.elapsedTimeInterval) {
+      clearInterval(this.elapsedTimeInterval);
+    }
+
+    // Update immediately
+    this.updateElapsedTime(startTimestamp);
+
+    // Update every second
+    this.elapsedTimeInterval = window.setInterval(() => {
+      this.updateElapsedTime(startTimestamp);
+    }, 1000);
+  }
+
+  private updateElapsedTime(startTimestamp: number): void {
+    const now = Math.floor(Date.now() / 1000);
+    const elapsed = now - startTimestamp;
+
+    const hours = Math.floor(elapsed / 3600);
+    const minutes = Math.floor((elapsed % 3600) / 60);
+    const seconds = elapsed % 60;
+
+    const formatted = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    this.elapsedTime.set(formatted);
   }
 
   private async fetchZapGoal(goalEventId: string): Promise<void> {
