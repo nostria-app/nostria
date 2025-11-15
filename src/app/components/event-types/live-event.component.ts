@@ -4,9 +4,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
+import { Clipboard } from '@angular/cdk/clipboard';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { Event } from 'nostr-tools';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MediaItem } from '../../interfaces';
 
@@ -18,8 +22,10 @@ import { MediaItem } from '../../interfaces';
     MatButtonModule,
     MatChipsModule,
     MatTooltipModule,
+    MatMenuModule,
     DatePipe,
-    ProfileDisplayNameComponent
+    ProfileDisplayNameComponent,
+    UserProfileComponent,
   ],
   templateUrl: './live-event.component.html',
   styleUrl: './live-event.component.scss',
@@ -29,6 +35,8 @@ export class LiveEventComponent {
 
   private router = inject(Router);
   private mediaPlayer = inject(MediaPlayerService);
+  private clipboard = inject(Clipboard);
+  private snackBar = inject(MatSnackBar);
 
   // Live event title
   title = computed(() => {
@@ -136,6 +144,12 @@ export class LiveEventComponent {
       }));
   });
 
+  // First participant for fallback images
+  firstParticipant = computed(() => {
+    const participants = this.participants();
+    return participants.length > 0 ? participants[0] : null;
+  });
+
   // Hashtags
   hashtags = computed(() => {
     const event = this.event();
@@ -195,7 +209,6 @@ export class LiveEventComponent {
     const url = this.streamingUrl();
     if (!url) return;
 
-    const event = this.event();
     const title = this.title() || 'Live Stream';
     const thumbnail = this.thumbnail() || '/icons/icon-192x192.png';
 
@@ -225,6 +238,17 @@ export class LiveEventComponent {
       if (event) {
         this.router.navigate(['/e', event.id]);
       }
+    }
+  }
+
+  // Copy event data to clipboard for debugging
+  copyEventData(): void {
+    const event = this.event();
+    if (event) {
+      this.clipboard.copy(JSON.stringify(event, null, 2));
+      this.snackBar.open('Event data copied to clipboard', 'Close', {
+        duration: 3000,
+      });
     }
   }
 }

@@ -4,8 +4,26 @@
   @let streamUrl = streamingUrl();
   @let startsTime = starts();
   @let endsTime = ends();
+  @let participantsList = participants();
+  @let firstPart = firstParticipant();
 
-  <!-- Thumbnail -->
+  <!-- Context menu button -->
+  <button mat-icon-button class="context-menu-button" [matMenuTriggerFor]="contextMenu">
+    <mat-icon>more_vert</mat-icon>
+  </button>
+
+  <mat-menu #contextMenu="matMenu">
+    <button mat-menu-item (click)="copyEventData()">
+      <mat-icon>content_copy</mat-icon>
+      <span>Copy Event Data</span>
+    </button>
+    <button mat-menu-item (click)="openEventPage()">
+      <mat-icon>open_in_new</mat-icon>
+      <span>View Event Details</span>
+    </button>
+  </mat-menu>
+
+  <!-- Thumbnail or Participant Banner Fallback -->
   @if (thumbnailUrl) {
   <div class="live-thumbnail-container">
     <img [src]="thumbnailUrl" alt="{{ title() }}" class="live-thumbnail" loading="lazy" />
@@ -15,8 +33,42 @@
       <mat-icon class="status-icon">{{ statusIcon() }}</mat-icon>
       <span class="status-text">{{ statusValue | uppercase }}</span>
     </div>
+
+    <!-- Participant avatars overlay on thumbnail -->
+    @if (participantsList.length > 0) {
+    <div class="participant-avatars-overlay">
+      @for (participant of participantsList.slice(0, 3); track participant.pubkey) {
+      <app-user-profile [pubkey]="participant.pubkey" view="compact" [hostWidthAuto]="true" />
+      }
+      @if (participantsList.length > 3) {
+      <div class="more-participants">+{{ participantsList.length - 3 }}</div>
+      }
+    </div>
+    }
+  </div>
+  } @else {
+  <!-- Fallback: No thumbnail - show default with participants -->
+  <div class="live-thumbnail-container fallback">
+    <div class="fallback-thumbnail">
+      @if (firstPart) {
+      <div class="fallback-participants">
+        @for (participant of participantsList.slice(0, 4); track participant.pubkey) {
+        <app-user-profile [pubkey]="participant.pubkey" view="compact" [hostWidthAuto]="true" />
+        }
+      </div>
+      } @else {
+      <mat-icon class="fallback-icon">sensors</mat-icon>
+      }
+    </div>
+    
+    <!-- Status badge overlay -->
+    <div class="status-badge" [class]="statusValue">
+      <mat-icon class="status-icon">{{ statusIcon() }}</mat-icon>
+      <span class="status-text">{{ statusValue | uppercase }}</span>
+    </div>
   </div>
   }
+
 
   <!-- Live event details -->
   <div class="live-details">
@@ -62,8 +114,7 @@
     </div>
     }
 
-    <!-- Participants list (hosts, speakers) -->
-    @let participantsList = participants();
+    <!-- Participants list with avatars -->
     @if (participantsList.length > 0) {
     <div class="participants-list">
       <div class="participants-header">
@@ -73,8 +124,11 @@
       <div class="participants-chips">
         @for (participant of participantsList; track participant.pubkey) {
         <div class="participant-chip">
-          <app-profile-display-name [pubkey]="participant.pubkey"></app-profile-display-name>
-          @if (participant.role) {
+          <app-user-profile [pubkey]="participant.pubkey" view="compact" [hostWidthAuto]="true" />
+          <span class="participant-name">
+            <app-profile-display-name [pubkey]="participant.pubkey"></app-profile-display-name>
+          </span>
+          @if (participant.role && participant.role !== 'Participant') {
           <span class="participant-role">{{ participant.role }}</span>
           }
         </div>
