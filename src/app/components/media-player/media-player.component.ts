@@ -26,6 +26,7 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { TimePipe } from '../../pipes/time.pipe';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
+import { LiveChatComponent } from '../live-chat/live-chat.component';
 
 interface WindowControlsOverlay {
   getTitlebarAreaRect(): DOMRect;
@@ -48,6 +49,7 @@ declare global {
     ReactiveFormsModule,
     FormsModule,
     TimePipe,
+    LiveChatComponent,
   ],
   templateUrl: './media-player.component.html',
   styleUrl: './media-player.component.scss',

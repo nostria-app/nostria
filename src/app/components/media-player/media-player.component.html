@@ -24,9 +24,11 @@
     </button>
     }
 
+    @if (!media.current?.isLiveStream) {
     <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button class="nodrag">
       <mat-icon>skip_previous</mat-icon>
     </button>
+    }
 
     @if (media.paused) {
     <button (click)="media.resume()" mat-icon-button class="nodrag">
@@ -38,9 +40,11 @@
     </button>
     }
 
+    @if (!media.current?.isLiveStream) {
     <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button class="nodrag">
       <mat-icon>skip_next</mat-icon>
     </button>
+    }
 
     @if (media.current?.type === 'Podcast') {
     <button (click)="media.forward(10)" class="hide-small" mat-icon-button class="nodrag">
@@ -87,7 +91,30 @@
     }
 
     @if (media.current?.type === 'Video' || media.current?.type === 'HLS') {
-    <div class="media-info">
+    <div class="media-info" [class.fullscreen-video-container]="layout.fullscreenMediaPlayer()">
+      <!-- Video player -->
+      <div class="video-player-wrapper">
+        @if (media.current?.type === 'HLS') {
+        <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" controls autoplay
+          preload="metadata" (loadeddata)="registerVideoElement()" (canplay)="registerVideoElement()"
+          (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
+        } @else if (media.videoUrl()) {
+        <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" [src]="media.videoUrl()"
+          controls autoplay preload="metadata" (loadeddata)="registerVideoElement()" (canplay)="registerVideoElement()"
+          (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
+        }
+      </div>
+
+      <!-- Live stream sidebar (chat + participants) for fullscreen -->
+      @let liveEvent = media.current?.liveEventData;
+      @if (layout.fullscreenMediaPlayer() && media.current?.isLiveStream) {
+      <div class="live-stream-sidebar">
+        <app-live-chat [liveEvent]="liveEvent" />
+      </div>
+      }
+
+      <!-- Video controls overlay (only in non-fullscreen) -->
+      @if (!layout.fullscreenMediaPlayer()) {
       <div class="video-controls">
         <button matTooltip="Open video in window" (click)="media.pictureInPicture()" mat-icon-button>
           <mat-icon>picture_in_picture_alt</mat-icon>
@@ -96,14 +123,6 @@
           <mat-icon>tv</mat-icon>
         </button>
       </div>
-      @if (media.current?.type === 'HLS') {
-      <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" controls autoplay
-        preload="metadata" (loadeddata)="registerVideoElement()" (canplay)="registerVideoElement()"
-        (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
-      } @else if (media.videoUrl()) {
-      <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" [src]="media.videoUrl()"
-        controls autoplay preload="metadata" (loadeddata)="registerVideoElement()" (canplay)="registerVideoElement()"
-        (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
       }
     </div>
     }
@@ -122,9 +141,11 @@
         </button>
         }
 
+        @if (!media.current?.isLiveStream) {
         <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
           <mat-icon>skip_previous</mat-icon>
         </button>
+        }
 
         @if (media.paused) {
         <button matTooltip="Play" (click)="media.resume()" mat-icon-button>
@@ -138,9 +159,11 @@
         </button>
         }
 
+        @if (!media.current?.isLiveStream) {
         <button matTooltip="Next" [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
           <mat-icon>skip_next</mat-icon>
         </button>
+        }
 
         @if (media.current?.type === 'Podcast') {
         <button matTooltip="Skip forward 10 seconds" class="hide-small" (click)="media.forward(10)" mat-icon-button>

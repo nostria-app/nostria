@@ -79,9 +79,24 @@
     width: 40px;
     height: 40px;
     border-radius: 50%;
+    overflow: hidden;
     border: 2px solid white;
-    background: white;
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    flex-shrink: 0;
+
+    ::ng-deep .user-profile-avatar-container {
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+    }
+
+    ::ng-deep .user-avatar,
+    ::ng-deep .default-user-avatar {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: cover;
+      display: block;
+    }
   }
 
   .more-participants {
@@ -111,7 +126,7 @@
 .status-badge {
   position: absolute;
   top: 12px;
-  right: 12px;
+  left: 12px;
   display: flex;
   align-items: center;
   gap: 6px;

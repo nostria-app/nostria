@@ -24,9 +24,9 @@
   </mat-menu>
 
   <!-- Thumbnail or Participant Banner Fallback -->
-  @if (thumbnailUrl) {
+  @if (thumbnailUrl && !thumbnailError()) {
   <div class="live-thumbnail-container">
-    <img [src]="thumbnailUrl" alt="{{ title() }}" class="live-thumbnail" loading="lazy" />
+    <img [src]="thumbnailUrl" alt="{{ title() }}" class="live-thumbnail" loading="lazy" (error)="onThumbnailError()" />
 
     <!-- Status badge overlay -->
     <div class="status-badge" [class]="statusValue">
@@ -60,7 +60,7 @@
       <mat-icon class="fallback-icon">sensors</mat-icon>
       }
     </div>
-    
+
     <!-- Status badge overlay -->
     <div class="status-badge" [class]="statusValue">
       <mat-icon class="status-icon">{{ statusIcon() }}</mat-icon>

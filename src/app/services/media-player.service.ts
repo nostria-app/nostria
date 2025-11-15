@@ -787,6 +787,13 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   async resume() {
+    // For live streams, restart instead of resuming
+    if (this.current?.isLiveStream) {
+      this.start();
+      return;
+    }
+
+    // Normal resume behavior for non-live content
     if (this.videoMode()) {
       if (this.current?.type === 'Video' && this.videoElement) {
         try {
@@ -816,6 +823,30 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   pause() {
+    // For live streams, stop playback instead of pausing
+    if (this.current?.isLiveStream) {
+      if (this.videoMode()) {
+        if (this.current?.type === 'Video' || this.current?.type === 'HLS') {
+          if (this.videoElement) {
+            this.videoElement.pause();
+            this.videoElement.currentTime = 0;
+          }
+          // Destroy HLS instance for live streams
+          if (this.hlsInstance) {
+            try {
+              this.hlsInstance.destroy();
+              this.hlsInstance = undefined;
+            } catch (error) {
+              console.error('Error destroying HLS instance:', error);
+            }
+          }
+        }
+      }
+      navigator.mediaSession.playbackState = 'none';
+      return;
+    }
+
+    // Normal pause behavior for non-live content
     if (this.videoMode()) {
       if (this.current?.type === 'Video' && this.videoElement) {
         this.videoElement.pause();

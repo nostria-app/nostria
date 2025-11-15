@@ -1,4 +1,4 @@
-import { Component, computed, input, inject } from '@angular/core';
+import { Component, computed, input, inject, signal } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -37,6 +37,9 @@ export class LiveEventComponent {
   private mediaPlayer = inject(MediaPlayerService);
   private clipboard = inject(Clipboard);
   private snackBar = inject(MatSnackBar);
+
+  // Track thumbnail load errors
+  thumbnailError = signal(false);
 
   // Live event title
   title = computed(() => {
@@ -219,6 +222,9 @@ export class LiveEventComponent {
       artist: 'Live Stream',
       artwork: thumbnail,
       type: url.toLowerCase().includes('.m3u8') ? 'HLS' : 'Video',
+      isLiveStream: true, // Mark as live stream
+      participants: this.participants(), // Pass participant data
+      liveEventData: this.event(), // Pass full event data
     };
 
     // Play the stream in the media player
@@ -250,5 +256,10 @@ export class LiveEventComponent {
         duration: 3000,
       });
     }
+  }
+
+  // Handle thumbnail image load error
+  onThumbnailError(): void {
+    this.thumbnailError.set(true);
   }
 }
