@@ -123,15 +123,21 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
 
       // Update URL with encoded event data if it's a live stream
       if (this.media.current?.isLiveStream && this.media.current?.liveEventData) {
-        const event = this.media.current.liveEventData;
-        const eventJson = JSON.stringify(event);
-        const encodedEvent = btoa(eventJson);
+        const encodedEvent = this.utilities.encodeEventForUrl(this.media.current.liveEventData);
 
         // Store current URL to restore on exit
         const previousUrl = this.router.url;
 
+        console.log('Navigating to stream URL:', `/stream/${encodedEvent.substring(0, 50)}...`);
+        console.log('Previous URL:', previousUrl);
+
         this.router.navigate(['/stream', encodedEvent], {
           state: { previousUrl }
+        });
+      } else {
+        console.log('Not a live stream or no event data:', {
+          isLiveStream: this.media.current?.isLiveStream,
+          hasEventData: !!this.media.current?.liveEventData
         });
       }
     }
