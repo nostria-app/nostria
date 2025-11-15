@@ -1,0 +1,178 @@
+<div class="meetings-container">
+  <div class="meetings-header">
+    <h1>
+      <mat-icon>groups</mat-icon>
+      Meeting Spaces
+    </h1>
+    <button mat-icon-button (click)="refresh()" [disabled]="loading()">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">public</mat-icon>
+        Open Rooms
+        @if (openSpaces().length > 0) {
+        <span class="tab-count">{{ openSpaces().length }}</span>
+        }
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">lock</mat-icon>
+        Private Rooms
+        @if (privateSpaces().length > 0) {
+        <span class="tab-count">{{ privateSpaces().length }}</span>
+        }
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
+
+  <div class="meetings-content">
+    @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p>Loading meeting spaces...</p>
+    </div>
+    } @else if (currentSpaces().length === 0) {
+    <div class="empty-state">
+      <mat-icon>meeting_room</mat-icon>
+      <h2>No meeting spaces found</h2>
+      <p>
+        @if (selectedTabIndex() === 0) {
+        There are no open meeting spaces at the moment. Check back later.
+        } @else {
+        There are no private meeting spaces available.
+        }
+      </p>
+      <button mat-flat-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Refresh
+      </button>
+    </div>
+    } @else {
+    <div class="spaces-grid">
+      @for (space of currentSpaces(); track space.event.id) {
+      <mat-card class="space-card">
+        <mat-card-header>
+          @if (getSpaceImage(space.event)) {
+          <img mat-card-avatar [src]="getSpaceImage(space.event)!" alt="{{ getSpaceName(space.event) }}" />
+          }
+          <mat-card-title>{{ getSpaceName(space.event) }}</mat-card-title>
+          <mat-card-subtitle>
+            <div class="space-status" [class]="getSpaceStatus(space.event)">
+              <mat-icon>{{ getSpaceStatus(space.event) === 'open' ? 'lock_open' : 'lock' }}</mat-icon>
+              <span>{{ getSpaceStatus(space.event) | uppercase }}</span>
+            </div>
+          </mat-card-subtitle>
+        </mat-card-header>
+
+        <mat-card-content>
+          @if (getSpaceSummary(space.event)) {
+          <p class="space-summary">{{ getSpaceSummary(space.event) }}</p>
+          }
+
+          <!-- Hosts -->
+          @let hosts = getSpaceHosts(space.event);
+          @if (hosts.length > 0) {
+          <div class="space-hosts">
+            <div class="hosts-header">
+              <mat-icon>badge</mat-icon>
+              <span>Hosts</span>
+            </div>
+            <div class="hosts-chips">
+              @for (host of hosts; track host.pubkey) {
+              <div class="host-chip">
+                <app-profile-display-name [pubkey]="host.pubkey"></app-profile-display-name>
+                @if (host.role !== 'Participant') {
+                <span class="host-role">{{ host.role }}</span>
+                }
+              </div>
+              }
+            </div>
+          </div>
+          }
+
+          <!-- Hashtags -->
+          @let tags = getSpaceHashtags(space.event);
+          @if (tags.length > 0) {
+          <div class="hashtags">
+            @for (tag of tags; track tag) {
+            <mat-chip>
+              <mat-icon matChipAvatar>tag</mat-icon>
+              {{ tag }}
+            </mat-chip>
+            }
+          </div>
+          }
+
+          <!-- Meetings in this space -->
+          @if (space.meetings.length > 0) {
+          <mat-expansion-panel class="meetings-panel">
+            <mat-expansion-panel-header>
+              <mat-panel-title>
+                <mat-icon>event</mat-icon>
+                Meetings ({{ space.meetings.length }})
+              </mat-panel-title>
+            </mat-expansion-panel-header>
+
+            <div class="meetings-list">
+              @for (meeting of space.meetings; track meeting.id) {
+              <div class="meeting-item">
+                <div class="meeting-header">
+                  <h4>{{ getMeetingTitle(meeting) }}</h4>
+                  <span class="meeting-status" [class]="getStatusColor(getMeetingStatus(meeting))">
+                    <mat-icon>{{ getStatusIcon(getMeetingStatus(meeting)) }}</mat-icon>
+                    {{ getMeetingStatus(meeting) | uppercase }}
+                  </span>
+                </div>
+
+                @if (getMeetingSummary(meeting)) {
+                <p class="meeting-summary">{{ getMeetingSummary(meeting) }}</p>
+                }
+
+                <div class="meeting-info">
+                  @let startsTime = getMeetingStarts(meeting);
+                  @if (startsTime) {
+                  <div class="info-item">
+                    <mat-icon>event</mat-icon>
+                    <span>{{ startsTime * 1000 | date: 'medium' }}</span>
+                  </div>
+                  }
+
+                  @let currentParticipants = getMeetingCurrentParticipants(meeting);
+                  @if (currentParticipants) {
+                  <div class="info-item">
+                    <mat-icon>people</mat-icon>
+                    <span>{{ currentParticipants }} participants</span>
+                  </div>
+                  }
+                </div>
+
+                <button mat-stroked-button (click)="viewMeeting(meeting)" class="view-meeting-btn">
+                  <mat-icon>open_in_new</mat-icon>
+                  View Details
+                </button>
+              </div>
+              }
+            </div>
+          </mat-expansion-panel>
+          }
+        </mat-card-content>
+
+        <mat-card-actions>
+          <button mat-flat-button (click)="joinSpace(space.event)"
+            [disabled]="getSpaceStatus(space.event) === 'closed'">
+            <mat-icon>{{ getSpaceStatus(space.event) === 'closed' ? 'block' : 'login' }}</mat-icon>
+            {{ getSpaceStatus(space.event) === 'closed' ? 'Room Closed' : 'Join Space' }}
+          </button>
+        </mat-card-actions>
+      </mat-card>
+      }
+    </div>
+    }
+  </div>
+</div>

@@ -202,6 +202,14 @@
         <mat-icon>dock_to_bottom</mat-icon>
         <span>Media Player</span>
       </button>
+      <button mat-menu-item routerLink="/streams">
+        <mat-icon>live_tv</mat-icon>
+        <span>Live Streams</span>
+      </button>
+      <button mat-menu-item routerLink="/meetings">
+        <mat-icon>adaptive_audio_mic</mat-icon>
+        <span>Live Meetings</span>
+      </button>
       <mat-divider></mat-divider>
       @if (app.enabledFeature('preview')) {
       <button mat-menu-item routerLink="/calendar">
