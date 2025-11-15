@@ -267,6 +267,12 @@ input {
   flex-direction: column;
   overflow: hidden;
   flex-shrink: 0;
+  transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+
+  // Hide sidebar when chat is hidden
+  &:has(app-live-chat .live-chat-container[data-hidden="true"]) {
+    display: none;
+  }
 
   app-live-chat {
     display: flex;
@@ -280,10 +286,45 @@ input {
     width: 100%;
     min-width: 100%;
     max-width: 100%;
-    height: 400px;
-    min-height: 400px;
+    height: auto;
+    min-height: 300px;
+    max-height: 50vh;
     border-left: none;
     border-top: 1px solid var(--mat-sys-outline-variant);
+
+    // On mobile, always show if not hidden
+    &:has(app-live-chat .live-chat-container:not([data-hidden="true"])) {
+      display: flex;
+    }
+  }
+}
+
+.chat-toggle-overlay {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
+  pointer-events: none;
+
+  .chat-toggle-button {
+    pointer-events: all;
+    background: var(--mat-sys-surface-container-high);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: var(--mat-sys-surface-container-highest);
+      transform: scale(1.05);
+    }
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  @media (max-width: 768px) {
+    top: 8px;
+    right: 8px;
   }
 }
 
@@ -552,14 +593,35 @@ input {
     width: 100%;
     max-width: 900px;
     height: auto;
-    min-height: 120px;
-    padding: 20px 0 20px 0;
+    min-height: 80px;
+    padding: 12px 0;
     margin-bottom: 0;
     order: 2;
     flex-shrink: 0;
     transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
     position: relative;
     bottom: 0;
+
+    &.compact-controls {
+      min-height: 60px;
+      padding: 8px 0;
+
+      button {
+        transform: scale(1);
+        width: 40px;
+        height: 40px;
+
+        &.play-button {
+          transform: scale(1.2);
+        }
+
+        mat-icon {
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
+        }
+      }
+    }
   }
 
   .media-controls-container {

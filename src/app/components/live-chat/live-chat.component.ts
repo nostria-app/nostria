@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -42,7 +42,7 @@ interface ChatMessage {
   templateUrl: './live-chat.component.html',
   styleUrl: './live-chat.component.scss',
 })
-export class LiveChatComponent {
+export class LiveChatComponent implements AfterViewInit {
   private relayPool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
@@ -50,8 +50,13 @@ export class LiveChatComponent {
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
 
+  @ViewChild('messagesContainer') messagesContainer?: ElementRef<HTMLDivElement>;
+
   // Input: The live event data (kind 30311 or 30313)
   liveEvent = input<Event | undefined>(undefined);
+
+  // Chat visibility (output signal for parent to control)
+  isVisible = signal(true);
 
   // Chat messages
   messages = signal<ChatMessage[]>([]);
@@ -96,6 +101,18 @@ export class LiveChatComponent {
     });
   }
 
+  ngAfterViewInit(): void {
+    // Initial scroll to bottom
+    setTimeout(() => this.scrollToBottom(), 100);
+  }
+
+  private scrollToBottom(): void {
+    if (this.messagesContainer) {
+      const element = this.messagesContainer.nativeElement;
+      element.scrollTop = element.scrollHeight;
+    }
+  }
+
   private async subscribeToChatMessages(eventAddress: string): Promise<void> {
     const relayUrls = this.relaysService.getOptimalRelays(
       this.utilities.preferredRelays
@@ -132,6 +149,7 @@ export class LiveChatComponent {
         .sort((a, b) => a.created_at - b.created_at); // Oldest first
 
       this.messages.set(chatMessages);
+      setTimeout(() => this.scrollToBottom(), 100);
     } catch (error) {
       console.error('Error querying chat messages:', error);
     }
@@ -191,6 +209,8 @@ export class LiveChatComponent {
             created_at: result.event.created_at,
           };
           this.messages.update(msgs => [...msgs, newMessage]);
+          // Scroll to bottom after adding new message
+          setTimeout(() => this.scrollToBottom(), 50);
         }
       } else {
         // Restore the message if publish failed
@@ -207,6 +227,10 @@ export class LiveChatComponent {
 
   toggleView(mode: 'chat' | 'participants'): void {
     this.viewMode.set(mode);
+  }
+
+  toggleVisibility(): void {
+    this.isVisible.update(v => !v);
   }
 
   formatTimestamp(timestamp: number): string {

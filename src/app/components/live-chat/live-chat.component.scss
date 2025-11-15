@@ -13,6 +13,10 @@
   width: 100%;
   background: var(--mat-sys-surface-container);
   overflow: hidden;
+
+  &[data-hidden="true"] {
+    display: none;
+  }
 }
 
 .chat-header {

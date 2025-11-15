@@ -1,4 +1,4 @@
-<div class="live-chat-container" [attr.data-view]="viewMode()">
+<div class="live-chat-container" [attr.data-view]="viewMode()" [attr.data-hidden]="!isVisible()">
   <!-- Chat Header -->
   <div class="chat-header">
     <div class="chat-title">
@@ -23,41 +23,41 @@
   @if (viewMode() === 'chat') {
   <div class="chat-content-wrapper">
     <div class="chat-messages" #messagesContainer>
-    @if (messages().length === 0) {
-    <div class="no-messages">
-      <mat-icon>chat_bubble_outline</mat-icon>
-      <p>No messages yet</p>
-      <span>Be the first to send a message!</span>
-    </div>
-    }
-
-    @for (message of messages(); track message.event.id) {
-    <div class="chat-message" [class.reply]="message.replyTo">
-      <app-user-profile [pubkey]="message.pubkey" view="compact" [hostWidthAuto]="true" />
-
-      <div class="message-content">
-        <div class="message-header">
-          <app-profile-display-name [pubkey]="message.pubkey" class="message-author"></app-profile-display-name>
-          <span class="message-time">{{ formatTimestamp(message.created_at) }}</span>
-        </div>
-
-        <div class="message-text">{{ message.content }}</div>
+      @if (messages().length === 0) {
+      <div class="no-messages">
+        <mat-icon>chat_bubble_outline</mat-icon>
+        <p>No messages yet</p>
+        <span>Be the first to send a message!</span>
       </div>
-    </div>
-    }
+      }
+
+      @for (message of messages(); track message.event.id) {
+      <div class="chat-message" [class.reply]="message.replyTo">
+        <app-user-profile [pubkey]="message.pubkey" view="compact" [hostWidthAuto]="true" />
+
+        <div class="message-content">
+          <div class="message-header">
+            <app-profile-display-name [pubkey]="message.pubkey" class="message-author"></app-profile-display-name>
+            <span class="message-time">{{ formatTimestamp(message.created_at) }}</span>
+          </div>
+
+          <div class="message-text">{{ message.content }}</div>
+        </div>
+      </div>
+      }
     </div>
 
     <!-- Chat Input -->
     <div class="chat-input-container">
-    <mat-form-field class="chat-input-field" appearance="outline">
-      <mat-label>Send a message...</mat-label>
-      <input matInput [ngModel]="messageInput()" (ngModelChange)="messageInput.set($event)"
-        (keydown.enter)="sendMessage()" placeholder="Type your message" autocomplete="off" />
-      <button mat-icon-button matSuffix (click)="sendMessage()" [disabled]="!messageInput().trim()"
-        matTooltip="Send message">
-        <mat-icon>send</mat-icon>
-      </button>
-    </mat-form-field>
+      <mat-form-field class="chat-input-field" appearance="outline">
+        <mat-label>Send a message...</mat-label>
+        <input matInput [ngModel]="messageInput()" (ngModelChange)="messageInput.set($event)"
+          (keydown.enter)="sendMessage()" placeholder="Type your message" autocomplete="off" />
+        <button mat-icon-button matSuffix (click)="sendMessage()" [disabled]="!messageInput().trim()"
+          matTooltip="Send message">
+          <mat-icon>send</mat-icon>
+        </button>
+      </mat-form-field>
     </div>
   </div>
   }
