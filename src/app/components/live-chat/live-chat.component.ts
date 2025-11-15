@@ -169,6 +169,7 @@ export class LiveChatComponent {
         pubkey: pubkey,
         tags: [
           ['a', address, relayHint, 'root'],
+          ['client', 'nostria'],
         ],
         content: message,
         created_at: Math.floor(Date.now() / 1000),

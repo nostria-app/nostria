@@ -466,6 +466,7 @@ input {
   /* Expand media info to take more space - positioned at top */
   .media-info {
     flex: 1 1 auto;
+    min-height: 0;
     max-height: none;
     display: flex;
     align-items: center;
@@ -473,6 +474,7 @@ input {
     width: 100%;
     padding: 0;
     order: 1;
+    overflow: hidden;
     transition: transform 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
   }
 
@@ -521,14 +523,14 @@ input {
     width: 100%;
     max-width: 900px;
     height: auto;
-    padding: 20px 0 40px 0;
-    /* Add extra bottom padding to prevent clipping */
-    margin-bottom: 20px;
-    /* Add margin to ensure spacing from bottom */
+    min-height: 120px;
+    padding: 20px 0 20px 0;
+    margin-bottom: 0;
     order: 2;
-    /* Controls second */
     flex-shrink: 0;
     transition: all 0.4s cubic-bezier(0.4, 0.0, 0.2, 1);
+    position: relative;
+    bottom: 0;
   }
 
   .media-controls-container {
