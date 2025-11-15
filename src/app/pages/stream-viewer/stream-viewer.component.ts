@@ -4,6 +4,8 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { LayoutService } from '../../services/layout.service';
 import { MediaPlayerComponent } from '../../components/media-player/media-player.component';
 import { UtilitiesService } from '../../services/utilities.service';
+import { FeedService } from '../../services/feed.service';
+import { Event } from 'nostr-tools';
 
 @Component({
   selector: 'app-stream-viewer',
@@ -11,12 +13,24 @@ import { UtilitiesService } from '../../services/utilities.service';
   template: `
     @if (streamLoaded) {
       <app-media-player [footer]="true" />
+    } @else if (loading) {
+      <div class="loading-container">
+        <p>Loading stream...</p>
+      </div>
     }
   `,
   styles: [`
     :host {
       display: block;
       height: 100%;
+    }
+    .loading-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      font-size: 1.2rem;
+      opacity: 0.7;
     }
   `]
 })
@@ -26,10 +40,12 @@ export class StreamViewerComponent implements OnInit {
   private media = inject(MediaPlayerService);
   private layout = inject(LayoutService);
   private utilities = inject(UtilitiesService);
+  private feed = inject(FeedService);
 
   streamLoaded = false;
+  loading = false;
 
-  ngOnInit(): void {
+  async ngOnInit(): Promise<void> {
     const encodedEvent = this.route.snapshot.paramMap.get('encodedEvent');
 
     if (!encodedEvent) {
@@ -38,14 +54,73 @@ export class StreamViewerComponent implements OnInit {
       return;
     }
 
-    const event = this.utilities.decodeEventFromUrl(encodedEvent);
+    const eventPointer = this.utilities.decodeEventFromUrl(encodedEvent);
 
-    if (!event) {
-      console.error('Failed to decode event from URL');
+    if (!eventPointer) {
+      console.error('Failed to decode nevent from URL');
       this.router.navigate(['/streams']);
       return;
     }
 
+    // Fetch the event from relays
+    this.loading = true;
+
+    try {
+      const event = await this.fetchEventFromRelays(eventPointer.id, eventPointer.relays);
+
+      if (!event) {
+        console.error('Failed to fetch event from relays');
+        this.router.navigate(['/streams']);
+        return;
+      }
+
+      this.loadStream(event);
+    } catch (error) {
+      console.error('Error fetching stream event:', error);
+      this.router.navigate(['/streams']);
+    } finally {
+      this.loading = false;
+    }
+  }
+
+  private async fetchEventFromRelays(eventId: string, relayHints?: string[]): Promise<Event | null> {
+    // Use relay hints if provided, otherwise use user's relays
+    const relaysToUse = relayHints && relayHints.length > 0
+      ? relayHints
+      : this.feed.userRelays().map(r => r.url);
+
+    return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        resolve(null);
+      }, 10000); // 10 second timeout
+
+      // Use FeedService's internal relay subscription mechanism
+      // We'll need to access the relay service differently
+      // For now, let's use a simpler approach with direct relay connection
+      this.fetchEventDirectly(eventId, relaysToUse).then(event => {
+        clearTimeout(timeout);
+        resolve(event);
+      });
+    });
+  }
+
+  private async fetchEventDirectly(eventId: string, relays: string[]): Promise<Event | null> {
+    // Simple pool-based fetch
+    const { SimplePool } = await import('nostr-tools/pool');
+    const pool = new SimplePool();
+
+    try {
+      const event = await pool.get(relays, { ids: [eventId] });
+      pool.close(relays);
+      return event;
+    } catch (error) {
+      console.error('Error fetching event:', error);
+      pool.close(relays);
+      return null;
+    }
+  }
+
+  private loadStream(event: Event): void {
     // Extract stream information
     const titleTag = event.tags.find(tag => tag[0] === 'title');
     const streamingTag = event.tags.find(tag => tag[0] === 'streaming');
