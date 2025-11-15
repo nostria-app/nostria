@@ -1,5 +1,5 @@
 import { Component, computed, input, inject, signal, effect, OnDestroy } from '@angular/core';
-import { Event } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -426,7 +426,7 @@ export class StreamInfoBarComponent implements OnDestroy {
     effect(() => {
       const event = this.liveEvent();
       if (event.id) {
-        this.trackStreamZaps(event.id);
+        this.trackStreamZaps();
       }
     });
   }
@@ -495,7 +495,7 @@ export class StreamInfoBarComponent implements OnDestroy {
     }
   }
 
-  private async trackStreamZaps(streamEventId: string): Promise<void> {
+  private async trackStreamZaps(): Promise<void> {
     const relayUrls = this.relaysService.getOptimalRelays(
       this.utilities.preferredRelays
     );
@@ -505,12 +505,20 @@ export class StreamInfoBarComponent implements OnDestroy {
       return;
     }
 
+    const streamerPubkey = this.streamerPubkey();
+
     try {
-      // Query for kind 9735 zap receipts that reference this stream event
+      // Query for kind 9735 zap receipts sent to the streamer
+      // Zaps are sent to people (p tag), not events
+      const filter: Filter & { '#a'?: string[] } = {
+        kinds: [9735],
+        '#p': [streamerPubkey]
+      };
+
       const events = await this.relayPool.query(
         relayUrls,
-        { kinds: [9735], '#e': [streamEventId] },
-        5000
+        filter,
+        10000
       );
 
       // Calculate total zaps
@@ -530,8 +538,8 @@ export class StreamInfoBarComponent implements OnDestroy {
         try {
           const recentEvents = await this.relayPool.query(
             relayUrls,
-            { kinds: [9735], '#e': [streamEventId] },
-            5000
+            filter,
+            10000
           );
 
           let newTotal = 0;
@@ -543,6 +551,7 @@ export class StreamInfoBarComponent implements OnDestroy {
             }
           }
 
+          totalSats = newTotal;
           this.currentZapAmount.set(newTotal);
         } catch (error) {
           console.error('Error updating stream zaps:', error);
@@ -554,21 +563,44 @@ export class StreamInfoBarComponent implements OnDestroy {
   }
 
   private extractAmountFromBolt11(bolt11: string): number {
-    // Extract amount from bolt11 invoice
-    // Format: lnbc{amount}{multiplier}...
-    const match = bolt11.match(/lnbc(\d+)([munp]?)/);
-    if (!match) return 0;
+    try {
+      // Extract amount from bolt11 invoice
+      // Format: lnbc{amount}{multiplier}...
+      // Example: lnbc10u... = 10 micro-bitcoin = 1000 sats
+      const match = bolt11.toLowerCase().match(/^lnbc(\d+)([munp]?)/);
+      if (!match) {
+        return 0;
+      }
 
-    const amount = parseInt(match[1]);
-    const multiplier = match[2];
+      const amount = parseInt(match[1]);
+      const multiplier = match[2];
 
-    // Convert to sats based on multiplier
-    switch (multiplier) {
-      case 'm': return amount * 100000; // milli-btc
-      case 'u': return amount * 100; // micro-btc
-      case 'n': return amount / 10; // nano-btc
-      case 'p': return amount / 10000; // pico-btc
-      default: return amount * 100000000; // btc
+      // Convert to sats based on multiplier
+      // 1 BTC = 100,000,000 sats
+      let sats = 0;
+      switch (multiplier) {
+        case 'm': // milli-bitcoin (0.001 BTC)
+          sats = amount * 100000;
+          break;
+        case 'u': // micro-bitcoin (0.000001 BTC)
+          sats = amount * 100;
+          break;
+        case 'n': // nano-bitcoin (0.000000001 BTC)
+          sats = amount / 10;
+          break;
+        case 'p': // pico-bitcoin (0.000000000001 BTC)
+          sats = amount / 10000;
+          break;
+        case '': // whole bitcoin
+          sats = amount * 100000000;
+          break;
+        default:
+          return 0;
+      }
+
+      return Math.floor(sats);
+    } catch {
+      return 0;
     }
   }
 
