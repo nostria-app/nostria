@@ -108,8 +108,16 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
         element.classList.add('exiting-fullscreen');
       }
 
-      // Restore previous URL
-      if (this.utilities.isBrowser() && window.history.state?.previousUrl) {
+      // Check if we're on a stream route
+      const currentUrl = this.router.url;
+      const isStreamRoute = currentUrl.startsWith('/stream/');
+
+      // If on a stream route, navigate to streams page, otherwise restore previous URL
+      if (isStreamRoute) {
+        // Navigate to streams page
+        this.router.navigate(['/streams']);
+      } else if (this.utilities.isBrowser() && window.history.state?.previousUrl) {
+        // Restore previous URL if available
         this.location.replaceState(window.history.state.previousUrl);
       }
 
