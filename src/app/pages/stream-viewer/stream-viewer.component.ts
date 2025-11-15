@@ -190,7 +190,7 @@ export class StreamViewerComponent implements OnInit {
     // Enter fullscreen mode after a short delay to ensure media is loaded
     setTimeout(() => {
       this.layout.fullscreenMediaPlayer.set(true);
-      
+
       // Ensure the stream starts playing after entering fullscreen
       // This helps with browser autoplay policies when opening stream URLs directly
       setTimeout(() => {
