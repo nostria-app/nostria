@@ -46,6 +46,7 @@
 
 .chat-messages {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px;
@@ -193,6 +194,7 @@
 // Participants view
 .participants-view {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
   padding: 12px;
