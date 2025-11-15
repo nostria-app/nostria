@@ -434,9 +434,23 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
         // console.log('📝 [Event Setup] Record created for event:', event.id.substring(0, 8), '| Kind:', event.kind);
 
+        // CRITICAL: Clear all interaction state when event changes
+        // This prevents interactions from the previous event being displayed on the new event
+        this.reactions.set({ events: [], data: new Map() });
+        this.reposts.set([]);
+        this.reports.set({ events: [], data: new Map() });
+        this.zaps.set([]);
+        this.quotes.set([]);
+
         // Reset the loaded interactions flag when event changes
         // This ensures each new event loads its own interactions
         this.hasLoadedInteractions.set(false);
+
+        // Recreate IntersectionObserver if it exists
+        // This ensures we observe the correct event when component is reused
+        if (this.intersectionObserver) {
+          this.setupIntersectionObserver();
+        }
 
         // Interactions will be loaded lazily via IntersectionObserver in ngAfterViewInit
         // No longer loading immediately to reduce relay requests for off-screen events
@@ -514,6 +528,21 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
+    // Set up IntersectionObserver for lazy loading
+    this.setupIntersectionObserver();
+  }
+
+  /**
+   * Set up or recreate IntersectionObserver to lazy load interactions when event becomes visible
+   * This method can be called when the component initializes or when the event changes
+   */
+  private setupIntersectionObserver(): void {
+    // Clean up existing observer if present
+    if (this.intersectionObserver) {
+      this.intersectionObserver.disconnect();
+      this.intersectionObserver = undefined;
+    }
+
     // Set up IntersectionObserver to lazy load interactions when event becomes visible
     // Using rootMargin to trigger slightly before element enters viewport for seamless UX
     const options: IntersectionObserverInit = {
