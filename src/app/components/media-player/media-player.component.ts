@@ -31,6 +31,7 @@ import { TimePipe } from '../../pipes/time.pipe';
 import { Subscription } from 'rxjs';
 import { filter } from 'rxjs/operators';
 import { LiveChatComponent } from '../live-chat/live-chat.component';
+import { StreamInfoBarComponent } from '../stream-info-bar/stream-info-bar.component';
 
 interface WindowControlsOverlay {
   getTitlebarAreaRect(): DOMRect;
@@ -56,6 +57,7 @@ declare global {
     TimePipe,
     LiveChatComponent,
     MatMenuModule,
+    StreamInfoBarComponent,
   ],
   templateUrl: './media-player.component.html',
   styleUrl: './media-player.component.scss',
