@@ -92,21 +92,28 @@
 
     @if (media.current?.type === 'Video' || media.current?.type === 'HLS') {
     <div class="media-info" [class.fullscreen-video-container]="layout.fullscreenMediaPlayer()">
-      <!-- Video player -->
-      <div class="video-player-wrapper">
-        @if (media.current?.type === 'HLS') {
-        <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" controls autoplay
-          preload="metadata" (loadeddata)="registerVideoElement()" (canplay)="registerVideoElement()"
-          (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
-        } @else if (media.videoUrl()) {
-        <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" [src]="media.videoUrl()"
-          controls autoplay preload="metadata" (loadeddata)="registerVideoElement()" (canplay)="registerVideoElement()"
-          (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
+      <!-- Video player and info section -->
+      <div class="video-content-wrapper">
+        <div class="video-player-wrapper">
+          @if (media.current?.type === 'HLS') {
+          <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" controls autoplay
+            preload="metadata" (loadeddata)="registerVideoElement()" (canplay)="registerVideoElement()"
+            (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
+          } @else if (media.videoUrl()) {
+          <video #videoElement class="event-video" [class.fullscreen]="media.isFullscreen()" [src]="media.videoUrl()"
+            controls autoplay preload="metadata" (loadeddata)="registerVideoElement()"
+            (canplay)="registerVideoElement()" (ended)="onVideoEnded()" (error)="onVideoError($event)"></video>
+          }
+        </div>
+
+        <!-- Stream info bar for fullscreen live streams -->
+        @let liveEvent = media.current?.liveEventData;
+        @if (layout.fullscreenMediaPlayer() && media.current?.isLiveStream && liveEvent) {
+        <app-stream-info-bar [liveEvent]="liveEvent" />
         }
       </div>
 
       <!-- Live stream sidebar (chat + participants) for fullscreen -->
-      @let liveEvent = media.current?.liveEventData;
       @if (layout.fullscreenMediaPlayer() && media.current?.isLiveStream) {
       <div class="live-stream-sidebar" #chatSidebar [class.hidden]="!chatVisible">
         <app-live-chat [liveEvent]="liveEvent" #liveChat />
