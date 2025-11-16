@@ -86,7 +86,7 @@ interface FeatureUpdate {
       </div>
 
       <div mat-dialog-actions class="dialog-actions">
-        <button mat-raised-button color="primary" [mat-dialog-close]="true">Got it!</button>
+        <button mat-flat-button [mat-dialog-close]="true">Got it!</button>
       </div>
     </div>
   `,
