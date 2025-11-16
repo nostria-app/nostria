@@ -227,6 +227,11 @@ export class LiveChatComponent implements AfterViewInit {
 
   toggleView(mode: 'chat' | 'participants'): void {
     this.viewMode.set(mode);
+    
+    // Scroll to bottom when switching to chat view
+    if (mode === 'chat') {
+      setTimeout(() => this.scrollToBottom(), 100);
+    }
   }
 
   toggleVisibility(): void {
