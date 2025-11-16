@@ -128,8 +128,12 @@ export class MediaPublishDialogComponent {
     if (mediaType?.startsWith('image')) {
       return 20; // Picture event
     } else if (mediaType?.startsWith('video')) {
-      // Default to kind 21 (normal video), user can change to 22 (short video)
-      return 21;
+      // Check if it's a webm file (likely recorded) or small file size (< 10MB suggests short video)
+      const isLikelyRecorded = this.data.mediaItem.type?.includes('webm') ||
+        (this.data.mediaItem.size && this.data.mediaItem.size < 10 * 1024 * 1024);
+
+      // Default to kind 22 (short video) for likely recorded videos, otherwise kind 21 (normal video)
+      return isLikelyRecorded ? 22 : 21;
     }
 
     // Default to picture

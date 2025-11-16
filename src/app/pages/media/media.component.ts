@@ -19,6 +19,7 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { MediaService, MediaItem } from '../../services/media.service';
 import { MediaUploadDialogComponent } from './media-upload-dialog/media-upload-dialog.component';
 import { MediaServerDialogComponent } from './media-server-dialog/media-server-dialog.component';
+import { VideoRecordDialogComponent } from './video-record-dialog/video-record-dialog.component';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { NostrService } from '../../services/nostr.service';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
@@ -176,6 +177,55 @@ export class MediaComponent {
         setTimeout(() => {
           this.openUploadDialog();
         }, 100);
+      }
+    });
+  }
+
+  openRecordVideoDialog(): void {
+    const dialogRef = this.dialog.open(VideoRecordDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe(async result => {
+      if (result && result.file) {
+        try {
+          // Set uploading state to true
+          this.mediaService.uploading.set(true);
+
+          // Upload the recorded video to media servers
+          const uploadResult = await this.mediaService.uploadFile(
+            result.file,
+            false, // Don't upload original since it's already optimized
+            this.mediaService.mediaServers()
+          );
+
+          // Set the uploading state to false
+          this.mediaService.uploading.set(false);
+
+          // Handle the result
+          if (uploadResult.status === 'success' && uploadResult.item) {
+            this.snackBar.open('Video uploaded successfully', 'Close', {
+              duration: 3000,
+            });
+
+            // Open publish dialog immediately with the uploaded video
+            this.publishSingleItemFromCard(uploadResult.item);
+          } else {
+            this.snackBar.open('Failed to upload recorded video', 'Close', {
+              duration: 3000,
+            });
+          }
+        } catch (error) {
+          // Set the uploading state to false on error
+          this.mediaService.uploading.set(false);
+
+          this.snackBar.open('Failed to upload recorded video', 'Close', {
+            duration: 3000,
+          });
+        }
       }
     });
   }
