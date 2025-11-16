@@ -7,7 +7,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { Event, nip19 } from 'nostr-tools';
 import { EventPointer } from 'nostr-tools/nip19';
 import { firstValueFrom } from 'rxjs';
@@ -44,6 +44,7 @@ import { EventMenuComponent } from '../event-menu/event-menu.component';
 })
 export class EventHeaderComponent {
   readonly layout = inject(LayoutService);
+  readonly router = inject(Router);
   accountState = inject(AccountStateService);
   dialog = inject(MatDialog);
   data = inject(DataService);
@@ -120,12 +121,21 @@ export class EventHeaderComponent {
       return;
     }
 
+    const currentEvent = this.event();
+
     // Prevent default navigation for left-click so we can use router
     event.preventDefault();
     event.stopPropagation();
 
-    const currentEvent = this.event();
-    this.layout.openEvent(currentEvent.id, currentEvent);
+    // Only open thread dialog for kind 1 events
+    // Other kinds (videos, articles, etc.) should navigate directly
+    if (currentEvent.kind === 1) {
+      this.layout.openEvent(currentEvent.id, currentEvent);
+    } else {
+      // Navigate with event state to ensure event data is available
+      const url = this.eventUrl();
+      this.router.navigate([url], { state: { event: currentEvent } });
+    }
   }
 
   async deleteEvent() {
