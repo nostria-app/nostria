@@ -116,10 +116,10 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
       const currentUrl = this.router.url;
       const isStreamRoute = currentUrl.startsWith('/stream/');
 
-      // If on a stream route, navigate to streams page, otherwise restore previous URL
+      // If on a stream route, update URL to /streams silently
       if (isStreamRoute) {
-        // Navigate to streams page
-        this.router.navigate(['/streams']);
+        // Use replaceState to update URL without navigation
+        this.location.replaceState('/streams');
       } else if (this.utilities.isBrowser() && window.history.state?.previousUrl) {
         // Restore previous URL if available
         this.location.replaceState(window.history.state.previousUrl);

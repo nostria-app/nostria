@@ -65,6 +65,60 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
   }
 }
 
+/**
+ * Fetch event from relays by address (kind, pubkey, identifier)
+ */
+async function fetchEventByAddress(kind: number, pubkey: string, identifier: string, relayHints?: string[]): Promise<Event | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { WebSocket: WS } = await import('ws');
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (globalThis as any).WebSocket = WS;
+
+  const { SimplePool } = await import('nostr-tools/pool');
+  const pool = new SimplePool();
+
+  const popularRelays = [
+    'wss://relay.damus.io',
+    'wss://relay.nostr.band',
+    'wss://nos.lol',
+    'wss://relay.snort.social',
+    'wss://relay.primal.net',
+    'wss://nostr.wine',
+    'wss://purplepag.es',
+  ];
+
+  const relays = relayHints && relayHints.length > 0
+    ? [...new Set([...relayHints, ...popularRelays])]
+    : popularRelays;
+
+  console.log('[SSR] StreamResolver: Fetching by address from', relays.length, 'relays...');
+
+  try {
+    const event = await Promise.race([
+      pool.get(relays, {
+        kinds: [kind],
+        authors: [pubkey],
+        '#d': [identifier],
+      }),
+      new Promise<Event | null>((resolve) => setTimeout(() => resolve(null), 5000))
+    ]);
+
+    pool.close(relays);
+
+    if (event) {
+      console.log('[SSR] StreamResolver: Event found by address (kind:', event.kind, ')');
+    } else {
+      console.log('[SSR] StreamResolver: Event not found by address');
+    }
+
+    return event;
+  } catch (error) {
+    console.error('[SSR] StreamResolver: Error fetching event by address:', error);
+    pool.close(relays);
+    return null;
+  }
+}
+
 export const streamResolver: ResolveFn<StreamData | null> = async (route: ActivatedRouteSnapshot): Promise<StreamData | null> => {
   const layout = inject(LayoutService);
   const transferState = inject(TransferState);
@@ -92,13 +146,30 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
     const eventPointer = utilities.decodeEventFromUrl(encodedEvent);
 
     if (!eventPointer) {
-      console.error('[SSR] StreamResolver: Failed to decode nevent');
+      console.error('[SSR] StreamResolver: Failed to decode event');
       transferState.set(STREAM_STATE_KEY, data);
       return data;
     }
 
-    // Fetch the event from relays using SimplePool
-    const event = await fetchEventFromRelays(eventPointer.id, eventPointer.relays);
+    // Fetch the event from relays - handle both nevent and naddr
+    let event: Event | null;
+
+    if (eventPointer.kind && eventPointer.identifier !== undefined && eventPointer.author) {
+      // It's an naddr - fetch by kind, pubkey, and d-tag
+      event = await fetchEventByAddress(
+        eventPointer.kind,
+        eventPointer.author,
+        eventPointer.identifier,
+        eventPointer.relays
+      );
+    } else if (eventPointer.id) {
+      // It's a nevent - fetch by ID
+      event = await fetchEventFromRelays(eventPointer.id, eventPointer.relays);
+    } else {
+      console.error('[SSR] StreamResolver: Invalid event pointer format');
+      transferState.set(STREAM_STATE_KEY, data);
+      return data;
+    }
 
     // Fallback to metadata API if relay fetch fails
     if (!event) {
