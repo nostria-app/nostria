@@ -36,7 +36,8 @@
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
     }
     <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
-    @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22 || targetItem.event.kind === 34235 || targetItem.event.kind === 34236) {
+    @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22 || targetItem.event.kind === 34235 ||
+    targetItem.event.kind === 34236) {
     <app-video-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
     }
@@ -104,7 +105,8 @@
             [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
           }
           <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
-          @else if (rootRecordData.event.kind === 21 || rootRecordData.event.kind === 22 || rootRecordData.event.kind === 34235 || rootRecordData.event.kind === 34236) {
+          @else if (rootRecordData.event.kind === 21 || rootRecordData.event.kind === 22 || rootRecordData.event.kind
+          === 34235 || rootRecordData.event.kind === 34236) {
           <app-video-event [event]="rootRecordData.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
             [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
           }
@@ -176,7 +178,8 @@
           }
           <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
           @else if (
-          parentRecordData.event.kind === 21 || parentRecordData.event.kind === 22 || parentRecordData.event.kind === 34235 || parentRecordData.event.kind === 34236
+          parentRecordData.event.kind === 21 || parentRecordData.event.kind === 22 || parentRecordData.event.kind ===
+          34235 || parentRecordData.event.kind === 34236
           ) {
           <app-video-event [event]="parentRecordData.event" [hideComments]="hideComments()"
             [showOverlay]="showOverlay()" [allMediaEvents]="allMediaEvents()"
@@ -239,7 +242,8 @@
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
     }
     <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
-    @else if (item.event.kind === 21 || item.event.kind === 22 || item.event.kind === 34235 || item.event.kind === 34236) {
+    @else if (item.event.kind === 21 || item.event.kind === 22 || item.event.kind === 34235 || item.event.kind ===
+    34236) {
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
     }
@@ -290,8 +294,9 @@
     <app-photo-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
     }
-    <!-- Videos (NIP-71, kind 21/22) -->
-    @else if (item.event.kind === 21 || item.event.kind === 22) {
+    <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
+    @else if (item.event.kind === 21 || item.event.kind === 22 || item.event.kind === 34235 || item.event.kind ===
+    34236) {
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
     }

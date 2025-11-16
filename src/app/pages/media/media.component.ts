@@ -996,8 +996,8 @@ export class MediaComponent {
       });
       return false;
     }
-  } 
-  
+  }
+
   private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
     const tags: string[][] = [];
 
