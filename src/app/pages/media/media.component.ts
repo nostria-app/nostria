@@ -196,9 +196,10 @@ export class MediaComponent {
           this.mediaService.uploading.set(true);
 
           // Upload the recorded video to media servers
+          // Use uploadOriginal flag from dialog result
           const uploadResult = await this.mediaService.uploadFile(
             result.file,
-            false, // Don't upload original since it's already optimized
+            result.uploadOriginal ?? false,
             this.mediaService.mediaServers()
           );
 
