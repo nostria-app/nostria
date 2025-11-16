@@ -435,7 +435,11 @@ export class ReportingService {
       const signedEvent = await this.nostr.signEvent(muteListEvent);
 
       // Update the account state with the new mute list
+      // Use update() to force signal change detection
       this.accountState.muteList.set(signedEvent);
+
+      // Force update by accessing the signal to ensure change detection
+      this.accountState.muteList();
 
       return signedEvent;
     } catch (error) {
@@ -478,11 +482,12 @@ export class ReportingService {
       const signedEvent = await this.nostr.signEvent(muteListEvent);
 
       // Update the account state with the new mute list
+      console.log('[ReportingService] Updating mute list signal with new event:', signedEvent);
       this.accountState.muteList.set(signedEvent);
 
       return signedEvent;
     } catch (error) {
-      console.error('Error creating fresh mute list event without user:', error);
+      console.error('Error creating fresh mute list event:', error);
       return null;
     }
   }

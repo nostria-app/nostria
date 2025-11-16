@@ -132,7 +132,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (!currentEvent) return false;
 
     const mutedAccounts = this.accountState.mutedAccounts();
-    return mutedAccounts.includes(currentEvent.pubkey);
+    const isMuted = mutedAccounts.includes(currentEvent.pubkey);
+
+    if (isMuted) {
+      console.log('[EventComponent] Event author is muted:', currentEvent.pubkey.substring(0, 8));
+    }
+
+    return isMuted;
   });
 
   // Loading states
