@@ -1,4 +1,4 @@
-import { Component, inject, signal, OnDestroy, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
 import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,7 +23,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   templateUrl: './video-record-dialog.component.html',
   styleUrls: ['./video-record-dialog.component.scss'],
 })
-export class VideoRecordDialogComponent implements OnDestroy {
+export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   private dialogRef = inject(MatDialogRef<VideoRecordDialogComponent>);
   private snackBar = inject(MatSnackBar);
 
@@ -56,7 +56,12 @@ export class VideoRecordDialogComponent implements OnDestroy {
     }
   }
 
-  async startRecording(): Promise<void> {
+  ngAfterViewInit(): void {
+    // Start camera preview as soon as view is ready
+    setTimeout(() => this.startCameraPreview(), 100);
+  }
+
+  async startCameraPreview(): Promise<void> {
     try {
       // Set video constraints based on aspect ratio
       const isVertical = this.aspectRatio() === 'vertical';
@@ -80,6 +85,25 @@ export class VideoRecordDialogComponent implements OnDestroy {
         videoElement.srcObject = stream;
         // Ensure video is muted to prevent audio feedback
         videoElement.muted = true;
+      }
+    } catch (error) {
+      console.error('Failed to start camera preview:', error);
+      this.snackBar.open('Failed to access camera. Please check permissions.', 'Close', {
+        duration: 3000,
+      });
+    }
+  }
+
+  async startRecording(): Promise<void> {
+    try {
+      // If no stream exists, start camera preview first
+      if (!this.stream()) {
+        await this.startCameraPreview();
+      }
+
+      const stream = this.stream();
+      if (!stream) {
+        throw new Error('Failed to get camera stream');
       }
 
       // Setup MediaRecorder
@@ -225,10 +249,10 @@ export class VideoRecordDialogComponent implements OnDestroy {
 
     this.facingMode.set(this.facingMode() === 'user' ? 'environment' : 'user');
 
-    // If camera is already active (not recording, not previewing), restart with new camera
+    // Restart camera preview with new facing mode
     if (this.stream() && !this.isPreviewing()) {
       this.stopCamera();
-      this.startRecording();
+      this.startCameraPreview();
     }
   }
 
