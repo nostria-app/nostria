@@ -17,6 +17,10 @@
     display: flex;
     align-items: center;
     justify-content: center;
+
+    &.horizontal {
+      max-height: 50vh;
+    }
   }
 
   .camera-preview,
@@ -71,10 +75,56 @@
 
   mat-dialog-actions {
     padding: 16px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: center;
+    justify-content: space-between;
+
+    .recording-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      flex: 1;
+
+      .aspect-ratio-buttons {
+        display: flex;
+        gap: 4px;
+        border: 1px solid var(--mat-sys-outline-variant);
+        border-radius: 4px;
+        padding: 2px;
+
+        button {
+          min-width: 48px;
+          padding: 4px 8px;
+
+          &.active {
+            background-color: var(--mat-sys-primary-container);
+            color: var(--mat-sys-on-primary-container);
+          }
+
+          mat-icon {
+            margin: 0;
+          }
+        }
+      }
+
+      .short-form-toggle,
+      .upload-original-toggle {
+        .toggle-label {
+          font-size: 14px;
+        }
+      }
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      margin-left: auto;
+    }
 
     button {
-      margin-left: 8px;
-
       mat-icon {
         margin-right: 4px;
       }
