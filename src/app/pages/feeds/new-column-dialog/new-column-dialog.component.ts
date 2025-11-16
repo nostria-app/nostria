@@ -59,6 +59,8 @@ const NOSTR_KINDS = [
   { value: 30024, label: 'Draft Long-form Content (30024)' },
   { value: 30078, label: 'Application-specific Data (30078)' },
   { value: 32100, label: 'M3U Playlist (32100)' },
+  { value: 34235, label: 'Video (34235)' },
+  { value: 34236, label: 'Short Video (34236)' },
 ];
 
 @Component({
