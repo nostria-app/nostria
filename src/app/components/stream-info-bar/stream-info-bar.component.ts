@@ -99,12 +99,16 @@ import { MatSnackBar } from '@angular/material/snack-bar';
   `,
   styles: [`
     .stream-info-bar {
+      container-type: inline-size;
       background: var(--mat-sys-surface-container);
       border-top: 1px solid var(--mat-sys-outline-variant);
       padding: 16px 20px;
       display: flex;
       flex-direction: column;
       gap: 12px;
+      height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
 
     .stream-header {
@@ -260,6 +264,118 @@ import { MatSnackBar } from '@angular/material/snack-bar';
       
       mat-chip {
         font-size: 0.75rem;
+      }
+    }
+
+    /* Compact mode for smaller viewports or when sidebar is visible */
+    @container (max-width: 900px) {
+      .stream-info-bar {
+        padding: 12px 16px;
+      }
+
+      .stream-title {
+        font-size: 1.1rem;
+      }
+
+      .stream-description {
+        -webkit-line-clamp: 1;
+        font-size: 0.8rem;
+      }
+
+      .stream-meta {
+        flex-wrap: wrap;
+        font-size: 0.8rem;
+      }
+
+      .viewer-count-badge,
+      .time-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+      }
+
+      .live-badge {
+        font-size: 0.65rem;
+        padding: 3px 6px;
+      }
+    }
+
+    /* Extra compact for very small spaces */
+    @container (max-width: 600px) {
+      .stream-info-bar {
+        padding: 8px 12px;
+      }
+
+      .stream-title {
+        font-size: 1rem;
+      }
+
+      .stream-description {
+        display: none;
+      }
+
+      .zap-goal {
+        display: none;
+      }
+
+      .provider-link {
+        display: none;
+      }
+    }
+
+    /* Compact mode for smaller containers */
+    @container (max-width: 900px) {
+      .stream-info-bar {
+        padding: 12px 16px;
+        gap: 10px;
+      }
+
+      .stream-title {
+        font-size: 1.1rem;
+      }
+
+      .stream-description {
+        -webkit-line-clamp: 1;
+        font-size: 0.8rem;
+      }
+
+      .stream-meta {
+        flex-wrap: wrap;
+        font-size: 0.8rem;
+      }
+
+      .viewer-count-badge,
+      .time-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+      }
+
+      .live-badge {
+        font-size: 0.65rem;
+        padding: 3px 6px;
+      }
+    }
+
+    /* Extra compact for very small containers */
+    @container (max-width: 600px) {
+      .stream-info-bar {
+        padding: 8px 12px;
+        gap: 8px;
+      }
+
+      .stream-title {
+        font-size: 1rem;
+      }
+
+      .stream-description {
+        display: none;
+      }
+
+      .zap-goal {
+        display: none;
+      }
+
+      .provider-link {
+        display: none;
       }
     }
 
