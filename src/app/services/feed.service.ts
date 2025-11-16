@@ -506,6 +506,14 @@ export class FeedService {
     // Track if we started with cached events (for queueing logic)
     const hadCachedEvents = cachedEvents.length > 0;
 
+    // Set initial lastCheckTimestamp based on most recent cached event, or current time if no cache
+    let initialLastCheckTimestamp = Math.floor(Date.now() / 1000);
+    if (cachedEvents.length > 0) {
+      // Find the most recent event timestamp from cached events
+      const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
+      initialLastCheckTimestamp = mostRecentTimestamp;
+    }
+
     const item: FeedItem = {
       column,
       filter: null,
@@ -515,7 +523,7 @@ export class FeedService {
       isLoadingMore: signal<boolean>(false),
       hasMore: signal<boolean>(true),
       pendingEvents: signal<Event[]>([]),
-      lastCheckTimestamp: Math.floor(Date.now() / 1000), // Initialize with current timestamp in seconds
+      lastCheckTimestamp: initialLastCheckTimestamp, // Initialize based on most recent cached event or current time
       initialLoadComplete: hadCachedEvents, // If we have cache, mark as complete immediately
     };
 
@@ -1714,13 +1722,19 @@ export class FeedService {
     // Clear pending events
     feedData.pendingEvents.set([]);
 
-    // Update last check timestamp to now
-    feedData.lastCheckTimestamp = Math.floor(Date.now() / 1000);
+    // Update last check timestamp to the most recent event timestamp (not current time)
+    // This ensures we don't keep showing old events as "new" on refresh
+    if (uniqueEvents.length > 0) {
+      const mostRecentTimestamp = Math.max(...uniqueEvents.map(e => e.created_at));
+      feedData.lastCheckTimestamp = mostRecentTimestamp;
+    } else {
+      feedData.lastCheckTimestamp = Math.floor(Date.now() / 1000);
+    }
 
     // Update reactive signal
     this._feedData.update(map => new Map(map));
 
-    this.logger.debug(`Loaded ${pending.length} pending events for column ${columnId}`);
+    this.logger.debug(`Loaded ${pending.length} pending events for column ${columnId}, updated lastCheckTimestamp to ${feedData.lastCheckTimestamp}`);
   }
 
   /**
