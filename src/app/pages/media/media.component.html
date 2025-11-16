@@ -14,6 +14,10 @@
         <span>Uploading...</span>
       </div>
       }
+      <button mat-raised-button (click)="openRecordVideoDialog()" [disabled]="mediaService.uploading()">
+        <mat-icon>videocam</mat-icon>
+        Record Video
+      </button>
       <button mat-raised-button color="primary" (click)="openUploadDialog()" [disabled]="mediaService.uploading()">
         <mat-icon>upload</mat-icon>
         Upload Media

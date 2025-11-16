@@ -1,0 +1,65 @@
+<div class="video-record-dialog">
+  <h2 mat-dialog-title>
+    @if (isRecording()) {
+    Recording Video...
+    } @else if (isPreviewing()) {
+    Preview Your Video
+    } @else {
+    Record Video
+    }
+  </h2>
+
+  <mat-dialog-content>
+    @if (!isPreviewing()) {
+    <!-- Camera Preview -->
+    <div class="camera-container">
+      <video #cameraPreview autoplay playsinline muted class="camera-preview"></video>
+
+      @if (isRecording()) {
+      <div class="recording-indicator">
+        <div class="recording-dot"></div>
+        <span>Recording</span>
+      </div>
+
+      <mat-progress-bar mode="determinate" [value]="recordingProgress()" class="recording-progress">
+      </mat-progress-bar>
+      }
+
+      @if (!isRecording()) {
+      <button mat-icon-button class="camera-flip-button" (click)="toggleCamera()" matTooltip="Switch camera">
+        <mat-icon>flip_camera_ios</mat-icon>
+      </button>
+      }
+    </div>
+    } @else {
+    <!-- Video Preview -->
+    <div class="preview-container">
+      <video #videoPreview [src]="recordedUrl()!" controls autoplay class="video-preview"></video>
+    </div>
+    }
+  </mat-dialog-content>
+
+  <mat-dialog-actions align="end">
+    @if (!isRecording() && !isPreviewing()) {
+    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-flat-button color="primary" (click)="startRecording()">
+      <mat-icon>videocam</mat-icon>
+      Start Recording
+    </button>
+    } @else if (isRecording()) {
+    <button mat-flat-button color="warn" (click)="stopRecording()">
+      <mat-icon>stop</mat-icon>
+      Stop Recording
+    </button>
+    } @else if (isPreviewing()) {
+    <button mat-button (click)="retakeVideo()">
+      <mat-icon>replay</mat-icon>
+      Retake
+    </button>
+    <button mat-flat-button color="primary" (click)="useVideo()">
+      <mat-icon>check</mat-icon>
+      Use Video
+    </button>
+    }
+  </mat-dialog-actions>
+</div>
