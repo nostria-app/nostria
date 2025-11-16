@@ -505,15 +505,4 @@
   .comments-header {
     position: static;
   }
-
-  // Account for window-controls-overlay on mobile
-  @media (display-mode: window-controls-overlay) {
-    .dialog-header {
-      top: calc(env(titlebar-area-height, 33px) + 12px);
-    }
-
-    .media-side {
-      padding-top: calc(env(titlebar-area-height, 33px) + 4rem);
-    }
-  }
 }

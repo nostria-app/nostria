@@ -299,28 +299,13 @@
 .profile-outlet {
   height: calc(100vh - 164px);
 
-  // Account for window controls overlay (custom chrome)
-  @media (display-mode: window-controls-overlay) {
-    height: calc(100vh - 164px - env(titlebar-area-height, 33px));
-  }
-
   &.mobile {
     height: calc(100vh - 200px);
-
-    // Account for window controls overlay on mobile
-    @media (display-mode: window-controls-overlay) {
-      height: calc(100vh - 200px - env(titlebar-area-height, 33px));
-    }
 
     // Adjust height for tiny screens when toolbar is more compact
     // Account for margin-top (1rem = ~16px) by subtracting less
     @media screen and (max-width: 420px) {
       height: calc(100vh - 164px); // Adjusted to fit without causing overflow
-
-      // Account for window controls overlay on tiny screens
-      @media (display-mode: window-controls-overlay) {
-        height: calc(100vh - 164px - env(titlebar-area-height, 33px));
-      }
     }
   }
 }

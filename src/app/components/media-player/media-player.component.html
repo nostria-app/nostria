@@ -3,69 +3,50 @@
   @if (!footer()) {
   <img class="media-player-icon" src="icons/icon.svg" width="16" height="16" alt="Nostria" />
 
-  <!-- Title area to mimic native title bar when using window-controls-overlay -->
-  @if (layout.overlayMode()) {
-  <div class="titlebar-area" title="{{ pageTitle }}">
-    <div class="title-text">{{ pageTitle }}</div>
-  </div>
-  }
-
   <div class="media-player-controls">
     @if (media.hasQueue()) {
     @if (media.current?.type === 'Podcast') {
-    <button (click)="media.rate()" mat-icon-button class="nodrag">
+    <button (click)="media.rate()" mat-icon-button>
       <mat-icon>speed</mat-icon>
     </button>
     }
 
     @if (media.current?.type === 'Podcast') {
-    <button (click)="media.rewind(10)" class="hide-small" mat-icon-button class="nodrag">
+    <button (click)="media.rewind(10)" class="hide-small" mat-icon-button>
       <mat-icon>replay_10</mat-icon>
     </button>
     }
 
     @if (!media.current?.isLiveStream) {
-    <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button class="nodrag">
+    <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
       <mat-icon>skip_previous</mat-icon>
     </button>
     }
 
     @if (media.paused) {
-    <button (click)="media.resume()" mat-icon-button class="nodrag">
+    <button (click)="media.resume()" mat-icon-button>
       <mat-icon>play_arrow</mat-icon>
     </button>
     } @else {
-    <button (click)="media.pause()" mat-icon-button class="nodrag">
+    <button (click)="media.pause()" mat-icon-button>
       <mat-icon>pause</mat-icon>
     </button>
     }
 
     @if (!media.current?.isLiveStream) {
-    <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button class="nodrag">
+    <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
       <mat-icon>skip_next</mat-icon>
     </button>
     }
 
     @if (media.current?.type === 'Podcast') {
-    <button (click)="media.forward(10)" class="hide-small" mat-icon-button class="nodrag">
+    <button (click)="media.forward(10)" class="hide-small" mat-icon-button>
       <mat-icon>forward_10</mat-icon>
     </button>
     }
     }
 
-    <!-- @if (!media.videoMode() && media.muted) {
-    <button mat-icon-button (click)="media.mute()" class="nodrag">
-      <mat-icon>volume_off</mat-icon>
-    </button>
-    }
-
-    @if (!media.videoMode() && !media.muted) {
-    <button mat-icon-button (click)="media.mute()" class="nodrag">
-      <mat-icon>volume_up</mat-icon>
-    </button>
-    } -->
-
-    <button (click)="media.pause()" routerLink="/media-queue" mat-icon-button class="nodrag">
+    <button (click)="media.pause()" routerLink="/media-queue" mat-icon-button>
       <mat-icon>queue_music</mat-icon>
     </button>
   </div>

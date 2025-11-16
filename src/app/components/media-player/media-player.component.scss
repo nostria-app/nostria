@@ -5,18 +5,12 @@
   z-index: 1500;
 
   &:not(.footer-mode) {
-    /* Toolbar mode - fixed position with window controls overlay support */
+    /* Toolbar mode - fixed position */
     position: fixed;
-    /* Use the environment variable for the left anchoring with a fallback. */
-    left: env(titlebar-area-x, 0);
-    /* Use the environment variable for the top anchoring with a fallback. */
-    top: env(titlebar-area-y, 0);
-    /* Use the environment variable for setting the width with a fallback. */
-    width: env(titlebar-area-width, 100%);
-    /* Use the environment variable for setting the height with a fallback. */
-    height: env(titlebar-area-height, 33px);
-
-    -webkit-app-region: drag;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 33px;
   }
 
   &.footer-mode {
@@ -27,9 +21,6 @@
     border-top: 1px solid var(--mat-sys-outline-variant);
     flex-shrink: 0;
     /* Prevent the footer from shrinking */
-
-    /* Remove drag behavior for footer mode */
-    -webkit-app-region: none;
 
     display: flex;
     flex-direction: row;
@@ -52,16 +43,13 @@
 
   /* Fullscreen mode - override footer-mode when both are active */
   &.footer-mode.fullscreen-host {
-    /* Override relative positioning from footer-mode */
     position: fixed !important;
-    /* Start below titlebar when window-controls-overlay is active */
-    top: env(titlebar-area-height, 0px) !important;
+    top: 0 !important;
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
     width: 100vw !important;
-    /* Adjust height to account for titlebar */
-    height: calc(100vh - env(titlebar-area-height, 0px)) !important;
+    height: 100vh !important;
     z-index: 10000 !important;
     border: none !important;
   }
@@ -74,27 +62,6 @@
   z-index: 1500;
   flex-wrap: nowrap;
   min-width: 0;
-  /* Inherit drag behavior from host for toolbar mode */
-  -webkit-app-region: inherit;
-}
-
-/* Titlebar area displayed only when using window-controls-overlay */
-.titlebar-area {
-  -webkit-app-region: drag;
-  display: flex;
-  align-items: center;
-  padding: 0 8px;
-  height: 100%;
-  // min-width: 120px;
-  max-width: 50%;
-  overflow: hidden;
-}
-
-.title-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 0.8em;
 }
 
 .media-player-footer {
@@ -130,8 +97,6 @@
   margin-left: 4px;
   margin-right: 4px;
   margin-top: -1px;
-  /* Allow dragging on the icon in toolbar mode */
-  -webkit-app-region: inherit;
 }
 
 .media-player-controls {
@@ -139,8 +104,6 @@
   display: flex;
   flex-wrap: nowrap;
   align-items: center;
-  /* Inherit drag behavior in toolbar mode, allow buttons to override with nodrag */
-  -webkit-app-region: inherit;
 }
 
 .media-player-controls-footer {
@@ -153,50 +116,6 @@
   flex-wrap: nowrap;
   min-width: 0;
 }
-
-.nodrag {
-  -webkit-app-region: no-drag;
-}
-
-/* Ensure buttons are explicitly not draggable */
-button.nodrag,
-.nodrag button,
-.media-player-controls button {
-  -webkit-app-region: no-drag;
-}
-
-/* …except for the `input`. */
-input {
-  -webkit-app-region: no-drag;
-}
-
-/* For macOS: */
-.search-controls-left {
-  /* Remove hardcoded gradient, let theme color take precedence */
-  background: var(--theme-background-color,
-      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
-}
-
-/* For Windows: */
-.search-controls-right {
-  /* Remove hardcoded gradient, let theme color take precedence */
-  background: var(--theme-background-color,
-      var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
-}
-
-// @media (display-mode: window-controls-overlay) {
-//     :host {
-//         |none;
-//         background-color: green;
-//     }
-// }
-
-// @media (display-mode: not(window-controls-overlay)) {
-//     :host {
-//         background-color: red;
-//         display: none;
-//     }
-// }
 
 .media-controls-container {
   align-self: center;
@@ -693,14 +612,12 @@ app-stream-info-bar {
 .media-player-footer.exiting-fullscreen {
   /* Keep fullscreen positioning during exit animation */
   position: fixed !important;
-  /* Start below titlebar when window-controls-overlay is active */
-  top: env(titlebar-area-height, 0px) !important;
+  top: 0 !important;
   left: 0 !important;
   right: 0 !important;
   bottom: 0 !important;
   width: 100vw !important;
-  /* Adjust height to account for titlebar */
-  height: calc(100vh - env(titlebar-area-height, 0px)) !important;
+  height: 100vh !important;
   z-index: 10000 !important;
   /* Higher than mobile-nav (1000) */
 

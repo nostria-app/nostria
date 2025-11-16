@@ -87,16 +87,13 @@ export class VideoPlayerComponent {
       const newX = start.windowX + (event.clientX - start.x);
       const newY = start.windowY + (event.clientY - start.y);
 
-      // Get titlebar height when in overlay mode
-      const titlebarHeight = this.layout.overlayMode() ? 33 : 0; // default 33px from env(titlebar-area-height, 33px)
-
       // Constrain to viewport
       const maxX = window.innerWidth - this.media.videoWindowState().width;
       const maxY = window.innerHeight - this.media.videoWindowState().height;
 
       this.media.updateWindowPosition(
         Math.max(0, Math.min(newX, maxX)),
-        Math.max(titlebarHeight, Math.min(newY, maxY))
+        Math.max(0, Math.min(newY, maxY))
       );
     }
   }
@@ -172,7 +169,6 @@ export class VideoPlayerComponent {
       maximized: state.isMaximized,
       dragging: this.isDragging(),
       resizing: this.isResizing(),
-      'overlay-mode': this.layout.overlayMode(),
     };
   }
 }
