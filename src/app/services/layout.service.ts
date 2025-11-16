@@ -23,6 +23,9 @@ import {
 } from '../components/report-dialog/report-dialog.component';
 import { ReportTarget } from './reporting.service';
 import { UserRelayService } from './relays/user-relay';
+import { FeedService } from './feed.service';
+import { UtilitiesService } from './utilities.service';
+import { RelayPoolService } from './relays/relay-pool';
 
 @Injectable({
   providedIn: 'root',
@@ -37,6 +40,7 @@ export class LayoutService implements OnDestroy {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private injector = inject(Injector);
+  private utilities = inject(UtilitiesService);
   isHandset = signal(false);
   isWideScreen = signal(false);
   breakpointObserver = inject(BreakpointObserver);
@@ -45,6 +49,8 @@ export class LayoutService implements OnDestroy {
   profileState = inject(ProfileStateService);
   accountStateService = inject(AccountStateService);
   private userRelayService = inject(UserRelayService);
+  private feedService = inject(FeedService);
+  private pool = inject(RelayPoolService);
   overlayMode = signal(false);
   showMediaPlayer = signal(false);
   fullscreenMediaPlayer = signal(false);
@@ -832,6 +838,54 @@ export class LayoutService implements OnDestroy {
   }
 
   openEvent(eventId: string, event: Event): void {
+    debugger;
+    // Handle live event comments (kind 1311) - extract and open the referenced stream
+    if (event.kind === 1311) {
+      const aTag = event.tags.find((tag: string[]) => tag[0] === 'a');
+      if (aTag && aTag[1]) {
+        // Parse the "a" tag: "kind:pubkey:d-tag"
+        const parts = aTag[1].split(':');
+        if (parts.length === 3 && parts[0] === '30311') {
+          // This is a reference to a live event (kind 30311)
+          const [kind, pubkey, dTag] = parts;
+          const relayHint = aTag[2] || '';
+          const relays = relayHint ? [relayHint] : this.feedService.userRelays().map((r: { url: string }) => r.url).slice(0, 3);
+
+          // Encode as naddr (for parameterized replaceable events)
+          const naddr = nip19.naddrEncode({
+            kind: 30311,
+            pubkey: pubkey,
+            identifier: dTag,
+            relays: relays,
+          });
+
+          debugger;
+
+          // Navigate to the stream
+          this.router.navigate(['/stream', naddr]);
+          return;
+        }
+      }
+    }
+
+    // Handle live events (kind 30311) - open the stream directly
+    if (event.kind === 30311) {
+      const relayHints = this.feedService.userRelays().map((r: { url: string }) => r.url).slice(0, 3);
+      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+
+      // Encode as naddr (for parameterized replaceable events)
+      const naddr = nip19.naddrEncode({
+        kind: 30311,
+        pubkey: event.pubkey,
+        identifier: dTag,
+        relays: relayHints,
+      });
+
+      // Navigate to the stream
+      this.router.navigate(['/stream', naddr]);
+      return;
+    }
+
     let neventId = eventId;
     if (!neventId.startsWith('nevent')) {
       neventId = nip19.neventEncode({
