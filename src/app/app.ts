@@ -1110,10 +1110,22 @@ export class App implements OnInit {
   }
 
   exitFullscreen(): void {
+    // Check if we're on a stream route before exiting
+    const currentUrl = this.router.url;
+    const isStreamRoute = currentUrl.startsWith('/stream/');
+
+    console.log('[App] exitFullscreen called, currentUrl:', currentUrl, 'isStreamRoute:', isStreamRoute);
+
     this.media.exitFullscreen();
     // Also turn off fullscreen media player mode so it doesn't auto-open next time
     if (this.layout.fullscreenMediaPlayer()) {
       this.layout.fullscreenMediaPlayer.set(false);
+    }
+
+    // Navigate to streams page if we were on a stream route
+    if (isStreamRoute) {
+      console.log('[App] Navigating to /streams');
+      this.router.navigate(['/streams']);
     }
   }
 

@@ -1,5 +1,6 @@
 import { effect, inject, Injectable, signal, computed } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Router } from '@angular/router';
 import { MediaItem, OnInitialized, Playlist } from '../interfaces';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
@@ -32,6 +33,7 @@ export interface VideoWindowState {
 })
 export class MediaPlayerService implements OnInitialized {
   private sanitizer = inject(DomSanitizer);
+  private router = inject(Router);
   utilities = inject(UtilitiesService);
   localStorage = inject(LocalStorageService);
   layout = inject(LayoutService);
@@ -265,6 +267,10 @@ export class MediaPlayerService implements OnInitialized {
   exit() {
     console.log('Exiting media player and hiding footer');
 
+    // Check if we're on a stream route and need to navigate
+    const currentUrl = this.router.url;
+    const isStreamRoute = currentUrl.startsWith('/stream/');
+
     // Use the centralized cleanup method
     this.cleanupCurrentMedia();
 
@@ -315,6 +321,12 @@ export class MediaPlayerService implements OnInitialized {
     navigator.mediaSession.playbackState = 'none';
 
     console.log('Media player completely exited and hidden');
+
+    // Navigate to streams page if we were on a stream route
+    if (isStreamRoute) {
+      console.log('[MediaPlayer] Navigating to /streams from stream route');
+      this.router.navigate(['/streams']);
+    }
   }
 
   playPlaylist(playlist: Playlist): void {
