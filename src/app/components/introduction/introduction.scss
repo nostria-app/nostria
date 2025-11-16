@@ -15,20 +15,6 @@
   @media (min-width: 600px) {
     min-height: calc(100vh - 64px);
   }
-
-  // When window-controls-overlay is active, account for titlebar area
-  @media (display-mode: window-controls-overlay) {
-
-    // On mobile with window controls
-    @media (max-width: 599px) {
-      min-height: calc(100vh - 56px - 56px - env(titlebar-area-height, 33px));
-    }
-
-    // On tablet/desktop with window controls
-    @media (min-width: 600px) {
-      min-height: calc(100vh - 64px - env(titlebar-area-height, 33px));
-    }
-  }
 }
 
 .introduction-content {

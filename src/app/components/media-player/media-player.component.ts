@@ -33,17 +33,6 @@ import { filter } from 'rxjs/operators';
 import { LiveChatComponent } from '../live-chat/live-chat.component';
 import { StreamInfoBarComponent } from '../stream-info-bar/stream-info-bar.component';
 
-interface WindowControlsOverlay {
-  getTitlebarAreaRect(): DOMRect;
-  visible: boolean;
-}
-
-declare global {
-  interface Navigator {
-    windowControlsOverlay: WindowControlsOverlay;
-  }
-}
-
 @Component({
   selector: 'app-media-player',
   imports: [
@@ -67,7 +56,6 @@ declare global {
   },
 })
 export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
-  // expose layout to template so we can read overlayMode() there
   readonly layout = inject(LayoutService);
   private readonly theme = inject(ThemeService);
   private readonly utilities = inject(UtilitiesService);
@@ -83,10 +71,6 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   private readonly location = inject(Location);
   private readonly feed = inject(FeedService);
   private routerSub?: Subscription;
-  private displayModeListener?: (event: MediaQueryListEvent) => void;
-  // store the current page title shown in the titlebar
-  pageTitle = '';
-
   // Chat visibility state
   chatVisible = true;
 
@@ -191,28 +175,6 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
       }
     });
 
-    // Effect to handle display mode changes (only for toolbar mode)
-    effect(() => {
-      const div = this.elementRef.nativeElement;
-      const isOverlayMode = this.layout.overlayMode();
-      const isFooterMode = this.footer();
-
-      // Only apply overlay mode logic if not in footer mode
-      if (!isFooterMode) {
-        if (isOverlayMode) {
-          div.classList.add('window-controls-overlay');
-          div.style.display = 'block';
-        } else {
-          div.classList.remove('window-controls-overlay');
-          div.style.display = 'none';
-        }
-      } else {
-        // Footer mode should always be visible
-        div.style.display = 'block';
-        div.classList.remove('window-controls-overlay');
-      }
-    });
-
     // Effect to handle theme changes and update background color
     effect(() => {
       // read the signal so the effect reruns when darkMode changes
@@ -281,50 +243,6 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
     if (!this.utilities.isBrowser()) {
       return;
     }
-
-    const div = this.elementRef.nativeElement;
-
-    // Only apply window controls overlay logic for toolbar mode (not footer mode)
-    if (!this.footer()) {
-      if ('windowControlsOverlay' in navigator) {
-        const { x } = navigator.windowControlsOverlay.getTitlebarAreaRect();
-        if (x === 0) {
-          div.classList.add('search-controls-right');
-        } else {
-          div.classList.add('search-controls-left');
-        }
-
-        // if (navigator.windowControlsOverlay.visible) {
-        //   // The window controls overlay is visible in the title bar area.
-        // }
-      } else {
-        div.classList.add('search-controls-right');
-      }
-
-      // Create and setup the media query list
-      this.mediaQueryList = window.matchMedia('(display-mode: window-controls-overlay)');
-
-      // Set initial state
-      this.layout.overlayMode.set(this.mediaQueryList.matches);
-
-      // Define callback for media query changes and keep a reference so we can remove it later
-      this.displayModeListener = (event: MediaQueryListEvent) => {
-        this.layout.overlayMode.set(event.matches);
-      };
-
-      // Add event listener
-      this.mediaQueryList.addEventListener('change', this.displayModeListener);
-    }
-
-    // Initialize page title from document
-    this.pageTitle = this.document.title || '';
-
-    // Subscribe to router navigation end events to update title when routes change
-    this.routerSub = this.router.events
-      .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
-      .subscribe(() => {
-        this.pageTitle = this.document.title || '';
-      });
   }
 
   private moveVideoToGlobalContainer(): void {
@@ -391,12 +309,6 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    // Clean up media query listener
-    if (this.mediaQueryList) {
-      if (this.displayModeListener) {
-        this.mediaQueryList.removeEventListener('change', this.displayModeListener);
-      }
-    }
     this.removeEscapeListener();
 
     // Clean up video element reference in service
@@ -405,11 +317,6 @@ export class MediaPlayerComponent implements AfterViewInit, OnInit, OnDestroy {
     // Clean up if component is destroyed while in fullscreen
     if (this.media.isFullscreen() && this.originalVideoParent) {
       this.moveVideoBackToOriginal();
-    }
-
-    // Unsubscribe router events
-    if (this.routerSub) {
-      this.routerSub.unsubscribe();
     }
   }
 }

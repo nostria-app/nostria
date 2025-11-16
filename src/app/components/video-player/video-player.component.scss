@@ -14,12 +14,6 @@
     width: 100vw !important;
     height: 100vh !important;
     border-radius: 0;
-
-    // Respect titlebar area when in overlay mode
-    &.overlay-mode {
-      top: env(titlebar-area-height, 33px) !important;
-      height: calc(100vh - env(titlebar-area-height, 33px)) !important;
-    }
   }
 
   &.minimized {

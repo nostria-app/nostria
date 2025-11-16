@@ -34,12 +34,6 @@
   width: 100%;
   display: flex;
   justify-content: flex-end;
-
-  // Reduce height when window-controls-overlay is active since buttons sit in titlebar area
-  @media (display-mode: window-controls-overlay) {
-    height: 0;
-    min-height: 0;
-  }
 }
 
 .welcome-theme-button {
@@ -94,12 +88,6 @@
   align-items: center;
   padding: 0 1rem;
   position: relative;
-
-  // Add padding when window-controls-overlay is active to prevent buttons being cut off
-  @media (display-mode: window-controls-overlay) {
-    padding-bottom: calc(1rem + env(titlebar-area-height, 33px));
-    min-height: calc(60px + env(titlebar-area-height, 33px));
-  }
 }
 
 // Wizard step content

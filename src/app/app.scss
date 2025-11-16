@@ -39,14 +39,6 @@ nav {
   font-size: 0.8rem;
 }
 
-@media (display-mode: window-controls-overlay) {
-
-  /** This is for when the app is running in a window with custom title bar controls. */
-  .app-container {
-    padding-top: env(titlebar-area-height, 33px);
-  }
-}
-
 .sidenav-container {
   flex: 1;
   overflow: hidden;
@@ -272,12 +264,6 @@ mat-sidenav-content {
 .profile-sidenav.mat-drawer {
   transition: transform 0.3s ease-in-out;
   z-index: 1001; // Ensure the drawer itself also has high z-index
-}
-
-@media (display-mode: window-controls-overlay) {
-  .profile-sidenav {
-    margin-top: env(titlebar-area-height, 33px);
-  }
 }
 
 // Ensure the sidenav container doesn't resize when right-side sidenavs open
