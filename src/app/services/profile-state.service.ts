@@ -260,7 +260,7 @@ export class ProfileStateService {
       kinds.LongFormArticle,
       kinds.Repost,
       kinds.GenericRepost,
-      20, 21, 22 // Media kinds
+      20, 21, 22, 34235, 34236 // Media kinds: Picture (20), Video (21), Short Video (22), Addressable Video (34235), Addressable Short Video (34236)
     );
 
     // Optionally add reactions if enabled
