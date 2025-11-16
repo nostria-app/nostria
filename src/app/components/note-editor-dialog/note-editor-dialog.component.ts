@@ -38,6 +38,8 @@ import { PowService, PowProgress } from '../../services/pow.service';
 import { MentionAutocompleteComponent, MentionSelection, MentionAutocompleteConfig } from '../mention-autocomplete/mention-autocomplete.component';
 import { MentionInputService, MentionDetectionResult } from '../../services/mention-input.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
+import { Subscription } from 'rxjs';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -125,6 +127,8 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private powService = inject(PowService);
   private mentionInputService = inject(MentionInputService);
   private utilities = inject(UtilitiesService);
+  private publishEventBus = inject(PublishEventBus);
+  private publishSubscription?: Subscription;
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -318,6 +322,11 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     // Clear auto-save timer on destroy
     if (this.autoSaveTimer) {
       clearTimeout(this.autoSaveTimer);
+    }
+
+    // Clean up publish subscription
+    if (this.publishSubscription) {
+      this.publishSubscription.unsubscribe();
     }
   }
 
@@ -599,6 +608,53 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
       // Use the centralized publishing service which handles relay distribution
       // This ensures replies, quotes, and mentions are published to all relevant relays
+
+      // Set up a flag to track if dialog has been closed
+      let dialogClosed = false;
+      let publishedEventId: string | undefined;
+
+      // Subscribe to relay results to close dialog on first success
+      this.publishSubscription = this.publishEventBus.on('relay-result').subscribe((event) => {
+        if (!dialogClosed && event.type === 'relay-result') {
+          const relayEvent = event as PublishRelayResultEvent;
+
+          // Check if this is for our event (match by content since we don't have ID yet)
+          // Once we have the event ID, match by that
+          const isOurEvent = publishedEventId
+            ? relayEvent.event.id === publishedEventId
+            : relayEvent.event.content === this.content().trim();
+
+          if (isOurEvent && relayEvent.success) {
+            dialogClosed = true;
+            publishedEventId = relayEvent.event.id;
+
+            // Clear draft and close dialog immediately after first successful publish
+            this.clearAutoDraft();
+            this.snackBar.open('Note published successfully!', 'Close', {
+              duration: 3000,
+            });
+
+            // Close dialog with the signed event
+            const signedEvent = relayEvent.event;
+            this.dialogRef?.close({ published: true, event: signedEvent });
+
+            // Navigate to the published event
+            const nevent = nip19.neventEncode({
+              id: signedEvent.id,
+              author: signedEvent.pubkey,
+            });
+            this.router.navigate(['/e', nevent], { state: { event: signedEvent } });
+
+            // Unsubscribe after handling
+            if (this.publishSubscription) {
+              this.publishSubscription.unsubscribe();
+              this.publishSubscription = undefined;
+            }
+          }
+        }
+      });
+
+      // Start the publish operation (will continue in background even after dialog closes)
       const result = await this.nostrService.signAndPublish(eventToSign);
 
       console.log('[NoteEditorDialog] Publish result:', {
@@ -607,29 +663,15 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         eventId: result.event?.id
       });
 
-      if (!result.success || !result.event) {
-        throw new Error('Failed to publish event');
+      // Store the event ID for matching in the subscription
+      if (result.event) {
+        publishedEventId = result.event.id;
       }
 
-      const signedEvent = result.event;
-
-      // CRITICAL: Clear draft immediately after signing to prevent duplicate publishes
-      // If user clicks publish again while this is processing, there's no draft to republish
-      this.clearAutoDraft();
-
-      this.snackBar.open('Note published successfully!', 'Close', {
-        duration: 3000,
-      });
-      this.dialogRef?.close({ published: true, event: signedEvent });
-
-      // We don't do "note" much, we want URLs that embeds the autor.
-      // const note = nip19.noteEncode(signedEvent.id);
-      // this.router.navigate(['/e', note]); // Navigate to the published event
-      const nevent = nip19.neventEncode({
-        id: signedEvent.id,
-        author: signedEvent.pubkey,
-      });
-      this.router.navigate(['/e', nevent], { state: { event: signedEvent } }); // Navigate to the published event
+      // If no relay succeeded at all (dialog would still be open)
+      if (!dialogClosed && (!result.success || !result.event)) {
+        throw new Error('Failed to publish event');
+      }
     } catch (error) {
       console.error('Error publishing note:', error);
       this.snackBar.open('Failed to publish note. Please try again.', 'Close', {
