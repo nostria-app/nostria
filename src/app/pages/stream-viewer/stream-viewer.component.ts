@@ -72,7 +72,7 @@ export class StreamViewerComponent implements OnInit {
     const eventPointer = this.utilities.decodeEventFromUrl(encodedEvent);
 
     if (!eventPointer) {
-      console.error('[StreamViewer] Failed to decode nevent from URL');
+      console.error('[StreamViewer] Failed to decode event from URL');
       // Only navigate on browser
       if (isPlatformBrowser(this.platformId)) {
         this.router.navigate(['/streams']);
@@ -80,14 +80,34 @@ export class StreamViewerComponent implements OnInit {
       return;
     }
 
-    console.log('[StreamViewer] Event pointer decoded:', { id: eventPointer.id, relays: eventPointer.relays?.length });
+    console.log('[StreamViewer] Event pointer decoded:', eventPointer);
 
     // Fetch the event from relays
     this.loading = true;
 
     try {
       console.log('[StreamViewer] Calling fetchEventFromRelays...');
-      const event = await this.fetchEventFromRelays(eventPointer.id, eventPointer.relays);
+      let event: Event | null;
+
+      // Check if it's an naddr (kind + pubkey + identifier) or nevent (id)
+      if (eventPointer.kind && eventPointer.identifier !== undefined) {
+        // It's an naddr - fetch by kind, pubkey, and d-tag
+        event = await this.fetchEventByAddress(
+          eventPointer.kind,
+          eventPointer.author!,
+          eventPointer.identifier,
+          eventPointer.relays
+        );
+      } else if (eventPointer.id) {
+        // It's a nevent - fetch by ID
+        event = await this.fetchEventFromRelays(eventPointer.id, eventPointer.relays);
+      } else {
+        console.error('[StreamViewer] Invalid event pointer format');
+        if (isPlatformBrowser(this.platformId)) {
+          this.router.navigate(['/streams']);
+        }
+        return;
+      }
 
       if (!event) {
         console.error('[StreamViewer] Event not found');
@@ -121,6 +141,31 @@ export class StreamViewerComponent implements OnInit {
     }
 
     console.log('[StreamViewer] ngOnInit called - END');
+  }
+
+  private async fetchEventByAddress(kind: number, pubkey: string, identifier: string, relayHints?: string[]): Promise<Event | null> {
+    // Use relay hints if provided, otherwise use user's relays
+    const relaysToUse = relayHints && relayHints.length > 0
+      ? relayHints
+      : this.feed.userRelays().map(r => r.url);
+
+    const { SimplePool } = await import('nostr-tools/pool');
+    const pool = new SimplePool();
+
+    try {
+      // Fetch by kind, author, and d-tag for replaceable events
+      const event = await pool.get(relaysToUse, {
+        kinds: [kind],
+        authors: [pubkey],
+        '#d': [identifier],
+      });
+      pool.close(relaysToUse);
+      return event;
+    } catch (error) {
+      console.error('Error fetching event by address:', error);
+      pool.close(relaysToUse);
+      return null;
+    }
   }
 
   private async fetchEventFromRelays(eventId: string, relayHints?: string[]): Promise<Event | null> {

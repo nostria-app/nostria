@@ -983,6 +983,18 @@ export class UtilitiesService {
    * @returns NIP-19 nevent string
    */
   encodeEventForUrl(event: Event, relays?: string[]): string {
+    // For kind 30311 (live events), use naddr encoding for replaceable events
+    if (event.kind === 30311) {
+      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+      return nip19.naddrEncode({
+        kind: 30311,
+        pubkey: event.pubkey,
+        identifier: dTag,
+        relays: relays || [],
+      });
+    }
+
+    // For other events, use nevent encoding
     return nip19.neventEncode({
       id: event.id,
       relays: relays || [],
@@ -991,20 +1003,33 @@ export class UtilitiesService {
   }
 
   /**
-   * Decode a NIP-19 nevent string from URL
-   * @param encodedEvent The NIP-19 nevent string
+   * Decode a NIP-19 encoded event from URL (supports both nevent and naddr)
+   * @param encodedEvent The NIP-19 nevent or naddr string
    * @returns Decoded event pointer with id, relays, and author, or null if decoding fails
    */
-  decodeEventFromUrl(encodedEvent: string): { id: string; relays?: string[]; author?: string } | null {
+  decodeEventFromUrl(encodedEvent: string): { id?: string; relays?: string[]; author?: string; kind?: number; identifier?: string } | null {
     try {
       const decoded = nip19.decode(encodedEvent);
+
       if (decoded.type === 'nevent') {
         return decoded.data;
       }
-      this.logger.error('Invalid nevent format');
+
+      if (decoded.type === 'naddr') {
+        // For naddr (replaceable events), return the address data
+        // The caller will need to fetch the actual event using kind, pubkey, and identifier
+        return {
+          kind: decoded.data.kind,
+          author: decoded.data.pubkey,
+          identifier: decoded.data.identifier,
+          relays: decoded.data.relays,
+        };
+      }
+
+      this.logger.error('Invalid event format - expected nevent or naddr, got:', decoded.type);
       return null;
     } catch (error) {
-      this.logger.error('Failed to decode nevent from URL:', error);
+      this.logger.error('Failed to decode event from URL:', error);
       return null;
     }
   }
