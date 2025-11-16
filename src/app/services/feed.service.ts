@@ -23,6 +23,7 @@ import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { UserRelayService } from './relays/user-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
+import { RelayPoolService } from './relays/relay-pool';
 import { Followset } from './followset';
 import { RegionService } from './region.service';
 
@@ -105,8 +106,8 @@ const COLUMN_TYPES = {
   videos: {
     label: 'Videos',
     icon: 'movie',
-    kinds: [21],
-    description: 'Videos',
+    kinds: [21, 22, 34235, 34236],
+    description: 'Videos (normal, short, and addressable)',
   },
   music: {
     label: 'Music',
@@ -235,6 +236,7 @@ export class FeedService {
   private readonly userRelayEx = inject(UserRelayService);
   private readonly sharedRelayEx = inject(SharedRelayService);
   private readonly userDataService = inject(UserDataService);
+  private readonly relayPool = inject(RelayPoolService);
   // On-demand access for one-shot per-user fetches to avoid lingering sockets
   private readonly onDemandUserData = inject(OnDemandUserDataService);
   private readonly followset = inject(Followset);
@@ -565,35 +567,21 @@ export class FeedService {
       await this.loadCustomFeed(item);
     } else {
       console.log(`📍 Loading GLOBAL/OTHER feed for column ${column.id}, source:`, column.source);
-      // Choose relay service based on column.relayConfig
-      let relayService: AccountRelayService | UserRelayService;
-
+      
+      // Subscribe to relay events using the appropriate relay service
+      let sub: { unsubscribe: () => void } | { close: () => void } | null = null;
+      
       if (
         column.relayConfig === 'custom' &&
         column.customRelays &&
         column.customRelays.length > 0
       ) {
-        // Use custom relays for this column
+        // Use custom relays for this column via RelayPoolService
         this.logger.debug(`Using custom relays for column ${column.id}:`, column.customRelays);
-
-        // Use UserRelayServiceEx and initialize it with custom relays
-        relayService = this.userRelayEx;
-        relayService.init(column.customRelays);
-      } else {
-        // Use account relays (default)
-        this.logger.debug(`Using account relays for column ${column.id}`);
-        relayService = this.accountRelay;
-      }
-
-      console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
-      console.log(`🚀 Using relay service:`, relayService.constructor.name);
-
-      // Subscribe to relay events using the selected relay service
-      let sub: { unsubscribe: () => void } | { close: () => void } | null;
-      if (relayService instanceof UserRelayService) {
-        console.log(`🚀 Using UserRelayService.subscribe`);
-        // UserRelayService requires pubkey parameter
-        sub = await relayService.subscribe(this.accountState.pubkey(), item.filter, (event: Event) => {
+        console.log(`🚀 Using RelayPoolService.subscribe with custom relays:`, column.customRelays);
+        console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
+        
+        sub = this.relayPool.subscribe(column.customRelays, item.filter, (event: Event) => {
           console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
 
           // Filter out live events that are muted.
@@ -628,11 +616,14 @@ export class FeedService {
           }
 
           this.logger.debug(`Column event received for ${column.id}:`, event);
-        }) as { unsubscribe: () => void } | { close: () => void } | null;
+        });
       } else {
+        // Use account relays (default)
+        this.logger.debug(`Using account relays for column ${column.id}`);
         console.log(`🚀 Using AccountRelayService.subscribe`);
-        // AccountRelayService uses the old signature
-        sub = relayService.subscribe(item.filter, (event: Event) => {
+        console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
+        
+        sub = this.accountRelay.subscribe(item.filter, (event: Event) => {
           console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
 
           // Filter out live events that are muted.
@@ -669,7 +660,7 @@ export class FeedService {
           this.logger.debug(`Column event received for ${column.id}:`, event);
         });
       }
-
+      
       item.subscription = sub;
       console.log(`✅ Subscription created and stored:`, sub ? 'YES' : 'NO');
 

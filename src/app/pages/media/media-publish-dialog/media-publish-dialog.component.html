@@ -102,6 +102,45 @@
       </mat-select>
       <mat-hint>Choose the type of video event to publish</mat-hint>
     </mat-form-field>
+
+    <!-- D-tag (for addressable events) -->
+    @if (kind() === 34235 || kind() === 34236) {
+    <mat-form-field appearance="outline">
+      <mat-label>Unique Identifier (d-tag)</mat-label>
+      <input matInput [value]="dTag()" (input)="dTag.set($any($event.target).value)"
+        placeholder="Leave empty to auto-generate" />
+      <mat-hint>Unique identifier for this addressable event (required for updating)</mat-hint>
+    </mat-form-field>
+    }
+
+    <!-- Origin fields (for addressable events - imported content) -->
+    @if (kind() === 34235 || kind() === 34236) {
+    <div class="origin-section">
+      <h3>Origin (Optional - for imported content)</h3>
+      <mat-form-field appearance="outline">
+        <mat-label>Platform</mat-label>
+        <input matInput [value]="originPlatform()" (input)="originPlatform.set($any($event.target).value)"
+          placeholder="e.g., youtube, vimeo, rumble" />
+        <mat-hint>Original platform if imported from elsewhere</mat-hint>
+      </mat-form-field>
+
+      @if (originPlatform()) {
+      <mat-form-field appearance="outline">
+        <mat-label>External ID</mat-label>
+        <input matInput [value]="originExternalId()" (input)="originExternalId.set($any($event.target).value)"
+          placeholder="Original video ID on the platform" />
+        <mat-hint>Video ID on the original platform</mat-hint>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Original URL</mat-label>
+        <input matInput [value]="originUrl()" (input)="originUrl.set($any($event.target).value)"
+          placeholder="https://youtube.com/watch?v=..." />
+        <mat-hint>Original URL of the video</mat-hint>
+      </mat-form-field>
+      }
+    </div>
+    }
     }
 
     <!-- Title (optional) -->
