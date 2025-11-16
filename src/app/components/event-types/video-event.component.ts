@@ -221,8 +221,8 @@ export class VideoEventComponent {
   }
 
   private getVideoData(event: Event): VideoData | null {
-    // For kind 21 and 22 events (NIP-71), extract video data from 'imeta' tags
-    if (event.kind === 21 || event.kind === 22) {
+    // For kind 21, 22, 34235, and 34236 events (NIP-71), extract video data from 'imeta' tags
+    if (event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236) {
       const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
 
       if (imetaTags.length === 0) return null;

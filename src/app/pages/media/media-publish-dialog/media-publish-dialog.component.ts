@@ -20,7 +20,7 @@ export interface MediaPublishDialogData {
 }
 
 export interface MediaPublishOptions {
-  kind: 20 | 21 | 22; // 20 = picture, 21 = video, 22 = short video
+  kind: 20 | 21 | 22 | 34235 | 34236; // 20 = picture, 21 = video, 22 = short video, 34235 = addressable video, 34236 = addressable short video
   title: string;
   content: string;
   alt?: string;
@@ -34,6 +34,8 @@ export interface MediaPublishOptions {
   thumbnailDimensions?: { width: number; height: number }; // Thumbnail dimensions
   blurhash?: string; // Blurhash of thumbnail or image
   imageDimensions?: { width: number; height: number }; // Image dimensions for pictures
+  dTag?: string; // For addressable events (kinds 34235, 34236) - unique identifier
+  origin?: { platform: string; externalId?: string; url?: string }; // For imported content (NIP-71)
 }
 
 @Component({
@@ -63,7 +65,7 @@ export class MediaPublishDialogComponent {
   data: MediaPublishDialogData = inject(MAT_DIALOG_DATA);
 
   // Form fields
-  kind = signal<20 | 21 | 22>(this.getDefaultKind());
+  kind = signal<20 | 21 | 22 | 34235 | 34236>(this.getDefaultKind());
   title = signal('');
   content = signal('');
   alt = signal('');
@@ -72,6 +74,12 @@ export class MediaPublishDialogComponent {
   location = signal('');
   geohash = signal('');
   duration = signal<number | undefined>(undefined);
+
+  // Addressable event fields (NIP-71)
+  dTag = signal('');
+  originPlatform = signal('');
+  originExternalId = signal('');
+  originUrl = signal('');
 
   // Thumbnail management
   thumbnailUrl = signal<string | undefined>(this.data.thumbnailUrl);
@@ -114,7 +122,7 @@ export class MediaPublishDialogComponent {
     return !this.publishing() && !this.publishInitiated;
   };
 
-  private getDefaultKind(): 20 | 21 | 22 {
+  private getDefaultKind(): 20 | 21 | 22 | 34235 | 34236 {
     const mediaType = this.data.mediaItem.type;
 
     if (mediaType?.startsWith('image')) {
@@ -128,7 +136,7 @@ export class MediaPublishDialogComponent {
     return 20;
   }
 
-  getAvailableKinds(): { value: 20 | 21 | 22; label: string; description: string }[] {
+  getAvailableKinds(): { value: 20 | 21 | 22 | 34235 | 34236; label: string; description: string }[] {
     if (this.isImage()) {
       return [
         { value: 20, label: 'Picture (kind 20)', description: 'Standard image post' }
@@ -136,7 +144,9 @@ export class MediaPublishDialogComponent {
     } else if (this.isVideo()) {
       return [
         { value: 21, label: 'Video (kind 21)', description: 'Normal/horizontal video' },
-        { value: 22, label: 'Short Video (kind 22)', description: 'Short/vertical video (stories, reels)' }
+        { value: 22, label: 'Short Video (kind 22)', description: 'Short/vertical video (stories, reels)' },
+        { value: 34235, label: 'Addressable Video (kind 34235)', description: 'Updateable normal video (NIP-71)' },
+        { value: 34236, label: 'Addressable Short Video (kind 34236)', description: 'Updateable short video (NIP-71)' }
       ];
     }
 
@@ -346,6 +356,35 @@ export class MediaPublishDialogComponent {
     // For images, include dimensions if we have them
     if (this.isImage() && this.thumbnailDimensions()) {
       options.imageDimensions = this.thumbnailDimensions();
+    }
+
+    // For addressable events (kinds 34235, 34236), include d-tag
+    if (this.kind() === 34235 || this.kind() === 34236) {
+      // Generate d-tag if not provided by user
+      const userProvidedDTag = this.dTag().trim();
+      if (userProvidedDTag) {
+        options.dTag = userProvidedDTag;
+      } else {
+        // Auto-generate d-tag using timestamp + random suffix for uniqueness
+        const timestamp = Math.floor(Date.now() / 1000);
+        const randomSuffix = Math.random().toString(36).substring(2, 8);
+        options.dTag = `${timestamp}-${randomSuffix}`;
+      }
+
+      // Include origin tag if platform is specified
+      if (this.originPlatform().trim()) {
+        options.origin = {
+          platform: this.originPlatform().trim(),
+        };
+
+        if (this.originExternalId().trim()) {
+          options.origin.externalId = this.originExternalId().trim();
+        }
+
+        if (this.originUrl().trim()) {
+          options.origin.url = this.originUrl().trim();
+        }
+      }
     }
 
     this.dialogRef.close(options);

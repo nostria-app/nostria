@@ -996,13 +996,20 @@ export class MediaComponent {
       });
       return false;
     }
-  } private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
+  } 
+  
+  private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
     const tags: string[][] = [];
+
+    // Add d-tag for addressable events (kinds 34235, 34236)
+    if ((options.kind === 34235 || options.kind === 34236) && options.dTag) {
+      tags.push(['d', options.dTag]);
+    }
 
     // Upload thumbnail blob if provided (for videos)
     let thumbnailUrl = options.thumbnailUrl;
     const thumbnailUrls: string[] = []; // Collect all thumbnail URLs (main + mirrors)
-    if (options.thumbnailBlob && (options.kind === 21 || options.kind === 22)) {
+    if (options.thumbnailBlob && (options.kind === 21 || options.kind === 22 || options.kind === 34235 || options.kind === 34236)) {
       try {
         const thumbnailFile = new File([options.thumbnailBlob], 'thumbnail.jpg', { type: 'image/jpeg' });
         const uploadResult = await this.mediaService.uploadFile(
@@ -1072,7 +1079,7 @@ export class MediaComponent {
     }
 
     // For videos, add all thumbnail image URLs if provided (NIP-71)
-    if (thumbnailUrls.length > 0 && (options.kind === 21 || options.kind === 22)) {
+    if (thumbnailUrls.length > 0 && (options.kind === 21 || options.kind === 22 || options.kind === 34235 || options.kind === 34236)) {
       thumbnailUrls.forEach(url => {
         imetaTag.push(`image ${url}`);
       });
@@ -1084,12 +1091,12 @@ export class MediaComponent {
     }
 
     // For videos, add blurhash if provided (NIP-71)
-    if (options.blurhash && (options.kind === 21 || options.kind === 22)) {
+    if (options.blurhash && (options.kind === 21 || options.kind === 22 || options.kind === 34235 || options.kind === 34236)) {
       imetaTag.push(`blurhash ${options.blurhash}`);
     }
 
     // For videos, add duration if provided
-    if (options.duration !== undefined && (options.kind === 21 || options.kind === 22)) {
+    if (options.duration !== undefined && (options.kind === 21 || options.kind === 22 || options.kind === 34235 || options.kind === 34236)) {
       imetaTag.push(`duration ${options.duration}`);
     }
 
@@ -1128,6 +1135,18 @@ export class MediaComponent {
     // Add geohash if provided
     if (options.geohash) {
       tags.push(['g', options.geohash]);
+    }
+
+    // Add origin tag for addressable events (NIP-71)
+    if ((options.kind === 34235 || options.kind === 34236) && options.origin) {
+      const originTag = ['origin', options.origin.platform];
+      if (options.origin.externalId) {
+        originTag.push(options.origin.externalId);
+      }
+      if (options.origin.url) {
+        originTag.push(options.origin.url);
+      }
+      tags.push(originTag);
     }
 
     // Add MIME type as m tag for filtering (for images)

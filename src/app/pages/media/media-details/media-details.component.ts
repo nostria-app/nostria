@@ -323,6 +323,11 @@ export class MediaDetailsComponent {
   } private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
     const tags: string[][] = [];
 
+    // Add d-tag for addressable events (kinds 34235, 34236)
+    if ((options.kind === 34235 || options.kind === 34236) && options.dTag) {
+      tags.push(['d', options.dTag]);
+    }
+
     // Add title tag (required)
     tags.push(['title', options.title]);
 
@@ -351,7 +356,7 @@ export class MediaDetailsComponent {
     }
 
     // For videos, add duration if provided
-    if (options.duration !== undefined && (options.kind === 21 || options.kind === 22)) {
+    if (options.duration !== undefined && (options.kind === 21 || options.kind === 22 || options.kind === 34235 || options.kind === 34236)) {
       imetaTag.push(`duration ${options.duration}`);
     }
 
@@ -390,6 +395,18 @@ export class MediaDetailsComponent {
     // Add geohash if provided
     if (options.geohash) {
       tags.push(['g', options.geohash]);
+    }
+
+    // Add origin tag for addressable events (NIP-71)
+    if ((options.kind === 34235 || options.kind === 34236) && options.origin) {
+      const originTag = ['origin', options.origin.platform];
+      if (options.origin.externalId) {
+        originTag.push(options.origin.externalId);
+      }
+      if (options.origin.url) {
+        originTag.push(options.origin.url);
+      }
+      tags.push(originTag);
     }
 
     // Add MIME type as m tag for filtering (for images)
