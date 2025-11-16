@@ -150,6 +150,24 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isRootEventExpanded = signal<boolean>(false);
   isParentEventExpanded = signal<boolean>(false);
 
+  // Check if this event card should be clickable (only kind 1)
+  isCardClickable = computed<boolean>(() => {
+    const currentEvent = this.event() || this.record()?.event;
+    return currentEvent?.kind === 1 && !this.isCurrentlySelected();
+  });
+
+  // Check if root event card should be clickable (only kind 1)
+  isRootCardClickable = computed<boolean>(() => {
+    const rootRecordData = this.rootRecord();
+    return rootRecordData?.event.kind === 1;
+  });
+
+  // Check if parent event card should be clickable (only kind 1)
+  isParentCardClickable = computed<boolean>(() => {
+    const parentRecordData = this.parentRecord();
+    return parentRecordData?.event.kind === 1;
+  });
+
   // Check if this event is currently the one being displayed on the event page
   isCurrentlySelected = computed<boolean>(() => {
     // If navigation is disabled, treat as selected (e.g., in thread view or dialog)
@@ -1233,6 +1251,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   onCardClick(event: MouseEvent) {
+    // Only handle clicks for kind 1 events (text notes)
+    const currentEvent = this.event() || this.record()?.event;
+    if (!currentEvent || currentEvent.kind !== 1) {
+      return;
+    }
+
     // Don't navigate if navigation is explicitly disabled
     if (this.navigationDisabled()) {
       return;
@@ -1261,18 +1285,22 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     // Navigate to the event
-    const currentEvent = this.event() || this.record()?.event;
-    if (currentEvent) {
-      this.layout.openEvent(currentEvent.id, currentEvent);
-    }
+    this.layout.openEvent(currentEvent.id, currentEvent);
   }
 
   /**
    * Handle clicks on the root event card
+   * Only opens thread dialog for kind 1 (text note) events
    */
   onRootEventClick(event: MouseEvent) {
     event.stopPropagation(); // Prevent the main card click handler
 
+    // Navigate to the root event (only kind 1)
+    const rootRecordData = this.rootRecord();
+    if (!rootRecordData || rootRecordData.event.kind !== 1) {
+      return;
+    }
+
     const target = event.target as HTMLElement;
 
     // Allow expand/collapse buttons to work normally
@@ -1290,18 +1318,21 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Navigate to the root event
-    const rootRecordData = this.rootRecord();
-    if (rootRecordData) {
-      this.layout.openEvent(rootRecordData.event.id, rootRecordData.event);
-    }
+    this.layout.openEvent(rootRecordData.event.id, rootRecordData.event);
   }
 
   /**
    * Handle clicks on the parent event card
+   * Only opens thread dialog for kind 1 (text note) events
    */
   onParentEventClick(event: MouseEvent) {
     event.stopPropagation(); // Prevent the main card click handler
+
+    // Navigate to the parent event (only kind 1)
+    const parentRecordData = this.parentRecord();
+    if (!parentRecordData || parentRecordData.event.kind !== 1) {
+      return;
+    }
 
     const target = event.target as HTMLElement;
 
@@ -1320,11 +1351,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Navigate to the parent event
-    const parentRecordData = this.parentRecord();
-    if (parentRecordData) {
-      this.layout.openEvent(parentRecordData.event.id, parentRecordData.event);
-    }
+    this.layout.openEvent(parentRecordData.event.id, parentRecordData.event);
   }
 
   /**

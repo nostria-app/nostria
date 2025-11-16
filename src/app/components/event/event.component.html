@@ -13,7 +13,7 @@
 <!-- Don't render events from muted/blocked accounts at all -->
 } @else if (targetItem && item) {
 <mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined" [class.selected]="isCurrentlySelected()"
-  [attr.tabindex]="isCurrentlySelected() ? null : 0" [style.cursor]="isCurrentlySelected() ? 'auto' : 'pointer'"
+  [attr.tabindex]="isCardClickable() ? 0 : null" [style.cursor]="isCardClickable() ? 'pointer' : 'auto'"
   (click)="onCardClick($event)">
   @if (repostedEvent) {
   <!-- Repost structure -->
@@ -97,7 +97,8 @@
       } @else {
       <!-- <h4 class="thread-label">Replying to</h4> -->
       }
-      <mat-card appearance="outlined" class="root-event" (click)="onRootEventClick($event)">
+      <mat-card appearance="outlined" class="root-event" [style.cursor]="isRootCardClickable() ? 'pointer' : 'auto'"
+        (click)="onRootEventClick($event)">
         <app-event-header [event]="rootRecordData.event" [compact]="true"></app-event-header>
         <mat-card-content [class.collapsed]="!isRootEventExpanded()">
           @if (rootRecordData.event.kind === 20) {
@@ -168,7 +169,8 @@
       @if (isThreadedReply()) {
       <!-- <h4 class="thread-label">Replying to</h4> -->
       }
-      <mat-card appearance="outlined" class="parent-event" (click)="onParentEventClick($event)">
+      <mat-card appearance="outlined" class="parent-event" [style.cursor]="isParentCardClickable() ? 'pointer' : 'auto'"
+        (click)="onParentEventClick($event)">
         <app-event-header [event]="parentRecordData.event" [compact]="true"></app-event-header>
         <mat-card-content [class.collapsed]="!isParentEventExpanded()">
           @if (parentRecordData.event.kind === 20) {
