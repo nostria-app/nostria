@@ -838,7 +838,6 @@ export class LayoutService implements OnDestroy {
   }
 
   openEvent(eventId: string, event: Event): void {
-    debugger;
     // Handle live event comments (kind 1311) - extract and open the referenced stream
     if (event.kind === 1311) {
       const aTag = event.tags.find((tag: string[]) => tag[0] === 'a');
@@ -858,8 +857,6 @@ export class LayoutService implements OnDestroy {
             identifier: dTag,
             relays: relays,
           });
-
-          debugger;
 
           // Navigate to the stream
           this.router.navigate(['/stream', naddr]);
