@@ -40,7 +40,7 @@
     background-color 0.2s ease-in-out,
     transform 0.2s ease-in-out;
 
-  &:hover:not(.selected) {
+  &.clickable:hover:not(.selected) {
     background-color: var(--mat-sys-surface-container);
     // transform: translateY(-1px);
   }
@@ -48,7 +48,7 @@
   &.plain {
     border: none;
 
-    &:hover:not(.selected) {
+    &.clickable:hover:not(.selected) {
       background-color: var(--mat-sys-surface-container);
       // transform: translateY(-1px);
     }
