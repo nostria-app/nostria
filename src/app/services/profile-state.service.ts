@@ -338,8 +338,8 @@ export class ProfileStateService {
           console.log('Adding new repost:', event.id);
           return [...reposts, record];
         });
-      } else if (event.kind === 20 || event.kind === 21 || event.kind === 22) {
-        // Handle media events (20 = Picture, 21 = Video, 22 = Unknown/Other media)
+      } else if (event.kind === 20 || event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236) {
+        // Handle media events (20 = Picture, 21 = Video, 22 = Short Video, 34235 = Addressable Video, 34236 = Addressable Short Video)
         const record = this.utilities.toRecord(event);
         // Check for duplicates before adding to media
         this.media.update(media => {
@@ -771,7 +771,7 @@ export class ProfileStateService {
   }
 
   /**
-   * Load more media events (kinds 20, 21, 22) for the profile
+   * Load more media events (kinds 20, 21, 22, 34235, 34236) for the profile
    * @param beforeTimestamp Optional timestamp to load events before. If not provided, uses the oldest media event timestamp
    * @returns Array of newly loaded media records
    */
@@ -799,7 +799,7 @@ export class ProfileStateService {
 
       // Query events using the async method
       const events = await this.userRelayService.query(pubkey, {
-        kinds: [20, 21, 22], // Picture, Video, and other media types
+        kinds: [20, 21, 22, 34235, 34236], // Picture (20), Video (21), Short Video (22), Addressable Video (34235), Addressable Short Video (34236)
         authors: [pubkey],
         until: oldestTimestamp,
         limit: 15, // Load 15 more media items at a time
@@ -819,7 +819,7 @@ export class ProfileStateService {
 
       // Process all returned events
       for (const event of events || []) {
-        if (event.kind === 20 || event.kind === 21 || event.kind === 22) {
+        if (event.kind === 20 || event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236) {
           // Create a NostrRecord
           const record: NostrRecord = {
             event: event,

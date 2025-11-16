@@ -140,7 +140,13 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       // Auto-stop after MAX_DURATION_MS only if short form is enabled
       if (this.isShortForm()) {
         this.recordingTimer = window.setTimeout(() => {
-          this.stopRecording();
+          // Force stop the recording at exactly 6.3 seconds
+          const recorder = this.mediaRecorder();
+          if (recorder && recorder.state === 'recording') {
+            recorder.stop();
+            this.isRecording.set(false);
+            this.cleanupTimers();
+          }
         }, this.MAX_DURATION_MS);
       }
     } catch (error) {

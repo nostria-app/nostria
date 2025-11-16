@@ -709,16 +709,36 @@ export class UtilitiesService {
 
     // Create canvas and draw the video frame
     const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
+
+    // Respect aspect ratio - create thumbnail at a standard size while maintaining aspect
+    const maxWidth = 1280;
+    const maxHeight = 720;
+    const videoAspect = video.videoWidth / video.videoHeight;
+    const targetAspect = maxWidth / maxHeight;
+
+    let targetWidth: number;
+    let targetHeight: number;
+
+    if (videoAspect > targetAspect) {
+      // Video is wider - fit to width
+      targetWidth = maxWidth;
+      targetHeight = Math.round(maxWidth / videoAspect);
+    } else {
+      // Video is taller - fit to height
+      targetHeight = maxHeight;
+      targetWidth = Math.round(maxHeight * videoAspect);
+    }
+
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
 
     const ctx = canvas.getContext('2d', { willReadFrequently: false });
     if (!ctx) {
       throw new Error('Failed to get canvas context');
     }
 
-    // Draw the video frame
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // Draw the video frame at the calculated dimensions
+    ctx.drawImage(video, 0, 0, targetWidth, targetHeight);
 
     // Convert canvas to blob
     const blob = await new Promise<Blob>((resolve, reject) => {
