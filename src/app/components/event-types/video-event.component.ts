@@ -225,20 +225,27 @@ export class VideoEventComponent {
     if (event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236) {
       const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
 
+      console.log('Video event kind:', event.kind, 'imeta tags:', imetaTags);
+
       if (imetaTags.length === 0) return null;
 
       // Use the first imeta tag for primary video data
       const primaryImeta = imetaTags[0];
       const parsed = this.parseImetaTag(primaryImeta);
 
-      if (!parsed['url']) return null;
+      console.log('Parsed imeta tag:', parsed);
+
+      if (!parsed['url']) {
+        console.warn('No URL found in imeta tag');
+        return null;
+      }
 
       // Get duration from dedicated duration tag
       const durationTag = event.tags.find(tag => tag[0] === 'duration');
       const altTag = event.tags.find(tag => tag[0] === 'alt');
       const titleTag = event.tags.find(tag => tag[0] === 'title');
 
-      return {
+      const videoData = {
         url: parsed['url'],
         thumbnail: parsed['image'],
         blurhash: parsed['blurhash'],
@@ -246,6 +253,10 @@ export class VideoEventComponent {
         title: titleTag?.[1],
         alt: altTag?.[1] || parsed['alt'],
       };
+
+      console.log('Video data:', videoData);
+
+      return videoData;
     } else {
       // Fallback for other event types
       const urlTag = event.tags.find(tag => tag[0] === 'url');
@@ -290,6 +301,13 @@ export class VideoEventComponent {
       if (spaceIndex > 0) {
         const key = part.substring(0, spaceIndex);
         const value = part.substring(spaceIndex + 1);
+
+        // For 'url' key, prefer the first occurrence (usually the direct MP4)
+        // Don't overwrite if we already have a value
+        if (key === 'url' && parsed[key]) {
+          continue;
+        }
+
         parsed[key] = value;
       }
     }

@@ -567,10 +567,10 @@ export class FeedService {
       await this.loadCustomFeed(item);
     } else {
       console.log(`📍 Loading GLOBAL/OTHER feed for column ${column.id}, source:`, column.source);
-      
+
       // Subscribe to relay events using the appropriate relay service
       let sub: { unsubscribe: () => void } | { close: () => void } | null = null;
-      
+
       if (
         column.relayConfig === 'custom' &&
         column.customRelays &&
@@ -580,7 +580,7 @@ export class FeedService {
         this.logger.debug(`Using custom relays for column ${column.id}:`, column.customRelays);
         console.log(`🚀 Using RelayPoolService.subscribe with custom relays:`, column.customRelays);
         console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
-        
+
         sub = this.relayPool.subscribe(column.customRelays, item.filter, (event: Event) => {
           console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
 
@@ -622,7 +622,7 @@ export class FeedService {
         this.logger.debug(`Using account relays for column ${column.id}`);
         console.log(`🚀 Using AccountRelayService.subscribe`);
         console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
-        
+
         sub = this.accountRelay.subscribe(item.filter, (event: Event) => {
           console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
 
@@ -660,7 +660,7 @@ export class FeedService {
           this.logger.debug(`Column event received for ${column.id}:`, event);
         });
       }
-      
+
       item.subscription = sub;
       console.log(`✅ Subscription created and stored:`, sub ? 'YES' : 'NO');
 
