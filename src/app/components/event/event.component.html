@@ -12,9 +12,9 @@
 } @else if (isAuthorMuted()) {
 <!-- Don't render events from muted/blocked accounts at all -->
 } @else if (targetItem && item) {
-<mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined" [class.selected]="isCurrentlySelected()"
-  [attr.tabindex]="isCardClickable() ? 0 : null" [style.cursor]="isCardClickable() ? 'pointer' : 'auto'"
-  (click)="onCardClick($event)">
+<mat-card class="note-card" [class.plain]="isPlain()" [class.clickable]="isCardClickable()" appearance="outlined"
+  [class.selected]="isCurrentlySelected()" [attr.tabindex]="isCardClickable() ? 0 : null"
+  [style.cursor]="isCardClickable() ? 'pointer' : 'auto'" (click)="onCardClick($event)">
   @if (repostedEvent) {
   <!-- Repost structure -->
   <mat-card-header class="repost-header">
