@@ -965,7 +965,8 @@ export class MediaPlayerService implements OnInitialized {
 
   get paused() {
     if (this.videoMode()) {
-      if (this.current?.type === 'Video' && this.videoElement) {
+      // For Video and HLS live streams, check the video element
+      if ((this.current?.type === 'Video' || this.current?.isLiveStream) && this.videoElement) {
         return this.videoElement.paused;
       } else {
         return this.youtubeUrl() == null;
@@ -980,6 +981,10 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   get muted() {
+    if (this.videoMode() && this.videoElement) {
+      return this.videoElement.muted;
+    }
+
     if (!this.audio) {
       return false;
     }
@@ -1012,11 +1017,13 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   mute() {
-    if (!this.audio) {
-      return;
+    if (this.videoMode() && this.videoElement) {
+      this.videoElement.muted = !this.videoElement.muted;
     }
 
-    this.audio.muted = !this.audio.muted;
+    if (this.audio) {
+      this.audio.muted = !this.audio.muted;
+    }
   }
 
   forward(value: number) {

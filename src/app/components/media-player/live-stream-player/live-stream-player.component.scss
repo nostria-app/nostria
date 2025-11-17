@@ -263,11 +263,10 @@
 .playback-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 16px;
   gap: 16px;
   flex: 1;
   min-width: 0;
+  width: 100%;
 }
 
 .stream-info-footer {
@@ -320,6 +319,7 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+  margin-left: auto;
 }
 
 app-stream-info-bar {
