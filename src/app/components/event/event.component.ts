@@ -508,34 +508,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       }
     });
 
-    effect(async () => {
-      if (this.app.initialized()) {
-        const eventId = this.id();
-        const type = this.type();
-
-        if (!eventId || !type) {
-          return;
-        }
-
-        if (type === 'e' || type === 'a') {
-          if (eventId) {
-            this.isLoadingEvent.set(true);
-            this.loadingError.set(null);
-            try {
-              const eventData = await this.data.getEventById(eventId);
-              this.record.set(eventData);
-              console.log('RECORD:', this.record());
-            } catch (error) {
-              console.error('Error loading event:', error);
-              this.loadingError.set('Failed to load event');
-            } finally {
-              this.isLoadingEvent.set(false);
-            }
-          }
-        }
-      }
-    });
-
     // Effect to reload reports when a new report is published for this event
     effect(() => {
       const reportNotification = this.reportingService.getReportPublishedSignal()();
