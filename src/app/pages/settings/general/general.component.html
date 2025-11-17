@@ -53,7 +53,7 @@
   </div>
 
   <div>
-    <h2>Media Privacy</h2>
+    <h2>Media</h2>
     <p class="setting-description">Control how media content is displayed based on your following status</p>
 
     <mat-form-field appearance="outline" class="full-width">
@@ -78,6 +78,18 @@
       }
       }
     </p>
+
+    <div class="setting-item">
+      <span>Auto-Play Short Form Videos</span>
+      <mat-slide-toggle [checked]="settings.settings().autoPlayShortForm ?? true" (change)="toggleAutoPlayShortForm()">
+      </mat-slide-toggle>
+    </div>
+
+    <div class="setting-item">
+      <span>Repeat Short Form Videos</span>
+      <mat-slide-toggle [checked]="settings.settings().repeatShortForm ?? true" (change)="toggleRepeatShortForm()">
+      </mat-slide-toggle>
+    </div>
   </div>
 
   <div>

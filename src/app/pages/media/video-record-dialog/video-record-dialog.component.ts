@@ -97,6 +97,9 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   async startRecording(): Promise<void> {
     try {
+      console.log('[VideoRecorder] Starting recording...');
+      console.log('[VideoRecorder] isShortForm value:', this.isShortForm);
+
       // If no stream exists, start camera preview first
       if (!this.stream()) {
         await this.startCameraPreview();
@@ -115,23 +118,37 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       this.recordedChunks = [];
 
       mediaRecorder.ondataavailable = (event) => {
+        console.log('[VideoRecorder] ondataavailable fired, size:', event.data.size);
         if (event.data && event.data.size > 0) {
           this.recordedChunks.push(event.data);
         }
       };
 
       mediaRecorder.onstop = () => {
+        console.log('[VideoRecorder] MediaRecorder onstop event fired');
+        console.log('[VideoRecorder] Recorded chunks count:', this.recordedChunks.length);
         const blob = new Blob(this.recordedChunks, {
           type: mediaRecorder.mimeType,
         });
+        console.log('[VideoRecorder] Created blob, size:', blob.size, 'bytes');
         this.recordedBlob.set(blob);
         this.recordedUrl.set(URL.createObjectURL(blob));
         this.isPreviewing.set(true);
         this.stopCamera();
       };
 
+      mediaRecorder.onerror = (event: Event) => {
+        console.error('[VideoRecorder] MediaRecorder error:', event);
+      };
+
+      mediaRecorder.onstart = () => {
+        console.log('[VideoRecorder] MediaRecorder onstart event fired');
+      };
+
       this.mediaRecorder.set(mediaRecorder);
+      console.log('[VideoRecorder] Starting MediaRecorder...');
       mediaRecorder.start();
+      console.log('[VideoRecorder] MediaRecorder started, state:', mediaRecorder.state);
       this.isRecording.set(true);
       this.recordingProgress.set(0);
 
@@ -140,17 +157,32 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
       // Auto-stop after MAX_DURATION_MS only if short form is enabled
       if (this.isShortForm) {
+        console.log('[VideoRecorder] Short form enabled, setting timer for', this.MAX_DURATION_MS, 'ms');
+        const timerStartTime = Date.now();
         this.recordingTimer = window.setTimeout(() => {
+          const actualElapsed = Date.now() - timerStartTime;
+          console.log('[VideoRecorder] ⏰ TIMER FIRED! Actual elapsed time:', actualElapsed, 'ms');
+          console.log('[VideoRecorder] Attempting to stop recording...');
           // Force stop the recording at exactly 6.3 seconds
           const recorder = this.mediaRecorder();
+          console.log('[VideoRecorder] MediaRecorder state:', recorder?.state);
+          console.log('[VideoRecorder] isRecording signal:', this.isRecording());
+
           if (recorder && recorder.state === 'recording') {
+            console.log('[VideoRecorder] Stopping recorder now...');
             // Request data before stopping to ensure we get all chunks
             recorder.requestData();
             recorder.stop();
             this.isRecording.set(false);
             this.cleanupTimers();
+            console.log('[VideoRecorder] Recording stopped successfully');
+          } else {
+            console.warn('[VideoRecorder] Cannot stop - recorder state is:', recorder?.state);
           }
         }, this.MAX_DURATION_MS);
+        console.log('[VideoRecorder] Timer ID:', this.recordingTimer);
+      } else {
+        console.log('[VideoRecorder] Short form disabled, no auto-stop timer set');
       }
     } catch (error) {
       console.error('Failed to start recording:', error);
@@ -162,6 +194,8 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   }
 
   stopRecording(): void {
+    console.log('[VideoRecorder] stopRecording() called manually');
+    console.log('[VideoRecorder] Stack trace:', new Error().stack);
     const recorder = this.mediaRecorder();
     if (recorder && this.isRecording()) {
       recorder.stop();
@@ -190,17 +224,25 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       }
 
       if (progress >= 100) {
-        this.cleanupTimers();
+        // Only clear the progress timer, NOT the recording timer
+        if (this.progressTimer) {
+          clearInterval(this.progressTimer);
+          this.progressTimer = null;
+        }
       }
     }, 50);
   }
 
   private cleanupTimers(): void {
+    console.log('[VideoRecorder] cleanupTimers() called');
+    console.log('[VideoRecorder] Stack trace:', new Error().stack);
     if (this.recordingTimer) {
+      console.log('[VideoRecorder] Clearing recording timer:', this.recordingTimer);
       clearTimeout(this.recordingTimer);
       this.recordingTimer = null;
     }
     if (this.progressTimer) {
+      console.log('[VideoRecorder] Clearing progress timer:', this.progressTimer);
       clearInterval(this.progressTimer);
       this.progressTimer = null;
     }

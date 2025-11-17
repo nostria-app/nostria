@@ -46,6 +46,22 @@ export class VideoEventComponent {
   // Media privacy state
   isRevealed = signal(false);
 
+  // Short form video detection and settings
+  isShortFormVideo = computed(() => {
+    const event = this.event();
+    return event.kind === 22 || event.kind === 34236; // NIP-71 short form video kinds
+  });
+
+  shouldAutoPlay = computed(() => {
+    const autoPlayEnabled = this.settings.settings()?.autoPlayShortForm ?? true;
+    return this.isShortFormVideo() && autoPlayEnabled;
+  });
+
+  shouldRepeat = computed(() => {
+    const repeatEnabled = this.settings.settings()?.repeatShortForm ?? true;
+    return this.isShortFormVideo() && repeatEnabled;
+  });
+
   // Store generated blurhashes for thumbnails without blurhash
   private generatedBlurhash = signal<string | null>(null);
 

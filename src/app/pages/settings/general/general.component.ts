@@ -109,6 +109,16 @@ export class GeneralSettingsComponent {
     this.settings.updateSettings({ mediaPrivacy: value });
   }
 
+  toggleAutoPlayShortForm(): void {
+    const currentValue = this.settings.settings()?.autoPlayShortForm ?? true;
+    this.settings.updateSettings({ autoPlayShortForm: !currentValue });
+  }
+
+  toggleRepeatShortForm(): void {
+    const currentValue = this.settings.settings()?.repeatShortForm ?? true;
+    this.settings.updateSettings({ repeatShortForm: !currentValue });
+  }
+
   resetNotificationsCache(): void {
     const dialogRef = this.dialog.open(ConfirmDialogComponent, {
       width: '400px',
