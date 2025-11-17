@@ -683,15 +683,18 @@ export class LayoutService implements OnDestroy {
       return;
     }
 
+    // Trim the input to remove leading/trailing whitespace
+    const trimmedValue = event.target.value.trim();
+
     // Set query immediately for cached search results
-    console.log('onSearchInput called with value:', event.target.value);
-    this.query.set(event.target.value);
+    console.log('onSearchInput called with value:', trimmedValue);
+    this.query.set(trimmedValue);
 
     // Debounce logic to wait until user finishes typing for special searches
     clearTimeout(this.debounceTimer);
     this.debounceTimer = setTimeout(() => {
       console.log('Handle search called!');
-      this.handleSearch(event.target.value);
+      this.handleSearch(trimmedValue);
     }, 750);
   }
   private async handleSearch(value: string): Promise<void> {
