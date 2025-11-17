@@ -226,6 +226,51 @@
         placeholder="e.g., dr5regw" />
       <mat-hint>Optional geohash for precise location</mat-hint>
     </mat-form-field>
+
+    <!-- Custom Relays Section -->
+    <div class="custom-relays-section">
+      <h3>Additional Relays (Optional)</h3>
+
+      <!-- Preset relay suggestion for short form videos -->
+      @if (isShortFormVideo()) {
+      <div class="preset-relay-suggestion">
+        <div class="suggestion-header">
+          <mat-icon>tips_and_updates</mat-icon>
+          <span>Recommended for short form videos:</span>
+        </div>
+        <button mat-stroked-button (click)="addPresetRelay('wss://relay.divine.video/')">
+          <mat-icon>add</mat-icon>
+          Add wss://relay.divine.video/
+        </button>
+      </div>
+      }
+
+      <div class="add-relay-form">
+        <mat-form-field appearance="outline" class="relay-input">
+          <mat-label>Custom Relay URL</mat-label>
+          <input matInput [ngModel]="customRelayInput()" (ngModelChange)="customRelayInput.set($event)"
+            placeholder="wss://relay.example.com" (keyup.enter)="addCustomRelay()" />
+          <mat-hint>Publish to additional relays beyond your account relays</mat-hint>
+        </mat-form-field>
+        <button mat-icon-button (click)="addCustomRelay()" [disabled]="!customRelayInput().trim()"
+          matTooltip="Add relay">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      @if (customRelays().length > 0) {
+      <mat-chip-set class="custom-relays-chips">
+        @for (relay of customRelays(); track relay) {
+        <mat-chip (removed)="removeCustomRelay(relay)">
+          {{ relay }}
+          <button matChipRemove>
+            <mat-icon>cancel</mat-icon>
+          </button>
+        </mat-chip>
+        }
+      </mat-chip-set>
+      }
+    </div>
   </div>
 </mat-dialog-content>
 
