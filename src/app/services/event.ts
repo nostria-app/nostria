@@ -314,7 +314,7 @@ export class EventService {
     eventId: string,
     onProgress?: (currentBatch: number, totalBatches: number, relayUrls: string[]) => void
   ): Promise<Event | null> {
-    debugger;
+    // debugger;
     const BATCH_SIZE = 10;
 
     // Get observed relays sorted by events received (most active first)
