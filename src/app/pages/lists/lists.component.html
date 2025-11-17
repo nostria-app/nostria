@@ -1,18 +1,12 @@
 <div class="lists-container">
   <header class="page-header">
     <h1>
-      Lists 
+      Lists
       <!-- <mat-icon class="premium-icon">diamond</mat-icon> -->
     </h1>
     <p class="subtitle">Manage your Nostr lists and sets</p>
   </header>
 
-  @if (loading()) {
-  <div class="loading-container">
-    <mat-spinner diameter="50"></mat-spinner>
-    <p>Loading lists...</p>
-  </div>
-  } @else {
   <mat-tab-group [(selectedIndex)]="selectedTab" animationDuration="300ms">
     <!-- Lists Tab -->
     <mat-tab label="Lists">
@@ -20,6 +14,13 @@
         <p class="tab-description">
           Lists are replaceable events - you can have only one of each type.
         </p>
+
+        @if (loading()) {
+        <div class="loading-indicator">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Loading lists...</p>
+        </div>
+        }
 
         <div class="lists-grid">
           @for (listType of standardLists; track listType.kind) {
@@ -74,6 +75,13 @@
         <p class="tab-description">
           Sets are parameterized replaceable events - you can have multiple sets of each type.
         </p>
+
+        @if (loading()) {
+        <div class="loading-indicator">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Loading sets...</p>
+        </div>
+        }
 
         @for (listType of listSets; track listType.kind) {
         <div class="set-category">
@@ -142,5 +150,4 @@
       </div>
     </mat-tab>
   </mat-tab-group>
-  }
 </div>

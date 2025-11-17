@@ -22,16 +22,19 @@
   }
 }
 
-.loading-container {
+.loading-indicator {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 64px;
-  gap: 16px;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  background: var(--mat-sys-surface-container);
+  border-radius: 8px;
 
   p {
     color: var(--md-sys-color-on-surface-variant);
+    margin: 0;
+    font-size: 14px;
   }
 }
 
