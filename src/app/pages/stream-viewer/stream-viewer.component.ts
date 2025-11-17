@@ -5,6 +5,7 @@ import { LayoutService } from '../../services/layout.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { FeedService } from '../../services/feed.service';
 import { MetaService } from '../../services/meta.service';
+import { RelaysService } from '../../services/relays/relays';
 import { Event } from 'nostr-tools';
 import { STREAM_STATE_KEY, StreamData } from '../../stream-resolver';
 import { isPlatformServer, isPlatformBrowser } from '@angular/common';
@@ -44,6 +45,7 @@ export class StreamViewerComponent implements OnInit {
   private metaService = inject(MetaService);
   private transferState = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
+  private relaysService = inject(RelaysService);
 
   loading = false;
 
@@ -118,41 +120,63 @@ export class StreamViewerComponent implements OnInit {
         return;
       }
 
-      console.log('[StreamViewer] Event fetched successfully');
+      console.log('[StreamViewer] Event fetched successfully:', event);
 
       // If on server, set meta tags for SSR
       if (isPlatformServer(this.platformId)) {
         console.log('[StreamViewer SSR] Setting meta tags...');
         this.setMetaTags(event, encodedEvent);
+        this.loading = false;
       }
 
       // Only load stream on browser
       if (isPlatformBrowser(this.platformId)) {
+        // Stop loading before navigation to prevent UI staying in loading state
+        this.loading = false;
         this.loadStream(event);
       }
     } catch (error) {
       console.error('[StreamViewer] Error fetching stream event:', error);
+      this.loading = false;
       // Only navigate on browser
       if (isPlatformBrowser(this.platformId)) {
         this.router.navigate(['/streams']);
       }
-    } finally {
-      this.loading = false;
     }
 
     console.log('[StreamViewer] ngOnInit called - END');
   }
 
   private async fetchEventByAddress(kind: number, pubkey: string, identifier: string, relayHints?: string[]): Promise<Event | null> {
-    // Use relay hints if provided, otherwise use user's relays
-    const relaysToUse = relayHints && relayHints.length > 0
-      ? relayHints
-      : this.feed.userRelays().map(r => r.url);
+    console.log('[StreamViewer] fetchEventByAddress called:', { kind, pubkey: pubkey.substring(0, 8), identifier });
+
+    // Use relay hints if provided, otherwise use user's relays, or fall back to preferred relays
+    let relaysToUse: string[];
+
+    if (relayHints && relayHints.length > 0) {
+      relaysToUse = relayHints;
+      console.log('[StreamViewer] Using relay hints:', relaysToUse);
+    } else {
+      const userRelays = this.feed.userRelays().map(r => r.url);
+      if (userRelays.length > 0) {
+        relaysToUse = userRelays;
+        console.log('[StreamViewer] Using user relays:', relaysToUse);
+      } else {
+        relaysToUse = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+        console.log('[StreamViewer] Using preferred relays as fallback:', relaysToUse);
+      }
+    }
+
+    if (relaysToUse.length === 0) {
+      console.error('[StreamViewer] No relays available for fetching event');
+      return null;
+    }
 
     const { SimplePool } = await import('nostr-tools/pool');
     const pool = new SimplePool();
 
     try {
+      console.log('[StreamViewer] Fetching event from relays...');
       // Fetch by kind, author, and d-tag for replaceable events
       const event = await pool.get(relaysToUse, {
         kinds: [kind],
@@ -160,9 +184,10 @@ export class StreamViewerComponent implements OnInit {
         '#d': [identifier],
       });
       pool.close(relaysToUse);
+      console.log('[StreamViewer] Event fetched:', event ? 'success' : 'not found');
       return event;
     } catch (error) {
-      console.error('Error fetching event by address:', error);
+      console.error('[StreamViewer] Error fetching event by address:', error);
       pool.close(relaysToUse);
       return null;
     }
@@ -206,6 +231,21 @@ export class StreamViewerComponent implements OnInit {
   }
 
   private loadStream(event: Event): void {
+    console.log('[StreamViewer] loadStream called with event:', event.id);
+
+    // Check stream status
+    const statusTag = event.tags.find(tag => tag[0] === 'status');
+    const status = statusTag?.[1] || 'planned';
+
+    console.log('[StreamViewer] Stream status:', status);
+
+    // If stream has ended, navigate to event details instead
+    if (status === 'ended') {
+      console.log('[StreamViewer] Stream has ended, redirecting to event details');
+      this.router.navigate(['/e', event.id]);
+      return;
+    }
+
     // Extract stream information
     const titleTag = event.tags.find(tag => tag[0] === 'title');
     const streamingTag = event.tags.find(tag => tag[0] === 'streaming');
@@ -215,9 +255,12 @@ export class StreamViewerComponent implements OnInit {
     const streamUrl = streamingTag?.[1];
     const thumbnail = imageTag?.[1];
 
+    console.log('[StreamViewer] Stream URL:', streamUrl);
+
     if (!streamUrl) {
       console.error('No streaming URL found in event');
-      this.router.navigate(['/streams']);
+      // For planned or ended streams without URL, show event details
+      this.router.navigate(['/e', event.id]);
       return;
     }
 
