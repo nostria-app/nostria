@@ -44,6 +44,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
+  private hostElement = inject(ElementRef);
 
   // Viewport visibility
   private intersectionObserver?: IntersectionObserver;
@@ -91,24 +92,55 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
       const isCurrentlyExpanded = this.isExpanded();
       const isBlurred = this.shouldBlurMedia();
       const inOverlayMode = this.showOverlay();
+      const isShortForm = this.isShortFormVideo();
+      const inViewport = this.isInViewport();
 
-      if (!videoElement || isBlurred || inOverlayMode) return;
+      console.log('🎥 [Video AutoPlay] Effect triggered:', {
+        eventId: this.event().id.substring(0, 8),
+        shouldPlay,
+        hasVideoElement: !!videoElement,
+        isCurrentlyExpanded,
+        isBlurred,
+        inOverlayMode,
+        isShortForm,
+        inViewport
+      });
 
-      if (shouldPlay && !isCurrentlyExpanded) {
-        // Auto-expand when entering viewport
+      // Skip if blurred or in overlay mode
+      if (isBlurred || inOverlayMode) {
+        console.log('🎥 [Video AutoPlay] Skipping - blurred or overlay mode');
+        return;
+      }
+
+      // Auto-expand when entering viewport (before we have a video element)
+      if (shouldPlay && !isCurrentlyExpanded && isShortForm) {
+        console.log('🎥 [Video AutoPlay] Auto-expanding video');
         this.isExpanded.set(true);
-      } else if (!shouldPlay && isCurrentlyExpanded && this.isShortFormVideo()) {
-        // Pause video when leaving viewport (only for short form videos)
+        return; // Let the next effect run handle playing after expansion
+      }
+
+      // Now handle play/pause if we have a video element
+      if (!videoElement) {
+        console.log('🎥 [Video AutoPlay] No video element yet');
+        return;
+      }
+
+      // Pause/collapse video when leaving viewport (only for short form videos)
+      if (!shouldPlay && isCurrentlyExpanded && isShortForm) {
+        console.log('🎥 [Video AutoPlay] Pausing video (left viewport)');
         videoElement.pause();
       }
 
       // Play/pause based on viewport visibility
-      if (isCurrentlyExpanded && this.isShortFormVideo()) {
+      if (isCurrentlyExpanded && isShortForm) {
         if (shouldPlay) {
-          videoElement.play().catch(() => {
+          console.log('🎥 [Video AutoPlay] Playing video');
+          videoElement.play().catch((error) => {
+            console.log('🎥 [Video AutoPlay] Play failed:', error);
             // Ignore errors (e.g., user hasn't interacted with page yet)
           });
         } else {
+          console.log('🎥 [Video AutoPlay] Pausing video');
           videoElement.pause();
         }
       }
@@ -122,7 +154,14 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         entries => {
           entries.forEach(entry => {
             // Consider video in viewport if at least 50% is visible
-            this.isInViewport.set(entry.isIntersecting && entry.intersectionRatio >= 0.5);
+            const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.5;
+            console.log('🎥 [Video AutoPlay] Viewport change:', {
+              eventId: this.event().id.substring(0, 8),
+              isVisible,
+              intersectionRatio: entry.intersectionRatio,
+              isIntersecting: entry.isIntersecting
+            });
+            this.isInViewport.set(isVisible);
           });
         },
         {
@@ -131,10 +170,10 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         }
       );
 
-      // Observe the component's host element
-      const hostElement = this.videoPlayerRef?.nativeElement.closest('app-video-event');
-      if (hostElement) {
-        this.intersectionObserver.observe(hostElement);
+      // Observe the component's host element directly
+      if (this.hostElement?.nativeElement) {
+        console.log('🎥 [Video AutoPlay] Setting up observer for event:', this.event().id.substring(0, 8));
+        this.intersectionObserver.observe(this.hostElement.nativeElement);
       }
     }
   }
