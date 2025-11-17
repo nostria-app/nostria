@@ -1,0 +1,56 @@
+<div class="youtube-player-container">
+  @if (footer()) {
+  <!-- Footer mode - embedded player with controls -->
+  <div class="youtube-player-footer">
+    <div class="youtube-embed-container">
+      @if (youtubeUrl()) {
+      <iframe id="ytplayer" class="youtube-iframe" type="text/html" [src]="youtubeUrl()" frameborder="0" allowfullscreen
+        allow="autoplay" title="YouTube video player"></iframe>
+      }
+    </div>
+
+    <div class="youtube-controls">
+      <div class="control-buttons">
+        @if (media.paused) {
+        <button matTooltip="Play" (click)="media.resume()" mat-icon-button>
+          <mat-icon>play_arrow</mat-icon>
+        </button>
+        } @else {
+        <button matTooltip="Pause" (click)="media.pause()" mat-icon-button>
+          <mat-icon>pause</mat-icon>
+        </button>
+        }
+
+        <button matTooltip="View queue" routerLink="/media-queue" mat-icon-button>
+          <mat-icon>queue_music</mat-icon>
+        </button>
+
+        <button matTooltip="Close" (click)="media.exit()" mat-icon-button>
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+  </div>
+  } @else {
+  <!-- Compact mode - minimal controls -->
+  <div class="youtube-player-compact">
+    <img class="media-icon" src="icons/icon.svg" width="16" height="16" alt="Nostria" />
+
+    <div class="compact-controls">
+      @if (media.paused) {
+      <button (click)="media.resume()" mat-icon-button>
+        <mat-icon>play_arrow</mat-icon>
+      </button>
+      } @else {
+      <button (click)="media.pause()" mat-icon-button>
+        <mat-icon>pause</mat-icon>
+      </button>
+      }
+
+      <button routerLink="/media-queue" mat-icon-button>
+        <mat-icon>queue_music</mat-icon>
+      </button>
+    </div>
+  </div>
+  }
+</div>

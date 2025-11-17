@@ -1,0 +1,132 @@
+<div class="audio-player-container">
+  @if (footer()) {
+  <!-- Footer mode - full player with album art -->
+  <div class="audio-player-footer">
+    <div class="media-info">
+      @if (media.current?.artwork) {
+      <img class="album-art" [src]="media.current?.artwork" alt="{{ media.current?.title || 'Album artwork' }}" />
+      }
+      <div class="media-info-text">
+        <div class="media-title">{{ media.current?.title }}</div>
+        <div class="media-artist">{{ media.current?.artist }}</div>
+      </div>
+    </div>
+
+    <div class="media-controls">
+      <div class="control-buttons">
+        @if (isPodcast()) {
+        <button matTooltip="Change speed" (click)="media.rate()" mat-icon-button>
+          <mat-icon>speed</mat-icon>
+        </button>
+        }
+
+        @if (isPodcast()) {
+        <button matTooltip="Skip back 10 seconds" class="hide-small" (click)="media.rewind(10)" mat-icon-button>
+          <mat-icon>replay_10</mat-icon>
+        </button>
+        }
+
+        <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
+          <mat-icon>skip_previous</mat-icon>
+        </button>
+
+        @if (media.paused) {
+        <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button">
+          <mat-icon>play_arrow</mat-icon>
+        </button>
+        } @else {
+        <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button">
+          <mat-icon>pause</mat-icon>
+        </button>
+        }
+
+        <button matTooltip="Next" [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
+          <mat-icon>skip_next</mat-icon>
+        </button>
+
+        @if (isPodcast()) {
+        <button matTooltip="Skip forward 10 seconds" class="hide-small" (click)="media.forward(10)" mat-icon-button>
+          <mat-icon>forward_10</mat-icon>
+        </button>
+        }
+
+        <button matTooltip="View queue" routerLink="/media-queue" mat-icon-button>
+          <mat-icon>queue_music</mat-icon>
+        </button>
+      </div>
+
+      <div class="media-timeline">
+        <span class="time-label">{{ formatLabel(currentTime()) }}</span>
+        <mat-slider class="timeline-slider" [min]="0" [max]="duration()" [step]="1">
+          <input matSliderThumb [value]="currentTime()" (valueChange)="onTimeChange($event)"
+            aria-label="Current time" />
+        </mat-slider>
+        <span class="time-label">{{ formatLabel(duration()) }}</span>
+      </div>
+    </div>
+
+    <div class="media-audio-controls">
+      @if (media.muted) {
+      <button matTooltip="Unmute" (click)="media.mute()" mat-icon-button>
+        <mat-icon>volume_off</mat-icon>
+      </button>
+      } @else {
+      <button matTooltip="Mute" (click)="media.mute()" mat-icon-button>
+        <mat-icon>volume_up</mat-icon>
+      </button>
+      }
+
+      <mat-slider class="volume-slider" [min]="0" [max]="100" [step]="1">
+        <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
+      </mat-slider>
+    </div>
+  </div>
+  } @else {
+  <!-- Compact mode - minimal controls -->
+  <div class="audio-player-compact">
+    <img class="media-icon" src="icons/icon.svg" width="16" height="16" alt="Nostria" />
+
+    <div class="compact-controls">
+      @if (isPodcast()) {
+      <button (click)="media.rate()" mat-icon-button>
+        <mat-icon>speed</mat-icon>
+      </button>
+      }
+
+      @if (isPodcast()) {
+      <button (click)="media.rewind(10)" class="hide-small" mat-icon-button>
+        <mat-icon>replay_10</mat-icon>
+      </button>
+      }
+
+      <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
+        <mat-icon>skip_previous</mat-icon>
+      </button>
+
+      @if (media.paused) {
+      <button (click)="media.resume()" mat-icon-button>
+        <mat-icon>play_arrow</mat-icon>
+      </button>
+      } @else {
+      <button (click)="media.pause()" mat-icon-button>
+        <mat-icon>pause</mat-icon>
+      </button>
+      }
+
+      <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
+        <mat-icon>skip_next</mat-icon>
+      </button>
+
+      @if (isPodcast()) {
+      <button (click)="media.forward(10)" class="hide-small" mat-icon-button>
+        <mat-icon>forward_10</mat-icon>
+      </button>
+      }
+
+      <button routerLink="/media-queue" mat-icon-button>
+        <mat-icon>queue_music</mat-icon>
+      </button>
+    </div>
+  </div>
+  }
+</div>

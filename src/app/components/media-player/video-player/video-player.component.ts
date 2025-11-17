@@ -1,0 +1,71 @@
+import {
+  Component,
+  inject,
+  ViewChild,
+  ElementRef,
+  afterNextRender,
+  OnDestroy,
+  input,
+} from '@angular/core';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterModule } from '@angular/router';
+import { MediaPlayerService } from '../../../services/media-player.service';
+import { LayoutService } from '../../../services/layout.service';
+import { UtilitiesService } from '../../../services/utilities.service';
+
+@Component({
+  selector: 'app-video-player',
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatTooltipModule,
+    RouterModule,
+  ],
+  templateUrl: './video-player.component.html',
+  styleUrl: './video-player.component.scss',
+  host: {
+    '[class.footer-mode]': 'footer()',
+    '[class.compact-mode]': '!footer()',
+  },
+})
+export class VideoPlayerComponent implements OnDestroy {
+  readonly media = inject(MediaPlayerService);
+  readonly layout = inject(LayoutService);
+  private readonly utilities = inject(UtilitiesService);
+
+  footer = input<boolean>(false);
+
+  @ViewChild('videoElement', { static: false })
+  videoElement?: ElementRef<HTMLVideoElement>;
+
+  constructor() {
+    if (!this.utilities.isBrowser()) {
+      return;
+    }
+
+    afterNextRender(() => {
+      this.registerVideoElement();
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.media.setVideoElement(undefined);
+  }
+
+  registerVideoElement(): void {
+    if (this.videoElement?.nativeElement) {
+      this.media.setVideoElement(this.videoElement.nativeElement);
+    }
+  }
+
+  onVideoError(event: ErrorEvent): void {
+    const video = event.target as HTMLVideoElement;
+    console.error('Video error:', video.error);
+  }
+
+  async pictureInPicture(): Promise<void> {
+    await this.media.pictureInPicture();
+  }
+}
