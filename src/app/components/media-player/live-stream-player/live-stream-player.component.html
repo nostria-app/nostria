@@ -1,0 +1,124 @@
+<div class="live-stream-container" [class.fullscreen]="layout.fullscreenMediaPlayer()">
+  <!-- Stream metadata header -->
+  <div class="stream-header">
+    <div class="stream-info">
+      <div class="stream-title-row">
+        <span class="live-badge">
+          <mat-icon>fiber_manual_record</mat-icon>
+          LIVE
+        </span>
+        <h2 class="stream-title">{{ streamTitle() }}</h2>
+      </div>
+      @if (viewerCount() > 0) {
+      <div class="stream-stats">
+        <mat-icon>visibility</mat-icon>
+        <span>{{ viewerCount() }} watching</span>
+      </div>
+      }
+    </div>
+    <div class="stream-actions">
+      @if (layout.fullscreenMediaPlayer()) {
+      <button mat-icon-button matTooltip="Toggle chat" (click)="toggleChatVisibility()">
+        <mat-icon>{{ chatVisible() ? 'chat' : 'chat_bubble_outline' }}</mat-icon>
+      </button>
+      }
+      <button mat-icon-button [matMenuTriggerFor]="streamMenu" matTooltip="More options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <button mat-icon-button matTooltip="Close stream" (click)="exitStream()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main content area -->
+  <div class="stream-content">
+    <!-- Video player -->
+    <div class="video-container">
+      @if (media.current?.type === 'HLS' || media.current?.type === 'Video') {
+      <video #videoElement class="stream-video" [muted]="media.muted" autoplay playsinline
+        (error)="onVideoError($event)"></video>
+      }
+
+      <!-- Video controls overlay (non-fullscreen only) -->
+      @if (!layout.fullscreenMediaPlayer()) {
+      <div class="video-controls-overlay">
+        <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
+          <mat-icon>picture_in_picture_alt</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Fullscreen" (click)="toggleFullscreen()">
+          <mat-icon>fullscreen</mat-icon>
+        </button>
+      </div>
+      }
+    </div>
+
+    <!-- Stream info bar (fullscreen only) -->
+    @if (layout.fullscreenMediaPlayer() && liveEvent()) {
+    <app-stream-info-bar [liveEvent]="liveEvent()!" />
+    }
+  </div>
+
+  <!-- Chat sidebar (fullscreen only) -->
+  @if (layout.fullscreenMediaPlayer() && liveEvent()) {
+  <div class="chat-sidebar" [class.hidden]="!chatVisible()">
+    <app-live-chat [liveEvent]="liveEvent()!" />
+  </div>
+  }
+
+  <!-- Playback controls (footer mode) -->
+  @if (footer()) {
+  <div class="playback-controls">
+    <div class="stream-info-footer">
+      <span class="live-badge-small">
+        <mat-icon>fiber_manual_record</mat-icon>
+        LIVE
+      </span>
+      <span class="stream-title-footer">{{ streamTitle() }}</span>
+    </div>
+
+    <div class="control-buttons">
+      @if (media.paused) {
+      <button mat-icon-button matTooltip="Play" (click)="media.resume()">
+        <mat-icon>play_arrow</mat-icon>
+      </button>
+      } @else {
+      <button mat-icon-button matTooltip="Pause" (click)="media.pause()">
+        <mat-icon>pause</mat-icon>
+      </button>
+      }
+
+      @if (media.muted) {
+      <button mat-icon-button matTooltip="Unmute" (click)="media.mute()">
+        <mat-icon>volume_off</mat-icon>
+      </button>
+      } @else {
+      <button mat-icon-button matTooltip="Mute" (click)="media.mute()">
+        <mat-icon>volume_up</mat-icon>
+      </button>
+      }
+    </div>
+
+    <div class="control-actions">
+      <button mat-icon-button matTooltip="Fullscreen" (click)="toggleFullscreen()">
+        <mat-icon>fullscreen</mat-icon>
+      </button>
+      <button mat-icon-button matTooltip="Close stream" (click)="exitStream()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+  }
+</div>
+
+<!-- Context menu -->
+<mat-menu #streamMenu="matMenu">
+  <button mat-menu-item (click)="copyEventData()">
+    <mat-icon>code</mat-icon>
+    <span>Copy Event Data</span>
+  </button>
+  <button mat-menu-item (click)="copyEventUrl()">
+    <mat-icon>link</mat-icon>
+    <span>Copy Event URL</span>
+  </button>
+</mat-menu>
