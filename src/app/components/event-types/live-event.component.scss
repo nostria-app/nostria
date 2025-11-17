@@ -250,10 +250,27 @@
   height: 18px;
 }
 
-.participants-list {
+.participants-section {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+}
+
+.participants-list {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+
+  app-user-profile {
+    display: inline-flex;
+    vertical-align: middle;
+  }
+
+  span {
+    color: var(--mat-text-secondary);
+  }
 }
 
 .participants-header {

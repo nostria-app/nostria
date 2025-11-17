@@ -56,7 +56,13 @@ export class LiveEventComponent {
     if (!event) return null;
 
     const summaryTag = event.tags.find(tag => tag[0] === 'summary');
-    return summaryTag?.[1] || null;
+    const fullSummary = summaryTag?.[1] || null;
+
+    // Truncate to 200 characters
+    if (fullSummary && fullSummary.length > 200) {
+      return fullSummary.substring(0, 200) + '...';
+    }
+    return fullSummary;
   });
 
   // Live event status

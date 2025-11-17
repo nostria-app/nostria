@@ -85,7 +85,7 @@
 
     <!-- Time information -->
     <div class="live-time-info">
-      @if (startsTime) {
+      @if (startsTime && statusValue === 'planned') {
       <div class="time-item">
         <mat-icon class="time-icon">event</mat-icon>
         <span class="time-label">Starts:</span>
@@ -101,15 +101,26 @@
       }
     </div>
 
-    <!-- Participants count -->
-    @if (currentParticipants() || totalParticipants()) {
-    <div class="participants-count">
-      <mat-icon class="participants-icon">people</mat-icon>
-      @if (currentParticipants()) {
-      <span>{{ currentParticipants() }} watching</span>
+    <!-- Participants -->
+    @if (participantsList.length > 0 || currentParticipants() || totalParticipants()) {
+    <div class="participants-section">
+      @if (currentParticipants() || totalParticipants()) {
+      <div class="participants-count">
+        <mat-icon>people</mat-icon>
+        @if (currentParticipants()) {
+        <span>{{ currentParticipants() }} watching</span>
+        }
+        @if (totalParticipants() && statusValue === 'ended') {
+        <span>{{ totalParticipants() }} total</span>
+        }
+      </div>
       }
-      @if (totalParticipants() && statusValue === 'ended') {
-      <span>{{ totalParticipants() }} total participants</span>
+      @if (participantsList.length > 0) {
+      <div class="participants-list">
+        @for (participant of participantsList; track participant.pubkey; let isLast = $last) {<app-user-profile
+          [pubkey]="participant.pubkey" view="compact" [hostWidthAuto]="true" />@if (!isLast) {<span>, </span>}
+        }
+      </div>
       }
     </div>
     }
