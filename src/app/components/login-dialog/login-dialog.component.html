@@ -187,7 +187,8 @@
       <mat-form-field class="nsec-input">
         <mat-label>Private Key (nsec...)</mat-label>
         <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1..." autocomplete="off"
-          autocorrect="off" spellcheck="false" />
+          autocorrect="off" spellcheck="false" name="nostr-private-key" readonly
+          onfocus="this.removeAttribute('readonly');" />
       </mat-form-field>
 
       <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNsec()" matTooltip="Scan QR code">
