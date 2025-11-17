@@ -19,6 +19,18 @@ import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { AccountStateService } from '../../../services/account-state.service';
 import { Followset, StarterPack } from '../../../services/followset';
 import { NostrRecord } from '../../../interfaces';
+import { DataService } from '../../../services/data.service';
+import { EncryptionService } from '../../../services/encryption.service';
+import { LoggerService } from '../../../services/logger.service';
+
+export interface FollowSet {
+  id: string; // event id
+  dTag: string; // d-tag identifier
+  title: string;
+  description?: string;
+  pubkeys: string[]; // Combined public and private pubkeys
+  created: number;
+}
 
 interface DialogData {
   icons: string[];
@@ -89,6 +101,9 @@ export class NewColumnDialogComponent {
   private feedService = inject(FeedService);
   private accountState = inject(AccountStateService);
   private followset = inject(Followset);
+  private dataService = inject(DataService);
+  private encryption = inject(EncryptionService);
+  private logger = inject(LoggerService);
   readonly data: DialogData = inject(MAT_DIALOG_DATA);
 
   // Form controls
@@ -112,17 +127,21 @@ export class NewColumnDialogComponent {
   selectedUsers = signal<NostrRecord[]>([]);
   selectedStarterPacks = signal<StarterPack[]>([]);
   availableStarterPacks = signal<StarterPack[]>([]);
+  selectedFollowSets = signal<FollowSet[]>([]);
+  availableFollowSets = signal<FollowSet[]>([]);
 
   // Form controls for chips and autocomplete
   kindInputControl = new FormControl('');
   relayInputControl = new FormControl('');
   userInputControl = new FormControl('');
   starterPackInputControl = new FormControl('');
+  followSetInputControl = new FormControl('');
 
   // Reactive signals for input values
   kindInputValue = signal('');
   userInputValue = signal('');
   starterPackInputValue = signal('');
+  followSetInputValue = signal('');
 
   // Chip separator keys
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
@@ -194,6 +213,20 @@ export class NewColumnDialogComponent {
     });
   });
 
+  // Filtered follow sets for autocomplete
+  filteredFollowSets = computed(() => {
+    const input = this.followSetInputValue().toLowerCase();
+    const available = this.availableFollowSets();
+    const selected = this.selectedFollowSets();
+
+    return available.filter(set => {
+      const matchesInput = set.title.toLowerCase().includes(input) ||
+        set.description?.toLowerCase().includes(input);
+      const notSelected = !selected.some(s => s.id === set.id);
+      return matchesInput && notSelected;
+    });
+  });
+
   constructor() {
     // Set up reactive input value tracking
     this.kindInputControl.valueChanges.subscribe(value => {
@@ -208,10 +241,24 @@ export class NewColumnDialogComponent {
       this.starterPackInputValue.set(value || '');
     });
 
-    // Load starter packs when component initializes
-    this.loadStarterPacks();
+    this.followSetInputControl.valueChanges.subscribe(value => {
+      this.followSetInputValue.set(value || '');
+    });
+
+    // Load starter packs and follow sets when component initializes
+    // Wait for both to complete before initializing selected items
+    this.initializeData();
+  }
+
+  private async initializeData(): Promise<void> {
+    // Load data in parallel
+    await Promise.all([
+      this.loadStarterPacks(),
+      this.loadFollowSets()
+    ]);
 
     // Initialize selected items if editing existing column
+    // This must happen AFTER the data is loaded
     if (this.data.column) {
       this.initializeSelectedItems();
     }
@@ -347,6 +394,7 @@ export class NewColumnDialogComponent {
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
         customUsers: formValue.source === 'custom' ? this.selectedUsers().map(u => u.event.pubkey) : undefined,
         customStarterPacks: formValue.source === 'custom' ? this.selectedStarterPacks().map(p => p.dTag) : undefined,
+        customFollowSets: formValue.source === 'custom' ? this.selectedFollowSets().map(s => s.dTag) : undefined,
         filters: Object.keys(filters).length > 0 ? filters : {},
         createdAt: this.data.column?.createdAt || Date.now(),
         updatedAt: Date.now(),
@@ -366,14 +414,101 @@ export class NewColumnDialogComponent {
     }
   }
 
+  async loadFollowSets(): Promise<void> {
+    try {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.logger.warn('No pubkey available for loading follow sets');
+        return;
+      }
+
+      // Fetch kind 30000 events (Follow Sets)
+      const records = await this.dataService.getEventsByPubkeyAndKind(pubkey, 30000, {
+        save: true,
+        cache: true,
+      });
+
+      if (!records || records.length === 0) {
+        this.logger.debug('No follow sets found');
+        return;
+      }
+
+      const followSets: FollowSet[] = [];
+
+      for (const record of records) {
+        if (!record.event) continue;
+
+        const event = record.event;
+
+        // Extract metadata
+        const dTag = event.tags.find(t => t[0] === 'd')?.[1] || crypto.randomUUID();
+        const title = event.tags.find(t => t[0] === 'title')?.[1] || event.tags.find(t => t[0] === 'name')?.[1] || `Follow Set ${dTag}`;
+        const description = event.tags.find(t => t[0] === 'description')?.[1];
+
+        // Parse public items (p tags)
+        const publicPubkeys = event.tags
+          .filter(t => t[0] === 'p' && t[1])
+          .map(t => t[1]);
+
+        // Parse private items from encrypted content
+        let privatePubkeys: string[] = [];
+        if (event.content && event.content.trim() !== '') {
+          try {
+            // Check if content is encrypted
+            const isEncrypted = this.encryption.isContentEncrypted(event.content);
+            if (isEncrypted) {
+              // Decrypt content - use autoDecrypt which handles both NIP-04 and NIP-44
+              const decrypted = await this.encryption.autoDecrypt(event.content, pubkey, event);
+              if (decrypted && decrypted.content) {
+                // Parse decrypted JSON
+                const privateData = JSON.parse(decrypted.content);
+                if (Array.isArray(privateData)) {
+                  // Extract p tags from private data
+                  privatePubkeys = privateData
+                    .filter((tag: string[]) => tag[0] === 'p' && tag[1])
+                    .map((tag: string[]) => tag[1]);
+                }
+              }
+            }
+          } catch (error) {
+            this.logger.error('Failed to decrypt follow set content:', error);
+          }
+        }
+
+        // Combine public and private pubkeys (remove duplicates)
+        const allPubkeys = [...new Set([...publicPubkeys, ...privatePubkeys])];
+
+        followSets.push({
+          id: event.id,
+          dTag,
+          title,
+          description,
+          pubkeys: allPubkeys,
+          created: event.created_at,
+        });
+      }
+
+      // Sort by creation date (newest first)
+      followSets.sort((a, b) => b.created - a.created);
+
+      this.availableFollowSets.set(followSets);
+      this.logger.debug(`Loaded ${followSets.length} follow sets`);
+    } catch (error) {
+      this.logger.error('Failed to load follow sets:', error);
+    }
+  }
+
 
 
   initializeSelectedItems(): void {
     const column = this.data.column;
     if (!column) return;
 
+    this.logger.debug('[NewColumnDialog] Initializing selected items for column:', column.id);
+
     // Initialize selected users if customUsers exist
     if (column.customUsers && column.customUsers.length > 0) {
+      this.logger.debug('[NewColumnDialog] Loading', column.customUsers.length, 'custom users');
       const profiles: NostrRecord[] = [];
       for (const pubkey of column.customUsers) {
         const cacheKey = `metadata-${pubkey}`;
@@ -383,14 +518,29 @@ export class NewColumnDialogComponent {
         }
       }
       this.selectedUsers.set(profiles);
+      this.logger.debug('[NewColumnDialog] Loaded', profiles.length, 'user profiles');
     }
 
     // Initialize selected starter packs if customStarterPacks exist
     if (column.customStarterPacks && column.customStarterPacks.length > 0) {
+      this.logger.debug('[NewColumnDialog] Loading', column.customStarterPacks.length, 'starter packs from dTags:', column.customStarterPacks);
+      this.logger.debug('[NewColumnDialog] Available starter packs:', this.availableStarterPacks().length);
       const packs = this.availableStarterPacks().filter(pack =>
         column.customStarterPacks!.includes(pack.dTag)
       );
       this.selectedStarterPacks.set(packs);
+      this.logger.debug('[NewColumnDialog] Loaded', packs.length, 'starter packs');
+    }
+
+    // Initialize selected follow sets if customFollowSets exist
+    if (column.customFollowSets && column.customFollowSets.length > 0) {
+      this.logger.debug('[NewColumnDialog] Loading', column.customFollowSets.length, 'follow sets from dTags:', column.customFollowSets);
+      this.logger.debug('[NewColumnDialog] Available follow sets:', this.availableFollowSets().length, this.availableFollowSets().map(s => ({ dTag: s.dTag, title: s.title })));
+      const sets = this.availableFollowSets().filter(set =>
+        column.customFollowSets!.includes(set.dTag)
+      );
+      this.selectedFollowSets.set(sets);
+      this.logger.debug('[NewColumnDialog] Loaded', sets.length, 'follow sets:', sets.map(s => ({ dTag: s.dTag, title: s.title, pubkeys: s.pubkeys.length })));
     }
   }
 
@@ -426,5 +576,22 @@ export class NewColumnDialogComponent {
 
   removeStarterPack(pack: StarterPack): void {
     this.selectedStarterPacks.update(packs => packs.filter(p => p.id !== pack.id));
+  }
+
+  onFollowSetSelected(event: MatAutocompleteSelectedEvent): void {
+    const setId = event.option.value;
+    const followSet = this.availableFollowSets().find(s => s.id === setId);
+
+    if (followSet && !this.selectedFollowSets().some(s => s.id === setId)) {
+      this.selectedFollowSets.update(sets => [...sets, followSet]);
+    }
+
+    // Clear the input
+    this.followSetInputControl.setValue('');
+    this.followSetInputValue.set('');
+  }
+
+  removeFollowSet(followSet: FollowSet): void {
+    this.selectedFollowSets.update(sets => sets.filter(s => s.id !== followSet.id));
   }
 }

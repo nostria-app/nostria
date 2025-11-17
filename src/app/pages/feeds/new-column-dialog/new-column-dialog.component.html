@@ -172,6 +172,47 @@
             </div>
             }
           </div>
+
+          <!-- Follow Set Selection -->
+          <div class="follow-sets-section">
+            <h5>Select Follow Sets</h5>
+            <p class="subsection-description">Choose from your Follow Sets (kind 30000)</p>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Search and select follow sets</mat-label>
+              <input type="text" matInput placeholder="Type to search follow sets..."
+                [matAutocomplete]="followSetAutocomplete" #followSetInput [formControl]="followSetInputControl">
+              <mat-autocomplete #followSetAutocomplete="matAutocomplete" (optionSelected)="onFollowSetSelected($event)">
+                @for (set of filteredFollowSets(); track set.id) {
+                <mat-option [value]="set.id">
+                  <div class="follow-set-option">
+                    <div class="set-info">
+                      <span class="set-title">{{ set.title }}</span>
+                      @if (set.description) {
+                      <span class="set-description">{{ set.description }}</span>
+                      }
+                      (<span class="set-users">{{ set.pubkeys.length }} users</span>)
+                    </div>
+                  </div>
+                </mat-option>
+                }
+              </mat-autocomplete>
+            </mat-form-field>
+
+            <!-- Selected Follow Sets Display -->
+            @if (selectedFollowSets().length > 0) {
+            <div class="selected-items">
+              <h6>Selected Follow Sets ({{ selectedFollowSets().length }})</h6>
+              <div class="selected-chips">
+                @for (set of selectedFollowSets(); track set.id) {
+                <mat-chip-row removable (removed)="removeFollowSet(set)">
+                  {{ set.title }}
+                  <mat-icon matChipRemove>cancel</mat-icon>
+                </mat-chip-row>
+                }
+              </div>
+            </div>
+            }
+          </div>
         </div>
         }
       </div>
