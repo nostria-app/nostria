@@ -116,16 +116,16 @@
         min-width: 0;
         max-height: 48px;
         overflow: hidden;
-        
+
         ::ng-deep .user-profile {
           max-height: 48px;
           overflow: hidden;
         }
-        
+
         ::ng-deep .user-profile-content {
           padding: 4px 0;
         }
-        
+
         ::ng-deep .user-profile-display-name {
           overflow: hidden;
           text-overflow: ellipsis;
