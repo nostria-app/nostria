@@ -39,8 +39,8 @@
       </div>
 
       <div class="control-actions">
-        <button mat-icon-button matTooltip="Fullscreen" (click)="toggleFullscreen()">
-          <mat-icon>fullscreen</mat-icon>
+        <button mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
+          <mat-icon>open_in_full</mat-icon>
         </button>
         <button mat-icon-button matTooltip="Close stream" (click)="exitStream()">
           <mat-icon>close</mat-icon>
@@ -90,13 +90,13 @@
     </div>
 
     <!-- Stream info bar (fullscreen only) -->
-    @if (layout.fullscreenMediaPlayer() && liveEvent()) {
+    @if (liveEvent()) {
     <app-stream-info-bar [liveEvent]="liveEvent()!" />
     }
   </div>
 
   <!-- Chat sidebar (fullscreen only) -->
-  @if (layout.fullscreenMediaPlayer() && liveEvent()) {
+  @if (liveEvent()) {
   <div class="chat-sidebar" [class.hidden]="!chatVisible()">
     <app-live-chat [liveEvent]="liveEvent()!" />
   </div>

@@ -127,7 +127,7 @@ export class MediaQueueComponent {
   }
 
   isCurrentPlaying(item: MediaItem, index: number): boolean {
-    return this.media.current === item && this.media.index === index;
+    return this.media.current() === item && this.media.index === index;
   }
 
   playItem(index: number) {

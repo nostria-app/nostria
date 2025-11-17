@@ -32,5 +32,9 @@ export class YouTubePlayerComponent {
 
   footer = input<boolean>(false);
 
-  youtubeUrl = computed(() => this.media.getYouTubeEmbedUrl());
+  youtubeUrl = computed(() => {
+    const current = this.media.current();
+    if (!current || current.type !== 'YouTube') return undefined;
+    return this.media.getYouTubeEmbedUrl()(current.source, 'autoplay=1');
+  });
 }
