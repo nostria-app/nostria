@@ -450,16 +450,23 @@ export class AccountStateService implements OnDestroy {
     const currentSubscriptions = this.subscriptions();
     const existingIndex = currentSubscriptions.findIndex(sub => sub.pubkey === account.pubkey);
 
+    // Create a new array to ensure reactivity
+    let updatedSubscriptions: Account[];
+
     if (existingIndex >= 0) {
-      // Update existing subscription
-      currentSubscriptions[existingIndex] = account;
+      // Update existing subscription by creating new array with updated item
+      updatedSubscriptions = [
+        ...currentSubscriptions.slice(0, existingIndex),
+        account,
+        ...currentSubscriptions.slice(existingIndex + 1)
+      ];
     } else {
-      // Add new subscription
-      currentSubscriptions.push(account);
+      // Add new subscription by creating new array with new item
+      updatedSubscriptions = [...currentSubscriptions, account];
     }
 
-    this.localStorage.setObject(this.appState.SUBSCRIPTIONS_STORAGE_KEY, currentSubscriptions);
-    this.subscriptions.set(currentSubscriptions);
+    this.localStorage.setObject(this.appState.SUBSCRIPTIONS_STORAGE_KEY, updatedSubscriptions);
+    this.subscriptions.set(updatedSubscriptions);
   }
 
   /**
