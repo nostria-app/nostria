@@ -38,7 +38,7 @@
         <div class="message-content">
           <div class="message-header">
             <app-profile-display-name [pubkey]="message.pubkey" class="message-author"></app-profile-display-name>
-            <span class="message-time">{{ formatTimestamp(message.created_at) }}</span>
+            <span class="message-time">{{ message.formattedTime }}</span>
           </div>
 
           <div class="message-text">{{ message.content }}</div>

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, ViewChild, ElementRef, AfterViewInit, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -23,6 +23,7 @@ interface ChatMessage {
   content: string;
   created_at: number;
   replyTo?: string;
+  formattedTime: string;
 }
 
 @Component({
@@ -41,6 +42,7 @@ interface ChatMessage {
   ],
   templateUrl: './live-chat.component.html',
   styleUrl: './live-chat.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class LiveChatComponent implements AfterViewInit {
   private relayPool = inject(RelayPoolService);
@@ -144,6 +146,7 @@ export class LiveChatComponent implements AfterViewInit {
             content: event.content,
             created_at: event.created_at,
             replyTo: replyTag?.[1],
+            formattedTime: this.formatTimestamp(event.created_at),
           };
         })
         .sort((a, b) => a.created_at - b.created_at); // Oldest first
@@ -207,6 +210,7 @@ export class LiveChatComponent implements AfterViewInit {
             pubkey: result.event.pubkey,
             content: result.event.content,
             created_at: result.event.created_at,
+            formattedTime: this.formatTimestamp(result.event.created_at),
           };
           this.messages.update(msgs => [...msgs, newMessage]);
           // Scroll to bottom after adding new message
@@ -227,7 +231,7 @@ export class LiveChatComponent implements AfterViewInit {
 
   toggleView(mode: 'chat' | 'participants'): void {
     this.viewMode.set(mode);
-    
+
     // Scroll to bottom when switching to chat view
     if (mode === 'chat') {
       setTimeout(() => this.scrollToBottom(), 100);
