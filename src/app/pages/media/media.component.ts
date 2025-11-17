@@ -38,6 +38,7 @@ import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip
 import { MediaPublishDialogComponent, MediaPublishOptions } from './media-publish-dialog/media-publish-dialog.component';
 import { PublishService } from '../../services/publish.service';
 import { nip19 } from 'nostr-tools';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-media',
@@ -181,55 +182,11 @@ export class MediaComponent {
     });
   }
 
-  openRecordVideoDialog(): void {
-    const dialogRef = this.dialog.open(VideoRecordDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
-      panelClass: 'responsive-dialog',
-      disableClose: true,
-    });
+  layout = inject(LayoutService);
 
-    dialogRef.afterClosed().subscribe(async result => {
-      if (result && result.file) {
-        try {
-          // Set uploading state to true
-          this.mediaService.uploading.set(true);
-
-          // Upload the recorded video to media servers
-          // Use uploadOriginal flag from dialog result
-          const uploadResult = await this.mediaService.uploadFile(
-            result.file,
-            result.uploadOriginal ?? false,
-            this.mediaService.mediaServers()
-          );
-
-          // Set the uploading state to false
-          this.mediaService.uploading.set(false);
-
-          // Handle the result
-          if (uploadResult.status === 'success' && uploadResult.item) {
-            this.snackBar.open('Video uploaded successfully', 'Close', {
-              duration: 3000,
-            });
-
-            // Open publish dialog immediately with the uploaded video
-            this.publishSingleItemFromCard(uploadResult.item);
-          } else {
-            this.snackBar.open('Failed to upload recorded video', 'Close', {
-              duration: 3000,
-            });
-          }
-        } catch (error) {
-          // Set the uploading state to false on error
-          this.mediaService.uploading.set(false);
-
-          this.snackBar.open('Failed to upload recorded video', 'Close', {
-            duration: 3000,
-          });
-        }
-      }
-    });
-  }
+  // openRecordVideoDialog(): void {
+  //   this.layout.openRecordVideoDialog((item) => this.publishSingleItemFromCard(item));
+  // }
 
   openUploadDialog(): void {
     const dialogRef = this.dialog.open(MediaUploadDialogComponent, {
@@ -935,7 +892,7 @@ export class MediaComponent {
       this.selectedItems.set([]);
     } else {
       // Single item - show dialog and publish
-      const result = await this.publishSingleItem(firstItem);
+      const result = await this.layout.publishSingleItem(firstItem);
       if (result) {
         this.selectedItems.set([]);
       }
@@ -943,7 +900,7 @@ export class MediaComponent {
   }
 
   async publishSingleItemFromCard(item: MediaItem): Promise<void> {
-    await this.publishSingleItem(item);
+    await this.layout.publishSingleItem(item);
   }
 
   private async publishSingleItemWithoutNavigation(item: MediaItem): Promise<string | null> {
@@ -990,64 +947,64 @@ export class MediaComponent {
     }
   }
 
-  private async publishSingleItem(item: MediaItem): Promise<boolean> {
-    // Open the publish dialog
-    const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
-      data: {
-        mediaItem: item,
-      },
-      maxWidth: '650px',
-      width: '100%',
-      panelClass: 'responsive-dialog',
-    });
+  // private async publishSingleItem(item: MediaItem): Promise<boolean> {
+  //   // Open the publish dialog
+  //   const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
+  //     data: {
+  //       mediaItem: item,
+  //     },
+  //     maxWidth: '650px',
+  //     width: '100%',
+  //     panelClass: 'responsive-dialog',
+  //   });
 
-    const result: MediaPublishOptions | null = await dialogRef.afterClosed().toPromise();
+  //   const result: MediaPublishOptions | null = await dialogRef.afterClosed().toPromise();
 
-    if (!result) {
-      return false; // User cancelled
-    }
+  //   if (!result) {
+  //     return false; // User cancelled
+  //   }
 
-    try {
-      // Show publishing message
-      this.snackBar.open('Publishing to Nostr...', '', { duration: 2000 });
+  //   try {
+  //     // Show publishing message
+  //     this.snackBar.open('Publishing to Nostr...', '', { duration: 2000 });
 
-      // Build the event
-      const event = await this.buildMediaEvent(item, result);
+  //     // Build the event
+  //     const event = await this.buildMediaEvent(item, result);
 
-      // Sign and publish the event
-      const signedEvent = await this.nostr.signEvent(event);
-      const publishResult = await this.publishService.publish(signedEvent, {
-        useOptimizedRelays: false, // Publish to ALL account relays for media events
-      });
+  //     // Sign and publish the event
+  //     const signedEvent = await this.nostr.signEvent(event);
+  //     const publishResult = await this.publishService.publish(signedEvent, {
+  //       useOptimizedRelays: false, // Publish to ALL account relays for media events
+  //     });
 
-      if (publishResult.success) {
-        this.snackBar.open('Successfully published to Nostr!', 'Close', {
-          duration: 3000,
-        });
+  //     if (publishResult.success) {
+  //       this.snackBar.open('Successfully published to Nostr!', 'Close', {
+  //         duration: 3000,
+  //       });
 
-        // Navigate to the published event
-        const neventId = nip19.neventEncode({
-          id: signedEvent.id,
-          author: signedEvent.pubkey,
-          kind: signedEvent.kind,
-        });
-        this.router.navigate(['/e', neventId], { state: { event: signedEvent } });
+  //       // Navigate to the published event
+  //       const neventId = nip19.neventEncode({
+  //         id: signedEvent.id,
+  //         author: signedEvent.pubkey,
+  //         kind: signedEvent.kind,
+  //       });
+  //       this.router.navigate(['/e', neventId], { state: { event: signedEvent } });
 
-        return true;
-      } else {
-        this.snackBar.open('Failed to publish to some relays', 'Close', {
-          duration: 5000,
-        });
-        return false;
-      }
-    } catch (error) {
-      console.error('Error publishing media:', error);
-      this.snackBar.open('Failed to publish media', 'Close', {
-        duration: 3000,
-      });
-      return false;
-    }
-  }
+  //       return true;
+  //     } else {
+  //       this.snackBar.open('Failed to publish to some relays', 'Close', {
+  //         duration: 5000,
+  //       });
+  //       return false;
+  //     }
+  //   } catch (error) {
+  //     console.error('Error publishing media:', error);
+  //     this.snackBar.open('Failed to publish media', 'Close', {
+  //       duration: 3000,
+  //     });
+  //     return false;
+  //   }
+  // }
 
   private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
     const tags: string[][] = [];

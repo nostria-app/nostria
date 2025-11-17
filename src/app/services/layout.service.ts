@@ -26,6 +26,11 @@ import { UserRelayService } from './relays/user-relay';
 import { FeedService } from './feed.service';
 import { UtilitiesService } from './utilities.service';
 import { RelayPoolService } from './relays/relay-pool';
+import { VideoRecordDialogComponent } from '../pages/media/video-record-dialog/video-record-dialog.component';
+import { MediaService, MediaItem } from './media.service';
+import { MediaPublishDialogComponent, MediaPublishOptions } from '../pages/media/media-publish-dialog/media-publish-dialog.component';
+import { NostrService } from './nostr.service';
+import { PublishService } from './publish.service';
 
 @Injectable({
   providedIn: 'root',
@@ -961,6 +966,306 @@ export class LayoutService implements OnDestroy {
   async uploadMedia(): Promise<void> {
     // Navigate to media page with upload parameter
     await this.router.navigate(['/media'], { queryParams: { upload: 'true' } });
+  }
+
+  mediaService = inject(MediaService);
+  private nostr = inject(NostrService);
+  private publishService = inject(PublishService);
+
+  openRecordVideoDialog(): void {
+    const dialogRef = this.dialog.open(VideoRecordDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe(async result => {
+      if (result && result.file) {
+        try {
+          // Set uploading state to true
+          this.mediaService.uploading.set(true);
+
+          // Upload the recorded video to media servers
+          // Use uploadOriginal flag from dialog result
+          const uploadResult = await this.mediaService.uploadFile(
+            result.file,
+            result.uploadOriginal ?? false,
+            this.mediaService.mediaServers()
+          );
+
+          // Set the uploading state to false
+          this.mediaService.uploading.set(false);
+
+          // Handle the result
+          if (uploadResult.status === 'success' && uploadResult.item) {
+            this.snackBar.open('Video uploaded successfully', 'Close', {
+              duration: 3000,
+            });
+
+            this.publishSingleItem(uploadResult.item);
+
+            // Call the callback function if provided
+            // if (onUploadComplete) {
+            //   onUploadComplete(uploadResult.item);
+            // }
+          } else {
+            this.snackBar.open('Failed to upload recorded video', 'Close', {
+              duration: 3000,
+            });
+          }
+        } catch (error) {
+          // Set the uploading state to false on error
+          this.mediaService.uploading.set(false);
+
+          this.snackBar.open('Failed to upload recorded video', 'Close', {
+            duration: 3000,
+          });
+        }
+      }
+    });
+  }
+
+  /**
+   * Publish a single media item to Nostr
+   * @param item - The media item to publish
+   * @returns Promise<boolean> - True if successfully published
+   */
+  async publishSingleItem(item: MediaItem): Promise<boolean> {
+    // Open the publish dialog
+    const dialogRef = this.dialog.open(MediaPublishDialogComponent, {
+      data: {
+        mediaItem: item,
+      },
+      maxWidth: '650px',
+      width: '100%',
+      panelClass: 'responsive-dialog',
+    });
+
+    const result: MediaPublishOptions | null = await dialogRef.afterClosed().toPromise();
+
+    if (!result) {
+      return false; // User cancelled
+    }
+
+    try {
+      // Show publishing message
+      this.snackBar.open('Publishing to Nostr...', '', { duration: 2000 });
+
+      // Build the event
+      const event = await this.buildMediaEvent(item, result);
+
+      // Sign and publish the event
+      const signedEvent = await this.nostr.signEvent(event);
+      const publishResult = await this.publishService.publish(signedEvent, {
+        useOptimizedRelays: false, // Publish to ALL account relays for media events
+      });
+
+      if (publishResult.success) {
+        this.snackBar.open('Successfully published to Nostr!', 'Close', {
+          duration: 3000,
+        });
+
+        // Navigate to the published event
+        const neventId = nip19.neventEncode({
+          id: signedEvent.id,
+          author: signedEvent.pubkey,
+          kind: signedEvent.kind,
+        });
+        this.router.navigate(['/e', neventId], { state: { event: signedEvent } });
+
+        return true;
+      } else {
+        this.snackBar.open('Failed to publish to some relays', 'Close', {
+          duration: 5000,
+        });
+        return false;
+      }
+    } catch (error) {
+      console.error('Error publishing media:', error);
+      this.snackBar.open('Failed to publish media', 'Close', {
+        duration: 3000,
+      });
+      return false;
+    }
+  }
+
+  /**
+   * Build a media event from a media item and publish options
+   * @param item - The media item
+   * @param options - Publishing options from the dialog
+   * @returns The unsigned event
+   */
+  private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
+    const tags: string[][] = [];
+
+    // Add d-tag for addressable events (kinds 34235, 34236)
+    if ((options.kind === 34235 || options.kind === 34236) && options.dTag) {
+      tags.push(['d', options.dTag]);
+    }
+
+    // Upload thumbnail blob if provided (for videos)
+    let thumbnailUrl = options.thumbnailUrl;
+    const thumbnailUrls: string[] = []; // Collect all thumbnail URLs (main + mirrors)
+    if (options.thumbnailBlob && (options.kind === 21 || options.kind === 22 || options.kind === 34235 || options.kind === 34236)) {
+      try {
+        const thumbnailFile = new File([options.thumbnailBlob], 'thumbnail.jpg', { type: 'image/jpeg' });
+        const uploadResult = await this.mediaService.uploadFile(
+          thumbnailFile,
+          false,
+          this.mediaService.mediaServers()
+        );
+
+        if (uploadResult.status === 'success' && uploadResult.item) {
+          thumbnailUrl = uploadResult.item.url;
+
+          // Collect all thumbnail URLs: main URL + all mirrors (deduplicated)
+          const allUrls = [uploadResult.item.url];
+          if (uploadResult.item.mirrors && uploadResult.item.mirrors.length > 0) {
+            allUrls.push(...uploadResult.item.mirrors);
+          }
+
+          // Deduplicate URLs
+          const uniqueUrls = [...new Set(allUrls)];
+          thumbnailUrls.push(...uniqueUrls);
+        }
+      } catch (error) {
+        console.error('Failed to upload thumbnail during publish:', error);
+      }
+    } else if (thumbnailUrl) {
+      // If thumbnail URL is provided but no blob was uploaded, use just that URL
+      thumbnailUrls.push(thumbnailUrl);
+    }
+
+    // Add title tag if provided
+    if (options.title && options.title.trim().length > 0) {
+      tags.push(['title', options.title]);
+    }
+
+    // Build imeta tag according to NIP-92/94
+    const imetaTag = ['imeta'];
+
+    // Add URL
+    imetaTag.push(`url ${item.url}`);
+
+    // Add MIME type
+    if (item.type) {
+      imetaTag.push(`m ${item.type}`);
+    }
+
+    // Add SHA-256 hash
+    imetaTag.push(`x ${item.sha256}`);
+
+    // Add file size
+    if (item.size) {
+      imetaTag.push(`size ${item.size}`);
+    }
+
+    // Add alt text if provided
+    if (options.alt) {
+      imetaTag.push(`alt ${options.alt}`);
+    }
+
+    // Add dimensions if provided (for images or video thumbnails)
+    if (options.imageDimensions && options.kind === 20) {
+      imetaTag.push(`dim ${options.imageDimensions.width}x${options.imageDimensions.height}`);
+    }
+
+    // Add blurhash for images if provided
+    if (options.blurhash && options.kind === 20) {
+      imetaTag.push(`blurhash ${options.blurhash}`);
+    }
+
+    // For videos, add all thumbnail image URLs if provided (NIP-71)
+    if (thumbnailUrls.length > 0 && (options.kind === 21 || options.kind === 22 || options.kind === 34235 || options.kind === 34236)) {
+      thumbnailUrls.forEach(url => {
+        imetaTag.push(`image ${url}`);
+      });
+
+      // Add thumbnail dimensions if available
+      if (options.thumbnailDimensions) {
+        imetaTag.push(`dim ${options.thumbnailDimensions.width}x${options.thumbnailDimensions.height}`);
+      }
+    }
+
+    // For videos, add blurhash if provided (NIP-71)
+    if (options.blurhash && (options.kind === 21 || options.kind === 22 || options.kind === 34235 || options.kind === 34236)) {
+      imetaTag.push(`blurhash ${options.blurhash}`);
+    }
+
+    // For videos, add duration if provided
+    if (options.duration !== undefined && (options.kind === 21 || options.kind === 22 || options.kind === 34235 || options.kind === 34236)) {
+      imetaTag.push(`duration ${options.duration}`);
+    }
+
+    // Add mirror URLs as fallback
+    if (item.mirrors && item.mirrors.length > 0) {
+      item.mirrors.forEach(mirrorUrl => {
+        imetaTag.push(`fallback ${mirrorUrl}`);
+      });
+    }
+
+    tags.push(imetaTag);
+
+    // Add published_at timestamp
+    tags.push(['published_at', Math.floor(Date.now() / 1000).toString()]);
+
+    // Add alt tag separately if provided (for accessibility)
+    if (options.alt) {
+      tags.push(['alt', options.alt]);
+    }
+
+    // Add content warning if provided
+    if (options.contentWarning) {
+      tags.push(['content-warning', options.contentWarning]);
+    }
+
+    // Add hashtags
+    options.hashtags.forEach(tag => {
+      tags.push(['t', tag]);
+    });
+
+    // Add location if provided
+    if (options.location) {
+      tags.push(['location', options.location]);
+    }
+
+    // Add geohash if provided
+    if (options.geohash) {
+      tags.push(['g', options.geohash]);
+    }
+
+    // Add origin tag for addressable events (NIP-71)
+    if ((options.kind === 34235 || options.kind === 34236) && options.origin) {
+      const originTag = ['origin', options.origin.platform];
+      if (options.origin.externalId) {
+        originTag.push(options.origin.externalId);
+      }
+      if (options.origin.url) {
+        originTag.push(options.origin.url);
+      }
+      tags.push(originTag);
+    }
+
+    // Add MIME type as m tag for filtering (for images)
+    if (item.type && options.kind === 20) {
+      tags.push(['m', item.type]);
+    }
+
+    // Add x tag with hash for queryability
+    tags.push(['x', item.sha256]);
+
+    // Add client tag (Nostria)
+    tags.push(['client', 'nostria']);
+
+    // Create the event
+    const event = this.nostr.createEvent(
+      options.kind,
+      options.content,
+      tags
+    );
+
+    return event;
   }
 
   /**
