@@ -20,6 +20,7 @@ import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confi
 import { RouterModule } from '@angular/router';
 import { FavoritesService } from '../../../services/favorites.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 
 @Component({
   selector: 'app-algorithm',
@@ -39,6 +40,7 @@ import { AccountStateService } from '../../../services/account-state.service';
     MatMenuModule,
     MatTabsModule,
     RouterModule,
+    UserProfileComponent,
   ],
   templateUrl: './algorithm.html',
   styleUrl: './algorithm.scss',
@@ -68,8 +70,7 @@ export class AlgorithmComponent implements OnInit {
   // Table columns
   displayedColumns = [
     'position',
-    'pubkey',
-    'name',
+    'user',
     'engagementScore',
     'viewed',
     'liked',
