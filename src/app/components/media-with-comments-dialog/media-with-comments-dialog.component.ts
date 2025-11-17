@@ -80,7 +80,7 @@ export class MediaWithCommentsDialogComponent {
 
   isVideo = computed(() => {
     const ev = this.event();
-    return ev.kind === 21 || ev.kind === 22; // NIP-71 Video events
+    return ev.kind === 21 || ev.kind === 22 || ev.kind === 34235 || ev.kind === 34236; // NIP-71 Video events (21, 22) and Addressable Video events (34235, 34236)
   });
 
   // Photo data
@@ -290,7 +290,7 @@ export class MediaWithCommentsDialogComponent {
   }
 
   private getVideoData(event: Event): VideoData | null {
-    if (event.kind === 21 || event.kind === 22) {
+    if (event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236) {
       const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
       if (imetaTags.length === 0) return null;
 
