@@ -280,9 +280,15 @@
 
 .username-prompt {
   margin-top: 16px;
+  padding-bottom: 16px;
 }
 
 .username-prompt-text {
   margin-bottom: 12px;
   color: var(--mat-sys-on-surface-variant);
+}
+
+mat-list-item:has(.username-prompt) {
+  height: auto !important;
+  min-height: 120px;
 }

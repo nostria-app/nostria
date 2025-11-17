@@ -90,6 +90,16 @@
   .metrics-table {
     width: 100%;
 
+    .mat-mdc-cell,
+    .mat-mdc-header-cell {
+      padding: 8px 12px;
+    }
+
+    .mat-mdc-row {
+      min-height: 48px;
+      height: 48px;
+    }
+
     .favorite-icon {
       color: var(--mat-sys-color-primary);
       font-size: 18px;
@@ -99,10 +109,29 @@
       display: flex;
       align-items: center;
       gap: 8px;
+      max-width: 250px;
 
       app-user-profile {
         flex: 1;
         min-width: 0;
+        max-height: 48px;
+        overflow: hidden;
+        
+        ::ng-deep .user-profile {
+          max-height: 48px;
+          overflow: hidden;
+        }
+        
+        ::ng-deep .user-profile-content {
+          padding: 4px 0;
+        }
+        
+        ::ng-deep .user-profile-display-name {
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          max-width: 150px;
+        }
       }
 
       mat-chip {
