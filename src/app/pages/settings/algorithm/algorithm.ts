@@ -67,6 +67,28 @@ export class AlgorithmComponent implements OnInit {
   // Computed signal for template access to favorites
   favoriteUsers = computed(() => this.favoritesService.favorites());
 
+  // Computed signal to get favorite users with their metrics for table display
+  favoriteUsersData = computed(() => {
+    const favorites = this.favoritesService.favorites();
+    const allMetrics = this.allMetrics();
+
+    return favorites.map(pubkey => {
+      const metric = allMetrics.find(m => m.pubkey === pubkey);
+      return metric || {
+        pubkey,
+        viewed: 0,
+        liked: 0,
+        replied: 0,
+        reposted: 0,
+        quoted: 0,
+        zapped: 0,
+        timeSpent: 0,
+        lastInteraction: 0,
+        engagementScore: 0,
+      };
+    });
+  });
+
   // Table columns
   displayedColumns = [
     'position',
@@ -75,6 +97,26 @@ export class AlgorithmComponent implements OnInit {
     'viewed',
     'liked',
     'timeSpent',
+    'actions',
+  ];
+
+  displayedColumnsRecent = [
+    'position',
+    'user',
+    'lastInteraction',
+    'viewed',
+    'liked',
+    'timeSpent',
+    'actions',
+  ];
+
+  displayedColumnsDeclining = [
+    'position',
+    'user',
+    'engagementScore',
+    'lastInteraction',
+    'viewed',
+    'liked',
     'actions',
   ];
 
