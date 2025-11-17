@@ -151,7 +151,7 @@ export class MetaService {
     this.updateSocialMetadata({
       title: title,
       description: description,
-      image: imageUrl || 'https://nostria.app/icons/icon-512x512.png', // Use extracted image or fallback
+      image: imageUrl || 'https://nostria.app/assets/nostria-social.jpg', // Use extracted image or fallback
       url: targetUrl,
     });
 
