@@ -15,6 +15,7 @@ export interface ColumnDefinition {
   source?: 'following' | 'public' | 'custom' | 'for-you';
   customUsers?: string[]; // Array of pubkeys for custom user selection
   customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
+  customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
   relayConfig: 'account' | 'custom';
   customRelays?: string[];
   filters?: Record<string, unknown>;

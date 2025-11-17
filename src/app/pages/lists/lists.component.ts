@@ -417,14 +417,14 @@ export class ListsComponent implements OnInit {
     this.loading.set(true);
 
     // Set a maximum timeout for the entire load operation (30 seconds)
-    const timeoutId = setTimeout(() => {
-      if (this.isLoadingLists) {
-        this.logger.error('[ListsComponent] Load operation timed out after 30 seconds');
-        this.isLoadingLists = false;
-        this.loading.set(false);
-        this.snackBar.open('Failed to load lists (timeout)', 'Close', { duration: 5000 });
-      }
-    }, 30000);
+    // const timeoutId = setTimeout(() => {
+    //   if (this.isLoadingLists) {
+    //     this.logger.error('[ListsComponent] Load operation timed out after 30 seconds');
+    //     this.isLoadingLists = false;
+    //     this.loading.set(false);
+    //     this.snackBar.open('Failed to load lists (timeout)', 'Close', { duration: 5000 });
+    //   }
+    // }, 30000);
 
     try {
       // Load standard lists (10000 series)
@@ -442,7 +442,7 @@ export class ListsComponent implements OnInit {
       this.logger.error('[ListsComponent] Error loading lists', error);
       this.snackBar.open('Failed to load lists', 'Close', { duration: 3000 });
     } finally {
-      clearTimeout(timeoutId); // Clear the timeout if we complete normally
+      // clearTimeout(timeoutId); // Clear the timeout if we complete normally
       this.logger.info('[ListsComponent] Setting loading to false');
       this.isLoadingLists = false;
       this.loading.set(false);
