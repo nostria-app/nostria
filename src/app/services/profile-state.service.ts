@@ -366,6 +366,10 @@ export class ProfileStateService {
       }
     }
 
+    // Load additional media items separately to ensure we have enough for the media tab
+    // This runs in parallel with the main query to optimize loading time
+    this.loadInitialMedia(pubkey);
+
     // this.relay?.subscribeEose(
     //   pubkey,
     //   {
@@ -771,6 +775,52 @@ export class ProfileStateService {
   }
 
   /**
+   * Load initial media events separately to ensure sufficient content for media tab
+   * @param pubkey The user's public key
+   */
+  private async loadInitialMedia(pubkey: string): Promise<void> {
+    try {
+      this.logger.debug(`Loading initial media for ${pubkey}`);
+
+      // Query media events with a higher limit
+      const mediaEvents = await this.userRelayService.query(pubkey, {
+        kinds: [20, 21, 22, 34235, 34236], // Picture (20), Video (21), Short Video (22), Addressable Video (34235), Addressable Short Video (34236)
+        authors: [pubkey],
+        limit: 30, // Load 30 media items initially
+      });
+
+      // Check if profile was switched during the query
+      if (this.currentlyLoadingPubkey() !== pubkey || this.pubkey() !== pubkey) {
+        this.logger.info(`Profile switched during loadInitialMedia. Discarding ${mediaEvents?.length || 0} results for: ${pubkey}`);
+        return;
+      }
+
+      // Process all returned events
+      for (const event of mediaEvents || []) {
+        if (event.kind === 20 || event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236) {
+          const record: NostrRecord = {
+            event: event,
+            data: event.content,
+          };
+
+          // Add to media with duplicate check
+          this.media.update(existing => {
+            const exists = existing.some(m => m.event.id === event.id);
+            if (!exists) {
+              return [...existing, record];
+            }
+            return existing;
+          });
+        }
+      }
+
+      this.logger.debug(`Loaded ${mediaEvents?.length || 0} initial media items`);
+    } catch (error) {
+      this.logger.error('Failed to load initial media:', error);
+    }
+  }
+
+  /**
    * Load more media events (kinds 20, 21, 22, 34235, 34236) for the profile
    * @param beforeTimestamp Optional timestamp to load events before. If not provided, uses the oldest media event timestamp
    * @returns Array of newly loaded media records
@@ -802,7 +852,7 @@ export class ProfileStateService {
         kinds: [20, 21, 22, 34235, 34236], // Picture (20), Video (21), Short Video (22), Addressable Video (34235), Addressable Short Video (34236)
         authors: [pubkey],
         until: oldestTimestamp,
-        limit: 15, // Load 15 more media items at a time
+        limit: 30, // Load 30 more media items at a time for smoother scrolling
       });
 
       // Check if profile was switched during the query
