@@ -200,7 +200,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
           metaService.updateSocialMetadata({
             title,
             description,
-            image: image || '/icons/icon-512x512.png',
+            image: image || '/assets/nostria-social.jpg',
             url: `https://nostria.app/stream/${encodedEvent}`,
           });
 
@@ -217,7 +217,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
       metaService.updateSocialMetadata({
         title: 'Live Stream - Nostria',
         description: 'Watch live streams on Nostria, your decentralized social network',
-        image: '/icons/icon-512x512.png',
+        image: '/assets/nostria-social.jpg',
         url: `https://nostria.app/stream/${encodedEvent}`,
       });
 
@@ -248,7 +248,7 @@ export const streamResolver: ResolveFn<StreamData | null> = async (route: Activa
     metaService.updateSocialMetadata({
       title,
       description,
-      image: image || '/icons/icon-512x512.png',
+      image: image || '/assets/nostria-social.jpg',
       url: `https://nostria.app/stream/${encodedEvent}`,
     });
 

@@ -306,7 +306,7 @@ export class StreamViewerComponent implements OnInit {
     this.metaService.updateSocialMetadata({
       title,
       description,
-      image: image || '/icons/icon-512x512.png',
+      image: image || '/assets/nostria-social.jpg',
       url: `https://nostria.app/stream/${encodedEvent}`,
     });
 
