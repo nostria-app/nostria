@@ -39,7 +39,7 @@ export class AudioPlayerComponent {
   // Computed values for display
   currentTime = computed(() => this.media.time);
   duration = computed(() => this.media.duration);
-  isPodcast = computed(() => this.media.current?.type === 'Podcast');
+  isPodcast = computed(() => this.media.current()?.type === 'Podcast');
 
   formatLabel(value: number): string {
     const hours = Math.floor(value / 3600);

@@ -32,8 +32,8 @@ export class MediaPlayerComponent {
   footer = input<boolean>(false);
 
   // Computed signals to determine which player to show
-  isLiveStream = computed(() => this.media.current?.type === 'HLS' && this.media.current?.isLiveStream);
-  isYouTube = computed(() => this.media.current?.type === 'YouTube');
-  isVideo = computed(() => this.media.current?.type === 'Video' || (this.media.current?.type === 'HLS' && !this.media.current?.isLiveStream));
-  isAudio = computed(() => this.media.current?.type === 'Music' || this.media.current?.type === 'Podcast');
+  isLiveStream = computed(() => this.media.current()?.type === 'HLS' && this.media.current()?.isLiveStream);
+  isYouTube = computed(() => this.media.current()?.type === 'YouTube');
+  isVideo = computed(() => this.media.current()?.type === 'Video' || (this.media.current()?.type === 'HLS' && !this.media.current()?.isLiveStream));
+  isAudio = computed(() => this.media.current()?.type === 'Music' || this.media.current()?.type === 'Podcast');
 }

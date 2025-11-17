@@ -48,18 +48,23 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   videoElement?: ElementRef<HTMLVideoElement>;
 
   // Live stream metadata
-  streamTitle = computed(() => this.media.current?.title || 'Live Stream');
+  streamTitle = computed(() => this.media.current()?.title || 'Live Stream');
   streamStatus = computed(() => {
-    const event = this.media.current?.liveEventData;
+    const event = this.media.current()?.liveEventData;
     if (!event) return 'live';
-    const statusTag = event.tags.find(tag => tag[0] === 'status');
+    const statusTag = event.tags.find((tag: any) => tag[0] === 'status');
     return statusTag?.[1] || 'live';
   });
 
-  liveEvent = computed(() => this.media.current?.liveEventData);
+  liveEvent = computed(() => this.media.current()?.liveEventData);
 
-  // Viewer count (placeholder - would need to be implemented in service)
-  viewerCount = signal(0);
+  // Viewer count from live event
+  viewerCount = computed(() => {
+    const event = this.liveEvent();
+    if (!event) return 0;
+    const participantsTag = event.tags.find((tag: any) => tag[0] === 'current_participants');
+    return participantsTag?.[1] ? parseInt(participantsTag[1], 10) : 0;
+  });
 
   constructor() {
     if (!this.utilities.isBrowser()) {
@@ -87,11 +92,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   }
 
   toggleFullscreen(): void {
-    if (this.layout.fullscreenMediaPlayer()) {
-      this.media.exitFullscreen();
-    } else {
-      this.media.fullscreen();
-    }
+    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
   }
 
   toggleChatVisibility(): void {

@@ -3,12 +3,12 @@
   <!-- Footer mode - full player with album art -->
   <div class="audio-player-footer">
     <div class="media-info">
-      @if (media.current?.artwork) {
-      <img class="album-art" [src]="media.current?.artwork" alt="{{ media.current?.title || 'Album artwork' }}" />
+      @if (media.current()?.artwork) {
+      <img class="album-art" [src]="media.current()?.artwork" alt="{{ media.current()?.title || 'Album artwork' }}" />
       }
       <div class="media-info-text">
-        <div class="media-title">{{ media.current?.title }}</div>
-        <div class="media-artist">{{ media.current?.artist }}</div>
+        <div class="media-title">{{ media.current()?.title }}</div>
+        <div class="media-artist">{{ media.current()?.artist }}</div>
       </div>
     </div>
 

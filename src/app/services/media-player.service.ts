@@ -40,7 +40,7 @@ export class MediaPlayerService implements OnInitialized {
   app = inject(ApplicationService);
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
-  current?: MediaItem;
+  current = signal<MediaItem | undefined>(undefined);
   // make index a signal-backed property so computed signals can react to changes
   private _index = signal<number>(0);
   get index(): number {
@@ -300,7 +300,7 @@ export class MediaPlayerService implements OnInitialized {
 
     // Reset all state
     this.index = -1;
-    this.current = undefined;
+    this.current.set(undefined);
     this.videoMode.set(false);
     this.youtubeUrl.set(undefined);
     this.videoUrl.set(undefined);
@@ -502,9 +502,10 @@ export class MediaPlayerService implements OnInitialized {
       console.log('Video element registered for current video');
 
       // If we have a current video/HLS item that's waiting for the video element, set it up now
-      if (this.current && (this.current.type === 'Video' || this.current.type === 'HLS')) {
+      const currentItem = this.current();
+      if (currentItem && (currentItem.type === 'Video' || currentItem.type === 'HLS')) {
         console.log('Setting up deferred video/HLS playback');
-        this.setupVideoPlayback(this.current);
+        this.setupVideoPlayback(currentItem);
       }
     }
   }
@@ -569,7 +570,7 @@ export class MediaPlayerService implements OnInitialized {
     // Clean up previous media before starting new one
     this.cleanupCurrentMedia();
 
-    this.current = file;
+    this.current.set(file);
 
     // Reset video playback initialization flag for new media
     this.videoPlaybackInitialized = false;
@@ -800,14 +801,15 @@ export class MediaPlayerService implements OnInitialized {
 
   async resume() {
     // For live streams, restart instead of resuming
-    if (this.current?.isLiveStream) {
+    const currentItem = this.current();
+    if (currentItem?.isLiveStream) {
       this.start();
       return;
     }
 
     // Normal resume behavior for non-live content
     if (this.videoMode()) {
-      if (this.current?.type === 'Video' && this.videoElement) {
+      if (currentItem?.type === 'Video' && this.videoElement) {
         try {
           await this.videoElement.play();
         } catch (err) {
@@ -836,9 +838,10 @@ export class MediaPlayerService implements OnInitialized {
 
   pause() {
     // For live streams, stop playback instead of pausing
-    if (this.current?.isLiveStream) {
+    const currentItem = this.current();
+    if (currentItem?.isLiveStream) {
       if (this.videoMode()) {
-        if (this.current?.type === 'Video' || this.current?.type === 'HLS') {
+        if (currentItem.type === 'Video' || currentItem.type === 'HLS') {
           if (this.videoElement) {
             this.videoElement.pause();
             this.videoElement.currentTime = 0;
@@ -860,7 +863,7 @@ export class MediaPlayerService implements OnInitialized {
 
     // Normal pause behavior for non-live content
     if (this.videoMode()) {
-      if (this.current?.type === 'Video' && this.videoElement) {
+      if (currentItem?.type === 'Video' && this.videoElement) {
         this.videoElement.pause();
       } else {
         this.pausedYouTubeUrl.set(this.youtubeUrl());
@@ -964,9 +967,10 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   get paused() {
+    const currentItem = this.current();
     if (this.videoMode()) {
       // For Video and HLS live streams, check the video element
-      if ((this.current?.type === 'Video' || this.current?.isLiveStream) && this.videoElement) {
+      if ((currentItem?.type === 'Video' || currentItem?.isLiveStream) && this.videoElement) {
         return this.videoElement.paused;
       } else {
         return this.youtubeUrl() == null;
@@ -1078,7 +1082,7 @@ export class MediaPlayerService implements OnInitialized {
 
     // Reset all state
     this.index = -1;
-    this.current = undefined;
+    this.current.set(undefined);
     this.videoMode.set(false);
     this.youtubeUrl.set(undefined);
     this.videoUrl.set(undefined);

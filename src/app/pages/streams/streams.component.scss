@@ -104,7 +104,7 @@
 
 .streams-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(400px, 100%), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
   gap: 1.5rem;
   padding: 0.5rem 0;
 
@@ -118,6 +118,7 @@
   flex-direction: column;
   min-height: 500px;
   overflow: hidden;
+  width: 100%;
 
   mat-card-content {
     padding: 1rem;
