@@ -1,4 +1,4 @@
-import { Component, computed, effect, input, signal, inject } from '@angular/core';
+import { Component, computed, effect, input, signal, inject, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -29,7 +29,7 @@ interface VideoData {
   templateUrl: './video-event.component.html',
   styleUrl: './video-event.component.scss',
 })
-export class VideoEventComponent {
+export class VideoEventComponent implements AfterViewInit, OnDestroy {
   event = input.required<Event>();
   hideComments = input<boolean>(false);
   showOverlay = input<boolean>(false);
@@ -37,11 +37,17 @@ export class VideoEventComponent {
   allMediaEvents = input<Event[]>([]);
   mediaEventIndex = input<number | undefined>(undefined);
 
+  @ViewChild('videoPlayer') videoPlayerRef?: ElementRef<HTMLVideoElement>;
+
   private router = inject(Router);
   private dialog = inject(MatDialog);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
+
+  // Viewport visibility
+  private intersectionObserver?: IntersectionObserver;
+  isInViewport = signal(false);
 
   // Media privacy state
   isRevealed = signal(false);
@@ -54,7 +60,8 @@ export class VideoEventComponent {
 
   shouldAutoPlay = computed(() => {
     const autoPlayEnabled = this.settings.settings()?.autoPlayShortForm ?? true;
-    return this.isShortFormVideo() && autoPlayEnabled;
+    const inViewport = this.isInViewport();
+    return this.isShortFormVideo() && autoPlayEnabled && inViewport;
   });
 
   shouldRepeat = computed(() => {
@@ -76,6 +83,66 @@ export class VideoEventComponent {
         this.generateBlurhashForThumbnail(videoInfo.thumbnail);
       }
     });
+
+    // Handle play/pause based on viewport visibility and auto-play settings
+    effect(() => {
+      const shouldPlay = this.shouldAutoPlay();
+      const videoElement = this.videoPlayerRef?.nativeElement;
+      const isCurrentlyExpanded = this.isExpanded();
+      const isBlurred = this.shouldBlurMedia();
+      const inOverlayMode = this.showOverlay();
+
+      if (!videoElement || isBlurred || inOverlayMode) return;
+
+      if (shouldPlay && !isCurrentlyExpanded) {
+        // Auto-expand when entering viewport
+        this.isExpanded.set(true);
+      } else if (!shouldPlay && isCurrentlyExpanded && this.isShortFormVideo()) {
+        // Pause video when leaving viewport (only for short form videos)
+        videoElement.pause();
+      }
+
+      // Play/pause based on viewport visibility
+      if (isCurrentlyExpanded && this.isShortFormVideo()) {
+        if (shouldPlay) {
+          videoElement.play().catch(() => {
+            // Ignore errors (e.g., user hasn't interacted with page yet)
+          });
+        } else {
+          videoElement.pause();
+        }
+      }
+    });
+  }
+
+  ngAfterViewInit(): void {
+    // Set up IntersectionObserver to detect when video enters/leaves viewport
+    if (typeof IntersectionObserver !== 'undefined') {
+      this.intersectionObserver = new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            // Consider video in viewport if at least 50% is visible
+            this.isInViewport.set(entry.isIntersecting && entry.intersectionRatio >= 0.5);
+          });
+        },
+        {
+          threshold: [0, 0.5, 1],
+          rootMargin: '0px',
+        }
+      );
+
+      // Observe the component's host element
+      const hostElement = this.videoPlayerRef?.nativeElement.closest('app-video-event');
+      if (hostElement) {
+        this.intersectionObserver.observe(hostElement);
+      }
+    }
+  }
+
+  ngOnDestroy(): void {
+    if (this.intersectionObserver) {
+      this.intersectionObserver.disconnect();
+    }
   }
 
   shouldBlurMedia = computed(() => {

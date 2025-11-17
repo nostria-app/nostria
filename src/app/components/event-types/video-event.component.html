@@ -55,7 +55,7 @@
   } @else {
   <!-- Video Player (Expanded State) -->
   <div class="video-player-container">
-    <video controls class="video-player" [autoplay]="shouldAutoPlay()" [loop]="shouldRepeat()"
+    <video #videoPlayer controls class="video-player" [autoplay]="shouldAutoPlay()" [loop]="shouldRepeat()"
       [poster]="videoInfo.thumbnail || blurhashUrl || undefined">
       <source [src]="videoInfo.url" [type]="videoMimeType()" />
       Your browser does not support the video tag.
