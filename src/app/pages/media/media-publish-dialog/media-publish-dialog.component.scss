@@ -222,6 +222,70 @@
   }
 }
 
+.custom-relays-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  background: var(--mat-sys-surface-container-low);
+  border-radius: 8px;
+
+  h3 {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+
+  .preset-relay-suggestion {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px;
+    background: var(--mat-sys-primary-container);
+    border-radius: 6px;
+    border: 1px solid var(--mat-sys-outline-variant);
+
+    .suggestion-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.875rem;
+      color: var(--mat-sys-on-primary-container);
+      font-weight: 500;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    button {
+      align-self: flex-start;
+    }
+  }
+
+  .add-relay-form {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+
+    .relay-input {
+      flex: 1;
+    }
+
+    button {
+      margin-top: 8px;
+    }
+  }
+
+  .custom-relays-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+}
+
 mat-dialog-content {
   padding: 20px 24px;
   max-height: 70vh;

@@ -36,6 +36,7 @@ export interface MediaPublishOptions {
   imageDimensions?: { width: number; height: number }; // Image dimensions for pictures
   dTag?: string; // For addressable events (kinds 34235, 34236) - unique identifier
   origin?: { platform: string; externalId?: string; url?: string }; // For imported content (NIP-71)
+  customRelays?: string[]; // Additional custom relays to publish to
 }
 
 @Component({
@@ -92,6 +93,10 @@ export class MediaPublishDialogComponent {
   extractingThumbnail = signal(false);
   thumbnailExtractOffset = signal(0); // Track how many times extraction was called
 
+  // Custom relays
+  customRelays = signal<string[]>([]);
+  customRelayInput = signal('');
+
   // UI state
   hashtagInput = signal('');
   publishing = signal(false);
@@ -116,6 +121,10 @@ export class MediaPublishDialogComponent {
 
   isVideo = (): boolean => {
     return this.data.mediaItem.type?.startsWith('video') || false;
+  };
+
+  isShortFormVideo = (): boolean => {
+    return this.kind() === 22 || this.kind() === 34236;
   };
 
   canPublish = (): boolean => {
@@ -175,6 +184,42 @@ export class MediaPublishDialogComponent {
     if (event.key === 'Enter') {
       event.preventDefault();
       this.addHashtag();
+    }
+  }
+
+  addCustomRelay(): void {
+    const relay = this.customRelayInput().trim();
+    if (!relay) return;
+
+    // Normalize relay URL
+    let normalizedRelay = relay;
+    if (!normalizedRelay.startsWith('wss://') && !normalizedRelay.startsWith('ws://')) {
+      normalizedRelay = 'wss://' + normalizedRelay;
+    }
+
+    // Add trailing slash if there's no path component
+    try {
+      const url = new URL(normalizedRelay);
+      if (url.pathname === '') {
+        normalizedRelay = normalizedRelay + '/';
+      }
+    } catch {
+      // Invalid URL, skip normalization
+    }
+
+    if (!this.customRelays().includes(normalizedRelay)) {
+      this.customRelays.set([...this.customRelays(), normalizedRelay]);
+      this.customRelayInput.set('');
+    }
+  }
+
+  removeCustomRelay(relay: string): void {
+    this.customRelays.set(this.customRelays().filter(r => r !== relay));
+  }
+
+  addPresetRelay(relay: string): void {
+    if (!this.customRelays().includes(relay)) {
+      this.customRelays.set([...this.customRelays(), relay]);
     }
   }
 
@@ -389,6 +434,11 @@ export class MediaPublishDialogComponent {
           options.origin.url = this.originUrl().trim();
         }
       }
+    }
+
+    // Include custom relays if any are added
+    if (this.customRelays().length > 0) {
+      options.customRelays = this.customRelays();
     }
 
     this.dialogRef.close(options);

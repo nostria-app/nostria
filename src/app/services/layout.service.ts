@@ -1057,9 +1057,18 @@ export class LayoutService implements OnDestroy {
 
       // Sign and publish the event
       const signedEvent = await this.nostr.signEvent(event);
-      const publishResult = await this.publishService.publish(signedEvent, {
+
+      // Prepare publish options with custom relays if provided
+      const publishOptions: { useOptimizedRelays: boolean; customRelays?: string[] } = {
         useOptimizedRelays: false, // Publish to ALL account relays for media events
-      });
+      };
+
+      // Add custom relays if provided
+      if (result.customRelays && result.customRelays.length > 0) {
+        publishOptions.customRelays = result.customRelays;
+      }
+
+      const publishResult = await this.publishService.publish(signedEvent, publishOptions);
 
       if (publishResult.success) {
         this.snackBar.open('Successfully published to Nostr!', 'Close', {
