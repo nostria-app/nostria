@@ -25,12 +25,12 @@
 .live-thumbnail-container {
   position: relative;
   width: 100%;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: 8px;
   background-color: var(--mat-card-background-color);
 
   &.fallback {
-    min-height: 200px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -39,7 +39,7 @@
 
 .fallback-thumbnail {
   width: 100%;
-  height: 200px;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,55 +72,68 @@
   bottom: 12px;
   left: 12px;
   display: flex;
-  gap: 8px;
+  // gap: 8px;
   align-items: center;
 
   app-user-profile {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    overflow: hidden;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-    flex-shrink: 0;
+    // width: 40px;
+    // height: 40px;
+    // border-radius: 50%;
+    // overflow: hidden;
+    // box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    // flex-shrink: 0;
 
-    ::ng-deep .user-profile-avatar-container {
-      width: 100% !important;
-      height: 100% !important;
-      display: block;
-    }
+    // ::ng-deep .user-profile-container {
+    //   width: 100% !important;
+    //   height: 100% !important;
+    //   display: block !important;
+    //   background: transparent !important;
+    //   border: none !important;
+    //   padding: 0 !important;
+    //   margin: 0 !important;
+    // }
 
-    ::ng-deep .user-avatar,
-    ::ng-deep .default-user-avatar {
-      width: 100% !important;
-      height: 100% !important;
-      object-fit: cover;
-      display: block;
-    }
+    // ::ng-deep .user-profile-avatar-container {
+    //   width: 100% !important;
+    //   height: 100% !important;
+    //   display: block !important;
+    //   background: transparent !important;
+    //   border: none !important;
+    //   padding: 0 !important;
+    //   margin: 0 !important;
+    // }
+
+    // ::ng-deep .user-avatar,
+    // ::ng-deep .default-user-avatar {
+    //   width: 100% !important;
+    //   height: 100% !important;
+    //   object-fit: cover;
+    //   display: block;
+    //   border: none !important;
+    // }
   }
 
-  .more-participants {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
-    font-size: 0.75rem;
-    font-weight: 600;
-    border: 2px solid white;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-  }
+  // .more-participants {
+  //   display: flex;
+  //   align-items: center;
+  //   justify-content: center;
+  //   width: 40px;
+  //   height: 40px;
+  //   border-radius: 50%;
+  //   background: rgba(0, 0, 0, 0.7);
+  //   color: white;
+  //   font-size: 0.75rem;
+  //   font-weight: 600;
+  //   border: 2px solid white;
+  //   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  // }
 }
 
 .live-thumbnail {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
   object-fit: cover;
-  max-height: 400px;
 }
 
 .status-badge {
