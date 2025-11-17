@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { Event, kinds, nip19 } from 'nostr-tools';
+import { Event, kinds, nip19, Filter } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { DataService } from './data.service';
 import { UtilitiesService } from './utilities.service';
@@ -12,6 +12,7 @@ import { Cache } from './cache';
 import { UserDataService } from './user-data.service';
 import { RelaysService } from './relays/relays';
 import { SubscriptionCacheService } from './subscription-cache.service';
+import { RelayPoolService } from './relays/relay-pool';
 import {
   NoteEditorDialogComponent,
   NoteEditorDialogData,
@@ -93,6 +94,7 @@ export class EventService {
   private readonly relays = inject(RelaysService);
   private readonly subscriptionCache = inject(SubscriptionCacheService);
   private readonly accountState = inject(AccountStateService);
+  private readonly relayPool = inject(RelayPoolService);
 
   /**
    * Parse event tags to extract thread information
@@ -302,11 +304,81 @@ export class EventService {
   }
 
   /**
+   * Attempt deep resolution by searching batches of observed relays.
+   * This is a fallback mechanism when normal event loading fails.
+   * @param eventId The hex event ID to search for
+   * @param onProgress Optional callback to report progress (currentBatch, totalBatches, relayUrls)
+   * @returns The found event or null
+   */
+  async loadEventWithDeepResolution(
+    eventId: string,
+    onProgress?: (currentBatch: number, totalBatches: number, relayUrls: string[]) => void
+  ): Promise<Event | null> {
+    debugger;
+    const BATCH_SIZE = 10;
+
+    // Get observed relays sorted by events received (most active first)
+    const observedRelays = await this.relays.getObservedRelaysSorted('eventsReceived');
+
+    if (observedRelays.length === 0) {
+      this.logger.info('[Deep Resolution] No observed relays available');
+      return null;
+    }
+
+    // Extract just the URLs
+    const relayUrls = observedRelays.map(r => r.url);
+
+    // Calculate number of batches
+    const totalBatches = Math.ceil(relayUrls.length / BATCH_SIZE);
+
+    this.logger.info(`[Deep Resolution] Starting deep resolution for event ${eventId}`, {
+      totalRelays: relayUrls.length,
+      batchSize: BATCH_SIZE,
+      totalBatches,
+    });
+
+    // Process in batches
+    for (let i = 0; i < totalBatches; i++) {
+      const start = i * BATCH_SIZE;
+      const end = Math.min(start + BATCH_SIZE, relayUrls.length);
+      const batchRelays = relayUrls.slice(start, end);
+
+      this.logger.info(`[Deep Resolution] Searching batch ${i + 1}/${totalBatches}`, {
+        relays: batchRelays,
+      });
+
+      // Report progress
+      if (onProgress) {
+        onProgress(i + 1, totalBatches, batchRelays);
+      }
+
+      try {
+        // Query this batch of relays
+        const filter: Filter = { ids: [eventId] };
+        const events = await this.relayPool.query(batchRelays, filter, 3000);
+
+        if (events && events.length > 0) {
+          this.logger.info(`[Deep Resolution] Event found in batch ${i + 1}/${totalBatches}!`, {
+            eventId: events[0].id,
+            relays: batchRelays,
+          });
+          return events[0];
+        }
+      } catch (error) {
+        this.logger.error(`[Deep Resolution] Error querying batch ${i + 1}:`, error);
+        // Continue to next batch even if this one fails
+      }
+    }
+
+    this.logger.info('[Deep Resolution] Event not found after searching all batches');
+    return null;
+  }
+
+  /**
    * Load a single event by ID or nevent using outbox model.
    */
   async loadEvent(nevent: string, item?: EventData): Promise<Event | null> {
     // this.logger.info('loadEvent called with nevent:', nevent);
-
     // Check if the input is in addressable event format: kind:pubkey:d-tag
     // This is used for parameterized replaceable events (kinds 30000-39999) like live events (30311)
     const addressableEventPattern = /^(\d+):([0-9a-f]{64}):(.+)$/;
@@ -371,14 +443,16 @@ export class EventService {
       return null;
     }
 
-    // Handle regular events (nevent)
-    if (decoded.type !== 'nevent') {
+    // Handle regular events (nevent or note)
+    if (decoded.type !== 'nevent' && decoded.type !== 'note') {
       this.logger.error('Unexpected decoded type:', decoded.type);
       return null;
     }
 
-    const hex = decoded.data.id;
-    const author = decoded.data.author;
+    // For 'note' type, decoded.data is just the hex string
+    // For 'nevent' type, decoded.data is an object with id and author
+    const hex = decoded.type === 'note' ? decoded.data : decoded.data.id;
+    const author = decoded.type === 'nevent' ? decoded.data.author : null;
     // this.logger.info('Decoded event ID:', hex, 'Author:', author);
 
     // Check if we have cached event in item
@@ -413,6 +487,15 @@ export class EventService {
         } catch (error) {
           this.logger.error('Error loading event from data service:', error);
         }
+      }
+
+      // If event not found through normal means, attempt deep resolution
+      this.logger.info('[Deep Resolution] Event not found through normal channels, attempting deep resolution for:', hex);
+      const foundEvent = await this.loadEventWithDeepResolution(hex);
+
+      if (foundEvent) {
+        this.logger.info('[Deep Resolution] Event found via deep resolution!', foundEvent.id);
+        return foundEvent;
       }
 
       return null;
