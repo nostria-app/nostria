@@ -197,8 +197,8 @@ export class AccountStateService implements OnDestroy {
 
   async unfollow(pubkey: string) {
     const account = this.account();
-    if (!account) {
-      console.warn('No account is currently set to unfollow:', pubkey);
+    if (!account || account.source === 'preview') {
+      console.warn('No valid account is currently set to unfollow:', pubkey);
       return;
     }
 
@@ -308,8 +308,8 @@ export class AccountStateService implements OnDestroy {
 
   async follow(pubkeys: string | string[]) {
     const account = this.account();
-    if (!account) {
-      console.warn('No account is currently set to follow:', pubkeys);
+    if (!account || account.source === 'preview') {
+      console.warn('No valid account is currently set to follow:', pubkeys);
       return;
     }
 
