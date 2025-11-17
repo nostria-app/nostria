@@ -1,7 +1,6 @@
 .streams-container {
   display: flex;
   flex-direction: column;
-  height: 100%;
   padding: 1rem;
   gap: 1rem;
 }
@@ -49,8 +48,6 @@
 }
 
 .streams-content {
-  flex: 1;
-  overflow-y: auto;
   padding: 1rem 0;
 }
 
