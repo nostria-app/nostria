@@ -7,6 +7,9 @@
     } @else {
     Record Video
     }
+    <button mat-icon-button class="close-button" (click)="cancel()" matTooltip="Close">
+      <mat-icon>close</mat-icon>
+    </button>
   </h2>
 
   <mat-dialog-content>
@@ -19,6 +22,14 @@
       <div class="recording-indicator">
         <div class="recording-dot"></div>
         <span>Recording</span>
+      </div>
+
+      <div class="time-remaining">
+        @if (isShortForm) {
+        {{ timeRemaining().toFixed(1) }}s remaining
+        } @else {
+        {{ timeRemaining().toFixed(1) }}s
+        }
       </div>
 
       <mat-progress-bar mode="determinate" [value]="recordingProgress()" class="recording-progress">

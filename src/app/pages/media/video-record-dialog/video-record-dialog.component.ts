@@ -33,14 +33,15 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   isRecording = signal(false);
   isPreviewing = signal(false);
   recordingProgress = signal(0);
+  timeRemaining = signal(0); // Time remaining in seconds
   stream = signal<MediaStream | null>(null);
   mediaRecorder = signal<MediaRecorder | null>(null);
   recordedBlob = signal<Blob | null>(null);
   recordedUrl = signal<string | null>(null);
   facingMode = signal<'user' | 'environment'>('user'); // 'user' = front camera, 'environment' = back camera
-  isShortForm = signal(true); // Toggle for short form recording (6.3 seconds auto-stop)
+  isShortForm = true; // Toggle for short form recording (6.3 seconds auto-stop)
   aspectRatio = signal<'vertical' | 'horizontal'>('vertical'); // Video orientation
-  uploadOriginal = signal(false); // Upload original without transcoding
+  uploadOriginal = false; // Upload original without transcoding
 
   // Recording constraints
   private readonly MAX_DURATION_MS = 6300; // 6.3 seconds
@@ -138,11 +139,13 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       this.startProgressAnimation();
 
       // Auto-stop after MAX_DURATION_MS only if short form is enabled
-      if (this.isShortForm()) {
+      if (this.isShortForm) {
         this.recordingTimer = window.setTimeout(() => {
           // Force stop the recording at exactly 6.3 seconds
           const recorder = this.mediaRecorder();
           if (recorder && recorder.state === 'recording') {
+            // Request data before stopping to ensure we get all chunks
+            recorder.requestData();
             recorder.stop();
             this.isRecording.set(false);
             this.cleanupTimers();
@@ -172,10 +175,19 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     this.progressTimer = window.setInterval(() => {
       const elapsed = Date.now() - startTime;
       // Only show progress if short form is enabled
-      const progress = this.isShortForm()
+      const progress = this.isShortForm
         ? Math.min((elapsed / this.MAX_DURATION_MS) * 100, 100)
         : 0;
       this.recordingProgress.set(progress);
+
+      // Update time remaining
+      if (this.isShortForm) {
+        const remaining = Math.max(0, (this.MAX_DURATION_MS - elapsed) / 1000);
+        this.timeRemaining.set(remaining);
+      } else {
+        const elapsedSeconds = elapsed / 1000;
+        this.timeRemaining.set(elapsedSeconds);
+      }
 
       if (progress >= 100) {
         this.cleanupTimers();
@@ -227,7 +239,8 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     this.recordedUrl.set(null);
     this.isPreviewing.set(false);
     this.recordingProgress.set(0);
-    this.startRecording();
+    // Restart camera preview instead of immediately recording
+    this.startCameraPreview();
   }
 
   useVideo(): void {
@@ -239,7 +252,7 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       });
       this.dialogRef.close({
         file,
-        uploadOriginal: this.uploadOriginal()
+        uploadOriginal: this.uploadOriginal
       });
     }
   }
