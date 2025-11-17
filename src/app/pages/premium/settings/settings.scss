@@ -1,8 +1,17 @@
 .username-prompt {
-  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 8px 0;
 }
 
 .username-prompt-text {
-  margin-bottom: 12px;
+  margin: 0;
   color: var(--mat-sys-on-surface-variant);
+}
+
+mat-list-item:has(.username-prompt) {
+  height: auto !important;
+  min-height: 80px;
+  padding: 12px 0;
 }
