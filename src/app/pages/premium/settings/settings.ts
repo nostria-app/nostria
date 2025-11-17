@@ -42,8 +42,11 @@ export class PremiumSettings implements OnInit {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        // Username was set/changed successfully, refresh handled by dialog
-        console.log('Username operation completed successfully');
+        // Username was set/changed successfully, refresh subscription to show new username
+        console.log('Username operation completed successfully, refreshing subscription');
+        this.accountState.refreshSubscription().catch(error => {
+          console.error('Failed to refresh subscription after username update:', error);
+        });
       }
     });
   }
