@@ -114,29 +114,6 @@
     </div>
     }
 
-    <!-- Participants list with avatars -->
-    @if (participantsList.length > 0) {
-    <div class="participants-list">
-      <div class="participants-header">
-        <mat-icon>badge</mat-icon>
-        <span>Participants</span>
-      </div>
-      <div class="participants-chips">
-        @for (participant of participantsList; track participant.pubkey) {
-        <div class="participant-chip">
-          <app-user-profile [pubkey]="participant.pubkey" view="compact" [hostWidthAuto]="true" />
-          <span class="participant-name">
-            <app-profile-display-name [pubkey]="participant.pubkey"></app-profile-display-name>
-          </span>
-          @if (participant.role && participant.role !== 'Participant') {
-          <span class="participant-role">{{ participant.role }}</span>
-          }
-        </div>
-        }
-      </div>
-    </div>
-    }
-
     <!-- Hashtags -->
     @let tags = hashtags();
     @if (tags.length > 0) {
