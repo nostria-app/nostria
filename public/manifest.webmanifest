@@ -9,9 +9,6 @@
   "background_color": "#303030",
   "description": "Your Social Network",
   "orientation": "any",
-  "display_override": [
-    "window-controls-overlay"
-  ],
   "display": "standalone",
   "scope": "https://nostria.app/",
   "start_url": "https://nostria.app/",

@@ -56,7 +56,6 @@ export class InstallService {
         console.log('Platform Info:', status.platformInfo);
         console.log('Display Modes:', {
           standalone: window.matchMedia('(display-mode: standalone)').matches,
-          windowControls: window.matchMedia('(display-mode: window-controls-overlay)').matches,
           iosStandalone: !!(window.navigator as { standalone?: boolean }).standalone,
         });
       };
@@ -73,10 +72,9 @@ export class InstallService {
     // Check if the app is running as installed PWA
     // Your manifest uses "display": "standalone", so check for that mode
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-    const isWindowControls = window.matchMedia('(display-mode: window-controls-overlay)').matches;
     const isIOSStandalone = !!standalone; // iOS Safari uses navigator.standalone
 
-    const isInStandaloneMode = isStandalone || isWindowControls || isIOSStandalone;
+    const isInStandaloneMode = isStandalone || isIOSStandalone;
 
     const info: PlatformInfo = {
       isWindows: /windows/.test(userAgent),
@@ -94,7 +92,6 @@ export class InstallService {
     this.logger.debug('[InstallService] Platform detected:', info);
     this.logger.debug('[InstallService] Display modes:', {
       standalone: isStandalone,
-      windowControls: isWindowControls,
       iosStandalone: isIOSStandalone,
     });
     this.logger.debug('[InstallService] Is installed:', isInStandaloneMode);

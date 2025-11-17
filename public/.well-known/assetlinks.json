@@ -1,8 +1,16 @@
-[{
-      "relation": ["delegate_permission/common.handle_all_urls"],
-      "target": {
-        "namespace": "android_app",
-        "package_name": "app.nostria.twa",
-        "sha256_cert_fingerprints": ["32:A5:C7:E9:95:D3:60:EC:68:9F:11:01:34:3F:2A:5B:0C:87:71:75:8E:3E:C5:6E:E6:C9:B7:36:48:06:FD:81", "0F:6D:3B:BC:4D:29:32:30:A1:67:5F:3C:28:DE:B8:77:89:88:02:EF:93:0F:1D:3A:5A:66:4A:E0:6E:06:86:E4"]
-      }
-    }]
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.nostria.twa",
+      "sha256_cert_fingerprints": [
+        "67:1A:52:41:71:7E:2E:6E:92:3B:22:DF:73:D4:33:77:23:2A:F1:44:F9:08:19:8D:8B:74:05:98:44:A7:16:0B",
+        "32:A5:C7:E9:95:D3:60:EC:68:9F:11:01:34:3F:2A:5B:0C:87:71:75:8E:3E:C5:6E:E6:C9:B7:36:48:06:FD:81",
+        "0F:6D:3B:BC:4D:29:32:30:A1:67:5F:3C:28:DE:B8:77:89:88:02:EF:93:0F:1D:3A:5A:66:4A:E0:6E:06:86:E4"
+      ]
+    }
+  }
+]
