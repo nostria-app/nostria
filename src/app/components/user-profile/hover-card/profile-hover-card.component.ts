@@ -218,6 +218,14 @@ export class ProfileHoverCardComponent {
 
   async toggleFollow(): Promise<void> {
     const pubkey = this.pubkey();
+    
+    // Check if user is logged in with a real account
+    const currentAccount = this.accountState.account();
+    if (!currentAccount || currentAccount.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
+    
     this.isLoadingFollowing.set(true);
 
     try {
@@ -236,6 +244,13 @@ export class ProfileHoverCardComponent {
   }
 
   async reportProfile(): Promise<void> {
+    // Check if user is logged in with a real account
+    const currentAccount = this.accountState.account();
+    if (!currentAccount || currentAccount.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
+    
     try {
       const reportEvent = this.reportingService.createReportEvent(
         { type: 'user', pubkey: this.pubkey() },
@@ -256,6 +271,13 @@ export class ProfileHoverCardComponent {
   }
 
   async blockUser(): Promise<void> {
+    // Check if user is logged in with a real account
+    const currentAccount = this.accountState.account();
+    if (!currentAccount || currentAccount.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
+    
     try {
       await this.reportingService.muteUser(this.pubkey());
       this.layout.toast('User blocked');

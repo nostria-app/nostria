@@ -79,8 +79,9 @@ export class RepostButtonComponent {
   async createRepost() {
     // Check if user is logged in
     const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) {
-      // Show login dialog if no account is active
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      // Show login dialog if no account is active or if using a preview account
       await this.layout.showLoginDialog();
       return;
     }
@@ -94,8 +95,9 @@ export class RepostButtonComponent {
   async deleteRepost() {
     // Check if user is logged in
     const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) {
-      // Show login dialog if no account is active
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      // Show login dialog if no account is active or if using a preview account
       await this.layout.showLoginDialog();
       return;
     }
@@ -109,8 +111,9 @@ export class RepostButtonComponent {
   async createQuote() {
     // Check if user is logged in
     const userPubkey = this.accountState.pubkey();
-    if (!userPubkey) {
-      // Show login dialog if no account is active
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      // Show login dialog if no account is active or if using a preview account
       await this.layout.showLoginDialog();
       return;
     }
