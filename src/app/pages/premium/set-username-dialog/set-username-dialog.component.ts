@@ -104,6 +104,7 @@ export interface SetUsernameDialogData {
             }
             <mat-checkbox
               [(ngModel)]="shouldUpdateNip05"
+              [ngModelOptions]="{standalone: true}"
               color="primary"
             >
               @if (hasExistingNip05()) {
@@ -321,9 +322,11 @@ export class SetUsernameDialogComponent implements OnDestroy {
       this.existingNip05.set(currentProfile.data.nip05);
       // Default to updating NIP-05 only if user already has one
       this.shouldUpdateNip05 = true;
+      console.log('User has existing NIP-05, defaulting shouldUpdateNip05 to true:', currentProfile.data.nip05);
     } else {
       // For users without NIP-05, default to NOT setting it
       this.shouldUpdateNip05 = false;
+      console.log('User has NO existing NIP-05, defaulting shouldUpdateNip05 to false');
     }
 
     // Setup username validation
@@ -396,6 +399,9 @@ export class SetUsernameDialogComponent implements OnDestroy {
       // Update NIP-05 in profile only if user explicitly requested it
       // For users without existing NIP-05, they must check the checkbox
       // For users with existing NIP-05, they can choose whether to update
+      console.log('shouldUpdateNip05 value:', this.shouldUpdateNip05);
+      console.log('hasExistingNip05:', this.hasExistingNip05());
+
       if (this.shouldUpdateNip05) {
         const currentProfile = this.accountState.profile();
         const newNip05 = `${username}@nostria.app`;
