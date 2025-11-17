@@ -18,6 +18,9 @@ export interface UserSettings {
   hideOther?: boolean;
   // Media privacy setting: 'blur-non-following' | 'blur-always' | 'show-always'
   mediaPrivacy?: 'blur-non-following' | 'blur-always' | 'show-always';
+  // Short form video settings
+  autoPlayShortForm?: boolean;
+  repeatShortForm?: boolean;
   // Add more settings as needed
 }
 
@@ -33,6 +36,8 @@ const DEFAULT_SETTINGS: UserSettings = {
   hideImpersonation: true,
   hideOther: true,
   mediaPrivacy: 'show-always',
+  autoPlayShortForm: true,
+  repeatShortForm: true,
 };
 
 @Injectable({
