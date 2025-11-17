@@ -31,6 +31,34 @@
   }
 }
 
+// Footer mode layout
+.stream-footer-content {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  gap: 16px;
+  background: var(--mat-sys-surface-container);
+}
+
+.video-preview {
+  flex-shrink: 0;
+  width: 142px;
+  height: 80px;
+  background: #000;
+  border-radius: 4px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .stream-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
 .stream-header {
   display: flex;
   align-items: center;
@@ -236,12 +264,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
-  background: var(--mat-sys-surface-container);
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  padding: 0 16px;
   gap: 16px;
-  flex-shrink: 0;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
 }
 
 .stream-info-footer {

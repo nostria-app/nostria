@@ -34,6 +34,14 @@
       <span class="status-text">{{ statusValue | uppercase }}</span>
     </div>
 
+    <!-- Viewer count overlay (show when live or has viewers) -->
+    @if (statusValue === 'live' || currentParticipants()) {
+    <div class="viewer-count-badge">
+      <mat-icon>visibility</mat-icon>
+      <span>{{ currentParticipants() || 0 }} viewers</span>
+    </div>
+    }
+
     <!-- Participant avatars overlay on thumbnail -->
     @if (participantsList.length > 0) {
     <div class="participant-avatars-overlay">
@@ -66,6 +74,14 @@
       <mat-icon class="status-icon">{{ statusIcon() }}</mat-icon>
       <span class="status-text">{{ statusValue | uppercase }}</span>
     </div>
+
+    <!-- Viewer count overlay (show when live or has viewers) -->
+    @if (statusValue === 'live' || currentParticipants()) {
+    <div class="viewer-count-badge">
+      <mat-icon>visibility</mat-icon>
+      <span>{{ currentParticipants() || 0 }} viewers</span>
+    </div>
+    }
   </div>
   }
 
@@ -99,20 +115,14 @@
         <span class="time-value">{{ endsTime * 1000 | date: 'medium' }}</span>
       </div>
       }
-    </div>
-
-    <!-- Participants -->
-    @if (currentParticipants() || totalParticipants()) {
-    <div class="participants-count">
-      <mat-icon>people</mat-icon>
-      @if (currentParticipants()) {
-      <span>{{ currentParticipants() }} watching</span>
-      }
       @if (totalParticipants() && statusValue === 'ended') {
-      <span>{{ totalParticipants() }} total</span>
+      <div class="time-item">
+        <mat-icon class="time-icon">people</mat-icon>
+        <span class="time-label">Total viewers:</span>
+        <span class="time-value">{{ totalParticipants() }}</span>
+      </div>
       }
     </div>
-    }
 
     <!-- Hashtags -->
     @let tags = hashtags();
