@@ -37,11 +37,11 @@
     <!-- Participant avatars overlay on thumbnail -->
     @if (participantsList.length > 0) {
     <div class="participant-avatars-overlay">
-      @for (participant of participantsList.slice(0, 3); track participant.pubkey) {
-      <app-user-profile [pubkey]="participant.pubkey" view="compact" [hostWidthAuto]="true" />
+      @for (participant of participantsList.slice(0, 5); track participant.pubkey) {
+      <app-user-profile [pubkey]="participant.pubkey" view="icon" />
       }
-      @if (participantsList.length > 3) {
-      <div class="more-participants">+{{ participantsList.length - 3 }}</div>
+      @if (participantsList.length > 5) {
+      <div class="more-participants">+{{ participantsList.length - 5 }}</div>
       }
     </div>
     }
@@ -53,7 +53,7 @@
       @if (firstPart) {
       <div class="fallback-participants">
         @for (participant of participantsList.slice(0, 4); track participant.pubkey) {
-        <app-user-profile [pubkey]="participant.pubkey" view="compact" [hostWidthAuto]="true" />
+        <app-user-profile [pubkey]="participant.pubkey" view="icon" />
         }
       </div>
       } @else {
@@ -102,25 +102,14 @@
     </div>
 
     <!-- Participants -->
-    @if (participantsList.length > 0 || currentParticipants() || totalParticipants()) {
-    <div class="participants-section">
-      @if (currentParticipants() || totalParticipants()) {
-      <div class="participants-count">
-        <mat-icon>people</mat-icon>
-        @if (currentParticipants()) {
-        <span>{{ currentParticipants() }} watching</span>
-        }
-        @if (totalParticipants() && statusValue === 'ended') {
-        <span>{{ totalParticipants() }} total</span>
-        }
-      </div>
+    @if (currentParticipants() || totalParticipants()) {
+    <div class="participants-count">
+      <mat-icon>people</mat-icon>
+      @if (currentParticipants()) {
+      <span>{{ currentParticipants() }} watching</span>
       }
-      @if (participantsList.length > 0) {
-      <div class="participants-list">
-        @for (participant of participantsList; track participant.pubkey; let isLast = $last) {<app-user-profile
-          [pubkey]="participant.pubkey" view="compact" [hostWidthAuto]="true" />@if (!isLast) {<span>, </span>}
-        }
-      </div>
+      @if (totalParticipants() && statusValue === 'ended') {
+      <span>{{ totalParticipants() }} total</span>
       }
     </div>
     }

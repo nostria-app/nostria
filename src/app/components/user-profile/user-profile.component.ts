@@ -576,8 +576,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    * Shows the profile hover card
    */
   onMouseEnter(event: MouseEvent, triggerElement: HTMLElement): void {
-    // Don't show hover card for icon-only view (no avatar visible)
-    if (this.view() === 'icon' || this.view() === 'tiny' || this.view() === 'name') {
+    // Don't show hover card for tiny/name-only views
+    if (this.view() === 'tiny' || this.view() === 'name') {
       return;
     }
 
