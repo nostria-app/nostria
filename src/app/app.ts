@@ -430,18 +430,20 @@ export class App implements OnInit {
 
     // Track previous handset state to detect transitions
     let previousIsHandset = this.layout.isHandset();
+    let isFirstRun = true;
 
     // Single effect to handle responsive behavior and sidenav sync
     effect(() => {
       const isHandset = this.layout.isHandset();
 
-      // Only close sidenav when transitioning FROM desktop TO mobile (not when already on mobile)
-      if (isHandset && !previousIsHandset) {
+      // Only close sidenav when transitioning FROM desktop TO mobile (not on initial load)
+      if (!isFirstRun && isHandset && !previousIsHandset) {
         this.localSettings.setMenuOpen(false);
       }
 
       // Update previous state for next comparison
       previousIsHandset = isHandset;
+      isFirstRun = false;
 
       // Sync sidenav state with local settings (only after view is initialized)
       if (this.sidenav) {
@@ -959,6 +961,20 @@ export class App implements OnInit {
       } else {
         this.sidenav.close();
       }
+    }
+  }
+
+  onSidenavClosed() {
+    // Sync local settings when sidenav is closed (e.g., via backdrop click)
+    if (this.localSettings.menuOpen()) {
+      this.localSettings.setMenuOpen(false);
+    }
+  }
+
+  onSidenavOpened() {
+    // Sync local settings when sidenav is opened
+    if (!this.localSettings.menuOpen()) {
+      this.localSettings.setMenuOpen(true);
     }
   }
 

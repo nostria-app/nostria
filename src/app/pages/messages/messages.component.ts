@@ -742,11 +742,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.isSending.set(false);
 
       // Show success notification
-      this.snackBar.open('Message sent', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
+      // this.snackBar.open('Message sent', 'Close', {
+      //   duration: 3000,
+      //   horizontalPosition: 'center',
+      //   verticalPosition: 'bottom',
+      // });
     } catch (err) {
       this.logger.error('Failed to send message', err);
 

@@ -277,7 +277,8 @@
     <!-- Side navigation -->
     <mat-sidenav #sidenav class="sidenav no-print"
       [ngClass]="{ 'sidenav-labels': displayLabels(), 'sidenav-small': !displayLabels() }" [opened]="opened()"
-      [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false">
+      [mode]="layout.isHandset() ? 'over' : 'side'" [fixedInViewport]="false" (closed)="onSidenavClosed()"
+      (opened)="onSidenavOpened()">
       <mat-nav-list>
         @for (item of navigationItems(); track $index) {
         <!-- Main navigation item -->
