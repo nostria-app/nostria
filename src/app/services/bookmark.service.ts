@@ -108,6 +108,15 @@ export class BookmarkService {
   }
 
   async addBookmark(id: string, type: BookmarkType = 'e') {
+    // Check if user is logged in
+    const userPubkey = this.accountState.pubkey();
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      // Show login dialog if no account is active or if using a preview account
+      await this.layout.showLoginDialog();
+      return;
+    }
+
     let event = this.bookmarkEvent();
 
     if (!event) {
