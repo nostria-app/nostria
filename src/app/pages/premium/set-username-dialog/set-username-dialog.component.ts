@@ -101,21 +101,17 @@ export interface SetUsernameDialogData {
                   <p class="nip05-value">{{ existingNip05() }}</p>
                 </div>
               </div>
-              <mat-checkbox
-                [(ngModel)]="shouldUpdateNip05"
-                color="primary"
-              >
-                Update NIP-05 to <strong>{{ usernameFormGroup.get('username')?.value }}@nostria.app</strong>
-              </mat-checkbox>
-            } @else {
-              <div class="nip05-auto-set">
-                <mat-icon color="primary">verified</mat-icon>
-                <p>
-                  Your NIP-05 identifier will be automatically set to
-                  <strong>{{ usernameFormGroup.get('username')?.value }}@nostria.app</strong>
-                </p>
-              </div>
             }
+            <mat-checkbox
+              [(ngModel)]="shouldUpdateNip05"
+              color="primary"
+            >
+              @if (hasExistingNip05()) {
+                Update NIP-05 to <strong>{{ usernameFormGroup.get('username')?.value }}@nostria.app</strong>
+              } @else {
+                Set NIP-05 to <strong>{{ usernameFormGroup.get('username')?.value }}@nostria.app</strong>
+              }
+            </mat-checkbox>
           </div>
         }
       </form>
@@ -323,8 +319,11 @@ export class SetUsernameDialogComponent implements OnDestroy {
     const currentProfile = this.accountState.profile();
     if (currentProfile?.data?.nip05) {
       this.existingNip05.set(currentProfile.data.nip05);
-      // Default to updating NIP-05 if user already has one
+      // Default to updating NIP-05 only if user already has one
       this.shouldUpdateNip05 = true;
+    } else {
+      // For users without NIP-05, default to NOT setting it
+      this.shouldUpdateNip05 = false;
     }
 
     // Setup username validation
@@ -394,10 +393,10 @@ export class SetUsernameDialogComponent implements OnDestroy {
       // Refresh the subscription to get updated account data
       await this.accountState.refreshSubscription();
 
-      // Update NIP-05 in profile if needed
-      const shouldUpdateProfile = !this.hasExistingNip05() || this.shouldUpdateNip05;
-
-      if (shouldUpdateProfile) {
+      // Update NIP-05 in profile only if user explicitly requested it
+      // For users without existing NIP-05, they must check the checkbox
+      // For users with existing NIP-05, they can choose whether to update
+      if (this.shouldUpdateNip05) {
         const currentProfile = this.accountState.profile();
         const newNip05 = `${username}@nostria.app`;
 
