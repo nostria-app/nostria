@@ -225,7 +225,9 @@ app-stream-info-bar {
   order: 2;
 
   @media (max-width: 968px) {
-    max-height: 150px;
+    flex: 1;
+    max-height: none;
+    min-height: 150px;
   }
 
   // Hide on mobile when chat is visible
@@ -248,7 +250,8 @@ app-stream-info-bar {
 
   @media (max-width: 968px) {
     width: 100%;
-    height: 350px;
+    flex: 1;
+    min-height: 350px;
     border-left: none;
   }
 
