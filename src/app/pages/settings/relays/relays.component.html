@@ -89,6 +89,38 @@
         </mat-card>
         }
 
+        @if (hasMalformedRelayList()) {
+        <mat-card class="info-card warning-card">
+          <mat-card-header>
+            <mat-card-title>
+              <div class="info-title">
+                <mat-icon class="info-icon">build</mat-icon>
+                Malformed Relay Configuration Detected
+              </div>
+            </mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <p>
+              Your relay list (kind 10002) was created by another Nostr client with incorrect tag names.
+              The event uses 'relay' tags instead of the correct 'r' tags according to the Nostr protocol.
+            </p>
+            <p>
+              This may prevent some Nostr clients from properly loading your relays. Click the button below to
+              automatically repair and republish your relay list with the correct format.
+            </p>
+            <p>
+              <button mat-flat-button color="primary" (click)="repairMalformedRelayList()"
+                [disabled]="isRepairingRelayList()">
+                @if (isRepairingRelayList()) {
+                <mat-icon class="spinning-icon">sync</mat-icon>
+                }
+                Repair and Republish Relay List
+              </button>
+            </p>
+          </mat-card-content>
+        </mat-card>
+        }
+
         @if (showUpdateDMRelays() && userRelays().length > 0) {
         <mat-card class="info-card">
           <mat-card-header>
