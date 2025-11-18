@@ -10,6 +10,7 @@ import {
   input,
 } from '@angular/core';
 import { Router } from '@angular/router';
+import { Location } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -42,6 +43,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   readonly layout = inject(LayoutService);
   private readonly utilities = inject(UtilitiesService);
   private readonly router = inject(Router);
+  private readonly location = inject(Location);
 
   footer = input<boolean>(false);
   chatVisible = signal(true);
@@ -98,12 +100,12 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     this.layout.fullscreenMediaPlayer.set(isExpanding);
 
     if (isExpanding && this.liveEvent()) {
-      // Expanding to fullscreen - add stream to URL
+      // Expanding to fullscreen - silently update URL without navigation
       const encoded = this.utilities.encodeEventForUrl(this.liveEvent()!);
-      this.router.navigate(['/stream', encoded], { replaceUrl: true });
+      this.location.replaceState(`/stream/${encoded}`);
     } else if (!isExpanding) {
-      // Minimizing - navigate back to home or previous route
-      this.router.navigate(['/'], { replaceUrl: true });
+      // Minimizing - navigate to streams page to show content
+      this.router.navigate(['/streams'], { replaceUrl: true });
     }
   }
 
@@ -130,7 +132,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   exitStream(): void {
     this.media.exit();
-    // Navigate back to home
-    this.router.navigate(['/'], { replaceUrl: true });
+    // Navigate to streams page
+    this.router.navigate(['/streams'], { replaceUrl: true });
   }
 }
