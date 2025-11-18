@@ -55,6 +55,11 @@ mat-sidenav-content {
   height: 100%;
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
+  // When media player is shown, add extra padding for it
+  &.media-player-shown {
+    padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  }
+
   // Add margin when following sidebar is docked
   &.following-sidebar-docked {
     margin-right: 220px; // Width of docked sidebar (reduced from 320px)
