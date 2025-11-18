@@ -44,6 +44,9 @@
         <h2>{{ media.current()?.title || 'YouTube Video' }}</h2>
       </div>
       <div class="youtube-actions">
+        <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
+          <mat-icon>minimize</mat-icon>
+        </button>
         <button mat-icon-button matTooltip="Close" (click)="media.exit()">
           <mat-icon>close</mat-icon>
         </button>
