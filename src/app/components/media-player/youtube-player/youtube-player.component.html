@@ -24,7 +24,12 @@
         <button matTooltip="View queue" routerLink="/media-queue" mat-icon-button>
           <mat-icon>queue_music</mat-icon>
         </button>
+      </div>
 
+      <div class="control-actions">
+        <button mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
+          <mat-icon>open_in_full</mat-icon>
+        </button>
         <button matTooltip="Close" (click)="media.exit()" mat-icon-button>
           <mat-icon>close</mat-icon>
         </button>
@@ -32,24 +37,24 @@
     </div>
   </div>
   } @else {
-  <!-- Compact mode - minimal controls -->
-  <div class="youtube-player-compact">
-    <img class="media-icon" src="icons/icon.svg" width="16" height="16" alt="Nostria" />
+  <!-- Expanded mode - large YouTube player -->
+  <div class="youtube-player-expanded">
+    <div class="youtube-header">
+      <div class="youtube-title">
+        <h2>{{ media.current()?.title || 'YouTube Video' }}</h2>
+      </div>
+      <div class="youtube-actions">
+        <button mat-icon-button matTooltip="Close" (click)="media.exit()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
 
-    <div class="compact-controls">
-      @if (media.paused) {
-      <button (click)="media.resume()" mat-icon-button>
-        <mat-icon>play_arrow</mat-icon>
-      </button>
-      } @else {
-      <button (click)="media.pause()" mat-icon-button>
-        <mat-icon>pause</mat-icon>
-      </button>
+    <div class="youtube-content">
+      @if (youtubeUrl()) {
+      <iframe id="ytplayer" class="youtube-iframe-expanded" type="text/html" [src]="youtubeUrl()" frameborder="0"
+        allowfullscreen allow="autoplay" title="YouTube video player"></iframe>
       }
-
-      <button routerLink="/media-queue" mat-icon-button>
-        <mat-icon>queue_music</mat-icon>
-      </button>
     </div>
   </div>
   }

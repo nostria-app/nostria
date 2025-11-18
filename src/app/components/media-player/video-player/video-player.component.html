@@ -47,35 +47,37 @@
         </button>
         }
       </div>
+
+      <div class="control-actions">
+        <button mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
+          <mat-icon>open_in_full</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Close" (click)="media.exit()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
     </div>
   </div>
   } @else {
-  <!-- Compact mode - minimal controls -->
-  <div class="video-player-compact">
-    <img class="media-icon" src="icons/icon.svg" width="16" height="16" alt="Nostria" />
+  <!-- Expanded mode - large video player -->
+  <div class="video-player-expanded">
+    <div class="video-header">
+      <div class="video-title">
+        <h2>{{ media.current()?.title || 'Video' }}</h2>
+      </div>
+      <div class="video-actions">
+        <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
+          <mat-icon>picture_in_picture_alt</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Close" (click)="media.exit()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
 
-    <div class="compact-controls">
-      <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
-        <mat-icon>skip_previous</mat-icon>
-      </button>
-
-      @if (media.paused) {
-      <button (click)="media.resume()" mat-icon-button>
-        <mat-icon>play_arrow</mat-icon>
-      </button>
-      } @else {
-      <button (click)="media.pause()" mat-icon-button>
-        <mat-icon>pause</mat-icon>
-      </button>
-      }
-
-      <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
-        <mat-icon>skip_next</mat-icon>
-      </button>
-
-      <button routerLink="/media-queue" mat-icon-button>
-        <mat-icon>queue_music</mat-icon>
-      </button>
+    <div class="video-content">
+      <video #videoElement class="video-element-expanded" [muted]="media.muted" autoplay playsinline controls
+        (error)="onVideoError($event)"></video>
     </div>
   </div>
   }
