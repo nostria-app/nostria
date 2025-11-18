@@ -14,6 +14,11 @@
     flex-shrink: 0;
     display: flex;
     flex-direction: row;
+
+    /* On mobile, position above the mobile navigation (56px) */
+    @media (max-width: 599px) {
+      bottom: 56px;
+    }
   }
 
   &.fullscreen-mode {
