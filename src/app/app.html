@@ -469,19 +469,13 @@
       <div class="content-wrapper">
         <router-outlet></router-outlet>
       </div>
-      <!-- Footer media player outside scrollable content -->
-      @if (layout.showMediaPlayer()) {
-      <app-media-player [footer]="true"></app-media-player>
-      }
     </mat-sidenav-content>
   </mat-sidenav-container>
   }
 
-  <!-- Fullscreen media player overlay -->
-  @if (layout.fullscreenMediaPlayer() && media.hasQueue()) {
-  <div class="fullscreen-media-overlay">
-    <app-media-player [footer]="false"></app-media-player>
-  </div>
+  <!-- Media player - positioned in footer or fullscreen based on state -->
+  @if (layout.showMediaPlayer()) {
+  <app-media-player></app-media-player>
   }
 
   <!-- Mobile navigation footer - now outside of sidenav container -->

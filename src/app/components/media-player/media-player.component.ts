@@ -2,7 +2,6 @@ import {
   Component,
   inject,
   computed,
-  input,
 } from '@angular/core';
 import { LiveStreamPlayerComponent } from './live-stream-player/live-stream-player.component';
 import { AudioPlayerComponent } from './audio-player/audio-player.component';
@@ -22,14 +21,16 @@ import { MediaPlayerService } from '../../services/media-player.service';
   templateUrl: './media-player.component.html',
   styleUrl: './media-player.component.scss',
   host: {
-    '[class.footer-mode]': 'footer()',
-    '[class.fullscreen-host]': 'layout.fullscreenMediaPlayer()',
+    '[class.footer-mode]': '!layout.fullscreenMediaPlayer()',
+    '[class.fullscreen-mode]': 'layout.fullscreenMediaPlayer()',
   },
 })
 export class MediaPlayerComponent {
   readonly layout = inject(LayoutService);
   readonly media = inject(MediaPlayerService);
-  footer = input<boolean>(false);
+
+  // Footer mode is when NOT in fullscreen
+  footer = computed(() => !this.layout.fullscreenMediaPlayer());
 
   // Computed signals to determine which player to show
   isLiveStream = computed(() => this.media.current()?.type === 'HLS' && this.media.current()?.isLiveStream);
