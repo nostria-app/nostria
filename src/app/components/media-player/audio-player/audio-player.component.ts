@@ -65,4 +65,8 @@ export class AudioPlayerComponent {
   get volume(): number {
     return this.media.audio ? Math.round(this.media.audio.volume * 100) : 100;
   }
+
+  toggleFullscreen(): void {
+    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+  }
 }

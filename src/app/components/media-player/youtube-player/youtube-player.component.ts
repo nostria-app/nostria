@@ -37,4 +37,8 @@ export class YouTubePlayerComponent {
     if (!current || current.type !== 'YouTube') return undefined;
     return this.media.getYouTubeEmbedUrl()(current.source, 'autoplay=1');
   });
+
+  toggleFullscreen(): void {
+    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+  }
 }

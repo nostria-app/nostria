@@ -65,6 +65,10 @@ export class VideoPlayerComponent implements OnDestroy {
     console.error('Video error:', video.error);
   }
 
+  toggleFullscreen(): void {
+    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+  }
+
   async pictureInPicture(): Promise<void> {
     await this.media.pictureInPicture();
   }
