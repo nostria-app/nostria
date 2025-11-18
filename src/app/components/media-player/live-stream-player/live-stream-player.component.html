@@ -1,16 +1,11 @@
 <div class="live-stream-container" [class.fullscreen]="!footer()" [class.footer-mode]="footer()">
-  <!-- Video element - single instance, CSS controls visibility/position -->
-  <div class="video-wrapper" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
-    <video #videoElement class="stream-video" [muted]="media.muted" autoplay playsinline
-      (error)="onVideoError($event)"></video>
-  </div>
+  <!-- Single video element - always present, positioned via CSS -->
+  <video #videoElement class="stream-video" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()"
+    [muted]="media.muted" autoplay playsinline (error)="onVideoError($event)"></video>
 
   @if (footer()) {
   <!-- Footer mode - compact controls with video preview -->
   <div class="stream-footer-content">
-    <div class="video-preview">
-      <!-- Video rendered via .video-wrapper positioned here with CSS -->
-    </div>
 
     <div class="playback-controls">
       <div class="stream-info-footer">
@@ -91,22 +86,20 @@
 
   <!-- Main content area -->
   <div class="stream-content">
-    <!-- Video container - video-wrapper renders here via CSS in fullscreen -->
-    <div class="video-container">
+    <div class="stream-main">
+      <!-- Stream info bar at bottom of video -->
+      @if (liveEvent()) {
+      <app-stream-info-bar [liveEvent]="liveEvent()!" />
+      }
     </div>
 
-    <!-- Stream info bar -->
+    <!-- Chat sidebar -->
     @if (liveEvent()) {
-    <app-stream-info-bar [liveEvent]="liveEvent()!" />
+    <div class="chat-sidebar" [class.hidden]="!chatVisible()">
+      <app-live-chat [liveEvent]="liveEvent()!" />
+    </div>
     }
   </div>
-
-  <!-- Chat sidebar -->
-  @if (liveEvent()) {
-  <div class="chat-sidebar" [class.hidden]="!chatVisible()">
-    <app-live-chat [liveEvent]="liveEvent()!" />
-  </div>
-  }
   }
 
 </div>
