@@ -438,7 +438,11 @@ export abstract class RelayServiceBase {
     },
     options: { timeout?: number } = {},
   ): Promise<T | null> {
-    return this.getWithRelays(filter, this.getEffectiveRelayUrls(), options);
+    const urls = this.getEffectiveRelayUrls();
+    if (urls.length === 0) {
+      return null;
+    }
+    return this.getWithRelays(filter, urls, options);
   }
 
   /**
@@ -583,7 +587,11 @@ export abstract class RelayServiceBase {
     },
     options: { timeout?: number } = {},
   ): Promise<T[]> {
-    return this.getManyWithRelays(filter, this.getEffectiveRelayUrls(), options);
+    const urls = this.getEffectiveRelayUrls();
+    if (urls.length === 0) {
+      return [];
+    }
+    return this.getManyWithRelays(filter, urls, options);
   }
 
   /**

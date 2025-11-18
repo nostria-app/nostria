@@ -160,6 +160,11 @@ export class RelaysComponent implements OnInit {
   // Signal for Nostria setup process
   isSettingUpNostriaRelays = signal(false);
 
+  // Signals for malformed kind 10002 relay list detection and repair
+  hasMalformedRelayList = signal(false);
+  malformedRelayEvent = signal<any>(undefined);
+  isRepairingRelayList = signal(false);
+
   constructor() {
     // Effect to re-check following list when active pubkey changes
     effect(async () => {
@@ -167,9 +172,11 @@ export class RelaysComponent implements OnInit {
       if (pubkey) {
         await this.checkFollowingListForRelays(pubkey);
         await this.checkDirectMessageRelayList(pubkey);
+        await this.checkForMalformedRelayList(pubkey);
       } else {
         this.showFollowingRelayCleanup.set(false);
         this.showUpdateDMRelays.set(false);
+        this.hasMalformedRelayList.set(false);
       }
     });
   }
@@ -240,6 +247,36 @@ export class RelaysComponent implements OnInit {
     } catch (err) {
       this.logger.error('Failed to check DM relay list', err);
       this.showUpdateDMRelays.set(true);
+    }
+  }
+
+  // Check for malformed kind 10002 relay list with 'relay' tags instead of 'r' tags
+  private async checkForMalformedRelayList(pubkey: string) {
+    try {
+      // Get the relay list event from storage
+      const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+
+      if (!event) {
+        this.hasMalformedRelayList.set(false);
+        this.malformedRelayEvent.set(undefined);
+        return;
+      }
+
+      // Check if event has malformed 'relay' tags instead of 'r' tags
+      const hasRelayTags = event.tags.some(tag => tag[0] === 'relay');
+      const hasRTags = event.tags.some(tag => tag[0] === 'r');
+
+      if (hasRelayTags && !hasRTags) {
+        this.logger.warn(`Detected malformed kind 10002 event with 'relay' tags instead of 'r' tags`);
+        this.hasMalformedRelayList.set(true);
+        this.malformedRelayEvent.set(event);
+      } else {
+        this.hasMalformedRelayList.set(false);
+        this.malformedRelayEvent.set(undefined);
+      }
+    } catch (err) {
+      this.logger.error('Failed to check for malformed relay list', err);
+      this.hasMalformedRelayList.set(false);
     }
   }
 
@@ -397,6 +434,56 @@ export class RelaysComponent implements OnInit {
     this.accountRelay.removeRelay(relay.url);
     await this.publish();
     this.showMessage('Relay removed');
+  }
+
+  async repairMalformedRelayList() {
+    if (this.isRepairingRelayList()) {
+      return;
+    }
+
+    const malformedEvent = this.malformedRelayEvent();
+    if (!malformedEvent) {
+      this.showMessage('No malformed relay list found');
+      return;
+    }
+
+    this.isRepairingRelayList.set(true);
+
+    try {
+      // Extract relay URLs from 'relay' tags
+      const relayUrls = malformedEvent.tags
+        .filter((tag: string[]) => tag.length >= 2 && tag[0] === 'relay')
+        .map((tag: string[]) => {
+          const url = tag[1];
+          const wssIndex = url.indexOf('wss://');
+          return wssIndex >= 0 ? url.substring(wssIndex) : url;
+        });
+
+      if (relayUrls.length === 0) {
+        this.showMessage('No relay URLs found in malformed event');
+        this.isRepairingRelayList.set(false);
+        return;
+      }
+
+      this.logger.info(`Repairing malformed relay list with ${relayUrls.length} relays`);
+
+      // Update the account relay service with the corrected URLs
+      this.accountRelay.updateRelays(relayUrls);
+
+      // Publish the corrected relay list
+      await this.publish();
+
+      this.showMessage(`Successfully repaired and published relay list with ${relayUrls.length} relays`);
+
+      // Clear the malformed state
+      this.hasMalformedRelayList.set(false);
+      this.malformedRelayEvent.set(undefined);
+    } catch (err) {
+      this.logger.error('Failed to repair malformed relay list', err);
+      this.showMessage('Failed to repair relay list');
+    } finally {
+      this.isRepairingRelayList.set(false);
+    }
   }
 
   async publish() {
