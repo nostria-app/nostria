@@ -50,7 +50,6 @@
     <!-- Chat Input -->
     <div class="chat-input-container">
       <mat-form-field class="chat-input-field" appearance="outline">
-        <mat-label>Send a message...</mat-label>
         <input matInput [ngModel]="messageInput()" (ngModelChange)="messageInput.set($event)"
           (keydown.enter)="sendMessage()" placeholder="Type your message" autocomplete="off" />
         <button mat-icon-button matSuffix (click)="sendMessage()" [disabled]="!messageInput().trim()"
