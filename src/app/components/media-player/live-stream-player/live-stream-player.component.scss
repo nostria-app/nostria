@@ -40,15 +40,21 @@
       "video chat"
       "info chat";
 
-    // Mobile layout - stack vertically
+    // Mobile layout - video takes full space, chat and info overlay from bottom
     @media (max-width: 968px) {
       grid-template-columns: 1fr;
-      grid-template-rows: auto 1fr auto auto;
+      grid-template-rows: auto 1fr;
       grid-template-areas:
         "header"
-        "video"
-        "info"
-        "chat";
+        "video";
+      position: relative;
+    }
+  }
+
+  // When chat is visible on mobile, hide info bar (handled below in app-stream-info-bar)
+  &.fullscreen:has(.chat-sidebar) {
+    @media (max-width: 968px) {
+      // Grid stays the same, chat and info use absolute positioning
     }
   }
 }
@@ -103,6 +109,8 @@
   gap: 16px;
   flex-shrink: 0;
   z-index: 10;
+  overflow: hidden;
+  min-width: 0;
 
   .fullscreen & {
     background: rgba(0, 0, 0, 0.7);
@@ -124,6 +132,7 @@
   display: flex;
   align-items: center;
   gap: 12px;
+  min-width: 0;
 }
 
 .live-badge {
@@ -167,6 +176,8 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--mat-sys-on-surface);
+  min-width: 0;
+  flex: 1;
 
   .fullscreen & {
     color: white;
@@ -210,13 +221,24 @@ app-stream-info-bar {
 
   @media (max-width: 968px) {
     max-height: 150px;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+  }
+
+  // Hide on mobile when chat is visible
+  @media (max-width: 968px) {
+    .live-stream-container.fullscreen:has(.chat-sidebar) & {
+      display: none;
+    }
   }
 }
 
 .chat-sidebar {
   grid-area: chat;
   width: 360px;
-  min-width: 360px;
   background: var(--mat-sys-surface-container);
   border-left: 1px solid var(--mat-sys-outline-variant);
   display: flex;
@@ -225,9 +247,13 @@ app-stream-info-bar {
 
   @media (max-width: 968px) {
     width: 100%;
-    min-width: 100%;
     height: 350px;
     border-left: none;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
   }
 
   app-live-chat {
