@@ -46,14 +46,8 @@ export class AccountRelayService extends RelayServiceBase {
         this.logger.warn(`Found malformed kind 10002 event with 'relay' tags instead of 'r' tags`);
         hasMalformedRelayList = true;
         malformedEvent = event;
-        // Try to extract URLs from 'relay' tags
-        relayUrls = event.tags
-          .filter(tag => tag.length >= 2 && tag[0] === 'relay')
-          .map(tag => {
-            const url = tag[1];
-            const wssIndex = url.indexOf('wss://');
-            return wssIndex >= 0 ? url.substring(wssIndex) : url;
-          });
+        // Don't use malformed relays - leave relayUrls empty to force user to repair
+        relayUrls = [];
       } else {
         relayUrls = this.utilities.getRelayUrls(event);
       }
