@@ -116,6 +116,11 @@
   min-width: 0;
   order: 0;
 
+  // @media (max-width: 599px) {
+  //   padding: 8px 12px;
+  //   gap: 8px;
+  // }
+
   .fullscreen & {
     background: rgba(0, 0, 0, 0.7);
     -webkit-backdrop-filter: blur(8px);
@@ -130,6 +135,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  // overflow: hidden;
 }
 
 .stream-title-row {
@@ -137,6 +143,11 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
+  // overflow: hidden;
+
+  // @media (max-width: 599px) {
+  //   gap: 8px;
+  // }
 }
 
 .live-badge {
@@ -182,6 +193,11 @@
   color: var(--mat-sys-on-surface);
   min-width: 0;
   flex: 1;
+  // max-width: 100%;
+
+  // @media (max-width: 599px) {
+  //   font-size: 0.875rem;
+  // }
 
   .fullscreen & {
     color: white;
@@ -211,6 +227,16 @@
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
+
+  // @media (max-width: 599px) {
+  //   gap: 2px;
+    
+  //   button {
+  //     padding: 8px;
+  //     width: 40px;
+  //     height: 40px;
+  //   }
+  // }
 
   .fullscreen & button {
     color: white;

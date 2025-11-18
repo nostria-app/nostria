@@ -122,6 +122,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     .stream-title-section {
       flex: 1;
       min-width: 0;
+      width: 100%;
     }
 
     .stream-title {
