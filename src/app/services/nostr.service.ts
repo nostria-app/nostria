@@ -133,14 +133,16 @@ export class NostrService implements NostriaService {
     effect(() => {
       const allUsers = this.accountState.accounts();
 
-      if (allUsers.length === 0) {
-        this.logger.debug('No users to save to localStorage');
-        return;
-      }
-
       this.logger.debug('Users collection effect triggered', {
         count: allUsers.length,
       });
+
+      if (allUsers.length === 0) {
+        this.logger.debug('No users - removing from localStorage');
+        this.localStorage.removeItem(this.appState.ACCOUNTS_STORAGE_KEY);
+        return;
+      }
+
       this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
       this.localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(allUsers));
     });
@@ -1833,6 +1835,14 @@ export class NostrService implements NostriaService {
     const allUsers = this.accountState.accounts();
     const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
     this.accountState.accounts.set(updatedUsers);
+
+    // Explicitly save to localStorage to ensure persistence
+    this.logger.debug(`Saving ${updatedUsers.length} accounts to localStorage after removal`);
+    if (updatedUsers.length === 0) {
+      this.localStorage.removeItem(this.appState.ACCOUNTS_STORAGE_KEY);
+    } else {
+      this.localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(updatedUsers));
+    }
 
     // If we're removing the active user, set active user to null
     if (this.accountState.account()?.pubkey === pubkey) {
