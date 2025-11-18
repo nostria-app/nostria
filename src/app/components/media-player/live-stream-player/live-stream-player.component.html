@@ -84,22 +84,17 @@
     </div>
   </div>
 
-  <!-- Main content area -->
-  <div class="stream-content">
-    <div class="stream-main">
-      <!-- Stream info bar at bottom of video -->
-      @if (liveEvent()) {
-      <app-stream-info-bar [liveEvent]="liveEvent()!" />
-      }
-    </div>
+  <!-- Stream info bar at bottom of video -->
+  @if (liveEvent()) {
+  <app-stream-info-bar [liveEvent]="liveEvent()!" />
+  }
 
-    <!-- Chat sidebar -->
-    @if (liveEvent()) {
-    <div class="chat-sidebar" [class.hidden]="!chatVisible()">
-      <app-live-chat [liveEvent]="liveEvent()!" />
-    </div>
-    }
+  <!-- Chat sidebar -->
+  @if (liveEvent() && chatVisible()) {
+  <div class="chat-sidebar">
+    <app-live-chat [liveEvent]="liveEvent()!" />
   </div>
+  }
   }
 
 </div>
