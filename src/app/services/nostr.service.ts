@@ -1317,6 +1317,28 @@ export class NostrService implements NostriaService {
       }
     } else {
       this.logger.debug('No users found in localStorage');
+
+      // Recovery: Check if there's a single account stored in the old ACCOUNT_STORAGE_KEY
+      const singleAccountJson = this.localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+      if (singleAccountJson) {
+        try {
+          const singleAccount = JSON.parse(singleAccountJson);
+          this.logger.info('Found single account in storage, recovering to accounts list', {
+            pubkey: singleAccount.pubkey,
+          });
+
+          // Restore the accounts list with this single account
+          const recoveredAccounts = [singleAccount];
+          this.localStorage.setItem(
+            this.appState.ACCOUNTS_STORAGE_KEY,
+            JSON.stringify(recoveredAccounts)
+          );
+
+          return recoveredAccounts;
+        } catch (e) {
+          this.logger.error('Failed to recover account from single account storage', e);
+        }
+      }
     }
 
     return [];
