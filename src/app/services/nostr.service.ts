@@ -90,6 +90,7 @@ export class NostrService implements NostriaService {
   private readonly pinPrompt = inject(PinPromptService);
 
   initialized = signal(false);
+  private accountsInitialized = false;
   MAX_WAIT_TIME = 2000;
   MAX_WAIT_TIME_METADATA = 2500;
   dataLoaded = false;
@@ -135,11 +136,12 @@ export class NostrService implements NostriaService {
 
       this.logger.debug('Users collection effect triggered', {
         count: allUsers.length,
+        initialized: this.accountsInitialized,
       });
 
-      if (allUsers.length === 0) {
-        this.logger.debug('No users - removing from localStorage');
-        this.localStorage.removeItem(this.appState.ACCOUNTS_STORAGE_KEY);
+      // Don't auto-save during initialization to avoid wiping accounts
+      if (!this.accountsInitialized) {
+        this.logger.debug('Skipping auto-save during initialization');
         return;
       }
 
@@ -265,6 +267,8 @@ export class NostrService implements NostriaService {
         // Show success animation instead of waiting
         this.appState.showSuccess.set(false);
         this.initialized.set(true);
+        // Mark accounts as initialized even when empty to enable auto-save
+        this.accountsInitialized = true;
         return;
       }
 
@@ -290,6 +294,9 @@ export class NostrService implements NostriaService {
       }
 
       this.accountState.accounts.set(migratedAccounts);
+
+      // Mark accounts as initialized to enable auto-save
+      this.accountsInitialized = true;
 
       // We keep an in-memory copy of the user metadata and relay list for all accounts,
       // they won't take up too much memory space.
@@ -1838,11 +1845,7 @@ export class NostrService implements NostriaService {
 
     // Explicitly save to localStorage to ensure persistence
     this.logger.debug(`Saving ${updatedUsers.length} accounts to localStorage after removal`);
-    if (updatedUsers.length === 0) {
-      this.localStorage.removeItem(this.appState.ACCOUNTS_STORAGE_KEY);
-    } else {
-      this.localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(updatedUsers));
-    }
+    this.localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(updatedUsers));
 
     // If we're removing the active user, set active user to null
     if (this.accountState.account()?.pubkey === pubkey) {
