@@ -20,26 +20,47 @@
 }
 
 .live-stream-container {
-  display: flex;
-  flex-direction: column;
   width: 100%;
   height: 100%;
   background: #000;
-  position: relative;
 
+  // Footer mode - simple flex layout
+  &.footer-mode {
+    display: flex;
+    position: relative;
+  }
+
+  // Fullscreen mode - CSS Grid layout
   &.fullscreen {
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    grid-template-rows: auto 1fr auto;
+    grid-template-areas:
+      "header header"
+      "video chat"
+      "info chat";
+
+    // Mobile layout - stack vertically
+    @media (max-width: 968px) {
+      grid-template-columns: 1fr;
+      grid-template-rows: auto 1fr auto auto;
+      grid-template-areas:
+        "header"
+        "video"
+        "info"
+        "chat";
+    }
   }
 }
 
 // Single video element - repositioned via CSS based on mode
 .stream-video {
-  position: absolute;
   object-fit: contain;
   display: block;
   background: #000;
 
   &.in-footer {
+    position: absolute;
     top: 0;
     left: 0;
     width: 142px;
@@ -49,14 +70,10 @@
   }
 
   &.in-fullscreen {
-    top: 64px; // Below header
-    left: 0;
-    bottom: 0;
-    right: 0; // Fill stream-main container width
-    width: auto;
-    height: auto;
-    z-index: 1;
-    pointer-events: auto; // Enable video controls
+    grid-area: video;
+    width: 100%;
+    height: 100%;
+    pointer-events: auto;
   }
 }
 
@@ -76,8 +93,7 @@
 }
 
 .stream-header {
-  position: relative;
-  z-index: 10;
+  grid-area: header;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -86,14 +102,11 @@
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   gap: 16px;
   flex-shrink: 0;
+  z-index: 10;
 
   .fullscreen & {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 10;
     background: rgba(0, 0, 0, 0.7);
+    -webkit-backdrop-filter: blur(8px);
     backdrop-filter: blur(8px);
     border-bottom: none;
   }
@@ -189,118 +202,32 @@
   }
 }
 
-.stream-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  position: relative;
-  z-index: 1;
+app-stream-info-bar {
+  grid-area: info;
+  flex-shrink: 0;
+  max-height: 200px;
+  overflow-y: auto;
 
-  .fullscreen & {
-    flex-direction: row;
-
-    @media (max-width: 968px) {
-      flex-direction: column;
-    }
-  }
-}
-
-.stream-main {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  position: relative;
-  min-height: 0;
-
-  app-stream-info-bar {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 10;
-  }
-
-  // On mobile, hide stream info bar when chat is visible
   @media (max-width: 968px) {
-    .fullscreen &:has(~ .chat-sidebar:not(.hidden)) app-stream-info-bar {
-      display: none;
-    }
-  }
-}
-
-.video-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  background: #000;
-  position: relative;
-  min-height: 0;
-
-  .stream-video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-    display: block;
-  }
-}
-
-.video-controls-overlay {
-  position: absolute;
-  bottom: 16px;
-  right: 16px;
-  display: flex;
-  gap: 8px;
-  opacity: 0;
-  transition: opacity 0.2s;
-
-  .video-container:hover & {
-    opacity: 1;
-  }
-
-  button {
-    background: rgba(0, 0, 0, 0.6);
-    color: white;
-    backdrop-filter: blur(4px);
-
-    &:hover {
-      background: rgba(0, 0, 0, 0.8);
-    }
+    max-height: 150px;
   }
 }
 
 .chat-sidebar {
-  display: none;
+  grid-area: chat;
+  width: 360px;
+  min-width: 360px;
+  background: var(--mat-sys-surface-container);
+  border-left: 1px solid var(--mat-sys-outline-variant);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 
-  .fullscreen & {
-    display: flex;
-    width: 360px;
-    min-width: 360px;
-    max-width: 360px;
-    height: 100%;
-    padding-top: 64px; // Position below header
-    background: var(--mat-sys-surface-container);
-    border-left: 1px solid var(--mat-sys-outline-variant);
-    flex-direction: column;
-    overflow: hidden;
-    flex-shrink: 0;
-    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
-
-    &.hidden {
-      display: none;
-    }
-
-    @media (max-width: 968px) {
-      width: 100%;
-      max-width: 100%;
-      min-width: 100%;
-      height: 300px;
-      padding-top: 0;
-      border-left: none;
-      border-top: 1px solid var(--mat-sys-outline-variant);
-    }
+  @media (max-width: 968px) {
+    width: 100%;
+    min-width: 100%;
+    height: 350px;
+    border-left: none;
   }
 
   app-live-chat {
@@ -371,10 +298,4 @@
   gap: 4px;
   flex-shrink: 0;
   margin-left: auto;
-}
-
-app-stream-info-bar {
-  flex-shrink: 0;
-  max-height: 200px;
-  overflow-y: auto;
 }
