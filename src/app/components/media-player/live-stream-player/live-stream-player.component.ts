@@ -9,6 +9,7 @@ import {
   OnDestroy,
   input,
 } from '@angular/core';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -40,6 +41,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   readonly media = inject(MediaPlayerService);
   readonly layout = inject(LayoutService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly router = inject(Router);
 
   footer = input<boolean>(false);
   chatVisible = signal(true);
@@ -92,7 +94,17 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   }
 
   toggleFullscreen(): void {
-    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+    const isExpanding = !this.layout.fullscreenMediaPlayer();
+    this.layout.fullscreenMediaPlayer.set(isExpanding);
+
+    if (isExpanding && this.liveEvent()) {
+      // Expanding to fullscreen - add stream to URL
+      const encoded = this.utilities.encodeEventForUrl(this.liveEvent()!);
+      this.router.navigate(['/stream', encoded], { replaceUrl: true });
+    } else if (!isExpanding) {
+      // Minimizing - navigate back to home or previous route
+      this.router.navigate(['/'], { replaceUrl: true });
+    }
   }
 
   toggleChatVisibility(): void {
@@ -118,5 +130,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   exitStream(): void {
     this.media.exit();
+    // Navigate back to home
+    this.router.navigate(['/'], { replaceUrl: true });
   }
 }

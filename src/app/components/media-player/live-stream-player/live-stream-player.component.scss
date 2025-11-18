@@ -52,17 +52,15 @@
     top: 64px; // Below header
     left: 0;
     bottom: 0;
-    right: 360px; // Default space for chat
+    right: 0; // Fill stream-main container width
     width: auto;
     height: auto;
     z-index: 1;
+    pointer-events: auto; // Enable video controls
   }
 }
 
-// Adjust video when chat is hidden in fullscreen - extend to full width
-.live-stream-container.fullscreen:has(.chat-sidebar.hidden) .stream-video.in-fullscreen {
-  right: 0;
-}
+// Remove this rule - no longer needed
 
 // Footer mode layout
 .stream-footer-content {
@@ -277,11 +275,13 @@
     flex-direction: column;
     overflow: hidden;
     flex-shrink: 0;
-    transition: width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 
     &.hidden {
       width: 0;
       min-width: 0;
+      max-width: 0;
+      padding: 0;
       border: none;
       overflow: hidden;
     }
