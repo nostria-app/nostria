@@ -1,10 +1,15 @@
-<div class="live-stream-container" [class.fullscreen]="!footer()">
+<div class="live-stream-container" [class.fullscreen]="!footer()" [class.footer-mode]="footer()">
+  <!-- Video element - single instance, CSS controls visibility/position -->
+  <div class="video-wrapper" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
+    <video #videoElement class="stream-video" [muted]="media.muted" autoplay playsinline
+      (error)="onVideoError($event)"></video>
+  </div>
+
   @if (footer()) {
   <!-- Footer mode - compact controls with video preview -->
   <div class="stream-footer-content">
     <div class="video-preview">
-      <video #videoElement class="stream-video" [muted]="media.muted" autoplay playsinline
-        (error)="onVideoError($event)"></video>
+      <!-- Video rendered via .video-wrapper positioned here with CSS -->
     </div>
 
     <div class="playback-controls">
@@ -48,7 +53,9 @@
       </div>
     </div>
   </div>
-  } @else {
+  }
+
+  @if (!footer()) {
   <!-- Normal/Fullscreen mode - full stream interface -->
   <div class="stream-header">
     <div class="stream-info">
@@ -73,6 +80,9 @@
       <button mat-icon-button [matMenuTriggerFor]="streamMenu" matTooltip="More options">
         <mat-icon>more_vert</mat-icon>
       </button>
+      <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
+        <mat-icon>minimize</mat-icon>
+      </button>
       <button mat-icon-button matTooltip="Close stream" (click)="exitStream()">
         <mat-icon>close</mat-icon>
       </button>
@@ -81,10 +91,8 @@
 
   <!-- Main content area -->
   <div class="stream-content">
-    <!-- Video player -->
+    <!-- Video container - video-wrapper renders here via CSS in fullscreen -->
     <div class="video-container">
-      <video #videoElement class="stream-video" [muted]="media.muted" autoplay playsinline
-        (error)="onVideoError($event)"></video>
     </div>
 
     <!-- Stream info bar -->

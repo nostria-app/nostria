@@ -25,10 +25,43 @@
   width: 100%;
   height: 100%;
   background: #000;
+  position: relative;
 
   &.fullscreen {
     flex-direction: row;
   }
+}
+
+// Video wrapper - single element that moves between footer and fullscreen
+.video-wrapper {
+  position: absolute;
+  z-index: 10;
+
+  &.in-footer {
+    top: 0;
+    left: 0;
+    width: 142px;
+    height: 80px;
+  }
+
+  &.in-fullscreen {
+    top: 64px; // Below header
+    left: 0;
+    bottom: 0;
+    width: calc(100% - 360px); // Leave space for chat
+    height: calc(100% - 64px);
+  }
+
+  .stream-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+// Adjust fullscreen video when chat is hidden
+.live-stream-container.fullscreen:has(.chat-sidebar.hidden) .video-wrapper.in-fullscreen {
+  width: 100%;
 }
 
 // Footer mode layout
@@ -53,12 +86,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
-  .stream-video {
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
-  }
+  position: relative;
 }
 
 .stream-header {
@@ -195,12 +223,6 @@
   min-height: 0;
 }
 
-.stream-video {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
 .video-controls-overlay {
   position: absolute;
   bottom: 16px;
@@ -230,6 +252,7 @@
   min-width: 360px;
   max-width: 360px;
   height: 100%;
+  padding-top: 64px; // Move down below header
   background: var(--mat-sys-surface-container);
   border-left: 1px solid var(--mat-sys-outline-variant);
   display: flex;
