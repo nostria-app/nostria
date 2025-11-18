@@ -68,7 +68,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
         {{ description() }}
       </div>
       }
-      
+
       @if (zapGoalAmount() > 0) {
       <div class="zap-goal">
         <div class="zap-goal-header">
@@ -98,6 +98,13 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     </div>
   `,
   styles: [`
+    :host {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
+    }
+
     .stream-info-bar {
       container-type: inline-size;
       background: var(--mat-sys-surface-container);
@@ -106,7 +113,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
       display: flex;
       flex-direction: column;
       gap: 12px;
-      height: 100%;
+      flex: 1;
       overflow-y: auto;
       overflow-x: hidden;
     }
