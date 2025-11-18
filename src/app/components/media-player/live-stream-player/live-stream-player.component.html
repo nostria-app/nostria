@@ -1,4 +1,4 @@
-<div class="live-stream-container" [class.fullscreen]="layout.fullscreenMediaPlayer()">
+<div class="live-stream-container" [class.fullscreen]="!footer()">
   @if (footer()) {
   <!-- Footer mode - compact controls with video preview -->
   <div class="stream-footer-content">
@@ -49,7 +49,7 @@
     </div>
   </div>
   } @else {
-  <!-- Fullscreen mode - full stream interface -->
+  <!-- Normal/Fullscreen mode - full stream interface -->
   <div class="stream-header">
     <div class="stream-info">
       <div class="stream-title-row">
@@ -67,11 +67,9 @@
       }
     </div>
     <div class="stream-actions">
-      @if (layout.fullscreenMediaPlayer()) {
       <button mat-icon-button matTooltip="Toggle chat" (click)="toggleChatVisibility()">
         <mat-icon>{{ chatVisible() ? 'chat' : 'chat_bubble_outline' }}</mat-icon>
       </button>
-      }
       <button mat-icon-button [matMenuTriggerFor]="streamMenu" matTooltip="More options">
         <mat-icon>more_vert</mat-icon>
       </button>
@@ -89,13 +87,13 @@
         (error)="onVideoError($event)"></video>
     </div>
 
-    <!-- Stream info bar (fullscreen only) -->
+    <!-- Stream info bar -->
     @if (liveEvent()) {
     <app-stream-info-bar [liveEvent]="liveEvent()!" />
     }
   </div>
 
-  <!-- Chat sidebar (fullscreen only) -->
+  <!-- Chat sidebar -->
   @if (liveEvent()) {
   <div class="chat-sidebar" [class.hidden]="!chatVisible()">
     <app-live-chat [liveEvent]="liveEvent()!" />

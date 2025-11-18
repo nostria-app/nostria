@@ -2,7 +2,7 @@
 
 <img src="public/icons/icon-128x128.png" alt="Nostria Logo" width="128" height="128">
 
-Making the Nostr protocol accessible to everyone, with a focus on user experience and performance for global scale.
+Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your profile and data under your control, and share and explore a decentralized space that resists censorship while being quick to join and friendly to use.
 
 ## Installation
 

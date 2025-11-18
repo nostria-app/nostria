@@ -769,3 +769,23 @@ mat-sidenav-content {
 .sidenav-container .mat-drawer-backdrop {
   z-index: 1000 !important;
 }
+
+// Fullscreen media player overlay
+.fullscreen-media-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 2000;
+  background: var(--mat-sys-background);
+  display: flex;
+  flex-direction: column;
+
+  app-media-player {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+  }
+}
