@@ -34,7 +34,7 @@
   &.fullscreen {
     display: grid;
     grid-template-columns: 1fr auto;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: auto 1fr 1fr;
     grid-template-areas:
       "header header"
       "video chat"
@@ -246,14 +246,13 @@
 app-stream-info-bar {
   grid-area: info;
   flex-shrink: 0;
-  max-height: 200px;
   overflow-y: auto;
   order: 2;
 
   @media (max-width: 968px) {
     flex: 1;
-    max-height: none;
-    min-height: 150px;
+    min-height: 0;
+    display: flex;
   }
 
   // Hide on mobile when chat is visible
