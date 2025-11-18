@@ -304,7 +304,7 @@ export class SetUsernameDialogComponent implements OnDestroy {
   usernameFormGroup = this.formBuilder.group({
     username: [
       '',
-      [Validators.required, Validators.minLength(3), Validators.pattern('^[a-zA-Z0-9_]+$')],
+      [Validators.required, Validators.minLength(2), Validators.pattern('^[a-zA-Z0-9_]+$')],
     ],
   });
 
@@ -336,7 +336,7 @@ export class SetUsernameDialogComponent implements OnDestroy {
         takeUntil(this.destroy$),
         debounceTime(500),
         switchMap(username => {
-          if (!username || username.length < 3) {
+          if (!username || username.length < 2) {
             this.isCheckingUsername.set(false);
             return of(null);
           }

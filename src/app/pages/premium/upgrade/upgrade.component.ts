@@ -82,7 +82,7 @@ export class UpgradeComponent implements OnDestroy {
   usernameFormGroup = this.formBuilder.group({
     username: [
       '',
-      [Validators.required, Validators.minLength(3), Validators.pattern('^[a-zA-Z0-9_]+$')],
+      [Validators.required, Validators.minLength(2), Validators.pattern('^[a-zA-Z0-9_]+$')],
     ],
   });
 
