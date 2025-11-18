@@ -107,6 +107,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
+  min-height: 64px;
+  height: 64px;
   background: var(--mat-sys-surface-container);
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   gap: 16px;
