@@ -59,14 +59,18 @@ export class StateService implements NostriaService {
     // Destroy old connections before setting up new ones
     const relayStatus = await this.accountRelay.setAccount(pubkey, true);
 
-    // Check if user has no relays configured
-    if (relayStatus.relayUrls.length === 0) {
+    // Check if user has a malformed relay list or no relays configured
+    if (relayStatus.hasMalformedRelayList || relayStatus.relayUrls.length === 0) {
       // Navigate to relay settings
       this.router.navigate(['/settings/relays']);
 
-      // Show a snackbar message
+      // Show appropriate message
+      const message = relayStatus.hasMalformedRelayList
+        ? 'Malformed relay configuration detected. Please repair your relay list.'
+        : 'No relays configured. Please add relays to use Nostr.';
+
       this.snackBar.open(
-        'No relays configured. Please add relays to use Nostr.',
+        message,
         'OK',
         {
           duration: 0, // Don't auto-dismiss
