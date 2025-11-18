@@ -52,14 +52,14 @@
     top: 64px; // Below header
     left: 0;
     bottom: 0;
-    right: 360px; // Leave space for chat
+    right: 360px; // Default space for chat
     width: auto;
     height: auto;
     z-index: 1;
   }
 }
 
-// Adjust video when chat is hidden in fullscreen
+// Adjust video when chat is hidden in fullscreen - extend to full width
 .live-stream-container.fullscreen:has(.chat-sidebar.hidden) .stream-video.in-fullscreen {
   right: 0;
 }
@@ -271,12 +271,13 @@
     min-width: 360px;
     max-width: 360px;
     height: 100%;
+    padding-top: 64px; // Position below header
     background: var(--mat-sys-surface-container);
     border-left: 1px solid var(--mat-sys-outline-variant);
     flex-direction: column;
     overflow: hidden;
     flex-shrink: 0;
-    transition: transform 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+    transition: width 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
 
     &.hidden {
       width: 0;
