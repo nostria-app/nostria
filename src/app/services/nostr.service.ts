@@ -90,6 +90,7 @@ export class NostrService implements NostriaService {
   private readonly pinPrompt = inject(PinPromptService);
 
   initialized = signal(false);
+  private accountsInitialized = false;
   MAX_WAIT_TIME = 2000;
   MAX_WAIT_TIME_METADATA = 2500;
   dataLoaded = false;
@@ -133,14 +134,17 @@ export class NostrService implements NostriaService {
     effect(() => {
       const allUsers = this.accountState.accounts();
 
-      if (allUsers.length === 0) {
-        this.logger.debug('No users to save to localStorage');
+      this.logger.debug('Users collection effect triggered', {
+        count: allUsers.length,
+        initialized: this.accountsInitialized,
+      });
+
+      // Don't auto-save during initialization to avoid wiping accounts
+      if (!this.accountsInitialized) {
+        this.logger.debug('Skipping auto-save during initialization');
         return;
       }
 
-      this.logger.debug('Users collection effect triggered', {
-        count: allUsers.length,
-      });
       this.logger.debug(`Saving ${allUsers.length} users to localStorage`);
       this.localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(allUsers));
     });
@@ -263,6 +267,8 @@ export class NostrService implements NostriaService {
         // Show success animation instead of waiting
         this.appState.showSuccess.set(false);
         this.initialized.set(true);
+        // Mark accounts as initialized even when empty to enable auto-save
+        this.accountsInitialized = true;
         return;
       }
 
@@ -288,6 +294,9 @@ export class NostrService implements NostriaService {
       }
 
       this.accountState.accounts.set(migratedAccounts);
+
+      // Mark accounts as initialized to enable auto-save
+      this.accountsInitialized = true;
 
       // We keep an in-memory copy of the user metadata and relay list for all accounts,
       // they won't take up too much memory space.
@@ -1308,6 +1317,28 @@ export class NostrService implements NostriaService {
       }
     } else {
       this.logger.debug('No users found in localStorage');
+
+      // Recovery: Check if there's a single account stored in the old ACCOUNT_STORAGE_KEY
+      const singleAccountJson = this.localStorage.getItem(this.appState.ACCOUNT_STORAGE_KEY);
+      if (singleAccountJson) {
+        try {
+          const singleAccount = JSON.parse(singleAccountJson);
+          this.logger.info('Found single account in storage, recovering to accounts list', {
+            pubkey: singleAccount.pubkey,
+          });
+
+          // Restore the accounts list with this single account
+          const recoveredAccounts = [singleAccount];
+          this.localStorage.setItem(
+            this.appState.ACCOUNTS_STORAGE_KEY,
+            JSON.stringify(recoveredAccounts)
+          );
+
+          return recoveredAccounts;
+        } catch (e) {
+          this.logger.error('Failed to recover account from single account storage', e);
+        }
+      }
     }
 
     return [];
@@ -1833,6 +1864,10 @@ export class NostrService implements NostriaService {
     const allUsers = this.accountState.accounts();
     const updatedUsers = allUsers.filter(u => u.pubkey !== pubkey);
     this.accountState.accounts.set(updatedUsers);
+
+    // Explicitly save to localStorage to ensure persistence
+    this.logger.debug(`Saving ${updatedUsers.length} accounts to localStorage after removal`);
+    this.localStorage.setItem(this.appState.ACCOUNTS_STORAGE_KEY, JSON.stringify(updatedUsers));
 
     // If we're removing the active user, set active user to null
     if (this.accountState.account()?.pubkey === pubkey) {

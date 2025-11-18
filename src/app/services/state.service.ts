@@ -1,4 +1,6 @@
 import { effect, inject, Injectable } from '@angular/core';
+import { Router } from '@angular/router';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { MediaService } from './media.service';
 import { AccountStateService } from './account-state.service';
 import { NostriaService } from '../interfaces';
@@ -16,6 +18,8 @@ import { FollowingService } from './following.service';
   providedIn: 'root',
 })
 export class StateService implements NostriaService {
+  private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
   accountState = inject(AccountStateService);
   media = inject(MediaService);
   badge = inject(BadgeService);
@@ -53,7 +57,29 @@ export class StateService implements NostriaService {
     // This is never called for anonymous accounts.
     await this.discoveryRelay.load();
     // Destroy old connections before setting up new ones
-    await this.accountRelay.setAccount(pubkey, true);
+    const relayStatus = await this.accountRelay.setAccount(pubkey, true);
+
+    // Check if user has a malformed relay list or no relays configured
+    if (relayStatus.hasMalformedRelayList || relayStatus.relayUrls.length === 0) {
+      // Navigate to relay settings
+      this.router.navigate(['/settings/relays']);
+
+      // Show appropriate message
+      const message = relayStatus.hasMalformedRelayList
+        ? 'Malformed relay configuration detected. Please repair your relay list.'
+        : 'No relays configured. Please add relays to use Nostr.';
+
+      this.snackBar.open(
+        message,
+        'OK',
+        {
+          duration: 0, // Don't auto-dismiss
+          horizontalPosition: 'center',
+          verticalPosition: 'top',
+        }
+      );
+    }
+
     await this.accountState.load();
     await this.nostr.load();
 
