@@ -291,9 +291,10 @@
   align-items: center;
   margin-bottom: 8px;
   color: var(--mat-hint-color, #757575);
-  width: auto;
   max-width: 100%;
   overflow: hidden;
+  width: fit-content;
+  /* Container only takes space it needs */
 
   mat-icon {
     margin-right: 8px;
@@ -313,7 +314,8 @@
     max-width: 100%;
     /* Adjusted from calc(100% - 26px) */
     display: inline-block;
-    /* Added to ensure tooltip aligns properly */
+    width: fit-content;
+    /* Ensure span only takes up the space it needs */
   }
 
   a {
