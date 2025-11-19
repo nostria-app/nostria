@@ -979,10 +979,33 @@ export class NostrService implements NostriaService {
   }
 
   async discoverMetadata(pubkey: string, disconnect = true): Promise<Event | undefined | null> {
+    // Get or create info object for this user
+    let info: any = await this.storage.getInfo(pubkey, 'user');
+    if (!info) {
+      info = {};
+    }
+
+    // Check if we have a relay list in storage (it may have been fetched by discoveryRelay.getUserRelayUrls)
+    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+    if (relayListEvent) {
+      info.hasRelayList = true;
+      info.foundOnDiscoveryRelays = true;
+      this.logger.debug('Found existing relay list for user during discovery', { pubkey });
+    }
+
+    // Fetch metadata
     const data = await this.sharedRelay.get(pubkey, {
       authors: [pubkey],
       kinds: [kinds.Metadata],
     });
+
+    if (data) {
+      info.foundMetadataOnUserRelays = true;
+    }
+
+    // Save updated info
+    await this.storage.saveInfo(pubkey, 'user', info);
+
     return data;
   }
 

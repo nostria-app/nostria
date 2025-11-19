@@ -7,16 +7,6 @@
   Example: <app-user-profile [hostWidthAuto]="true" ...></app-user-profile>
 -->
 <div [ngClass]="['user-profile', view()]">
-  @if (info()) {
-  <div class="user-info-status" [matTooltip]="getInfoTooltip()" [matTooltipClass]="'user-profile-tooltip'">
-    @if (this.info()!['hasRelayList']) {
-    <mat-icon class="user-info-icon" [class]="getInfoClass()">info</mat-icon>
-    } @else {
-    <mat-icon class="user-info-icon" [class]="getInfoClass()">warning</mat-icon>
-    }
-  </div>
-  }
-
   <div class="user-profile-container">
     <!-- Banner section for grid view -->
     @if (view() === 'grid') {
@@ -60,7 +50,8 @@
       </a>
 
       <!-- Trust rank badge -->
-      @if (showRank() && trustEnabled() && trustRank() !== undefined && (view() === 'large' || view() === 'medium' || view() === 'small')) {
+      @if (showRank() && trustEnabled() && trustRank() !== undefined && (view() === 'large' || view() === 'medium' ||
+      view() === 'small')) {
       <div class="trust-rank-badge" [class]="'trust-rank-' + view()" [matTooltip]="'Trust Rank: ' + trustRank()">
         {{ trustRank() }}
       </div>
