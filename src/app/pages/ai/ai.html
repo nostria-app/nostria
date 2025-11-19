@@ -3,58 +3,70 @@
   <p>Run Small Language Models locally in your browser using WebGPU/WASM.</p>
 
   <div class="models-grid">
+    @for (model of models(); track model.id) {
     <mat-card>
       <mat-card-header>
-        <mat-card-title>Text Generation</mat-card-title>
-        <mat-card-subtitle>{{ textModel }}</mat-card-subtitle>
+        <mat-card-title>{{ model.name }}</mat-card-title>
+        <mat-card-subtitle>{{ model.id }}</mat-card-subtitle>
       </mat-card-header>
       <mat-card-content>
-        <p>Generates text based on a prompt.</p>
-        @if (textModelLoading()) {
-        <mat-progress-bar mode="determinate" [value]="textModelProgress()"></mat-progress-bar>
-        <p>Downloading model... {{ textModelProgress() | number:'1.0-0' }}%</p>
+        <p>{{ model.description }}</p>
+        @if (model.loading) {
+        <mat-progress-bar mode="determinate" [value]="model.progress"></mat-progress-bar>
+        <p>Downloading model... {{ model.progress | number:'1.0-0' }}%</p>
         }
       </mat-card-content>
       <mat-card-actions>
-        <button mat-flat-button (click)="loadTextModel()" [disabled]="textModelLoaded() || textModelLoading()">
-          {{ textModelLoaded() ? 'Loaded' : 'Download & Load' }}
+        <button mat-flat-button (click)="loadModel(model)" [disabled]="model.loaded || model.loading">
+          @if (model.loaded) {
+          Loaded
+          } @else if (model.cached) {
+          Load (Cached)
+          } @else {
+          Download & Load
+          }
         </button>
       </mat-card-actions>
     </mat-card>
-
-    <mat-card>
-      <mat-card-header>
-        <mat-card-title>Translation</mat-card-title>
-        <mat-card-subtitle>{{ translationModel }}</mat-card-subtitle>
-      </mat-card-header>
-      <mat-card-content>
-        <p>Translates text (English to German).</p>
-        @if (translationModelLoading()) {
-        <mat-progress-bar mode="determinate" [value]="translationModelProgress()"></mat-progress-bar>
-        <p>Downloading model... {{ translationModelProgress() | number:'1.0-0' }}%</p>
-        }
-      </mat-card-content>
-      <mat-card-actions>
-        <button mat-flat-button (click)="loadTranslationModel()"
-          [disabled]="translationModelLoaded() || translationModelLoading()">
-          {{ translationModelLoaded() ? 'Loaded' : 'Download & Load' }}
-        </button>
-      </mat-card-actions>
-    </mat-card>
+    }
   </div>
 
   <div class="playground-section">
     <h2>Playground</h2>
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Input Text</mat-label>
-      <textarea matInput [ngModel]="inputText()" (ngModelChange)="inputText.set($event)" rows="4"></textarea>
+      <textarea matInput [ngModel]="inputText()" (ngModelChange)="inputText.set($event)" rows="4"
+        placeholder="Enter text here..."></textarea>
     </mat-form-field>
 
     <div class="actions">
-      <button mat-stroked-button (click)="generate()" [disabled]="!textModelLoaded() || isGenerating()">Generate
-        Text</button>
-      <button mat-stroked-button (click)="translate()"
-        [disabled]="!translationModelLoaded() || isGenerating()">Translate (En->De)</button>
+      <button mat-stroked-button (click)="generate()"
+        [disabled]="!isModelLoaded('Xenova/distilgpt2') || isGenerating()">
+        Generate Text
+      </button>
+      <button mat-stroked-button (click)="summarize()"
+        [disabled]="!isModelLoaded('Xenova/distilbart-cnn-6-6') || isGenerating()">
+        Summarize
+      </button>
+      <button mat-stroked-button (click)="analyzeSentiment()"
+        [disabled]="!isModelLoaded('Xenova/distilbert-base-uncased-finetuned-sst-2-english') || isGenerating()">
+        Sentiment
+      </button>
+
+      <div class="translation-group">
+        <mat-form-field appearance="outline" class="compact-select">
+          <mat-label>Translation Model</mat-label>
+          <mat-select [ngModel]="selectedTranslationModel()" (ngModelChange)="selectedTranslationModel.set($event)">
+            <mat-option value="Xenova/opus-mt-en-de">En -> De</mat-option>
+            <mat-option value="Xenova/opus-mt-en-es">En -> Es</mat-option>
+            <mat-option value="Xenova/opus-mt-en-fr">En -> Fr</mat-option>
+          </mat-select>
+        </mat-form-field>
+        <button mat-stroked-button (click)="translate()"
+          [disabled]="!isModelLoaded(selectedTranslationModel()) || isGenerating()">
+          Translate
+        </button>
+      </div>
     </div>
 
     @if (isGenerating()) {
