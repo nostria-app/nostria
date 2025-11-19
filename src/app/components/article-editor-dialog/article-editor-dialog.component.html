@@ -40,7 +40,7 @@
             <mat-icon>psychology</mat-icon>
           </button>
           <mat-menu #aiMenu="matMenu">
-            <button mat-menu-item (click)="openAiDialog('generate')">
+            <button mat-menu-item (click)="openAiDialog('generate')" disabled matTooltip="Temporarily disabled">
               <mat-icon>auto_awesome</mat-icon>
               <span>Generate Text</span>
             </button>

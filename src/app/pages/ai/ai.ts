@@ -66,17 +66,6 @@ export class AiComponent implements OnInit {
       cached: false
     },
     {
-      id: 'microsoft/Phi-3-mini-4k-instruct-onnx-web',
-      task: 'text-generation',
-      name: 'Phi-3 Mini 4K',
-      description: 'Text Generation (High Quality)',
-      size: '~2.5GB',
-      loading: false,
-      progress: 0,
-      loaded: false,
-      cached: false
-    },
-    {
       id: 'Xenova/distilbart-cnn-6-6',
       task: 'summarization',
       name: 'DistilBART CNN',
