@@ -1,14 +1,14 @@
-.drafts-container {
+.articles-container {
   width: 100%;
   padding: 24px;
 
-  // Ensure drafts list stretches full width
-  .drafts-list {
+  // Ensure articles list stretches full width
+  .articles-list {
     width: 100%;
   }
 }
 
-.drafts-header {
+.articles-header {
   margin-bottom: 32px;
 
   .header-content {
@@ -142,14 +142,14 @@
   }
 }
 
-.drafts-list {
+.articles-list {
   display: flex;
   flex-direction: column;
   gap: 16px;
   width: 100%;
 }
 
-.draft-card {
+.article-card {
   cursor: pointer;
   transition: all 0.2s ease;
   width: 100%;
@@ -159,7 +159,7 @@
     box-shadow: var(--mat-sys-level3);
   }
 
-  .draft-card-content {
+  .article-card-content {
     display: flex;
     gap: 24px;
     padding: 16px;
@@ -170,7 +170,7 @@
     }
   }
 
-  .draft-image {
+  .article-image {
     flex-shrink: 0;
     width: 200px;
     height: 150px;
@@ -190,37 +190,55 @@
     }
   }
 
-  .draft-details {
+  .article-details {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 12px;
     min-width: 0; // Allows text truncation to work
 
-    .draft-header {
+    .article-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 16px;
 
-      .draft-title-section {
+      .article-title-section {
         flex: 1;
         min-width: 0;
 
-        .draft-title {
+        .article-title {
           font-size: 1.25rem;
           line-height: 1.4;
           margin: 0 0 4px 0;
           color: var(--mat-sys-on-surface);
           font-family: 'Protest Strike', sans-serif;
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
+          display: flex;
+          align-items: center;
+          flex-wrap: wrap;
+          gap: 8px;
+
+          .status-badge {
+            font-size: 0.75rem;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            font-family: Roboto, sans-serif;
+
+            &.published {
+              background-color: var(--mat-sys-primary-container);
+              color: var(--mat-sys-on-primary-container);
+            }
+
+            &.edited {
+              background-color: var(--mat-sys-tertiary-container);
+              color: var(--mat-sys-on-tertiary-container);
+            }
+          }
         }
 
-        .draft-meta {
+        .article-meta {
           margin: 0;
           color: var(--mat-sys-on-surface-variant);
           font-size: 0.875rem;
@@ -243,7 +261,7 @@
       opacity: 1;
     }
 
-    .draft-summary {
+    .article-summary {
       color: var(--mat-sys-on-surface-variant);
       line-height: 1.5;
       margin: 0;
@@ -254,7 +272,7 @@
       overflow: hidden;
     }
 
-    .draft-tags {
+    .article-tags {
       mat-chip-set {
         display: flex;
         flex-wrap: wrap;
@@ -269,7 +287,7 @@
       }
     }
 
-    .draft-actions {
+    .article-actions {
       display: flex;
       align-items: center;
       margin-top: auto;
@@ -292,7 +310,7 @@ button {
 
 // Responsive design
 @media (max-width: 768px) {
-  .drafts-container {
+  .articles-container {
     padding: 16px;
   }
 

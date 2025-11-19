@@ -44,7 +44,7 @@ import { Calendar } from './pages/calendar/calendar';
 import { AlgorithmComponent } from './pages/settings/algorithm/algorithm';
 import { RelaysComponent } from './pages/settings/relays/relays.component';
 import { TrustSettingsComponent } from './pages/settings/trust/trust.component';
-import { DraftsComponent } from './pages/drafts/drafts.component';
+import { ArticlesListComponent } from './pages/articles-list/articles-list.component';
 import { ProfileOpenComponent } from './pages/profile/profile-open.component';
 import { DeleteEventComponent } from './pages/delete-event/delete-event.component';
 import { DeleteAccountComponent } from './pages/delete-account/delete-account.component';
@@ -236,10 +236,10 @@ export const routes: Routes = [
     title: 'Edit Article',
   },
   {
-    path: 'article/drafts',
-    component: DraftsComponent,
+    path: 'articles',
+    component: ArticlesListComponent,
     data: { isRoot: true },
-    title: 'Drafts',
+    title: 'Articles',
   },
   {
     path: 'a/:id',
