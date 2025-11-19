@@ -89,6 +89,47 @@ export class AiService {
     return this.postMessage('check', { task, model }) as Promise<{ loaded: boolean, cached: boolean }>;
   }
 
+  async deleteModelFromCache(modelId: string) {
+    if ('caches' in window) {
+      try {
+        const cache = await caches.open('transformers-cache');
+        const keys = await cache.keys();
+        const deletions = keys
+          .filter(request => request.url.includes(modelId))
+          .map(request => cache.delete(request));
+
+        await Promise.all(deletions);
+
+        // Update local state
+        this.loadedModels.update(models => {
+          const newModels = new Set(models);
+          newModels.delete(modelId);
+          return newModels;
+        });
+
+        return true;
+      } catch (error) {
+        console.error('Error deleting model from cache:', error);
+        return false;
+      }
+    }
+    return false;
+  }
+
+  async clearAllCache() {
+    if ('caches' in window) {
+      try {
+        await caches.delete('transformers-cache');
+        this.loadedModels.set(new Set());
+        return true;
+      } catch (error) {
+        console.error('Error clearing cache:', error);
+        return false;
+      }
+    }
+    return false;
+  }
+
   private postMessage(type: string, payload: unknown, progressCallback?: (data: unknown) => void): Promise<unknown> {
     return new Promise((resolve, reject) => {
       const id = Math.random().toString(36).substring(7);
