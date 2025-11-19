@@ -21,10 +21,12 @@ h2 {
   margin: 0 auto;
   height: calc(100vh - 100px);
   position: relative;
+  overflow: hidden;
 
   @media (max-width: 768px) {
     flex-direction: column;
     height: auto;
+    overflow: visible;
   }
 }
 
@@ -45,9 +47,13 @@ h2 {
 .settings-sidebar {
   width: 240px;
   flex-shrink: 0;
+  overflow-y: auto;
+  height: 100%;
 
   @media (max-width: 768px) {
     width: 100%;
+    height: auto;
+    overflow-y: visible;
   }
 
   .active {
@@ -58,6 +64,13 @@ h2 {
 
 .settings-content {
   flex: 1;
+  overflow-y: auto;
+  height: 100%;
+
+  @media (max-width: 768px) {
+    overflow-y: visible;
+    height: auto;
+  }
 }
 
 .settings-card {
