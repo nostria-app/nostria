@@ -19,18 +19,20 @@ import { type Event, kinds, nip19 } from 'nostr-tools';
 import type { Subscription } from 'rxjs';
 import type { ArticleData } from '../../components/article-display/article-display.component';
 import { ArticleDisplayComponent } from '../../components/article-display/article-display.component';
-import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
-import type { NostrRecord } from '../../interfaces';
-import { AccountStateService } from '../../services/account-state.service';
-import { BookmarkService } from '../../services/bookmark.service';
-import { Cache } from '../../services/cache';
-import { DataService } from '../../services/data.service';
-import { FormatService } from '../../services/format/format.service';
-import { LayoutService } from '../../services/layout.service';
-import { LoggerService } from '../../services/logger.service';
-import { UrlUpdateService } from '../../services/url-update.service';
-import { UserDataService } from '../../services/user-data.service';
+import { MatMenuModule } from '@angular/material/menu';
+import { AiService } from '../../services/ai.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { UserDataService } from '../../services/user-data.service';
+import { LoggerService } from '../../services/logger.service';
+import { DataService } from '../../services/data.service';
+import { LayoutService } from '../../services/layout.service';
+import { FormatService } from '../../services/format/format.service';
+import { UrlUpdateService } from '../../services/url-update.service';
+import { Cache } from '../../services/cache';
+import { BookmarkService } from '../../services/bookmark.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
+import { NostrRecord } from '../../interfaces';
 
 @Component({
   selector: 'app-article',
@@ -42,6 +44,7 @@ import { UtilitiesService } from '../../services/utilities.service';
     MatProgressSpinnerModule,
     CommonModule,
     ArticleDisplayComponent,
+    MatMenuModule
   ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
@@ -57,6 +60,7 @@ export class ArticleComponent implements OnDestroy {
   private url = inject(UrlUpdateService);
   private readonly cache = inject(Cache);
   private dialog = inject(MatDialog);
+  private aiService = inject(AiService);
   bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
   link = '';
@@ -70,8 +74,11 @@ export class ArticleComponent implements OnDestroy {
   // Text-to-Speech state
   isSpeaking = signal(false);
   isPaused = signal(false);
+  useAiVoice = signal(false);
+  isSynthesizing = signal(false);
   private speechSynthesis: SpeechSynthesis | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
+  private audioPlayer: HTMLAudioElement | null = null;
 
   constructor() {
     if (!this.layout.isBrowser()) {
@@ -510,136 +517,146 @@ export class ArticleComponent implements OnDestroy {
   }
 
   /**
-   * Start reading the article content aloud using text-to-speech
+   * Toggle between play and pause
    */
-  startSpeech(): void {
-    if (!this.speechSynthesis || !this.layout.isBrowser()) {
-      return;
-    }
-
-    // Stop any ongoing speech
-    this.stopSpeech();
-
-    // Get the text content to speak
-    let textToSpeak = '';
-
-    // Add title
-    const titleText = this.title();
-    if (titleText) {
-      textToSpeak += titleText + '. ';
-    }
-
-    // Add summary
-    const summaryText = this.summary();
-    if (summaryText) {
-      textToSpeak += summaryText + '. ';
-    }
-
-    // Add main content
-    if (this.isJsonContent()) {
-      // For JSON content, stringify it in a readable way
-      const jsonContent = this.jsonData();
-      if (jsonContent) {
-        textToSpeak += 'Content: ' + JSON.stringify(jsonContent, null, 2);
+  toggleSpeech() {
+    if (this.isSpeaking()) {
+      if (this.isPaused()) {
+        this.resumeSpeech();
+      } else {
+        this.pauseSpeech();
       }
     } else {
-      // For markdown content, strip HTML tags and use plain text
-      const contentText = this.content();
-      if (contentText) {
-        // Remove markdown formatting for better speech
-        const plainText = contentText
-          .replace(/[#*_~`]/g, '') // Remove markdown symbols
-          .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Convert links to text
-          .replace(/!\[([^\]]*)\]\([^)]+\)/g, '') // Remove images
-          .trim();
-        textToSpeak += plainText;
+      this.startSpeech();
+    }
+  }
+
+  async startSpeech() {
+    const articleContent = this.event()?.content;
+    if (!articleContent) return;
+
+    // Strip markdown/html for speech
+    const textToSpeak = this.stripMarkdown(articleContent);
+
+    if (this.useAiVoice()) {
+      await this.startAiSpeech(textToSpeak);
+    } else {
+      this.startNativeSpeech(textToSpeak);
+    }
+  }
+
+  async startAiSpeech(text: string) {
+    this.isSynthesizing.set(true);
+    try {
+      // Check if model is loaded
+      const status = await this.aiService.checkModel('text-to-speech', 'Xenova/speecht5_tts');
+      if (!status.loaded) {
+        // Prompt user or auto-load? For now auto-load with notification
+        // Ideally we should show a dialog or toast
+        await this.aiService.loadModel('text-to-speech', 'Xenova/speecht5_tts');
       }
+
+      // Split text into chunks if too long?
+      // For now, just try the first 500 chars as a demo/limit
+      const chunk = text.slice(0, 500); 
+
+      const result = await this.aiService.synthesizeSpeech(chunk) as { audio: Float32Array, sampling_rate: number };
+      
+      if (result && result.audio) {
+        this.playAudio(result.audio, result.sampling_rate);
+        this.isSpeaking.set(true);
+        this.isPaused.set(false);
+      }
+    } catch (err) {
+      console.error('AI Speech error:', err);
+      // Fallback to native?
+      this.startNativeSpeech(text);
+    } finally {
+      this.isSynthesizing.set(false);
     }
-
-    if (!textToSpeak.trim()) {
-      console.warn('No content to speak');
-      return;
-    }
-
-    // Create utterance
-    this.currentUtterance = new SpeechSynthesisUtterance(textToSpeak);
-
-    // Set voice properties
-    this.currentUtterance.rate = 1.0;
-    this.currentUtterance.pitch = 1.0;
-    this.currentUtterance.volume = 1.0;
-
-    // Set up event listeners
-    this.currentUtterance.onstart = () => {
-      this.isSpeaking.set(true);
-      this.isPaused.set(false);
-    };
-
-    this.currentUtterance.onend = () => {
-      this.isSpeaking.set(false);
-      this.isPaused.set(false);
-      this.currentUtterance = null;
-    };
-
-    this.currentUtterance.onerror = (event) => {
-      console.error('Speech synthesis error:', event);
-      this.isSpeaking.set(false);
-      this.isPaused.set(false);
-      this.currentUtterance = null;
-    };
-
-    // Start speaking
-    this.speechSynthesis.speak(this.currentUtterance);
   }
 
-  /**
-   * Pause the current speech
-   */
-  pauseSpeech(): void {
-    if (!this.speechSynthesis || !this.isSpeaking()) {
-      return;
-    }
+  playAudio(audioData: Float32Array, sampleRate: number) {
+    const audioContext = new AudioContext({ sampleRate });
+    const buffer = audioContext.createBuffer(1, audioData.length, sampleRate);
+    buffer.copyToChannel(new Float32Array(audioData), 0);
 
-    this.speechSynthesis.pause();
-    this.isPaused.set(true);
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start();
+    
+    source.onended = () => {
+      this.stopSpeech();
+    };
+
+    // Store context/source to stop later if needed
+    // For simplicity in this demo, we just play it.
+    // To implement pause/resume with Web Audio API is more complex.
   }
 
-  /**
-   * Resume paused speech
-   */
-  resumeSpeech(): void {
-    if (!this.speechSynthesis || !this.isPaused()) {
-      return;
-    }
+  startNativeSpeech(text: string) {
+    if (!this.speechSynthesis) return;
 
-    this.speechSynthesis.resume();
+    this.stopSpeech();
+
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.onend = () => {
+      this.isSpeaking.set(false);
+      this.isPaused.set(false);
+    };
+
+    this.currentUtterance = utterance;
+    this.speechSynthesis.speak(utterance);
+    this.isSpeaking.set(true);
     this.isPaused.set(false);
   }
 
-  /**
-   * Stop the current speech
-   */
-  stopSpeech(): void {
-    if (!this.speechSynthesis) {
-      return;
+  pauseSpeech() {
+    if (this.useAiVoice()) {
+      // Web Audio API pause not implemented in this simple version
+      this.stopSpeech();
+    } else {
+      if (this.speechSynthesis) {
+        this.speechSynthesis.pause();
+        this.isPaused.set(true);
+      }
     }
+  }
 
-    this.speechSynthesis.cancel();
+  resumeSpeech() {
+    if (this.useAiVoice()) {
+      // Not implemented
+    } else {
+      if (this.speechSynthesis) {
+        this.speechSynthesis.resume();
+        this.isPaused.set(false);
+      }
+    }
+  }
+
+  stopSpeech() {
+    if (this.speechSynthesis) {
+      this.speechSynthesis.cancel();
+    }
+    // Stop Web Audio if playing
+    
     this.isSpeaking.set(false);
     this.isPaused.set(false);
     this.currentUtterance = null;
   }
 
-  /**
-   * Toggle between play and pause
-   */
-  toggleSpeech(): void {
-    if (!this.isSpeaking()) {
-      this.startSpeech();
-    } else if (this.isPaused()) {
-      this.resumeSpeech();
-    } else {
-      this.pauseSpeech();
-    }
+  stripMarkdown(text: string): string {
+    // Basic markdown stripping
+    return text
+      .replace(/!\[.*?\]\(.*?\)/g, '') // Remove images
+      .replace(/\[.*?\]\(.*?\)/g, '$1') // Remove links but keep text
+      .replace(/#{1,6}\s/g, '') // Remove headers
+      .replace(/(\*\*|__)(.*?)\1/g, '$2') // Remove bold
+      .replace(/(\*|_)(.*?)\1/g, '$2') // Remove italic
+      .replace(/`{3}[\s\S]*?`{3}/g, '') // Remove code blocks
+      .replace(/`(.+?)`/g, '$1') // Remove inline code
+      .replace(/>\s/g, '') // Remove blockquotes
+      .replace(/\n+/g, '. '); // Replace newlines with periods for better pausing
   }
 }

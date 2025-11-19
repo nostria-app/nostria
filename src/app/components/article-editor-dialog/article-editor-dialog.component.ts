@@ -47,6 +47,7 @@ import type { ArticleData } from '../article-display/article-display.component';
 import { ArticleDisplayComponent } from '../article-display/article-display.component';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
+import { AiService } from '../../services/ai.service';
 
 export interface ArticleEditorDialogData {
   articleId?: string;
@@ -113,11 +114,18 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   private accountRelay = inject(AccountRelayService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private aiService = inject(AiService);
   private sanitizer = inject(DomSanitizer);
   private accountState = inject(AccountStateService);
+  private media = inject(MediaService);
   private localStorage = inject(LocalStorageService);
   private cache = inject(Cache);
-  private media = inject(MediaService);
+
+  // Signals
+  autoDTagEnabled = signal(true);
+  isEditMode = signal(false);
+  isLoadingArticle = signal(false);
+  publishInitiated = false;
 
   // Auto-save configuration
   private readonly AUTO_SAVE_INTERVAL = 2000; // Save every 2 seconds
@@ -126,11 +134,10 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   // Editor state
   isLoading = signal(false);
   isPublishing = signal(false);
-  private publishInitiated = false; // Guard against race conditions from double-clicks
-  isEditMode = signal(false);
-  selectedTabIndex = signal(0);
-  autoDTagEnabled = signal(true);
-  isLoadingArticle = signal(false); // Track when we're loading an existing article
+  isRecording = signal(false);
+  isTranscribing = signal(false);
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
 
   // Article data
   article = signal<ArticleDraft>({
@@ -579,7 +586,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
     }
   }
 
-  async publishArticle(kind = 30023): Promise<any | null> {
+  async publishArticle(kind = 30023): Promise<unknown | null> {
     // Guard against double-clicks and race conditions
     if (this.isPublishing() || this.publishInitiated) {
       return null;
@@ -1264,5 +1271,77 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
         this.updateContent(result);
       }
     });
+  }
+
+  async toggleRecording() {
+    if (this.isRecording()) {
+      this.stopRecording();
+    } else {
+      await this.startRecording();
+    }
+  }
+
+  async startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(stream);
+      this.audioChunks = [];
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        this.audioChunks.push(event.data);
+      };
+
+      this.mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+        await this.transcribeAudio(audioBlob);
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      this.mediaRecorder.start();
+      this.isRecording.set(true);
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      this.snackBar.open('Error accessing microphone', 'Close', { duration: 3000 });
+    }
+  }
+
+  stopRecording() {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      this.isRecording.set(false);
+    }
+  }
+
+  async transcribeAudio(blob: Blob) {
+    this.isTranscribing.set(true);
+    try {
+      // Check if model is loaded
+      const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+      if (!status.loaded) {
+        this.snackBar.open('Loading Whisper model...', 'Close', { duration: 2000 });
+        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+      }
+
+      // Convert Blob to Float32Array
+      const arrayBuffer = await blob.arrayBuffer();
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const audioData = audioBuffer.getChannelData(0);
+
+      const result = await this.aiService.transcribeAudio(audioData) as { text: string };
+      
+      if (result && result.text) {
+        const currentContent = this.article().content;
+        const newContent = currentContent ? currentContent + ' ' + result.text.trim() : result.text.trim();
+        this.updateContent(newContent);
+      }
+    } catch (err) {
+      console.error('Transcription error:', err);
+      this.snackBar.open('Transcription failed', 'Close', { duration: 3000 });
+    } finally {
+      this.isTranscribing.set(false);
+    }
   }
 }

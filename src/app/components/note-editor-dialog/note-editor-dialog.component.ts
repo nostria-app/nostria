@@ -43,6 +43,7 @@ import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 import { MatMenuModule } from '@angular/material/menu';
+import { AiService } from '../../services/ai.service';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -134,6 +135,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private publishEventBus = inject(PublishEventBus);
   private publishSubscription?: Subscription;
   private dialog = inject(MatDialog);
+  private aiService = inject(AiService);
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -146,12 +148,17 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
   // Signals for reactive state
   content = signal('');
-  isPublishing = signal(false);
-  isUploading = signal(false);
-  isDragOver = signal(false);
+  mentions = signal<string[]>([]);
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
-  mentions = signal<string[]>(this.data?.mentions || []);
+  isDragOver = signal(false);
+  isUploading = signal(false);
+  dragCounter = 0;
+  isPublishing = signal(false);
+  isRecording = signal(false);
+  isTranscribing = signal(false);
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
 
   // Computed hashtags from content
   hashtags = computed(() => {
@@ -196,8 +203,6 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     bestEvent: null,
   });
   powMinedEvent = signal<UnsignedEvent | null>(null);
-
-  private dragCounter = 0;
 
   // Computed properties
   characterCount = computed(() => this.content().length);
@@ -1767,5 +1772,86 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         this.content.set(result);
       }
     });
+  }
+
+  async toggleRecording() {
+    if (this.isRecording()) {
+      this.stopRecording();
+    } else {
+      await this.startRecording();
+    }
+  }
+
+  async startRecording() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(stream);
+      this.audioChunks = [];
+
+      this.mediaRecorder.ondataavailable = (event) => {
+        this.audioChunks.push(event.data);
+      };
+
+      this.mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
+        await this.transcribeAudio(audioBlob);
+        
+        // Stop all tracks
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      this.mediaRecorder.start();
+      this.isRecording.set(true);
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      this.snackBar.open('Error accessing microphone', 'Close', { duration: 3000 });
+    }
+  }
+
+  stopRecording() {
+    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
+      this.mediaRecorder.stop();
+      this.isRecording.set(false);
+    }
+  }
+
+  adjustTextareaHeight(): void {
+    if (this.contentTextarea) {
+      const textarea = this.contentTextarea.nativeElement;
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }
+  }
+
+  async transcribeAudio(blob: Blob) {
+    this.isTranscribing.set(true);
+    try {
+      // Check if model is loaded
+      const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+      if (!status.loaded) {
+        this.snackBar.open('Loading Whisper model...', 'Close', { duration: 2000 });
+        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+      }
+
+      // Convert Blob to Float32Array
+      const arrayBuffer = await blob.arrayBuffer();
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const audioData = audioBuffer.getChannelData(0);
+
+      const result = await this.aiService.transcribeAudio(audioData) as { text: string };
+      
+      if (result && result.text) {
+        const currentContent = this.content();
+        const newContent = currentContent ? currentContent + ' ' + result.text.trim() : result.text.trim();
+        this.content.set(newContent);
+        this.adjustTextareaHeight();
+      }
+    } catch (err) {
+      console.error('Transcription error:', err);
+      this.snackBar.open('Transcription failed', 'Close', { duration: 3000 });
+    } finally {
+      this.isTranscribing.set(false);
+    }
   }
 }

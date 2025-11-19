@@ -4,6 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { RouterModule } from '@angular/router';
 import { SafeHtml } from '@angular/platform-browser';
 import { Event } from 'nostr-tools';
@@ -42,6 +43,7 @@ export interface ArticleData {
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
+    MatMenuModule,
     RouterModule,
     UserProfileComponent,
     DateToggleComponent,
@@ -63,12 +65,14 @@ export class ArticleDisplayComponent {
   // Text-to-speech inputs (only used in full mode)
   isSpeaking = input<boolean>(false);
   isPaused = input<boolean>(false);
+  useAiVoice = input<boolean>(false);
 
   // Text-to-speech outputs (only used in full mode)
   startSpeech = output<void>();
   pauseSpeech = output<void>();
   resumeSpeech = output<void>();
   stopSpeech = output<void>();
+  toggleAiVoice = output<boolean>();
   share = output<void>();
 
   layout = inject(LayoutService);

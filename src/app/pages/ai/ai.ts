@@ -66,6 +66,17 @@ export class AiComponent implements OnInit {
       cached: false
     },
     {
+      id: 'microsoft/Phi-3-mini-4k-instruct-onnx-web',
+      task: 'text-generation',
+      name: 'Phi-3 Mini 4K',
+      description: 'Text Generation (High Quality)',
+      size: '~2.5GB',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false
+    },
+    {
       id: 'Xenova/distilbart-cnn-6-6',
       task: 'summarization',
       name: 'DistilBART CNN',
@@ -115,6 +126,28 @@ export class AiComponent implements OnInit {
       name: 'English to French',
       description: 'Translation',
       size: '~107MB',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false
+    },
+    {
+      id: 'Xenova/whisper-tiny.en',
+      task: 'automatic-speech-recognition',
+      name: 'Whisper Tiny',
+      description: 'Speech to Text',
+      size: '~40MB',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false
+    },
+    {
+      id: 'Xenova/speecht5_tts',
+      task: 'text-to-speech',
+      name: 'SpeechT5',
+      description: 'Text to Speech',
+      size: '~180MB',
       loading: false,
       progress: 0,
       loaded: false,
@@ -217,7 +250,7 @@ export class AiComponent implements OnInit {
       }) as { generated_text: string }[];
       console.log('Generate result:', result);
       if (Array.isArray(result) && result.length > 0 && result[0].generated_text) {
-        this.outputText.set(result[0].generated_text);
+        this.outputText.set(result[0].generated_text.trim());
       } else {
         this.outputText.set(JSON.stringify(result, null, 2));
       }
