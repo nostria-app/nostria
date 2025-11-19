@@ -1,0 +1,126 @@
+<div class="articles-container">
+  <div class="articles-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>article</mat-icon>
+        My Articles
+      </h1>
+      <div class="header-actions">
+        <button mat-flat-button (click)="createNewArticle()">
+          <mat-icon>add</mat-icon>
+          New Article
+        </button>
+        <button mat-icon-button (click)="refreshArticles()" matTooltip="Refresh articles">
+          <mat-icon>refresh</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <mat-tab-group [selectedIndex]="selectedTab()" (selectedIndexChange)="onTabChange($event)" animationDuration="0ms">
+      <mat-tab label="Drafts"></mat-tab>
+      <mat-tab label="Published"></mat-tab>
+    </mat-tab-group>
+
+    @if (availableTags().length > 0) {
+    <div class="tag-filters">
+      <span class="filter-label">Filter by tags:</span>
+      <mat-chip-listbox multiple (change)="onTagSelectionChange($any($event.value))">
+        @for (tag of availableTags(); track $index) {
+        <mat-chip-option [value]="tag" [selected]="selectedTags().includes(tag)" class="tag-chip">{{ tag
+          }}</mat-chip-option>
+        }
+      </mat-chip-listbox>
+    </div>
+    }
+  </div>
+
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-progress-spinner mode="indeterminate" diameter="50"></mat-progress-spinner>
+    <p>Loading articles...</p>
+  </div>
+  } @else if (error()) {
+  <div class="error-container">
+    <mat-icon color="warn">error</mat-icon>
+    <p>{{ error() }}</p>
+    <button mat-raised-button (click)="refreshArticles()">Try Again</button>
+  </div>
+  } @else if (filteredArticles().length === 0) {
+  <div class="empty-state">
+    @if (selectedTags().length > 0) {
+    <mat-icon>filter_list_off</mat-icon>
+    <h2>No articles found with selected tags</h2>
+    <p>Try clearing the filter or selecting different tags.</p>
+    <button mat-raised-button (click)="clearTagFilter()">Clear Filter</button>
+    } @else {
+    <mat-icon>article</mat-icon>
+    <h2>No {{ selectedTab() === 0 ? 'drafts' : 'published articles' }} yet</h2>
+    <p>{{ selectedTab() === 0 ? 'Start writing your first article!' : 'Publish your drafts to see them here.' }}</p>
+    @if (selectedTab() === 0) {
+    <button mat-raised-button color="primary" (click)="createNewArticle()">
+      <mat-icon>add</mat-icon>
+      Create Your First Article
+    </button>
+    }
+    }
+  </div>
+  } @else {
+  <div class="articles-list">
+    @for (article of filteredArticles(); track article.id) {
+    <mat-card class="article-card" (click)="openArticle(article)">
+      <div class="article-card-content">
+        @if (article.imageUrl) {
+        <div class="article-image">
+          <img [src]="article.imageUrl" alt="{{ article.title }}" title="{{ article.title }}" />
+        </div>
+        }
+
+        <div class="article-details">
+          <div class="article-header">
+            <div class="article-title-section">
+              <h3 class="article-title">
+                {{ article.title }}
+                @if (selectedTab() === 0) {
+                @if (article.status === 'published') {
+                <span class="status-badge published">Published</span>
+                }
+                @if (article.isEdited) {
+                <span class="status-badge edited">Unpublished Changes</span>
+                }
+                }
+              </h3>
+              <p class="article-meta">
+                Last modified {{ article.lastModified | ago }} • Created {{ article.createdAt | ago }}
+              </p>
+            </div>
+            <button mat-icon-button (click)="deleteArticle(article, $event)" matTooltip="Delete article"
+              class="delete-button">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <p class="article-summary">{{ article.summary }}</p>
+
+          @if (article.tags.length > 0) {
+          <div class="article-tags">
+            <mat-chip-set>
+              @for (tag of article.tags; track $index) {
+              <mat-chip class="tag-chip">{{ tag }}</mat-chip>
+              }
+            </mat-chip-set>
+          </div>
+          }
+
+          <div class="article-actions">
+            <button mat-button (click)="openArticle(article, $event)">
+              <mat-icon>edit</mat-icon>
+              {{ selectedTab() === 0 ? 'Continue Writing' : 'Edit Article' }}
+            </button>
+          </div>
+        </div>
+      </div>
+    </mat-card>
+    }
+  </div>
+  }
+</div>

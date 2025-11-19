@@ -46,7 +46,7 @@ export class AppsMenuComponent {
       action: () => this.eventService.createNote(),
       hideWhenNotAuthenticated: true,
     },
-        {
+    {
       icon: 'cinematic_blur',
       label: 'Clip',
       action: () => this.layout.openRecordVideoDialog(),
@@ -68,7 +68,7 @@ export class AppsMenuComponent {
 
   contentItems: MenuItem[] = [
     { icon: 'photo_library', label: 'Media', route: ['/media'] },
-    { icon: 'edit_document', label: 'Drafts', route: ['/article/drafts'] },
+    { icon: 'edit_document', label: 'Articles', route: ['/articles'] },
     { icon: 'lists', label: 'Lists', route: ['/lists'] },
     { icon: 'poll', label: 'Polls', route: ['/polls'] },
   ];
@@ -88,7 +88,7 @@ export class AppsMenuComponent {
       route: ['/calendar'],
       requiresFeature: 'preview',
     },
-        {
+    {
       icon: 'bookmarks',
       label: 'Bookmarks',
       route: ['/bookmarks'],
