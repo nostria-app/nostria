@@ -7,6 +7,8 @@ env.useBrowserCache = true;
 let textGenerator: any = null;
 let summarizer: any = null;
 let sentiment: any = null;
+let transcriber: any = null;
+let synthesizer: any = null;
 const translators = new Map<string, any>();
 
 addEventListener('message', async ({ data }) => {
@@ -28,6 +30,12 @@ addEventListener('message', async ({ data }) => {
         break;
       case 'translate':
         await handleTranslate(payload, id);
+        break;
+      case 'transcribe':
+        await handleTranscribe(payload, id);
+        break;
+      case 'synthesize':
+        await handleSynthesize(payload, id);
         break;
       case 'check':
         await handleCheck(payload, id);
@@ -62,6 +70,10 @@ async function handleLoad(payload: { task: string, model: string }, id: string) 
   } else if (task === 'translation') {
     const translator = await pipeline(task, model, { progress_callback: progressCallback });
     translators.set(model, translator);
+  } else if (task === 'automatic-speech-recognition') {
+    transcriber = await pipeline(task, model, { progress_callback: progressCallback });
+  } else if (task === 'text-to-speech') {
+    synthesizer = await pipeline(task, model, { progress_callback: progressCallback });
   }
 
   postMessage({
@@ -120,6 +132,30 @@ async function handleTranslate(payload: { text: string, model: string, params?: 
   });
 }
 
+async function handleTranscribe(payload: { audio: Float32Array, params?: any }, id: string) {
+  if (!transcriber) {
+    throw new Error('Transcription model not loaded');
+  }
+  const result = await transcriber(payload.audio, payload.params);
+  postMessage({
+    type: 'result',
+    id,
+    payload: result
+  });
+}
+
+async function handleSynthesize(payload: { text: string, params?: any }, id: string) {
+  if (!synthesizer) {
+    throw new Error('Text-to-speech model not loaded');
+  }
+  const result = await synthesizer(payload.text, payload.params);
+  postMessage({
+    type: 'result',
+    id,
+    payload: result
+  });
+}
+
 async function handleCheck(payload: { task: string, model: string }, id: string) {
   const { task, model } = payload;
   let isLoaded = false;
@@ -130,6 +166,8 @@ async function handleCheck(payload: { task: string, model: string }, id: string)
   else if (task === 'summarization') isLoaded = !!summarizer;
   else if (task === 'sentiment-analysis') isLoaded = !!sentiment;
   else if (task === 'translation') isLoaded = translators.has(model);
+  else if (task === 'automatic-speech-recognition') isLoaded = !!transcriber;
+  else if (task === 'text-to-speech') isLoaded = !!synthesizer;
 
   // Check cache if not loaded
   if (!isLoaded) {

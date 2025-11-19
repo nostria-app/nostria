@@ -37,6 +37,16 @@
         <!-- Text-to-Speech Controls (Header) - only in full mode -->
         @if (mode() === 'full') {
         <div class="article-tts-controls">
+          <button mat-icon-button [matMenuTriggerFor]="voiceMenu" matTooltip="Voice Settings">
+            <mat-icon>settings_voice</mat-icon>
+          </button>
+          <mat-menu #voiceMenu="matMenu">
+            <button mat-menu-item (click)="toggleAiVoice.emit(!useAiVoice())">
+              <mat-icon>{{ useAiVoice() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+              <span>Use AI Voice (SpeechT5)</span>
+            </button>
+          </mat-menu>
+
           @if (!isSpeaking()) {
           <button mat-icon-button color="primary" (click)="startSpeech.emit()" title="Read article aloud">
             <mat-icon>volume_up</mat-icon>

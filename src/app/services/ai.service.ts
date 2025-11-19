@@ -18,6 +18,8 @@ export class AiService {
   translationModelLoaded = signal(false);
   summarizationModelLoaded = signal(false);
   sentimentModelLoaded = signal(false);
+  transcriptionModelLoaded = signal(false);
+  speechModelLoaded = signal(false);
 
   loadedModels = signal<Set<string>>(new Set());
 
@@ -58,6 +60,8 @@ export class AiService {
       if (task === 'translation') this.translationModelLoaded.set(true);
       if (task === 'summarization') this.summarizationModelLoaded.set(true);
       if (task === 'sentiment-analysis') this.sentimentModelLoaded.set(true);
+      if (task === 'automatic-speech-recognition') this.transcriptionModelLoaded.set(true);
+      if (task === 'text-to-speech') this.speechModelLoaded.set(true);
 
       this.loadedModels.update(models => {
         const newModels = new Set(models);
@@ -83,6 +87,14 @@ export class AiService {
 
   async translateText(text: string, model: string, params?: unknown) {
     return this.postMessage('translate', { text, model, params });
+  }
+
+  async transcribeAudio(audio: Float32Array, params?: unknown) {
+    return this.postMessage('transcribe', { audio, params });
+  }
+
+  async synthesizeSpeech(text: string, params?: unknown) {
+    return this.postMessage('synthesize', { text, params });
   }
 
   async checkModel(task: string, model: string): Promise<{ loaded: boolean, cached: boolean }> {
