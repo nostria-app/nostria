@@ -24,6 +24,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { CommonModule } from '@angular/common';
 import { LayoutService } from '../../services/layout.service';
 import { NostrRecord } from '../../interfaces';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 
 export interface ArticleItem {
   id: string;
@@ -70,6 +71,7 @@ export class ArticlesListComponent {
   private data = inject(DataService);
   private app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private dialog = inject(MatDialog);
   private layout = inject(LayoutService);
 
@@ -126,6 +128,8 @@ export class ArticlesListComponent {
   constructor() {
     effect(() => {
       if (this.app.initialized() && this.accountState.account()) {
+        const pubkey = this.accountState.account()!.pubkey;
+        this.selectedTab.set(this.accountLocalState.getArticlesActiveTab(pubkey));
         this.loadArticles();
       }
     });
@@ -375,5 +379,9 @@ export class ArticlesListComponent {
 
   onTabChange(index: number): void {
     this.selectedTab.set(index);
+    const account = this.accountState.account();
+    if (account) {
+      this.accountLocalState.setArticlesActiveTab(account.pubkey, index);
+    }
   }
 }
