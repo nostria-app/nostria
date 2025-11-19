@@ -31,6 +31,8 @@ import { MediaService, MediaItem } from './media.service';
 import { MediaPublishDialogComponent, MediaPublishOptions } from '../pages/media/media-publish-dialog/media-publish-dialog.component';
 import { NostrService } from './nostr.service';
 import { PublishService } from './publish.service';
+import { CustomDialogService, CustomDialogRef } from './custom-dialog.service';
+// import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
   providedIn: 'root',
@@ -43,6 +45,7 @@ export class LayoutService implements OnDestroy {
   location = inject(Location);
   private logger = inject(LoggerService);
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private snackBar = inject(MatSnackBar);
   private injector = inject(Injector);
   private utilities = inject(UtilitiesService);
@@ -961,9 +964,26 @@ export class LayoutService implements OnDestroy {
     this.scrollToOptimalPosition(this.optimalProfilePosition);
   }
 
-  createArticle(): void {
-    // Navigate to article creation
-    this.router.navigate(['/article/create']);
+  async createArticle(articleId?: string): Promise<CustomDialogRef<any>> {
+    // Open the article editor dialog
+    const { ArticleEditorDialogComponent } = await import('../components/article-editor-dialog/article-editor-dialog.component');
+
+    const dialogRef = this.customDialog.open(ArticleEditorDialogComponent, {
+      width: '920px',
+      maxWidth: '100vw',
+      disableClose: true,
+      disableEnterSubmit: true,
+      showCloseButton: true,
+      title: articleId ? 'Edit Article' : 'New Article',
+      data: { articleId },
+      panelClass: 'article-editor-dialog'
+    });
+
+    // Set the dialogRef and data on the component instance
+    dialogRef.componentInstance.dialogRef = dialogRef;
+    dialogRef.componentInstance.data = { articleId };
+
+    return dialogRef;
   }
 
   async uploadMedia(): Promise<void> {

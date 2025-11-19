@@ -1,0 +1,163 @@
+<!-- Content Area -->
+<div dialog-content class="article-editor-dialog">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    <p>Loading article...</p>
+  </div>
+  } @else {
+  <div class="editor-content-wrapper">
+    <!-- Medium-style Editor -->
+    <div class="medium-editor">
+      <!-- Top Action Buttons -->
+      <div class="top-action-buttons">
+        <div class="left-buttons">
+          @if (!article().image) {
+          <div class="featured-image-drop-zone" [class.drag-over]="isFeaturedImageDragOver()"
+            (dragenter)="onFeaturedImageDragEnter($event)" (dragover)="onFeaturedImageDragOver($event)"
+            (dragleave)="onFeaturedImageDragLeave($event)" (drop)="onFeaturedImageDrop($event)">
+            <button mat-icon-button [matMenuTriggerFor]="featuredImageMenu" matTooltip="Add featured image">
+              <mat-icon>add_photo_alternate</mat-icon>
+            </button>
+            @if (isFeaturedImageDragOver()) {
+            <span class="drop-hint">Drop image here</span>
+            }
+          </div>
+          <mat-menu #featuredImageMenu="matMenu">
+            <button mat-menu-item (click)="openFeaturedImageUpload()">
+              <mat-icon>upload</mat-icon>
+              <span>Upload Image</span>
+            </button>
+            <button mat-menu-item (click)="openFeaturedImageUrl()">
+              <mat-icon>link</mat-icon>
+              <span>Image from URL</span>
+            </button>
+          </mat-menu>
+          }
+        </div>
+        <div class="right-buttons">
+          <button mat-icon-button (click)="togglePreview()" [matTooltip]="showPreview() ? 'Edit' : 'Preview'"
+            [class.active]="showPreview()">
+            <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- Featured Image Preview -->
+      @if (article().image && !showPreview()) {
+      <div class="featured-image-preview">
+        <img [src]="article().image" [alt]="article().title || 'Featured image'"
+          [title]="article().title || 'Featured image'" loading="lazy" />
+        <button mat-icon-button class="clear-image-button" (click)="clearFeaturedImage()" matTooltip="Remove image">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+
+      <!-- Title Input -->
+      @if (!showPreview()) {
+      <input #titleInput type="text" class="title-input" placeholder="Title" [value]="article().title"
+        (input)="updateTitle($any($event.target).value)" (keydown)="onTitleKeyDown($event)" />
+
+      <!-- Summary Input -->
+      <textarea class="summary-input" placeholder="Summary (optional)" [value]="article().summary"
+        (input)="updateSummary($any($event.target).value)"></textarea>
+      }
+
+      <!-- Content Editor or Preview -->
+      @if (!showPreview()) {
+      <!-- Write Mode -->
+      <div class="write-tab">
+        <app-rich-text-editor [content]="article().content" (contentChange)="updateContent($event)"
+          [richTextMode]="editorIsRichTextMode()" (richTextModeChange)="onEditorModeChange($event)">
+        </app-rich-text-editor>
+      </div>
+      } @else {
+      <!-- Preview Mode -->
+      <app-article-display [article]="previewArticleData()" mode="preview"></app-article-display>
+      }
+    </div>
+
+    @if (!showPreview()) {
+    <!-- Article Metadata -->
+    <div class="metadata-section">
+      <div class="dTag-field-container">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>Article ID (d tag) *</mat-label>
+          <input matInput [value]="article().dTag" (input)="updateDTag($any($event.target).value)"
+            placeholder="unique-article-identifier" required [readonly]="autoDTagEnabled()" />
+          @if (autoDTagEnabled()) {
+          <mat-hint>Auto-ID is enabled. ID will update based on title.</mat-hint>
+          } @else {
+          <mat-hint>Unique identifier for your article. Used in URLs.</mat-hint>
+          }
+        </mat-form-field>
+        <div class="dTag-controls">
+          <button mat-icon-button color="primary" (click)="toggleAutoDTagMode()"
+            [matTooltip]="autoDTagEnabled() ? 'Disable Auto-ID' : 'Enable Auto-ID'">
+            <mat-icon>{{ autoDTagEnabled() ? 'auto_awesome' : 'auto_awesome_off' }}</mat-icon>
+          </button>
+          @if (suggestedDTag() && autoDTagEnabled()) {
+          <button mat-icon-button matTooltip="Apply suggested ID: {{ suggestedDTag() }}" (click)="applyAutoDTag()">
+            <mat-icon>refresh</mat-icon>
+          </button>
+          }
+        </div>
+      </div>
+
+      <!-- Tags Section -->
+      <div class="tags-section">
+        <h3>Tags</h3>
+        <div class="tag-input-container">
+          <mat-form-field appearance="outline" class="tag-input">
+            <input matInput [value]="newTag()" (input)="newTag.set($any($event.target).value)"
+              (keypress)="onTagKeyPress($event)" placeholder="Enter a tag" />
+          </mat-form-field>
+          <button mat-icon-button (click)="addTag()" [disabled]="!newTag().trim()">
+            <mat-icon>add</mat-icon>
+          </button>
+        </div>
+
+        @if (article().tags.length > 0) {
+        <div class="tags-container">
+          @for (tag of article().tags; track tag) {
+          <mat-chip class="tag-chip" [removable]="true" (removed)="removeTag(tag)">
+            {{ tag }}
+            <mat-icon matChipRemove>cancel</mat-icon>
+          </mat-chip>
+          }
+        </div>
+        }
+      </div>
+    </div>
+    }
+  </div>
+  }
+</div>
+
+<div dialog-actions class="action-container">
+  @if (isPublishing()) {
+  <mat-progress-bar mode="indeterminate" class="publish-progress"></mat-progress-bar>
+  }
+
+  <div class="left-actions">
+    <button mat-button (click)="resetDraft()" [disabled]="isPublishing()" class="reset-button">
+      <mat-icon>refresh</mat-icon>
+      <span class="button-label">Reset</span>
+    </button>
+  </div>
+
+  <div class="right-actions">
+    <button mat-button type="button" (click)="cancel()" [disabled]="isPublishing()">
+      Cancel
+    </button>
+
+    <button mat-button type="button" (click)="saveDraft()" [disabled]="!isDraftValid() || isPublishing()">
+      Save
+    </button>
+
+    <button mat-flat-button type="button" color="primary" (click)="publish()" [disabled]="!isValid() || isPublishing()">
+      Publish
+    </button>
+  </div>
+</div>

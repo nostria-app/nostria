@@ -15,6 +15,7 @@ import { MentionHoverDirective } from '../../directives/mention-hover.directive'
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { BookmarkService } from '../../services/bookmark.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { LayoutService } from '../../services/layout.service';
 
 export interface ArticleData {
   event?: Event;
@@ -69,6 +70,8 @@ export class ArticleDisplayComponent {
   resumeSpeech = output<void>();
   stopSpeech = output<void>();
   share = output<void>();
+
+  layout = inject(LayoutService);
 
   // Services
   bookmark = inject(BookmarkService);

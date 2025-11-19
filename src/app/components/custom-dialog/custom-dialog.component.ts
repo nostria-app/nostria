@@ -47,6 +47,7 @@ import { MatButtonModule } from '@angular/material/button';
       role="presentation">
       <div 
         class="dialog-container" 
+        [ngClass]="panelClass()"
         (click)="$event.stopPropagation()"
         role="dialog"
         [attr.aria-labelledby]="getTitle() ? 'dialog-title' : null"
@@ -108,8 +109,10 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   showBackButton = input<boolean>(false);
   showCloseButton = input<boolean>(true);
   disableClose = input<boolean>(false);
+  disableEnterSubmit = input<boolean>(false);
   width = input<string>('600px');
   maxWidth = input<string>('95vw');
+  panelClass = input<string | string[]>('');
 
   // Modern signal-based outputs
   closed = output<void>();
@@ -131,6 +134,15 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
       const container = this.dialogContainer();
       if (container) {
         this.setupEnterKeyListener();
+      }
+    });
+
+    // Apply width and max-width CSS variables
+    effect(() => {
+      const container = this.dialogContainer()?.nativeElement;
+      if (container) {
+        container.style.setProperty('--dialog-width', this.width());
+        container.style.setProperty('--dialog-max-width', this.maxWidth());
       }
     });
   }
@@ -186,10 +198,14 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
 
     container.addEventListener('keydown', (event: KeyboardEvent) => {
       if (event.key === 'Enter' && !event.shiftKey) {
+        if (this.disableEnterSubmit()) {
+          return;
+        }
+
         const target = event.target as HTMLElement;
 
-        // Don't trigger on textareas or buttons
-        if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON') {
+        // Don't trigger on textareas, buttons, or contenteditable elements
+        if (target.tagName === 'TEXTAREA' || target.tagName === 'BUTTON' || target.isContentEditable) {
           return;
         }
 
