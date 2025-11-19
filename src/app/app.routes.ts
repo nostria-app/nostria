@@ -283,6 +283,11 @@ export const routes: Routes = [
     title: 'Upgrade to Premium',
   },
   {
+    path: 'ai',
+    loadComponent: () => import('./pages/ai/ai').then((m) => m.AiComponent),
+    title: 'AI',
+  },
+  {
     path: 'backup',
     loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent),
   },

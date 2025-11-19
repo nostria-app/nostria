@@ -40,6 +40,8 @@ import { MentionInputService, MentionDetectionResult } from '../../services/ment
 import { UtilitiesService } from '../../services/utilities.service';
 import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish-event-bus.service';
 import { Subscription } from 'rxjs';
+import { MatDialog } from '@angular/material/dialog';
+import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -129,6 +131,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private utilities = inject(UtilitiesService);
   private publishEventBus = inject(PublishEventBus);
   private publishSubscription?: Subscription;
+  private dialog = inject(MatDialog);
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -1748,6 +1751,19 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       attempts: 0,
       isRunning: false,
       bestEvent: null,
+    });
+  }
+
+  openAiDialog() {
+    const dialogRef = this.dialog.open(AiToolsDialogComponent, {
+      data: { content: this.content() },
+      width: '500px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.content.set(result);
+      }
     });
   }
 }

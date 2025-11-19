@@ -293,6 +293,11 @@
         matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
       </button>
+      <button mat-icon-button type="button" (click)="openAiDialog()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="AI Tools">
+        <mat-icon>psychology</mat-icon>
+      </button>
       <button mat-icon-button type="button" (click)="openFileDialog()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Upload image">

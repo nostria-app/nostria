@@ -81,6 +81,10 @@ export class AppsMenuComponent {
     { icon: 'adaptive_audio_mic', label: 'Live Meetings', route: ['/meetings'] },
   ];
 
+  aiItems: MenuItem[] = [
+    { icon: 'psychology', label: 'AI Models', route: ['/ai'] },
+  ];
+
   moreItems: MenuItem[] = [
     {
       icon: 'calendar_month',

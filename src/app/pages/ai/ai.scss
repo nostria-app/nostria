@@ -1,0 +1,34 @@
+.page-container {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.playground-section {
+  margin-top: 30px;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.output-box {
+  background: var(--mat-sys-surface-container);
+  padding: 15px;
+  border-radius: 8px;
+  white-space: pre-wrap;
+  font-family: monospace;
+}
