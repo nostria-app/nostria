@@ -1,0 +1,231 @@
+.article-editor-dialog {
+  display: flex;
+  flex-direction: column;
+  min-height: 80dvh;
+  padding: 0;
+
+  .loading-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px;
+    height: 100%;
+
+    @media (max-width: 600px) {
+      padding: 24px;
+    }
+
+    p {
+      margin-top: 16px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .editor-content-wrapper {
+    padding: 16px 24px;
+    max-width: 752px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+
+    @media (max-width: 600px) {
+      padding: 12px 4px;
+    }
+  }
+
+  .medium-editor {
+    width: 100%;
+    padding-bottom: 2rem;
+
+    .top-action-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 16px;
+
+      .left-buttons,
+      .right-buttons {
+        display: flex;
+        gap: 8px;
+      }
+
+      button.active {
+        color: var(--mat-sys-primary);
+        background-color: var(--mat-sys-primary-container);
+      }
+
+      .featured-image-drop-zone {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px;
+        border-radius: 8px;
+        transition: all 0.2s ease-in-out;
+
+        &.drag-over {
+          background-color: var(--mat-sys-primary-container);
+          border: 2px dashed var(--mat-sys-primary);
+          padding: 2px;
+
+          .drop-hint {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+
+        .drop-hint {
+          font-size: 12px;
+          color: var(--mat-sys-primary);
+          font-weight: 500;
+          white-space: nowrap;
+          opacity: 0;
+          transform: translateX(-10px);
+          transition: all 0.2s ease-in-out;
+        }
+      }
+    }
+
+    .featured-image-preview {
+      position: relative;
+      margin-bottom: 32px;
+      border-radius: 8px;
+      overflow: hidden;
+      max-height: 400px;
+      background-color: var(--mat-sys-surface-variant);
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
+      .clear-image-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background-color: rgba(0, 0, 0, 0.5);
+        color: white;
+
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.7);
+        }
+      }
+    }
+
+    .title-input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-size: 2.5rem;
+      font-weight: 400;
+      color: var(--mat-sys-on-surface);
+      margin-bottom: 16px;
+      outline: none;
+      font-family: 'Protest Strike', sans-serif;
+      line-height: 1.2;
+
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.5;
+      }
+    }
+
+    .summary-input {
+      width: 100%;
+      border: none;
+      background: transparent;
+      font-size: 1.25rem;
+      color: var(--mat-sys-on-surface-variant);
+      margin-bottom: 32px;
+      outline: none;
+      font-family: inherit;
+      resize: none;
+      min-height: 60px;
+
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.5;
+      }
+    }
+
+    .write-tab {
+      min-height: 300px;
+    }
+  }
+
+  .metadata-section {
+    margin-top: 32px;
+    padding-top: 32px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+
+    .dTag-field-container {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-bottom: 24px;
+
+      mat-form-field {
+        flex: 1;
+      }
+
+      .dTag-controls {
+        display: flex;
+        gap: 4px;
+        margin-top: 4px;
+      }
+    }
+
+    .tags-section {
+      h3 {
+        font-size: 1rem;
+        font-weight: 500;
+        color: var(--mat-sys-on-surface);
+        margin: 0 0 16px 0;
+      }
+
+      .tag-input-container {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+
+        .tag-input {
+          flex: 1;
+          max-width: 300px;
+
+          ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+            display: none;
+          }
+        }
+      }
+
+      .tags-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+    }
+  }
+}
+
+.action-container {
+
+  .publish-progress {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+  }
+
+  .button-label {
+    margin-left: 8px;
+  }
+
+  @media (max-width: 600px) {
+    .button-label {
+      display: none;
+    }
+  }
+}

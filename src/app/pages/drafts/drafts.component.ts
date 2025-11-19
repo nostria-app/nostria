@@ -21,6 +21,7 @@ import { ApplicationService } from '../../services/application.service';
 import { standardizedTag } from '../../standardized-tags';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { CommonModule } from '@angular/common';
+import { LayoutService } from '../../services/layout.service';
 
 interface Draft {
   id: string;
@@ -64,6 +65,7 @@ export class DraftsComponent {
   private app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
   private dialog = inject(MatDialog);
+  private layout = inject(LayoutService);
 
   isLoading = signal(true);
   drafts = signal<Draft[]>([]);
@@ -170,7 +172,47 @@ export class DraftsComponent {
     return summary.length < content.length ? `${summary}...` : summary;
   }
 
-  openDraft(draft: Draft): void {
+  private updateDraftList(event: Event): void {
+    if (event.kind !== 30024) return;
+
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+    const titleTag = this.nostrService.getTags(event, standardizedTag.title);
+    const imageTag = this.nostrService.getTags(event, standardizedTag.image);
+    const summaryTag = this.nostrService.getTags(event, standardizedTag.summary);
+    const topicTags = event.tags.filter(tag => tag[0] === 't').map(tag => tag[1]);
+
+    const newDraft: Draft = {
+      id: event.id,
+      dTag: dTag,
+      title: titleTag[0] || 'Untitled Draft',
+      summary: summaryTag[0] || this.generateSummary(event.content),
+      content: event.content,
+      createdAt: event.created_at,
+      lastModified: event.created_at,
+      tags: topicTags,
+      imageUrl: imageTag[0],
+      event: event,
+    };
+
+    this.drafts.update(drafts => {
+      const index = drafts.findIndex(d => d.dTag === dTag);
+      if (index !== -1) {
+        // Update existing
+        const updated = [...drafts];
+        updated[index] = newDraft;
+        return updated.sort((a, b) => b.lastModified - a.lastModified);
+      } else {
+        // Add new
+        return [newDraft, ...drafts].sort((a, b) => b.lastModified - a.lastModified);
+      }
+    });
+  }
+
+  async openDraft(draft: Draft, event?: MouseEvent): Promise<void> {
+    if (event) {
+      event.stopPropagation();
+    }
+
     // Navigate to article editor with the draft's naddr
     const naddr = nip19.naddrEncode({
       identifier: draft.dTag,
@@ -178,14 +220,20 @@ export class DraftsComponent {
       kind: 30024,
     });
 
-    this.router.navigate(['/article/edit', naddr], {
-      state: { from: '/article/drafts' }
+    const dialogRef = await this.layout.createArticle(naddr);
+    dialogRef.afterClosed$.subscribe((result) => {
+      if (result) {
+        this.updateDraftList(result as Event);
+      }
     });
   }
 
-  createNewDraft(): void {
-    this.router.navigate(['/article/create'], {
-      state: { from: '/article/drafts' }
+  async createNewDraft(): Promise<void> {
+    const dialogRef = await this.layout.createArticle();
+    dialogRef.afterClosed$.subscribe((result) => {
+      if (result) {
+        this.updateDraftList(result as Event);
+      }
     });
   }
 

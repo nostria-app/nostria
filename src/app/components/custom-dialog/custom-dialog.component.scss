@@ -280,6 +280,17 @@
   }
 }
 
+// Article Editor Override
+.dialog-container.article-editor-dialog {
+  .dialog-content {
+    padding: 16px;
+
+    @media (max-width: 600px) {
+      padding: 12px;
+    }
+  }
+}
+
 // Actions
 .dialog-actions {
   border-top: 1px solid transparent;

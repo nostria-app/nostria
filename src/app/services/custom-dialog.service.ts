@@ -1,5 +1,6 @@
 import { Injectable, Type, signal, inject, ApplicationRef, createComponent, EnvironmentInjector, ComponentRef } from '@angular/core';
 import { CustomDialogComponent } from '../components/custom-dialog/custom-dialog.component';
+import { Subject } from 'rxjs';
 
 /**
  * Reference to a custom dialog instance
@@ -7,11 +8,17 @@ import { CustomDialogComponent } from '../components/custom-dialog/custom-dialog
 export class CustomDialogRef<T = unknown, R = unknown> {
   private closedSubject = signal<R | undefined>(undefined);
   private hasBeenClosed = signal(false);
+  private _afterClosed = new Subject<R | undefined>();
 
   /**
    * Observable-like signal that emits when the dialog closes
    */
   afterClosed = this.closedSubject.asReadonly;
+
+  /**
+   * Observable that emits when the dialog closes
+   */
+  afterClosed$ = this._afterClosed.asObservable();
 
   /**
    * Signal indicating if the dialog has been closed
@@ -31,6 +38,8 @@ export class CustomDialogRef<T = unknown, R = unknown> {
 
     this.hasBeenClosed.set(true);
     this.closedSubject.set(result);
+    this._afterClosed.next(result);
+    this._afterClosed.complete();
     this.onCloseCallback(result);
   }
 }
@@ -49,6 +58,8 @@ export interface CustomDialogConfig {
   showCloseButton?: boolean;
   /** Prevent closing on backdrop click or escape */
   disableClose?: boolean;
+  /** Disable submitting the dialog when pressing Enter */
+  disableEnterSubmit?: boolean;
   /** Dialog width (default: 600px) */
   width?: string;
   /** Dialog max width (default: 95vw) */
@@ -106,8 +117,10 @@ export class CustomDialogService {
     if (config.showBackButton !== undefined) dialogRef.setInput('showBackButton', config.showBackButton);
     if (config.showCloseButton !== undefined) dialogRef.setInput('showCloseButton', config.showCloseButton);
     if (config.disableClose !== undefined) dialogRef.setInput('disableClose', config.disableClose);
+    if (config.disableEnterSubmit !== undefined) dialogRef.setInput('disableEnterSubmit', config.disableEnterSubmit);
     if (config.width) dialogRef.setInput('width', config.width);
     if (config.maxWidth) dialogRef.setInput('maxWidth', config.maxWidth);
+    if (config.panelClass) dialogRef.setInput('panelClass', config.panelClass);
 
     // Create the content component
     const contentRef = createComponent(component, {
@@ -117,24 +130,24 @@ export class CustomDialogService {
     // Attach content to dialog
     const dialogElement = dialogRef.location.nativeElement;
     const contentElement = contentRef.location.nativeElement;
-    
+
     // Find elements with dialog-header, dialog-content, and dialog-actions attributes
     const headerElements = contentElement.querySelectorAll('[dialog-header]');
     const contentElements = contentElement.querySelectorAll('[dialog-content]');
     const actionElements = contentElement.querySelectorAll('[dialog-actions]');
-    
+
     // Get dialog slots
     const headerSlot = dialogElement.querySelector('.dialog-header');
     const contentSlot = dialogElement.querySelector('.dialog-content');
     const actionsSlot = dialogElement.querySelector('.dialog-actions');
-    
+
     // Append elements to their respective slots
     if (headerSlot && headerElements.length > 0) {
       headerElements.forEach((el: Element) => {
         headerSlot.appendChild(el);
       });
     }
-    
+
     if (contentSlot && contentElements.length > 0) {
       contentElements.forEach((el: Element) => {
         contentSlot.appendChild(el);
@@ -143,7 +156,7 @@ export class CustomDialogService {
       // If no dialog-content attribute found, append entire component to content
       contentSlot.appendChild(contentElement);
     }
-    
+
     if (actionsSlot && actionElements.length > 0) {
       actionElements.forEach((el: Element) => {
         actionsSlot.appendChild(el);
