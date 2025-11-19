@@ -7,7 +7,6 @@ import {
   OnInit,
   ViewChild,
   ElementRef,
-  AfterViewInit,
 } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
@@ -60,7 +59,7 @@ import { kinds } from 'nostr-tools';
     ]),
   ],
 })
-export class DetailsComponent implements OnInit, AfterViewInit {
+export class DetailsComponent implements OnInit {
   private router = inject(Router);
   private accountRelay = inject(AccountRelayService);
   private discoveryRelay = inject(DiscoveryRelayService);
@@ -93,6 +92,12 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   info = signal<any>(null);
   metrics = signal<UserMetric | null>(null);
 
+  infoAsJson = computed(() => {
+    const infoData = this.info();
+    if (!infoData) return '';
+    return JSON.stringify(infoData, null, 2);
+  });
+
   constructor() {
     // effect(async () => {
     //   const list = this.profileState.followingList();
@@ -117,11 +122,6 @@ export class DetailsComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     // Call loadMutualConnections to populate mutual connections list
     this.loadMutualConnections();
-  }
-
-  ngAfterViewInit(): void {
-    // Ensure component is scrolled into view after view initialization
-    // setTimeout(() => this.scrollToTop(), 350);
   }
 
   async broadcastProfile() {
@@ -209,7 +209,7 @@ export class DetailsComponent implements OnInit, AfterViewInit {
         this.mutualConnectionsList.set(mockMutuals);
       }, 500);
     } catch (err) {
-      this.logger.error('Error loading mutual connections', err);
+      this.logger.error('Error loading mutual connections', err as Error);
     }
   }
 
@@ -220,5 +220,11 @@ export class DetailsComponent implements OnInit, AfterViewInit {
 
   goBack(): void {
     this.location.back();
+  }
+
+  formatTimestamp(timestamp: number): string {
+    if (!timestamp) return 'Unknown';
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleString();
   }
 }

@@ -7,13 +7,143 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
-.info-container div {
+.info-section {
   display: flex;
-  padding: 1rem;
-  align-items: center;
+  flex-direction: column;
   gap: 1rem;
+
+  h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0.75rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background-color: var(--mat-sys-surface-variant);
+  transition: background-color 0.2s;
+
+  mat-icon {
+    flex-shrink: 0;
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .info-label {
+    flex: 1;
+    font-size: 0.875rem;
+  }
+
+  &.positive {
+    background-color: rgba(102, 187, 106, 0.15);
+    border-left: 3px solid var(--mat-success-color);
+
+    mat-icon {
+      color: var(--mat-success-color);
+    }
+  }
+
+  &.negative {
+    background-color: rgba(244, 67, 54, 0.15);
+    border-left: 3px solid var(--mat-sys-error);
+
+    mat-icon {
+      color: var(--mat-sys-error);
+    }
+  }
+
+  &.neutral {
+    background-color: var(--mat-sys-surface-variant);
+    border-left: 3px solid var(--mat-sys-primary);
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+  }
+}
+
+.info-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+.raw-info {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+
+  summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--mat-sys-on-surface);
+    -webkit-user-select: none;
+    user-select: none;
+    padding: 0.5rem;
+
+    &:hover {
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  pre {
+    margin: 1rem 0 0 0;
+    padding: 1rem;
+    background-color: var(--mat-sys-surface-dim);
+    border-radius: 4px;
+    overflow-x: auto;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 1rem;
+  }
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
 }
 
 .following-container {
