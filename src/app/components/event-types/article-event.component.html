@@ -8,7 +8,7 @@
 <article class="article-container">
   @if (title()) {
   <h3 class="article-title clickable" (click)="openFullArticle()" (keydown.enter)="openFullArticle()"
-    (keydown.space)="openFullArticle()" tabindex="0" role="button" [attr.aria-label]="'Open article: ' + title()">
+    (keydown.space)="openFullArticle()" tabindex="0" role="button" [attr.aria-label]="'Read article: ' + title()">
     {{ title() }}
   </h3>
   }
@@ -81,7 +81,7 @@
 
     <button mat-button color="primary" (click)="openFullArticle()" class="open-article">
       <mat-icon>article</mat-icon>
-      Open Article
+      Read Article
     </button>
   </div>
 </article>
