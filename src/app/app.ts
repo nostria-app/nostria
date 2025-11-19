@@ -242,19 +242,19 @@ export class App implements OnInit {
   });
 
   // Computed signal to check if there are any active pending notifications
-  hasActivePendingNotifications = computed(() => {
-    return this.notificationService.notifications().some(notification => {
-      // Check if it's a RelayPublishingNotification with pending promises
-      if (notification.type === NotificationType.RELAY_PUBLISHING) {
-        const relayNotification = notification as RelayPublishingNotification;
-        return (
-          !relayNotification.complete &&
-          relayNotification.relayPromises?.some(relay => relay.status === 'pending')
-        );
-      }
-      return false;
-    });
-  });
+  // hasActivePendingNotifications = computed(() => {
+  //   return this.notificationService.notifications().some(notification => {
+  //     // Check if it's a RelayPublishingNotification with pending promises
+  //     if (notification.type === NotificationType.RELAY_PUBLISHING) {
+  //       const relayNotification = notification as RelayPublishingNotification;
+  //       return (
+  //         !relayNotification.complete &&
+  //         relayNotification.relayPromises?.some(relay => relay.status === 'pending')
+  //       );
+  //     }
+  //     return false;
+  //   });
+  // });
 
   // Computed signal to get unread content notifications only (excluding technical/system notifications)
   contentNotifications = computed(() => {
