@@ -82,16 +82,10 @@ mat-sidenav-content {
 
 .sidenav {
   width: 250px;
-  display: flex;
-  flex-direction: column;
 
   // Adjust for mobile navigation
   @media (min-width: 599px) {
     z-index: 0 !important;
-  }
-
-  mat-nav-list {
-    flex: 1;
   }
 }
 
