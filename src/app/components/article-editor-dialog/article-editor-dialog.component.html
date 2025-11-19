@@ -36,6 +36,9 @@
           }
         </div>
         <div class="right-buttons">
+          <button mat-icon-button (click)="openAiDialog()" matTooltip="AI Tools">
+            <mat-icon>psychology</mat-icon>
+          </button>
           <button mat-icon-button (click)="togglePreview()" [matTooltip]="showPreview() ? 'Edit' : 'Preview'"
             [class.active]="showPreview()">
             <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>

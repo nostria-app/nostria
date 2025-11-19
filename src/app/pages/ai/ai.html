@@ -1,0 +1,73 @@
+<div class="page-container">
+  <h1>Local AI Models</h1>
+  <p>Run Small Language Models locally in your browser using WebGPU/WASM.</p>
+
+  <div class="models-grid">
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Text Generation</mat-card-title>
+        <mat-card-subtitle>{{ textModel }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <p>Generates text based on a prompt.</p>
+        @if (textModelLoading()) {
+        <mat-progress-bar mode="determinate" [value]="textModelProgress()"></mat-progress-bar>
+        <p>Downloading model... {{ textModelProgress() | number:'1.0-0' }}%</p>
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-flat-button (click)="loadTextModel()" [disabled]="textModelLoaded() || textModelLoading()">
+          {{ textModelLoaded() ? 'Loaded' : 'Download & Load' }}
+        </button>
+      </mat-card-actions>
+    </mat-card>
+
+    <mat-card>
+      <mat-card-header>
+        <mat-card-title>Translation</mat-card-title>
+        <mat-card-subtitle>{{ translationModel }}</mat-card-subtitle>
+      </mat-card-header>
+      <mat-card-content>
+        <p>Translates text (English to German).</p>
+        @if (translationModelLoading()) {
+        <mat-progress-bar mode="determinate" [value]="translationModelProgress()"></mat-progress-bar>
+        <p>Downloading model... {{ translationModelProgress() | number:'1.0-0' }}%</p>
+        }
+      </mat-card-content>
+      <mat-card-actions>
+        <button mat-flat-button (click)="loadTranslationModel()"
+          [disabled]="translationModelLoaded() || translationModelLoading()">
+          {{ translationModelLoaded() ? 'Loaded' : 'Download & Load' }}
+        </button>
+      </mat-card-actions>
+    </mat-card>
+  </div>
+
+  <div class="playground-section">
+    <h2>Playground</h2>
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Input Text</mat-label>
+      <textarea matInput [ngModel]="inputText()" (ngModelChange)="inputText.set($event)" rows="4"></textarea>
+    </mat-form-field>
+
+    <div class="actions">
+      <button mat-stroked-button (click)="generate()" [disabled]="!textModelLoaded() || isGenerating()">Generate
+        Text</button>
+      <button mat-stroked-button (click)="translate()"
+        [disabled]="!translationModelLoaded() || isGenerating()">Translate (En->De)</button>
+    </div>
+
+    @if (isGenerating()) {
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    }
+
+    @if (outputText()) {
+    <div class="output-section">
+      <h3>Output</h3>
+      <div class="output-box">
+        {{ outputText() }}
+      </div>
+    </div>
+    }
+  </div>
+</div>

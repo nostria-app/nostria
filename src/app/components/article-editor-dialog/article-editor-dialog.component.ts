@@ -46,6 +46,7 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
 import type { ArticleData } from '../article-display/article-display.component';
 import { ArticleDisplayComponent } from '../article-display/article-display.component';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
+import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 
 export interface ArticleEditorDialogData {
   articleId?: string;
@@ -1249,6 +1250,19 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
 
       // Fallback to truncated npub if not cached
       return `${nip19.npubEncode(pubkey).substring(0, 12)}...`;
+    });
+  }
+
+  openAiDialog() {
+    const dialogRef = this.dialog.open(AiToolsDialogComponent, {
+      data: { content: this.article().content },
+      width: '500px'
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        this.updateContent(result);
+      }
     });
   }
 }
