@@ -77,21 +77,35 @@ export class ArticlesListComponent {
   articles = signal<ArticleItem[]>([]);
   error = signal<string | null>(null);
   selectedTags = signal<string[]>([]);
+  selectedDraftTags = signal<string[]>([]);
+  selectedPublishedTags = signal<string[]>([]);
   selectedTab = signal<number>(0); // 0: Drafts, 1: Published
 
   // Extract unique tags from all articles
   availableTags = computed(() => {
     const tagSet = new Set<string>();
+    const tab = this.selectedTab();
+
+    // Only show tags relevant to the current tab
     this.articles().forEach(article => {
-      article.tags.forEach(tag => tagSet.add(tag));
+      // Filter logic duplicated from filteredArticles to ensure tags match visible items
+      const isDraftTab = tab === 0;
+      const isPublishedTab = tab === 1;
+
+      const showInDrafts = article.status === 'draft' || (article.status === 'published' && article.isEdited);
+      const showInPublished = article.status === 'published';
+
+      if ((isDraftTab && showInDrafts) || (isPublishedTab && showInPublished)) {
+        article.tags.forEach(tag => tagSet.add(tag));
+      }
     });
-    return Array.from(tagSet);
+    return Array.from(tagSet).sort();
   });
 
   // Filter articles based on selected tags and tab
   filteredArticles = computed(() => {
-    const tags = this.selectedTags();
     const tab = this.selectedTab();
+    const tags = tab === 0 ? this.selectedDraftTags() : this.selectedPublishedTags();
 
     let filtered = this.articles();
 
@@ -321,19 +335,42 @@ export class ArticlesListComponent {
     }
   }
 
-  onTagSelectionChange(selectedTags: string[]): void {
-    this.selectedTags.set(selectedTags);
-  }
-
-  clearTagFilter(): void {
-    this.selectedTags.set([]);
-  }
-
   async refreshArticles(): Promise<void> {
     await this.loadArticles();
     this.snackBar.open('Articles refreshed', 'Close', {
       duration: 2000,
     });
+  }
+
+  onTagSelectionChange(selectedTags: string[]): void {
+    if (this.selectedTab() === 0) {
+      this.selectedDraftTags.set(selectedTags);
+    } else {
+      this.selectedPublishedTags.set(selectedTags);
+    }
+  }
+
+  clearTagFilter(): void {
+    if (this.selectedTab() === 0) {
+      this.selectedDraftTags.set([]);
+    } else {
+      this.selectedPublishedTags.set([]);
+    }
+  }
+
+  viewArticle(article: ArticleItem, event?: MouseEvent): void {
+    if (event) {
+      event.stopPropagation();
+    }
+
+    const targetEvent = article.publishedEvent || article.event;
+    const naddr = nip19.naddrEncode({
+      identifier: article.dTag,
+      pubkey: targetEvent.pubkey,
+      kind: targetEvent.kind,
+    });
+
+    this.router.navigate(['/a', naddr]);
   }
 
   onTabChange(index: number): void {
