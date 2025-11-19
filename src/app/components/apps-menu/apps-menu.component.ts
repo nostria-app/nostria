@@ -42,13 +42,19 @@ export class AppsMenuComponent {
   createItems: MenuItem[] = [
     {
       icon: 'create',
-      label: 'Create Note',
+      label: 'Note',
       action: () => this.eventService.createNote(),
+      hideWhenNotAuthenticated: true,
+    },
+        {
+      icon: 'cinematic_blur',
+      label: 'Clip',
+      action: () => this.layout.openRecordVideoDialog(),
       hideWhenNotAuthenticated: true,
     },
     {
       icon: 'article',
-      label: 'Write Article',
+      label: 'Article',
       action: () => this.layout.createArticle(),
       hideWhenNotAuthenticated: true,
     },
@@ -61,6 +67,7 @@ export class AppsMenuComponent {
   ];
 
   contentItems: MenuItem[] = [
+    { icon: 'photo_library', label: 'Media', route: ['/media'] },
     { icon: 'edit_document', label: 'Drafts', route: ['/article/drafts'] },
     { icon: 'lists', label: 'Lists', route: ['/lists'] },
     { icon: 'poll', label: 'Polls', route: ['/polls'] },
