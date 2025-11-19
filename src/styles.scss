@@ -351,6 +351,16 @@ body {
   background: transparent;
 }
 
+// Apps menu overlay styles
+.cdk-overlay-pane:has(app-apps-menu) {
+  .apps-menu-container {
+    background: var(--mat-sys-surface-container);
+    border-radius: 12px;
+    box-shadow: var(--mat-sys-level4);
+    border: 1px solid var(--mat-sys-outline-variant);
+  }
+}
+
 .cdk-overlay-pane .tooltip-content-card {
   box-shadow: var(--mat-sys-level4);
   border: 1px solid var(--mat-sys-outline-variant);

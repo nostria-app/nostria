@@ -82,6 +82,9 @@ import { PushNotificationPromptComponent } from './components/push-notification-
 import { isPlatformBrowser } from '@angular/common';
 import { StandaloneLoginDialogComponent } from './components/standalone-login-dialog/standalone-login-dialog.component';
 import { StandaloneTermsDialogComponent } from './components/standalone-terms-dialog/standalone-terms-dialog.component';
+import { Overlay, OverlayRef } from '@angular/cdk/overlay';
+import { ComponentPortal } from '@angular/cdk/portal';
+import { AppsMenuComponent } from './components/apps-menu/apps-menu.component';
 
 interface NavItem {
   path: string;
@@ -172,6 +175,7 @@ export class App implements OnInit {
   private readonly document = inject(DOCUMENT);
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly webPushService = inject(WebPushService);
+  private readonly overlay = inject(Overlay);
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
@@ -179,6 +183,9 @@ export class App implements OnInit {
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
   @ViewChild('notificationMenuTrigger') notificationMenuTrigger!: MatMenuTrigger;
   @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
+
+  // Apps menu overlay
+  private appsMenuOverlayRef?: OverlayRef;
 
   // Track if push notification prompt has been shown
   private pushPromptShown = signal(false);
@@ -340,7 +347,6 @@ export class App implements OnInit {
     // { path: 'badges', label: 'Badges', icon: 'badge', level: 'beta', authenticated: true },
     // { path: 'relays', label: 'Relays', icon: 'dns', showInMobile: false },
     // { path: 'backup', label: 'Backup', icon: 'archive', showInMobile: false },
-    { path: 'settings', label: 'Settings', icon: 'settings' },
     {
       path: 'premium',
       label: 'Premium',
@@ -1065,6 +1071,61 @@ export class App implements OnInit {
 
   openCreateOptions(): void {
     this.bottomSheet.open(CreateOptionsSheetComponent);
+  }
+
+  toggleAppsMenu(event: MouseEvent): void {
+    if (this.appsMenuOverlayRef) {
+      this.closeAppsMenu();
+      return;
+    }
+
+    const target = event.currentTarget as HTMLElement;
+    const positionStrategy = this.overlay
+      .position()
+      .flexibleConnectedTo(target)
+      .withPositions([
+        {
+          originX: 'end',
+          originY: 'bottom',
+          overlayX: 'end',
+          overlayY: 'top',
+          offsetY: 8,
+        },
+        {
+          originX: 'end',
+          originY: 'top',
+          overlayX: 'end',
+          overlayY: 'bottom',
+          offsetY: -8,
+        },
+      ]);
+
+    this.appsMenuOverlayRef = this.overlay.create({
+      positionStrategy,
+      scrollStrategy: this.overlay.scrollStrategies.reposition(),
+      hasBackdrop: true,
+      backdropClass: 'cdk-overlay-transparent-backdrop',
+    });
+
+    const portal = new ComponentPortal(AppsMenuComponent);
+    const componentRef = this.appsMenuOverlayRef.attach(portal);
+
+    // Listen for close event from the component
+    componentRef.instance.closed.subscribe(() => {
+      this.closeAppsMenu();
+    });
+
+    // Close when clicking backdrop
+    this.appsMenuOverlayRef.backdropClick().subscribe(() => {
+      this.closeAppsMenu();
+    });
+  }
+
+  closeAppsMenu(): void {
+    if (this.appsMenuOverlayRef) {
+      this.appsMenuOverlayRef.dispose();
+      this.appsMenuOverlayRef = undefined;
+    }
   }
 
   openInstallDialog(): void {

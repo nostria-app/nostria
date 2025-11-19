@@ -153,91 +153,10 @@
     </mat-menu>
 
     @if (!layout.search()) {
-    <button mat-icon-button [matMenuTriggerFor]="menuApps">
+    <button mat-icon-button (click)="toggleAppsMenu($event)">
       <mat-icon>apps</mat-icon>
     </button>
     }
-
-    <mat-menu #menuApps="matMenu">
-      @if (app.authenticated()) {
-      <button mat-menu-item (click)="eventService.createNote()">
-        <mat-icon>create</mat-icon>
-        <span>Create Note</span>
-      </button>
-      <button mat-menu-item (click)="layout.createArticle()">
-        <mat-icon>article</mat-icon>
-        <span>Write Article</span>
-      </button>
-      <button mat-menu-item (click)="layout.uploadMedia()">
-        <mat-icon>upload</mat-icon>
-        <span>Upload</span>
-      </button>
-      <mat-divider></mat-divider>
-      }
-      <button mat-menu-item routerLink="/article/drafts">
-        <mat-icon>edit_document</mat-icon>
-        <span>Drafts</span>
-      </button>
-      <button mat-menu-item routerLink="/lists">
-        <mat-icon>lists</mat-icon>
-        <span>Lists</span>
-      </button>
-      <button mat-menu-item routerLink="/polls">
-        <mat-icon>poll</mat-icon>
-        <span>Polls</span>
-      </button>
-      <mat-divider></mat-divider>
-      <button mat-menu-item routerLink="/playlists">
-        <mat-icon>playlist_play</mat-icon>
-        <span>Playlists</span>
-      </button>
-      <button mat-menu-item routerLink="/media-queue">
-        <mat-icon>queue_music</mat-icon>
-        <span>Media Queue</span>
-      </button>
-      <button mat-menu-item (click)="toggleMediaPlayer()">
-        <mat-icon>dock_to_bottom</mat-icon>
-        <span>Media Player</span>
-      </button>
-      <button mat-menu-item routerLink="/streams">
-        <mat-icon>live_tv</mat-icon>
-        <span>Live Streams</span>
-      </button>
-      <button mat-menu-item routerLink="/meetings">
-        <mat-icon>adaptive_audio_mic</mat-icon>
-        <span>Live Meetings</span>
-      </button>
-      <mat-divider></mat-divider>
-      @if (app.enabledFeature('preview')) {
-      <button mat-menu-item routerLink="/calendar">
-        <mat-icon>calendar_month</mat-icon>
-        <span>Calendar</span>
-      </button>
-      }
-
-      @if (accountState.hasActiveSubscription()) {
-      <button mat-menu-item routerLink="/notes">
-        <mat-icon>note_stack</mat-icon>
-        <span>Notes</span>
-      </button>
-      }
-
-      <button mat-menu-item [routerLink]="['p', accountState.pubkey(), 'badges']">
-        <mat-icon>badge</mat-icon>
-        <span>Badges</span>
-      </button>
-      <button mat-menu-item (click)="layout.openPublishCustomEvent()">
-        <mat-icon>publish</mat-icon>
-        <span>Publish Event</span>
-      </button>
-      @if (installService.shouldShowInstallOption()) {
-      <mat-divider></mat-divider>
-      <button mat-menu-item (click)="openInstallDialog()">
-        <mat-icon>download</mat-icon>
-        <span>Install App</span>
-      </button>
-      }
-    </mat-menu>
 
     @if (!layout.search()) {
     <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
@@ -418,6 +337,10 @@
           <a mat-list-item routerLink="/accounts" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>manage_accounts</mat-icon>
             <span>Manage accounts</span>
+          </a>
+          <a mat-list-item routerLink="/settings" (click)="toggleProfileSidenav()">
+            <mat-icon matListItemIcon>settings</mat-icon>
+            <span>Settings</span>
           </a>
         </mat-nav-list>
         <mat-divider></mat-divider>
