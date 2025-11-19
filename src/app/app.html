@@ -319,14 +319,6 @@
         }
         }
         }
-        @if (app.authenticated()) {
-        <a mat-list-item (click)="openCreateOptions()">
-          <mat-icon matListItemIcon>add</mat-icon>
-          @if (displayLabels()) {
-          <span class="nav-label">Create</span>
-          }
-        </a>
-        }
 
         <a mat-list-item (click)="toggleMenuSize()">
           @if (displayLabels()) {
@@ -336,6 +328,16 @@
           }
         </a>
       </mat-nav-list>
+
+      <!-- Create FAB at bottom of sidenav -->
+      @if (app.authenticated()) {
+      <div class="sidenav-fab-container">
+        <button mat-mini-fab color="primary" class="sidenav-create-fab" (click)="openCreateOptions()"
+          aria-label="Create new content" [matTooltip]="displayLabels() ? '' : 'Create'">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+      }
     </mat-sidenav>
 
     <mat-sidenav #profileSidenav position="end" class="profile-sidenav" mode="over" [fixedInViewport]="true"
