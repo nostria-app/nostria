@@ -17,30 +17,6 @@
       </div>
       }
 
-      <!-- Debug info panel - top left -->
-      @if (debugInfo()) {
-      <div class="debug-panel">
-        <div class="debug-info">
-          <mat-icon>bug_report</mat-icon>
-          <span>{{ debugInfo() }}</span>
-        </div>
-        @if (scanningActive()) {
-        <div class="debug-stats">
-          <span>📊 Frames: {{ framesScanned() }}</span>
-          <span>🎯 QR Attempts: {{ qrDetectionAttempts() }}</span>
-          <span>⚠️ Errors: {{ imageProcessingErrors() }}</span>
-          <span>⚡ Processing: {{ lastProcessingTime() | number:'1.0-2' }}ms</span>
-          @if (lastScanAttempt()) {
-          <span>🕒 Last: {{ timeSinceLastScan() | number:'1.0-1' }}s ago</span>
-          }
-        </div>
-        <div class="debug-tip">
-          <small>💡 Check top-right corner for decoder visualization</small>
-        </div>
-        }
-      </div>
-      }
-
       <!-- Camera controls - bottom center -->
       @if (availableCameras().length > 1) {
       <div class="camera-controls">
