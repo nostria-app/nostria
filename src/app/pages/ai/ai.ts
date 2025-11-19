@@ -6,14 +6,21 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTableModule } from '@angular/material/table';
+import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { firstValueFrom } from 'rxjs';
 import { AiService } from '../../services/ai.service';
+import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 
 interface ModelInfo {
   id: string;
   task: string;
   name: string;
   description: string;
+  size: string;
   loading: boolean;
   progress: number;
   loaded: boolean;
@@ -31,13 +38,20 @@ interface ModelInfo {
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
-    FormsModule
+    MatTableModule,
+    MatIconModule,
+    MatTooltipModule,
+    FormsModule,
+    MatDialogModule
   ],
   templateUrl: './ai.html',
   styleUrl: './ai.scss'
 })
 export class AiComponent implements OnInit {
   private aiService = inject(AiService);
+  private dialog = inject(MatDialog);
+
+  displayedColumns: string[] = ['info', 'size', 'status', 'actions'];
 
   models = signal<ModelInfo[]>([
     {
@@ -45,6 +59,7 @@ export class AiComponent implements OnInit {
       task: 'text-generation',
       name: 'DistilGPT2',
       description: 'Text Generation',
+      size: '~85MB',
       loading: false,
       progress: 0,
       loaded: false,
@@ -55,6 +70,7 @@ export class AiComponent implements OnInit {
       task: 'summarization',
       name: 'DistilBART CNN',
       description: 'Summarization',
+      size: '~283MB',
       loading: false,
       progress: 0,
       loaded: false,
@@ -65,6 +81,7 @@ export class AiComponent implements OnInit {
       task: 'sentiment-analysis',
       name: 'DistilBERT Sentiment',
       description: 'Sentiment Analysis',
+      size: '~65MB',
       loading: false,
       progress: 0,
       loaded: false,
@@ -75,6 +92,7 @@ export class AiComponent implements OnInit {
       task: 'translation',
       name: 'English to German',
       description: 'Translation',
+      size: '~160MB',
       loading: false,
       progress: 0,
       loaded: false,
@@ -85,6 +103,7 @@ export class AiComponent implements OnInit {
       task: 'translation',
       name: 'English to Spanish',
       description: 'Translation',
+      size: '~110MB',
       loading: false,
       progress: 0,
       loaded: false,
@@ -95,6 +114,7 @@ export class AiComponent implements OnInit {
       task: 'translation',
       name: 'English to French',
       description: 'Translation',
+      size: '~107MB',
       loading: false,
       progress: 0,
       loaded: false,
@@ -125,9 +145,10 @@ export class AiComponent implements OnInit {
   async loadModel(model: ModelInfo) {
     this.updateModelStatus(model.id, { loading: true, progress: 0 });
     try {
-      await this.aiService.loadModel(model.task, model.id, (data: any) => {
-        if (data.status === 'progress') {
-          this.updateModelStatus(model.id, { progress: data.progress });
+      await this.aiService.loadModel(model.task, model.id, (data: unknown) => {
+        const progressData = data as { status: string, progress: number };
+        if (progressData.status === 'progress') {
+          this.updateModelStatus(model.id, { progress: progressData.progress });
         }
       });
       this.updateModelStatus(model.id, { loaded: true, cached: true });
@@ -138,17 +159,70 @@ export class AiComponent implements OnInit {
     }
   }
 
+  async downloadAll() {
+    for (const model of this.models()) {
+      if (!model.loaded && !model.cached) {
+        await this.loadModel(model);
+      }
+    }
+  }
+
+  async deleteModel(model: ModelInfo) {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Model',
+        message: `Are you sure you want to delete the cached files for ${model.name}?`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn'
+      }
+    });
+
+    const confirmed = await firstValueFrom(dialogRef.afterClosed());
+
+    if (confirmed) {
+      await this.aiService.deleteModelFromCache(model.id);
+      this.updateModelStatus(model.id, { loaded: false, cached: false });
+    }
+  }
+
+  async clearAllCache() {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Wipe All Cache',
+        message: 'Are you sure you want to delete ALL cached AI models? This cannot be undone.',
+        confirmText: 'Wipe All',
+        cancelText: 'Cancel',
+        confirmColor: 'warn'
+      }
+    });
+
+    const confirmed = await firstValueFrom(dialogRef.afterClosed());
+
+    if (confirmed) {
+      await this.aiService.clearAllCache();
+      this.models.update(models => models.map(m => ({ ...m, loaded: false, cached: false })));
+    }
+  }
+
   async generate() {
     if (!this.inputText()) return;
     this.isGenerating.set(true);
     try {
-      const result: any = await this.aiService.generateText(this.inputText());
+      const result = await this.aiService.generateText(this.inputText(), {
+        max_new_tokens: 100,
+        temperature: 0.7,
+        do_sample: true,
+        return_full_text: false
+      }) as { generated_text: string }[];
+      console.log('Generate result:', result);
       if (Array.isArray(result) && result.length > 0 && result[0].generated_text) {
         this.outputText.set(result[0].generated_text);
       } else {
         this.outputText.set(JSON.stringify(result, null, 2));
       }
     } catch (err) {
+      console.error('Generate error:', err);
       this.outputText.set('Error: ' + err);
     } finally {
       this.isGenerating.set(false);
@@ -159,7 +233,7 @@ export class AiComponent implements OnInit {
     if (!this.inputText()) return;
     this.isGenerating.set(true);
     try {
-      const result: any = await this.aiService.summarizeText(this.inputText());
+      const result = await this.aiService.summarizeText(this.inputText()) as { summary_text: string }[];
       if (Array.isArray(result) && result.length > 0 && result[0].summary_text) {
         this.outputText.set(result[0].summary_text);
       } else {
@@ -176,7 +250,7 @@ export class AiComponent implements OnInit {
     if (!this.inputText()) return;
     this.isGenerating.set(true);
     try {
-      const result: any = await this.aiService.analyzeSentiment(this.inputText());
+      const result = await this.aiService.analyzeSentiment(this.inputText()) as { label: string, score: number }[];
       // Result is usually [{ label: 'POSITIVE', score: 0.99 }]
       if (Array.isArray(result) && result.length > 0) {
         this.outputText.set(JSON.stringify(result, null, 2));
@@ -194,7 +268,7 @@ export class AiComponent implements OnInit {
     if (!this.inputText()) return;
     this.isGenerating.set(true);
     try {
-      const result: any = await this.aiService.translateText(this.inputText(), this.selectedTranslationModel());
+      const result = await this.aiService.translateText(this.inputText(), this.selectedTranslationModel()) as { translation_text: string }[];
       if (Array.isArray(result) && result.length > 0 && result[0].translation_text) {
         this.outputText.set(result[0].translation_text);
       } else {
