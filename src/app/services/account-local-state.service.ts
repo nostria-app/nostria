@@ -32,6 +32,7 @@ interface AccountLocalState {
   lastRoute?: string;
   launchCount?: number;
   dismissedPushNotificationDialog?: boolean;
+  articlesActiveTab?: number;
 }
 
 /**
@@ -339,6 +340,21 @@ export class AccountLocalStateService {
    */
   setDismissedPushNotificationDialog(pubkey: string, dismissed: boolean): void {
     this.updateAccountState(pubkey, { dismissedPushNotificationDialog: dismissed });
+  }
+
+  /**
+   * Get active articles tab for an account
+   */
+  getArticlesActiveTab(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.articlesActiveTab || 0;
+  }
+
+  /**
+   * Set active articles tab for an account
+   */
+  setArticlesActiveTab(pubkey: string, tabIndex: number): void {
+    this.updateAccountState(pubkey, { articlesActiveTab: tabIndex });
   }
 
   /**
