@@ -11,6 +11,7 @@ import { LayoutService } from '../../services/layout.service';
 import { TimelineHoverCardService } from '../../services/timeline-hover-card.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ImageCacheService } from '../../services/image-cache.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 
 @Component({
   selector: 'app-favorites-overlay',
@@ -31,6 +32,7 @@ export class FavoritesOverlayComponent {
   private timelineHoverCardService = inject(TimelineHoverCardService);
   private accountState = inject(AccountStateService);
   private imageCacheService = inject(ImageCacheService);
+  private accountLocalState = inject(AccountLocalStateService);
   layout = inject(LayoutService);
 
   // Signal to track if overlay is visible
@@ -66,12 +68,15 @@ export class FavoritesOverlayComponent {
   followingWithProfiles = signal<{ pubkey: string; profile?: NostrRecord }[]>([]);
 
   constructor() {
-    // Load docked preference from localStorage
-    const savedDocked = localStorage.getItem('followingSidebarDocked');
-    if (savedDocked === 'true' && !this.layout.isHandset()) {
-      // Only restore docked state on desktop
-      this.isDocked.set(true);
-      this.isVisible.set(true);
+    // Load docked preference from account local state
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      const savedDocked = this.accountLocalState.getFollowingSidebarDocked(pubkey);
+      if (savedDocked && !this.layout.isHandset()) {
+        // Only restore docked state on desktop
+        this.isDocked.set(true);
+        this.isVisible.set(true);
+      }
     }
 
     // Monitor screen size changes and auto-undock if screen becomes small
@@ -80,7 +85,10 @@ export class FavoritesOverlayComponent {
       if (isHandset && this.isDocked()) {
         // Auto-undock when screen becomes small
         this.isDocked.set(false);
-        localStorage.setItem('followingSidebarDocked', 'false');
+        const pubkey = this.accountState.pubkey();
+        if (pubkey) {
+          this.accountLocalState.setFollowingSidebarDocked(pubkey, false);
+        }
       }
     });
 
@@ -176,7 +184,11 @@ export class FavoritesOverlayComponent {
 
     const newDocked = !this.isDocked();
     this.isDocked.set(newDocked);
-    localStorage.setItem('followingSidebarDocked', String(newDocked));
+
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setFollowingSidebarDocked(pubkey, newDocked);
+    }
 
     // If docking, ensure overlay is visible
     if (newDocked) {
