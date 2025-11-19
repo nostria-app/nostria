@@ -441,6 +441,7 @@ export class StreamInfoBarComponent implements OnDestroy {
   // Zap goal tracking
   zapGoalAmount = signal(0); // in sats
   currentZapAmount = signal(0); // in sats
+  private zapGoalEvent = signal<Event | null>(null); // Store the full goal event
   zapGoalProgress = computed(() => {
     const goal = this.zapGoalAmount();
     if (goal === 0) return 0;
@@ -551,20 +552,21 @@ export class StreamInfoBarComponent implements OnDestroy {
       }
     });
 
-    // Fetch zap goal
+    // Fetch zap goal and track zaps only if goal exists
     effect(() => {
       const event = this.currentEvent() || this.liveEvent();
       const goalTag = event.tags.find(tag => tag[0] === 'goal');
       if (goalTag?.[1]) {
         this.fetchZapGoal(goalTag[1]);
-      }
-    });
-
-    // Track zaps for this stream
-    effect(() => {
-      const event = this.currentEvent() || this.liveEvent();
-      if (event.id) {
-        this.trackStreamZaps();
+      } else {
+        // No goal tag, clear any existing zap tracking
+        this.zapGoalEvent.set(null);
+        this.zapGoalAmount.set(0);
+        this.currentZapAmount.set(0);
+        if (this.zapSubscription) {
+          this.zapSubscription.close();
+          this.zapSubscription = null;
+        }
       }
     });
   }
@@ -662,9 +664,11 @@ export class StreamInfoBarComponent implements OnDestroy {
     );
 
     if (relayUrls.length === 0) {
-      console.warn('No relays available for fetching zap goal');
+      console.warn('[StreamInfoBar] No relays available for fetching zap goal');
       return;
     }
+
+    console.log('[StreamInfoBar] Fetching zap goal:', { goalEventId: goalEventId.substring(0, 16) });
 
     try {
       const events = await this.relayPool.query(
@@ -680,42 +684,84 @@ export class StreamInfoBarComponent implements OnDestroy {
           // Amount is in millisats, convert to sats
           const amountInSats = Math.floor(parseInt(amountTag[1]) / 1000);
           this.zapGoalAmount.set(amountInSats);
+          this.zapGoalEvent.set(goalEvent);
+
+          console.log('[StreamInfoBar] Zap goal loaded:', { goalAmount: amountInSats, goalId: goalEventId.substring(0, 16) });
+
+          // Now start tracking zaps for this goal
+          this.trackGoalZaps();
         }
+      } else {
+        console.warn('[StreamInfoBar] Zap goal event not found:', goalEventId);
+        this.zapGoalEvent.set(null);
+        this.zapGoalAmount.set(0);
       }
     } catch (error) {
-      console.error('Error fetching zap goal:', error);
+      console.error('[StreamInfoBar] Error fetching zap goal:', error);
+      this.zapGoalEvent.set(null);
+      this.zapGoalAmount.set(0);
     }
   }
 
-  private trackStreamZaps(): void {
+  private trackGoalZaps(): void {
     // Close existing subscription if any
     if (this.zapSubscription) {
       this.zapSubscription.close();
       this.zapSubscription = null;
     }
 
+    const goalEvent = this.zapGoalEvent();
+    if (!goalEvent) {
+      console.warn('[StreamInfoBar] No goal event, cannot track zaps');
+      return;
+    }
+
     // Reset zap tracking
     this.zapEventIds.clear();
     this.currentZapAmount.set(0);
 
-    const relayUrls = this.relaysService.getOptimalRelays(
-      this.utilities.preferredRelays
-    );
+    // Get relays from the goal event's relays tag (NIP-75 requirement)
+    const relaysTag = goalEvent.tags.find(tag => tag[0] === 'relays');
+    let relayUrls: string[];
+
+    if (relaysTag && relaysTag.length > 1) {
+      // Use relays specified in the goal event (skip the first element which is 'relays')
+      relayUrls = relaysTag.slice(1);
+      console.log('[StreamInfoBar] Using relays from goal event:', relayUrls);
+    } else {
+      // Fallback to optimal relays if goal doesn't specify
+      relayUrls = this.relaysService.getOptimalRelays(
+        this.utilities.preferredRelays
+      );
+      console.log('[StreamInfoBar] Goal has no relay hints, using optimal relays:', relayUrls.length);
+    }
 
     if (relayUrls.length === 0) {
       console.warn('[StreamInfoBar] No relays available for tracking zaps');
       return;
     }
 
-    const streamerPubkey = this.streamerPubkey();
+    // Check for closed_at timestamp (NIP-75)
+    const closedAtTag = goalEvent.tags.find(tag => tag[0] === 'closed_at');
+    const closedAt = closedAtTag?.[1] ? parseInt(closedAtTag[1]) : null;
+    const now = Math.floor(Date.now() / 1000);
 
-    console.log('[StreamInfoBar] Subscribing to zap receipts:', { streamerPubkey: streamerPubkey.substring(0, 8), relayCount: relayUrls.length });
+    if (closedAt && closedAt < now) {
+      console.log('[StreamInfoBar] Goal is closed, using until filter:', new Date(closedAt * 1000));
+    }
 
-    // Subscribe to kind 9735 zap receipts sent to the streamer
-    // Zaps are sent to people (p tag), not events
-    const filter: Filter & { '#p'?: string[] } = {
+    console.log('[StreamInfoBar] Subscribing to goal zap receipts:', {
+      goalId: goalEvent.id.substring(0, 16),
+      relayCount: relayUrls.length,
+      closedAt: closedAt ? new Date(closedAt * 1000).toISOString() : 'none'
+    });
+
+    // Subscribe to kind 9735 zap receipts that reference this goal event
+    // According to NIP-75, zaps to the goal should tag the goal event ID in the 'e' tag
+    const filter: Filter & { '#e'?: string[] } = {
       kinds: [9735],
-      '#p': [streamerPubkey]
+      '#e': [goalEvent.id], // Filter zaps that reference the goal event
+      until: closedAt || undefined, // Only count zaps before closed_at if specified
     };
 
     this.zapSubscription = this.relayPool.subscribe(
@@ -729,13 +775,22 @@ export class StreamInfoBarComponent implements OnDestroy {
 
         this.zapEventIds.add(zapReceipt.id);
 
+        // If goal is closed, verify the zap timestamp is before closed_at
+        if (closedAt && zapReceipt.created_at > closedAt) {
+          console.log('[StreamInfoBar] Ignoring zap after goal closed:', {
+            zapTime: new Date(zapReceipt.created_at * 1000).toISOString(),
+            closedTime: new Date(closedAt * 1000).toISOString()
+          });
+          return;
+        }
+
         // Extract and add zap amount
         const boltTag = zapReceipt.tags.find(tag => tag[0] === 'bolt11');
         if (boltTag?.[1]) {
           const amountInSats = this.extractAmountFromBolt11(boltTag[1]);
           if (amountInSats > 0) {
             this.currentZapAmount.update(current => current + amountInSats);
-            console.log('[StreamInfoBar] New zap received:', { amountInSats, total: this.currentZapAmount() });
+            console.log('[StreamInfoBar] New goal zap received:', { amountInSats, total: this.currentZapAmount() });
           }
         }
       }
