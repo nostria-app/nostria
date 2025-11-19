@@ -1,12 +1,24 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { AiService } from '../../services/ai.service';
+
+interface ModelInfo {
+  id: string;
+  task: string;
+  name: string;
+  description: string;
+  loading: boolean;
+  progress: number;
+  loaded: boolean;
+  cached: boolean;
+}
 
 @Component({
   selector: 'app-ai',
@@ -18,60 +30,111 @@ import { AiService } from '../../services/ai.service';
     MatProgressBarModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSelectModule,
     FormsModule
   ],
   templateUrl: './ai.html',
   styleUrl: './ai.scss'
 })
-export class AiComponent {
+export class AiComponent implements OnInit {
   private aiService = inject(AiService);
 
-  textModel = 'Xenova/distilgpt2';
-  translationModel = 'Xenova/opus-mt-en-de'; // Default to En-De for demo
-
-  textModelLoading = signal(false);
-  translationModelLoading = signal(false);
-
-  textModelProgress = signal(0);
-  translationModelProgress = signal(0);
+  models = signal<ModelInfo[]>([
+    {
+      id: 'Xenova/distilgpt2',
+      task: 'text-generation',
+      name: 'DistilGPT2',
+      description: 'Text Generation',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false
+    },
+    {
+      id: 'Xenova/distilbart-cnn-6-6',
+      task: 'summarization',
+      name: 'DistilBART CNN',
+      description: 'Summarization',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false
+    },
+    {
+      id: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+      task: 'sentiment-analysis',
+      name: 'DistilBERT Sentiment',
+      description: 'Sentiment Analysis',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false
+    },
+    {
+      id: 'Xenova/opus-mt-en-de',
+      task: 'translation',
+      name: 'English to German',
+      description: 'Translation',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false
+    },
+    {
+      id: 'Xenova/opus-mt-en-es',
+      task: 'translation',
+      name: 'English to Spanish',
+      description: 'Translation',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false
+    },
+    {
+      id: 'Xenova/opus-mt-en-fr',
+      task: 'translation',
+      name: 'English to French',
+      description: 'Translation',
+      loading: false,
+      progress: 0,
+      loaded: false,
+      cached: false
+    }
+  ]);
 
   inputText = signal('');
   outputText = signal('');
+  selectedTranslationModel = signal('Xenova/opus-mt-en-de');
 
   isGenerating = signal(false);
 
-  get textModelLoaded() { return this.aiService.textModelLoaded; }
-  get translationModelLoaded() { return this.aiService.translationModelLoaded; }
-
-  async loadTextModel() {
-    this.textModelLoading.set(true);
-    this.textModelProgress.set(0);
-    try {
-      await this.aiService.loadModel('text-generation', this.textModel, (data: any) => {
-        if (data.status === 'progress') {
-          this.textModelProgress.set(data.progress);
-        }
-      });
-    } catch (err) {
-      console.error(err);
-    } finally {
-      this.textModelLoading.set(false);
+  async ngOnInit() {
+    // Check cache status for all models
+    for (const model of this.models()) {
+      const status = await this.aiService.checkModel(model.task, model.id);
+      this.updateModelStatus(model.id, { loaded: status.loaded, cached: status.cached });
     }
   }
 
-  async loadTranslationModel() {
-    this.translationModelLoading.set(true);
-    this.translationModelProgress.set(0);
+  updateModelStatus(id: string, updates: Partial<ModelInfo>) {
+    this.models.update(models =>
+      models.map(m => m.id === id ? { ...m, ...updates } : m)
+    );
+  }
+
+  async loadModel(model: ModelInfo) {
+    this.updateModelStatus(model.id, { loading: true, progress: 0 });
     try {
-      await this.aiService.loadModel('translation', this.translationModel, (data: any) => {
+      await this.aiService.loadModel(model.task, model.id, (data: any) => {
         if (data.status === 'progress') {
-          this.translationModelProgress.set(data.progress);
+          this.updateModelStatus(model.id, { progress: data.progress });
         }
       });
+      this.updateModelStatus(model.id, { loaded: true, cached: true });
     } catch (err) {
       console.error(err);
     } finally {
-      this.translationModelLoading.set(false);
+      this.updateModelStatus(model.id, { loading: false });
     }
   }
 
@@ -80,14 +143,47 @@ export class AiComponent {
     this.isGenerating.set(true);
     try {
       const result: any = await this.aiService.generateText(this.inputText());
-      // Result is usually array of objects
       if (Array.isArray(result) && result.length > 0 && result[0].generated_text) {
         this.outputText.set(result[0].generated_text);
       } else {
         this.outputText.set(JSON.stringify(result, null, 2));
       }
     } catch (err) {
-      console.error(err);
+      this.outputText.set('Error: ' + err);
+    } finally {
+      this.isGenerating.set(false);
+    }
+  }
+
+  async summarize() {
+    if (!this.inputText()) return;
+    this.isGenerating.set(true);
+    try {
+      const result: any = await this.aiService.summarizeText(this.inputText());
+      if (Array.isArray(result) && result.length > 0 && result[0].summary_text) {
+        this.outputText.set(result[0].summary_text);
+      } else {
+        this.outputText.set(JSON.stringify(result, null, 2));
+      }
+    } catch (err) {
+      this.outputText.set('Error: ' + err);
+    } finally {
+      this.isGenerating.set(false);
+    }
+  }
+
+  async analyzeSentiment() {
+    if (!this.inputText()) return;
+    this.isGenerating.set(true);
+    try {
+      const result: any = await this.aiService.analyzeSentiment(this.inputText());
+      // Result is usually [{ label: 'POSITIVE', score: 0.99 }]
+      if (Array.isArray(result) && result.length > 0) {
+        this.outputText.set(JSON.stringify(result, null, 2));
+      } else {
+        this.outputText.set(JSON.stringify(result, null, 2));
+      }
+    } catch (err) {
       this.outputText.set('Error: ' + err);
     } finally {
       this.isGenerating.set(false);
@@ -98,17 +194,20 @@ export class AiComponent {
     if (!this.inputText()) return;
     this.isGenerating.set(true);
     try {
-      const result: any = await this.aiService.translateText(this.inputText());
+      const result: any = await this.aiService.translateText(this.inputText(), this.selectedTranslationModel());
       if (Array.isArray(result) && result.length > 0 && result[0].translation_text) {
         this.outputText.set(result[0].translation_text);
       } else {
         this.outputText.set(JSON.stringify(result, null, 2));
       }
     } catch (err) {
-      console.error(err);
       this.outputText.set('Error: ' + err);
     } finally {
       this.isGenerating.set(false);
     }
+  }
+
+  isModelLoaded(id: string) {
+    return this.models().find(m => m.id === id)?.loaded;
   }
 }

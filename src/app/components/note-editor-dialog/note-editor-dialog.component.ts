@@ -42,6 +42,7 @@ import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
+import { MatMenuModule } from '@angular/material/menu';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -105,6 +106,7 @@ interface NoteAutoDraft {
     MatSlideToggleModule,
     ContentComponent,
     MentionAutocompleteComponent,
+    MatMenuModule
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
@@ -1754,9 +1756,9 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  openAiDialog() {
+  openAiDialog(action: 'generate' | 'translate' | 'sentiment' = 'generate') {
     const dialogRef = this.dialog.open(AiToolsDialogComponent, {
-      data: { content: this.content() },
+      data: { content: this.content(), initialAction: action },
       width: '500px'
     });
 

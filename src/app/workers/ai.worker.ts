@@ -5,7 +5,9 @@ env.allowLocalModels = false;
 env.useBrowserCache = true;
 
 let textGenerator: any = null;
-let translator: any = null;
+let summarizer: any = null;
+let sentiment: any = null;
+const translators = new Map<string, any>();
 
 addEventListener('message', async ({ data }) => {
   const { type, payload, id } = data;
@@ -17,6 +19,12 @@ addEventListener('message', async ({ data }) => {
         break;
       case 'generate':
         await handleGenerate(payload, id);
+        break;
+      case 'summarize':
+        await handleSummarize(payload, id);
+        break;
+      case 'sentiment':
+        await handleSentiment(payload, id);
         break;
       case 'translate':
         await handleTranslate(payload, id);
@@ -47,8 +55,13 @@ async function handleLoad(payload: { task: string, model: string }, id: string) 
 
   if (task === 'text-generation') {
     textGenerator = await pipeline(task, model, { progress_callback: progressCallback });
+  } else if (task === 'summarization') {
+    summarizer = await pipeline(task, model, { progress_callback: progressCallback });
+  } else if (task === 'sentiment-analysis') {
+    sentiment = await pipeline(task, model, { progress_callback: progressCallback });
   } else if (task === 'translation') {
-    translator = await pipeline(task, model, { progress_callback: progressCallback });
+    const translator = await pipeline(task, model, { progress_callback: progressCallback });
+    translators.set(model, translator);
   }
 
   postMessage({
@@ -70,9 +83,34 @@ async function handleGenerate(payload: { text: string, params?: any }, id: strin
   });
 }
 
-async function handleTranslate(payload: { text: string, src_lang?: string, tgt_lang?: string, params?: any }, id: string) {
+async function handleSummarize(payload: { text: string, params?: any }, id: string) {
+  if (!summarizer) {
+    throw new Error('Summarization model not loaded');
+  }
+  const result = await summarizer(payload.text, payload.params);
+  postMessage({
+    type: 'result',
+    id,
+    payload: result
+  });
+}
+
+async function handleSentiment(payload: { text: string, params?: any }, id: string) {
+  if (!sentiment) {
+    throw new Error('Sentiment analysis model not loaded');
+  }
+  const result = await sentiment(payload.text, payload.params);
+  postMessage({
+    type: 'result',
+    id,
+    payload: result
+  });
+}
+
+async function handleTranslate(payload: { text: string, model: string, params?: any }, id: string) {
+  const translator = translators.get(payload.model);
   if (!translator) {
-    throw new Error('Translation model not loaded');
+    throw new Error(`Translation model ${payload.model} not loaded`);
   }
   const result = await translator(payload.text, payload.params);
   postMessage({
@@ -83,18 +121,36 @@ async function handleTranslate(payload: { text: string, src_lang?: string, tgt_l
 }
 
 async function handleCheck(payload: { task: string, model: string }, id: string) {
-  const { task } = payload;
-  try {
-    postMessage({
-      type: 'status',
-      id,
-      payload: { loaded: (task === 'text-generation' && !!textGenerator) || (task === 'translation' && !!translator) }
-    });
-  } catch {
-    postMessage({
-      type: 'status',
-      id,
-      payload: { loaded: false }
-    });
+  const { task, model } = payload;
+  let isLoaded = false;
+  let isCached = false;
+
+  // Check memory
+  if (task === 'text-generation') isLoaded = !!textGenerator;
+  else if (task === 'summarization') isLoaded = !!summarizer;
+  else if (task === 'sentiment-analysis') isLoaded = !!sentiment;
+  else if (task === 'translation') isLoaded = translators.has(model);
+
+  // Check cache if not loaded
+  if (!isLoaded) {
+    try {
+      const cache = await caches.open('transformers-cache');
+      // We check for the existence of the model config file in the cache
+      // The URL pattern is usually: https://huggingface.co/{model}/resolve/main/config.json
+      // But it might vary.
+      const modelPath = model.startsWith('http') ? model : `https://huggingface.co/${model}/resolve/main/config.json`;
+      const match = await cache.match(modelPath);
+      if (match) {
+        isCached = true;
+      }
+    } catch (e) {
+      console.warn('Cache check failed', e);
+    }
   }
+
+  postMessage({
+    type: 'status',
+    id,
+    payload: { loaded: isLoaded, cached: isCached }
+  });
 }

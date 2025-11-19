@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
@@ -12,6 +12,7 @@ import { AiService } from '../../services/ai.service';
 
 export interface AiToolsDialogData {
   content: string;
+  initialAction?: 'generate' | 'translate' | 'sentiment';
 }
 
 @Component({
@@ -36,7 +37,8 @@ export interface AiToolsDialogData {
           <mat-label>Action</mat-label>
           <mat-select [ngModel]="selectedAction()" (ngModelChange)="selectedAction.set($event)">
             <mat-option value="generate">Generate Text</mat-option>
-            <mat-option value="translate">Translate (En->De)</mat-option>
+            <mat-option value="translate">Translate</mat-option>
+            <mat-option value="sentiment">Sentiment Analysis</mat-option>
           </mat-select>
         </mat-form-field>
 
@@ -50,11 +52,38 @@ export interface AiToolsDialogData {
         }
 
         @if (selectedAction() === 'translate') {
-            <p>Translates the current content to German.</p>
-             @if (!aiService.translationModelLoaded()) {
-                <button mat-stroked-button (click)="loadTranslationModel()" [disabled]="aiService.translationModelLoaded()">
-                    {{ aiService.translationModelLoaded() ? 'Model Loaded' : 'Load Model' }}
+            <p>Translates the current content.</p>
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Target Language</mat-label>
+              <mat-select [ngModel]="selectedTranslationModel()" (ngModelChange)="selectedTranslationModel.set($event)">
+                <mat-option value="Xenova/opus-mt-en-de">German (De)</mat-option>
+                <mat-option value="Xenova/opus-mt-en-es">Spanish (Es)</mat-option>
+                <mat-option value="Xenova/opus-mt-en-fr">French (Fr)</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+             @if (!aiService.isModelLoaded(selectedTranslationModel())) {
+                <button mat-stroked-button (click)="loadTranslationModel()" [disabled]="aiService.isModelLoaded(selectedTranslationModel())">
+                    {{ aiService.isModelLoaded(selectedTranslationModel()) ? 'Model Loaded' : 'Load Model' }}
                 </button>
+            }
+        }
+
+        @if (selectedAction() === 'sentiment') {
+            <p>Analyzes the sentiment of the content.</p>
+             @if (!aiService.sentimentModelLoaded()) {
+                <button mat-stroked-button (click)="loadSentimentModel()" [disabled]="aiService.sentimentModelLoaded()">
+                    {{ aiService.sentimentModelLoaded() ? 'Model Loaded' : 'Load Model' }}
+                </button>
+            }
+
+            @if (sentimentResult()) {
+              <div class="sentiment-result">
+                <mat-icon [class]="sentimentResult()?.label === 'POSITIVE' ? 'positive' : 'negative'">
+                  {{ sentimentIcon() }}
+                </mat-icon>
+                <span>{{ sentimentResult()?.label }} ({{ sentimentResult()?.score | percent:'1.0-2' }})</span>
+              </div>
             }
         }
 
@@ -84,10 +113,23 @@ export interface AiToolsDialogData {
       flex-direction: column;
       gap: 16px;
       min-width: 400px;
+      padding-top: 8px;
     }
     .full-width {
       width: 100%;
     }
+    .sentiment-result {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1.2em;
+      font-weight: bold;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+    }
+    .positive { color: var(--mat-success-color, #4caf50); }
+    .negative { color: var(--mat-sys-error, #f44336); }
   `]
 })
 export class AiToolsDialogComponent {
@@ -96,36 +138,63 @@ export class AiToolsDialogComponent {
   readonly aiService = inject(AiService);
 
   content = signal(this.data.content);
-  selectedAction = signal<'generate' | 'translate'>('generate');
+  selectedAction = signal<'generate' | 'translate' | 'sentiment'>(this.data.initialAction || 'generate');
+  selectedTranslationModel = signal<string>('Xenova/opus-mt-en-de');
   isProcessing = signal(false);
+  sentimentResult = signal<{ label: string, score: number } | null>(null);
+
+  sentimentIcon = computed(() => {
+    const result = this.sentimentResult();
+    if (!result) return '';
+
+    if (result.label === 'POSITIVE') {
+      return result.score > 0.9 ? 'sentiment_very_satisfied' : 'sentiment_satisfied';
+    } else {
+      return result.score > 0.9 ? 'sentiment_very_dissatisfied' : 'sentiment_dissatisfied';
+    }
+  });
 
   async loadTextModel() {
     await this.aiService.loadModel('text-generation', 'Xenova/distilgpt2');
   }
 
   async loadTranslationModel() {
-    await this.aiService.loadModel('translation', 'Xenova/opus-mt-en-de');
+    await this.aiService.loadModel('translation', this.selectedTranslationModel());
+  }
+
+  async loadSentimentModel() {
+    await this.aiService.loadModel('sentiment-analysis', 'Xenova/distilbert-base-uncased-finetuned-sst-2-english');
   }
 
   canProcess() {
     if (this.selectedAction() === 'generate') return this.aiService.textModelLoaded();
-    if (this.selectedAction() === 'translate') return this.aiService.translationModelLoaded();
+    if (this.selectedAction() === 'translate') return this.aiService.isModelLoaded(this.selectedTranslationModel());
+    if (this.selectedAction() === 'sentiment') return this.aiService.sentimentModelLoaded();
     return false;
   }
 
   async process() {
     this.isProcessing.set(true);
+    this.sentimentResult.set(null);
     try {
-      let result: any;
+      let result: unknown;
       if (this.selectedAction() === 'generate') {
         result = await this.aiService.generateText(this.content());
-        if (Array.isArray(result) && result.length > 0 && result[0].generated_text) {
-          this.content.set(result[0].generated_text);
+        const typedResult = result as { generated_text: string }[];
+        if (Array.isArray(typedResult) && typedResult.length > 0 && typedResult[0].generated_text) {
+          this.content.set(typedResult[0].generated_text);
         }
-      } else {
-        result = await this.aiService.translateText(this.content());
-        if (Array.isArray(result) && result.length > 0 && result[0].translation_text) {
-          this.content.set(result[0].translation_text);
+      } else if (this.selectedAction() === 'translate') {
+        result = await this.aiService.translateText(this.content(), this.selectedTranslationModel());
+        const typedResult = result as { translation_text: string }[];
+        if (Array.isArray(typedResult) && typedResult.length > 0 && typedResult[0].translation_text) {
+          this.content.set(typedResult[0].translation_text);
+        }
+      } else if (this.selectedAction() === 'sentiment') {
+        result = await this.aiService.analyzeSentiment(this.content());
+        const typedResult = result as { label: string, score: number }[];
+        if (Array.isArray(typedResult) && typedResult.length > 0) {
+          this.sentimentResult.set(typedResult[0]);
         }
       }
     } catch (e) {

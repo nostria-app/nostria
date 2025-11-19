@@ -16,6 +16,14 @@ export class AiService {
   // Signals for UI
   textModelLoaded = signal(false);
   translationModelLoaded = signal(false);
+  summarizationModelLoaded = signal(false);
+  sentimentModelLoaded = signal(false);
+
+  loadedModels = signal<Set<string>>(new Set());
+
+  isModelLoaded(modelId: string) {
+    return this.loadedModels().has(modelId);
+  }
 
   constructor() {
     if (typeof Worker !== 'undefined') {
@@ -48,6 +56,15 @@ export class AiService {
     return this.postMessage('load', { task, model }, progressCallback).then((res) => {
       if (task === 'text-generation') this.textModelLoaded.set(true);
       if (task === 'translation') this.translationModelLoaded.set(true);
+      if (task === 'summarization') this.summarizationModelLoaded.set(true);
+      if (task === 'sentiment-analysis') this.sentimentModelLoaded.set(true);
+
+      this.loadedModels.update(models => {
+        const newModels = new Set(models);
+        newModels.add(model);
+        return newModels;
+      });
+
       return res;
     });
   }
@@ -56,8 +73,20 @@ export class AiService {
     return this.postMessage('generate', { text, params });
   }
 
-  async translateText(text: string, params?: unknown) {
-    return this.postMessage('translate', { text, params });
+  async summarizeText(text: string, params?: unknown) {
+    return this.postMessage('summarize', { text, params });
+  }
+
+  async analyzeSentiment(text: string, params?: unknown) {
+    return this.postMessage('sentiment', { text, params });
+  }
+
+  async translateText(text: string, model: string, params?: unknown) {
+    return this.postMessage('translate', { text, model, params });
+  }
+
+  async checkModel(task: string, model: string): Promise<{ loaded: boolean, cached: boolean }> {
+    return this.postMessage('check', { task, model }) as Promise<{ loaded: boolean, cached: boolean }>;
   }
 
   private postMessage(type: string, payload: unknown, progressCallback?: (data: unknown) => void): Promise<unknown> {
