@@ -332,9 +332,10 @@ export class PublishService {
     event: Event,
     options: PublishOptions
   ): Promise<string[]> {
-    // If explicit relay URLs provided, use those
+    // If explicit relay URLs provided, use those (deduplicated)
     if (options.relayUrls && options.relayUrls.length > 0) {
-      return this.applyRelayOptimization(options.relayUrls, options.useOptimizedRelays);
+      const uniqueRelays = Array.from(new Set(options.relayUrls));
+      return this.applyRelayOptimization(uniqueRelays, options.useOptimizedRelays);
     }
 
     const accountRelayUrls = this.accountRelay.getRelayUrls();
@@ -406,8 +407,9 @@ export class PublishService {
       }
     }
 
-    // For other events, use account relays with optional optimization
-    return this.applyRelayOptimization(accountRelayUrls, options.useOptimizedRelays);
+    // For other events, use account relays with optional optimization (deduplicated)
+    const uniqueAccountRelays = Array.from(new Set(accountRelayUrls));
+    return this.applyRelayOptimization(uniqueAccountRelays, options.useOptimizedRelays);
   }
 
   /**
@@ -523,17 +525,21 @@ export class PublishService {
   }
 
   /**
-   * Apply relay optimization if requested
+   * Apply relay optimization if requested.
+   * Always returns deduplicated relay URLs.
    */
   private applyRelayOptimization(
     relayUrls: string[],
     useOptimized = true
   ): string[] {
+    // Ensure deduplication in all cases
+    const uniqueRelays = Array.from(new Set(relayUrls));
+
     if (!useOptimized) {
-      return relayUrls;
+      return uniqueRelays;
     }
 
-    return this.relaysService.getOptimalRelays(relayUrls);
+    return this.relaysService.getOptimalRelays(uniqueRelays);
   }
 
   /**

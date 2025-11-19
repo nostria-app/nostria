@@ -421,9 +421,13 @@ export class StreamInfoBarComponent implements OnDestroy {
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
 
+  // Current stream event (may be updated via subscription)
+  private currentEvent = signal<Event | null>(null);
+  private subscription: { close: () => void } | null = null;
+
   // Viewer count (from current_participants tag in stream event)
   viewerCount = computed(() => {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     const participantsTag = event.tags.find(tag => tag[0] === 'current_participants');
     return participantsTag?.[1] ? parseInt(participantsTag[1], 10) : 0;
   });
@@ -444,21 +448,21 @@ export class StreamInfoBarComponent implements OnDestroy {
 
   // Stream title
   title = computed(() => {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     const titleTag = event.tags.find(tag => tag[0] === 'title');
     return titleTag?.[1] || 'Live Stream';
   });
 
   // Stream description
   description = computed(() => {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     const summaryTag = event.tags.find(tag => tag[0] === 'summary');
     return summaryTag?.[1] || null;
   });
 
   // Stream provider (from event pubkey metadata)
   streamProvider = computed(() => {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     // Try to extract provider from service tag or determine from pubkey
     const serviceTag = event.tags.find(tag => tag[0] === 'service');
     if (serviceTag?.[1]) {
@@ -477,7 +481,7 @@ export class StreamInfoBarComponent implements OnDestroy {
 
   // Stream provider URL
   streamProviderUrl = computed(() => {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     const serviceTag = event.tags.find(tag => tag[0] === 'service');
     if (serviceTag?.[1]) {
       const url = serviceTag[1];
@@ -493,14 +497,14 @@ export class StreamInfoBarComponent implements OnDestroy {
 
   // Start time from "starts" tag
   startTime = computed(() => {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     const startsTag = event.tags.find(tag => tag[0] === 'starts');
     return startsTag?.[1] ? parseInt(startsTag[1], 10) : null;
   });
 
   // Streamer pubkey - use host p tag if available, otherwise event pubkey
   streamerPubkey = computed(() => {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     // Find the p tag with "host" role
     const hostTag = event.tags.find(tag => tag[0] === 'p' && tag[3] === 'host');
     return hostTag?.[1] || event.pubkey;
@@ -513,7 +517,7 @@ export class StreamInfoBarComponent implements OnDestroy {
 
   // Tags
   tags = computed(() => {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     return event.tags
       .filter(tag => tag[0] === 't')
       .map(tag => tag[1])
@@ -522,13 +526,21 @@ export class StreamInfoBarComponent implements OnDestroy {
 
   // Event address for tracking viewers
   eventAddress = computed(() => {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
     if (!dTag) return null;
     return `${event.kind}:${event.pubkey}:${dTag}`;
   });
 
   constructor() {
+    // Subscribe to stream updates
+    effect(() => {
+      const event = this.liveEvent();
+      if (event) {
+        this.subscribeToStreamUpdates(event);
+      }
+    });
+
     // Start elapsed time counter
     effect(() => {
       const startTimestamp = this.startTime();
@@ -539,7 +551,7 @@ export class StreamInfoBarComponent implements OnDestroy {
 
     // Fetch zap goal
     effect(() => {
-      const event = this.liveEvent();
+      const event = this.currentEvent() || this.liveEvent();
       const goalTag = event.tags.find(tag => tag[0] === 'goal');
       if (goalTag?.[1]) {
         this.fetchZapGoal(goalTag[1]);
@@ -548,7 +560,7 @@ export class StreamInfoBarComponent implements OnDestroy {
 
     // Track zaps for this stream
     effect(() => {
-      const event = this.liveEvent();
+      const event = this.currentEvent() || this.liveEvent();
       if (event.id) {
         this.trackStreamZaps();
       }
@@ -559,6 +571,57 @@ export class StreamInfoBarComponent implements OnDestroy {
     if (this.elapsedTimeInterval) {
       clearInterval(this.elapsedTimeInterval);
     }
+    if (this.subscription) {
+      this.subscription.close();
+    }
+  }
+
+  private subscribeToStreamUpdates(event: Event): void {
+    // Close existing subscription if any
+    if (this.subscription) {
+      this.subscription.close();
+    }
+
+    // Get d-tag for this stream (kind 30311 is a replaceable event)
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+    if (!dTag) {
+      console.warn('[StreamInfoBar] No d-tag found, cannot subscribe to updates');
+      return;
+    }
+
+    const relayUrls = this.relaysService.getOptimalRelays(
+      this.utilities.preferredRelays
+    );
+
+    if (relayUrls.length === 0) {
+      console.warn('[StreamInfoBar] No relays available for stream updates');
+      return;
+    }
+
+    console.log('[StreamInfoBar] Subscribing to stream updates:', { kind: event.kind, pubkey: event.pubkey.substring(0, 8), dTag });
+
+    // Subscribe to updates for this specific stream
+    const filter: Filter = {
+      kinds: [event.kind],
+      authors: [event.pubkey],
+      '#d': [dTag],
+    };
+
+    this.subscription = this.relayPool.subscribe(
+      relayUrls,
+      filter,
+      (updatedEvent: Event) => {
+        // Only update if this event is newer than the current one
+        const current = this.currentEvent() || this.liveEvent();
+        if (updatedEvent.created_at > current.created_at) {
+          console.log('[StreamInfoBar] Received stream update:', {
+            previousTimestamp: current.created_at,
+            newTimestamp: updatedEvent.created_at,
+          });
+          this.currentEvent.set(updatedEvent);
+        }
+      }
+    );
   }
 
   private startElapsedTimeCounter(startTimestamp: number): void {
@@ -738,7 +801,7 @@ export class StreamInfoBarComponent implements OnDestroy {
   }
 
   async openZapDialog(): Promise<void> {
-    const event = this.liveEvent();
+    const event = this.currentEvent() || this.liveEvent();
     // Use the host pubkey for zaps
     const recipientPubkey = this.streamerPubkey();
 
