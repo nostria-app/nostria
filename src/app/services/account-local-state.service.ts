@@ -26,6 +26,7 @@ interface AccountLocalState {
   peopleScrollPosition?: number;
   bookmarksViewMode?: string;
   activeProfileTab?: string;
+  followingSidebarDocked?: boolean;
   powEnabled?: boolean;
   powTargetDifficulty?: number;
   lastRoute?: string;
@@ -245,6 +246,21 @@ export class AccountLocalStateService {
    */
   setActiveProfileTab(pubkey: string, tabId: string | null | undefined): void {
     this.updateAccountState(pubkey, { activeProfileTab: tabId || undefined });
+  }
+
+  /**
+   * Get following sidebar docked state for an account
+   */
+  getFollowingSidebarDocked(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.followingSidebarDocked || false;
+  }
+
+  /**
+   * Set following sidebar docked state for an account
+   */
+  setFollowingSidebarDocked(pubkey: string, docked: boolean): void {
+    this.updateAccountState(pubkey, { followingSidebarDocked: docked });
   }
 
   /**
