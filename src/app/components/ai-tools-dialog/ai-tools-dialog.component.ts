@@ -36,7 +36,7 @@ export interface AiToolsDialogData {
         <mat-form-field appearance="outline" class="full-width">
           <mat-label>Action</mat-label>
           <mat-select [ngModel]="selectedAction()" (ngModelChange)="selectedAction.set($event)">
-            <mat-option value="generate">Generate Text</mat-option>
+            <mat-option value="generate" disabled>Generate Text (Temporarily Disabled)</mat-option>
             <mat-option value="translate">Translate</mat-option>
             <mat-option value="sentiment">Sentiment Analysis</mat-option>
           </mat-select>
