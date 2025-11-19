@@ -312,14 +312,13 @@
           <span>Sentiment Analysis</span>
         </button>
       </mat-menu>
-      <button mat-icon-button type="button" (click)="toggleRecording()"
-        [color]="isRecording() ? 'warn' : ''"
+      <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
         matTooltip="Dictate note">
         @if (isTranscribing()) {
-          <mat-icon class="spinning">sync</mat-icon>
+        <mat-icon class="spinning">sync</mat-icon>
         } @else {
-          <mat-icon>mic</mat-icon>
+        <mat-icon>mic</mat-icon>
         }
       </button>
       <button mat-icon-button type="button" (click)="openFileDialog()"
