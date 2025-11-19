@@ -82,10 +82,16 @@ mat-sidenav-content {
 
 .sidenav {
   width: 250px;
+  display: flex;
+  flex-direction: column;
 
   // Adjust for mobile navigation
   @media (min-width: 599px) {
     z-index: 0 !important;
+  }
+
+  mat-nav-list {
+    flex: 1;
   }
 }
 
@@ -242,6 +248,19 @@ mat-sidenav-content {
   /* Positioning the FAB button to be raised above the navigation */
   z-index: 11;
   box-shadow: var(--mat-sys-level4);
+}
+
+// Sidenav FAB styles
+.sidenav-fab-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+.sidenav-create-fab {
+  box-shadow: var(--mat-sys-level3);
 }
 
 .apps-sidenav {
