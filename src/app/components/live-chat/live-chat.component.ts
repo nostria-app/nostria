@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, ViewChild, ElementRef, AfterViewInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, ViewChild, ElementRef, AfterViewInit, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -44,7 +44,7 @@ interface ChatMessage {
   styleUrl: './live-chat.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class LiveChatComponent implements AfterViewInit {
+export class LiveChatComponent implements AfterViewInit, OnDestroy {
   private relayPool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
@@ -62,6 +62,10 @@ export class LiveChatComponent implements AfterViewInit {
 
   // Chat messages
   messages = signal<ChatMessage[]>([]);
+
+  // Subscription management
+  private chatSubscription: { close: () => void } | null = null;
+  private messageIds = new Set<string>();
 
   // Message input
   messageInput = signal('');
@@ -97,7 +101,14 @@ export class LiveChatComponent implements AfterViewInit {
     // Subscribe to chat messages when event changes
     effect(() => {
       const address = this.eventAddress();
-      if (!address) return;
+      if (!address) {
+        // Close existing subscription if address becomes invalid
+        if (this.chatSubscription) {
+          this.chatSubscription.close();
+          this.chatSubscription = null;
+        }
+        return;
+      }
 
       this.subscribeToChatMessages(address);
     });
@@ -108,6 +119,12 @@ export class LiveChatComponent implements AfterViewInit {
     setTimeout(() => this.scrollToBottom(), 100);
   }
 
+  ngOnDestroy(): void {
+    if (this.chatSubscription) {
+      this.chatSubscription.close();
+    }
+  }
+
   private scrollToBottom(): void {
     if (this.messagesContainer) {
       const element = this.messagesContainer.nativeElement;
@@ -115,47 +132,69 @@ export class LiveChatComponent implements AfterViewInit {
     }
   }
 
-  private async subscribeToChatMessages(eventAddress: string): Promise<void> {
+  private subscribeToChatMessages(eventAddress: string): void {
+    // Close existing subscription if any
+    if (this.chatSubscription) {
+      this.chatSubscription.close();
+      this.chatSubscription = null;
+    }
+
+    // Reset messages and message IDs for new subscription
+    this.messages.set([]);
+    this.messageIds.clear();
+
     const relayUrls = this.relaysService.getOptimalRelays(
       this.utilities.preferredRelays
     );
 
     if (relayUrls.length === 0) {
-      console.warn('No relays available for chat messages');
+      console.warn('[LiveChat] No relays available for chat messages');
       return;
     }
 
-    // Query for kind 1311 chat messages
+    console.log('[LiveChat] Subscribing to chat messages:', { eventAddress, relayCount: relayUrls.length });
+
+    // Subscribe to kind 1311 chat messages
     const filter = {
       kinds: [1311],
       '#a': [eventAddress],
       limit: 100,
     };
 
-    try {
-      const events = await this.relayPool.query(relayUrls, filter, 5000);
+    this.chatSubscription = this.relayPool.subscribe(
+      relayUrls,
+      filter,
+      (event: Event) => {
+        // Deduplicate by event ID
+        if (this.messageIds.has(event.id)) {
+          return;
+        }
 
-      const chatMessages: ChatMessage[] = events
-        .map(event => {
-          // Find reply-to event ID from 'e' tag
-          const replyTag = event.tags.find(tag => tag[0] === 'e');
+        this.messageIds.add(event.id);
 
-          return {
-            event: event,
-            pubkey: event.pubkey,
-            content: event.content,
-            created_at: event.created_at,
-            replyTo: replyTag?.[1],
-            formattedTime: this.formatTimestamp(event.created_at),
-          };
-        })
-        .sort((a, b) => a.created_at - b.created_at); // Oldest first
+        // Find reply-to event ID from 'e' tag
+        const replyTag = event.tags.find(tag => tag[0] === 'e');
 
-      this.messages.set(chatMessages);
-      setTimeout(() => this.scrollToBottom(), 100);
-    } catch (error) {
-      console.error('Error querying chat messages:', error);
-    }
+        const newMessage: ChatMessage = {
+          event: event,
+          pubkey: event.pubkey,
+          content: event.content,
+          created_at: event.created_at,
+          replyTo: replyTag?.[1],
+          formattedTime: this.formatTimestamp(event.created_at),
+        };
+
+        // Add message and re-sort
+        this.messages.update(msgs => {
+          const updated = [...msgs, newMessage];
+          updated.sort((a, b) => a.created_at - b.created_at);
+          return updated;
+        });
+
+        // Auto-scroll to bottom when new messages arrive
+        setTimeout(() => this.scrollToBottom(), 50);
+      }
+    );
   }
 
   async sendMessage(): Promise<void> {
@@ -203,19 +242,9 @@ export class LiveChatComponent implements AfterViewInit {
       const result = await this.nostrService.signAndPublish(chatEvent);
 
       if (result.success) {
-        // Optionally add the message to the local list immediately
-        if (result.event) {
-          const newMessage: ChatMessage = {
-            event: result.event,
-            pubkey: result.event.pubkey,
-            content: result.event.content,
-            created_at: result.event.created_at,
-            formattedTime: this.formatTimestamp(result.event.created_at),
-          };
-          this.messages.update(msgs => [...msgs, newMessage]);
-          // Scroll to bottom after adding new message
-          setTimeout(() => this.scrollToBottom(), 50);
-        }
+        // Note: We don't manually add the message here because the subscription
+        // will pick it up automatically when it's published to relays
+        console.log('[LiveChat] Message sent successfully');
       } else {
         // Restore the message if publish failed
         this.messageInput.set(message);
