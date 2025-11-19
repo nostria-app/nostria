@@ -33,6 +33,10 @@ export class WebPushService {
   devicesLoaded = signal(false);
   webRequest = inject(WebRequest);
   private platformId = inject(PLATFORM_ID);
+  // Track last fetch time for preferences
+  private lastPreferencesFetch = 0;
+  // Cache duration: 2 days in milliseconds
+  private readonly PREFERENCES_CACHE_DURATION = 2 * 24 * 60 * 60 * 1000;
 
   constructor() {
     // Only load preferences in browser environment when user is authenticated
@@ -119,6 +123,8 @@ export class WebPushService {
         { kind: kinds.HTTPAuth }
       );
       console.log('Response from savePreferencesToServer:', response);
+      // Update cache timestamp after successful save
+      this.lastPreferencesFetch = Date.now();
       this.logger.info('Device notification preferences saved successfully');
     } catch (error) {
       this.logger.error('Failed to save preferences to server:', error);
@@ -128,6 +134,13 @@ export class WebPushService {
     // Only load preferences if we have an authenticated user
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
+      return;
+    }
+
+    // Check if we have recent cached data (within 2 days)
+    const now = Date.now();
+    if (this.lastPreferencesFetch > 0 && (now - this.lastPreferencesFetch) < this.PREFERENCES_CACHE_DURATION) {
+      this.logger.debug('Using cached subscription settings (fetched less than 2 days ago)');
       return;
     }
 
@@ -143,6 +156,7 @@ export class WebPushService {
       if (result && result.settings) {
         const settings = JSON.parse(result.settings);
         this.devicePreferences.set(settings);
+        this.lastPreferencesFetch = now; // Update cache timestamp
         this.logger.info('Device notification preferences loaded from server');
         return;
       }
