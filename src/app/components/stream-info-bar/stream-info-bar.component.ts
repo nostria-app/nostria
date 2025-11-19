@@ -423,7 +423,9 @@ export class StreamInfoBarComponent implements OnDestroy {
 
   // Current stream event (may be updated via subscription)
   private currentEvent = signal<Event | null>(null);
-  private subscription: { close: () => void } | null = null;
+  private streamSubscription: { close: () => void } | null = null;
+  private zapSubscription: { close: () => void } | null = null;
+  private zapEventIds = new Set<string>();
 
   // Viewer count (from current_participants tag in stream event)
   viewerCount = computed(() => {
@@ -571,15 +573,18 @@ export class StreamInfoBarComponent implements OnDestroy {
     if (this.elapsedTimeInterval) {
       clearInterval(this.elapsedTimeInterval);
     }
-    if (this.subscription) {
-      this.subscription.close();
+    if (this.streamSubscription) {
+      this.streamSubscription.close();
+    }
+    if (this.zapSubscription) {
+      this.zapSubscription.close();
     }
   }
 
   private subscribeToStreamUpdates(event: Event): void {
     // Close existing subscription if any
-    if (this.subscription) {
-      this.subscription.close();
+    if (this.streamSubscription) {
+      this.streamSubscription.close();
     }
 
     // Get d-tag for this stream (kind 30311 is a replaceable event)
@@ -607,7 +612,7 @@ export class StreamInfoBarComponent implements OnDestroy {
       '#d': [dTag],
     };
 
-    this.subscription = this.relayPool.subscribe(
+    this.streamSubscription = this.relayPool.subscribe(
       relayUrls,
       filter,
       (updatedEvent: Event) => {
@@ -682,71 +687,59 @@ export class StreamInfoBarComponent implements OnDestroy {
     }
   }
 
-  private async trackStreamZaps(): Promise<void> {
+  private trackStreamZaps(): void {
+    // Close existing subscription if any
+    if (this.zapSubscription) {
+      this.zapSubscription.close();
+      this.zapSubscription = null;
+    }
+
+    // Reset zap tracking
+    this.zapEventIds.clear();
+    this.currentZapAmount.set(0);
+
     const relayUrls = this.relaysService.getOptimalRelays(
       this.utilities.preferredRelays
     );
 
     if (relayUrls.length === 0) {
-      console.warn('No relays available for tracking zaps');
+      console.warn('[StreamInfoBar] No relays available for tracking zaps');
       return;
     }
 
     const streamerPubkey = this.streamerPubkey();
 
-    try {
-      // Query for kind 9735 zap receipts sent to the streamer
-      // Zaps are sent to people (p tag), not events
-      const filter: Filter & { '#a'?: string[] } = {
-        kinds: [9735],
-        '#p': [streamerPubkey]
-      };
+    console.log('[StreamInfoBar] Subscribing to zap receipts:', { streamerPubkey: streamerPubkey.substring(0, 8), relayCount: relayUrls.length });
 
-      const events = await this.relayPool.query(
-        relayUrls,
-        filter,
-        10000
-      );
+    // Subscribe to kind 9735 zap receipts sent to the streamer
+    // Zaps are sent to people (p tag), not events
+    const filter: Filter & { '#p'?: string[] } = {
+      kinds: [9735],
+      '#p': [streamerPubkey]
+    };
 
-      // Calculate total zaps
-      let totalSats = 0;
-      for (const zapReceipt of events) {
+    this.zapSubscription = this.relayPool.subscribe(
+      relayUrls,
+      filter,
+      (zapReceipt: Event) => {
+        // Deduplicate by event ID
+        if (this.zapEventIds.has(zapReceipt.id)) {
+          return;
+        }
+
+        this.zapEventIds.add(zapReceipt.id);
+
+        // Extract and add zap amount
         const boltTag = zapReceipt.tags.find(tag => tag[0] === 'bolt11');
         if (boltTag?.[1]) {
           const amountInSats = this.extractAmountFromBolt11(boltTag[1]);
-          totalSats += amountInSats;
+          if (amountInSats > 0) {
+            this.currentZapAmount.update(current => current + amountInSats);
+            console.log('[StreamInfoBar] New zap received:', { amountInSats, total: this.currentZapAmount() });
+          }
         }
       }
-
-      this.currentZapAmount.set(totalSats);
-
-      // Poll for new zaps every 15 seconds
-      setInterval(async () => {
-        try {
-          const recentEvents = await this.relayPool.query(
-            relayUrls,
-            filter,
-            10000
-          );
-
-          let newTotal = 0;
-          for (const zapReceipt of recentEvents) {
-            const boltTag = zapReceipt.tags.find(tag => tag[0] === 'bolt11');
-            if (boltTag?.[1]) {
-              const amountInSats = this.extractAmountFromBolt11(boltTag[1]);
-              newTotal += amountInSats;
-            }
-          }
-
-          totalSats = newTotal;
-          this.currentZapAmount.set(newTotal);
-        } catch (error) {
-          console.error('Error updating stream zaps:', error);
-        }
-      }, 15000);
-    } catch (error) {
-      console.error('Error tracking stream zaps:', error);
-    }
+    );
   }
 
   private extractAmountFromBolt11(bolt11: string): number {
