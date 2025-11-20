@@ -59,6 +59,7 @@ Nostria implements the usage of the Nostr protocol to ensure maximum decentraliz
 - [x] [NIP-51: Lists](https://github.com/nostr-protocol/nips/blob/master/51.md)
 - [x] [NIP-52: Calendar Events](https://github.com/nostr-protocol/nips/blob/master/52.md)
 - [x] [NIP-56: Reporting](https://github.com/nostr-protocol/nips/blob/master/56.md)
+- [x] [NIP-55: Android Signer Application](https://github.com/nostr-protocol/nips/blob/master/55.md)
 - [x] [NIP-57: Lightning Zaps](https://github.com/nostr-protocol/nips/blob/master/57.md)
 - [x] [NIP-58: Badges](https://github.com/nostr-protocol/nips/blob/master/58.md)
 - [x] [NIP-65: Relay List Metadata](https://github.com/nostr-protocol/nips/blob/master/65.md)
