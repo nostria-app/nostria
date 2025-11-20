@@ -16,6 +16,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { NostrService } from '../../services/nostr.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { UserDataService } from '../../services/user-data.service';
 
 interface ChatMessage {
   event: Event;
@@ -51,6 +52,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   private nostrService = inject(NostrService);
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
+  private userDataService = inject(UserDataService);
 
   @ViewChild('messagesContainer') messagesContainer?: ElementRef<HTMLDivElement>;
 
@@ -135,7 +137,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private subscribeToChatMessages(eventAddress: string): void {
+  private async subscribeToChatMessages(eventAddress: string): Promise<void> {
     // Close existing subscription if any
     if (this.chatSubscription) {
       this.chatSubscription.close();
@@ -145,10 +147,30 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     // Reset messages and message IDs for new subscription
     this.messages.set([]);
     this.messageIds.clear();
+    this.activeRelays.set([]);
 
-    const relayUrls = this.relaysService.getOptimalRelays(
-      this.utilities.preferredRelays
-    );
+    // Get streamer pubkey from event
+    const event = this.liveEvent();
+    const streamerPubkey = event?.pubkey;
+
+    let targetRelays: string[] = [];
+
+    if (streamerPubkey) {
+      // Get streamer's relays
+      targetRelays = await this.userDataService.getUserRelays(streamerPubkey);
+    }
+
+    // Check if we are still on the same event
+    if (this.eventAddress() !== eventAddress) {
+      return;
+    }
+
+    // If no streamer relays found, fallback to preferred relays
+    if (targetRelays.length === 0) {
+      targetRelays = this.utilities.preferredRelays;
+    }
+
+    const relayUrls = this.relaysService.getOptimalRelays(targetRelays);
 
     if (relayUrls.length === 0) {
       console.warn('[LiveChat] No relays available for chat messages');
