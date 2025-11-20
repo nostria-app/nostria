@@ -4,6 +4,7 @@ import { kinds } from 'nostr-tools';
 import { SwPush } from '@angular/service-worker';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
+import { AccountLocalStateService } from './account-local-state.service';
 import { UserNotificationType, DeviceNotificationPreferences } from './storage.service';
 import { environment } from './../../environments/environment';
 import { WebRequest } from './web-request';
@@ -24,6 +25,7 @@ export interface Device {
 export class WebPushService {
   private server: string = environment.backendUrl;
   accountState = inject(AccountStateService);
+  accountLocalState = inject(AccountLocalStateService);
   push = inject(SwPush);
   logger = inject(LoggerService);
   deviceList = signal<Device[]>([]);
@@ -33,10 +35,8 @@ export class WebPushService {
   devicesLoaded = signal(false);
   webRequest = inject(WebRequest);
   private platformId = inject(PLATFORM_ID);
-  // Track last fetch time for preferences
-  private lastPreferencesFetch = 0;
-  // Cache duration: 2 days in milliseconds
-  private readonly PREFERENCES_CACHE_DURATION = 2 * 24 * 60 * 60 * 1000;
+  // Cache duration: 3 days in milliseconds
+  private readonly PREFERENCES_CACHE_DURATION = 3 * 24 * 60 * 60 * 1000;
 
   constructor() {
     // Only load preferences in browser environment when user is authenticated
@@ -115,7 +115,8 @@ export class WebPushService {
   async savePreferencesToServer(): Promise<void> {
     try {
       const prefs = this.devicePreferences();
-      const url = `${this.server}api/subscription/settings/${this.accountState.pubkey()}`;
+      const pubkey = this.accountState.pubkey();
+      const url = `${this.server}api/subscription/settings/${pubkey}`;
 
       const response = await this.webRequest.fetchJson(
         url,
@@ -123,8 +124,12 @@ export class WebPushService {
         { kind: kinds.HTTPAuth }
       );
       console.log('Response from savePreferencesToServer:', response);
-      // Update cache timestamp after successful save
-      this.lastPreferencesFetch = Date.now();
+
+      // Update cache timestamp and settings after successful save
+      const now = Date.now();
+      this.accountLocalState.setSubscriptionSettingsLastFetch(pubkey, now);
+      this.accountLocalState.setSubscriptionSettings(pubkey, prefs);
+
       this.logger.info('Device notification preferences saved successfully');
     } catch (error) {
       this.logger.error('Failed to save preferences to server:', error);
@@ -137,10 +142,18 @@ export class WebPushService {
       return;
     }
 
-    // Check if we have recent cached data (within 2 days)
+    // Load from local state first to ensure we have something to show
+    const savedPrefs = this.accountLocalState.getSubscriptionSettings(pubkey);
+    if (savedPrefs) {
+      this.devicePreferences.set(savedPrefs);
+    }
+
+    const lastFetch = this.accountLocalState.getSubscriptionSettingsLastFetch(pubkey);
+
+    // Check if we have recent cached data (within 3 days)
     const now = Date.now();
-    if (this.lastPreferencesFetch > 0 && (now - this.lastPreferencesFetch) < this.PREFERENCES_CACHE_DURATION) {
-      this.logger.debug('Using cached subscription settings (fetched less than 2 days ago)');
+    if (lastFetch > 0 && (now - lastFetch) < this.PREFERENCES_CACHE_DURATION) {
+      this.logger.debug('Using cached subscription settings (fetched less than 3 days ago)');
       return;
     }
 
@@ -156,12 +169,19 @@ export class WebPushService {
       if (result && result.settings) {
         const settings = JSON.parse(result.settings);
         this.devicePreferences.set(settings);
-        this.lastPreferencesFetch = now; // Update cache timestamp
+
+        // Update cache timestamp and settings
+        this.accountLocalState.setSubscriptionSettingsLastFetch(pubkey, now);
+        this.accountLocalState.setSubscriptionSettings(pubkey, settings);
+
         this.logger.info('Device notification preferences loaded from server');
         return;
       }
     } catch (error) {
       this.logger.error('Failed to load preferences from server:', error);
+
+      // If it fails, also don't try again for another 3 days
+      this.accountLocalState.setSubscriptionSettingsLastFetch(pubkey, now);
     }
   }
 
