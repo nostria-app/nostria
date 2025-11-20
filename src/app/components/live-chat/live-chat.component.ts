@@ -63,6 +63,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   // Chat messages
   messages = signal<ChatMessage[]>([]);
 
+  // Active relays for chat
+  activeRelays = signal<string[]>([]);
+
   // Subscription management
   private chatSubscription: { close: () => void } | null = null;
   private messageIds = new Set<string>();
@@ -152,13 +155,15 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    this.activeRelays.set(relayUrls);
+
     console.log('[LiveChat] Subscribing to chat messages:', { eventAddress, relayCount: relayUrls.length });
 
     // Subscribe to kind 1311 chat messages
     const filter = {
       kinds: [1311],
       '#a': [eventAddress],
-      limit: 100,
+      limit: 1000,
     };
 
     this.chatSubscription = this.relayPool.subscribe(

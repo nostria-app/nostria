@@ -1229,3 +1229,7 @@ app-media-queue .media-list mat-list {
     }
   }
 }
+
+.multiline-tooltip {
+  white-space: pre-line;
+}
