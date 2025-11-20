@@ -34,9 +34,10 @@
 <div class="article-container">
   <!-- Use ArticleDisplayComponent for rendering -->
   <app-article-display [article]="articleData()" mode="full" [isSpeaking]="isSpeaking()" [isPaused]="isPaused()"
-    [useAiVoice]="useAiVoice()" [isSynthesizing]="isSynthesizing()" (startSpeech)="startSpeech()"
-    (pauseSpeech)="pauseSpeech()" (resumeSpeech)="resumeSpeech()" (stopSpeech)="stopSpeech()"
-    (toggleAiVoice)="useAiVoice.set($event)" (share)="shareArticle()"></app-article-display>
+    [useAiVoice]="useAiVoice()" [isSynthesizing]="isSynthesizing()" [isTranslating]="isTranslating()"
+    (startSpeech)="startSpeech()" (pauseSpeech)="pauseSpeech()" (resumeSpeech)="resumeSpeech()"
+    (stopSpeech)="stopSpeech()" (toggleAiVoice)="useAiVoice.set($event)" (share)="shareArticle()"
+    (translate)="onTranslate()"></app-article-display>
 </div>
 } @else {
 <!-- Loading or Empty State -->

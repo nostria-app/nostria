@@ -69,6 +69,7 @@ export class ArticleDisplayComponent {
   isPaused = input<boolean>(false);
   isSynthesizing = input<boolean>(false);
   useAiVoice = input<boolean>(false);
+  isTranslating = input<boolean>(false);
 
   // Text-to-speech outputs (only used in full mode)
   startSpeech = output<void>();
@@ -77,6 +78,7 @@ export class ArticleDisplayComponent {
   stopSpeech = output<void>();
   toggleAiVoice = output<boolean>();
   share = output<void>();
+  translate = output<void>();
 
   layout = inject(LayoutService);
 
