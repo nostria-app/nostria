@@ -5,6 +5,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterModule } from '@angular/router';
 import { SafeHtml } from '@angular/platform-browser';
 import { Event } from 'nostr-tools';
@@ -44,6 +45,7 @@ export interface ArticleData {
     MatIconModule,
     MatChipsModule,
     MatMenuModule,
+    MatProgressSpinnerModule,
     RouterModule,
     UserProfileComponent,
     DateToggleComponent,
@@ -65,6 +67,7 @@ export class ArticleDisplayComponent {
   // Text-to-speech inputs (only used in full mode)
   isSpeaking = input<boolean>(false);
   isPaused = input<boolean>(false);
+  isSynthesizing = input<boolean>(false);
   useAiVoice = input<boolean>(false);
 
   // Text-to-speech outputs (only used in full mode)

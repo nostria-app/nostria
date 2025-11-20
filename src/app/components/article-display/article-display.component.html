@@ -48,8 +48,13 @@
           </mat-menu>
 
           @if (!isSpeaking()) {
-          <button mat-icon-button color="primary" (click)="startSpeech.emit()" title="Read article aloud">
+          <button mat-icon-button color="primary" (click)="startSpeech.emit()" title="Read article aloud"
+            [disabled]="isSynthesizing()">
+            @if (isSynthesizing()) {
+            <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
+            } @else {
             <mat-icon>volume_up</mat-icon>
+            }
           </button>
           } @else {
           @if (isPaused()) {

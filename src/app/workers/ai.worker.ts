@@ -73,7 +73,10 @@ async function handleLoad(payload: { task: string, model: string }, id: string) 
   } else if (task === 'automatic-speech-recognition') {
     transcriber = await pipeline(task, model, { progress_callback: progressCallback });
   } else if (task === 'text-to-speech') {
-    synthesizer = await pipeline(task, model, { progress_callback: progressCallback });
+    synthesizer = await pipeline(task, model, { 
+      dtype: 'fp32',
+      progress_callback: progressCallback 
+    });
   }
 
   postMessage({
