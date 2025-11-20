@@ -330,12 +330,8 @@
     background: linear-gradient(90deg, #009688, #4caf50);
   }
 
-  &.external {
-    border-left: 4px solid #ff9800; // Orange for external/amber
-
-    mat-icon {
-      color: #ff9800;
-    }
+  &.external::after {
+    background: linear-gradient(90deg, #ffb300, #ff6f00);
   }
 }
 
