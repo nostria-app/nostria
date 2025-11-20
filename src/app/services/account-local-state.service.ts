@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
+import { DeviceNotificationPreferences } from './storage.service';
 
 /**
  * Filter options for People page
@@ -33,6 +34,8 @@ interface AccountLocalState {
   launchCount?: number;
   dismissedPushNotificationDialog?: boolean;
   articlesActiveTab?: number;
+  subscriptionSettingsLastFetch?: number;
+  subscriptionSettings?: DeviceNotificationPreferences[];
 }
 
 /**
@@ -355,6 +358,36 @@ export class AccountLocalStateService {
    */
   setArticlesActiveTab(pubkey: string, tabIndex: number): void {
     this.updateAccountState(pubkey, { articlesActiveTab: tabIndex });
+  }
+
+  /**
+   * Get subscription settings last fetch timestamp for an account
+   */
+  getSubscriptionSettingsLastFetch(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.subscriptionSettingsLastFetch || 0;
+  }
+
+  /**
+   * Set subscription settings last fetch timestamp for an account
+   */
+  setSubscriptionSettingsLastFetch(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { subscriptionSettingsLastFetch: timestamp });
+  }
+
+  /**
+   * Get subscription settings for an account
+   */
+  getSubscriptionSettings(pubkey: string): DeviceNotificationPreferences[] | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.subscriptionSettings;
+  }
+
+  /**
+   * Set subscription settings for an account
+   */
+  setSubscriptionSettings(pubkey: string, settings: DeviceNotificationPreferences[]): void {
+    this.updateAccountState(pubkey, { subscriptionSettings: settings });
   }
 
   /**
