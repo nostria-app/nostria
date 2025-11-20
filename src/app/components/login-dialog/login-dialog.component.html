@@ -308,7 +308,8 @@
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Public Key (npub...)</mat-label>
-        <input matInput [(ngModel)]="externalSignerPubkey" placeholder="npub1..." autocomplete="off" />
+        <input matInput [(ngModel)]="externalSignerPubkey" placeholder="npub1..." autocomplete="off"
+          #externalSignerInput />
       </mat-form-field>
 
       <div class="actions-row">

@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, AfterViewInit, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -53,7 +53,7 @@ export interface ExternalSignerDialogData {
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Paste Signature or Signed Event JSON</mat-label>
-        <textarea matInput [(ngModel)]="resultJson" rows="6" placeholder='{"id": "...", "pubkey": "...", "sig": "..."}'></textarea>
+        <textarea matInput [(ngModel)]="resultJson" rows="6" placeholder='{"id": "...", "pubkey": "...", "sig": "..."}' #resultInput></textarea>
       </mat-form-field>
 
     </mat-dialog-content>
@@ -98,15 +98,50 @@ export interface ExternalSignerDialogData {
     }
   `]
 })
-export class ExternalSignerDialogComponent {
+export class ExternalSignerDialogComponent implements AfterViewInit, OnDestroy {
   readonly dialogRef = inject(MatDialogRef<ExternalSignerDialogComponent>);
   readonly data = inject<ExternalSignerDialogData>(MAT_DIALOG_DATA);
   private sanitizer = inject(DomSanitizer);
+
+  @ViewChild('resultInput') resultInput!: ElementRef<HTMLTextAreaElement>;
 
   resultJson = '';
 
   get safeUrl(): SafeUrl {
     return this.sanitizer.bypassSecurityTrustUrl(this.data.nostrSignerUrl);
+  }
+
+  ngAfterViewInit() {
+    this.resultInput.nativeElement.focus();
+    window.addEventListener('focus', this.onWindowFocus);
+  }
+
+  ngOnDestroy() {
+    window.removeEventListener('focus', this.onWindowFocus);
+  }
+
+  onWindowFocus = async () => {
+    this.resultInput.nativeElement.focus();
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+
+      if (!text) return;
+
+      // JSON Event check
+      if (text.startsWith('{') && text.endsWith('}')) {
+        this.resultJson = text;
+        return;
+      }
+
+      // Signature check (Hex)
+      // Schnorr signature is 64 bytes (128 hex characters)
+      const isHex = /^[0-9a-fA-F]+$/.test(text);
+      if (isHex && text.length === 128) {
+        this.resultJson = text;
+      }
+    } catch (err) {
+      // Ignore clipboard read errors
+    }
   }
 
   confirm() {
