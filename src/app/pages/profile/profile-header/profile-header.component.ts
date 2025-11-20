@@ -391,16 +391,42 @@ export class ProfileHeaderComponent {
     // No need to load favorites here as the service handles it automatically
   }
 
-  blockUser(): void {
+  async blockUser(): Promise<void> {
     const pubkey = this.pubkey();
-    if (pubkey) {
-      if (this.isUserBlocked()) {
-        // User is already blocked, so unblock them
-        this.reportingService.unblockUser(pubkey);
-      } else {
-        // User is not blocked, so block them
-        this.reportingService.muteUser(pubkey);
+    if (!pubkey) return;
+
+    if (this.isUserBlocked()) {
+      // User is already blocked, so unblock them
+      this.reportingService.unblockUser(pubkey);
+    } else {
+      // Check if we're currently following this user
+      const isFollowing = this.isFollowing();
+      
+      if (isFollowing) {
+        // Import ConfirmDialogComponent dynamically to show confirmation dialog
+        const { ConfirmDialogComponent } = await import('../../../components/confirm-dialog/confirm-dialog.component');
+        
+        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+          data: {
+            title: 'Unfollow and Block User?',
+            message: 'You are currently following this user. Would you like to unfollow them before blocking?',
+            confirmText: 'Unfollow and Block',
+            cancelText: 'Just Block',
+            confirmColor: 'warn'
+          },
+          width: '400px',
+        });
+
+        const shouldUnfollow = await firstValueFrom(dialogRef.afterClosed());
+        
+        if (shouldUnfollow) {
+          // Unfollow first, then block
+          await this.accountState.unfollow(pubkey);
+        }
       }
+      
+      // User is not blocked, so block them
+      await this.reportingService.muteUser(pubkey);
     }
   }
 
