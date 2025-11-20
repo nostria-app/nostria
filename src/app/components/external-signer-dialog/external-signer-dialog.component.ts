@@ -33,7 +33,7 @@ export interface ExternalSignerDialogData {
       </p>
 
       <div class="actions">
-        <a mat-flat-button color="primary" [href]="safeUrl" target="_blank" rel="noopener noreferrer">
+        <a mat-flat-button color="primary" [href]="safeUrl">
           <mat-icon>open_in_new</mat-icon>
           Open Signer App
         </a>
@@ -102,7 +102,7 @@ export class ExternalSignerDialogComponent {
   readonly dialogRef = inject(MatDialogRef<ExternalSignerDialogComponent>);
   readonly data = inject<ExternalSignerDialogData>(MAT_DIALOG_DATA);
   private sanitizer = inject(DomSanitizer);
-  
+
   resultJson = '';
 
   get safeUrl(): SafeUrl {

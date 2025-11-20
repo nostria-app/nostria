@@ -1,5 +1,6 @@
 import { Component, inject, signal, output } from '@angular/core';
 import { nip19 } from 'nostr-tools';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
@@ -68,6 +69,7 @@ export class LoginDialogComponent {
   private accountState = inject(AccountStateService);
   private data = inject(DataService);
   layout = inject(LayoutService);
+  private sanitizer = inject(DomSanitizer);
 
   // Event emitter for when dialog should close (used in standalone mode)
   dialogClosed = output<void>();
@@ -662,13 +664,21 @@ export class LoginDialogComponent {
     this.dialogClosed.emit();
   }
 
+  getExternalSignerUrl(): string {
+    return `nostrsigner:?compressionType=none&returnType=signature&type=get_public_key`;
+  }
+
+  get safeExternalSignerUrl(): SafeUrl {
+    return this.sanitizer.bypassSecurityTrustUrl(this.getExternalSignerUrl());
+  }
+
   async loginWithExternalSigner(): Promise<void> {
     this.logger.debug('Attempting login with external signer');
     this.loading.set(true);
 
     try {
       let pubkey = this.externalSignerPubkey.trim();
-      
+
       // Handle npub if pasted
       if (pubkey.startsWith('npub')) {
         try {
@@ -713,16 +723,12 @@ export class LoginDialogComponent {
     } catch (err) {
       this.logger.error('Login with external signer failed', err);
       this.loading.set(false);
-      
+
       const errorMessage = err instanceof Error ? err.message : 'Failed to login with external signer';
       this.snackBar.open(errorMessage, 'Close', {
         duration: 5000,
         panelClass: 'error-snackbar',
       });
     }
-  }
-
-  getExternalSignerUrl(): string {
-    return `nostrsigner:?compressionType=none&returnType=signature&type=get_public_key`;
   }
 }
