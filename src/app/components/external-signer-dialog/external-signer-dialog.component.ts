@@ -6,6 +6,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { ClipboardModule } from '@angular/cdk/clipboard';
+import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 export interface ExternalSignerDialogData {
   eventJson: string;
@@ -32,10 +33,14 @@ export interface ExternalSignerDialogData {
       </p>
 
       <div class="actions">
-        <a mat-flat-button color="primary" [href]="data.nostrSignerUrl" target="_blank" rel="noopener noreferrer">
+        <a mat-flat-button color="primary" [href]="safeUrl" target="_blank" rel="noopener noreferrer">
           <mat-icon>open_in_new</mat-icon>
           Open Signer App
         </a>
+        <button mat-stroked-button [cdkCopyToClipboard]="data.eventJson">
+          <mat-icon>content_copy</mat-icon>
+          Copy Event JSON
+        </button>
       </div>
 
       <div class="divider">
@@ -70,7 +75,9 @@ export interface ExternalSignerDialogData {
     .actions {
       display: flex;
       justify-content: center;
+      gap: 8px;
       padding: 16px 0;
+      flex-wrap: wrap;
     }
     .divider {
       display: flex;
@@ -94,8 +101,13 @@ export interface ExternalSignerDialogData {
 export class ExternalSignerDialogComponent {
   readonly dialogRef = inject(MatDialogRef<ExternalSignerDialogComponent>);
   readonly data = inject<ExternalSignerDialogData>(MAT_DIALOG_DATA);
+  private sanitizer = inject(DomSanitizer);
   
   resultJson = '';
+
+  get safeUrl(): SafeUrl {
+    return this.sanitizer.bypassSecurityTrustUrl(this.data.nostrSignerUrl);
+  }
 
   confirm() {
     this.dialogRef.close(this.resultJson);
