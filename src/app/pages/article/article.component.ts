@@ -72,10 +72,12 @@ export class ArticleComponent implements OnDestroy {
   error = signal<string | null>(null);
 
   // Text-to-Speech state
+  isSynthesizing = signal<boolean>(false);
+  isTranslating = signal<boolean>(false);
+  translatedSummary = signal<string | null>(null);
   isSpeaking = signal(false);
   isPaused = signal(false);
   useAiVoice = signal(false);
-  isSynthesizing = signal(false);
   private speechSynthesis: SpeechSynthesis | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private audioPlayer: HTMLAudioElement | null = null;
@@ -336,7 +338,7 @@ export class ArticleComponent implements OnDestroy {
   articleData = computed<ArticleData>(() => ({
     event: this.event(),
     title: this.title(),
-    summary: this.summary(),
+    summary: this.translatedSummary() || this.summary(),
     image: this.image(),
     publishedAt: this.publishedAt(),
     publishedAtTimestamp: this.publishedAtTimestamp(),
@@ -579,7 +581,7 @@ export class ArticleComponent implements OnDestroy {
   }
 
   playAudio(audioData: Float32Array, sampleRate: number) {
-    const audioContext = new AudioContext({ sampleRate });
+    const audioContext = new AudioContext();
     const buffer = audioContext.createBuffer(1, audioData.length, sampleRate);
     buffer.copyToChannel(new Float32Array(audioData), 0);
 
@@ -646,6 +648,42 @@ export class ArticleComponent implements OnDestroy {
     this.isSpeaking.set(false);
     this.isPaused.set(false);
     this.currentUtterance = null;
+  }
+
+  /**
+   * Translate content to target language
+   */
+  async onTranslate() {
+    if (this.isTranslating()) return;
+    this.isTranslating.set(true);
+
+    try {
+      const model = 'Xenova/nllb-200-distilled-600M';
+      const status = await this.aiService.checkModel('translation', model);
+      if (!status.loaded) {
+        await this.aiService.loadModel('translation', model);
+      }
+
+      // Translate summary or first part of content
+      const text = this.stripMarkdown(this.content() || '').slice(0, 500);
+      
+      // Defaulting to English -> Spanish for demo purposes
+      // In a real app, we would detect language or let user choose
+      const result = await this.aiService.translateText(text, model, {
+        src_lang: 'eng_Latn',
+        tgt_lang: 'spa_Latn'
+      });
+
+      if (Array.isArray(result) && result.length > 0) {
+         const translated = (result[0] as { translation_text: string }).translation_text;
+         this.translatedSummary.set(translated);
+      }
+
+    } catch (err) {
+      console.error('Translation error', err);
+    } finally {
+      this.isTranslating.set(false);
+    }
   }
 
   stripMarkdown(text: string): string {
