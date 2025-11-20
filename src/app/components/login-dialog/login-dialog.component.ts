@@ -1,4 +1,5 @@
 import { Component, inject, signal, output } from '@angular/core';
+import { nip19 } from 'nostr-tools';
 
 import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
@@ -33,6 +34,7 @@ enum LoginStep {
   EXISTING_ACCOUNTS = 'existing-accounts',
   NOSTR_CONNECT = 'nostr-connect',
   PREVIEW = 'preview',
+  EXTERNAL_SIGNER = 'external-signer',
 }
 
 @Component({
@@ -97,6 +99,7 @@ export class LoginDialogComponent {
 
   // Input fields
   nsecKey = '';
+  externalSignerPubkey = '';
   // previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
   previewPubkey = 'npub1lmtv5qjrgjak504pc0a2885w72df69lmk8jfaet2xc3x2rppjy8sfzxvac' // Coffee
 
@@ -657,5 +660,69 @@ export class LoginDialogComponent {
 
     // If used standalone with custom dialog
     this.dialogClosed.emit();
+  }
+
+  async loginWithExternalSigner(): Promise<void> {
+    this.logger.debug('Attempting login with external signer');
+    this.loading.set(true);
+
+    try {
+      let pubkey = this.externalSignerPubkey.trim();
+      
+      // Handle npub if pasted
+      if (pubkey.startsWith('npub')) {
+        try {
+          const decoded = nip19.decode(pubkey);
+          if (decoded.type === 'npub') {
+            pubkey = decoded.data as string;
+          }
+        } catch (e) {
+          this.logger.error('Invalid npub', e);
+          throw new Error('Invalid public key format');
+        }
+      }
+
+      // Basic validation
+      if (!pubkey || pubkey.length !== 64) {
+        throw new Error('Invalid public key length. It should be 64 characters (hex).');
+      }
+
+      const newUser: NostrUser = {
+        pubkey,
+        name: 'External Signer',
+        source: 'external',
+        lastUsed: Date.now(),
+        hasActivated: true,
+      };
+
+      await this.nostrService.setAccount(newUser);
+      this.logger.debug('External signer account set successfully', { pubkey });
+
+      // Check if the user has relay configuration
+      const currentAccount = this.accountState.account();
+      if (currentAccount) {
+        const hasRelays = await this.nostrService.hasRelayConfiguration(currentAccount.pubkey);
+
+        if (!hasRelays) {
+          this.logger.info('No relay configuration found, showing setup dialog');
+          await this.showSetupNewAccountDialog(currentAccount);
+        }
+      }
+
+      this.closeDialog();
+    } catch (err) {
+      this.logger.error('Login with external signer failed', err);
+      this.loading.set(false);
+      
+      const errorMessage = err instanceof Error ? err.message : 'Failed to login with external signer';
+      this.snackBar.open(errorMessage, 'Close', {
+        duration: 5000,
+        panelClass: 'error-snackbar',
+      });
+    }
+  }
+
+  getExternalSignerUrl(): string {
+    return `nostrsigner:?compressionType=none&returnType=signature&type=get_public_key`;
   }
 }
