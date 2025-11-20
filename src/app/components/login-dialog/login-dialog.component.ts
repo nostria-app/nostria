@@ -1,4 +1,4 @@
-import { Component, inject, signal, output } from '@angular/core';
+import { Component, inject, signal, output, effect, ViewChild, ElementRef } from '@angular/core';
 import { nip19 } from 'nostr-tools';
 import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
@@ -105,8 +105,32 @@ export class LoginDialogComponent {
   // previewPubkey = 'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m'; // jack
   previewPubkey = 'npub1lmtv5qjrgjak504pc0a2885w72df69lmk8jfaet2xc3x2rppjy8sfzxvac' // Coffee
 
+  @ViewChild('externalSignerInput') externalSignerInput!: ElementRef<HTMLInputElement>;
+
   constructor() {
-    this.logger.debug('UnifiedLoginDialogComponent initialized');
+    effect(() => {
+      if (this.currentStep() === LoginStep.EXTERNAL_SIGNER) {
+        window.addEventListener('focus', this.onWindowFocusExternalSigner);
+        // Focus input after a short delay to allow rendering
+        setTimeout(() => {
+          this.externalSignerInput?.nativeElement?.focus();
+        }, 100);
+      } else {
+        window.removeEventListener('focus', this.onWindowFocusExternalSigner);
+      }
+    });
+  }
+
+  onWindowFocusExternalSigner = async () => {
+    this.externalSignerInput?.nativeElement?.focus();
+    try {
+      const text = (await navigator.clipboard.readText()).trim();
+      if (text && (text.startsWith('npub') || /^[0-9a-fA-F]{64}$/.test(text))) {
+        this.externalSignerPubkey = text;
+      }
+    } catch {
+      // Ignore clipboard read errors
+    }
   }
 
   /**
