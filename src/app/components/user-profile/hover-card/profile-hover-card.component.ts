@@ -31,6 +31,7 @@ import { TrustService } from '../../../services/trust.service';
 import { FavoritesService } from '../../../services/favorites.service';
 import { PublishService } from '../../../services/publish.service';
 import { NostrService } from '../../../services/nostr.service';
+import { firstValueFrom } from 'rxjs';
 
 interface ProfileData {
   data?: {
@@ -279,7 +280,33 @@ export class ProfileHoverCardComponent {
     }
 
     try {
-      await this.reportingService.muteUser(this.pubkey());
+      const pubkey = this.pubkey();
+      
+      // Check if we're currently following this user
+      if (this.isFollowing()) {
+        // Import ConfirmDialogComponent dynamically to show confirmation dialog
+        const { ConfirmDialogComponent } = await import('../../confirm-dialog/confirm-dialog.component');
+        
+        const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+          data: {
+            title: 'Unfollow and Block User?',
+            message: 'You are currently following this user. Would you like to unfollow them before blocking?',
+            confirmText: 'Unfollow and Block',
+            cancelText: 'Just Block',
+            confirmColor: 'warn'
+          },
+          width: '400px',
+        });
+
+        const shouldUnfollow = await firstValueFrom(dialogRef.afterClosed());
+        
+        if (shouldUnfollow) {
+          // Unfollow first, then block
+          await this.accountState.unfollow(pubkey);
+        }
+      }
+      
+      await this.reportingService.muteUser(pubkey);
       this.layout.toast('User blocked');
     } catch (error) {
       console.error('Failed to block user:', error);
