@@ -3,7 +3,7 @@
   <div class="chat-header">
     <div class="chat-title">
       <mat-icon>{{ viewMode() === 'chat' ? 'chat' : 'people' }}</mat-icon>
-      <h3>{{ viewMode() === 'chat' ? 'Live Chat' : 'Participants' }}</h3>
+      <h3 [matTooltip]="viewMode() === 'chat' ? activeRelays().join('\n') : ''" matTooltipClass="multiline-tooltip">{{ viewMode() === 'chat' ? 'Live Chat' : 'Participants' }}</h3>
       @if (viewMode() === 'chat') {
       <span class="message-count">({{ messages().length }})</span>
       }
