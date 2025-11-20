@@ -404,7 +404,8 @@ export class ZapService {
     message = '',
     eventId?: string,
     lnurl?: string,
-    relays: string[] = []
+    relays: string[] = [],
+    goalEventId?: string
   ): Promise<UnsignedEvent> {
     const currentUser = this.accountState.account();
     if (!currentUser) {
@@ -435,6 +436,10 @@ export class ZapService {
       tags.push(['e', eventId]);
       // Add the kind of the target event if it's a note
       tags.push(['k', '1']);
+    }
+
+    if (goalEventId) {
+      tags.push(['e', goalEventId]);
     }
 
     const zapRequest: UnsignedEvent = {
@@ -766,7 +771,8 @@ export class ZapService {
     message = '',
     eventId?: string,
     recipientMetadata?: Record<string, unknown>,
-    customRelays?: string[] // Optional: custom relays for the zap request (e.g., for gift subscriptions)
+    customRelays?: string[], // Optional: custom relays for the zap request (e.g., for gift subscriptions)
+    goalEventId?: string // Optional: NIP-75 goal event ID
   ): Promise<void> {
     const startTime = Date.now();
 
@@ -837,7 +843,8 @@ export class ZapService {
             message,
             eventId,
             lnurl,
-            recipientRelays
+            recipientRelays,
+            goalEventId
           );
 
           // Sign the zap request

@@ -173,7 +173,7 @@
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Message (optional)</mat-label>
         <textarea matInput [maxlength]="commentLimit() || 200" formControlName="message"
-          placeholder="Add a message with your zap..." rows="3" [disabled]="!commentsAllowed()"></textarea>
+          placeholder="Add a message with your zap..." rows="3"></textarea>
         @if (commentLimit() === 0) {
         <mat-hint>This recipient does not allow comments with zaps</mat-hint>
         } @else if (commentLimit() !== null) {
