@@ -146,6 +146,17 @@
           </mat-card-content>
         </mat-card>
 
+        <mat-card class="login-card external" (click)="goToStep(LoginStep.EXTERNAL_SIGNER)">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-text">
+                <h3><mat-icon>open_in_new</mat-icon>External Signer</h3>
+                <p>Use an external signer app (NIP-55)</p>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+
         <mat-card class="login-card preview" (click)="goToStep(LoginStep.PREVIEW)">
           <mat-card-content>
             <div class="card-content">
@@ -271,6 +282,46 @@
         <p>Browse Nostr content using any public key. View posts and profiles without posting or interacting.</p>
       </mat-card-content>
     </mat-card>
+    }
+
+    <!-- External Signer Login -->
+    @if (currentStep() === LoginStep.EXTERNAL_SIGNER) {
+    <div class="external-signer-section">
+      <p class="instruction-text">
+        Use an external signer app like Amber to log in.
+      </p>
+
+      <div class="actions">
+        <a mat-flat-button color="primary" [href]="getExternalSignerUrl()" target="_blank" rel="noopener noreferrer">
+          <mat-icon>open_in_new</mat-icon>
+          Open Signer App
+        </a>
+      </div>
+
+      <div class="divider">
+        <span>OR</span>
+      </div>
+
+      <p class="instruction-text">
+        Paste your public key (npub or hex) below if the signer app copied it to clipboard:
+      </p>
+
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Public Key (npub...)</mat-label>
+        <input matInput [(ngModel)]="externalSignerPubkey" placeholder="npub1..." autocomplete="off" />
+      </mat-form-field>
+
+      <div class="actions-row">
+        <button mat-button (click)="goToStep(LoginStep.LOGIN_OPTIONS)">Back</button>
+        <button mat-flat-button color="primary" [disabled]="!externalSignerPubkey" (click)="loginWithExternalSigner()">
+          @if (loading()) {
+          <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+          Login
+          }
+        </button>
+      </div>
+    </div>
     }
   </div>
 </div>

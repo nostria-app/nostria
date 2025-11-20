@@ -329,6 +329,14 @@
   &.preview::after {
     background: linear-gradient(90deg, #009688, #4caf50);
   }
+
+  &.external {
+    border-left: 4px solid #ff9800; // Orange for external/amber
+
+    mat-icon {
+      color: #ff9800;
+    }
+  }
 }
 
 // Region selection styles
@@ -1039,5 +1047,55 @@
   .mdc-button__label {
     display: inline-flex;
     align-items: center;
+  }
+}
+
+.external-signer-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px 0;
+
+  .instruction-text {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+    line-height: 1.5;
+  }
+
+  .actions {
+    display: flex;
+    justify-content: center;
+    padding: 8px 0;
+  }
+
+  .divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--mat-sys-outline);
+    margin: 8px 0;
+
+    &::before,
+    &::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid var(--mat-sys-outline-variant);
+    }
+
+    span {
+      padding: 0 10px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+  }
+
+  .full-width {
+    width: 100%;
+  }
+
+  .actions-row {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
   }
 }

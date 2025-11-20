@@ -5,6 +5,7 @@ import {
   generateSecretKey,
   getPublicKey,
   UnsignedEvent,
+  getEventHash,
 } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { nip19, nip98 } from 'nostr-tools';
@@ -29,6 +30,7 @@ import { LocalSettingsService } from './local-settings.service';
 import { PublishService } from './publish.service';
 import { MatDialog } from '@angular/material/dialog';
 import { SigningDialogComponent } from '../components/signing-dialog/signing-dialog.component';
+import { ExternalSignerDialogComponent } from '../components/external-signer-dialog/external-signer-dialog.component';
 import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.service';
 import { PinPromptService } from './pin-prompt.service';
 
@@ -41,7 +43,7 @@ export interface NostrUser {
    */
   privkey?: string;
   name?: string;
-  source: 'extension' | 'nsec' | 'preview' | 'remote';
+  source: 'extension' | 'nsec' | 'preview' | 'remote' | 'external';
   lastUsed?: number; // Timestamp when this account was last used
   bunker?: BunkerPointer;
   region?: string; // Add this new property
@@ -672,6 +674,76 @@ export class NostrService implements NostriaService {
     const eventPubkey = ('pubkey' in event) ? event.pubkey : currentUser.pubkey;
 
     switch (currentUser?.source) {
+      case 'external': {
+        // Create the event object with pubkey
+        const unsignedEvent: UnsignedEvent = {
+          kind: event.kind,
+          created_at: event.created_at ?? this.currentDate(),
+          tags: event.tags,
+          content: event.content,
+          pubkey: eventPubkey,
+        };
+
+        // Generate ID if not present (important for signing)
+        const eventId = getEventHash(unsignedEvent);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (unsignedEvent as any).id = eventId;
+
+        const eventJson = JSON.stringify(unsignedEvent);
+        const encodedJson = encodeURIComponent(eventJson);
+        
+        // Construct the nostrsigner URL
+        // compressionType=none&returnType=signature&type=sign_event
+        const url = `nostrsigner:${encodedJson}?compressionType=none&returnType=signature&type=sign_event`;
+
+        // Open the dialog
+        const dialogRef = this.dialog.open(ExternalSignerDialogComponent, {
+          disableClose: true,
+          hasBackdrop: true,
+          data: {
+            eventJson: eventJson,
+            nostrSignerUrl: url
+          }
+        });
+
+        const result = await dialogRef.afterClosed().toPromise();
+
+        if (!result) {
+          throw new Error('Signing cancelled');
+        }
+
+        // The result can be a signature string or a full JSON event
+        const signature = result.trim();
+        
+        // Check if it's a JSON object (full event)
+        if (signature.startsWith('{')) {
+          try {
+            const parsedEvent = JSON.parse(signature);
+            if (parsedEvent.sig) {
+              signedEvent = parsedEvent;
+            } else if (parsedEvent.signature) {
+               // Some signers might return { signature: ... } ?
+               // But NIP-55 says returnType=signature returns just the signature string usually, 
+               // or returnType=event returns the full event.
+               // If user pasted full event:
+               signedEvent = parsedEvent;
+            }
+          } catch {
+            // Not JSON, assume it's signature
+          }
+        }
+
+        if (!signedEvent) {
+          // It's a signature string
+          signedEvent = {
+            ...unsignedEvent,
+            id: eventId,
+            sig: signature
+          };
+        }
+
+        break;
+      }
       case 'extension': {
         // Wait for window.nostr to be available (extensions inject it asynchronously)
         if (!window.nostr) {
