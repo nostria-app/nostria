@@ -37,7 +37,7 @@
     [useAiVoice]="useAiVoice()" [isSynthesizing]="isSynthesizing()" [isTranslating]="isTranslating()"
     (startSpeech)="startSpeech()" (pauseSpeech)="pauseSpeech()" (resumeSpeech)="resumeSpeech()"
     (stopSpeech)="stopSpeech()" (toggleAiVoice)="useAiVoice.set($event)" (share)="shareArticle()"
-    (translate)="onTranslate()"></app-article-display>
+    (translate)="onTranslate($event)"></app-article-display>
 </div>
 } @else {
 <!-- Loading or Empty State -->

@@ -78,7 +78,7 @@ export class ArticleDisplayComponent {
   stopSpeech = output<void>();
   toggleAiVoice = output<boolean>();
   share = output<void>();
-  translate = output<void>();
+  translate = output<string>();
 
   layout = inject(LayoutService);
 

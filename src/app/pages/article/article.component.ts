@@ -653,7 +653,7 @@ export class ArticleComponent implements OnDestroy {
   /**
    * Translate content to target language
    */
-  async onTranslate() {
+  async onTranslate(targetLang: string) {
     if (this.isTranslating()) return;
     this.isTranslating.set(true);
 
@@ -667,11 +667,10 @@ export class ArticleComponent implements OnDestroy {
       // Translate summary or first part of content
       const text = this.stripMarkdown(this.content() || '').slice(0, 500);
       
-      // Defaulting to English -> Spanish for demo purposes
       // In a real app, we would detect language or let user choose
       const result = await this.aiService.translateText(text, model, {
-        src_lang: 'eng_Latn',
-        tgt_lang: 'spa_Latn'
+        src_lang: 'eng_Latn', // Assuming English source for now
+        tgt_lang: targetLang
       });
 
       if (Array.isArray(result) && result.length > 0) {

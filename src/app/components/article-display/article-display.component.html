@@ -37,13 +37,25 @@
         <!-- Text-to-Speech Controls (Header) - only in full mode -->
         @if (mode() === 'full') {
         <div class="article-tts-controls">
-          <button mat-icon-button (click)="translate.emit()" title="Translate Article" [disabled]="isTranslating()">
+          <button mat-icon-button [matMenuTriggerFor]="translateMenu" title="Translate Article"
+            [disabled]="isTranslating()">
             @if (isTranslating()) {
             <mat-progress-spinner mode="indeterminate" diameter="24"></mat-progress-spinner>
             } @else {
             <mat-icon>translate</mat-icon>
             }
           </button>
+          <mat-menu #translateMenu="matMenu">
+            <button mat-menu-item (click)="translate.emit('eng_Latn')">English</button>
+            <button mat-menu-item (click)="translate.emit('spa_Latn')">Spanish</button>
+            <button mat-menu-item (click)="translate.emit('fra_Latn')">French</button>
+            <button mat-menu-item (click)="translate.emit('deu_Latn')">German</button>
+            <button mat-menu-item (click)="translate.emit('ita_Latn')">Italian</button>
+            <button mat-menu-item (click)="translate.emit('por_Latn')">Portuguese</button>
+            <button mat-menu-item (click)="translate.emit('rus_Cyrl')">Russian</button>
+            <button mat-menu-item (click)="translate.emit('zho_Hans')">Chinese (Simplified)</button>
+            <button mat-menu-item (click)="translate.emit('jpn_Jpan')">Japanese</button>
+          </mat-menu>
 
           <button mat-icon-button [matMenuTriggerFor]="voiceMenu" matTooltip="Voice Settings">
             <mat-icon>settings_voice</mat-icon>
