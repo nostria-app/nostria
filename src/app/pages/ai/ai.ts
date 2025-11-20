@@ -11,6 +11,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { firstValueFrom } from 'rxjs';
 import { AiService } from '../../services/ai.service';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
@@ -42,7 +43,8 @@ interface ModelInfo {
     MatIconModule,
     MatTooltipModule,
     FormsModule,
-    MatDialogModule
+    MatDialogModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './ai.html',
   styleUrl: './ai.scss'
@@ -144,11 +146,19 @@ export class AiComponent implements OnInit {
     }
   ]);
 
-  inputText = signal('');
+  inputText = signal('Hello world! This is a test of the local AI models running in your browser.');
   outputText = signal('');
   selectedTranslationModel = signal('Xenova/opus-mt-en-de');
 
+  speakers = [
+    { name: 'Demo Speaker (US Female)', id: 'cmu_us_slt_arctic-wav-arctic_a0001', url: '/assets/embeddings/cmu_us_slt_arctic-wav-arctic_a0001.bin' },
+    { name: 'Female', id: 'cmu_us_clb_arctic-wav-arctic_a0144', url: '/assets/embeddings/cmu_us_clb_arctic-wav-arctic_a0144.bin' },
+    { name: 'Male', id: 'cmu_us_bdl_arctic-wav-arctic_a0009', url: '/assets/embeddings/cmu_us_bdl_arctic-wav-arctic_a0009.bin' },
+  ];
+  selectedSpeaker = signal(this.speakers[0]);
   isGenerating = signal(false);
+  isSpeaking = signal(false);
+  audioUrl = signal<string | null>(null);
 
   async ngOnInit() {
     // Check cache status for all models
@@ -228,7 +238,7 @@ export class AiComponent implements OnInit {
   }
 
   async generate() {
-    if (!this.inputText()) return;
+    if (this.inputText().trim() === '') return;
     this.isGenerating.set(true);
     try {
       const result = await this.aiService.generateText(this.inputText(), {
@@ -301,6 +311,36 @@ export class AiComponent implements OnInit {
     } finally {
       this.isGenerating.set(false);
     }
+  }
+
+  async speak() {
+    if (this.inputText().trim() === '') return;
+    this.isSpeaking.set(true);
+
+    try {
+      const model = 'Xenova/speecht5_tts';
+      const status = await this.aiService.checkModel('text-to-speech', model);
+      if (!status.loaded) {
+        await this.aiService.loadModel('text-to-speech', model);
+      }
+
+      const result = await this.aiService.synthesizeSpeech(this.inputText(), {
+        speaker_embeddings: this.selectedSpeaker().url
+      }) as { blob: Blob, sampling_rate: number };
+
+      if (result && result.blob) {
+        this.playAudio(result.blob);
+      }
+    } catch (err) {
+      console.error('Speech error', err);
+    } finally {
+      this.isSpeaking.set(false);
+    }
+  }
+
+  playAudio(blob: Blob) {
+    const url = URL.createObjectURL(blob);
+    this.audioUrl.set(url);
   }
 
   isModelLoaded(id: string) {

@@ -97,9 +97,25 @@
     </mat-form-field>
 
     <div class="actions">
+      <mat-form-field appearance="outline">
+        <mat-label>Speaker</mat-label>
+        <mat-select [ngModel]="selectedSpeaker()" (ngModelChange)="selectedSpeaker.set($event)">
+          @for (speaker of speakers; track speaker.id) {
+          <mat-option [value]="speaker">{{ speaker.name }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
       <button mat-stroked-button (click)="generate()"
         [disabled]="!isModelLoaded('Xenova/distilgpt2') || isGenerating()">
         Generate Text
+      </button>
+      <button mat-stroked-button (click)="speak()" [disabled]="isSpeaking()">
+        @if (isSpeaking()) {
+        <mat-progress-spinner mode="indeterminate" diameter="20"></mat-progress-spinner>
+        } @else {
+        <span><mat-icon>volume_up</mat-icon> Speak</span>
+        }
       </button>
       <button mat-stroked-button (click)="summarize()"
         [disabled]="!isModelLoaded('Xenova/distilbart-cnn-6-6') || isGenerating()">
@@ -136,6 +152,13 @@
       <div class="output-box">
         {{ outputText() }}
       </div>
+    </div>
+    }
+
+    @if (audioUrl()) {
+    <div class="output-section">
+      <h3>Audio Output</h3>
+      <audio controls [src]="audioUrl()" class="full-width"></audio>
     </div>
     }
   </div>
