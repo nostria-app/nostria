@@ -344,6 +344,7 @@ export abstract class RelayServiceBase {
     return this.getMany({
       authors,
       kinds: [kind],
+      limit: 1000,
     });
   }
 
