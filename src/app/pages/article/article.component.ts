@@ -560,7 +560,9 @@ export class ArticleComponent implements OnDestroy {
       // For now, just try the first 500 chars as a demo/limit
       const chunk = text.slice(0, 500); 
 
-      const result = await this.aiService.synthesizeSpeech(chunk) as { audio: Float32Array, sampling_rate: number };
+      const result = await this.aiService.synthesizeSpeech(chunk, {
+        speaker_embeddings: 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin'
+      }) as { audio: Float32Array, sampling_rate: number };
       
       if (result && result.audio) {
         this.playAudio(result.audio, result.sampling_rate);
