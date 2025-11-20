@@ -342,7 +342,6 @@ export class App implements OnInit {
       path: 'streams',
       label: 'Streams',
       icon: 'live_tv',
-      authenticated: true,
     },
     // {
     //   path: 'bookmarks',
@@ -1015,14 +1014,14 @@ export class App implements OnInit {
 
   async navigateToFeed(feedId: string) {
     try {
+      // Close sidenav on mobile
+      if (this.layout.isHandset()) {
+        this.localSettings.setMenuOpen(false);
+      }
+
       // Set the active feed and navigate to home
       await this.feedsCollectionService.setActiveFeed(feedId);
       this.router.navigate(['/']);
-
-      // Close sidenav on mobile
-      if (this.layout.isHandset()) {
-        this.toggleSidenav();
-      }
     } catch (error) {
       this.logger.error('Error navigating to feed:', error);
       // Fallback: just navigate to home page
