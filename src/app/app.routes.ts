@@ -49,10 +49,10 @@ import { ProfileOpenComponent } from './pages/profile/profile-open.component';
 import { DeleteEventComponent } from './pages/delete-event/delete-event.component';
 import { DeleteAccountComponent } from './pages/delete-account/delete-account.component';
 import { InviteComponent } from './pages/invite/invite.component';
-import { NotesComponent } from './pages/notes/notes.component';
 import { StreamsComponent } from './pages/streams/streams.component';
 import { MeetingsComponent } from './pages/meetings/meetings.component';
 import { StreamViewerComponent } from './pages/stream-viewer/stream-viewer.component';
+import { MemosComponent } from './pages/memos/memos.component';
 
 const profileChildren: Routes = [
   {
@@ -217,10 +217,10 @@ export const routes: Routes = [
     title: 'Bookmarks',
   },
   {
-    path: 'notes',
-    component: NotesComponent,
+    path: 'memos',
+    component: MemosComponent,
     data: { isRoot: true },
-    title: 'Notes',
+    title: 'Memos',
   },
   {
     path: 'zaps',

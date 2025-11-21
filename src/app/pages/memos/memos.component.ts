@@ -5,15 +5,17 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { NotesService } from '../../services/notes.service';
-import { NoteCardComponent } from './note-card/note-card.component';
-import { Note } from '../../models/note.model';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MemosService } from '../../services/memos.service';
+import { Memo } from '../../models/memo.model';
 import { AccountStateService } from '../../services/account-state.service';
 import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
-import { NotesDownloadDialogComponent } from './notes-download-dialog/notes-download-dialog.component';
+import { MemoCardComponent } from './memos-card/memo-card.component';
+import { MemosDownloadDialogComponent } from './memos-download-dialog/memos-download-dialog.component';
+import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-history-dialog.component';
 
 @Component({
-  selector: 'app-notes',
+  selector: 'app-memos',
   imports: [
     CommonModule,
     MatButtonModule,
@@ -21,7 +23,8 @@ import { NotesDownloadDialogComponent } from './notes-download-dialog/notes-down
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatDialogModule,
-    NoteCardComponent,
+    MatTooltipModule,
+    MemoCardComponent,
     InfoTooltipComponent,
   ],
   template: `
@@ -31,40 +34,43 @@ import { NotesDownloadDialogComponent } from './notes-download-dialog/notes-down
 
       <header class="notes-header">
         <h1>
-          Notes 
+          Memos 
           <mat-icon class="premium-icon">diamond</mat-icon>
-          <app-info-tooltip [content]="notesInfoContent" ariaLabel="Learn about Notes privacy" />
+          <app-info-tooltip [content]="notesInfoContent" ariaLabel="Learn about Memos privacy" />
         </h1>
         <div class="header-actions">
-          <button mat-raised-button (click)="downloadNotes()">
+          <button mat-icon-button (click)="openHistory()" matTooltip="History">
+            <mat-icon>history</mat-icon>
+          </button>
+          <button mat-raised-button (click)="downloadMemos()">
             <mat-icon>download</mat-icon>
             Download
           </button>
-          <button mat-flat-button (click)="createNewNote()">
+          <button mat-flat-button (click)="createNewMemo()" [disabled]="loading()">
             <mat-icon>add</mat-icon>
-            New Note
+            New Memo
           </button>
         </div>
       </header>
 
       <ng-template #notesInfoContent>
         <div class="info-content">
-          <h3>About Notes</h3>
+          <h3>About Memos</h3>
           <p>
-            Notes are stored as <strong>encrypted events</strong> using NIP-44 encryption, 
+            Memos are stored as <strong>encrypted events</strong> using NIP-44 encryption, 
             which means only you can read them with your private key.
           </p>
           <p>
             <strong>⚠️ Important Privacy Notice:</strong>
           </p>
           <ul>
-            <li>Notes are published to <strong>public relays</strong>, making them retrievable by anyone</li>
+            <li>Memos are published to <strong>public relays</strong>, making them retrievable by anyone</li>
             <li>While currently encrypted, future advances in computing power could potentially decrypt them</li>
             <li>Avoid storing highly sensitive personal information (passwords, private keys, etc.)</li>
-            <li>Think of Notes as "encrypted but not completely secret"</li>
+            <li>Think of Memos as "encrypted but not completely secret"</li>
           </ul>
           <p>
-            <strong>Best practices:</strong> Use Notes for personal reminders, ideas, and non-critical information 
+            <strong>Best practices:</strong> Use Memos for personal reminders, ideas, and non-critical information 
             that you want synced across devices.
           </p>
         </div>
@@ -74,23 +80,23 @@ import { NotesDownloadDialogComponent } from './notes-download-dialog/notes-down
         <div class="loading-container">
           <mat-spinner />
         </div>
-      } @else if (notes().length === 0) {
+      } @else if (memos().length === 0) {
         <div class="empty-state">
           <mat-icon>note</mat-icon>
-          <h2>No notes yet</h2>
-          <p>Create your first encrypted note</p>
-          <button mat-raised-button color="primary" (click)="createNewNote()">
+          <h2>No memos yet</h2>
+          <p>Create your first encrypted memo</p>
+          <button mat-raised-button color="primary" (click)="createNewMemo()">
             <mat-icon>add</mat-icon>
             Create Note
           </button>
         </div>
       } @else {
         <div class="notes-grid">
-          @for (note of notes(); track note.id) {
-            <app-note-card
-              [note]="note"
-              (save)="handleSaveNote($event)"
-              (delete)="handleDeleteNote($event)"
+          @for (memo of memos(); track memo.id) {
+            <app-memo-card
+              [memo]="memo"
+              (save)="handleSaveMemo($event)"
+              (delete)="handleDeleteMemo($event)"
             />
           }
         </div>
@@ -206,51 +212,51 @@ import { NotesDownloadDialogComponent } from './notes-download-dialog/notes-down
     }
   `],
 })
-export class NotesComponent {
-  private readonly notesService = inject(NotesService);
+export class MemosComponent {
+  private readonly memosService = inject(MemosService);
   private readonly snackBar = inject(MatSnackBar);
   private readonly accountState = inject(AccountStateService);
   private readonly dialog = inject(MatDialog);
 
-  readonly loading = signal(false);
-  readonly notes = this.notesService.notes;
-  private isLoadingNotes = false;
+  readonly loading = signal(true);
+  readonly memos = this.memosService.memos;
+  private isLoadingMemos = false;
 
   constructor() {
-    // Reload notes when account changes
+    // Reload memos when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
-      console.log('[NotesComponent] Account changed, pubkey:', pubkey?.substring(0, 8));
+      console.log('[MemosComponent] Account changed, pubkey:', pubkey?.substring(0, 8));
       if (pubkey) {
         // Use setTimeout to avoid effect timing issues
-        setTimeout(() => this.loadNotes(), 0);
+        setTimeout(() => this.loadMemos(), 0);
       } else {
-        // Clear notes if no account
-        this.notesService.notes.set([]);
+        // Clear memos if no account
+        this.memosService.memos.set([]);
       }
     });
   }
 
-  async loadNotes() {
+  async loadMemos() {
     // Prevent duplicate loads
-    if (this.isLoadingNotes) {
-      console.log('[NotesComponent] Already loading notes, skipping...');
+    if (this.isLoadingMemos) {
+      console.log('[MemosComponent] Already loading memos, skipping...');
       return;
     }
 
-    console.log('[NotesComponent] loadNotes called');
-    this.isLoadingNotes = true;
+    console.log('[MemosComponent] loadMemos called');
+    this.isLoadingMemos = true;
     this.loading.set(true);
     try {
-      await this.notesService.loadNotes();
+      await this.memosService.loadMemos();
     } finally {
       this.loading.set(false);
-      this.isLoadingNotes = false;
+      this.isLoadingMemos = false;
     }
   }
 
-  async createNewNote() {
-    const success = await this.notesService.createNote('', 'default');
+  async createNewMemo() {
+    const success = await this.memosService.createMemo('', 'default');
     if (success) {
       this.snackBar.open('Note created', 'Close', { duration: 2000 });
     } else {
@@ -258,8 +264,8 @@ export class NotesComponent {
     }
   }
 
-  async downloadNotes() {
-    const dialogRef = this.dialog.open(NotesDownloadDialogComponent, {
+  async downloadMemos() {
+    const dialogRef = this.dialog.open(MemosDownloadDialogComponent, {
       width: '500px',
     });
 
@@ -271,33 +277,40 @@ export class NotesComponent {
 
     try {
       if (format === 'encrypted') {
-        await this.notesService.downloadEncryptedEvent();
+        await this.memosService.downloadEncryptedEvent();
         this.snackBar.open('Encrypted event downloaded', 'Close', { duration: 2000 });
       } else if (format === 'json') {
-        await this.notesService.downloadReadableJson();
+        await this.memosService.downloadReadableJson();
         this.snackBar.open('JSON file downloaded', 'Close', { duration: 2000 });
       }
     } catch (error) {
       console.error('Download failed:', error);
-      this.snackBar.open('Failed to download notes', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to download memos', 'Close', { duration: 3000 });
     }
   }
 
-  async handleSaveNote(note: Note) {
-    const success = await this.notesService.updateNote(note.id, note.content, note.color);
+  openHistory() {
+    this.dialog.open(MemosHistoryDialogComponent, {
+      width: '500px',
+      maxHeight: '80vh'
+    });
+  }
+
+  async handleSaveMemo(memo: Memo) {
+    const success = await this.memosService.updateMemo(memo.id, memo.content, memo.color);
     if (success) {
-      this.snackBar.open('Note saved', 'Close', { duration: 2000 });
+      this.snackBar.open('Memo saved', 'Close', { duration: 2000 });
     } else {
-      this.snackBar.open('Failed to save note', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to save memo', 'Close', { duration: 3000 });
     }
   }
 
-  async handleDeleteNote(noteId: string) {
-    const success = await this.notesService.deleteNote(noteId);
+  async handleDeleteMemo(memoId: string) {
+    const success = await this.memosService.deleteMemo(memoId);
     if (success) {
-      this.snackBar.open('Note deleted', 'Close', { duration: 2000 });
+      this.snackBar.open('Memo deleted', 'Close', { duration: 2000 });
     } else {
-      this.snackBar.open('Failed to delete note', 'Close', { duration: 3000 });
+      this.snackBar.open('Failed to delete memo', 'Close', { duration: 3000 });
     }
   }
 }

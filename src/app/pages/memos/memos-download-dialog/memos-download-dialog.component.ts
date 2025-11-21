@@ -6,7 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 export type DownloadFormat = 'encrypted' | 'json';
 
 @Component({
-  selector: 'app-notes-download-dialog',
+  selector: 'app-memos-download-dialog',
   imports: [
     MatButtonModule,
     MatDialogModule,
@@ -104,8 +104,8 @@ export type DownloadFormat = 'encrypted' | 'json';
     }
   `],
 })
-export class NotesDownloadDialogComponent {
-  private readonly dialogRef = inject(MatDialogRef<NotesDownloadDialogComponent>);
+export class MemosDownloadDialogComponent {
+  private readonly dialogRef = inject(MatDialogRef<MemosDownloadDialogComponent>);
 
   selectFormat(format: DownloadFormat) {
     this.dialogRef.close(format);
