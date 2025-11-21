@@ -72,13 +72,22 @@
   </div> -->
 
 @if (error()) {
-<div class="warn">
-  {{ error() }}
+<div class="error-container">
+  <mat-icon class="error-icon">error_outline</mat-icon>
+  <h3 class="error-title">{{ error() }}</h3>
+
   @if (error() === 'Event not found') {
-  <div class="deep-resolution-actions">
-    <button mat-flat-button (click)="startDeepResolution()" [disabled]="isLoading()">
-      Try Deep Resolution
-    </button>
+  <div class="deep-resolution-section">
+    <p class="deep-resolution-description">
+      Deep Resolution attempts to find this event by querying multiple relays and checking for reposts or quotes that
+      might contain the original content.
+    </p>
+    <div class="deep-resolution-actions">
+      <button mat-flat-button color="primary" (click)="startDeepResolution()" [disabled]="isLoading()">
+        <mat-icon>search</mat-icon>
+        Try Deep Resolution
+      </button>
+    </div>
   </div>
   }
 </div>
