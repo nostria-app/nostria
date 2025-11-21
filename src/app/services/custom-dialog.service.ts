@@ -1,4 +1,4 @@
-import { Injectable, Type, signal, inject, ApplicationRef, createComponent, EnvironmentInjector, ComponentRef } from '@angular/core';
+import { Injectable, Type, signal, inject, ApplicationRef, createComponent, EnvironmentInjector, ComponentRef, Injector } from '@angular/core';
 import { CustomDialogComponent } from '../components/custom-dialog/custom-dialog.component';
 import { Subject } from 'rxjs';
 
@@ -25,8 +25,9 @@ export class CustomDialogRef<T = unknown, R = unknown> {
    */
   isClosed = this.hasBeenClosed.asReadonly;
 
+  public componentInstance!: T;
+
   constructor(
-    public componentInstance: T,
     private onCloseCallback: (result?: R) => void
   ) { }
 
@@ -122,10 +123,29 @@ export class CustomDialogService {
     if (config.maxWidth) dialogRef.setInput('maxWidth', config.maxWidth);
     if (config.panelClass) dialogRef.setInput('panelClass', config.panelClass);
 
+    // Create dialog ref first to provide it to the component
+    const customDialogRef = new CustomDialogRef<T, R>(
+      () => {
+        this.closeDialog(dialogRef, contentRef);
+      }
+    );
+
+    // Create injector with the dialog ref
+    const injector = Injector.create({
+      providers: [
+        { provide: CustomDialogRef, useValue: customDialogRef }
+      ],
+      parent: this.injector
+    });
+
     // Create the content component
     const contentRef = createComponent(component, {
-      environmentInjector: this.injector
+      environmentInjector: this.injector,
+      elementInjector: injector
     });
+
+    // Set the component instance on the dialog ref
+    customDialogRef.componentInstance = contentRef.instance;
 
     // Attach content to dialog
     const dialogElement = dialogRef.location.nativeElement;
@@ -170,14 +190,6 @@ export class CustomDialogService {
 
     // Track the dialog
     this.openDialogs.add(dialogRef);
-
-    // Create dialog ref for external use
-    const customDialogRef = new CustomDialogRef<T, R>(
-      contentRef.instance,
-      () => {
-        this.closeDialog(dialogRef, contentRef);
-      }
-    );
 
     // Set up close handler - subscribe to the dialog's closed output
     const subscription = dialogRef.instance.closed.subscribe(() => {
