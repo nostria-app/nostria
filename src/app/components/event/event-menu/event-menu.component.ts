@@ -180,7 +180,12 @@ export class EventMenuComponent {
       }
 
       this.snackBar.open('Generating speech...', 'Dismiss', { duration: 2000 });
-      await this.ai.synthesizeSpeech(event.content);
+      const result = await this.ai.synthesizeSpeech(event.content) as { blob: Blob, sampling_rate: number };
+
+      const url = URL.createObjectURL(result.blob);
+      const audio = new Audio(url);
+      audio.play();
+      audio.onended = () => URL.revokeObjectURL(url);
     } catch (error) {
       this.snackBar.open(`Speech generation failed: ${error}`, 'Dismiss', { duration: 3000 });
     }
