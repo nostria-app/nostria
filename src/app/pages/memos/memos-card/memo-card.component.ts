@@ -6,11 +6,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { Note } from '../../../models/note.model';
-import { NoteDeleteDialogComponent } from '../note-delete-dialog/note-delete-dialog.component';
+import { Memo } from '../../../models/memo.model';
+import { MemoDeleteDialogComponent } from '../memos-delete-dialog/memo-delete-dialog.component';
 
 @Component({
-  selector: 'app-note-card',
+  selector: 'app-memo-card',
   imports: [
     CommonModule,
     FormsModule,
@@ -27,7 +27,7 @@ import { NoteDeleteDialogComponent } from '../note-delete-dialog/note-delete-dia
         [(ngModel)]="currentContent"
         (blur)="handleBlur()"
         (focus)="isFocused.set(true)"
-        placeholder="Take a note..."
+        placeholder="Write a memo..."
         rows="6"
       ></textarea>
 
@@ -66,8 +66,8 @@ import { NoteDeleteDialogComponent } from '../note-delete-dialog/note-delete-dia
 
           <button
             mat-icon-button
-            matTooltip="Delete note"
-            (click)="deleteNote()"
+            matTooltip="Delete memo"
+            (click)="deleteMemo()"
             type="button"
           >
             <mat-icon>delete</mat-icon>
@@ -221,11 +221,11 @@ import { NoteDeleteDialogComponent } from '../note-delete-dialog/note-delete-dia
     }
   `],
 })
-export class NoteCardComponent {
+export class MemoCardComponent {
   private readonly dialog = inject(MatDialog);
 
-  readonly note = input.required<Note>();
-  readonly save = output<Note>();
+  readonly memo = input.required<Memo>();
+  readonly save = output<Memo>();
   readonly delete = output<string>();
 
   readonly currentContent = signal('');
@@ -233,7 +233,7 @@ export class NoteCardComponent {
   readonly isFocused = signal(false);
 
   // Computed signal for the formatted date to prevent ExpressionChangedAfterItHasBeenCheckedError
-  readonly formattedDate = computed(() => this.formatDate(this.note().updatedAt));
+  readonly formattedDate = computed(() => this.formatDate(this.memo().updatedAt));
 
   readonly availableColors = [
     { value: 'default', name: 'Default' },
@@ -254,22 +254,22 @@ export class NoteCardComponent {
   constructor() {
     // Initialize content and color from input
     effect(() => {
-      const note = this.note();
-      this.currentContent.set(note.content);
-      this.currentColor.set(note.color || 'default');
+      const memo = this.memo();
+      this.currentContent.set(memo.content);
+      this.currentColor.set(memo.color || 'default');
     });
   }
 
   handleBlur() {
     this.isFocused.set(false);
     // Only save if content or color has changed
-    const note = this.note();
+    const memo = this.memo();
     if (
-      this.currentContent() !== note.content ||
-      this.currentColor() !== note.color
+      this.currentContent() !== memo.content ||
+      this.currentColor() !== memo.color
     ) {
       this.save.emit({
-        ...note,
+        ...memo,
         content: this.currentContent(),
         color: this.currentColor(),
       });
@@ -281,15 +281,15 @@ export class NoteCardComponent {
     this.handleBlur(); // Auto-save when color changes
   }
 
-  async deleteNote() {
-    const dialogRef = this.dialog.open(NoteDeleteDialogComponent, {
+  async deleteMemo() {
+    const dialogRef = this.dialog.open(MemoDeleteDialogComponent, {
       width: '400px',
     });
 
     const confirmed = await dialogRef.afterClosed().toPromise();
 
     if (confirmed) {
-      this.delete.emit(this.note().id);
+      this.delete.emit(this.memo().id);
     }
   }
 

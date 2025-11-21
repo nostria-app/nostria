@@ -110,8 +110,8 @@ export class AppsMenuComponent {
     },
     {
       icon: 'note_stack',
-      label: 'Notes',
-      route: ['/notes'],
+      label: 'Memos',
+      route: ['/memos'],
       requiresSubscription: true,
     },
     {

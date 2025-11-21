@@ -4,15 +4,15 @@ import { MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 
 @Component({
-  selector: 'app-note-delete-dialog',
+  selector: 'app-memo-delete-dialog',
   imports: [MatButtonModule, MatDialogModule, MatIconModule],
   template: `
     <h2 mat-dialog-title>
       <mat-icon>warning</mat-icon>
-      Delete Note
+      Delete Memo
     </h2>
     <mat-dialog-content>
-      <p>Are you sure you want to delete this note?</p>
+      <p>Are you sure you want to delete this memo?</p>
       <p class="warning-text">This action cannot be undone.</p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
@@ -54,4 +54,4 @@ import { MatIconModule } from '@angular/material/icon';
     `,
   ],
 })
-export class NoteDeleteDialogComponent { }
+export class MemoDeleteDialogComponent { }
