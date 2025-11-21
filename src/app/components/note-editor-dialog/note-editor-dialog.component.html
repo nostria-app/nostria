@@ -317,6 +317,8 @@
         matTooltip="Dictate note">
         @if (isTranscribing()) {
         <mat-icon class="spinning">sync</mat-icon>
+        } @else if (isRecording()) {
+        <mat-icon>stop</mat-icon>
         } @else {
         <mat-icon>mic</mat-icon>
         }
