@@ -181,7 +181,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     this.parseDebounceTimer = window.setTimeout(async () => {
       try {
         this._isParsing.set(true);
-        const newTokens = await this.parsing.parseContent(content);
+        const newTokens = await this.parsing.parseContent(content, this.event()?.tags);
 
         const eventMentions = await Promise.all(
           newTokens
@@ -195,7 +195,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
               const eventData = await this.data.getEventById(eventId);
               if (!eventData) return null;
-              const contentTokens = await this.parsing.parseContent(eventData?.data);
+              const contentTokens = await this.parsing.parseContent(eventData?.data, eventData?.event.tags);
               return {
                 event: eventData,
                 contentTokens,

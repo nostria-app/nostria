@@ -25,9 +25,14 @@ export class CreateOptionsSheetComponent {
       action: () => this.eventService.createNote(),
     },
     {
-      label: 'Clip',
+      label: 'Video Clip',
       icon: 'cinematic_blur',
       action: () => this.layout.openRecordVideoDialog(),
+    },
+    {
+      label: 'Audio Clip',
+      icon: 'mic',
+      action: () => this.layout.openRecordAudioDialog(),
     },
     {
       label: 'Article',

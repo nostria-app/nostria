@@ -83,3 +83,24 @@ mat-progress-bar {
   left: 0;
   right: 0;
 }
+
+.actions-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.audio-attachment {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--mat-sys-secondary-container);
+  color: var(--mat-sys-on-secondary-container);
+  border-radius: 16px;
+  margin-bottom: 16px;
+
+  span {
+    flex: 1;
+  }
+}

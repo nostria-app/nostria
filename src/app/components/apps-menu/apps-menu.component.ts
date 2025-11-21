@@ -50,8 +50,14 @@ export class AppsMenuComponent {
     },
     {
       icon: 'cinematic_blur',
-      label: 'Clip',
+      label: 'Video Clip',
       action: () => this.layout.openRecordVideoDialog(),
+      hideWhenNotAuthenticated: true,
+    },
+    {
+      icon: 'mic',
+      label: 'Audio Clip',
+      action: () => this.layout.openRecordAudioDialog(),
       hideWhenNotAuthenticated: true,
     },
     {

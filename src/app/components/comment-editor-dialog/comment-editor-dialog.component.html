@@ -11,6 +11,22 @@
         <mat-hint>Press Ctrl+Enter (Cmd+Enter on Mac) to publish</mat-hint>
       </mat-form-field>
 
+      <div class="actions-row">
+        <button mat-icon-button (click)="recordAudio()" [disabled]="isPublishing()" matTooltip="Record audio clip">
+          <mat-icon>mic</mat-icon>
+        </button>
+      </div>
+
+      @if (audioAttachment()) {
+      <div class="audio-attachment">
+        <mat-icon>audiotrack</mat-icon>
+        <span>Voice message attached ({{ audioAttachment()!.duration }}s)</span>
+        <button mat-icon-button (click)="audioAttachment.set(null); content.set('')">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
+
       @if (content().trim()) {
       <div class="preview-section">
         <h3>Preview</h3>
@@ -30,7 +46,7 @@
       Publishing...
     </button>
     } @else {
-    <button mat-flat-button color="primary" (click)="onPublish()" [disabled]="!content().trim()">
+    <button mat-flat-button color="primary" (click)="onPublish()" [disabled]="!content().trim() && !audioAttachment()">
       <mat-icon>send</mat-icon>
       Publish Comment
     </button>
