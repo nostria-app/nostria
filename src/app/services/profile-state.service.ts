@@ -515,12 +515,7 @@ export class ProfileStateService {
     const pubkey = this.pubkey();
 
     try {
-      const currentNotes = this.notes();
-      const oldestTimestamp =
-        beforeTimestamp ||
-        (currentNotes.length > 0
-          ? Math.min(...currentNotes.map(n => n.event.created_at)) - 1
-          : Math.floor(Date.now() / 1000));
+      const oldestTimestamp = beforeTimestamp || Math.floor(Date.now() / 1000);
 
       this.logger.debug(`Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}`);
 
