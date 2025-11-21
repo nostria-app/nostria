@@ -16,78 +16,93 @@
     </div>
   </div>
 
-  <div class="models-table-container">
-    <table mat-table [dataSource]="models()" class="mat-elevation-z8">
+  <mat-tab-group>
+    <mat-tab label="Models">
+      <div class="models-table-container">
+        <ng-container *ngTemplateOutlet="modelsTable; context: { $implicit: models() }"></ng-container>
+      </div>
+    </mat-tab>
+    <mat-tab label="Languages">
+      <div class="models-table-container">
+        <ng-container *ngTemplateOutlet="modelsTable; context: { $implicit: languageModels() }"></ng-container>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 
-      <!-- Info Column (Name, ID, Description) -->
-      <ng-container matColumnDef="info">
-        <th mat-header-cell *matHeaderCellDef> Model </th>
-        <td mat-cell *matCellDef="let model">
-          <div class="model-info-cell">
-            <div class="model-name">{{model.name}}</div>
-            <div class="model-subtext">
-              <a [href]="'https://huggingface.co/' + model.id" target="_blank" class="model-link">
-                {{model.id}} <mat-icon class="link-icon">open_in_new</mat-icon>
-              </a>
-              <span class="separator">•</span>
-              <span>{{model.description}}</span>
+  <ng-template #modelsTable let-dataSource>
+    <div class="models-table-container">
+      <table mat-table [dataSource]="dataSource" class="mat-elevation-z8">
+
+        <!-- Info Column (Name, ID, Description) -->
+        <ng-container matColumnDef="info">
+          <th mat-header-cell *matHeaderCellDef> Model </th>
+          <td mat-cell *matCellDef="let model">
+            <div class="model-info-cell">
+              <div class="model-name">{{model.name}}</div>
+              <div class="model-subtext">
+                <a [href]="'https://huggingface.co/' + model.id" target="_blank" class="model-link">
+                  {{model.id}} <mat-icon class="link-icon">open_in_new</mat-icon>
+                </a>
+                <span class="separator">•</span>
+                <span>{{model.description}}</span>
+              </div>
             </div>
-          </div>
-        </td>
-      </ng-container>
+          </td>
+        </ng-container>
 
-      <!-- Size Column -->
-      <ng-container matColumnDef="size">
-        <th mat-header-cell *matHeaderCellDef> Size </th>
-        <td mat-cell *matCellDef="let model"> {{model.size}} </td>
-      </ng-container>
+        <!-- Size Column -->
+        <ng-container matColumnDef="size">
+          <th mat-header-cell *matHeaderCellDef> Size </th>
+          <td mat-cell *matCellDef="let model"> {{model.size}} </td>
+        </ng-container>
 
-      <!-- Status Column -->
-      <ng-container matColumnDef="status">
-        <th mat-header-cell *matHeaderCellDef> Status </th>
-        <td mat-cell *matCellDef="let model">
-          @if (model.loading) {
-          <div class="status-loading">
-            <mat-progress-bar mode="determinate" [value]="model.progress"></mat-progress-bar>
-            <span>{{ model.progress | number:'1.0-0' }}%</span>
-          </div>
-          } @else if (model.loaded) {
-          <span class="status-loaded"><mat-icon>check_circle</mat-icon> Loaded</span>
-          } @else if (model.cached) {
-          <span class="status-cached"><mat-icon>save</mat-icon> Cached</span>
-          } @else {
-          <span class="status-not-loaded">Not Loaded</span>
-          }
-        </td>
-      </ng-container>
-
-      <!-- Actions Column -->
-      <ng-container matColumnDef="actions">
-        <th mat-header-cell *matHeaderCellDef> Actions </th>
-        <td mat-cell *matCellDef="let model">
-          <div class="action-buttons">
-            <button mat-stroked-button (click)="loadModel(model)" [disabled]="model.loaded || model.loading">
-              @if (model.loaded) {
-              Loaded
-              } @else if (model.cached) {
-              Load
-              } @else {
-              Download
-              }
-            </button>
-            @if (model.cached || model.loaded) {
-            <button mat-icon-button color="warn" (click)="deleteModel(model)" matTooltip="Delete from cache">
-              <mat-icon>delete</mat-icon>
-            </button>
+        <!-- Status Column -->
+        <ng-container matColumnDef="status">
+          <th mat-header-cell *matHeaderCellDef> Status </th>
+          <td mat-cell *matCellDef="let model">
+            @if (model.loading) {
+            <div class="status-loading">
+              <mat-progress-bar mode="determinate" [value]="model.progress"></mat-progress-bar>
+              <span>{{ model.progress | number:'1.0-0' }}%</span>
+            </div>
+            } @else if (model.loaded) {
+            <span class="status-loaded"><mat-icon>check_circle</mat-icon> Loaded</span>
+            } @else if (model.cached) {
+            <span class="status-cached"><mat-icon>save</mat-icon> Cached</span>
+            } @else {
+            <span class="status-not-loaded">Not Loaded</span>
             }
-          </div>
-        </td>
-      </ng-container>
+          </td>
+        </ng-container>
 
-      <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-      <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-    </table>
-  </div>
+        <!-- Actions Column -->
+        <ng-container matColumnDef="actions">
+          <th mat-header-cell *matHeaderCellDef> Actions </th>
+          <td mat-cell *matCellDef="let model">
+            <div class="action-buttons">
+              <button mat-stroked-button (click)="loadModel(model)" [disabled]="model.loaded || model.loading">
+                @if (model.loaded) {
+                Loaded
+                } @else if (model.cached) {
+                Load
+                } @else {
+                Download
+                }
+              </button>
+              @if (model.cached || model.loaded) {
+              <button mat-icon-button color="warn" (click)="deleteModel(model)" matTooltip="Delete from cache">
+                <mat-icon>delete</mat-icon>
+              </button>
+              }
+            </div>
+          </td>
+        </ng-container>
+
+        <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+        <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+      </table>
+    </div>
+  </ng-template>
   <div class="playground-section">
     <h2>Playground</h2>
     <mat-form-field appearance="outline" class="full-width">
@@ -97,7 +112,7 @@
     </mat-form-field>
 
     <div class="actions">
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
         <mat-label>Speaker</mat-label>
         <mat-select [ngModel]="selectedSpeaker()" (ngModelChange)="selectedSpeaker.set($event)">
           @for (speaker of speakers; track speaker.id) {
@@ -127,12 +142,12 @@
       </button>
 
       <div class="translation-group">
-        <mat-form-field appearance="outline" class="compact-select">
+        <mat-form-field appearance="outline" class="compact-select" subscriptSizing="dynamic">
           <mat-label>Translation Model</mat-label>
           <mat-select [ngModel]="selectedTranslationModel()" (ngModelChange)="selectedTranslationModel.set($event)">
-            <mat-option value="Xenova/opus-mt-en-de">En -> De</mat-option>
-            <mat-option value="Xenova/opus-mt-en-es">En -> Es</mat-option>
-            <mat-option value="Xenova/opus-mt-en-fr">En -> Fr</mat-option>
+            @for (model of languageModels(); track model.id) {
+            <mat-option [value]="model.id">{{ model.name }}</mat-option>
+            }
           </mat-select>
         </mat-form-field>
         <button mat-stroked-button (click)="translate()"
