@@ -479,7 +479,7 @@ export class ProfileStateService {
 
       // Build the kinds array based on filter options
       const currentFilter = this.timelineFilter();
-      const kindsToQuery: number[] = [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost];
+      const kindsToQuery: number[] = [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost, 1222];
 
       // Optionally add reactions if enabled
       if (currentFilter.showReactions) {
