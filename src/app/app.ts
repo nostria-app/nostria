@@ -85,6 +85,7 @@ import { StandaloneTermsDialogComponent } from './components/standalone-terms-di
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { AppsMenuComponent } from './components/apps-menu/apps-menu.component';
+import { AiService } from './services/ai.service';
 
 interface NavItem {
   path: string;
@@ -170,6 +171,7 @@ export class App implements OnInit {
   routeDataService = inject(RouteDataService);
   installService = inject(InstallService);
   cacheCleanup = inject(CacheCleanupService);
+  ai = inject(AiService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);

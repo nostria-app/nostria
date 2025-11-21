@@ -23,6 +23,9 @@ export class AiService {
   transcriptionModelLoaded = signal(false);
   speechModelLoaded = signal(false);
 
+  processingState = signal<{ isProcessing: boolean, task: string | null }>({ isProcessing: false, task: null });
+  private _processingCount = 0;
+
   loadedModels = signal<Set<string>>(new Set());
 
   availableTranslationModels = [
@@ -53,6 +56,26 @@ export class AiService {
   readonly summarizationModelId = 'Xenova/distilbart-cnn-6-6';
   readonly sentimentModelId = 'Xenova/distilbert-base-uncased-finetuned-sst-2-english';
   readonly textGenerationModelId = 'Xenova/LaMini-Flan-T5-783M';
+
+  getTaskName(task: string | null): string {
+    if (!task) return '';
+    switch (task) {
+      case 'text-generation': return 'Generating text...';
+      case 'summarization': return 'Summarizing...';
+      case 'sentiment-analysis': return 'Analyzing sentiment...';
+      case 'translation': return 'Translating...';
+      case 'automatic-speech-recognition': return 'Transcribing...';
+      case 'text-to-speech': return 'Synthesizing speech...';
+      case 'load': return 'Loading model...';
+      case 'synthesize': return 'Synthesizing speech...'; // The postMessage type is 'synthesize'
+      case 'generate': return 'Generating text...';
+      case 'summarize': return 'Summarizing...';
+      case 'sentiment': return 'Analyzing sentiment...';
+      case 'translate': return 'Translating...';
+      case 'transcribe': return 'Transcribing...';
+      default: return 'Processing...';
+    }
+  }
 
   getTranslationModel(source: string, target: string): string | undefined {
     // Direct match
@@ -218,9 +241,36 @@ export class AiService {
   }
 
   private postMessage(type: string, payload: unknown, progressCallback?: (data: unknown) => void): Promise<unknown> {
+    if (type !== 'check') {
+      this._processingCount++;
+      this.processingState.set({ isProcessing: true, task: type });
+    }
+
     return new Promise((resolve, reject) => {
       const id = Math.random().toString(36).substring(7);
-      this.callbacks[id] = { resolve, reject, progress: progressCallback };
+      this.callbacks[id] = {
+        resolve: (val) => {
+          if (type !== 'check') {
+            this._processingCount--;
+            if (this._processingCount <= 0) {
+              this._processingCount = 0;
+              this.processingState.set({ isProcessing: false, task: null });
+            }
+          }
+          resolve(val);
+        },
+        reject: (err) => {
+          if (type !== 'check') {
+            this._processingCount--;
+            if (this._processingCount <= 0) {
+              this._processingCount = 0;
+              this.processingState.set({ isProcessing: false, task: null });
+            }
+          }
+          reject(err);
+        },
+        progress: progressCallback
+      };
       this.worker?.postMessage({ type, payload, id });
     });
   }

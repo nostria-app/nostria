@@ -74,9 +74,10 @@
       <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
     </button>
     }
-    @if (app.authenticated() && appState.isPublishing() && !layout.search()) {
-    <button mat-icon-button class="profile-cache-button" matTooltip="Publishing event..."
-      aria-label="Publishing in progress">
+    @if (app.authenticated() && (appState.isPublishing() || ai.processingState().isProcessing) && !layout.search()) {
+    <button mat-icon-button class="profile-cache-button"
+      [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : 'Publishing event...'"
+      aria-label="Processing in progress">
       <mat-icon class="spinning-icon">sync</mat-icon>
     </button>
     }
