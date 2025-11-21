@@ -45,7 +45,7 @@ export class TranslateDialogComponent {
   availableLanguages = computed(() => {
     const models = this.ai.availableTranslationModels;
     const languages = new Set<string>();
-    
+
     models.forEach(model => {
       const parts = model.replace('Xenova/opus-mt-', '').split('-');
       if (parts.length >= 2) {
@@ -56,22 +56,22 @@ export class TranslateDialogComponent {
         // Actually, we should probably list pairs?
         // Or just list all unique codes and let the user pick, then find a model.
         // If no direct model, we might fail.
-        
+
         // Better approach: List all unique codes found in either position.
         parts.forEach(p => {
-            if (p.length >= 2 && p.length <= 3 && p !== 'mul' && p !== 'gem' && p !== 'gmw' && p !== 'big' && p !== 'tc') {
-                languages.add(p);
-            }
+          if (p.length >= 2 && p.length <= 3 && p !== 'mul' && p !== 'gem' && p !== 'gmw' && p !== 'big' && p !== 'tc') {
+            languages.add(p);
+          }
         });
       }
     });
-    
+
     return Array.from(languages).sort();
   });
 
   constructor() {
-      // Set default target lang from browser or settings if possible
-      // For now default to 'es' or first available not 'en'
+    // Set default target lang from browser or settings if possible
+    // For now default to 'es' or first available not 'en'
   }
 
   async translate() {
@@ -81,7 +81,7 @@ export class TranslateDialogComponent {
 
     try {
       const model = this.ai.getTranslationModel(this.sourceLang(), this.targetLang());
-      
+
       if (!model) {
         this.error.set(`No translation model found for ${this.sourceLang()} to ${this.targetLang()}`);
         this.isTranslating.set(false);
@@ -92,25 +92,25 @@ export class TranslateDialogComponent {
       // We might need to handle model loading progress here or in AI service
       // For now, let's assume AI service handles it or we trigger it.
       // The original code called ensureModelLoaded.
-      
+
       // We can call translateText directly, it might fail if not loaded?
       // ai.worker.ts throws if not loaded.
-      
+
       // We should check if loaded.
       const isLoaded = this.ai.isModelLoaded(model);
       if (!isLoaded) {
-          // Trigger load?
-          // ai.service.ts has loadModel.
-          // But translateText doesn't seem to auto-load.
-          // We should probably try to load it.
-          await this.ai.loadModel('translation', model, (data: unknown) => {
-              // Handle progress if needed
-              console.log('Loading progress', data);
-          });
+        // Trigger load?
+        // ai.service.ts has loadModel.
+        // But translateText doesn't seem to auto-load.
+        // We should probably try to load it.
+        await this.ai.loadModel('translation', model, (data: unknown) => {
+          // Handle progress if needed
+          console.log('Loading progress', data);
+        });
       }
 
       const result = await this.ai.translateText(this.data.content, model);
-      
+
       // Handle result format
       if (Array.isArray(result) && result.length > 0) {
         const firstItem = result[0];
