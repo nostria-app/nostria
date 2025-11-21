@@ -1,5 +1,10 @@
 <div class="dialog-container">
-  <h2 mat-dialog-title>Record Audio Clip</h2>
+  <div class="dialog-header">
+    <h2 mat-dialog-title>Record Audio Clip</h2>
+    <button mat-icon-button (click)="close()">
+      <mat-icon>close</mat-icon>
+    </button>
+  </div>
 
   <div mat-dialog-content class="content">
     @if (!isPreviewing()) {

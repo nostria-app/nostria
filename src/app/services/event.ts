@@ -24,6 +24,10 @@ import {
 import { CustomDialogService, CustomDialogRef } from './custom-dialog.service';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { AccountStateService } from './account-state.service';
+import { AudioRecordDialogComponent } from '../pages/media/audio-record-dialog/audio-record-dialog.component';
+import { MediaService } from './media.service';
+import { AccountRelayService } from './relays/account-relay';
+import { UnsignedEvent } from 'nostr-tools';
 
 export interface Reaction {
   emoji: string;
@@ -95,6 +99,8 @@ export class EventService {
   private readonly subscriptionCache = inject(SubscriptionCacheService);
   private readonly accountState = inject(AccountStateService);
   private readonly relayPool = inject(RelayPoolService);
+  private readonly mediaService = inject(MediaService);
+  private readonly accountRelay = inject(AccountRelayService);
 
   /**
    * Parse event tags to extract thread information
@@ -1202,5 +1208,137 @@ export class EventService {
     });
 
     return dialogRef;
+  }
+
+  async createAudioReply(rootEvent: Event): Promise<Event | undefined> {
+    const dialogRef = this.dialog.open(AudioRecordDialogComponent, {
+      width: '400px',
+      maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
+      disableClose: true,
+    });
+
+    const result = await dialogRef.afterClosed().toPromise();
+
+    if (result && result.blob) {
+      try {
+        // Upload file
+        const file = new File([result.blob], 'voice-message.mp4', { type: result.blob.type });
+        const uploadResult = await this.mediaService.uploadFile(
+          file,
+          false,
+          this.mediaService.mediaServers()
+        );
+
+        if (uploadResult.status === 'success' && uploadResult.item) {
+          const audioAttachment = {
+            url: uploadResult.item.url,
+            waveform: result.waveform,
+            duration: Math.round(result.duration)
+          };
+
+          const pubkey = this.accountState.pubkey();
+          if (!pubkey) return undefined;
+
+          const unsignedEvent = this.buildCommentEvent(
+            rootEvent,
+            uploadResult.item.url,
+            pubkey,
+            undefined,
+            audioAttachment
+          );
+
+          const signedEvent = await this.nostrService.signEvent(unsignedEvent);
+          if (!signedEvent) return undefined;
+
+          await this.accountRelay.publish(signedEvent);
+          return signedEvent;
+        }
+      } catch (error) {
+        console.error('Failed to create audio reply:', error);
+      }
+    }
+
+    return undefined;
+  }
+
+  buildCommentEvent(
+    rootEvent: Event,
+    content: string,
+    pubkey: string,
+    parentComment?: Event,
+    audioAttachment?: { url: string; waveform: number[]; duration: number }
+  ): UnsignedEvent {
+    const now = Math.floor(Date.now() / 1000);
+    const tags: string[][] = [];
+
+    // Determine if replying to a comment or the root event
+    const isReplyingToComment = !!parentComment;
+
+    // Check if root event is addressable (kind >= 30000 and < 40000)
+    const isRootAddressable = rootEvent.kind >= 30000 && rootEvent.kind < 40000;
+
+    if (isReplyingToComment && parentComment) {
+      // Replying to a comment
+      // Root scope tags (uppercase) - point to original event
+      if (isRootAddressable) {
+        // Use A tag for addressable events (like articles)
+        const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        const aTagValue = `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}`;
+        tags.push(['A', aTagValue, '', rootEvent.pubkey]);
+      } else {
+        // Use E tag for regular events
+        tags.push(['E', rootEvent.id, '', rootEvent.pubkey]);
+      }
+      tags.push(['K', rootEvent.kind.toString()]);
+      tags.push(['P', rootEvent.pubkey]);
+
+      // Parent scope tags (lowercase) - point to the comment being replied to
+      tags.push(['e', parentComment.id, '', parentComment.pubkey]);
+      tags.push(['k', parentComment.kind.toString()]);
+      tags.push(['p', parentComment.pubkey]);
+    } else {
+      // Top-level comment on the event
+      // Root scope tags (uppercase)
+      if (isRootAddressable) {
+        // Use A tag for addressable events (like articles)
+        const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        const aTagValue = `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}`;
+        tags.push(['A', aTagValue, '', rootEvent.pubkey]);
+      } else {
+        // Use E tag for regular events
+        tags.push(['E', rootEvent.id, '', rootEvent.pubkey]);
+      }
+      tags.push(['K', rootEvent.kind.toString()]);
+      tags.push(['P', rootEvent.pubkey]);
+
+      // Parent scope tags (lowercase) - same as root for top-level
+      if (isRootAddressable) {
+        const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        const aTagValue = `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}`;
+        tags.push(['a', aTagValue, '', rootEvent.pubkey]);
+      } else {
+        tags.push(['e', rootEvent.id, '', rootEvent.pubkey]);
+      }
+      tags.push(['k', rootEvent.kind.toString()]);
+      tags.push(['p', rootEvent.pubkey]);
+    }
+
+    const kind = audioAttachment ? 1244 : 1111;
+
+    if (audioAttachment) {
+      const att = audioAttachment;
+      const waveform = att.waveform.join(' ');
+      tags.push(['imeta', `url ${att.url}`, `waveform ${waveform}`, `duration ${att.duration}`]);
+      tags.push(['alt', 'Voice reply']);
+    }
+
+    return {
+      kind,
+      content,
+      tags,
+      created_at: now,
+      pubkey,
+    };
   }
 }

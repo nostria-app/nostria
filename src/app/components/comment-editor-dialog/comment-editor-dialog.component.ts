@@ -23,6 +23,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { MatDialog } from '@angular/material/dialog';
 import { AudioRecordDialogComponent } from '../../pages/media/audio-record-dialog/audio-record-dialog.component';
 import { MediaService } from '../../services/media.service';
+import { EventService } from '../../services/event';
 
 export interface CommentEditorDialogData {
   rootEvent: NostrEvent; // The event being commented on
@@ -54,6 +55,7 @@ export class CommentEditorDialogComponent implements AfterViewInit {
   private accountRelay = inject(AccountRelayService);
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
+  private eventService = inject(EventService);
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -156,6 +158,7 @@ export class CommentEditorDialogComponent implements AfterViewInit {
             this.snackBar.open('Failed to upload voice message', 'Close', { duration: 3000 });
           }
         } catch (error) {
+          console.error(error);
           this.isPublishing.set(false);
           this.snackBar.open('Failed to upload voice message', 'Close', { duration: 3000 });
         }
@@ -164,80 +167,13 @@ export class CommentEditorDialogComponent implements AfterViewInit {
   }
 
   private buildCommentEvent(content: string, pubkey: string): UnsignedEvent {
-    const rootEvent = this.data.rootEvent;
-    const parentComment = this.data.parentComment;
-    const now = Math.floor(Date.now() / 1000);
-
-    const tags: string[][] = [];
-
-    // Determine if replying to a comment or the root event
-    const isReplyingToComment = !!parentComment;
-
-    // Check if root event is addressable (kind >= 30000 and < 40000)
-    const isRootAddressable = rootEvent.kind >= 30000 && rootEvent.kind < 40000;
-
-    if (isReplyingToComment && parentComment) {
-      // Replying to a comment
-      // Root scope tags (uppercase) - point to original event
-      if (isRootAddressable) {
-        // Use A tag for addressable events (like articles)
-        const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
-        const aTagValue = `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}`;
-        tags.push(['A', aTagValue, '', rootEvent.pubkey]);
-      } else {
-        // Use E tag for regular events
-        tags.push(['E', rootEvent.id, '', rootEvent.pubkey]);
-      }
-      tags.push(['K', rootEvent.kind.toString()]);
-      tags.push(['P', rootEvent.pubkey]);
-
-      // Parent scope tags (lowercase) - point to the comment being replied to
-      tags.push(['e', parentComment.id, '', parentComment.pubkey]);
-      tags.push(['k', '1111']); // Parent is a comment (kind 1111)
-      tags.push(['p', parentComment.pubkey]);
-    } else {
-      // Top-level comment on the event
-      // Root scope tags (uppercase)
-      if (isRootAddressable) {
-        // Use A tag for addressable events (like articles)
-        const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
-        const aTagValue = `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}`;
-        tags.push(['A', aTagValue, '', rootEvent.pubkey]);
-      } else {
-        // Use E tag for regular events
-        tags.push(['E', rootEvent.id, '', rootEvent.pubkey]);
-      }
-      tags.push(['K', rootEvent.kind.toString()]);
-      tags.push(['P', rootEvent.pubkey]);
-
-      // Parent scope tags (lowercase) - same as root for top-level
-      if (isRootAddressable) {
-        const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
-        const aTagValue = `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}`;
-        tags.push(['a', aTagValue, '', rootEvent.pubkey]);
-      } else {
-        tags.push(['e', rootEvent.id, '', rootEvent.pubkey]);
-      }
-      tags.push(['k', rootEvent.kind.toString()]);
-      tags.push(['p', rootEvent.pubkey]);
-    }
-
-    const kind = this.audioAttachment() ? 1244 : 1111;
-
-    if (this.audioAttachment()) {
-      const att = this.audioAttachment()!;
-      const waveform = att.waveform.join(' ');
-      tags.push(['imeta', `url ${att.url}`, `waveform ${waveform}`, `duration ${att.duration}`]);
-      tags.push(['alt', 'Voice reply']);
-    }
-
-    return {
-      kind,
+    return this.eventService.buildCommentEvent(
+      this.data.rootEvent,
       content,
-      tags,
-      created_at: now,
       pubkey,
-    };
+      this.data.parentComment,
+      this.audioAttachment() || undefined
+    );
   }
 
   onCancel(): void {

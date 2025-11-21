@@ -41,6 +41,10 @@
     <app-video-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
     }
+    <!-- Audio (kind 1222, 1244) -->
+    @else if (targetItem.event.kind === 1222 || targetItem.event.kind === 1244) {
+    <app-audio-event [event]="targetItem.event" [hideComments]="hideComments()"></app-audio-event>
+    }
     <!-- Articles (kind 30023) -->
     @else if (targetItem.event.kind === 30023) {
     <app-article-event [event]="targetItem.event"></app-article-event>
@@ -110,6 +114,10 @@
           === 34235 || rootRecordData.event.kind === 34236) {
           <app-video-event [event]="rootRecordData.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
             [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
+          }
+          <!-- Audio (kind 1222, 1244) -->
+          @else if (rootRecordData.event.kind === 1222 || rootRecordData.event.kind === 1244) {
+          <app-audio-event [event]="rootRecordData.event" [hideComments]="hideComments()"></app-audio-event>
           }
           <!-- Articles (kind 30023) -->
           @else if (rootRecordData.event.kind === 30023) {
@@ -187,6 +195,10 @@
             [showOverlay]="showOverlay()" [allMediaEvents]="allMediaEvents()"
             [mediaEventIndex]="mediaEventIndex()"></app-video-event>
           }
+          <!-- Audio (kind 1222, 1244) -->
+          @else if (parentRecordData.event.kind === 1222 || parentRecordData.event.kind === 1244) {
+          <app-audio-event [event]="parentRecordData.event" [hideComments]="hideComments()"></app-audio-event>
+          }
           <!-- Articles (kind 30023) -->
           @else if (parentRecordData.event.kind === 30023) {
           <app-article-event [event]="parentRecordData.event"></app-article-event>
@@ -249,6 +261,10 @@
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
     }
+    <!-- Audio (kind 1222, 1244) -->
+    @else if (item.event.kind === 1222 || item.event.kind === 1244) {
+    <app-audio-event [event]="item.event" [hideComments]="hideComments()"></app-audio-event>
+    }
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {
     <app-article-event [event]="item.event"></app-article-event>
@@ -301,6 +317,10 @@
     34236) {
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
       [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
+    }
+    <!-- Audio (kind 1222, 1244) -->
+    @else if (item.event.kind === 1222 || item.event.kind === 1244) {
+    <app-audio-event [event]="item.event" [hideComments]="hideComments()"></app-audio-event>
     }
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {

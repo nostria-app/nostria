@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { Event } from 'nostr-tools';
 import { CommentComponent } from '../comment/comment.component';
 import { DataService } from '../../services/data.service';
@@ -19,6 +20,7 @@ import { SharedRelayService } from '../../services/relays/shared-relay';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatTooltipModule,
     CommentComponent,
   ],
   templateUrl: './comments-list.component.html',
@@ -27,6 +29,10 @@ import { SharedRelayService } from '../../services/relays/shared-relay';
 export class CommentsListComponent implements AfterViewInit {
   event = input.required<Event>();
   autoExpand = input<boolean>(false);
+  label = input<string>('Comments');
+  singularLabel = input<string>('Comment');
+  allowedKinds = input<number[]>([1111]);
+  replyType = input<'text' | 'audio'>('text');
 
   @ViewChild('commentsContainer') commentsContainer?: ElementRef<HTMLElement>;
 
@@ -127,7 +133,7 @@ export class CommentsListComponent implements AfterViewInit {
       // For regular events, query by 'e' tag
       const isAddressable = event.kind >= 30000 && event.kind < 40000;
       const filter: Record<string, unknown> = {
-        kinds: [1111],
+        kinds: this.allowedKinds(),
         limit: this.INITIAL_LIMIT,
       };
 
@@ -244,28 +250,39 @@ export class CommentsListComponent implements AfterViewInit {
       return;
     }
 
-    // Open comment creation dialog
-    const dialogRef = this.eventService.createComment(this.event());
-
-    // Handle dialog result
-    dialogRef.afterClosed().subscribe((result: { published: boolean; event?: Event } | undefined) => {
-      if (result?.published && result.event) {
-        // Immediately add the new comment to the list (optimistic update)
-        const newCommentRecord = this.data.toRecord(result.event);
-        const currentComments = this.comments();
-        const updatedComments = [...currentComments, newCommentRecord];
-
-        // Sort by created_at (oldest first for display)
-        updatedComments.sort((a, b) => a.event.created_at - b.event.created_at);
-
-        this.comments.set(updatedComments);
-
-        // Optionally refresh after a delay to catch any other new comments
-        setTimeout(() => {
-          this.refreshComments();
-        }, 2000);
+    if (this.replyType() === 'audio') {
+      const event = await this.eventService.createAudioReply(this.event());
+      if (event) {
+        this.addCommentToList(event);
       }
-    });
+    } else {
+      // Open comment creation dialog
+      const dialogRef = this.eventService.createComment(this.event());
+
+      // Handle dialog result
+      dialogRef.afterClosed().subscribe((result: { published: boolean; event?: Event } | undefined) => {
+        if (result?.published && result.event) {
+          this.addCommentToList(result.event);
+        }
+      });
+    }
+  }
+
+  private addCommentToList(event: Event) {
+    // Immediately add the new comment to the list (optimistic update)
+    const newCommentRecord = this.data.toRecord(event);
+    const currentComments = this.comments();
+    const updatedComments = [...currentComments, newCommentRecord];
+
+    // Sort by created_at (oldest first for display)
+    updatedComments.sort((a, b) => a.event.created_at - b.event.created_at);
+
+    this.comments.set(updatedComments);
+
+    // Optionally refresh after a delay to catch any other new comments
+    setTimeout(() => {
+      this.refreshComments();
+    }, 2000);
   }
 
   async refreshComments(): Promise<void> {
