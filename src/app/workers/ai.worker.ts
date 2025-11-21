@@ -172,6 +172,14 @@ async function handleSynthesize(payload: { text: string, params?: any }, id: str
     throw new Error('Text-to-speech model not loaded');
   }
 
+  if (!payload.params) {
+    payload.params = {};
+  }
+
+  if (!payload.params.speaker_embeddings) {
+    payload.params.speaker_embeddings = 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin';
+  }
+
   if (payload.params && payload.params.speaker_embeddings && typeof payload.params.speaker_embeddings === 'string') {
     const url = payload.params.speaker_embeddings;
     try {
@@ -180,19 +188,19 @@ async function handleSynthesize(payload: { text: string, params?: any }, id: str
         throw new Error(`Failed to fetch speaker embeddings: ${response.statusText}`);
       }
       const buffer = await response.arrayBuffer();
-      
+
       let data: Float32Array;
-      
+
       if (url.endsWith('.npy')) {
         data = parseNpy(buffer);
       } else {
         // Assume raw float32 binary (e.g. .bin from Xenova/cmu-arctic-xvectors-extracted)
         data = new Float32Array(buffer);
       }
-      
+
       console.log('Embedding parsed. Length:', data.length);
       // console.log('First 5 values:', Array.from(data.slice(0, 5)));
-      
+
       const tensor = new Tensor('float32', data, [1, data.length]);
       payload.params.speaker_embeddings = tensor;
       console.log('Loaded speaker embeddings:', url, 'Shape:', tensor.dims);
@@ -203,7 +211,7 @@ async function handleSynthesize(payload: { text: string, params?: any }, id: str
   }
 
   console.log('Synthesizing speech with params:', payload.params);
-  
+
   const tokenizer = await TTSPipeline.tokenizer;
   const model = await TTSPipeline.model;
   const vocoder = await TTSPipeline.vocoder;
@@ -212,17 +220,17 @@ async function handleSynthesize(payload: { text: string, params?: any }, id: str
   const speaker_embeddings = payload.params.speaker_embeddings;
 
   const { waveform } = await model.generate_speech(input_ids, speaker_embeddings, { vocoder });
-  
+
   const wav = encodeWAV(waveform.data);
   const blob = new Blob([wav], { type: 'audio/wav' });
-  
+
   const result = {
     blob: blob,
     sampling_rate: 16000
   };
 
   console.log('Synthesis result:', result);
-  
+
   postMessage({
     type: 'result',
     id,
@@ -273,7 +281,7 @@ function encodeWAV(samples: Float32Array) {
 
 function writeString(view: DataView, offset: number, string: string) {
   for (let i = 0; i < string.length; ++i) {
-      view.setUint8(offset + i, string.charCodeAt(i))
+    view.setUint8(offset + i, string.charCodeAt(i))
   }
 }
 
@@ -284,27 +292,27 @@ function parseNpy(buffer: ArrayBuffer): Float32Array {
   if (magic[0] !== 0x93 || String.fromCharCode(...magic.slice(1)) !== 'NUMPY') {
     throw new Error('Invalid .npy file');
   }
-  
+
   // Read version
   const major = view.getUint8(6);
   // const minor = view.getUint8(7);
-  
+
   // Read header length
   let headerLen = view.getUint16(8, true); // Little endian
   let offset = 10;
-  
+
   if (major >= 2) {
     headerLen = view.getUint32(8, true);
     offset = 12;
   }
-  
+
   // The data starts after the header
   const dataOffset = offset + headerLen;
-  
+
   // Assume float32 (f4) and little endian (<)
   // In a full parser we would parse the header JSON to check 'descr' and 'fortran_order' and 'shape'
   // But for this specific use case (speecht5 embeddings), we know it's float32
-  
+
   return new Float32Array(buffer.slice(dataOffset));
 }
 
