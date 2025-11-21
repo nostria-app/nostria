@@ -26,7 +26,7 @@
     @if (filteredCommands().length > 0) {
     <mat-list>
       @for (cmd of filteredCommands(); track cmd.id; let i = $index) {
-      <mat-list-item [class.selected]="i === selectedIndex()" (click)="executeCommand(cmd)"
+      <mat-list-item #listItem [class.selected]="i === selectedIndex()" (click)="executeCommand(cmd)"
         (mouseenter)="selectedIndex.set(i)">
         <mat-icon matListItemIcon>{{ cmd.icon }}</mat-icon>
         <span matListItemTitle>{{ cmd.label }}</span>

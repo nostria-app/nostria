@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, ElementRef, ViewChild, ViewChildren, QueryList, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +11,7 @@ import { AiService } from '../../services/ai.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from '../../services/event';
 import { LayoutService } from '../../services/layout.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 export interface Command {
   id: string;
@@ -42,8 +43,10 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private layoutService = inject(LayoutService);
   private aiService = inject(AiService);
   private snackBar = inject(MatSnackBar);
+  private accountState = inject(AccountStateService);
 
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  @ViewChildren('listItem', { read: ElementRef }) listItems!: QueryList<ElementRef>;
 
   searchQuery = signal('');
   selectedIndex = signal(0);
@@ -73,7 +76,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       id: 'nav-profile',
       label: 'Open Profile',
       icon: 'person',
-      action: () => this.router.navigate(['/profile']), // Assuming /profile redirects to current user
+      action: () => this.router.navigate(['/p', this.accountState.pubkey()]), // Assuming /profile redirects to current user
       keywords: ['profile', 'me', 'account', 'user']
     },
     {
@@ -168,15 +171,24 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     if (event.key === 'ArrowDown') {
       event.preventDefault();
       this.selectedIndex.update(i => Math.min(i + 1, this.filteredCommands().length - 1));
+      this.scrollToSelected();
     } else if (event.key === 'ArrowUp') {
       event.preventDefault();
       this.selectedIndex.update(i => Math.max(i - 1, 0));
+      this.scrollToSelected();
     } else if (event.key === 'Enter') {
       event.preventDefault();
       this.executeSelected();
     } else if (event.key === 'Escape') {
       this.dialogRef.close();
     }
+  }
+
+  scrollToSelected() {
+    setTimeout(() => {
+      const selectedEl = this.listItems.get(this.selectedIndex())?.nativeElement;
+      selectedEl?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
   }
 
   executeSelected() {
