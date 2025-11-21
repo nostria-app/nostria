@@ -28,6 +28,7 @@ import { AudioRecordDialogComponent } from '../pages/media/audio-record-dialog/a
 import { MediaService } from './media.service';
 import { AccountRelayService } from './relays/account-relay';
 import { UnsignedEvent } from 'nostr-tools';
+import { ConfirmDialogComponent } from '../components/confirm-dialog/confirm-dialog.component';
 
 export interface Reaction {
   emoji: string;
@@ -1221,6 +1222,23 @@ export class EventService {
     const result = await dialogRef.afterClosed().toPromise();
 
     if (result && result.blob) {
+      // Confirm before publishing
+      const confirmDialog = this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Publish Audio Reply?',
+          message: 'Are you sure you want to publish this audio reply?',
+          confirmText: 'Publish',
+          cancelText: 'Cancel',
+          confirmColor: 'primary'
+        }
+      });
+
+      const confirmed = await confirmDialog.afterClosed().toPromise();
+
+      if (!confirmed) {
+        return undefined;
+      }
+
       try {
         // Upload file
         const file = new File([result.blob], 'voice-message.mp4', { type: result.blob.type });
