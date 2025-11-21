@@ -1,0 +1,52 @@
+<div dialog-content class="command-palette-container">
+  <div class="search-header">
+    <mat-icon class="search-icon">search</mat-icon>
+    <input #searchInput type="text" [ngModel]="searchQuery()"
+      (ngModelChange)="searchQuery.set($event); selectedIndex.set(0)" (keydown)="onKeyDown($event)"
+      placeholder="Type a command or search..." class="search-input" [disabled]="isListening() || isTranscribing()">
+
+    @if (isListening()) {
+    <div class="listening-indicator">
+      <span class="pulse"></span>
+      Listening...
+    </div>
+    } @else if (isTranscribing()) {
+    <div class="processing-indicator">
+      <mat-icon class="spinning">sync</mat-icon>
+    </div>
+    } @else {
+    <div class="shortcuts">
+      <span class="shortcut">↑↓</span> to navigate
+      <span class="shortcut">↵</span> to select
+    </div>
+    }
+  </div>
+
+  <div class="results-list">
+    @if (filteredCommands().length > 0) {
+    <mat-list>
+      @for (cmd of filteredCommands(); track cmd.id; let i = $index) {
+      <mat-list-item [class.selected]="i === selectedIndex()" (click)="executeCommand(cmd)"
+        (mouseenter)="selectedIndex.set(i)">
+        <mat-icon matListItemIcon>{{ cmd.icon }}</mat-icon>
+        <span matListItemTitle>{{ cmd.label }}</span>
+        @if (cmd.description) {
+        <span matListItemLine>{{ cmd.description }}</span>
+        }
+      </mat-list-item>
+      }
+    </mat-list>
+    } @else {
+    <div class="no-results">
+      <p>No commands found.</p>
+    </div>
+    }
+  </div>
+
+  <div class="footer">
+    <div class="footer-item">
+      <mat-icon>keyboard_voice</mat-icon>
+      <span>Hold <b>Alt+C</b> to speak</span>
+    </div>
+  </div>
+</div>

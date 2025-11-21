@@ -86,6 +86,8 @@ import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { AppsMenuComponent } from './components/apps-menu/apps-menu.component';
 import { AiService } from './services/ai.service';
+import { CustomDialogService } from './services/custom-dialog.service';
+import { CommandPaletteDialogComponent } from './components/command-palette-dialog/command-palette-dialog.component';
 
 interface NavItem {
   path: string;
@@ -172,6 +174,7 @@ export class App implements OnInit {
   installService = inject(InstallService);
   cacheCleanup = inject(CacheCleanupService);
   ai = inject(AiService);
+  customDialog = inject(CustomDialogService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -1070,8 +1073,35 @@ export class App implements OnInit {
     // ALT+N shortcut to open create options (global shortcut)
     if (event.altKey && event.key.toLowerCase() === 'n') {
       event.preventDefault();
-      if (this.app.authenticated()) {
-        this.openCreateOptions();
+      this.openCreateOptions();
+    }
+
+    // Ctrl+K or Cmd+K to open command palette
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      this.openCommandPalette();
+    }
+
+    // Alt+C to open command palette in listening mode
+    if (event.altKey && event.key.toLowerCase() === 'c') {
+      event.preventDefault();
+      this.openCommandPalette(true);
+    }
+  }
+
+  openCommandPalette(listening = false): void {
+    const dialogRef = this.customDialog.open(CommandPaletteDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      panelClass: 'command-palette-dialog',
+      showCloseButton: false,
+      disableEnterSubmit: true
+    });
+
+    if (listening) {
+      // Start recording immediately if opened in listening mode
+      if (dialogRef.componentInstance) {
+        dialogRef.componentInstance.startRecording();
       }
     }
   }
