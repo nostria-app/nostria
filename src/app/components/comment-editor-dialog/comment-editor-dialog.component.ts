@@ -20,6 +20,9 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ContentComponent } from '../content/content.component';
 import { Event as NostrEvent, UnsignedEvent } from 'nostr-tools';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { MatDialog } from '@angular/material/dialog';
+import { AudioRecordDialogComponent } from '../../pages/media/audio-record-dialog/audio-record-dialog.component';
+import { MediaService } from '../../services/media.service';
 
 export interface CommentEditorDialogData {
   rootEvent: NostrEvent; // The event being commented on
@@ -43,6 +46,8 @@ export interface CommentEditorDialogData {
   styleUrl: './comment-editor-dialog.component.scss',
 })
 export class CommentEditorDialogComponent implements AfterViewInit {
+  private dialog = inject(MatDialog);
+  private mediaService = inject(MediaService);
   private dialogRef = inject(MatDialogRef<CommentEditorDialogComponent>);
   data = inject(MAT_DIALOG_DATA) as CommentEditorDialogData;
   private nostrService = inject(NostrService);
@@ -56,6 +61,7 @@ export class CommentEditorDialogComponent implements AfterViewInit {
   // Signals for reactive state
   content = signal('');
   isPublishing = signal(false);
+  audioAttachment = signal<{ url: string, waveform: number[], duration: number } | null>(null);
 
   ngAfterViewInit(): void {
     // Focus the textarea after view init
@@ -75,7 +81,7 @@ export class CommentEditorDialogComponent implements AfterViewInit {
   async onPublish(): Promise<void> {
     const commentText = this.content().trim();
 
-    if (!commentText) {
+    if (!commentText && !this.audioAttachment()) {
       this.snackBar.open('Comment cannot be empty', 'Close', { duration: 3000 });
       return;
     }
@@ -114,6 +120,47 @@ export class CommentEditorDialogComponent implements AfterViewInit {
     } finally {
       this.isPublishing.set(false);
     }
+  }
+
+  recordAudio() {
+    const dialogRef = this.dialog.open(AudioRecordDialogComponent, {
+      width: '400px',
+      maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe(async result => {
+      if (result && result.blob) {
+        try {
+          this.isPublishing.set(true); // Reuse publishing spinner for uploading
+
+          // Upload file
+          const file = new File([result.blob], 'voice-message.mp4', { type: result.blob.type });
+          const uploadResult = await this.mediaService.uploadFile(
+            file,
+            false,
+            this.mediaService.mediaServers()
+          );
+
+          this.isPublishing.set(false);
+
+          if (uploadResult.status === 'success' && uploadResult.item) {
+            this.audioAttachment.set({
+              url: uploadResult.item.url,
+              waveform: result.waveform,
+              duration: Math.round(result.duration)
+            });
+            this.content.set(uploadResult.item.url);
+          } else {
+            this.snackBar.open('Failed to upload voice message', 'Close', { duration: 3000 });
+          }
+        } catch (error) {
+          this.isPublishing.set(false);
+          this.snackBar.open('Failed to upload voice message', 'Close', { duration: 3000 });
+        }
+      }
+    });
   }
 
   private buildCommentEvent(content: string, pubkey: string): UnsignedEvent {
@@ -175,12 +222,21 @@ export class CommentEditorDialogComponent implements AfterViewInit {
       tags.push(['p', rootEvent.pubkey]);
     }
 
+    const kind = this.audioAttachment() ? 1244 : 1111;
+
+    if (this.audioAttachment()) {
+      const att = this.audioAttachment()!;
+      const waveform = att.waveform.join(' ');
+      tags.push(['imeta', `url ${att.url}`, `waveform ${waveform}`, `duration ${att.duration}`]);
+      tags.push(['alt', 'Voice reply']);
+    }
+
     return {
-      kind: 1111,
-      pubkey,
-      created_at: now,
-      tags,
+      kind,
       content,
+      tags,
+      created_at: now,
+      pubkey,
     };
   }
 

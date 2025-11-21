@@ -41,6 +41,8 @@ export interface ContentToken {
   nostrData?: NostrData;
   emoji?: string;
   processedUrl?: SafeResourceUrl; // For YouTube embed URLs that are pre-processed
+  waveform?: number[];
+  duration?: number;
   cashuData?: {
     token: string;
     mint?: string;
@@ -276,7 +278,7 @@ export class ParsingService {
     ':black_circle:': '⚫',
   };
 
-  async parseContent(content: string): Promise<ContentToken[]> {
+  async parseContent(content: string, tags?: string[][]): Promise<ContentToken[]> {
     if (!content) return [];
 
     // Replace line breaks with placeholders
@@ -290,7 +292,7 @@ export class ParsingService {
       /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
     const imageRegex =
       /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
-    const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg|m4a)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const videoRegex =
       /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const nostrRegex =
@@ -318,6 +320,8 @@ export class ParsingService {
       nostrData?: NostrData;
       emoji?: string;
       processedUrl?: SafeResourceUrl;
+      waveform?: number[];
+      duration?: number;
       cashuData?: {
         token: string;
         mint?: string;
@@ -464,11 +468,33 @@ export class ParsingService {
     // Find video URLs
     videoRegex.lastIndex = 0;
     while ((match = videoRegex.exec(processedContent)) !== null) {
+      const url = match[0];
+      let type: 'video' | 'audio' = 'video';
+      let waveform: number[] | undefined;
+      let duration: number | undefined;
+
+      if (tags) {
+        const imeta = tags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
+        if (imeta) {
+          const waveformTag = imeta.find(v => v.startsWith('waveform '));
+          if (waveformTag) {
+            waveform = waveformTag.substring(9).split(' ').map(Number);
+            type = 'audio'; // Treat as audio if waveform is present
+          }
+          const durationTag = imeta.find(v => v.startsWith('duration '));
+          if (durationTag) {
+            duration = Number(durationTag.substring(9));
+          }
+        }
+      }
+
       matches.push({
         start: match.index,
         end: match.index + match[0].length,
-        content: match[0],
-        type: 'video',
+        content: url,
+        type: type,
+        waveform,
+        duration
       });
     }
 
@@ -486,11 +512,33 @@ export class ParsingService {
     // Find audio URLs
     audioRegex.lastIndex = 0;
     while ((match = audioRegex.exec(processedContent)) !== null) {
+      const url = match[0];
+      let waveform: number[] | undefined;
+      let duration: number | undefined;
+
+      if (tags) {
+        // Look for imeta tag matching this URL
+        // imeta tag format: ["imeta", "url <url>", "waveform <values>", "duration <seconds>"]
+        const imeta = tags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
+        if (imeta) {
+          const waveformTag = imeta.find(v => v.startsWith('waveform '));
+          if (waveformTag) {
+            waveform = waveformTag.substring(9).split(' ').map(Number);
+          }
+          const durationTag = imeta.find(v => v.startsWith('duration '));
+          if (durationTag) {
+            duration = Number(durationTag.substring(9));
+          }
+        }
+      }
+
       matches.push({
         start: match.index,
         end: match.index + match[0].length,
-        content: match[0],
+        content: url,
         type: 'audio',
+        waveform,
+        duration
       });
     }
 
@@ -575,6 +623,14 @@ export class ParsingService {
 
       if (match.cashuData) {
         token.cashuData = match.cashuData;
+      }
+
+      if (match.waveform) {
+        token.waveform = match.waveform;
+      }
+
+      if (match.duration) {
+        token.duration = match.duration;
       }
 
       tokens.push(token);

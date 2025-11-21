@@ -14,6 +14,7 @@ import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { ProfileHoverCardComponent } from '../../user-profile/hover-card/profile-hover-card.component';
 import { CashuTokenComponent } from '../../cashu-token/cashu-token.component';
+import { AudioPlayerComponent } from '../../audio-player/audio-player.component';
 import { SettingsService } from '../../../services/settings.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { decode } from 'blurhash';
@@ -21,7 +22,7 @@ import { decode } from 'blurhash';
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent],
+  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, AudioPlayerComponent],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })

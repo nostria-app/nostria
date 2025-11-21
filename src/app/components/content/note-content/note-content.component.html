@@ -53,17 +53,13 @@
 </div>
 } @else if (token.type === 'audio') {
 <div class="media-container">
-  <audio controls>
-    <source [src]="token.content" />
-    Your browser does not support the audio element.
-  </audio>
+  <app-audio-player [src]="token.content" [waveform]="token.waveform || []"
+    [duration]="token.duration || 0"></app-audio-player>
 </div>
 } @else if (token.type === 'base64-audio') {
 <div class="media-container">
-  <audio controls>
-    <source [src]="token.content" />
-    Your browser does not support the audio element.
-  </audio>
+  <app-audio-player [src]="token.content" [waveform]="token.waveform || []"
+    [duration]="token.duration || 0"></app-audio-player>
 </div>
 } @else if (token.type === 'video') {
 <div class="media-container video-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"

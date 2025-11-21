@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
@@ -21,17 +22,19 @@ import {
   ReportDialogComponent,
   ReportDialogData,
 } from '../components/report-dialog/report-dialog.component';
-import { ReportTarget } from './reporting.service';
-import { UserRelayService } from './relays/user-relay';
-import { FeedService } from './feed.service';
 import { UtilitiesService } from './utilities.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { VideoRecordDialogComponent } from '../pages/media/video-record-dialog/video-record-dialog.component';
+import { AudioRecordDialogComponent } from '../pages/media/audio-record-dialog/audio-record-dialog.component';
 import { MediaService, MediaItem } from './media.service';
 import { MediaPublishDialogComponent, MediaPublishOptions } from '../pages/media/media-publish-dialog/media-publish-dialog.component';
 import { NostrService } from './nostr.service';
 import { PublishService } from './publish.service';
 import { CustomDialogService, CustomDialogRef } from './custom-dialog.service';
+import { AccountRelayService } from './relays/account-relay';
+import { UserRelayService } from './relays/user-relay';
+import { FeedService } from './feed.service';
+import { ReportTarget } from './reporting.service';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
@@ -47,6 +50,7 @@ export class LayoutService implements OnDestroy {
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
   private snackBar = inject(MatSnackBar);
+  private accountRelay = inject(AccountRelayService);
   private injector = inject(Injector);
   private utilities = inject(UtilitiesService);
   isHandset = signal(false);
@@ -991,8 +995,8 @@ export class LayoutService implements OnDestroy {
     await this.router.navigate(['/media'], { queryParams: { upload: 'true' } });
   }
 
-  mediaService = inject(MediaService);
-  private nostr = inject(NostrService);
+  private nostrService = inject(NostrService);
+  private mediaService = inject(MediaService);
   private publishService = inject(PublishService);
 
   openRecordVideoDialog(): void {
@@ -1049,6 +1053,64 @@ export class LayoutService implements OnDestroy {
     });
   }
 
+  openRecordAudioDialog(): void {
+    const dialogRef = this.dialog.open(AudioRecordDialogComponent, {
+      width: '400px',
+      maxWidth: '90vw',
+      panelClass: 'responsive-dialog',
+      disableClose: true,
+    });
+
+    dialogRef.afterClosed().subscribe(async result => {
+      if (result && result.blob) {
+        try {
+          this.mediaService.uploading.set(true);
+
+          // Upload file
+          const file = new File([result.blob], 'voice-message.mp4', { type: result.blob.type });
+          const uploadResult = await this.mediaService.uploadFile(
+            file,
+            false,
+            this.mediaService.mediaServers()
+          );
+
+          this.mediaService.uploading.set(false);
+
+          if (uploadResult.status === 'success' && uploadResult.item) {
+            // Create kind 1222 event
+            const url = uploadResult.item.url;
+            const duration = Math.round(result.duration);
+            const waveform = result.waveform.join(' ');
+
+            const tags = [
+              ['imeta', `url ${url}`, `waveform ${waveform}`, `duration ${duration}`]
+            ];
+
+            // Also add 'alt' tag for clients that don't support kind 1222
+            tags.push(['alt', 'Voice message']);
+
+            const event = this.nostrService.createEvent(
+              1222,
+              url,
+              tags
+            );
+
+            const signedEvent = await this.nostrService.signEvent(event);
+            await this.accountRelay.publish(signedEvent);
+
+            this.snackBar.open('Voice message sent!', 'Close', { duration: 3000 });
+          } else {
+            this.snackBar.open('Failed to upload voice message', 'Close', { duration: 3000 });
+          }
+        } catch (error) {
+          console.error(error);
+          this.mediaService.uploading.set(false);
+          this.snackBar.open('Failed to send voice message', 'Close', { duration: 3000 });
+        }
+      }
+    });
+  }
+
   /**
    * Publish a single media item to Nostr
    * @param item - The media item to publish
@@ -1079,7 +1141,7 @@ export class LayoutService implements OnDestroy {
       const event = await this.buildMediaEvent(item, result);
 
       // Sign and publish the event
-      const signedEvent = await this.nostr.signEvent(event);
+      const signedEvent = await this.nostrService.signEvent(event);
 
       // Prepare publish options with custom relays if provided
       const publishOptions: { useOptimizedRelays: boolean; customRelays?: string[] } = {
@@ -1291,7 +1353,7 @@ export class LayoutService implements OnDestroy {
     tags.push(['client', 'nostria']);
 
     // Create the event
-    const event = this.nostr.createEvent(
+    const event = this.nostrService.createEvent(
       options.kind,
       options.content,
       tags

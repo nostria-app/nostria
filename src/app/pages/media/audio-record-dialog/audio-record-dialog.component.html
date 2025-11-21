@@ -1,0 +1,42 @@
+<div class="dialog-container">
+  <h2 mat-dialog-title>Record Audio Clip</h2>
+
+  <div mat-dialog-content class="content">
+    @if (!isPreviewing()) {
+    <div class="visualization-container">
+      <div class="live-waveform">
+        @for (bar of liveWaveform(); track $index) {
+        <div class="bar" [style.height.%]="bar"></div>
+        }
+      </div>
+      <div class="timer">{{ timeRemaining() }}s</div>
+    </div>
+
+    <div class="controls">
+      @if (!isRecording()) {
+      <button mat-fab color="warn" (click)="startRecording()" class="record-button" aria-label="Start recording">
+        <mat-icon>mic</mat-icon>
+      </button>
+      } @else {
+      <button mat-fab color="primary" (click)="stopRecording()" class="stop-button" aria-label="Stop recording">
+        <mat-icon>stop</mat-icon>
+      </button>
+      }
+    </div>
+
+    @if (isRecording()) {
+    <mat-progress-bar mode="determinate" [value]="recordingProgress()"></mat-progress-bar>
+    }
+    } @else {
+    <div class="preview-container">
+      <app-audio-player [src]="recordedUrl()!" [waveform]="waveform()" [duration]="60 - timeRemaining()">
+      </app-audio-player>
+    </div>
+
+    <div class="actions">
+      <button mat-button (click)="resetRecording()">Discard</button>
+      <button mat-flat-button color="primary" (click)="saveRecording()">Use Audio</button>
+    </div>
+    }
+  </div>
+</div>

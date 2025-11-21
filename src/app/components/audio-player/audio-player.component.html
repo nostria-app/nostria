@@ -1,0 +1,27 @@
+<div class="audio-player">
+  <button mat-icon-button (click)="togglePlay()" class="play-button">
+    <mat-icon>{{ isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+  </button>
+
+  <div class="waveform-container" (click)="onWaveformClick($event)">
+    @if (waveform.length > 0) {
+    <div class="waveform">
+      @for (bar of waveform; track $index) {
+      <div class="bar" [style.height.%]="getWaveformBarHeight(bar)"
+        [class.active]="$index / waveform.length <= currentTime() / (totalDuration() || 1)">
+      </div>
+      }
+    </div>
+    } @else {
+    <mat-slider min="0" [max]="totalDuration()" step="0.1" class="fallback-slider">
+      <input matSliderThumb [value]="currentTime()" (input)="seek($event)">
+    </mat-slider>
+    }
+  </div>
+
+  <div class="time">
+    {{ formatTime(currentTime()) }}
+  </div>
+
+  <audio #audioElement [src]="src" hidden></audio>
+</div>
