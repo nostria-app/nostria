@@ -1,0 +1,35 @@
+.language-selectors {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  mat-form-field {
+    flex: 1;
+  }
+}
+
+.result {
+  margin-top: 16px;
+  padding: 16px;
+  background: var(--mat-sys-surface-container-high);
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+
+.error {
+  color: var(--mat-sys-error);
+  margin-top: 16px;
+}
+
+.status {
+  margin-top: 8px;
+  font-style: italic;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.preview {
+    margin-top: 16px;
+    color: var(--mat-sys-on-surface-variant);
+    font-style: italic;
+}

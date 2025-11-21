@@ -1,0 +1,138 @@
+import { Component, inject, signal, computed } from '@angular/core';
+import { CommonModule } from '@angular/common';
+import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
+import { MatButtonModule } from '@angular/material/button';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { MatInputModule } from '@angular/material/input';
+import { FormsModule } from '@angular/forms';
+import { AiService } from '../../../services/ai.service';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatIconModule } from '@angular/material/icon';
+
+export interface TranslateDialogData {
+  content: string;
+}
+
+@Component({
+  selector: 'app-translate-dialog',
+  standalone: true,
+  imports: [
+    CommonModule,
+    MatDialogModule,
+    MatButtonModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    MatInputModule,
+    FormsModule,
+    MatProgressBarModule,
+    MatIconModule
+  ],
+  templateUrl: './translate-dialog.component.html',
+  styleUrls: ['./translate-dialog.component.scss'],
+})
+export class TranslateDialogComponent {
+  private dialogRef = inject(MatDialogRef<TranslateDialogComponent>);
+  data: TranslateDialogData = inject(MAT_DIALOG_DATA);
+  ai = inject(AiService);
+
+  sourceLang = signal('en');
+  targetLang = signal('es');
+  translatedText = signal('');
+  isTranslating = signal(false);
+  error = signal('');
+
+  availableLanguages = computed(() => {
+    const models = this.ai.availableTranslationModels;
+    const languages = new Set<string>();
+    
+    models.forEach(model => {
+      const parts = model.replace('Xenova/opus-mt-', '').split('-');
+      if (parts.length >= 2) {
+        languages.add(parts[0]);
+        // Handle cases like 'en-es' where 'es' is target
+        // But some models are 'mul-en', 'en-mul'.
+        // Let's just add all parts that look like lang codes.
+        // Actually, we should probably list pairs?
+        // Or just list all unique codes and let the user pick, then find a model.
+        // If no direct model, we might fail.
+        
+        // Better approach: List all unique codes found in either position.
+        parts.forEach(p => {
+            if (p.length >= 2 && p.length <= 3 && p !== 'mul' && p !== 'gem' && p !== 'gmw' && p !== 'big' && p !== 'tc') {
+                languages.add(p);
+            }
+        });
+      }
+    });
+    
+    return Array.from(languages).sort();
+  });
+
+  constructor() {
+      // Set default target lang from browser or settings if possible
+      // For now default to 'es' or first available not 'en'
+  }
+
+  async translate() {
+    this.isTranslating.set(true);
+    this.error.set('');
+    this.translatedText.set('');
+
+    try {
+      const model = this.ai.getTranslationModel(this.sourceLang(), this.targetLang());
+      
+      if (!model) {
+        this.error.set(`No translation model found for ${this.sourceLang()} to ${this.targetLang()}`);
+        this.isTranslating.set(false);
+        return;
+      }
+
+      // Ensure model is loaded
+      // We might need to handle model loading progress here or in AI service
+      // For now, let's assume AI service handles it or we trigger it.
+      // The original code called ensureModelLoaded.
+      
+      // We can call translateText directly, it might fail if not loaded?
+      // ai.worker.ts throws if not loaded.
+      
+      // We should check if loaded.
+      const isLoaded = this.ai.isModelLoaded(model);
+      if (!isLoaded) {
+          // Trigger load?
+          // ai.service.ts has loadModel.
+          // But translateText doesn't seem to auto-load.
+          // We should probably try to load it.
+          await this.ai.loadModel('translation', model, (data: unknown) => {
+              // Handle progress if needed
+              console.log('Loading progress', data);
+          });
+      }
+
+      const result = await this.ai.translateText(this.data.content, model);
+      
+      // Handle result format
+      if (Array.isArray(result) && result.length > 0) {
+        const firstItem = result[0];
+        if (typeof firstItem === 'object' && firstItem !== null && 'translation_text' in firstItem) {
+          this.translatedText.set((firstItem as { translation_text: string }).translation_text);
+        } else {
+          this.translatedText.set(JSON.stringify(result));
+        }
+      } else if (typeof result === 'string') {
+        this.translatedText.set(result);
+      } else {
+        this.translatedText.set(JSON.stringify(result));
+      }
+
+    } catch (err) {
+      this.error.set(err instanceof Error ? err.message : 'Translation failed');
+    } finally {
+      this.isTranslating.set(false);
+    }
+  }
+
+  close(): void {
+    this.dialogRef.close();
+  }
+}
