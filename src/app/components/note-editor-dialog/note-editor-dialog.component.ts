@@ -169,6 +169,9 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private readonly SILENCE_THRESHOLD = 0.02; // Adjust as needed
   private readonly SILENCE_DURATION = 3000; // 3 seconds
 
+  // Recording history for undo
+  recordingHistory: string[] = [];
+
   // Computed hashtags from content
   hashtags = computed(() => {
     const content = this.content();
@@ -1883,6 +1886,14 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     this.silenceStart = null;
   }
 
+  undoLastRecording() {
+    const prevContent = this.recordingHistory.pop();
+    if (prevContent !== undefined) {
+      this.content.set(prevContent);
+      this.adjustTextareaHeight();
+    }
+  }
+
   adjustTextareaHeight(): void {
     if (this.contentTextarea) {
       const textarea = this.contentTextarea.nativeElement;
@@ -1911,6 +1922,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
       if (result && result.text) {
         const currentContent = this.content();
+        this.recordingHistory.push(currentContent);
         const newContent = currentContent ? currentContent + ' ' + result.text.trim() : result.text.trim();
         this.content.set(newContent);
         this.adjustTextareaHeight();
