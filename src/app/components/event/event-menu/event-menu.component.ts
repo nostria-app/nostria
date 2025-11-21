@@ -28,6 +28,7 @@ import { PinnedService } from '../../../services/pinned.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { AiService } from '../../../services/ai.service';
 import { SettingsService } from '../../../services/settings.service';
+import { TranslateDialogComponent, TranslateDialogData } from '../translate-dialog/translate-dialog.component';
 import { AiInfoDialogComponent } from '../../ai-info-dialog/ai-info-dialog.component';
 import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dialog.component';
 
@@ -136,38 +137,12 @@ export class EventMenuComponent {
     const event = this.event();
     if (!event) return;
 
-    try {
-      const targetLang = this.settings.settings().aiNativeLanguage || 'en';
-      // Assume source is English for now, or try to detect?
-      // Ideally we'd have language detection.
-      const sourceLang = 'en';
-
-      const model = this.ai.getTranslationModel(sourceLang, targetLang);
-
-      if (!model) {
-        this.snackBar.open(`No translation model found for ${sourceLang} to ${targetLang}`, 'Dismiss', { duration: 3000 });
-        return;
-      }
-
-      if (!(await this.ensureModelLoaded('translation', model))) {
-        return;
-      }
-
-      this.snackBar.open('Translating...', 'Dismiss', { duration: 2000 });
-      const result = await this.ai.translateText(event.content, model);
-
-      this.dialog.open(ConfirmDialogComponent, {
-        data: {
-          title: 'Translation',
-          message: result as string,
-          confirmText: 'Close',
-          cancelText: '',
-        } as ConfirmDialogData
-      });
-
-    } catch (error) {
-      this.snackBar.open(`Translation failed: ${error}`, 'Dismiss', { duration: 3000 });
-    }
+    this.dialog.open(TranslateDialogComponent, {
+      data: {
+        content: event.content
+      } as TranslateDialogData,
+      width: '500px'
+    });
   }
 
   async readAloud() {
