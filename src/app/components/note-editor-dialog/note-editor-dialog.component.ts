@@ -7,6 +7,7 @@ import {
   ElementRef,
   AfterViewInit,
   OnDestroy,
+  HostListener,
 } from '@angular/core';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -958,6 +959,34 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       event.preventDefault();
       if (this.canPublish() && !this.isPublishing()) {
         this.publishNote();
+      }
+    }
+
+    // Close dialog on Escape if not in mention autocomplete or other overlays
+    if (event.key === 'Escape') {
+      // Check if mention autocomplete is open
+      const mentionConfig = this.mentionConfig();
+      if (mentionConfig) {
+        // Prevent default behavior and stop propagation
+        event.preventDefault();
+        event.stopPropagation();
+
+        // Dismiss the mention autocomplete
+        this.onMentionDismissed();
+      } else {
+        // Mention autocomplete is not open, close the dialog
+        this.cancel();
+      }
+    }
+  }
+
+  @HostListener('document:keydown', ['$event'])
+  handleGlobalKeydown(event: KeyboardEvent) {
+    // Alt+D shortcut to toggle dictation
+    if (event.altKey && (event.key.toLowerCase() === 'd' || event.code === 'KeyD')) {
+      event.preventDefault();
+      if (!this.isUploading() && !this.isPublishing() && !this.showPreview() && !this.showAdvancedOptions() && !this.isTranscribing()) {
+        this.toggleRecording();
       }
     }
   }
