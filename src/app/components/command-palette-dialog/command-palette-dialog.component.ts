@@ -152,9 +152,12 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   });
 
   ngAfterViewInit() {
+    // Small delay to ensure dialog is fully rendered and focusable
     setTimeout(() => {
-      this.searchInput.nativeElement.focus();
-    });
+      if (this.searchInput) {
+        this.searchInput.nativeElement.focus();
+      }
+    }, 100);
   }
 
   ngOnDestroy() {
