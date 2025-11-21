@@ -1,0 +1,26 @@
+<h2 mat-dialog-title>Local AI Models</h2>
+<mat-dialog-content>
+  <p>
+    Nostria uses advanced AI models that run directly on your device. This means:
+  </p>
+  <ul>
+    <li><strong>Privacy First:</strong> Your data never leaves your device. No cloud servers are involved.</li>
+    <li><strong>Offline Capable:</strong> Once downloaded, models work without an internet connection.</li>
+    <li><strong>Local Processing:</strong> Processing happens on your hardware, which may be slower than cloud services
+      depending on your device's capabilities.</li>
+  </ul>
+  <p>
+    <strong>Note:</strong> The first time you use an AI feature, the app will download and cache the necessary model.
+    This may take a few moments and use some data.
+  </p>
+
+  <div class="disable-option">
+    <mat-checkbox [(ngModel)]="disableAi" color="warn">
+      Disable all AI features
+    </mat-checkbox>
+    <p class="hint">Check this if you prefer not to use any AI features or want to save resources.</p>
+  </div>
+</mat-dialog-content>
+<mat-dialog-actions align="end">
+  <button mat-button (click)="close()">Close</button>
+</mat-dialog-actions>

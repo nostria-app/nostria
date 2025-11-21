@@ -288,6 +288,11 @@ export const routes: Routes = [
     title: 'AI',
   },
   {
+    path: 'ai/settings',
+    loadComponent: () => import('./pages/ai/settings/settings.component').then((m) => m.AiSettingsComponent),
+    title: 'AI Settings',
+  },
+  {
     path: 'backup',
     loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent),
   },
