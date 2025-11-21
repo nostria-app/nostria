@@ -47,7 +47,7 @@
     <div class="menu-section">
       <h3 class="section-title">AI</h3>
       <div class="menu-grid">
-        @for (item of aiItems; track item.label) {
+        @for (item of getAiItems(); track item.label) {
         <button class="menu-item" (click)="onItemClick(item)">
           <div class="menu-item-icon">
             <mat-icon>{{ item.icon }}</mat-icon>

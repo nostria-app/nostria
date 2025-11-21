@@ -30,6 +30,17 @@
     }
   </button>
   }
+  @if (showAiOptions()) {
+  <button mat-menu-item (click)="translate()">
+    <mat-icon>translate</mat-icon>
+    Translate
+  </button>
+  <button mat-menu-item (click)="readAloud()">
+    <mat-icon>record_voice_over</mat-icon>
+    Read Aloud
+  </button>
+  <mat-divider></mat-divider>
+  }
   <button mat-menu-item (click)="layout.shareEvent(event())">
     <mat-icon>share</mat-icon>
     Share Event

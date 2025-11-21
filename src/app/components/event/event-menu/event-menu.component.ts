@@ -26,6 +26,10 @@ import { CommonModule } from '@angular/common';
 import { BookmarkService } from '../../../services/bookmark.service';
 import { PinnedService } from '../../../services/pinned.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
+import { AiService } from '../../../services/ai.service';
+import { SettingsService } from '../../../services/settings.service';
+import { AiInfoDialogComponent } from '../../ai-info-dialog/ai-info-dialog.component';
+import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dialog.component';
 
 @Component({
   selector: 'app-event-menu',
@@ -51,6 +55,8 @@ export class EventMenuComponent {
   snackBar = inject(MatSnackBar);
   bookmark = inject(BookmarkService);
   pinned = inject(PinnedService);
+  ai = inject(AiService);
+  settings = inject(SettingsService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -82,6 +88,103 @@ export class EventMenuComponent {
   showPinOptions = computed<boolean>(() => {
     return this.isOnOwnProfile() && this.isTextNote() && this.isOurEvent();
   });
+
+  // Check if AI options should be shown
+  showAiOptions = computed<boolean>(() => {
+    return !!this.settings.settings().aiEnabled && this.isTextNote();
+  });
+
+  async ensureModelLoaded(task: string, model: string): Promise<boolean> {
+    // 1. Check if model is already loaded
+    if (this.ai.isModelLoaded(model)) {
+      return true;
+    }
+
+    // 2. Check if disclaimer seen
+    const disclaimerSeen = localStorage.getItem('aiDisclaimerSeen');
+    if (!disclaimerSeen) {
+      const dialogRef = this.dialog.open(AiInfoDialogComponent);
+      const result = await firstValueFrom(dialogRef.afterClosed());
+      if (!result) {
+        return false; // User cancelled or declined
+      }
+      localStorage.setItem('aiDisclaimerSeen', 'true');
+    }
+
+    // 3. Show loading dialog
+    const dialogRef = this.dialog.open(ModelLoadDialogComponent, {
+      data: { task, model },
+      disableClose: true
+    });
+
+    try {
+      // 4. Load model
+      await this.ai.loadModel(task, model, (data) => {
+        dialogRef.componentInstance.updateProgress(data as { status: string, progress?: number, file?: string });
+      });
+      dialogRef.close(true);
+      return true;
+    } catch (error) {
+      console.error('Failed to load model', error);
+      dialogRef.close(false);
+      this.snackBar.open(`Failed to load model: ${error}`, 'Dismiss', { duration: 3000 });
+      return false;
+    }
+  }
+
+  async translate() {
+    const event = this.event();
+    if (!event) return;
+
+    try {
+      const targetLang = this.settings.settings().aiNativeLanguage || 'en';
+      // Assume source is English for now, or try to detect?
+      // Ideally we'd have language detection.
+      const sourceLang = 'en';
+
+      const model = this.ai.getTranslationModel(sourceLang, targetLang);
+
+      if (!model) {
+        this.snackBar.open(`No translation model found for ${sourceLang} to ${targetLang}`, 'Dismiss', { duration: 3000 });
+        return;
+      }
+
+      if (!(await this.ensureModelLoaded('translation', model))) {
+        return;
+      }
+
+      this.snackBar.open('Translating...', 'Dismiss', { duration: 2000 });
+      const result = await this.ai.translateText(event.content, model);
+
+      this.dialog.open(ConfirmDialogComponent, {
+        data: {
+          title: 'Translation',
+          message: result as string,
+          confirmText: 'Close',
+          cancelText: '',
+        } as ConfirmDialogData
+      });
+
+    } catch (error) {
+      this.snackBar.open(`Translation failed: ${error}`, 'Dismiss', { duration: 3000 });
+    }
+  }
+
+  async readAloud() {
+    const event = this.event();
+    if (!event) return;
+
+    try {
+      if (!(await this.ensureModelLoaded('text-to-speech', this.ai.speechModelId))) {
+        return;
+      }
+
+      this.snackBar.open('Generating speech...', 'Dismiss', { duration: 2000 });
+      await this.ai.synthesizeSpeech(event.content);
+    } catch (error) {
+      this.snackBar.open(`Speech generation failed: ${error}`, 'Dismiss', { duration: 3000 });
+    }
+  }
 
   onBookmarkClick(event: MouseEvent) {
     event.stopPropagation();

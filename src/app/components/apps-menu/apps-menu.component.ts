@@ -9,6 +9,7 @@ import { EventService } from '../../services/event';
 import { AccountStateService } from '../../services/account-state.service';
 import { InstallService } from '../../services/install.service';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { SettingsService } from '../../services/settings.service';
 
 interface MenuItem {
   icon: string;
@@ -36,6 +37,7 @@ export class AppsMenuComponent {
   private accountState = inject(AccountStateService);
   private installService = inject(InstallService);
   private mediaPlayerService = inject(MediaPlayerService);
+  private settings = inject(SettingsService);
 
   closed = output<void>();
 
@@ -83,7 +85,16 @@ export class AppsMenuComponent {
 
   aiItems: MenuItem[] = [
     { icon: 'psychology', label: 'AI Models', route: ['/ai'] },
+    { icon: 'settings_suggest', label: 'AI Settings', route: ['/ai/settings'] },
   ];
+
+  getAiItems() {
+    if (!this.settings.settings().aiEnabled) {
+      // Only show settings if AI is disabled, so user can re-enable it
+      return this.aiItems.filter(item => item.label === 'AI Settings');
+    }
+    return this.aiItems;
+  }
 
   moreItems: MenuItem[] = [
     {

@@ -21,6 +21,15 @@ export interface UserSettings {
   // Short form video settings
   autoPlayShortForm?: boolean;
   repeatShortForm?: boolean;
+  // AI Settings
+  aiEnabled?: boolean;
+  aiSentimentEnabled?: boolean;
+  aiTranslationEnabled?: boolean;
+  aiSummarizationEnabled?: boolean;
+  aiTranscriptionEnabled?: boolean;
+  aiSpeechEnabled?: boolean;
+  aiVoice?: 'female' | 'male';
+  aiNativeLanguage?: string;
   // Add more settings as needed
 }
 
@@ -38,6 +47,15 @@ const DEFAULT_SETTINGS: UserSettings = {
   mediaPrivacy: 'show-always',
   autoPlayShortForm: true,
   repeatShortForm: true,
+  // AI Defaults
+  aiEnabled: true,
+  aiSentimentEnabled: true,
+  aiTranslationEnabled: true,
+  aiSummarizationEnabled: true,
+  aiTranscriptionEnabled: true,
+  aiSpeechEnabled: true,
+  aiVoice: 'female',
+  aiNativeLanguage: 'en',
 };
 
 @Injectable({
