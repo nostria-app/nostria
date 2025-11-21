@@ -58,6 +58,7 @@ const NOSTR_KINDS = [
   { value: 44, label: 'Channel Mute User (44)' },
   { value: 1063, label: 'File Metadata (1063)' },
   { value: 1068, label: 'Poll (1068)' },
+  { value: 1222, label: 'Voice Message (1222)' },
   { value: 1311, label: 'Live Chat Message (1311)' },
   { value: 1984, label: 'Reporting (1984)' },
   { value: 9734, label: 'Zap Request (9734)' },

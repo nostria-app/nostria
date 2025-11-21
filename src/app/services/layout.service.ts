@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext } from '@angular/core';
+import { inject, Injectable, signal, OnDestroy, effect, PLATFORM_ID, Injector, runInInjectionContext, NgZone } from '@angular/core';
 import { NavigationExtras, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { LoggerService } from './logger.service';
@@ -26,6 +26,7 @@ import { UtilitiesService } from './utilities.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { VideoRecordDialogComponent } from '../pages/media/video-record-dialog/video-record-dialog.component';
 import { AudioRecordDialogComponent } from '../pages/media/audio-record-dialog/audio-record-dialog.component';
+import { ConfirmDialogComponent } from '../components/confirm-dialog/confirm-dialog.component';
 import { MediaService, MediaItem } from './media.service';
 import { MediaPublishDialogComponent, MediaPublishOptions } from '../pages/media/media-publish-dialog/media-publish-dialog.component';
 import { NostrService } from './nostr.service';
@@ -47,6 +48,7 @@ export class LayoutService implements OnDestroy {
   router = inject(Router);
   location = inject(Location);
   private logger = inject(LoggerService);
+  private ngZone = inject(NgZone);
   private dialog = inject(MatDialog);
   private customDialog = inject(CustomDialogService);
   private snackBar = inject(MatSnackBar);
@@ -1063,6 +1065,23 @@ export class LayoutService implements OnDestroy {
 
     dialogRef.afterClosed().subscribe(async result => {
       if (result && result.blob) {
+        // Confirm before publishing
+        const confirmDialog = this.dialog.open(ConfirmDialogComponent, {
+          data: {
+            title: 'Publish Audio Clip?',
+            message: 'Are you sure you want to publish this audio clip?',
+            confirmText: 'Publish',
+            cancelText: 'Cancel',
+            confirmColor: 'primary'
+          }
+        });
+
+        const confirmed = await confirmDialog.afterClosed().toPromise();
+
+        if (!confirmed) {
+          return;
+        }
+
         try {
           this.mediaService.uploading.set(true);
 
@@ -1098,14 +1117,18 @@ export class LayoutService implements OnDestroy {
             const signedEvent = await this.nostrService.signEvent(event);
             await this.accountRelay.publish(signedEvent);
 
+            // Redirect to the event
+            this.ngZone.run(() => {
+              this.router.navigate(['/e', signedEvent.id]);
+            });
             this.snackBar.open('Voice message sent!', 'Close', { duration: 3000 });
           } else {
             this.snackBar.open('Failed to upload voice message', 'Close', { duration: 3000 });
           }
         } catch (error) {
-          console.error(error);
+          console.error('Failed to upload/publish audio:', error);
           this.mediaService.uploading.set(false);
-          this.snackBar.open('Failed to send voice message', 'Close', { duration: 3000 });
+          this.snackBar.open('Failed to publish audio clip.', 'Close', { duration: 3000 });
         }
       }
     });
