@@ -427,15 +427,13 @@ export class ListsComponent implements OnInit {
     // }, 30000);
 
     try {
-      // Load standard lists (10000 series)
-      this.logger.info('[ListsComponent] Loading standard lists...');
-      await this.loadStandardLists(pubkey);
-      this.logger.info('[ListsComponent] Standard lists loaded successfully');
+      // Load standard lists (10000 series) and sets (30000 series) in parallel
+      this.logger.info('[ListsComponent] Loading lists and sets...');
 
-      // Load sets (30000 series)
-      this.logger.info('[ListsComponent] Loading sets...');
-      await this.loadSets(pubkey);
-      this.logger.info('[ListsComponent] Sets loaded successfully');
+      await Promise.all([
+        this.loadStandardLists(pubkey),
+        this.loadSets(pubkey)
+      ]);
 
       this.logger.info('[ListsComponent] All lists loaded successfully');
     } catch (error) {
@@ -454,7 +452,9 @@ export class ListsComponent implements OnInit {
    */
   private async loadStandardLists(pubkey: string) {
     this.logger.debug(`[ListsComponent] Loading standard lists for ${STANDARD_LISTS.length} types`);
-    const listsMap = new Map<number, ListData>();
+
+    // Reset to empty map to start fresh
+    this.standardListsData.set(new Map<number, ListData>());
 
     for (const listType of STANDARD_LISTS) {
       try {
@@ -474,7 +474,12 @@ export class ListsComponent implements OnInit {
           this.logger.debug(`[ListsComponent] Found event for kind ${listType.kind}, parsing...`);
           const listData = await this.parseListEvent(record.event, listType);
           if (listData) {
-            listsMap.set(listType.kind, listData);
+            // Update signal incrementally
+            this.standardListsData.update(map => {
+              const newMap = new Map(map);
+              newMap.set(listType.kind, listData);
+              return newMap;
+            });
             this.logger.debug(`[ListsComponent] Successfully parsed list for kind ${listType.kind}`);
           }
         } else {
@@ -484,9 +489,6 @@ export class ListsComponent implements OnInit {
         this.logger.debug(`[ListsComponent] Error loading list for kind ${listType.kind}:`, error);
       }
     }
-
-    this.logger.debug(`[ListsComponent] Setting ${listsMap.size} standard lists`);
-    this.standardListsData.set(listsMap);
   }
 
   /**
@@ -494,7 +496,9 @@ export class ListsComponent implements OnInit {
    */
   private async loadSets(pubkey: string) {
     this.logger.debug(`[ListsComponent] Loading sets for ${LIST_SETS.length} types`);
-    const setsMap = new Map<number, ListData[]>();
+
+    // Reset to empty map to start fresh
+    this.setsData.set(new Map<number, ListData[]>());
 
     for (const listType of LIST_SETS) {
       try {
@@ -524,7 +528,12 @@ export class ListsComponent implements OnInit {
           }
 
           if (sets.length > 0) {
-            setsMap.set(listType.kind, sets);
+            // Update signal incrementally
+            this.setsData.update(map => {
+              const newMap = new Map(map);
+              newMap.set(listType.kind, sets);
+              return newMap;
+            });
             this.logger.debug(`[ListsComponent] Added ${sets.length} sets for kind ${listType.kind}`);
           }
         } else {
@@ -534,9 +543,6 @@ export class ListsComponent implements OnInit {
         this.logger.debug(`[ListsComponent] Error loading sets for kind ${listType.kind}:`, error);
       }
     }
-
-    this.logger.debug(`[ListsComponent] Setting ${setsMap.size} set types`);
-    this.setsData.set(setsMap);
   }
 
   /**
