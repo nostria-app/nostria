@@ -245,3 +245,20 @@
     margin-right: 0.25rem;
   }
 }
+
+.deep-resolution-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.deep-resolution-progress {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  margin: 16px 0;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  color: var(--mat-sys-on-surface);
+}

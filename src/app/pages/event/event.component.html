@@ -74,6 +74,20 @@
 @if (error()) {
 <div class="warn">
   {{ error() }}
+  @if (error() === 'Event not found') {
+  <div class="deep-resolution-actions">
+    <button mat-flat-button (click)="startDeepResolution()" [disabled]="isLoading()">
+      Try Deep Resolution
+    </button>
+  </div>
+  }
+</div>
+}
+
+@if (deepResolutionProgress()) {
+<div class="deep-resolution-progress">
+  <mat-spinner diameter="20"></mat-spinner>
+  <span>{{ deepResolutionProgress() }}</span>
 </div>
 }
 
