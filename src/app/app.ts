@@ -1070,14 +1070,18 @@ export class App implements OnInit {
   }
 
   onWindowKeyDown(event: KeyboardEvent): void {
+    if (event.defaultPrevented) {
+      return;
+    }
+
     // ALT+N shortcut to open create options (global shortcut)
     if (event.altKey && event.key.toLowerCase() === 'n') {
       event.preventDefault();
       this.openCreateOptions();
     }
 
-    // Ctrl+K or Cmd+K to open command palette
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+    // Alt+P to open command palette
+    if (event.altKey && event.key.toLowerCase() === 'p') {
       event.preventDefault();
       this.openCommandPalette();
     }
