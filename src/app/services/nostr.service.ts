@@ -8,7 +8,7 @@ import {
   getEventHash,
 } from 'nostr-tools/pure';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
-import { nip19, nip98 } from 'nostr-tools';
+import { nip19, nip98, nip04, nip44 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
 import { kinds, SimplePool } from 'nostr-tools';
@@ -691,7 +691,7 @@ export class NostrService implements NostriaService {
 
         const eventJson = JSON.stringify(unsignedEvent);
         const encodedJson = encodeURIComponent(eventJson);
-        
+
         // Construct the nostrsigner URL
         // compressionType=none&returnType=signature&type=sign_event
         const url = `nostrsigner:${encodedJson}?compressionType=none&returnType=signature&type=sign_event`;
@@ -714,7 +714,7 @@ export class NostrService implements NostriaService {
 
         // The result can be a signature string or a full JSON event
         const signature = result.trim();
-        
+
         // Check if it's a JSON object (full event)
         if (signature.startsWith('{')) {
           try {
@@ -722,11 +722,11 @@ export class NostrService implements NostriaService {
             if (parsedEvent.sig) {
               signedEvent = parsedEvent;
             } else if (parsedEvent.signature) {
-               // Some signers might return { signature: ... } ?
-               // But NIP-55 says returnType=signature returns just the signature string usually, 
-               // or returnType=event returns the full event.
-               // If user pasted full event:
-               signedEvent = parsedEvent;
+              // Some signers might return { signature: ... } ?
+              // But NIP-55 says returnType=signature returns just the signature string usually, 
+              // or returnType=event returns the full event.
+              // If user pasted full event:
+              signedEvent = parsedEvent;
             }
           } catch {
             // Not JSON, assume it's signature
@@ -1328,40 +1328,101 @@ export class NostrService implements NostriaService {
       });
 
       const privateKey = generateSecretKey();
+      const clientPubkey = getPublicKey(privateKey);
 
       const pool = new SimplePool();
-      const bunker = BunkerSigner.fromBunker(privateKey, bunkerParsed!, { pool });
-      await bunker.connect();
 
-      const remotePublicKey = await bunker.getPublicKey();
-      console.log('Remote Public Key:', remotePublicKey);
-
-      this.logger.info('Using remote signer account');
-      // jack
-      const newUser: NostrUser = {
-        privkey: bytesToHex(privateKey),
-        pubkey: remotePublicKey,
-        name: 'Remote Signer',
-        source: 'remote', // With 'remote' type, the actually stored pubkey is not connected with the prvkey.
-        bunker: bunkerParsed!,
-        lastUsed: Date.now(),
-        hasActivated: true,
-      };
-
-      await this.setAccount(newUser);
-      this.logger.debug('Remote signer account set successfully', {
-        pubkey: remotePublicKey,
+      // Create a promise that rejects if we receive an error response
+      let errorListener: (reason?: any) => void;
+      const errorPromise = new Promise((_, reject) => {
+        errorListener = reject;
       });
 
-      this.logger.info('Nostr Connect login successful', { pubkey });
+      // Monitor for error messages
+      const sub = pool.subscribeMany(
+        bunkerParsed!.relays,
+        {
+          kinds: [24133],
+          authors: [bunkerParsed!.pubkey],
+          '#p': [clientPubkey],
+        },
+        {
+          onevent: async (event) => {
+            try {
+              let response: { error?: string };
 
-      return {
-        pubkey,
-        relays,
-        secret,
-      };
+              if (event.content.includes('?iv=')) {
+                const decrypted = await nip04.decrypt(bytesToHex(privateKey), bunkerParsed!.pubkey, event.content);
+                response = JSON.parse(decrypted);
+              } else {
+                // Try NIP-44 decryption first
+                try {
+                  const conversationKey = nip44.getConversationKey(privateKey, bunkerParsed!.pubkey);
+                  const decrypted = nip44.decrypt(event.content, conversationKey);
+                  response = JSON.parse(decrypted);
+                } catch {
+                  // Not NIP-44 or failed, try plain JSON
+                  try {
+                    response = JSON.parse(event.content);
+                  } catch {
+                    // Assume content is the error message itself if it's not JSON
+                    response = { error: event.content };
+                  }
+                }
+              }
+
+              if (response.error) {
+                this.logger.error('Nostr Connect Error:', response.error);
+                if (errorListener) {
+                  errorListener(new Error(response.error));
+                }
+              }
+            } catch (e) {
+              console.error('Error processing NIP-46 response:', e);
+            }
+          }
+        }
+      );
+
+      const bunker = BunkerSigner.fromBunker(privateKey, bunkerParsed!, { pool });
+
+      try {
+        // Race between connection/getPublicKey and error response
+        await Promise.race([bunker.connect(), errorPromise]);
+
+        const remotePublicKey = await Promise.race([bunker.getPublicKey(), errorPromise]) as string;
+        console.log('Remote Public Key:', remotePublicKey);
+
+        this.logger.info('Using remote signer account');
+        // jack
+        const newUser: NostrUser = {
+          privkey: bytesToHex(privateKey),
+          pubkey: remotePublicKey,
+          name: 'Remote Signer',
+          source: 'remote', // With 'remote' type, the actually stored pubkey is not connected with the prvkey.
+          bunker: bunkerParsed!,
+          lastUsed: Date.now(),
+          hasActivated: true,
+        };
+
+        await this.setAccount(newUser);
+        this.logger.debug('Remote signer account set successfully', {
+          pubkey: remotePublicKey,
+        });
+
+        this.logger.info('Nostr Connect login successful', { pubkey });
+
+        return {
+          pubkey,
+          relays,
+          secret,
+        };
+      } finally {
+        // Always close the subscription
+        sub.close();
+      }
     } catch (error) {
-      this.logger.error('Error parsing Nostr Connect URL:', error);
+      this.logger.error('Login with Nostr Connect failed:', error);
       throw error;
     }
   }
