@@ -92,6 +92,7 @@ export class EventPageComponent {
   );
 
   showCompletionStatus = signal(false);
+  deepResolutionProgress = signal<string>('');
 
   constructor() {
     // this.item = this.route.snapshot.data['data'];
@@ -180,6 +181,7 @@ export class EventPageComponent {
       this.isLoadingReplies.set(true);
       this.error.set(null);
       this.showCompletionStatus.set(false);
+      this.deepResolutionProgress.set('');
 
       // Reset state
       this.parentEvents.set([]);
@@ -301,6 +303,61 @@ export class EventPageComponent {
       setTimeout(() => {
         this.scrollToMainEventWithRetry(attempt + 1, maxAttempts);
       }, delay);
+    }
+  }
+
+  async startDeepResolution() {
+    const nevent = this.dialogEventId() || this.routeParams()?.get('id');
+    if (!nevent) return;
+
+    this.isLoading.set(true);
+    this.error.set(null);
+    this.deepResolutionProgress.set('Starting deep resolution...');
+
+    try {
+      // Decode to get hex ID
+      let hex = nevent;
+      if (!this.utilities.isHex(nevent)) {
+        const decoded = this.utilities.decode(nevent);
+        if (decoded.type === 'note') {
+          hex = decoded.data;
+        } else if (decoded.type === 'nevent') {
+          hex = decoded.data.id;
+        } else if (decoded.type === 'naddr') {
+          // Addressable events might need different handling, but let's assume we can't deep resolve them by ID easily without kind/pubkey
+          // But loadEventWithDeepResolution takes a string, presumably hex ID.
+          // If it's naddr, we might not have a single hex ID to search for unless we know the event ID.
+          // But loadEvent handles naddr separately.
+          // If we are here, loadEvent failed.
+          this.error.set('Cannot perform deep resolution on this event type');
+          this.isLoading.set(false);
+          return;
+        }
+      }
+
+      const event = await this.eventService.loadEventWithDeepResolution(hex, (current, total, relays) => {
+        this.deepResolutionProgress.set(`Scanning batch ${current}/${total} (${relays.length} relays)...`);
+      });
+
+      if (event) {
+        this.deepResolutionProgress.set('Event found! Loading thread...');
+        // Update item so loadEvent picks it up
+        if (!this.item) {
+          this.item = { title: '', description: '' };
+        }
+        this.item.event = event;
+
+        // Restart loading
+        await this.loadEvent(nevent);
+      } else {
+        this.error.set('Event not found');
+        this.deepResolutionProgress.set('');
+        this.isLoading.set(false);
+      }
+    } catch (err) {
+      this.logger.error('Deep resolution error:', err);
+      this.error.set('Deep resolution failed');
+      this.isLoading.set(false);
     }
   }
 }

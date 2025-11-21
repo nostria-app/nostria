@@ -489,15 +489,8 @@ export class EventService {
         }
       }
 
-      // If event not found through normal means, attempt deep resolution
-      this.logger.info('[Deep Resolution] Event not found through normal channels, attempting deep resolution for:', hex);
-      const foundEvent = await this.loadEventWithDeepResolution(hex);
-
-      if (foundEvent) {
-        this.logger.info('[Deep Resolution] Event found via deep resolution!', foundEvent.id);
-        return foundEvent;
-      }
-
+      // If event not found through normal means, we return null.
+      // Deep resolution should be triggered manually by the user in the UI.
       return null;
     } catch (error) {
       this.logger.error('Error in getEventFromUrl:', error);
