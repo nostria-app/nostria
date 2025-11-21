@@ -314,7 +314,7 @@
       </mat-menu>
       <button mat-icon-button type="button" (click)="toggleRecording()" [color]="isRecording() ? 'warn' : ''"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
-        matTooltip="Dictate note">
+        [matTooltip]="isRecording() ? 'Stop listening' : 'Dictate note'">
         @if (isTranscribing()) {
         <mat-icon class="spinning">sync</mat-icon>
         } @else if (isRecording()) {
@@ -323,6 +323,13 @@
         <mat-icon>mic</mat-icon>
         }
       </button>
+      @if (recordingHistory.length > 0) {
+      <button mat-icon-button type="button" (click)="undoLastRecording()"
+        [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions() || isTranscribing()"
+        matTooltip="Undo last recording">
+        <mat-icon>undo</mat-icon>
+      </button>
+      }
       <button mat-icon-button type="button" (click)="openFileDialog()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
         [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Upload image">
