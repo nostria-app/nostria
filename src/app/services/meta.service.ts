@@ -95,7 +95,9 @@ export class MetaService {
         content: config.description,
       });
     if (config.image) this.meta.updateTag({ name: 'twitter:image', content: config.image });
-  }  /**
+  }
+
+  /**
    * Gets a link element if it exists
    * @param rel The rel attribute to look for
    * @returns The link element or null if not found
