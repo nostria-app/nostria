@@ -14,6 +14,8 @@ export class AccountRelayService extends RelayServiceBase {
   constructor() {
     // TODO: We always create a new instance here that will be immediately destroyed by setAccount.
     super(new SimplePool());
+    // Ensure we always connect to all account relays to maximize data availability
+    this.useOptimizedRelays = false;
   }
 
   async setAccount(pubkey: string, destroy = false): Promise<{
