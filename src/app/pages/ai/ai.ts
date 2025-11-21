@@ -146,14 +146,13 @@ export class AiComponent implements OnInit {
     }
   ]);
 
-  inputText = signal('Hello world! This is a test of the local AI models running in your browser.');
+  inputText = signal(`Hi and welcome to Nostria. We're here to help you.`);
   outputText = signal('');
   selectedTranslationModel = signal('Xenova/opus-mt-en-de');
 
   speakers = [
-    { name: 'Demo Speaker (US Female)', id: 'cmu_us_slt_arctic-wav-arctic_a0001', url: '/assets/embeddings/cmu_us_slt_arctic-wav-arctic_a0001.bin' },
-    { name: 'Female', id: 'cmu_us_clb_arctic-wav-arctic_a0144', url: '/assets/embeddings/cmu_us_clb_arctic-wav-arctic_a0144.bin' },
-    { name: 'Male', id: 'cmu_us_bdl_arctic-wav-arctic_a0009', url: '/assets/embeddings/cmu_us_bdl_arctic-wav-arctic_a0009.bin' },
+    { name: 'Female', id: 'cmu_us_slt_arctic-wav-arctic_a0001', url: '/assets/embeddings/cmu_us_slt_arctic-wav-arctic_a0001.bin' },
+    { name: 'Male', id: 'cmu_us_ksp_arctic-wav-arctic_a0584', url: '/assets/embeddings/cmu_us_ksp_arctic-wav-arctic_a0584.bin' },
   ];
   selectedSpeaker = signal(this.speakers[0]);
   isGenerating = signal(false);
