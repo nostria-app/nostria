@@ -5,3 +5,4 @@ export { PlaylistEventComponent } from './playlist-event.component';
 export { StarterPackEventComponent } from './starter-pack-event.component';
 export { PollEventComponent } from './poll-event.component';
 export { LiveEventComponent } from './live-event.component';
+export { AudioEventComponent } from './audio-event.component';

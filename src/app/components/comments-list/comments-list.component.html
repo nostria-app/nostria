@@ -3,14 +3,14 @@
     <button mat-button (click)="toggleComments()" class="comments-toggle">
       <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
       @if (!hasLoadedInitial()) {
-      <span>View Comments</span>
+      <span>View {{ label() }}</span>
       } @else {
-      <span>{{ commentCount() }} {{ commentCount() === 1 ? 'Comment' : 'Comments' }}</span>
+      <span>{{ commentCount() }} {{ commentCount() === 1 ? singularLabel() : label() }}</span>
       }
     </button>
 
     @if (isExpanded()) {
-    <button mat-icon-button (click)="onAddComment()" matTooltip="Add comment">
+    <button mat-icon-button (click)="onAddComment()" [matTooltip]="'Add ' + singularLabel().toLowerCase()">
       <mat-icon>add_comment</mat-icon>
     </button>
     }

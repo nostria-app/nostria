@@ -1,0 +1,28 @@
+.audio-event-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.content-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background-color: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.audio-player-wrapper {
+  width: 100%;
+}
+
+.description {
+  font-size: 14px;
+  color: var(--mat-sys-on-surface);
+  white-space: pre-wrap;
+  word-break: break-word;
+}

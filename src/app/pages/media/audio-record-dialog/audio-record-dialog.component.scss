@@ -3,6 +3,17 @@
   padding: 16px;
 }
 
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+
+  h2 {
+    margin: 0;
+  }
+}
+
 .content {
   display: flex;
   flex-direction: column;

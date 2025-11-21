@@ -32,6 +32,7 @@ import {
   VideoEventComponent,
   PollEventComponent,
   LiveEventComponent,
+  AudioEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -73,6 +74,7 @@ type EventCardAppearance = 'card' | 'plain';
     StarterPackEventComponent,
     PollEventComponent,
     LiveEventComponent,
+    AudioEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
