@@ -4,8 +4,8 @@
     <mat-form-field appearance="outline">
       <mat-label>Source Language</mat-label>
       <mat-select [ngModel]="sourceLang()" (ngModelChange)="sourceLang.set($event)">
-        @for (lang of availableLanguages(); track lang) {
-        <mat-option [value]="lang">{{ lang }}</mat-option>
+        @for (lang of availableLanguages(); track lang.code) {
+        <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
         }
       </mat-select>
     </mat-form-field>
@@ -15,8 +15,8 @@
     <mat-form-field appearance="outline">
       <mat-label>Target Language</mat-label>
       <mat-select [ngModel]="targetLang()" (ngModelChange)="targetLang.set($event)">
-        @for (lang of availableLanguages(); track lang) {
-        <mat-option [value]="lang">{{ lang }}</mat-option>
+        @for (lang of availableLanguages(); track lang.code) {
+        <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
         }
       </mat-select>
     </mat-form-field>

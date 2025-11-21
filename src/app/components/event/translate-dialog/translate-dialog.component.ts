@@ -49,15 +49,6 @@ export class TranslateDialogComponent {
     models.forEach(model => {
       const parts = model.replace('Xenova/opus-mt-', '').split('-');
       if (parts.length >= 2) {
-        languages.add(parts[0]);
-        // Handle cases like 'en-es' where 'es' is target
-        // But some models are 'mul-en', 'en-mul'.
-        // Let's just add all parts that look like lang codes.
-        // Actually, we should probably list pairs?
-        // Or just list all unique codes and let the user pick, then find a model.
-        // If no direct model, we might fail.
-
-        // Better approach: List all unique codes found in either position.
         parts.forEach(p => {
           if (p.length >= 2 && p.length <= 3 && p !== 'mul' && p !== 'gem' && p !== 'gmw' && p !== 'big' && p !== 'tc') {
             languages.add(p);
@@ -66,7 +57,17 @@ export class TranslateDialogComponent {
       }
     });
 
-    return Array.from(languages).sort();
+    const displayNames = new Intl.DisplayNames(['en'], { type: 'language' });
+
+    return Array.from(languages)
+      .map(code => {
+        try {
+          return { code, name: displayNames.of(code) || code };
+        } catch {
+          return { code, name: code };
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
   });
 
   constructor() {
