@@ -22,6 +22,7 @@ export class ProfileStateService {
   replies = signal<NostrRecord[]>([]);
   articles = signal<NostrRecord[]>([]);
   media = signal<NostrRecord[]>([]);
+  audio = signal<NostrRecord[]>([]);
   reactions = signal<NostrRecord[]>([]);
 
   // Current profile pubkey
@@ -116,6 +117,7 @@ export class ProfileStateService {
     this.replies.set([]);
     this.articles.set([]);
     this.media.set([]);
+    this.audio.set([]);
     this.reactions.set([]);
     this.hasMoreNotes.set(true);
     this.hasMoreArticles.set(true);
@@ -147,6 +149,24 @@ export class ProfileStateService {
       items.push(...this.replies());
     }
 
+    // Add audio if enabled
+    if (filter.showAudio) {
+      items.push(...this.audio());
+    }
+
+    // Add video if enabled
+    if (filter.showVideo) {
+      // Filter media for video kinds
+      const videoEvents = this.media().filter(
+        m =>
+          m.event.kind === 21 ||
+          m.event.kind === 22 ||
+          m.event.kind === 34235 ||
+          m.event.kind === 34236
+      );
+      items.push(...videoEvents);
+    }
+
     // Add reactions if enabled
     if (filter.showReactions) {
       items.push(...this.reactions());
@@ -171,6 +191,12 @@ export class ProfileStateService {
   // Update timeline filter options
   updateTimelineFilter(filter: Partial<TimelineFilterOptions>): void {
     this.timelineFilter.update(current => ({ ...current, ...filter }));
+
+    // Reload data with new filter to ensure we have the content for enabled filters
+    const pubkey = this.pubkey();
+    if (pubkey) {
+      this.loadUserData(pubkey);
+    }
   }
 
   // Reset timeline filter to defaults
@@ -254,14 +280,28 @@ export class ProfileStateService {
     const currentFilter = this.timelineFilter();
     const kindsToQuery: number[] = [];
 
-    // Always query for basic types (we'll filter them in the computed signal)
-    kindsToQuery.push(
-      kinds.ShortTextNote,
-      kinds.LongFormArticle,
-      kinds.Repost,
-      kinds.GenericRepost,
-      20, 21, 22, 34235, 34236 // Media kinds: Picture (20), Video (21), Short Video (22), Addressable Video (34235), Addressable Short Video (34236)
-    );
+    // Always query for articles and pictures (for media tab)
+    kindsToQuery.push(kinds.LongFormArticle, 20);
+
+    // Add notes/replies if either is enabled
+    if (currentFilter.showNotes || currentFilter.showReplies) {
+      kindsToQuery.push(kinds.ShortTextNote);
+    }
+
+    // Add reposts if enabled
+    if (currentFilter.showReposts) {
+      kindsToQuery.push(kinds.Repost, kinds.GenericRepost);
+    }
+
+    // Add audio if enabled
+    if (currentFilter.showAudio) {
+      kindsToQuery.push(1222, 1244);
+    }
+
+    // Add video if enabled
+    if (currentFilter.showVideo) {
+      kindsToQuery.push(21, 22, 34235, 34236);
+    }
 
     // Optionally add reactions if enabled
     if (currentFilter.showReactions) {
@@ -350,6 +390,18 @@ export class ProfileStateService {
           }
           console.log('Adding new media:', event.id);
           return [...media, record];
+        });
+      } else if (event.kind === 1222 || event.kind === 1244) {
+        // Handle audio events
+        const record = this.utilities.toRecord(event);
+        this.audio.update(audio => {
+          const exists = audio.some(a => a.event.id === event.id);
+          if (exists) {
+            console.log('Duplicate audio event prevented:', event.id);
+            return audio;
+          }
+          console.log('Adding new audio:', event.id);
+          return [...audio, record];
         });
       } else if (event.kind === kinds.Reaction) {
         // Handle reaction events (Kind 7)
@@ -476,10 +528,28 @@ export class ProfileStateService {
       const newReplies: NostrRecord[] = [];
       const newReposts: NostrRecord[] = [];
       const newReactions: NostrRecord[] = [];
+      const newAudio: NostrRecord[] = [];
+      const newMedia: NostrRecord[] = [];
 
       // Build the kinds array based on filter options
       const currentFilter = this.timelineFilter();
-      const kindsToQuery: number[] = [kinds.ShortTextNote, kinds.Repost, kinds.GenericRepost, 1222];
+      const kindsToQuery: number[] = [];
+
+      if (currentFilter.showNotes || currentFilter.showReplies) {
+        kindsToQuery.push(kinds.ShortTextNote);
+      }
+
+      if (currentFilter.showReposts) {
+        kindsToQuery.push(kinds.Repost, kinds.GenericRepost);
+      }
+
+      if (currentFilter.showAudio) {
+        kindsToQuery.push(1222, 1244);
+      }
+
+      if (currentFilter.showVideo) {
+        kindsToQuery.push(21, 22, 34235, 34236);
+      }
 
       // Optionally add reactions if enabled
       if (currentFilter.showReactions) {
@@ -565,11 +635,42 @@ export class ProfileStateService {
           if (!exists) {
             newReactions.push(record);
           }
+        } else if (event.kind === 1222 || event.kind === 1244) {
+          // Handle audio
+          const record: NostrRecord = {
+            event: event,
+            data: event.content,
+          };
+
+          const existingAudio = this.audio();
+          const exists = existingAudio.some(a => a.event.id === event.id);
+
+          if (!exists) {
+            newAudio.push(record);
+          }
+        } else if (
+          event.kind === 21 ||
+          event.kind === 22 ||
+          event.kind === 34235 ||
+          event.kind === 34236
+        ) {
+          // Handle video (media)
+          const record: NostrRecord = {
+            event: event,
+            data: event.content,
+          };
+
+          const existingMedia = this.media();
+          const exists = existingMedia.some(m => m.event.id === event.id);
+
+          if (!exists) {
+            newMedia.push(record);
+          }
         }
       }
 
       this.logger.debug(
-        `Loaded ${newNotes.length} more notes, ${newReplies.length} more replies, ${newReposts.length} more reposts, and ${newReactions.length} more reactions`
+        `Loaded ${newNotes.length} more notes, ${newReplies.length} more replies, ${newReposts.length} more reposts, ${newReactions.length} more reactions, ${newAudio.length} more audio, ${newMedia.length} more video`
       );
 
       // Track if we added any new content
@@ -651,6 +752,42 @@ export class ProfileStateService {
         });
       }
 
+      // Add new audio to the existing ones with final deduplication check
+      if (newAudio.length > 0) {
+        this.audio.update(existing => {
+          const filtered = newAudio.filter(
+            newItem => !existing.some(existingItem => existingItem.event.id === newItem.event.id)
+          );
+          console.log(
+            `Adding ${filtered.length} new audio (${newAudio.length - filtered.length} duplicates filtered)`
+          );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
+          return [...existing, ...filtered];
+        });
+      }
+
+      // Add new media (video) to the existing ones with final deduplication check
+      if (newMedia.length > 0) {
+        this.media.update(existing => {
+          const filtered = newMedia.filter(
+            newItem => !existing.some(existingItem => existingItem.event.id === newItem.event.id)
+          );
+          console.log(
+            `Adding ${filtered.length} new media (${newMedia.length - filtered.length} duplicates filtered)`
+          );
+
+          if (filtered.length > 0) {
+            addedAnyContent = true;
+          }
+
+          return [...existing, ...filtered];
+        });
+      }
+
       // Only keep hasMoreNotes true if we actually added new content
       if (!addedAnyContent) {
         this.hasMoreNotes.set(false);
@@ -659,7 +796,14 @@ export class ProfileStateService {
       }
 
       this.isLoadingMoreNotes.set(false);
-      return [...newNotes, ...newReplies, ...newReposts, ...newReactions];
+      return [
+        ...newNotes,
+        ...newReplies,
+        ...newReposts,
+        ...newReactions,
+        ...newAudio,
+        ...newMedia,
+      ];
     } catch (error) {
       this.logger.error('Failed to load more notes:', error);
       this.isLoadingMoreNotes.set(false);

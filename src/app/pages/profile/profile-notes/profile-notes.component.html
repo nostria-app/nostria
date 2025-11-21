@@ -97,6 +97,24 @@
             <span class="option-description">Comments on other posts</span>
           </div>
 
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showAudio" (change)="updateFilter('showAudio', $event.checked)"
+              color="primary">
+              <mat-icon>audiotrack</mat-icon>
+              <span>Audio Clips</span>
+            </mat-slide-toggle>
+            <span class="option-description">Audio posts and music</span>
+          </div>
+
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showVideo" (change)="updateFilter('showVideo', $event.checked)"
+              color="primary">
+              <mat-icon>movie</mat-icon>
+              <span>Video Clips</span>
+            </mat-slide-toggle>
+            <span class="option-description">Video posts and clips</span>
+          </div>
+
           <div class="filter-divider"></div>
 
           <div class="filter-option advanced-option">
@@ -140,6 +158,24 @@
               <span>Replies</span>
             </mat-slide-toggle>
             <span class="option-description">Comments on other posts</span>
+          </div>
+
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showAudio" (change)="updateFilter('showAudio', $event.checked)"
+              color="primary">
+              <mat-icon>audiotrack</mat-icon>
+              <span>Audio Clips</span>
+            </mat-slide-toggle>
+            <span class="option-description">Audio posts and music</span>
+          </div>
+
+          <div class="filter-option">
+            <mat-slide-toggle [checked]="timelineFilter.showVideo" (change)="updateFilter('showVideo', $event.checked)"
+              color="primary">
+              <mat-icon>movie</mat-icon>
+              <span>Video Clips</span>
+            </mat-slide-toggle>
+            <span class="option-description">Video posts and clips</span>
           </div>
 
           <div class="filter-divider"></div>
