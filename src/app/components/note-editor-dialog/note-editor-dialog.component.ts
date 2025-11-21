@@ -160,6 +160,15 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
 
+  // Silence detection
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private microphone: MediaStreamAudioSourceNode | null = null;
+  private silenceStart: number | null = null;
+  private animationFrameId: number | null = null;
+  private readonly SILENCE_THRESHOLD = 0.02; // Adjust as needed
+  private readonly SILENCE_DURATION = 3000; // 3 seconds
+
   // Computed hashtags from content
   hashtags = computed(() => {
     const content = this.content();
@@ -1795,17 +1804,61 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       this.mediaRecorder.onstop = async () => {
         const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
         await this.transcribeAudio(audioBlob);
-        
+
         // Stop all tracks
         stream.getTracks().forEach(track => track.stop());
       };
 
       this.mediaRecorder.start();
       this.isRecording.set(true);
+
+      // Start silence detection
+      this.startSilenceDetection(stream);
     } catch (err) {
       console.error('Error accessing microphone:', err);
       this.snackBar.open('Error accessing microphone', 'Close', { duration: 3000 });
     }
+  }
+
+  startSilenceDetection(stream: MediaStream) {
+    this.audioContext = new AudioContext();
+    this.analyser = this.audioContext.createAnalyser();
+    this.microphone = this.audioContext.createMediaStreamSource(stream);
+    this.microphone.connect(this.analyser);
+
+    this.analyser.fftSize = 2048;
+    const bufferLength = this.analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    this.silenceStart = Date.now();
+
+    const checkSilence = () => {
+      if (!this.isRecording()) return;
+
+      this.analyser!.getByteTimeDomainData(dataArray);
+
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const x = (dataArray[i] - 128) / 128.0;
+        sum += x * x;
+      }
+      const rms = Math.sqrt(sum / bufferLength);
+
+      if (rms < this.SILENCE_THRESHOLD) {
+        if (this.silenceStart === null) {
+          this.silenceStart = Date.now();
+        } else if (Date.now() - this.silenceStart > this.SILENCE_DURATION) {
+          this.stopRecording();
+          return;
+        }
+      } else {
+        this.silenceStart = null;
+      }
+
+      this.animationFrameId = requestAnimationFrame(checkSilence);
+    };
+
+    checkSilence();
   }
 
   stopRecording() {
@@ -1813,6 +1866,21 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       this.mediaRecorder.stop();
       this.isRecording.set(false);
     }
+
+    // Clean up silence detection
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+
+    this.analyser = null;
+    this.microphone = null;
+    this.silenceStart = null;
   }
 
   adjustTextareaHeight(): void {
@@ -1840,7 +1908,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       const audioData = audioBuffer.getChannelData(0);
 
       const result = await this.aiService.transcribeAudio(audioData) as { text: string };
-      
+
       if (result && result.text) {
         const currentContent = this.content();
         const newContent = currentContent ? currentContent + ' ' + result.text.trim() : result.text.trim();
