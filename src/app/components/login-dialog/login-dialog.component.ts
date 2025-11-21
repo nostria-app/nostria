@@ -544,9 +544,17 @@ export class LoginDialogComponent {
       this.closeDialog();
     } catch (err) {
       this.logger.error('Login with Nostr Connect failed', err);
-      this.nostrConnectError.set(
-        err instanceof Error ? err.message : 'Failed to connect using Nostr Connect'
-      );
+
+      let errorMessage = 'Failed to connect using Nostr Connect';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err && typeof err === 'object' && 'toString' in err) {
+        errorMessage = err.toString();
+      }
+
+      this.nostrConnectError.set(errorMessage);
       this.nostrConnectLoading.set(false);
     }
   }
