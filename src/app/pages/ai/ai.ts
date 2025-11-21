@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTabsModule } from '@angular/material/tabs';
 import { firstValueFrom } from 'rxjs';
 import { AiService } from '../../services/ai.service';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
@@ -44,7 +45,8 @@ interface ModelInfo {
     MatTooltipModule,
     FormsModule,
     MatDialogModule,
-    MatProgressSpinnerModule
+    MatProgressSpinnerModule,
+    MatTabsModule
   ],
   templateUrl: './ai.html',
   styleUrl: './ai.scss'
@@ -54,6 +56,8 @@ export class AiComponent implements OnInit {
   private dialog = inject(MatDialog);
 
   displayedColumns: string[] = ['info', 'size', 'status', 'actions'];
+
+  languageModels = signal<ModelInfo[]>([]);
 
   models = signal<ModelInfo[]>([
     {
@@ -89,39 +93,39 @@ export class AiComponent implements OnInit {
       loaded: false,
       cached: false
     },
-    {
-      id: 'Xenova/opus-mt-en-de',
-      task: 'translation',
-      name: 'English to German',
-      description: 'Translation',
-      size: '~160MB',
-      loading: false,
-      progress: 0,
-      loaded: false,
-      cached: false
-    },
-    {
-      id: 'Xenova/opus-mt-en-es',
-      task: 'translation',
-      name: 'English to Spanish',
-      description: 'Translation',
-      size: '~110MB',
-      loading: false,
-      progress: 0,
-      loaded: false,
-      cached: false
-    },
-    {
-      id: 'Xenova/opus-mt-en-fr',
-      task: 'translation',
-      name: 'English to French',
-      description: 'Translation',
-      size: '~107MB',
-      loading: false,
-      progress: 0,
-      loaded: false,
-      cached: false
-    },
+    // {
+    //   id: 'Xenova/opus-mt-en-de',
+    //   task: 'translation',
+    //   name: 'English to German',
+    //   description: 'Translation',
+    //   size: '~160MB',
+    //   loading: false,
+    //   progress: 0,
+    //   loaded: false,
+    //   cached: false
+    // },
+    // {
+    //   id: 'Xenova/opus-mt-en-es',
+    //   task: 'translation',
+    //   name: 'English to Spanish',
+    //   description: 'Translation',
+    //   size: '~110MB',
+    //   loading: false,
+    //   progress: 0,
+    //   loaded: false,
+    //   cached: false
+    // },
+    // {
+    //   id: 'Xenova/opus-mt-en-fr',
+    //   task: 'translation',
+    //   name: 'English to French',
+    //   description: 'Translation',
+    //   size: '~107MB',
+    //   loading: false,
+    //   progress: 0,
+    //   loaded: false,
+    //   cached: false
+    // },
     {
       id: 'Xenova/whisper-tiny.en',
       task: 'automatic-speech-recognition',
@@ -160,15 +164,63 @@ export class AiComponent implements OnInit {
   audioUrl = signal<string | null>(null);
 
   async ngOnInit() {
+    // Populate language models
+    const displayNames = new Intl.DisplayNames(['en'], { type: 'language' });
+    const langs = this.aiService.availableTranslationModels.map(id => {
+      const parts = id.replace('Xenova/opus-mt-', '').split('-');
+      let name = id;
+      if (parts.length >= 2) {
+        const source = parts[parts.length - 2];
+        const target = parts[parts.length - 1];
+        try {
+          const sourceName = displayNames.of(source) || source;
+          const targetName = displayNames.of(target) || target;
+          name = `${sourceName} to ${targetName}`;
+        } catch {
+          name = `${source} to ${target}`;
+        }
+      }
+
+      return {
+        id: id,
+        task: 'translation',
+        name: name,
+        description: 'Translation',
+        size: '~80MB',
+        loading: false,
+        progress: 0,
+        loaded: false,
+        cached: false
+      };
+    });
+
+    // Sort by name
+    langs.sort((a, b) => a.name.localeCompare(b.name));
+    this.languageModels.set(langs);
+
     // Check cache status for all models
     for (const model of this.models()) {
       const status = await this.aiService.checkModel(model.task, model.id);
       this.updateModelStatus(model.id, { loaded: status.loaded, cached: status.cached });
     }
+
+    // Check cache status for language models (in parallel to avoid blocking too long)
+    // Or maybe just check them one by one but don't await the whole loop?
+    // Let's do it one by one for now to avoid overwhelming the worker if it's single threaded for checks.
+    for (const model of this.languageModels()) {
+      // We can fire and forget or await. Awaiting might be slow if there are many.
+      // But checkModel is fast if it just checks cache/loaded map.
+      this.aiService.checkModel(model.task, model.id).then(status => {
+        this.updateModelStatus(model.id, { loaded: status.loaded, cached: status.cached });
+      });
+    }
   }
 
   updateModelStatus(id: string, updates: Partial<ModelInfo>) {
     this.models.update(models =>
+      models.map(m => m.id === id ? { ...m, ...updates } : m)
+    );
+    this.languageModels.update(models =>
       models.map(m => m.id === id ? { ...m, ...updates } : m)
     );
   }
