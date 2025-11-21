@@ -5,7 +5,7 @@
       <mat-label>Source Language</mat-label>
       <mat-select [ngModel]="sourceLang()" (ngModelChange)="sourceLang.set($event)">
         @for (lang of availableLanguages(); track lang) {
-          <mat-option [value]="lang">{{ lang }}</mat-option>
+        <mat-option [value]="lang">{{ lang }}</mat-option>
         }
       </mat-select>
     </mat-form-field>
@@ -16,28 +16,28 @@
       <mat-label>Target Language</mat-label>
       <mat-select [ngModel]="targetLang()" (ngModelChange)="targetLang.set($event)">
         @for (lang of availableLanguages(); track lang) {
-          <mat-option [value]="lang">{{ lang }}</mat-option>
+        <mat-option [value]="lang">{{ lang }}</mat-option>
         }
       </mat-select>
     </mat-form-field>
   </div>
 
   @if (isTranslating()) {
-    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-    <p class="status">Translating...</p>
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  <p class="status">Translating...</p>
   }
 
   @if (error()) {
-    <p class="error">{{ error() }}</p>
+  <p class="error">{{ error() }}</p>
   }
 
   @if (translatedText()) {
-    <div class="result">
-      <h3>Result:</h3>
-      <p>{{ translatedText() }}</p>
-    </div>
+  <div class="result">
+    <h3>Result:</h3>
+    <p>{{ translatedText() }}</p>
+  </div>
   } @else if (!isTranslating() && !error()) {
-      <p class="preview">Original: {{ data.content | slice:0:100 }}{{ data.content.length > 100 ? '...' : '' }}</p>
+  <p class="preview">Original: {{ data.content | slice:0:100 }}{{ data.content.length > 100 ? '...' : '' }}</p>
   }
 
 </mat-dialog-content>
