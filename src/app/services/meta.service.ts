@@ -95,7 +95,9 @@ export class MetaService {
         content: config.description,
       });
     if (config.image) this.meta.updateTag({ name: 'twitter:image', content: config.image });
-  }  /**
+  }
+
+  /**
    * Gets a link element if it exists
    * @param rel The rel attribute to look for
    * @returns The link element or null if not found
@@ -134,6 +136,11 @@ export class MetaService {
     let eventImageUrl = this.extractImageUrlFromImeta(data.tags);
     if (!eventImageUrl) {
       eventImageUrl = this.extractImageUrlFromContent(data.content);
+    }
+
+    // If no regular image found, try to extract YouTube thumbnail
+    if (!eventImageUrl) {
+      eventImageUrl = this.extractYouTubeThumbnailFromContent(data.content);
     }
 
     if (eventImageUrl) {
@@ -181,5 +188,44 @@ export class MetaService {
     const match = content.match(urlRegex);
 
     return match ? match[0] : null;
+  }
+
+  /**
+   * Extract YouTube thumbnail URL from content if it contains a YouTube video
+   * @param content The content to search for YouTube URLs
+   * @returns YouTube thumbnail URL or null if no YouTube video found
+   */
+  private extractYouTubeThumbnailFromContent(content: string): string | null {
+    if (!content) return null;
+
+    const youtubeId = this.extractYouTubeId(content);
+    if (youtubeId) {
+      return `https://img.youtube.com/vi/${youtubeId}/0.jpg`;
+    }
+
+    return null;
+  }
+
+  /**
+   * Extract YouTube video ID from various URL formats
+   * @param url The URL or content to extract YouTube ID from
+   * @returns YouTube video ID or null if not found
+   */
+  private extractYouTubeId(url: string): string | null {
+    if (!url) return null;
+
+    // Handle youtube.com/embed/ format
+    const embedMatch = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/);
+    if (embedMatch) return embedMatch[1];
+
+    // Handle youtube.com/watch?v= format
+    const watchMatch = url.match(/[?&]v=([a-zA-Z0-9_-]+)/);
+    if (watchMatch) return watchMatch[1];
+
+    // Handle youtu.be/ format
+    const shortMatch = url.match(/youtu\.be\/([a-zA-Z0-9_-]+)/);
+    if (shortMatch) return shortMatch[1];
+
+    return null;
   }
 }
