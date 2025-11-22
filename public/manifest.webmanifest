@@ -31,6 +31,14 @@
     {
       "protocol": "nostr",
       "url": "/?nostr=%s"
+    },
+    {
+      "protocol": "web+nostr+walletconnect",
+      "url": "/?nwc=%s"
+    },
+    {
+      "protocol": "nostr+walletconnect",
+      "url": "/?nwc=%s"
     }
   ],
   "features": [
