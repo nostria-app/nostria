@@ -383,12 +383,17 @@ export class MediaPlayerService implements OnInitialized {
     });
   }
 
-  private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS' {
+  private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS' | 'LiveKit' {
     if (!url) return 'Music';
 
     // Check for YouTube URLs
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       return 'YouTube';
+    }
+
+    // Check for LiveKit streams
+    if (url.toLowerCase().startsWith('wss+livekit')) {
+      return 'LiveKit';
     }
 
     // Check for HLS streams (.m3u8)

@@ -227,7 +227,8 @@ export class LiveEventComponent {
       title: title,
       artist: 'Live Stream',
       artwork: thumbnail,
-      type: url.toLowerCase().includes('.m3u8') ? 'HLS' : 'Video',
+      type: url.toLowerCase().includes('.m3u8') ? 'HLS' :
+        url.toLowerCase().startsWith('wss+livekit') ? 'LiveKit' : 'Video',
       isLiveStream: true, // Mark as live stream
       participants: this.participants(), // Pass participant data
       liveEventData: this.event(), // Pass full event data

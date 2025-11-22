@@ -13,7 +13,7 @@ export interface MediaItem {
   title: string;
   artist: string;
   source: string;
-  type: 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS';
+  type: 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS' | 'LiveKit';
   isLiveStream?: boolean; // Flag for live streaming content
   participants?: Array<{ pubkey: string; role?: string }>; // Live stream participants
   liveEventData?: Event; // Full Nostr event for live streams
