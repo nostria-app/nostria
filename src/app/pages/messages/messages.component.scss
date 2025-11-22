@@ -1,3 +1,9 @@
+:host {
+  display: block;
+  height: 100%;
+  overflow: hidden;
+}
+
 .messages {
   display: flex;
   flex-wrap: nowrap;
@@ -157,12 +163,12 @@
 }
 
 .message-list {
-  height: 100%;
   flex: 1;
   /* takes all remaining space */
   overflow-y: auto;
   /* enable scrolling if needed */
   padding: 0 0.4rem;
+  min-height: 0;
 }
 
 .message-input-container {
