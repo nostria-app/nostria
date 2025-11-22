@@ -80,6 +80,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       keywords: ['profile', 'me', 'account', 'user']
     },
     {
+      id: 'nav-profile-edit',
+      label: 'Edit Profile',
+      icon: 'edit',
+      action: () => this.router.navigate(['/p', this.accountState.pubkey(), 'edit']), // Assuming /profile redirects to current user
+      keywords: ['profile', 'me', 'account', 'user', 'edit']
+    },
+    {
       id: 'nav-feeds',
       label: 'Open Feeds',
       icon: 'dynamic_feed',

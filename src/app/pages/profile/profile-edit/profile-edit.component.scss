@@ -62,6 +62,19 @@
   display: flex;
   justify-content: center;
 
+  .preview-wrapper {
+    position: relative;
+    display: inline-block;
+
+    .remove-button {
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      z-index: 1;
+      transform: scale(0.8);
+    }
+  }
+
   img {
     max-width: 100%;
     border-radius: 4px;

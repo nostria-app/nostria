@@ -359,4 +359,30 @@ export class ProfileEditComponent implements OnInit {
   navigateToMediaSettings(): void {
     this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
   }
+
+  removeImage(type: 'profile' | 'banner'): void {
+    if (type === 'profile') {
+      this.previewProfileImage.set(null);
+      this.profile.update(p => ({
+        ...p,
+        picture: '',
+        pictureUrl: '',
+        selectedProfileFile: null,
+      }));
+      // Reset file input if it exists
+      const fileInput = document.querySelector('input[type="file"][accept="image/*"]') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    } else {
+      this.previewBanner.set(null);
+      this.profile.update(p => ({
+        ...p,
+        banner: '',
+        bannerUrl: '',
+        selectedBannerFile: null,
+      }));
+      // Reset file input if it exists
+      const fileInput = document.querySelectorAll('input[type="file"][accept="image/*"]')[1] as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+    }
+  }
 }
