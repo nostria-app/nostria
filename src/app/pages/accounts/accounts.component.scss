@@ -143,13 +143,17 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
+  min-width: 0; // Allow flex item to shrink below content size
+  padding-right: 48px; // Avoid overlap with delete button
 
   .account-name {
     font-weight: 500;
     margin: 0;
-    padding-right: 80px;
     font-size: 16px;
     margin-bottom: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
   .account-details-container {
     display: flex;
@@ -157,7 +161,17 @@
     gap: 2px;
   }
 
-  .account-npub,
+  .account-npub {
+    margin: 0;
+    color: var(--mat-text-secondary-color);
+    font-size: 12px;
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+
   .account-source {
     margin: 0;
     color: var(--mat-text-secondary-color);
