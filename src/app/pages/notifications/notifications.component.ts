@@ -302,6 +302,7 @@ export class NotificationsComponent implements OnInit {
       const neventId = nip19.neventEncode({
         id: contentNotif.eventId,
         author: contentNotif.authorPubkey,
+        kind: contentNotif.kind,
       });
       this.router.navigate(['/e', neventId]);
       return;

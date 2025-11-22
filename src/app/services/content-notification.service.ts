@@ -175,6 +175,7 @@ export class ContentNotificationService {
               authorPubkey: event.pubkey,
               recipientPubkey: pubkey, // The account that received this notification
               eventId: event.id,
+              kind: 3,
               timestamp: event.created_at * 1000, // Convert to milliseconds
             });
           }
@@ -221,6 +222,7 @@ export class ContentNotificationService {
             authorPubkey: event.pubkey,
             recipientPubkey: pubkey,
             eventId: event.id,
+            kind: 1,
             timestamp: event.created_at * 1000,
             metadata: {
               content: event.content,
@@ -261,6 +263,7 @@ export class ContentNotificationService {
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: event.id,
+          kind: 6,
           timestamp: event.created_at * 1000,
         });
       }
@@ -304,6 +307,7 @@ export class ContentNotificationService {
             authorPubkey: event.pubkey,
             recipientPubkey: pubkey,
             eventId: event.id,
+            kind: 1,
             timestamp: event.created_at * 1000,
             metadata: {
               content: event.content,
@@ -475,6 +479,7 @@ export class ContentNotificationService {
     authorPubkey: string;
     recipientPubkey: string; // The account that received this notification
     eventId?: string;
+    kind?: number;
     timestamp: number;
     metadata?: {
       content?: string;
@@ -528,6 +533,7 @@ export class ContentNotificationService {
       recipientPubkey: data.recipientPubkey, // Store which account received this notification
       authorPubkey: data.authorPubkey,
       eventId: data.eventId,
+      kind: data.kind,
       metadata: data.metadata,
     };
 
