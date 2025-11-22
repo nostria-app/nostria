@@ -44,7 +44,13 @@
 
         @if (previewProfileImage()) {
         <div class="preview-container">
-          <img [src]="previewProfileImage()" class="profile-preview" alt="Profile Preview" />
+          <div class="preview-wrapper">
+            <img [src]="previewProfileImage()" class="profile-preview" alt="Profile Preview" />
+            <button mat-mini-fab color="warn" class="remove-button" (click)="removeImage('profile')"
+              matTooltip="Remove profile image">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
         </div>
         }
       </div>
@@ -91,7 +97,13 @@
 
         @if (previewBanner()) {
         <div class="preview-container">
-          <img [src]="previewBanner()" class="banner-preview" alt="Banner Preview" />
+          <div class="preview-wrapper">
+            <img [src]="previewBanner()" class="banner-preview" alt="Banner Preview" />
+            <button mat-mini-fab color="warn" class="remove-button" (click)="removeImage('banner')"
+              matTooltip="Remove banner image">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
         </div>
         }
       </div>
