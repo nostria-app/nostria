@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal, ViewChild, ElementRef, AfterViewInit, ChangeDetectionStrategy, OnDestroy } from '@angular/core';
+import { Component, computed, effect, inject, input, signal, ViewChild, ElementRef, AfterViewInit, ChangeDetectionStrategy, OnDestroy, untrack } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -115,7 +115,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      this.subscribeToChatMessages(address);
+      untrack(() => {
+        this.subscribeToChatMessages(address);
+      });
     });
   }
 
