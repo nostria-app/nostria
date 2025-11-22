@@ -152,6 +152,11 @@
       .zap-sender-name {
         font-weight: 500;
         color: var(--mat-sys-on-surface);
+        max-width: 120px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: bottom;
       }
 
       .zap-info {
@@ -196,6 +201,11 @@
   .message-author {
     font-weight: 500;
     color: var(--mat-sys-primary);
+    max-width: 120px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    vertical-align: bottom;
   }
 
   .message-time {
@@ -277,36 +287,66 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+
+    .participant-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 4px 8px;
+      border-radius: 8px;
+
+      &:hover {
+        background: var(--mat-sys-surface-container-highest);
+      }
+
+      app-user-profile {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .participant-role-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: 12px;
+        background: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+        white-space: nowrap;
+      }
+    }
   }
 }
 
-.participant-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  border-radius: 8px;
-  transition: background-color 0.2s;
-  animation: messageSlideIn 0.3s ease-out;
+// Settings view
+.settings-view {
+  grid-row: 2;
+  padding: 16px;
+  overflow-y: auto;
 
-  &:hover {
-    background: var(--mat-sys-surface-container-highest);
+  .settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
   }
 
-  app-user-profile {
-    flex: 1;
-    min-width: 0;
-  }
-
-  .participant-role-badge {
-    display: inline-block;
-    padding: 2px 8px;
+  .setting-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    background: var(--mat-sys-surface-container-high);
     border-radius: 12px;
-    background: var(--mat-sys-primary-container);
-    color: var(--mat-sys-on-primary-container);
-    font-size: 0.75rem;
-    font-weight: 500;
-    flex-shrink: 0;
+
+    .setting-label {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 1rem;
+      color: var(--mat-sys-on-surface);
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+      }
+    }
   }
 }

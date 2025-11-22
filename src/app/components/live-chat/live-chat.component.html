@@ -2,9 +2,10 @@
   <!-- Chat Header -->
   <div class="chat-header">
     <div class="chat-title">
-      <mat-icon>{{ viewMode() === 'chat' ? 'chat' : 'people' }}</mat-icon>
+      <mat-icon>{{ viewMode() === 'chat' ? 'chat' : (viewMode() === 'participants' ? 'people' : 'settings')
+        }}</mat-icon>
       <h3 [matTooltip]="viewMode() === 'chat' ? activeRelays().join('\n') : ''" matTooltipClass="multiline-tooltip">{{
-        viewMode() === 'chat' ? 'Live Chat' : 'Participants' }}</h3>
+        viewMode() === 'chat' ? 'Live Chat' : (viewMode() === 'participants' ? 'Participants' : 'Settings') }}</h3>
       @if (viewMode() === 'chat') {
       <span class="message-count">({{ messages().length }})</span>
       }
@@ -16,6 +17,9 @@
       </mat-button-toggle>
       <mat-button-toggle value="participants" matTooltip="Participants">
         <mat-icon>people</mat-icon>
+      </mat-button-toggle>
+      <mat-button-toggle value="settings" matTooltip="Settings">
+        <mat-icon>settings</mat-icon>
       </mat-button-toggle>
     </mat-button-toggle-group>
   </div>
@@ -34,6 +38,7 @@
 
       @for (message of messages(); track message.event.id) {
       @if (message.type === 'zap') {
+      @if (showZaps()) {
       <div class="chat-message zap-message">
         <div class="zap-header">
           <mat-icon class="zap-icon">bolt</mat-icon>
@@ -46,6 +51,7 @@
         <div class="zap-content">{{ message.content }}</div>
         }
       </div>
+      }
       } @else {
       <div class="chat-message" [class.reply]="message.replyTo">
         <app-user-profile [pubkey]="message.pubkey" view="compact" [hostWidthAuto]="true" />
@@ -96,6 +102,22 @@
         }
       </div>
       }
+    </div>
+  </div>
+  }
+
+  <!-- Settings View -->
+  @if (viewMode() === 'settings') {
+  <div class="settings-view">
+    <div class="settings-list">
+      <div class="setting-item">
+        <div class="setting-label">
+          <mat-icon>bolt</mat-icon>
+          <span>Show Zaps</span>
+        </div>
+        <mat-slide-toggle [checked]="showZaps()" (change)="showZaps.set($event.checked)" color="primary">
+        </mat-slide-toggle>
+      </div>
     </div>
   </div>
   }

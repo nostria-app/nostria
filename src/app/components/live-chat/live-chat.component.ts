@@ -7,6 +7,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Event } from 'nostr-tools';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
@@ -43,6 +44,7 @@ interface ChatMessage {
     MatFormFieldModule,
     MatTooltipModule,
     MatButtonToggleModule,
+    MatSlideToggleModule,
     UserProfileComponent,
     ProfileDisplayNameComponent,
   ],
@@ -81,8 +83,11 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   // Message input
   messageInput = signal('');
 
-  // View mode: 'chat' or 'participants'
-  viewMode = signal<'chat' | 'participants'>('chat');
+  // View mode: 'chat' or 'participants' or 'settings'
+  viewMode = signal<'chat' | 'participants' | 'settings'>('chat');
+
+  // Settings
+  showZaps = signal(true);
 
   // Computed participants from event
   participants = computed(() => {
@@ -326,12 +331,10 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  toggleView(mode: 'chat' | 'participants'): void {
-    this.viewMode.set(mode);
-
-    // Scroll to bottom when switching to chat view
+  toggleView(mode: string) {
+    this.viewMode.set(mode as 'chat' | 'participants' | 'settings');
     if (mode === 'chat') {
-      setTimeout(() => this.scrollToBottom(), 100);
+      setTimeout(() => this.scrollToBottom(), 50);
     }
   }
 
