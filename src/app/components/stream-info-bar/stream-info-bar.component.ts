@@ -882,6 +882,7 @@ export class StreamInfoBarComponent implements OnDestroy {
         undefined,
       recipientMetadata: parsedMetadata,
       eventId: event.id, // Reference the stream event
+      eventKind: event.kind, // Reference the stream event kind
       goalEventId: this.zapGoalEvent()?.id, // Reference the goal event if it exists
       eventContent: `Live stream: ${this.title()}`,
     };

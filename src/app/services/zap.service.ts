@@ -405,7 +405,8 @@ export class ZapService {
     eventId?: string,
     lnurl?: string,
     relays: string[] = [],
-    goalEventId?: string
+    goalEventId?: string,
+    eventKind?: number
   ): Promise<UnsignedEvent> {
     const currentUser = this.accountState.account();
     if (!currentUser) {
@@ -434,8 +435,12 @@ export class ZapService {
 
     if (eventId) {
       tags.push(['e', eventId]);
-      // Add the kind of the target event if it's a note
-      tags.push(['k', '1']);
+      // Add the kind of the target event if provided, otherwise default to 1 (text note)
+      if (eventKind !== undefined) {
+        tags.push(['k', eventKind.toString()]);
+      } else {
+        tags.push(['k', '1']);
+      }
     }
 
     if (goalEventId) {
@@ -735,7 +740,9 @@ export class ZapService {
         message,
         event.id,
         payment.metadata!,
-        payment.relay ? [payment.relay] : undefined
+        payment.relay ? [payment.relay] : undefined,
+        undefined, // goalEventId
+        event.kind // eventKind
       );
 
       try {
@@ -772,7 +779,8 @@ export class ZapService {
     eventId?: string,
     recipientMetadata?: Record<string, unknown>,
     customRelays?: string[], // Optional: custom relays for the zap request (e.g., for gift subscriptions)
-    goalEventId?: string // Optional: NIP-75 goal event ID
+    goalEventId?: string, // Optional: NIP-75 goal event ID
+    eventKind?: number // Optional: Event kind for the zap request
   ): Promise<void> {
     const startTime = Date.now();
 
@@ -844,7 +852,8 @@ export class ZapService {
             eventId,
             lnurl,
             recipientRelays,
-            goalEventId
+            goalEventId,
+            eventKind
           );
 
           // Sign the zap request
@@ -1302,7 +1311,8 @@ export class ZapService {
     amount: number,
     message?: string,
     eventId?: string,
-    recipientMetadata?: Record<string, unknown>
+    recipientMetadata?: Record<string, unknown>,
+    eventKind?: number
   ): Promise<string> {
     try {
       const amountMsats = amount * 1000;
@@ -1347,7 +1357,10 @@ export class ZapService {
         amountMsats,
         message,
         eventId,
-        lnurl
+        lnurl,
+        [], // relays
+        undefined, // goalEventId
+        eventKind
       );
 
       // Sign the zap request

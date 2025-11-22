@@ -33,6 +33,20 @@
       }
 
       @for (message of messages(); track message.event.id) {
+      @if (message.type === 'zap') {
+      <div class="chat-message zap-message">
+        <div class="zap-header">
+          <mat-icon class="zap-icon">bolt</mat-icon>
+          <app-user-profile [pubkey]="message.zapSender!" view="icon" [hostWidthAuto]="true"
+            class="zap-sender-avatar" />
+          <app-profile-display-name [pubkey]="message.zapSender!" class="zap-sender-name"></app-profile-display-name>
+          <span class="zap-info">zapped <span class="zap-amount">{{ message.zapAmount | number }}</span> sats</span>
+        </div>
+        @if (message.content) {
+        <div class="zap-content">{{ message.content }}</div>
+        }
+      </div>
+      } @else {
       <div class="chat-message" [class.reply]="message.replyTo">
         <app-user-profile [pubkey]="message.pubkey" view="compact" [hostWidthAuto]="true" />
 
@@ -45,6 +59,7 @@
           <div class="message-text">{{ message.content }}</div>
         </div>
       </div>
+      }
       }
     </div>
 

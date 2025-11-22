@@ -17,14 +17,19 @@ import { NostrService } from '../../services/nostr.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { UserDataService } from '../../services/user-data.service';
+import { ZapService } from '../../services/zap.service';
 
 interface ChatMessage {
+  id: string;
   event: Event;
   pubkey: string;
   content: string;
   created_at: number;
   replyTo?: string;
   formattedTime: string;
+  type: 'chat' | 'zap';
+  zapAmount?: number;
+  zapSender?: string;
 }
 
 @Component({
@@ -53,6 +58,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
   private userDataService = inject(UserDataService);
+  private zapService = inject(ZapService);
 
   @ViewChild('messagesContainer') messagesContainer?: ElementRef<HTMLDivElement>;
 
@@ -189,9 +195,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
 
     console.log('[LiveChat] Subscribing to chat messages:', { eventAddress, relayCount: relayUrls.length });
 
-    // Subscribe to kind 1311 chat messages
+    // Subscribe to kind 1311 chat messages and kind 9735 zaps
     const filter = {
-      kinds: [1311],
+      kinds: [1311, 9735],
       '#a': [eventAddress],
       limit: 1000,
     };
@@ -200,34 +206,61 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       relayUrls,
       filter,
       (event: Event) => {
-        // Deduplicate by event ID
-        if (this.messageIds.has(event.id)) {
-          return;
-        }
-
+        // Handle incoming messages
+        if (this.messageIds.has(event.id)) return;
         this.messageIds.add(event.id);
 
-        // Find reply-to event ID from 'e' tag
-        const replyTag = event.tags.find(tag => tag[0] === 'e');
+        let newMessage: ChatMessage | null = null;
 
-        const newMessage: ChatMessage = {
-          event: event,
-          pubkey: event.pubkey,
-          content: event.content,
-          created_at: event.created_at,
-          replyTo: replyTag?.[1],
-          formattedTime: this.formatTimestamp(event.created_at),
-        };
+        if (event.kind === 1311) {
+          const replyTo = event.tags.find(tag => tag[0] === 'e' && tag[3] === 'reply')?.[1];
 
-        // Add message and re-sort
-        this.messages.update(msgs => {
-          const updated = [...msgs, newMessage];
-          updated.sort((a, b) => a.created_at - b.created_at);
-          return updated;
-        });
+          newMessage = {
+            id: event.id,
+            event,
+            pubkey: event.pubkey,
+            content: event.content,
+            created_at: event.created_at,
+            replyTo,
+            formattedTime: new Date(event.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            type: 'chat'
+          };
+        } else if (event.kind === 9735) {
+          // Parse zap receipt
+          const { zapRequest, amount, comment } = this.zapService.parseZapReceipt(event);
 
-        // Auto-scroll to bottom when new messages arrive
-        setTimeout(() => this.scrollToBottom(), 50);
+          if (zapRequest && amount) {
+            newMessage = {
+              id: event.id,
+              event,
+              pubkey: event.pubkey, // This is the provider pubkey
+              content: comment || zapRequest.content,
+              created_at: event.created_at,
+              formattedTime: new Date(event.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              type: 'zap',
+              zapAmount: amount,
+              zapSender: zapRequest.pubkey // This is the actual sender
+            };
+          }
+        }
+
+        if (newMessage) {
+          this.messages.update(msgs => {
+            const newMsgs = [...msgs, newMessage!].sort((a, b) => a.created_at - b.created_at);
+
+            // Keep only last 500 messages to prevent memory issues
+            if (newMsgs.length > 500) {
+              return newMsgs.slice(newMsgs.length - 500);
+            }
+
+            return newMsgs;
+          });
+
+          // Scroll to bottom if user was already at bottom
+          // For now, just scroll to bottom on new messages if it's not initial load
+          // We might want to add "new messages" indicator later
+          setTimeout(() => this.scrollToBottom(), 50);
+        }
       }
     );
   }
