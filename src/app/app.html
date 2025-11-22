@@ -320,10 +320,17 @@
 
         <mat-nav-list>
           @if (app.authenticated()) {
-          <a mat-list-item [routerLink]="accountState.profilePath()" (click)="toggleProfileSidenav()">
-            <mat-icon matListItemIcon>person</mat-icon>
-            <span>My Profile</span>
-          </a>
+          <div class="profile-nav-item-container">
+            <a mat-list-item [routerLink]="accountState.profilePath()" (click)="toggleProfileSidenav()">
+              <mat-icon matListItemIcon>person</mat-icon>
+              <span>My Profile</span>
+            </a>
+            <button mat-icon-button class="profile-edit-button"
+              (click)="$event.stopPropagation(); toggleProfileSidenav()"
+              [routerLink]="accountState.profilePath() + '/edit'" matTooltip="Edit profile" tabindex="0">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </div>
           <a mat-list-item routerLink="/credentials" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>key</mat-icon>
             <span>Credentials</span>

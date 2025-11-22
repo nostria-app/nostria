@@ -485,6 +485,34 @@ mat-sidenav-content {
   }
 }
 
+.profile-nav-item-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  a[mat-list-item] {
+    flex: 1;
+  }
+
+  .profile-edit-button {
+    position: absolute;
+    right: 8px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+    z-index: 1;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  .profile-edit-button:hover {
+    opacity: 1 !important;
+  }
+}
+
 .current-account {
   display: flex;
   align-items: center;
