@@ -1,7 +1,25 @@
 <div class="live-stream-container" [class.fullscreen]="!footer()" [class.footer-mode]="footer()">
   <!-- Single video element - always present, positioned via CSS -->
+  @if (!isLiveKit()) {
   <video #videoElement class="stream-video" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()"
     [muted]="media.muted" autoplay playsinline (error)="onVideoError($event)"></video>
+  } @else {
+  <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
+    <div class="livekit-content">
+      <mat-icon class="livekit-icon">groups</mat-icon>
+      @if (!footer()) {
+      <h3>Interactive Room</h3>
+      <p>This is an interactive LiveKit room. Join to participate!</p>
+      @if (joinUrl()) {
+      <button mat-flat-button color="primary" (click)="openJoinUrl()">
+        <mat-icon>login</mat-icon>
+        Join Room
+      </button>
+      }
+      }
+    </div>
+  </div>
+  }
 
   @if (footer()) {
   <!-- Footer mode - compact controls with video preview -->

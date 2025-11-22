@@ -8,6 +8,7 @@ import {
   afterNextRender,
   OnDestroy,
   input,
+  effect,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
@@ -20,6 +21,9 @@ import { StreamInfoBarComponent } from '../../stream-info-bar/stream-info-bar.co
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { RelayPoolService } from '../../../services/relays/relay-pool';
+import { RelaysService } from '../../../services/relays/relays';
+import { Filter, Event } from 'nostr-tools';
 
 @Component({
   selector: 'app-live-stream-player',
@@ -44,6 +48,8 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
+  private readonly relayPool = inject(RelayPoolService);
+  private readonly relaysService = inject(RelaysService);
 
   footer = input<boolean>(false);
   chatVisible = signal(true);
@@ -51,12 +57,15 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
 
+  private eventSubscription: { close: () => void } | null = null;
+  private currentStreamId: string | null = null;
+
   // Live stream metadata
   streamTitle = computed(() => this.media.current()?.title || 'Live Stream');
   streamStatus = computed(() => {
     const event = this.media.current()?.liveEventData;
     if (!event) return 'live';
-    const statusTag = event.tags.find((tag: any) => tag[0] === 'status');
+    const statusTag = event.tags.find((tag: string[]) => tag[0] === 'status');
     return statusTag?.[1] || 'live';
   });
 
@@ -66,9 +75,35 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   viewerCount = computed(() => {
     const event = this.liveEvent();
     if (!event) return 0;
-    const participantsTag = event.tags.find((tag: any) => tag[0] === 'current_participants');
+    const participantsTag = event.tags.find((tag: string[]) => tag[0] === 'current_participants');
     return participantsTag?.[1] ? parseInt(participantsTag[1], 10) : 0;
   });
+
+  isLiveKit = computed(() => this.media.current()?.type === 'LiveKit');
+
+  // Extract URL from alt tag or service tag
+  joinUrl = computed(() => {
+    const event = this.media.current()?.liveEventData;
+    if (!event) return null;
+
+    const serviceTag = event.tags.find((tag: string[]) => tag[0] === 'service');
+    if (serviceTag?.[1]) return serviceTag[1];
+
+    const altTag = event.tags.find((tag: string[]) => tag[0] === 'alt');
+    if (altTag?.[1]) {
+      const urlMatch = altTag[1].match(/https?:\/\/[^\s]+/);
+      return urlMatch?.[0] || null;
+    }
+
+    return null;
+  });
+
+  openJoinUrl(): void {
+    const url = this.joinUrl();
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }
 
   constructor() {
     if (!this.utilities.isBrowser()) {
@@ -78,10 +113,82 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     afterNextRender(() => {
       this.registerVideoElement();
     });
+
+    // Subscribe to event updates
+    effect(() => {
+      const event = this.media.current()?.liveEventData;
+      const dTag = event?.tags.find((tag: string[]) => tag[0] === 'd')?.[1];
+      const pubkey = event?.pubkey;
+
+      if (!dTag || !pubkey) {
+        if (this.eventSubscription) {
+          this.eventSubscription.close();
+          this.eventSubscription = null;
+        }
+        this.currentStreamId = null;
+        return;
+      }
+
+      const uniqueId = `${pubkey}:${dTag}`;
+
+      if (this.currentStreamId === uniqueId) return;
+      this.currentStreamId = uniqueId;
+
+      this.subscribeToEventUpdates(event!);
+    });
   }
 
   ngOnDestroy(): void {
     this.media.setVideoElement(undefined);
+    if (this.eventSubscription) {
+      this.eventSubscription.close();
+    }
+  }
+
+  private subscribeToEventUpdates(event: Event): void {
+    if (this.eventSubscription) {
+      this.eventSubscription.close();
+    }
+
+    const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1];
+    if (!dTag) return;
+
+    // Get relays from event tags
+    let targetRelays: string[] = [];
+    const relaysTag = event.tags.find((tag: string[]) => tag[0] === 'relays');
+
+    if (relaysTag && relaysTag.length > 1) {
+      targetRelays = relaysTag.slice(1);
+    } else {
+      // Fallback to default relays if none specified
+      targetRelays = this.utilities.preferredRelays;
+    }
+
+    const relayUrls = this.relaysService.getOptimalRelays(targetRelays);
+
+    const filter: Filter = {
+      kinds: [event.kind],
+      authors: [event.pubkey],
+      '#d': [dTag],
+      limit: 1,
+    };
+
+    this.eventSubscription = this.relayPool.subscribe(
+      relayUrls,
+      filter,
+      (newEvent: Event) => {
+        // Update the event data in media player service if newer
+        const currentEvent = this.media.current()?.liveEventData;
+        if (currentEvent && newEvent.created_at > currentEvent.created_at) {
+          this.media.current.update(current => {
+            if (current) {
+              return { ...current, liveEventData: newEvent };
+            }
+            return current;
+          });
+        }
+      }
+    );
   }
 
   registerVideoElement(): void {

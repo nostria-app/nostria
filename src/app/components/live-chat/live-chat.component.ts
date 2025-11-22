@@ -155,7 +155,13 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
 
     let targetRelays: string[] = [];
 
-    if (streamerPubkey) {
+    // Check for relays tag in the event
+    const relaysTag = event?.tags.find(tag => tag[0] === 'relays');
+
+    if (relaysTag && relaysTag.length > 1) {
+      // Use relays specified in the event
+      targetRelays = relaysTag.slice(1);
+    } else if (streamerPubkey) {
       // Get streamer's relays
       targetRelays = await this.userDataService.getUserRelays(streamerPubkey);
     }
