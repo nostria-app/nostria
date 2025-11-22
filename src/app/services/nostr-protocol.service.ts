@@ -2,6 +2,8 @@ import { inject, Injectable } from '@angular/core';
 import { Router } from '@angular/router';
 import { LoggerService } from './logger.service';
 import { nip19 } from 'nostr-tools';
+import { Wallets } from './wallets';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 @Injectable({
   providedIn: 'root',
@@ -9,6 +11,8 @@ import { nip19 } from 'nostr-tools';
 export class NostrProtocolService {
   private readonly router = inject(Router);
   private readonly logger = inject(LoggerService);
+  private readonly wallets = inject(Wallets);
+  private readonly snackBar = inject(MatSnackBar);
 
   /**
    * Handles nostr protocol URLs by parsing the URI and navigating to the appropriate route
@@ -37,8 +41,8 @@ export class NostrProtocolService {
         throw new Error(`Invalid URL format: ${url}`);
       }
 
-      // Extract the nostr parameter from the URL
-      this.logger.debug('[NostrProtocol] Extracting nostr parameter from URL');
+      // Extract parameters from the URL
+      this.logger.debug('[NostrProtocol] Extracting parameters from URL');
       const urlParams = new URLSearchParams(urlObj.search);
       this.logger.debug(
         '[NostrProtocol] URLSearchParams created, available keys:',
@@ -46,12 +50,15 @@ export class NostrProtocolService {
       );
 
       const nostrValue = urlParams.get('nostr');
-      this.logger.debug('[NostrProtocol] Raw nostr parameter value:', nostrValue);
-      this.logger.debug('[NostrProtocol] Nostr value type:', typeof nostrValue);
-      this.logger.debug('[NostrProtocol] Nostr value length:', nostrValue?.length || 'null');
+      const nwcValue = urlParams.get('nwc');
 
-      if (!nostrValue) {
-        this.logger.warn('[NostrProtocol] No nostr parameter found in URL');
+      this.logger.debug('[NostrProtocol] Raw nostr parameter value:', nostrValue);
+      this.logger.debug('[NostrProtocol] Raw nwc parameter value:', nwcValue);
+
+      const valueToProcess = nwcValue || nostrValue;
+
+      if (!valueToProcess) {
+        this.logger.warn('[NostrProtocol] No nostr or nwc parameter found in URL');
         this.logger.warn('[NostrProtocol] Available parameters:', Array.from(urlParams.entries()));
         this.logger.warn('[NostrProtocol] Full URL breakdown:', {
           href: urlObj.href,
@@ -63,9 +70,51 @@ export class NostrProtocolService {
         return;
       }
 
+      // Check for Wallet Connect
+      if (
+        nwcValue ||
+        valueToProcess.startsWith('nostr+walletconnect:') ||
+        valueToProcess.startsWith('web+nostr+walletconnect:')
+      ) {
+        this.logger.info('[NostrProtocol] Wallet Connect protocol detected');
+        try {
+          // Remove web+ prefix if present to get the standard nostr+walletconnect URI
+          let walletConnectUri = valueToProcess;
+          if (walletConnectUri.startsWith('web+')) {
+            walletConnectUri = walletConnectUri.substring(4);
+          }
+
+          const parsed = this.wallets.parseConnectionString(walletConnectUri);
+          this.wallets.addWallet(parsed.pubkey, walletConnectUri, {
+            relay: parsed.relay,
+            secret: parsed.secret,
+          });
+
+          this.snackBar.open('Wallet added successfully', 'Dismiss', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+
+          await this.router.navigate(['/credentials']);
+        } catch (error) {
+          this.logger.error('[NostrProtocol] Failed to add wallet:', error);
+          this.snackBar.open(
+            'Failed to add wallet. Please check the connection string.',
+            'Dismiss',
+            {
+              duration: 3000,
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom',
+            }
+          );
+        }
+        return;
+      }
+
       // Clean the nostr value by removing web+nostr:// protocol wrapper if present
       this.logger.debug('[NostrProtocol] Cleaning nostr value of protocol wrappers');
-      let cleanedNostrValue = nostrValue;
+      let cleanedNostrValue = valueToProcess;
 
       cleanedNostrValue = cleanedNostrValue.replace('web+nostr://', '');
       cleanedNostrValue = cleanedNostrValue.replace('web+nostr:', '');
