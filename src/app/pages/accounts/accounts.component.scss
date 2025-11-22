@@ -43,6 +43,7 @@
   align-items: center;
   background-color: var(--mat-primary-300);
   margin-right: 16px;
+
   &.list-avatar {
     width: 36px;
     height: 36px;
@@ -85,11 +86,13 @@
     color: var(--mat-text-secondary-color);
     font-size: 14px;
   }
+
   .account-source {
     margin: 0;
     color: var(--mat-text-secondary-color);
     font-size: 14px;
   }
+
   .account-npub {
     margin: 0;
     color: var(--mat-text-secondary-color);
@@ -117,6 +120,7 @@
   &:hover {
     background-color: rgba(0, 0, 0, 0.04);
   }
+
   &.current-account-item {
     background-color: rgba(var(--mat-sys-background), 0.08);
     border-left: 4px solid var(--mat-sys-primary);
@@ -155,6 +159,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
   .account-details-container {
     display: flex;
     flex-direction: column;
@@ -189,7 +194,15 @@
   padding: 0;
   height: 32px;
   width: 32px;
-  line-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
 }
 
 .no-accounts {
