@@ -76,16 +76,23 @@
 
 .account-details {
   flex: 1;
+  min-width: 0;
 
   h3 {
     margin: 0 0 4px 0;
     font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .pubkey {
     margin: 0 0 4px 0;
     color: var(--mat-text-secondary-color);
     font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .account-source {
