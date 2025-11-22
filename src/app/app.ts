@@ -400,19 +400,19 @@ export class App implements OnInit {
 
           // Handle nostr protocol links
           const url = launchParams.targetURL;
-          this.logger.debug('[App] Checking if URL contains nostr parameter');
+          this.logger.debug('[App] Checking if URL contains nostr or nwc parameter');
 
-          if (url.includes('nostr=')) {
-            this.logger.info('[App] *** NOSTR PROTOCOL DETECTED IN LAUNCH QUEUE ***');
-            this.logger.info('[App] Processing nostr protocol from launch queue');
-            this.logger.info('[App] URL with nostr parameter:', url);
+          if (url.includes('nostr=') || url.includes('nwc=')) {
+            this.logger.info('[App] *** NOSTR/NWC PROTOCOL DETECTED IN LAUNCH QUEUE ***');
+            this.logger.info('[App] Processing protocol from launch queue');
+            this.logger.info('[App] URL with parameter:', url);
 
             try {
               await this.nostrProtocol.handleNostrProtocol(url);
-              this.logger.info('[App] *** NOSTR PROTOCOL HANDLING COMPLETED SUCCESSFULLY ***');
+              this.logger.info('[App] *** PROTOCOL HANDLING COMPLETED SUCCESSFULLY ***');
             } catch (error) {
-              this.logger.error('[App] *** NOSTR PROTOCOL HANDLING FAILED ***');
-              this.logger.error('[App] Launch queue nostr protocol error:', error);
+              this.logger.error('[App] *** PROTOCOL HANDLING FAILED ***');
+              this.logger.error('[App] Launch queue protocol error:', error);
 
               if (error instanceof Error) {
                 this.logger.error('[App] Launch queue error name:', error.name);
