@@ -104,7 +104,7 @@ export interface TrustMetrics {
   zapCntRecd?: number;
   zapCntSent?: number;
   lastUpdated?: number; // When this data was fetched
-  
+
   // Additional NIP-85 metrics
   hops?: number;
   personalizedGrapeRank_influence?: number;
@@ -196,6 +196,8 @@ export interface ContentNotification extends Notification {
   authorPubkey: string;
   // Optional: the event ID that triggered this notification
   eventId?: string;
+  // Optional: the kind of the event that triggered this notification
+  kind?: number;
   // Optional: additional metadata
   metadata?: {
     content?: string; // For mentions/replies, the text content
