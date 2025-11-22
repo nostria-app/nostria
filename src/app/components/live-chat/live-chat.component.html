@@ -11,7 +11,7 @@
       }
     </div>
 
-    <mat-button-toggle-group [value]="viewMode()" (change)="toggleView($event.value)" class="chat-toggle">
+    <mat-button-toggle-group [hideSingleSelectionIndicator]="true" [value]="viewMode()" (change)="toggleView($event.value)" class="chat-toggle">
       <mat-button-toggle value="chat" matTooltip="Chat">
         <mat-icon>chat</mat-icon>
       </mat-button-toggle>
