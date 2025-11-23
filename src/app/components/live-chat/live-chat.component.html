@@ -11,7 +11,8 @@
       }
     </div>
 
-    <mat-button-toggle-group [hideSingleSelectionIndicator]="true" [value]="viewMode()" (change)="toggleView($event.value)" class="chat-toggle">
+    <mat-button-toggle-group [hideSingleSelectionIndicator]="true" [value]="viewMode()"
+      (change)="toggleView($event.value)" class="chat-toggle">
       <mat-button-toggle value="chat" matTooltip="Chat">
         <mat-icon>chat</mat-icon>
       </mat-button-toggle>
@@ -27,14 +28,14 @@
   <!-- Chat Messages -->
   @if (viewMode() === 'chat') {
   <div class="chat-content-wrapper">
-    <div class="chat-messages" #messagesContainer>
+    <div class="chat-messages" #messagesContainer (scroll)="onScroll()">
       @if (isLoadingOlderMessages()) {
       <div class="loading-older-messages">
         <mat-icon class="spinner">autorenew</mat-icon>
         <span>Loading older messages...</span>
       </div>
       }
-      
+
       @if (messages().length === 0) {
       <div class="no-messages">
         <mat-icon>chat_bubble_outline</mat-icon>
@@ -49,9 +50,8 @@
       <div class="chat-message zap-message">
         <div class="zap-header">
           <mat-icon class="zap-icon">bolt</mat-icon>
-          <app-user-profile [pubkey]="message.zapSender!" view="icon" [hostWidthAuto]="true"
+          <app-user-profile [pubkey]="message.zapSender!" view="compact" [hostWidthAuto]="true"
             class="zap-sender-avatar" />
-          <app-profile-display-name [pubkey]="message.zapSender!" class="zap-sender-name"></app-profile-display-name>
           <span class="zap-info">zapped <span class="zap-amount">{{ message.zapAmount | number }}</span> sats</span>
         </div>
         @if (message.content) {
@@ -61,11 +61,9 @@
       }
       } @else {
       <div class="chat-message" [class.reply]="message.replyTo">
-        <app-user-profile [pubkey]="message.pubkey" view="compact" [hostWidthAuto]="true" />
-
         <div class="message-content">
           <div class="message-header">
-            <app-profile-display-name [pubkey]="message.pubkey" class="message-author"></app-profile-display-name>
+            <app-user-profile [pubkey]="message.pubkey" view="compact" [hostWidthAuto]="true" class="chat-avatar" />
             <span class="message-time">{{ message.formattedTime }}</span>
           </div>
 
@@ -75,6 +73,12 @@
       }
       }
     </div>
+
+    @if (showScrollToBottom()) {
+    <button mat-mini-fab class="scroll-to-bottom-btn" (click)="scrollToBottom()" matTooltip="Go to end">
+      <mat-icon>arrow_downward</mat-icon>
+    </button>
+    }
 
     <!-- Chat Input -->
     <div class="chat-input-container">

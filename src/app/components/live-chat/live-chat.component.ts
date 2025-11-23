@@ -88,17 +88,18 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
 
   // Settings
   showZaps = signal(true);
+  showScrollToBottom = signal(false);
 
   // Pagination state
   private oldestMessageTimestamp: number | null = null;
   isLoadingOlderMessages = signal(false);
   hasMoreMessages = signal(true);
-  // Load 50 messages initially to reduce render time and improve performance
-  private readonly INITIAL_LIMIT = 50;
-  // Load 50 more messages at a time when scrolling up for smooth pagination
-  private readonly LOAD_MORE_LIMIT = 50;
+  // Load 30 messages initially to reduce render time and improve performance
+  private readonly INITIAL_LIMIT = 30;
+  // Load 30 more messages at a time when scrolling up for smooth pagination
+  private readonly LOAD_MORE_LIMIT = 30;
   // Scroll threshold in pixels to trigger loading older messages
-  private readonly SCROLL_THRESHOLD = 100;
+  private readonly SCROLL_THRESHOLD = 200;
 
   // Store bound scroll handler for proper cleanup
   private boundScrollHandler?: () => void;
@@ -149,47 +150,37 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     // Initial scroll to bottom
     setTimeout(() => this.scrollToBottom(), 100);
-    
-    // Add scroll event listener for loading older messages
-    if (this.messagesContainer) {
-      const container = this.messagesContainer.nativeElement;
-      this.boundScrollHandler = this.onScroll.bind(this);
-      container.addEventListener('scroll', this.boundScrollHandler);
-    }
   }
 
   ngOnDestroy(): void {
     if (this.chatSubscription) {
       this.chatSubscription.close();
     }
-    
-    // Clean up scroll event listener
-    if (this.messagesContainer && this.boundScrollHandler) {
-      const container = this.messagesContainer.nativeElement;
-      container.removeEventListener('scroll', this.boundScrollHandler);
-    }
-  }
-
-  private scrollToBottom(): void {
+  } scrollToBottom(): void {
     if (this.messagesContainer) {
       const element = this.messagesContainer.nativeElement;
       element.scrollTop = element.scrollHeight;
+      this.showScrollToBottom.set(false);
     }
   }
 
-  private onScroll(): void {
+  onScroll(): void {
     if (!this.messagesContainer) return;
-    
+
     const container = this.messagesContainer.nativeElement;
     const scrollTop = container.scrollTop;
-    
+    const scrollHeight = container.scrollHeight;
+    const clientHeight = container.clientHeight;
+
     // Check if user scrolled near the top to load older messages
     if (scrollTop < this.SCROLL_THRESHOLD && !this.isLoadingOlderMessages() && this.hasMoreMessages()) {
       this.loadOlderMessages();
     }
-  }
 
-  private async subscribeToChatMessages(eventAddress: string): Promise<void> {
+    // Check if user is near bottom to toggle "Go to end" button
+    const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
+    this.showScrollToBottom.set(!isNearBottom);
+  } private async subscribeToChatMessages(eventAddress: string): Promise<void> {
     // Close existing subscription if any
     if (this.chatSubscription) {
       this.chatSubscription.close();
@@ -456,7 +447,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
 
       // Use a one-time subscription to fetch older messages
       const olderMessages: ChatMessage[] = [];
-      
+
       await new Promise<void>((resolve) => {
         const sub = this.relayPool.subscribe(
           relayUrls,
@@ -464,7 +455,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
           (event: Event) => {
             // Skip if we already have this message
             if (this.messageIds.has(event.id)) return;
-            
+
             let newMessage: ChatMessage | null = null;
 
             if (event.kind === 1311) {
@@ -510,7 +501,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
         // This is a reasonable timeout as Nostr relays typically respond within 1-2 seconds
         setTimeout(() => {
           console.log('[LiveChat] Received', olderMessages.length, 'older messages');
-          
+
           // Close the subscription
           sub.close();
           resolve();
@@ -524,7 +515,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
         // Add older messages to the beginning
         this.messages.update(msgs => {
           const newMsgs = [...olderMessages, ...msgs].sort((a, b) => a.created_at - b.created_at);
-          
+
           // Update oldest timestamp
           if (newMsgs.length > 0) {
             this.oldestMessageTimestamp = newMsgs[0].created_at;
