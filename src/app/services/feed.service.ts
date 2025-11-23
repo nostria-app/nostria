@@ -1944,6 +1944,18 @@ export class FeedService {
 
   /**
    * Load feeds from local storage
+   * 
+   * Feed Initialization Behavior:
+   * 1. First-time users: Default feeds are initialized and saved
+   * 2. Returning users: Existing feeds are loaded from localStorage
+   * 3. Users who deleted all feeds: Empty feed list is preserved (no auto-reset)
+   * 4. Manual reset: User explicitly resets via menu option
+   * 
+   * The feedsInitialized flag ensures that:
+   * - Default feeds are only created for truly new users
+   * - Login method changes (browser extension, nsec, etc.) don't trigger resets
+   * - Intentional feed deletions are respected
+   * - Feed configurations persist across sessions
    */
   private async loadFeeds(): Promise<void> {
     try {
