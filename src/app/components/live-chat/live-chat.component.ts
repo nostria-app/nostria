@@ -89,6 +89,13 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   // Settings
   showZaps = signal(true);
 
+  // Pagination state
+  private oldestMessageTimestamp: number | null = null;
+  isLoadingOlderMessages = signal(false);
+  hasMoreMessages = signal(true);
+  private readonly INITIAL_LIMIT = 50;
+  private readonly LOAD_MORE_LIMIT = 50;
+
   // Computed participants from event
   participants = computed(() => {
     const event = this.liveEvent();
@@ -135,11 +142,23 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     // Initial scroll to bottom
     setTimeout(() => this.scrollToBottom(), 100);
+    
+    // Add scroll event listener for loading older messages
+    if (this.messagesContainer) {
+      const container = this.messagesContainer.nativeElement;
+      container.addEventListener('scroll', this.onScroll.bind(this));
+    }
   }
 
   ngOnDestroy(): void {
     if (this.chatSubscription) {
       this.chatSubscription.close();
+    }
+    
+    // Clean up scroll event listener
+    if (this.messagesContainer) {
+      const container = this.messagesContainer.nativeElement;
+      container.removeEventListener('scroll', this.onScroll.bind(this));
     }
   }
 
@@ -147,6 +166,18 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     if (this.messagesContainer) {
       const element = this.messagesContainer.nativeElement;
       element.scrollTop = element.scrollHeight;
+    }
+  }
+
+  private onScroll(): void {
+    if (!this.messagesContainer) return;
+    
+    const container = this.messagesContainer.nativeElement;
+    const scrollTop = container.scrollTop;
+    
+    // Check if user scrolled to top (with some threshold)
+    if (scrollTop < 100 && !this.isLoadingOlderMessages() && this.hasMoreMessages()) {
+      this.loadOlderMessages();
     }
   }
 
@@ -161,6 +192,8 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     this.messages.set([]);
     this.messageIds.clear();
     this.activeRelays.set([]);
+    this.oldestMessageTimestamp = null;
+    this.hasMoreMessages.set(true);
 
     // Get streamer pubkey from event
     const event = this.liveEvent();
@@ -204,7 +237,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     const filter = {
       kinds: [1311, 9735],
       '#a': [eventAddress],
-      limit: 1000,
+      limit: this.INITIAL_LIMIT,
     };
 
     this.chatSubscription = this.relayPool.subscribe(
@@ -256,6 +289,11 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
         if (newMessage) {
           this.messages.update(msgs => {
             const newMsgs = [...msgs, newMessage!].sort((a, b) => a.created_at - b.created_at);
+
+            // Track oldest message timestamp
+            if (newMsgs.length > 0) {
+              this.oldestMessageTimestamp = newMsgs[0].created_at;
+            }
 
             // Keep only last 500 messages to prevent memory issues
             if (newMsgs.length > 500) {
@@ -370,5 +408,145 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
 
     // Format as time only
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
+
+  private async loadOlderMessages(): Promise<void> {
+    // Don't load if already loading or no more messages
+    if (this.isLoadingOlderMessages() || !this.hasMoreMessages()) {
+      return;
+    }
+
+    // Don't load if we don't have an oldest timestamp yet
+    if (this.oldestMessageTimestamp === null) {
+      return;
+    }
+
+    const address = this.eventAddress();
+    if (!address) return;
+
+    const relayUrls = this.activeRelays();
+    if (relayUrls.length === 0) {
+      return;
+    }
+
+    this.isLoadingOlderMessages.set(true);
+
+    console.log('[LiveChat] Loading older messages before:', this.oldestMessageTimestamp);
+
+    // Save current scroll position to restore it later
+    const container = this.messagesContainer?.nativeElement;
+    const previousScrollHeight = container?.scrollHeight || 0;
+
+    try {
+      // Create a filter for older messages
+      const filter = {
+        kinds: [1311, 9735],
+        '#a': [address],
+        until: this.oldestMessageTimestamp - 1, // Get messages before the oldest one we have
+        limit: this.LOAD_MORE_LIMIT,
+      };
+
+      // Use a one-time subscription to fetch older messages
+      const olderMessages: ChatMessage[] = [];
+      
+      await new Promise<void>((resolve) => {
+        const sub = this.relayPool.subscribe(
+          relayUrls,
+          filter,
+          (event: Event) => {
+            // Skip if we already have this message
+            if (this.messageIds.has(event.id)) return;
+            
+            let newMessage: ChatMessage | null = null;
+
+            if (event.kind === 1311) {
+              const replyTo = event.tags.find(tag => tag[0] === 'e' && tag[3] === 'reply')?.[1];
+
+              newMessage = {
+                id: event.id,
+                event,
+                pubkey: event.pubkey,
+                content: event.content,
+                created_at: event.created_at,
+                replyTo,
+                formattedTime: new Date(event.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                type: 'chat'
+              };
+            } else if (event.kind === 9735) {
+              // Parse zap receipt
+              const { zapRequest, amount, comment } = this.zapService.parseZapReceipt(event);
+
+              if (zapRequest && amount) {
+                newMessage = {
+                  id: event.id,
+                  event,
+                  pubkey: event.pubkey,
+                  content: comment || zapRequest.content,
+                  created_at: event.created_at,
+                  formattedTime: new Date(event.created_at * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                  type: 'zap',
+                  zapAmount: amount,
+                  zapSender: zapRequest.pubkey
+                };
+              }
+            }
+
+            if (newMessage) {
+              olderMessages.push(newMessage);
+              this.messageIds.add(event.id);
+            }
+          }
+        );
+
+        // Wait for messages to arrive (give relays time to respond)
+        setTimeout(() => {
+          console.log('[LiveChat] Received', olderMessages.length, 'older messages');
+          
+          // Close the subscription
+          sub.close();
+          resolve();
+        }, 2000);
+      });
+
+      if (olderMessages.length === 0) {
+        // No more messages to load
+        this.hasMoreMessages.set(false);
+      } else {
+        // Add older messages to the beginning
+        this.messages.update(msgs => {
+          const newMsgs = [...olderMessages, ...msgs].sort((a, b) => a.created_at - b.created_at);
+          
+          // Update oldest timestamp
+          if (newMsgs.length > 0) {
+            this.oldestMessageTimestamp = newMsgs[0].created_at;
+          }
+
+          // Keep only last 500 messages to prevent memory issues
+          if (newMsgs.length > 500) {
+            return newMsgs.slice(newMsgs.length - 500);
+          }
+
+          return newMsgs;
+        });
+
+        // Restore scroll position
+        if (container) {
+          setTimeout(() => {
+            const newScrollHeight = container.scrollHeight;
+            const scrollDiff = newScrollHeight - previousScrollHeight;
+            container.scrollTop = scrollDiff;
+          }, 50);
+        }
+
+        // If we received fewer messages than the limit, we've reached the end
+        if (olderMessages.length < this.LOAD_MORE_LIMIT) {
+          this.hasMoreMessages.set(false);
+        }
+      }
+    } catch (error) {
+      console.error('[LiveChat] Error loading older messages:', error);
+    } finally {
+      this.isLoadingOlderMessages.set(false);
+    }
   }
 }

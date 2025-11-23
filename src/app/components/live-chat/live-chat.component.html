@@ -28,6 +28,13 @@
   @if (viewMode() === 'chat') {
   <div class="chat-content-wrapper">
     <div class="chat-messages" #messagesContainer>
+      @if (isLoadingOlderMessages()) {
+      <div class="loading-older-messages">
+        <mat-icon class="spinner">autorenew</mat-icon>
+        <span>Loading older messages...</span>
+      </div>
+      }
+      
       @if (messages().length === 0) {
       <div class="no-messages">
         <mat-icon>chat_bubble_outline</mat-icon>
