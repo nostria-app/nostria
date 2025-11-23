@@ -16,6 +16,7 @@ import { SettingsService } from '../../../services/settings.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 import { ReportingService } from '../../../services/reporting.service';
+import { LocalSettingsService } from '../../../services/local-settings.service';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -41,6 +42,7 @@ export class PrivacySettingsComponent {
   settingsService = inject(SettingsService);
   imageCacheService = inject(ImageCacheService);
   reportingService = inject(ReportingService);
+  localSettingsService = inject(LocalSettingsService);
   router = inject(Router);
 
   // NIP-56 report types
@@ -59,6 +61,8 @@ export class PrivacySettingsComponent {
   imageCacheInfoContent!: TemplateRef<unknown>;
   @ViewChild('socialSharingInfoContent')
   socialSharingInfoContent!: TemplateRef<unknown>;
+  @ViewChild('trackingRemovalInfoContent')
+  trackingRemovalInfoContent!: TemplateRef<unknown>;
 
   // Compute muted lists using getTags utility function
   mutedAccounts = computed(() => {
@@ -122,6 +126,10 @@ export class PrivacySettingsComponent {
     } catch (error) {
       console.error('Failed to toggle social sharing preview setting', error);
     }
+  }
+
+  toggleRemoveTrackingParameters(): void {
+    this.localSettingsService.toggleRemoveTrackingParameters();
   }
 
   async toggleImageCache(): Promise<void> {
