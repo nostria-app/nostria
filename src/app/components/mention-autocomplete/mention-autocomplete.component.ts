@@ -8,7 +8,6 @@ import {
   signal,
   viewChild,
   ElementRef,
-  OnInit,
   ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
@@ -125,7 +124,7 @@ export interface MentionAutocompleteConfig {
   styleUrl: './mention-autocomplete.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class MentionAutocompleteComponent implements OnInit {
+export class MentionAutocompleteComponent {
   // Services
   private readonly accountState = inject(AccountStateService);
   private readonly followingService = inject(FollowingService);
@@ -183,13 +182,13 @@ export class MentionAutocompleteComponent implements OnInit {
   private scrollEffect = effect(() => {
     const index = this.focusedIndex();
     const visible = this.isVisible();
-    
+
     if (visible) {
       this.scrollToFocusedItem(index);
     }
   });
 
-  ngOnInit(): void {
+  constructor() {
     // Reset focused index when search results change
     effect(() => {
       this.searchResults();
@@ -250,7 +249,7 @@ export class MentionAutocompleteComponent implements OnInit {
     setTimeout(() => {
       const container = this.autocompleteContainer()?.nativeElement;
       const items = container?.querySelectorAll('.mention-item');
-      
+
       if (items && items[index]) {
         const item = items[index] as HTMLElement;
         item.scrollIntoView({
