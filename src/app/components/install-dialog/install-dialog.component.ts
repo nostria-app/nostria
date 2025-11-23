@@ -81,6 +81,20 @@ export interface InstallDialogData {
             </button>
           </div>
         </div>
+
+        <mat-divider></mat-divider>
+
+        <div class="install-option">
+          <mat-icon>android</mat-icon>
+          <div class="option-content">
+            <h3>Download APK</h3>
+            <p>Download the Android package file directly</p>
+            <button mat-stroked-button (click)="downloadApk()">
+              <mat-icon>download</mat-icon>
+              Download APK
+            </button>
+          </div>
+        </div>
         }
 
         @if (data.platformInfo.isAndroid && data.platformInfo.isIOS) {
@@ -299,6 +313,11 @@ export class InstallDialogComponent {
   openPlayStore(): void {
     // TODO: Replace with actual Play Store link when available
     window.open('https://play.google.com/apps/testing/app.nostria.twa', '_blank');
+    this.dialogRef.close();
+  }
+
+  downloadApk(): void {
+    window.open('https://github.com/nostria-app/nostria/releases/download/android-v1.0.5/nostria-android-v1.0.5.apk', '_blank');
     this.dialogRef.close();
   }
 
