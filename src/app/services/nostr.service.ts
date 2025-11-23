@@ -1734,6 +1734,11 @@ export class NostrService implements NostriaService {
     const relayServerUrl = this.region.getRelayServer(accountRegion, 0);
     const relayTags = this.createTags('r', [relayServerUrl!]);
 
+    // Add these 3 default relays, most popular ones.
+    relayTags.push(['r', 'wss://relay.damus.io/']);
+    relayTags.push(['r', 'wss://relay.snort.social/']);
+    relayTags.push(['r', 'wss://nos.lol/']);
+
     // Initialize the account relay so we can start using it
     this.accountRelay.init([relayServerUrl!]);
 
