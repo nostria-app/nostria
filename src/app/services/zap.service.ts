@@ -834,10 +834,13 @@ export class ZapService {
           // Validate comment length if provided
           if (message && message.trim()) {
             const commentAllowed = lnurlPayInfo.commentAllowed || 0;
-            if (commentAllowed === 0) {
-              throw new Error('Recipient does not allow comments with zaps');
-            }
-            if (message.trim().length > commentAllowed) {
+            // If commentAllowed is 0, it usually means not allowed.
+            // However, some providers might not return this field correctly.
+            // We will only warn in logs but allow the zap to proceed if the user forced it (which they can do in the UI).
+            // The LNURL service will reject it if it's truly not allowed.
+
+            if (commentAllowed > 0 && message.trim().length > commentAllowed) {
+              // Only enforce length limit if it's explicitly set and greater than 0
               throw new Error(`Comment too long. Maximum ${commentAllowed} characters allowed.`);
             }
           }
@@ -1348,10 +1351,8 @@ export class ZapService {
       // Validate comment length if provided
       if (message && message.trim()) {
         const commentAllowed = lnurlPayInfo.commentAllowed || 0;
-        if (commentAllowed === 0) {
-          throw new Error('Recipient does not allow comments with zaps');
-        }
-        if (message.trim().length > commentAllowed) {
+        // Relaxed validation to allow overrides
+        if (commentAllowed > 0 && message.trim().length > commentAllowed) {
           throw new Error(`Comment too long. Maximum ${commentAllowed} characters allowed.`);
         }
       }

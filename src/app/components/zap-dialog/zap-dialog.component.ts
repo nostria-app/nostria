@@ -106,6 +106,7 @@ export class ZapDialogComponent {
   lnurlPayInfo = signal<LnurlPayResponse | null>(null);
   isLoadingLnurlInfo = signal(false);
   lnurlError = signal<string | null>(null);
+  forceComment = signal(false); // Added forceComment signal
 
   // Computed property for available wallets
   availableWallets = computed(() => {
@@ -144,6 +145,11 @@ export class ZapDialogComponent {
   commentsAllowed = computed(() => {
     const limit = this.commentLimit();
     return limit !== null && limit > 0;
+  });
+
+  // Computed property to check if we should allow comments
+  shouldAllowComments = computed(() => {
+    return this.commentsAllowed() || this.forceComment();
   });
 
   // Computed property for amount limits
@@ -268,7 +274,11 @@ export class ZapDialogComponent {
 
     // Update message validators and enable/disable based on commentAllowed
     if (messageControl) {
-      if (commentLimit === null) {
+      if (this.forceComment()) {
+        // If forced, allow up to 200 chars (standard Nostr limit usually)
+        messageControl.setValidators([Validators.maxLength(200)]);
+        messageControl.enable();
+      } else if (commentLimit === null) {
         // LNURL info not loaded yet, use conservative default
         messageControl.setValidators([Validators.maxLength(200)]);
         messageControl.enable();
@@ -678,5 +688,10 @@ export class ZapDialogComponent {
 
   close(): void {
     this.dialogRef.close();
+  }
+
+  toggleForceComment(): void {
+    this.forceComment.update(v => !v);
+    this.updateFormValidators();
   }
 }
