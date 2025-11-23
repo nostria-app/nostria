@@ -158,13 +158,24 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       
       if (this.selectedFilter() !== 'none' && canvas) {
         // Capture stream from canvas which has the filter applied
-        recordingStream = canvas.captureStream(30); // 30 fps
+        // Try to match the camera stream's frame rate, default to 30fps
+        const cameraStream = this.stream();
+        const videoTrack = cameraStream?.getVideoTracks()[0];
+        const frameRate = videoTrack?.getSettings().frameRate || 30;
+        
+        recordingStream = canvas.captureStream(frameRate);
         
         // Add audio from the original camera stream
-        const cameraStream = this.stream();
         if (cameraStream) {
           const audioTracks = cameraStream.getAudioTracks();
-          audioTracks.forEach(track => recordingStream.addTrack(track));
+          // Check if audio tracks exist and aren't already in the recording stream
+          const existingAudioTracks = recordingStream.getAudioTracks();
+          audioTracks.forEach(track => {
+            const isDuplicate = existingAudioTracks.some(existing => existing.id === track.id);
+            if (!isDuplicate) {
+              recordingStream.addTrack(track);
+            }
+          });
         }
       } else {
         // Use original camera stream without filter
