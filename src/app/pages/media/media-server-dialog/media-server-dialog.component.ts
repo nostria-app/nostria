@@ -46,10 +46,13 @@ export class MediaServerDialogComponent implements OnInit {
   testing = signal(false);
   testResult: { success: boolean; message: string } | null = null;
 
-  suggestedServers = signal<string[]>([
-    'https://blossom.band/',
-    'https://blossom.primal.net/',
-    'https://blossom.f7z.io/',
+  suggestedServers = signal<{ name: string; url: string }[]>([
+    { name: 'Nostria (Europe)', url: 'https://mibo.eu.nostria.app/' },
+    { name: 'Nostria (USA)', url: 'https://mibo.us.nostria.app/' },
+    { name: 'Nostria (Africa)', url: 'https://mibo.af.nostria.app/' },
+    { name: 'Blossom Band', url: 'https://blossom.band/' },
+    { name: 'Primal', url: 'https://blossom.primal.net/' },
+    { name: 'F7Z', url: 'https://blossom.f7z.io/' },
   ]);
 
   ngOnInit(): void {
