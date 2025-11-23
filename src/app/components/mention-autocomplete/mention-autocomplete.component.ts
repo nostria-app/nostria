@@ -21,6 +21,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { UserRelaysService } from '../../services/relays/user-relays';
 import { NostrRecord } from '../../interfaces';
 import { nip19 } from 'nostr-tools';
+import { FollowingService } from '../../services/following.service';
 
 export interface MentionSelection {
   pubkey: string;
@@ -127,6 +128,7 @@ export interface MentionAutocompleteConfig {
 export class MentionAutocompleteComponent implements OnInit {
   // Services
   private readonly accountState = inject(AccountStateService);
+  private readonly followingService = inject(FollowingService);
   private readonly userRelaysService = inject(UserRelaysService);
   readonly utilities = inject(UtilitiesService);
 
@@ -198,23 +200,27 @@ export class MentionAutocompleteComponent implements OnInit {
   private performSearch(query: string): void {
     if (query.length === 0) {
       // Show recent profiles when no query - just get first few from following list
-      const followingPubkeys = this.accountState.followingList().slice(0, this.maxResults());
-      const recentProfiles: NostrRecord[] = [];
+      const recentProfiles = this.followingService.profiles().slice(0, this.maxResults());
+      
+      // Convert FollowingProfile to NostrRecord
+      const records = recentProfiles
+        .filter(p => p.profile !== null)
+        .map(p => p.profile!);
 
-      for (const pubkey of followingPubkeys) {
-        const profile = this.accountState.getCachedProfile(pubkey);
-        if (profile) {
-          recentProfiles.push(profile);
-        }
-      }
-
-      this.searchResults.set(recentProfiles);
+      this.searchResults.set(records);
       return;
     }
 
-    // Search following profiles first
-    const followingResults = this.accountState.searchProfiles(query);
-    this.searchResults.set(followingResults.slice(0, this.maxResults()));
+    // Search following profiles using FollowingService
+    const followingResults = this.followingService.searchProfiles(query);
+    
+    // Convert FollowingProfile to NostrRecord
+    const records = followingResults
+      .filter(p => p.profile !== null)
+      .map(p => p.profile!)
+      .slice(0, this.maxResults());
+    
+    this.searchResults.set(records);
   }
 
   onKeyDown(event: KeyboardEvent): void {

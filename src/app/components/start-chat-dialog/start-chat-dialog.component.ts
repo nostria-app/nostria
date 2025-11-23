@@ -15,6 +15,7 @@ import { CommonModule } from '@angular/common';
 import { nip19 } from 'nostr-tools';
 
 import { AccountStateService } from '../../services/account-state.service';
+import { FollowingService } from '../../services/following.service';
 import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { NPubPipe } from '../../pipes/npub.pipe';
@@ -49,6 +50,7 @@ export interface StartChatDialogResult {
 export class StartChatDialogComponent {
   private readonly dialogRef = inject(MatDialogRef<StartChatDialogComponent>);
   private readonly accountState = inject(AccountStateService);
+  private readonly followingService = inject(FollowingService);
 
   // Form state
   searchQuery = signal<string>('');
@@ -79,11 +81,17 @@ export class StartChatDialogComponent {
   });
 
   constructor() {
-    // Effect to handle search query changes
+    // Effect to handle search query changes using FollowingService
     effect(() => {
       const query = this.searchQuery().trim();
       if (query.length >= 2) {
-        const results = untracked(() => this.accountState.searchProfiles(query));
+        const results = untracked(() => {
+          const followingResults = this.followingService.searchProfiles(query);
+          // Convert FollowingProfile to NostrRecord
+          return followingResults
+            .filter(p => p.profile !== null)
+            .map(p => p.profile!);
+        });
         this.searchResults.set(results.slice(0, 10)); // Limit to 10 results
       } else {
         this.searchResults.set([]);

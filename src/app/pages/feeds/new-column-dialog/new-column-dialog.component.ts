@@ -22,6 +22,7 @@ import { NostrRecord } from '../../../interfaces';
 import { DataService } from '../../../services/data.service';
 import { EncryptionService } from '../../../services/encryption.service';
 import { LoggerService } from '../../../services/logger.service';
+import { FollowingService } from '../../../services/following.service';
 
 export interface FollowSet {
   id: string; // event id
@@ -101,6 +102,7 @@ export class NewColumnDialogComponent {
   private dialogRef = inject(MatDialogRef<NewColumnDialogComponent>);
   private feedService = inject(FeedService);
   private accountState = inject(AccountStateService);
+  private followingService = inject(FollowingService);
   private followset = inject(Followset);
   private dataService = inject(DataService);
   private encryption = inject(EncryptionService);
@@ -151,21 +153,12 @@ export class NewColumnDialogComponent {
   columnTypes = signal(this.feedService.getFeedTypes());
   nostrKinds = signal(NOSTR_KINDS);
 
-  // Get following users from account state using cached profiles
-  // This uses the same cache as the global search for efficiency
+  // Get following users from FollowingService for better reliability
   followingUsers = computed(() => {
-    const followingPubkeys = this.accountState.followingList();
-    if (!followingPubkeys || followingPubkeys.length === 0) return [];
-
-    const profiles: NostrRecord[] = [];
-    for (const pubkey of followingPubkeys) {
-      const cacheKey = `metadata-${pubkey}`;
-      const profile = this.accountState['cache'].get<NostrRecord>(cacheKey);
-      if (profile) {
-        profiles.push(profile);
-      }
-    }
-    return profiles;
+    const profiles = this.followingService.profiles();
+    return profiles
+      .filter(p => p.profile !== null)
+      .map(p => p.profile!);
   });
 
   // Filtered options for autocomplete
@@ -181,7 +174,7 @@ export class NewColumnDialogComponent {
     });
   });
 
-  // Filtered users for autocomplete using the same search as global search
+  // Filtered users for autocomplete using FollowingService for consistent search
   filteredUsers = computed(() => {
     const input = this.userInputValue();
     if (!input || input.length < 1) {
@@ -191,13 +184,17 @@ export class NewColumnDialogComponent {
       });
     }
 
-    // Use accountState.searchProfiles for consistent search behavior
-    const searchResults = this.accountState.searchProfiles(input);
+    // Use FollowingService.searchProfiles for consistent search behavior
+    const searchResults = this.followingService.searchProfiles(input);
     const selected = this.selectedUsers();
 
-    return searchResults.filter(profile => {
-      return !selected.some(s => s.event.pubkey === profile.event.pubkey);
-    });
+    // Convert FollowingProfile to NostrRecord
+    return searchResults
+      .filter(p => p.profile !== null)
+      .map(p => p.profile!)
+      .filter(profile => {
+        return !selected.some(s => s.event.pubkey === profile.event.pubkey);
+      });
   });
 
   // Filtered starter packs for autocomplete
