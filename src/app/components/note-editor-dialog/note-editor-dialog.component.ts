@@ -78,6 +78,8 @@ interface MediaMetadata {
 interface NoteAutoDraft {
   content: string;
   mentions: string[];
+  mentionMap?: [string, string][];
+  pubkeyToNameMap?: [string, string][];
   showPreview: boolean;
   showAdvancedOptions: boolean;
   expirationEnabled: boolean;
@@ -151,6 +153,11 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   // Signals for reactive state
   content = signal('');
   mentions = signal<string[]>([]);
+
+  // Maps for mention handling
+  private mentionMap = new Map<string, string>(); // @name -> nostr:uri
+  private pubkeyToNameMap = new Map<string, string>(); // pubkey -> name
+
   showPreview = signal(false);
   showAdvancedOptions = signal(false);
   isDragOver = signal(false);
@@ -219,7 +226,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   powMinedEvent = signal<UnsignedEvent | null>(null);
 
   // Computed properties
-  characterCount = computed(() => this.content().length);
+  characterCount = computed(() => this.processContentForPublishing(this.content()).length);
 
   // Current account pubkey for display
   currentAccountPubkey = computed(() => this.accountState.pubkey());
@@ -294,17 +301,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
     if (!content.trim()) return 'Nothing to preview...';
 
-    // const formatted = this.formatPreviewContent(content);
-    return content;
-
-    // if (!this.showPreview()) return this.sanitizer.bypassSecurityTrustHtml('');
-
-    // const content = this.content();
-    // if (!content.trim()) return this.sanitizer.bypassSecurityTrustHtml('<span class="empty-preview">Nothing to preview...</span>');
-
-    // Format the content with better URL handling and line breaks
-    // const formatted = this.formatPreviewContent(content);
-    // return this.sanitizer.bypassSecurityTrustHtml(formatted);
+    return this.processContentForPublishing(content);
   });
 
   // Dialog mode indicators
@@ -479,6 +476,8 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     const autoDraft: NoteAutoDraft = {
       content: this.content(),
       mentions: [...this.mentions()],
+      mentionMap: Array.from(this.mentionMap.entries()),
+      pubkeyToNameMap: Array.from(this.pubkeyToNameMap.entries()),
       showPreview: this.showPreview(),
       showAdvancedOptions: this.showAdvancedOptions(),
       expirationEnabled: this.expirationEnabled(),
@@ -541,6 +540,14 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         if (draftHasMoreContent) {
           this.content.set(autoDraft.content);
           this.mentions.set([...autoDraft.mentions]);
+
+          if (autoDraft.mentionMap) {
+            this.mentionMap = new Map(autoDraft.mentionMap);
+          }
+          if (autoDraft.pubkeyToNameMap) {
+            this.pubkeyToNameMap = new Map(autoDraft.pubkeyToNameMap);
+          }
+
           this.showPreview.set(autoDraft.showPreview);
           this.showAdvancedOptions.set(autoDraft.showAdvancedOptions);
           this.expirationEnabled.set(autoDraft.expirationEnabled);
@@ -588,13 +595,16 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     try {
       let eventToSign: UnsignedEvent;
 
+      // Use processed content for mining and publishing
+      const contentToPublish = this.processContentForPublishing(this.content().trim());
+
       // If PoW is enabled, ensure we have a mined event
       if (this.powEnabled()) {
         // If we don't have a mined event yet, or content has changed, mine it now
-        if (!this.powMinedEvent() || this.powMinedEvent()?.content !== this.content().trim()) {
+        if (!this.powMinedEvent() || this.powMinedEvent()?.content !== contentToPublish) {
           // Build the base event for mining
           const tags = this.buildTags();
-          const baseEvent = this.nostrService.createEvent(1, this.content().trim(), tags);
+          const baseEvent = this.nostrService.createEvent(1, contentToPublish, tags);
 
           // Start mining
           this.snackBar.open('Mining Proof-of-Work before publishing...', '', { duration: 2000 });
@@ -627,7 +637,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       } else {
         // PoW is not enabled, create event normally
         const tags = this.buildTags();
-        eventToSign = this.nostrService.createEvent(1, this.content().trim(), tags);
+        eventToSign = this.nostrService.createEvent(1, contentToPublish, tags);
       }
 
       // Use the centralized publishing service which handles relay distribution
@@ -646,7 +656,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
           // Once we have the event ID, match by that
           const isOurEvent = publishedEventId
             ? relayEvent.event.id === publishedEventId
-            : relayEvent.event.content === this.content().trim();
+            : relayEvent.event.content === contentToPublish;
 
           if (isOurEvent && relayEvent.success) {
             dialogClosed = true;
@@ -781,6 +791,14 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       }
     }
 
+    // Parse NIP-27 references from content and add appropriate tags (NIP-18 for quotes)
+    // This is optional according to NIP-27, but recommended for notifications
+    const contentToPublish = this.processContentForPublishing(this.content());
+    this.extractNip27Tags(contentToPublish, tags);
+
+    // Extract hashtags from content and add as t-tags
+    this.extractHashtags(contentToPublish, tags);
+
     // Add mention tags (avoid duplicates with existing p tags)
     const existingPubkeys = new Set(tags.filter(tag => tag[0] === 'p').map(tag => tag[1]));
     this.mentions().forEach(pubkey => {
@@ -788,13 +806,6 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
         tags.push(['p', pubkey]);
       }
     });
-
-    // Parse NIP-27 references from content and add appropriate tags (NIP-18 for quotes)
-    // This is optional according to NIP-27, but recommended for notifications
-    this.extractNip27Tags(this.content(), tags);
-
-    // Extract hashtags from content and add as t-tags
-    this.extractHashtags(this.content(), tags);
 
     // Add expiration tag if enabled
     if (this.expirationEnabled()) {
@@ -1166,10 +1177,30 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     const detection = this.mentionDetection();
     if (!detection) return;
 
+    // Generate display name
+    let name = selection.displayName || 'unknown';
+    // Sanitize name to avoid issues with regex or confusing characters if needed
+    // For now, just ensure it doesn't have newlines
+    name = name.replace(/\s+/g, '_');
+
+    let textToInsert = `@${name}`;
+
+    // Handle collisions
+    if (this.mentionMap.has(textToInsert) && this.mentionMap.get(textToInsert) !== selection.nprofileUri) {
+      let counter = 1;
+      while (this.mentionMap.has(`${textToInsert}_${counter}`) && this.mentionMap.get(`${textToInsert}_${counter}`) !== selection.nprofileUri) {
+        counter++;
+      }
+      textToInsert = `${textToInsert}_${counter}`;
+    }
+
+    this.mentionMap.set(textToInsert, selection.nprofileUri);
+    this.pubkeyToNameMap.set(selection.pubkey, name);
+
     // Replace the mention in the content
     const replacement = this.mentionInputService.replaceMention(
       detection,
-      selection.nprofileUri
+      textToInsert
     );
 
     // Update content
@@ -1778,7 +1809,8 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     try {
       // Build the base event
       const tags = this.buildTags();
-      const baseEvent = this.nostrService.createEvent(1, this.content().trim(), tags);
+      const contentToPublish = this.processContentForPublishing(this.content().trim());
+      const baseEvent = this.nostrService.createEvent(1, contentToPublish, tags);
 
       // Start mining
       this.snackBar.open('Starting Proof-of-Work mining...', 'Close', { duration: 2000 });
@@ -2001,5 +2033,25 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     } finally {
       this.isTranscribing.set(false);
     }
+  }
+
+  private processContentForPublishing(content: string): string {
+    let processed = content;
+
+    // Sort entries by key length descending to handle prefixes correctly
+    const sortedEntries = Array.from(this.mentionMap.entries()).sort((a, b) => b[0].length - a[0].length);
+
+    for (const [name, uri] of sortedEntries) {
+      const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedName, 'g');
+      processed = processed.replace(regex, uri);
+    }
+    return processed;
+  }
+
+  getMentionDisplayName(pubkey: string): string {
+    const name = this.pubkeyToNameMap.get(pubkey);
+    if (name) return name;
+    return pubkey.slice(0, 16) + '...';
   }
 }
