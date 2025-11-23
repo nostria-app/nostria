@@ -1,4 +1,7 @@
 import { Component, inject, signal, computed } from '@angular/core';
+import { Router, NavigationStart } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -411,7 +414,17 @@ export interface ReactionsDialogData {
 })
 export class ReactionsDialogComponent {
   private dialogRef = inject(MatDialogRef<ReactionsDialogComponent>);
+  private router = inject(Router);
   data = inject<ReactionsDialogData>(MAT_DIALOG_DATA);
+
+  constructor() {
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationStart),
+      takeUntilDestroyed()
+    ).subscribe(() => {
+      this.dialogRef.close();
+    });
+  }
 
   reactions = signal<NostrRecord[]>(this.data.reactions || []);
   zaps = signal<ReactionsDialogData['zaps']>(this.data.zaps || []);
