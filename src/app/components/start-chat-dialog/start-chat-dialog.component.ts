@@ -87,10 +87,7 @@ export class StartChatDialogComponent {
       if (query.length >= 2) {
         const results = untracked(() => {
           const followingResults = this.followingService.searchProfiles(query);
-          // Convert FollowingProfile to NostrRecord
-          return followingResults
-            .filter(p => p.profile !== null)
-            .map(p => p.profile!);
+          return this.followingService.toNostrRecords(followingResults);
         });
         this.searchResults.set(results.slice(0, 10)); // Limit to 10 results
       } else {

@@ -201,25 +201,14 @@ export class MentionAutocompleteComponent implements OnInit {
     if (query.length === 0) {
       // Show recent profiles when no query - just get first few from following list
       const recentProfiles = this.followingService.profiles().slice(0, this.maxResults());
-      
-      // Convert FollowingProfile to NostrRecord
-      const records = recentProfiles
-        .filter(p => p.profile !== null)
-        .map(p => p.profile!);
-
+      const records = this.followingService.toNostrRecords(recentProfiles);
       this.searchResults.set(records);
       return;
     }
 
     // Search following profiles using FollowingService
     const followingResults = this.followingService.searchProfiles(query);
-    
-    // Convert FollowingProfile to NostrRecord
-    const records = followingResults
-      .filter(p => p.profile !== null)
-      .map(p => p.profile!)
-      .slice(0, this.maxResults());
-    
+    const records = this.followingService.toNostrRecords(followingResults).slice(0, this.maxResults());
     this.searchResults.set(records);
   }
 

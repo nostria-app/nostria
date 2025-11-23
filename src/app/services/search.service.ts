@@ -43,11 +43,7 @@ export class SearchService {
       if (searchValue) {
         // First, search in cached profiles using FollowingService
         const followingResults = untracked(() => this.followingService.searchProfiles(searchValue));
-        
-        // Convert FollowingProfile to NostrRecord
-        const cachedResults = followingResults
-          .filter(p => p.profile !== null)
-          .map(p => p.profile!);
+        const cachedResults = this.followingService.toNostrRecords(followingResults);
         
         console.log(
           'Cached search results:',

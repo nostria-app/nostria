@@ -156,9 +156,7 @@ export class NewColumnDialogComponent {
   // Get following users from FollowingService for better reliability
   followingUsers = computed(() => {
     const profiles = this.followingService.profiles();
-    return profiles
-      .filter(p => p.profile !== null)
-      .map(p => p.profile!);
+    return this.followingService.toNostrRecords(profiles);
   });
 
   // Filtered options for autocomplete
@@ -187,14 +185,11 @@ export class NewColumnDialogComponent {
     // Use FollowingService.searchProfiles for consistent search behavior
     const searchResults = this.followingService.searchProfiles(input);
     const selected = this.selectedUsers();
+    const records = this.followingService.toNostrRecords(searchResults);
 
-    // Convert FollowingProfile to NostrRecord
-    return searchResults
-      .filter(p => p.profile !== null)
-      .map(p => p.profile!)
-      .filter(profile => {
-        return !selected.some(s => s.event.pubkey === profile.event.pubkey);
-      });
+    return records.filter(profile => {
+      return !selected.some(s => s.event.pubkey === profile.event.pubkey);
+    });
   });
 
   // Filtered starter packs for autocomplete
