@@ -392,7 +392,18 @@ export class AccountLocalStateService {
   }
 
   /**
-   * Get feeds initialized status for an account
+   * Get feeds initialized status for an account.
+   * 
+   * Returns true if default feeds have been set up for this account at least once.
+   * This flag prevents automatic reset to defaults when:
+   * - User logs in with different authentication methods
+   * - Feeds are not found in localStorage
+   * - User has intentionally deleted all feeds
+   * 
+   * The flag is only set to false when explicitly clearing account state.
+   * 
+   * @param pubkey - The account's public key
+   * @returns true if feeds have been initialized for this account, false otherwise
    */
   getFeedsInitialized(pubkey: string): boolean {
     const state = this.getAccountState(pubkey);
@@ -400,7 +411,18 @@ export class AccountLocalStateService {
   }
 
   /**
-   * Set feeds initialized status for an account
+   * Set feeds initialized status for an account.
+   * 
+   * This flag should be set to true when:
+   * - Default feeds are created for a new user
+   * - User saves custom feed configurations
+   * - User manually resets to defaults
+   * 
+   * Setting this flag prevents the system from automatically re-initializing
+   * default feeds on subsequent logins.
+   * 
+   * @param pubkey - The account's public key
+   * @param initialized - Whether feeds have been initialized
    */
   setFeedsInitialized(pubkey: string, initialized: boolean): void {
     this.updateAccountState(pubkey, { feedsInitialized: initialized });

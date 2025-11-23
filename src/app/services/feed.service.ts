@@ -1978,11 +1978,28 @@ export class FeedService {
         this._feedsLoaded.set(true);
         this.logger.debug('Loaded feeds from storage for pubkey', pubkey, storedFeeds);
       } else {
-        // Check if feeds have been initialized for this account before
+        /**
+         * No feeds found in storage for this account.
+         * 
+         * Check the feedsInitialized flag to determine if this is:
+         * 1. A new user who needs default feeds
+         * 2. A returning user who intentionally deleted all feeds
+         * 
+         * This prevents automatic reset to defaults for users who have
+         * previously configured their feeds but deleted them.
+         */
         const feedsInitialized = this.accountLocalState.getFeedsInitialized(pubkey);
         
         if (!feedsInitialized) {
-          // First time user - initialize default feeds
+          /**
+           * First-time user scenario:
+           * - No feeds exist in localStorage
+           * - feedsInitialized flag is not set
+           * - Action: Initialize default feeds and set flag
+           * 
+           * This ensures new users get a helpful starting configuration
+           * without requiring manual setup.
+           */
           this.logger.info('First time user detected, initializing default feeds for pubkey', pubkey);
           const feedsByAccount: Record<string, FeedConfig[]> = {};
           const defaultFeeds = await this.initializeDefaultFeeds();
@@ -1992,11 +2009,20 @@ export class FeedService {
           this.saveFeeds();
           
           // Mark feeds as initialized for this account
+          // Note: saveFeeds() also sets this flag, but we set it explicitly here for clarity
           this.accountLocalState.setFeedsInitialized(pubkey, true);
           this.logger.debug('Default feeds initialized and marked as initialized for pubkey', pubkey);
         } else {
-          // Feeds were previously initialized but storage is empty - user may have deleted feeds
-          // Keep feeds empty to preserve user's intentional deletion
+          /**
+           * Returning user with empty feeds:
+           * - No feeds exist in localStorage
+           * - feedsInitialized flag IS set
+           * - Action: Keep feeds empty (respect user's deletion)
+           * 
+           * This scenario occurs when a user has previously configured feeds
+           * but then deleted them all. We respect this choice and don't
+           * automatically restore defaults.
+           */
           this.logger.warn('Feeds initialized flag set but no feeds found in storage - keeping empty for pubkey', pubkey);
           this._feeds.set([]);
           this._feedsLoaded.set(true);
@@ -2044,6 +2070,12 @@ export class FeedService {
 
   /**
    * Save feeds to local storage
+   * 
+   * This method persists the current feed configuration to localStorage
+   * and marks feeds as initialized for the account. This ensures that:
+   * - Feed configurations are preserved across sessions
+   * - The system won't auto-reset to defaults on next login
+   * - Custom configurations are respected
    */
   private saveFeeds(): void {
     try {
@@ -2062,13 +2094,15 @@ export class FeedService {
       feedsByAccount[pubkey] = this._feeds();
       this.localStorageService.setObject(this.appState.FEEDS_STORAGE_KEY, feedsByAccount);
       
-      // Mark feeds as initialized whenever we save feeds (user has configured feeds)
-      // This ensures that even if feeds are empty, we don't auto-reset to defaults
+      // Mark feeds as initialized after successful save
+      // This flag is set regardless of whether feeds array is empty or not
+      // to ensure that empty feeds (user deleted all) are also considered "initialized"
       this.accountLocalState.setFeedsInitialized(pubkey, true);
       
       this.logger.debug('Saved feeds to storage for pubkey', pubkey, this._feeds());
     } catch (error) {
       this.logger.error('Error saving feeds to storage:', error);
+      // Note: Don't set feedsInitialized flag on error to allow retry
     }
   }
 
