@@ -43,6 +43,7 @@ import { PublishEventBus, PublishRelayResultEvent } from '../../services/publish
 import { Subscription } from 'rxjs';
 import { MatDialog } from '@angular/material/dialog';
 import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { AiService } from '../../services/ai.service';
 
@@ -1314,7 +1315,35 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       console.warn('File input not available. Make sure preview and advanced options are closed.');
       return;
     }
+
+    // Check if user has media servers configured
+    if (this.mediaService.mediaServers().length === 0) {
+      this.showMediaServerWarning();
+      return;
+    }
+
     this.fileInput.nativeElement.click();
+  }
+
+  private showMediaServerWarning(): void {
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'No Media Server Configured',
+        message: 'You need to configure a media server before uploading files. Would you like to set one up now?',
+        confirmText: 'Setup Media Server',
+        cancelText: 'Cancel',
+        confirmColor: 'primary',
+      },
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Navigate to media library servers tab
+        this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
+        // Close the note editor dialog
+        this.dialogRef?.close({ published: false });
+      }
+    });
   }
 
   onDragEnter(event: DragEvent): void {
@@ -1355,6 +1384,12 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
 
   private async uploadFiles(files: File[]): Promise<void> {
     if (files.length === 0) return;
+
+    // Check if user has media servers configured
+    if (this.mediaService.mediaServers().length === 0) {
+      this.showMediaServerWarning();
+      return;
+    }
 
     this.isUploading.set(true);
 
