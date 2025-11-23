@@ -9,10 +9,10 @@
       <input matInput formControlName="url" placeholder="https://example.com/" />
       <mat-hint>HTTPS is recommended for security</mat-hint>
       @if (serverForm.get('url')?.hasError('required') && serverForm.get('url')?.touched) {
-        <mat-error>Server URL is required</mat-error>
+      <mat-error>Server URL is required</mat-error>
       }
       @if (serverForm.get('url')?.hasError('pattern') && serverForm.get('url')?.touched) {
-        <mat-error>Server URL must start with http:// or https://</mat-error>
+      <mat-error>Server URL must start with http:// or https://</mat-error>
       }
     </mat-form-field>
 
@@ -20,9 +20,9 @@
       <h3 class="suggested-title">Suggested servers:</h3>
       <mat-chip-listbox [multiple]="false" class="server-chips">
         @for (server of suggestedServers(); track $index) {
-          <mat-chip-option (click)="selectSuggestedServer(server)">
-            {{ server.replace('https://', '') }}
-          </mat-chip-option>
+        <mat-chip-option (click)="selectSuggestedServer(server.url)">
+          {{ server.name }}
+        </mat-chip-option>
         }
       </mat-chip-listbox>
     </div>
@@ -39,33 +39,25 @@
     </mat-form-field> -->
 
     @if (testing()) {
-      <div class="test-connection">
-        <mat-spinner diameter="24"></mat-spinner>
-        <span>Testing connection...</span>
-      </div>
+    <div class="test-connection">
+      <mat-spinner diameter="24"></mat-spinner>
+      <span>Testing connection...</span>
+    </div>
     }
 
     @if (testResult) {
-      <div
-        class="connection-result"
-        [class.success]="testResult.success"
-        [class.error]="!testResult.success"
-      >
-        <mat-icon [color]="testResult.success ? 'primary' : 'warn'">
-          {{ testResult.success ? 'check_circle' : 'error' }}
-        </mat-icon>
-        <span>{{ testResult.message }}</span>
-      </div>
+    <div class="connection-result" [class.success]="testResult.success" [class.error]="!testResult.success">
+      <mat-icon [color]="testResult.success ? 'primary' : 'warn'">
+        {{ testResult.success ? 'check_circle' : 'error' }}
+      </mat-icon>
+      <span>{{ testResult.message }}</span>
+    </div>
     }
   </mat-dialog-content>
 
   <mat-dialog-actions align="end">
-    <button
-      mat-stroked-button
-      type="button"
-      (click)="testConnection()"
-      [disabled]="!serverForm.get('url')?.valid || testing()"
-    >
+    <button mat-stroked-button type="button" (click)="testConnection()"
+      [disabled]="!serverForm.get('url')?.valid || testing()">
       <mat-icon>sync</mat-icon>
       Test Connection
     </button>
