@@ -1057,6 +1057,11 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   onContentKeyUp(event: KeyboardEvent): void {
+    // Ignore navigation keys that are handled in keydown to prevent resetting mention state
+    if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) {
+      return;
+    }
+
     const target = event.target as HTMLTextAreaElement;
     this.handleMentionInput(this.content(), target.selectionStart || 0);
   }
