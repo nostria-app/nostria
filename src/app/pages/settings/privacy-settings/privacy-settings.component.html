@@ -2,6 +2,19 @@
   <h2>Privacy and Safety Settings</h2>
 
   <section class="sharing-section">
+    <h3>URL Privacy</h3>
+    <div class="settings-option">
+      <mat-checkbox [checked]="localSettingsService.removeTrackingParameters()" (change)="toggleRemoveTrackingParameters()">
+        Remove tracking parameters from pasted URLs
+      </mat-checkbox>
+      <app-info-tooltip [content]="trackingRemovalInfoContent"
+        ariaLabel="Learn about URL tracking parameter removal"></app-info-tooltip>
+    </div>
+  </section>
+
+  <mat-divider></mat-divider>
+
+  <section class="sharing-section">
     <h3>Image Cache Service</h3>
     <div class="settings-option">
       <mat-checkbox [checked]="settingsService.settings().imageCacheEnabled" (change)="toggleImageCache()">
@@ -170,6 +183,29 @@
   </section>
 
   <!-- Template definitions for tooltip content -->
+  <ng-template #trackingRemovalInfoContent>
+    <mat-card-header>
+      <mat-card-title>
+        <div class="info-title">
+          <mat-icon class="info-icon">link_off</mat-icon>
+          URL Tracking Parameter Removal
+        </div>
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p>
+        When enabled, tracking parameters are automatically removed from URLs you paste.
+      </p>
+      <p>
+        This removes parameters like utm_*, fbclid, gclid, and other tracking codes used by
+        YouTube, Twitter/X, Facebook, and other platforms to track your activity across the web.
+      </p>
+      <p>
+        Disable if you need to preserve all URL parameters, though this may reduce your privacy.
+      </p>
+    </mat-card-content>
+  </ng-template>
+
   <ng-template #imageCacheInfoContent>
     <mat-card-header>
       <mat-card-title>
