@@ -241,7 +241,7 @@
       <mat-chip-set class="mentions-chips">
         @for (mention of mentions(); track mention) {
         <mat-chip removable (removed)="removeMention(mention)">
-          {{ mention.slice(0, 16) }}...
+          {{ getMentionDisplayName(mention) }}
           <mat-icon matChipRemove>cancel</mat-icon>
         </mat-chip>
         }
