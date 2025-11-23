@@ -406,7 +406,8 @@ export class ZapService {
     lnurl?: string,
     relays: string[] = [],
     goalEventId?: string,
-    eventKind?: number
+    eventKind?: number,
+    eventAddress?: string // Added eventAddress for addressable events (a tag)
   ): Promise<UnsignedEvent> {
     const currentUser = this.accountState.account();
     if (!currentUser) {
@@ -432,6 +433,10 @@ export class ZapService {
     ];
 
     // Don't include lnurl in zap request - it's only used for the callback
+
+    if (eventAddress) {
+      tags.push(['a', eventAddress]);
+    }
 
     if (eventId) {
       tags.push(['e', eventId]);
@@ -780,7 +785,8 @@ export class ZapService {
     recipientMetadata?: Record<string, unknown>,
     customRelays?: string[], // Optional: custom relays for the zap request (e.g., for gift subscriptions)
     goalEventId?: string, // Optional: NIP-75 goal event ID
-    eventKind?: number // Optional: Event kind for the zap request
+    eventKind?: number, // Optional: Event kind for the zap request
+    eventAddress?: string // Optional: Addressable event tag (a tag)
   ): Promise<void> {
     const startTime = Date.now();
 
@@ -853,7 +859,8 @@ export class ZapService {
             lnurl,
             recipientRelays,
             goalEventId,
-            eventKind
+            eventKind,
+            eventAddress
           );
 
           // Sign the zap request
@@ -1312,7 +1319,8 @@ export class ZapService {
     message?: string,
     eventId?: string,
     recipientMetadata?: Record<string, unknown>,
-    eventKind?: number
+    eventKind?: number,
+    eventAddress?: string
   ): Promise<string> {
     try {
       const amountMsats = amount * 1000;
@@ -1360,7 +1368,8 @@ export class ZapService {
         lnurl,
         [], // relays
         undefined, // goalEventId
-        eventKind
+        eventKind,
+        eventAddress
       );
 
       // Sign the zap request
