@@ -352,4 +352,14 @@ export class FollowingService {
       );
     });
   }
+
+  /**
+   * Helper method to convert FollowingProfile array to NostrRecord array
+   * Filters out profiles without profile data
+   */
+  toNostrRecords(profiles: FollowingProfile[]): NostrRecord[] {
+    return profiles
+      .filter(p => p.profile !== null)
+      .map(p => p.profile!);
+  }
 }
