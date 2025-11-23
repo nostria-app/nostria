@@ -1645,80 +1645,30 @@ export class NostrService implements NostriaService {
 
     this.logger.debug(`New keypair generated successfully (${isEncrypted ? 'encrypted' : 'plaintext'})`, { pubkey, region });
 
-    // Configure the discovery relay based on the user's region
-    if (region) {
-      const discoveryRelay = this.region.getDiscoveryRelay(region);
+    // Setup the account with defaults (relays, etc.)
+    // We pass the secretKey so it can sign events without the account being set yet
+    await this.setupNewAccountWithDefaults(newUser, region, secretKey);
 
-      this.logger.info('Setting discovery relay for new user based on region', {
-        region,
-        discoveryRelay,
-      });
-
-      this.discoveryRelay.setDiscoveryRelays([discoveryRelay]);
-    }
-
-    const relayServerUrl = this.region.getRelayServer(region!, 0);
-    const relayTags = this.createTags('r', [relayServerUrl!]);
-
-    // Initialize the account relay so we can start using it.
-    this.accountRelay.init([relayServerUrl!]);
-    // Create Relay List event for the new user
-    const relayListEvent: UnsignedEvent = {
-      pubkey,
-      created_at: Math.floor(Date.now() / 1000),
-      kind: kinds.RelayList,
-      tags: relayTags,
-      content: '',
-    };
-
-    const signedEvent = finalizeEvent(relayListEvent, secretKey);
-
-    // Save locally first, then publish to discovery relays.
-    await this.storage.saveEvent(signedEvent);
-    await this.accountRelay.publish(signedEvent);
-    await this.discoveryRelay.publish(signedEvent);
-
-    const mediaServerUrl = this.region.getMediaServer(region!, 0);
-    const mediaTags = this.createTags('server', [mediaServerUrl!]);
-
-    // Create Media Server event for the new user, this we cannot publish yet, because account is not initialized.
-    const mediaServerEvent: UnsignedEvent = {
-      pubkey,
-      created_at: Math.floor(Date.now() / 1000),
-      kind: MEDIA_SERVERS_EVENT_KIND,
-      tags: mediaTags,
-      content: '',
-    };
-
-    const signedMediaEvent = finalizeEvent(mediaServerEvent, secretKey);
-    await this.storage.saveEvent(signedMediaEvent);
-    await this.accountRelay.publish(signedMediaEvent);
-
-    const relayDMTags = this.createTags('relay', [relayServerUrl!]);
-
-    // Create DM Relay List event for the new user to support NIP-17.
-    const relayDMListEvent: UnsignedEvent = {
-      pubkey,
-      created_at: Math.floor(Date.now() / 1000),
-      kind: kinds.DirectMessageRelaysList,
-      tags: relayDMTags,
-      content: '',
-    };
-
-    const signedDMEvent = finalizeEvent(relayDMListEvent, secretKey);
-    await this.storage.saveEvent(signedDMEvent);
-    await this.accountRelay.publish(signedDMEvent);
-
+    // Set the account after setup is complete
     await this.setAccount(newUser);
 
     return newUser;
   }
 
-  async setupNewAccountWithDefaults(user: NostrUser, region?: string): Promise<void> {
+  async setupNewAccountWithDefaults(user: NostrUser, region?: string, secretKey?: Uint8Array): Promise<void> {
     this.logger.info('Setting up new account with default configuration', {
       pubkey: user.pubkey,
       region,
     });
+
+    // Helper to sign events either with secret key or via signEvent method
+    const sign = async (event: UnsignedEvent) => {
+      if (secretKey) {
+        return finalizeEvent(event, secretKey);
+      } else {
+        return this.signEvent(event);
+      }
+    };
 
     // If region is not provided, try to get it from the user or use a default
     const accountRegion = region || user.region || 'us';
@@ -1752,7 +1702,7 @@ export class NostrService implements NostriaService {
     };
 
     // Use the existing sign method which handles all account types properly
-    const signedRelayEvent = await this.signEvent(relayListEvent);
+    const signedRelayEvent = await sign(relayListEvent);
 
     await this.storage.saveEvent(signedRelayEvent);
     await this.accountRelay.publish(signedRelayEvent);
@@ -1770,7 +1720,7 @@ export class NostrService implements NostriaService {
       content: '',
     };
 
-    const signedMediaEvent = await this.signEvent(mediaServerEvent);
+    const signedMediaEvent = await sign(mediaServerEvent);
 
     await this.storage.saveEvent(signedMediaEvent);
     await this.accountRelay.publish(signedMediaEvent);
@@ -1786,7 +1736,7 @@ export class NostrService implements NostriaService {
       content: '',
     };
 
-    const signedDMEvent = await this.signEvent(relayDMListEvent);
+    const signedDMEvent = await sign(relayDMListEvent);
 
     await this.storage.saveEvent(signedDMEvent);
     await this.accountRelay.publish(signedDMEvent);
