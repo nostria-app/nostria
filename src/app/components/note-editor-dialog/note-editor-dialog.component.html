@@ -55,7 +55,7 @@
 
         <!-- Mention Autocomplete positioned relative to textarea -->
         @if (mentionConfig()) {
-        <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="15"
+        <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="100"
           [maxHeight]="400" (mentionSelected)="onMentionSelected($event)"
           (dismissed)="onMentionDismissed()"></app-mention-autocomplete>
         }
