@@ -89,7 +89,7 @@ export class StartChatDialogComponent {
           const followingResults = this.followingService.searchProfiles(query);
           return this.followingService.toNostrRecords(followingResults);
         });
-        this.searchResults.set(results.slice(0, 10)); // Limit to 10 results
+        this.searchResults.set(results);
       } else {
         this.searchResults.set([]);
       }
