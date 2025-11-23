@@ -1,9 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit, OnDestroy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { EventPageComponent } from '../event.component';
 import { Event } from 'nostr-tools';
+import { Router, NavigationStart } from '@angular/router';
+import { Subscription, filter } from 'rxjs';
 
 export interface EventDialogData {
   eventId: string;
@@ -69,9 +71,28 @@ export interface EventDialogData {
     }
   `],
 })
-export class EventDialogComponent {
+export class EventDialogComponent implements OnInit, OnDestroy {
   dialogRef = inject(MatDialogRef<EventDialogComponent>);
   data = inject<EventDialogData>(MAT_DIALOG_DATA);
+  private router = inject(Router);
+  private routerSubscription?: Subscription;
+
+  ngOnInit(): void {
+    // Subscribe to router navigation events
+    // When a navigation starts, close the dialog
+    this.routerSubscription = this.router.events
+      .pipe(filter(event => event instanceof NavigationStart))
+      .subscribe(() => {
+        this.close();
+      });
+  }
+
+  ngOnDestroy(): void {
+    // Clean up subscription when component is destroyed
+    if (this.routerSubscription) {
+      this.routerSubscription.unsubscribe();
+    }
+  }
 
   close(): void {
     this.dialogRef.close();
