@@ -40,6 +40,11 @@
   <p class="preview">Original: {{ data.content | slice:0:100 }}{{ data.content.length > 100 ? '...' : '' }}</p>
   }
 
+  <div class="ai-warning">
+    <mat-icon>info</mat-icon>
+    <p>Translations are performed by AI models running locally in your browser. The results may contain inaccuracies or mistakes. AI-generated translations should be reviewed and verified for accuracy before relying on them.</p>
+  </div>
+
 </mat-dialog-content>
 <mat-dialog-actions align="end">
   <button mat-button (click)="close()">Close</button>
