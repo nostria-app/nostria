@@ -133,11 +133,24 @@ export function removeTrackingParameters(url: string): string {
  * @returns The text with cleaned URLs
  */
 export function cleanTrackingParametersFromText(text: string): string {
-  // Regular expression to match URLs
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
+  // More comprehensive URL regex that handles common edge cases
+  // Matches http(s) URLs and stops at common punctuation that's likely not part of the URL
+  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\]]+)/g;
   
   return text.replace(urlRegex, (match) => {
-    return removeTrackingParameters(match);
+    // Remove trailing punctuation that's likely not part of the URL
+    // (periods, commas, semicolons, etc. at the end)
+    let url = match;
+    const trailingPunctuationRegex = /[.,;:!?)\]]+$/;
+    const trailingMatch = url.match(trailingPunctuationRegex);
+    const trailingPunctuation = trailingMatch ? trailingMatch[0] : '';
+    
+    if (trailingPunctuation) {
+      url = url.slice(0, -trailingPunctuation.length);
+    }
+    
+    const cleanedUrl = removeTrackingParameters(url);
+    return cleanedUrl + trailingPunctuation;
   });
 }
 

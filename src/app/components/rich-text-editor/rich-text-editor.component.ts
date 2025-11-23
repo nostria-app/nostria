@@ -701,7 +701,8 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     let text = event.clipboardData?.getData('text/plain');
     if (text) {
       // Check if tracking parameter removal is enabled and clean URLs
-      if (this.localSettingsService.removeTrackingParameters()) {
+      // For performance, only process text up to 10KB (most pastes are much smaller)
+      if (this.localSettingsService.removeTrackingParameters() && text.length < 10000) {
         const cleanedText = cleanTrackingParametersFromText(text);
         if (cleanedText !== text) {
           // Text was modified, prevent default paste and insert cleaned text

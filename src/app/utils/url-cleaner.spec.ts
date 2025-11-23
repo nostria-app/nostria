@@ -98,6 +98,24 @@ describe('URL Cleaner Utility', () => {
       const expected = 'Visit https://example.com/page or https://clean.com/page';
       expect(cleanTrackingParametersFromText(input)).toBe(expected);
     });
+
+    it('should handle URLs with trailing punctuation', () => {
+      const input = 'Check out https://example.com/page?utm_source=google.';
+      const expected = 'Check out https://example.com/page.';
+      expect(cleanTrackingParametersFromText(input)).toBe(expected);
+    });
+
+    it('should handle URLs with trailing commas', () => {
+      const input = 'Links: https://example.com/page?utm_source=google, https://test.com/';
+      const expected = 'Links: https://example.com/page, https://test.com/';
+      expect(cleanTrackingParametersFromText(input)).toBe(expected);
+    });
+
+    it('should handle URLs in parentheses', () => {
+      const input = 'See (https://example.com/page?utm_source=google) for more info';
+      const expected = 'See (https://example.com/page) for more info';
+      expect(cleanTrackingParametersFromText(input)).toBe(expected);
+    });
   });
 
   describe('hasTrackingParameters', () => {
