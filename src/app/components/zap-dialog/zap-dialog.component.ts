@@ -27,6 +27,7 @@ export interface ZapDialogData {
   recipientMetadata?: Record<string, unknown>;
   eventId?: string;
   eventKind?: number; // Added eventKind
+  eventAddress?: string; // Added eventAddress for addressable events (a tag)
   eventContent?: string;
   goalEventId?: string; // For NIP-75 zap goals
   zapSplits?: { pubkey: string; relay: string; weight: number }[];
@@ -437,7 +438,8 @@ export class ZapDialogComponent {
         this.zapForm.get('message')?.value || undefined,
         this.data.eventId,
         this.data.recipientMetadata,
-        this.data.eventKind // eventKind
+        this.data.eventKind, // eventKind
+        this.data.eventAddress // eventAddress
       );
 
       this.invoiceUrl.set(invoice);
@@ -619,7 +621,8 @@ export class ZapDialogComponent {
           this.data.recipientMetadata,
           undefined, // customRelays
           this.data.goalEventId, // goalEventId
-          this.data.eventKind // eventKind
+          this.data.eventKind, // eventKind
+          this.data.eventAddress // eventAddress
         );
 
         this.snackBar.open(

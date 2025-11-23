@@ -231,6 +231,10 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
             type: 'chat'
           };
         } else if (event.kind === 9735) {
+
+          console.log('[LiveChat] Received zap event:');
+          console.log(JSON.stringify(event, null, 2));
+
           // Parse zap receipt
           const { zapRequest, amount, comment } = this.zapService.parseZapReceipt(event);
 
