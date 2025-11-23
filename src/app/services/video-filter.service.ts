@@ -74,6 +74,7 @@ export class VideoFilterService {
       varying vec2 v_texCoord;
       uniform sampler2D u_image;
       uniform int u_filter;
+      uniform vec2 u_resolution;
       
       vec3 grayscale(vec3 color) {
         float gray = dot(color, vec3(0.299, 0.587, 0.114));
@@ -92,8 +93,8 @@ export class VideoFilterService {
         return vec3(1.0) - color;
       }
       
-      vec3 edgeDetect(sampler2D image, vec2 texCoord) {
-        vec2 texelSize = vec2(1.0 / 640.0, 1.0 / 480.0);
+      vec3 edgeDetect(sampler2D image, vec2 texCoord, vec2 resolution) {
+        vec2 texelSize = 1.0 / resolution;
         float kernel[9];
         kernel[0] = -1.0; kernel[1] = -1.0; kernel[2] = -1.0;
         kernel[3] = -1.0; kernel[4] =  8.0; kernel[5] = -1.0;
@@ -115,8 +116,8 @@ export class VideoFilterService {
         return floor(color * levels) / levels;
       }
       
-      vec3 blur(sampler2D image, vec2 texCoord) {
-        vec2 texelSize = vec2(1.0 / 640.0, 1.0 / 480.0);
+      vec3 blur(sampler2D image, vec2 texCoord, vec2 resolution) {
+        vec2 texelSize = 1.0 / resolution;
         vec3 sum = vec3(0.0);
         float kernel[9];
         kernel[0] = 1.0/16.0; kernel[1] = 2.0/16.0; kernel[2] = 1.0/16.0;
@@ -132,8 +133,8 @@ export class VideoFilterService {
         return sum;
       }
       
-      vec3 sharpen(sampler2D image, vec2 texCoord) {
-        vec2 texelSize = vec2(1.0 / 640.0, 1.0 / 480.0);
+      vec3 sharpen(sampler2D image, vec2 texCoord, vec2 resolution) {
+        vec2 texelSize = 1.0 / resolution;
         float kernel[9];
         kernel[0] =  0.0; kernel[1] = -1.0; kernel[2] =  0.0;
         kernel[3] = -1.0; kernel[4] =  5.0; kernel[5] = -1.0;
@@ -189,13 +190,13 @@ export class VideoFilterService {
         } else if (u_filter == 3) {
           result = invert(result);
         } else if (u_filter == 4) {
-          result = edgeDetect(u_image, v_texCoord);
+          result = edgeDetect(u_image, v_texCoord, u_resolution);
         } else if (u_filter == 5) {
           result = cartoon(result);
         } else if (u_filter == 6) {
-          result = blur(u_image, v_texCoord);
+          result = blur(u_image, v_texCoord, u_resolution);
         } else if (u_filter == 7) {
-          result = sharpen(u_image, v_texCoord);
+          result = sharpen(u_image, v_texCoord, u_resolution);
         } else if (u_filter == 8) {
           result = adjustBrightness(result, 0.2);
         } else if (u_filter == 9) {
@@ -222,7 +223,13 @@ export class VideoFilterService {
       return;
     }
 
-    this.program = this.gl.createProgram()!;
+    const program = this.gl.createProgram();
+    if (!program) {
+      console.error('Failed to create WebGL program');
+      return;
+    }
+
+    this.program = program;
     this.gl.attachShader(this.program, vertexShader);
     this.gl.attachShader(this.program, fragmentShader);
     this.gl.linkProgram(this.program);
@@ -291,8 +298,7 @@ export class VideoFilterService {
   }
 
   getFilterIndex(filterId: string): number {
-    const filterIds = ['none', 'grayscale', 'sepia', 'invert', 'edge', 'cartoon', 'blur', 'sharpen', 'brightness', 'contrast', 'vignette', 'warmth', 'cool', 'pixelate'];
-    return filterIds.indexOf(filterId);
+    return this.availableFilters.findIndex(f => f.id === filterId);
   }
 
   applyFilter(video: HTMLVideoElement, canvas: HTMLCanvasElement): void {
@@ -329,8 +335,10 @@ export class VideoFilterService {
     // Set uniforms
     const imageLocation = this.gl.getUniformLocation(this.program, 'u_image');
     const filterLocation = this.gl.getUniformLocation(this.program, 'u_filter');
+    const resolutionLocation = this.gl.getUniformLocation(this.program, 'u_resolution');
     this.gl.uniform1i(imageLocation, 0);
     this.gl.uniform1i(filterLocation, filterIndex);
+    this.gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
 
     // Draw
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
