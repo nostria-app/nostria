@@ -7,6 +7,7 @@ import { UserDataService } from './user-data.service';
 import { RelaysService } from './relays/relays';
 import { RelayPoolService } from './relays/relay-pool';
 import { StorageService } from './storage.service';
+import { FollowingService } from './following.service';
 
 @Injectable({
   providedIn: 'root',
@@ -14,6 +15,7 @@ import { StorageService } from './storage.service';
 export class SearchService {
   layout = inject(LayoutService);
   accountState = inject(AccountStateService);
+  followingService = inject(FollowingService);
   userData = inject(UserDataService);
   relaysService = inject(RelaysService);
   relayPool = inject(RelayPoolService);
@@ -39,8 +41,10 @@ export class SearchService {
       console.log('SearchService effect triggered with query:', query);
 
       if (searchValue) {
-        // First, search in cached profiles
-        const cachedResults = untracked(() => this.accountState.searchProfiles(searchValue));
+        // First, search in cached profiles using FollowingService
+        const followingResults = untracked(() => this.followingService.searchProfiles(searchValue));
+        const cachedResults = this.followingService.toNostrRecords(followingResults);
+        
         console.log(
           'Cached search results:',
           cachedResults.length,
