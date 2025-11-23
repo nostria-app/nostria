@@ -30,6 +30,8 @@ import {
   FloatingToolbarComponent,
   FloatingToolbarPosition,
 } from '../floating-toolbar/floating-toolbar.component';
+import { LocalSettingsService } from '../../services/local-settings.service';
+import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 
 @Component({
   selector: 'app-rich-text-editor',
@@ -77,6 +79,7 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
   private mediaService = inject(MediaService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private localSettingsService = inject(LocalSettingsService);
 
   ngAfterViewInit() {
     this.setContent(this.content || '');
@@ -695,12 +698,28 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
     }
 
     // Check for NIP-19 identifiers in text and auto-prefix with nostr:
-    const text = event.clipboardData?.getData('text/plain');
-    if (text && this.containsNip19Identifier(text)) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.insertTextWithNostrPrefix(text);
-      return;
+    let text = event.clipboardData?.getData('text/plain');
+    if (text) {
+      // Check if tracking parameter removal is enabled and clean URLs
+      if (this.localSettingsService.removeTrackingParameters()) {
+        const cleanedText = cleanTrackingParametersFromText(text);
+        if (cleanedText !== text) {
+          // Text was modified, prevent default paste and insert cleaned text
+          event.preventDefault();
+          event.stopPropagation();
+          text = cleanedText;
+          this.insertCleanedText(text);
+          return;
+        }
+      }
+
+      // Check for NIP-19 identifiers and auto-prefix with nostr:
+      if (this.containsNip19Identifier(text)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.insertTextWithNostrPrefix(text);
+        return;
+      }
     }
 
     // If no image files or NIP-19 identifiers, allow normal text pasting
@@ -813,6 +832,54 @@ export class RichTextEditorComponent implements AfterViewInit, OnChanges {
       // Restore cursor position after the inserted text
       setTimeout(() => {
         const newCursorPosition = cursorPosition + processedText.length;
+        textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+        textarea.focus();
+      }, 0);
+    }
+  }
+
+  /**
+   * Insert cleaned text (with tracking parameters removed)
+   */
+  private insertCleanedText(text: string): void {
+    if (this.isRichTextMode()) {
+      // For rich text mode, insert as text node
+      const selection = window.getSelection();
+      if (selection && selection.rangeCount > 0) {
+        const range = selection.getRangeAt(0);
+        range.deleteContents();
+        const textNode = document.createTextNode(text);
+        range.insertNode(textNode);
+
+        // Move cursor to end of inserted text
+        range.setStartAfter(textNode);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+
+      // Update model from editor content
+      const markdown = this.convertRichTextToMarkdown();
+      this.isInternalChange = true;
+      this.content = markdown;
+      this.contentChange.emit(markdown);
+    } else {
+      // For markdown mode, insert at cursor position
+      const textarea = this.markdownTextarea.nativeElement;
+      const cursorPosition = textarea.selectionStart || 0;
+      const currentContent = this.content || '';
+
+      const newContent =
+        currentContent.substring(0, cursorPosition) + text + currentContent.substring(cursorPosition);
+
+      this.isInternalChange = true;
+      this.content = newContent;
+      this.markdownContent.set(newContent);
+      this.contentChange.emit(newContent);
+
+      // Restore cursor position after the inserted text
+      setTimeout(() => {
+        const newCursorPosition = cursorPosition + text.length;
         textarea.setSelectionRange(newCursorPosition, newCursorPosition);
         textarea.focus();
       }, 0);

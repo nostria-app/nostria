@@ -12,6 +12,7 @@ export interface LocalSettings {
   trustEnabled: boolean;
   trustRelay: string;
   startOnLastRoute: boolean;
+  removeTrackingParameters: boolean;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -24,6 +25,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   trustEnabled: true,
   trustRelay: 'wss://nip85.brainstorm.world',
   startOnLastRoute: true,
+  removeTrackingParameters: true,
 };
 
 /**
@@ -51,6 +53,7 @@ export class LocalSettingsService {
   readonly trustEnabled = computed(() => this.settings().trustEnabled);
   readonly trustRelay = computed(() => this.settings().trustRelay);
   readonly startOnLastRoute = computed(() => this.settings().startOnLastRoute);
+  readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
 
   constructor() {
     this.loadSettings();
@@ -182,6 +185,13 @@ export class LocalSettingsService {
   }
 
   /**
+   * Set remove tracking parameters preference
+   */
+  setRemoveTrackingParameters(removeTrackingParameters: boolean): void {
+    this.updateSettings({ removeTrackingParameters });
+  }
+
+  /**
    * Toggle menu open state
    */
   toggleMenuOpen(): void {
@@ -193,6 +203,13 @@ export class LocalSettingsService {
    */
   toggleMenuExpanded(): void {
     this.setMenuExpanded(!this.menuExpanded());
+  }
+
+  /**
+   * Toggle remove tracking parameters
+   */
+  toggleRemoveTrackingParameters(): void {
+    this.setRemoveTrackingParameters(!this.removeTrackingParameters());
   }
 
   /**
