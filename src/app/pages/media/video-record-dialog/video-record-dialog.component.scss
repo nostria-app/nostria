@@ -40,6 +40,21 @@
     height: auto;
     max-height: 70vh;
     display: block;
+    
+    &.hidden {
+      display: none;
+    }
+  }
+  
+  .filter-canvas {
+    width: 100%;
+    height: auto;
+    max-height: 70vh;
+    display: block;
+    
+    &.hidden {
+      display: none;
+    }
   }
 
   .recording-indicator {
@@ -94,6 +109,99 @@
 
     &:hover {
       background: rgba(0, 0, 0, 0.8);
+    }
+  }
+  
+  .filters-button {
+    position: absolute;
+    top: 16px;
+    right: 72px;
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.8);
+    }
+    
+    &.active {
+      background: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+    }
+  }
+  
+  .filter-selection {
+    position: absolute;
+    bottom: 60px;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.8);
+    padding: 12px;
+    backdrop-filter: blur(10px);
+    
+    .filter-chips {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 4px 0;
+      scrollbar-width: thin;
+      
+      &::-webkit-scrollbar {
+        height: 6px;
+      }
+      
+      &::-webkit-scrollbar-track {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 3px;
+      }
+      
+      &::-webkit-scrollbar-thumb {
+        background: rgba(255, 255, 255, 0.3);
+        border-radius: 3px;
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.5);
+        }
+      }
+      
+      .filter-chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 12px;
+        min-width: 80px;
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.1);
+        color: white;
+        border: 2px solid transparent;
+        transition: all 0.2s ease;
+        
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+          margin: 0;
+        }
+        
+        span {
+          font-size: 11px;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          max-width: 100%;
+        }
+        
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+        
+        &.selected {
+          background: var(--mat-sys-primary);
+          color: var(--mat-sys-on-primary);
+          border-color: var(--mat-sys-primary);
+        }
+      }
     }
   }
 
