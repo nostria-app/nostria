@@ -388,6 +388,12 @@
       gap: 4px;
       margin-bottom: 12px;
 
+      .option-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--mat-sys-on-surface);
+      }
+
       .mat-slide-toggle {
         align-self: flex-start;
       }

@@ -22,6 +22,7 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule, provideNativeDateAdapter } from '@angular/material/core';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatSliderModule } from '@angular/material/slider';
 import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -109,6 +110,7 @@ interface NoteAutoDraft {
     MatNativeDateModule,
     MatCheckboxModule,
     MatSlideToggleModule,
+    MatSliderModule,
     ContentComponent,
     MentionAutocompleteComponent,
     MatMenuModule
@@ -361,7 +363,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       const powEnabled = this.accountLocalState.getPowEnabled(pubkey);
       const powDifficulty = this.accountLocalState.getPowTargetDifficulty(pubkey);
       this.powEnabled.set(powEnabled);
-      this.powTargetDifficulty.set(powDifficulty);
+      this.powTargetDifficulty.set(powEnabled ? powDifficulty : 0);
     }
 
     // Initialize content with quote if provided
@@ -1775,33 +1777,23 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   // Proof of Work methods
-  onPowToggle(enabled: boolean): void {
+  onPowDifficultySliderChange(value: number): void {
+    this.powTargetDifficulty.set(value);
+    const enabled = value > 0;
     this.powEnabled.set(enabled);
 
-    // Persist to account state
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setPowEnabled(pubkey, enabled);
+      if (enabled) {
+        this.accountLocalState.setPowTargetDifficulty(pubkey, value);
+      }
     }
 
     if (!enabled) {
       this.stopPow();
       this.powMinedEvent.set(null);
       this.powService.reset();
-    }
-  }
-
-  onPowDifficultyChange(event: Event): void {
-    const target = event.target as HTMLInputElement;
-    const difficulty = parseInt(target.value, 10);
-    if (!isNaN(difficulty) && difficulty >= 0) {
-      this.powTargetDifficulty.set(difficulty);
-
-      // Persist to account state
-      const pubkey = this.accountState.pubkey();
-      if (pubkey) {
-        this.accountLocalState.setPowTargetDifficulty(pubkey, difficulty);
-      }
     }
   }
 
