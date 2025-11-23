@@ -172,13 +172,16 @@
 
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Message (optional)</mat-label>
-        <textarea matInput [maxlength]="commentLimit() || 200" formControlName="message"
+        <textarea matInput [maxlength]="forceComment() ? 200 : (commentLimit() || 200)" formControlName="message"
           placeholder="Add a message with your zap..." rows="3"></textarea>
-        @if (commentLimit() === 0) {
-        <mat-hint>This recipient does not allow comments with zaps</mat-hint>
+        @if (commentLimit() === 0 && !forceComment()) {
+        <mat-hint>
+          This recipient does not allow comments with zaps.
+          <a href="javascript:void(0)" (click)="toggleForceComment()">Override</a>
+        </mat-hint>
         } @else if (commentLimit() !== null) {
         <mat-hint>{{ zapForm.get('message')?.value?.length || 0 }}/{{
-          commentLimit()
+          forceComment() ? 200 : commentLimit()
           }}
           characters</mat-hint>
         } @else {
@@ -186,7 +189,7 @@
           limits...)</mat-hint>
         }
         @if (zapForm.get('message')?.hasError('maxlength')) {
-        <mat-error>Message is too long (max {{ commentLimit() || 200 }} characters)</mat-error>
+        <mat-error>Message is too long (max {{ forceComment() ? 200 : (commentLimit() || 200) }} characters)</mat-error>
         }
       </mat-form-field>
     </form>
