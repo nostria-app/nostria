@@ -10,7 +10,7 @@ import {
   input,
   effect,
 } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, NavigationStart } from '@angular/router';
 import { Location } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -106,6 +106,14 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   }
 
   constructor() {
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationStart) {
+        if (this.layout.fullscreenMediaPlayer()) {
+          this.layout.fullscreenMediaPlayer.set(false);
+        }
+      }
+    });
+
     if (!this.utilities.isBrowser()) {
       return;
     }
