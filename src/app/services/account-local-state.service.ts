@@ -36,6 +36,7 @@ interface AccountLocalState {
   articlesActiveTab?: number;
   subscriptionSettingsLastFetch?: number;
   subscriptionSettings?: DeviceNotificationPreferences[];
+  feedsInitialized?: boolean;
 }
 
 /**
@@ -388,6 +389,21 @@ export class AccountLocalStateService {
    */
   setSubscriptionSettings(pubkey: string, settings: DeviceNotificationPreferences[]): void {
     this.updateAccountState(pubkey, { subscriptionSettings: settings });
+  }
+
+  /**
+   * Get feeds initialized status for an account
+   */
+  getFeedsInitialized(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.feedsInitialized || false;
+  }
+
+  /**
+   * Set feeds initialized status for an account
+   */
+  setFeedsInitialized(pubkey: string, initialized: boolean): void {
+    this.updateAccountState(pubkey, { feedsInitialized: initialized });
   }
 
   /**
