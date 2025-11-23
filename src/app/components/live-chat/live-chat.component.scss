@@ -103,6 +103,32 @@
       opacity: 0.7;
     }
   }
+
+  .loading-older-messages {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+
+    .spinner {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 }
 
 .chat-message {
