@@ -73,6 +73,13 @@ export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy
       this.isLoading.set(true);
       const response = await fetch(url);
       if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+      // Security check: Validate Content-Type to prevent XSS via Blob
+      const contentType = response.headers.get('Content-Type')?.toLowerCase() || '';
+      if (contentType.includes('html') || contentType.includes('script') || contentType.includes('svg') || contentType.includes('xml')) {
+        throw new Error(`Security blocked: Unsafe content type '${contentType}'`);
+      }
+
       const blob = await response.blob();
       this.blobUrl = URL.createObjectURL(blob);
       this.currentSrc.set(this.blobUrl);
