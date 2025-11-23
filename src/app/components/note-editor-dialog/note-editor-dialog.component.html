@@ -143,81 +143,22 @@
       <!-- Proof of Work Option -->
       <div class="option-row">
         <div class="option-header">
-          <mat-slide-toggle [checked]="powEnabled()" (change)="onPowToggle($event.checked)" color="primary">
-            Proof of Work
-          </mat-slide-toggle>
+          <div class="option-label">Proof of Work (Difficulty: {{ powTargetDifficulty() }})</div>
           <span class="option-description">Add computational proof to deter spam (NIP-13)</span>
         </div>
 
-        @if (powEnabled()) {
         <div class="option-content pow-content">
-          <!-- Target Difficulty Input -->
-          <mat-form-field appearance="outline" class="difficulty-field">
-            <mat-label>Target Difficulty (bits)</mat-label>
-            <input matInput type="number" min="1" max="40" [value]="powTargetDifficulty()"
-              (input)="onPowDifficultyChange($event)" [disabled]="isPowMining()" placeholder="20" />
-            <mat-hint>Number of leading zero bits (recommended: 20-25)</mat-hint>
-          </mat-form-field>
+          <mat-slider min="0" max="26" step="1" showTickMarks discrete [disabled]="isPowMining()">
+            <input matSliderThumb [value]="powTargetDifficulty()" (valueChange)="onPowDifficultySliderChange($event)"
+              aria-label="Proof of Work Difficulty">
+          </mat-slider>
 
-          <!-- Mining Controls -->
-          <div class="pow-controls">
-            @if (!isPowMining() && !hasPowResult()) {
-            <button mat-raised-button color="primary" (click)="startPow()" [disabled]="!content().trim()">
-              <mat-icon>auto_awesome</mat-icon>
-              Generate Proof
-            </button>
-            }
-
-            @if (isPowMining()) {
-            <button mat-raised-button color="warn" (click)="stopPow()">
-              <mat-icon>stop</mat-icon>
-              Stop Mining
-            </button>
-            }
-
-            @if (hasPowResult() && !isPowMining()) {
-            <button mat-raised-button (click)="resetPow()">
-              <mat-icon>refresh</mat-icon>
-              Reset & Mine Again
-            </button>
-            }
-          </div>
-
-          <!-- Mining Progress -->
-          @if (isPowMining() || hasPowResult()) {
-          <div class="pow-progress-section">
-            <div class="pow-stats">
-              <div class="pow-stat">
-                <span class="stat-label">Difficulty Achieved:</span>
-                <span class="stat-value">{{ powDifficulty() }} bits</span>
-              </div>
-              <div class="pow-stat">
-                <span class="stat-label">Attempts:</span>
-                <span class="stat-value">{{ powAttempts().toLocaleString() }}</span>
-              </div>
-              @if (hasPowResult()) {
-              <div class="pow-stat success">
-                <mat-icon>check_circle</mat-icon>
-                <span class="stat-label">Ready to publish with PoW!</span>
-              </div>
-              }
-            </div>
-
-            @if (isPowMining()) {
-            <div class="pow-progress-bar">
-              <mat-progress-bar mode="determinate" [value]="powProgressPercentage()" color="accent"></mat-progress-bar>
-              <span class="progress-text">{{ powProgressPercentage().toFixed(1) }}% to target</span>
-            </div>
-            }
-          </div>
-          }
-
+          @if (powTargetDifficulty() > 0) {
           <mat-hint class="pow-hint">
-            Mining will find a nonce that makes the event ID start with zero bits.
-            Higher difficulty takes exponentially longer but provides stronger spam protection.
+            Mining will start automatically when you publish.
           </mat-hint>
+          }
         </div>
-        }
       </div>
     </div>
     }
