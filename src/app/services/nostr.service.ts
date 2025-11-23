@@ -694,7 +694,7 @@ export class NostrService implements NostriaService {
 
         // Construct the nostrsigner URL
         // compressionType=none&returnType=signature&type=sign_event
-        const url = `nostrsigner:${encodedJson}?compressionType=none&returnType=signature&type=sign_event`;
+        const url = `nostrsigner:${encodedJson}?compressionType=none&returnType=signature&type=sign_event&name=Nostria`;
 
         // Open the dialog
         const dialogRef = this.dialog.open(ExternalSignerDialogComponent, {
