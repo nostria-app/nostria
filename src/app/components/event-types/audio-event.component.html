@@ -10,12 +10,6 @@
     <app-audio-player [src]="audioUrl()" [waveform]="waveform()" [duration]="duration()"></app-audio-player>
   </div>
 
-  <!-- @if (description()) {
-  <div class="description">
-    <app-content [content]="description()!" [event]="event()"></app-content>
-  </div>
-  } -->
-
   @if (!hideComments()) {
   <app-comments-list [event]="event()" [label]="'Replies'" [singularLabel]="'Reply'" [replyType]="'audio'"
     [allowedKinds]="[1111, 1244]"></app-comments-list>
