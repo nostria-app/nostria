@@ -1317,12 +1317,16 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     }
 
     // Check if user has media servers configured
-    if (this.mediaService.mediaServers().length === 0) {
+    if (!this.hasConfiguredMediaServers()) {
       this.showMediaServerWarning();
       return;
     }
 
     this.fileInput.nativeElement.click();
+  }
+
+  private hasConfiguredMediaServers(): boolean {
+    return this.mediaService.mediaServers().length > 0;
   }
 
   private showMediaServerWarning(): void {
@@ -1386,7 +1390,7 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
     if (files.length === 0) return;
 
     // Check if user has media servers configured
-    if (this.mediaService.mediaServers().length === 0) {
+    if (!this.hasConfiguredMediaServers()) {
       this.showMediaServerWarning();
       return;
     }
