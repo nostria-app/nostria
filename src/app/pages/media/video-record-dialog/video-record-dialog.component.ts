@@ -7,6 +7,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { VideoFilterService } from '../../../services/video-filter.service';
+import { MatChipsModule } from '@angular/material/chips';
 
 @Component({
   selector: 'app-video-record-dialog',
@@ -19,6 +21,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
     MatTooltipModule,
     MatSlideToggleModule,
     FormsModule,
+    MatChipsModule,
   ],
   templateUrl: './video-record-dialog.component.html',
   styleUrls: ['./video-record-dialog.component.scss'],
@@ -26,8 +29,10 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   private dialogRef = inject(MatDialogRef<VideoRecordDialogComponent>);
   private snackBar = inject(MatSnackBar);
+  filterService = inject(VideoFilterService);
 
   @ViewChild('cameraPreview') cameraPreview?: ElementRef<HTMLVideoElement>;
+  @ViewChild('filterCanvas') filterCanvas?: ElementRef<HTMLCanvasElement>;
 
   // Recording state
   isRecording = signal(false);
@@ -42,6 +47,9 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   isShortForm = true; // Toggle for short form recording (6.3 seconds auto-stop)
   aspectRatio = signal<'vertical' | 'horizontal'>('vertical'); // Video orientation
   uploadOriginal = false; // Upload original without transcoding
+  selectedFilter = signal<string>('none'); // Currently selected filter
+  showFilters = signal<boolean>(false); // Show/hide filter selection
+  private filterAnimationFrame: number | null = null;
 
   // Recording constraints
   private readonly MAX_DURATION_MS = 6300; // 6.3 seconds
@@ -52,6 +60,8 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   async ngOnDestroy(): Promise<void> {
     this.stopCamera();
     this.cleanupTimers();
+    this.stopFilterRendering();
+    this.filterService.cleanup();
     if (this.recordedUrl()) {
       URL.revokeObjectURL(this.recordedUrl()!);
     }
@@ -59,7 +69,44 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit(): void {
     // Start camera preview as soon as view is ready
-    setTimeout(() => this.startCameraPreview(), 100);
+    setTimeout(() => {
+      this.startCameraPreview();
+      this.initializeFilters();
+    }, 100);
+  }
+
+  private initializeFilters(): void {
+    const canvas = this.filterCanvas?.nativeElement;
+    if (canvas) {
+      const initialized = this.filterService.initWebGL(canvas);
+      if (initialized) {
+        this.startFilterRendering();
+      } else {
+        console.warn('WebGL filters not available, falling back to standard video');
+      }
+    }
+  }
+
+  private startFilterRendering(): void {
+    const renderFrame = () => {
+      const video = this.cameraPreview?.nativeElement;
+      const canvas = this.filterCanvas?.nativeElement;
+      
+      if (video && canvas && video.readyState >= video.HAVE_CURRENT_DATA) {
+        this.filterService.applyFilter(video, canvas);
+      }
+      
+      this.filterAnimationFrame = requestAnimationFrame(renderFrame);
+    };
+    
+    renderFrame();
+  }
+
+  private stopFilterRendering(): void {
+    if (this.filterAnimationFrame !== null) {
+      cancelAnimationFrame(this.filterAnimationFrame);
+      this.filterAnimationFrame = null;
+    }
   }
 
   async startCameraPreview(): Promise<void> {
@@ -105,13 +152,31 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
         await this.startCameraPreview();
       }
 
-      const stream = this.stream();
-      if (!stream) {
-        throw new Error('Failed to get camera stream');
+      // Get the stream from the filtered canvas if filter is active, otherwise use camera stream
+      let recordingStream: MediaStream;
+      const canvas = this.filterCanvas?.nativeElement;
+      
+      if (this.selectedFilter() !== 'none' && canvas) {
+        // Capture stream from canvas which has the filter applied
+        recordingStream = canvas.captureStream(30); // 30 fps
+        
+        // Add audio from the original camera stream
+        const cameraStream = this.stream();
+        if (cameraStream) {
+          const audioTracks = cameraStream.getAudioTracks();
+          audioTracks.forEach(track => recordingStream.addTrack(track));
+        }
+      } else {
+        // Use original camera stream without filter
+        const stream = this.stream();
+        if (!stream) {
+          throw new Error('Failed to get camera stream');
+        }
+        recordingStream = stream;
       }
 
       // Setup MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream, {
+      const mediaRecorder = new MediaRecorder(recordingStream, {
         mimeType: this.getSupportedMimeType(),
       });
 
@@ -319,5 +384,14 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   getStreamForPreview(): MediaStream | null {
     return this.stream();
+  }
+
+  selectFilter(filterId: string): void {
+    this.selectedFilter.set(filterId);
+    this.filterService.setFilter(filterId);
+  }
+
+  toggleFilters(): void {
+    this.showFilters.update(show => !show);
   }
 }
