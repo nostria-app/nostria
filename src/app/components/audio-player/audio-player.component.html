@@ -1,6 +1,10 @@
 <div class="audio-player">
-  <button mat-icon-button (click)="togglePlay()" class="play-button">
+  <button mat-icon-button (click)="togglePlay()" class="play-button" [disabled]="isLoading()">
+    @if (isLoading()) {
+    <mat-spinner diameter="24"></mat-spinner>
+    } @else {
     <mat-icon>{{ isPlaying() ? 'pause' : 'play_arrow' }}</mat-icon>
+    }
   </button>
 
   <div class="waveform-container" (click)="onWaveformClick($event)">
@@ -23,5 +27,5 @@
     {{ formatTime(currentTime()) }}
   </div>
 
-  <audio #audioElement [src]="src" hidden></audio>
+  <audio #audioElement [src]="currentSrc()" hidden playsinline></audio>
 </div>

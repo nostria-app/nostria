@@ -1,18 +1,19 @@
-import { Component, Input, signal, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
+import { Component, Input, signal, ViewChild, ElementRef, AfterViewInit, SimpleChanges, OnChanges, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSliderModule } from '@angular/material/slider';
 import { FormsModule } from '@angular/forms';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 @Component({
   selector: 'app-audio-player',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatSliderModule, FormsModule],
+  imports: [CommonModule, MatIconModule, MatButtonModule, MatSliderModule, FormsModule, MatProgressSpinnerModule],
   templateUrl: './audio-player.component.html',
   styleUrls: ['./audio-player.component.scss']
 })
-export class AudioPlayerComponent implements AfterViewInit {
+export class AudioPlayerComponent implements AfterViewInit, OnChanges, OnDestroy {
   @Input() src = '';
   @Input() waveform: number[] = [];
   @Input() duration = 0;
@@ -20,14 +21,38 @@ export class AudioPlayerComponent implements AfterViewInit {
   @ViewChild('audioElement') audioRef!: ElementRef<HTMLAudioElement>;
 
   isPlaying = signal(false);
+  isLoading = signal(false);
   currentTime = signal(0);
   totalDuration = signal(0);
+  currentSrc = signal('');
+
+  private isRetryingWithBlob = false;
+  private blobUrl: string | null = null;
 
   ngAfterViewInit() {
     const audio = this.audioRef.nativeElement;
 
     audio.addEventListener('loadedmetadata', () => {
-      this.totalDuration.set(audio.duration || this.duration);
+      const duration = audio.duration;
+      if (duration && isFinite(duration)) {
+        this.totalDuration.set(duration);
+      } else {
+        this.totalDuration.set(this.duration);
+      }
+    });
+
+    audio.addEventListener('error', async (e) => {
+      const target = e.target as HTMLAudioElement;
+      const error = target.error;
+      console.error('Audio playback error:', error?.code, error?.message);
+      this.isPlaying.set(false);
+
+      // If network error (2) or not supported (4), try blob fallback
+      if (this.src && !this.isRetryingWithBlob && (error?.code === 2 || error?.code === 4)) {
+        console.log('Attempting to load audio as Blob...');
+        this.isRetryingWithBlob = true;
+        await this.loadAsBlob(this.src);
+      }
     });
 
     audio.addEventListener('timeupdate', () => {
@@ -43,10 +68,51 @@ export class AudioPlayerComponent implements AfterViewInit {
     audio.addEventListener('pause', () => this.isPlaying.set(false));
   }
 
-  togglePlay() {
+  async loadAsBlob(url: string) {
+    try {
+      this.isLoading.set(true);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const blob = await response.blob();
+      this.blobUrl = URL.createObjectURL(blob);
+      this.currentSrc.set(this.blobUrl);
+      console.log('Blob loaded successfully, starting playback...');
+
+      // Allow change detection to update the src
+      setTimeout(async () => {
+        const audio = this.audioRef?.nativeElement;
+        if (audio) {
+          audio.load();
+          try {
+            await audio.play();
+          } catch (e) {
+            console.error("Playback failed after blob fallback:", e);
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Failed to load audio as blob:', err);
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  ngOnDestroy() {
+    if (this.blobUrl) {
+      URL.revokeObjectURL(this.blobUrl);
+    }
+  }
+
+  async togglePlay() {
+    if (this.isLoading()) return;
     const audio = this.audioRef.nativeElement;
     if (audio.paused) {
-      audio.play();
+      try {
+        await audio.play();
+      } catch (err) {
+        console.error('Error playing audio:', err);
+        this.isPlaying.set(false);
+      }
     } else {
       audio.pause();
     }
@@ -67,9 +133,38 @@ export class AudioPlayerComponent implements AfterViewInit {
 
   private maxWaveformValue = 100;
 
-  ngOnChanges() {
+  ngOnChanges(changes: SimpleChanges) {
+    if (changes['src']) {
+      // Cleanup previous blob
+      if (this.blobUrl) {
+        URL.revokeObjectURL(this.blobUrl);
+        this.blobUrl = null;
+      }
+      this.isRetryingWithBlob = false;
+      this.currentSrc.set(this.src);
+
+      if (!changes['src'].firstChange) {
+        const audio = this.audioRef?.nativeElement;
+        if (audio) {
+          audio.load();
+          this.isPlaying.set(false);
+          this.currentTime.set(0);
+        }
+      }
+    }
+
     if (this.waveform && this.waveform.length > 0) {
       this.maxWaveformValue = Math.max(...this.waveform, 1);
+    }
+
+    // If we have a duration input, set it initially.
+    // This helps when audio metadata hasn't loaded yet or is infinite (streaming/webm).
+    if (this.duration) {
+      // Only set if we don't have a valid audio duration yet
+      const audio = this.audioRef?.nativeElement;
+      if (!audio || !audio.duration || !isFinite(audio.duration)) {
+        this.totalDuration.set(this.duration);
+      }
     }
   }
 

@@ -1,11 +1,9 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
 import { AudioPlayerComponent } from '../audio-player/audio-player.component';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
-import { ContentComponent } from '../content/content.component';
-import { ParsingService } from '../../services/parsing.service';
 
 @Component({
   selector: 'app-audio-event',
@@ -14,8 +12,7 @@ import { ParsingService } from '../../services/parsing.service';
     CommonModule,
     MatIconModule,
     AudioPlayerComponent,
-    CommentsListComponent,
-    ContentComponent
+    CommentsListComponent
   ],
   templateUrl: './audio-event.component.html',
   styleUrl: './audio-event.component.scss',
@@ -23,8 +20,6 @@ import { ParsingService } from '../../services/parsing.service';
 export class AudioEventComponent {
   event = input.required<Event>();
   hideComments = input<boolean>(false);
-
-  private parsingService = inject(ParsingService);
 
   // Extract audio URL from content
   audioUrl = computed(() => {
@@ -35,7 +30,10 @@ export class AudioEventComponent {
     if (imetaTag) {
       const urlPart = imetaTag.find(p => p.startsWith('url '));
       if (urlPart) {
-        return urlPart.substring(4);
+        const url = urlPart.substring(4).trim();
+        if (url) {
+          return url;
+        }
       }
     }
 
@@ -76,13 +74,4 @@ export class AudioEventComponent {
   });
 
   hasContentWarning = computed(() => !!this.contentWarning());
-
-  // Description might be in 'alt' tag or maybe we don't have one for audio clips usually?
-  // NIP-A0 doesn't specify a description field other than content being the URL.
-  // But maybe there is an 'alt' tag.
-  description = computed(() => {
-    const event = this.event();
-    const altTag = event.tags.find(t => t[0] === 'alt');
-    return altTag ? altTag[1] : null;
-  });
 }
