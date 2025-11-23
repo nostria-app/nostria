@@ -29,8 +29,20 @@ export class AudioEventComponent {
   // Extract audio URL from content
   audioUrl = computed(() => {
     const event = this.event();
-    // Content should be the URL
-    return event.content;
+
+    // Check imeta tag first
+    const imetaTag = event.tags.find(t => t[0] === 'imeta');
+    if (imetaTag) {
+      const urlPart = imetaTag.find(p => p.startsWith('url '));
+      if (urlPart) {
+        return urlPart.substring(4);
+      }
+    }
+
+    // Parse content for URL
+    const content = event.content;
+    const match = content.match(/(https?:\/\/[^\s]+)/);
+    return match ? match[0] : content;
   });
 
   // Extract waveform and duration from imeta tag
