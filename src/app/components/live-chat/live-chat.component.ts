@@ -93,8 +93,15 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   private oldestMessageTimestamp: number | null = null;
   isLoadingOlderMessages = signal(false);
   hasMoreMessages = signal(true);
+  // Load 50 messages initially to reduce render time and improve performance
   private readonly INITIAL_LIMIT = 50;
+  // Load 50 more messages at a time when scrolling up for smooth pagination
   private readonly LOAD_MORE_LIMIT = 50;
+  // Scroll threshold in pixels to trigger loading older messages
+  private readonly SCROLL_THRESHOLD = 100;
+
+  // Store bound scroll handler for proper cleanup
+  private boundScrollHandler?: () => void;
 
   // Computed participants from event
   participants = computed(() => {
@@ -146,7 +153,8 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     // Add scroll event listener for loading older messages
     if (this.messagesContainer) {
       const container = this.messagesContainer.nativeElement;
-      container.addEventListener('scroll', this.onScroll.bind(this));
+      this.boundScrollHandler = this.onScroll.bind(this);
+      container.addEventListener('scroll', this.boundScrollHandler);
     }
   }
 
@@ -156,9 +164,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     }
     
     // Clean up scroll event listener
-    if (this.messagesContainer) {
+    if (this.messagesContainer && this.boundScrollHandler) {
       const container = this.messagesContainer.nativeElement;
-      container.removeEventListener('scroll', this.onScroll.bind(this));
+      container.removeEventListener('scroll', this.boundScrollHandler);
     }
   }
 
@@ -175,8 +183,8 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     const container = this.messagesContainer.nativeElement;
     const scrollTop = container.scrollTop;
     
-    // Check if user scrolled to top (with some threshold)
-    if (scrollTop < 100 && !this.isLoadingOlderMessages() && this.hasMoreMessages()) {
+    // Check if user scrolled near the top to load older messages
+    if (scrollTop < this.SCROLL_THRESHOLD && !this.isLoadingOlderMessages() && this.hasMoreMessages()) {
       this.loadOlderMessages();
     }
   }
@@ -498,7 +506,8 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
           }
         );
 
-        // Wait for messages to arrive (give relays time to respond)
+        // Wait for messages to arrive (2 second timeout for relay responses)
+        // This is a reasonable timeout as Nostr relays typically respond within 1-2 seconds
         setTimeout(() => {
           console.log('[LiveChat] Received', olderMessages.length, 'older messages');
           
