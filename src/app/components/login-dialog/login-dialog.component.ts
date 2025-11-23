@@ -697,7 +697,7 @@ export class LoginDialogComponent {
   }
 
   getExternalSignerUrl(): string {
-    return `nostrsigner:?compressionType=none&returnType=signature&type=get_public_key`;
+    return `nostrsigner:?compressionType=none&returnType=signature&type=get_public_key&name=Nostria`;
   }
 
   get safeExternalSignerUrl(): SafeUrl {
