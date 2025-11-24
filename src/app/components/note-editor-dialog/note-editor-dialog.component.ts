@@ -48,6 +48,7 @@ import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.compo
 import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { AiService } from '../../services/ai.service';
+import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -1659,12 +1660,29 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     // Check for NIP-19 identifiers in text and auto-prefix with nostr:
-    const text = event.clipboardData?.getData('text/plain');
-    if (text && this.containsNip19Identifier(text)) {
-      event.preventDefault();
-      event.stopPropagation();
-      this.insertTextWithNostrPrefix(text);
-      return;
+    let text = event.clipboardData?.getData('text/plain');
+    if (text) {
+      // Check if tracking parameter removal is enabled and clean URLs
+      // For performance, only process text up to 10KB (most pastes are much smaller)
+      if (this.localSettings.removeTrackingParameters() && text.length < 10000) {
+        const cleanedText = cleanTrackingParametersFromText(text);
+        if (cleanedText !== text) {
+          // Text was modified, prevent default paste and insert cleaned text
+          event.preventDefault();
+          event.stopPropagation();
+          text = cleanedText;
+          this.insertCleanedText(text);
+          return;
+        }
+      }
+
+      // Check for NIP-19 identifiers and auto-prefix with nostr:
+      if (this.containsNip19Identifier(text)) {
+        event.preventDefault();
+        event.stopPropagation();
+        this.insertTextWithNostrPrefix(text);
+        return;
+      }
     }
 
     // If no image files or NIP-19 identifiers, allow normal text pasting
@@ -1802,6 +1820,30 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // Restore cursor position after the inserted text
     setTimeout(() => {
       const newCursorPosition = cursorPosition + processedText.length;
+      textarea.setSelectionRange(newCursorPosition, newCursorPosition);
+      textarea.focus();
+    }, 0);
+  }
+
+  /**
+   * Insert cleaned text (with tracking parameters removed)
+   */
+  private insertCleanedText(text: string): void {
+    const textarea = this.contentTextarea.nativeElement;
+    const cursorPosition = textarea.selectionStart || 0;
+    const currentContent = this.content();
+
+    // Insert the cleaned text at cursor position
+    const newContent =
+      currentContent.substring(0, cursorPosition) +
+      text +
+      currentContent.substring(cursorPosition);
+
+    this.content.set(newContent);
+
+    // Restore cursor position after the inserted text
+    setTimeout(() => {
+      const newCursorPosition = cursorPosition + text.length;
       textarea.setSelectionRange(newCursorPosition, newCursorPosition);
       textarea.focus();
     }, 0);
