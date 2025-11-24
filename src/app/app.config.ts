@@ -91,7 +91,7 @@ export const appConfig: ApplicationConfig = {
     provideAnimations(),
     provideHttpClient(withFetch(), withInterceptors([nip98AuthInterceptor])),
     provideClientHydration(withEventReplay()),
-    provideServiceWorker('ngsw-worker.js', {
+    provideServiceWorker('service-worker.js', {
       enabled: !isDevMode(),
       // enabled: true, // For development, set to true to test service worker. Also add "serviceWorker" in angular.json.
       registrationStrategy: 'registerWhenStable:30000',
