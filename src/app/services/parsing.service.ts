@@ -125,19 +125,26 @@ export class ParsingService {
       // Use the proper nip19 function for decoding nostr URIs
       const decoded = nip19.decodeNostrURI(uri);
 
-      if (!decoded) return null;
+      if (!decoded) {
+        this.logger.debug(`Failed to decode nostr URI: ${uri}`);
+        return null;
+      }
 
       let displayName = '';
       let pubkey = '';
       let metadata: NostrRecord | undefined;
 
+      // Handle both npub and nprofile types
       if (decoded.type === 'nprofile') {
         pubkey = (decoded.data as ProfilePointer).pubkey;
+        this.logger.debug(`Decoded nprofile mention for pubkey: ${pubkey.substring(0, 8)}...`);
       } else if (decoded.type === 'npub') {
         pubkey = decoded.data;
+        this.logger.debug(`Decoded npub mention for pubkey: ${pubkey.substring(0, 8)}...`);
       }
 
       if (pubkey) {
+        // Fetch profile metadata to get display name
         metadata = await this.data.getProfile(pubkey);
 
         if (metadata) {
@@ -145,9 +152,11 @@ export class ParsingService {
             metadata.data.display_name ||
             metadata.data.name ||
             this.utilities.getTruncatedNpub(pubkey);
+          this.logger.debug(`Found profile for ${pubkey.substring(0, 8)}...: ${displayName}`);
         } else {
           // Fallback to truncated pubkey if no metadata found
           displayName = this.utilities.getTruncatedNpub(pubkey);
+          this.logger.debug(`No profile found for ${pubkey.substring(0, 8)}..., using truncated npub: ${displayName}`);
         }
       } else {
         displayName = this.getDisplayNameFromNostrUri(decoded.type, decoded.data);
