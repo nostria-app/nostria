@@ -75,7 +75,7 @@ export class CreatePlaylistDialogComponent {
         } else {
           this.generateRandomId();
         }
-      }      this.importedTracks = feed.items.map(item => ({
+      } this.importedTracks = feed.items.map(item => ({
         url: item.mediaUrl,
         title: item.title,
         artist: feed.title,

@@ -6,8 +6,8 @@
     <div class="rss-section">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Import from RSS Feed (Optional)</mat-label>
-        <input matInput formControlName="rssUrl" placeholder="https://example.com/feed.xml" autocomplete="off">
-        <button type="button" mat-icon-button matSuffix (click)="fetchRss()" [disabled]="isParsingRss()"
+        <input matInput formControlName="rssUrl" placeholder="https://example.com/feed.xml" autocomplete="off" (keydown.enter)="fetchRss()" (blur)="fetchRss()">
+        <button type="button" mat-icon-button matSuffix (click)="fetchRss()" [disabled]="isParsingRss()" matTooltip="Fetch RSS">
           matTooltip="Fetch RSS">
           @if (isParsingRss()) {
           <mat-spinner diameter="20"></mat-spinner>
