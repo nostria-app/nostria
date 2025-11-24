@@ -53,6 +53,9 @@ export class TimelineHoverCardComponent {
   // Expose isFavorite as a computed signal
   isFavorite = () => this.favoritesService.isFavorite(this.pubkey());
 
+  isHovering = signal(false);
+  effectTransform = signal('');
+
   constructor() {
     effect(() => {
       const pubkey = this.pubkey();
@@ -123,6 +126,20 @@ export class TimelineHoverCardComponent {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  onCardMouseMove(event: MouseEvent) {
+    this.isHovering.set(true);
+    const card = event.currentTarget as HTMLElement;
+    const rect = card.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    this.effectTransform.set(`translate(${x}px, ${y}px) translate(-50%, -50%)`);
+  }
+
+  onCardMouseLeave() {
+    this.isHovering.set(false);
   }
 
   getDisplayName(): string {
