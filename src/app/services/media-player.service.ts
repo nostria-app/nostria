@@ -50,6 +50,7 @@ export class MediaPlayerService implements OnInitialized {
     this._index.set(v);
   }
   readonly MEDIA_STORAGE_KEY = 'nostria-media-queue';
+  readonly PODCAST_POSITIONS_KEY = 'nostria-podcast-positions';
 
   // Cache for YouTube embed URLs
   private _youtubeUrlCache = new Map<string, SafeResourceUrl>();
@@ -470,6 +471,41 @@ export class MediaPlayerService implements OnInitialized {
     );
   }
 
+  /**
+   * Save the current playback position for a podcast
+   * @param url The media file URL used as unique identifier
+   * @param position The current playback position in seconds
+   */
+  savePodcastPosition(url: string, position: number): void {
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      const positions: Record<string, number> = positionsJson ? JSON.parse(positionsJson) : {};
+      positions[url] = position;
+      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
+    } catch (error) {
+      console.error('Error saving podcast position:', error);
+    }
+  }
+
+  /**
+   * Restore the playback position for a podcast
+   * @param url The media file URL used as unique identifier
+   * @returns The saved position in seconds, or 0 if not found
+   */
+  restorePodcastPosition(url: string): number {
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      if (!positionsJson) {
+        return 0;
+      }
+      const positions: Record<string, number> = JSON.parse(positionsJson);
+      return positions[url] || 0;
+    } catch (error) {
+      console.error('Error restoring podcast position:', error);
+      return 0;
+    }
+  }
+
   updateWindowPosition(x: number, y: number) {
     this.videoWindowState.update(state => ({ ...state, x, y }));
     this.saveWindowState();
@@ -539,12 +575,28 @@ export class MediaPlayerService implements OnInitialized {
   private handleTimeUpdate = () => {
     if (this.audio) {
       this.currentTimeSig.set(this.audio.currentTime);
+      
+      // Save podcast position periodically (only for podcasts)
+      const currentItem = this.current();
+      if (currentItem?.type === 'Podcast') {
+        this.savePodcastPosition(currentItem.source, this.audio.currentTime);
+      }
     }
   };
 
   private handleLoadedMetadata = () => {
     if (this.audio) {
       this.durationSig.set(this.audio.duration);
+      
+      // Restore saved position for podcasts
+      const currentItem = this.current();
+      if (currentItem?.type === 'Podcast') {
+        const savedPosition = this.restorePodcastPosition(currentItem.source);
+        if (savedPosition > 0 && savedPosition < this.audio.duration) {
+          this.audio.currentTime = savedPosition;
+          console.log(`Restored podcast position: ${savedPosition}s for ${currentItem.source}`);
+        }
+      }
     }
   };
 
@@ -791,6 +843,12 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   private cleanupCurrentMedia() {
+    // Save podcast position before cleanup
+    const currentItem = this.current();
+    if (currentItem?.type === 'Podcast' && this.audio) {
+      this.savePodcastPosition(currentItem.source, this.audio.currentTime);
+    }
+
     // Reset initialization flag
     this.videoPlaybackInitialized = false;
 
