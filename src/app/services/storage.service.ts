@@ -366,8 +366,30 @@ export class StorageService {
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private db!: IDBPDatabase<NostriaDBSchema>;
-  private readonly DB_NAME = 'nostria';
+  private readonly DEFAULT_DB_NAME = 'nostria';
+  private readonly DB_NAME_STORAGE_KEY = 'nostria_db_name';
   private readonly DB_VERSION = 9; // Updated for messages table
+  private currentDbName: string;
+
+  // Get the database name from localStorage or use default
+  private getDbName(): string {
+    try {
+      const storedName = localStorage.getItem(this.DB_NAME_STORAGE_KEY);
+      return storedName || this.DEFAULT_DB_NAME;
+    } catch {
+      return this.DEFAULT_DB_NAME;
+    }
+  }
+
+  // Set a new database name in localStorage
+  private setDbName(name: string): void {
+    try {
+      localStorage.setItem(this.DB_NAME_STORAGE_KEY, name);
+      this.currentDbName = name;
+    } catch (error) {
+      this.logger.error('Failed to save database name to localStorage', error);
+    }
+  }
 
   // Signal to track database initialization status
   initialized = signal(false);
@@ -410,7 +432,9 @@ export class StorageService {
   private fallbackStorage = new Map<string, any>();
   useFallbackMode = signal(false);
 
-  constructor() { }
+  constructor() {
+    this.currentDbName = this.getDbName();
+  }
 
   async init(): Promise<void> {
     this.logger.info('StorageService.init() called');
@@ -492,9 +516,9 @@ export class StorageService {
   }
 
   private async createDatabase(): Promise<IDBPDatabase<NostriaDBSchema>> {
-    this.logger.debug('Starting IndexedDB database creation/opening');
+    this.logger.debug('Starting IndexedDB database creation/opening', { dbName: this.currentDbName });
 
-    return await openDB<NostriaDBSchema>(this.DB_NAME, this.DB_VERSION, {
+    return await openDB<NostriaDBSchema>(this.currentDbName, this.DB_VERSION, {
       upgrade: async (db, oldVersion, newVersion) => {
         this.logger.info('Creating database schema', {
           oldVersion,
@@ -641,12 +665,21 @@ export class StorageService {
       storageQuota: this.getStorageQuotaInfo(),
     });
 
-    // Set initialized to false in case of error
+    // Set initialized to false
     this.initialized.set(false);
 
-    // Attempt to fall back to a simpler database or memory storage
-    // This will throw an error if fallback also fails with permanent failure
-    await this.attemptFallbackInitialization();
+    // Mark as permanent failure
+    this.storageInfo.update(info => ({
+      ...info,
+      lastError: 'IndexedDB permanently locked or blocked',
+      isPermanentFailure: true,
+      initializationAttempts: info.initializationAttempts + 1,
+    }));
+
+    // Throw error to propagate to app initialization
+    throw new Error(
+      'IndexedDB is permanently locked or blocked. Please close all browser tabs running Nostria and restart your browser.'
+    );
   }
 
   private detectPrivateMode(): boolean {
@@ -677,91 +710,7 @@ export class StorageService {
     return null;
   }
 
-  private async attemptFallbackInitialization(): Promise<void> {
-    this.logger.info('Attempting fallback IndexedDB initialization');
 
-    try {
-      // Add timeout for deletion and recreation
-      const fallbackInitPromise = this.performFallbackInit();
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Fallback initialization timeout after 8 seconds'));
-        }, 8000);
-      });
-
-      await Promise.race([fallbackInitPromise, timeoutPromise]);
-
-      this.logger.info('Fallback IndexedDB initialization successful');
-      this.initialized.set(true);
-    } catch (fallbackError) {
-      this.logger.error('Fallback initialization also failed', fallbackError);
-
-      // Check if this is a timeout or lock error
-      const errorMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-      const isPermanentFailure =
-        errorMessage.includes('timeout') ||
-        errorMessage.includes('blocked') ||
-        errorMessage.includes('lock') ||
-        errorMessage.includes('VersionError');
-
-      if (isPermanentFailure) {
-        this.logger.error('Permanent IndexedDB failure detected - database is locked or blocked');
-        this.storageInfo.update(info => ({
-          ...info,
-          lastError: 'IndexedDB permanently locked or blocked',
-          isPermanentFailure: true,
-          initializationAttempts: info.initializationAttempts + 1,
-        }));
-
-        // Set initialized to false to trigger error handling in app.ts
-        this.initialized.set(false);
-
-        // Throw error to propagate to app initialization
-        throw new Error(
-          'IndexedDB is permanently locked or blocked. Please close all browser tabs and restart your browser.'
-        );
-      }
-
-      // For other errors, try memory-only mode
-      this.logger.warn('Enabling memory-only storage mode due to IndexedDB failure');
-      this.useFallbackMode.set(true);
-      this.initialized.set(true);
-
-      // Update storage info
-      this.storageInfo.update(info => ({
-        ...info,
-        lastError: 'Complete IndexedDB failure - using memory storage',
-        initializationAttempts: info.initializationAttempts + 1,
-      }));
-    }
-  }
-
-  private async performFallbackInit(): Promise<void> {
-    // Try to delete and recreate the database
-    this.logger.info('Deleting corrupted database');
-    await deleteDB(this.DB_NAME);
-
-    // Wait a bit before recreating
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Try again with a simplified approach
-    this.logger.info('Recreating database with simplified schema');
-    this.db = await openDB<NostriaDBSchema>(this.DB_NAME, 1, {
-      upgrade: async db => {
-        this.logger.info('Creating minimal database schema');
-
-        // Create only essential stores
-        if (!db.objectStoreNames.contains('events')) {
-          const eventsStore = db.createObjectStore('events', {
-            keyPath: 'id',
-          });
-          eventsStore.createIndex('by-kind', 'kind');
-          eventsStore.createIndex('by-pubkey', 'pubkey');
-          this.logger.debug('Created minimal events store');
-        }
-      },
-    });
-  }
 
   // Generate a composite key from key and type
   private generateCompositeKey(key: string, type: string): string {
@@ -1637,7 +1586,7 @@ export class StorageService {
       }
 
       // Delete the entire database
-      await deleteDB(this.DB_NAME);
+      await deleteDB(this.currentDbName);
 
       // Reset initialization status
       this.initialized.set(false);
@@ -1660,6 +1609,48 @@ export class StorageService {
       this.logger.error('Error wiping database', error);
       // Attempt to re-initialize in case of error
       this.initDatabase();
+    }
+  }
+
+  /**
+   * Recreate the cache database with a new unique name
+   * This is useful when the current database is locked and inaccessible
+   */
+  async recreateCacheDatabase(): Promise<void> {
+    try {
+      this.logger.info('Recreating cache database with new name');
+
+      // Close the current database connection if it exists
+      if (this.db) {
+        this.db.close();
+      }
+
+      // Generate a new unique database name
+      const timestamp = Date.now();
+      const newDbName = `${this.DEFAULT_DB_NAME}_${timestamp}`;
+
+      this.logger.info('New database name:', newDbName);
+
+      // Update the database name in localStorage
+      this.setDbName(newDbName);
+
+      // Reset initialization status
+      this.initialized.set(false);
+
+      // Reset storage info
+      this.storageInfo.update(info => ({
+        ...info,
+        isPermanentFailure: false,
+        lastError: undefined,
+      }));
+
+      // Initialize the new database
+      await this.initDatabase();
+
+      this.logger.info('Cache database recreated successfully with name:', newDbName);
+    } catch (error) {
+      this.logger.error('Error recreating cache database', error);
+      throw error;
     }
   }
 
