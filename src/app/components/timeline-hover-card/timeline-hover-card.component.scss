@@ -235,7 +235,7 @@
 .timeline-footer {
   padding: 12px 16px;
   border-top: 1px solid var(--mat-sys-outline-variant);
-  background-color: var(--mat-app-surface-variant);
+  background-color: transparent;
 
   a {
     width: 100%;
@@ -244,5 +244,17 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
+    
+    // Make the background behind the button brighter (glass effect)
+    -webkit-backdrop-filter: brightness(1.5) saturate(1.2);
+    backdrop-filter: brightness(1.5) saturate(1.2);
+    
+    // Make the border brighter
+    border-color: rgba(255, 255, 255, 0.4);
+    
+    &:hover {
+      border-color: rgba(255, 255, 255, 0.6);
+      background-color: rgba(255, 255, 255, 0.05);
+    }
   }
 }
