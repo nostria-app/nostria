@@ -2,10 +2,10 @@
   display: block;
   width: 100%;
   height: 100%;
-  background: var(--mat-sys-background);
+  background: transparent;
 
   &.footer-mode {
-    height: 80px;
+    height: 64px;
   }
 
   &.fullscreen-mode {
@@ -22,7 +22,7 @@
 .live-stream-container {
   width: 100%;
   height: 100%;
-  background: #000;
+  background: transparent;
 
   // Footer mode - simple flex layout
   &.footer-mode {
@@ -32,6 +32,7 @@
 
   // Fullscreen mode - CSS Grid layout
   &.fullscreen {
+    background: #000;
     display: grid;
     grid-template-columns: 1fr auto;
     grid-template-rows: auto 1fr 1fr;
@@ -60,10 +61,10 @@
     position: absolute;
     top: 0;
     left: 0;
-    width: 142px;
-    height: 80px;
+    width: 114px;
+    height: 64px;
     z-index: 1;
-    border-radius: 4px;
+    border-radius: 32px 0 0 32px;
   }
 
   &.in-fullscreen {
@@ -94,8 +95,8 @@
   max-width: 100%;
   height: 100%;
   gap: 16px;
-  padding-left: 158px; // Leave space for video positioned at left
-  background: var(--mat-sys-surface-container);
+  padding-left: 130px; // Leave space for video positioned at left
+  background: transparent;
   overflow: hidden;
 }
 
