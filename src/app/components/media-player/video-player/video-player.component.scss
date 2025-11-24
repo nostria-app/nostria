@@ -6,10 +6,6 @@
   &.footer-mode {
     height: 64px;
   }
-
-  &.compact-mode {
-    height: 33px;
-  }
 }
 
 .video-player-container {
@@ -17,33 +13,83 @@
   width: 100%;
   height: 100%;
   background: transparent;
-}
 
-.video-player-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding: 0 16px 0 0;
-  gap: 16px;
+  &.footer-mode {
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px 0 0;
+    gap: 16px;
 
-  @media (max-width: 768px) {
-    padding: 0 8px 0 0;
-    gap: 8px;
+    @media (max-width: 768px) {
+      padding: 0 8px 0 0;
+      gap: 8px;
+    }
+  }
+
+  &.expanded-mode {
+    flex-direction: column;
+    background: #000;
   }
 }
 
-.video-container {
-  flex: 1;
+.video-header {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  z-index: 10;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  box-sizing: border-box;
+
+  &.hidden {
+    display: none;
+  }
+}
+
+.video-title h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: white;
+}
+
+.video-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.video-area {
   position: relative;
-  background: #000;
-  border-radius: 32px 0 0 32px;
   overflow: hidden;
-  max-width: 114px;
-  height: 64px;
+
+  .footer-mode & {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #000;
+    border-radius: 32px 0 0 32px;
+    max-width: 114px;
+    height: 64px;
+  }
+
+  .expanded-mode & {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    padding-top: 60px;
+    /* Space for header */
+    box-sizing: border-box;
+  }
 }
 
 .video-element {
@@ -60,7 +106,11 @@
   opacity: 0;
   transition: opacity 0.2s;
 
-  .video-container:hover & {
+  &.hidden {
+    display: none;
+  }
+
+  .video-area:hover & {
     opacity: 1;
   }
 
@@ -80,6 +130,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
+
+  &.hidden {
+    display: none;
+  }
 }
 
 .control-buttons {
