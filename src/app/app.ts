@@ -452,9 +452,12 @@ export class App implements OnInit {
     effect(() => {
       const isHandset = this.layout.isHandset();
 
-      // Only close sidenav when transitioning FROM desktop TO mobile (not on initial load)
-      if (!isFirstRun && isHandset && !previousIsHandset) {
-        this.localSettings.setMenuOpen(false);
+      // On mobile (over mode), ensure menu starts closed on initial app load
+      // Also close when transitioning FROM desktop TO mobile
+      if (isHandset) {
+        if (isFirstRun || (!isFirstRun && !previousIsHandset)) {
+          this.localSettings.setMenuOpen(false);
+        }
       }
 
       // Update previous state for next comparison
