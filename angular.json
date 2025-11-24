@@ -32,7 +32,8 @@
                 "glob": "**/*",
                 "input": "public"
               },
-              "src/locale"
+              "src/locale",
+              "src/service-worker.js"
             ],
             "styles": [
               "src/styles.scss"

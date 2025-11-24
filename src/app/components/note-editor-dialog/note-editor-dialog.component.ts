@@ -7,6 +7,7 @@ import {
   ElementRef,
   AfterViewInit,
   OnDestroy,
+  OnInit,
   HostListener,
 } from '@angular/core';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
@@ -61,6 +62,8 @@ export interface NoteEditorDialogData {
     content?: string;
   };
   mentions?: string[]; // Array of pubkeys to mention
+  content?: string; // Initial content
+  files?: File[]; // Initial files
 }
 
 interface MediaMetadata {
@@ -122,7 +125,7 @@ interface NoteAutoDraft {
     '(keydown)': 'onHostKeyDown($event)',
   },
 })
-export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
+export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestroy {
   dialogRef?: CustomDialogRef<NoteEditorDialogComponent, { published: boolean; event?: NostrEvent }>;
   data: NoteEditorDialogData = {};
   private nostrService = inject(NostrService);
@@ -366,13 +369,42 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       this.powTargetDifficulty.set(powEnabled ? powDifficulty : 0);
     }
 
+    // Set up auto-save effects
+    this.setupAutoSave();
+  }
+
+  ngOnInit() {
+    // Load auto-saved draft if available
+    this.loadAutoDraft();
+
     // Initialize content with quote if provided
     if (this.data?.quote) {
       const nevent = nip19.neventEncode({
         id: this.data.quote.id,
         author: this.data.quote.pubkey,
       });
-      this.content.set(`\n\nnostr:${nevent}`);
+
+      // Append quote to existing content (e.g. draft) or set it
+      const currentContent = this.content();
+      const quoteText = `\n\nnostr:${nevent}`;
+
+      if (currentContent) {
+        this.content.set(currentContent + quoteText);
+      } else {
+        this.content.set(quoteText);
+      }
+    }
+
+    // Initialize content if provided (e.g. from Share Target)
+    if (this.data?.content) {
+      const currentContent = this.content();
+      const newContent = this.data.content;
+
+      if (currentContent) {
+        this.content.set(currentContent + '\n' + newContent);
+      } else {
+        this.content.set(newContent);
+      }
     }
 
     // Add reply mentions if this is a reply
@@ -383,11 +415,10 @@ export class NoteEditorDialogComponent implements AfterViewInit, OnDestroy {
       }
     }
 
-    // Load auto-saved draft if available
-    this.loadAutoDraft();
-
-    // Set up auto-save effects
-    this.setupAutoSave();
+    // Handle shared files
+    if (this.data?.files && this.data.files.length > 0) {
+      this.uploadFiles(this.data.files);
+    }
   }
 
   private getAutoDraftKey(): string {

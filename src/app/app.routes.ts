@@ -48,6 +48,7 @@ import { ArticlesListComponent } from './pages/articles-list/articles-list.compo
 import { ProfileOpenComponent } from './pages/profile/profile-open.component';
 import { DeleteEventComponent } from './pages/delete-event/delete-event.component';
 import { DeleteAccountComponent } from './pages/delete-account/delete-account.component';
+import { ShareTargetComponent } from './pages/share-target/share-target.component';
 import { InviteComponent } from './pages/invite/invite.component';
 import { StreamsComponent } from './pages/streams/streams.component';
 import { MeetingsComponent } from './pages/meetings/meetings.component';
@@ -86,6 +87,7 @@ export const routes: Routes = [
     pathMatch: 'full',
     title: 'Home',
   },
+  { path: 'share-target', component: ShareTargetComponent },
   { path: 'f/:path', component: FeedsComponent, title: 'Feeds' },
   {
     path: 'e/:id',

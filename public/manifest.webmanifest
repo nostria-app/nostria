@@ -41,17 +41,39 @@
       "url": "/?nwc=%s"
     }
   ],
+  "share_target": {
+    "action": "/share-target",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "files",
+          "accept": [
+            "image/*",
+            "video/*",
+            "audio/*",
+            "text/*",
+            "application/pdf"
+          ]
+        }
+      ]
+    }
+  },
   "features": [
     "Cross Platform",
     "Nostr",
     "Social Media"
   ],
   "categories": [
+    "social",
     "entertainment",
-    "music",
-    "photo",
     "productivity",
-    "social"
+    "music",
+    "photo"
   ],
   "iarc_rating_id": "4543bbc1-c869-496b-8679-9be4cbf05ad6",
   "shortcuts": [
