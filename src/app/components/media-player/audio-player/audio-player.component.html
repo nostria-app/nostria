@@ -14,53 +14,128 @@
 
     <div class="media-controls">
       <div class="control-buttons">
-        @if (isPodcast()) {
-        <button matTooltip="Change speed" (click)="media.rate()" mat-icon-button>
-          <mat-icon>speed</mat-icon>
-        </button>
-        }
+        <!-- Desktop Controls -->
+        <div class="desktop-controls">
+          @if (isPodcast()) {
+          <button mat-icon-button [matMenuTriggerFor]="speedMenu" matTooltip="Change speed">
+            <span class="speed-label">{{ media.playbackRate() }}x</span>
+          </button>
+          <mat-menu #speedMenu="matMenu">
+            <button mat-menu-item (click)="media.setPlaybackRate(0.5)">0.5x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(0.75)">0.75x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(1)">1x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(1.25)">1.25x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(1.5)">1.5x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(2)">2x</button>
+          </mat-menu>
+          }
 
-        @if (isPodcast()) {
-        <button matTooltip="Skip back 10 seconds" class="hide-small" (click)="media.rewind(10)" mat-icon-button>
-          <mat-icon>replay_10</mat-icon>
-        </button>
-        }
+          @if (isPodcast()) {
+          <button matTooltip="Skip back 10 seconds" (click)="media.rewind(10)" mat-icon-button>
+            <mat-icon>replay_10</mat-icon>
+          </button>
+          }
 
-        <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
-          <mat-icon>skip_previous</mat-icon>
-        </button>
+          <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
+            <mat-icon>skip_previous</mat-icon>
+          </button>
 
-        @if (media.paused) {
-        <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button">
-          <mat-icon>play_arrow</mat-icon>
-        </button>
-        } @else {
-        <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button">
-          <mat-icon>pause</mat-icon>
-        </button>
-        }
+          @if (media.paused) {
+          <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button">
+            <mat-icon>play_arrow</mat-icon>
+          </button>
+          } @else {
+          <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button">
+            <mat-icon>pause</mat-icon>
+          </button>
+          }
 
-        <button matTooltip="Next" [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
-          <mat-icon>skip_next</mat-icon>
-        </button>
+          <button matTooltip="Next" [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
+            <mat-icon>skip_next</mat-icon>
+          </button>
 
-        @if (isPodcast()) {
-        <button matTooltip="Skip forward 10 seconds" class="hide-small" (click)="media.forward(10)" mat-icon-button>
-          <mat-icon>forward_10</mat-icon>
-        </button>
-        }
+          @if (isPodcast()) {
+          <button matTooltip="Skip forward 10 seconds" (click)="media.forward(10)" mat-icon-button>
+            <mat-icon>forward_10</mat-icon>
+          </button>
+          }
 
-        <button matTooltip="View queue" routerLink="/media-queue" mat-icon-button>
-          <mat-icon>queue_music</mat-icon>
-        </button>
+          <button matTooltip="View queue" routerLink="/media-queue" mat-icon-button>
+            <mat-icon>queue_music</mat-icon>
+          </button>
+        </div>
+
+        <!-- Mobile Controls -->
+        <div class="mobile-controls">
+          <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
+            <mat-icon>skip_previous</mat-icon>
+          </button>
+
+          @if (media.paused) {
+          <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button">
+            <mat-icon>play_arrow</mat-icon>
+          </button>
+          } @else {
+          <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button">
+            <mat-icon>pause</mat-icon>
+          </button>
+          }
+
+          <button matTooltip="Next" [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
+            <mat-icon>skip_next</mat-icon>
+          </button>
+
+          <button mat-icon-button [matMenuTriggerFor]="moreMenu" matTooltip="More options">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+
+          <mat-menu #moreMenu="matMenu">
+            @if (isPodcast()) {
+            <button mat-menu-item [matMenuTriggerFor]="speedMenuMobile">
+              <mat-icon>speed</mat-icon>
+              <span>Speed: {{ media.playbackRate() }}x</span>
+            </button>
+            <button mat-menu-item (click)="media.rewind(10)">
+              <mat-icon>replay_10</mat-icon>
+              <span>Rewind 10s</span>
+            </button>
+            <button mat-menu-item (click)="media.forward(10)">
+              <mat-icon>forward_10</mat-icon>
+              <span>Forward 10s</span>
+            </button>
+            }
+            <button mat-menu-item routerLink="/media-queue">
+              <mat-icon>queue_music</mat-icon>
+              <span>Queue</span>
+            </button>
+            <button mat-menu-item (click)="toggleFullscreen()">
+              <mat-icon>open_in_full</mat-icon>
+              <span>Fullscreen</span>
+            </button>
+            <button mat-menu-item (click)="media.exit()">
+              <mat-icon>close</mat-icon>
+              <span>Close Player</span>
+            </button>
+          </mat-menu>
+
+          <mat-menu #speedMenuMobile="matMenu">
+            <button mat-menu-item (click)="media.setPlaybackRate(0.5)">0.5x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(0.75)">0.75x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(1)">1x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(1.25)">1.25x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(1.5)">1.5x</button>
+            <button mat-menu-item (click)="media.setPlaybackRate(2)">2x</button>
+          </mat-menu>
+        </div>
       </div>
 
       <div class="media-timeline">
         <span class="time-label">{{ formatLabel(currentTime()) }}</span>
-        <mat-slider class="timeline-slider" [min]="0" [max]="duration()" [step]="1">
-          <input matSliderThumb [value]="currentTime()" (valueChange)="onTimeChange($event)"
-            aria-label="Current time" />
-        </mat-slider>
+        <div class="custom-slider">
+          <input type="range" [min]="0" [max]="duration() || 0" [value]="currentTime()" (input)="onTimeChange($event)"
+            class="slider-input" [style.background-size]="(currentTime() / (duration() || 1)) * 100 + '% 100%'"
+            aria-label="Seek slider" />
+        </div>
         <span class="time-label">{{ formatLabel(duration()) }}</span>
       </div>
     </div>
@@ -88,12 +163,17 @@
         <mat-icon>close</mat-icon>
       </button>
     </div>
+
+    <!-- Mobile Progress Bar -->
+    <div class="mobile-progress">
+      <div class="progress-bar" [style.width.%]="(currentTime() / (duration() || 1)) * 100"></div>
+    </div>
   </div>
   } @else {
   <!-- Expanded mode - large audio player with artwork -->
   <div class="audio-player-expanded">
     <div class="audio-header">
-      <div class="audio-title">
+      <div class="audio-title-container">
         <h2>{{ media.current()?.title || 'Audio' }}</h2>
         <p>{{ media.current()?.artist }}</p>
       </div>
@@ -148,10 +228,11 @@
 
         <div class="timeline-expanded">
           <span class="time-label">{{ formatLabel(currentTime()) }}</span>
-          <mat-slider class="timeline-slider-expanded" [min]="0" [max]="duration()" [step]="1">
-            <input matSliderThumb [value]="currentTime()" (valueChange)="onTimeChange($event)"
-              aria-label="Current time" />
-          </mat-slider>
+          <div class="custom-slider expanded-slider">
+            <input type="range" [min]="0" [max]="duration() || 0" [value]="currentTime()" (input)="onTimeChange($event)"
+              class="slider-input" [style.background-size]="(currentTime() / (duration() || 1)) * 100 + '% 100%'"
+              aria-label="Seek slider" />
+          </div>
           <span class="time-label">{{ formatLabel(duration()) }}</span>
         </div>
 

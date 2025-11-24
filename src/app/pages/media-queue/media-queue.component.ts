@@ -24,6 +24,23 @@ export class MediaQueueComponent {
   private dialog = inject(MatDialog);
   private ngZone = inject(NgZone);
 
+  pressedItemIndex = -1;
+
+  onMouseDown(index: number) {
+    this.pressedItemIndex = index;
+  }
+
+  onMouseUp() {
+    this.pressedItemIndex = -1;
+  }
+
+  onDragStarted() {
+    this.pressedItemIndex = -1; // Clear pressed state when drag starts
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
+    }
+  }
+
   drop(event: CdkDragDrop<string[]>) {
     const currentMedia = this.media.media();
     moveItemInArray(currentMedia, event.previousIndex, event.currentIndex);

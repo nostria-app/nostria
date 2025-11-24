@@ -76,6 +76,7 @@ export class MediaPlayerService implements OnInitialized {
   videoUrl = signal<SafeResourceUrl | undefined>(undefined);
   videoMode = signal(false);
   pausedYouTubeUrl = signal<SafeResourceUrl | undefined>(undefined);
+  playbackRate = signal(1.0);
 
   // Video element reference
   private videoElement?: HTMLVideoElement;
@@ -627,9 +628,17 @@ export class MediaPlayerService implements OnInitialized {
 
       if (!this.audio) {
         this.audio = new Audio(file.source);
+        this.audio.addEventListener('ratechange', () => {
+          if (this.audio) {
+            this.playbackRate.set(this.audio.playbackRate);
+          }
+        });
       } else {
         this.audio.src = file.source;
       }
+
+      // Sync signal
+      this.playbackRate.set(this.audio.playbackRate);
 
       // Add ended event listener to audio
       this.audio.addEventListener('ended', this.handleMediaEnded);
@@ -1064,9 +1073,16 @@ export class MediaPlayerService implements OnInitialized {
     console.log(this.audio.playbackRate);
 
     if (this.audio.playbackRate == 2.0) {
-      this.audio.playbackRate = 1.0;
+      this.setPlaybackRate(1.0);
     } else {
-      this.audio.playbackRate = 2.0;
+      this.setPlaybackRate(2.0);
+    }
+  }
+
+  setPlaybackRate(speed: number) {
+    if (this.audio) {
+      this.audio.playbackRate = speed;
+      this.playbackRate.set(speed);
     }
   }
 
