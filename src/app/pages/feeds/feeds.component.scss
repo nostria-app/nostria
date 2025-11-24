@@ -52,6 +52,10 @@ app-user-profile {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
+
+    @media (max-width: 599px) {
+      padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+    }
   }
 
   // Header styles

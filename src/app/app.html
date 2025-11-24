@@ -410,7 +410,7 @@
   </mat-sidenav-container>
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
-  @if (layout.isHandset()) {
+  @if (layout.isHandset() && !layout.showMediaPlayer()) {
   <div class="mobile-nav no-print">
     <a mat-button class="mobile-nav-button" [routerLink]="['/']" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
