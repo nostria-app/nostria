@@ -31,6 +31,10 @@
   <!-- Footer Controls (Footer Mode Only) -->
   <div class="youtube-controls" [class.hidden]="!footer()">
     <div class="control-buttons">
+      <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
+        <mat-icon>skip_previous</mat-icon>
+      </button>
+
       @if (media.paused) {
       <button matTooltip="Play" (click)="media.resume()" mat-icon-button>
         <mat-icon>play_arrow</mat-icon>
@@ -40,6 +44,10 @@
         <mat-icon>pause</mat-icon>
       </button>
       }
+
+      <button matTooltip="Next" [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
+        <mat-icon>skip_next</mat-icon>
+      </button>
 
       <button matTooltip="View queue" routerLink="/media-queue" mat-icon-button>
         <mat-icon>queue_music</mat-icon>
