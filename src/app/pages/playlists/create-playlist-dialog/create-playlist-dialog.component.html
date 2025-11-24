@@ -10,7 +10,6 @@
           (keydown.enter)="fetchRss()" (blur)="fetchRss()">
         <button type="button" mat-icon-button matSuffix (click)="fetchRss()" [disabled]="isParsingRss()"
           matTooltip="Fetch RSS">
-          matTooltip="Fetch RSS">
           @if (isParsingRss()) {
           <mat-spinner diameter="20"></mat-spinner>
           } @else {

@@ -8,6 +8,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
+import { MatMenuModule } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MediaPlayerService } from '../../../services/media-player.service';
@@ -20,6 +21,7 @@ import { LayoutService } from '../../../services/layout.service';
     MatIconModule,
     MatTooltipModule,
     MatSliderModule,
+    MatMenuModule,
     FormsModule,
     RouterModule,
   ],
@@ -42,6 +44,10 @@ export class AudioPlayerComponent {
   isPodcast = computed(() => this.media.current()?.type === 'Podcast');
 
   formatLabel(value: number): string {
+    if (!value || isNaN(value)) {
+      return '0:00';
+    }
+
     const hours = Math.floor(value / 3600);
     const minutes = Math.floor((value % 3600) / 60);
     const seconds = Math.floor(value % 60);
@@ -52,8 +58,14 @@ export class AudioPlayerComponent {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  onTimeChange(value: number): void {
-    this.media.time = value;
+  onTimeChange(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = Number(input.value);
+
+    // Only update if value actually changed to avoid jitter
+    if (this.media.audio && Math.abs(this.media.audio.currentTime - value) > 0.5) {
+      this.media.audio.currentTime = value;
+    }
   }
 
   onVolumeChange(value: number): void {
@@ -68,5 +80,13 @@ export class AudioPlayerComponent {
 
   toggleFullscreen(): void {
     this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+  }
+
+  toggleExpanded(): void {
+    this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+  }
+
+  close(): void {
+    this.media.exit();
   }
 }

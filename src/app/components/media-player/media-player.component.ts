@@ -23,6 +23,7 @@ import { MediaPlayerService } from '../../services/media-player.service';
   host: {
     '[class.footer-mode]': '!layout.fullscreenMediaPlayer()',
     '[class.fullscreen-mode]': 'layout.fullscreenMediaPlayer()',
+    '[class.podcast-mode]': 'isPodcast()',
   },
 })
 export class MediaPlayerComponent {
@@ -37,4 +38,5 @@ export class MediaPlayerComponent {
   isYouTube = computed(() => this.media.current()?.type === 'YouTube');
   isVideo = computed(() => this.media.current()?.type === 'Video' || (this.media.current()?.type === 'HLS' && !this.media.current()?.isLiveStream));
   isAudio = computed(() => this.media.current()?.type === 'Music' || this.media.current()?.type === 'Podcast');
+  isPodcast = computed(() => this.media.current()?.type === 'Podcast');
 }
