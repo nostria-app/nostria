@@ -57,17 +57,17 @@ export class RssParserService {
 
     const items: RssFeedItem[] = [];
     const itemElements = channel.querySelectorAll('item');
-    
+
     itemElements.forEach(item => {
       const itemTitle = this.getElementText(item, 'title');
       const itemDescription = this.getElementText(item, 'description');
       const itemLink = this.getElementText(item, 'link');
       const itemPubDate = this.getElementText(item, 'pubDate');
-      
+
       const enclosure = item.querySelector('enclosure');
       const mediaUrl = enclosure?.getAttribute('url') || '';
       const type = enclosure?.getAttribute('type') || '';
-      
+
       let itemDuration = '';
       const durationElems = item.getElementsByTagName('itunes:duration');
       if (durationElems.length > 0) {
@@ -78,7 +78,7 @@ export class RssParserService {
       const itemItunesImages = item.getElementsByTagName('itunes:image');
       if (itemItunesImages.length > 0) {
         itemImage = itemItunesImages[0].getAttribute('href') || '';
-      }      if (mediaUrl) {
+      } if (mediaUrl) {
         items.push({
           title: itemTitle,
           description: itemDescription,

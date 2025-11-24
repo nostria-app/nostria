@@ -9,10 +9,11 @@ import { RssParserService } from '../../services/rss-parser.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 @Component({
   selector: 'app-media-queue',
-  imports: [MatButtonModule, MatIconModule, MatListModule, RouterModule],
+  imports: [MatButtonModule, MatIconModule, MatListModule, RouterModule, DragDropModule],
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
 })
@@ -21,6 +22,37 @@ export class MediaQueueComponent {
   media = inject(MediaPlayerService);
   private rssParser = inject(RssParserService);
   private dialog = inject(MatDialog);
+
+  drop(event: CdkDragDrop<string[]>) {
+    const currentMedia = this.media.media();
+    moveItemInArray(currentMedia, event.previousIndex, event.currentIndex);
+    this.media.media.set(currentMedia);
+    this.media.save();
+    
+    // If the currently playing item was moved, update the index
+    if (this.media.index === event.previousIndex) {
+      this.media.index = event.currentIndex;
+    } else if (
+      this.media.index > event.previousIndex &&
+      this.media.index <= event.currentIndex
+    ) {
+      this.media.index--;
+    } else if (
+      this.media.index < event.previousIndex &&
+      this.media.index >= event.currentIndex
+    ) {
+      this.media.index++;
+    }
+  }
+
+  onMouseMove(event: MouseEvent, target: any) {
+    const element = target as HTMLElement;
+    const rect = element.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    element.style.setProperty('--mouse-x', `${x}px`);
+    element.style.setProperty('--mouse-y', `${y}px`);
+  }
 
   /**
    * Get artwork URL for media item, extracting YouTube thumbnail if applicable

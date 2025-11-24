@@ -33,9 +33,15 @@
   </div>
   } @else {
   <div class="media-list">
-    <mat-list>
+    <mat-list cdkDropList (cdkDropListDropped)="drop($event)">
       @for (item of media.media(); track item; let i = $index) {
-      <mat-list-item [class.current-playing]="isCurrentPlaying(item, i)">
+      <mat-list-item cdkDrag [class.current-playing]="isCurrentPlaying(item, i)" 
+        (mousemove)="onMouseMove($event, $event.currentTarget)" class="queue-item">
+        
+        <div class="hover-highlight"></div>
+
+        <mat-icon matListItemIcon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
+
         @if (hasArtwork(item)) {
         <img matListItemAvatar class="queue-artwork" [src]="utilities.sanitizeImageUrl(getArtwork(item))"
           (error)="onImageError($event, item)" alt="Artwork" />
