@@ -47,7 +47,13 @@ export class LiveEventComponent {
     if (!event) return null;
 
     const titleTag = event.tags.find(tag => tag[0] === 'title');
-    return titleTag?.[1] || 'Untitled Live Event';
+    const fullTitle = titleTag?.[1] || 'Untitled Live Event';
+
+    // Truncate to 100 characters
+    if (fullTitle.length > 100) {
+      return fullTitle.substring(0, 100) + '...';
+    }
+    return fullTitle;
   });
 
   // Live event summary/description
