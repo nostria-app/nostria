@@ -703,19 +703,15 @@ export class App implements OnInit {
 
         // Show user-friendly error message
         this.showStorageError(error, diagnostics);
-
-        // If this is a permanent failure, stop loading
-        const storageInfo = this.storage.storageInfo();
-        if (storageInfo.isPermanentFailure) {
-          // Don't continue initialization for permanent failures
-          return;
-        }
       } catch (diagError) {
         this.logger.error('[App] Failed to collect diagnostic info', diagError);
+        // Show error dialog even if diagnostics fail
+        this.showStorageError(error, null);
       }
 
-      // Don't completely block the app, continue with limited functionality
-      this.logger.warn('[App] Continuing with limited functionality due to storage failure');
+      // Stop initialization - do not continue without working database
+      this.logger.error('[App] Halting initialization due to database failure');
+      return;
     }
 
     // Check for nostr protocol parameter in current URL
@@ -756,35 +752,13 @@ export class App implements OnInit {
   }
 
   private showStorageError(error: any, diagnostics: any): void {
-    // Check if this is a permanent failure (database locked/blocked)
-    const storageInfo = this.storage.storageInfo();
-    if (storageInfo.isPermanentFailure) {
-      // Show critical error dialog for permanent failures
-      this.dialog.open(DatabaseErrorDialogComponent, {
-        disableClose: true,
-        width: '90vw',
-        maxWidth: '550px',
-      });
-      return;
-    }
-
-    // For other errors, show a less critical message
-    let errorMessage = 'Storage initialization failed. ';
-
-    if (diagnostics.platform.isIOS && diagnostics.platform.isWebView) {
-      errorMessage += 'This appears to be an iOS WebView which may have IndexedDB restrictions. ';
-    } else if (diagnostics.isPrivateMode) {
-      errorMessage += 'Private browsing mode detected which may limit storage capabilities. ';
-    } else if (!diagnostics.indexedDBSupported) {
-      errorMessage += 'IndexedDB is not supported in this browser. ';
-    }
-
-    errorMessage += 'The app will continue with limited functionality.';
-
-    this.logger.warn('[App] User-friendly error message:', errorMessage);
-
-    // Show a snackbar for non-critical errors
-    this.snackBar.open(errorMessage, 'OK', { duration: 10000 });
+    // Always show critical error dialog with backdrop since we're halting the app
+    this.dialog.open(DatabaseErrorDialogComponent, {
+      disableClose: true,
+      hasBackdrop: true,
+      width: '90vw',
+      maxWidth: '550px',
+    });
   }
 
   /**
