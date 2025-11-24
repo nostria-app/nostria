@@ -80,6 +80,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   });
 
   isLiveKit = computed(() => this.media.current()?.type === 'LiveKit');
+  isExternal = computed(() => this.media.current()?.type === 'External');
 
   // Extract URL from alt tag or service tag
   joinUrl = computed(() => {
@@ -100,6 +101,13 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   openJoinUrl(): void {
     const url = this.joinUrl();
+    if (url) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  }
+
+  openExternalUrl(): void {
+    const url = this.media.current()?.source;
     if (url) {
       window.open(url, '_blank', 'noopener,noreferrer');
     }

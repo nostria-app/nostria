@@ -1,9 +1,9 @@
 <div class="live-stream-container" [class.fullscreen]="!footer()" [class.footer-mode]="footer()">
   <!-- Single video element - always present, positioned via CSS -->
-  @if (!isLiveKit()) {
+  @if (!isLiveKit() && !isExternal()) {
   <video #videoElement class="stream-video" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()"
     [muted]="media.muted" autoplay playsinline (error)="onVideoError($event)"></video>
-  } @else {
+  } @else if (isLiveKit()) {
   <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
     <div class="livekit-content">
       <mat-icon class="livekit-icon">groups</mat-icon>
@@ -16,6 +16,20 @@
         Join Room
       </button>
       }
+      }
+    </div>
+  </div>
+  } @else if (isExternal()) {
+  <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
+    <div class="livekit-content">
+      <mat-icon class="livekit-icon">open_in_new</mat-icon>
+      @if (!footer()) {
+      <h3>External Stream</h3>
+      <p>This stream is hosted on an external platform.</p>
+      <button mat-flat-button color="primary" (click)="openExternalUrl()">
+        <mat-icon>open_in_new</mat-icon>
+        Open Stream
+      </button>
       }
     </div>
   </div>
