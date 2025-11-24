@@ -67,10 +67,15 @@ export class CreatePlaylistDialogComponent {
 
       // If ID is empty, generate one based on title or random
       if (!this.playlistForm.get('id')?.value) {
-        this.generateRandomId();
-      }
-
-      this.importedTracks = feed.items.map(item => ({
+        if (feed.title) {
+          const slug = feed.title.toLowerCase()
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/(^-|-$)+/g, '');
+          this.playlistForm.patchValue({ id: slug });
+        } else {
+          this.generateRandomId();
+        }
+      }      this.importedTracks = feed.items.map(item => ({
         url: item.mediaUrl,
         title: item.title,
         artist: feed.title,

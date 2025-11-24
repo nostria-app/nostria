@@ -42,9 +42,9 @@ export class RssParserService {
 
     // Try to find image in various standard locations
     let image = '';
-    const itunesImage = channel.querySelector('itunes\\:image');
-    if (itunesImage) {
-      image = itunesImage.getAttribute('href') || '';
+    const itunesImages = channel.getElementsByTagName('itunes:image');
+    if (itunesImages.length > 0) {
+      image = itunesImages[0].getAttribute('href') || '';
     } else {
       const imageElem = channel.querySelector('image');
       if (imageElem) {
@@ -57,30 +57,28 @@ export class RssParserService {
 
     const items: RssFeedItem[] = [];
     const itemElements = channel.querySelectorAll('item');
-
+    
     itemElements.forEach(item => {
       const itemTitle = this.getElementText(item, 'title');
       const itemDescription = this.getElementText(item, 'description');
       const itemLink = this.getElementText(item, 'link');
       const itemPubDate = this.getElementText(item, 'pubDate');
-
+      
       const enclosure = item.querySelector('enclosure');
       const mediaUrl = enclosure?.getAttribute('url') || '';
       const type = enclosure?.getAttribute('type') || '';
-
+      
       let itemDuration = '';
-      const durationElem = item.querySelector('itunes\\:duration');
-      if (durationElem) {
-        itemDuration = durationElem.textContent || '';
+      const durationElems = item.getElementsByTagName('itunes:duration');
+      if (durationElems.length > 0) {
+        itemDuration = durationElems[0].textContent || '';
       }
 
       let itemImage = '';
-      const itemItunesImage = item.querySelector('itunes\\:image');
-      if (itemItunesImage) {
-        itemImage = itemItunesImage.getAttribute('href') || '';
-      }
-
-      if (mediaUrl) {
+      const itemItunesImages = item.getElementsByTagName('itunes:image');
+      if (itemItunesImages.length > 0) {
+        itemImage = itemItunesImages[0].getAttribute('href') || '';
+      }      if (mediaUrl) {
         items.push({
           title: itemTitle,
           description: itemDescription,
