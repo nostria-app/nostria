@@ -482,7 +482,7 @@ export class MediaPlayerService implements OnInitialized {
    */
   savePodcastPosition(url: string, position: number): void {
     // Validate inputs
-    if (!url || typeof position !== 'number' || position < 0 || !isFinite(position)) {
+    if (typeof url !== 'string' || url.trim() === '' || typeof position !== 'number' || position < 0 || !isFinite(position)) {
       return;
     }
 
@@ -605,7 +605,9 @@ export class MediaPlayerService implements OnInitialized {
       const currentItem = this.current();
       if (currentItem?.type === 'Podcast') {
         const savedPosition = this.restorePodcastPosition(currentItem.source);
-        if (savedPosition >= 0 && savedPosition < this.audio.duration) {
+        // Ensure duration is valid and position is within safe bounds (at least 2 seconds before the end)
+        const duration = this.audio.duration;
+        if (!isNaN(duration) && isFinite(duration) && savedPosition < duration - 2) {
           this.audio.currentTime = savedPosition;
           console.log(`Restored podcast position: ${savedPosition}s for ${currentItem.source}`);
         }
