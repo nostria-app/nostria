@@ -197,14 +197,22 @@ mat-sidenav-content.media-player-shown .content-wrapper {
   border-radius: 32px;
 
   // Glass effect
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 255, 255, 0.05);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
 
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  // Remove explicit border, use box-shadow for glass edge effect
+  border: none;
+
   box-shadow:
-    0 8px 32px 0 rgba(0, 0, 0, 0.2),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    // Inner white highlight (sharp edge)
+    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+    // Inner glow
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
+    // Drop shadows
+    0px 4px 16px rgba(17, 17, 26, 0.1),
+    0px 8px 24px rgba(17, 17, 26, 0.1),
+    0px 16px 56px rgba(17, 17, 26, 0.1);
 
   /* Smooth transition for hide/show */
   transition: opacity 0.3s ease-out, visibility 0.3s ease-out, transform 0.3s ease-out;
@@ -221,11 +229,17 @@ mat-sidenav-content.media-player-shown .content-wrapper {
 }
 
 .dark .mobile-nav {
-  background-color: rgba(30, 30, 30, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: rgba(0, 0, 0, 0.2);
+
   box-shadow:
-    0 8px 32px 0 rgba(0, 0, 0, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+    // Inner highlight (subtler in dark mode)
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+    // Inner glow
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.05),
+    // Drop shadows (darker)
+    0px 4px 16px rgba(0, 0, 0, 0.4),
+    0px 8px 24px rgba(0, 0, 0, 0.4),
+    0px 16px 56px rgba(0, 0, 0, 0.4);
 }
 
 .mobile-nav-button {
