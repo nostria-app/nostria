@@ -1053,4 +1053,30 @@ export class UtilitiesService {
       return null;
     }
   }
+
+  /**
+   * Check if an event kind is a replaceable event (NIP-01)
+   * Replaceable events: kind 0, 3, or 10000-19999
+   * These events should always be fetched from relays to ensure we have the latest version
+   */
+  isReplaceableEvent(kind: number): boolean {
+    return kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000);
+  }
+
+  /**
+   * Check if an event kind is a parameterized replaceable event (NIP-01)
+   * Parameterized replaceable events: kind 30000-39999 (e.g., articles, long-form content)
+   * These events should always be fetched from relays to ensure we have the latest version
+   */
+  isParameterizedReplaceableEvent(kind: number): boolean {
+    return kind >= 30000 && kind < 40000;
+  }
+
+  /**
+   * Check if an event should be fetched from relays even if found in local storage
+   * Returns true for replaceable and parameterized replaceable events
+   */
+  shouldAlwaysFetchFromRelay(kind: number): boolean {
+    return this.isReplaceableEvent(kind) || this.isParameterizedReplaceableEvent(kind);
+  }
 }
