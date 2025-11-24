@@ -17,7 +17,7 @@
 }
 
 .card-inner-content {
-  background-color: transparent;
+  background-color: rgba(0, 0, 0, 0.6);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -25,6 +25,8 @@
   height: 100%;
   position: relative;
   z-index: 1;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 .card-effect {
@@ -244,14 +246,14 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    
+
     // Make the background behind the button brighter (glass effect)
     -webkit-backdrop-filter: brightness(1.5) saturate(1.2);
     backdrop-filter: brightness(1.5) saturate(1.2);
-    
+
     // Make the border brighter
     border-color: rgba(255, 255, 255, 0.4);
-    
+
     &:hover {
       border-color: rgba(255, 255, 255, 0.6);
       background-color: rgba(255, 255, 255, 0.05);
