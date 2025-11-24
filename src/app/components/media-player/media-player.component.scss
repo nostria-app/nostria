@@ -17,7 +17,9 @@
 
     /* On mobile, position above the mobile navigation (56px) */
     @media (max-width: 599px) {
-      bottom: 56px;
+      bottom: 0;
+      padding-bottom: env(safe-area-inset-bottom, 0px);
+      height: calc(80px + env(safe-area-inset-bottom, 0px));
     }
   }
 

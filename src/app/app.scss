@@ -56,9 +56,9 @@ mat-sidenav-content {
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 
   // When media player is shown, add extra padding for it
-  &.media-player-shown {
-    padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
-  }
+  // &.media-player-shown {
+  //   padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  // }
 
   // Add margin when following sidebar is docked
   &.following-sidebar-docked {
@@ -92,6 +92,14 @@ mat-sidenav-content {
 
   @media (min-width: 599px) {
     z-index: 0 !important;
+  }
+
+  // Add padding to sidenav content on mobile so items aren't hidden by mobile nav
+  // if the sidenav is open and mobile nav is visible
+  mat-nav-list {
+    @media (max-width: 599px) {
+      padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+    }
   }
 }
 
@@ -159,19 +167,12 @@ mat-sidenav-content {
   overflow-y: auto;
   overflow-x: hidden;
   // Remove fixed height since we're using flexbox now
-
-  // Add padding for mobile nav so content can be scrolled into view
-  @media (max-width: 599px) {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-  }
 }
 
 // When media player is shown, add extra padding to content-wrapper
-mat-sidenav-content.media-player-shown .content-wrapper {
-  @media (max-width: 599px) {
-    padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px));
-  }
-}
+// mat-sidenav-content.media-player-shown .content-wrapper {
+//   // We handle padding in individual components now to support glass effect
+// }
 
 // Mobile navigation footer
 .mobile-nav {
@@ -376,6 +377,10 @@ mat-sidenav-content.media-player-shown .content-wrapper {
 
 .profile-content {
   padding: 16px;
+
+  @media (max-width: 599px) {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .profile-header {

@@ -84,6 +84,10 @@
   flex: 1;
   overflow: auto;
   padding: 0;
+
+  @media (max-width: 599px) {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 // Add virtual scrolling styles
