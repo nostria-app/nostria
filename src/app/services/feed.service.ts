@@ -1972,8 +1972,6 @@ export class FeedService {
         this.appState.FEEDS_STORAGE_KEY
       );
 
-      debugger;
-
       const storedFeeds = feedsByAccount && feedsByAccount[pubkey];
 
       if (storedFeeds && Array.isArray(storedFeeds) && storedFeeds.length > 0) {
@@ -2025,12 +2023,13 @@ export class FeedService {
 
       // Find the starter feed and populate it with the first available starter pack
       const starterFeed = feeds.find(f => f.id === 'default-feed-starter');
+
       if (starterFeed && starterFeed.columns.length > 0 && starterPacks.length > 0) {
         // Use the first starter pack's dTag
         starterFeed.columns[0].customStarterPacks = [starterPacks[0].dTag];
         this.logger.info('Initialized starter feed with starter pack:', starterPacks[0].dTag);
       }
-§
+
       return feeds;
     } catch (error) {
       this.logger.error('Error initializing default feeds with starter packs:', error);
@@ -2064,11 +2063,6 @@ export class FeedService {
 
       feedsByAccount[pubkey] = this._feeds();
       this.localStorageService.setObject(this.appState.FEEDS_STORAGE_KEY, feedsByAccount);
-
-      // Mark feeds as initialized after successful save
-      // This flag is set regardless of whether feeds array is empty or not
-      // to ensure that empty feeds (user deleted all) are also considered "initialized"
-      this.accountLocalState.setFeedsInitialized(pubkey, true);
 
       this.logger.debug('Saved feeds to storage for pubkey', pubkey, this._feeds());
     } catch (error) {
@@ -2373,15 +2367,6 @@ export class FeedService {
     const defaultFeeds = await this.initializeDefaultFeeds();
     this._feeds.set(defaultFeeds);
     this.saveFeeds();
-
-    // Reset the feedsInitialized flag so that if the user deletes all feeds later,
-    // they won't automatically get defaults again (preserving the manual reset intent)
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      // Keep the flag as true since we're intentionally resetting to defaults
-      // This ensures defaults won't be re-initialized unless explicitly reset again
-      this.accountLocalState.setFeedsInitialized(pubkey, true);
-    }
 
     this.logger.debug('Reset all feeds to defaults');
   }
