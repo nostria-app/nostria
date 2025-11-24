@@ -282,11 +282,11 @@ export class FeedService {
       const pubkey = this.accountState.pubkey();
       const initialized = this.accountState.initialized();
 
-      if (initialized) {
+      if (pubkey && initialized) {
         untracked(async () => {
           // Reset feedsLoaded before loading new feeds
           this._feedsLoaded.set(false);
-          await this.loadFeeds();
+          await this.loadFeeds(pubkey);
           this.loadRelays();
         });
       }
@@ -1957,76 +1957,45 @@ export class FeedService {
    * - Intentional feed deletions are respected
    * - Feed configurations persist across sessions
    */
-  private async loadFeeds(): Promise<void> {
+  private async loadFeeds(pubkey: string): Promise<void> {
     try {
-      const pubkey = this.accountState.pubkey();
-      if (!pubkey) {
-        this.logger.warn('No pubkey found, using defaults');
-        const defaultFeeds = await this.initializeDefaultFeeds();
-        this._feeds.set(defaultFeeds);
-        this._feedsLoaded.set(true);
-        this.saveFeeds();
-        return;
-      }
+      // if (!pubkey) {
+      //   this.logger.warn('No pubkey found, not need to load anything yet.');
+      //   // const defaultFeeds = await this.initializeDefaultFeeds();
+      //   // this._feeds.set(defaultFeeds);
+      //   // this._feedsLoaded.set(true);
+      //   // this.saveFeeds();
+      //   // return;
+      // }
+
       const feedsByAccount = this.localStorageService.getObject<Record<string, FeedConfig[]>>(
         this.appState.FEEDS_STORAGE_KEY
       );
 
       const storedFeeds = feedsByAccount && feedsByAccount[pubkey];
+
       if (storedFeeds && Array.isArray(storedFeeds) && storedFeeds.length > 0) {
         this._feeds.set(storedFeeds);
         this._feedsLoaded.set(true);
         this.logger.debug('Loaded feeds from storage for pubkey', pubkey, storedFeeds);
+      } else if (feedsByAccount) {
+        // If there is already array of feeds, but not for logged on user, we populate 
+        // their feeds with the default feeds connected to their pubkey.
+        this.logger.info('No feeds found for pubkey, initializing default feeds for pubkey', pubkey);
+        const defaultFeeds = await this.initializeDefaultFeeds();
+        feedsByAccount[pubkey] = defaultFeeds;
+        this._feeds.set(defaultFeeds);
+        this._feedsLoaded.set(true);
+        this.saveFeeds();
       } else {
-        /**
-         * No feeds found in storage for this account.
-         * 
-         * Check the feedsInitialized flag to determine if this is:
-         * 1. A new user who needs default feeds
-         * 2. A returning user who intentionally deleted all feeds
-         * 
-         * This prevents automatic reset to defaults for users who have
-         * previously configured their feeds but deleted them.
-         */
-        const feedsInitialized = this.accountLocalState.getFeedsInitialized(pubkey);
-        
-        if (!feedsInitialized) {
-          /**
-           * First-time user scenario:
-           * - No feeds exist in localStorage
-           * - feedsInitialized flag is not set
-           * - Action: Initialize default feeds and set flag
-           * 
-           * This ensures new users get a helpful starting configuration
-           * without requiring manual setup.
-           */
-          this.logger.info('First time user detected, initializing default feeds for pubkey', pubkey);
-          const feedsByAccount: Record<string, FeedConfig[]> = {};
-          const defaultFeeds = await this.initializeDefaultFeeds();
-          feedsByAccount[pubkey] = defaultFeeds;
-          this._feeds.set(defaultFeeds);
-          this._feedsLoaded.set(true);
-          this.saveFeeds();
-          
-          // Mark feeds as initialized for this account
-          // Note: saveFeeds() also sets this flag, but we set it explicitly here for clarity
-          this.accountLocalState.setFeedsInitialized(pubkey, true);
-          this.logger.debug('Default feeds initialized and marked as initialized for pubkey', pubkey);
-        } else {
-          /**
-           * Returning user with empty feeds:
-           * - No feeds exist in localStorage
-           * - feedsInitialized flag IS set
-           * - Action: Keep feeds empty (respect user's deletion)
-           * 
-           * This scenario occurs when a user has previously configured feeds
-           * but then deleted them all. We respect this choice and don't
-           * automatically restore defaults.
-           */
-          this.logger.warn('Feeds initialized flag set but no feeds found in storage - keeping empty for pubkey', pubkey);
-          this._feeds.set([]);
-          this._feedsLoaded.set(true);
-        }
+        // No feeds found at all, first time user - initialize defaults
+        this.logger.info('No feeds found in storage, initializing default feeds for pubkey', pubkey);
+        const feedsByAccount: Record<string, FeedConfig[]> = {};
+        const defaultFeeds = await this.initializeDefaultFeeds();
+        feedsByAccount[pubkey] = defaultFeeds;
+        this._feeds.set(defaultFeeds);
+        this._feedsLoaded.set(true);
+        this.saveFeeds();
       }
     } catch (error) {
       this.logger.error('Error loading feeds from storage:', error);
@@ -2054,6 +2023,7 @@ export class FeedService {
 
       // Find the starter feed and populate it with the first available starter pack
       const starterFeed = feeds.find(f => f.id === 'default-feed-starter');
+
       if (starterFeed && starterFeed.columns.length > 0 && starterPacks.length > 0) {
         // Use the first starter pack's dTag
         starterFeed.columns[0].customStarterPacks = [starterPacks[0].dTag];
@@ -2093,12 +2063,7 @@ export class FeedService {
 
       feedsByAccount[pubkey] = this._feeds();
       this.localStorageService.setObject(this.appState.FEEDS_STORAGE_KEY, feedsByAccount);
-      
-      // Mark feeds as initialized after successful save
-      // This flag is set regardless of whether feeds array is empty or not
-      // to ensure that empty feeds (user deleted all) are also considered "initialized"
-      this.accountLocalState.setFeedsInitialized(pubkey, true);
-      
+
       this.logger.debug('Saved feeds to storage for pubkey', pubkey, this._feeds());
     } catch (error) {
       this.logger.error('Error saving feeds to storage:', error);
@@ -2402,15 +2367,6 @@ export class FeedService {
     const defaultFeeds = await this.initializeDefaultFeeds();
     this._feeds.set(defaultFeeds);
     this.saveFeeds();
-
-    // Reset the feedsInitialized flag so that if the user deletes all feeds later,
-    // they won't automatically get defaults again (preserving the manual reset intent)
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      // Keep the flag as true since we're intentionally resetting to defaults
-      // This ensures defaults won't be re-initialized unless explicitly reset again
-      this.accountLocalState.setFeedsInitialized(pubkey, true);
-    }
 
     this.logger.debug('Reset all feeds to defaults');
   }
