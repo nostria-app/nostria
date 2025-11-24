@@ -78,6 +78,10 @@ export class MediaPlayerService implements OnInitialized {
   pausedYouTubeUrl = signal<SafeResourceUrl | undefined>(undefined);
   playbackRate = signal(1.0);
 
+  // Signals for time and duration
+  currentTimeSig = signal(0);
+  durationSig = signal(0);
+
   // Video element reference
   private videoElement?: HTMLVideoElement;
 
@@ -532,6 +536,18 @@ export class MediaPlayerService implements OnInitialized {
     }
   };
 
+  private handleTimeUpdate = () => {
+    if (this.audio) {
+      this.currentTimeSig.set(this.audio.currentTime);
+    }
+  };
+
+  private handleLoadedMetadata = () => {
+    if (this.audio) {
+      this.durationSig.set(this.audio.duration);
+    }
+  };
+
   getYouTubeEmbedUrl = computed(() => {
     // Return a function that caches YouTube embed URLs
     return (url: string, query?: string): SafeResourceUrl => {
@@ -640,8 +656,10 @@ export class MediaPlayerService implements OnInitialized {
       // Sync signal
       this.playbackRate.set(this.audio.playbackRate);
 
-      // Add ended event listener to audio
+      // Add event listeners to audio
       this.audio.addEventListener('ended', this.handleMediaEnded);
+      this.audio.addEventListener('timeupdate', this.handleTimeUpdate);
+      this.audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
 
       await this.audio.play();
     }
@@ -782,6 +800,8 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.currentTime = 0;
       // Remove event listeners
       this.audio.removeEventListener('ended', this.handleMediaEnded);
+      this.audio.removeEventListener('timeupdate', this.handleTimeUpdate);
+      this.audio.removeEventListener('loadedmetadata', this.handleLoadedMetadata);
     }
 
     // Cleanup HLS instance

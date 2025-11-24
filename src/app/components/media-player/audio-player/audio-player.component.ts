@@ -39,8 +39,8 @@ export class AudioPlayerComponent {
   footer = input<boolean>(false);
 
   // Computed values for display
-  currentTime = computed(() => this.media.time);
-  duration = computed(() => this.media.duration);
+  currentTime = computed(() => this.media.currentTimeSig());
+  duration = computed(() => this.media.durationSig());
   isPodcast = computed(() => this.media.current()?.type === 'Podcast');
 
   formatLabel(value: number): string {
