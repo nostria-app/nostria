@@ -17,7 +17,7 @@
 }
 
 .card-inner-content {
-  background-color: var(--mat-sys-surface);
+  background-color: transparent;
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -55,7 +55,7 @@
 
 .timeline-header {
   padding: 16px;
-  background-color: var(--mat-app-surface-variant);
+  background-color: transparent;
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   display: flex;
   align-items: center;
@@ -172,7 +172,7 @@
   .note-item {
     padding: 12px;
     margin-bottom: 8px;
-    background-color: var(--mat-app-surface-variant);
+    background-color: var(--mat-sys-surface);
     border-radius: 8px;
     border: 1px solid var(--mat-sys-outline-variant);
     transition: all 0.2s ease;
@@ -185,7 +185,7 @@
     }
 
     &:hover {
-      background-color: var(--mat-app-surface);
+      background-color: var(--mat-sys-surface-container-high);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       transform: translateY(-1px);
     }
