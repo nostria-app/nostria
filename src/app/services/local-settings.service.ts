@@ -1,6 +1,7 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
+import { BreakpointObserver } from '@angular/cdk/layout';
 
 export interface LocalSettings {
   menuOpen: boolean;
@@ -38,6 +39,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
 export class LocalSettingsService {
   private readonly localStorage = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
+  private readonly breakpointObserver = inject(BreakpointObserver);
   private readonly STORAGE_KEY = 'nostria-settings';
 
   // Signal containing all local settings
@@ -86,8 +88,20 @@ export class LocalSettingsService {
         this.settings.set(mergedSettings);
         this.logger.debug('Local settings loaded successfully', mergedSettings);
       } else {
-        this.logger.debug('No local settings found, using defaults', DEFAULT_LOCAL_SETTINGS);
-        this.settings.set({ ...DEFAULT_LOCAL_SETTINGS });
+        // New installation - set menuOpen based on device type
+        // Desktop (not mobile): menu should be open
+        // Mobile: menu should be closed
+        const isHandset = this.breakpointObserver.isMatched('(max-width: 599px)');
+        const defaultSettings = {
+          ...DEFAULT_LOCAL_SETTINGS,
+          menuOpen: !isHandset, // Open on desktop, closed on mobile
+        };
+
+        this.logger.debug('No local settings found, using defaults with device-specific menuOpen', {
+          isHandset,
+          menuOpen: defaultSettings.menuOpen,
+        });
+        this.settings.set(defaultSettings);
       }
     } catch (error) {
       this.logger.error('Failed to load local settings', error);
