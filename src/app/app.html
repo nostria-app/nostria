@@ -401,13 +401,13 @@
       <div class="content-wrapper">
         <router-outlet></router-outlet>
       </div>
-
-      <!-- Media player - positioned in footer or fullscreen based on state -->
-      @if (layout.showMediaPlayer()) {
-      <app-media-player></app-media-player>
-      }
     </mat-sidenav-content>
   </mat-sidenav-container>
+
+  <!-- Media player - positioned in footer or fullscreen based on state -->
+  @if (layout.showMediaPlayer()) {
+  <app-media-player></app-media-player>
+  }
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
   @if (layout.isHandset() && !layout.showMediaPlayer()) {
