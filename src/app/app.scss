@@ -71,11 +71,12 @@ mat-sidenav-content {
 
   // Adjust for mobile navigation
   @media (max-width: 599px) {
-    padding-bottom: calc(60px + env(safe-area-inset-bottom, 0px)); // Height of mobile nav + safe area
+    // Padding moved to .content-wrapper to allow scrolling behind the glass nav
+    padding-bottom: 0;
 
     // When media player is shown, add extra padding for it
     &.media-player-shown {
-      padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px)); // Mobile nav (60px) + media player (80px)
+      padding-bottom: 0;
     }
   }
 }
@@ -158,30 +159,55 @@ mat-sidenav-content {
   overflow-y: auto;
   overflow-x: hidden;
   // Remove fixed height since we're using flexbox now
+
+  // Add padding for mobile nav so content can be scrolled into view
+  @media (max-width: 599px) {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+// When media player is shown, add extra padding to content-wrapper
+mat-sidenav-content.media-player-shown .content-wrapper {
+  @media (max-width: 599px) {
+    padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 // Mobile navigation footer
 .mobile-nav {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  right: auto;
 
-  width: 100%;
+  width: auto;
+  min-width: 320px;
+  max-width: calc(100% - 32px);
+
   display: flex;
-  justify-content: space-around;
+  justify-content: space-evenly;
+  align-items: center;
   z-index: 1000;
-  height: 56px;
-  padding-bottom: env(safe-area-inset-bottom, 0px);
+  height: 64px;
+  padding: 0 8px;
+  padding-bottom: 0;
   padding-top: 0;
 
-  background-color: var(--mat-sys-background);
-  justify-content: space-around;
-  align-items: flex-start;
-  box-shadow: var(--mat-sys-level3);
+  border-radius: 32px;
+
+  // Glass effect
+  background-color: rgba(255, 255, 255, 0.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.2),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1);
 
   /* Smooth transition for hide/show */
-  transition: opacity 0.3s ease-out, visibility 0.3s ease-out;
+  transition: opacity 0.3s ease-out, visibility 0.3s ease-out, transform 0.3s ease-out;
 }
 
 // Hide mobile nav completely when fullscreen is active
@@ -191,36 +217,47 @@ mat-sidenav-content {
 }
 
 .mobile-nav a {
-  color: var(--mat-list-list-item-label-text-color);
+  color: var(--mat-sys-on-surface);
 }
 
 .dark .mobile-nav {
-  background-color: #424242;
+  background-color: rgba(30, 30, 30, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px 0 rgba(0, 0, 0, 0.4),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .mobile-nav-button {
-  flex: 1;
+  flex: 0 1 auto;
+  width: 60px;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   min-width: 0;
-  height: 56px;
-  border-radius: 0;
+  height: 100%;
+  border-radius: 16px;
   text-align: center;
+  margin: 0 2px;
+
+  &:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
 }
 
 .mobile-nav-button .mat-icon {
-  font-size: 22px;
-  height: 22px;
-  width: 22px;
-  margin-bottom: 2px;
+  font-size: 24px;
+  height: 24px;
+  width: 24px;
+  margin-bottom: 4px;
   display: block;
   margin-left: auto;
   margin-right: auto;
 }
 
 .mobile-nav-label {
-  font-size: 12px;
+  font-size: 10px;
   line-height: 1;
   text-align: center;
   white-space: nowrap;
@@ -229,8 +266,9 @@ mat-sidenav-content {
   max-width: 100%;
   display: block;
   width: 100%;
-  padding: 0 2px;
-  margin-top: 2px;
+  padding: 0;
+  margin-top: 0;
+  opacity: 0.8;
 }
 
 .fab-container {
@@ -239,14 +277,18 @@ mat-sidenav-content {
   height: 56px;
   display: flex;
   justify-content: center;
+  align-items: center;
+  margin: 0 4px;
 }
 
 .create-fab {
   position: absolute;
-  bottom: 24px;
+  bottom: 12px;
+  /* Adjusted for floating dock */
   /* Positioning the FAB button to be raised above the navigation */
   z-index: 11;
   box-shadow: var(--mat-sys-level4);
+  scale: 1.1;
 }
 
 // Sidenav FAB styles
