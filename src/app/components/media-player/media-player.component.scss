@@ -42,20 +42,19 @@
   }
 
   :host-context(.dark) &.footer-mode {
-    @media (max-width: 599px) {
-      background: initial;
-      background-color: rgba(0, 0, 0, 0.2) !important;
+    background: initial;
+    // Slightly brighter than 0.2 (less dark)
+    background-color: rgba(0, 0, 0, 0.1) !important;
 
-      box-shadow:
-        // Inner highlight (subtler in dark mode)
-        inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-        // Inner glow
-        inset 0 0 10px 4px rgba(255, 255, 255, 0.05),
-        // Drop shadows (darker)
-        0px 4px 16px rgba(0, 0, 0, 0.4),
-        0px 8px 24px rgba(0, 0, 0, 0.4),
-        0px 16px 56px rgba(0, 0, 0, 0.4);
-    }
+    box-shadow:
+      // Inner highlight (subtler in dark mode)
+      inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+      // Inner glow
+      inset 0 0 10px 4px rgba(255, 255, 255, 0.05),
+      // Drop shadows (darker)
+      0px 4px 16px rgba(0, 0, 0, 0.4),
+      0px 8px 24px rgba(0, 0, 0, 0.4),
+      0px 16px 56px rgba(0, 0, 0, 0.4);
   }
 
   &.fullscreen-mode {
