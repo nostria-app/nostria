@@ -100,6 +100,10 @@ export class MediaPlayerService implements OnInitialized {
   private youtubePlayer?: YouTubePlayer;
   private youtubeApiReady = false;
 
+  // Throttling for podcast position saves
+  private lastPodcastPositionSave = 0;
+  private readonly PODCAST_SAVE_INTERVAL = 2000; // Save every 2 seconds
+
   constructor() {
     if (!this.app.isBrowser()) {
       return;
@@ -477,6 +481,11 @@ export class MediaPlayerService implements OnInitialized {
    * @param position The current playback position in seconds
    */
   savePodcastPosition(url: string, position: number): void {
+    // Validate inputs
+    if (!url || typeof position !== 'number' || position < 0 || !isFinite(position)) {
+      return;
+    }
+
     try {
       const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
       const positions: Record<string, number> = positionsJson ? JSON.parse(positionsJson) : {};
@@ -576,10 +585,14 @@ export class MediaPlayerService implements OnInitialized {
     if (this.audio) {
       this.currentTimeSig.set(this.audio.currentTime);
       
-      // Save podcast position periodically (only for podcasts)
+      // Save podcast position periodically (only for podcasts), throttled to every 2 seconds
       const currentItem = this.current();
       if (currentItem?.type === 'Podcast') {
-        this.savePodcastPosition(currentItem.source, this.audio.currentTime);
+        const now = Date.now();
+        if (now - this.lastPodcastPositionSave >= this.PODCAST_SAVE_INTERVAL) {
+          this.savePodcastPosition(currentItem.source, this.audio.currentTime);
+          this.lastPodcastPositionSave = now;
+        }
       }
     }
   };
@@ -592,7 +605,7 @@ export class MediaPlayerService implements OnInitialized {
       const currentItem = this.current();
       if (currentItem?.type === 'Podcast') {
         const savedPosition = this.restorePodcastPosition(currentItem.source);
-        if (savedPosition > 0 && savedPosition < this.audio.duration) {
+        if (savedPosition >= 0 && savedPosition < this.audio.duration) {
           this.audio.currentTime = savedPosition;
           console.log(`Restored podcast position: ${savedPosition}s for ${currentItem.source}`);
         }
