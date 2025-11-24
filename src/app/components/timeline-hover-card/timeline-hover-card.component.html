@@ -1,47 +1,57 @@
-<mat-card class="timeline-hover-card">
-  <!-- Header with profile info -->
-  <div class="timeline-header">
-    <a [routerLink]="['/p', npubValue()]" class="profile-link">
-      @if (getAvatarUrl()) {
-      <img [src]="getAvatarUrl()!" alt="Avatar" class="avatar" />
-      } @else {
-      <mat-icon class="default-avatar">account_circle</mat-icon>
-      }
-      <div class="profile-name">{{ getDisplayName() }}</div>
-    </a>
-    <button mat-icon-button class="favorite-button" [class.is-favorite]="isFavorite()" (click)="toggleFavorite($event)"
-      [attr.aria-label]="isFavorite() ? 'Remove from favorites' : 'Add to favorites'" type="button">
-      <mat-icon>star</mat-icon>
-    </button>
-  </div>
-
-  <!-- Timeline content -->
-  @if (isLoading()) {
-  <div class="loading-container">
-    <mat-spinner [diameter]="40"></mat-spinner>
-    <span>Loading timeline...</span>
-  </div>
-  } @else if (recentNotes().length > 0) {
-  <div class="timeline-content">
-    @for (note of recentNotes(); track note.event.id) {
-    <button class="note-item" (click)="navigateToEvent(note.event.id)" type="button">
-      <div class="note-content">{{ truncateContent(note.data) }}</div>
-      <div class="note-time">{{ getTimeAgo(note.event.created_at) }}</div>
-    </button>
+<mat-card class="timeline-hover-card" (mousemove)="onCardMouseMove($event)" (mouseleave)="onCardMouseLeave()">
+  <div class="card-effect" [style.opacity]="isHovering() ? 1 : 0">
+    @if (getAvatarUrl()) {
+    <img [src]="getAvatarUrl()!" class="effect-avatar" [style.transform]="effectTransform()" alt=""
+      aria-hidden="true" />
     }
   </div>
-  } @else {
-  <div class="no-posts">
-    <mat-icon>article</mat-icon>
-    <span>No recent posts</span>
-  </div>
-  }
 
-  <!-- Footer -->
-  <div class="timeline-footer">
-    <a [routerLink]="['/p', npubValue()]" mat-stroked-button>
-      <mat-icon>visibility</mat-icon>
-      View Full Profile
-    </a>
+  <div class="card-inner-content">
+    <!-- Header with profile info -->
+    <div class="timeline-header">
+      <a [routerLink]="['/p', npubValue()]" class="profile-link">
+        @if (getAvatarUrl()) {
+        <img [src]="getAvatarUrl()!" alt="Avatar" class="avatar" />
+        } @else {
+        <mat-icon class="default-avatar">account_circle</mat-icon>
+        }
+        <div class="profile-name">{{ getDisplayName() }}</div>
+      </a>
+      <button mat-icon-button class="favorite-button" [class.is-favorite]="isFavorite()"
+        (click)="toggleFavorite($event)" [attr.aria-label]="isFavorite() ? 'Remove from favorites' : 'Add to favorites'"
+        type="button">
+        <mat-icon>star</mat-icon>
+      </button>
+    </div>
+
+    <!-- Timeline content -->
+    @if (isLoading()) {
+    <div class="loading-container">
+      <mat-spinner [diameter]="40"></mat-spinner>
+      <span>Loading timeline...</span>
+    </div>
+    } @else if (recentNotes().length > 0) {
+    <div class="timeline-content">
+      @for (note of recentNotes(); track note.event.id) {
+      <button class="note-item" (click)="navigateToEvent(note.event.id)" type="button">
+        <div class="note-content">{{ truncateContent(note.data) }}</div>
+        <div class="note-time">{{ getTimeAgo(note.event.created_at) }}</div>
+      </button>
+      }
+    </div>
+    } @else {
+    <div class="no-posts">
+      <mat-icon>article</mat-icon>
+      <span>No recent posts</span>
+    </div>
+    }
+
+    <!-- Footer -->
+    <div class="timeline-footer">
+      <a [routerLink]="['/p', npubValue()]" mat-stroked-button>
+        <mat-icon>visibility</mat-icon>
+        View Full Profile
+      </a>
+    </div>
   </div>
 </mat-card>
