@@ -22,9 +22,6 @@
   user-select: none;
   transition: background-color 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
   border: 1px solid transparent; // Reserve space for border
-  display: flex;
-  align-items: center;
-  /* Center content vertically */
 
   &.is-pressed {
     transition-delay: 0.2s;
@@ -53,17 +50,10 @@
     opacity: 1;
   }
 
-  /* Override mat-list-item default layout if necessary */
-  ::ng-deep .mdc-list-item__content {
-    display: flex;
-    align-items: center;
-    width: 100%;
-  }
-
   ::ng-deep .mat-mdc-list-item-meta {
     display: flex;
     align-items: center;
-    height: 100%;
+    align-self: center;
   }
 }
 
@@ -191,8 +181,6 @@
   display: flex;
   gap: 4px;
   align-items: center;
-  height: 100%;
-  /* Ensure it takes full height if needed */
 }
 
 .page {
