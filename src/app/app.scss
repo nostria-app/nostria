@@ -83,7 +83,12 @@ mat-sidenav-content {
 .sidenav {
   width: 250px;
 
-  // Adjust for mobile navigation
+  // On desktop, keep it at base level (side mode)
+  // On mobile, ensure it's above the mobile nav (over mode)
+  @media (max-width: 599px) {
+    z-index: 1001 !important;
+  }
+
   @media (min-width: 599px) {
     z-index: 0 !important;
   }
@@ -807,9 +812,14 @@ mat-sidenav-content {
   z-index: 1001;
 }
 
-// Ensure backdrop appears above toolbar but below sidenav
+// Ensure backdrop appears above toolbar and mobile nav but below sidenav
 .sidenav-container .mat-drawer-backdrop {
   z-index: 1000 !important;
+
+  // On mobile, ensure backdrop is above mobile nav
+  @media (max-width: 599px) {
+    z-index: 1000 !important;
+  }
 }
 
 // Fullscreen media player overlay
