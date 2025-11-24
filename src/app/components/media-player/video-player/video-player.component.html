@@ -1,87 +1,78 @@
-<div class="video-player-container">
-  @if (footer()) {
-  <!-- Footer mode - video with controls -->
-  <div class="video-player-footer">
-    <div class="video-container">
-      <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
-        (error)="onVideoError($event)"></video>
-
-      <div class="video-controls-overlay">
-        <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
-          <mat-icon>picture_in_picture_alt</mat-icon>
-        </button>
-      </div>
+<div class="video-player-container" [class.footer-mode]="footer()" [class.expanded-mode]="!footer()">
+  <!-- Header (Expanded Mode Only) -->
+  <div class="video-header" [class.hidden]="footer()">
+    <div class="video-title">
+      <h2>{{ media.current()?.title || 'Video' }}</h2>
     </div>
-
-    <div class="video-controls">
-      <div class="control-buttons">
-        <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button matTooltip="Previous">
-          <mat-icon>skip_previous</mat-icon>
-        </button>
-
-        @if (media.paused) {
-        <button matTooltip="Play" (click)="media.resume()" mat-icon-button>
-          <mat-icon>play_arrow</mat-icon>
-        </button>
-        } @else {
-        <button matTooltip="Pause" (click)="media.pause()" mat-icon-button>
-          <mat-icon>pause</mat-icon>
-        </button>
-        }
-
-        <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button matTooltip="Next">
-          <mat-icon>skip_next</mat-icon>
-        </button>
-
-        <button matTooltip="View queue" routerLink="/media-queue" mat-icon-button>
-          <mat-icon>queue_music</mat-icon>
-        </button>
-
-        @if (media.muted) {
-        <button matTooltip="Unmute" (click)="media.mute()" mat-icon-button>
-          <mat-icon>volume_off</mat-icon>
-        </button>
-        } @else {
-        <button matTooltip="Mute" (click)="media.mute()" mat-icon-button>
-          <mat-icon>volume_up</mat-icon>
-        </button>
-        }
-      </div>
-
-      <div class="control-actions">
-        <button mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
-          <mat-icon>open_in_full</mat-icon>
-        </button>
-        <button mat-icon-button matTooltip="Close" (click)="media.exit()">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
+    <div class="video-actions">
+      <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
+        <mat-icon>picture_in_picture_alt</mat-icon>
+      </button>
+      <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
+        <mat-icon>minimize</mat-icon>
+      </button>
+      <button mat-icon-button matTooltip="Close" (click)="media.exit()">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
   </div>
-  } @else {
-  <!-- Expanded mode - large video player -->
-  <div class="video-player-expanded">
-    <div class="video-header">
-      <div class="video-title">
-        <h2>{{ media.current()?.title || 'Video' }}</h2>
-      </div>
-      <div class="video-actions">
-        <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
-          <mat-icon>picture_in_picture_alt</mat-icon>
-        </button>
-        <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
-          <mat-icon>minimize</mat-icon>
-        </button>
-        <button mat-icon-button matTooltip="Close" (click)="media.exit()">
-          <mat-icon>close</mat-icon>
-        </button>
-      </div>
-    </div>
 
-    <div class="video-content">
-      <video #videoElement class="video-element-expanded" [src]="media.videoUrl()" [muted]="media.muted" autoplay
-        playsinline controls (error)="onVideoError($event)"></video>
+  <!-- Video Area (Shared) -->
+  <div class="video-area">
+    <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
+      [controls]="!footer()" (error)="onVideoError($event)"></video>
+
+    <!-- Footer Overlay (Footer Mode Only) -->
+    <div class="video-controls-overlay" [class.hidden]="!footer()">
+      <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
+        <mat-icon>picture_in_picture_alt</mat-icon>
+      </button>
     </div>
   </div>
-  }
+
+  <!-- Footer Controls (Footer Mode Only) -->
+  <div class="video-controls" [class.hidden]="!footer()">
+    <div class="control-buttons">
+      <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button matTooltip="Previous">
+        <mat-icon>skip_previous</mat-icon>
+      </button>
+
+      @if (media.paused) {
+      <button matTooltip="Play" (click)="media.resume()" mat-icon-button>
+        <mat-icon>play_arrow</mat-icon>
+      </button>
+      } @else {
+      <button matTooltip="Pause" (click)="media.pause()" mat-icon-button>
+        <mat-icon>pause</mat-icon>
+      </button>
+      }
+
+      <button [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button matTooltip="Next">
+        <mat-icon>skip_next</mat-icon>
+      </button>
+
+      <button matTooltip="View queue" routerLink="/media-queue" mat-icon-button>
+        <mat-icon>queue_music</mat-icon>
+      </button>
+
+      @if (media.muted) {
+      <button matTooltip="Unmute" (click)="media.mute()" mat-icon-button>
+        <mat-icon>volume_off</mat-icon>
+      </button>
+      } @else {
+      <button matTooltip="Mute" (click)="media.mute()" mat-icon-button>
+        <mat-icon>volume_up</mat-icon>
+      </button>
+      }
+    </div>
+
+    <div class="control-actions">
+      <button mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
+        <mat-icon>open_in_full</mat-icon>
+      </button>
+      <button mat-icon-button matTooltip="Close" (click)="media.exit()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
 </div>
