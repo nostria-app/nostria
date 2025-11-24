@@ -3,7 +3,7 @@
   <!-- Footer mode - video with controls -->
   <div class="video-player-footer">
     <div class="video-container">
-      <video #videoElement class="video-element" [muted]="media.muted" autoplay playsinline
+      <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
         (error)="onVideoError($event)"></video>
 
       <div class="video-controls-overlay">
@@ -79,8 +79,8 @@
     </div>
 
     <div class="video-content">
-      <video #videoElement class="video-element-expanded" [muted]="media.muted" autoplay playsinline controls
-        (error)="onVideoError($event)"></video>
+      <video #videoElement class="video-element-expanded" [src]="media.videoUrl()" [muted]="media.muted" autoplay
+        playsinline controls (error)="onVideoError($event)"></video>
     </div>
   </div>
   }

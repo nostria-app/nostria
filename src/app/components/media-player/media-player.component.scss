@@ -1,4 +1,5 @@
 :host {
+  display: block;
   background: var(--theme-background-color,
       var(--mat-toolbar-container-background-color, var(--mat-sys-surface)));
   z-index: 1500;
