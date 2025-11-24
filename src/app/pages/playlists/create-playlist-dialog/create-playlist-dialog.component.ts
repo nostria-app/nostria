@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule } from '@angular/material/dialog';
@@ -6,7 +6,10 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { RssParserService } from '../../../services/rss-parser.service';
+import { PlaylistTrack } from '../../../interfaces';
 
 export interface CreatePlaylistDialogData {
   title?: string;
@@ -24,6 +27,7 @@ export interface CreatePlaylistDialogData {
     MatInputModule,
     MatIconModule,
     MatTooltipModule,
+    MatProgressSpinnerModule,
     ReactiveFormsModule,
   ],
   templateUrl: './create-playlist-dialog.component.html',
@@ -33,15 +37,53 @@ export class CreatePlaylistDialogComponent {
   private dialogRef = inject(MatDialogRef<CreatePlaylistDialogComponent>);
   private data = inject(MAT_DIALOG_DATA);
   private fb = inject(FormBuilder);
+  private rssParser = inject(RssParserService);
 
   playlistForm: FormGroup;
+  importedTracks: PlaylistTrack[] = [];
+  isParsingRss = signal(false);
 
   constructor() {
     this.playlistForm = this.fb.group({
       id: [this.data?.id || '', [Validators.required, Validators.minLength(1)]],
       title: [this.data?.title || '', [Validators.required, Validators.minLength(1)]],
       description: [this.data?.description || ''],
+      rssUrl: [''],
     });
+  }
+
+  async fetchRss() {
+    const url = this.playlistForm.get('rssUrl')?.value;
+    if (!url) return;
+
+    this.isParsingRss.set(true);
+    try {
+      const feed = await this.rssParser.parse(url);
+
+      this.playlistForm.patchValue({
+        title: feed.title,
+        description: feed.description
+      });
+
+      // If ID is empty, generate one based on title or random
+      if (!this.playlistForm.get('id')?.value) {
+        this.generateRandomId();
+      }
+
+      this.importedTracks = feed.items.map(item => ({
+        url: item.mediaUrl,
+        title: item.title,
+        artist: feed.title,
+        duration: item.duration,
+        image: item.image
+      }));
+
+    } catch (error) {
+      console.error('Failed to parse RSS', error);
+      // TODO: Show error to user
+    } finally {
+      this.isParsingRss.set(false);
+    }
   }
 
   generateRandomId(): void {
@@ -63,7 +105,11 @@ export class CreatePlaylistDialogComponent {
 
   onSubmit(): void {
     if (this.playlistForm.valid) {
-      this.dialogRef.close(this.playlistForm.value);
+      const result = {
+        ...this.playlistForm.value,
+        tracks: this.importedTracks
+      };
+      this.dialogRef.close(result);
     }
   }
 

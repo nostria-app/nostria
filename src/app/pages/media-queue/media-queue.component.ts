@@ -5,6 +5,7 @@ import { AddMediaDialog, AddMediaDialogData } from './add-media-dialog/add-media
 import { MediaItem } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { RssParserService } from '../../services/rss-parser.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
@@ -18,6 +19,7 @@ import { MatButtonModule } from '@angular/material/button';
 export class MediaQueueComponent {
   utilities = inject(UtilitiesService);
   media = inject(MediaPlayerService);
+  private rssParser = inject(RssParserService);
   private dialog = inject(MatDialog);
 
   /**
@@ -78,6 +80,25 @@ export class MediaQueueComponent {
     dialogRef.afterClosed().subscribe(async (result: AddMediaDialogData) => {
       if (!result || !result.url) {
         return;
+      }
+
+      // Try parsing as RSS first
+      try {
+        const feed = await this.rssParser.parse(result.url);
+        if (feed && feed.items.length > 0) {
+          for (const item of feed.items) {
+            this.media.enque({
+              artist: feed.title,
+              artwork: item.image || feed.image,
+              title: item.title,
+              source: item.mediaUrl,
+              type: 'Podcast'
+            });
+          }
+          return;
+        }
+      } catch (e) {
+        // Ignore error and continue with other checks
       }
 
       if (result.url.indexOf('youtu.be') > -1 || result.url.indexOf('youtube.com') > -1) {

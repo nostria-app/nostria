@@ -196,12 +196,12 @@ export class PlaylistService implements OnInitialized {
   }
 
   // Create a new playlist
-  createPlaylist(title: string, description?: string, id?: string): PlaylistDraft {
+  createPlaylist(title: string, description?: string, id?: string, tracks: PlaylistTrack[] = []): PlaylistDraft {
     const draft: PlaylistDraft = {
       id: id || this.generatePlaylistId(),
       title,
       description,
-      tracks: [],
+      tracks: tracks,
       tags: [],
       isNewPlaylist: true,
     };

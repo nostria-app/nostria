@@ -78,7 +78,7 @@ export class PlaylistsComponent {
 
     dialogRef.afterClosed().subscribe(result => {
       if (result) {
-        const draft = this.playlistService.createPlaylist(result.title, result.description, result.id);
+        const draft = this.playlistService.createPlaylist(result.title, result.description, result.id, result.tracks);
         this.router.navigate(['/playlists/edit', draft.id]);
       }
     });

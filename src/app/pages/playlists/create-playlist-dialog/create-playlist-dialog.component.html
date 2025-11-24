@@ -2,6 +2,22 @@
 
 <mat-dialog-content>
   <form [formGroup]="playlistForm" class="playlist-form">
+
+    <div class="rss-section">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Import from RSS Feed (Optional)</mat-label>
+        <input matInput formControlName="rssUrl" placeholder="https://example.com/feed.xml" autocomplete="off">
+        <button type="button" mat-icon-button matSuffix (click)="fetchRss()" [disabled]="isParsingRss()"
+          matTooltip="Fetch RSS">
+          @if (isParsingRss()) {
+          <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+          <mat-icon>rss_feed</mat-icon>
+          }
+        </button>
+      </mat-form-field>
+    </div>
+
     <div class="id-field-container">
       <mat-form-field appearance="outline" class="id-field">
         <mat-label>Playlist ID (d tag)</mat-label>
