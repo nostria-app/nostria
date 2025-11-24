@@ -16,9 +16,9 @@
 
   <!-- Video Area (Shared) -->
   <div class="youtube-area">
-    @if (youtubeUrl()) {
-    <iframe id="ytplayer" class="youtube-iframe" type="text/html" [src]="youtubeUrl()" frameborder="0" allowfullscreen
-      allow="autoplay" title="YouTube video player"></iframe>
+    @if (media.youtubeUrl()) {
+    <iframe id="ytplayer" class="youtube-iframe" type="text/html" [src]="media.youtubeUrl()" frameborder="0"
+      allowfullscreen allow="autoplay" title="YouTube video player"></iframe>
     }
   </div>
 

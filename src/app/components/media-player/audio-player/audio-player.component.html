@@ -17,20 +17,6 @@
         <!-- Desktop Controls -->
         <div class="desktop-controls">
           @if (isPodcast()) {
-          <button mat-icon-button [matMenuTriggerFor]="speedMenu" matTooltip="Change speed" class="speed-button">
-            <span class="speed-label">{{ media.playbackRate() }}x</span>
-          </button>
-          <mat-menu #speedMenu="matMenu">
-            <button mat-menu-item (click)="media.setPlaybackRate(0.5)">0.5x</button>
-            <button mat-menu-item (click)="media.setPlaybackRate(0.75)">0.75x</button>
-            <button mat-menu-item (click)="media.setPlaybackRate(1)">1x</button>
-            <button mat-menu-item (click)="media.setPlaybackRate(1.25)">1.25x</button>
-            <button mat-menu-item (click)="media.setPlaybackRate(1.5)">1.5x</button>
-            <button mat-menu-item (click)="media.setPlaybackRate(2)">2x</button>
-          </mat-menu>
-          }
-
-          @if (isPodcast()) {
           <button matTooltip="Skip back 10 seconds" (click)="media.rewind(10)" mat-icon-button>
             <mat-icon>replay_10</mat-icon>
           </button>
@@ -159,10 +145,25 @@
             <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
           </mat-slider>
         </div>
+        @if (isPodcast()) {
+        <button mat-menu-item [matMenuTriggerFor]="speedMenuDesktop">
+          <mat-icon>speed</mat-icon>
+          <span>Speed: {{ media.playbackRate() }}x</span>
+        </button>
+        }
         <button mat-menu-item routerLink="/media-queue">
           <mat-icon>queue_music</mat-icon>
           <span>Queue</span>
         </button>
+
+        <mat-menu #speedMenuDesktop="matMenu">
+          <button mat-menu-item (click)="media.setPlaybackRate(0.5)">0.5x</button>
+          <button mat-menu-item (click)="media.setPlaybackRate(0.75)">0.75x</button>
+          <button mat-menu-item (click)="media.setPlaybackRate(1)">1x</button>
+          <button mat-menu-item (click)="media.setPlaybackRate(1.25)">1.25x</button>
+          <button mat-menu-item (click)="media.setPlaybackRate(1.5)">1.5x</button>
+          <button mat-menu-item (click)="media.setPlaybackRate(2)">2x</button>
+        </mat-menu>
       </mat-menu>
 
       <button matTooltip="Close" (click)="media.exit()" mat-icon-button>
