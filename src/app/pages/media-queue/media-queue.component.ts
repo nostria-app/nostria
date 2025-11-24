@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, NgZone } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { AddMediaDialog, AddMediaDialogData } from './add-media-dialog/add-media-dialog';
@@ -22,13 +22,14 @@ export class MediaQueueComponent {
   media = inject(MediaPlayerService);
   private rssParser = inject(RssParserService);
   private dialog = inject(MatDialog);
+  private ngZone = inject(NgZone);
 
   drop(event: CdkDragDrop<string[]>) {
     const currentMedia = this.media.media();
     moveItemInArray(currentMedia, event.previousIndex, event.currentIndex);
     this.media.media.set(currentMedia);
     this.media.save();
-    
+
     // If the currently playing item was moved, update the index
     if (this.media.index === event.previousIndex) {
       this.media.index = event.currentIndex;
@@ -46,12 +47,14 @@ export class MediaQueueComponent {
   }
 
   onMouseMove(event: MouseEvent, target: any) {
-    const element = target as HTMLElement;
-    const rect = element.getBoundingClientRect();
-    const x = event.clientX - rect.left;
-    const y = event.clientY - rect.top;
-    element.style.setProperty('--mouse-x', `${x}px`);
-    element.style.setProperty('--mouse-y', `${y}px`);
+    this.ngZone.runOutsideAngular(() => {
+      const element = target as HTMLElement;
+      const rect = element.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      element.style.setProperty('--mouse-x', `${x}px`);
+      element.style.setProperty('--mouse-y', `${y}px`);
+    });
   }
 
   /**
