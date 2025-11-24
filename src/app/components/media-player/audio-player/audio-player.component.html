@@ -17,7 +17,7 @@
         <!-- Desktop Controls -->
         <div class="desktop-controls">
           @if (isPodcast()) {
-          <button mat-icon-button [matMenuTriggerFor]="speedMenu" matTooltip="Change speed">
+          <button mat-icon-button [matMenuTriggerFor]="speedMenu" matTooltip="Change speed" class="speed-button">
             <span class="speed-label">{{ media.playbackRate() }}x</span>
           </button>
           <mat-menu #speedMenu="matMenu">
@@ -60,9 +60,15 @@
           </button>
           }
 
-          <button matTooltip="View queue" routerLink="/media-queue" mat-icon-button>
-            <mat-icon>queue_music</mat-icon>
+          <button mat-icon-button [matMenuTriggerFor]="desktopMenu" matTooltip="More options">
+            <mat-icon>more_vert</mat-icon>
           </button>
+          <mat-menu #desktopMenu="matMenu">
+            <button mat-menu-item routerLink="/media-queue">
+              <mat-icon>queue_music</mat-icon>
+              <span>Queue</span>
+            </button>
+          </mat-menu>
         </div>
 
         <!-- Mobile Controls -->
@@ -90,6 +96,12 @@
           </button>
 
           <mat-menu #moreMenu="matMenu">
+            <div class="mobile-volume-item" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0">
+              <mat-icon>volume_up</mat-icon>
+              <mat-slider class="mobile-volume-slider" [min]="0" [max]="100" [step]="1">
+                <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
+              </mat-slider>
+            </div>
             @if (isPodcast()) {
             <button mat-menu-item [matMenuTriggerFor]="speedMenuMobile">
               <mat-icon>speed</mat-icon>

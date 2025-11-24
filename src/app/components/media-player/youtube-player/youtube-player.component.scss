@@ -111,3 +111,32 @@
     display: none;
   }
 }
+
+.media-info-text {
+  flex: 1;
+  min-width: 0;
+  padding-left: 12px;
+
+  &.hidden {
+    display: none;
+  }
+}
+
+.media-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-bottom: 4px;
+  color: var(--mat-sys-on-surface);
+  padding-right: 8px;
+}
+
+.media-artist {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

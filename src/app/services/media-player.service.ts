@@ -316,7 +316,7 @@ export class MediaPlayerService implements OnInitialized {
     this.layout.fullscreenMediaPlayer.set(false);
 
     // Clear saved queue from localStorage
-    this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
+    // this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
 
     // Update media session
     navigator.mediaSession.playbackState = 'none';
