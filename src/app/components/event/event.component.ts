@@ -1255,8 +1255,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (event.kind === 32100) {
       const dTag = event.tags.find(t => t[0] === 'd')?.[1];
       if (dTag) {
-        const playlist = { id: dTag, pubkey: event.pubkey } as any;
-        return this.playlistService.isPlaylistSaved(playlist) ? 'bookmark' : 'bookmark_border';
+        const playlist = { id: dTag, pubkey: event.pubkey } as Pick<Playlist, 'id' | 'pubkey'>;
+        return this.playlistService.isPlaylistSaved(playlist as Playlist) ? 'bookmark' : 'bookmark_border';
       }
     }
     return this.bookmark.getBookmarkIcon(event.id);
@@ -1266,8 +1266,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     if (event.kind === 32100) {
       const dTag = event.tags.find(t => t[0] === 'd')?.[1];
       if (dTag) {
-        const playlist = { id: dTag, pubkey: event.pubkey } as any;
-        return this.playlistService.isPlaylistSaved(playlist) ? 'Remove from saved playlists' : 'Save playlist to bookmarks';
+        const playlist = { id: dTag, pubkey: event.pubkey } as Pick<Playlist, 'id' | 'pubkey'>;
+        return this.playlistService.isPlaylistSaved(playlist as Playlist) ? 'Remove from saved playlists' : 'Save playlist to bookmarks';
       }
     }
     return this.bookmark.getBookmarkTooltip(event.id);

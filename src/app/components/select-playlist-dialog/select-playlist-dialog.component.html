@@ -28,7 +28,7 @@
     }
 
     <div class="new-playlist-action">
-      <button mat-flat-button color="primary" (click)="toggleNewPlaylistForm()">
+      <button mat-flat-button (click)="toggleNewPlaylistForm()">
         <mat-icon>add</mat-icon>
         Create New Playlist
       </button>
@@ -49,7 +49,7 @@
           <mat-icon>arrow_back</mat-icon>
           Back to Playlists
         </button>
-        <button mat-flat-button color="primary" type="submit" [disabled]="!newPlaylistForm.valid">
+        <button mat-flat-button type="submit" [disabled]="!newPlaylistForm.valid">
           <mat-icon>add</mat-icon>
           Create and Add
         </button>

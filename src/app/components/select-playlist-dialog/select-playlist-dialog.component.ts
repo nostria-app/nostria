@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatListModule } from '@angular/material/list';
@@ -21,6 +21,7 @@ export interface SelectPlaylistDialogResult {
 
 @Component({
   selector: 'app-select-playlist-dialog',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatDialogModule,
     MatButtonModule,

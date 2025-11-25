@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, ChangeDetectionStrategy } from '@angular/core';
 import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,6 +16,7 @@ export interface RenamePlaylistDialogResult {
 
 @Component({
   selector: 'app-rename-playlist-dialog',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatDialogModule,
     MatButtonModule,

@@ -456,8 +456,8 @@
       }
 
       <button mat-icon-button (click)="onBookmarkClick($event)">
-        <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(targetItem.event.id)" matTooltipPosition="below">
-          {{ bookmark.getBookmarkIcon(targetItem.event.id) }}
+        <mat-icon [matTooltip]="getBookmarkTooltip(targetItem.event)" matTooltipPosition="below">
+          {{ getBookmarkIcon(targetItem.event) }}
         </mat-icon>
       </button>
     </div>
