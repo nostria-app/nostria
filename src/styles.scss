@@ -14,9 +14,9 @@ html {
   --mat-success-darker: #2e7d32;
 
   // Scrollbar colors for light theme
-  --scrollbar-track: #f1f1f1;
-  --scrollbar-thumb: #c1c1c1;
-  --scrollbar-thumb-hover: #a1a1a1;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
 
   @include mat.theme((color: (theme-type: light,
         primary: nostria-theme.$primary-palette,
@@ -33,9 +33,9 @@ html {
   --mat-success-darker: #388e3c;
 
   // Scrollbar colors for dark theme
-  --scrollbar-track: #424242;
-  --scrollbar-thumb: #686868;
-  --scrollbar-thumb-hover: #7e7e7e;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
 
   @include mat.theme((color: (theme-type: dark,
         primary: nostria-theme.$primary-palette,
