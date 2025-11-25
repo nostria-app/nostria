@@ -31,7 +31,11 @@
   }
 
   &.completed {
-    opacity: 0.5;
+    opacity: 0.4;
+
+    .queue-artwork {
+      filter: grayscale(100%);
+    }
 
     &:hover {
       opacity: 0.8;
@@ -39,6 +43,10 @@
 
     &.current-playing {
       opacity: 1;
+
+      .queue-artwork {
+        filter: none;
+      }
     }
   }
 

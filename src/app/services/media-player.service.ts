@@ -498,10 +498,10 @@ export class MediaPlayerService implements OnInitialized {
     try {
       const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
       const positions: Record<string, PodcastProgress> = positionsJson ? JSON.parse(positionsJson) : {};
-      
+
       // Get existing progress or create new
       const existing = positions[url] || { position: 0, lastListenedAt: 0, completed: false };
-      
+
       // Update progress
       positions[url] = {
         position,
@@ -509,7 +509,7 @@ export class MediaPlayerService implements OnInitialized {
         lastListenedAt: this.getCurrentNostrTimestamp(),
         completed: existing.completed, // Preserve completed status
       };
-      
+
       this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
     } catch (error) {
       console.error('Error saving podcast position:', error);
@@ -564,21 +564,21 @@ export class MediaPlayerService implements OnInitialized {
     try {
       const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
       const positions: Record<string, PodcastProgress> = positionsJson ? JSON.parse(positionsJson) : {};
-      
+
       // Get existing progress or create new
-      const existing = positions[url] || { 
-        position: 0, 
-        lastListenedAt: this.getCurrentNostrTimestamp(), 
-        completed: false 
+      const existing = positions[url] || {
+        position: 0,
+        lastListenedAt: this.getCurrentNostrTimestamp(),
+        completed: false
       };
-      
+
       // Update completed status
       positions[url] = {
         ...existing,
         completed,
         lastListenedAt: this.getCurrentNostrTimestamp(),
       };
-      
+
       this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
     } catch (error) {
       console.error('Error setting podcast completed status:', error);
@@ -660,6 +660,13 @@ export class MediaPlayerService implements OnInitialized {
 
   private handleMediaEnded = () => {
     console.log('Media ended, checking for next item');
+
+    // Mark podcast as completed if applicable
+    const currentItem = this.current();
+    if (currentItem?.type === 'Podcast') {
+      this.setPodcastCompleted(currentItem.source, true);
+    }
+
     if (this.canNext()) {
       console.log('Auto-advancing to next media item');
       this.next();
@@ -672,7 +679,7 @@ export class MediaPlayerService implements OnInitialized {
   private handleTimeUpdate = () => {
     if (this.audio) {
       this.currentTimeSig.set(this.audio.currentTime);
-      
+
       // Save podcast position periodically (only for podcasts), throttled to every 2 seconds
       const currentItem = this.current();
       if (currentItem?.type === 'Podcast') {
@@ -688,7 +695,7 @@ export class MediaPlayerService implements OnInitialized {
   private handleLoadedMetadata = () => {
     if (this.audio) {
       this.durationSig.set(this.audio.duration);
-      
+
       // Restore saved position for podcasts
       const currentItem = this.current();
       if (currentItem?.type === 'Podcast') {
