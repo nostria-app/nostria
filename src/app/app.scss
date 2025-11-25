@@ -27,6 +27,96 @@ nav {
   left: 0;
   right: 0;
   bottom: 0;
+
+  // CSS variable for toolbar height
+  --toolbar-height: 64px;
+}
+
+// Glass toolbar styles - transparent container
+.app-toolbar {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: var(--toolbar-height);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  // Transparent background - no glass effect on the toolbar itself
+  background: transparent !important;
+  box-shadow: none;
+  border: none;
+}
+
+// Glass section mixin for toolbar sections
+@mixin glass-section {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 8px;
+  border-radius: 24px;
+
+  // Glass effect
+  background-color: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
+  box-shadow:
+    // Inner white highlight
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    // Inner glow
+    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+    // Drop shadows
+    0px 2px 8px rgba(17, 17, 26, 0.08),
+    0px 4px 16px rgba(17, 17, 26, 0.06);
+}
+
+@mixin glass-section-dark {
+  background-color: rgba(0, 0, 0, 0.4);
+
+  box-shadow:
+    // Inner highlight (subtler in dark mode)
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+    // Inner glow
+    inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
+    // Drop shadows
+    0px 2px 8px rgba(0, 0, 0, 0.3),
+    0px 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+// Toolbar sections with glass effect
+.toolbar-section {
+  @include glass-section;
+}
+
+.dark .toolbar-section {
+  @include glass-section-dark;
+}
+
+// Left section - hamburger, navigation, title
+.toolbar-left {
+  flex-shrink: 0;
+}
+
+// Right section - action buttons, profile
+.toolbar-right {
+  flex-shrink: 0;
+}
+
+// Search container also gets glass styling
+.search-container.toolbar-section {
+  flex: 1;
+  max-width: 600px;
+  position: relative;
+}
+
+// Dark mode - transparent toolbar maintained
+.dark .app-toolbar {
+  background: transparent !important;
+  box-shadow: none;
 }
 
 .premium-label {
@@ -44,6 +134,12 @@ nav {
   overflow: hidden;
   /* Prevent scrolling on the container itself - only content-wrapper should scroll */
 
+  // Account for fixed toolbar - sidenav-container takes full height
+  // The sidenav will start from top and the content-wrapper handles the toolbar offset
+  margin-top: 0;
+  height: 100%;
+  box-sizing: border-box;
+
   // Make space for mobile nav when on mobile
   @media (max-width: 599px) {}
 }
@@ -54,6 +150,9 @@ mat-sidenav-content {
   flex-direction: column;
   height: 100%;
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  // Position content below the toolbar (on desktop)
+  margin-top: var(--toolbar-height, 64px);
+  height: calc(100% - var(--toolbar-height, 64px));
 
   // When media player is shown, add extra padding for it
   // &.media-player-shown {
@@ -73,6 +172,9 @@ mat-sidenav-content {
   @media (max-width: 599px) {
     // Padding moved to .content-wrapper to allow scrolling behind the glass nav
     padding-bottom: 0;
+    // On mobile, content also needs the toolbar offset
+    margin-top: var(--toolbar-height, 64px);
+    height: calc(100% - var(--toolbar-height, 64px));
 
     // When media player is shown, add extra padding for it
     &.media-player-shown {
@@ -83,11 +185,17 @@ mat-sidenav-content {
 
 .sidenav {
   width: 250px;
+  // Position sidenav below the toolbar
+  margin-top: var(--toolbar-height, 64px);
+  height: calc(100% - var(--toolbar-height, 64px)) !important;
 
   // On desktop, keep it at base level (side mode)
   // On mobile, ensure it's above the mobile nav (over mode)
   @media (max-width: 599px) {
     z-index: 1001 !important;
+    // On mobile (over mode), sidenav should be full height 
+    margin-top: 0;
+    height: 100% !important;
   }
 
   @media (min-width: 599px) {
@@ -99,6 +207,8 @@ mat-sidenav-content {
   mat-nav-list {
     @media (max-width: 599px) {
       padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+      // Add padding for toolbar on mobile overlay mode
+      padding-top: var(--toolbar-height, 64px);
     }
   }
 }
@@ -166,7 +276,7 @@ mat-sidenav-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // Remove fixed height since we're using flexbox now
+  // Content scrolls normally - toolbar offset is handled at mat-sidenav-content level
 }
 
 // When media player is shown, add extra padding to content-wrapper
@@ -739,6 +849,23 @@ mat-sidenav-content {
   width: 100%;
   display: flex;
   align-items: center;
+
+  // When used in toolbar with glass effect
+  &.toolbar-section {
+    padding: 0 4px 0 12px;
+
+    .search-input {
+      border: none;
+      background: transparent;
+      box-shadow: none;
+
+      &:focus {
+        outline: none;
+        border: none;
+        box-shadow: none;
+      }
+    }
+  }
 }
 
 .search-input {

@@ -17,21 +17,25 @@
   }
   @if (app.initialized()) {
   <!-- Top toolbar - now outside and above the sidenav container -->
-  <mat-toolbar color="primary" class="app-toolbar no-print no-select">
-    @if (!layout.search()) {
-    <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
-      <mat-icon>menu</mat-icon>
-    </button>
-    }
-    @if (!layout.search()) {
-    <app-navigation></app-navigation>
-    <span class="app-title title-font hide-small">
-      <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
-    </span>
-    }
+  <mat-toolbar class="app-toolbar no-print no-select">
+    <!-- Left section: hamburger menu, navigation, and title -->
+    <div class="toolbar-section toolbar-left">
+      @if (!layout.search()) {
+      <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
+        <mat-icon>menu</mat-icon>
+      </button>
+      }
+      @if (!layout.search()) {
+      <app-navigation></app-navigation>
+      <span class="app-title title-font hide-small">
+        <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
+      </span>
+      }
+    </div>
+
     <span class="toolbar-spacer">
       @if (layout.search()) {
-      <div class="search-container">
+      <div class="search-container toolbar-section">
         <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
           (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
           placeholder="Search for cached profiles or paste identifiers..." />
@@ -49,129 +53,133 @@
       }
     </span>
 
-    @if (!layout.search()) {
-    <button mat-icon-button (click)="layout.toggleSearch()">
-      <mat-icon>search</mat-icon>
-    </button>
-    }
-    @if (pwaUpdateService.updateAvailable() && !layout.search()) {
-    <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
-      matTooltip="Update ready!" aria-label="Update application">
-      <mat-icon class="update-icon">system_update</mat-icon>
-    </button>
-    }
-    @if (app.authenticated() && accountState.profileProcessingState().isProcessing && !layout.search()) {
-    <button mat-icon-button class="profile-cache-button" [matTooltip]="
-            'Caching profiles: ' +
-            accountState.processingProgress() +
-            '% (' +
-            accountState.profileProcessingState().processed +
-            '/' +
-            accountState.profileProcessingState().total +
-            ')'
-          " aria-label="Profile caching progress">
-      <mat-icon class="spinning-icon">cached</mat-icon>
-      <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
-    </button>
-    }
-    @if (app.authenticated() && (appState.isPublishing() || ai.processingState().isProcessing) && !layout.search()) {
-    <button mat-icon-button class="profile-cache-button"
-      [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : 'Publishing event...'"
-      aria-label="Processing in progress">
-      <mat-icon class="spinning-icon">sync</mat-icon>
-    </button>
-    }
-    @if (app.authenticated() && !layout.search()) {
-    <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
-      #notificationMenuTrigger="matMenuTrigger">
-      <mat-icon [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
-    </button>
-    }
-
-    <mat-menu #menuNotifications="matMenu">
-      @if (contentNotifications().length > 0) {
-      <!-- Display last 5 content notifications -->
-      @for (
-      notification of contentNotifications().slice(0, 5);
-      track notification.id
-      ) {
-      <button mat-menu-item (click)="onNotificationClick(notification, $event)">
-        <mat-icon>
-          @if (notification.type === notificationType.SUCCESS) {
-          check_circle
-          } @else if (notification.type === notificationType.GENERAL) {
-          info
-          } @else if (notification.type === notificationType.WARNING) {
-          warning
-          } @else if (notification.type === notificationType.ERROR) {
-          error
-          } @else if (notification.type === notificationType.RELAY_PUBLISHING) {
-          sync
-          } @else {
-          notifications
-          }
-        </mat-icon>
-        <span>{{ getFormattedNotificationTitle(notification) }}</span>
-        <div class="notification-details dimmed">
-          {{ notification.timestamp | date: 'short' }}
-        </div>
+    <!-- Right section: action buttons and profile -->
+    <div class="toolbar-section toolbar-right">
+      @if (!layout.search()) {
+      <button mat-icon-button (click)="layout.toggleSearch()">
+        <mat-icon>search</mat-icon>
       </button>
       }
-      <mat-divider></mat-divider>
-      <button mat-menu-item routerLink="/notifications">
-        <mat-icon>visibility</mat-icon>
-        <span>See all notifications</span>
-      </button>
-      } @else {
-      <button mat-menu-item routerLink="/notifications">
-        <mat-icon>notifications_off</mat-icon>
-        <span>No notifications</span>
+      @if (pwaUpdateService.updateAvailable() && !layout.search()) {
+      <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
+        matTooltip="Update ready!" aria-label="Update application">
+        <mat-icon class="update-icon">system_update</mat-icon>
       </button>
       }
-      <mat-divider></mat-divider>
-
-
-
-      <button mat-menu-item (click)="openWhatsNewDialog()">
-        <mat-icon>campaign</mat-icon>
-        <span>What's New</span>
+      @if (app.authenticated() && accountState.profileProcessingState().isProcessing && !layout.search()) {
+      <button mat-icon-button class="profile-cache-button" [matTooltip]="
+              'Caching profiles: ' +
+              accountState.processingProgress() +
+              '% (' +
+              accountState.profileProcessingState().processed +
+              '/' +
+              accountState.profileProcessingState().total +
+              ')'
+            " aria-label="Profile caching progress">
+        <mat-icon class="spinning-icon">cached</mat-icon>
+        <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
       </button>
+      }
+      @if (app.authenticated() && (appState.isPublishing() || ai.processingState().isProcessing) && !layout.search()) {
+      <button mat-icon-button class="profile-cache-button"
+        [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : 'Publishing event...'"
+        aria-label="Processing in progress">
+        <mat-icon class="spinning-icon">sync</mat-icon>
+      </button>
+      }
+      @if (app.authenticated() && !layout.search()) {
+      <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
+        #notificationMenuTrigger="matMenuTrigger">
+        <mat-icon
+          [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
+      </button>
+      }
 
-      <mat-divider></mat-divider>
+      <mat-menu #menuNotifications="matMenu">
+        @if (contentNotifications().length > 0) {
+        <!-- Display last 5 content notifications -->
+        @for (
+        notification of contentNotifications().slice(0, 5);
+        track notification.id
+        ) {
+        <button mat-menu-item (click)="onNotificationClick(notification, $event)">
+          <mat-icon>
+            @if (notification.type === notificationType.SUCCESS) {
+            check_circle
+            } @else if (notification.type === notificationType.GENERAL) {
+            info
+            } @else if (notification.type === notificationType.WARNING) {
+            warning
+            } @else if (notification.type === notificationType.ERROR) {
+            error
+            } @else if (notification.type === notificationType.RELAY_PUBLISHING) {
+            sync
+            } @else {
+            notifications
+            }
+          </mat-icon>
+          <span>{{ getFormattedNotificationTitle(notification) }}</span>
+          <div class="notification-details dimmed">
+            {{ notification.timestamp | date: 'short' }}
+          </div>
+        </button>
+        }
+        <mat-divider></mat-divider>
+        <button mat-menu-item routerLink="/notifications">
+          <mat-icon>visibility</mat-icon>
+          <span>See all notifications</span>
+        </button>
+        } @else {
+        <button mat-menu-item routerLink="/notifications">
+          <mat-icon>notifications_off</mat-icon>
+          <span>No notifications</span>
+        </button>
+        }
+        <mat-divider></mat-divider>
 
-      <!-- @if (!isPushNotificationEnabled()) {
+
+
+        <button mat-menu-item (click)="openWhatsNewDialog()">
+          <mat-icon>campaign</mat-icon>
+          <span>What's New</span>
+        </button>
+
+        <mat-divider></mat-divider>
+
+        <!-- @if (!isPushNotificationEnabled()) {
       <button mat-menu-item (click)="enablePushNotifications()">
         <mat-icon>notifications_active</mat-icon>
         <span>Enable Push Notifications</span>
       </button>
       } -->
 
-      <button mat-menu-item routerLink="/notifications/settings">
-        <mat-icon>settings</mat-icon>
-        <span>Notification settings</span>
+        <button mat-menu-item routerLink="/notifications/settings">
+          <mat-icon>settings</mat-icon>
+          <span>Notification settings</span>
+        </button>
+      </mat-menu>
+
+      @if (!layout.search()) {
+      <button mat-icon-button (click)="toggleAppsMenu($event)">
+        <mat-icon>apps</mat-icon>
       </button>
-    </mat-menu>
-
-    @if (!layout.search()) {
-    <button mat-icon-button (click)="toggleAppsMenu($event)">
-      <mat-icon>apps</mat-icon>
-    </button>
-    }
-
-    @if (!layout.search()) {
-    <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
-      (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
-      @if (accountState.profile()?.data?.picture) {
-      <img [src]="accountState.profile()?.data?.picture" class="profile-button-avatar" alt="Profile picture" />
-      } @else {
-      @if (app.authenticated()) {
-      <mat-icon>account_circle</mat-icon>
-      } @else {
-      <mat-icon>account_circle_off</mat-icon>
       }
+
+      @if (!layout.search()) {
+      <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
+        (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
+        @if (accountState.profile()?.data?.picture) {
+        <img [src]="accountState.profile()?.data?.picture" class="profile-button-avatar" alt="Profile picture" />
+        } @else {
+        @if (app.authenticated()) {
+        <mat-icon>account_circle</mat-icon>
+        } @else {
+        <mat-icon>account_circle_off</mat-icon>
+        }
+        }
+      </button>
       }
-    </button>
-    }
+    </div>
   </mat-toolbar>
   }
 
