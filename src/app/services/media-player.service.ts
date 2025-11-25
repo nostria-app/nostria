@@ -275,6 +275,14 @@ export class MediaPlayerService implements OnInitialized {
     checkIframe();
   }
 
+  /**
+   * Exit the media player and clean up resources.
+   * 
+   * Navigation behavior:
+   * - Fullscreen mode on stream route: Navigates to /streams
+   * - Footer mode (small player): Just closes, no navigation
+   * - All other cases: Just closes, no navigation
+   */
   exit() {
     console.log('Exiting media player and hiding footer');
 
