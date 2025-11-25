@@ -12,6 +12,7 @@ import { Event } from 'nostr-tools';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 import { RepostButtonComponent } from '../event/repost-button/repost-button.component';
+import { ReactionButtonComponent } from '../event/reaction-button/reaction-button.component';
 import { EventMenuComponent } from '../event/event-menu/event-menu.component';
 import { MentionHoverDirective } from '../../directives/mention-hover.directive';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
@@ -50,6 +51,7 @@ export interface ArticleData {
     UserProfileComponent,
     DateToggleComponent,
     RepostButtonComponent,
+    ReactionButtonComponent,
     EventMenuComponent,
     MentionHoverDirective,
     CommentsListComponent,

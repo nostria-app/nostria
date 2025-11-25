@@ -161,6 +161,7 @@
       </button>
 
       @if (event()) {
+      <app-reaction-button [event]="event()!" [view]="'full'"></app-reaction-button>
       <app-repost-button [event]="event()!" [view]="'full'"></app-repost-button>
       }
 
