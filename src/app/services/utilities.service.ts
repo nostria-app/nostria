@@ -1067,7 +1067,7 @@ export class UtilitiesService {
     const METADATA_KIND = 0;
     const CONTACT_LIST_KIND = 3;
     const REPLACEABLE_MIN = 10000;
-    const REPLACEABLE_MAX = 20000;
+    const REPLACEABLE_MAX = 20000; // Exclusive upper bound (includes 10000-19999)
     
     return kind === METADATA_KIND || 
            kind === CONTACT_LIST_KIND || 
@@ -1082,7 +1082,7 @@ export class UtilitiesService {
   isParameterizedReplaceableEvent(kind: number): boolean {
     // NIP-01 defines parameterized replaceable events as kinds 30000-39999
     const PARAMETERIZED_REPLACEABLE_MIN = 30000;
-    const PARAMETERIZED_REPLACEABLE_MAX = 40000;
+    const PARAMETERIZED_REPLACEABLE_MAX = 40000; // Exclusive upper bound (includes 30000-39999)
     
     return kind >= PARAMETERIZED_REPLACEABLE_MIN && kind < PARAMETERIZED_REPLACEABLE_MAX;
   }
