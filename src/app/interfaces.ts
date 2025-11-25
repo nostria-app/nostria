@@ -15,7 +15,7 @@ export interface MediaItem {
   source: string;
   type: 'Music' | 'Podcast' | 'YouTube' | 'Video' | 'HLS' | 'LiveKit' | 'External';
   isLiveStream?: boolean; // Flag for live streaming content
-  participants?: Array<{ pubkey: string; role?: string }>; // Live stream participants
+  participants?: { pubkey: string; role?: string }[]; // Live stream participants
   liveEventData?: Event; // Full Nostr event for live streams
 }
 
@@ -36,6 +36,7 @@ export interface PlaylistMetadata {
   created_at: number;
   pubkey: string;
   eventId?: string; // Nostr event id if published
+  kind?: number; // Event kind (usually 32100)
   isLocal: boolean; // True if only stored locally, false if published to Nostr
 }
 
