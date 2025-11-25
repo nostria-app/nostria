@@ -7,6 +7,7 @@ import { Metrics } from './metrics';
 import { LoggerService } from './logger.service';
 import { NostrRecord } from '../interfaces';
 import { UserMetric } from '../interfaces/metrics';
+import { ImageCacheService } from './image-cache.service';
 
 /**
  * Complete profile data structure for a followed user
@@ -34,6 +35,7 @@ export class FollowingService {
   private readonly userData = inject(UserDataService);
   private readonly metrics = inject(Metrics);
   private readonly logger = inject(LoggerService);
+  private readonly imageCacheService = inject(ImageCacheService);
 
   // In-memory cache of all following profiles
   private readonly profilesMap = signal<Map<string, FollowingProfile>>(new Map());
@@ -108,11 +110,48 @@ export class FollowingService {
       this.profilesMap.set(newMap);
       this.isInitialized.set(true);
       this.logger.info(`[FollowingService] Successfully loaded ${newMap.size} following profiles`);
+
+      // Preload profile images in the background
+      this.preloadProfileImages(newMap);
     } catch (error) {
       this.logger.error('[FollowingService] Error loading profiles:', error);
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  /**
+   * Preload images for all following profiles in the background
+   */
+  private preloadProfileImages(profilesMap: Map<string, FollowingProfile>): void {
+    // Run in background to not block UI
+    queueMicrotask(async () => {
+      try {
+        const imagesToPreload: Array<{ url: string; width: number; height: number }> = [];
+
+        // Collect all profile image URLs
+        for (const profile of profilesMap.values()) {
+          if (profile.profile?.data?.picture) {
+            // Preload images in different sizes commonly used
+            imagesToPreload.push(
+              { url: profile.profile.data.picture, width: 40, height: 40 }, // list view
+              { url: profile.profile.data.picture, width: 48, height: 48 }, // small/icon view
+              { url: profile.profile.data.picture, width: 128, height: 128 } // medium view
+            );
+          }
+        }
+
+        if (imagesToPreload.length > 0) {
+          this.logger.info(
+            `[FollowingService] Preloading ${imagesToPreload.length} profile images for ${profilesMap.size} users`
+          );
+          await this.imageCacheService.preloadImages(imagesToPreload);
+          this.logger.info('[FollowingService] Profile images preloaded successfully');
+        }
+      } catch (error) {
+        this.logger.warn('[FollowingService] Failed to preload profile images:', error);
+      }
+    });
   }
 
   /**
