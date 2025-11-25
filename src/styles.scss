@@ -1325,20 +1325,19 @@ app-media-queue .media-list mat-list {
   z-index: 105 !important;
 }
 
-.mat-drawer-container .mat-drawer.mat-drawer-end {
-  z-index: 115 !important;
+// The sidenav drawer must be above its own backdrop
+.mat-drawer-container .mat-drawer.mat-drawer-end,
+.mat-drawer.mat-drawer-end {
+  z-index: 120 !important;
 }
 
 // Fixed viewport sidenavs need higher z-index
 .mat-drawer.mat-drawer-end[style*="position: fixed"] {
-  z-index: 115 !important;
+  z-index: 120 !important;
 }
 
-.mat-drawer-container .mat-drawer-backdrop {
-  z-index: 110 !important;
-}
-
-// Backdrop for fixed viewport sidenav
+// Backdrop z-index - must be below the drawer but above toolbar
+.mat-drawer-container .mat-drawer-backdrop,
 .mat-drawer-backdrop {
   z-index: 110 !important;
 }

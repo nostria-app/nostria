@@ -434,7 +434,7 @@ mat-sidenav-content {
 .profile-sidenav {
   width: 300px;
   max-width: 90vw;
-  z-index: 102 !important; // Higher than app-toolbar (z-index: 100) and backdrop (101)
+  z-index: 120 !important; // Higher than backdrop (z-index: 110)
   position: fixed !important; // Ensure it's fixed positioned above toolbar
 
   // Glass effect - similar to favorites overlay (light mode)
@@ -469,7 +469,7 @@ mat-sidenav-content {
 // Animation for the profile sidenav
 .profile-sidenav.mat-drawer {
   transition: transform 0.3s ease-in-out;
-  z-index: 102 !important; // Ensure the drawer itself also has high z-index
+  z-index: 120 !important; // Ensure the drawer itself also has high z-index
 }
 
 // Ensure the sidenav container doesn't resize when right-side sidenavs open
@@ -481,14 +481,14 @@ mat-sidenav-content {
 
     // Right sidenavs should overlay, not push
     &.mat-drawer-over {
-      z-index: 102 !important;
+      z-index: 120 !important;
     }
   }
 
-  // Ensure backdrop appears correctly and above toolbar
+  // Ensure backdrop appears correctly and above toolbar but below sidenav
   .mat-sidenav-backdrop {
     position: fixed !important;
-    z-index: 101 !important; // Above toolbar (100)
+    z-index: 110 !important; // Above toolbar (100), below sidenav (120)
   }
 }
 
