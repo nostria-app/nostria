@@ -39,7 +39,7 @@ export class SelectPlaylistDialogComponent {
   private fb = inject(FormBuilder);
   private playlistService = inject(PlaylistService);
 
-  playlists = this.playlistService.playlists;
+  playlists = this.playlistService.userPlaylists;
   showNewPlaylistForm = false;
   newPlaylistForm: FormGroup;
 
