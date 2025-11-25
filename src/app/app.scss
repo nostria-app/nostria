@@ -336,6 +336,34 @@ mat-sidenav-content {
   width: 300px;
   max-width: 90vw;
   z-index: 1001; // Higher than app-toolbar (z-index: 2) and mobile-nav (z-index: 1000)
+
+  // Glass effect - similar to favorites overlay
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
+  box-shadow:
+    // Inner white highlight (sharp edge)
+    inset 0 0 0 1px rgba(255, 255, 255, 0.3),
+    // Inner glow
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.1),
+    // Drop shadows
+    -4px 0 16px rgba(17, 17, 26, 0.1),
+    -8px 0 24px rgba(17, 17, 26, 0.1);
+
+  // Dark mode glass effect
+  .dark & {
+    background-color: rgba(0, 0, 0, 0.3) !important;
+
+    box-shadow:
+      // Inner highlight (subtler in dark mode)
+      inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+      // Inner glow
+      inset 0 0 10px 4px rgba(255, 255, 255, 0.05),
+      // Drop shadows (darker)
+      -4px 0 16px rgba(0, 0, 0, 0.4),
+      -8px 0 24px rgba(0, 0, 0, 0.4);
+  }
 }
 
 // Animation for the profile sidenav
@@ -871,6 +899,7 @@ mat-sidenav-content {
 // Additional z-index fixes for Material sidenav
 .profile-sidenav .mat-drawer-inner-container {
   z-index: 1001;
+  background: transparent !important; // Ensure inner container doesn't override glass effect
 }
 
 // Ensure backdrop appears above toolbar and mobile nav but below sidenav
