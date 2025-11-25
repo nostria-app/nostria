@@ -1,0 +1,28 @@
+@if (view() === 'icon') {
+  <button
+    mat-icon-button
+    [class.active]="!!likeReaction()"
+    [class.liked]="!!likeReaction()"
+    [disabled]="isLoadingReactions()"
+    (click)="toggleLike(); $event.stopPropagation()"
+    matTooltip="Like"
+    matTooltipPosition="below"
+  >
+    <mat-icon>favorite</mat-icon>
+  </button>
+} @else {
+  <button
+    mat-button
+    [class.active]="!!likeReaction()"
+    [class.liked]="!!likeReaction()"
+    [disabled]="isLoadingReactions()"
+    (click)="toggleLike(); $event.stopPropagation()"
+  >
+    <mat-icon>favorite</mat-icon>
+    @if (!!likeReaction()) {
+      Unlike
+    } @else {
+      Like
+    }
+  </button>
+}
