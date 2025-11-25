@@ -278,9 +278,10 @@ export class MediaPlayerService implements OnInitialized {
   exit() {
     console.log('Exiting media player and hiding footer');
 
-    // Check if we're on a stream route and need to navigate
+    // Check if we're on a stream route and in fullscreen mode
     const currentUrl = this.router.url;
     const isStreamRoute = currentUrl.startsWith('/stream/');
+    const isFullscreen = this.layout.fullscreenMediaPlayer();
 
     // Use the centralized cleanup method
     this.cleanupCurrentMedia();
@@ -333,9 +334,10 @@ export class MediaPlayerService implements OnInitialized {
 
     console.log('Media player completely exited and hidden');
 
-    // Navigate to streams page if we were on a stream route
-    if (isStreamRoute) {
-      console.log('[MediaPlayer] Navigating to /streams from stream route');
+    // Only navigate to /streams if we were in fullscreen mode on a stream route
+    // In footer mode (small player), just close without navigation
+    if (isStreamRoute && isFullscreen) {
+      console.log('[MediaPlayer] Navigating to /streams from fullscreen stream view');
       this.router.navigate(['/streams']);
     }
   }
