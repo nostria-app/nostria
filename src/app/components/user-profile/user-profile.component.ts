@@ -129,6 +129,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         this.profile.set(pref as unknown as Record<string, unknown>);
         // Mark as loaded to prevent redundant fetches
         this.isLoading.set(false);
+        // Preload image if available
+        this.preloadProfileImage(pref as unknown as Record<string, unknown>);
       }
     });
     // Set up scroll detection
@@ -153,9 +155,18 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
           const npub = this.utilities.getNpubFromPubkey(pubkey);
           this.npub.set(npub);
 
-          // Only load profile data when the component is visible and not scrolling
-          if (this.isVisible() && !this.isScrolling() && !this.profile()) {
-            this.debouncedLoadProfileData(pubkey);
+          // Try to get cached profile synchronously first for instant display
+          const cachedProfile = this.data.getCachedProfile(pubkey);
+          if (cachedProfile) {
+            this.profile.set(cachedProfile);
+            this.isLoading.set(false);
+            // Preload image if available
+            this.preloadProfileImage(cachedProfile);
+          } else {
+            // Only load profile data when the component is visible and not scrolling
+            if (this.isVisible() && !this.isScrolling() && !this.profile()) {
+              this.debouncedLoadProfileData(pubkey);
+            }
           }
         });
       }
@@ -330,6 +341,19 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     this.layout.copyToClipboard(this.event()?.content, 'event data');
   }
 
+  /**
+   * Preload profile image for faster display
+   */
+  private preloadProfileImage(profile: any): void {
+    if (profile?.data?.picture && this.settingsService.settings().imageCacheEnabled) {
+      const size = this.getImageSize();
+      // Preload the image in the background - don't await
+      this.imageCacheService.preloadImage(profile.data.picture, size, size).catch(error => {
+        this.logger.debug('Failed to preload profile image:', error);
+      });
+    }
+  }
+
   private async loadProfileData(npubValue: string): Promise<void> {
     // Don't reload if we already have data
     if (this.profile()) {
@@ -360,6 +384,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         // Set profile to an empty object if no data was found
         // This will distinguish between "not loaded yet" and "loaded but empty"
         this.profile.set(data || { isEmpty: true });
+        
+        // Preload image if available
+        if (data) {
+          this.preloadProfileImage(data);
+        }
       }
     } catch (error) {
       this.logger.error('Failed to load profile data:', error);
