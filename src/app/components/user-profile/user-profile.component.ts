@@ -106,10 +106,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
   // Debounce control variables
   private debouncedLoadTimer?: number;
-  private isScrolling = signal(false);
   private readonly DEBOUNCE_TIME = 350; // milliseconds
-  private readonly SCROLL_CHECK_INTERVAL = 100; // milliseconds
-  private scrollCheckTimer?: number;
 
   npubValue = computed<string>(() => {
     const pubkey = this.pubkey();
@@ -133,8 +130,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         this.preloadProfileImage(pref as unknown as Record<string, unknown>);
       }
     });
-    // Set up scroll detection
-    this.setupScrollDetection(); // Set up an effect to watch for changes to npub input
+    // Set up an effect to watch for changes to npub input
     effect(() => {
       const pubkey = this.pubkey();
 
@@ -164,7 +160,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
             this.preloadProfileImage(cachedProfile);
           } else {
             // Only load profile data when the component is visible and not scrolling
-            if (this.isVisible() && !this.isScrolling() && !this.profile()) {
+            if (this.isVisible() && !this.layout.isScrolling() && !this.profile()) {
               this.debouncedLoadProfileData(pubkey);
             }
           }
@@ -226,7 +222,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     // Clean up the observer and timers when component is destroyed
     this.disconnectObserver();
     this.clearDebounceTimer();
-    this.clearScrollCheckTimer();
   }
 
   /**
@@ -234,51 +229,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
 
 
-  /**
-   * Sets up the scroll detection mechanism
-   */
-  private setupScrollDetection(): void {
-    // Get the scroll container - typically the virtual scroll viewport
-    const scrollDetector = () => {
-      // We need to determine if scrolling has occurred
-      const lastScrollPosition = {
-        x: window.scrollX,
-        y: window.scrollY,
-      };
 
-      this.scrollCheckTimer = window.setInterval(() => {
-        const currentPosition = {
-          x: window.scrollX,
-          y: window.scrollY,
-        };
-
-        // If position changed, user is scrolling
-        if (
-          lastScrollPosition.x !== currentPosition.x ||
-          lastScrollPosition.y !== currentPosition.y
-        ) {
-          this.isScrolling.set(true);
-
-          // Update last position
-          lastScrollPosition.x = currentPosition.x;
-          lastScrollPosition.y = currentPosition.y;
-        } else {
-          // No change in position means scrolling has stopped
-          this.isScrolling.set(false);
-        }
-      }, this.SCROLL_CHECK_INTERVAL);
-    };
-
-    // Start the scroll detection
-    scrollDetector();
-  }
-
-  private clearScrollCheckTimer(): void {
-    if (this.scrollCheckTimer) {
-      window.clearInterval(this.scrollCheckTimer);
-      this.scrollCheckTimer = undefined;
-    }
-  }
 
   private setupIntersectionObserver(): void {
     this.disconnectObserver(); // Ensure any existing observer is disconnected
@@ -290,7 +241,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         const isVisible = entries.some(entry => entry.isIntersecting);
         this.isVisible.set(isVisible);
 
-        if (isVisible && !this.isScrolling()) {
+        if (isVisible && !this.layout.isScrolling()) {
           // Using the debounced load function to prevent rapid loading during scroll
           if (!this.profile() && !this.isLoading()) {
             this.debouncedLoadProfileData(this.pubkey());
@@ -324,7 +275,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     // Set a new timer
     this.debouncedLoadTimer = window.setTimeout(() => {
       // Only proceed if we're visible and not currently scrolling
-      if (this.isVisible() && !this.isScrolling()) {
+      if (this.isVisible() && !this.layout.isScrolling()) {
         this.loadProfileData(pubkeyValue);
       }
     }, this.DEBOUNCE_TIME);

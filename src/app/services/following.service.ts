@@ -92,7 +92,8 @@ export class FollowingService {
         await Promise.all(
           batch.map(async (pubkey) => {
             try {
-              const profile = await this.loadSingleProfile(pubkey);
+              // Skip relay fetch for initial bulk load to prevent network spam
+              const profile = await this.loadSingleProfile(pubkey, true);
               newMap.set(pubkey, profile);
             } catch (error) {
               this.logger.error(`[FollowingService] Failed to load profile for ${pubkey}:`, error);
@@ -135,7 +136,7 @@ export class FollowingService {
 
     schedulePreload(async () => {
       try {
-        const imagesToPreload: Array<{ url: string; width: number; height: number }> = [];
+        const imagesToPreload: { url: string; width: number; height: number }[] = [];
 
         // Collect all profile image URLs
         for (const profile of profilesMap.values()) {
@@ -165,12 +166,12 @@ export class FollowingService {
   /**
    * Load a single profile with all its data
    */
-  private async loadSingleProfile(pubkey: string): Promise<FollowingProfile> {
+  private async loadSingleProfile(pubkey: string, skipRelay = false): Promise<FollowingProfile> {
     const now = Math.floor(Date.now() / 1000);
 
     // Load all data in parallel
     const [profileData, infoRecord, trustMetrics, metricData] = await Promise.all([
-      this.userData.getProfile(pubkey).catch(() => null),
+      this.userData.getProfile(pubkey, { skipRelay }).catch(() => null),
       this.storage.getInfo(pubkey, 'user').catch(() => null),
       this.storage.getInfo(pubkey, 'trust').catch(() => null),
       this.metrics.getUserMetric(pubkey).catch(() => null),
