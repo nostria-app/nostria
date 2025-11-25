@@ -754,7 +754,7 @@ export class LayoutService implements OnDestroy {
     if (value.includes('@')) {
       // Keep the query set for NIP-05 lookups (already set in onSearchInput)
       // The search service will handle this
-    } else if (value.includes(':')) {
+    } else if (value.includes(':') && !value.startsWith('http')) {
       this.openProfile(value);
     } else {
       // For regular text searches, let the search service handle cached results
