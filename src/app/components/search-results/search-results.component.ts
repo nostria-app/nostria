@@ -11,7 +11,7 @@ import { UtilitiesService } from '../../services/utilities.service';
   standalone: true,
   imports: [MatListModule, MatIconModule, MatButtonModule],
   template: `
-    @if (searchService.searchResults().length > 0) {
+    @if (searchService.searchResults().length > 0 || searchService.searchActions().length > 0) {
       <div
         class="search-results"
         tabindex="0"
@@ -19,50 +19,74 @@ import { UtilitiesService } from '../../services/utilities.service';
         (focus)="onContainerFocus()"
         #searchResultsContainer
       >
-        <div class="search-results-header">
-          <span>Found Profiles ({{ searchService.searchResults().length }})</span>
-          <button mat-icon-button (click)="searchService.clearResults()">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
-        <div class="search-results-list">
-          @for (
-            profile of searchService.searchResults();
-            track profile.event.pubkey;
-            let i = $index
-          ) {
-            <div
-              class="search-result-item"
-              [class.focused]="focusedIndex() === i"
-              (click)="selectItem(profile, i)"
-              (mouseenter)="setFocusedIndex(i)"
-            >
-              @if (profile.data.picture) {
-                <img
-                  [src]="profile.data.picture"
-                  alt="Profile picture"
-                  class="search-result-avatar"
-                />
-              } @else {
-                <mat-icon class="search-result-avatar-icon">account_circle</mat-icon>
-              }
-              <div class="search-result-info">
-                <div class="search-result-name">
-                  {{
-                    profile.data.display_name ||
-                      profile.data.name ||
-                      utilities.getNpubFromPubkey(profile.event.pubkey)
-                  }}
+        @if (searchService.searchActions().length > 0) {
+          <div class="search-results-header">
+            <span>Actions</span>
+            <button mat-icon-button (click)="searchService.clearResults()">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+          <div class="search-results-list">
+            @for (action of searchService.searchActions(); track action.label) {
+              <div class="search-result-item" (click)="action.callback()" (keydown.enter)="action.callback()" tabindex="0">
+                <mat-icon class="search-result-avatar-icon">{{ action.icon }}</mat-icon>
+                <div class="search-result-info">
+                  <div class="search-result-name">{{ action.label }}</div>
+                  <div class="search-result-about">{{ action.description }}</div>
                 </div>
-                @if (profile.data.nip05) {
-                  <div class="search-result-nip05">
-                    {{ utilities.parseNip05(profile.data.nip05) }}
-                  </div>
-                }
               </div>
-            </div>
-          }
-        </div>
+            }
+          </div>
+        }
+
+        @if (searchService.searchResults().length > 0) {
+          <div class="search-results-header">
+            <span>Found Profiles ({{ searchService.searchResults().length }})</span>
+            @if (searchService.searchActions().length === 0) {
+              <button mat-icon-button (click)="searchService.clearResults()">
+                <mat-icon>close</mat-icon>
+              </button>
+            }
+          </div>
+          <div class="search-results-list">
+            @for (
+              profile of searchService.searchResults();
+              track profile.event.pubkey;
+              let i = $index
+            ) {
+              <div
+                class="search-result-item"
+                [class.focused]="focusedIndex() === i"
+                (click)="selectItem(profile, i)"
+                (mouseenter)="setFocusedIndex(i)"
+              >
+                @if (profile.data.picture) {
+                  <img
+                    [src]="profile.data.picture"
+                    alt="Profile picture"
+                    class="search-result-avatar"
+                  />
+                } @else {
+                  <mat-icon class="search-result-avatar-icon">account_circle</mat-icon>
+                }
+                <div class="search-result-info">
+                  <div class="search-result-name">
+                    {{
+                      profile.data.display_name ||
+                        profile.data.name ||
+                        utilities.getNpubFromPubkey(profile.event.pubkey)
+                    }}
+                  </div>
+                  @if (profile.data.nip05) {
+                    <div class="search-result-nip05">
+                      {{ utilities.parseNip05(profile.data.nip05) }}
+                    </div>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+        }
       </div>
     }
   `,
@@ -205,7 +229,8 @@ export class SearchResultsComponent {
     // Reset focused index when search results change
     effect(() => {
       const results = this.searchService.searchResults();
-      if (results.length === 0) {
+      const actions = this.searchService.searchActions();
+      if (results.length === 0 && actions.length === 0) {
         this.focusedIndex.set(-1);
       }
     });

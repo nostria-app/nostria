@@ -8,6 +8,18 @@ import { RelaysService } from './relays/relays';
 import { RelayPoolService } from './relays/relay-pool';
 import { StorageService } from './storage.service';
 import { FollowingService } from './following.service';
+import { MatDialog } from '@angular/material/dialog';
+import { AddMediaDialog } from '../pages/media-queue/add-media-dialog/add-media-dialog';
+import { EventService } from './event';
+import { MediaPlayerService } from './media-player.service';
+import { RssParserService } from './rss-parser.service';
+
+export interface SearchAction {
+  icon: string;
+  label: string;
+  description: string;
+  callback: () => void;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -20,9 +32,14 @@ export class SearchService {
   relaysService = inject(RelaysService);
   relayPool = inject(RelayPoolService);
   storage = inject(StorageService);
+  dialog = inject(MatDialog);
+  eventService = inject(EventService);
+  mediaPlayer = inject(MediaPlayerService);
+  rssParser = inject(RssParserService);
 
   // Search results from cached profiles
   searchResults = signal<NostrRecord[]>([]);
+  searchActions = signal<SearchAction[]>([]);
 
   // Track last processed query to prevent redundant searches
   #lastQuery = '';
@@ -40,11 +57,82 @@ export class SearchService {
       this.#lastQuery = searchValue;
       console.log('SearchService effect triggered with query:', query);
 
+      // Check if query is a URL
+      const isUrl = /^(http|https):\/\/[^ "]+$/.test(searchValue);
+
+      if (isUrl) {
+        this.searchActions.set([
+          {
+            icon: 'note_add',
+            label: 'Publish Note',
+            description: 'Create a new note with this URL',
+            callback: () => {
+              this.eventService.createNote({ content: searchValue });
+              this.layout.toggleSearch();
+            },
+          },
+          {
+            icon: 'playlist_add',
+            label: 'Add to Media Queue',
+            description: 'Add this media to your playback queue',
+            callback: () => {
+              const dialogRef = this.dialog.open(AddMediaDialog, {
+                data: { url: searchValue },
+                width: '500px',
+              });
+
+              dialogRef.afterClosed().subscribe(async (result) => {
+                if (result && result.url) {
+                  try {
+                    const feed = await this.rssParser.parse(result.url);
+                    if (feed && feed.items.length > 0) {
+                      for (const item of feed.items) {
+                        this.mediaPlayer.enque({
+                          artist: feed.title,
+                          artwork: item.image || feed.image,
+                          title: item.title,
+                          source: item.mediaUrl,
+                          type: 'Podcast',
+                        });
+                      }
+                      this.layout.toast('Added podcast to queue');
+                    } else {
+                      this.mediaPlayer.enque({
+                        artist: 'Unknown',
+                        artwork: '',
+                        title: result.url,
+                        source: result.url,
+                        type: 'Podcast',
+                      });
+                      this.layout.toast('Added to queue');
+                    }
+                  } catch (err) {
+                    console.error('Failed to parse RSS:', err);
+                    // Fallback to adding as single item
+                    this.mediaPlayer.enque({
+                      artist: 'Unknown',
+                      artwork: '',
+                      title: result.url,
+                      source: result.url,
+                      type: 'Podcast',
+                    });
+                    this.layout.toast('Added to queue');
+                  }
+                }
+              });
+              this.layout.toggleSearch();
+            },
+          },
+        ]);
+      } else {
+        this.searchActions.set([]);
+      }
+
       if (searchValue) {
         // First, search in cached profiles using FollowingService
         const followingResults = untracked(() => this.followingService.searchProfiles(searchValue));
         const cachedResults = this.followingService.toNostrRecords(followingResults);
-        
+
         console.log(
           'Cached search results:',
           cachedResults.length,
@@ -96,6 +184,7 @@ export class SearchService {
         // Clear results when query is empty
         untracked(() => {
           this.searchResults.set([]);
+          this.searchActions.set([]);
         });
       }
     });
