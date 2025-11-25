@@ -186,6 +186,21 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
       }
     });
 
+    // Effect to trigger load when scrolling stops if the component is visible but not loaded
+    effect(() => {
+      const isScrolling = this.layout.isScrolling();
+      const isVisible = this.isVisible();
+      const profile = this.profile();
+      const isLoading = this.isLoading();
+      const pubkey = this.pubkey();
+
+      if (!isScrolling && isVisible && !profile && !isLoading && pubkey) {
+        untracked(() => {
+          this.debouncedLoadProfileData(pubkey);
+        });
+      }
+    });
+
     // Additional effect to watch for visibility changes and scrolling status
     // effect(() => {
     //     if (this.isVisible() && !this.isScrolling() && this.pubkey() && !this.profile()) {

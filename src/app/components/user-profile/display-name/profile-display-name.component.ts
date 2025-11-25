@@ -51,6 +51,21 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private readonly DEBOUNCE_TIME = 350; // milliseconds
 
   constructor() {
+    // Effect to trigger load when scrolling stops if the component is visible but not loaded
+    effect(() => {
+      const isScrolling = this.layout.isScrolling();
+      const isVisible = this.isVisible();
+      const profile = this.profile();
+      const isLoading = this.isLoading();
+      const pubkey = this.pubkey();
+
+      if (!isScrolling && isVisible && !profile && !isLoading && pubkey) {
+        untracked(() => {
+          this.debouncedLoadProfileData(pubkey);
+        });
+      }
+    });
+
     // Set up an effect to watch for changes to npub input
     effect(() => {
       const pubkey = this.pubkey();
