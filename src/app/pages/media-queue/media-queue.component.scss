@@ -30,6 +30,26 @@
     border-color: var(--mat-sys-primary);
   }
 
+  &.completed {
+    opacity: 0.4;
+
+    .queue-artwork {
+      filter: grayscale(100%);
+    }
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    &.current-playing {
+      opacity: 1;
+
+      .queue-artwork {
+        filter: none;
+      }
+    }
+  }
+
   // Hover highlight
   .hover-highlight {
     position: absolute;
@@ -168,6 +188,12 @@
   }
 }
 
+.listening-status {
+  font-size: 12px;
+  opacity: 0.7;
+  font-style: italic;
+}
+
 .playing-icon {
   color: var(--mat-sys-primary);
   font-size: 16px;
@@ -186,33 +212,32 @@
 .page {
   padding: 16px;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  /* Prevent double scrollbars */
+  overflow-y: auto;
+  /* Allow scrolling on entire component */
 }
 
 .media-list {
-  flex: 1;
-  /* Remove overflow-y: auto to prevent double scrollbars */
-  min-height: 0;
-  /* Allow flex item to shrink below content size */
+  /* Media list content flows naturally without separate scrolling */
 }
 
 @media screen and (max-width: 600px) {
   .queue-header {
-    flex-direction: column;
-    gap: 16px;
-    align-items: stretch;
+    flex-wrap: wrap;
+    gap: 12px;
+
+    .queue-nav {
+      flex: 1 1 100%;
+      /* Full width on mobile */
+    }
 
     .queue-header-actions {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+      flex: 1 1 100%;
+      /* Full width on mobile */
+      justify-content: stretch;
 
-      button {
-        width: 100%;
+      button:not([mat-icon-button]) {
+        flex: 1;
+        /* Raised buttons take equal space */
       }
     }
   }

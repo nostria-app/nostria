@@ -1053,4 +1053,45 @@ export class UtilitiesService {
       return null;
     }
   }
+
+  /**
+   * Check if an event kind is a replaceable event (NIP-01)
+   * Replaceable events: kind 0, 3, or 10000-19999
+   * These events should always be fetched from relays to ensure we have the latest version
+   */
+  isReplaceableEvent(kind: number): boolean {
+    // NIP-01 defines replaceable events as:
+    // - Kind 0 (Metadata)
+    // - Kind 3 (Contact list)
+    // - Kinds 10000-19999 (Replaceable events)
+    const METADATA_KIND = 0;
+    const CONTACT_LIST_KIND = 3;
+    const REPLACEABLE_MIN = 10000;
+    const REPLACEABLE_MAX = 20000; // Exclusive upper bound (includes 10000-19999)
+    
+    return kind === METADATA_KIND || 
+           kind === CONTACT_LIST_KIND || 
+           (kind >= REPLACEABLE_MIN && kind < REPLACEABLE_MAX);
+  }
+
+  /**
+   * Check if an event kind is a parameterized replaceable event (NIP-01)
+   * Parameterized replaceable events: kind 30000-39999 (e.g., articles, long-form content)
+   * These events should always be fetched from relays to ensure we have the latest version
+   */
+  isParameterizedReplaceableEvent(kind: number): boolean {
+    // NIP-01 defines parameterized replaceable events as kinds 30000-39999
+    const PARAMETERIZED_REPLACEABLE_MIN = 30000;
+    const PARAMETERIZED_REPLACEABLE_MAX = 40000; // Exclusive upper bound (includes 30000-39999)
+    
+    return kind >= PARAMETERIZED_REPLACEABLE_MIN && kind < PARAMETERIZED_REPLACEABLE_MAX;
+  }
+
+  /**
+   * Check if an event should be fetched from relays even if found in local storage
+   * Returns true for replaceable and parameterized replaceable events
+   */
+  shouldAlwaysFetchFromRelay(kind: number): boolean {
+    return this.isReplaceableEvent(kind) || this.isParameterizedReplaceableEvent(kind);
+  }
 }
