@@ -337,7 +337,7 @@ mat-sidenav-content {
   max-width: 90vw;
   z-index: 1001; // Higher than app-toolbar (z-index: 2) and mobile-nav (z-index: 1000)
 
-  // Glass effect - similar to favorites overlay
+  // Glass effect - similar to favorites overlay (light mode)
   background-color: rgba(255, 255, 255, 0.7) !important;
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
@@ -350,20 +350,20 @@ mat-sidenav-content {
     // Drop shadows
     -4px 0 16px rgba(17, 17, 26, 0.1),
     -8px 0 24px rgba(17, 17, 26, 0.1);
+}
 
-  // Dark mode glass effect
-  .dark & {
-    background-color: rgba(0, 0, 0, 0.3) !important;
+// Dark mode glass effect - use :host-context to access parent .dark class
+:host-context(.dark) .profile-sidenav {
+  background-color: rgba(0, 0, 0, 0.6) !important;
 
-    box-shadow:
-      // Inner highlight (subtler in dark mode)
-      inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-      // Inner glow
-      inset 0 0 10px 4px rgba(255, 255, 255, 0.05),
-      // Drop shadows (darker)
-      -4px 0 16px rgba(0, 0, 0, 0.4),
-      -8px 0 24px rgba(0, 0, 0, 0.4);
-  }
+  box-shadow:
+    // Inner highlight (subtler in dark mode)
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    // Inner glow
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.03),
+    // Drop shadows (darker)
+    -4px 0 16px rgba(0, 0, 0, 0.5),
+    -8px 0 24px rgba(0, 0, 0, 0.5);
 }
 
 // Animation for the profile sidenav

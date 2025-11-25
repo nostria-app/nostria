@@ -66,6 +66,15 @@ Always use "field-sizing: content" for textareas that grow with content. This is
 - The app supports dark and light mode, so make sure your styles work well in both modes.
 - Don't add hardcoded colors. Use CSS variables defined in styles.scss and theme.scss
 
+Due to Angular component styles are encapsulated by default, so use this way to ensure dark mode is applied correctly:
+
+```css
+:host-context(.dark) .your-class {
+    background-color: var(--mat-sys-surface-container);
+    color: var(--mat-sys-on-surface);
+}
+```
+
 Don't make documentation for every change, only important and hard to understand fixes.
 
 When you generate markdown documentation of what you have done, place those documents into the "docs" folder.
