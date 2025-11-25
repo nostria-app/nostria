@@ -1,7 +1,7 @@
 import { effect, inject, Injectable, signal, computed } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { MediaItem, OnInitialized, Playlist } from '../interfaces';
+import { MediaItem, OnInitialized, Playlist, PodcastProgress } from '../interfaces';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
 import { LocalStorageService } from './local-storage.service';
@@ -50,6 +50,7 @@ export class MediaPlayerService implements OnInitialized {
     this._index.set(v);
   }
   readonly MEDIA_STORAGE_KEY = 'nostria-media-queue';
+  readonly PODCAST_POSITIONS_KEY = 'nostria-podcast-positions';
 
   // Cache for YouTube embed URLs
   private _youtubeUrlCache = new Map<string, SafeResourceUrl>();
@@ -98,6 +99,11 @@ export class MediaPlayerService implements OnInitialized {
   // YouTube Player API reference
   private youtubePlayer?: YouTubePlayer;
   private youtubeApiReady = false;
+
+  // Throttling for podcast position saves
+  private lastPodcastPositionSave = 0;
+  private readonly PODCAST_SAVE_INTERVAL = 2000; // Save every 2 seconds
+  private readonly POSITION_SAFETY_MARGIN_SECONDS = 2; // Buffer before end of media
 
   constructor() {
     if (!this.app.isBrowser()) {
@@ -470,6 +476,133 @@ export class MediaPlayerService implements OnInitialized {
     );
   }
 
+  /**
+   * Get current timestamp in Nostr format (seconds since epoch)
+   */
+  private getCurrentNostrTimestamp(): number {
+    return Math.floor(Date.now() / 1000);
+  }
+
+  /**
+   * Save the current playback position for a podcast
+   * @param url The media file URL used as unique identifier
+   * @param position The current playback position in seconds
+   * @param duration Optional total duration in seconds
+   */
+  savePodcastPosition(url: string, position: number, duration?: number): void {
+    // Validate inputs
+    if (typeof url !== 'string' || url.trim() === '' || typeof position !== 'number' || position < 0 || !isFinite(position)) {
+      return;
+    }
+
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      const positions: Record<string, PodcastProgress> = positionsJson ? JSON.parse(positionsJson) : {};
+
+      // Get existing progress or create new
+      const existing = positions[url] || { position: 0, lastListenedAt: 0, completed: false };
+
+      // Update progress
+      positions[url] = {
+        position,
+        duration: duration || existing.duration,
+        lastListenedAt: this.getCurrentNostrTimestamp(),
+        completed: existing.completed, // Preserve completed status
+      };
+
+      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
+    } catch (error) {
+      console.error('Error saving podcast position:', error);
+    }
+  }
+
+  /**
+   * Restore the playback position for a podcast
+   * @param url The media file URL used as unique identifier
+   * @returns The saved position in seconds, or 0 if not found
+   */
+  restorePodcastPosition(url: string): number {
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      if (!positionsJson) {
+        return 0;
+      }
+      const positions: Record<string, PodcastProgress> = JSON.parse(positionsJson);
+      const progress = positions[url];
+      return progress?.position || 0;
+    } catch (error) {
+      console.error('Error restoring podcast position:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get full podcast progress data
+   * @param url The media file URL used as unique identifier
+   * @returns The podcast progress data or null if not found
+   */
+  getPodcastProgress(url: string): PodcastProgress | null {
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      if (!positionsJson) {
+        return null;
+      }
+      const positions: Record<string, PodcastProgress> = JSON.parse(positionsJson);
+      return positions[url] || null;
+    } catch (error) {
+      console.error('Error getting podcast progress:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Mark a podcast as completed/listened
+   * @param url The media file URL used as unique identifier
+   * @param completed Whether the podcast is completed
+   */
+  setPodcastCompleted(url: string, completed: boolean): void {
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      const positions: Record<string, PodcastProgress> = positionsJson ? JSON.parse(positionsJson) : {};
+
+      // Get existing progress or create new
+      const existing = positions[url] || {
+        position: 0,
+        lastListenedAt: this.getCurrentNostrTimestamp(),
+        completed: false
+      };
+
+      // Update completed status
+      positions[url] = {
+        ...existing,
+        completed,
+        lastListenedAt: this.getCurrentNostrTimestamp(),
+      };
+
+      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
+    } catch (error) {
+      console.error('Error setting podcast completed status:', error);
+    }
+  }
+
+  /**
+   * Reset podcast progress (clear position and completed status)
+   * @param url The media file URL used as unique identifier
+   */
+  resetPodcastProgress(url: string): void {
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      if (!positionsJson) {
+        return;
+      }
+      const positions: Record<string, PodcastProgress> = JSON.parse(positionsJson);
+      delete positions[url];
+      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
+    } catch (error) {
+      console.error('Error resetting podcast progress:', error);
+    }
+  }
+
   updateWindowPosition(x: number, y: number) {
     this.videoWindowState.update(state => ({ ...state, x, y }));
     this.saveWindowState();
@@ -527,6 +660,13 @@ export class MediaPlayerService implements OnInitialized {
 
   private handleMediaEnded = () => {
     console.log('Media ended, checking for next item');
+
+    // Mark podcast as completed if applicable
+    const currentItem = this.current();
+    if (currentItem?.type === 'Podcast') {
+      this.setPodcastCompleted(currentItem.source, true);
+    }
+
     if (this.canNext()) {
       console.log('Auto-advancing to next media item');
       this.next();
@@ -539,12 +679,34 @@ export class MediaPlayerService implements OnInitialized {
   private handleTimeUpdate = () => {
     if (this.audio) {
       this.currentTimeSig.set(this.audio.currentTime);
+
+      // Save podcast position periodically (only for podcasts), throttled to every 2 seconds
+      const currentItem = this.current();
+      if (currentItem?.type === 'Podcast') {
+        const now = Date.now();
+        if (now - this.lastPodcastPositionSave >= this.PODCAST_SAVE_INTERVAL) {
+          this.savePodcastPosition(currentItem.source, this.audio.currentTime, this.audio.duration);
+          this.lastPodcastPositionSave = now;
+        }
+      }
     }
   };
 
   private handleLoadedMetadata = () => {
     if (this.audio) {
       this.durationSig.set(this.audio.duration);
+
+      // Restore saved position for podcasts
+      const currentItem = this.current();
+      if (currentItem?.type === 'Podcast') {
+        const savedPosition = this.restorePodcastPosition(currentItem.source);
+        // Ensure duration is valid and position is within safe bounds
+        const duration = this.audio.duration;
+        if (!isNaN(duration) && isFinite(duration) && savedPosition < duration - this.POSITION_SAFETY_MARGIN_SECONDS) {
+          this.audio.currentTime = savedPosition;
+          console.log(`Restored podcast position: ${savedPosition}s for ${currentItem.source}`);
+        }
+      }
     }
   };
 
@@ -791,6 +953,12 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   private cleanupCurrentMedia() {
+    // Save podcast position before cleanup
+    const currentItem = this.current();
+    if (currentItem?.type === 'Podcast' && this.audio) {
+      this.savePodcastPosition(currentItem.source, this.audio.currentTime, this.audio.duration);
+    }
+
     // Reset initialization flag
     this.videoPlaybackInitialized = false;
 

@@ -37,8 +37,9 @@
       @for (item of media.media(); track item; let i = $index) {
       <mat-list-item cdkDrag [cdkDragStartDelay]="200" (cdkDragStarted)="onDragStarted()"
         [class.current-playing]="isCurrentPlaying(item, i)" [class.is-pressed]="pressedItemIndex === i"
-        (mousedown)="onMouseDown(i)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()"
-        (mousemove)="onMouseMove($event, $event.currentTarget)" (click)="playItem(i)" class="queue-item">
+        [class.completed]="isPodcastCompleted(item)" (mousedown)="onMouseDown(i)" (mouseup)="onMouseUp()"
+        (mouseleave)="onMouseUp()" (mousemove)="onMouseMove($event, $event.currentTarget)" (click)="playItem(i)"
+        class="queue-item">
 
         <div class="hover-highlight"></div>
 
@@ -55,12 +56,38 @@
           {{ i + 1 }}. {{ item.title }}
         </span>
         <span matListItemLine>{{ item.artist }}</span>
+        @if (item.type === 'Podcast' && getListeningStatus(item)) {
+        <span matListItemLine class="listening-status">{{ getListeningStatus(item) }}</span>
+        }
         <span matListItemMeta class="queue-actions">
           @if (!isCurrentPlaying(item, i)) {
           <button (click)="playItem(i); $event.stopPropagation()" mat-icon-button matTooltip="Play this item"
             color="primary">
             <mat-icon>play_arrow</mat-icon>
           </button>
+          }
+          @if (item.type === 'Podcast') {
+          <button [matMenuTriggerFor]="podcastMenu" mat-icon-button matTooltip="Podcast options"
+            (click)="$event.stopPropagation()">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #podcastMenu="matMenu">
+            @if (!isPodcastCompleted(item)) {
+            <button mat-menu-item (click)="markAsCompleted(item, $event)">
+              <mat-icon>check_circle</mat-icon>
+              <span>Mark as Completed</span>
+            </button>
+            } @else {
+            <button mat-menu-item (click)="markAsNotCompleted(item, $event)">
+              <mat-icon>radio_button_unchecked</mat-icon>
+              <span>Mark as Not Completed</span>
+            </button>
+            }
+            <button mat-menu-item (click)="resetPodcastProgress(item, $event)">
+              <mat-icon>restart_alt</mat-icon>
+              <span>Reset Progress</span>
+            </button>
+          </mat-menu>
           }
           <button (click)="remove(item); $event.stopPropagation()" mat-icon-button matTooltip="Remove from queue"
             color="warn">
