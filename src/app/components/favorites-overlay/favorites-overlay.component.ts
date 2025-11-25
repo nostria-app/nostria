@@ -110,6 +110,23 @@ export class FavoritesOverlayComponent {
 
         const profiles = await Promise.all(profilesPromises);
         this.favoritesWithProfiles.set(profiles);
+
+        // Preload images for favorites
+        const imagesToPreload: { url: string; width: number; height: number }[] = [];
+
+        profiles.forEach((p) => {
+          const url = p.profile?.data?.picture;
+          if (url) {
+            // Preload 128x128 for overlay
+            imagesToPreload.push({ url, width: 128, height: 128 });
+            // Preload 48x48 for preview bar
+            imagesToPreload.push({ url, width: 48, height: 48 });
+          }
+        });
+
+        if (imagesToPreload.length > 0) {
+          this.imageCacheService.preloadImages(imagesToPreload);
+        }
       });
     });
 
@@ -131,6 +148,16 @@ export class FavoritesOverlayComponent {
 
         const profiles = await Promise.all(profilesPromises);
         this.followingWithProfiles.set(profiles);
+
+        // Preload images for following (only used in overlay at 128x128)
+        const imagesToPreload = profiles
+          .map((p) => p.profile?.data?.picture)
+          .filter((url) => !!url)
+          .map((url) => ({ url: url!, width: 128, height: 128 }));
+
+        if (imagesToPreload.length > 0) {
+          this.imageCacheService.preloadImages(imagesToPreload);
+        }
       });
     });
   }
@@ -224,17 +251,16 @@ export class FavoritesOverlayComponent {
     if (!pictureUrl) return undefined;
 
     // Always use the same size regardless of dock state to prevent re-downloading
-    // Use 144px which works for both docked (56px display) and undocked (72px display)
-    // This is 2x for retina displays in both cases
-    return this.imageCacheService.getOptimizedImageUrl(pictureUrl, 144, 144);
+    // Use 128px (standard large size)
+    return this.imageCacheService.getOptimizedImageUrl(pictureUrl, 128, 128);
   }
 
   getPreviewAvatarUrl(profile?: NostrRecord): string | undefined {
     const pictureUrl = profile?.data?.picture;
     if (!pictureUrl) return undefined;
 
-    // Preview avatars are 36px, use 72px for retina displays
-    return this.imageCacheService.getOptimizedImageUrl(pictureUrl, 72, 72);
+    // Preview avatars are 36px, use 48px (standard small size)
+    return this.imageCacheService.getOptimizedImageUrl(pictureUrl, 48, 48);
   }
 
   getInitials(profile?: NostrRecord): string {

@@ -1,6 +1,7 @@
 import { Injectable, inject } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { SwUpdate } from '@angular/service-worker';
+import { ImagePreloaderService } from './image-preloader.service';
 
 @Injectable({
   providedIn: 'root',
@@ -8,18 +9,57 @@ import { SwUpdate } from '@angular/service-worker';
 export class ImageCacheService {
   private readonly settingsService = inject(SettingsService);
   private readonly swUpdate = inject(SwUpdate);
+  private readonly imagePreloader = inject(ImagePreloaderService);
   private readonly PROXY_BASE_URL = 'https://proxy.eu.nostria.app/api/ImageOptimizeProxy';
 
   /**
    * Gets the optimized image URL with proper cache headers
    */
-  getOptimizedImageUrl(originalUrl: string, width = 250, height = 250): string {
+  getOptimizedImageUrl(originalUrl: string, width = 128, height = 128): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
       return originalUrl;
     }
 
+    // Enforce standard sizes: 48x48 or 128x128
+    // If requested size is larger than 48x48, use 128x128
+    // Otherwise use 48x48
+    const targetSize = (width > 48 || height > 48) ? 128 : 48;
+
     const encodedUrl = encodeURIComponent(originalUrl);
-    return `${this.PROXY_BASE_URL}?w=${width}&h=${height}&url=${encodedUrl}`;
+    return `${this.PROXY_BASE_URL}?w=${targetSize}&h=${targetSize}&url=${encodedUrl}`;
+  }
+
+  /**
+   * Preload an image for faster display
+   * @param originalUrl The original image URL
+   * @param width Target width
+   * @param height Target height
+   */
+  async preloadImage(originalUrl: string, width = 128, height = 128): Promise<void> {
+    if (!originalUrl || !this.settingsService.settings().imageCacheEnabled) {
+      return;
+    }
+
+    const optimizedUrl = this.getOptimizedImageUrl(originalUrl, width, height);
+    await this.imagePreloader.preloadImage(optimizedUrl);
+  }
+
+  /**
+   * Preload multiple images in parallel
+   * @param imageUrls Array of {url, width, height} objects
+   */
+  async preloadImages(
+    imageUrls: { url: string; width?: number; height?: number }[]
+  ): Promise<void> {
+    if (!this.settingsService.settings().imageCacheEnabled) {
+      return;
+    }
+
+    const optimizedUrls = imageUrls.map(({ url, width = 128, height = 128 }) =>
+      this.getOptimizedImageUrl(url, width, height)
+    );
+
+    await this.imagePreloader.preloadImages(optimizedUrls);
   }
 
   /**
@@ -27,7 +67,6 @@ export class ImageCacheService {
    */
   async clearAllCache(): Promise<void> {
     try {
-      debugger;
       if (!('caches' in window)) return;
 
       const cacheNames = await caches.keys();
@@ -56,6 +95,9 @@ export class ImageCacheService {
         }
       }
 
+      // Also clear the image preloader cache
+      await this.imagePreloader.clearCache();
+
       console.log('Image cache cleared successfully');
     } catch (error) {
       console.error('Error clearing cache:', error);
@@ -69,7 +111,12 @@ export class ImageCacheService {
   async clearExpiredCache(): Promise<void> {
     // Angular Service Worker handles cache expiration automatically
     // based on the maxAge setting in ngsw-config.json
-    console.log('Cache expiration is handled automatically by Angular Service Worker');
+
+    // Also cleanup image preloader cache
+    const removedCount = await this.imagePreloader.cleanupExpiredCache();
+    console.log(
+      `Cache expiration is handled automatically by Angular Service Worker. Cleaned up ${removedCount} expired preload cache entries.`
+    );
   }
 
   /**

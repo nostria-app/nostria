@@ -173,6 +173,15 @@ export class DataService {
     return metadataList;
   }
 
+  /**
+   * Gets cached profile synchronously without triggering any async operations
+   * Returns undefined if profile is not in cache
+   */
+  getCachedProfile(pubkey: string): NostrRecord | undefined {
+    const cacheKey = `metadata-${pubkey}`;
+    return this.cache.get<NostrRecord>(cacheKey);
+  }
+
   async getProfile(pubkey: string, refresh = false): Promise<NostrRecord | undefined> {
     const cacheKey = `metadata-${pubkey}`;
 
