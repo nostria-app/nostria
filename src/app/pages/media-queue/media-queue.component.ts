@@ -20,7 +20,6 @@ import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-
 @Component({
   selector: 'app-media-queue',
   imports: [MatButtonModule, MatIconModule, MatListModule, MatTooltipModule, MatMenuModule, RouterModule, DragDropModule],
-  imports: [MatButtonModule, MatIconModule, MatListModule, RouterModule, DragDropModule, MatMenuModule, MatTooltipModule],
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
 })
