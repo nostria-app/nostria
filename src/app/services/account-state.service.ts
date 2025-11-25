@@ -210,7 +210,24 @@ export class AccountStateService implements OnDestroy {
 
     // CRITICAL: Get the existing following event from relay FIRST
     // This prevents overwriting changes made in other Nostria instances
-    let existingFollowingEvent = await this.accountRelay.getEventByPubkeyAndKind(account.pubkey, kinds.Contacts);
+    let existingFollowingEvent: Event | null = null;
+
+    try {
+      // Create a timeout promise that resolves to null after 2.5 seconds
+      const timeoutPromise = new Promise<null>(resolve =>
+        setTimeout(() => {
+          console.warn('Timeout waiting for following list from relay (unfollow)');
+          resolve(null);
+        }, 2500)
+      );
+
+      existingFollowingEvent = await Promise.race([
+        this.accountRelay.getEventByPubkeyAndKind(account.pubkey, kinds.Contacts),
+        timeoutPromise,
+      ]);
+    } catch (error) {
+      console.warn('Error fetching following list from relay (unfollow):', error);
+    }
 
     if (existingFollowingEvent) {
       // Save fresh following list to storage
@@ -337,10 +354,25 @@ export class AccountStateService implements OnDestroy {
 
     // CRITICAL: Get the existing following event from relay FIRST
     // This prevents overwriting changes made in other Nostria instances
-    let existingFollowingEvent: Event | null = await this.accountRelay.getEventByPubkeyAndKind(
-      account.pubkey,
-      kinds.Contacts
-    );
+    let existingFollowingEvent: Event | null = null;
+
+    try {
+      // Create a timeout promise that resolves to null after 2.5 seconds
+      // We want this to be fast so the UI doesn't feel unresponsive
+      const timeoutPromise = new Promise<null>(resolve =>
+        setTimeout(() => {
+          console.warn('Timeout waiting for following list from relay');
+          resolve(null);
+        }, 2500)
+      );
+
+      existingFollowingEvent = await Promise.race([
+        this.accountRelay.getEventByPubkeyAndKind(account.pubkey, kinds.Contacts),
+        timeoutPromise,
+      ]);
+    } catch (error) {
+      console.warn('Error fetching following list from relay:', error);
+    }
 
     if (existingFollowingEvent) {
       // Save fresh following list to storage (relay always returns signed Event)
