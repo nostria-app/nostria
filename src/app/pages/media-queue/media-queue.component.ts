@@ -159,7 +159,7 @@ export class MediaQueueComponent {
           }
           return;
         }
-      } catch {
+      } catch (error) {
         // Ignore error and continue with other checks
       }
 
