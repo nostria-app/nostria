@@ -270,7 +270,7 @@ export class FeedsCollectionService {
   /**
    * Set the active feed
    */
-  async setActiveFeed(feedId: string): Promise<boolean> {
+  setActiveFeed(feedId: string): boolean {
     const feed = this.getFeedById(feedId);
     if (feed) {
       // Set the active feed ID IMMEDIATELY for instant UI updates
