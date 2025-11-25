@@ -452,38 +452,61 @@ export class FeedsComponent implements OnDestroy {
             this.layoutService.restoreFeedScrollPosition(currentFeedId);
           }, 1000); // Increased delay to ensure content is loaded
         }
+
+        // Sync URL with active feed (if URL doesn't already match)
+        if (currentFeedId) {
+          const feed = this.feedsCollectionService.feeds().find(f => f.id === currentFeedId);
+          if (feed) {
+            const currentPath = this.route.snapshot.params['path'];
+            const targetPath = feed.path;
+            
+            // Only navigate if the URL doesn't already match the feed
+            if (targetPath && currentPath !== targetPath) {
+              this.router.navigate(['/f', targetPath], { replaceUrl: true });
+            } else if (!targetPath && currentPath) {
+              // Feed has no path but URL has one - navigate to /f
+              this.router.navigate(['/f'], { replaceUrl: true });
+            }
+          }
+        }
       });
     });
 
     // Handle route parameters for feed navigation
+    // This effect handles URL-based navigation to feeds (e.g., /f/discover, /f/articles)
     effect(() => {
-      this.route.params.subscribe(async params => {
+      this.route.params.subscribe(params => {
         const pathParam = params['path'];
         
         if (pathParam) {
-          // Find feed by path
+          // Find feed by path parameter from URL
           const feeds = this.feedsCollectionService.feeds();
           const targetFeed = feeds.find(feed => feed.path === pathParam);
 
           if (targetFeed) {
-            // Set the active feed immediately without awaiting
-            this.feedsCollectionService.setActiveFeed(targetFeed.id);
+            // Set the active feed immediately (synchronous operation)
+            // Only set if it's different from current to avoid unnecessary updates
+            const currentActiveFeedId = this.feedsCollectionService.activeFeedId();
+            if (currentActiveFeedId !== targetFeed.id) {
+              this.feedsCollectionService.setActiveFeed(targetFeed.id);
+              this.logger.debug(`Activated feed from URL path: ${pathParam} -> ${targetFeed.id}`);
+            }
           } else {
             // If no feed with this path is found, redirect to default feed
             console.warn(`No feed found with path: ${pathParam}`);
             this.router.navigate(['/f'], { replaceUrl: true });
           }
         } else if (this.router.url.startsWith('/f')) {
-          // User navigated to /f without a path - use the first feed without a path
-          // or restore the previously active feed
-          const feeds = this.feedsCollectionService.feeds();
+          // User navigated to /f without a path parameter
+          // Restore the previously active feed or use the first feed
           const activeFeedId = this.feedsCollectionService.activeFeedId();
+          const feeds = this.feedsCollectionService.feeds();
           
-          // If there's already an active feed, keep it
           if (!activeFeedId && feeds.length > 0) {
-            // Set the first feed as active
+            // No active feed yet, set the first one
             this.feedsCollectionService.setActiveFeed(feeds[0].id);
           }
+          // If there's already an active feed, keep it (already loaded from localStorage)
         }
       });
     });
