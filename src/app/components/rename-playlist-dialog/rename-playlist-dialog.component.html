@@ -1,0 +1,25 @@
+<div mat-dialog-title>
+  <h2>Rename Playlist</h2>
+</div>
+
+<div mat-dialog-content>
+  <form [formGroup]="renameForm" (ngSubmit)="onSubmit()">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Playlist Name</mat-label>
+      <input matInput formControlName="name" placeholder="Enter new playlist name" required autofocus />
+      @if (renameForm.get('name')?.hasError('required')) {
+        <mat-error>Playlist name is required</mat-error>
+      }
+      @if (renameForm.get('name')?.hasError('minlength')) {
+        <mat-error>Playlist name must be at least 1 character</mat-error>
+      }
+    </mat-form-field>
+  </form>
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!renameForm.valid">
+    Rename
+  </button>
+</div>

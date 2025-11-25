@@ -354,6 +354,27 @@ export class PlaylistService implements OnInitialized {
     this.removeDraft(playlistId);
   }
 
+  // Rename playlist
+  renamePlaylist(playlistId: string, newTitle: string): void {
+    const playlists = this._playlists();
+    const playlistIndex = playlists.findIndex(p => p.id === playlistId);
+    
+    if (playlistIndex === -1) {
+      throw new Error(`Playlist with id ${playlistId} not found`);
+    }
+
+    const playlist = playlists[playlistIndex];
+    const updatedPlaylist: Playlist = {
+      ...playlist,
+      title: newTitle,
+    };
+
+    const newPlaylists = [...playlists];
+    newPlaylists[playlistIndex] = updatedPlaylist;
+    this._playlists.set(newPlaylists);
+    this.savePlaylistsToStorage();
+  }
+
   // Load draft for editing
   loadDraft(draftId: string): void {
     const draft = this._drafts().find(d => d.id === draftId);
