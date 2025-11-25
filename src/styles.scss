@@ -944,20 +944,19 @@ iframe {
 
 /* Media queue specific styles to prevent double scrollbars */
 app-media-queue {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  display: block;
+  height: auto;
+  overflow: visible;
 }
 
 app-media-queue .page {
-  height: 100%;
-  overflow: hidden;
+  height: auto;
+  overflow: visible;
 }
 
 app-media-queue .media-list mat-list {
-  height: 100%;
-  overflow-y: auto;
+  height: auto;
+  overflow: visible;
 }
 
 .time-label {
