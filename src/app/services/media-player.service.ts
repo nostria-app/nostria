@@ -103,6 +103,7 @@ export class MediaPlayerService implements OnInitialized {
   // Throttling for podcast position saves
   private lastPodcastPositionSave = 0;
   private readonly PODCAST_SAVE_INTERVAL = 2000; // Save every 2 seconds
+  private readonly POSITION_SAFETY_MARGIN_SECONDS = 2; // Buffer before end of media
 
   constructor() {
     if (!this.app.isBrowser()) {
@@ -476,6 +477,13 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   /**
+   * Get current timestamp in Nostr format (seconds since epoch)
+   */
+  private getCurrentNostrTimestamp(): number {
+    return Math.floor(Date.now() / 1000);
+  }
+
+  /**
    * Save the current playback position for a podcast
    * @param url The media file URL used as unique identifier
    * @param position The current playback position in seconds
@@ -498,7 +506,7 @@ export class MediaPlayerService implements OnInitialized {
       positions[url] = {
         position,
         duration: duration || existing.duration,
-        lastListenedAt: Math.floor(Date.now() / 1000), // Convert to seconds (Nostr timestamp format)
+        lastListenedAt: this.getCurrentNostrTimestamp(),
         completed: existing.completed, // Preserve completed status
       };
       
@@ -560,7 +568,7 @@ export class MediaPlayerService implements OnInitialized {
       // Get existing progress or create new
       const existing = positions[url] || { 
         position: 0, 
-        lastListenedAt: Math.floor(Date.now() / 1000), 
+        lastListenedAt: this.getCurrentNostrTimestamp(), 
         completed: false 
       };
       
@@ -568,7 +576,7 @@ export class MediaPlayerService implements OnInitialized {
       positions[url] = {
         ...existing,
         completed,
-        lastListenedAt: Math.floor(Date.now() / 1000), // Update timestamp
+        lastListenedAt: this.getCurrentNostrTimestamp(),
       };
       
       this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
@@ -685,9 +693,9 @@ export class MediaPlayerService implements OnInitialized {
       const currentItem = this.current();
       if (currentItem?.type === 'Podcast') {
         const savedPosition = this.restorePodcastPosition(currentItem.source);
-        // Ensure duration is valid and position is within safe bounds (at least 2 seconds before the end)
+        // Ensure duration is valid and position is within safe bounds
         const duration = this.audio.duration;
-        if (!isNaN(duration) && isFinite(duration) && savedPosition < duration - 2) {
+        if (!isNaN(duration) && isFinite(duration) && savedPosition < duration - this.POSITION_SAFETY_MARGIN_SECONDS) {
           this.audio.currentTime = savedPosition;
           console.log(`Restored podcast position: ${savedPosition}s for ${currentItem.source}`);
         }

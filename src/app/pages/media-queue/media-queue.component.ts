@@ -273,8 +273,9 @@ export class MediaQueueComponent {
   formatLastListened(timestamp: number): string {
     const date = new Date(timestamp * 1000); // Convert from seconds to milliseconds
     const now = new Date();
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
     const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor(diffMs / MS_PER_DAY);
 
     if (diffDays === 0) {
       return 'Today';
@@ -303,7 +304,7 @@ export class MediaQueueComponent {
       return `Completed • ${this.formatLastListened(progress.lastListenedAt)}`;
     }
 
-    if (progress.position > 0 && progress.duration) {
+    if (progress.position > 0 && progress.duration && progress.duration > 0) {
       const percentage = Math.floor((progress.position / progress.duration) * 100);
       return `${percentage}% • ${this.formatLastListened(progress.lastListenedAt)}`;
     }
