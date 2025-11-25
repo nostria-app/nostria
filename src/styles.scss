@@ -353,12 +353,7 @@ body {
 
 // Apps menu overlay styles
 .cdk-overlay-pane:has(app-apps-menu) {
-  .apps-menu-container {
-    background: var(--mat-sys-surface-container);
-    border-radius: 12px;
-    box-shadow: var(--mat-sys-level4);
-    border: 1px solid var(--mat-sys-outline-variant);
-  }
+  // Styles moved to apps-menu.component.scss to support glass effect
 }
 
 .cdk-overlay-pane .tooltip-content-card {
@@ -944,19 +939,20 @@ iframe {
 
 /* Media queue specific styles to prevent double scrollbars */
 app-media-queue {
-  display: block;
-  height: auto;
-  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
 }
 
 app-media-queue .page {
-  height: auto;
-  overflow: visible;
+  height: 100%;
+  overflow: hidden;
 }
 
 app-media-queue .media-list mat-list {
-  height: auto;
-  overflow: visible;
+  height: 100%;
+  overflow-y: auto;
 }
 
 .time-label {
