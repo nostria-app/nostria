@@ -1233,3 +1233,88 @@ app-media-queue .media-list mat-list {
 .multiline-tooltip {
   white-space: pre-line;
 }
+
+// Timeline Hover Card - Light/Dark mode styles for CDK Overlay
+// These need to be global because CDK Overlay renders outside the component context
+.cdk-overlay-container {
+
+  // Light mode (default)
+  app-timeline-hover-card {
+    .card-inner-content {
+      background-color: rgba(255, 255, 255, 0.75);
+    }
+
+    .card-effect .effect-avatar {
+      filter: blur(60px) saturate(2.5) brightness(1.2);
+      opacity: 0.7;
+    }
+
+    .timeline-header {
+      border-bottom-color: rgba(0, 0, 0, 0.1);
+    }
+
+    .timeline-content .note-item {
+      background-color: rgba(255, 255, 255, 0.5);
+      border-color: rgba(0, 0, 0, 0.1);
+
+      &:hover {
+        background-color: rgba(255, 255, 255, 0.7);
+      }
+    }
+
+    .timeline-footer {
+      border-top-color: rgba(0, 0, 0, 0.1);
+
+      a {
+        border-color: rgba(0, 0, 0, 0.2);
+
+        &:hover {
+          border-color: rgba(0, 0, 0, 0.4);
+          background-color: rgba(0, 0, 0, 0.05);
+        }
+      }
+    }
+  }
+}
+
+// Dark mode overrides
+.dark .cdk-overlay-container {
+  app-timeline-hover-card {
+    .card-inner-content {
+      background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    .card-effect .effect-avatar {
+      filter: blur(60px) saturate(2);
+      opacity: 0.5;
+    }
+
+    .timeline-header {
+      border-bottom-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .timeline-content .note-item {
+      background-color: rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.1);
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.5);
+      }
+    }
+
+    .timeline-footer {
+      border-top-color: rgba(255, 255, 255, 0.1);
+
+      a {
+        -webkit-backdrop-filter: brightness(1.5) saturate(1.2);
+        backdrop-filter: brightness(1.5) saturate(1.2);
+        border-color: rgba(255, 255, 255, 0.4);
+
+        &:hover {
+          border-color: rgba(255, 255, 255, 0.6);
+          background-color: rgba(255, 255, 255, 0.05);
+        }
+      }
+    }
+  }
+}
