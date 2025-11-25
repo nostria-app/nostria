@@ -7,6 +7,7 @@ import { Metrics } from './metrics';
 import { LoggerService } from './logger.service';
 import { NostrRecord } from '../interfaces';
 import { UserMetric } from '../interfaces/metrics';
+import { ImageCacheService } from './image-cache.service';
 
 /**
  * Complete profile data structure for a followed user
@@ -34,6 +35,7 @@ export class FollowingService {
   private readonly userData = inject(UserDataService);
   private readonly metrics = inject(Metrics);
   private readonly logger = inject(LoggerService);
+  private readonly imageCacheService = inject(ImageCacheService);
 
   // In-memory cache of all following profiles
   private readonly profilesMap = signal<Map<string, FollowingProfile>>(new Map());
@@ -84,13 +86,14 @@ export class FollowingService {
       const newMap = new Map<string, FollowingProfile>();
 
       // Load all profiles in parallel batches
-      const batchSize = 20;
+      const batchSize = 50;
       for (let i = 0; i < pubkeys.length; i += batchSize) {
         const batch = pubkeys.slice(i, i + batchSize);
         await Promise.all(
           batch.map(async (pubkey) => {
             try {
-              const profile = await this.loadSingleProfile(pubkey);
+              // Skip relay fetch for initial bulk load to prevent network spam
+              const profile = await this.loadSingleProfile(pubkey, true);
               newMap.set(pubkey, profile);
             } catch (error) {
               this.logger.error(`[FollowingService] Failed to load profile for ${pubkey}:`, error);
@@ -100,14 +103,19 @@ export class FollowingService {
           })
         );
 
-        // Update progress
-        this.logger.debug(`[FollowingService] Loaded ${Math.min(i + batchSize, pubkeys.length)}/${pubkeys.length} profiles`);
+        // Update progress periodically (every 100 profiles)
+        if ((i + batchSize) % 100 === 0 || i + batchSize >= pubkeys.length) {
+          this.logger.debug(`[FollowingService] Loaded ${Math.min(i + batchSize, pubkeys.length)}/${pubkeys.length} profiles`);
+        }
       }
 
       // Update the signal with the new map
       this.profilesMap.set(newMap);
       this.isInitialized.set(true);
       this.logger.info(`[FollowingService] Successfully loaded ${newMap.size} following profiles`);
+
+      // Preload profile images in the background
+      this.preloadProfileImages(newMap);
     } catch (error) {
       this.logger.error('[FollowingService] Error loading profiles:', error);
     } finally {
@@ -116,14 +124,56 @@ export class FollowingService {
   }
 
   /**
+   * Preload images for all following profiles in the background
+   */
+  private preloadProfileImages(profilesMap: Map<string, FollowingProfile>): void {
+    // Use requestIdleCallback if available, otherwise fall back to queueMicrotask
+    const schedulePreload = (callback: () => void) => {
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(callback, { timeout: 5000 });
+      } else {
+        queueMicrotask(callback);
+      }
+    };
+
+    schedulePreload(async () => {
+      try {
+        const imagesToPreload: { url: string; width: number; height: number }[] = [];
+
+        // Collect all profile image URLs
+        for (const profile of profilesMap.values()) {
+          if (profile.profile?.data?.picture) {
+            // Preload images in different sizes commonly used
+            imagesToPreload.push(
+              { url: profile.profile.data.picture, width: 40, height: 40 }, // list view
+              { url: profile.profile.data.picture, width: 48, height: 48 }, // small/icon view
+              { url: profile.profile.data.picture, width: 128, height: 128 } // medium view
+            );
+          }
+        }
+
+        if (imagesToPreload.length > 0) {
+          this.logger.info(
+            `[FollowingService] Preloading ${imagesToPreload.length} profile images for ${profilesMap.size} users`
+          );
+          await this.imageCacheService.preloadImages(imagesToPreload);
+          this.logger.info('[FollowingService] Profile images preloaded successfully');
+        }
+      } catch (error) {
+        this.logger.warn('[FollowingService] Failed to preload profile images:', error);
+      }
+    });
+  }
+
+  /**
    * Load a single profile with all its data
    */
-  private async loadSingleProfile(pubkey: string): Promise<FollowingProfile> {
+  private async loadSingleProfile(pubkey: string, skipRelay = false): Promise<FollowingProfile> {
     const now = Math.floor(Date.now() / 1000);
 
     // Load all data in parallel
     const [profileData, infoRecord, trustMetrics, metricData] = await Promise.all([
-      this.userData.getProfile(pubkey).catch(() => null),
+      this.userData.getProfile(pubkey, { skipRelay }).catch(() => null),
       this.storage.getInfo(pubkey, 'user').catch(() => null),
       this.storage.getInfo(pubkey, 'trust').catch(() => null),
       this.metrics.getUserMetric(pubkey).catch(() => null),

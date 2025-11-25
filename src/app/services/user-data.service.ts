@@ -150,7 +150,17 @@ export class UserDataService {
     return metadataList;
   }
 
-  async getProfile(pubkey: string, refresh = false): Promise<NostrRecord | undefined> {
+  async getProfile(pubkey: string, options?: { refresh?: boolean; skipRelay?: boolean } | boolean): Promise<NostrRecord | undefined> {
+    let refresh = false;
+    let skipRelay = false;
+
+    if (typeof options === 'boolean') {
+      refresh = options;
+    } else if (options) {
+      refresh = options.refresh || false;
+      skipRelay = options.skipRelay || false;
+    }
+
     // Validate pubkey parameter
     if (!pubkey || pubkey === 'undefined' || !pubkey.trim()) {
       this.logger.warn('getProfile called with invalid pubkey:', pubkey);
@@ -180,7 +190,7 @@ export class UserDataService {
     }
 
     // If no cached data available, load fresh data
-    const profilePromise = this.loadProfile(pubkey, cacheKey, refresh);
+    const profilePromise = this.loadProfile(pubkey, cacheKey, refresh, skipRelay);
     this.pendingProfileRequests.set(pubkey, profilePromise);
 
     try {
@@ -196,6 +206,7 @@ export class UserDataService {
     pubkey: string,
     cacheKey: string,
     refresh: boolean,
+    skipRelay = false,
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -208,7 +219,7 @@ export class UserDataService {
     if (metadata) {
       record = this.toRecord(metadata);
       this.cache.set(cacheKey, record);
-    } else {
+    } else if (!skipRelay) {
       // Try to get from relays
       console.log('getProfile', pubkey, metadata);
       metadata = await this.sharedRelayEx.get(pubkey, {

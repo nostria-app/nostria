@@ -106,10 +106,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
   // Debounce control variables
   private debouncedLoadTimer?: number;
-  private isScrolling = signal(false);
   private readonly DEBOUNCE_TIME = 350; // milliseconds
-  private readonly SCROLL_CHECK_INTERVAL = 100; // milliseconds
-  private scrollCheckTimer?: number;
 
   npubValue = computed<string>(() => {
     const pubkey = this.pubkey();
@@ -129,10 +126,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         this.profile.set(pref as unknown as Record<string, unknown>);
         // Mark as loaded to prevent redundant fetches
         this.isLoading.set(false);
+        // Preload image if available
+        this.preloadProfileImage(pref as unknown as Record<string, unknown>);
       }
     });
-    // Set up scroll detection
-    this.setupScrollDetection(); // Set up an effect to watch for changes to npub input
+    // Set up an effect to watch for changes to npub input
     effect(() => {
       const pubkey = this.pubkey();
 
@@ -153,9 +151,18 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
           const npub = this.utilities.getNpubFromPubkey(pubkey);
           this.npub.set(npub);
 
-          // Only load profile data when the component is visible and not scrolling
-          if (this.isVisible() && !this.isScrolling() && !this.profile()) {
-            this.debouncedLoadProfileData(pubkey);
+          // Try to get cached profile synchronously first for instant display
+          const cachedProfile = this.data.getCachedProfile(pubkey);
+          if (cachedProfile) {
+            this.profile.set(cachedProfile);
+            this.isLoading.set(false);
+            // Preload image if available
+            this.preloadProfileImage(cachedProfile);
+          } else {
+            // Only load profile data when the component is visible and not scrolling
+            if (this.isVisible() && !this.layout.isScrolling() && !this.profile()) {
+              this.debouncedLoadProfileData(pubkey);
+            }
           }
         });
       }
@@ -175,6 +182,21 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
           const npub = this.utilities.getNpubFromPubkey(event.pubkey);
           this.npub.set(npub);
+        });
+      }
+    });
+
+    // Effect to trigger load when scrolling stops if the component is visible but not loaded
+    effect(() => {
+      const isScrolling = this.layout.isScrolling();
+      const isVisible = this.isVisible();
+      const profile = this.profile();
+      const isLoading = this.isLoading();
+      const pubkey = this.pubkey();
+
+      if (!isScrolling && isVisible && !profile && !isLoading && pubkey) {
+        untracked(() => {
+          this.debouncedLoadProfileData(pubkey);
         });
       }
     });
@@ -215,7 +237,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     // Clean up the observer and timers when component is destroyed
     this.disconnectObserver();
     this.clearDebounceTimer();
-    this.clearScrollCheckTimer();
   }
 
   /**
@@ -223,51 +244,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
 
 
-  /**
-   * Sets up the scroll detection mechanism
-   */
-  private setupScrollDetection(): void {
-    // Get the scroll container - typically the virtual scroll viewport
-    const scrollDetector = () => {
-      // We need to determine if scrolling has occurred
-      const lastScrollPosition = {
-        x: window.scrollX,
-        y: window.scrollY,
-      };
 
-      this.scrollCheckTimer = window.setInterval(() => {
-        const currentPosition = {
-          x: window.scrollX,
-          y: window.scrollY,
-        };
-
-        // If position changed, user is scrolling
-        if (
-          lastScrollPosition.x !== currentPosition.x ||
-          lastScrollPosition.y !== currentPosition.y
-        ) {
-          this.isScrolling.set(true);
-
-          // Update last position
-          lastScrollPosition.x = currentPosition.x;
-          lastScrollPosition.y = currentPosition.y;
-        } else {
-          // No change in position means scrolling has stopped
-          this.isScrolling.set(false);
-        }
-      }, this.SCROLL_CHECK_INTERVAL);
-    };
-
-    // Start the scroll detection
-    scrollDetector();
-  }
-
-  private clearScrollCheckTimer(): void {
-    if (this.scrollCheckTimer) {
-      window.clearInterval(this.scrollCheckTimer);
-      this.scrollCheckTimer = undefined;
-    }
-  }
 
   private setupIntersectionObserver(): void {
     this.disconnectObserver(); // Ensure any existing observer is disconnected
@@ -279,7 +256,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         const isVisible = entries.some(entry => entry.isIntersecting);
         this.isVisible.set(isVisible);
 
-        if (isVisible && !this.isScrolling()) {
+        if (isVisible && !this.layout.isScrolling()) {
           // Using the debounced load function to prevent rapid loading during scroll
           if (!this.profile() && !this.isLoading()) {
             this.debouncedLoadProfileData(this.pubkey());
@@ -313,7 +290,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     // Set a new timer
     this.debouncedLoadTimer = window.setTimeout(() => {
       // Only proceed if we're visible and not currently scrolling
-      if (this.isVisible() && !this.isScrolling()) {
+      if (this.isVisible() && !this.layout.isScrolling()) {
         this.loadProfileData(pubkeyValue);
       }
     }, this.DEBOUNCE_TIME);
@@ -328,6 +305,20 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
   copyEventData(): void {
     this.layout.copyToClipboard(this.event()?.content, 'event data');
+  }
+
+  /**
+   * Preload profile image for faster display
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private preloadProfileImage(profile: any): void {
+    if (profile?.data?.picture && this.settingsService.settings().imageCacheEnabled) {
+      const size = this.getImageSize();
+      // Preload the image in the background - don't await
+      this.imageCacheService.preloadImage(profile.data.picture, size, size).catch(error => {
+        this.logger.debug('Failed to preload profile image:', error);
+      });
+    }
   }
 
   private async loadProfileData(npubValue: string): Promise<void> {
@@ -360,6 +351,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         // Set profile to an empty object if no data was found
         // This will distinguish between "not loaded yet" and "loaded but empty"
         this.profile.set(data || { isEmpty: true });
+
+        // Preload image if available
+        if (data) {
+          this.preloadProfileImage(data);
+        }
       }
     } catch (error) {
       this.logger.error('Failed to load profile data:', error);
@@ -445,21 +441,10 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private getImageSize(): number {
     switch (this.view()) {
       case 'large':
-        return 256;
       case 'medium':
         return 128;
-      case 'small':
+      default:
         return 48;
-      case 'details':
-        return 40;
-      case 'grid':
-        return 36;
-      case 'compact':
-      case 'name':
-      case 'tiny':
-        return 24;
-      default: // 'list'
-        return 40;
     }
   }
 

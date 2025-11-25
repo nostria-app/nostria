@@ -139,6 +139,15 @@ export class LayoutService implements OnDestroy {
    */
   scrolledToBottom = signal(false);
 
+  /**
+   * Signal that indicates whether the user is currently scrolling
+   * This is useful for deferring heavy operations (like image loading or complex rendering)
+   * until scrolling stops to improve performance.
+   */
+  isScrolling = signal(false);
+  private scrollCheckTimer?: number;
+  private lastScrollPosition = { x: 0, y: 0 };
+
   private scrollEventListener?: () => void;
   private contentWrapper?: Element;
   private isScrollMonitoringReady = signal(false);
@@ -180,6 +189,9 @@ export class LayoutService implements OnDestroy {
         }, 500); // Increased from 100ms to 500ms to ensure full render
       }
     });
+
+    // Setup global scroll detection
+    this.setupGlobalScrollDetection();
   }
 
   /**
@@ -305,7 +317,6 @@ export class LayoutService implements OnDestroy {
   /**
    * Re-initialize scroll monitoring (useful when DOM structure changes)
    */
-
   reinitializeScrollMonitoring(): void {
     this.isScrollMonitoringReady.set(false);
     this.initializeScrollMonitoring();
@@ -436,6 +447,10 @@ export class LayoutService implements OnDestroy {
   ngOnDestroy(): void {
     if (this.contentWrapper && this.scrollEventListener) {
       this.contentWrapper.removeEventListener('scroll', this.scrollEventListener);
+    }
+
+    if (this.scrollCheckTimer) {
+      clearInterval(this.scrollCheckTimer);
     }
   }
 
@@ -862,7 +877,7 @@ export class LayoutService implements OnDestroy {
         const parts = aTag[1].split(':');
         if (parts.length === 3 && parts[0] === '30311') {
           // This is a reference to a live event (kind 30311)
-          const [kind, pubkey, dTag] = parts;
+          const [, pubkey, dTag] = parts;
           const relayHint = aTag[2] || '';
           const relays = relayHint ? [relayHint] : this.feedService.userRelays().map((r: { url: string }) => r.url).slice(0, 3);
 
@@ -1043,7 +1058,7 @@ export class LayoutService implements OnDestroy {
               duration: 3000,
             });
           }
-        } catch (error) {
+        } catch {
           // Set the uploading state to false on error
           this.mediaService.uploading.set(false);
 
@@ -1565,7 +1580,7 @@ export class LayoutService implements OnDestroy {
    */
   openProfilePicture(profile: NostrRecord): void {
     if (profile?.data.picture) {
-      const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
+      this.dialog.open(MediaPreviewDialogComponent, {
         data: {
           mediaUrl: profile.data.picture,
           mediaType: 'image',
@@ -1624,7 +1639,7 @@ export class LayoutService implements OnDestroy {
 
   openProfileBanner(profile: NostrRecord): void {
     if (profile?.data.banner) {
-      const dialogRef = this.dialog.open(MediaPreviewDialogComponent, {
+      this.dialog.open(MediaPreviewDialogComponent, {
         data: {
           mediaUrl: profile.data.banner,
           mediaType: 'image',
@@ -1950,5 +1965,31 @@ export class LayoutService implements OnDestroy {
   clearAllFeedScrollPositions(): void {
     this.feedScrollPositions.clear();
     this.logger.debug('Cleared all feed scroll positions');
+  }
+
+  private setupGlobalScrollDetection(): void {
+    if (!isPlatformBrowser(this.platformId)) return;
+
+    this.ngZone.runOutsideAngular(() => {
+      // Check scroll position periodically to detect scrolling
+      // This is more reliable than scroll events which might be throttled or not fire for all containers
+      this.scrollCheckTimer = window.setInterval(() => {
+        const currentX = window.scrollX;
+        const currentY = window.scrollY;
+
+        if (this.lastScrollPosition.x !== currentX || this.lastScrollPosition.y !== currentY) {
+          // Scrolling detected
+          if (!this.isScrolling()) {
+            this.ngZone.run(() => this.isScrolling.set(true));
+          }
+          this.lastScrollPosition = { x: currentX, y: currentY };
+        } else {
+          // No change, scrolling stopped
+          if (this.isScrolling()) {
+            this.ngZone.run(() => this.isScrolling.set(false));
+          }
+        }
+      }, 100);
+    });
   }
 }
