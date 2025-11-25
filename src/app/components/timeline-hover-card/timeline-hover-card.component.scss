@@ -17,7 +17,8 @@
 }
 
 .card-inner-content {
-  background-color: rgba(0, 0, 0, 0.6);
+  // Light mode: use white/light overlay for glass effect
+  background-color: rgba(255, 255, 255, 0.75);
   border-radius: 8px;
   overflow: hidden;
   display: flex;
@@ -27,6 +28,11 @@
   z-index: 1;
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
+
+  // Dark mode: darker overlay
+  :host-context(.dark) & {
+    background-color: rgba(0, 0, 0, 0.6);
+  }
 }
 
 .card-effect {
@@ -48,17 +54,25 @@
     width: 800px;
     height: 800px;
     object-fit: cover;
-    filter: blur(60px) saturate(2);
-    opacity: 0.5;
+    // Light mode: more vibrant and visible colors
+    filter: blur(60px) saturate(2.5) brightness(1.2);
+    opacity: 0.7;
     border-radius: 50%;
     will-change: transform;
+
+    // Dark mode: original settings
+    :host-context(.dark) & {
+      filter: blur(60px) saturate(2);
+      opacity: 0.5;
+    }
   }
 }
 
 .timeline-header {
   padding: 16px;
   background-color: transparent;
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  // Light mode: subtle dark border
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -66,6 +80,11 @@
   position: relative;
   overflow: hidden;
   z-index: 0;
+
+  // Dark mode: subtle light border
+  :host-context(.dark) & {
+    border-bottom-color: rgba(255, 255, 255, 0.1);
+  }
 
   .profile-link {
     display: flex;
@@ -174,22 +193,33 @@
   .note-item {
     padding: 12px;
     margin-bottom: 8px;
-    background-color: var(--mat-sys-surface);
+    // Light mode: semi-transparent white
+    background-color: rgba(255, 255, 255, 0.5);
     border-radius: 8px;
-    border: 1px solid var(--mat-sys-outline-variant);
+    border: 1px solid rgba(0, 0, 0, 0.1);
     transition: all 0.2s ease;
     cursor: pointer;
     width: 100%;
     text-align: left;
+
+    // Dark mode: semi-transparent dark
+    :host-context(.dark) & {
+      background-color: rgba(0, 0, 0, 0.3);
+      border-color: rgba(255, 255, 255, 0.1);
+    }
 
     &:last-child {
       margin-bottom: 0;
     }
 
     &:hover {
-      background-color: var(--mat-sys-surface-container-high);
+      background-color: rgba(255, 255, 255, 0.7);
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       transform: translateY(-1px);
+
+      :host-context(.dark) & {
+        background-color: rgba(0, 0, 0, 0.5);
+      }
     }
 
     &:active {
@@ -236,8 +266,14 @@
 
 .timeline-footer {
   padding: 12px 16px;
-  border-top: 1px solid var(--mat-sys-outline-variant);
+  // Light mode: subtle dark border
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
   background-color: transparent;
+
+  // Dark mode: subtle light border
+  :host-context(.dark) & {
+    border-top-color: rgba(255, 255, 255, 0.1);
+  }
 
   a {
     width: 100%;
@@ -247,16 +283,24 @@
     justify-content: center;
     gap: 8px;
 
-    // Make the background behind the button brighter (glass effect)
-    -webkit-backdrop-filter: brightness(1.5) saturate(1.2);
-    backdrop-filter: brightness(1.5) saturate(1.2);
-
-    // Make the border brighter
-    border-color: rgba(255, 255, 255, 0.4);
+    // Light mode: darker border for contrast
+    border-color: rgba(0, 0, 0, 0.2);
 
     &:hover {
-      border-color: rgba(255, 255, 255, 0.6);
-      background-color: rgba(255, 255, 255, 0.05);
+      border-color: rgba(0, 0, 0, 0.4);
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    // Dark mode: brighter border for contrast
+    :host-context(.dark) & {
+      -webkit-backdrop-filter: brightness(1.5) saturate(1.2);
+      backdrop-filter: brightness(1.5) saturate(1.2);
+      border-color: rgba(255, 255, 255, 0.4);
+
+      &:hover {
+        border-color: rgba(255, 255, 255, 0.6);
+        background-color: rgba(255, 255, 255, 0.05);
+      }
     }
   }
 }
