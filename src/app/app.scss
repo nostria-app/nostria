@@ -92,7 +92,8 @@ nav {
   @include glass-section;
 }
 
-.dark .toolbar-section {
+// Dark mode for toolbar sections - use :host-context since .dark is on html element
+:host-context(.dark) .toolbar-section {
   @include glass-section-dark;
 }
 
@@ -114,7 +115,7 @@ nav {
 }
 
 // Dark mode - transparent toolbar maintained
-.dark .app-toolbar {
+:host-context(.dark) .app-toolbar {
   background: transparent !important;
   box-shadow: none;
 }
@@ -201,7 +202,7 @@ mat-sidenav-content {
   }
 }
 
-.dark .active-link {
+:host-context(.dark) .active-link {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -327,7 +328,7 @@ mat-sidenav-content {
   color: var(--mat-sys-on-surface);
 }
 
-.dark .mobile-nav {
+:host-context(.dark) .mobile-nav {
   background-color: rgba(0, 0, 0, 0.2);
 
   box-shadow:
@@ -714,7 +715,7 @@ mat-sidenav-content {
   background-color: rgba(0, 0, 0, 0.04);
 }
 
-.dark .current-account {
+:host-context(.dark) .current-account {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -949,7 +950,7 @@ mat-sidenav-content {
 }
 
 /* Dark theme adjustments */
-.dark .floating-offline-indicator {
+:host-context(.dark) .floating-offline-indicator {
   background-color: #ef5350;
 }
 
