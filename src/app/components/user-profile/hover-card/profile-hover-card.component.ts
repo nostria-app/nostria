@@ -140,11 +140,29 @@ export class ProfileHoverCardComponent {
     try {
       const profile = await this.dataService.getProfile(pubkey);
       this.profile.set((profile as ProfileData) || { isEmpty: true });
+
+      // Preload image if available
+      if (profile) {
+        this.preloadProfileImage(profile as ProfileData);
+      }
     } catch (error) {
       console.error('Failed to load profile for hover card:', error);
       this.profile.set({ isEmpty: true });
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Preload profile image for faster display
+   */
+  private preloadProfileImage(profile: ProfileData): void {
+    if (profile?.data?.picture && this.settingsService.settings().imageCacheEnabled) {
+      // Preload the image in the background - don't await
+      // Use 128x128 for hover card
+      this.imageCacheService.preloadImage(profile.data.picture, 128, 128).catch(error => {
+        console.debug('Failed to preload profile image:', error);
+      });
     }
   }
 

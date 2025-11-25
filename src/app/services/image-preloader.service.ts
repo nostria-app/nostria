@@ -12,12 +12,12 @@ import { SettingsService } from './settings.service';
 export class ImagePreloaderService {
   private readonly logger = inject(LoggerService);
   private readonly settingsService = inject(SettingsService);
-  private readonly CACHE_NAME = 'nostria-image-preload-cache';
+  private readonly CACHE_NAME = 'nostria-image-cache';
   private readonly MAX_CACHE_AGE = 7 * 24 * 60 * 60 * 1000; // 7 days
-  
+
   // Track images currently being preloaded to avoid duplicate requests
   private preloadingImages = new Set<string>();
-  
+
   /**
    * Preload an image and store it in the Cache API
    * @param imageUrl The URL of the image to preload
@@ -35,11 +35,11 @@ export class ImagePreloaderService {
 
     try {
       this.preloadingImages.add(imageUrl);
-      
+
       // Check if already cached
       const cache = await caches.open(this.CACHE_NAME);
       const cachedResponse = await cache.match(imageUrl);
-      
+
       if (cachedResponse) {
         // Already cached, check if it's still fresh
         const cacheDate = cachedResponse.headers.get('x-cache-date');
@@ -61,7 +61,7 @@ export class ImagePreloaderService {
       if (response.ok) {
         // Clone the response before consuming it to avoid issues
         const responseClone = response.clone();
-        
+
         // Create a new response with cache timestamp header
         const responseToCache = new Response(responseClone.body, {
           status: responseClone.status,
@@ -106,7 +106,7 @@ export class ImagePreloaderService {
 
     // Filter out URLs that are already being preloaded
     const urlsToPreload = imageUrls.filter(url => !this.preloadingImages.has(url));
-    
+
     // Process images in batches to avoid overwhelming the network
     for (let i = 0; i < urlsToPreload.length; i += maxConcurrent) {
       const batch = urlsToPreload.slice(i, i + maxConcurrent);
@@ -126,7 +126,7 @@ export class ImagePreloaderService {
     try {
       const cache = await caches.open(this.CACHE_NAME);
       const cachedResponse = await cache.match(imageUrl);
-      
+
       if (cachedResponse) {
         // Check if cache is still fresh
         const cacheDate = cachedResponse.headers.get('x-cache-date');
@@ -137,7 +137,7 @@ export class ImagePreloaderService {
           }
         }
       }
-      
+
       return null;
     } catch (error) {
       this.logger.warn(`Failed to get cached image ${imageUrl}:`, error);
@@ -157,7 +157,7 @@ export class ImagePreloaderService {
     try {
       const cache = await caches.open(this.CACHE_NAME);
       const cachedResponse = await cache.match(imageUrl);
-      
+
       if (!cachedResponse) {
         return false;
       }
@@ -168,7 +168,7 @@ export class ImagePreloaderService {
         const age = Date.now() - parseInt(cacheDate, 10);
         return age < this.MAX_CACHE_AGE;
       }
-      
+
       return true;
     } catch (error) {
       return false;

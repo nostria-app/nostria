@@ -310,6 +310,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   /**
    * Preload profile image for faster display
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private preloadProfileImage(profile: any): void {
     if (profile?.data?.picture && this.settingsService.settings().imageCacheEnabled) {
       const size = this.getImageSize();

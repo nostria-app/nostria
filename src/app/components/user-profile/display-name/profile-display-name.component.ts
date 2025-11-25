@@ -17,6 +17,8 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { RouterModule } from '@angular/router';
 import { ProfileHoverCardService } from '../../../services/profile-hover-card.service';
 import { LayoutService } from '../../../services/layout.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
+import { SettingsService } from '../../../services/settings.service';
 
 @Component({
   selector: 'app-profile-display-name',
@@ -32,6 +34,8 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private hoverCardService = inject(ProfileHoverCardService);
   readonly utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
+  private imageCacheService = inject(ImageCacheService);
+  private settingsService = inject(SettingsService);
 
   private linkElement: HTMLElement | null = null;
 
@@ -228,6 +232,11 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
         // Set profile to an empty object if no data was found
         // This will distinguish between "not loaded yet" and "loaded but empty"
         this.profile.set(data || { isEmpty: true });
+
+        // Preload image if available
+        if (data) {
+          this.preloadProfileImage(data);
+        }
       }
     } catch (error) {
       this.logger.error('Failed to load profile data:', error);
@@ -243,6 +252,20 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
       if (this.publicKey === npubValue) {
         this.isLoading.set(false);
       }
+    }
+  }
+
+  /**
+   * Preload profile image for faster display
+   */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  private preloadProfileImage(profile: any): void {
+    if (profile?.data?.picture && this.settingsService.settings().imageCacheEnabled) {
+      // Preload the image in the background - don't await
+      // Use 48x48 for display name (likely icon size)
+      this.imageCacheService.preloadImage(profile.data.picture, 48, 48).catch(error => {
+        this.logger.debug('Failed to preload profile image:', error);
+      });
     }
   }
 
