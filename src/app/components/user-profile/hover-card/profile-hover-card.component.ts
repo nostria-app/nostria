@@ -281,12 +281,12 @@ export class ProfileHoverCardComponent {
 
     try {
       const pubkey = this.pubkey();
-      
+
       // Check if we're currently following this user
       if (this.isFollowing()) {
         // Import ConfirmDialogComponent dynamically to show confirmation dialog
         const { ConfirmDialogComponent } = await import('../../confirm-dialog/confirm-dialog.component');
-        
+
         const dialogRef = this.dialog.open(ConfirmDialogComponent, {
           data: {
             title: 'Unfollow and Block User?',
@@ -299,13 +299,13 @@ export class ProfileHoverCardComponent {
         });
 
         const shouldUnfollow = await firstValueFrom(dialogRef.afterClosed());
-        
+
         if (shouldUnfollow) {
           // Unfollow first, then block
           await this.accountState.unfollow(pubkey);
         }
       }
-      
+
       await this.reportingService.muteUser(pubkey);
       this.layout.toast('User blocked');
     } catch (error) {
@@ -334,7 +334,7 @@ export class ProfileHoverCardComponent {
       return url;
     }
 
-    return this.imageCacheService.getOptimizedImageUrl(url, 80, 80);
+    return this.imageCacheService.getOptimizedImageUrl(url, 128, 128);
   }
 
   onImageLoadError(): void {

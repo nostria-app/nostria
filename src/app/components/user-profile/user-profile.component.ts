@@ -384,7 +384,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         // Set profile to an empty object if no data was found
         // This will distinguish between "not loaded yet" and "loaded but empty"
         this.profile.set(data || { isEmpty: true });
-        
+
         // Preload image if available
         if (data) {
           this.preloadProfileImage(data);
@@ -474,21 +474,10 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private getImageSize(): number {
     switch (this.view()) {
       case 'large':
-        return 256;
       case 'medium':
         return 128;
-      case 'small':
+      default:
         return 48;
-      case 'details':
-        return 40;
-      case 'grid':
-        return 36;
-      case 'compact':
-      case 'name':
-      case 'tiny':
-        return 24;
-      default: // 'list'
-        return 40;
     }
   }
 

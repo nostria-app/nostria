@@ -15,13 +15,18 @@ export class ImageCacheService {
   /**
    * Gets the optimized image URL with proper cache headers
    */
-  getOptimizedImageUrl(originalUrl: string, width = 250, height = 250): string {
+  getOptimizedImageUrl(originalUrl: string, width = 128, height = 128): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
       return originalUrl;
     }
 
+    // Enforce standard sizes: 48x48 or 128x128
+    // If requested size is larger than 48x48, use 128x128
+    // Otherwise use 48x48
+    const targetSize = (width > 48 || height > 48) ? 128 : 48;
+
     const encodedUrl = encodeURIComponent(originalUrl);
-    return `${this.PROXY_BASE_URL}?w=${width}&h=${height}&url=${encodedUrl}`;
+    return `${this.PROXY_BASE_URL}?w=${targetSize}&h=${targetSize}&url=${encodedUrl}`;
   }
 
   /**
@@ -30,7 +35,7 @@ export class ImageCacheService {
    * @param width Target width
    * @param height Target height
    */
-  async preloadImage(originalUrl: string, width = 250, height = 250): Promise<void> {
+  async preloadImage(originalUrl: string, width = 128, height = 128): Promise<void> {
     if (!originalUrl || !this.settingsService.settings().imageCacheEnabled) {
       return;
     }
@@ -44,13 +49,13 @@ export class ImageCacheService {
    * @param imageUrls Array of {url, width, height} objects
    */
   async preloadImages(
-    imageUrls: Array<{ url: string; width?: number; height?: number }>
+    imageUrls: { url: string; width?: number; height?: number }[]
   ): Promise<void> {
     if (!this.settingsService.settings().imageCacheEnabled) {
       return;
     }
 
-    const optimizedUrls = imageUrls.map(({ url, width = 250, height = 250 }) =>
+    const optimizedUrls = imageUrls.map(({ url, width = 128, height = 128 }) =>
       this.getOptimizedImageUrl(url, width, height)
     );
 
@@ -106,7 +111,7 @@ export class ImageCacheService {
   async clearExpiredCache(): Promise<void> {
     // Angular Service Worker handles cache expiration automatically
     // based on the maxAge setting in ngsw-config.json
-    
+
     // Also cleanup image preloader cache
     const removedCount = await this.imagePreloader.cleanupExpiredCache();
     console.log(
