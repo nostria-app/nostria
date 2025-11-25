@@ -1,0 +1,14 @@
+// Component-specific styles for reaction-button
+// Global styles should be used for common styling patterns
+
+:host {
+  text-align: center; // to look good in mobile view
+}
+
+.liked {
+  color: #e91e63; // Pink/red color for liked state
+}
+
+.active {
+  opacity: 1;
+}
