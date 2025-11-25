@@ -37,8 +37,9 @@
       @for (item of media.media(); track item; let i = $index) {
       <mat-list-item cdkDrag [cdkDragStartDelay]="200" (cdkDragStarted)="onDragStarted()"
         [class.current-playing]="isCurrentPlaying(item, i)" [class.is-pressed]="pressedItemIndex === i"
-        (mousedown)="onMouseDown(i)" (mouseup)="onMouseUp()" (mouseleave)="onMouseUp()"
-        (mousemove)="onMouseMove($event, $event.currentTarget)" (click)="playItem(i)" class="queue-item">
+        [class.completed]="isPodcastCompleted(item)" (mousedown)="onMouseDown(i)" (mouseup)="onMouseUp()"
+        (mouseleave)="onMouseUp()" (mousemove)="onMouseMove($event, $event.currentTarget)" (click)="playItem(i)"
+        class="queue-item">
 
         <div class="hover-highlight"></div>
 

@@ -30,6 +30,18 @@
     border-color: var(--mat-sys-primary);
   }
 
+  &.completed {
+    opacity: 0.5;
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    &.current-playing {
+      opacity: 1;
+    }
+  }
+
   // Hover highlight
   .hover-highlight {
     position: absolute;
