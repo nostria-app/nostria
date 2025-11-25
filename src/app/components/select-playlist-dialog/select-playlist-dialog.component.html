@@ -1,0 +1,66 @@
+<div mat-dialog-title>
+  <h2>Add to Playlist</h2>
+  <p class="subtitle">Add {{ mediaCount }} track{{ mediaCount > 1 ? 's' : '' }} to a playlist</p>
+</div>
+
+<div mat-dialog-content>
+  @if (!showNewPlaylistForm) {
+    <!-- Existing playlists list -->
+    @if (playlists().length > 0) {
+      <mat-list>
+        @for (playlist of playlists(); track playlist.id) {
+          <mat-list-item (click)="selectPlaylist(playlist)" class="playlist-item">
+            <mat-icon matListItemIcon>queue_music</mat-icon>
+            <span matListItemTitle>{{ playlist.title }}</span>
+            <span matListItemLine>{{ playlist.tracks.length }} tracks</span>
+            <button mat-icon-button matListItemMeta>
+              <mat-icon>chevron_right</mat-icon>
+            </button>
+          </mat-list-item>
+        }
+      </mat-list>
+    } @else {
+      <div class="empty-state">
+        <mat-icon class="empty-icon">queue_music</mat-icon>
+        <p>No playlists yet</p>
+        <p class="hint">Create your first playlist below</p>
+      </div>
+    }
+
+    <div class="new-playlist-action">
+      <button mat-flat-button color="primary" (click)="toggleNewPlaylistForm()">
+        <mat-icon>add</mat-icon>
+        Create New Playlist
+      </button>
+    </div>
+  } @else {
+    <!-- New playlist form -->
+    <form [formGroup]="newPlaylistForm" (ngSubmit)="createNewPlaylist()">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Playlist Name</mat-label>
+        <input matInput formControlName="name" placeholder="My Awesome Playlist" required />
+        @if (newPlaylistForm.get('name')?.hasError('required')) {
+          <mat-error>Playlist name is required</mat-error>
+        }
+        @if (newPlaylistForm.get('name')?.hasError('minlength')) {
+          <mat-error>Playlist name must be at least 1 character</mat-error>
+        }
+      </mat-form-field>
+
+      <div class="form-actions">
+        <button mat-button type="button" (click)="toggleNewPlaylistForm()">
+          <mat-icon>arrow_back</mat-icon>
+          Back to Playlists
+        </button>
+        <button mat-flat-button color="primary" type="submit" [disabled]="!newPlaylistForm.valid">
+          <mat-icon>add</mat-icon>
+          Create and Add
+        </button>
+      </div>
+    </form>
+  }
+</div>
+
+<div mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+</div>

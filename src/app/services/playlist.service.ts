@@ -374,6 +374,28 @@ export class PlaylistService implements OnInitialized {
     return this._playlists().find(p => p.id === playlistId);
   }
 
+  // Add tracks to an existing playlist
+  addTracksToPlaylist(playlistId: string, tracks: PlaylistTrack[]): void {
+    const playlists = this._playlists();
+    const playlistIndex = playlists.findIndex(p => p.id === playlistId);
+    
+    if (playlistIndex === -1) {
+      throw new Error(`Playlist with id ${playlistId} not found`);
+    }
+
+    const playlist = playlists[playlistIndex];
+    const updatedPlaylist: Playlist = {
+      ...playlist,
+      tracks: [...playlist.tracks, ...tracks],
+      totalDuration: this.calculateTotalDuration([...playlist.tracks, ...tracks]),
+    };
+
+    const newPlaylists = [...playlists];
+    newPlaylists[playlistIndex] = updatedPlaylist;
+    this._playlists.set(newPlaylists);
+    this.savePlaylistsToStorage();
+  }
+
   // Convert MediaItem to PlaylistTrack
   mediaItemToPlaylistTrack(mediaItem: MediaItem): PlaylistTrack {
     return {
