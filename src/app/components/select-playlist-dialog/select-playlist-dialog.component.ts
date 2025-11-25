@@ -45,7 +45,7 @@ export class SelectPlaylistDialogComponent {
 
   constructor() {
     this.newPlaylistForm = this.fb.group({
-      name: ['', [Validators.required, Validators.minLength(1)]],
+      name: ['', [Validators.required]],
     });
   }
 

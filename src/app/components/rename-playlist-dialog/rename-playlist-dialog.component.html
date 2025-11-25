@@ -6,12 +6,9 @@
   <form [formGroup]="renameForm" (ngSubmit)="onSubmit()">
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Playlist Name</mat-label>
-      <input matInput formControlName="name" placeholder="Enter new playlist name" required autofocus />
+      <input matInput formControlName="name" placeholder="Enter new playlist name" required />
       @if (renameForm.get('name')?.hasError('required')) {
         <mat-error>Playlist name is required</mat-error>
-      }
-      @if (renameForm.get('name')?.hasError('minlength')) {
-        <mat-error>Playlist name must be at least 1 character</mat-error>
       }
     </mat-form-field>
   </form>

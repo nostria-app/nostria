@@ -42,9 +42,6 @@
         @if (newPlaylistForm.get('name')?.hasError('required')) {
           <mat-error>Playlist name is required</mat-error>
         }
-        @if (newPlaylistForm.get('name')?.hasError('minlength')) {
-          <mat-error>Playlist name must be at least 1 character</mat-error>
-        }
       </mat-form-field>
 
       <div class="form-actions">

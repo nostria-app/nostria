@@ -72,6 +72,8 @@ export class MediaQueueComponent {
   }
 
   onMouseMove(event: MouseEvent, target: EventTarget | null) {
+    if (!target) return;
+    
     this.ngZone.runOutsideAngular(() => {
       const element = target as HTMLElement;
       const rect = element.getBoundingClientRect();

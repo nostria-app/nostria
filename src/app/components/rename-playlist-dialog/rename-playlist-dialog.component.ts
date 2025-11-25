@@ -35,7 +35,7 @@ export class RenamePlaylistDialogComponent {
 
   constructor() {
     this.renameForm = this.fb.group({
-      name: [this.data.playlist.title, [Validators.required, Validators.minLength(1)]],
+      name: [this.data.playlist.title, [Validators.required]],
     });
   }
 
