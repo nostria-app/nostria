@@ -124,8 +124,16 @@ export class FollowingService {
    * Preload images for all following profiles in the background
    */
   private preloadProfileImages(profilesMap: Map<string, FollowingProfile>): void {
-    // Run in background to not block UI
-    queueMicrotask(async () => {
+    // Use requestIdleCallback if available, otherwise fall back to queueMicrotask
+    const schedulePreload = (callback: () => void) => {
+      if (typeof requestIdleCallback !== 'undefined') {
+        requestIdleCallback(callback, { timeout: 5000 });
+      } else {
+        queueMicrotask(callback);
+      }
+    };
+
+    schedulePreload(async () => {
       try {
         const imagesToPreload: Array<{ url: string; width: number; height: number }> = [];
 

@@ -59,21 +59,36 @@ export class ImagePreloaderService {
       });
 
       if (response.ok) {
-        // Clone the response and add cache timestamp header
-        const responseToCache = new Response(response.body, {
-          status: response.status,
-          statusText: response.statusText,
+        // Clone the response before consuming it to avoid issues
+        const responseClone = response.clone();
+        
+        // Create a new response with cache timestamp header
+        const responseToCache = new Response(responseClone.body, {
+          status: responseClone.status,
+          statusText: responseClone.statusText,
           headers: new Headers({
-            ...Object.fromEntries(response.headers.entries()),
+            ...Object.fromEntries(responseClone.headers.entries()),
             'x-cache-date': Date.now().toString(),
           }),
         });
 
         await cache.put(imageUrl, responseToCache);
         this.logger.debug(`Preloaded and cached image: ${imageUrl}`);
+      } else {
+        // Handle non-OK responses
+        this.logger.warn(
+          `Failed to preload image ${imageUrl}: HTTP ${response.status} ${response.statusText}`
+        );
       }
     } catch (error) {
-      this.logger.warn(`Failed to preload image ${imageUrl}:`, error);
+      // Provide more specific error messages
+      if (error instanceof TypeError) {
+        this.logger.warn(`Network error while preloading image ${imageUrl}:`, error.message);
+      } else if (error instanceof DOMException) {
+        this.logger.warn(`Storage error while caching image ${imageUrl}:`, error.message);
+      } else {
+        this.logger.warn(`Failed to preload image ${imageUrl}:`, error);
+      }
     } finally {
       this.preloadingImages.delete(imageUrl);
     }

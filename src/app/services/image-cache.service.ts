@@ -62,7 +62,6 @@ export class ImageCacheService {
    */
   async clearAllCache(): Promise<void> {
     try {
-      debugger;
       if (!('caches' in window)) return;
 
       const cacheNames = await caches.keys();
