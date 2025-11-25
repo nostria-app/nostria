@@ -85,6 +85,8 @@ export class SearchService {
                 if (result && result.url) {
                   try {
                     const feed = await this.rssParser.parse(result.url);
+                    const startIndex = this.mediaPlayer.media().length;
+
                     if (feed && feed.items.length > 0) {
                       for (const item of feed.items) {
                         this.mediaPlayer.enque({
@@ -106,9 +108,15 @@ export class SearchService {
                       });
                       this.layout.toast('Added to queue');
                     }
+
+                    if (result.playImmediately) {
+                      this.mediaPlayer.index = startIndex;
+                      this.mediaPlayer.start();
+                    }
                   } catch (err) {
                     console.error('Failed to parse RSS:', err);
                     // Fallback to adding as single item
+                    const startIndex = this.mediaPlayer.media().length;
                     this.mediaPlayer.enque({
                       artist: 'Unknown',
                       artwork: '',
@@ -117,6 +125,11 @@ export class SearchService {
                       type: 'Podcast',
                     });
                     this.layout.toast('Added to queue');
+
+                    if (result.playImmediately) {
+                      this.mediaPlayer.index = startIndex;
+                      this.mediaPlayer.start();
+                    }
                   }
                 }
               });

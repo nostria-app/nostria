@@ -10,9 +10,11 @@ import {
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 
 export interface AddMediaDialogData {
   url: string;
+  playImmediately: boolean;
 }
 
 @Component({
@@ -26,13 +28,19 @@ export interface AddMediaDialogData {
     MatInputModule,
     FormsModule,
     MatDialogModule,
+    MatSlideToggleModule,
   ],
 })
 export class AddMediaDialog {
   constructor(
     public dialogRef: MatDialogRef<AddMediaDialogData>,
     @Inject(MAT_DIALOG_DATA) public data: AddMediaDialogData
-  ) {}
+  ) {
+    // Default to true if not specified
+    if (this.data.playImmediately === undefined) {
+      this.data.playImmediately = true;
+    }
+  }
 
   onNoClick(): void {
     this.data.url = '';

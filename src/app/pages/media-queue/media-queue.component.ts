@@ -74,7 +74,7 @@ export class MediaQueueComponent {
 
   onMouseMove(event: MouseEvent, target: EventTarget | null) {
     if (!target) return;
-    
+
     this.ngZone.runOutsideAngular(() => {
       const element = target as HTMLElement;
       const rect = element.getBoundingClientRect();
@@ -145,6 +145,8 @@ export class MediaQueueComponent {
         return;
       }
 
+      const startIndex = this.media.media().length;
+
       // Try parsing as RSS first
       try {
         const feed = await this.rssParser.parse(result.url);
@@ -157,6 +159,11 @@ export class MediaQueueComponent {
               source: item.mediaUrl,
               type: 'Podcast'
             });
+          }
+
+          if (result.playImmediately) {
+            this.media.index = startIndex;
+            this.media.start();
           }
           return;
         }
@@ -198,6 +205,11 @@ export class MediaQueueComponent {
           source: result.url,
           type: 'Music',
         });
+      }
+
+      if (result.playImmediately) {
+        this.media.index = startIndex;
+        this.media.start();
       }
     });
   }
@@ -257,7 +269,7 @@ export class MediaQueueComponent {
       }
 
       // Convert media items to playlist tracks
-      const tracks = mediaItems.map(item => 
+      const tracks = mediaItems.map(item =>
         this.playlistService.mediaItemToPlaylistTrack(item)
       );
 
@@ -269,7 +281,7 @@ export class MediaQueueComponent {
           undefined,
           tracks
         );
-        
+
         // Save the playlist
         try {
           this.playlistService.savePlaylist();
