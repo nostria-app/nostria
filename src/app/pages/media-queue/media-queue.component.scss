@@ -168,6 +168,12 @@
   }
 }
 
+.listening-status {
+  font-size: 12px;
+  opacity: 0.7;
+  font-style: italic;
+}
+
 .playing-icon {
   color: var(--mat-sys-primary);
   font-size: 16px;

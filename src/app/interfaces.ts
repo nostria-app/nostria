@@ -19,6 +19,14 @@ export interface MediaItem {
   liveEventData?: Event; // Full Nostr event for live streams
 }
 
+// Podcast progress tracking interface
+export interface PodcastProgress {
+  position: number; // Current playback position in seconds
+  duration?: number; // Total duration in seconds (optional)
+  lastListenedAt: number; // Unix timestamp in seconds when last listened
+  completed: boolean; // Whether user marked as completed/listened
+}
+
 // Playlist-related interfaces for Nostr kind 32100 events
 export interface PlaylistTrack {
   url: string;

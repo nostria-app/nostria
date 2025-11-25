@@ -1,7 +1,7 @@
 import { effect, inject, Injectable, signal, computed } from '@angular/core';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { Router } from '@angular/router';
-import { MediaItem, OnInitialized, Playlist } from '../interfaces';
+import { MediaItem, OnInitialized, Playlist, PodcastProgress } from '../interfaces';
 import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
 import { LocalStorageService } from './local-storage.service';
@@ -479,8 +479,9 @@ export class MediaPlayerService implements OnInitialized {
    * Save the current playback position for a podcast
    * @param url The media file URL used as unique identifier
    * @param position The current playback position in seconds
+   * @param duration Optional total duration in seconds
    */
-  savePodcastPosition(url: string, position: number): void {
+  savePodcastPosition(url: string, position: number, duration?: number): void {
     // Validate inputs
     if (typeof url !== 'string' || url.trim() === '' || typeof position !== 'number' || position < 0 || !isFinite(position)) {
       return;
@@ -488,8 +489,19 @@ export class MediaPlayerService implements OnInitialized {
 
     try {
       const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
-      const positions: Record<string, number> = positionsJson ? JSON.parse(positionsJson) : {};
-      positions[url] = position;
+      const positions: Record<string, PodcastProgress> = positionsJson ? JSON.parse(positionsJson) : {};
+      
+      // Get existing progress or create new
+      const existing = positions[url] || { position: 0, lastListenedAt: 0, completed: false };
+      
+      // Update progress
+      positions[url] = {
+        position,
+        duration: duration || existing.duration,
+        lastListenedAt: Math.floor(Date.now() / 1000), // Convert to seconds (Nostr timestamp format)
+        completed: existing.completed, // Preserve completed status
+      };
+      
       this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
     } catch (error) {
       console.error('Error saving podcast position:', error);
@@ -507,11 +519,79 @@ export class MediaPlayerService implements OnInitialized {
       if (!positionsJson) {
         return 0;
       }
-      const positions: Record<string, number> = JSON.parse(positionsJson);
-      return positions[url] || 0;
+      const positions: Record<string, PodcastProgress> = JSON.parse(positionsJson);
+      const progress = positions[url];
+      return progress?.position || 0;
     } catch (error) {
       console.error('Error restoring podcast position:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Get full podcast progress data
+   * @param url The media file URL used as unique identifier
+   * @returns The podcast progress data or null if not found
+   */
+  getPodcastProgress(url: string): PodcastProgress | null {
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      if (!positionsJson) {
+        return null;
+      }
+      const positions: Record<string, PodcastProgress> = JSON.parse(positionsJson);
+      return positions[url] || null;
+    } catch (error) {
+      console.error('Error getting podcast progress:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Mark a podcast as completed/listened
+   * @param url The media file URL used as unique identifier
+   * @param completed Whether the podcast is completed
+   */
+  setPodcastCompleted(url: string, completed: boolean): void {
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      const positions: Record<string, PodcastProgress> = positionsJson ? JSON.parse(positionsJson) : {};
+      
+      // Get existing progress or create new
+      const existing = positions[url] || { 
+        position: 0, 
+        lastListenedAt: Math.floor(Date.now() / 1000), 
+        completed: false 
+      };
+      
+      // Update completed status
+      positions[url] = {
+        ...existing,
+        completed,
+        lastListenedAt: Math.floor(Date.now() / 1000), // Update timestamp
+      };
+      
+      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
+    } catch (error) {
+      console.error('Error setting podcast completed status:', error);
+    }
+  }
+
+  /**
+   * Reset podcast progress (clear position and completed status)
+   * @param url The media file URL used as unique identifier
+   */
+  resetPodcastProgress(url: string): void {
+    try {
+      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      if (!positionsJson) {
+        return;
+      }
+      const positions: Record<string, PodcastProgress> = JSON.parse(positionsJson);
+      delete positions[url];
+      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
+    } catch (error) {
+      console.error('Error resetting podcast progress:', error);
     }
   }
 
@@ -590,7 +670,7 @@ export class MediaPlayerService implements OnInitialized {
       if (currentItem?.type === 'Podcast') {
         const now = Date.now();
         if (now - this.lastPodcastPositionSave >= this.PODCAST_SAVE_INTERVAL) {
-          this.savePodcastPosition(currentItem.source, this.audio.currentTime);
+          this.savePodcastPosition(currentItem.source, this.audio.currentTime, this.audio.duration);
           this.lastPodcastPositionSave = now;
         }
       }
@@ -861,7 +941,7 @@ export class MediaPlayerService implements OnInitialized {
     // Save podcast position before cleanup
     const currentItem = this.current();
     if (currentItem?.type === 'Podcast' && this.audio) {
-      this.savePodcastPosition(currentItem.source, this.audio.currentTime);
+      this.savePodcastPosition(currentItem.source, this.audio.currentTime, this.audio.duration);
     }
 
     // Reset initialization flag
