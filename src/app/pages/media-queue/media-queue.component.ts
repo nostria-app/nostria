@@ -1,10 +1,14 @@
 import { Component, inject, NgZone } from '@angular/core';
+import { Router } from '@angular/router';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { AddMediaDialog, AddMediaDialogData } from './add-media-dialog/add-media-dialog';
+import { SelectPlaylistDialogComponent, SelectPlaylistDialogData, SelectPlaylistDialogResult } from '../../components/select-playlist-dialog/select-playlist-dialog.component';
 import { MediaItem, PodcastProgress } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { PlaylistService } from '../../services/playlist.service';
 import { RssParserService } from '../../services/rss-parser.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
@@ -15,6 +19,7 @@ import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-
 
 @Component({
   selector: 'app-media-queue',
+  imports: [MatButtonModule, MatIconModule, MatListModule, MatTooltipModule, MatMenuModule, RouterModule, DragDropModule],
   imports: [MatButtonModule, MatIconModule, MatListModule, RouterModule, DragDropModule, MatMenuModule, MatTooltipModule],
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
@@ -22,8 +27,11 @@ import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-
 export class MediaQueueComponent {
   utilities = inject(UtilitiesService);
   media = inject(MediaPlayerService);
+  private playlistService = inject(PlaylistService);
   private rssParser = inject(RssParserService);
   private dialog = inject(MatDialog);
+  private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
   private ngZone = inject(NgZone);
 
   pressedItemIndex = -1;
@@ -65,7 +73,9 @@ export class MediaQueueComponent {
     }
   }
 
-  onMouseMove(event: MouseEvent, target: any) {
+  onMouseMove(event: MouseEvent, target: EventTarget | null) {
+    if (!target) return;
+    
     this.ngZone.runOutsideAngular(() => {
       const element = target as HTMLElement;
       const rect = element.getBoundingClientRect();
@@ -151,7 +161,7 @@ export class MediaQueueComponent {
           }
           return;
         }
-      } catch (e) {
+      } catch (error) {
         // Ignore error and continue with other checks
       }
 
@@ -208,6 +218,99 @@ export class MediaQueueComponent {
   playItem(index: number) {
     this.media.index = index;
     this.media.start();
+  }
+
+  /**
+   * Add a single media item to a playlist
+   */
+  addToPlaylist(item: MediaItem): void {
+    this.openPlaylistSelectionDialog([item]);
+  }
+
+  /**
+   * Add entire queue to a playlist
+   */
+  addQueueToPlaylist(): void {
+    const mediaItems = this.media.media();
+    if (mediaItems.length === 0) {
+      this.snackBar.open('No media in queue to add', 'Close', {
+        duration: 3000,
+      });
+      return;
+    }
+    this.openPlaylistSelectionDialog(mediaItems);
+  }
+
+  /**
+   * Open dialog to select or create a playlist and add media items
+   */
+  private openPlaylistSelectionDialog(mediaItems: MediaItem[]): void {
+    const dialogRef = this.dialog.open(SelectPlaylistDialogComponent, {
+      width: '500px',
+      data: {
+        mediaItems,
+      } as SelectPlaylistDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result: SelectPlaylistDialogResult) => {
+      if (!result) {
+        return;
+      }
+
+      // Convert media items to playlist tracks
+      const tracks = mediaItems.map(item => 
+        this.playlistService.mediaItemToPlaylistTrack(item)
+      );
+
+      if (result.createNew && result.newPlaylistName) {
+        // Create new playlist with the tracks
+        this.playlistService.createPlaylist(
+          result.newPlaylistName,
+          undefined,
+          undefined,
+          tracks
+        );
+        
+        // Save the playlist
+        try {
+          this.playlistService.savePlaylist();
+          this.snackBar.open(
+            `Added ${mediaItems.length} track${mediaItems.length > 1 ? 's' : ''} to new playlist "${result.newPlaylistName}"`,
+            'View',
+            {
+              duration: 5000,
+            }
+          ).onAction().subscribe(() => {
+            this.router.navigate(['/playlists']);
+          });
+        } catch (error) {
+          console.error('Failed to create playlist:', error);
+          this.snackBar.open('Failed to create playlist', 'Close', {
+            duration: 3000,
+          });
+        }
+      } else if (result.playlistId) {
+        // Add to existing playlist
+        try {
+          this.playlistService.addTracksToPlaylist(result.playlistId, tracks);
+          const playlist = this.playlistService.getPlaylist(result.playlistId);
+          this.snackBar.open(
+            `Added ${mediaItems.length} track${mediaItems.length > 1 ? 's' : ''} to "${playlist?.title}"`,
+            'View',
+            {
+              duration: 5000,
+            }
+          ).onAction().subscribe(() => {
+            this.router.navigate(['/playlists']);
+          });
+        } catch (error) {
+          console.error('Failed to add to playlist:', error);
+          this.snackBar.open('Failed to add to playlist', 'Close', {
+            duration: 3000,
+          });
+        }
+      }
+    });
   }
 
   /**

@@ -4,12 +4,14 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { MediaItem } from '../../interfaces';
+import { MediaItem, Playlist } from '../../interfaces';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
+import { PlaylistService } from '../../services/playlist.service';
+import { MatSnackBar } from '@angular/material/snack-bar';
 
 interface PlaylistTrack {
   url: string;
@@ -46,6 +48,8 @@ export class PlaylistEventComponent {
 
   // Inject the media player service
   private mediaPlayerService = inject(MediaPlayerService);
+  private playlistService = inject(PlaylistService);
+  private snackBar = inject(MatSnackBar);
 
   layout = inject(LayoutService);
 
@@ -72,6 +76,60 @@ export class PlaylistEventComponent {
     const warningTag = event.tags.find(tag => tag[0] === 'content-warning');
     return warningTag?.[1] || 'Content may be sensitive';
   });
+
+  isSaved = computed(() => {
+    const event = this.event();
+    if (!event) return false;
+
+    // We need to construct a Playlist object to check if it's saved
+    // This is a bit of a hack, but we only need pubkey and id
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+    if (!dTag) return false;
+
+    const playlist: Partial<Playlist> = {
+      id: dTag,
+      pubkey: event.pubkey
+    };
+
+    return this.playlistService.isPlaylistSaved(playlist as Playlist);
+  });
+
+  async toggleSavePlaylist(): Promise<void> {
+    const event = this.event();
+    if (!event) return;
+
+    const playlistData = this.playlistData();
+    if (!playlistData) return;
+
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1];
+    if (!dTag) return;
+
+    // Construct a Playlist object
+    const playlist: Playlist = {
+      id: dTag,
+      title: playlistData.title,
+      description: playlistData.alt,
+      tracks: playlistData.tracks,
+      created_at: event.created_at,
+      pubkey: event.pubkey,
+      eventId: event.id,
+      isLocal: false,
+      kind: event.kind
+    };
+
+    try {
+      if (this.isSaved()) {
+        await this.playlistService.removePlaylistFromBookmarks(playlist);
+        this.snackBar.open('Playlist removed from saved playlists', 'Close', { duration: 3000 });
+      } else {
+        await this.playlistService.savePlaylistToBookmarks(playlist);
+        this.snackBar.open('Playlist saved to bookmarks', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      console.error('Failed to toggle save playlist:', error);
+      this.snackBar.open('Failed to update saved playlists', 'Close', { duration: 3000 });
+    }
+  }
 
   playPlaylist(playlistData: PlaylistData): void {
     console.log('Playing playlist:', playlistData.title);

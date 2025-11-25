@@ -4,7 +4,7 @@ import { ApplicationService } from './application.service';
 import { NostrService } from './nostr.service';
 import { AccountRelayService } from './relays/account-relay';
 import { Playlist, PlaylistTrack, PlaylistDraft, OnInitialized, MediaItem } from '../interfaces';
-import { Event } from 'nostr-tools';
+import { Event, Filter } from 'nostr-tools';
 
 @Injectable({
   providedIn: 'root',
@@ -23,16 +23,32 @@ export class PlaylistService implements OnInitialized {
   private _playlists = signal<Playlist[]>([]);
   private _drafts = signal<PlaylistDraft[]>([]);
   private _currentEditingPlaylist = signal<PlaylistDraft | null>(null);
+  private _savedPlaylistIds = signal<Set<string>>(new Set());
 
   // Public readonly signals
   playlists = this._playlists.asReadonly();
   drafts = this._drafts.asReadonly();
   currentEditingPlaylist = this._currentEditingPlaylist.asReadonly();
+  savedPlaylistIds = this._savedPlaylistIds.asReadonly();
 
   // Computed signals
   userPlaylists = computed(() => {
     const currentPubkey = this.getCurrentUserPubkey();
-    return this._playlists().filter(playlist => playlist.isLocal || playlist.pubkey === currentPubkey);
+    const savedIds = this._savedPlaylistIds();
+
+    return this._playlists().filter(playlist => {
+      // Keep if local
+      if (playlist.isLocal) return true;
+
+      // Keep if owned by current user
+      if (playlist.pubkey === currentPubkey) return true;
+
+      // Keep if saved (bookmarked)
+      const coordinate = `${playlist.kind || 32100}:${playlist.pubkey}:${playlist.id}`;
+      if (savedIds.has(coordinate)) return true;
+
+      return false;
+    });
   });
 
   hasUnsavedChanges = computed(() => {
@@ -56,6 +72,7 @@ export class PlaylistService implements OnInitialized {
       const pubkey = this.app.accountState.pubkey();
       if (pubkey) {
         this.cleanupPlaylists();
+        this.fetchSavedPlaylists(pubkey);
       }
     });
   }
@@ -65,6 +82,219 @@ export class PlaylistService implements OnInitialized {
     this.loadDraftsFromStorage();
     // Clean up playlists to remove those from other accounts and duplicates
     this.cleanupPlaylists();
+
+    const pubkey = this.getCurrentUserPubkey();
+    if (pubkey) {
+      this.fetchSavedPlaylists(pubkey);
+    }
+  }
+
+  /**
+   * Fetch saved playlists (Bookmark Set kind 30003)
+   */
+  async fetchSavedPlaylists(pubkey: string): Promise<void> {
+    try {
+      // Fetch the bookmark set
+      const events = await this.accountRelay.getMany<Event>({
+        kinds: [30003],
+        authors: [pubkey],
+        '#d': ['nostria-playlists']
+      } as Filter);
+
+      if (events.length === 0) {
+        this._savedPlaylistIds.set(new Set());
+        return;
+      }
+
+      // Get the most recent event
+      const bookmarkEvent = events.reduce((prev, current) =>
+        (prev.created_at > current.created_at) ? prev : current
+      );
+
+      // Extract playlist coordinates
+      const savedIds = new Set<string>();
+      const coordinatesToFetch: string[] = [];
+
+      for (const tag of bookmarkEvent.tags) {
+        if (tag[0] === 'a') {
+          const coordinate = tag[1];
+          // Check if it's a playlist (kind 32100)
+          if (coordinate.startsWith('32100:')) {
+            savedIds.add(coordinate);
+            coordinatesToFetch.push(coordinate);
+          }
+        }
+      }
+
+      this._savedPlaylistIds.set(savedIds);
+
+      // Fetch the actual playlist events if we don't have them
+      if (coordinatesToFetch.length > 0) {
+        await this.fetchPlaylistsByCoordinates(coordinatesToFetch);
+      }
+
+    } catch (error) {
+      console.error('Failed to fetch saved playlists:', error);
+    }
+  }
+
+  /**
+   * Fetch playlists by their coordinates (kind:pubkey:d-tag)
+   */
+  async fetchPlaylistsByCoordinates(coordinates: string[]): Promise<void> {
+    // Filter out coordinates we already have loaded
+    const playlists = this._playlists();
+    const missingCoordinates = coordinates.filter(coord => {
+      const [, pubkey, dTag] = coord.split(':');
+      return !playlists.some(p => p.pubkey === pubkey && p.id === dTag);
+    });
+
+    if (missingCoordinates.length === 0) return;
+
+    // Group by d-tags and authors for the query
+    const dTags = new Set<string>();
+    const authors = new Set<string>();
+
+    missingCoordinates.forEach(coord => {
+      const [, pubkey, dTag] = coord.split(':');
+      dTags.add(dTag);
+      authors.add(pubkey);
+    });
+
+    try {
+      const events = await this.accountRelay.getMany<Event>({
+        kinds: [32100],
+        authors: Array.from(authors),
+        '#d': Array.from(dTags)
+      } as Filter);
+
+      for (const event of events) {
+        this.importPlaylistFromNostrEvent(event);
+      }
+    } catch (error) {
+      console.error('Failed to fetch referenced playlists:', error);
+    }
+  }
+
+  /**
+   * Save a playlist to the "nostria-playlists" Bookmark Set
+   */
+  async savePlaylistToBookmarks(playlist: Playlist): Promise<void> {
+    const pubkey = this.getCurrentUserPubkey();
+    if (!pubkey) throw new Error('User not logged in');
+
+    const coordinate = `32100:${playlist.pubkey}:${playlist.id}`;
+
+    // 1. Fetch existing bookmark set
+    let bookmarkEvent: Event | undefined;
+    try {
+      const events = await this.accountRelay.getMany<Event>({
+        kinds: [30003],
+        authors: [pubkey],
+        '#d': ['nostria-playlists']
+      } as Filter);
+
+      if (events.length > 0) {
+        bookmarkEvent = events.reduce((prev, current) =>
+          (prev.created_at > current.created_at) ? prev : current
+        );
+      }
+    } catch {
+      console.warn('Could not fetch existing bookmarks, creating new one');
+    }
+
+    // 2. Prepare tags
+    let tags: string[][] = [];
+    if (bookmarkEvent) {
+      tags = [...bookmarkEvent.tags];
+    } else {
+      tags.push(['d', 'nostria-playlists']);
+      tags.push(['title', 'Saved Playlists']);
+      tags.push(['description', 'Playlists saved in Nostria']);
+    }
+
+    // 3. Add new playlist if not exists
+    const exists = tags.some(tag => tag[0] === 'a' && tag[1] === coordinate);
+    if (!exists) {
+      tags.push(['a', coordinate]);
+    } else {
+      console.log('Playlist already saved');
+      return;
+    }
+
+    // 4. Publish updated event
+    const event = this.nostrService.createEvent(30003, bookmarkEvent?.content || '', tags);
+    if (!event) throw new Error('Failed to create bookmark event');
+
+    const signedEvent = await this.nostrService.signEvent(event);
+    if (!signedEvent) throw new Error('Failed to sign bookmark event');
+
+    await this.accountRelay.publish(signedEvent);
+
+    // Update local state
+    const newSavedIds = new Set(this._savedPlaylistIds());
+    newSavedIds.add(coordinate);
+    this._savedPlaylistIds.set(newSavedIds);
+
+    // Ensure the playlist is in our list (it should be if we are saving it)
+    // But if we are saving a playlist we just viewed but haven't "imported" yet, we might need to ensure it's there.
+    // Assuming the playlist object passed here is already full.
+
+    // If the playlist is not in _playlists, add it
+    const playlists = this._playlists();
+    if (!playlists.some(p => p.id === playlist.id && p.pubkey === playlist.pubkey)) {
+      this._playlists.set([...playlists, playlist]);
+      this.savePlaylistsToStorage();
+    }
+  }
+
+  /**
+   * Remove a playlist from bookmarks
+   */
+  async removePlaylistFromBookmarks(playlist: Playlist): Promise<void> {
+    const pubkey = this.getCurrentUserPubkey();
+    if (!pubkey) throw new Error('User not logged in');
+
+    const coordinate = `32100:${playlist.pubkey}:${playlist.id}`;
+
+    // 1. Fetch existing bookmark set
+    const events = await this.accountRelay.getMany<Event>({
+      kinds: [30003],
+      authors: [pubkey],
+      '#d': ['nostria-playlists']
+    } as Filter);
+
+    if (events.length === 0) return;
+
+    const bookmarkEvent = events.reduce((prev, current) =>
+      (prev.created_at > current.created_at) ? prev : current
+    );
+
+    // 2. Filter out the playlist
+    const newTags = bookmarkEvent.tags.filter(tag =>
+      !(tag[0] === 'a' && tag[1] === coordinate)
+    );
+
+    if (newTags.length === bookmarkEvent.tags.length) return; // Nothing changed
+
+    // 3. Publish updated event
+    const event = this.nostrService.createEvent(30003, bookmarkEvent.content, newTags);
+    if (!event) throw new Error('Failed to create bookmark event');
+
+    const signedEvent = await this.nostrService.signEvent(event);
+    if (!signedEvent) throw new Error('Failed to sign bookmark event');
+
+    await this.accountRelay.publish(signedEvent);
+
+    // Update local state
+    const newSavedIds = new Set(this._savedPlaylistIds());
+    newSavedIds.delete(coordinate);
+    this._savedPlaylistIds.set(newSavedIds);
+  }
+
+  isPlaylistSaved(playlist: Playlist): boolean {
+    const coordinate = `32100:${playlist.pubkey}:${playlist.id}`;
+    return this._savedPlaylistIds().has(coordinate);
   }
 
   /**
@@ -354,6 +584,27 @@ export class PlaylistService implements OnInitialized {
     this.removeDraft(playlistId);
   }
 
+  // Rename playlist
+  renamePlaylist(playlistId: string, newTitle: string): void {
+    const playlists = this._playlists();
+    const playlistIndex = playlists.findIndex(p => p.id === playlistId);
+
+    if (playlistIndex === -1) {
+      throw new Error(`Playlist with id ${playlistId} not found`);
+    }
+
+    const playlist = playlists[playlistIndex];
+    const updatedPlaylist: Playlist = {
+      ...playlist,
+      title: newTitle,
+    };
+
+    const newPlaylists = [...playlists];
+    newPlaylists[playlistIndex] = updatedPlaylist;
+    this._playlists.set(newPlaylists);
+    this.savePlaylistsToStorage();
+  }
+
   // Load draft for editing
   loadDraft(draftId: string): void {
     const draft = this._drafts().find(d => d.id === draftId);
@@ -372,6 +623,28 @@ export class PlaylistService implements OnInitialized {
   // Get playlist by ID
   getPlaylist(playlistId: string): Playlist | undefined {
     return this._playlists().find(p => p.id === playlistId);
+  }
+
+  // Add tracks to an existing playlist
+  addTracksToPlaylist(playlistId: string, tracks: PlaylistTrack[]): void {
+    const playlists = this._playlists();
+    const playlistIndex = playlists.findIndex(p => p.id === playlistId);
+
+    if (playlistIndex === -1) {
+      throw new Error(`Playlist with id ${playlistId} not found`);
+    }
+
+    const playlist = playlists[playlistIndex];
+    const updatedPlaylist: Playlist = {
+      ...playlist,
+      tracks: [...playlist.tracks, ...tracks],
+      totalDuration: this.calculateTotalDuration([...playlist.tracks, ...tracks]),
+    };
+
+    const newPlaylists = [...playlists];
+    newPlaylists[playlistIndex] = updatedPlaylist;
+    this._playlists.set(newPlaylists);
+    this.savePlaylistsToStorage();
   }
 
   // Convert MediaItem to PlaylistTrack
@@ -618,7 +891,7 @@ export class PlaylistService implements OnInitialized {
   }
 
   private generatePlaylistId(): string {
-    return `playlist_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `playlist_${Date.now()}_${Math.random().toString(36).slice(2, 11)}`;
   }
 
   private extractTitleFromUrl(url: string): string {
