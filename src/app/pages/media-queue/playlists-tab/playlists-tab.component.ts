@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, ChangeDetectionStrategy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -8,16 +8,16 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { nip19 } from 'nostr-tools';
-import { PlaylistService } from '../../services/playlist.service';
-import { MediaPlayerService } from '../../services/media-player.service';
-import { ApplicationService } from '../../services/application.service';
-import { Playlist } from '../../interfaces';
-import { CreatePlaylistDialogComponent } from './create-playlist-dialog/create-playlist-dialog.component';
-import { RenamePlaylistDialogComponent, RenamePlaylistDialogData, RenamePlaylistDialogResult } from '../../components/rename-playlist-dialog/rename-playlist-dialog.component';
+import { PlaylistService } from '../../../services/playlist.service';
+import { MediaPlayerService } from '../../../services/media-player.service';
+import { ApplicationService } from '../../../services/application.service';
+import { Playlist } from '../../../interfaces';
+import { CreatePlaylistDialogComponent } from '../../playlists/create-playlist-dialog/create-playlist-dialog.component';
+import { RenamePlaylistDialogComponent, RenamePlaylistDialogData, RenamePlaylistDialogResult } from '../../../components/rename-playlist-dialog/rename-playlist-dialog.component';
 
 @Component({
-  selector: 'app-playlists',
-  standalone: true,
+  selector: 'app-playlists-tab',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,
@@ -25,10 +25,10 @@ import { RenamePlaylistDialogComponent, RenamePlaylistDialogData, RenamePlaylist
     MatTooltipModule,
     MatProgressSpinnerModule,
   ],
-  templateUrl: './playlists.component.html',
-  styleUrl: './playlists.component.scss',
+  templateUrl: './playlists-tab.component.html',
+  styleUrl: './playlists-tab.component.scss',
 })
-export class PlaylistsComponent {
+export class PlaylistsTabComponent {
   private playlistService = inject(PlaylistService);
   private mediaPlayer = inject(MediaPlayerService);
   private router = inject(Router);
@@ -38,8 +38,6 @@ export class PlaylistsComponent {
 
   playlists = this.playlistService.playlists;
   drafts = this.playlistService.drafts;
-
-  // Local state
   isLoading = signal(false);
 
   constructor() {
@@ -53,25 +51,14 @@ export class PlaylistsComponent {
   }
 
   private async loadPlaylists(pubkey: string): Promise<void> {
-    // Only show full loading if we have no cached playlists
-    const hasCachedPlaylists = this.playlists().length > 0 || this.drafts().length > 0;
-
-    if (!hasCachedPlaylists) {
+    // Only show loading if we have no playlists yet
+    if (this.playlists().length === 0) {
       this.isLoading.set(true);
     }
-
     try {
       await this.playlistService.fetchPlaylistsFromNostr(pubkey);
     } catch (error) {
       console.error('Failed to load playlists:', error);
-      // Only show error if we have no cached data to show
-      if (!hasCachedPlaylists) {
-        this.snackBar.open('Failed to load playlists from Nostr', 'Close', {
-          duration: 3000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom'
-        });
-      }
     } finally {
       this.isLoading.set(false);
     }
@@ -102,10 +89,8 @@ export class PlaylistsComponent {
       return;
     }
 
-    // Clear current queue and play playlist
     this.mediaPlayer.clearQueue();
 
-    // Convert playlist tracks to MediaItems
     const mediaItems = playlist.tracks.map((track, index) => ({
       source: track.url,
       title: track.title || `Track ${index + 1}`,
@@ -114,7 +99,6 @@ export class PlaylistsComponent {
       type: this.getMediaType(track.url),
     }));
 
-    // Play first track and add rest to queue
     if (mediaItems.length > 0) {
       this.mediaPlayer.play(mediaItems[0]);
 
@@ -130,7 +114,6 @@ export class PlaylistsComponent {
       return;
     }
 
-    // Convert playlist tracks to MediaItems and add to queue
     const mediaItems = playlist.tracks.map((track, index) => ({
       source: track.url,
       title: track.title || `Track ${index + 1}`,
@@ -141,6 +124,10 @@ export class PlaylistsComponent {
 
     mediaItems.forEach(item => {
       this.mediaPlayer.enque(item);
+    });
+
+    this.snackBar.open(`Added ${mediaItems.length} tracks to queue`, 'Close', {
+      duration: 3000,
     });
   }
 
@@ -164,15 +151,11 @@ export class PlaylistsComponent {
           this.playlistService.renamePlaylist(playlist.id, result.name);
           this.snackBar.open(`Playlist renamed to "${result.name}"`, 'Close', {
             duration: 3000,
-            horizontalPosition: 'center',
-            verticalPosition: 'bottom'
           });
         } catch (error) {
           console.error('Failed to rename playlist:', error);
           this.snackBar.open('Failed to rename playlist', 'Close', {
             duration: 3000,
-            horizontalPosition: 'center',
-            verticalPosition: 'bottom'
           });
         }
       }
@@ -190,15 +173,51 @@ export class PlaylistsComponent {
     }
   }
 
+  async copyNeventAddress(playlist: Playlist): Promise<void> {
+    try {
+      const naddr = nip19.naddrEncode({
+        kind: 32100,
+        pubkey: playlist.pubkey,
+        identifier: playlist.id,
+        relays: []
+      });
+
+      await navigator.clipboard.writeText(naddr);
+      this.snackBar.open('Playlist address copied!', 'Close', {
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Failed to copy nevent address:', error);
+      this.snackBar.open('Failed to copy address', 'Close', {
+        duration: 3000,
+      });
+    }
+  }
+
+  async copyEventData(playlist: Playlist): Promise<void> {
+    try {
+      const eventData = this.playlistService.generatePlaylistEvent(playlist);
+      const jsonData = JSON.stringify(eventData, null, 2);
+      await navigator.clipboard.writeText(jsonData);
+
+      this.snackBar.open('Event data copied!', 'Close', {
+        duration: 3000,
+      });
+    } catch (error) {
+      console.error('Failed to copy event data:', error);
+      this.snackBar.open('Failed to copy event data', 'Close', {
+        duration: 3000,
+      });
+    }
+  }
+
   private getMediaType(url: string): 'Music' | 'Podcast' | 'YouTube' | 'Video' {
     if (!url) return 'Music';
 
-    // Check for YouTube URLs
     if (url.includes('youtube.com') || url.includes('youtu.be')) {
       return 'YouTube';
     }
 
-    // Check for video file extensions
     const videoExtensions = ['.mp4', '.webm', '.ogg', '.avi', '.mov', '.wmv', '.flv', '.mkv'];
     const lowercaseUrl = url.toLowerCase();
     if (videoExtensions.some(ext => lowercaseUrl.includes(ext))) {
@@ -206,62 +225,5 @@ export class PlaylistsComponent {
     }
 
     return 'Music';
-  }
-
-  /**
-   * Copy nevent address for the playlist to clipboard
-   */
-  async copyNeventAddress(playlist: Playlist): Promise<void> {
-    try {
-      // For playlist events (kind 32100), we use naddr instead of nevent
-      // since it's a replaceable event with a 'd' tag identifier
-      const naddr = nip19.naddrEncode({
-        kind: 32100,
-        pubkey: playlist.pubkey,
-        identifier: playlist.id,
-        // Add relay hints if available (optional)
-        relays: [] // TODO: Add user's preferred relays
-      });
-
-      await navigator.clipboard.writeText(naddr);
-      this.snackBar.open('Playlist address copied to clipboard!', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
-    } catch (error) {
-      console.error('Failed to copy nevent address:', error);
-      this.snackBar.open('Failed to copy address', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
-    }
-  }
-
-  /**
-   * Copy raw event data as JSON to clipboard
-   */
-  async copyEventData(playlist: Playlist): Promise<void> {
-    try {
-      // Generate the event data that would be published to Nostr
-      const eventData = this.playlistService.generatePlaylistEvent(playlist);
-
-      const jsonData = JSON.stringify(eventData, null, 2);
-      await navigator.clipboard.writeText(jsonData);
-
-      this.snackBar.open('Event data copied to clipboard!', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
-    } catch (error) {
-      console.error('Failed to copy event data:', error);
-      this.snackBar.open('Failed to copy event data', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom'
-      });
-    }
   }
 }

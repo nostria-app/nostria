@@ -300,16 +300,31 @@ export class PlaylistService implements OnInitialized {
   /**
    * Fetch all playlists from Nostr for the current user
    * This should be called when the playlists page is opened to load fresh data
+   * Uses a shorter timeout and doesn't block if network is slow
    */
   async fetchPlaylistsFromNostr(pubkey: string): Promise<void> {
     try {
       console.log('Fetching playlists from Nostr for pubkey:', pubkey);
 
+      // Use a shorter timeout (5 seconds) to prevent long delays
+      // If the user has cached playlists, they'll see those while this loads
+      const timeoutPromise = new Promise<Event[]>((_, reject) =>
+        setTimeout(() => reject(new Error('Fetch timeout')), 5000)
+      );
+
       // Query for playlist events (kind 32100) authored by the user
-      const events = await this.accountRelay.getMany<Event>({
+      const fetchPromise = this.accountRelay.getMany<Event>({
         kinds: [32100],
         authors: [pubkey],
-      }, { timeout: 10000 }); // 10 second timeout
+      });
+
+      let events: Event[];
+      try {
+        events = await Promise.race([fetchPromise, timeoutPromise]);
+      } catch (timeoutError) {
+        console.warn('Playlist fetch timed out, will use cached data');
+        return;
+      }
 
       console.log(`Found ${events.length} playlist events`);
 
