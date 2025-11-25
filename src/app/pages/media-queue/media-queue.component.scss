@@ -30,6 +30,26 @@
     border-color: var(--mat-sys-primary);
   }
 
+  &.completed {
+    opacity: 0.4;
+
+    .queue-artwork {
+      filter: grayscale(100%);
+    }
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    &.current-playing {
+      opacity: 1;
+
+      .queue-artwork {
+        filter: none;
+      }
+    }
+  }
+
   // Hover highlight
   .hover-highlight {
     position: absolute;
@@ -166,6 +186,12 @@
     color: var(--mat-sys-on-primary-container) !important;
     opacity: 0.8;
   }
+}
+
+.listening-status {
+  font-size: 12px;
+  opacity: 0.7;
+  font-style: italic;
 }
 
 .playing-icon {

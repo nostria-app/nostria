@@ -2,18 +2,20 @@ import { Component, inject, NgZone } from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { AddMediaDialog, AddMediaDialogData } from './add-media-dialog/add-media-dialog';
-import { MediaItem } from '../../interfaces';
+import { MediaItem, PodcastProgress } from '../../interfaces';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { RssParserService } from '../../services/rss-parser.service';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 @Component({
   selector: 'app-media-queue',
-  imports: [MatButtonModule, MatIconModule, MatListModule, RouterModule, DragDropModule],
+  imports: [MatButtonModule, MatIconModule, MatListModule, RouterModule, DragDropModule, MatMenuModule, MatTooltipModule],
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
 })
@@ -215,5 +217,102 @@ export class MediaQueueComponent {
     console.warn('Failed to load artwork for:', item.title, 'URL:', this.getArtwork(item));
     // The image will be hidden by setting artwork to empty, triggering the fallback icon
     item.artwork = '';
+  }
+
+  /**
+   * Get podcast progress for a media item
+   */
+  getPodcastProgress(item: MediaItem): PodcastProgress | null {
+    if (item.type !== 'Podcast') {
+      return null;
+    }
+    return this.media.getPodcastProgress(item.source);
+  }
+
+  /**
+   * Check if a podcast is marked as completed
+   */
+  isPodcastCompleted(item: MediaItem): boolean {
+    const progress = this.getPodcastProgress(item);
+    return progress?.completed || false;
+  }
+
+  /**
+   * Mark a podcast as completed/listened
+   */
+  markAsCompleted(item: MediaItem, event: Event) {
+    event.stopPropagation();
+    if (item.type === 'Podcast') {
+      this.media.setPodcastCompleted(item.source, true);
+    }
+  }
+
+  /**
+   * Mark a podcast as not completed
+   */
+  markAsNotCompleted(item: MediaItem, event: Event) {
+    event.stopPropagation();
+    if (item.type === 'Podcast') {
+      this.media.setPodcastCompleted(item.source, false);
+    }
+  }
+
+  /**
+   * Reset podcast progress
+   */
+  resetPodcastProgress(item: MediaItem, event: Event) {
+    event.stopPropagation();
+    if (item.type === 'Podcast') {
+      this.media.resetPodcastProgress(item.source);
+    }
+  }
+
+  /**
+   * Format the last listened date
+   */
+  formatLastListened(timestamp: number): string {
+    const date = new Date(timestamp * 1000); // Convert from seconds to milliseconds
+    const now = new Date();
+    const MS_PER_DAY = 1000 * 60 * 60 * 24;
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / MS_PER_DAY);
+
+    if (diffDays === 0) {
+      return 'Today';
+    } else if (diffDays === 1) {
+      return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays} days ago`;
+    } else if (diffDays < 30) {
+      const weeks = Math.floor(diffDays / 7);
+      return `${weeks} week${weeks > 1 ? 's' : ''} ago`;
+    } else {
+      return date.toLocaleDateString();
+    }
+  }
+
+  /**
+   * Get listening status text for a podcast
+   */
+  getListeningStatus(item: MediaItem): string {
+    const progress = this.getPodcastProgress(item);
+    if (!progress) {
+      return '';
+    }
+
+    if (progress.completed) {
+      return `Completed • ${this.formatLastListened(progress.lastListenedAt)}`;
+    }
+
+    if (progress.position > 0 && progress.duration && progress.duration > 0) {
+      const percentage = Math.floor((progress.position / progress.duration) * 100);
+      return `${percentage}% • ${this.formatLastListened(progress.lastListenedAt)}`;
+    }
+
+    if (progress.lastListenedAt > 0) {
+      return `Started • ${this.formatLastListened(progress.lastListenedAt)}`;
+    }
+
+    return '';
   }
 }
