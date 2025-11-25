@@ -1060,7 +1060,18 @@ export class UtilitiesService {
    * These events should always be fetched from relays to ensure we have the latest version
    */
   isReplaceableEvent(kind: number): boolean {
-    return kind === 0 || kind === 3 || (kind >= 10000 && kind < 20000);
+    // NIP-01 defines replaceable events as:
+    // - Kind 0 (Metadata)
+    // - Kind 3 (Contact list)
+    // - Kinds 10000-19999 (Replaceable events)
+    const METADATA_KIND = 0;
+    const CONTACT_LIST_KIND = 3;
+    const REPLACEABLE_MIN = 10000;
+    const REPLACEABLE_MAX = 20000;
+    
+    return kind === METADATA_KIND || 
+           kind === CONTACT_LIST_KIND || 
+           (kind >= REPLACEABLE_MIN && kind < REPLACEABLE_MAX);
   }
 
   /**
@@ -1069,7 +1080,11 @@ export class UtilitiesService {
    * These events should always be fetched from relays to ensure we have the latest version
    */
   isParameterizedReplaceableEvent(kind: number): boolean {
-    return kind >= 30000 && kind < 40000;
+    // NIP-01 defines parameterized replaceable events as kinds 30000-39999
+    const PARAMETERIZED_REPLACEABLE_MIN = 30000;
+    const PARAMETERIZED_REPLACEABLE_MAX = 40000;
+    
+    return kind >= PARAMETERIZED_REPLACEABLE_MIN && kind < PARAMETERIZED_REPLACEABLE_MAX;
   }
 
   /**
