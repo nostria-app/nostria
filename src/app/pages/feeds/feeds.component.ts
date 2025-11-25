@@ -459,17 +459,30 @@ export class FeedsComponent implements OnDestroy {
     effect(() => {
       this.route.params.subscribe(async params => {
         const pathParam = params['path'];
+        
         if (pathParam) {
           // Find feed by path
           const feeds = this.feedsCollectionService.feeds();
           const targetFeed = feeds.find(feed => feed.path === pathParam);
 
           if (targetFeed) {
-            await this.feedsCollectionService.setActiveFeed(targetFeed.id);
+            // Set the active feed immediately without awaiting
+            this.feedsCollectionService.setActiveFeed(targetFeed.id);
           } else {
             // If no feed with this path is found, redirect to default feed
             console.warn(`No feed found with path: ${pathParam}`);
             this.router.navigate(['/f'], { replaceUrl: true });
+          }
+        } else if (this.router.url.startsWith('/f')) {
+          // User navigated to /f without a path - use the first feed without a path
+          // or restore the previously active feed
+          const feeds = this.feedsCollectionService.feeds();
+          const activeFeedId = this.feedsCollectionService.activeFeedId();
+          
+          // If there's already an active feed, keep it
+          if (!activeFeedId && feeds.length > 0) {
+            // Set the first feed as active
+            this.feedsCollectionService.setActiveFeed(feeds[0].id);
           }
         }
       });
@@ -1323,13 +1336,14 @@ export class FeedsComponent implements OnDestroy {
   /**
    * Select a feed
    */
-  async selectFeed(feedId: string): Promise<void> {
+  selectFeed(feedId: string): void {
     const feeds = this.feedsCollectionService.feeds();
     const selectedFeed = feeds.find(feed => feed.id === feedId);
 
-    // Set the active feed
-    await this.feedsCollectionService.setActiveFeed(feedId);
-    // Navigate to the appropriate URL
+    // Set the active feed (this happens synchronously now)
+    this.feedsCollectionService.setActiveFeed(feedId);
+
+    // Navigate to the appropriate URL immediately
     if (selectedFeed?.path) {
       this.router.navigate(['/f', selectedFeed.path]);
     } else {
