@@ -1,106 +1,128 @@
 <div class="page">
-  <div class="queue-header">
-    <div class="queue-nav">
-      <h2>Media Queue</h2>
-      <a mat-button routerLink="/playlists" class="playlists-link">
-        <mat-icon>playlist_play</mat-icon>
-        View Playlists
-      </a>
-    </div>
-
-    <div class="queue-header-actions">
-      <button matTooltip="Add entire queue to playlist" (click)="addQueueToPlaylist()" mat-icon-button>
-        <mat-icon>playlist_add</mat-icon>
-      </button>
-
-      @if (media.media().length > 0) {
-      <button mat-raised-button (click)="clearQueue()" matTooltip="Clear entire queue">
-        <mat-icon>clear_all</mat-icon>
-        Clear Queue
-      </button>
-      }
-    </div>
-  </div>
-
-  @if (media.media().length === 0) {
-  <div class="empty-queue">
-    <mat-icon class="empty-icon">queue_music</mat-icon>
-    <p>No media in queue</p>
-    <button mat-raised-button color="primary" (click)="addQueue()">
-      <mat-icon>add</mat-icon>
-      Add Media
-    </button>
-  </div>
-  } @else {
-  <div class="media-list">
-    <mat-list cdkDropList cdkDropListLockAxis="y" (cdkDropListDropped)="drop($event)">
-      @for (item of media.media(); track item; let i = $index) {
-      <mat-list-item cdkDrag [cdkDragStartDelay]="200" (cdkDragStarted)="onDragStarted()"
-        [class.current-playing]="isCurrentPlaying(item, i)" [class.is-pressed]="pressedItemIndex === i"
-        [class.completed]="isPodcastCompleted(item)" (mousedown)="onMouseDown(i)" (mouseup)="onMouseUp()"
-        (mouseleave)="onMouseUp()" (mousemove)="onMouseMove($event, $event.currentTarget)" (click)="playItem(i)"
-        class="queue-item">
-
-        <div class="hover-highlight"></div>
-
-        @if (hasArtwork(item)) {
-        <img matListItemAvatar class="queue-artwork" [src]="utilities.sanitizeImageUrl(getArtwork(item))"
-          (error)="onImageError($event, item)" alt="Artwork" />
-        } @else {
-        <mat-icon matListItemAvatar class="queue-artwork-icon">music_note</mat-icon>
+  <mat-tab-group [(selectedIndex)]="selectedTabIndex" animationDuration="200ms">
+    <!-- Queue Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>queue_music</mat-icon>
+        <span>Queue</span>
+        @if (media.media().length > 0) {
+        <span class="tab-badge">{{ media.media().length }}</span>
         }
-        <span matListItemTitle>
-          @if (isCurrentPlaying(item, i)) {
-          <mat-icon class="playing-icon">play_circle</mat-icon>
-          }
-          {{ i + 1 }}. {{ item.title }}
-        </span>
-        <span matListItemLine>{{ item.artist }}</span>
-        @if (item.type === 'Podcast' && getListeningStatus(item)) {
-        <span matListItemLine class="listening-status">{{ getListeningStatus(item) }}</span>
-        }
-        <span matListItemMeta class="queue-actions">
-          @if (!isCurrentPlaying(item, i)) {
-          <button (click)="playItem(i); $event.stopPropagation()" mat-icon-button matTooltip="Play this item"
-            color="primary">
-            <mat-icon>play_arrow</mat-icon>
-          </button>
-          }
-          <button (click)="addToPlaylist(item); $event.stopPropagation()" mat-icon-button 
-            matTooltip="Add to playlist">
-            <mat-icon>playlist_add</mat-icon>
-          </button>
-          @if (item.type === 'Podcast') {
-          <button [matMenuTriggerFor]="podcastMenu" mat-icon-button matTooltip="Podcast options"
-            (click)="$event.stopPropagation()">
-            <mat-icon>more_vert</mat-icon>
-          </button>
-          <mat-menu #podcastMenu="matMenu">
-            @if (!isPodcastCompleted(item)) {
-            <button mat-menu-item (click)="markAsCompleted(item, $event)">
-              <mat-icon>check_circle</mat-icon>
-              <span>Mark as Completed</span>
+      </ng-template>
+
+      <div class="tab-content">
+        <div class="queue-header">
+          <div class="queue-header-actions">
+            <button matTooltip="Add entire queue to playlist" (click)="addQueueToPlaylist()" mat-icon-button>
+              <mat-icon>playlist_add</mat-icon>
             </button>
-            } @else {
-            <button mat-menu-item (click)="markAsNotCompleted(item, $event)">
-              <mat-icon>radio_button_unchecked</mat-icon>
-              <span>Mark as Not Completed</span>
+
+            @if (media.media().length > 0) {
+            <button mat-stroked-button (click)="clearQueue()" matTooltip="Clear entire queue">
+              <mat-icon>clear_all</mat-icon>
+              Clear Queue
             </button>
             }
-            <button mat-menu-item (click)="resetPodcastProgress(item, $event)">
-              <mat-icon>restart_alt</mat-icon>
-              <span>Reset Progress</span>
-            </button>
-          </mat-menu>
-          }
-          <button (click)="remove(item); $event.stopPropagation()" mat-icon-button matTooltip="Remove from queue"
-            color="warn">
-            <mat-icon>delete</mat-icon>
+          </div>
+        </div>
+
+        @if (media.media().length === 0) {
+        <div class="empty-queue">
+          <mat-icon class="empty-icon">queue_music</mat-icon>
+          <p>No media in queue</p>
+          <button mat-flat-button (click)="addQueue()">
+            <mat-icon>add</mat-icon>
+            Add Media
           </button>
-        </span>
-      </mat-list-item>
-      }
-    </mat-list>
-  </div>
-  }
+        </div>
+        } @else {
+        <div class="media-list">
+          <mat-list cdkDropList cdkDropListLockAxis="y" (cdkDropListDropped)="drop($event)">
+            @for (item of media.media(); track item; let i = $index) {
+            <mat-list-item cdkDrag [cdkDragStartDelay]="200" (cdkDragStarted)="onDragStarted()"
+              [class.current-playing]="isCurrentPlaying(item, i)" [class.is-pressed]="pressedItemIndex === i"
+              [class.completed]="isPodcastCompleted(item)" (mousedown)="onMouseDown(i)" (mouseup)="onMouseUp()"
+              (mouseleave)="onMouseUp()" (mousemove)="onMouseMove($event, $event.currentTarget)" (click)="playItem(i)"
+              class="queue-item">
+
+              <div class="hover-highlight"></div>
+
+              @if (hasArtwork(item)) {
+              <img matListItemAvatar class="queue-artwork" [src]="utilities.sanitizeImageUrl(getArtwork(item))"
+                (error)="onImageError($event, item)" alt="Artwork" />
+              } @else {
+              <mat-icon matListItemAvatar class="queue-artwork-icon">music_note</mat-icon>
+              }
+              <span matListItemTitle>
+                @if (isCurrentPlaying(item, i)) {
+                <mat-icon class="playing-icon">play_circle</mat-icon>
+                }
+                {{ i + 1 }}. {{ item.title }}
+              </span>
+              <span matListItemLine>{{ item.artist }}</span>
+              @if (item.type === 'Podcast' && getListeningStatus(item)) {
+              <span matListItemLine class="listening-status">{{ getListeningStatus(item) }}</span>
+              }
+              <span matListItemMeta class="queue-actions">
+                @if (!isCurrentPlaying(item, i)) {
+                <button (click)="playItem(i); $event.stopPropagation()" mat-icon-button matTooltip="Play this item"
+                  color="primary">
+                  <mat-icon>play_arrow</mat-icon>
+                </button>
+                }
+                <button (click)="addToPlaylist(item); $event.stopPropagation()" mat-icon-button
+                  matTooltip="Add to playlist">
+                  <mat-icon>playlist_add</mat-icon>
+                </button>
+                @if (item.type === 'Podcast') {
+                <button [matMenuTriggerFor]="podcastMenu" mat-icon-button matTooltip="Podcast options"
+                  (click)="$event.stopPropagation()">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+                <mat-menu #podcastMenu="matMenu">
+                  @if (!isPodcastCompleted(item)) {
+                  <button mat-menu-item (click)="markAsCompleted(item, $event)">
+                    <mat-icon>check_circle</mat-icon>
+                    <span>Mark as Completed</span>
+                  </button>
+                  } @else {
+                  <button mat-menu-item (click)="markAsNotCompleted(item, $event)">
+                    <mat-icon>radio_button_unchecked</mat-icon>
+                    <span>Mark as Not Completed</span>
+                  </button>
+                  }
+                  <button mat-menu-item (click)="resetPodcastProgress(item, $event)">
+                    <mat-icon>restart_alt</mat-icon>
+                    <span>Reset Progress</span>
+                  </button>
+                </mat-menu>
+                }
+                <button (click)="remove(item); $event.stopPropagation()" mat-icon-button matTooltip="Remove from queue"
+                  color="warn">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </span>
+            </mat-list-item>
+            }
+          </mat-list>
+        </div>
+        }
+      </div>
+    </mat-tab>
+
+    <!-- Playlists Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>playlist_play</mat-icon>
+        <span>Playlists</span>
+        @if (playlistService.playlists().length > 0) {
+        <span class="tab-badge">{{ playlistService.playlists().length }}</span>
+        }
+      </ng-template>
+
+      <div class="tab-content">
+        <app-playlists-tab></app-playlists-tab>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
 </div>

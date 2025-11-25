@@ -1,13 +1,10 @@
-<div class="playlists-container">
+<div class="playlists-tab-container">
   <header class="playlists-header">
-    <div class="header-content">
-      <h1>My Playlists</h1>
-      <div class="header-actions">
-        <button mat-flat-button (click)="createNewPlaylist()">
-          <mat-icon>add</mat-icon>
-          New Playlist
-        </button>
-      </div>
+    <div class="header-actions">
+      <button mat-flat-button (click)="createNewPlaylist()">
+        <mat-icon>add</mat-icon>
+        New Playlist
+      </button>
     </div>
   </header>
 
@@ -23,9 +20,9 @@
     @if (drafts().length > 0) {
     <section class="drafts-section">
       <div class="section-header">
-        <h2>Drafts</h2>
+        <h3>Drafts</h3>
         @if (isLoading()) {
-        <mat-spinner diameter="20"></mat-spinner>
+        <mat-spinner diameter="16"></mat-spinner>
         }
       </div>
       <div class="playlist-list">
@@ -39,14 +36,10 @@
             <div class="playlist-meta">
               {{ draft.tracks.length }} tracks · Draft
             </div>
-            @if (draft.description) {
-            <div class="playlist-description">{{ draft.description }}</div>
-            }
           </div>
 
           <div class="playlist-actions">
-            <button mat-icon-button (click)="loadDraft(draft.id!); $event.stopPropagation()"
-              matTooltip="Continue Editing">
+            <button mat-icon-button (click)="loadDraft(draft.id!); $event.stopPropagation()" matTooltip="Edit">
               <mat-icon>edit</mat-icon>
             </button>
             <button mat-icon-button [matMenuTriggerFor]="draftMenu" (click)="$event.stopPropagation()">
@@ -72,15 +65,15 @@
     <!-- Playlists Section -->
     <section class="playlists-section">
       <div class="section-header">
-        <h2>Playlists</h2>
+        <h3>Playlists</h3>
         @if (isLoading() && playlists().length > 0) {
-        <mat-spinner diameter="20"></mat-spinner>
+        <mat-spinner diameter="16"></mat-spinner>
         }
       </div>
       @if (playlists().length === 0 && !isLoading()) {
       <div class="empty-state">
         <mat-icon class="empty-icon">queue_music</mat-icon>
-        <h3>No playlists yet</h3>
+        <h4>No playlists yet</h4>
         <p>Create your first playlist to get started</p>
         <button mat-flat-button (click)="createNewPlaylist()">
           <mat-icon>add</mat-icon>
@@ -90,8 +83,8 @@
       } @else if (playlists().length > 0) {
       <div class="playlist-list">
         @for (playlist of playlists(); track playlist.id) {
-        <div class="playlist-item" tabindex="0" (click)="editPlaylist(playlist)"
-          (keydown.enter)="editPlaylist(playlist)" (keydown.space)="editPlaylist(playlist)">
+        <div class="playlist-item" tabindex="0" (click)="playPlaylist(playlist)"
+          (keydown.enter)="playPlaylist(playlist)" (keydown.space)="playPlaylist(playlist)">
           <button mat-icon-button class="play-button" (click)="playPlaylist(playlist); $event.stopPropagation()"
             matTooltip="Play playlist">
             <mat-icon>play_arrow</mat-icon>
@@ -111,16 +104,6 @@
                 {{ (playlist.isLocal || !playlist.eventId) ? 'Local' : 'Public' }}
               </span>
             </div>
-            @if (playlist.description) {
-            <div class="playlist-description">{{ playlist.description }}</div>
-            }
-            @if (playlist.tags && playlist.tags.length > 0) {
-            <div class="playlist-tags">
-              @for (tag of playlist.tags; track tag) {
-              <span class="tag">{{ tag }}</span>
-              }
-            </div>
-            }
           </div>
 
           <div class="playlist-actions">

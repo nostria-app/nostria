@@ -1,6 +1,5 @@
-import { Component, inject, NgZone } from '@angular/core';
+import { Component, inject, NgZone, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AddMediaDialog, AddMediaDialogData } from './add-media-dialog/add-media-dialog';
@@ -15,24 +14,36 @@ import { MatListModule } from '@angular/material/list';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatTabsModule } from '@angular/material/tabs';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
+import { PlaylistsTabComponent } from './playlists-tab/playlists-tab.component';
 
 @Component({
   selector: 'app-media-queue',
-  imports: [MatButtonModule, MatIconModule, MatListModule, MatTooltipModule, MatMenuModule, RouterModule, DragDropModule],
+  imports: [
+    MatButtonModule,
+    MatIconModule,
+    MatListModule,
+    MatTooltipModule,
+    MatMenuModule,
+    MatTabsModule,
+    DragDropModule,
+    PlaylistsTabComponent,
+  ],
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
 })
 export class MediaQueueComponent {
   utilities = inject(UtilitiesService);
   media = inject(MediaPlayerService);
-  private playlistService = inject(PlaylistService);
+  playlistService = inject(PlaylistService);
   private rssParser = inject(RssParserService);
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
   private ngZone = inject(NgZone);
 
+  selectedTabIndex = signal(0);
   pressedItemIndex = -1;
 
   onMouseDown(index: number) {
@@ -167,7 +178,7 @@ export class MediaQueueComponent {
           }
           return;
         }
-      } catch (error) {
+      } catch {
         // Ignore error and continue with other checks
       }
 

@@ -1,3 +1,60 @@
+.page {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  ::ng-deep .mat-mdc-tab-group {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+
+    .mat-mdc-tab-header {
+      flex-shrink: 0;
+    }
+
+    .mat-mdc-tab-body-wrapper {
+      flex: 1;
+      overflow: hidden;
+    }
+
+    .mat-mdc-tab-body {
+      overflow: hidden;
+    }
+
+    .mat-mdc-tab-body-content {
+      height: 100%;
+      overflow-y: auto;
+    }
+  }
+
+  ::ng-deep .mat-mdc-tab {
+    .mdc-tab__content {
+      gap: 8px;
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  .tab-badge {
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    margin-left: 4px;
+  }
+}
+
+.tab-content {
+  height: 100%;
+  overflow-y: auto;
+}
+
 .queue-artwork {
   border-radius: 0 !important;
 }
@@ -113,41 +170,15 @@
 
 .queue-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-end;
   align-items: center;
-  margin-bottom: 16px;
-  padding: 0 16px;
-
-  .queue-nav {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-
-    h2 {
-      margin: 0;
-    }
-
-    .playlists-link {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      color: var(--mat-sys-primary);
-      text-decoration: none;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
-      }
-    }
-  }
+  margin-bottom: 8px;
+  padding: 8px 16px 0;
 
   .queue-header-actions {
     display: flex;
     gap: 8px;
     align-items: center;
-    margin-left: auto;
-    /* Push actions to right */
   }
 }
 
@@ -209,35 +240,17 @@
   align-items: center;
 }
 
-.page {
-  padding: 16px;
-  height: 100%;
-  overflow-y: auto;
-  /* Allow scrolling on entire component */
-}
-
 .media-list {
-  /* Media list content flows naturally without separate scrolling */
+  padding: 0 8px;
 }
 
 @media screen and (max-width: 600px) {
   .queue-header {
-    flex-wrap: wrap;
-    gap: 12px;
-
-    .queue-nav {
-      flex: 1 1 100%;
-      /* Full width on mobile */
-    }
+    padding: 8px 8px 0;
 
     .queue-header-actions {
-      flex: 1 1 100%;
-      /* Full width on mobile */
-      justify-content: stretch;
-
       button:not([mat-icon-button]) {
         flex: 1;
-        /* Raised buttons take equal space */
       }
     }
   }
