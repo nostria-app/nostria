@@ -1,3 +1,8 @@
 .input-full-width {
   width: 100% !important;
 }
+
+.toggle-container {
+  margin-top: 16px;
+  margin-bottom: 8px;
+}

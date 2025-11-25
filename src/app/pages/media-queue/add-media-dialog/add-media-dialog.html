@@ -6,6 +6,10 @@
       <mat-label>URL</mat-label>
       <input matInput type="text" [(ngModel)]="data.url" />
     </mat-form-field>
+
+    <div class="toggle-container">
+      <mat-slide-toggle [(ngModel)]="data.playImmediately">Start playing</mat-slide-toggle>
+    </div>
   </div>
 
   <div mat-dialog-actions align="end">
