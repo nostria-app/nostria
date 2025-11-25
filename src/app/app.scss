@@ -150,14 +150,8 @@ mat-sidenav-content {
   flex-direction: column;
   height: 100%;
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  // Position content below the toolbar (on desktop)
-  margin-top: var(--toolbar-height, 64px);
-  height: calc(100% - var(--toolbar-height, 64px));
-
-  // When media player is shown, add extra padding for it
-  // &.media-player-shown {
-  //   padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
-  // }
+  // Content flows to top - scrolls behind transparent toolbar
+  margin-top: 0;
 
   // Add margin when following sidebar is docked
   &.following-sidebar-docked {
@@ -167,35 +161,22 @@ mat-sidenav-content {
       margin-right: 0; // No margin on mobile, keep as overlay
     }
   }
-
-  // Adjust for mobile navigation
-  @media (max-width: 599px) {
-    // Padding moved to .content-wrapper to allow scrolling behind the glass nav
-    padding-bottom: 0;
-    // On mobile, content also needs the toolbar offset
-    margin-top: var(--toolbar-height, 64px);
-    height: calc(100% - var(--toolbar-height, 64px));
-
-    // When media player is shown, add extra padding for it
-    &.media-player-shown {
-      padding-bottom: 0;
-    }
-  }
 }
 
 .sidenav {
   width: 250px;
-  // Position sidenav below the toolbar
-  margin-top: var(--toolbar-height, 64px);
-  height: calc(100% - var(--toolbar-height, 64px)) !important;
+  // Sidenav flows to top - full height, with padding for toolbar
+  margin-top: 0;
+  height: 100% !important;
+  padding-top: var(--toolbar-height, 64px);
+  box-sizing: border-box;
 
   // On desktop, keep it at base level (side mode)
   // On mobile, ensure it's above the mobile nav (over mode)
   @media (max-width: 599px) {
     z-index: 1001 !important;
-    // On mobile (over mode), sidenav should be full height 
-    margin-top: 0;
-    height: 100% !important;
+    // On mobile (over mode), sidenav also needs toolbar padding
+    padding-top: var(--toolbar-height, 64px);
   }
 
   @media (min-width: 599px) {
@@ -207,8 +188,7 @@ mat-sidenav-content {
   mat-nav-list {
     @media (max-width: 599px) {
       padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-      // Add padding for toolbar on mobile overlay mode
-      padding-top: var(--toolbar-height, 64px);
+      // Toolbar padding is now on sidenav itself
     }
   }
 }
@@ -276,7 +256,15 @@ mat-sidenav-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // Content scrolls normally - toolbar offset is handled at mat-sidenav-content level
+  // Content scrolls behind transparent toolbar
+  // Padding at top for toolbar, at bottom for mobile menu
+  padding-top: var(--toolbar-height, 64px);
+
+  // Add bottom padding for mobile navigation menu
+  @media (max-width: 599px) {
+    // Mobile nav height (64px) + bottom offset (24px) + safe area + extra space
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 // When media player is shown, add extra padding to content-wrapper
