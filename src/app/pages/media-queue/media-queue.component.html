@@ -9,7 +9,7 @@
     </div>
 
     <div class="queue-header-actions">
-      <button matTooltip="Add to playlist" (click)="addQueue()" mat-icon-button>
+      <button matTooltip="Add entire queue to playlist" (click)="addQueueToPlaylist()" mat-icon-button>
         <mat-icon>playlist_add</mat-icon>
       </button>
 
@@ -66,6 +66,10 @@
             <mat-icon>play_arrow</mat-icon>
           </button>
           }
+          <button (click)="addToPlaylist(item); $event.stopPropagation()" mat-icon-button 
+            matTooltip="Add to playlist">
+            <mat-icon>playlist_add</mat-icon>
+          </button>
           @if (item.type === 'Podcast') {
           <button [matMenuTriggerFor]="podcastMenu" mat-icon-button matTooltip="Podcast options"
             (click)="$event.stopPropagation()">

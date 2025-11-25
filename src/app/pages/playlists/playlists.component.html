@@ -90,6 +90,13 @@
               @if (playlist.totalDuration) {
               · {{ playlist.totalDuration }}
               }
+              <span class="playlist-status" [class.is-local]="playlist.isLocal || !playlist.eventId"
+                [matTooltip]="(playlist.isLocal || !playlist.eventId) ? 'Local playlist (not published)' : 'Public playlist (published to Nostr)'">
+                ·
+                <mat-icon class="status-icon">{{ (playlist.isLocal || !playlist.eventId) ? 'cloud_off' : 'public'
+                  }}</mat-icon>
+                {{ (playlist.isLocal || !playlist.eventId) ? 'Local' : 'Public' }}
+              </span>
             </mat-card-subtitle>
             <button mat-icon-button [matMenuTriggerFor]="playlistMenu" class="card-menu-button">
               <mat-icon>more_vert</mat-icon>
@@ -106,6 +113,10 @@
               <button mat-menu-item [matMenuTriggerFor]="copyMenu">
                 <mat-icon>content_copy</mat-icon>
                 Copy
+              </button>
+              <button mat-menu-item (click)="renamePlaylist(playlist)">
+                <mat-icon>drive_file_rename_outline</mat-icon>
+                Rename
               </button>
               <button mat-menu-item (click)="editPlaylist(playlist)">
                 <mat-icon>edit</mat-icon>

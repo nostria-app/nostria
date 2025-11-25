@@ -14,6 +14,7 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { ApplicationService } from '../../services/application.service';
 import { Playlist } from '../../interfaces';
 import { CreatePlaylistDialogComponent } from './create-playlist-dialog/create-playlist-dialog.component';
+import { RenamePlaylistDialogComponent, RenamePlaylistDialogData, RenamePlaylistDialogResult } from '../../components/rename-playlist-dialog/rename-playlist-dialog.component';
 
 @Component({
   selector: 'app-playlists',
@@ -141,6 +142,35 @@ export class PlaylistsComponent {
     if (confirm(`Are you sure you want to delete "${playlist.title}"?`)) {
       this.playlistService.deletePlaylist(playlist.id);
     }
+  }
+
+  renamePlaylist(playlist: Playlist): void {
+    const dialogRef = this.dialog.open(RenamePlaylistDialogComponent, {
+      width: '400px',
+      data: {
+        playlist,
+      } as RenamePlaylistDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result: RenamePlaylistDialogResult) => {
+      if (result && result.name) {
+        try {
+          this.playlistService.renamePlaylist(playlist.id, result.name);
+          this.snackBar.open(`Playlist renamed to "${result.name}"`, 'Close', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom'
+          });
+        } catch (error) {
+          console.error('Failed to rename playlist:', error);
+          this.snackBar.open('Failed to rename playlist', 'Close', {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom'
+          });
+        }
+      }
+    });
   }
 
   loadDraft(draftId: string): void {

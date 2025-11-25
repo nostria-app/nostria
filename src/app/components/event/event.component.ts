@@ -8,7 +8,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router } from '@angular/router';
 import { Event, kinds, nip19 } from 'nostr-tools';
-import { NostrRecord } from '../../interfaces';
+import { NostrRecord, Playlist } from '../../interfaces';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { ApplicationService } from '../../services/application.service';
 import { BookmarkService } from '../../services/bookmark.service';
@@ -46,6 +46,7 @@ import { ZapService } from '../../services/zap.service';
 import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.component';
 import { PowService } from '../../services/pow.service';
 import { ContentWarningComponent } from '../content-warning/content-warning.component';
+import { PlaylistService } from '../../services/playlist.service';
 
 type EventCardAppearance = 'card' | 'plain';
 
@@ -124,6 +125,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   zapService = inject(ZapService);
   localSettings = inject(LocalSettingsService);
   powService = inject(PowService);
+  playlistService = inject(PlaylistService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -1212,8 +1214,63 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     event.stopPropagation();
     const targetItem = this.repostedRecord() || this.record();
     if (targetItem) {
-      this.bookmark.toggleBookmark(targetItem.event.id);
+      if (targetItem.event.kind === 32100) {
+        this.togglePlaylistBookmark(targetItem.event);
+      } else {
+        this.bookmark.toggleBookmark(targetItem.event.id);
+      }
     }
+  }
+
+  private async togglePlaylistBookmark(event: Event) {
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+    if (!dTag) return;
+
+    const playlist = {
+      id: dTag,
+      pubkey: event.pubkey,
+      title: event.tags.find(t => t[0] === 'alt')?.[1] || 'Untitled Playlist',
+      description: dTag,
+      kind: event.kind,
+      isLocal: false,
+      created_at: event.created_at,
+      tracks: [] // We don't need tracks for bookmarking
+    } as Playlist;
+
+    try {
+      if (this.playlistService.isPlaylistSaved(playlist)) {
+        await this.playlistService.removePlaylistFromBookmarks(playlist);
+        this.snackBar.open('Playlist removed from saved playlists', 'Close', { duration: 3000 });
+      } else {
+        await this.playlistService.savePlaylistToBookmarks(playlist);
+        this.snackBar.open('Playlist saved to bookmarks', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      console.error('Failed to toggle playlist bookmark:', error);
+      this.snackBar.open('Failed to update saved playlists', 'Close', { duration: 3000 });
+    }
+  }
+
+  getBookmarkIcon(event: Event): string {
+    if (event.kind === 32100) {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+      if (dTag) {
+        const playlist = { id: dTag, pubkey: event.pubkey } as Pick<Playlist, 'id' | 'pubkey'>;
+        return this.playlistService.isPlaylistSaved(playlist as Playlist) ? 'bookmark' : 'bookmark_border';
+      }
+    }
+    return this.bookmark.getBookmarkIcon(event.id);
+  }
+
+  getBookmarkTooltip(event: Event): string {
+    if (event.kind === 32100) {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+      if (dTag) {
+        const playlist = { id: dTag, pubkey: event.pubkey } as Pick<Playlist, 'id' | 'pubkey'>;
+        return this.playlistService.isPlaylistSaved(playlist as Playlist) ? 'Remove from saved playlists' : 'Save playlist to bookmarks';
+      }
+    }
+    return this.bookmark.getBookmarkTooltip(event.id);
   }
 
   /**

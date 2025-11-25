@@ -35,6 +35,11 @@
       <mat-icon>playlist_add</mat-icon>
       Add to Queue
     </button>
+    <button mat-button (click)="toggleSavePlaylist()"
+      [matTooltip]="isSaved() ? 'Remove from saved playlists' : 'Save playlist to bookmarks'">
+      <mat-icon>{{ isSaved() ? 'bookmark' : 'bookmark_border' }}</mat-icon>
+      {{ isSaved() ? 'Saved' : 'Save' }}
+    </button>
     <button mat-button (click)="downloadM3U()" title="Download M3U file">
       <mat-icon>download</mat-icon>
       Download .m3u
