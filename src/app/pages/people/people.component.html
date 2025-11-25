@@ -168,23 +168,20 @@
       }
     </div>
     } @else {
-    <cdk-virtual-scroll-viewport class="virtual-scroll-viewport" [itemSize]="itemSize()" [minBufferPx]="minBufferPx"
-      [maxBufferPx]="maxBufferPx">
-      <!-- Apply different container classes based on viewMode() -->
-      <div class="people-container" [ngClass]="{
+    <!-- Apply different container classes based on viewMode() -->
+    <div class="people-container" [ngClass]="{
             'large-grid': viewMode() === 'large' || viewMode() === 'grid',
             'medium-grid': viewMode() === 'medium',
             'small-grid': viewMode() === 'small',
             'details-list': viewMode() === 'details' || viewMode() === 'list',
           }">
-        @for (pubkey of sortedPeople(); track pubkey) {
-        <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
-          [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey" [view]="$any(viewMode())"
-          [hostWidthAuto]="viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
-          [showRank]="filters().showRank"></app-user-profile>
-        }
-      </div>
-    </cdk-virtual-scroll-viewport>
+      @for (pubkey of sortedPeople(); track pubkey) {
+      <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
+        [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey" [view]="$any(viewMode())"
+        [hostWidthAuto]="viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
+        [showRank]="filters().showRank"></app-user-profile>
+      }
+    </div>
     }
   </div>
 </div>
