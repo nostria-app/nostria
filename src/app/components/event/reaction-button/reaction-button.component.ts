@@ -167,7 +167,7 @@ export class ReactionButtonComponent {
     if (isAdding) {
       // Create a temporary reaction event for optimistic UI
       const tempReactionEvent = {
-        id: `temp-${userPubkey}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `temp-${userPubkey}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         pubkey: userPubkey,
         created_at: Math.floor(Date.now() / 1000),
         kind: kinds.Reaction,
