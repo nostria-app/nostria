@@ -77,7 +77,11 @@ export class SharedRelayService {
         maxWait: timeout,
       })) as unknown as T;
 
-      this.logger.debug(`Received event from query`, event);
+      if (event) {
+        this.logger.debug(`Received event from query`, event);
+      } else {
+        this.logger.debug(`No event received from query`);
+      }
 
       // If we received an event, increment the count for all relays that could have provided it
       if (event) {

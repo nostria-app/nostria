@@ -86,7 +86,7 @@ export class FollowingService {
       const newMap = new Map<string, FollowingProfile>();
 
       // Load all profiles in parallel batches
-      const batchSize = 20;
+      const batchSize = 50;
       for (let i = 0; i < pubkeys.length; i += batchSize) {
         const batch = pubkeys.slice(i, i + batchSize);
         await Promise.all(
@@ -103,8 +103,10 @@ export class FollowingService {
           })
         );
 
-        // Update progress
-        this.logger.debug(`[FollowingService] Loaded ${Math.min(i + batchSize, pubkeys.length)}/${pubkeys.length} profiles`);
+        // Update progress periodically (every 100 profiles)
+        if ((i + batchSize) % 100 === 0 || i + batchSize >= pubkeys.length) {
+          this.logger.debug(`[FollowingService] Loaded ${Math.min(i + batchSize, pubkeys.length)}/${pubkeys.length} profiles`);
+        }
       }
 
       // Update the signal with the new map
