@@ -76,17 +76,42 @@ export class DataService {
       event = await this.storage.getEventById(id);
     }
 
-    // If the caller explicitly supplies user relay, don't attempt to user account relay.
-    if (!event) {
-      if (userRelays) {
-        // If userRelays is true, we will try to get the event from user relays.
-        event = await this.userRelayEx.getEventByIdGlobal(id);
-      } else {
-        // Try to get the event from the account relay.
-        event = await this.accountRelayEx.getEventById(id);
+    // For non-replaceable events found in storage, return them directly without fetching from relays
+    // For replaceable events (kind 0, 3, 10000-19999) and parameterized replaceable events (kind 30000-39999),
+    // always fetch from relays to ensure we have the latest version
+    if (event && !this.utilities.shouldAlwaysFetchFromRelay(event.kind)) {
+      this.logger.debug(`Using cached event from storage for non-replaceable event: ${id} (kind: ${event.kind})`);
+      record = this.toRecord(event);
+
+      if (options?.cache) {
+        this.cache.set(`${id}`, record, options);
       }
 
-      eventFromRelays = true;
+      return record;
+    }
+
+    // Fetch from relays if:
+    // 1. Event not found in storage, OR
+    // 2. Event is replaceable/parameterized replaceable (need latest version)
+    if (!event || this.utilities.shouldAlwaysFetchFromRelay(event.kind)) {
+      let relayEvent: Event | null = null;
+      
+      // If the caller explicitly supplies user relay, don't attempt to use account relay.
+      if (userRelays) {
+        // If userRelays is true, we will try to get the event from user relays.
+        relayEvent = await this.userRelayEx.getEventByIdGlobal(id);
+      } else {
+        // Try to get the event from the account relay.
+        relayEvent = await this.accountRelayEx.getEventById(id);
+      }
+
+      if (relayEvent) {
+        event = relayEvent;
+        eventFromRelays = true;
+      } else if (event) {
+        // If relay fetch failed but we have a cached replaceable event, use it
+        this.logger.debug(`Relay fetch failed for replaceable event ${id}, using cached version`);
+      }
     }
 
     if (!event) {
@@ -100,7 +125,6 @@ export class DataService {
     }
 
     if (options?.save && eventFromRelays) {
-      // queueMicrotask(() => this.storage.saveEvent(event!));
       await this.storage.saveEvent(event);
       // Process relay hints when saving events from relays
       await this.processEventForRelayHints(event);

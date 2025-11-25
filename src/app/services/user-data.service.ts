@@ -45,6 +45,7 @@ export class UserDataService {
   ): Promise<NostrRecord | null> {
     let event: Event | null = null;
     let record: NostrRecord | undefined = undefined;
+    let eventFromRelays = false;
 
     if (options?.cache && !options?.invalidateCache) {
       record = this.cache.get<NostrRecord>(`${id}`);
@@ -60,9 +61,34 @@ export class UserDataService {
       event = await this.storage.getEventById(id);
     }
 
-    // Fetch from relays if we don't have event yet (or invalidateCache forced relay fetch)
-    if (!event) {
-      event = await this.userRelayEx.getEventById(pubkey, id);
+    // For non-replaceable events found in storage, return them directly without fetching from relays
+    // For replaceable events (kind 0, 3, 10000-19999) and parameterized replaceable events (kind 30000-39999),
+    // always fetch from relays to ensure we have the latest version
+    if (event && !this.utilities.shouldAlwaysFetchFromRelay(event.kind)) {
+      this.logger.debug(`Using cached event from storage for non-replaceable event: ${id} (kind: ${event.kind})`);
+      record = this.toRecord(event);
+
+      if (options?.cache) {
+        this.cache.set(`${id}`, record, options);
+      }
+
+      return record;
+    }
+
+    // Fetch from relays if:
+    // 1. Event not found in storage, OR
+    // 2. Event is replaceable/parameterized replaceable (need latest version), OR
+    // 3. invalidateCache is true
+    if (!event || this.utilities.shouldAlwaysFetchFromRelay(event.kind) || options?.invalidateCache) {
+      const relayEvent = await this.userRelayEx.getEventById(pubkey, id);
+      
+      if (relayEvent) {
+        event = relayEvent;
+        eventFromRelays = true;
+      } else if (event) {
+        // If relay fetch failed but we have a cached replaceable event, use it
+        this.logger.debug(`Relay fetch failed for replaceable event ${id}, using cached version`);
+      }
     }
 
     if (!event) {
@@ -75,8 +101,7 @@ export class UserDataService {
       this.cache.set(`${id}`, record, options);
     }
 
-    if (options?.save) {
-      // queueMicrotask(() => this.storage.saveEvent(event!));
+    if (options?.save && eventFromRelays) {
       await this.storage.saveEvent(event);
     }
 
@@ -486,15 +511,25 @@ export class UserDataService {
       }
     }
 
+    // Check if this kind is replaceable - if not, we can use cached events
+    const isReplaceable = this.utilities.shouldAlwaysFetchFromRelay(kind);
+
     // If invalidateCache is true, skip storage and fetch directly from relays
-    // Otherwise, check storage first if save option is enabled
-    if (events.length === 0 && options?.save && !options?.invalidateCache) {
+    // Otherwise, check storage first if save option is enabled and event is not replaceable
+    if (events.length === 0 && options?.save && !options?.invalidateCache && !isReplaceable) {
       const allEvents = await this.storage.getEventsByKind(kind);
       events = allEvents.filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
+      
+      if (events.length > 0) {
+        this.logger.debug(`Using ${events.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
+      }
     }
 
-    // Fetch from relays if we don't have events yet (or invalidateCache forced relay fetch)
-    if (events.length === 0) {
+    // Fetch from relays if:
+    // 1. No events found in storage, OR
+    // 2. Kind is replaceable (need latest version), OR
+    // 3. invalidateCache is true
+    if (events.length === 0 || isReplaceable || options?.invalidateCache) {
       const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(pubkey, kind, eventTag);
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
@@ -541,16 +576,26 @@ export class UserDataService {
       }
     }
 
+    // Check if any of these kinds are replaceable
+    const hasReplaceableKind = kinds.some(kind => this.utilities.shouldAlwaysFetchFromRelay(kind));
+
     // If invalidateCache is true, skip storage and fetch directly from relays
-    // Otherwise, check storage first if save option is enabled
-    if (events.length === 0 && options?.save && !options?.invalidateCache) {
+    // Otherwise, check storage first if save option is enabled and no kinds are replaceable
+    if (events.length === 0 && options?.save && !options?.invalidateCache && !hasReplaceableKind) {
       // Fetch from storage for all requested kinds
       const kindEvents = await Promise.all(kinds.map(kind => this.storage.getEventsByKind(kind)));
       events = kindEvents.flat().filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
+      
+      if (events.length > 0) {
+        this.logger.debug(`Using ${events.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
+      }
     }
 
-    // Fetch from relays if we don't have events yet (or invalidateCache forced relay fetch)
-    if (events.length === 0) {
+    // Fetch from relays if:
+    // 1. No events found in storage, OR
+    // 2. Any kind is replaceable (need latest version), OR
+    // 3. invalidateCache is true
+    if (events.length === 0 || hasReplaceableKind || options?.invalidateCache) {
       const relayEvents = await this.userRelayEx.getEventsByKindsAndEventTag(pubkey, kinds, eventTag);
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
