@@ -7,6 +7,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { type Event, nip19, kinds } from 'nostr-tools';
+import { MediaPlayerService } from '../../../services/media-player.service';
 import { firstValueFrom } from 'rxjs';
 import type { NostrRecord } from '../../../interfaces';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -58,6 +59,7 @@ export class EventMenuComponent {
   pinned = inject(PinnedService);
   ai = inject(AiService);
   settings = inject(SettingsService);
+  mediaPlayer = inject(MediaPlayerService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -94,6 +96,39 @@ export class EventMenuComponent {
   showAiOptions = computed<boolean>(() => {
     return !!this.settings.settings().aiEnabled && this.isTextNote();
   });
+
+  // Regex patterns for detecting media URLs
+  private audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg|m4a)(\?[^\s##]*)?)/gi;
+  private videoRegex = /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?)/gi;
+
+  // Extract media URLs from event content
+  mediaUrls = computed<{ url: string; type: 'audio' | 'video' }[]>(() => {
+    const event = this.event();
+    if (!event || !event.content) {
+      return [];
+    }
+
+    const urls: { url: string; type: 'audio' | 'video' }[] = [];
+    const content = event.content;
+
+    // Find audio URLs
+    this.audioRegex.lastIndex = 0;
+    let match;
+    while ((match = this.audioRegex.exec(content)) !== null) {
+      urls.push({ url: match[0], type: 'audio' });
+    }
+
+    // Find video URLs
+    this.videoRegex.lastIndex = 0;
+    while ((match = this.videoRegex.exec(content)) !== null) {
+      urls.push({ url: match[0], type: 'video' });
+    }
+
+    return urls;
+  });
+
+  // Check if event has media
+  hasMedia = computed<boolean>(() => this.mediaUrls().length > 0);
 
   async ensureModelLoaded(task: string, model: string): Promise<boolean> {
     // 1. Check if model is already loaded
@@ -280,5 +315,72 @@ export class EventMenuComponent {
       maxWidth: '800px',
       maxHeight: '90vh',
     });
+  }
+
+  /**
+   * Add media files from the event to the media queue
+   */
+  addMediaToQueue() {
+    const urls = this.mediaUrls();
+    if (urls.length === 0) {
+      return;
+    }
+
+    for (const media of urls) {
+      this.mediaPlayer.enque({
+        source: media.url,
+        title: this.extractFilename(media.url),
+        artist: '',
+        artwork: '',
+        type: media.type === 'video' ? 'Video' : 'Music',
+      });
+    }
+
+    this.snackBar.open(
+      urls.length === 1 ? 'Added to queue' : `Added ${urls.length} items to queue`,
+      'Dismiss',
+      { duration: 3000 }
+    );
+  }
+
+  /**
+   * Add media files to queue and start playing
+   */
+  playMediaInPlayer() {
+    const urls = this.mediaUrls();
+    if (urls.length === 0) {
+      return;
+    }
+
+    const startIndex = this.mediaPlayer.media().length;
+
+    for (const media of urls) {
+      this.mediaPlayer.enque({
+        source: media.url,
+        title: this.extractFilename(media.url),
+        artist: '',
+        artwork: '',
+        type: media.type === 'video' ? 'Video' : 'Music',
+      });
+    }
+
+    // Start playing from the first added item
+    this.mediaPlayer.index = startIndex;
+    this.mediaPlayer.start();
+  }
+
+  /**
+   * Extract filename from URL for display
+   */
+  private extractFilename(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname;
+      const filename = pathname.split('/').pop() || url;
+      // Decode URI and remove extension for cleaner display
+      return decodeURIComponent(filename);
+    } catch {
+      return url;
+    }
   }
 }

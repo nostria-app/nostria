@@ -59,6 +59,17 @@
     <mat-icon>publish</mat-icon>
     Publish Event
   </button>
+  @if (hasMedia()) {
+  <mat-divider></mat-divider>
+  <button mat-menu-item (click)="addMediaToQueue()">
+    <mat-icon>playlist_add</mat-icon>
+    Add to Queue
+  </button>
+  <button mat-menu-item (click)="playMediaInPlayer()">
+    <mat-icon>play_circle</mat-icon>
+    Play in Media Player
+  </button>
+  }
   <mat-divider></mat-divider>
   @if (isOurEvent()) {
   <button mat-menu-item (click)="deleteEvent()">
