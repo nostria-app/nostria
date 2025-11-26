@@ -694,17 +694,18 @@ export class FeedsComponent implements OnDestroy {
 
     const scrollListener = () => {
       const scrollTop = container.scrollTop;
+      const scrollDelta = scrollTop - this.lastScrollTop;
 
-      // Only hide/show after passing threshold
-      if (Math.abs(scrollTop - this.lastScrollTop) < this.scrollThreshold) {
-        return;
-      }
-
-      if (scrollTop > this.lastScrollTop && scrollTop > 100) {
-        // Scrolling down - hide header
+      // Scrolling down - hide header after scrolling down 50px past the top
+      if (scrollDelta > 10 && scrollTop > 100) {
         this.headerHidden.set(true);
-      } else {
-        // Scrolling up - show header
+      }
+      // Scrolling up - show header immediately (with small threshold to avoid jitter)
+      else if (scrollDelta < -10) {
+        this.headerHidden.set(false);
+      }
+      // At the very top - always show header
+      else if (scrollTop <= 50) {
         this.headerHidden.set(false);
       }
 

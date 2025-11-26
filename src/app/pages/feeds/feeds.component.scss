@@ -95,11 +95,19 @@ app-user-profile {
     // Transparent background - glass containers handle the styling
     background: transparent;
     position: sticky;
+    // Stick just below the toolbar (accounting for container's padding-top)
     top: 0;
 
-    // On mobile, hide on scroll
+    // On mobile, the header should hide/show based on scroll direction
     @media (max-width: 1023px) {
+      // Use fixed positioning on mobile for proper hide/show behavior
+      position: fixed;
+      top: var(--toolbar-height, 64px);
+      left: 0;
+      right: 0;
       transition: transform 0.3s ease;
+      // Ensure it's above other content
+      z-index: 100;
 
       // Hidden state class (applied via JS)
       &.header-hidden {
@@ -292,6 +300,8 @@ app-user-profile {
     @media (max-width: 1023px) {
       flex: none;
       overflow: visible;
+      // Add top padding to account for fixed header (approx header height)
+      padding-top: 64px;
     }
 
     .columns-wrapper {
