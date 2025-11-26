@@ -254,8 +254,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   }
 
   exitStream(): void {
+    // The media.exit() method now handles navigation based on fullscreen state
     this.media.exit();
-    // Navigate to streams page
-    this.router.navigate(['/streams'], { replaceUrl: true });
   }
 }
