@@ -31,10 +31,9 @@ app-user-profile {
 .home-container {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  height: 100%;
   overflow: hidden;
-  // Render behind transparent toolbar and mobile menu
-  padding-top: var(--toolbar-height, 64px);
+  // Note: padding-top is handled by .content-wrapper in app.scss
 
   // On mobile, allow full page scrolling instead of per-column scrolling
   @media (max-width: 1023px) {
