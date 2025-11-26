@@ -28,11 +28,28 @@ app-user-profile {
   }
 }
 
+// Make feeds component render edge-to-edge behind transparent toolbar and mobile menu
+:host {
+  display: block;
+  // Pull up into toolbar area
+  margin-top: calc(-1 * var(--toolbar-height, 64px));
+  // Compensate for the negative margin in height calculation
+  min-height: calc(100% + var(--toolbar-height, 64px));
+
+  @media (max-width: 599px) {
+    // Also pull down into mobile menu area
+    margin-bottom: calc(-100px - env(safe-area-inset-bottom, 0px));
+    min-height: calc(100% + var(--toolbar-height, 64px) + 100px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .home-container {
   display: flex;
   flex-direction: column;
   height: 100%;
   overflow: hidden;
+  // Add padding at top so content starts below toolbar
+  padding-top: var(--toolbar-height, 64px);
 
   // On mobile, allow full page scrolling instead of per-column scrolling
   @media (max-width: 1023px) {
@@ -1887,15 +1904,18 @@ h1 {
           background: transparent;
           border-bottom: none;
           box-shadow: none;
+          display: flex;
+          justify-content: flex-end; // Align to the right
 
           .column-header-content {
-            // Glass container for column actions on mobile
-            display: flex;
+            // Glass container for column actions on mobile - only wrap the buttons
+            display: inline-flex;
             align-items: center;
+            width: fit-content; // Don't stretch full width
             height: 40px;
-            padding: 0 8px;
+            padding: 0 4px;
             border-radius: 20px;
-            gap: 4px;
+            gap: 0;
 
             // Glass effect - light mode
             background-color: rgba(255, 255, 255, 0.7);
