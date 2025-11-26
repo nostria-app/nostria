@@ -679,17 +679,6 @@ export class FeedsComponent implements OnDestroy {
     // Scrolling happens on content-wrapper, not home-container
     const container = document.querySelector('.content-wrapper') as HTMLElement;
 
-    console.log('[HeaderScroll] Setting up listener, container found:', !!container);
-    if (container) {
-      console.log('[HeaderScroll] Container scroll info:', {
-        scrollHeight: container.scrollHeight,
-        clientHeight: container.clientHeight,
-        scrollTop: container.scrollTop,
-        overflow: getComputedStyle(container).overflow,
-        overflowY: getComputedStyle(container).overflowY
-      });
-    }
-
     if (!container) {
       return;
     }
@@ -704,21 +693,16 @@ export class FeedsComponent implements OnDestroy {
       const scrollTop = container.scrollTop;
       const scrollDelta = scrollTop - this.lastScrollTop;
 
-      console.log('[HeaderScroll] Scroll event:', { scrollTop, scrollDelta, lastScrollTop: this.lastScrollTop });
-
       // Scrolling down - hide header after scrolling down past threshold
       if (scrollDelta > 10 && scrollTop > 100) {
-        console.log('[HeaderScroll] Hiding header');
         this.headerHidden.set(true);
       }
       // Scrolling up - show header immediately
       else if (scrollDelta < -10) {
-        console.log('[HeaderScroll] Showing header (scroll up)');
         this.headerHidden.set(false);
       }
       // At the very top - always show header
       else if (scrollTop <= 50) {
-        console.log('[HeaderScroll] Showing header (at top)');
         this.headerHidden.set(false);
       }
 
@@ -728,7 +712,6 @@ export class FeedsComponent implements OnDestroy {
     // Store listener reference for cleanup
     (container as HTMLElement & { __headerScrollListener?: () => void }).__headerScrollListener = scrollListener;
     container.addEventListener('scroll', scrollListener, { passive: true });
-    console.log('[HeaderScroll] Listener attached');
   }
 
   /**
