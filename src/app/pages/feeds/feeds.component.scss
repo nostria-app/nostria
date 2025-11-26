@@ -84,7 +84,7 @@ app-user-profile {
 
   // Header styles
   .header-section {
-    padding: 0.75rem 1rem;
+    padding: 0.25rem 1rem;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
@@ -98,8 +98,14 @@ app-user-profile {
     top: var(--toolbar-height, 64px);
     left: 0;
     right: 0;
+    transition: transform 0.3s ease;
     // Ensure it's above other content
     z-index: 100;
+
+    // Hidden state class (applied via JS when scrolling down)
+    &.header-hidden {
+      transform: translateY(-100%);
+    }
 
     .title-section {
       display: flex;
@@ -282,7 +288,7 @@ app-user-profile {
     overflow: hidden;
     position: relative;
     // Add top padding to account for fixed header on all screen sizes
-    padding-top: 64px;
+    padding-top: 48px;
 
     // On mobile, don't restrict height - let it flow naturally for page scrolling
     @media (max-width: 1023px) {
@@ -301,7 +307,7 @@ app-user-profile {
         overflow: visible;
       }
 
-      overflow-x: auto;
+      overflow-x: scroll;
       overflow-y: hidden;
       padding: 12px;
       gap: 12px;
@@ -311,6 +317,11 @@ app-user-profile {
       scrollbar-width: thin;
       scroll-behavior: smooth;
       justify-content: flex-start; // Align columns to the left to prevent clipping
+
+      // Always show horizontal scrollbar on desktop when there are many columns
+      &::-webkit-scrollbar {
+        display: block;
+      }
 
       // Center when there's only one column
       &:has(.column-unit:only-child) {
