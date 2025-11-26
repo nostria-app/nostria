@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, effect, OnInit } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
@@ -21,6 +21,7 @@ import { CryptoEncryptionService, EncryptedData } from '../../services/crypto-en
 import { PinPromptService } from '../../services/pin-prompt.service';
 import { nip19 } from 'nostr-tools';
 import { QRCodeDialogComponent } from '../../components/qrcode-dialog/qrcode-dialog.component';
+import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 
 @Component({
   selector: 'app-credentials',
@@ -36,9 +37,11 @@ import { QRCodeDialogComponent } from '../../components/qrcode-dialog/qrcode-dia
     MatTabsModule,
     ReactiveFormsModule,
     RouterModule,
+    UserProfileComponent,
   ],
   templateUrl: './credentials.component.html',
   styleUrl: './credentials.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class CredentialsComponent implements OnInit {
   nostrService = inject(NostrService);
@@ -68,6 +71,14 @@ export class CredentialsComponent implements OnInit {
 
   // Cached nsec value (decrypted on demand)
   private cachedNsec = signal<string>('');
+
+  // Donation-related properties
+  developerPubkeys = ['17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', 'cbec30a9038fe934b55272b046df47eb4d20ef006de0acbe46b0c0dae06e5d5b', '5f432a9f39b58ff132fc0a4c8af10d42efd917d8076f68bb7f2f91ed7d4f6a41', '7e2b09f951ed9be483284e7469ac20ac427d3264633d250c9d01e4265c99ed42'];
+  selectedDonationAmount = signal<number | null>(null);
+  customDonationAmount = new FormControl<number | null>(null, [Validators.min(0.01)]);
+  isDonating = signal(false);
+  donationSuccess = signal(false);
+  donationError = signal<string | null>(null);
 
   constructor() {
     // Watch for account changes and reload nsec when account changes
@@ -350,18 +361,64 @@ export class CredentialsComponent implements OnInit {
     });
   }
 
-  async donate(wallet: Wallet) {
-    // 15 minutes.
-    // request.onTimeout(900, () => {
-    //   console.error('Payment request timed out');
-    // });
+  selectDonationAmount(amount: number): void {
+    this.selectedDonationAmount.set(amount);
+    this.customDonationAmount.reset();
+    this.donationError.set(null);
+  }
 
-    // request.onPaid(() => {
-    //   console.log('Donation successful');
-    // });
+  selectCustomAmount(): void {
+    this.selectedDonationAmount.set(null);
+    this.donationError.set(null);
+  }
 
-    const request = await new LN(wallet.connections[0]).pay('sondreb@npub.cash', USD(0.1));
-    console.log('Payment request created:', request);
+  getDonationAmount(): number | null {
+    if (this.selectedDonationAmount() !== null) {
+      return this.selectedDonationAmount();
+    }
+    return this.customDonationAmount.value;
+  }
+
+  async donate(wallet: Wallet): Promise<void> {
+    const amount = this.getDonationAmount();
+    if (!amount || amount <= 0) {
+      this.snackBar.open('Please select or enter a donation amount', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
+    this.isDonating.set(true);
+    this.donationSuccess.set(false);
+    this.donationError.set(null);
+
+    try {
+      const request = await new LN(wallet.connections[0]).pay('nostria@coinos.io', USD(amount));
+      console.log('Payment request created:', request);
+
+      this.donationSuccess.set(true);
+      this.snackBar.open(`Thank you for your $${amount.toFixed(2)} donation!`, 'Dismiss', {
+        duration: 5000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+
+      // Reset donation state after success
+      this.selectedDonationAmount.set(null);
+      this.customDonationAmount.reset();
+    } catch (error) {
+      console.error('Donation failed:', error);
+      this.donationError.set('Donation failed. Please try again.');
+      this.snackBar.open('Donation failed. Please try again.', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } finally {
+      this.isDonating.set(false);
+    }
   }
 
   getWalletEntries() {
