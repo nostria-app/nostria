@@ -98,14 +98,8 @@ app-user-profile {
     top: var(--toolbar-height, 64px);
     left: 0;
     right: 0;
-    transition: transform 0.3s ease;
     // Ensure it's above other content
     z-index: 100;
-
-    // Hidden state class (applied via JS)
-    &.header-hidden {
-      transform: translateY(-100%);
-    }
 
     .title-section {
       display: flex;
