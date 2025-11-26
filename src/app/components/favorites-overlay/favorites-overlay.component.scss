@@ -38,9 +38,9 @@
     }
   }
 
-  // At tablet width (720px), show only 3 favorites + more button
+  // At tablet width (720px), show only 2 favorites + more button
   @media (max-width: 720px) {
-    .favorite-avatar:nth-child(n+4):not(.more-button) {
+    .favorite-avatar:nth-child(n+3):not(.more-button) {
       display: none;
     }
   }
