@@ -105,6 +105,9 @@ export class FeedsComponent implements OnDestroy {
   showAdvancedFilters = signal(false);
   selectedTags = signal<string[]>([]);
   screenWidth = signal(window.innerWidth);
+  // Header visibility - hide when scrolling down, show when scrolling up
+  headerHidden = signal(false);
+  private lastScrollTop = 0;
 
   columnLayout = computed(() => {
     const width = this.screenWidth();
@@ -571,6 +574,15 @@ export class FeedsComponent implements OnDestroy {
       };
     });
 
+    // Set up scroll listener for header auto-hide
+    effect(() => {
+      if (this.layoutService.isBrowser()) {
+        setTimeout(() => {
+          this.setupHeaderScrollListener();
+        }, 500);
+      }
+    });
+
     // Set up scroll listeners for columns after they're rendered
     effect(() => {
       const columns = this.columns();
@@ -658,6 +670,65 @@ export class FeedsComponent implements OnDestroy {
         columnElement.addEventListener('scroll', scrollListener, { passive: true });
       }
     });
+  }
+
+  /**
+   * Set up scroll listener on main container to auto-hide/show header
+   */
+  private setupHeaderScrollListener(): void {
+    // Scrolling happens on content-wrapper, not home-container
+    const container = document.querySelector('.content-wrapper') as HTMLElement;
+
+    console.log('[HeaderScroll] Setting up listener, container found:', !!container);
+    if (container) {
+      console.log('[HeaderScroll] Container scroll info:', {
+        scrollHeight: container.scrollHeight,
+        clientHeight: container.clientHeight,
+        scrollTop: container.scrollTop,
+        overflow: getComputedStyle(container).overflow,
+        overflowY: getComputedStyle(container).overflowY
+      });
+    }
+
+    if (!container) {
+      return;
+    }
+
+    // Remove existing listener if any
+    const existingListener = (container as HTMLElement & { __headerScrollListener?: () => void }).__headerScrollListener;
+    if (existingListener) {
+      container.removeEventListener('scroll', existingListener);
+    }
+
+    const scrollListener = () => {
+      const scrollTop = container.scrollTop;
+      const scrollDelta = scrollTop - this.lastScrollTop;
+
+      console.log('[HeaderScroll] Scroll event:', { scrollTop, scrollDelta, lastScrollTop: this.lastScrollTop });
+
+      // Scrolling down - hide header after scrolling down past threshold
+      if (scrollDelta > 10 && scrollTop > 100) {
+        console.log('[HeaderScroll] Hiding header');
+        this.headerHidden.set(true);
+      }
+      // Scrolling up - show header immediately
+      else if (scrollDelta < -10) {
+        console.log('[HeaderScroll] Showing header (scroll up)');
+        this.headerHidden.set(false);
+      }
+      // At the very top - always show header
+      else if (scrollTop <= 50) {
+        console.log('[HeaderScroll] Showing header (at top)');
+        this.headerHidden.set(false);
+      }
+
+      this.lastScrollTop = scrollTop;
+    };
+
+    // Store listener reference for cleanup
+    (container as HTMLElement & { __headerScrollListener?: () => void }).__headerScrollListener = scrollListener;
+    container.addEventListener('scroll', scrollListener, { passive: true });
+    console.log('[HeaderScroll] Listener attached');
   }
 
   /**
