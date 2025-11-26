@@ -4,26 +4,27 @@
   margin-top: calc(var(--toolbar-height) * -1);
   padding-top: var(--toolbar-height);
   min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 
   ::ng-deep .mat-mdc-tab-group {
-    display: flex;
-    flex-direction: column;
-
-    .mat-mdc-tab-header {
-      flex-shrink: 0;
-    }
+    width: 100%;
+    max-width: 100%;
 
     .mat-mdc-tab-body-wrapper {
-      flex: 1;
+      // Allow content to flow naturally without internal scrolling
     }
 
     .mat-mdc-tab-body {
-      overflow: visible;
+      overflow: visible !important;
     }
 
     .mat-mdc-tab-body-content {
-      height: auto;
-      overflow: visible;
+      height: auto !important;
+      overflow: visible !important;
+      overflow-x: hidden !important;
     }
   }
 
@@ -50,9 +51,11 @@
 }
 
 .tab-content {
-  height: auto;
-  overflow: visible;
   padding-bottom: 100px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 .queue-artwork {
@@ -238,10 +241,19 @@
   display: flex;
   gap: 4px;
   align-items: center;
+  flex-shrink: 0;
 }
 
 .media-list {
   padding: 0 8px;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+
+  mat-list {
+    width: 100%;
+  }
 }
 
 @media screen and (max-width: 600px) {
