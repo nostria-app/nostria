@@ -264,6 +264,9 @@ export class FeedService {
   private readonly _activeFeedId = signal<string | null>(null);
   private activeFeedSubscriptions = new Set<string>(); // Track column IDs with active subscriptions
 
+  // Track whether the Feeds page is currently active/mounted
+  private readonly _feedsPageActive = signal<boolean>(false);
+
   // New event checking
   private newEventCheckInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -273,6 +276,7 @@ export class FeedService {
   readonly discoveryRelays = computed(() => this._discoveryRelays());
   readonly activeFeedId = computed(() => this._activeFeedId());
   readonly feedsLoaded = computed(() => this._feedsLoaded());
+  readonly feedsPageActive = computed(() => this._feedsPageActive());
 
   // Feed type definitions
   readonly feedTypes = COLUMN_TYPES;
@@ -393,6 +397,12 @@ export class FeedService {
       return;
     }
 
+    // Don't subscribe if the Feeds page is not active
+    if (!this._feedsPageActive()) {
+      this.logger.debug('Feeds page not active - skipping feed subscription');
+      return;
+    }
+
     this.data.clear();
     this._feedData.set(new Map());
 
@@ -437,12 +447,34 @@ export class FeedService {
   }
 
   /**
+   * Set whether the Feeds page is currently active/mounted.
+   * This controls whether subscriptions should be created or maintained.
+   */
+  setFeedsPageActive(active: boolean): void {
+    this._feedsPageActive.set(active);
+    this.logger.debug(`Feeds page active state set to: ${active}`);
+
+    if (!active) {
+      // When page becomes inactive, unsubscribe from all feeds
+      this.unsubscribe();
+    }
+  }
+
+  /**
    * Set the active feed and manage subscriptions
    */
   async setActiveFeed(feedId: string | null): Promise<void> {
     // Don't set active feed if there's no active account
     if (!this.accountState.account()) {
       this.logger.debug('No active account - skipping setActiveFeed');
+      return;
+    }
+
+    // Don't create subscriptions if the Feeds page is not active
+    if (!this._feedsPageActive()) {
+      this.logger.debug('Feeds page not active - skipping setActiveFeed subscription');
+      // Still update the active feed ID for when the page becomes active
+      this._activeFeedId.set(feedId);
       return;
     }
 
@@ -1739,6 +1771,11 @@ export class FeedService {
    * Check for new events across all active columns
    */
   private async checkForNewEvents(): Promise<void> {
+    // Skip if feeds page is not active
+    if (!this._feedsPageActive()) {
+      return;
+    }
+
     const activeFeedId = this._activeFeedId();
     if (!activeFeedId) return;
 
