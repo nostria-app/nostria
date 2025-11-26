@@ -4,7 +4,7 @@
   align-items: center;
   margin-right: 0.5rem;
 
-    // Re-enable pointer events on glass sections
+  // Re-enable pointer events on glass sections
   pointer-events: auto;
   // Always show at least the "..." button on mobile
 }
@@ -31,9 +31,9 @@
     0px 2px 8px rgba(17, 17, 26, 0.08),
     0px 4px 16px rgba(17, 17, 26, 0.06);
 
-  // On mobile, hide individual avatars but keep the more button
+  // On smallest screens, show only 1 favorite + more button
   @media (max-width: 599px) {
-    .favorite-avatar:not(.more-button) {
+    .favorite-avatar:nth-child(n+2):not(.more-button) {
       display: none;
     }
   }
