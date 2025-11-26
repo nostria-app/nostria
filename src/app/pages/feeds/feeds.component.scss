@@ -104,7 +104,8 @@ app-user-profile {
       padding: 0.25rem 8px;
     }
 
-    transition: transform 0.3s ease;
+    transition: transform 0.3s ease,
+    left 0.3s ease;
     // Ensure it's above other content
     z-index: 100;
 
