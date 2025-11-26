@@ -937,22 +937,45 @@ iframe {
   cursor: pointer;
 }
 
-/* Media queue specific styles to prevent double scrollbars */
+/* Media queue - allow full page scrolling behind transparent toolbar */
 app-media-queue {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
+  display: block;
 
-app-media-queue .page {
-  height: 100%;
-  overflow: hidden;
-}
+  // Fix long titles in queue items - force text truncation
+  .queue-item.mat-mdc-list-item {
+    // The list item itself needs to not exceed its container
+    max-width: 100%;
 
-app-media-queue .media-list mat-list {
-  height: 100%;
-  overflow-y: auto;
+    .mdc-list-item__content {
+      overflow: hidden;
+      min-width: 0;
+      width: 0; // Force it to shrink
+      flex: 1 1 0;
+    }
+
+    .mdc-list-item__primary-text,
+    .mat-mdc-list-item-title {
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      display: block !important;
+      max-width: 100% !important;
+    }
+
+    .mdc-list-item__secondary-text,
+    .mat-mdc-list-item-line {
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      display: block !important;
+      max-width: 100% !important;
+    }
+
+    .mdc-list-item__end {
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+  }
 }
 
 .time-label {
