@@ -1088,7 +1088,9 @@ export class App implements OnInit {
   }
 
   openCreateOptions(): void {
-    this.bottomSheet.open(CreateOptionsSheetComponent);
+    this.bottomSheet.open(CreateOptionsSheetComponent, {
+      panelClass: 'glass-bottom-sheet',
+    });
   }
 
   toggleAppsMenu(event: MouseEvent): void {
