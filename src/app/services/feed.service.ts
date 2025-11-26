@@ -158,6 +158,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     id: 'default-feed-following',
     label: 'Following',
     icon: 'diversity_2',
+    path: 'following',
     description: 'Content from people you follow',
     columns: [
       {
@@ -179,6 +180,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     id: 'default-feed-discover',
     label: 'Discover',
     icon: 'rocket_launch',
+    path: 'discover',
     description: 'Curated content to discover Nostr accounts',
     columns: [
       {
@@ -204,6 +206,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     id: 'default-feed-articles',
     label: 'Articles',
     icon: 'newsmode',
+    path: 'articles',
     description: 'Long-form articles from your network',
     columns: [
       {

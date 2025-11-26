@@ -1002,7 +1002,7 @@ export class App implements OnInit {
       }
 
       // Set the active feed and navigate to home
-      await this.feedsCollectionService.setActiveFeed(feedId);
+      this.feedsCollectionService.setActiveFeed(feedId);
       this.router.navigate(['/']);
     } catch (error) {
       this.logger.error('Error navigating to feed:', error);

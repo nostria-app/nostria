@@ -88,6 +88,7 @@ export const routes: Routes = [
     title: 'Home',
   },
   { path: 'share-target', component: ShareTargetComponent },
+  { path: 'f', component: FeedsComponent, title: 'Feeds' },
   { path: 'f/:path', component: FeedsComponent, title: 'Feeds' },
   {
     path: 'e/:id',
