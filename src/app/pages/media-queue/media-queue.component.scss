@@ -3,11 +3,16 @@
   flex-direction: column;
   margin-top: calc(var(--toolbar-height) * -1);
   padding-top: var(--toolbar-height);
-  min-height: 100vh;
+  min-height: calc(100vh - var(--toolbar-height));
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;
+
+  // Account for mobile navigation on small screens
+  @media (max-width: 599px) {
+    min-height: calc(100vh - var(--toolbar-height) - 88px); // 64px nav + 24px bottom offset
+  }
 
   ::ng-deep .mat-mdc-tab-group {
     width: 100%;
@@ -51,7 +56,7 @@
 }
 
 .tab-content {
-  padding-bottom: 100px;
+  // Bottom padding only needed when media player is showing (handled by parent container)
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
