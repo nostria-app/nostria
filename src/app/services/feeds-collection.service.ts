@@ -270,14 +270,18 @@ export class FeedsCollectionService {
   /**
    * Set the active feed
    */
-  async setActiveFeed(feedId: string): Promise<boolean> {
+  setActiveFeed(feedId: string): boolean {
     const feed = this.getFeedById(feedId);
     if (feed) {
+      // Set the active feed ID IMMEDIATELY for instant UI updates
       this._activeFeedId.set(feedId);
       this.saveActiveFeed();
 
-      // Delegate subscription management to FeedService
-      await this.feedService.setActiveFeed(feedId);
+      // Delegate subscription management to FeedService (async in background)
+      // Don't await - let it happen in the background
+      this.feedService.setActiveFeed(feedId).catch(error => {
+        this.logger.error(`Error setting active feed in FeedService: ${error}`);
+      });
 
       this.logger.debug(`Set active feed to ${feedId}`);
       return true;
