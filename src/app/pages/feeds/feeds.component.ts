@@ -23,6 +23,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { NostrService } from '../../services/nostr.service';
 import { NotificationService } from '../../services/notification.service';
 import { LayoutService } from '../../services/layout.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
 import { NewColumnDialogComponent } from './new-column-dialog/new-column-dialog.component';
@@ -84,6 +85,7 @@ export class FeedsComponent implements OnDestroy {
   private nostrService = inject(NostrService);
   private notificationService = inject(NotificationService);
   private layoutService = inject(LayoutService);
+  private localSettings = inject(LocalSettingsService);
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
@@ -131,6 +133,22 @@ export class FeedsComponent implements OnDestroy {
   isMobileView = computed(() => {
     const isMobile = this.screenWidth() < 1024;
     return isMobile;
+  });
+
+  // Calculate sidenav offset for fixed header positioning
+  // On desktop, the sidenav pushes content, but fixed elements need manual offset
+  sidenavOffset = computed(() => {
+    // On mobile/handset, sidenav is in 'over' mode and doesn't need offset
+    if (this.layoutService.isHandset()) {
+      return 0;
+    }
+    // On desktop, check if sidenav is open
+    if (!this.localSettings.menuOpen()) {
+      return 0;
+    }
+    // Sidenav is open - return width based on expanded/collapsed state
+    // 200px when expanded (displayLabels), 56px when collapsed
+    return this.localSettings.menuExpanded() ? 200 : 56;
   });
 
   feedIcon = computed(() => {
