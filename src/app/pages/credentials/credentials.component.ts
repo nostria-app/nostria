@@ -74,7 +74,7 @@ export class CredentialsComponent implements OnInit {
 
   // Donation-related properties
   developerPubkeys = ['17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', 'cbec30a9038fe934b55272b046df47eb4d20ef006de0acbe46b0c0dae06e5d5b', '5f432a9f39b58ff132fc0a4c8af10d42efd917d8076f68bb7f2f91ed7d4f6a41', '7e2b09f951ed9be483284e7469ac20ac427d3264633d250c9d01e4265c99ed42'];
-  selectedDonationAmount = signal<number | null>(null);
+  selectedDonationAmount = signal<number | null>(5);
   customDonationAmount = new FormControl<number | null>(null, [Validators.min(0.01)]);
   isDonating = signal(false);
   donationSuccess = signal(false);
