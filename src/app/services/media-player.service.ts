@@ -41,6 +41,8 @@ export class MediaPlayerService implements OnInitialized {
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current = signal<MediaItem | undefined>(undefined);
+  // Cache podcast positions to avoid excessive localStorage reads
+  private podcastPositions = signal<Record<string, PodcastProgress>>({});
   // make index a signal-backed property so computed signals can react to changes
   private _index = signal<number>(0);
   get index(): number {
@@ -171,6 +173,16 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     this.media.set(JSON.parse(mediaQueue) as MediaItem[]);
+
+    // Load podcast positions cache
+    const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+    if (positionsJson && positionsJson !== 'undefined') {
+      try {
+        this.podcastPositions.set(JSON.parse(positionsJson));
+      } catch {
+        this.podcastPositions.set({});
+      }
+    }
 
     // Load video window state
     const windowState = this.localStorage.getItem(this.WINDOW_STATE_STORAGE_KEY);
@@ -506,8 +518,7 @@ export class MediaPlayerService implements OnInitialized {
     }
 
     try {
-      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
-      const positions: Record<string, PodcastProgress> = positionsJson ? JSON.parse(positionsJson) : {};
+      const positions = { ...this.podcastPositions() };
 
       // Get existing progress or create new
       const existing = positions[url] || { position: 0, lastListenedAt: 0, completed: false };
@@ -520,6 +531,8 @@ export class MediaPlayerService implements OnInitialized {
         completed: existing.completed, // Preserve completed status
       };
 
+      // Update both the signal cache and localStorage
+      this.podcastPositions.set(positions);
       this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
     } catch (error) {
       console.error('Error saving podcast position:', error);
@@ -532,18 +545,8 @@ export class MediaPlayerService implements OnInitialized {
    * @returns The saved position in seconds, or 0 if not found
    */
   restorePodcastPosition(url: string): number {
-    try {
-      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
-      if (!positionsJson) {
-        return 0;
-      }
-      const positions: Record<string, PodcastProgress> = JSON.parse(positionsJson);
-      const progress = positions[url];
-      return progress?.position || 0;
-    } catch (error) {
-      console.error('Error restoring podcast position:', error);
-      return 0;
-    }
+    const progress = this.podcastPositions()[url];
+    return progress?.position || 0;
   }
 
   /**
@@ -552,17 +555,7 @@ export class MediaPlayerService implements OnInitialized {
    * @returns The podcast progress data or null if not found
    */
   getPodcastProgress(url: string): PodcastProgress | null {
-    try {
-      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
-      if (!positionsJson) {
-        return null;
-      }
-      const positions: Record<string, PodcastProgress> = JSON.parse(positionsJson);
-      return positions[url] || null;
-    } catch (error) {
-      console.error('Error getting podcast progress:', error);
-      return null;
-    }
+    return this.podcastPositions()[url] || null;
   }
 
   /**
@@ -572,8 +565,7 @@ export class MediaPlayerService implements OnInitialized {
    */
   setPodcastCompleted(url: string, completed: boolean): void {
     try {
-      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
-      const positions: Record<string, PodcastProgress> = positionsJson ? JSON.parse(positionsJson) : {};
+      const positions = { ...this.podcastPositions() };
 
       // Get existing progress or create new
       const existing = positions[url] || {
@@ -589,6 +581,8 @@ export class MediaPlayerService implements OnInitialized {
         lastListenedAt: this.getCurrentNostrTimestamp(),
       };
 
+      // Update both the signal cache and localStorage
+      this.podcastPositions.set(positions);
       this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
     } catch (error) {
       console.error('Error setting podcast completed status:', error);
@@ -601,12 +595,11 @@ export class MediaPlayerService implements OnInitialized {
    */
   resetPodcastProgress(url: string): void {
     try {
-      const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
-      if (!positionsJson) {
-        return;
-      }
-      const positions: Record<string, PodcastProgress> = JSON.parse(positionsJson);
+      const positions = { ...this.podcastPositions() };
       delete positions[url];
+
+      // Update both the signal cache and localStorage
+      this.podcastPositions.set(positions);
       this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
     } catch (error) {
       console.error('Error resetting podcast progress:', error);
