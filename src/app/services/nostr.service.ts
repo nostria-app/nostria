@@ -530,11 +530,11 @@ export class NostrService implements NostriaService {
         }
 
         case kinds.Contacts: {
-          const followingTags = this.getTags(event, 'p');
-          this.accountState.followingList.set(followingTags);
-          this.logger.info('Updated following list from subscription', {
+          // Use parseFollowingList to only update if the list has actually changed
+          await this.accountState.parseFollowingList(event);
+          this.logger.info('Processed following list from subscription', {
             pubkey,
-            followingCount: followingTags.length,
+            eventTimestamp: event.created_at,
           });
           break;
         }
