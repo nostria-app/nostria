@@ -13,6 +13,7 @@ export interface LocalSettings {
   trustEnabled: boolean;
   trustRelay: string;
   startOnLastRoute: boolean;
+  startFeedsOnLastEvent: boolean;
   removeTrackingParameters: boolean;
 }
 
@@ -26,6 +27,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   trustEnabled: true,
   trustRelay: 'wss://nip85.brainstorm.world',
   startOnLastRoute: true,
+  startFeedsOnLastEvent: true,
   removeTrackingParameters: true,
 };
 
@@ -55,6 +57,7 @@ export class LocalSettingsService {
   readonly trustEnabled = computed(() => this.settings().trustEnabled);
   readonly trustRelay = computed(() => this.settings().trustRelay);
   readonly startOnLastRoute = computed(() => this.settings().startOnLastRoute);
+  readonly startFeedsOnLastEvent = computed(() => this.settings().startFeedsOnLastEvent);
   readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
 
   constructor() {
@@ -83,6 +86,9 @@ export class LocalSettingsService {
           // Explicitly ensure startOnLastRoute defaults to true for existing users
           // who don't have this property yet
           startOnLastRoute: stored.startOnLastRoute !== undefined ? stored.startOnLastRoute : true,
+          // Explicitly ensure startFeedsOnLastEvent defaults to true for existing users
+          // who don't have this property yet
+          startFeedsOnLastEvent: stored.startFeedsOnLastEvent !== undefined ? stored.startFeedsOnLastEvent : true,
         };
 
         this.settings.set(mergedSettings);
@@ -196,6 +202,13 @@ export class LocalSettingsService {
    */
   setStartOnLastRoute(startOnLastRoute: boolean): void {
     this.updateSettings({ startOnLastRoute });
+  }
+
+  /**
+   * Set start feeds on last event preference
+   */
+  setStartFeedsOnLastEvent(startFeedsOnLastEvent: boolean): void {
+    this.updateSettings({ startFeedsOnLastEvent });
   }
 
   /**

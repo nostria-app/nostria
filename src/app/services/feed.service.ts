@@ -28,6 +28,7 @@ import { RelayPoolService } from './relays/relay-pool';
 import { Followset } from './followset';
 import { RegionService } from './region.service';
 import { EncryptionService } from './encryption.service';
+import { LocalSettingsService } from './local-settings.service';
 
 export interface FeedItem {
   column: ColumnConfig;
@@ -249,6 +250,7 @@ export class FeedService {
   private readonly followset = inject(Followset);
   private readonly regionService = inject(RegionService);
   private readonly encryption = inject(EncryptionService);
+  private readonly localSettings = inject(LocalSettingsService);
 
   private readonly algorithms = inject(Algorithms);
 
@@ -281,7 +283,7 @@ export class FeedService {
   constructor() {
     effect(() => {
       // Watch for pubkey changes to reload feeds when account switches
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
       const pubkey = this.accountState.pubkey();
       const initialized = this.accountState.initialized();
 
@@ -508,44 +510,47 @@ export class FeedService {
       return;
     }
 
-    // Load cached events for instant display - async operation from IndexedDB
-    const cachedEvents = await this.loadCachedEvents(column.id);
+    // Check if we should start feeds on last event (queue new events instead of auto-merging)
+    const startFeedsOnLastEvent = this.localSettings.startFeedsOnLastEvent();
 
-    // Track if we started with cached events (for queueing logic)
-    const hadCachedEvents = cachedEvents.length > 0;
+    // Determine initial load complete state:
+    // - If startFeedsOnLastEvent is ON: ALWAYS mark complete immediately (queue ALL relay events)
+    // - If startFeedsOnLastEvent is OFF: mark NOT complete (merge initial relay events, then queue after)
+    const initialLoadComplete = startFeedsOnLastEvent;
 
-    // Set initial lastCheckTimestamp based on most recent cached event, or current time if no cache
-    let initialLastCheckTimestamp = Math.floor(Date.now() / 1000);
-    if (cachedEvents.length > 0) {
-      // Find the most recent event timestamp from cached events
-      const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
-      initialLastCheckTimestamp = mostRecentTimestamp;
-    }
-
+    // Create item with empty events FIRST to ensure feedDataReactive has entry immediately
     const item: FeedItem = {
       column,
       filter: null,
-      events: signal<Event[]>(cachedEvents), // Initialize with cached events
+      events: signal<Event[]>([]), // Start with empty, will update with cached events
       subscription: null,
-      lastTimestamp: Date.now(), // Initialize with current timestamp
+      lastTimestamp: Date.now(),
       isLoadingMore: signal<boolean>(false),
       hasMore: signal<boolean>(true),
       pendingEvents: signal<Event[]>([]),
-      lastCheckTimestamp: initialLastCheckTimestamp, // Initialize based on most recent cached event or current time
-      initialLoadComplete: hadCachedEvents, // If we have cache, mark as complete immediately
+      lastCheckTimestamp: Math.floor(Date.now() / 1000),
+      initialLoadComplete: initialLoadComplete,
     };
 
-    // Add to data map IMMEDIATELY so UI can render cached events
+    // Add to data map IMMEDIATELY so UI has an entry (even if empty)
     this.data.set(column.id, item);
-
-    // Update the reactive signal IMMEDIATELY
     this._feedData.update(map => {
       const newMap = new Map(map);
       newMap.set(column.id, item);
       return newMap;
     });
 
+    // NOW load cached events asynchronously and update the signal
+    const cachedEvents = await this.loadCachedEvents(column.id);
+
     if (cachedEvents.length > 0) {
+      // Update the events signal with cached events
+      item.events.set(cachedEvents);
+
+      // Update lastCheckTimestamp based on most recent cached event
+      const mostRecentTimestamp = Math.max(...cachedEvents.map(e => e.created_at));
+      item.lastCheckTimestamp = mostRecentTimestamp;
+
       this.logger.info(`🚀 Rendered ${cachedEvents.length} cached events for column ${column.id}`);
     }
 
@@ -682,7 +687,9 @@ export class FeedService {
 
       // For empty feeds, mark initial load as complete after 2 seconds
       // This allows initial burst of events to render, then subsequent events queue
-      if (!hadCachedEvents) {
+      // Use the current state of events since cache was already loaded above
+      const hasCachedEvents = item.events().length > 0;
+      if (!hasCachedEvents) {
         setTimeout(() => {
           if (!item.initialLoadComplete) {
             item.initialLoadComplete = true;
@@ -1083,21 +1090,45 @@ export class FeedService {
     const newEvents = this.aggregateAndSortEvents(userEventsMap);
 
     if (newEvents.length > 0) {
-      // MERGE new events with existing events instead of replacing
       const existingEvents = feedData.events();
-      const mergedEvents = this.mergeEvents(existingEvents, newEvents);
 
-      // Update the feed with merged events
-      feedData.events.set(mergedEvents);
+      // If initial load is already complete (we had cached events), queue new events instead of merging
+      if (feedData.initialLoadComplete) {
+        // Filter out events that already exist in the feed
+        const existingIds = new Set(existingEvents.map(e => e.id));
+        const trulyNewEvents = newEvents.filter(e => !existingIds.has(e.id));
 
-      // Don't save to cache here - wait for finalization to avoid duplicate saves
+        if (trulyNewEvents.length > 0) {
+          // Queue to pending events instead of direct merge
+          feedData.pendingEvents?.update((pending: Event[]) => {
+            const pendingIds = new Set(pending.map(e => e.id));
+            const newPending = [...pending];
+            for (const event of trulyNewEvents) {
+              if (!pendingIds.has(event.id)) {
+                newPending.push(event);
+              }
+            }
+            return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          });
 
-      // Update last timestamp for pagination
-      feedData.lastTimestamp = Math.min(...mergedEvents.map((e: Event) => (e.created_at || 0) * 1000));
+          this.logger.debug(
+            `Incremental update: ${processedUsers}/${totalUsers} users processed, ${trulyNewEvents.length} events queued to pending`
+          );
+        }
+      } else {
+        // Initial load not complete - merge events directly
+        const mergedEvents = this.mergeEvents(existingEvents, newEvents);
 
-      this.logger.debug(
-        `Incremental update: ${processedUsers}/${totalUsers} users processed, ${mergedEvents.length} total events (${newEvents.length} new)`
-      );
+        // Update the feed with merged events
+        feedData.events.set(mergedEvents);
+
+        // Update last timestamp for pagination
+        feedData.lastTimestamp = Math.min(...mergedEvents.map((e: Event) => (e.created_at || 0) * 1000));
+
+        this.logger.debug(
+          `Incremental update: ${processedUsers}/${totalUsers} users processed, ${mergedEvents.length} total events (${newEvents.length} new)`
+        );
+      }
     }
   }
 
@@ -1109,25 +1140,55 @@ export class FeedService {
     const newEvents = this.aggregateAndSortEvents(userEventsMap);
 
     if (newEvents.length > 0) {
-      // MERGE new events with existing events instead of replacing
       const existingEvents = feedData.events();
-      const mergedEvents = this.mergeEvents(existingEvents, newEvents);
 
-      // Update feed data with merged events
-      feedData.events.set(mergedEvents);
+      // If initial load is already complete (we had cached events), queue new events instead of merging
+      if (feedData.initialLoadComplete) {
+        // Filter out events that already exist in the feed
+        const existingIds = new Set(existingEvents.map(e => e.id));
+        const trulyNewEvents = newEvents.filter(e => !existingIds.has(e.id));
 
-      // Save to cache after final update
-      this.saveCachedEvents(feedData.column.id, mergedEvents);
+        if (trulyNewEvents.length > 0) {
+          // Queue to pending events instead of direct merge
+          feedData.pendingEvents?.update((pending: Event[]) => {
+            const pendingIds = new Set(pending.map(e => e.id));
+            const newPending = [...pending];
+            for (const event of trulyNewEvents) {
+              if (!pendingIds.has(event.id)) {
+                newPending.push(event);
+              }
+            }
+            return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          });
 
-      // Update last timestamp for pagination
-      feedData.lastTimestamp = Math.min(...mergedEvents.map((e: Event) => (e.created_at || 0) * 1000));
+          // Save pending events to cache as well for persistence
+          const allEventsForCache = [...existingEvents, ...trulyNewEvents];
+          this.saveCachedEvents(feedData.column.id, allEventsForCache);
+
+          this.logger.debug(
+            `Final update: ${trulyNewEvents.length} events queued to pending (${existingEvents.length} cached events preserved)`
+          );
+        }
+      } else {
+        // Initial load not complete - merge events directly
+        const mergedEvents = this.mergeEvents(existingEvents, newEvents);
+
+        // Update feed data with merged events
+        feedData.events.set(mergedEvents);
+
+        // Save to cache after final update
+        this.saveCachedEvents(feedData.column.id, mergedEvents);
+
+        // Update last timestamp for pagination
+        feedData.lastTimestamp = Math.min(...mergedEvents.map((e: Event) => (e.created_at || 0) * 1000));
+
+        this.logger.debug(
+          `Final update: ${mergedEvents.length} total events (${newEvents.length} new from ${userEventsMap.size} users)`
+        );
+      }
 
       // Update lastRetrieved timestamp (current time in seconds) and save to localStorage
       this.updateColumnLastRetrieved(feedData.column.id);
-
-      this.logger.debug(
-        `Final update: ${mergedEvents.length} total events (${newEvents.length} new from ${userEventsMap.size} users)`
-      );
     } else {
       // No new events received, but keep existing cached events
       const existingEvents = feedData.events();
