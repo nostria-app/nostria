@@ -103,8 +103,9 @@ app-user-profile {
     z-index: 100;
 
     // Hidden state class (applied via JS when scrolling down)
+    // Move up by 100% of own height + toolbar height to completely hide
     &.header-hidden {
-      transform: translateY(-100%);
+      transform: translateY(calc(-100% - var(--toolbar-height, 64px)));
     }
 
     .title-section {
