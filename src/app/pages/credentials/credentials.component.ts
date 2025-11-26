@@ -10,6 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatSelectModule } from '@angular/material/select';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
@@ -35,6 +36,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
     MatDividerModule,
     MatTooltipModule,
     MatTabsModule,
+    MatSelectModule,
     ReactiveFormsModule,
     RouterModule,
     UserProfileComponent,
@@ -74,6 +76,7 @@ export class CredentialsComponent implements OnInit {
 
   // Donation-related properties
   developerPubkeys = ['17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', 'cbec30a9038fe934b55272b046df47eb4d20ef006de0acbe46b0c0dae06e5d5b', '5f432a9f39b58ff132fc0a4c8af10d42efd917d8076f68bb7f2f91ed7d4f6a41', '7e2b09f951ed9be483284e7469ac20ac427d3264633d250c9d01e4265c99ed42'];
+  selectedWalletPubkey = signal<string | null>(null);
   selectedDonationAmount = signal<number | null>(5);
   customDonationAmount = new FormControl<number | null>(null, [Validators.min(0.01)]);
   isDonating = signal(false);
@@ -379,7 +382,34 @@ export class CredentialsComponent implements OnInit {
     return this.customDonationAmount.value;
   }
 
-  async donate(wallet: Wallet): Promise<void> {
+  selectWallet(pubkey: string): void {
+    this.selectedWalletPubkey.set(pubkey);
+  }
+
+  getSelectedWallet(): Wallet | null {
+    const pubkey = this.selectedWalletPubkey();
+    if (!pubkey) return null;
+    return this.wallets.wallets()[pubkey] || null;
+  }
+
+  async donateWithSelectedWallet(): Promise<void> {
+    // Auto-select first wallet if only one exists
+    const walletEntries = this.getWalletEntries();
+    let wallet = this.getSelectedWallet();
+
+    if (!wallet && walletEntries.length === 1) {
+      wallet = walletEntries[0][1];
+    }
+
+    if (!wallet) {
+      this.snackBar.open('Please select a wallet', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+      return;
+    }
+
     const amount = this.getDonationAmount();
     if (!amount || amount <= 0) {
       this.snackBar.open('Please select or enter a donation amount', 'Dismiss', {
