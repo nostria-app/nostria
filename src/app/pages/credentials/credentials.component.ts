@@ -76,7 +76,7 @@ export class CredentialsComponent implements OnInit {
 
   // Donation-related properties
   developerPubkeys = ['17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', 'cbec30a9038fe934b55272b046df47eb4d20ef006de0acbe46b0c0dae06e5d5b', '5f432a9f39b58ff132fc0a4c8af10d42efd917d8076f68bb7f2f91ed7d4f6a41', '7e2b09f951ed9be483284e7469ac20ac427d3264633d250c9d01e4265c99ed42'];
-  selectedWalletPubkey = signal<string | null>(null);
+  selectedConnectionString = signal<string | null>(null);
   selectedDonationAmount = signal<number | null>(5);
   customDonationAmount = new FormControl<number | null>(null, [Validators.min(0.01)]);
   isDonating = signal(false);
@@ -382,27 +382,46 @@ export class CredentialsComponent implements OnInit {
     return this.customDonationAmount.value;
   }
 
-  selectWallet(pubkey: string): void {
-    this.selectedWalletPubkey.set(pubkey);
+  selectConnection(connectionString: string): void {
+    this.selectedConnectionString.set(connectionString);
   }
 
-  getSelectedWallet(): Wallet | null {
-    const pubkey = this.selectedWalletPubkey();
-    if (!pubkey) return null;
-    return this.wallets.wallets()[pubkey] || null;
+  /**
+   * Returns all connections across all wallets as a flat list
+   * Each entry contains the connection string and wallet info for display
+   */
+  getAllConnections(): { connectionString: string; walletName: string; walletPubkey: string; index: number }[] {
+    const connections: { connectionString: string; walletName: string; walletPubkey: string; index: number }[] = [];
+    const walletEntries = this.getWalletEntries();
+
+    for (const [pubkey, wallet] of walletEntries) {
+      wallet.connections.forEach((conn, index) => {
+        const name = wallet.connections.length > 1
+          ? `${this.getWalletName(wallet)} #${index + 1}`
+          : this.getWalletName(wallet);
+        connections.push({
+          connectionString: conn,
+          walletName: name,
+          walletPubkey: pubkey,
+          index
+        });
+      });
+    }
+
+    return connections;
   }
 
   async donateWithSelectedWallet(): Promise<void> {
-    // Auto-select first wallet if only one exists
-    const walletEntries = this.getWalletEntries();
-    let wallet = this.getSelectedWallet();
+    const allConnections = this.getAllConnections();
+    let connectionString = this.selectedConnectionString();
 
-    if (!wallet && walletEntries.length === 1) {
-      wallet = walletEntries[0][1];
+    // Auto-select first connection if only one exists
+    if (!connectionString && allConnections.length === 1) {
+      connectionString = allConnections[0].connectionString;
     }
 
-    if (!wallet) {
-      this.snackBar.open('Please select a wallet', 'Dismiss', {
+    if (!connectionString) {
+      this.snackBar.open('Please select a wallet connection', 'Dismiss', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'bottom',
@@ -425,7 +444,7 @@ export class CredentialsComponent implements OnInit {
     this.donationError.set(null);
 
     try {
-      const request = await new LN(wallet.connections[0]).pay('nostria@coinos.io', USD(amount));
+      const request = await new LN(connectionString).pay('nostria@coinos.io', USD(amount));
       console.log('Payment request created:', request);
 
       this.donationSuccess.set(true);
