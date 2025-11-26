@@ -575,14 +575,21 @@ export class FeedsComponent implements OnDestroy {
       };
     });
 
-    // Set up mobile scroll listener for header hiding
+    // Set up scroll listener for header hiding (both mobile and desktop)
     effect(() => {
       const isMobile = this.isMobileView();
+      const columns = this.columns();
 
-      if (isMobile && this.layoutService.isBrowser()) {
+      if (this.layoutService.isBrowser()) {
         // Wait for container to be rendered
         setTimeout(() => {
-          this.setupMobileScrollListener();
+          if (isMobile) {
+            // On mobile, listen to the home-container scroll
+            this.setupMobileScrollListener();
+          } else if (columns.length > 0) {
+            // On desktop, listen to column scroll events
+            this.setupDesktopHeaderScrollListeners(columns);
+          }
         }, 500);
       }
     });
@@ -715,6 +722,51 @@ export class FeedsComponent implements OnDestroy {
     // Store listener reference for cleanup
     (container as HTMLElement & { __mobileScrollListener?: () => void }).__mobileScrollListener = scrollListener;
     container.addEventListener('scroll', scrollListener, { passive: true });
+  }
+
+  /**
+   * Set up scroll listeners on columns for desktop header hide/show
+   */
+  private setupDesktopHeaderScrollListeners(columns: ColumnDefinition[]): void {
+    columns.forEach(column => {
+      const columnElement = document.querySelector(`[data-column-id="${column.id}"] .column-content`) as HTMLElement;
+
+      if (!columnElement) {
+        return;
+      }
+
+      // Remove existing header scroll listener if any
+      const existingListener = (columnElement as HTMLElement & { __headerScrollListener?: () => void }).__headerScrollListener;
+      if (existingListener) {
+        columnElement.removeEventListener('scroll', existingListener);
+      }
+
+      let lastScrollTop = 0;
+
+      const scrollListener = () => {
+        const scrollTop = columnElement.scrollTop;
+        const scrollDelta = scrollTop - lastScrollTop;
+
+        // Scrolling down - hide header after scrolling down past the top
+        if (scrollDelta > 10 && scrollTop > 100) {
+          this.headerHidden.set(true);
+        }
+        // Scrolling up - show header immediately
+        else if (scrollDelta < -10) {
+          this.headerHidden.set(false);
+        }
+        // At the very top - always show header
+        else if (scrollTop <= 50) {
+          this.headerHidden.set(false);
+        }
+
+        lastScrollTop = scrollTop;
+      };
+
+      // Store listener reference for cleanup
+      (columnElement as HTMLElement & { __headerScrollListener?: () => void }).__headerScrollListener = scrollListener;
+      columnElement.addEventListener('scroll', scrollListener, { passive: true });
+    });
   }
 
   /**
