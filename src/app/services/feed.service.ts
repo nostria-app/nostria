@@ -643,8 +643,10 @@ export class FeedService {
             return;
           }
 
-          // Queue events if initial load is complete (either had cache or timeout elapsed)
-          if (item.initialLoadComplete) {
+          const currentEvents = item.events();
+          // Queue events if initial load is complete AND there are existing events
+          // If there are zero events, show new events directly (don't force user to click "new posts" button)
+          if (item.initialLoadComplete && currentEvents.length > 0) {
             console.log(`📥 Queuing relay event for column ${column.id}: ${event.id.substring(0, 8)}...`);
             item.pendingEvents?.update((pending: Event[]) => {
               // Avoid duplicates
@@ -655,7 +657,7 @@ export class FeedService {
               return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
             });
           } else {
-            // Initial load not complete - render relay events directly (empty feed scenario)
+            // Initial load not complete OR no existing events - render relay events directly
             console.log(`➕ Adding relay event to empty feed for column ${column.id}: ${event.id.substring(0, 8)}...`);
             item.events.update((events: Event[]) => {
               // Avoid duplicates
@@ -687,8 +689,10 @@ export class FeedService {
             return;
           }
 
-          // Queue events if initial load is complete (either had cache or timeout elapsed)
-          if (item.initialLoadComplete) {
+          const currentEvents = item.events();
+          // Queue events if initial load is complete AND there are existing events
+          // If there are zero events, show new events directly (don't force user to click "new posts" button)
+          if (item.initialLoadComplete && currentEvents.length > 0) {
             console.log(`📥 Queuing relay event for column ${column.id}: ${event.id.substring(0, 8)}...`);
             item.pendingEvents?.update((pending: Event[]) => {
               // Avoid duplicates
@@ -699,7 +703,7 @@ export class FeedService {
               return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
             });
           } else {
-            // Initial load not complete - render relay events directly (empty feed scenario)
+            // Initial load not complete OR no existing events - render relay events directly
             console.log(`➕ Adding relay event to empty feed for column ${column.id}: ${event.id.substring(0, 8)}...`);
             item.events.update((events: Event[]) => {
               // Avoid duplicates
@@ -1129,7 +1133,8 @@ export class FeedService {
       const existingEvents = feedData.events();
 
       // If initial load is already complete (we had cached events), queue new events instead of merging
-      if (feedData.initialLoadComplete) {
+      // EXCEPT: If there are zero existing events, show new events directly (don't force user to click "new posts" button)
+      if (feedData.initialLoadComplete && existingEvents.length > 0) {
         // Filter out events that already exist in the feed
         const existingIds = new Set(existingEvents.map(e => e.id));
         const trulyNewEvents = newEvents.filter(e => !existingIds.has(e.id));
@@ -1152,7 +1157,7 @@ export class FeedService {
           );
         }
       } else {
-        // Initial load not complete - merge events directly
+        // Initial load not complete OR no existing events - merge events directly
         const mergedEvents = this.mergeEvents(existingEvents, newEvents);
 
         // Update the feed with merged events
@@ -1179,7 +1184,8 @@ export class FeedService {
       const existingEvents = feedData.events();
 
       // If initial load is already complete (we had cached events), queue new events instead of merging
-      if (feedData.initialLoadComplete) {
+      // EXCEPT: If there are zero existing events, show new events directly (don't force user to click "new posts" button)
+      if (feedData.initialLoadComplete && existingEvents.length > 0) {
         // Filter out events that already exist in the feed
         const existingIds = new Set(existingEvents.map(e => e.id));
         const trulyNewEvents = newEvents.filter(e => !existingIds.has(e.id));
@@ -1206,7 +1212,7 @@ export class FeedService {
           );
         }
       } else {
-        // Initial load not complete - merge events directly
+        // Initial load not complete OR no existing events - merge events directly
         const mergedEvents = this.mergeEvents(existingEvents, newEvents);
 
         // Update feed data with merged events
