@@ -50,6 +50,9 @@ export class FollowingService {
   // Count of following profiles
   readonly count = computed(() => this.profilesMap().size);
 
+  // Track the previous following list to detect additions and removals
+  private previousFollowingList: string[] = [];
+
   constructor() {
     // Effect to load profiles when account or following list changes
     effect(() => {
@@ -59,12 +62,29 @@ export class FollowingService {
       if (!pubkey || followingList.length === 0) {
         this.logger.debug('[FollowingService] No account or empty following list, clearing profiles');
         this.clear();
+        this.previousFollowingList = [];
         return;
       }
 
       untracked(() => {
-        this.logger.info(`[FollowingService] Account or following list changed, loading ${followingList.length} profiles`);
-        this.loadProfiles(followingList);
+        // Check if this is an incremental change (add/remove) or a full reload
+        // Initial load happens when:
+        // 1. No previous following list was tracked, AND
+        // 2. Service hasn't been initialized yet, OR profiles map is empty
+        const isInitialLoad = 
+          this.previousFollowingList.length === 0 && 
+          (!this.isInitialized() || this.profilesMap().size === 0);
+        
+        if (isInitialLoad) {
+          // Initial load - load all profiles
+          this.logger.info(`[FollowingService] Initial load of ${followingList.length} profiles`);
+          this.loadProfiles(followingList);
+        } else {
+          // Incremental update - calculate diff and update accordingly
+          this.handleIncrementalUpdate(followingList);
+        }
+
+        this.previousFollowingList = [...followingList];
       });
     });
   }
@@ -120,6 +140,82 @@ export class FollowingService {
       this.logger.error('[FollowingService] Error loading profiles:', error);
     } finally {
       this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Handle incremental updates to the following list
+   * Efficiently adds new profiles and removes unfollowed profiles
+   */
+  private async handleIncrementalUpdate(newFollowingList: string[]): Promise<void> {
+    const previousList = this.previousFollowingList;
+
+    // Find profiles to add (in new list but not in previous list)
+    const toAdd = newFollowingList.filter(pubkey => !previousList.includes(pubkey));
+
+    // Find profiles to remove (in previous list but not in new list)
+    const toRemove = previousList.filter(pubkey => !newFollowingList.includes(pubkey));
+
+    if (toAdd.length === 0 && toRemove.length === 0) {
+      this.logger.debug('[FollowingService] No changes detected in following list');
+      return;
+    }
+
+    this.logger.info(`[FollowingService] Incremental update: adding ${toAdd.length}, removing ${toRemove.length} profiles`);
+
+    // Remove unfollowed profiles first (this is synchronous)
+    if (toRemove.length > 0) {
+      this.profilesMap.update(map => {
+        const newMap = new Map(map);
+        toRemove.forEach(pubkey => {
+          newMap.delete(pubkey);
+          this.logger.debug(`[FollowingService] Removed profile for ${pubkey}`);
+        });
+        return newMap;
+      });
+    }
+
+    // Add new profiles (this is asynchronous)
+    if (toAdd.length > 0) {
+      await this.addProfiles(toAdd);
+    }
+  }
+
+  /**
+   * Add multiple profiles to the cache
+   * Used for incremental updates when following new accounts
+   */
+  private async addProfiles(pubkeys: string[]): Promise<void> {
+    this.logger.info(`[FollowingService] Adding ${pubkeys.length} new profiles...`);
+
+    try {
+      // Load profiles in parallel
+      const profiles = await Promise.all(
+        pubkeys.map(async (pubkey) => {
+          try {
+            // Fetch from relay for newly followed profiles to get fresh data
+            const profile = await this.loadSingleProfile(pubkey, false);
+            this.logger.debug(`[FollowingService] Loaded profile for newly followed ${pubkey}`);
+            return { pubkey, profile };
+          } catch (error) {
+            this.logger.error(`[FollowingService] Failed to load profile for ${pubkey}:`, error);
+            return { pubkey, profile: this.createMinimalProfile(pubkey) };
+          }
+        })
+      );
+
+      // Add all loaded profiles to the map in a single update
+      this.profilesMap.update(map => {
+        const newMap = new Map(map);
+        profiles.forEach(({ pubkey, profile }) => {
+          newMap.set(pubkey, profile);
+        });
+        return newMap;
+      });
+
+      this.logger.info(`[FollowingService] Successfully added ${profiles.length} new profiles`);
+    } catch (error) {
+      this.logger.error('[FollowingService] Error adding profiles:', error);
     }
   }
 
@@ -262,6 +358,7 @@ export class FollowingService {
     this.logger.debug('[FollowingService] Clearing all following profiles');
     this.profilesMap.set(new Map());
     this.isInitialized.set(false);
+    this.previousFollowingList = [];
   }
 
   /**
