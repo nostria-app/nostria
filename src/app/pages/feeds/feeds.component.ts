@@ -109,6 +109,14 @@ export class FeedsComponent implements OnDestroy {
   headerHidden = signal(false);
   private lastScrollTop = 0;
 
+  // Horizontal scrollbar tracking
+  hasHorizontalOverflow = signal(false);
+  columnsScrollWidth = signal(0);
+  columnsScrollLeft = signal(0);
+  @ViewChild('columnsContainer') columnsContainer!: ElementRef<HTMLDivElement>;
+  @ViewChild('fixedScrollbar') fixedScrollbar!: ElementRef<HTMLDivElement>;
+  private isSyncingScroll = false;
+
   columnLayout = computed(() => {
     const width = this.screenWidth();
     if (width >= 1600) {
@@ -566,6 +574,8 @@ export class FeedsComponent implements OnDestroy {
     effect(() => {
       const handleResize = () => {
         this.screenWidth.set(window.innerWidth);
+        // Update horizontal overflow on resize
+        this.updateHorizontalOverflow();
       };
 
       window.addEventListener('resize', handleResize);
@@ -596,6 +606,8 @@ export class FeedsComponent implements OnDestroy {
         // Wait for columns to be rendered
         setTimeout(() => {
           this.setupColumnScrollListeners(columns);
+          // Check for horizontal overflow after columns are rendered
+          this.updateHorizontalOverflow();
         }, 500);
       }
     });
@@ -712,6 +724,53 @@ export class FeedsComponent implements OnDestroy {
     // Store listener reference for cleanup
     (container as HTMLElement & { __headerScrollListener?: () => void }).__headerScrollListener = scrollListener;
     container.addEventListener('scroll', scrollListener, { passive: true });
+  }
+
+  /**
+   * Handle scroll on columns container and sync fixed scrollbar
+   */
+  onColumnsScroll(event: globalThis.Event): void {
+    if (this.isSyncingScroll) return;
+
+    const container = event.target as HTMLElement | null;
+    if (!container) return;
+
+    // Update scroll position for syncing
+    this.columnsScrollLeft.set(container.scrollLeft);
+
+    // Sync the fixed scrollbar
+    if (this.fixedScrollbar?.nativeElement) {
+      this.isSyncingScroll = true;
+      this.fixedScrollbar.nativeElement.scrollLeft = container.scrollLeft;
+      this.isSyncingScroll = false;
+    }
+  }
+
+  /**
+   * Handle scroll on fixed scrollbar and sync columns container
+   */
+  onFixedScrollbarScroll(event: globalThis.Event): void {
+    if (this.isSyncingScroll) return;
+
+    const scrollbar = event.target as HTMLElement | null;
+    if (!scrollbar || !this.columnsContainer?.nativeElement) return;
+
+    this.isSyncingScroll = true;
+    this.columnsContainer.nativeElement.scrollLeft = scrollbar.scrollLeft;
+    this.columnsScrollLeft.set(scrollbar.scrollLeft);
+    this.isSyncingScroll = false;
+  }
+
+  /**
+   * Check and update horizontal overflow state for columns
+   */
+  private updateHorizontalOverflow(): void {
+    if (!this.columnsContainer?.nativeElement) return;
+
+    const container = this.columnsContainer.nativeElement;
+    const hasOverflow = container.scrollWidth > container.clientWidth;
+    this.hasHorizontalOverflow.set(hasOverflow);
+    this.columnsScrollWidth.set(container.scrollWidth);
   }
 
   /**

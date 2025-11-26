@@ -290,67 +290,65 @@ app-user-profile {
   // Columns container - main content area
   .columns-container {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     flex: 1;
-    overflow: hidden;
+    overflow-x: auto;
+    overflow-y: hidden;
     position: relative;
     // Add top padding to account for fixed header on all screen sizes
     padding-top: 48px;
+    // Add bottom padding for the fixed scrollbar
+    padding-bottom: 16px;
+    scrollbar-width: thin;
+
+    &::-webkit-scrollbar {
+      height: 12px;
+      display: block;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--mat-sys-surface-container);
+      border-radius: 6px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--mat-sys-outline);
+      border-radius: 6px;
+
+      &:hover {
+        background: var(--mat-sys-on-surface-variant);
+      }
+    }
 
     // On mobile, don't restrict height - let it flow naturally for page scrolling
     @media (max-width: 1023px) {
+      flex-direction: column;
       flex: none;
       overflow: visible;
+      padding-bottom: 0;
     }
 
     .columns-wrapper {
       display: flex;
-      flex: 1;
+      flex: 0 0 auto;
+      gap: 12px;
+      padding: 12px;
+      height: 100%;
 
       // On mobile, don't restrict height - let content flow naturally
       @media (max-width: 1023px) {
+        flex-direction: column;
         flex: none;
         height: auto;
-        overflow: visible;
-      }
-
-      overflow-x: scroll;
-      overflow-y: hidden;
-      padding: 12px;
-      gap: 12px;
-      height: 100%;
-      width: 100%;
-      min-width: 100%;
-      scrollbar-width: thin;
-      scroll-behavior: smooth;
-      justify-content: flex-start; // Align columns to the left to prevent clipping
-
-      // Always show horizontal scrollbar on desktop when there are many columns
-      &::-webkit-scrollbar {
-        display: block;
+        width: 100%;
       }
 
       // Center when there's only one column
       &:has(.column-unit:only-child) {
-        justify-content: center;
-      }
-
-      &::-webkit-scrollbar {
-        height: 6px;
-      }
-
-      &::-webkit-scrollbar-thumb {
-        border-radius: 3px;
+        margin: 0 auto;
       }
 
       // For when there aren't enough columns to fill the width
-      &::after {
-        content: '';
-        flex: 0 0 1px; // Small flex item to help with centering
-        padding: 0;
-        margin: 0;
-      }
-
       // Column unit - contains both header and content
       .column-unit {
         display: flex;
@@ -936,6 +934,48 @@ app-user-profile {
           }
         }
       }
+    }
+  }
+
+  // Fixed horizontal scrollbar at the bottom of the viewport
+  .fixed-horizontal-scrollbar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    background: var(--mat-sys-surface-container);
+    border-top: 1px solid var(--mat-sys-outline-variant);
+    z-index: 100;
+    scrollbar-width: thin;
+
+    // Hide on mobile where horizontal scrolling isn't needed
+    @media (max-width: 1023px) {
+      display: none;
+    }
+
+    &::-webkit-scrollbar {
+      height: 10px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: var(--mat-sys-surface-container);
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: var(--mat-sys-outline);
+      border-radius: 5px;
+
+      &:hover {
+        background: var(--mat-sys-on-surface-variant);
+      }
+    }
+
+    // Content element that matches the columns scroll width
+    .scrollbar-content {
+      height: 1px;
     }
   }
 

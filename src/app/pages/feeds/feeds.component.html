@@ -76,7 +76,7 @@
   </header>
 
   <!-- Feeds Container with Connected Headers and Content -->
-  <div class="columns-container">
+  <div class="columns-container" #columnsContainer (scroll)="onColumnsScroll($event)">
     <!-- Scroll indicators -->
     @if (!isMobileView() && canScrollLeft()) {
     <div class="scroll-indicator left" (click)="scrollLeft()">
@@ -334,5 +334,12 @@
         } -->
     </div>
   </div>
+
+  <!-- Fixed horizontal scrollbar for desktop when many columns -->
+  @if (!isMobileView() && hasHorizontalOverflow()) {
+  <div class="fixed-horizontal-scrollbar" #fixedScrollbar (scroll)="onFixedScrollbarScroll($event)">
+    <div class="scrollbar-content" [style.width.px]="columnsScrollWidth()"></div>
+  </div>
+  }
 </div>
 }
