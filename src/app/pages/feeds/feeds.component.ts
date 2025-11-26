@@ -105,6 +105,11 @@ export class FeedsComponent implements OnDestroy {
   showAdvancedFilters = signal(false);
   selectedTags = signal<string[]>([]);
   screenWidth = signal(window.innerWidth);
+  // Mobile header visibility - hide when scrolling down
+  headerHidden = signal(false);
+  private lastScrollTop = 0;
+  private scrollThreshold = 50; // Minimum scroll before hiding header
+
   columnLayout = computed(() => {
     const width = this.screenWidth();
     if (width >= 1600) {
@@ -319,6 +324,8 @@ export class FeedsComponent implements OnDestroy {
 
   // Reference to columns wrapper for scrolling
   @ViewChild('columnsWrapper') columnsWrapper!: ElementRef<HTMLDivElement>;
+  // Reference to home container for mobile scroll detection
+  @ViewChild('homeContainer') homeContainer!: ElementRef<HTMLDivElement>;
 
   // Signals to track scroll position
   private scrollPosition = signal(0);
@@ -568,6 +575,18 @@ export class FeedsComponent implements OnDestroy {
       };
     });
 
+    // Set up mobile scroll listener for header hiding
+    effect(() => {
+      const isMobile = this.isMobileView();
+
+      if (isMobile && this.layoutService.isBrowser()) {
+        // Wait for container to be rendered
+        setTimeout(() => {
+          this.setupMobileScrollListener();
+        }, 500);
+      }
+    });
+
     // Set up scroll listeners for columns after they're rendered
     effect(() => {
       const columns = this.columns();
@@ -655,6 +674,46 @@ export class FeedsComponent implements OnDestroy {
         columnElement.addEventListener('scroll', scrollListener, { passive: true });
       }
     });
+  }
+
+  /**
+   * Set up scroll listener for mobile to hide/show header on scroll
+   */
+  private setupMobileScrollListener(): void {
+    const container = document.querySelector('.home-container') as HTMLElement;
+
+    if (!container) {
+      return;
+    }
+
+    // Remove existing listener if any
+    const existingListener = (container as HTMLElement & { __mobileScrollListener?: () => void }).__mobileScrollListener;
+    if (existingListener) {
+      container.removeEventListener('scroll', existingListener);
+    }
+
+    const scrollListener = () => {
+      const scrollTop = container.scrollTop;
+
+      // Only hide/show after passing threshold
+      if (Math.abs(scrollTop - this.lastScrollTop) < this.scrollThreshold) {
+        return;
+      }
+
+      if (scrollTop > this.lastScrollTop && scrollTop > 100) {
+        // Scrolling down - hide header
+        this.headerHidden.set(true);
+      } else {
+        // Scrolling up - show header
+        this.headerHidden.set(false);
+      }
+
+      this.lastScrollTop = scrollTop;
+    };
+
+    // Store listener reference for cleanup
+    (container as HTMLElement & { __mobileScrollListener?: () => void }).__mobileScrollListener = scrollListener;
+    container.addEventListener('scroll', scrollListener, { passive: true });
   }
 
   /**
