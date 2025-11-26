@@ -98,6 +98,12 @@ app-user-profile {
     top: var(--toolbar-height, 64px);
     left: 0;
     right: 0;
+
+    // Reduce padding on smaller screens to match toolbar
+    @media (max-width: 1023px) {
+      padding: 0.25rem 8px;
+    }
+
     transition: transform 0.3s ease;
     // Ensure it's above other content
     z-index: 100;

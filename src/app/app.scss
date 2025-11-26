@@ -52,6 +52,11 @@ nav {
 
   // Allow clicks to pass through transparent areas
   pointer-events: none;
+
+  // Reduce padding on smaller screens to match feeds selection menu
+  @media (max-width: 1023px) {
+    padding: 8px 8px;
+  }
 }
 
 // Glass section mixin for toolbar sections
