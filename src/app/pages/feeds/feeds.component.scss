@@ -33,7 +33,6 @@ app-user-profile {
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  // Note: padding-top is handled by .content-wrapper in app.scss
 
   // On mobile, allow full page scrolling instead of per-column scrolling
   @media (max-width: 1023px) {
