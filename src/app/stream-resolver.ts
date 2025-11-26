@@ -69,7 +69,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
  * Fetch event from relays by address (kind, pubkey, identifier)
  */
 async function fetchEventByAddress(kind: number, pubkey: string, identifier: string, relayHints?: string[]): Promise<Event | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const { WebSocket: WS } = await import('ws');
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   (globalThis as any).WebSocket = WS;

@@ -216,7 +216,7 @@ export class ZapButtonComponent {
 
   private openZapSplitDialog(
     event: Event,
-    splits: Array<{ pubkey: string; relay: string; weight: number }>
+    splits: { pubkey: string; relay: string; weight: number }[]
   ): void {
     // Prepare dialog data for zap split
     const dialogData: ZapDialogData = {
