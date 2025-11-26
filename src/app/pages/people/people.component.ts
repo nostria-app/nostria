@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, AfterViewInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +10,6 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
 import { RouterModule } from '@angular/router';
-import { ScrollingModule, CdkVirtualScrollViewport } from '@angular/cdk/scrolling';
 import { LoggerService } from '../../services/logger.service';
 import { debounceTime } from 'rxjs/operators';
 import { Subject } from 'rxjs';
@@ -53,7 +52,6 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' |
     MatCheckboxModule,
     MatRadioModule,
     RouterModule,
-    ScrollingModule,
     UserProfileComponent,
     MatMenuModule
   ],
@@ -61,8 +59,6 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' |
   styleUrls: ['./people.component.scss'],
 })
 export class PeopleComponent implements AfterViewInit, OnDestroy {
-  @ViewChild(CdkVirtualScrollViewport) viewport?: CdkVirtualScrollViewport;
-
   private router = inject(Router);
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);
@@ -246,57 +242,26 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit(): void {
     // Restore scroll position after view is initialized
-    // For grid layouts, we need to work directly with the scrollable element
     setTimeout(() => {
       const pubkey = this.accountState.pubkey();
-      if (pubkey && this.viewport) {
+      if (pubkey) {
         const savedPosition = this.accountLocalState.getPeopleScrollPosition(pubkey);
 
         if (savedPosition !== undefined && savedPosition > 0) {
-          // Get the actual scrollable element from the viewport
-          const scrollableElement = this.viewport.elementRef.nativeElement;
-
-          if (scrollableElement) {
-            // Set scrollTop directly on the element
-            scrollableElement.scrollTop = savedPosition;
-
-            this.logger.debug('Restored scroll position via scrollTop:', {
-              savedPosition,
-              actualScrollTop: scrollableElement.scrollTop,
-              itemSize: this.itemSize(),
-              dataLength: this.sortedPeople().length,
-              scrollHeight: scrollableElement.scrollHeight,
-              clientHeight: scrollableElement.clientHeight
-            });
-          }
+          window.scrollTo(0, savedPosition);
+          this.logger.debug('Restored scroll position via window.scrollTo:', { savedPosition });
         }
       }
 
       // Add scroll event listener to auto-save scroll position
-      if (this.viewport) {
-        const scrollableElement = this.viewport.elementRef.nativeElement;
-        if (scrollableElement) {
-          scrollableElement.addEventListener('scroll', () => {
-            const currentScrollTop = scrollableElement.scrollTop;
-
-            // Debounce the save operation to avoid saving too frequently
-            if (this.scrollSaveTimeout) {
-              clearTimeout(this.scrollSaveTimeout);
-            }
-
-            this.scrollSaveTimeout = window.setTimeout(() => {
-              const pubkey = this.accountState.pubkey();
-              if (pubkey) {
-                this.accountLocalState.setPeopleScrollPosition(pubkey, currentScrollTop);
-              }
-            }, 500); // Save 500ms after user stops scrolling
-          });
-        }
-      }
+      window.addEventListener('scroll', this.onScroll);
     }, 500);
   }
 
   ngOnDestroy(): void {
+    // Remove scroll listener
+    window.removeEventListener('scroll', this.onScroll);
+
     // Clear any pending scroll save timeout
     if (this.scrollSaveTimeout) {
       clearTimeout(this.scrollSaveTimeout);
@@ -304,15 +269,24 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
 
     // Save scroll position when leaving the component
     const pubkey = this.accountState.pubkey();
-    if (pubkey && this.viewport) {
-      // Get the actual scrollable element and read its scrollTop
-      const scrollableElement = this.viewport.elementRef.nativeElement;
-      const currentOffset = scrollableElement ? scrollableElement.scrollTop : 0;
-
-      // Save the offset (this ensures we save even if auto-save didn't trigger)
-      this.accountLocalState.setPeopleScrollPosition(pubkey, currentOffset);
+    if (pubkey) {
+      this.accountLocalState.setPeopleScrollPosition(pubkey, window.scrollY);
     }
   }
+
+  private onScroll = () => {
+    // Debounce the save operation to avoid saving too frequently
+    if (this.scrollSaveTimeout) {
+      clearTimeout(this.scrollSaveTimeout);
+    }
+
+    this.scrollSaveTimeout = window.setTimeout(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.accountLocalState.setPeopleScrollPosition(pubkey, window.scrollY);
+      }
+    }, 500); // Save 500ms after user stops scrolling
+  };
 
   updateSearch(term: string) {
     this.searchChanged.next(term);

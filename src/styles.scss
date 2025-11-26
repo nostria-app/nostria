@@ -14,9 +14,9 @@ html {
   --mat-success-darker: #2e7d32;
 
   // Scrollbar colors for light theme
-  --scrollbar-track: #f1f1f1;
-  --scrollbar-thumb: #c1c1c1;
-  --scrollbar-thumb-hover: #a1a1a1;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(0, 0, 0, 0.2);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
 
   @include mat.theme((color: (theme-type: light,
         primary: nostria-theme.$primary-palette,
@@ -33,9 +33,9 @@ html {
   --mat-success-darker: #388e3c;
 
   // Scrollbar colors for dark theme
-  --scrollbar-track: #424242;
-  --scrollbar-thumb: #686868;
-  --scrollbar-thumb-hover: #7e7e7e;
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: rgba(255, 255, 255, 0.2);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.3);
 
   @include mat.theme((color: (theme-type: dark,
         primary: nostria-theme.$primary-palette,
@@ -353,12 +353,7 @@ body {
 
 // Apps menu overlay styles
 .cdk-overlay-pane:has(app-apps-menu) {
-  .apps-menu-container {
-    background: var(--mat-sys-surface-container);
-    border-radius: 12px;
-    box-shadow: var(--mat-sys-level4);
-    border: 1px solid var(--mat-sys-outline-variant);
-  }
+  // Styles moved to apps-menu.component.scss to support glass effect
 }
 
 .cdk-overlay-pane .tooltip-content-card {
@@ -942,22 +937,45 @@ iframe {
   cursor: pointer;
 }
 
-/* Media queue specific styles to prevent double scrollbars */
+/* Media queue - allow full page scrolling behind transparent toolbar */
 app-media-queue {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  overflow: hidden;
-}
+  display: block;
 
-app-media-queue .page {
-  height: 100%;
-  overflow: hidden;
-}
+  // Fix long titles in queue items - force text truncation
+  .queue-item.mat-mdc-list-item {
+    // The list item itself needs to not exceed its container
+    max-width: 100%;
 
-app-media-queue .media-list mat-list {
-  height: 100%;
-  overflow-y: auto;
+    .mdc-list-item__content {
+      overflow: hidden;
+      min-width: 0;
+      width: 0; // Force it to shrink
+      flex: 1 1 0;
+    }
+
+    .mdc-list-item__primary-text,
+    .mat-mdc-list-item-title {
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      display: block !important;
+      max-width: 100% !important;
+    }
+
+    .mdc-list-item__secondary-text,
+    .mat-mdc-list-item-line {
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+      white-space: nowrap !important;
+      display: block !important;
+      max-width: 100% !important;
+    }
+
+    .mdc-list-item__end {
+      flex-shrink: 0;
+      margin-left: 8px;
+    }
+  }
 }
 
 .time-label {
@@ -1317,4 +1335,23 @@ app-media-queue .media-list mat-list {
       }
     }
   }
+}
+
+// Sidenav z-index hierarchy - all below toolbar (z-index: 1000)
+// Backdrop covers content but stays below toolbar
+.mat-drawer-backdrop,
+.mat-drawer-container .mat-drawer-backdrop {
+  z-index: 99 !important;
+}
+
+// Sidenavs above backdrop but below toolbar
+.mat-drawer,
+.mat-drawer-container .mat-drawer {
+  z-index: 100 !important;
+}
+
+// Profile sidenav (end position) - same level as other sidenavs
+.mat-drawer.mat-drawer-end,
+.mat-drawer-container .mat-drawer.mat-drawer-end {
+  z-index: 100 !important;
 }

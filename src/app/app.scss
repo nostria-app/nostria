@@ -27,6 +27,103 @@ nav {
   left: 0;
   right: 0;
   bottom: 0;
+
+  // CSS variable for toolbar height
+  --toolbar-height: 64px;
+}
+
+// Glass toolbar styles - transparent container
+.app-toolbar {
+  position: fixed !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000; // Above sidenavs and backdrops
+  height: var(--toolbar-height);
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  // Transparent background - no glass effect on the toolbar itself
+  background: transparent !important;
+  box-shadow: none;
+  border: none;
+
+  // Allow clicks to pass through transparent areas
+  pointer-events: none;
+}
+
+// Glass section mixin for toolbar sections
+@mixin glass-section {
+  display: flex;
+  align-items: center;
+  height: 48px;
+  padding: 0 8px;
+  border-radius: 24px;
+
+  // Re-enable pointer events on glass sections
+  pointer-events: auto;
+
+  // Glass effect
+  background-color: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
+  box-shadow:
+    // Inner white highlight
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    // Inner glow
+    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+    // Drop shadows
+    0px 2px 8px rgba(17, 17, 26, 0.08),
+    0px 4px 16px rgba(17, 17, 26, 0.06);
+}
+
+@mixin glass-section-dark {
+  background-color: rgba(0, 0, 0, 0.4);
+
+  box-shadow:
+    // Inner highlight (subtler in dark mode)
+    inset 0 0 0 1px rgba(255, 255, 255, 0.15),
+    // Inner glow
+    inset 0 0 8px 2px rgba(255, 255, 255, 0.05),
+    // Drop shadows
+    0px 2px 8px rgba(0, 0, 0, 0.3),
+    0px 4px 16px rgba(0, 0, 0, 0.25);
+}
+
+// Toolbar sections with glass effect
+.toolbar-section {
+  @include glass-section;
+}
+
+// Dark mode for toolbar sections - use :host-context since .dark is on html element
+:host-context(.dark) .toolbar-section {
+  @include glass-section-dark;
+}
+
+// Left section - hamburger, navigation, title
+.toolbar-left {
+  flex-shrink: 0;
+}
+
+// Right section - action buttons, profile
+.toolbar-right {
+  flex-shrink: 0;
+}
+
+// Search container also gets glass styling
+.search-container.toolbar-section {
+  flex: 1;
+  max-width: 600px;
+  position: relative;
+}
+
+// Dark mode - transparent toolbar maintained
+:host-context(.dark) .app-toolbar {
+  background: transparent !important;
+  box-shadow: none;
 }
 
 .premium-label {
@@ -44,6 +141,12 @@ nav {
   overflow: hidden;
   /* Prevent scrolling on the container itself - only content-wrapper should scroll */
 
+  // Account for fixed toolbar - sidenav-container takes full height
+  // The sidenav will start from top and the content-wrapper handles the toolbar offset
+  margin-top: 0;
+  height: 100%;
+  box-sizing: border-box;
+
   // Make space for mobile nav when on mobile
   @media (max-width: 599px) {}
 }
@@ -54,11 +157,8 @@ mat-sidenav-content {
   flex-direction: column;
   height: 100%;
   transition: margin-right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  // When media player is shown, add extra padding for it
-  // &.media-player-shown {
-  //   padding-bottom: calc(82px + env(safe-area-inset-bottom, 0px));
-  // }
+  // Content flows to top - scrolls behind transparent toolbar
+  margin-top: 0;
 
   // Add margin when following sidebar is docked
   &.following-sidebar-docked {
@@ -68,26 +168,18 @@ mat-sidenav-content {
       margin-right: 0; // No margin on mobile, keep as overlay
     }
   }
-
-  // Adjust for mobile navigation
-  @media (max-width: 599px) {
-    // Padding moved to .content-wrapper to allow scrolling behind the glass nav
-    padding-bottom: 0;
-
-    // When media player is shown, add extra padding for it
-    &.media-player-shown {
-      padding-bottom: 0;
-    }
-  }
 }
 
 .sidenav {
   width: 250px;
+  // Sidenav renders below toolbar - use margin-top instead of padding
+  margin-top: var(--toolbar-height, 64px) !important;
+  height: calc(100% - var(--toolbar-height, 64px)) !important;
+  box-sizing: border-box;
 
-  // On desktop, keep it at base level (side mode)
-  // On mobile, ensure it's above the mobile nav (over mode)
+  // On mobile (over mode), ensure proper z-index
   @media (max-width: 599px) {
-    z-index: 1001 !important;
+    z-index: 100 !important;
   }
 
   @media (min-width: 599px) {
@@ -111,7 +203,7 @@ mat-sidenav-content {
   }
 }
 
-.dark .active-link {
+:host-context(.dark) .active-link {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -166,7 +258,15 @@ mat-sidenav-content {
   flex: 1;
   overflow-y: auto;
   overflow-x: hidden;
-  // Remove fixed height since we're using flexbox now
+  // Content scrolls behind transparent toolbar
+  // Padding at top for toolbar, at bottom for mobile menu
+  padding-top: var(--toolbar-height, 64px);
+
+  // Add bottom padding for mobile navigation menu
+  @media (max-width: 599px) {
+    // Mobile nav height (64px) + bottom offset (24px) + safe area + extra space
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 // When media player is shown, add extra padding to content-wrapper
@@ -229,7 +329,7 @@ mat-sidenav-content {
   color: var(--mat-sys-on-surface);
 }
 
-.dark .mobile-nav {
+:host-context(.dark) .mobile-nav {
   background-color: rgba(0, 0, 0, 0.2);
 
   box-shadow:
@@ -335,7 +435,12 @@ mat-sidenav-content {
 .profile-sidenav {
   width: 300px;
   max-width: 90vw;
-  z-index: 1001; // Higher than app-toolbar (z-index: 2) and mobile-nav (z-index: 1000)
+  z-index: 100 !important;
+  position: fixed !important;
+  // Sidenav renders below toolbar - use margin-top and adjusted height
+  margin-top: var(--toolbar-height, 64px) !important;
+  height: calc(100% - var(--toolbar-height, 64px)) !important;
+  box-sizing: border-box;
 
   // Glass effect - similar to favorites overlay (light mode)
   background-color: rgba(255, 255, 255, 0.7) !important;
@@ -369,7 +474,7 @@ mat-sidenav-content {
 // Animation for the profile sidenav
 .profile-sidenav.mat-drawer {
   transition: transform 0.3s ease-in-out;
-  z-index: 1001; // Ensure the drawer itself also has high z-index
+  z-index: 100 !important;
 }
 
 // Ensure the sidenav container doesn't resize when right-side sidenavs open
@@ -381,13 +486,14 @@ mat-sidenav-content {
 
     // Right sidenavs should overlay, not push
     &.mat-drawer-over {
-      z-index: 1002 !important;
+      z-index: 120 !important;
     }
   }
 
-  // Ensure backdrop appears correctly
+  // Ensure backdrop appears correctly and above toolbar but below sidenav
   .mat-sidenav-backdrop {
     position: fixed !important;
+    z-index: 110 !important; // Above toolbar (100), below sidenav (120)
   }
 }
 
@@ -616,7 +722,7 @@ mat-sidenav-content {
   background-color: rgba(0, 0, 0, 0.04);
 }
 
-.dark .current-account {
+:host-context(.dark) .current-account {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
@@ -739,6 +845,23 @@ mat-sidenav-content {
   width: 100%;
   display: flex;
   align-items: center;
+
+  // When used in toolbar with glass effect
+  &.toolbar-section {
+    padding: 0 4px 0 12px;
+
+    .search-input {
+      border: none;
+      background: transparent;
+      box-shadow: none;
+
+      &:focus {
+        outline: none;
+        border: none;
+        box-shadow: none;
+      }
+    }
+  }
 }
 
 .search-input {
@@ -834,7 +957,7 @@ mat-sidenav-content {
 }
 
 /* Dark theme adjustments */
-.dark .floating-offline-indicator {
+:host-context(.dark) .floating-offline-indicator {
   background-color: #ef5350;
 }
 
