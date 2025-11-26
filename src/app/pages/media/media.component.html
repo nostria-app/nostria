@@ -56,7 +56,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">image</mat-icon>
-        <span class="hide-tiny">Images ({{ images().length }})</span>
+        <span class="hide-small">Images ({{ images().length }})</span>
       </ng-template>
       <div class="tab-content">
         @if (selectedItems().length > 0) {
@@ -159,7 +159,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">videocam</mat-icon>
-        <span class="hide-tiny">Videos ({{ videos().length }})</span>
+        <span class="hide-small">Videos ({{ videos().length }})</span>
       </ng-template>
       <div class="tab-content">
         @if (selectedItems().length > 0) {
@@ -266,7 +266,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">folder</mat-icon>
-        <span class="hide-tiny">Files ({{ files().length }})</span>
+        <span class="hide-small">Files ({{ files().length }})</span>
       </ng-template>
       <div class="tab-content">
         @if (selectedItems().length > 0) {
@@ -417,7 +417,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">storage</mat-icon>
-        <span class="hide-tiny">Servers</span>
+        <span class="hide-small">Servers</span>
       </ng-template>
       <div class="tab-content">
         <div class="server-header">
