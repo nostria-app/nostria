@@ -38,7 +38,7 @@ nav {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: 1000; // Above sidenavs and backdrops
   height: var(--toolbar-height);
   padding: 8px 16px;
   display: flex;
@@ -172,18 +172,14 @@ mat-sidenav-content {
 
 .sidenav {
   width: 250px;
-  // Sidenav flows to top - full height, with padding for toolbar
-  margin-top: 0;
-  height: 100% !important;
-  padding-top: var(--toolbar-height, 64px);
+  // Sidenav renders below toolbar - use margin-top instead of padding
+  margin-top: var(--toolbar-height, 64px) !important;
+  height: calc(100% - var(--toolbar-height, 64px)) !important;
   box-sizing: border-box;
 
-  // On desktop, keep it at base level (side mode)
-  // On mobile, ensure it's above the mobile nav (over mode)
+  // On mobile (over mode), ensure proper z-index
   @media (max-width: 599px) {
-    z-index: 1001 !important;
-    // On mobile (over mode), sidenav also needs toolbar padding
-    padding-top: var(--toolbar-height, 64px);
+    z-index: 100 !important;
   }
 
   @media (min-width: 599px) {
@@ -195,7 +191,6 @@ mat-sidenav-content {
   mat-nav-list {
     @media (max-width: 599px) {
       padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-      // Toolbar padding is now on sidenav itself
     }
   }
 }
@@ -440,8 +435,10 @@ mat-sidenav-content {
 .profile-sidenav {
   width: 300px;
   max-width: 90vw;
-  z-index: 120 !important; // Higher than backdrop (z-index: 110)
-  position: fixed !important; // Ensure it's fixed positioned above toolbar
+  z-index: 100 !important;
+  position: fixed !important;
+  padding-top: var(--toolbar-height, 64px); // Render below toolbar
+  box-sizing: border-box;
 
   // Glass effect - similar to favorites overlay (light mode)
   background-color: rgba(255, 255, 255, 0.7) !important;
@@ -475,7 +472,7 @@ mat-sidenav-content {
 // Animation for the profile sidenav
 .profile-sidenav.mat-drawer {
   transition: transform 0.3s ease-in-out;
-  z-index: 120 !important; // Ensure the drawer itself also has high z-index
+  z-index: 100 !important;
 }
 
 // Ensure the sidenav container doesn't resize when right-side sidenavs open

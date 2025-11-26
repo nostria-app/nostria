@@ -4,6 +4,8 @@
   align-items: center;
   margin-right: 0.5rem;
 
+    // Re-enable pointer events on glass sections
+  pointer-events: auto;
   // Always show at least the "..." button on mobile
 }
 
