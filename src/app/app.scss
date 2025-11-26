@@ -437,7 +437,9 @@ mat-sidenav-content {
   max-width: 90vw;
   z-index: 100 !important;
   position: fixed !important;
-  padding-top: var(--toolbar-height, 64px); // Render below toolbar
+  // Sidenav renders below toolbar - use margin-top and adjusted height
+  margin-top: var(--toolbar-height, 64px) !important;
+  height: calc(100% - var(--toolbar-height, 64px)) !important;
   box-sizing: border-box;
 
   // Glass effect - similar to favorites overlay (light mode)
