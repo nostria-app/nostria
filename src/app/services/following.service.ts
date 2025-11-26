@@ -68,7 +68,12 @@ export class FollowingService {
 
       untracked(() => {
         // Check if this is an incremental change (add/remove) or a full reload
-        const isInitialLoad = this.previousFollowingList.length === 0 && !this.isInitialized();
+        // Initial load happens when:
+        // 1. No previous following list was tracked, AND
+        // 2. Service hasn't been initialized yet, OR profiles map is empty
+        const isInitialLoad = 
+          this.previousFollowingList.length === 0 && 
+          (!this.isInitialized() || this.profilesMap().size === 0);
         
         if (isInitialLoad) {
           // Initial load - load all profiles
