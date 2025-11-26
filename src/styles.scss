@@ -1355,3 +1355,14 @@ app-media-queue {
 .mat-drawer-container .mat-drawer.mat-drawer-end {
   z-index: 100 !important;
 }
+
+// Glass bottom sheet styles
+.glass-bottom-sheet {
+
+  // Make container background transparent for glass effect
+  .mat-bottom-sheet-container {
+    background: transparent !important;
+    box-shadow: none !important;
+    padding: 0;
+  }
+}
