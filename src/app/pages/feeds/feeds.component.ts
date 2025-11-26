@@ -217,6 +217,9 @@ export class FeedsComponent implements OnDestroy {
   // Track the last active feed ID for scroll restoration
   private lastActiveFeedId: string | null = null;
 
+  // Flag to track if we're processing a URL-based navigation (prevents URL sync loop)
+  private isProcessingUrlNavigation = false;
+
   // Scroll position auto-save
   private scrollSaveInterval?: number;
 
@@ -455,19 +458,32 @@ export class FeedsComponent implements OnDestroy {
 
         // Sync URL with active feed (only if not triggered by route change)
         // This prevents infinite loops between route changes and feed changes
-        if (currentFeedId) {
+        // Also skip if we're currently processing a URL-based navigation
+        if (currentFeedId && !this.isProcessingUrlNavigation) {
           const feed = this.feedsCollectionService.feeds().find(f => f.id === currentFeedId);
           if (feed) {
             const currentPath = this.route.snapshot.params['path'];
             const targetPath = feed.path;
-            
+
+            // Check if there's a URL path that should take precedence over the saved active feed
+            // This handles the case where user directly navigates to /f/following but saved feed is "discover"
+            if (currentPath) {
+              const urlTargetFeed = this.feedsCollectionService.feeds().find(f => f.path === currentPath);
+              if (urlTargetFeed && urlTargetFeed.id !== currentFeedId) {
+                // URL points to a different feed - let the route params effect handle this
+                // Don't sync URL, the route params subscription will update the active feed
+                this.logger.debug(`URL path ${currentPath} differs from active feed - deferring to route handler`);
+                return;
+              }
+            }
+
             // Only navigate if the URL doesn't already match the feed
             // This check prevents loops: route change -> feed change -> route change
-            const urlMatchesFeed = 
-              (targetPath && currentPath === targetPath) || 
+            const urlMatchesFeed =
+              (targetPath && currentPath === targetPath) ||
               (!targetPath && !currentPath && this.router.url === '/f') ||
               (!targetPath && this.router.url === '/');
-            
+
             if (!urlMatchesFeed) {
               if (targetPath) {
                 this.router.navigate(['/f', targetPath], { replaceUrl: true });
@@ -485,18 +501,23 @@ export class FeedsComponent implements OnDestroy {
 
     // Handle route parameters for feed navigation
     // This effect handles URL-based navigation to feeds (e.g., /f/discover, /f/articles)
+    // IMPORTANT: This must run BEFORE the URL sync effect to properly handle direct URL navigation
     effect(() => {
       const feeds = this.feedsCollectionService.feeds(); // Add dependency on feeds
-      
+
       this.route.params.subscribe(params => {
         const pathParam = params['path'];
-        
+
         // Wait for feeds to be loaded before processing route
         if (feeds.length === 0) {
           return;
         }
-        
+
         if (pathParam) {
+          // Set flag to indicate we're processing URL navigation
+          // This prevents the URL sync effect from overriding our navigation
+          this.isProcessingUrlNavigation = true;
+
           // Find feed by path parameter from URL
           const targetFeed = feeds.find(feed => feed.path === pathParam);
 
@@ -513,11 +534,16 @@ export class FeedsComponent implements OnDestroy {
             console.warn(`No feed found with path: ${pathParam}`);
             this.router.navigate(['/f'], { replaceUrl: true });
           }
+
+          // Clear the flag after a short delay to allow the feed change to process
+          setTimeout(() => {
+            this.isProcessingUrlNavigation = false;
+          }, 100);
         } else if (this.router.url.startsWith('/f')) {
           // User navigated to /f without a path parameter
           // Restore the previously active feed or use the first feed
           const activeFeedId = this.feedsCollectionService.activeFeedId();
-          
+
           if (!activeFeedId && feeds.length > 0) {
             // No active feed yet, set the first one
             this.feedsCollectionService.setActiveFeed(feeds[0].id);
