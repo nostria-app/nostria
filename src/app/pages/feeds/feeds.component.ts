@@ -380,6 +380,9 @@ export class FeedsComponent implements OnDestroy {
   }
 
   constructor() {
+    // Mark the feeds page as active when component is constructed
+    this.feedService.setFeedsPageActive(true);
+
     // Initialize data loading
     // this.loadTrendingContent();
 
@@ -1259,7 +1262,8 @@ export class FeedsComponent implements OnDestroy {
       this.logger.debug('Saved scroll position on component destroy for feed:', currentFeedId);
     }
 
-    this.feedService.unsubscribe();
+    // Mark feeds page as inactive - this will trigger unsubscribe in FeedService
+    this.feedService.setFeedsPageActive(false);
   }
   // Helper methods for content rendering
   getImageUrls(event: any): string[] {
