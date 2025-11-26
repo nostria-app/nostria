@@ -105,6 +105,10 @@ export class GeneralSettingsComponent {
     this.localSettings.setStartOnLastRoute(!this.localSettings.startOnLastRoute());
   }
 
+  toggleStartFeedsOnLastEvent(): void {
+    this.localSettings.setStartFeedsOnLastEvent(!this.localSettings.startFeedsOnLastEvent());
+  }
+
   setMediaPrivacy(value: 'blur-non-following' | 'blur-always' | 'show-always'): void {
     this.settings.updateSettings({ mediaPrivacy: value });
   }

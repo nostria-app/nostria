@@ -236,9 +236,8 @@
           </div>
           } @else {
           <div class="column-items">
-            @let columnData = feedService.feedDataReactive().get(column.id);
             @let columnEventsData = columnEvents().get(column.id);
-            @if (columnData && columnEventsData) {
+            @if (columnEventsData) {
             @for (event of columnEventsData; track event.id) {
             <app-event [event]="event"></app-event>
             }

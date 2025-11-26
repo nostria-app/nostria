@@ -101,6 +101,14 @@
       </mat-slide-toggle>
     </div>
     <p class="setting-description">When opening the app, restore the last page you were viewing.</p>
+
+    <div class="setting-item">
+      <span>Start Feeds on Last Event</span>
+      <mat-slide-toggle [checked]="localSettings.startFeedsOnLastEvent()" (change)="toggleStartFeedsOnLastEvent()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description">Show previously loaded events first when opening feeds, with new posts appearing via
+      a button. Prevents the feed from jumping to the latest events on reload.</p>
   </div>
 
   @if (accountState.hasActiveSubscription()) {

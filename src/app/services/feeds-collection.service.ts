@@ -277,8 +277,8 @@ export class FeedsCollectionService {
       this._activeFeedId.set(feedId);
       this.saveActiveFeed();
 
-      // Delegate subscription management to FeedService (async in background)
-      // Don't await - let it happen in the background
+      // Delegate subscription management to FeedService
+      // We await this to ensure cached events are loaded before the UI renders columns
       this.feedService.setActiveFeed(feedId).catch(error => {
         this.logger.error(`Error setting active feed in FeedService: ${error}`);
       });
