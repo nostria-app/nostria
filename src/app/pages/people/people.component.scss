@@ -1,8 +1,9 @@
 .people-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
-  overflow: hidden;
+  margin-top: calc(var(--toolbar-height) * -1);
+  padding-top: var(--toolbar-height);
+  min-height: 100vh;
   background-color: var(--mat-sys-surface);
 }
 
@@ -81,21 +82,12 @@
 }
 
 .people-content {
-  flex: 1;
-  overflow: auto;
   padding: 0;
+  padding-bottom: 100px;
 
   @media (max-width: 599px) {
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
-}
-
-// Add virtual scrolling styles
-.virtual-scroll-viewport {
-  height: 100%;
-  width: 100%;
-  overflow-x: hidden; // Changed back to hidden since we're wrapping items
-  touch-action: pan-y; // Enable vertical touch scrolling
 }
 
 .loading-container,
