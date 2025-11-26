@@ -632,6 +632,8 @@ export class FeedService {
               }
               const newEvents = [...events, event];
               const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              // Schedule cache save (debounced internally)
+              this.saveCachedEvents(column.id, sortedEvents);
               return sortedEvents;
             });
           }
@@ -674,6 +676,8 @@ export class FeedService {
               }
               const newEvents = [...events, event];
               const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              // Schedule cache save (debounced internally)
+              this.saveCachedEvents(column.id, sortedEvents);
               return sortedEvents;
             });
           }
@@ -1994,6 +1998,9 @@ export class FeedService {
 
     // Update reactive signal
     this._feedData.update(map => new Map(map));
+
+    // Save merged events to cache for persistence
+    this.saveCachedEvents(columnId, uniqueEvents);
 
     this.logger.debug(`Loaded ${pending.length} pending events for column ${columnId}, updated lastCheckTimestamp to ${feedData.lastCheckTimestamp}`);
   }
