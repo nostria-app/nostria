@@ -19,19 +19,17 @@
   <!-- Top toolbar - now outside and above the sidenav container -->
   <mat-toolbar class="app-toolbar no-print no-select">
     <!-- Left section: hamburger menu, navigation, and title -->
+    @if (!layout.search()) {
     <div class="toolbar-section toolbar-left">
-      @if (!layout.search()) {
       <button mat-icon-button (click)="toggleSidenav()" aria-label="Toggle sidenav">
         <mat-icon>menu</mat-icon>
       </button>
-      }
-      @if (!layout.search()) {
       <app-navigation></app-navigation>
       <span class="app-title title-font hide-small">
         <button type="button" class="title-button" (click)="navigateToHome()">{{ title }}</button>
       </span>
-      }
     </div>
+    }
 
     <span class="toolbar-spacer">
       @if (layout.search()) {
@@ -54,19 +52,18 @@
     </span>
 
     <!-- Right section: action buttons and profile -->
+    @if (!layout.search()) {
     <div class="toolbar-section toolbar-right">
-      @if (!layout.search()) {
       <button mat-icon-button (click)="layout.toggleSearch()">
         <mat-icon>search</mat-icon>
       </button>
-      }
-      @if (pwaUpdateService.updateAvailable() && !layout.search()) {
+      @if (pwaUpdateService.updateAvailable()) {
       <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
         matTooltip="Update ready!" aria-label="Update application">
         <mat-icon class="update-icon">system_update</mat-icon>
       </button>
       }
-      @if (app.authenticated() && accountState.profileProcessingState().isProcessing && !layout.search()) {
+      @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
       <button mat-icon-button class="profile-cache-button" [matTooltip]="
               'Caching profiles: ' +
               accountState.processingProgress() +
@@ -80,14 +77,14 @@
         <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
       </button>
       }
-      @if (app.authenticated() && (appState.isPublishing() || ai.processingState().isProcessing) && !layout.search()) {
+      @if (app.authenticated() && (appState.isPublishing() || ai.processingState().isProcessing)) {
       <button mat-icon-button class="profile-cache-button"
         [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : 'Publishing event...'"
         aria-label="Processing in progress">
         <mat-icon class="spinning-icon">sync</mat-icon>
       </button>
       }
-      @if (app.authenticated() && !layout.search()) {
+      @if (app.authenticated()) {
       <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
         #notificationMenuTrigger="matMenuTrigger">
         <mat-icon
@@ -159,13 +156,10 @@
         </button>
       </mat-menu>
 
-      @if (!layout.search()) {
       <button mat-icon-button (click)="toggleAppsMenu($event)">
         <mat-icon>apps</mat-icon>
       </button>
-      }
 
-      @if (!layout.search()) {
       <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
         (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
         @if (accountState.profile()?.data?.picture) {
@@ -178,8 +172,8 @@
         }
         }
       </button>
-      }
     </div>
+    }
   </mat-toolbar>
   }
 
