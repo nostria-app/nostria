@@ -247,10 +247,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     }
 
     // Options for the observer (which part of item visible, etc)
+    // Using rootMargin to trigger slightly before element enters viewport for seamless UX
     const options = {
       root: null, // Use viewport as root
-      rootMargin: '0px',
-      threshold: 0.1, // 10% of the item visible
+      rootMargin: '200px', // Start loading 200px before entering viewport
+      threshold: 0.01, // 1% of the item visible
     };
     this.intersectionObserver = new IntersectionObserver(entries => {
       entries.forEach(entry => {

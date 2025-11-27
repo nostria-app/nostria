@@ -52,7 +52,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
 
   // Debounce control variables
   private debouncedLoadTimer?: number;
-  private readonly DEBOUNCE_TIME = 350; // milliseconds
+  private readonly DEBOUNCE_TIME = 100; // milliseconds - reduced for faster display
 
   constructor() {
     // Effect to trigger load when scrolling stops if the component is visible but not loaded
@@ -87,9 +87,16 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
         this.publicKey = pubkey;
 
         untracked(() => {
-          // Only load profile data when the component is visible and not scrolling
-          if (this.isVisible() && !this.layout.isScrolling() && !this.profile()) {
-            this.debouncedLoadProfileData(pubkey);
+          // Try to get cached profile synchronously first for instant display
+          const cachedProfile = this.data.getCachedProfile(pubkey);
+          if (cachedProfile) {
+            this.profile.set(cachedProfile);
+            this.isLoading.set(false);
+          } else {
+            // Only load profile data when the component is visible and not scrolling
+            if (this.isVisible() && !this.layout.isScrolling() && !this.profile()) {
+              this.debouncedLoadProfileData(pubkey);
+            }
           }
         });
       }
@@ -128,6 +135,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
     this.disconnectObserver(); // Ensure any existing observer is disconnected
 
     // Create IntersectionObserver instance
+    // Using rootMargin to trigger slightly before element enters viewport for seamless UX
     this.intersectionObserver = new IntersectionObserver(
       entries => {
         // Update visibility state
@@ -142,8 +150,9 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
         }
       },
       {
-        threshold: 0.1, // Trigger when at least 10% is visible
+        threshold: 0.01, // Trigger when at least 1% is visible
         root: null, // Use viewport as root
+        rootMargin: '200px', // Start loading 200px before entering viewport
       }
     );
 
