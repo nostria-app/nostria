@@ -106,7 +106,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
 
   // Debounce control variables
   private debouncedLoadTimer?: number;
-  private readonly DEBOUNCE_TIME = 350; // milliseconds
+  private readonly DEBOUNCE_TIME = 100; // milliseconds - reduced for faster display
 
   npubValue = computed<string>(() => {
     const pubkey = this.pubkey();
@@ -250,6 +250,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     this.disconnectObserver(); // Ensure any existing observer is disconnected
 
     // Create IntersectionObserver instance
+    // Using rootMargin to trigger slightly before element enters viewport for seamless UX
     this.intersectionObserver = new IntersectionObserver(
       entries => {
         // Update visibility state
@@ -264,8 +265,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         }
       },
       {
-        threshold: 0.1, // Trigger when at least 10% is visible
+        threshold: 0.01, // Trigger when at least 1% is visible
         root: null, // Use viewport as root
+        rootMargin: '200px', // Start loading 200px before entering viewport
       }
     );
 
