@@ -297,9 +297,9 @@ mat-sidenav-content {
   gap: 0;
   z-index: 1000;
   height: 56px;
-  padding: 6px;
+  padding: 0;
 
-  border-radius: 32px;
+  border-radius: 28px;
 
   // Glass effect
   background-color: rgba(255, 255, 255, 0.7);
@@ -350,12 +350,22 @@ mat-sidenav-content {
   align-items: center;
   justify-content: center;
   min-width: 0;
-  height: 44px;
-  border-radius: 22px;
+  height: 100%;
+  border-radius: 0;
   text-align: center;
   margin: 0;
   padding: 4px 8px;
   transition: background-color 0.2s ease;
+
+  &:first-child {
+    border-top-left-radius: 28px;
+    border-bottom-left-radius: 28px;
+  }
+
+  &:last-child {
+    border-top-right-radius: 28px;
+    border-bottom-right-radius: 28px;
+  }
 
   &:hover {
     background-color: rgba(0, 0, 0, 0.05);
