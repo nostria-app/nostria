@@ -21,6 +21,7 @@ export class VideoFilterService {
   private currentWidth = 0;
   private currentHeight = 0;
   private currentTexCoords = { left: 0, right: 1, top: 0, bottom: 1 };
+  private startTime = performance.now();
 
   readonly availableFilters: VideoFilter[] = [
     { id: 'none', name: 'None', icon: 'filter_none', description: 'No filter applied' },
@@ -107,6 +108,7 @@ export class VideoFilterService {
       uniform sampler2D u_image;
       uniform int u_filter;
       uniform vec2 u_resolution;
+      uniform float u_time;
       
       vec3 grayscale(vec3 color) {
         float gray = dot(color, vec3(0.299, 0.587, 0.114));
@@ -286,7 +288,7 @@ export class VideoFilterService {
         return sqrt(gx*gx + gy*gy);
       }
       
-      vec3 cyberpunk(sampler2D image, vec3 color, vec2 texCoord, vec2 resolution) {
+      vec3 cyberpunk(sampler2D image, vec3 color, vec2 texCoord, vec2 resolution, float time) {
         // === SMOOTHING: Apply blur to reduce noise ===
         vec3 smoothed = smoothBlur(image, texCoord, resolution);
         
@@ -351,34 +353,57 @@ export class VideoFilterService {
         vec3 edgeColor = vec3(0.05, 0.02, 0.18); // Slightly more blue in edges
         neonColor = mix(neonColor, edgeColor, edgeStrength * 0.85);
         
-        // === NEON STREAKS / LIGHT FLARES ===
-        // Diagonal streaks across the image
-        float streak1 = smoothstep(0.02, 0.0, abs(sin(texCoord.x * 15.0 + texCoord.y * 8.0 + noiseVal * 3.0) - 0.95));
-        float streak2 = smoothstep(0.02, 0.0, abs(sin(texCoord.x * 12.0 - texCoord.y * 10.0 + rnd * 2.0) - 0.97));
-        float streak3 = smoothstep(0.015, 0.0, abs(sin(texCoord.y * 20.0 + noiseVal * 5.0) - 0.98));
+        // === ANIMATED NEON STREAKS / LIGHT FLARES ===
+        // Flowing diagonal streaks that move over time
+        float t = time * 0.8; // Animation speed
         
-        // Colorful streak colors - cyan, pink, blue
-        vec3 streakColor1 = vec3(0.3, 0.9, 1.0) * streak1 * 0.4; // Cyan streak
-        vec3 streakColor2 = vec3(1.0, 0.3, 0.8) * streak2 * 0.35; // Pink streak
-        vec3 streakColor3 = vec3(0.4, 0.5, 1.0) * streak3 * 0.3; // Blue streak
+        // Streak 1: Flowing cyan diagonal lines
+        float streak1Phase = texCoord.x * 12.0 + texCoord.y * 6.0 - t * 2.0;
+        float streak1 = smoothstep(0.03, 0.0, abs(sin(streak1Phase) - 0.96));
+        streak1 *= smoothstep(0.0, 0.3, sin(texCoord.y * 3.14159 + t)); // Fade in/out
         
-        neonColor += streakColor1 + streakColor2 + streakColor3;
+        // Streak 2: Flowing pink opposite diagonal
+        float streak2Phase = texCoord.x * 10.0 - texCoord.y * 8.0 + t * 1.5;
+        float streak2 = smoothstep(0.025, 0.0, abs(sin(streak2Phase) - 0.97));
+        streak2 *= smoothstep(0.0, 0.3, cos(texCoord.x * 3.14159 - t * 0.7));
         
-        // === RANDOM LIGHT FLARES / BOKEH ===
-        // Create scattered glowing spots
-        for (int i = 0; i < 3; i++) {
-          vec2 flarePos = vec2(
-            hash(vec2(float(i) * 1.23, 0.456)),
-            hash(vec2(float(i) * 2.34, 1.567))
-          );
-          float flareDist = length(texCoord - flarePos);
-          float flareIntensity = smoothstep(0.15, 0.0, flareDist) * 0.3;
+        // Streak 3: Horizontal sweeping blue lines
+        float streak3Phase = texCoord.y * 15.0 + t * 3.0;
+        float streak3 = smoothstep(0.02, 0.0, abs(sin(streak3Phase) - 0.98));
+        streak3 *= smoothstep(0.0, 0.4, sin(t * 0.5 + texCoord.x * 2.0));
+        
+        // Streak 4: Vertical sweeping magenta
+        float streak4Phase = texCoord.x * 18.0 - t * 2.5;
+        float streak4 = smoothstep(0.02, 0.0, abs(sin(streak4Phase) - 0.97));
+        streak4 *= smoothstep(0.0, 0.3, cos(t * 0.3 + texCoord.y * 1.5));
+        
+        // Colorful animated streak colors
+        vec3 streakColor1 = vec3(0.3, 0.9, 1.0) * streak1 * 0.5; // Cyan
+        vec3 streakColor2 = vec3(1.0, 0.3, 0.8) * streak2 * 0.45; // Pink
+        vec3 streakColor3 = vec3(0.4, 0.6, 1.0) * streak3 * 0.4; // Blue
+        vec3 streakColor4 = vec3(0.9, 0.2, 0.9) * streak4 * 0.35; // Magenta
+        
+        neonColor += streakColor1 + streakColor2 + streakColor3 + streakColor4;
+        
+        // === ANIMATED LIGHT FLARES / BOKEH ===
+        // Moving glowing spots
+        for (int i = 0; i < 4; i++) {
+          // Animate flare positions in circular/flowing patterns
+          float fi = float(i);
+          float angle = t * (0.3 + fi * 0.1) + fi * 1.57;
+          float radius = 0.2 + 0.15 * sin(t * 0.5 + fi);
+          vec2 flarePos = vec2(0.5) + vec2(cos(angle), sin(angle)) * radius;
           
-          // Alternate between pink, cyan, and blue flares
+          float flareDist = length(texCoord - flarePos);
+          float flareIntensity = smoothstep(0.12, 0.0, flareDist) * 0.25;
+          flareIntensity *= 0.5 + 0.5 * sin(t * 2.0 + fi * 1.5); // Pulsing
+          
+          // Cycle through colors
           vec3 flareColor;
           if (i == 0) flareColor = vec3(1.0, 0.2, 0.6); // Pink
-          else if (i == 1) flareColor = vec3(0.2, 0.8, 1.0); // Cyan  
-          else flareColor = vec3(0.3, 0.4, 1.0); // Blue
+          else if (i == 1) flareColor = vec3(0.2, 0.8, 1.0); // Cyan
+          else if (i == 2) flareColor = vec3(0.4, 0.5, 1.0); // Blue
+          else flareColor = vec3(0.8, 0.3, 1.0); // Purple
           
           neonColor += flareColor * flareIntensity;
         }
@@ -440,7 +465,7 @@ export class VideoFilterService {
         } else if (u_filter == 13) {
           result = pixelate(u_image, v_texCoord);
         } else if (u_filter == 14) {
-          result = cyberpunk(u_image, result, v_texCoord, u_resolution);
+          result = cyberpunk(u_image, result, v_texCoord, u_resolution, u_time);
         }
         
         gl_FragColor = vec4(result, color.a);
@@ -671,9 +696,14 @@ export class VideoFilterService {
     const imageLocation = this.gl.getUniformLocation(this.program, 'u_image');
     const filterLocation = this.gl.getUniformLocation(this.program, 'u_filter');
     const resolutionLocation = this.gl.getUniformLocation(this.program, 'u_resolution');
+    const timeLocation = this.gl.getUniformLocation(this.program, 'u_time');
     this.gl.uniform1i(imageLocation, 0);
     this.gl.uniform1i(filterLocation, filterIndex);
     this.gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+
+    // Pass time for animated effects (in seconds)
+    const currentTime = (performance.now() - this.startTime) / 1000.0;
+    this.gl.uniform1f(timeLocation, currentTime);
 
     // Draw
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
@@ -686,5 +716,6 @@ export class VideoFilterService {
     this.currentWidth = 0;
     this.currentHeight = 0;
     this.currentTexCoords = { left: 0, right: 1, top: 0, bottom: 1 };
+    this.startTime = performance.now();
   }
 }
