@@ -76,7 +76,7 @@
   </div>
   } @else {
   <!-- Video Preview -->
-  <div class="preview-container">
+  <div class="preview-container" [class.horizontal]="aspectRatio() === 'horizontal'">
     <video #videoPreview [src]="recordedUrl()!" controls autoplay class="video-preview"></video>
   </div>
   }

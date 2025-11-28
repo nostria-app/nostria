@@ -389,6 +389,13 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     this.recordedUrl.set(null);
     this.isPreviewing.set(false);
     this.recordingProgress.set(0);
+
+    // Stop any existing filter rendering
+    this.stopFilterRendering();
+
+    // Clean up WebGL resources so they can be reinitialized with correct dimensions
+    this.filterService.cleanup();
+
     // Restart camera preview and filter rendering
     await this.startCameraPreview();
     this.initializeFilters();
