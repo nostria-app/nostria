@@ -49,7 +49,15 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   uploadOriginal = false; // Upload original without transcoding
   selectedFilter = signal<string>('none'); // Currently selected filter
   showFilters = signal<boolean>(false); // Show/hide filter selection
+  showSwipeHint = signal<boolean>(false); // Show swipe hint briefly
   private filterAnimationFrame: number | null = null;
+  private swipeHintTimeout: number | null = null;
+
+  // Swipe gesture state
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private isSwiping = false;
+  private readonly SWIPE_THRESHOLD = 50; // Minimum swipe distance
 
   // Recording constraints
   private readonly MAX_DURATION_MS = 6300; // 6.3 seconds
@@ -62,6 +70,9 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     this.cleanupTimers();
     this.stopFilterRendering();
     this.filterService.cleanup();
+    if (this.swipeHintTimeout) {
+      clearTimeout(this.swipeHintTimeout);
+    }
     if (this.recordedUrl()) {
       URL.revokeObjectURL(this.recordedUrl()!);
     }
@@ -72,7 +83,16 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     setTimeout(async () => {
       await this.startCameraPreview();
       this.initializeFilters();
+      this.showSwipeHintBriefly();
     }, 100);
+  }
+
+  private showSwipeHintBriefly(): void {
+    // Show swipe hint for 3 seconds
+    this.showSwipeHint.set(true);
+    this.swipeHintTimeout = window.setTimeout(() => {
+      this.showSwipeHint.set(false);
+    }, 3000);
   }
 
   private initializeFilters(): void {
@@ -417,5 +437,72 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   toggleFilters(): void {
     this.showFilters.update(show => !show);
+  }
+
+  // Get current filter info for display
+  getCurrentFilterIcon(): string {
+    const filter = this.filterService.availableFilters.find(f => f.id === this.selectedFilter());
+    return filter?.icon || 'filter_none';
+  }
+
+  getCurrentFilterName(): string {
+    const filter = this.filterService.availableFilters.find(f => f.id === this.selectedFilter());
+    return filter?.name || 'None';
+  }
+
+  getCurrentFilterIndex(): number {
+    return this.filterService.availableFilters.findIndex(f => f.id === this.selectedFilter());
+  }
+
+  // Swipe gesture handlers
+  onTouchStart(event: TouchEvent): void {
+    if (this.isRecording()) return;
+
+    const touch = event.touches[0];
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+    this.isSwiping = false;
+  }
+
+  onTouchMove(event: TouchEvent): void {
+    if (this.isRecording()) return;
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
+
+    // Determine if this is a horizontal swipe (filter change) vs vertical scroll
+    if (!this.isSwiping && Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      this.isSwiping = true;
+    }
+
+    // Prevent default scrolling during horizontal swipe
+    if (this.isSwiping) {
+      event.preventDefault();
+    }
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    if (this.isRecording() || !this.isSwiping) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - this.touchStartX;
+
+    if (Math.abs(deltaX) >= this.SWIPE_THRESHOLD) {
+      const currentIndex = this.getCurrentFilterIndex();
+      const filters = this.filterService.availableFilters;
+
+      if (deltaX < 0) {
+        // Swipe left - next filter
+        const nextIndex = (currentIndex + 1) % filters.length;
+        this.selectFilter(filters[nextIndex].id);
+      } else {
+        // Swipe right - previous filter
+        const prevIndex = currentIndex <= 0 ? filters.length - 1 : currentIndex - 1;
+        this.selectFilter(filters[prevIndex].id);
+      }
+    }
+
+    this.isSwiping = false;
   }
 }
