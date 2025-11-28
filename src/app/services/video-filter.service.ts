@@ -20,6 +20,7 @@ export class VideoFilterService {
   private canvas: HTMLCanvasElement | null = null;
   private currentWidth = 0;
   private currentHeight = 0;
+  private currentTexCoords = { left: 0, right: 1, top: 0, bottom: 1 };
 
   readonly availableFilters: VideoFilter[] = [
     { id: 'none', name: 'None', icon: 'filter_none', description: 'No filter applied' },
@@ -334,6 +335,31 @@ export class VideoFilterService {
     console.log('[VideoFilter] Texture setup complete');
   }
 
+  private updateTextureCoords(left: number, right: number, top: number, bottom: number): void {
+    if (!this.gl || !this.textureCoordBuffer) return;
+
+    // Check if coords changed
+    if (this.currentTexCoords.left === left &&
+      this.currentTexCoords.right === right &&
+      this.currentTexCoords.top === top &&
+      this.currentTexCoords.bottom === bottom) {
+      return;
+    }
+
+    this.currentTexCoords = { left, right, top, bottom };
+
+    // Update texture coordinates
+    // Note: Y is flipped because video origin is top-left, WebGL origin is bottom-left
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
+    const texCoords = new Float32Array([
+      left, 1 - top,      // bottom-left position -> top-left of video region
+      right, 1 - top,     // bottom-right position -> top-right of video region
+      left, 1 - bottom,   // top-left position -> bottom-left of video region
+      right, 1 - bottom,  // top-right position -> bottom-right of video region
+    ]);
+    this.gl.bufferData(this.gl.ARRAY_BUFFER, texCoords, this.gl.DYNAMIC_DRAW);
+  }
+
   setFilter(filterId: string): void {
     this.currentFilter = filterId;
   }
@@ -342,7 +368,7 @@ export class VideoFilterService {
     return this.availableFilters.findIndex(f => f.id === filterId);
   }
 
-  applyFilter(video: HTMLVideoElement, canvas: HTMLCanvasElement): void {
+  applyFilter(video: HTMLVideoElement, canvas: HTMLCanvasElement, targetAspectRatio?: number): void {
     if (!this.gl || !this.program) {
       return;
     }
@@ -352,16 +378,63 @@ export class VideoFilterService {
 
     const filterIndex = this.getFilterIndex(this.currentFilter);
 
-    // Update canvas size to match video
-    if (this.currentWidth !== video.videoWidth || this.currentHeight !== video.videoHeight) {
-      this.currentWidth = video.videoWidth;
-      this.currentHeight = video.videoHeight;
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+    // Calculate target canvas dimensions
+    let targetWidth: number;
+    let targetHeight: number;
+
+    if (targetAspectRatio) {
+      // Use target aspect ratio - scale to maintain reasonable resolution
+      const baseSize = Math.max(video.videoWidth, video.videoHeight);
+      if (targetAspectRatio > 1) {
+        // Landscape
+        targetWidth = baseSize;
+        targetHeight = Math.round(baseSize / targetAspectRatio);
+      } else {
+        // Portrait
+        targetHeight = baseSize;
+        targetWidth = Math.round(baseSize * targetAspectRatio);
+      }
+    } else {
+      // Match video dimensions
+      targetWidth = video.videoWidth;
+      targetHeight = video.videoHeight;
+    }
+
+    // Update canvas size if needed
+    if (this.currentWidth !== targetWidth || this.currentHeight !== targetHeight) {
+      this.currentWidth = targetWidth;
+      this.currentHeight = targetHeight;
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
       // Update viewport after resize
       this.gl.viewport(0, 0, canvas.width, canvas.height);
       console.log(`[VideoFilter] Canvas resized to ${canvas.width}x${canvas.height}`);
     }
+
+    // Calculate texture coordinates for center-crop (cover) effect
+    const videoAspect = video.videoWidth / video.videoHeight;
+    const canvasAspect = targetWidth / targetHeight;
+
+    let texLeft = 0, texRight = 1, texTop = 0, texBottom = 1;
+
+    if (targetAspectRatio && Math.abs(videoAspect - canvasAspect) > 0.01) {
+      if (videoAspect > canvasAspect) {
+        // Video is wider than target - crop left/right
+        const scale = canvasAspect / videoAspect;
+        const offset = (1 - scale) / 2;
+        texLeft = offset;
+        texRight = 1 - offset;
+      } else {
+        // Video is taller than target - crop top/bottom
+        const scale = videoAspect / canvasAspect;
+        const offset = (1 - scale) / 2;
+        texTop = offset;
+        texBottom = 1 - offset;
+      }
+    }
+
+    // Update texture coordinates if they changed
+    this.updateTextureCoords(texLeft, texRight, texTop, texBottom);
 
     // Check if context was lost
     if (this.gl.isContextLost()) {
@@ -411,5 +484,6 @@ export class VideoFilterService {
     this.canvas = null;
     this.currentWidth = 0;
     this.currentHeight = 0;
+    this.currentTexCoords = { left: 0, right: 1, top: 0, bottom: 1 };
   }
 }
