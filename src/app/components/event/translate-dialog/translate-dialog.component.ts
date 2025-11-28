@@ -76,14 +76,15 @@ export class TranslateDialogComponent {
   });
 
   constructor() {
-    // Load saved translation preferences
+    // Load saved translation preferences and validate against available languages
     const savedSourceLang = this.localStorage.getItem(this.SOURCE_LANG_KEY);
     const savedTargetLang = this.localStorage.getItem(this.TARGET_LANG_KEY);
+    const availableCodes = this.availableLanguages().map(lang => lang.code);
     
-    if (savedSourceLang) {
+    if (savedSourceLang && availableCodes.includes(savedSourceLang)) {
       this.sourceLang.set(savedSourceLang);
     }
-    if (savedTargetLang) {
+    if (savedTargetLang && availableCodes.includes(savedTargetLang)) {
       this.targetLang.set(savedTargetLang);
     }
   }
