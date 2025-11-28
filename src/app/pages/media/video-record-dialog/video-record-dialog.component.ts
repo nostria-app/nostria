@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -9,12 +8,11 @@ import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { VideoFilterService } from '../../../services/video-filter.service';
 import { MatChipsModule } from '@angular/material/chips';
+import { CustomDialogRef } from '../../../services/custom-dialog.service';
 
 @Component({
   selector: 'app-video-record-dialog',
-  standalone: true,
   imports: [
-    MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
@@ -27,7 +25,7 @@ import { MatChipsModule } from '@angular/material/chips';
   styleUrls: ['./video-record-dialog.component.scss'],
 })
 export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
-  private dialogRef = inject(MatDialogRef<VideoRecordDialogComponent>);
+  dialogRef = inject(CustomDialogRef<VideoRecordDialogComponent, { file: File; uploadOriginal: boolean } | null>);
   private snackBar = inject(MatSnackBar);
   filterService = inject(VideoFilterService);
 

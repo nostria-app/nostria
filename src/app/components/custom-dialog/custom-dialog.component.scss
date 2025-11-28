@@ -291,6 +291,14 @@
   }
 }
 
+// Video Record Dialog Override
+.dialog-container.video-record-dialog-panel {
+  .dialog-content {
+    padding: 0;
+    overflow: visible;
+  }
+}
+
 // Actions
 .dialog-actions {
   border-top: 1px solid transparent;
