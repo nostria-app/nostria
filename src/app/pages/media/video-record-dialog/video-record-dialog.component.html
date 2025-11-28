@@ -15,12 +15,21 @@
   <mat-dialog-content>
     @if (!isPreviewing()) {
     <!-- Camera Preview -->
-    <div class="camera-container" [class.horizontal]="aspectRatio() === 'horizontal'">
+    <div class="camera-container" [class.horizontal]="aspectRatio() === 'horizontal'"
+      (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
       <!-- Hidden video element for camera stream (source only, not displayed) -->
       <video #cameraPreview autoplay playsinline muted class="camera-preview-source"></video>
 
       <!-- Canvas for displaying video (with or without filters) -->
       <canvas #filterCanvas class="filter-canvas"></canvas>
+
+      <!-- Current filter indicator -->
+      @if (!isRecording() && selectedFilter() !== 'none') {
+      <div class="current-filter-badge">
+        <mat-icon>{{ getCurrentFilterIcon() }}</mat-icon>
+        <span>{{ getCurrentFilterName() }}</span>
+      </div>
+      }
 
       @if (isRecording()) {
       <div class="recording-indicator">
@@ -50,7 +59,7 @@
         <mat-icon>photo_filter</mat-icon>
       </button>
 
-      <!-- Filter Selection -->
+      <!-- Filter Selection Panel -->
       @if (showFilters()) {
       <div class="filter-selection">
         <div class="filter-chips">
@@ -62,6 +71,19 @@
           </button>
           }
         </div>
+        <div class="filter-indicator">
+          @for (filter of filterService.availableFilters; track filter.id; let i = $index) {
+          <div class="indicator-dot" [class.active]="selectedFilter() === filter.id"></div>
+          }
+        </div>
+      </div>
+      }
+
+      <!-- Swipe hint (shown briefly) -->
+      @if (showSwipeHint() && !showFilters()) {
+      <div class="swipe-hint visible">
+        <mat-icon>swipe</mat-icon>
+        <span>Swipe to change filter</span>
       </div>
       }
       }
