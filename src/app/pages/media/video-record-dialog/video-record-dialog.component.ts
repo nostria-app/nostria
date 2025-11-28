@@ -419,6 +419,18 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     }
   }
 
+  downloadVideo(): void {
+    const url = this.recordedUrl();
+    if (url) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `video-${Date.now()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
+  }
+
   cancel(): void {
     this.dialogRef.close(null);
   }
