@@ -228,6 +228,25 @@ export class VideoFilterService {
         return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
       }
       
+      // Pseudo-random function based on position
+      float hash(vec2 p) {
+        return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+      }
+      
+      // 2D noise function
+      float noise(vec2 p) {
+        vec2 i = floor(p);
+        vec2 f = fract(p);
+        f = f * f * (3.0 - 2.0 * f); // smoothstep
+        
+        float a = hash(i);
+        float b = hash(i + vec2(1.0, 0.0));
+        float c = hash(i + vec2(0.0, 1.0));
+        float d = hash(i + vec2(1.0, 1.0));
+        
+        return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+      }
+      
       // Smooth blur for noise reduction
       vec3 smoothBlur(sampler2D image, vec2 texCoord, vec2 resolution) {
         vec2 texel = 1.0 / resolution;
@@ -272,75 +291,114 @@ export class VideoFilterService {
         vec3 smoothed = smoothBlur(image, texCoord, resolution);
         
         // === SOFT POSTERIZATION ===
-        // Use fewer levels and smooth transitions for cleaner look
         float posterLevels = 4.0;
         vec3 posterized = floor(smoothed * posterLevels + 0.5) / posterLevels;
-        // Blend with smoothed for softer transitions
         posterized = mix(smoothed, posterized, 0.7);
         
         // === EDGE DETECTION: Only strong edges ===
         float edge = sobelEdge(image, texCoord, resolution);
-        float edgeThreshold = 0.25; // Higher threshold = fewer edges
+        float edgeThreshold = 0.25;
         float edgeStrength = smoothstep(edgeThreshold, edgeThreshold + 0.15, edge);
+        
+        // === RANDOM VARIATION for position-based effects ===
+        float rnd = hash(texCoord * 100.0);
+        float noiseVal = noise(texCoord * 8.0);
         
         // === CYBERPUNK COLOR TRANSFORMATION ===
         vec3 hsv = rgb2hsv(posterized);
         
         // Boost saturation for vivid neon colors
         hsv.y = min(hsv.y * 1.8, 1.0);
-        
-        // Boost value slightly for brighter neons
         hsv.z = min(hsv.z * 1.1, 1.0);
         
-        // Map hues to cyberpunk neon palette
+        // Map hues to cyberpunk neon palette with MORE BLUE variation
         float hue = hsv.x * 360.0;
         
+        // Random blue injection - some areas get pushed to blue
+        float blueChance = noise(texCoord * 5.0 + 0.5);
+        
         if (hue < 30.0 || hue >= 330.0) {
-          // Reds -> Hot pink/magenta
-          hsv.x = 320.0 / 360.0;
+          // Reds -> Hot pink/magenta OR electric blue (random)
+          hsv.x = blueChance > 0.6 ? 220.0 / 360.0 : 320.0 / 360.0;
         } else if (hue < 90.0) {
-          // Orange/Yellow -> Neon pink
-          hsv.x = 335.0 / 360.0;
+          // Orange/Yellow -> Neon pink OR cyan-blue
+          hsv.x = blueChance > 0.5 ? 200.0 / 360.0 : 335.0 / 360.0;
         } else if (hue < 150.0) {
-          // Yellow-green/Green -> Electric cyan
-          hsv.x = 185.0 / 360.0;
+          // Yellow-green/Green -> Electric cyan OR deep blue
+          hsv.x = blueChance > 0.4 ? 230.0 / 360.0 : 185.0 / 360.0;
         } else if (hue < 210.0) {
-          // Cyan range -> Bright cyan
-          hsv.x = 190.0 / 360.0;
+          // Cyan range -> Bright cyan OR neon blue
+          hsv.x = blueChance > 0.3 ? 240.0 / 360.0 : 190.0 / 360.0;
         } else if (hue < 270.0) {
-          // Blue range -> Deep neon blue
-          hsv.x = 240.0 / 360.0;
+          // Blue range -> Deep neon blue (keep blue)
+          hsv.x = mix(220.0, 250.0, noiseVal) / 360.0;
         } else {
-          // Purple/Violet -> Electric purple
-          hsv.x = 290.0 / 360.0;
+          // Purple/Violet -> Electric purple OR blue-violet
+          hsv.x = blueChance > 0.5 ? 260.0 / 360.0 : 290.0 / 360.0;
         }
         
         // Convert back to RGB
         vec3 neonColor = hsv2rgb(hsv);
         
+        // === ADD RANDOM BLUE TINT OVERLAY ===
+        float blueTint = noise(texCoord * 3.0) * 0.15;
+        neonColor = mix(neonColor, vec3(0.2, 0.4, 1.0), blueTint);
+        
         // === SOFT CONTRAST ===
         neonColor = (neonColor - 0.5) * 1.3 + 0.5;
         
-        // === CARTOON OUTLINES (only strong edges) ===
-        vec3 edgeColor = vec3(0.08, 0.02, 0.15); // Dark purple-ish black
+        // === CARTOON OUTLINES ===
+        vec3 edgeColor = vec3(0.05, 0.02, 0.18); // Slightly more blue in edges
         neonColor = mix(neonColor, edgeColor, edgeStrength * 0.85);
         
-        // === SUBTLE NEON GLOW ===
+        // === NEON STREAKS / LIGHT FLARES ===
+        // Diagonal streaks across the image
+        float streak1 = smoothstep(0.02, 0.0, abs(sin(texCoord.x * 15.0 + texCoord.y * 8.0 + noiseVal * 3.0) - 0.95));
+        float streak2 = smoothstep(0.02, 0.0, abs(sin(texCoord.x * 12.0 - texCoord.y * 10.0 + rnd * 2.0) - 0.97));
+        float streak3 = smoothstep(0.015, 0.0, abs(sin(texCoord.y * 20.0 + noiseVal * 5.0) - 0.98));
+        
+        // Colorful streak colors - cyan, pink, blue
+        vec3 streakColor1 = vec3(0.3, 0.9, 1.0) * streak1 * 0.4; // Cyan streak
+        vec3 streakColor2 = vec3(1.0, 0.3, 0.8) * streak2 * 0.35; // Pink streak
+        vec3 streakColor3 = vec3(0.4, 0.5, 1.0) * streak3 * 0.3; // Blue streak
+        
+        neonColor += streakColor1 + streakColor2 + streakColor3;
+        
+        // === RANDOM LIGHT FLARES / BOKEH ===
+        // Create scattered glowing spots
+        for (int i = 0; i < 3; i++) {
+          vec2 flarePos = vec2(
+            hash(vec2(float(i) * 1.23, 0.456)),
+            hash(vec2(float(i) * 2.34, 1.567))
+          );
+          float flareDist = length(texCoord - flarePos);
+          float flareIntensity = smoothstep(0.15, 0.0, flareDist) * 0.3;
+          
+          // Alternate between pink, cyan, and blue flares
+          vec3 flareColor;
+          if (i == 0) flareColor = vec3(1.0, 0.2, 0.6); // Pink
+          else if (i == 1) flareColor = vec3(0.2, 0.8, 1.0); // Cyan  
+          else flareColor = vec3(0.3, 0.4, 1.0); // Blue
+          
+          neonColor += flareColor * flareIntensity;
+        }
+        
+        // === SUBTLE GLOW ===
         float glowEdge = smoothstep(0.2, 0.35, edge);
-        vec3 glowColor = mix(vec3(1.0, 0.3, 0.8), vec3(0.3, 1.0, 1.0), texCoord.y);
+        vec3 glowColor = mix(vec3(0.3, 0.5, 1.0), vec3(0.3, 1.0, 1.0), texCoord.y); // More blue in glow
         neonColor += glowColor * glowEdge * 0.15 * (1.0 - edgeStrength);
         
-        // === VIGNETTE ===
+        // === VIGNETTE with blue tint ===
         vec2 position = texCoord - vec2(0.5);
         float dist = length(position);
         float vignette = smoothstep(1.0, 0.4, dist);
-        vec3 vignetteColor = vec3(0.1, 0.0, 0.2);
+        vec3 vignetteColor = vec3(0.05, 0.02, 0.2); // More blue vignette
         neonColor = mix(vignetteColor, neonColor, vignette);
         
-        // === SUBTLE BLOOM ===
+        // === BLOOM with blue bias ===
         float brightness = dot(neonColor, vec3(0.299, 0.587, 0.114));
         if (brightness > 0.6) {
-          vec3 bloomColor = mix(vec3(1.0, 0.5, 0.9), vec3(0.5, 1.0, 1.0), texCoord.y);
+          vec3 bloomColor = mix(vec3(0.5, 0.6, 1.0), vec3(0.5, 1.0, 1.0), texCoord.y);
           neonColor += bloomColor * (brightness - 0.6) * 0.25;
         }
         
