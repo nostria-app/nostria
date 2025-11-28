@@ -5,6 +5,7 @@ import { UserRelayService } from './relays/user-relay';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
+import { StorageService } from './storage.service';
 import { TimelineFilterOptions, DEFAULT_TIMELINE_FILTER } from '../interfaces/timeline-filter';
 
 @Injectable({
@@ -14,6 +15,7 @@ export class ProfileStateService {
   private readonly logger = inject(LoggerService);
   private readonly userRelayService = inject(UserRelayService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly storage = inject(StorageService);
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
@@ -204,10 +206,132 @@ export class ProfileStateService {
     this.timelineFilter.set({ ...DEFAULT_TIMELINE_FILTER });
   }
 
+  /**
+   * Load cached events from database for immediate display.
+   * This provides a better user experience by showing content instantly while fresh data loads.
+   * 
+   * @param pubkey - The hex public key of the profile to load cached events for
+   * @returns Promise that resolves when cached events are loaded (or if loading fails gracefully)
+   * 
+   * Note: If no cached events exist, this method returns early without error.
+   * Any errors during loading are caught and logged, allowing relay loading to proceed.
+   */
+  private async loadCachedEvents(pubkey: string): Promise<void> {
+    try {
+      this.logger.info(`Loading cached events from database for: ${pubkey}`);
+
+      // Get all cached events by pubkey from storage
+      const cachedEvents = await this.storage.getEventsByPubkey(pubkey);
+
+      if (!cachedEvents || cachedEvents.length === 0) {
+        this.logger.debug(`No cached events found for: ${pubkey}`);
+        return;
+      }
+
+      this.logger.info(`Found ${cachedEvents.length} cached events for: ${pubkey}`);
+
+      // Process cached events and populate the signals
+      for (const event of cachedEvents) {
+        // Check if we're still loading this profile
+        if (this.currentlyLoadingPubkey() !== pubkey) {
+          this.logger.debug(`Profile switched during cached events load. Stopping for: ${pubkey}`);
+          return;
+        }
+
+        if (event.kind === kinds.LongFormArticle) {
+          const record = this.utilities.toRecord(event);
+          this.articles.update(articles => {
+            const exists = articles.some(a => a.event.id === event.id);
+            if (!exists) {
+              return [...articles, record];
+            }
+            return articles;
+          });
+        } else if (event.kind === kinds.ShortTextNote) {
+          const record = this.utilities.toRecord(event);
+          if (this.utilities.isRootPost(event)) {
+            this.notes.update(notes => {
+              const exists = notes.some(n => n.event.id === event.id);
+              if (!exists) {
+                return [...notes, record];
+              }
+              return notes;
+            });
+          } else {
+            this.replies.update(replies => {
+              const exists = replies.some(r => r.event.id === event.id);
+              if (!exists) {
+                return [...replies, record];
+              }
+              return replies;
+            });
+          }
+        } else if (event.kind === kinds.Repost || event.kind === kinds.GenericRepost) {
+          const record = this.utilities.toRecord(event);
+          this.reposts.update(reposts => {
+            const exists = reposts.some(r => r.event.id === event.id);
+            if (!exists) {
+              return [...reposts, record];
+            }
+            return reposts;
+          });
+        } else if (event.kind === 20 || event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236) {
+          const record = this.utilities.toRecord(event);
+          this.media.update(media => {
+            const exists = media.some(m => m.event.id === event.id);
+            if (!exists) {
+              return [...media, record];
+            }
+            return media;
+          });
+        } else if (event.kind === 1222 || event.kind === 1244) {
+          const record = this.utilities.toRecord(event);
+          this.audio.update(audio => {
+            const exists = audio.some(a => a.event.id === event.id);
+            if (!exists) {
+              return [...audio, record];
+            }
+            return audio;
+          });
+        } else if (event.kind === kinds.Reaction) {
+          const record = this.utilities.toRecord(event);
+          this.reactions.update(reactions => {
+            const exists = reactions.some(r => r.event.id === event.id);
+            if (!exists) {
+              return [...reactions, record];
+            }
+            return reactions;
+          });
+        } else if (event.kind === kinds.Contacts) {
+          // Load cached contacts/following list for initial display.
+          // Only set if following list is empty - fresh data from relays will update it later.
+          const followingList = this.utilities.getPTagsValuesFromEvent(event);
+          if (followingList.length > 0 && this.followingList().length === 0) {
+            this.followingList.set(followingList);
+          }
+        }
+      }
+
+      this.logger.info(`Loaded cached events: notes=${this.notes().length}, articles=${this.articles().length}, media=${this.media().length}`);
+    } catch (error) {
+      this.logger.error(`Error loading cached events for ${pubkey}:`, error);
+      // Don't throw - continue with relay loading even if cache fails
+    }
+  }
+
   async loadUserData(pubkey: string) {
     // Set the currently loading pubkey to track this request
     this.currentlyLoadingPubkey.set(pubkey);
     this.logger.info(`Starting to load profile data for: ${pubkey}`);
+
+    // First, load cached events from database for immediate display
+    await this.loadCachedEvents(pubkey);
+
+    // Check if profile was switched during cache loading
+    if (this.currentlyLoadingPubkey() !== pubkey) {
+      this.logger.info(`Profile switched during cache load. Stopping for: ${pubkey}`);
+      return;
+    }
 
     // Subscribe to contacts separately since they need special handling (only 1 per user, potentially older)
     // Try user-specific relays first
