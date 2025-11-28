@@ -17,6 +17,9 @@ export class VideoFilterService {
   private positionBuffer: WebGLBuffer | null = null;
   private texture: WebGLTexture | null = null;
   private currentFilter = 'none';
+  private canvas: HTMLCanvasElement | null = null;
+  private currentWidth = 0;
+  private currentHeight = 0;
 
   readonly availableFilters: VideoFilter[] = [
     { id: 'none', name: 'None', icon: 'filter_none', description: 'No filter applied' },
@@ -37,17 +40,23 @@ export class VideoFilterService {
 
   initWebGL(canvas: HTMLCanvasElement): boolean {
     try {
-      this.gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl') as WebGLRenderingContext;
+      this.canvas = canvas;
+      this.gl = canvas.getContext('webgl', { preserveDrawingBuffer: true }) ||
+        canvas.getContext('experimental-webgl', { preserveDrawingBuffer: true }) as WebGLRenderingContext;
       if (!this.gl) {
         console.error('WebGL not supported');
         return false;
       }
 
       // Set up shaders and program
-      this.setupShaders();
+      if (!this.setupShaders()) {
+        console.error('Failed to setup shaders');
+        return false;
+      }
       this.setupBuffers();
       this.setupTexture();
 
+      console.log('[VideoFilter] WebGL initialized successfully');
       return true;
     } catch (e) {
       console.error('Error initializing WebGL:', e);
@@ -55,8 +64,29 @@ export class VideoFilterService {
     }
   }
 
-  private setupShaders(): void {
-    if (!this.gl) return;
+  private cleanupWebGLResources(): void {
+    if (this.gl) {
+      if (this.program) {
+        this.gl.deleteProgram(this.program);
+        this.program = null;
+      }
+      if (this.positionBuffer) {
+        this.gl.deleteBuffer(this.positionBuffer);
+        this.positionBuffer = null;
+      }
+      if (this.textureCoordBuffer) {
+        this.gl.deleteBuffer(this.textureCoordBuffer);
+        this.textureCoordBuffer = null;
+      }
+      if (this.texture) {
+        this.gl.deleteTexture(this.texture);
+        this.texture = null;
+      }
+    }
+  }
+
+  private setupShaders(): boolean {
+    if (!this.gl) return false;
 
     const vertexShaderSource = `
       attribute vec2 a_position;
@@ -220,13 +250,13 @@ export class VideoFilterService {
 
     if (!vertexShader || !fragmentShader) {
       console.error('Failed to create shaders');
-      return;
+      return false;
     }
 
     const program = this.gl.createProgram();
     if (!program) {
       console.error('Failed to create WebGL program');
-      return;
+      return false;
     }
 
     this.program = program;
@@ -236,8 +266,10 @@ export class VideoFilterService {
 
     if (!this.gl.getProgramParameter(this.program, this.gl.LINK_STATUS)) {
       console.error('Program link failed:', this.gl.getProgramInfoLog(this.program));
-      return;
+      return false;
     }
+
+    return true;
   }
 
   private createShader(gl: WebGLRenderingContext, type: number, source: string): WebGLShader | null {
@@ -264,20 +296,21 @@ export class VideoFilterService {
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
     const positions = new Float32Array([
       -1, -1,
-       1, -1,
-      -1,  1,
-       1,  1,
+      1, -1,
+      -1, 1,
+      1, 1,
     ]);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, positions, this.gl.STATIC_DRAW);
 
     // Texture coordinate buffer
+    // Note: Y is flipped (1-y) because video origin is top-left, WebGL origin is bottom-left
     this.textureCoordBuffer = this.gl.createBuffer();
     this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
     const texCoords = new Float32Array([
-      0, 1,
-      1, 1,
-      0, 0,
-      1, 0,
+      0, 1,  // bottom-left position -> top-left of video
+      1, 1,  // bottom-right position -> top-right of video
+      0, 0,  // top-left position -> bottom-left of video
+      1, 0,  // top-right position -> bottom-right of video
     ]);
     this.gl.bufferData(this.gl.ARRAY_BUFFER, texCoords, this.gl.STATIC_DRAW);
   }
@@ -287,10 +320,18 @@ export class VideoFilterService {
 
     this.texture = this.gl.createTexture();
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+
+    // Set texture parameters for video (non-power-of-two textures)
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_S, this.gl.CLAMP_TO_EDGE);
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_WRAP_T, this.gl.CLAMP_TO_EDGE);
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MIN_FILTER, this.gl.LINEAR);
     this.gl.texParameteri(this.gl.TEXTURE_2D, this.gl.TEXTURE_MAG_FILTER, this.gl.LINEAR);
+
+    // Initialize with a placeholder pixel (helps prevent black texture issues)
+    const pixel = new Uint8Array([128, 128, 128, 255]); // gray
+    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, 1, 1, 0, this.gl.RGBA, this.gl.UNSIGNED_BYTE, pixel);
+
+    console.log('[VideoFilter] Texture setup complete');
   }
 
   setFilter(filterId: string): void {
@@ -302,18 +343,38 @@ export class VideoFilterService {
   }
 
   applyFilter(video: HTMLVideoElement, canvas: HTMLCanvasElement): void {
-    if (!this.gl || !this.program) return;
+    if (!this.gl || !this.program) {
+      return;
+    }
+
+    // Skip if video doesn't have valid dimensions yet
+    if (video.videoWidth === 0 || video.videoHeight === 0) return;
 
     const filterIndex = this.getFilterIndex(this.currentFilter);
 
     // Update canvas size to match video
-    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+    if (this.currentWidth !== video.videoWidth || this.currentHeight !== video.videoHeight) {
+      this.currentWidth = video.videoWidth;
+      this.currentHeight = video.videoHeight;
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
+      // Update viewport after resize
       this.gl.viewport(0, 0, canvas.width, canvas.height);
+      console.log(`[VideoFilter] Canvas resized to ${canvas.width}x${canvas.height}`);
     }
 
-    // Upload video frame to texture
+    // Check if context was lost
+    if (this.gl.isContextLost()) {
+      console.error('[VideoFilter] WebGL context lost');
+      return;
+    }
+
+    // Clear the canvas
+    this.gl.clearColor(0, 0, 0, 1);
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+    // Activate texture unit 0 and upload video frame to texture
+    this.gl.activeTexture(this.gl.TEXTURE0);
     this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
     this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, video);
 
@@ -345,24 +406,10 @@ export class VideoFilterService {
   }
 
   cleanup(): void {
-    if (this.gl) {
-      if (this.program) {
-        this.gl.deleteProgram(this.program);
-        this.program = null;
-      }
-      if (this.positionBuffer) {
-        this.gl.deleteBuffer(this.positionBuffer);
-        this.positionBuffer = null;
-      }
-      if (this.textureCoordBuffer) {
-        this.gl.deleteBuffer(this.textureCoordBuffer);
-        this.textureCoordBuffer = null;
-      }
-      if (this.texture) {
-        this.gl.deleteTexture(this.texture);
-        this.texture = null;
-      }
-    }
+    this.cleanupWebGLResources();
     this.gl = null;
+    this.canvas = null;
+    this.currentWidth = 0;
+    this.currentHeight = 0;
   }
 }
