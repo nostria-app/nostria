@@ -288,37 +288,31 @@ mat-sidenav-content {
   right: auto;
 
   width: auto;
-  min-width: 320px;
+  min-width: 280px;
   max-width: calc(100% - 32px);
 
   display: flex;
-  justify-content: space-evenly;
+  justify-content: center;
   align-items: center;
+  gap: 0;
   z-index: 1000;
-  height: 64px;
-  padding: 0 8px;
-  padding-bottom: 0;
-  padding-top: 0;
+  height: 56px;
+  padding: 6px;
 
   border-radius: 32px;
 
   // Glass effect
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.7);
   -webkit-backdrop-filter: blur(20px) saturate(1.8);
   backdrop-filter: blur(20px) saturate(1.8);
 
-  // Remove explicit border, use box-shadow for glass edge effect
   border: none;
 
   box-shadow:
-    // Inner white highlight (sharp edge)
-    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
-    // Inner glow
-    inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
-    // Drop shadows
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.2),
     0px 4px 16px rgba(17, 17, 26, 0.1),
-    0px 8px 24px rgba(17, 17, 26, 0.1),
-    0px 16px 56px rgba(17, 17, 26, 0.1);
+    0px 8px 24px rgba(17, 17, 26, 0.1);
 
   /* Smooth transition for hide/show */
   transition: opacity 0.3s ease-out, visibility 0.3s ease-out, transform 0.3s ease-out;
@@ -331,46 +325,71 @@ mat-sidenav-content {
 }
 
 .mobile-nav a {
-  color: var(--mat-sys-on-surface);
+  color: #666;
 }
 
 :host-context(.dark) .mobile-nav {
-  background-color: rgba(0, 0, 0, 0.2);
+  background-color: rgba(0, 0, 0, 0.3);
 
   box-shadow:
-    // Inner highlight (subtler in dark mode)
     inset 0 0 0 1px rgba(255, 255, 255, 0.15),
-    // Inner glow
     inset 0 0 10px 4px rgba(255, 255, 255, 0.05),
-    // Drop shadows (darker)
     0px 4px 16px rgba(0, 0, 0, 0.4),
-    0px 8px 24px rgba(0, 0, 0, 0.4),
-    0px 16px 56px rgba(0, 0, 0, 0.4);
+    0px 8px 24px rgba(0, 0, 0, 0.4);
+
+  a {
+    color: rgba(255, 255, 255, 0.7);
+  }
 }
 
 .mobile-nav-button {
-  flex: 0 1 auto;
-  width: 60px;
+  flex: 0 0 auto;
+  width: 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   min-width: 0;
-  height: 100%;
-  border-radius: 16px;
+  height: 44px;
+  border-radius: 22px;
   text-align: center;
-  margin: 0 2px;
+  margin: 0;
+  padding: 4px 8px;
+  transition: background-color 0.2s ease;
 
   &:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+
+  &.active-link {
+    background-color: rgba(0, 0, 0, 0.08);
+
+    .mat-icon {
+      color: var(--mat-sys-primary);
+    }
+
+    .mobile-nav-label {
+      color: var(--mat-sys-primary);
+      opacity: 1;
+    }
+  }
+}
+
+:host-context(.dark) .mobile-nav-button {
+  &:hover {
     background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  &.active-link {
+    background-color: rgba(255, 255, 255, 0.15);
   }
 }
 
 .mobile-nav-button .mat-icon {
-  font-size: 24px;
-  height: 24px;
-  width: 24px;
-  margin-bottom: 4px;
+  font-size: 22px;
+  height: 22px;
+  width: 22px;
+  margin-bottom: 2px;
   display: block;
   margin-left: auto;
   margin-right: auto;
@@ -388,7 +407,7 @@ mat-sidenav-content {
   width: 100%;
   padding: 0;
   margin-top: 0;
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
 .fab-container {
