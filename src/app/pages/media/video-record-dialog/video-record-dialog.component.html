@@ -62,7 +62,7 @@
       <!-- Filter Selection Panel -->
       @if (showFilters()) {
       <div class="filter-selection">
-        <div class="filter-chips">
+        <div #filterChips class="filter-chips">
           @for (filter of filterService.availableFilters; track filter.id) {
           <button mat-button class="filter-chip" [class.selected]="selectedFilter() === filter.id"
             (click)="selectFilter(filter.id)" [matTooltip]="filter.description">
@@ -72,7 +72,7 @@
           }
         </div>
         <div class="filter-indicator">
-          @for (filter of filterService.availableFilters; track filter.id; let i = $index) {
+          @for (filter of filterService.availableFilters; track filter.id) {
           <div class="indicator-dot" [class.active]="selectedFilter() === filter.id"></div>
           }
         </div>

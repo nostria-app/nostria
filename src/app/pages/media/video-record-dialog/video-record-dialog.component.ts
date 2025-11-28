@@ -33,6 +33,7 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   @ViewChild('cameraPreview') cameraPreview?: ElementRef<HTMLVideoElement>;
   @ViewChild('filterCanvas') filterCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('filterChips') filterChipsContainer?: ElementRef<HTMLDivElement>;
 
   // Recording state
   isRecording = signal(false);
@@ -433,6 +434,33 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   selectFilter(filterId: string): void {
     this.selectedFilter.set(filterId);
     this.filterService.setFilter(filterId);
+    this.scrollToSelectedFilter();
+  }
+
+  private scrollToSelectedFilter(): void {
+    // Scroll the filter chips container to center the selected filter
+    setTimeout(() => {
+      const container = this.filterChipsContainer?.nativeElement;
+      if (!container) return;
+
+      const selectedIndex = this.getCurrentFilterIndex();
+      const filterChips = container.querySelectorAll('.filter-chip');
+      const selectedChip = filterChips[selectedIndex] as HTMLElement;
+
+      if (selectedChip) {
+        const containerWidth = container.offsetWidth;
+        const chipLeft = selectedChip.offsetLeft;
+        const chipWidth = selectedChip.offsetWidth;
+
+        // Calculate scroll position to center the chip
+        const scrollLeft = chipLeft - (containerWidth / 2) + (chipWidth / 2);
+
+        container.scrollTo({
+          left: Math.max(0, scrollLeft),
+          behavior: 'smooth'
+        });
+      }
+    }, 0);
   }
 
   toggleFilters(): void {
