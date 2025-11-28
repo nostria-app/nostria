@@ -211,88 +211,144 @@ export class VideoFilterService {
         return texture2D(image, coord).rgb;
       }
       
-      vec3 cyberpunk(vec3 color, vec2 texCoord) {
-        // Convert to HSV for color manipulation
-        float maxC = max(max(color.r, color.g), color.b);
-        float minC = min(min(color.r, color.g), color.b);
-        float delta = maxC - minC;
+      // Helper: RGB to HSV conversion
+      vec3 rgb2hsv(vec3 c) {
+        vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+        vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+        vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
+        float d = q.x - min(q.w, q.y);
+        float e = 1.0e-10;
+        return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+      }
+      
+      // Helper: HSV to RGB conversion
+      vec3 hsv2rgb(vec3 c) {
+        vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+        return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+      }
+      
+      // Smooth blur for noise reduction
+      vec3 smoothBlur(sampler2D image, vec2 texCoord, vec2 resolution) {
+        vec2 texel = 1.0 / resolution;
+        vec3 sum = vec3(0.0);
+        float totalWeight = 0.0;
         
-        float hue = 0.0;
-        float sat = 0.0;
-        float val = maxC;
-        
-        if (delta > 0.001) {
-          sat = delta / maxC;
-          if (color.r == maxC) {
-            hue = (color.g - color.b) / delta;
-          } else if (color.g == maxC) {
-            hue = 2.0 + (color.b - color.r) / delta;
-          } else {
-            hue = 4.0 + (color.r - color.g) / delta;
+        // 5x5 Gaussian-like blur for smooth skin/surfaces
+        for (int x = -2; x <= 2; x++) {
+          for (int y = -2; y <= 2; y++) {
+            vec2 offset = vec2(float(x), float(y)) * texel * 1.5;
+            float weight = 1.0 / (1.0 + float(x*x + y*y));
+            sum += texture2D(image, texCoord + offset).rgb * weight;
+            totalWeight += weight;
           }
-          hue *= 60.0;
-          if (hue < 0.0) hue += 360.0;
         }
+        return sum / totalWeight;
+      }
+      
+      // Sobel edge detection for cartoon outlines (with threshold)
+      float sobelEdge(sampler2D image, vec2 texCoord, vec2 resolution) {
+        vec2 texel = 1.0 / resolution * 2.0; // Larger sampling for smoother edges
         
-        // Boost saturation significantly for vivid colors
-        sat = min(sat * 2.0, 1.0);
+        // Sample 3x3 neighborhood
+        float tl = dot(texture2D(image, texCoord + vec2(-texel.x, texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+        float t  = dot(texture2D(image, texCoord + vec2(0.0, texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+        float tr = dot(texture2D(image, texCoord + vec2(texel.x, texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+        float l  = dot(texture2D(image, texCoord + vec2(-texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+        float r  = dot(texture2D(image, texCoord + vec2(texel.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+        float bl = dot(texture2D(image, texCoord + vec2(-texel.x, -texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+        float b  = dot(texture2D(image, texCoord + vec2(0.0, -texel.y)).rgb, vec3(0.299, 0.587, 0.114));
+        float br = dot(texture2D(image, texCoord + vec2(texel.x, -texel.y)).rgb, vec3(0.299, 0.587, 0.114));
         
-        // Shift colors toward cyberpunk palette (pink/magenta, cyan, blue)
-        // Map hues to neon colors
-        if (hue < 60.0 || hue >= 300.0) {
-          // Red-ish -> Hot pink/magenta (330)
-          hue = 330.0;
-        } else if (hue < 120.0) {
-          // Yellow-green -> Cyan (180)
-          hue = 180.0;
-        } else if (hue < 180.0) {
-          // Green-cyan -> Electric cyan (190)
-          hue = 190.0;
-        } else if (hue < 240.0) {
-          // Cyan-blue -> Neon blue (220)
-          hue = 220.0;
+        // Sobel kernels
+        float gx = -tl - 2.0*l - bl + tr + 2.0*r + br;
+        float gy = -tl - 2.0*t - tr + bl + 2.0*b + br;
+        
+        return sqrt(gx*gx + gy*gy);
+      }
+      
+      vec3 cyberpunk(sampler2D image, vec3 color, vec2 texCoord, vec2 resolution) {
+        // === SMOOTHING: Apply blur to reduce noise ===
+        vec3 smoothed = smoothBlur(image, texCoord, resolution);
+        
+        // === SOFT POSTERIZATION ===
+        // Use fewer levels and smooth transitions for cleaner look
+        float posterLevels = 4.0;
+        vec3 posterized = floor(smoothed * posterLevels + 0.5) / posterLevels;
+        // Blend with smoothed for softer transitions
+        posterized = mix(smoothed, posterized, 0.7);
+        
+        // === EDGE DETECTION: Only strong edges ===
+        float edge = sobelEdge(image, texCoord, resolution);
+        float edgeThreshold = 0.25; // Higher threshold = fewer edges
+        float edgeStrength = smoothstep(edgeThreshold, edgeThreshold + 0.15, edge);
+        
+        // === CYBERPUNK COLOR TRANSFORMATION ===
+        vec3 hsv = rgb2hsv(posterized);
+        
+        // Boost saturation for vivid neon colors
+        hsv.y = min(hsv.y * 1.8, 1.0);
+        
+        // Boost value slightly for brighter neons
+        hsv.z = min(hsv.z * 1.1, 1.0);
+        
+        // Map hues to cyberpunk neon palette
+        float hue = hsv.x * 360.0;
+        
+        if (hue < 30.0 || hue >= 330.0) {
+          // Reds -> Hot pink/magenta
+          hsv.x = 320.0 / 360.0;
+        } else if (hue < 90.0) {
+          // Orange/Yellow -> Neon pink
+          hsv.x = 335.0 / 360.0;
+        } else if (hue < 150.0) {
+          // Yellow-green/Green -> Electric cyan
+          hsv.x = 185.0 / 360.0;
+        } else if (hue < 210.0) {
+          // Cyan range -> Bright cyan
+          hsv.x = 190.0 / 360.0;
+        } else if (hue < 270.0) {
+          // Blue range -> Deep neon blue
+          hsv.x = 240.0 / 360.0;
         } else {
-          // Blue-purple -> Electric purple/pink (290)
-          hue = 290.0;
+          // Purple/Violet -> Electric purple
+          hsv.x = 290.0 / 360.0;
         }
         
         // Convert back to RGB
-        float c = val * sat;
-        float x = c * (1.0 - abs(mod(hue / 60.0, 2.0) - 1.0));
-        float m = val - c;
+        vec3 neonColor = hsv2rgb(hsv);
         
-        vec3 result;
-        if (hue < 60.0) {
-          result = vec3(c, x, 0.0);
-        } else if (hue < 120.0) {
-          result = vec3(x, c, 0.0);
-        } else if (hue < 180.0) {
-          result = vec3(0.0, c, x);
-        } else if (hue < 240.0) {
-          result = vec3(0.0, x, c);
-        } else if (hue < 300.0) {
-          result = vec3(x, 0.0, c);
-        } else {
-          result = vec3(c, 0.0, x);
-        }
-        result += m;
+        // === SOFT CONTRAST ===
+        neonColor = (neonColor - 0.5) * 1.3 + 0.5;
         
-        // Add contrast boost for dramatic effect
-        result = (result - 0.5) * 1.4 + 0.5;
+        // === CARTOON OUTLINES (only strong edges) ===
+        vec3 edgeColor = vec3(0.08, 0.02, 0.15); // Dark purple-ish black
+        neonColor = mix(neonColor, edgeColor, edgeStrength * 0.85);
         
-        // Add subtle vignette with colored edges (pink/magenta tint)
+        // === SUBTLE NEON GLOW ===
+        float glowEdge = smoothstep(0.2, 0.35, edge);
+        vec3 glowColor = mix(vec3(1.0, 0.3, 0.8), vec3(0.3, 1.0, 1.0), texCoord.y);
+        neonColor += glowColor * glowEdge * 0.15 * (1.0 - edgeStrength);
+        
+        // === VIGNETTE ===
         vec2 position = texCoord - vec2(0.5);
         float dist = length(position);
-        float vignette = smoothstep(0.9, 0.3, dist);
-        result = mix(result * vec3(0.4, 0.1, 0.6), result, vignette);
+        float vignette = smoothstep(1.0, 0.4, dist);
+        vec3 vignetteColor = vec3(0.1, 0.0, 0.2);
+        neonColor = mix(vignetteColor, neonColor, vignette);
         
-        // Slight glow/bloom effect on bright areas
-        float brightness = dot(result, vec3(0.299, 0.587, 0.114));
+        // === SUBTLE BLOOM ===
+        float brightness = dot(neonColor, vec3(0.299, 0.587, 0.114));
         if (brightness > 0.6) {
-          result += vec3(0.1, 0.05, 0.15) * (brightness - 0.6);
+          vec3 bloomColor = mix(vec3(1.0, 0.5, 0.9), vec3(0.5, 1.0, 1.0), texCoord.y);
+          neonColor += bloomColor * (brightness - 0.6) * 0.25;
         }
         
-        return clamp(result, 0.0, 1.0);
+        // === VERY SUBTLE SCANLINES ===
+        float scanline = sin(texCoord.y * resolution.y * 0.8) * 0.015 + 1.0;
+        neonColor *= scanline;
+        
+        return clamp(neonColor, 0.0, 1.0);
       }
       
       void main() {
@@ -326,7 +382,7 @@ export class VideoFilterService {
         } else if (u_filter == 13) {
           result = pixelate(u_image, v_texCoord);
         } else if (u_filter == 14) {
-          result = cyberpunk(result, v_texCoord);
+          result = cyberpunk(u_image, result, v_texCoord, u_resolution);
         }
         
         gl_FragColor = vec4(result, color.a);
