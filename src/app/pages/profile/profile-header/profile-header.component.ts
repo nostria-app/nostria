@@ -157,7 +157,22 @@ export class ProfileHeaderComponent {
     return this.topBadges().map(badge =>
       this.badgeService.isBadgeDefinitionLoading(badge.pubkey, badge.slug)
     );
-  });  // Computed property to check if bio needs expansion
+  });
+
+  // Track badges that have timed out (3 second timeout)
+  private timedOutBadges = signal<Set<string>>(new Set());
+  private badgeTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+
+  // Computed to check if a badge has timed out
+  isBadgeTimedOut = computed(() => {
+    const timedOut = this.timedOutBadges();
+    return this.topBadges().map(badge => {
+      const badgeKey = `${badge.pubkey}:${badge.slug}`;
+      return timedOut.has(badgeKey);
+    });
+  });
+
+  // Computed property to check if bio needs expansion
   shouldShowExpander = computed(() => {
     const about = this.profile()?.data.about;
     if (!about) return false;
@@ -358,7 +373,39 @@ export class ProfileHeaderComponent {
       if (currentPubkey) {
         // Clear badges first to prevent showing stale data from previous profile
         this.badgeService.clear();
+        // Clear timed out badges and cancel any pending timeouts
+        this.clearBadgeTimeouts();
         await this.badgeService.loadAcceptedBadges(currentPubkey);
+      }
+    });
+
+    // Start timeout when badges start loading
+    effect(() => {
+      const loadingBadges = this.badgeService.loadingBadgeDefinitions();
+      const badges = this.topBadges();
+
+      for (const badge of badges) {
+        const badgeKey = `${badge.pubkey}:${badge.slug}`;
+
+        // If badge is loading and we haven't started a timeout yet
+        if (loadingBadges.has(badgeKey) && !this.badgeTimeouts.has(badgeKey)) {
+          const timeout = setTimeout(() => {
+            // Mark badge as timed out after 3 seconds
+            this.timedOutBadges.update(timedOut => {
+              const newSet = new Set(timedOut);
+              newSet.add(badgeKey);
+              return newSet;
+            });
+            this.badgeTimeouts.delete(badgeKey);
+          }, 3000);
+          this.badgeTimeouts.set(badgeKey, timeout);
+        }
+
+        // If badge finished loading (no longer in loading set), clear the timeout
+        if (!loadingBadges.has(badgeKey) && this.badgeTimeouts.has(badgeKey)) {
+          clearTimeout(this.badgeTimeouts.get(badgeKey)!);
+          this.badgeTimeouts.delete(badgeKey);
+        }
       }
     });
 
@@ -401,11 +448,11 @@ export class ProfileHeaderComponent {
     } else {
       // Check if we're currently following this user
       const isFollowing = this.isFollowing();
-      
+
       if (isFollowing) {
         // Import ConfirmDialogComponent dynamically to show confirmation dialog
         const { ConfirmDialogComponent } = await import('../../../components/confirm-dialog/confirm-dialog.component');
-        
+
         const dialogRef = this.dialog.open(ConfirmDialogComponent, {
           data: {
             title: 'Unfollow and Block User?',
@@ -418,13 +465,13 @@ export class ProfileHeaderComponent {
         });
 
         const shouldUnfollow = await firstValueFrom(dialogRef.afterClosed());
-        
+
         if (shouldUnfollow) {
           // Unfollow first, then block
           await this.accountState.unfollow(pubkey);
         }
       }
-      
+
       // User is not blocked, so block them
       await this.reportingService.muteUser(pubkey);
     }
@@ -969,6 +1016,17 @@ export class ProfileHeaderComponent {
     const element = event.currentTarget as HTMLElement;
     this.badgeHoverElement = element;
     this.badgeHoverCardService.showHoverCard(element, badge.pubkey, badge.slug);
+  }
+
+  /**
+   * Clears all badge loading timeouts and resets timed out badges
+   */
+  private clearBadgeTimeouts(): void {
+    for (const timeout of this.badgeTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.badgeTimeouts.clear();
+    this.timedOutBadges.set(new Set());
   }
 
   /**
