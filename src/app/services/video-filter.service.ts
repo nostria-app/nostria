@@ -37,6 +37,7 @@ export class VideoFilterService {
     { id: 'warmth', name: 'Warmth', icon: 'wb_sunny', description: 'Warm color temperature' },
     { id: 'cool', name: 'Cool', icon: 'ac_unit', description: 'Cool color temperature' },
     { id: 'pixelate', name: 'Pixelate', icon: 'grid_on', description: 'Pixel art effect' },
+    { id: 'cyberpunk', name: 'Cyberpunk', icon: 'nightlife', description: 'Neon pink and cyan style' },
   ];
 
   initWebGL(canvas: HTMLCanvasElement): boolean {
@@ -210,6 +211,90 @@ export class VideoFilterService {
         return texture2D(image, coord).rgb;
       }
       
+      vec3 cyberpunk(vec3 color, vec2 texCoord) {
+        // Convert to HSV for color manipulation
+        float maxC = max(max(color.r, color.g), color.b);
+        float minC = min(min(color.r, color.g), color.b);
+        float delta = maxC - minC;
+        
+        float hue = 0.0;
+        float sat = 0.0;
+        float val = maxC;
+        
+        if (delta > 0.001) {
+          sat = delta / maxC;
+          if (color.r == maxC) {
+            hue = (color.g - color.b) / delta;
+          } else if (color.g == maxC) {
+            hue = 2.0 + (color.b - color.r) / delta;
+          } else {
+            hue = 4.0 + (color.r - color.g) / delta;
+          }
+          hue *= 60.0;
+          if (hue < 0.0) hue += 360.0;
+        }
+        
+        // Boost saturation significantly for vivid colors
+        sat = min(sat * 2.0, 1.0);
+        
+        // Shift colors toward cyberpunk palette (pink/magenta, cyan, blue)
+        // Map hues to neon colors
+        if (hue < 60.0 || hue >= 300.0) {
+          // Red-ish -> Hot pink/magenta (330)
+          hue = 330.0;
+        } else if (hue < 120.0) {
+          // Yellow-green -> Cyan (180)
+          hue = 180.0;
+        } else if (hue < 180.0) {
+          // Green-cyan -> Electric cyan (190)
+          hue = 190.0;
+        } else if (hue < 240.0) {
+          // Cyan-blue -> Neon blue (220)
+          hue = 220.0;
+        } else {
+          // Blue-purple -> Electric purple/pink (290)
+          hue = 290.0;
+        }
+        
+        // Convert back to RGB
+        float c = val * sat;
+        float x = c * (1.0 - abs(mod(hue / 60.0, 2.0) - 1.0));
+        float m = val - c;
+        
+        vec3 result;
+        if (hue < 60.0) {
+          result = vec3(c, x, 0.0);
+        } else if (hue < 120.0) {
+          result = vec3(x, c, 0.0);
+        } else if (hue < 180.0) {
+          result = vec3(0.0, c, x);
+        } else if (hue < 240.0) {
+          result = vec3(0.0, x, c);
+        } else if (hue < 300.0) {
+          result = vec3(x, 0.0, c);
+        } else {
+          result = vec3(c, 0.0, x);
+        }
+        result += m;
+        
+        // Add contrast boost for dramatic effect
+        result = (result - 0.5) * 1.4 + 0.5;
+        
+        // Add subtle vignette with colored edges (pink/magenta tint)
+        vec2 position = texCoord - vec2(0.5);
+        float dist = length(position);
+        float vignette = smoothstep(0.9, 0.3, dist);
+        result = mix(result * vec3(0.4, 0.1, 0.6), result, vignette);
+        
+        // Slight glow/bloom effect on bright areas
+        float brightness = dot(result, vec3(0.299, 0.587, 0.114));
+        if (brightness > 0.6) {
+          result += vec3(0.1, 0.05, 0.15) * (brightness - 0.6);
+        }
+        
+        return clamp(result, 0.0, 1.0);
+      }
+      
       void main() {
         vec4 color = texture2D(u_image, v_texCoord);
         vec3 result = color.rgb;
@@ -240,6 +325,8 @@ export class VideoFilterService {
           result = cool(result);
         } else if (u_filter == 13) {
           result = pixelate(u_image, v_texCoord);
+        } else if (u_filter == 14) {
+          result = cyberpunk(result, v_texCoord);
         }
         
         gl_FragColor = vec4(result, color.a);
