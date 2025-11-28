@@ -9,7 +9,8 @@ import { FormsModule } from '@angular/forms';
 import { AiService } from '../../../services/ai.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
-import { LocalStorageService } from '../../../services/local-storage.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
+import { AccountStateService } from '../../../services/account-state.service';
 
 export interface TranslateDialogData {
   content: string;
@@ -34,12 +35,10 @@ export interface TranslateDialogData {
 })
 export class TranslateDialogComponent {
   private dialogRef = inject(MatDialogRef<TranslateDialogComponent>);
-  private localStorage = inject(LocalStorageService);
+  private accountLocalState = inject(AccountLocalStateService);
+  private accountState = inject(AccountStateService);
   data: TranslateDialogData = inject(MAT_DIALOG_DATA);
   ai = inject(AiService);
-
-  private readonly SOURCE_LANG_KEY = 'nostria:translation:sourceLang';
-  private readonly TARGET_LANG_KEY = 'nostria:translation:targetLang';
 
   sourceLang = signal('en');
   targetLang = signal('es');
@@ -76,16 +75,34 @@ export class TranslateDialogComponent {
   });
 
   constructor() {
+    debugger;
     // Load saved translation preferences and validate against available languages
-    const savedSourceLang = this.localStorage.getItem(this.SOURCE_LANG_KEY);
-    const savedTargetLang = this.localStorage.getItem(this.TARGET_LANG_KEY);
+    const pubkey = this.accountState.pubkey();
+    const savedSourceLang = pubkey ? this.accountLocalState.getTranslationSourceLang(pubkey) : undefined;
+    const savedTargetLang = pubkey ? this.accountLocalState.getTranslationTargetLang(pubkey) : undefined;
     const availableCodes = this.availableLanguages().map(lang => lang.code);
-    
+
     if (savedSourceLang && availableCodes.includes(savedSourceLang)) {
       this.sourceLang.set(savedSourceLang);
     }
     if (savedTargetLang && availableCodes.includes(savedTargetLang)) {
       this.targetLang.set(savedTargetLang);
+    }
+  }
+
+  setSourceLang(lang: string): void {
+    this.sourceLang.set(lang);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setTranslationSourceLang(pubkey, lang);
+    }
+  }
+
+  setTargetLang(lang: string): void {
+    this.targetLang.set(lang);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setTranslationTargetLang(pubkey, lang);
     }
   }
 
@@ -139,10 +156,6 @@ export class TranslateDialogComponent {
       } else {
         this.translatedText.set(JSON.stringify(result));
       }
-
-      // Save the translation preferences after successful translation
-      this.localStorage.setItem(this.SOURCE_LANG_KEY, this.sourceLang());
-      this.localStorage.setItem(this.TARGET_LANG_KEY, this.targetLang());
 
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Translation failed');

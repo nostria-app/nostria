@@ -3,7 +3,7 @@
   <div class="language-selectors">
     <mat-form-field appearance="outline">
       <mat-label>Source Language</mat-label>
-      <mat-select [ngModel]="sourceLang()" (ngModelChange)="sourceLang.set($event)">
+      <mat-select [ngModel]="sourceLang()" (ngModelChange)="setSourceLang($event)">
         @for (lang of availableLanguages(); track lang.code) {
         <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
         }
@@ -14,7 +14,7 @@
 
     <mat-form-field appearance="outline">
       <mat-label>Target Language</mat-label>
-      <mat-select [ngModel]="targetLang()" (ngModelChange)="targetLang.set($event)">
+      <mat-select [ngModel]="targetLang()" (ngModelChange)="setTargetLang($event)">
         @for (lang of availableLanguages(); track lang.code) {
         <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
         }
@@ -42,7 +42,8 @@
 
   <div class="ai-warning">
     <mat-icon>info</mat-icon>
-    <p>Translations are performed by AI models running locally in your browser. The results may contain inaccuracies or mistakes. AI-generated translations should be reviewed and verified for accuracy before relying on them.</p>
+    <p>Translations are performed by AI models running locally in your browser. The results may contain inaccuracies or
+      mistakes. AI-generated translations should be reviewed and verified for accuracy before relying on them.</p>
   </div>
 
 </mat-dialog-content>
