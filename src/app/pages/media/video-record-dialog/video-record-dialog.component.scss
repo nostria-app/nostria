@@ -1,44 +1,47 @@
 .video-record-dialog {
-  min-width: 400px;
-  max-width: 600px;
-
-  h2[mat-dialog-title] {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-
-    .close-button {
-      margin-left: auto;
-    }
-  }
-
-  mat-dialog-content {
-    padding: 0;
-    margin: 0;
-    overflow: hidden;
-  }
+  width: 100%;
+  display: flex;
+  flex-direction: column;
 
   .camera-container,
   .preview-container {
     position: relative;
     width: 100%;
-    max-height: 70vh;
+    aspect-ratio: 9 / 16;
+    max-height: 60vh;
     background: var(--mat-sys-surface-container);
     display: flex;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
 
     &.horizontal {
+      aspect-ratio: 16 / 9;
       max-height: 50vh;
     }
   }
 
-  .camera-preview,
+  .camera-preview-source {
+    // Video source element - hidden from view but must remain in DOM for stream
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    opacity: 0;
+    pointer-events: none;
+  }
+
   .video-preview {
     width: 100%;
-    height: auto;
-    max-height: 70vh;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+  }
+
+  .filter-canvas {
+    // Canvas maintains its internal aspect ratio
+    // max-width/height ensure it fits within container while centering
+    max-width: 100%;
+    max-height: 100%;
     display: block;
   }
 
@@ -89,69 +92,262 @@
     position: absolute;
     top: 16px;
     right: 16px;
-    background: rgba(0, 0, 0, 0.6);
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
     color: white;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.8);
+      background: rgba(0, 0, 0, 0.7);
     }
   }
 
-  mat-dialog-actions {
-    padding: 16px 24px;
+  .filters-button {
+    position: absolute;
+    top: 16px;
+    right: 72px;
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    color: white;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    &.active {
+      background: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+    }
+  }
+
+  .current-filter-badge {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    color: white;
+    font-size: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  .filter-selection {
+    position: absolute;
+    bottom: 8px;
+    left: 0;
+    right: 0;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 80%, transparent 100%);
+    padding: 16px 8px 12px;
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+
+    .filter-chips {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 8px 4px 16px;
+      -ms-overflow-style: none;
+      scroll-behavior: smooth;
+      scroll-snap-type: x mandatory;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      .filter-chip {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px 8px;
+        min-width: 72px;
+        max-width: 72px;
+        height: 72px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.1);
+        -webkit-backdrop-filter: blur(10px);
+        backdrop-filter: blur(10px);
+        color: rgba(255, 255, 255, 0.9);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        flex-shrink: 0;
+        scroll-snap-align: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+          margin: 0;
+          opacity: 0.9;
+        }
+
+        span {
+          font-size: 10px;
+          white-space: nowrap;
+          text-overflow: ellipsis;
+          overflow: hidden;
+          max-width: 100%;
+          opacity: 0.8;
+        }
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+          border-color: rgba(255, 255, 255, 0.25);
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+        }
+
+        &.selected {
+          background: rgba(var(--mat-sys-primary-rgb, 197, 192, 255), 0.35);
+          border-color: var(--mat-sys-primary);
+          color: white;
+          box-shadow: 0 0 20px rgba(var(--mat-sys-primary-rgb, 197, 192, 255), 0.4),
+            0 4px 12px rgba(0, 0, 0, 0.2);
+
+          mat-icon,
+          span {
+            opacity: 1;
+          }
+        }
+      }
+    }
+
+    .filter-indicator {
+      display: flex;
+      justify-content: center;
+      gap: 6px;
+      margin-top: 8px;
+      padding-bottom: 4px;
+
+      .indicator-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.4);
+        transition: all 0.2s ease;
+
+        &.active {
+          background: var(--mat-sys-primary);
+          transform: scale(1.3);
+        }
+      }
+    }
+  }
+
+  .swipe-hint {
+    position: absolute;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.6);
+    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 12px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+
+    &.visible {
+      opacity: 1;
+    }
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+      animation: swipeHint 1.5s ease-in-out infinite;
+    }
+  }
+
+  @keyframes swipeHint {
+
+    0%,
+    100% {
+      transform: translateX(-4px);
+    }
+
+    50% {
+      transform: translateX(4px);
+    }
+  }
+}
+
+.video-record-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+
+  .recording-options {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 16px;
     align-items: center;
-    justify-content: space-between;
+    flex: 1;
 
-    .recording-options {
+    .aspect-ratio-buttons {
       display: flex;
-      flex-wrap: wrap;
-      gap: 16px;
-      align-items: center;
-      flex: 1;
+      gap: 4px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 4px;
+      padding: 2px;
 
-      .aspect-ratio-buttons {
-        display: flex;
-        gap: 4px;
-        border: 1px solid var(--mat-sys-outline-variant);
-        border-radius: 4px;
-        padding: 2px;
+      button {
+        min-width: 48px;
+        padding: 4px 8px;
 
-        button {
-          min-width: 48px;
-          padding: 4px 8px;
-
-          &.active {
-            background-color: var(--mat-sys-primary-container);
-            color: var(--mat-sys-on-primary-container);
-          }
-
-          mat-icon {
-            margin: 0;
-          }
+        &.active {
+          background-color: var(--mat-sys-primary-container);
+          color: var(--mat-sys-on-primary-container);
         }
-      }
 
-      .short-form-toggle,
-      .upload-original-toggle {
-        .toggle-label {
-          font-size: 14px;
+        mat-icon {
+          margin: 0;
         }
       }
     }
 
-    .action-buttons {
-      display: flex;
-      gap: 8px;
-      margin-left: auto;
-    }
-
-    button {
-      mat-icon {
-        margin-right: 4px;
+    .short-form-toggle,
+    .upload-original-toggle {
+      .toggle-label {
+        font-size: 14px;
       }
+    }
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  button {
+    mat-icon {
+      margin-right: 4px;
     }
   }
 }

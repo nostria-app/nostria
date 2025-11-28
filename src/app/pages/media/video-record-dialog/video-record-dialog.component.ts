@@ -1,5 +1,4 @@
 import { Component, inject, signal, OnDestroy, ViewChild, ElementRef, AfterViewInit } from '@angular/core';
-import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
@@ -7,27 +6,32 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { FormsModule } from '@angular/forms';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { VideoFilterService } from '../../../services/video-filter.service';
+import { MatChipsModule } from '@angular/material/chips';
+import { CustomDialogRef } from '../../../services/custom-dialog.service';
 
 @Component({
   selector: 'app-video-record-dialog',
-  standalone: true,
   imports: [
-    MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
     MatTooltipModule,
     MatSlideToggleModule,
     FormsModule,
+    MatChipsModule,
   ],
   templateUrl: './video-record-dialog.component.html',
   styleUrls: ['./video-record-dialog.component.scss'],
 })
 export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
-  private dialogRef = inject(MatDialogRef<VideoRecordDialogComponent>);
+  dialogRef = inject(CustomDialogRef<VideoRecordDialogComponent, { file: File; uploadOriginal: boolean } | null>);
   private snackBar = inject(MatSnackBar);
+  filterService = inject(VideoFilterService);
 
   @ViewChild('cameraPreview') cameraPreview?: ElementRef<HTMLVideoElement>;
+  @ViewChild('filterCanvas') filterCanvas?: ElementRef<HTMLCanvasElement>;
+  @ViewChild('filterChips') filterChipsContainer?: ElementRef<HTMLDivElement>;
 
   // Recording state
   isRecording = signal(false);
@@ -42,6 +46,17 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   isShortForm = true; // Toggle for short form recording (6.3 seconds auto-stop)
   aspectRatio = signal<'vertical' | 'horizontal'>('vertical'); // Video orientation
   uploadOriginal = false; // Upload original without transcoding
+  selectedFilter = signal<string>('none'); // Currently selected filter
+  showFilters = signal<boolean>(false); // Show/hide filter selection
+  showSwipeHint = signal<boolean>(false); // Show swipe hint briefly
+  private filterAnimationFrame: number | null = null;
+  private swipeHintTimeout: number | null = null;
+
+  // Swipe gesture state
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private isSwiping = false;
+  private readonly SWIPE_THRESHOLD = 50; // Minimum swipe distance
 
   // Recording constraints
   private readonly MAX_DURATION_MS = 6300; // 6.3 seconds
@@ -52,6 +67,11 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
   async ngOnDestroy(): Promise<void> {
     this.stopCamera();
     this.cleanupTimers();
+    this.stopFilterRendering();
+    this.filterService.cleanup();
+    if (this.swipeHintTimeout) {
+      clearTimeout(this.swipeHintTimeout);
+    }
     if (this.recordedUrl()) {
       URL.revokeObjectURL(this.recordedUrl()!);
     }
@@ -59,7 +79,57 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit(): void {
     // Start camera preview as soon as view is ready
-    setTimeout(() => this.startCameraPreview(), 100);
+    setTimeout(async () => {
+      await this.startCameraPreview();
+      this.initializeFilters();
+      this.showSwipeHintBriefly();
+    }, 100);
+  }
+
+  private showSwipeHintBriefly(): void {
+    // Show swipe hint for 3 seconds
+    this.showSwipeHint.set(true);
+    this.swipeHintTimeout = window.setTimeout(() => {
+      this.showSwipeHint.set(false);
+    }, 3000);
+  }
+
+  private initializeFilters(): void {
+    const canvas = this.filterCanvas?.nativeElement;
+    if (canvas) {
+      const initialized = this.filterService.initWebGL(canvas);
+      if (initialized) {
+        this.startFilterRendering();
+      } else {
+        console.warn('WebGL filters not available, falling back to standard video');
+      }
+    }
+  }
+
+  private getTargetAspectRatio(): number {
+    return this.aspectRatio() === 'vertical' ? 9 / 16 : 16 / 9;
+  }
+
+  private startFilterRendering(): void {
+    const renderFrame = () => {
+      const video = this.cameraPreview?.nativeElement;
+      const canvas = this.filterCanvas?.nativeElement;
+
+      if (video && canvas && video.readyState >= video.HAVE_CURRENT_DATA) {
+        this.filterService.applyFilter(video, canvas, this.getTargetAspectRatio());
+      }
+
+      this.filterAnimationFrame = requestAnimationFrame(renderFrame);
+    };
+
+    renderFrame();
+  }
+
+  private stopFilterRendering(): void {
+    if (this.filterAnimationFrame !== null) {
+      cancelAnimationFrame(this.filterAnimationFrame);
+      this.filterAnimationFrame = null;
+    }
   }
 
   async startCameraPreview(): Promise<void> {
@@ -86,6 +156,19 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
         videoElement.srcObject = stream;
         // Ensure video is muted to prevent audio feedback
         videoElement.muted = true;
+
+        // Wait for video to be ready before starting playback
+        await new Promise<void>((resolve) => {
+          videoElement.onloadedmetadata = () => {
+            videoElement.play().then(() => {
+              console.log('[VideoRecorder] Video playback started, dimensions:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+              resolve();
+            }).catch(err => {
+              console.error('[VideoRecorder] Failed to play video:', err);
+              resolve();
+            });
+          };
+        });
       }
     } catch (error) {
       console.error('Failed to start camera preview:', error);
@@ -99,19 +182,56 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     try {
       console.log('[VideoRecorder] Starting recording...');
       console.log('[VideoRecorder] isShortForm value:', this.isShortForm);
+      console.log('[VideoRecorder] selectedFilter:', this.selectedFilter());
 
       // If no stream exists, start camera preview first
       if (!this.stream()) {
         await this.startCameraPreview();
       }
 
-      const stream = this.stream();
-      if (!stream) {
-        throw new Error('Failed to get camera stream');
+      // Always capture from the filtered canvas since we always render to it
+      // This ensures the aspect ratio cropping is included in the recording
+      let recordingStream: MediaStream;
+      const canvas = this.filterCanvas?.nativeElement;
+
+      if (canvas && canvas.width > 0 && canvas.height > 0) {
+        console.log('[VideoRecorder] Using canvas stream, dimensions:', canvas.width, 'x', canvas.height);
+
+        // Capture stream from canvas which has the filter and aspect ratio applied
+        // Try to match the camera stream's frame rate, default to 30fps
+        const cameraStream = this.stream();
+        const videoTrack = cameraStream?.getVideoTracks()[0];
+        const frameRate = videoTrack?.getSettings().frameRate || 30;
+
+        recordingStream = canvas.captureStream(frameRate);
+        console.log('[VideoRecorder] Canvas stream created with framerate:', frameRate);
+        console.log('[VideoRecorder] Canvas stream video tracks:', recordingStream.getVideoTracks().length);
+
+        // Add audio from the original camera stream
+        if (cameraStream) {
+          const audioTracks = cameraStream.getAudioTracks();
+          console.log('[VideoRecorder] Adding audio tracks:', audioTracks.length);
+          // Check if audio tracks exist and aren't already in the recording stream
+          const existingAudioTracks = recordingStream.getAudioTracks();
+          audioTracks.forEach(track => {
+            const isDuplicate = existingAudioTracks.some(existing => existing.id === track.id);
+            if (!isDuplicate) {
+              recordingStream.addTrack(track);
+            }
+          });
+        }
+      } else {
+        console.log('[VideoRecorder] Canvas not ready, falling back to camera stream');
+        // Use original camera stream without filter
+        const stream = this.stream();
+        if (!stream) {
+          throw new Error('Failed to get camera stream');
+        }
+        recordingStream = stream;
       }
 
       // Setup MediaRecorder
-      const mediaRecorder = new MediaRecorder(stream, {
+      const mediaRecorder = new MediaRecorder(recordingStream, {
         mimeType: this.getSupportedMimeType(),
       });
 
@@ -273,7 +393,7 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     return 'video/webm';
   }
 
-  retakeVideo(): void {
+  async retakeVideo(): Promise<void> {
     if (this.recordedUrl()) {
       URL.revokeObjectURL(this.recordedUrl()!);
     }
@@ -281,8 +401,16 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     this.recordedUrl.set(null);
     this.isPreviewing.set(false);
     this.recordingProgress.set(0);
-    // Restart camera preview instead of immediately recording
-    this.startCameraPreview();
+
+    // Stop any existing filter rendering
+    this.stopFilterRendering();
+
+    // Clean up WebGL resources so they can be reinitialized with correct dimensions
+    this.filterService.cleanup();
+
+    // Restart camera preview and filter rendering
+    await this.startCameraPreview();
+    this.initializeFilters();
   }
 
   useVideo(): void {
@@ -296,6 +424,18 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
         file,
         uploadOriginal: this.uploadOriginal
       });
+    }
+  }
+
+  downloadVideo(): void {
+    const url = this.recordedUrl();
+    if (url) {
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `video-${Date.now()}.webm`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
     }
   }
 
@@ -319,5 +459,108 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   getStreamForPreview(): MediaStream | null {
     return this.stream();
+  }
+
+  selectFilter(filterId: string): void {
+    this.selectedFilter.set(filterId);
+    this.filterService.setFilter(filterId);
+    this.scrollToSelectedFilter();
+  }
+
+  private scrollToSelectedFilter(): void {
+    // Scroll the filter chips container to center the selected filter
+    setTimeout(() => {
+      const container = this.filterChipsContainer?.nativeElement;
+      if (!container) return;
+
+      const selectedIndex = this.getCurrentFilterIndex();
+      const filterChips = container.querySelectorAll('.filter-chip');
+      const selectedChip = filterChips[selectedIndex] as HTMLElement;
+
+      if (selectedChip) {
+        const containerWidth = container.offsetWidth;
+        const chipLeft = selectedChip.offsetLeft;
+        const chipWidth = selectedChip.offsetWidth;
+
+        // Calculate scroll position to center the chip
+        const scrollLeft = chipLeft - (containerWidth / 2) + (chipWidth / 2);
+
+        container.scrollTo({
+          left: Math.max(0, scrollLeft),
+          behavior: 'smooth'
+        });
+      }
+    }, 0);
+  }
+
+  toggleFilters(): void {
+    this.showFilters.update(show => !show);
+  }
+
+  // Get current filter info for display
+  getCurrentFilterIcon(): string {
+    const filter = this.filterService.availableFilters.find(f => f.id === this.selectedFilter());
+    return filter?.icon || 'filter_none';
+  }
+
+  getCurrentFilterName(): string {
+    const filter = this.filterService.availableFilters.find(f => f.id === this.selectedFilter());
+    return filter?.name || 'None';
+  }
+
+  getCurrentFilterIndex(): number {
+    return this.filterService.availableFilters.findIndex(f => f.id === this.selectedFilter());
+  }
+
+  // Swipe gesture handlers
+  onTouchStart(event: TouchEvent): void {
+    if (this.isRecording()) return;
+
+    const touch = event.touches[0];
+    this.touchStartX = touch.clientX;
+    this.touchStartY = touch.clientY;
+    this.isSwiping = false;
+  }
+
+  onTouchMove(event: TouchEvent): void {
+    if (this.isRecording()) return;
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
+
+    // Determine if this is a horizontal swipe (filter change) vs vertical scroll
+    if (!this.isSwiping && Math.abs(deltaX) > 10 && Math.abs(deltaX) > Math.abs(deltaY)) {
+      this.isSwiping = true;
+    }
+
+    // Prevent default scrolling during horizontal swipe
+    if (this.isSwiping) {
+      event.preventDefault();
+    }
+  }
+
+  onTouchEnd(event: TouchEvent): void {
+    if (this.isRecording() || !this.isSwiping) return;
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - this.touchStartX;
+
+    if (Math.abs(deltaX) >= this.SWIPE_THRESHOLD) {
+      const currentIndex = this.getCurrentFilterIndex();
+      const filters = this.filterService.availableFilters;
+
+      if (deltaX < 0) {
+        // Swipe left - next filter
+        const nextIndex = (currentIndex + 1) % filters.length;
+        this.selectFilter(filters[nextIndex].id);
+      } else {
+        // Swipe right - previous filter
+        const prevIndex = currentIndex <= 0 ? filters.length - 1 : currentIndex - 1;
+        this.selectFilter(filters[prevIndex].id);
+      }
+    }
+
+    this.isSwiping = false;
   }
 }

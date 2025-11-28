@@ -1,100 +1,135 @@
-<div class="video-record-dialog">
-  <h2 mat-dialog-title>
-    @if (isRecording()) {
-    Recording Video...
-    } @else if (isPreviewing()) {
-    Preview Your Video
-    } @else {
-    Record Video
+<div dialog-content class="video-record-dialog">
+  @if (!isPreviewing()) {
+  <!-- Camera Preview -->
+  <div class="camera-container" [class.horizontal]="aspectRatio() === 'horizontal'" (touchstart)="onTouchStart($event)"
+    (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
+    <!-- Hidden video element for camera stream (source only, not displayed) -->
+    <video #cameraPreview autoplay playsinline muted class="camera-preview-source"></video>
+
+    <!-- Canvas for displaying video (with or without filters) -->
+    <canvas #filterCanvas class="filter-canvas"></canvas>
+
+    <!-- Current filter indicator -->
+    @if (!isRecording() && selectedFilter() !== 'none') {
+    <div class="current-filter-badge">
+      <mat-icon>{{ getCurrentFilterIcon() }}</mat-icon>
+      <span>{{ getCurrentFilterName() }}</span>
+    </div>
     }
-    <button mat-icon-button class="close-button" (click)="cancel()" matTooltip="Close">
-      <mat-icon>close</mat-icon>
+
+    @if (isRecording()) {
+    <div class="recording-indicator">
+      <div class="recording-dot"></div>
+      <span>Recording</span>
+    </div>
+
+    <div class="time-remaining">
+      @if (isShortForm) {
+      {{ timeRemaining().toFixed(1) }}s remaining
+      } @else {
+      {{ timeRemaining().toFixed(1) }}s
+      }
+    </div>
+
+    <mat-progress-bar mode="determinate" [value]="recordingProgress()" class="recording-progress">
+    </mat-progress-bar>
+    }
+
+    @if (!isRecording()) {
+    <button mat-icon-button class="camera-flip-button" (click)="toggleCamera()" matTooltip="Switch camera">
+      <mat-icon>flip_camera_ios</mat-icon>
     </button>
-  </h2>
 
-  <mat-dialog-content>
-    @if (!isPreviewing()) {
-    <!-- Camera Preview -->
-    <div class="camera-container" [class.horizontal]="aspectRatio() === 'horizontal'">
-      <video #cameraPreview autoplay playsinline muted class="camera-preview"></video>
+    <button mat-icon-button class="filters-button" (click)="toggleFilters()" [class.active]="showFilters()"
+      matTooltip="Filters">
+      <mat-icon>photo_filter</mat-icon>
+    </button>
 
-      @if (isRecording()) {
-      <div class="recording-indicator">
-        <div class="recording-dot"></div>
-        <span>Recording</span>
-      </div>
-
-      <div class="time-remaining">f
-        @if (isShortForm) {
-        {{ timeRemaining().toFixed(1) }}s remaining
-        } @else {
-        {{ timeRemaining().toFixed(1) }}s
+    <!-- Filter Selection Panel -->
+    @if (showFilters()) {
+    <div class="filter-selection">
+      <div #filterChips class="filter-chips">
+        @for (filter of filterService.availableFilters; track filter.id) {
+        <button mat-button class="filter-chip" [class.selected]="selectedFilter() === filter.id"
+          (click)="selectFilter(filter.id)" [matTooltip]="filter.description">
+          <mat-icon>{{ filter.icon }}</mat-icon>
+          <span>{{ filter.name }}</span>
+        </button>
         }
       </div>
-
-      <mat-progress-bar mode="determinate" [value]="recordingProgress()" class="recording-progress">
-      </mat-progress-bar>
-      }
-
-      @if (!isRecording()) {
-      <button mat-icon-button class="camera-flip-button" (click)="toggleCamera()" matTooltip="Switch camera">
-        <mat-icon>flip_camera_ios</mat-icon>
-      </button>
-      }
-    </div>
-    } @else {
-    <!-- Video Preview -->
-    <div class="preview-container">
-      <video #videoPreview [src]="recordedUrl()!" controls autoplay class="video-preview"></video>
-    </div>
-    }
-  </mat-dialog-content>
-
-  <mat-dialog-actions align="end">
-    @if (!isRecording() && !isPreviewing()) {
-    <div class="recording-options">
-      <div class="aspect-ratio-buttons">
-        <button mat-button [class.active]="aspectRatio() === 'vertical'" (click)="aspectRatio.set('vertical')"
-          matTooltip="Portrait (9:16)">
-          <mat-icon>stay_current_portrait</mat-icon>
-        </button>
-        <button mat-button [class.active]="aspectRatio() === 'horizontal'" (click)="aspectRatio.set('horizontal')"
-          matTooltip="Landscape (16:9)">
-          <mat-icon>stay_current_landscape</mat-icon>
-        </button>
+      <div class="filter-indicator">
+        @for (filter of filterService.availableFilters; track filter.id) {
+        <div class="indicator-dot" [class.active]="selectedFilter() === filter.id"></div>
+        }
       </div>
-      <mat-slide-toggle [(ngModel)]="isShortForm" color="primary" class="short-form-toggle"
-        matTooltip="Automatically stop recording after 6.3 seconds">
-        <span class="toggle-label">Short Form (6.3s)</span>
-      </mat-slide-toggle>
-      <mat-slide-toggle [(ngModel)]="uploadOriginal" color="primary" class="upload-original-toggle"
-        matTooltip="Upload video without server-side transcoding">
-        <span class="toggle-label">Upload Original</span>
-      </mat-slide-toggle>
-    </div>
-    <div class="action-buttons">
-      <button mat-button (click)="cancel()">Cancel</button>
-      <button mat-flat-button color="primary" (click)="startRecording()">
-        <mat-icon>videocam</mat-icon>
-        Start Recording
-      </button>
-    </div>
-    } @else if (isRecording()) {
-    <button mat-flat-button color="warn" (click)="stopRecording()">
-      <mat-icon>stop</mat-icon>
-      Stop Recording
-    </button>
-    } @else if (isPreviewing()) {
-    <div class="action-buttons">
-      <button mat-button (click)="retakeVideo()">
-        <mat-icon>replay</mat-icon>
-        Retake
-      </button>
-      <button mat-flat-button color="primary" (click)="useVideo()">
-        <mat-icon>check</mat-icon>
-        Use Video
-      </button>
     </div>
     }
-  </mat-dialog-actions>
+
+    <!-- Swipe hint (shown briefly) -->
+    @if (showSwipeHint() && !showFilters()) {
+    <div class="swipe-hint visible">
+      <mat-icon>swipe</mat-icon>
+      <span>Swipe to change filter</span>
+    </div>
+    }
+    }
+  </div>
+  } @else {
+  <!-- Video Preview -->
+  <div class="preview-container" [class.horizontal]="aspectRatio() === 'horizontal'">
+    <video #videoPreview [src]="recordedUrl()!" controls autoplay class="video-preview"></video>
+  </div>
+  }
+</div>
+
+<div dialog-actions class="video-record-actions">
+  @if (!isRecording() && !isPreviewing()) {
+  <div class="recording-options">
+    <div class="aspect-ratio-buttons">
+      <button mat-button [class.active]="aspectRatio() === 'vertical'" (click)="aspectRatio.set('vertical')"
+        matTooltip="Portrait (9:16)">
+        <mat-icon>stay_current_portrait</mat-icon>
+      </button>
+      <button mat-button [class.active]="aspectRatio() === 'horizontal'" (click)="aspectRatio.set('horizontal')"
+        matTooltip="Landscape (16:9)">
+        <mat-icon>stay_current_landscape</mat-icon>
+      </button>
+    </div>
+    <mat-slide-toggle [(ngModel)]="isShortForm" color="primary" class="short-form-toggle"
+      matTooltip="Automatically stop recording after 6.3 seconds">
+      <span class="toggle-label">Short Form (6.3s)</span>
+    </mat-slide-toggle>
+    <mat-slide-toggle [(ngModel)]="uploadOriginal" color="primary" class="upload-original-toggle"
+      matTooltip="Upload video without server-side transcoding">
+      <span class="toggle-label">Upload Original</span>
+    </mat-slide-toggle>
+  </div>
+  <div class="action-buttons">
+    <button mat-button (click)="cancel()">Cancel</button>
+    <button mat-flat-button (click)="startRecording()">
+      <mat-icon>videocam</mat-icon>
+      Start Recording
+    </button>
+  </div>
+  } @else if (isRecording()) {
+  <button mat-flat-button color="warn" (click)="stopRecording()">
+    <mat-icon>stop</mat-icon>
+    Stop Recording
+  </button>
+  } @else if (isPreviewing()) {
+  <div class="action-buttons">
+    <button mat-button (click)="retakeVideo()">
+      <mat-icon>replay</mat-icon>
+      Retake
+    </button>
+    <button mat-button (click)="downloadVideo()" matTooltip="Save video to device">
+      <mat-icon>download</mat-icon>
+      Download
+    </button>
+    <button mat-flat-button (click)="useVideo()">
+      <mat-icon>check</mat-icon>
+      Use Video
+    </button>
+  </div>
+  }
 </div>
