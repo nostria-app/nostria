@@ -106,13 +106,17 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     }
   }
 
+  private getTargetAspectRatio(): number {
+    return this.aspectRatio() === 'vertical' ? 9 / 16 : 16 / 9;
+  }
+
   private startFilterRendering(): void {
     const renderFrame = () => {
       const video = this.cameraPreview?.nativeElement;
       const canvas = this.filterCanvas?.nativeElement;
 
       if (video && canvas && video.readyState >= video.HAVE_CURRENT_DATA) {
-        this.filterService.applyFilter(video, canvas);
+        this.filterService.applyFilter(video, canvas, this.getTargetAspectRatio());
       }
 
       this.filterAnimationFrame = requestAnimationFrame(renderFrame);
