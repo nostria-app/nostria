@@ -1002,14 +1002,19 @@ export class LayoutService implements OnDestroy {
   private publishService = inject(PublishService);
 
   openRecordVideoDialog(): void {
-    const dialogRef = this.dialog.open(VideoRecordDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
-      panelClass: 'responsive-dialog',
-      disableClose: true,
-    });
+    const dialogRef = this.customDialog.open<VideoRecordDialogComponent, { file: File; uploadOriginal: boolean } | null>(
+      VideoRecordDialogComponent,
+      {
+        title: 'Record Video',
+        width: '600px',
+        maxWidth: '90vw',
+        disableClose: true,
+        showCloseButton: true,
+        panelClass: 'video-record-dialog-panel',
+      }
+    );
 
-    dialogRef.afterClosed().subscribe(async result => {
+    dialogRef.afterClosed$.subscribe(async result => {
       if (result && result.file) {
         try {
           // Set uploading state to true
