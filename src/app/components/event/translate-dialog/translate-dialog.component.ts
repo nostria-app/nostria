@@ -9,6 +9,7 @@ import { FormsModule } from '@angular/forms';
 import { AiService } from '../../../services/ai.service';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatIconModule } from '@angular/material/icon';
+import { LocalStorageService } from '../../../services/local-storage.service';
 
 export interface TranslateDialogData {
   content: string;
@@ -33,8 +34,12 @@ export interface TranslateDialogData {
 })
 export class TranslateDialogComponent {
   private dialogRef = inject(MatDialogRef<TranslateDialogComponent>);
+  private localStorage = inject(LocalStorageService);
   data: TranslateDialogData = inject(MAT_DIALOG_DATA);
   ai = inject(AiService);
+
+  private readonly SOURCE_LANG_KEY = 'nostria:translation:sourceLang';
+  private readonly TARGET_LANG_KEY = 'nostria:translation:targetLang';
 
   sourceLang = signal('en');
   targetLang = signal('es');
@@ -71,8 +76,16 @@ export class TranslateDialogComponent {
   });
 
   constructor() {
-    // Set default target lang from browser or settings if possible
-    // For now default to 'es' or first available not 'en'
+    // Load saved translation preferences
+    const savedSourceLang = this.localStorage.getItem(this.SOURCE_LANG_KEY);
+    const savedTargetLang = this.localStorage.getItem(this.TARGET_LANG_KEY);
+    
+    if (savedSourceLang) {
+      this.sourceLang.set(savedSourceLang);
+    }
+    if (savedTargetLang) {
+      this.targetLang.set(savedTargetLang);
+    }
   }
 
   async translate() {
@@ -125,6 +138,10 @@ export class TranslateDialogComponent {
       } else {
         this.translatedText.set(JSON.stringify(result));
       }
+
+      // Save the translation preferences after successful translation
+      this.localStorage.setItem(this.SOURCE_LANG_KEY, this.sourceLang());
+      this.localStorage.setItem(this.TARGET_LANG_KEY, this.targetLang());
 
     } catch (err) {
       this.error.set(err instanceof Error ? err.message : 'Translation failed');
