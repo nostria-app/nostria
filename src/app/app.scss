@@ -182,6 +182,11 @@ mat-sidenav-content {
   height: calc(100% - var(--toolbar-height, 64px)) !important;
   box-sizing: border-box;
 
+  // Glass effect
+  background-color: rgba(255, 255, 255, 0.7) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
   // On mobile (over mode), ensure proper z-index
   @media (max-width: 599px) {
     z-index: 100 !important;
@@ -198,6 +203,10 @@ mat-sidenav-content {
       padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     }
   }
+}
+
+:host-context(.dark) .sidenav {
+  background-color: rgba(0, 0, 0, 0.3) !important;
 }
 
 .active-link {
