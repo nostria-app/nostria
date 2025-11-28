@@ -182,28 +182,35 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     try {
       console.log('[VideoRecorder] Starting recording...');
       console.log('[VideoRecorder] isShortForm value:', this.isShortForm);
+      console.log('[VideoRecorder] selectedFilter:', this.selectedFilter());
 
       // If no stream exists, start camera preview first
       if (!this.stream()) {
         await this.startCameraPreview();
       }
 
-      // Get the stream from the filtered canvas if filter is active, otherwise use camera stream
+      // Always capture from the filtered canvas since we always render to it
+      // This ensures the aspect ratio cropping is included in the recording
       let recordingStream: MediaStream;
       const canvas = this.filterCanvas?.nativeElement;
 
-      if (this.selectedFilter() !== 'none' && canvas) {
-        // Capture stream from canvas which has the filter applied
+      if (canvas && canvas.width > 0 && canvas.height > 0) {
+        console.log('[VideoRecorder] Using canvas stream, dimensions:', canvas.width, 'x', canvas.height);
+
+        // Capture stream from canvas which has the filter and aspect ratio applied
         // Try to match the camera stream's frame rate, default to 30fps
         const cameraStream = this.stream();
         const videoTrack = cameraStream?.getVideoTracks()[0];
         const frameRate = videoTrack?.getSettings().frameRate || 30;
 
         recordingStream = canvas.captureStream(frameRate);
+        console.log('[VideoRecorder] Canvas stream created with framerate:', frameRate);
+        console.log('[VideoRecorder] Canvas stream video tracks:', recordingStream.getVideoTracks().length);
 
         // Add audio from the original camera stream
         if (cameraStream) {
           const audioTracks = cameraStream.getAudioTracks();
+          console.log('[VideoRecorder] Adding audio tracks:', audioTracks.length);
           // Check if audio tracks exist and aren't already in the recording stream
           const existingAudioTracks = recordingStream.getAudioTracks();
           audioTracks.forEach(track => {
@@ -214,6 +221,7 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
           });
         }
       } else {
+        console.log('[VideoRecorder] Canvas not ready, falling back to camera stream');
         // Use original camera stream without filter
         const stream = this.stream();
         if (!stream) {
