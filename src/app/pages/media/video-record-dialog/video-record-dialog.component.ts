@@ -69,8 +69,8 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
 
   ngAfterViewInit(): void {
     // Start camera preview as soon as view is ready
-    setTimeout(() => {
-      this.startCameraPreview();
+    setTimeout(async () => {
+      await this.startCameraPreview();
       this.initializeFilters();
     }, 100);
   }
@@ -91,14 +91,14 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     const renderFrame = () => {
       const video = this.cameraPreview?.nativeElement;
       const canvas = this.filterCanvas?.nativeElement;
-      
+
       if (video && canvas && video.readyState >= video.HAVE_CURRENT_DATA) {
         this.filterService.applyFilter(video, canvas);
       }
-      
+
       this.filterAnimationFrame = requestAnimationFrame(renderFrame);
     };
-    
+
     renderFrame();
   }
 
@@ -133,6 +133,19 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
         videoElement.srcObject = stream;
         // Ensure video is muted to prevent audio feedback
         videoElement.muted = true;
+
+        // Wait for video to be ready before starting playback
+        await new Promise<void>((resolve) => {
+          videoElement.onloadedmetadata = () => {
+            videoElement.play().then(() => {
+              console.log('[VideoRecorder] Video playback started, dimensions:', videoElement.videoWidth, 'x', videoElement.videoHeight);
+              resolve();
+            }).catch(err => {
+              console.error('[VideoRecorder] Failed to play video:', err);
+              resolve();
+            });
+          };
+        });
       }
     } catch (error) {
       console.error('Failed to start camera preview:', error);
@@ -155,16 +168,16 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
       // Get the stream from the filtered canvas if filter is active, otherwise use camera stream
       let recordingStream: MediaStream;
       const canvas = this.filterCanvas?.nativeElement;
-      
+
       if (this.selectedFilter() !== 'none' && canvas) {
         // Capture stream from canvas which has the filter applied
         // Try to match the camera stream's frame rate, default to 30fps
         const cameraStream = this.stream();
         const videoTrack = cameraStream?.getVideoTracks()[0];
         const frameRate = videoTrack?.getSettings().frameRate || 30;
-        
+
         recordingStream = canvas.captureStream(frameRate);
-        
+
         // Add audio from the original camera stream
         if (cameraStream) {
           const audioTracks = cameraStream.getAudioTracks();

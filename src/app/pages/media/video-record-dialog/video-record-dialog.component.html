@@ -16,11 +16,11 @@
     @if (!isPreviewing()) {
     <!-- Camera Preview -->
     <div class="camera-container" [class.horizontal]="aspectRatio() === 'horizontal'">
-      <!-- Hidden video element for camera stream -->
-      <video #cameraPreview autoplay playsinline muted class="camera-preview" [class.hidden]="selectedFilter() !== 'none'"></video>
-      
-      <!-- Canvas for filtered video -->
-      <canvas #filterCanvas class="filter-canvas" [class.hidden]="selectedFilter() === 'none'"></canvas>
+      <!-- Hidden video element for camera stream (source only, not displayed) -->
+      <video #cameraPreview autoplay playsinline muted class="camera-preview-source"></video>
+
+      <!-- Canvas for displaying video (with or without filters) -->
+      <canvas #filterCanvas class="filter-canvas"></canvas>
 
       @if (isRecording()) {
       <div class="recording-indicator">
@@ -44,25 +44,22 @@
       <button mat-icon-button class="camera-flip-button" (click)="toggleCamera()" matTooltip="Switch camera">
         <mat-icon>flip_camera_ios</mat-icon>
       </button>
-      
-      <button mat-icon-button class="filters-button" (click)="toggleFilters()" [class.active]="showFilters()" matTooltip="Filters">
+
+      <button mat-icon-button class="filters-button" (click)="toggleFilters()" [class.active]="showFilters()"
+        matTooltip="Filters">
         <mat-icon>photo_filter</mat-icon>
       </button>
-      
+
       <!-- Filter Selection -->
       @if (showFilters()) {
       <div class="filter-selection">
         <div class="filter-chips">
           @for (filter of filterService.availableFilters; track filter.id) {
-            <button 
-              mat-button 
-              class="filter-chip"
-              [class.selected]="selectedFilter() === filter.id"
-              (click)="selectFilter(filter.id)"
-              [matTooltip]="filter.description">
-              <mat-icon>{{ filter.icon }}</mat-icon>
-              <span>{{ filter.name }}</span>
-            </button>
+          <button mat-button class="filter-chip" [class.selected]="selectedFilter() === filter.id"
+            (click)="selectFilter(filter.id)" [matTooltip]="filter.description">
+            <mat-icon>{{ filter.icon }}</mat-icon>
+            <span>{{ filter.name }}</span>
+          </button>
           }
         </div>
       </div>
