@@ -423,7 +423,7 @@ mat-sidenav-content {
 .fab-container {
   position: relative;
   width: 56px;
-  height: 56px;
+  height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -431,10 +431,6 @@ mat-sidenav-content {
 }
 
 .create-fab {
-  position: absolute;
-  bottom: 12px;
-  /* Adjusted for floating dock */
-  /* Positioning the FAB button to be raised above the navigation */
   z-index: 11;
   box-shadow: var(--mat-sys-level4);
   scale: 1.1;
