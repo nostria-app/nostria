@@ -383,7 +383,7 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     return 'video/webm';
   }
 
-  retakeVideo(): void {
+  async retakeVideo(): Promise<void> {
     if (this.recordedUrl()) {
       URL.revokeObjectURL(this.recordedUrl()!);
     }
@@ -391,8 +391,9 @@ export class VideoRecordDialogComponent implements OnDestroy, AfterViewInit {
     this.recordedUrl.set(null);
     this.isPreviewing.set(false);
     this.recordingProgress.set(0);
-    // Restart camera preview instead of immediately recording
-    this.startCameraPreview();
+    // Restart camera preview and filter rendering
+    await this.startCameraPreview();
+    this.initializeFilters();
   }
 
   useVideo(): void {
