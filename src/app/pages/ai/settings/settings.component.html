@@ -26,7 +26,7 @@
   <div class="features-grid">
     <mat-card class="settings-card">
       <mat-card-header>
-        <mat-card-title>Voice & Language</mat-card-title>
+        <mat-card-title>Voice</mat-card-title>
       </mat-card-header>
       <mat-card-content>
         <div class="setting-item">
@@ -35,18 +35,6 @@
             <mat-select [value]="settings.settings().aiVoice" (selectionChange)="updateVoice($event.value)">
               <mat-option value="female">Female</mat-option>
               <mat-option value="male">Male</mat-option>
-            </mat-select>
-          </mat-form-field>
-        </div>
-
-        <div class="setting-item">
-          <label>Native Language</label>
-          <p class="hint">Used for translation suggestions</p>
-          <mat-form-field appearance="outline">
-            <mat-select [value]="settings.settings().aiNativeLanguage" (selectionChange)="updateLanguage($event.value)">
-              @for (lang of languages; track lang.code) {
-              <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
-              }
             </mat-select>
           </mat-form-field>
         </div>

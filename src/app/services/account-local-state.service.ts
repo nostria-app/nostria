@@ -36,6 +36,8 @@ interface AccountLocalState {
   articlesActiveTab?: number;
   subscriptionSettingsLastFetch?: number;
   subscriptionSettings?: DeviceNotificationPreferences[];
+  translationSourceLang?: string;
+  translationTargetLang?: string;
 }
 
 /**
@@ -388,6 +390,36 @@ export class AccountLocalStateService {
    */
   setSubscriptionSettings(pubkey: string, settings: DeviceNotificationPreferences[]): void {
     this.updateAccountState(pubkey, { subscriptionSettings: settings });
+  }
+
+  /**
+   * Get translation source language for an account
+   */
+  getTranslationSourceLang(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.translationSourceLang;
+  }
+
+  /**
+   * Set translation source language for an account
+   */
+  setTranslationSourceLang(pubkey: string, lang: string | null | undefined): void {
+    this.updateAccountState(pubkey, { translationSourceLang: lang ?? undefined });
+  }
+
+  /**
+   * Get translation target language for an account
+   */
+  getTranslationTargetLang(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.translationTargetLang;
+  }
+
+  /**
+   * Set translation target language for an account
+   */
+  setTranslationTargetLang(pubkey: string, lang: string | null | undefined): void {
+    this.updateAccountState(pubkey, { translationTargetLang: lang ?? undefined });
   }
 
   /**
