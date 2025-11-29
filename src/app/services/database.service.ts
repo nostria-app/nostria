@@ -1716,6 +1716,7 @@ export class DatabaseService {
           );
 
         this.logger.debug(`Found ${events.length} cached events for kind ${kind} since ${sinceTimestamp}`);
+
         resolve(events);
       };
 
