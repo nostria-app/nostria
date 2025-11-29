@@ -1,5 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
 import { Event, kinds } from 'nostr-tools';
@@ -20,6 +21,7 @@ export interface DataOptions {
 })
 export class UserDataService {
   private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly userRelayEx = inject(UserRelayService);
   private readonly discoveryRelayEx = inject(DiscoveryRelayService);
   private readonly sharedRelayEx = inject(SharedRelayService);
@@ -81,7 +83,7 @@ export class UserDataService {
     // 3. invalidateCache is true
     if (!event || this.utilities.shouldAlwaysFetchFromRelay(event.kind) || options?.invalidateCache) {
       const relayEvent = await this.userRelayEx.getEventById(pubkey, id);
-      
+
       if (relayEvent) {
         event = relayEvent;
         eventFromRelays = true;
@@ -417,7 +419,9 @@ export class UserDataService {
     // If invalidateCache is true, skip storage and fetch directly from relays
     // Otherwise, check storage first if save option is enabled
     if (events.length === 0 && options?.save && !options?.invalidateCache) {
-      events = await this.storage.getEventsByPubkeyAndKind(pubkey, kind);
+      // Use new DatabaseService for event queries
+      await this.database.init();
+      events = await this.database.getEventsByPubkeyAndKind(pubkey, kind);
     }
 
     // Fetch from relays if we don't have events yet (or invalidateCache forced relay fetch)
@@ -439,8 +443,10 @@ export class UserDataService {
     }
 
     if (options?.save) {
+      // Use new DatabaseService for saving events
+      await this.database.init();
       for (const event of events) {
-        await this.storage.saveEvent(event);
+        await this.database.saveEvent(event);
       }
     }
 
@@ -530,7 +536,7 @@ export class UserDataService {
     if (events.length === 0 && options?.save && !options?.invalidateCache && !isReplaceable) {
       const allEvents = await this.storage.getEventsByKind(kind);
       events = allEvents.filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
-      
+
       if (events.length > 0) {
         this.logger.debug(`Using ${events.length} cached events for non-replaceable kind ${kind} with tag ${eventTag}`);
       }
@@ -596,7 +602,7 @@ export class UserDataService {
       // Fetch from storage for all requested kinds
       const kindEvents = await Promise.all(kinds.map(kind => this.storage.getEventsByKind(kind)));
       events = kindEvents.flat().filter((e) => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
-      
+
       if (events.length > 0) {
         this.logger.debug(`Using ${events.length} cached events for non-replaceable kinds [${kinds.join(',')}] with tag ${eventTag}`);
       }
