@@ -321,6 +321,7 @@ export class App implements OnInit {
 
   navItems: NavItem[] = [
     { path: '', label: 'Feeds', icon: 'stacks', authenticated: false },
+    { path: 'summary', label: 'Summary', icon: 'dashboard', authenticated: true },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
     // {
     //   path: 'articles',

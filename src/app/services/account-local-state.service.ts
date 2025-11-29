@@ -38,6 +38,7 @@ interface AccountLocalState {
   subscriptionSettings?: DeviceNotificationPreferences[];
   translationSourceLang?: string;
   translationTargetLang?: string;
+  lastSummaryCheck?: number; // Timestamp when user last viewed the Summary page
 }
 
 /**
@@ -420,6 +421,21 @@ export class AccountLocalStateService {
    */
   setTranslationTargetLang(pubkey: string, lang: string | null | undefined): void {
     this.updateAccountState(pubkey, { translationTargetLang: lang ?? undefined });
+  }
+
+  /**
+   * Get last summary check timestamp for an account
+   */
+  getLastSummaryCheck(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.lastSummaryCheck || 0;
+  }
+
+  /**
+   * Set last summary check timestamp for an account
+   */
+  setLastSummaryCheck(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { lastSummaryCheck: timestamp });
   }
 
   /**

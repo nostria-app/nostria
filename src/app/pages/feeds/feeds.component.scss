@@ -160,6 +160,7 @@ app-user-profile {
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s ease;
+            text-decoration: none;
 
             mat-icon {
               font-size: 1.1rem;
@@ -186,6 +187,18 @@ app-user-profile {
 
               span {
                 font-weight: 600;
+              }
+            }
+            
+            // Summary tab special styling
+            &.summary-tab {
+              mat-icon {
+                color: var(--mat-sys-tertiary);
+              }
+              
+              &:hover {
+                background-color: var(--mat-sys-tertiary-container);
+                color: var(--mat-sys-on-tertiary-container);
               }
             }
           }
