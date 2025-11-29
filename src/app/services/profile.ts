@@ -1,6 +1,7 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { DataService } from './data.service';
 import { AccountStateService } from './account-state.service';
 import { MediaService } from './media.service';
@@ -59,6 +60,7 @@ export class Profile {
   // private relay = inject(RelayService);
   private accountRelay = inject(AccountRelayService);
   private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private data = inject(DataService);
   private accountState = inject(AccountStateService);
   private media = inject(MediaService);
@@ -162,6 +164,9 @@ export class Profile {
 
       // Save locally
       await this.storage.saveEvent(profileEvent);
+      // Also save to new DatabaseService for Summary queries
+      await this.database.init();
+      await this.database.saveEvent(profileEvent);
       this.logger.debug('Profile saved locally');
 
       // Update account state

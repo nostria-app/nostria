@@ -596,6 +596,8 @@ export class NostrService implements NostriaService {
     if (followingEvent) {
       // Save the latest event to storage
       await this.storage.saveEvent(followingEvent);
+      // Also save to new DatabaseService for Summary queries
+      await this.database.saveEvent(followingEvent);
       this.logger.info('Loaded fresh following list from relay', {
         pubkey,
         followingCount: followingEvent.tags.filter(t => t[0] === 'p').length,
@@ -620,6 +622,8 @@ export class NostrService implements NostriaService {
     if (muteListEvent) {
       // Save the latest event to storage
       await this.storage.saveEvent(muteListEvent);
+      // Also save to new DatabaseService for Summary queries
+      await this.database.saveEvent(muteListEvent);
       this.logger.info('Loaded fresh mute list from relay', {
         pubkey,
         mutedCount: muteListEvent.tags.filter(t => t[0] === 'p').length,
@@ -950,6 +954,8 @@ export class NostrService implements NostriaService {
           if (metadata) {
             const record = this.data.toRecord(metadata);
             this.accountState.addToCache(pubkey, record);
+            // Save refreshed metadata to database for Summary queries
+            await this.database.saveEvent(metadata);
           }
         }, 0);
       }
@@ -973,7 +979,8 @@ export class NostrService implements NostriaService {
       if (metadata) {
         const record = this.data.toRecord(metadata);
         this.accountState.addToCache(pubkey, record);
-        // this.updateMetadataCache(pubkey, record);
+        // Save discovered metadata to database for Summary queries
+        await this.database.saveEvent(metadata);
         return record;
       }
 
@@ -1128,6 +1135,8 @@ export class NostrService implements NostriaService {
         // }
 
         await this.storage.saveEvent(relayListEvent);
+        // Also save to new DatabaseService for Summary queries
+        await this.database.saveEvent(relayListEvent);
 
         relayUrls = this.utilities.pickOptimalRelays(
           this.utilities.getRelayUrls(relayListEvent),
@@ -1157,6 +1166,8 @@ export class NostrService implements NostriaService {
           }
 
           await this.storage.saveEvent(followingEvent);
+          // Also save to new DatabaseService for Summary queries
+          await this.database.saveEvent(followingEvent);
           relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
         } else {
           this.logger.warn('No relay list or following event found for user', {
@@ -1200,6 +1211,8 @@ export class NostrService implements NostriaService {
           }
 
           await this.storage.saveEvent(metadataEvent);
+          // Also save to new DatabaseService for Summary queries
+          await this.database.saveEvent(metadataEvent);
           return metadataEvent;
         } else {
           this.logger.warn('No metadata event found for user', { pubkey });

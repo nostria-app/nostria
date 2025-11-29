@@ -240,6 +240,8 @@ export class DataService {
         record = this.toRecord(metadata);
         this.cache.set(cacheKey, record);
         await this.storage.saveEvent(metadata);
+        // Also save to new DatabaseService for Summary queries
+        await this.saveEventToDatabase(metadata);
         // Process relay hints when saving metadata
         await this.processEventForRelayHints(metadata);
       }
@@ -261,6 +263,8 @@ export class DataService {
           record = this.toRecord(metadata);
           this.cache.set(cacheKey, record);
           await this.storage.saveEvent(metadata);
+          // Also save to new DatabaseService for Summary queries
+          await this.saveEventToDatabase(metadata);
           // Process relay hints when saving metadata
           await this.processEventForRelayHints(metadata);
         }
@@ -283,6 +287,8 @@ export class DataService {
           const freshRecord = this.toRecord(fresh);
           this.cache.set(cacheKey, freshRecord);
           await this.storage.saveEvent(fresh);
+          // Also save to new DatabaseService for Summary queries
+          await this.saveEventToDatabase(fresh);
           // Process relay hints when saving fresh metadata
           await this.processEventForRelayHints(fresh);
         }
@@ -290,6 +296,19 @@ export class DataService {
         this.logger.warn(`Failed to refresh profile in background for ${pubkey}:`, error);
       }
     });
+  }
+
+  /**
+   * Save an event to the new DatabaseService for Summary queries
+   * This ensures events are available in the new events store
+   */
+  private async saveEventToDatabase(event: Event): Promise<void> {
+    try {
+      await this.database.init();
+      await this.database.saveEvent(event);
+    } catch (error) {
+      this.logger.warn(`Failed to save event to DatabaseService: ${event.id}`, error);
+    }
   }
 
   /** Will read event from local database, if available, or get from relay, and then save to database. */
@@ -341,6 +360,8 @@ export class DataService {
 
     if (options?.save && eventFromRelays) {
       await this.storage.saveEvent(event);
+      // Also save to new DatabaseService for Summary queries
+      await this.saveEventToDatabase(event);
     }
 
     return record;
@@ -389,6 +410,8 @@ export class DataService {
 
     if (options?.save && eventFromRelays) {
       await this.storage.saveEvent(event);
+      // Also save to new DatabaseService for Summary queries
+      await this.saveEventToDatabase(event);
       // Process relay hints when saving events from relays
       await this.processEventForRelayHints(event);
     }
@@ -505,6 +528,8 @@ export class DataService {
     if (options?.save && eventFromRelays) {
       for (const event of events) {
         await this.storage.saveEvent(event);
+        // Also save to new DatabaseService for Summary queries
+        await this.saveEventToDatabase(event);
         // Process relay hints when saving events from relays
         await this.processEventForRelayHints(event);
       }
