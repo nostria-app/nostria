@@ -1,5 +1,5 @@
 import { Injectable, inject, signal } from '@angular/core';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { LoggerService } from './logger.service';
 
 /**
@@ -19,7 +19,7 @@ import { LoggerService } from './logger.service';
   providedIn: 'root',
 })
 export class CacheCleanupService {
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
 
   // Cleanup configuration
@@ -104,7 +104,7 @@ export class CacheCleanupService {
       const startTime = Date.now();
 
       // Get stats before cleanup
-      const statsBefore = await this.storage.getCachedEventsStats();
+      const statsBefore = await this.database.getCachedEventsStats();
       this.logger.debug('Cache stats before cleanup:', {
         totalEvents: statsBefore.totalEvents,
         accounts: statsBefore.eventsByAccount.size,
@@ -112,10 +112,10 @@ export class CacheCleanupService {
       });
 
       // Perform the cleanup
-      await this.storage.cleanupCachedEvents();
+      await this.database.cleanupCachedEvents();
 
       // Get stats after cleanup
-      const statsAfter = await this.storage.getCachedEventsStats();
+      const statsAfter = await this.database.getCachedEventsStats();
       const eventsRemoved = statsBefore.totalEvents - statsAfter.totalEvents;
 
       const duration = Date.now() - startTime;
