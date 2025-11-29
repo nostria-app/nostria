@@ -2,7 +2,7 @@ import { Injectable, inject, signal, computed } from '@angular/core';
 import { LocalSettingsService } from './local-settings.service';
 import { LoggerService } from './logger.service';
 import { RelayPoolService } from './relays/relay-pool';
-import { StorageService, TrustMetrics } from './storage.service';
+import { DatabaseService, TrustMetrics } from './database.service';
 import type { Event as NostrEvent, Filter } from 'nostr-tools';
 
 /**
@@ -16,7 +16,7 @@ export class TrustService {
   private localSettings = inject(LocalSettingsService);
   private logger = inject(LoggerService);
   private relayPool = inject(RelayPoolService);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
 
   // In-memory cache for quick access
   private metricsCache = new Map<string, TrustMetrics>();
@@ -97,7 +97,7 @@ export class TrustService {
 
     // Check database cache
     try {
-      const cachedMetrics = await this.storage.getTrustMetrics(pubkey);
+      const cachedMetrics = await this.database.getTrustMetrics(pubkey);
       if (cachedMetrics) {
         // Cache in memory for quick access
         this.metricsCache.set(pubkey, cachedMetrics);
@@ -154,7 +154,7 @@ export class TrustService {
       console.log('Parsed metrics:', metrics);
 
       // Save to database
-      await this.storage.saveTrustMetrics(pubkey, metrics);
+      await this.database.saveTrustMetrics(pubkey, metrics);
 
       // Cache in memory
       this.metricsCache.set(pubkey, metrics);
@@ -321,7 +321,7 @@ export class TrustService {
    * @param maxRank Optional maximum rank filter
    */
   async getPubkeysByTrustRank(minRank?: number, maxRank?: number): Promise<string[]> {
-    return this.storage.getPubkeysByTrustRank(minRank, maxRank);
+    return this.database.getPubkeysByTrustRank(minRank, maxRank);
   }
 
   /**

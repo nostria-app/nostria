@@ -1,14 +1,21 @@
 import { inject, Injectable } from '@angular/core';
-import { StorageService, InfoRecord } from './storage.service';
+import { DatabaseService } from './database.service';
 import { UserMetric, MetricUpdate, MetricQuery } from '../interfaces/metrics';
 import { UtilitiesService } from './utilities.service';
 import { AccountStateService } from './account-state.service';
+
+interface InfoRecord {
+  key: string;
+  type: string;
+  updated: number;
+  [key: string]: unknown;
+}
 
 @Injectable({
   providedIn: 'root',
 })
 export class Metrics {
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
 
@@ -45,11 +52,11 @@ export class Metrics {
       return [];
     }
 
-    const records = await this.storage.getInfoByType('metric');
+    const records = await this.database.getInfoByType('metric');
 
     // Filter and map records for the current account
     return records
-      .map(record => this.mapRecordToMetric(record, currentAccount))
+      .map(record => this.mapRecordToMetric(record as InfoRecord, currentAccount))
       .filter((metric): metric is UserMetric => {
         // Filter out null values and metrics not belonging to current account
         return metric !== null && metric.accountPubkey === currentAccount;
@@ -82,8 +89,8 @@ export class Metrics {
     }
 
     // Fetch from storage
-    const record = await this.storage.getInfo(metricsKey, 'metric');
-    const metric = record ? this.mapRecordToMetric(record, currentAccount) : null;
+    const record = await this.database.getInfo(metricsKey, 'metric');
+    const metric = record ? this.mapRecordToMetric(record as InfoRecord, currentAccount) : null;
 
     // Cache the result
     if (metric) {
@@ -299,7 +306,7 @@ export class Metrics {
     }
 
     const metricsKey = this.generateMetricsKey(currentAccount, validHexPubkey);
-    await this.storage.deleteInfoByKeyAndType(metricsKey, 'metric');
+    await this.database.deleteInfoByKeyAndType(metricsKey, 'metric');
   }
 
   /**
@@ -317,7 +324,7 @@ export class Metrics {
 
     for (const metric of metrics) {
       const metricsKey = this.generateMetricsKey(metric.accountPubkey, metric.pubkey);
-      await this.storage.deleteInfoByKeyAndType(metricsKey, 'metric');
+      await this.database.deleteInfoByKeyAndType(metricsKey, 'metric');
     }
   }
 
@@ -353,7 +360,7 @@ export class Metrics {
     this.metricsCache.set(metricsKey, metric);
 
     // Save to storage
-    await this.storage.saveInfo(metricsKey, 'metric', { accountPubkey, ...data });
+    await this.database.saveInfo(metricsKey, 'metric', { accountPubkey, ...data });
   }
 
   private mapRecordToMetric(record: InfoRecord, accountPubkey: string): UserMetric | null {
@@ -373,20 +380,20 @@ export class Metrics {
     return {
       accountPubkey: parsed.accountPubkey,
       pubkey: parsed.trackedPubkey,
-      viewed: record['viewed'] || 0,
-      profileClicks: record['profileClicks'] || 0,
-      liked: record['liked'] || 0,
-      read: record['read'] || 0,
-      replied: record['replied'] || 0,
-      reposted: record['reposted'] || 0,
-      quoted: record['quoted'] || 0,
-      messaged: record['messaged'] || 0,
-      mentioned: record['mentioned'] || 0,
-      timeSpent: record['timeSpent'] || 0,
-      lastInteraction: record['lastInteraction'] || 0,
-      averageTimePerView: record['averageTimePerView'] || 0,
-      engagementScore: record['engagementScore'] || 0,
-      firstInteraction: record['firstInteraction'] || Date.now(),
+      viewed: (record['viewed'] as number) || 0,
+      profileClicks: (record['profileClicks'] as number) || 0,
+      liked: (record['liked'] as number) || 0,
+      read: (record['read'] as number) || 0,
+      replied: (record['replied'] as number) || 0,
+      reposted: (record['reposted'] as number) || 0,
+      quoted: (record['quoted'] as number) || 0,
+      messaged: (record['messaged'] as number) || 0,
+      mentioned: (record['mentioned'] as number) || 0,
+      timeSpent: (record['timeSpent'] as number) || 0,
+      lastInteraction: (record['lastInteraction'] as number) || 0,
+      averageTimePerView: (record['averageTimePerView'] as number) || 0,
+      engagementScore: (record['engagementScore'] as number) || 0,
+      firstInteraction: (record['firstInteraction'] as number) || Date.now(),
       updated: record.updated || Date.now(),
     };
   }

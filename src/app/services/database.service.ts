@@ -35,6 +35,43 @@ export interface CachedFeedEvent {
 }
 
 /**
+ * Interface for trust metrics data
+ */
+export interface TrustMetrics {
+  rank?: number;
+  followers?: number;
+  postCount?: number;
+  zapAmtRecd?: number;
+  zapAmtSent?: number;
+  firstCreatedAt?: number;
+  replyCount?: number;
+  reactionsCount?: number;
+  zapCntRecd?: number;
+  zapCntSent?: number;
+  lastUpdated?: number;
+  hops?: number;
+  personalizedGrapeRank_influence?: number;
+  personalizedGrapeRank_average?: number;
+  personalizedGrapeRank_confidence?: number;
+  personalizedGrapeRank_input?: number;
+  personalizedPageRank?: number;
+  verifiedFollowerCount?: number;
+  verifiedMuterCount?: number;
+  verifiedReporterCount?: number;
+}
+
+/**
+ * Interface for info records
+ */
+export interface InfoRecord {
+  key: string;
+  type: string;
+  updated: number;
+  compositeKey?: string;
+  [key: string]: unknown;
+}
+
+/**
  * Database configuration
  */
 const DB_NAME = 'nostria-db';
@@ -346,6 +383,44 @@ export class DatabaseService {
   }
 
   /**
+   * Get an event by ID (alias for getEvent for compatibility with StorageService)
+   */
+  async getEventById(id: string): Promise<Event | null> {
+    const event = await this.getEvent(id);
+    return event || null;
+  }
+
+  /**
+   * Get a single event by pubkey and kind (returns the most recent one)
+   * For compatibility with StorageService which returned a single event
+   */
+  async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
+    const events = await this.getEventsByPubkeyAndKind(pubkey, kind);
+    if (events.length === 0) {
+      return null;
+    }
+    // Return the most recent event
+    return events.sort((a, b) => b.created_at - a.created_at)[0];
+  }
+
+  /**
+   * Get a parameterized replaceable event by pubkey, kind, and d-tag
+   * Returns the most recent matching event
+   */
+  async getParameterizedReplaceableEvent(
+    pubkey: string,
+    kind: number,
+    dTagValue: string
+  ): Promise<Event | null> {
+    const events = await this.getEventsByPubkeyKindAndDTag(pubkey, kind, dTagValue);
+    if (events.length === 0) {
+      return null;
+    }
+    // Return the most recent event
+    return events.sort((a, b) => b.created_at - a.created_at)[0];
+  }
+
+  /**
    * Delete an event by ID
    */
   async deleteEvent(id: string): Promise<void> {
@@ -636,6 +711,150 @@ export class DatabaseService {
       request.onsuccess = () => resolve();
       request.onerror = () => reject(request.error);
     });
+  }
+
+  // ============================================================================
+  // INFO CONVENIENCE METHODS (Compatibility with StorageService)
+  // ============================================================================
+
+  /**
+   * Save info data for a key and type
+   */
+  async saveInfo(key: string, type: string, data: Record<string, unknown>): Promise<void> {
+    const compositeKey = `${key}:${type}`;
+    await this.saveInfoRecord({
+      compositeKey,
+      key,
+      type,
+      updated: Date.now(),
+      ...data,
+    });
+  }
+
+  /**
+   * Get info data for a key and type
+   */
+  async getInfo(key: string, type: string): Promise<Record<string, unknown> | null> {
+    const compositeKey = `${key}:${type}`;
+    const record = await this.getInfoRecord(compositeKey);
+    return record || null;
+  }
+
+  /**
+   * Get all info records of a specific type
+   */
+  async getInfoByType(type: string): Promise<Record<string, unknown>[]> {
+    return this.getInfoRecordsByType(type);
+  }
+
+  /**
+   * Delete info data for a key and type
+   */
+  async deleteInfoByKeyAndType(key: string, type: string): Promise<void> {
+    const compositeKey = `${key}:${type}`;
+    await this.deleteInfoRecord(compositeKey);
+  }
+
+  // ============================================================================
+  // TRUST METRICS OPERATIONS
+  // ============================================================================
+
+  /**
+   * Save trust metrics for a pubkey
+   */
+  async saveTrustMetrics(pubkey: string, metrics: TrustMetrics): Promise<void> {
+    try {
+      const data = {
+        ...metrics,
+        lastUpdated: Date.now(),
+      };
+      await this.saveInfo(pubkey, 'trust', data);
+      this.logger.debug(`Saved trust metrics for pubkey ${pubkey}`);
+    } catch (error) {
+      this.logger.error(`Error saving trust metrics for ${pubkey}`, error);
+    }
+  }
+
+  /**
+   * Get trust metrics for a pubkey
+   */
+  async getTrustMetrics(pubkey: string): Promise<TrustMetrics | null> {
+    try {
+      const record = await this.getInfo(pubkey, 'trust');
+      if (!record) {
+        return null;
+      }
+
+      const metrics: TrustMetrics = {
+        rank: record['rank'] as number | undefined,
+        followers: record['followers'] as number | undefined,
+        postCount: record['postCount'] as number | undefined,
+        zapAmtRecd: record['zapAmtRecd'] as number | undefined,
+        zapAmtSent: record['zapAmtSent'] as number | undefined,
+        firstCreatedAt: record['firstCreatedAt'] as number | undefined,
+        replyCount: record['replyCount'] as number | undefined,
+        reactionsCount: record['reactionsCount'] as number | undefined,
+        zapCntRecd: record['zapCntRecd'] as number | undefined,
+        zapCntSent: record['zapCntSent'] as number | undefined,
+        lastUpdated: record['lastUpdated'] as number | undefined,
+        hops: record['hops'] as number | undefined,
+        personalizedGrapeRank_influence: record['personalizedGrapeRank_influence'] as number | undefined,
+        personalizedGrapeRank_average: record['personalizedGrapeRank_average'] as number | undefined,
+        personalizedGrapeRank_confidence: record['personalizedGrapeRank_confidence'] as number | undefined,
+        personalizedGrapeRank_input: record['personalizedGrapeRank_input'] as number | undefined,
+        personalizedPageRank: record['personalizedPageRank'] as number | undefined,
+        verifiedFollowerCount: record['verifiedFollowerCount'] as number | undefined,
+        verifiedMuterCount: record['verifiedMuterCount'] as number | undefined,
+        verifiedReporterCount: record['verifiedReporterCount'] as number | undefined,
+      };
+
+      return metrics;
+    } catch (error) {
+      this.logger.error(`Error getting trust metrics for ${pubkey}`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Get all pubkeys with trust metrics, sorted by rank (descending)
+   */
+  async getPubkeysByTrustRank(minRank?: number, maxRank?: number): Promise<string[]> {
+    try {
+      const records = await this.getInfoByType('trust');
+
+      let filtered = records;
+
+      if (minRank !== undefined || maxRank !== undefined) {
+        filtered = records.filter(record => {
+          const rank = record['rank'] as number | undefined;
+          if (rank === undefined) {
+            return false;
+          }
+          if (minRank !== undefined && rank < minRank) {
+            return false;
+          }
+          if (maxRank !== undefined && rank > maxRank) {
+            return false;
+          }
+          return true;
+        });
+      }
+
+      // Sort by rank (descending - higher rank first)
+      filtered.sort((a, b) => ((b['rank'] as number) || 0) - ((a['rank'] as number) || 0));
+
+      return filtered.map(record => record['key'] as string);
+    } catch (error) {
+      this.logger.error('Error getting pubkeys by trust rank', error);
+      return [];
+    }
+  }
+
+  /**
+   * Delete trust metrics for a pubkey
+   */
+  async deleteTrustMetrics(pubkey: string): Promise<void> {
+    await this.deleteInfoByKeyAndType(pubkey, 'trust');
   }
 
   // ============================================================================
