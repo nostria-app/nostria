@@ -71,10 +71,10 @@ export class FollowingService {
         // Initial load happens when:
         // 1. No previous following list was tracked, AND
         // 2. Service hasn't been initialized yet, OR profiles map is empty
-        const isInitialLoad = 
-          this.previousFollowingList.length === 0 && 
+        const isInitialLoad =
+          this.previousFollowingList.length === 0 &&
           (!this.isInitialized() || this.profilesMap().size === 0);
-        
+
         if (isInitialLoad) {
           // Initial load - load all profiles
           this.logger.info(`[FollowingService] Initial load of ${followingList.length} profiles`);
@@ -234,17 +234,13 @@ export class FollowingService {
 
     schedulePreload(async () => {
       try {
-        const imagesToPreload: { url: string; width: number; height: number }[] = [];
+        const imagesToPreload: string[] = [];
 
         // Collect all profile image URLs
         for (const profile of profilesMap.values()) {
           if (profile.profile?.data?.picture) {
-            // Preload images in different sizes commonly used
-            imagesToPreload.push(
-              { url: profile.profile.data.picture, width: 40, height: 40 }, // list view
-              { url: profile.profile.data.picture, width: 48, height: 48 }, // small/icon view
-              { url: profile.profile.data.picture, width: 128, height: 128 } // medium view
-            );
+            // Preload images at 96x96 (standard size for all profile images)
+            imagesToPreload.push(profile.profile.data.picture);
           }
         }
 
