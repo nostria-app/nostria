@@ -101,6 +101,8 @@ export class AccountStateService implements OnDestroy {
   private isPreloadingProfiles = false;
   // Track the last set of account pubkeys we preloaded for
   private lastPreloadedAccountPubkeys = new Set<string>();
+  // Track pending background profile loads to prevent duplicate requests
+  private pendingProfileBackgroundLoads = new Set<string>();
 
   hasAccounts = computed(() => {
     return this.accounts().length > 0;
@@ -991,7 +993,11 @@ export class AccountStateService implements OnDestroy {
 
     // If not found anywhere, trigger async load in background
     // Use setTimeout to schedule for next tick
-    setTimeout(() => this.loadAccountProfileInBackground(pubkey), 0);
+    // Check if we already have a pending load for this pubkey
+    if (!this.pendingProfileBackgroundLoads.has(pubkey)) {
+      this.pendingProfileBackgroundLoads.add(pubkey);
+      setTimeout(() => this.loadAccountProfileInBackground(pubkey), 0);
+    }
 
     return undefined;
   }
@@ -1011,6 +1017,9 @@ export class AccountStateService implements OnDestroy {
       }
     } catch (error) {
       console.warn('Failed to load account profile in background:', pubkey, error);
+    } finally {
+      // Remove from pending set when done
+      this.pendingProfileBackgroundLoads.delete(pubkey);
     }
   }
 
