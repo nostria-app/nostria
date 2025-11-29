@@ -613,8 +613,8 @@ app-stream-info-bar {
   }
 
   /* Hide Queue button in fullscreen mode - users should exit fullscreen first */
-  button[routerlink="/media-queue"],
-  button[routerLink="/media-queue"] {
+  button[routerlink="/queue"],
+  button[routerLink="/queue"] {
     display: none !important;
   }
 

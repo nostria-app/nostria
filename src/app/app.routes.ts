@@ -173,8 +173,8 @@ export const routes: Routes = [
       { path: 'about', component: AboutComponent, title: 'About' },
     ],
   },
-  { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
-  { path: 'media-playlists', component: MediaQueueComponent, title: 'Playlists' },
+  { path: 'queue', component: MediaQueueComponent, title: 'Media Queue' },
+  { path: 'playlists', component: MediaQueueComponent, title: 'Playlists' },
   {
     path: 'stream/:encodedEvent',
     component: StreamViewerComponent,

@@ -49,7 +49,7 @@ export class MediaQueueComponent implements OnInit {
   ngOnInit(): void {
     // Set initial tab based on route
     const url = this.router.url;
-    if (url.includes('media-playlists')) {
+    if (url.includes('/playlists') && !url.includes('/playlists/edit')) {
       this.selectedTabIndex.set(1);
     } else {
       this.selectedTabIndex.set(0);
@@ -59,9 +59,9 @@ export class MediaQueueComponent implements OnInit {
   onTabChange(index: number): void {
     this.selectedTabIndex.set(index);
     if (index === 0) {
-      this.router.navigate(['/media-queue'], { replaceUrl: true });
+      this.router.navigate(['/queue'], { replaceUrl: true });
     } else if (index === 1) {
-      this.router.navigate(['/media-playlists'], { replaceUrl: true });
+      this.router.navigate(['/playlists'], { replaceUrl: true });
     }
   }
   pressedItemIndex = -1;
@@ -323,7 +323,7 @@ export class MediaQueueComponent implements OnInit {
               duration: 5000,
             }
           ).onAction().subscribe(() => {
-            this.router.navigate(['/media-playlists']);
+            this.router.navigate(['/playlists']);
           });
         } catch (error) {
           console.error('Failed to create playlist:', error);
@@ -343,7 +343,7 @@ export class MediaQueueComponent implements OnInit {
               duration: 5000,
             }
           ).onAction().subscribe(() => {
-            this.router.navigate(['/media-playlists']);
+            this.router.navigate(['/playlists']);
           });
         } catch (error) {
           console.error('Failed to add to playlist:', error);

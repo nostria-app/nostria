@@ -82,8 +82,8 @@ export class AppsMenuComponent {
   ];
 
   mediaItems: MenuItem[] = [
-    { icon: 'playlist_play', label: 'Playlists', route: ['/media-playlists'] },
-    { icon: 'queue_music', label: 'Media Queue', route: ['/media-queue'] },
+    { icon: 'playlist_play', label: 'Playlists', route: ['/playlists'] },
+    { icon: 'queue_music', label: 'Media Queue', route: ['/queue'] },
     // { icon: 'dock_to_bottom', label: 'Media Player', action: () => this.toggleMediaPlayer() },
     { icon: 'live_tv', label: 'Live Streams', route: ['/streams'] },
     { icon: 'adaptive_audio_mic', label: 'Live Meetings', route: ['/meetings'] },
