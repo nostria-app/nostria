@@ -1,13 +1,21 @@
 import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
-import { StorageService, InfoRecord, TrustMetrics } from './storage.service';
+import { DatabaseService, TrustMetrics } from './database.service';
 import { UserDataService } from './user-data.service';
 import { Metrics } from './metrics';
 import { LoggerService } from './logger.service';
 import { NostrRecord } from '../interfaces';
 import { UserMetric } from '../interfaces/metrics';
 import { ImageCacheService } from './image-cache.service';
+
+// Define InfoRecord locally for type compatibility
+interface InfoRecord {
+  key: string;
+  type: string;
+  updated: number;
+  [key: string]: unknown;
+}
 
 /**
  * Complete profile data structure for a followed user
@@ -31,7 +39,7 @@ export interface FollowingProfile {
 })
 export class FollowingService {
   private readonly accountState = inject(AccountStateService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly userData = inject(UserDataService);
   private readonly metrics = inject(Metrics);
   private readonly logger = inject(LoggerService);
@@ -266,8 +274,8 @@ export class FollowingService {
     // Load all data in parallel
     const [profileData, infoRecord, trustMetrics, metricData] = await Promise.all([
       this.userData.getProfile(pubkey, { skipRelay }).catch(() => null),
-      this.storage.getInfo(pubkey, 'user').catch(() => null),
-      this.storage.getInfo(pubkey, 'trust').catch(() => null),
+      this.database.getInfo(pubkey, 'user').catch(() => null) as Promise<InfoRecord | null>,
+      this.database.getInfo(pubkey, 'trust').catch(() => null),
       this.metrics.getUserMetric(pubkey).catch(() => null),
     ]);
 

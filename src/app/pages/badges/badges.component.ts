@@ -10,7 +10,7 @@ import { ApplicationService } from '../../services/application.service';
 import { NostrService } from '../../services/nostr.service';
 import { kinds, NostrEvent } from 'nostr-tools';
 import { BadgeComponent } from './badge/badge.component';
-import { StorageService } from '../../services/storage.service';
+import { DatabaseService } from '../../services/database.service';
 import { BadgeService, AcceptedBadge } from '../../services/badge.service';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -50,7 +50,7 @@ export class BadgesComponent {
   private readonly app = inject(ApplicationService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly nostr = inject(NostrService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly badgeService = inject(BadgeService);
   private readonly layout = inject(LayoutService);
   private readonly dataService = inject(DataService);
@@ -311,7 +311,7 @@ export class BadgesComponent {
       // Sign and publish the event
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
       await this.accountRelay.publish(signedEvent);
-      await this.storage.saveEvent(signedEvent);
+      await this.database.saveEvent(signedEvent);
 
       // Update the badge service state
       this.badgeService.profileBadgesEvent.set(signedEvent);
@@ -415,7 +415,7 @@ export class BadgesComponent {
       // Sign and publish the event
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
       await this.accountRelay.publish(signedEvent);
-      await this.storage.saveEvent(signedEvent);
+      await this.database.saveEvent(signedEvent);
 
       // Update the badge service state
       this.badgeService.profileBadgesEvent.set(signedEvent);
@@ -494,7 +494,7 @@ export class BadgesComponent {
       console.log('Signed reordered event:', signedEvent);
 
       await this.accountRelay.publish(signedEvent);
-      await this.storage.saveEvent(signedEvent);
+      await this.database.saveEvent(signedEvent);
 
       // Update badge service state
       this.badgeService.profileBadgesEvent.set(signedEvent);

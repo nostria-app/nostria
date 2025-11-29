@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
-import { StorageService } from './storage.service';
 import { DatabaseService } from './database.service';
 import { Event, kinds } from 'nostr-tools';
 import { ApplicationStateService } from './application-state.service';
@@ -234,7 +233,6 @@ const DEFAULT_FEEDS: FeedConfig[] = [
 export class FeedService {
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
-  private readonly storage = inject(StorageService);
   private readonly database = inject(DatabaseService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly appState = inject(ApplicationStateService);

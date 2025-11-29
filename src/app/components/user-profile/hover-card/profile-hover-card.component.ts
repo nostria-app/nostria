@@ -24,7 +24,7 @@ import { ImageCacheService } from '../../../services/image-cache.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { LayoutService } from '../../../services/layout.service';
-import { StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
 import { UserDataService } from '../../../services/user-data.service';
 import { nip19 } from 'nostr-tools';
 import { TrustService } from '../../../services/trust.service';
@@ -72,7 +72,7 @@ export class ProfileHoverCardComponent {
   private accountState = inject(AccountStateService);
   private reportingService = inject(ReportingService);
   private layout = inject(LayoutService);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private userDataService = inject(UserDataService);
   private trustService = inject(TrustService);
   private dialog = inject(MatDialog);
@@ -181,7 +181,7 @@ export class ProfileHoverCardComponent {
 
       // Get the target profile's following list (kind 3 event)
       // Try storage first, then fetch from relays if not found
-      let targetFollowingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
+      let targetFollowingEvent = await this.database.getEventByPubkeyAndKind(pubkey, 3);
 
       if (!targetFollowingEvent) {
         // Not in cache, fetch from relays

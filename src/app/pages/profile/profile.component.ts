@@ -37,7 +37,6 @@ import { MatListModule } from '@angular/material/list';
 import { FormsModule } from '@angular/forms';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { nip19 } from 'nostr-tools';
-import { StorageService } from '../../services/storage.service';
 import { ProfileStateService } from '../../services/profile-state.service';
 import { ProfileTrackingService } from '../../services/profile-tracking.service';
 import { LayoutService } from '../../services/layout.service';
