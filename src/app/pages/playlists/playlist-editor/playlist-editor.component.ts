@@ -56,7 +56,7 @@ export class PlaylistEditorComponent implements OnInit {
     const playlistId = this.route.snapshot.paramMap.get('id');
 
     if (!playlistId) {
-      this.router.navigate(['/playlists']);
+      this.router.navigate(['/media-playlists']);
       return;
     }
 
@@ -206,7 +206,7 @@ export class PlaylistEditorComponent implements OnInit {
     try {
       this.playlistService.savePlaylist();
       this.snackBar.open('Playlist saved!', 'Close', { duration: 2000 });
-      this.router.navigate(['/playlists']);
+      this.router.navigate(['/media-playlists']);
     } catch {
       this.snackBar.open('Failed to save playlist', 'Close', { duration: 3000 });
     }
@@ -222,7 +222,7 @@ export class PlaylistEditorComponent implements OnInit {
       const result = await this.playlistService.saveAndPublishPlaylist();
       if (result) {
         this.snackBar.open('Playlist published to Nostr!', 'Close', { duration: 3000 });
-        this.router.navigate(['/playlists']);
+        this.router.navigate(['/media-playlists']);
       } else {
         this.snackBar.open('Failed to publish playlist to Nostr', 'Close', { duration: 3000 });
       }
@@ -233,7 +233,7 @@ export class PlaylistEditorComponent implements OnInit {
 
   cancel(): void {
     this.playlistService.cancelEditing();
-    this.router.navigate(['/playlists']);
+    this.router.navigate(['/media-playlists']);
   }
 
   playTrack(index: number): void {
