@@ -169,9 +169,9 @@ export class UserDataService {
 
     const cacheKey = `metadata-${pubkey}`;
 
-    // Check if there's already a pending request for this pubkey
+    // CRITICAL: Check pending requests FIRST, synchronously, before any async work
     if (this.pendingProfileRequests.has(pubkey)) {
-      this.logger.debug(`Returning existing pending request for profile: ${pubkey}`);
+      this.logger.debug(`[UserData Dedup] Returning existing pending request for profile: ${pubkey.substring(0, 8)}...`);
       return this.pendingProfileRequests.get(pubkey);
     }
 
@@ -189,16 +189,35 @@ export class UserDataService {
       }
     }
 
-    // If no cached data available, load fresh data
-    const profilePromise = this.loadProfile(pubkey, cacheKey, refresh, skipRelay);
+    // CRITICAL: Create and set the promise SYNCHRONOUSLY before any await
+    // Only log when pending count is high (indicates potential issue)
+    if (this.pendingProfileRequests.size > 10) {
+      this.logger.debug(`[UserData] New request for: ${pubkey.substring(0, 8)}... (pending: ${this.pendingProfileRequests.size})`);
+    }
+
+    let resolvePromise: (value: NostrRecord | undefined) => void;
+    let rejectPromise: (error: unknown) => void;
+    const profilePromise = new Promise<NostrRecord | undefined>((resolve, reject) => {
+      resolvePromise = resolve;
+      rejectPromise = reject;
+    });
+
+    // Set the promise in the map IMMEDIATELY (synchronously)
     this.pendingProfileRequests.set(pubkey, profilePromise);
 
+    // Now do the async work
     try {
-      const result = await profilePromise;
+      const result = await this.loadProfile(pubkey, cacheKey, refresh, skipRelay);
+      resolvePromise!(result);
       return result;
+    } catch (error) {
+      rejectPromise!(error);
+      throw error;
     } finally {
-      // Always clean up the pending request
-      this.pendingProfileRequests.delete(pubkey);
+      // Clean up after a short delay to catch any late duplicates
+      setTimeout(() => {
+        this.pendingProfileRequests.delete(pubkey);
+      }, 100);
     }
   }
 
@@ -221,12 +240,10 @@ export class UserDataService {
       this.cache.set(cacheKey, record);
     } else if (!skipRelay) {
       // Try to get from relays
-      console.log('getProfile', pubkey, metadata);
       metadata = await this.sharedRelayEx.get(pubkey, {
         authors: [pubkey],
         kinds: [kinds.Metadata],
       });
-      console.log('gotProfile', pubkey, metadata);
 
       if (metadata) {
         record = this.toRecord(metadata);

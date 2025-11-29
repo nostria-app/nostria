@@ -90,6 +90,10 @@ export class AccountStateService implements OnDestroy {
   account = signal<NostrUser | null>(null);
   accounts = signal<NostrUser[]>([]);
 
+  // Signal to track when profile cache has been loaded from storage
+  // FollowingService waits for this before making individual profile requests
+  profileCacheLoaded = signal(false);
+
   // Signal to store pre-loaded account profiles for fast access
   accountProfiles = signal<Map<string, NostrRecord>>(new Map());
 
@@ -448,6 +452,10 @@ export class AccountStateService implements OnDestroy {
   }
 
   changeAccount(account: NostrUser | null): void {
+    // Reset profile cache loaded flag when account changes
+    // This ensures FollowingService waits for the new account's profiles to load
+    this.profileCacheLoaded.set(false);
+
     // this.accountChanging.set(account?.pubkey || '');
     this.account.set(account);
 
@@ -727,7 +735,7 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
-    console.log('🔄 [Profile Loading] Starting profile processing');
+    console.log('🔄 [Profile Loading] Starting batch profile processing');
     console.log(`📊 [Profile Loading] Total profiles to load: ${pubkeys.length}`);
     console.log(`👤 [Profile Loading] Account: ${this.pubkey()?.substring(0, 8)}...`);
 
@@ -740,51 +748,40 @@ export class AccountStateService implements OnDestroy {
     });
 
     const startTime = Date.now();
-    let successCount = 0;
-    let failureCount = 0;
-    let skippedCount = 0;
 
     try {
-      // Use parallel processing with the optimized discovery queue
-      await Promise.allSettled(
-        pubkeys.map(async pubkey => {
-          try {
-            this.profileProcessingState.update(state => ({
-              ...state,
-              currentProfile: pubkey,
-            }));
-
-            const profile = await dataService.getProfile(pubkey);
-
-            if (profile) {
-              this.addToCache(pubkey, profile);
-              successCount++;
-            } else {
-              skippedCount++;
-              console.warn(`⚠️ [Profile Loading] No profile found for ${pubkey.substring(0, 8)}...`);
-            }
-
-            this.profileProcessingState.update(state => ({
-              ...state,
-              processed: state.processed + 1,
-            }));
-          } catch (error) {
-            failureCount++;
-            console.error(`❌ [Profile Loading] Failed to cache profile for ${pubkey.substring(0, 8)}...:`, error);
-            this.profileProcessingState.update(state => ({
-              ...state,
-              processed: state.processed + 1,
-            }));
-          }
-        })
+      // Use batch loading instead of individual requests
+      const results = await dataService.batchLoadProfiles(
+        pubkeys,
+        (loaded, total, pubkey) => {
+          this.profileProcessingState.update(state => ({
+            ...state,
+            processed: loaded,
+            currentProfile: pubkey,
+          }));
+        }
       );
 
+      // Add all loaded profiles to cache
+      let successCount = 0;
+      for (const [pubkey, profile] of results) {
+        this.addToCache(pubkey, profile);
+        successCount++;
+      }
+
+      const skippedCount = pubkeys.length - successCount;
       const duration = Date.now() - startTime;
-      console.log(`✅ [Profile Loading] Profile processing completed in ${duration}ms`);
-      console.log(`📈 [Profile Loading] Results: ${successCount} succeeded, ${failureCount} failed, ${skippedCount} skipped`);
+
+      console.log(`✅ [Profile Loading] Batch processing completed in ${duration}ms`);
+      console.log(`📈 [Profile Loading] Results: ${successCount} loaded, ${skippedCount} not found`);
       console.log(`💾 [Profile Loading] Total cached profiles: ${this.cache.keys().filter(k => k.startsWith('metadata-')).length}`);
+
+      // Signal that cache loading is complete - FollowingService waits for this
+      this.profileCacheLoaded.set(true);
     } catch (error) {
-      console.error('❌ [Profile Loading] Failed to start profile processing:', error);
+      console.error('❌ [Profile Loading] Failed to complete batch profile processing:', error);
+      // Still mark as loaded on error so FollowingService doesn't wait forever
+      this.profileCacheLoaded.set(true);
     } finally {
       // Mark processing as complete only if we're still in the processing state
       // This prevents race conditions with restart attempts
@@ -1068,8 +1065,13 @@ export class AccountStateService implements OnDestroy {
         console.warn(`⚠️ [Profile Loading] Missing ${missingCount} profiles from storage (${followingList.length - records.length}/${followingList.length})`);
       }
       console.log(`💾 [Profile Loading] Total cached profiles now: ${this.cache.keys().filter(k => k.startsWith('metadata-')).length}`);
+
+      // Signal that cache loading is complete - FollowingService waits for this
+      this.profileCacheLoaded.set(true);
     } catch (error) {
       console.error('❌ [Profile Loading] Failed to load profiles from storage to cache:', error);
+      // Still mark as loaded on error so FollowingService doesn't wait forever
+      this.profileCacheLoaded.set(true);
     }
   }
 

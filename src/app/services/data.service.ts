@@ -174,6 +174,103 @@ export class DataService {
   }
 
   /**
+   * Batch load profiles efficiently - first checks storage, then fetches missing profiles
+   * from relays in a single batched request instead of individual requests per profile.
+   * 
+   * @param pubkeys Array of pubkeys to load profiles for
+   * @param onProgress Optional callback for progress updates
+   * @returns Map of pubkey to NostrRecord for all loaded profiles
+   */
+  async batchLoadProfiles(
+    pubkeys: string[],
+    onProgress?: (loaded: number, total: number, pubkey: string) => void
+  ): Promise<Map<string, NostrRecord>> {
+    const results = new Map<string, NostrRecord>();
+    const missingPubkeys: string[] = [];
+
+    this.logger.info(`[BatchLoad] Starting batch load for ${pubkeys.length} profiles`);
+
+    // Step 1: Check cache first
+    for (const pubkey of pubkeys) {
+      const cacheKey = `metadata-${pubkey}`;
+      const cached = this.cache.get<NostrRecord>(cacheKey);
+      if (cached) {
+        results.set(pubkey, cached);
+      }
+    }
+
+    this.logger.debug(`[BatchLoad] Found ${results.size} profiles in cache`);
+
+    // Step 2: Check storage for non-cached profiles
+    const notInCache = pubkeys.filter(p => !results.has(p));
+    if (notInCache.length > 0) {
+      const storageEvents = await this.database.getEventsByPubkeyAndKind(notInCache, kinds.Metadata);
+
+      for (const event of storageEvents) {
+        const record = this.toRecord(event);
+        const cacheKey = `metadata-${event.pubkey}`;
+        this.cache.set(cacheKey, record);
+        results.set(event.pubkey, record);
+      }
+
+      this.logger.debug(`[BatchLoad] Found ${storageEvents.length} profiles in storage`);
+    }
+
+    // Step 3: Identify profiles still missing
+    for (const pubkey of pubkeys) {
+      if (!results.has(pubkey)) {
+        missingPubkeys.push(pubkey);
+      }
+    }
+
+    this.logger.debug(`[BatchLoad] Need to fetch ${missingPubkeys.length} profiles from relays`);
+
+    // Step 4: Batch fetch missing profiles from relays
+    if (missingPubkeys.length > 0) {
+      // Fetch in batches of 100 to avoid overwhelming relays
+      const batchSize = 100;
+      for (let i = 0; i < missingPubkeys.length; i += batchSize) {
+        const batch = missingPubkeys.slice(i, i + batchSize);
+
+        try {
+          // Use getMany with all authors in a single request
+          const events = await this.sharedRelayEx.getMany<Event>(
+            batch[0], // Use first pubkey for relay discovery
+            {
+              authors: batch,
+              kinds: [kinds.Metadata],
+            },
+            { timeout: 10000 } // Longer timeout for batch requests
+          );
+
+          // Process received events
+          for (const event of events) {
+            const record = this.toRecord(event);
+            const cacheKey = `metadata-${event.pubkey}`;
+            this.cache.set(cacheKey, record);
+            results.set(event.pubkey, record);
+
+            // Save to storage
+            await this.database.saveEvent(event);
+            await this.saveEventToDatabase(event);
+            await this.processEventForRelayHints(event);
+
+            // Report progress
+            onProgress?.(results.size, pubkeys.length, event.pubkey);
+          }
+
+          this.logger.debug(`[BatchLoad] Fetched ${events.length} profiles from relays (batch ${Math.floor(i / batchSize) + 1})`);
+        } catch (error) {
+          this.logger.error(`[BatchLoad] Failed to fetch batch ${Math.floor(i / batchSize) + 1}:`, error);
+        }
+      }
+    }
+
+    this.logger.info(`[BatchLoad] Completed: ${results.size}/${pubkeys.length} profiles loaded`);
+    return results;
+  }
+
+  /**
    * Gets cached profile synchronously without triggering any async operations
    * Returns undefined if profile is not in cache
    */
@@ -185,9 +282,11 @@ export class DataService {
   async getProfile(pubkey: string, refresh = false): Promise<NostrRecord | undefined> {
     const cacheKey = `metadata-${pubkey}`;
 
-    // Check if there's already a pending request for this pubkey
+    // CRITICAL: Check pending requests FIRST, synchronously, before any async work
+    // This prevents the race condition where multiple callers slip through before
+    // the promise is set in the map
     if (this.pendingProfileRequests.has(pubkey)) {
-      this.logger.debug(`Returning existing pending request for profile: ${pubkey}`);
+      this.logger.debug(`[Dedup] Returning existing pending request for profile: ${pubkey.substring(0, 8)}...`);
       return this.pendingProfileRequests.get(pubkey);
     }
 
@@ -205,16 +304,37 @@ export class DataService {
       }
     }
 
-    // If no cached data available or refresh requested and no cache, load fresh data
-    const profilePromise = this.loadProfile(pubkey, cacheKey, refresh);
+    // CRITICAL: Create and set the promise SYNCHRONOUSLY before any await
+    // This ensures subsequent calls see the pending request immediately
+    // Only log when pending count is high (indicates potential issue)
+    if (this.pendingProfileRequests.size > 10) {
+      this.logger.debug(`[Profile] New request for: ${pubkey.substring(0, 8)}... (pending: ${this.pendingProfileRequests.size})`);
+    }
+
+    // Create a deferred promise that we can set immediately
+    let resolvePromise: (value: NostrRecord | undefined) => void;
+    let rejectPromise: (error: unknown) => void;
+    const profilePromise = new Promise<NostrRecord | undefined>((resolve, reject) => {
+      resolvePromise = resolve;
+      rejectPromise = reject;
+    });
+
+    // Set the promise in the map IMMEDIATELY (synchronously)
     this.pendingProfileRequests.set(pubkey, profilePromise);
 
+    // Now do the async work
     try {
-      const result = await profilePromise;
+      const result = await this.loadProfile(pubkey, cacheKey, refresh);
+      resolvePromise!(result);
       return result;
+    } catch (error) {
+      rejectPromise!(error);
+      throw error;
     } finally {
-      // Always clean up the pending request
-      this.pendingProfileRequests.delete(pubkey);
+      // Clean up the pending request after a short delay to catch any late duplicates
+      setTimeout(() => {
+        this.pendingProfileRequests.delete(pubkey);
+      }, 100);
     }
   }
 
