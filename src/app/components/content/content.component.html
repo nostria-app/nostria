@@ -6,10 +6,17 @@
   @if (mention.loading) {
   <!-- Loading placeholder for event mention -->
   <mat-card appearance="outlined" class="event-mention-card loading-card">
+    <mat-card-header class="loading-header">
+      <div class="skeleton-avatar"></div>
+      <div class="skeleton-text-container">
+        <div class="skeleton-text skeleton-name"></div>
+        <div class="skeleton-text skeleton-date"></div>
+      </div>
+    </mat-card-header>
     <mat-card-content>
-      <div class="event-loading-placeholder">
-        <mat-spinner diameter="24"></mat-spinner>
-        <span class="loading-text">Loading referenced event...</span>
+      <div class="skeleton-content">
+        <div class="skeleton-text skeleton-line"></div>
+        <div class="skeleton-text skeleton-line short"></div>
       </div>
     </mat-card-content>
   </mat-card>
@@ -44,7 +51,8 @@
   <mat-card appearance="outlined" class="event-mention-card not-found-card">
     <mat-card-content>
       <div class="event-not-found-placeholder">
-        <span class="not-found-text">Unable to load referenced event</span>
+        <mat-icon>link_off</mat-icon>
+        <span class="not-found-text">Referenced event not found</span>
       </div>
     </mat-card-content>
   </mat-card>

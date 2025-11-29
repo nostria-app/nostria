@@ -2,6 +2,7 @@ import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, comp
 
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatIconModule } from '@angular/material/icon';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { SettingsService } from '../../services/settings.service';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -35,6 +36,7 @@ interface SocialPreview {
     NoteContentComponent,
     MatCardModule,
     MatProgressSpinnerModule,
+    MatIconModule,
     MatTooltipModule,
     SocialPreviewComponent,
     AgoPipe,
