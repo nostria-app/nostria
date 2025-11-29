@@ -1,5 +1,5 @@
-import { Component, inject, NgZone, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, inject, NgZone, signal, OnInit } from '@angular/core';
+import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { AddMediaDialog, AddMediaDialogData } from './add-media-dialog/add-media-dialog';
@@ -33,7 +33,7 @@ import { PlaylistsTabComponent } from './playlists-tab/playlists-tab.component';
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
 })
-export class MediaQueueComponent {
+export class MediaQueueComponent implements OnInit {
   utilities = inject(UtilitiesService);
   media = inject(MediaPlayerService);
   playlistService = inject(PlaylistService);
@@ -41,9 +41,29 @@ export class MediaQueueComponent {
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private ngZone = inject(NgZone);
 
   selectedTabIndex = signal(0);
+
+  ngOnInit(): void {
+    // Set initial tab based on route
+    const url = this.router.url;
+    if (url.includes('media-playlists')) {
+      this.selectedTabIndex.set(1);
+    } else {
+      this.selectedTabIndex.set(0);
+    }
+  }
+
+  onTabChange(index: number): void {
+    this.selectedTabIndex.set(index);
+    if (index === 0) {
+      this.router.navigate(['/media-queue'], { replaceUrl: true });
+    } else if (index === 1) {
+      this.router.navigate(['/media-playlists'], { replaceUrl: true });
+    }
+  }
   pressedItemIndex = -1;
 
   onMouseDown(index: number) {
@@ -303,7 +323,7 @@ export class MediaQueueComponent {
               duration: 5000,
             }
           ).onAction().subscribe(() => {
-            this.router.navigate(['/playlists']);
+            this.router.navigate(['/media-playlists']);
           });
         } catch (error) {
           console.error('Failed to create playlist:', error);
@@ -323,7 +343,7 @@ export class MediaQueueComponent {
               duration: 5000,
             }
           ).onAction().subscribe(() => {
-            this.router.navigate(['/playlists']);
+            this.router.navigate(['/media-playlists']);
           });
         } catch (error) {
           console.error('Failed to add to playlist:', error);

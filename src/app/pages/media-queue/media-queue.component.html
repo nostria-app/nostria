@@ -1,5 +1,6 @@
 <div class="page">
-  <mat-tab-group [(selectedIndex)]="selectedTabIndex" animationDuration="200ms">
+  <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)"
+    animationDuration="200ms">
     <!-- Queue Tab -->
     <mat-tab>
       <ng-template mat-tab-label>

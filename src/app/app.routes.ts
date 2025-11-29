@@ -24,7 +24,6 @@ import { FeedsComponent } from './pages/feeds/feeds.component';
 import { ArticleComponent } from './pages/article/article.component';
 import { EditorComponent } from './pages/article/editor/editor.component';
 import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
-import { PlaylistsComponent } from './pages/playlists/playlists.component';
 import { PlaylistEditorComponent } from './pages/playlists/playlist-editor/playlist-editor.component';
 import { EventPageComponent } from './pages/event/event.component';
 import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
@@ -174,7 +173,8 @@ export const routes: Routes = [
       { path: 'about', component: AboutComponent, title: 'About' },
     ],
   },
-  { path: 'queue', component: MediaQueueComponent, title: 'Media Queue' },
+  { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
+  { path: 'media-playlists', component: MediaQueueComponent, title: 'Playlists' },
   {
     path: 'stream/:encodedEvent',
     component: StreamViewerComponent,
@@ -193,7 +193,6 @@ export const routes: Routes = [
     data: { isRoot: true },
     title: 'Meeting Spaces',
   },
-  { path: 'playlists', component: PlaylistsComponent, title: 'Playlists' },
   { path: 'playlists/edit/:id', component: PlaylistEditorComponent, title: 'Edit Playlist' },
   { path: 'polls', component: PollsComponent, title: 'Polls' },
   { path: 'polls/edit/:id', component: PollEditorComponent, title: 'Edit Poll' },
