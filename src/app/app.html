@@ -62,7 +62,12 @@
         matTooltip="Update ready!" aria-label="Update application">
         <mat-icon class="update-icon">system_update</mat-icon>
       </button>
+      } @else {
+      <button mat-icon-button (click)="layout.toggleSearch()">
+        <mat-icon>search</mat-icon>
+      </button>
       }
+
       @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
       <button mat-icon-button class="profile-cache-button" [matTooltip]="
               'Caching profiles: ' +
