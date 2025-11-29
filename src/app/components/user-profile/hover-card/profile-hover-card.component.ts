@@ -159,8 +159,7 @@ export class ProfileHoverCardComponent {
   private preloadProfileImage(profile: ProfileData): void {
     if (profile?.data?.picture && this.settingsService.settings().imageCacheEnabled) {
       // Preload the image in the background - don't await
-      // Use 128x128 for hover card
-      this.imageCacheService.preloadImage(profile.data.picture, 128, 128).catch(error => {
+      this.imageCacheService.preloadImage(profile.data.picture).catch(error => {
         console.debug('Failed to preload profile image:', error);
       });
     }
@@ -352,7 +351,7 @@ export class ProfileHoverCardComponent {
       return url;
     }
 
-    return this.imageCacheService.getOptimizedImageUrl(url, 128, 128);
+    return this.imageCacheService.getOptimizedImageUrl(url);
   }
 
   onImageLoadError(): void {

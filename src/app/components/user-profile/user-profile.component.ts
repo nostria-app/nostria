@@ -315,9 +315,8 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private preloadProfileImage(profile: any): void {
     if (profile?.data?.picture && this.settingsService.settings().imageCacheEnabled) {
-      const size = this.getImageSize();
       // Preload the image in the background - don't await
-      this.imageCacheService.preloadImage(profile.data.picture, size, size).catch(error => {
+      this.imageCacheService.preloadImage(profile.data.picture).catch(error => {
         this.logger.debug('Failed to preload profile image:', error);
       });
     }
@@ -433,21 +432,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   getOptimizedImageUrl(originalUrl: string): string {
     if (!originalUrl) return '';
 
-    const size = this.getImageSize();
-    return this.imageCacheService.getOptimizedImageUrl(originalUrl, size, size);
-  }
-
-  /**
-   * Returns the appropriate image size based on the current view
-   */
-  private getImageSize(): number {
-    switch (this.view()) {
-      case 'large':
-      case 'medium':
-        return 128;
-      default:
-        return 48;
-    }
+    return this.imageCacheService.getOptimizedImageUrl(originalUrl);
   }
 
   getInfoTooltip() {

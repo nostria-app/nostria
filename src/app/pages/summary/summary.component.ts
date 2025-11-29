@@ -87,6 +87,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // State signals
   isLoading = signal(true);
+  isLoadingActivity = signal(true);
+  isLoadingTopRanked = signal(true);
   lastCheckTimestamp = signal(0);
 
   // Favorites
@@ -189,37 +191,34 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   async loadSummaryData(): Promise<void> {
-    this.isLoading.set(true);
-
-    try {
-      const pubkey = this.accountState.pubkey();
-      if (!pubkey) {
-        this.isLoading.set(false);
-        return;
-      }
-
-      // Get last check timestamp
-      const lastCheck = this.accountLocalState.getLastSummaryCheck(pubkey);
-      this.lastCheckTimestamp.set(lastCheck);
-
-      // Calculate the timestamp in seconds for Nostr queries
-      // Default to DEFAULT_DAYS_LOOKBACK days ago if no previous check
-      const sinceTimestamp = lastCheck
-        ? Math.floor(lastCheck / 1000)
-        : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
-
-      // Load all data in parallel
-      await Promise.all([
-        this.loadFavoritesProfiles(),
-        this.loadTopRankedUsers(),
-        this.loadActivitySummary(sinceTimestamp),
-      ]);
-
-    } catch (error) {
-      this.logger.error('Failed to load summary data:', error);
-    } finally {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
       this.isLoading.set(false);
+      return;
     }
+
+    // Get last check timestamp immediately
+    const lastCheck = this.accountLocalState.getLastSummaryCheck(pubkey);
+    this.lastCheckTimestamp.set(lastCheck);
+
+    // Calculate the timestamp in seconds for Nostr queries
+    // Default to DEFAULT_DAYS_LOOKBACK days ago if no previous check
+    const sinceTimestamp = lastCheck
+      ? Math.floor(lastCheck / 1000)
+      : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
+
+    // Stop showing main loading spinner - show content progressively
+    this.isLoading.set(false);
+
+    // Reset section loading states
+    this.isLoadingActivity.set(true);
+    this.isLoadingTopRanked.set(true);
+
+    // Load all data in parallel - each section updates independently
+    // Don't await - let each section render as it completes
+    this.loadFavoritesProfiles();
+    this.loadTopRankedUsers();
+    this.loadActivitySummary(sinceTimestamp);
   }
 
   private async loadFavoritesProfiles(): Promise<void> {
@@ -253,6 +252,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.logger.warn('Failed to load top ranked users:', error);
       this.topRankedUsers.set([]);
+    } finally {
+      this.isLoadingTopRanked.set(false);
     }
   }
 
@@ -266,6 +267,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
           mediaCount: 0,
           profileUpdates: [],
         });
+        this.isLoadingActivity.set(false);
         return;
       }
 
@@ -278,7 +280,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.storage.getEventsByPubkeyAndKindSince(following, 0, sinceTimestamp),
       ]);
 
-      // Calculate activity summary
+      // Calculate activity summary - update immediately
       this.activitySummary.set({
         notesCount: notes.length,
         articlesCount: articles.length,
@@ -286,16 +288,20 @@ export class SummaryComponent implements OnInit, OnDestroy {
         profileUpdates: [...new Set(profiles.map(p => p.pubkey))],
       });
 
+      // Activity stats are now available
+      this.isLoadingActivity.set(false);
+
       // Calculate top posters
       this.calculateTopPosters(notes, 'notes');
       this.calculateTopPosters(articles, 'articles');
       this.calculateTopPosters(media, 'media');
 
-      // Load profiles for updated users
-      await this.loadUpdatedProfiles(profiles);
+      // Load profiles for updated users (don't block)
+      this.loadUpdatedProfiles(profiles);
 
     } catch (error) {
       this.logger.warn('Failed to load activity summary:', error);
+      this.isLoadingActivity.set(false);
     }
   }
 

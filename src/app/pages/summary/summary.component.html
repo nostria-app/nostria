@@ -32,6 +32,9 @@
       <h2 class="section-title">
         <mat-icon>analytics</mat-icon>
         Activity Overview
+        @if (isLoadingActivity()) {
+        <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+        }
       </h2>
       <div class="stats-grid">
         <div class="stat-card notes">
@@ -79,13 +82,16 @@
     }
 
     <!-- Top Ranked Users Section -->
-    @if (topRankedUsers().length > 0) {
     <section class="top-ranked-section">
       <h2 class="section-title">
         <mat-icon>trending_up</mat-icon>
         Top Engaged Users
+        @if (isLoadingTopRanked()) {
+        <mat-spinner diameter="16" class="inline-spinner"></mat-spinner>
+        }
       </h2>
       <p class="section-description">People you interact with the most</p>
+      @if (topRankedUsers().length > 0) {
       <div class="user-grid">
         @for (user of topRankedUsers(); track user.pubkey) {
         <div class="user-card ranked">
@@ -99,10 +105,12 @@
         </div>
         }
       </div>
+      } @else if (!isLoadingTopRanked()) {
+      <p class="no-data-message">No engagement data available yet.</p>
+      }
     </section>
 
     <mat-divider></mat-divider>
-    }
 
     <!-- Top Note Posters Section -->
     @if (topNotePosters().length > 0) {
@@ -193,7 +201,8 @@
         Discover People
       </a>
     </section>
-    } @else if (activitySummary().notesCount === 0 && activitySummary().articlesCount === 0 && activitySummary().mediaCount === 0) {
+    } @else if (activitySummary().notesCount === 0 && activitySummary().articlesCount === 0 &&
+    activitySummary().mediaCount === 0) {
     <section class="no-activity-state">
       <mat-icon>inbox</mat-icon>
       <h3>No New Activity</h3>
