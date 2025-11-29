@@ -89,10 +89,14 @@ export class RelaysService {
     // Initialize with preferred relays
     this.initializePreferredRelays();
 
-    // Load observed relays only when the storage is initialized
+    // Load observed relays and save initial stats when the storage is initialized
     effect(() => {
       if (this.database.initialized()) {
         this.loadObservedRelays();
+        // Save any relay stats that were added before database was ready
+        this.relayStats.forEach(stats => {
+          this.saveRelayStatsToStorage(stats);
+        });
       }
     });
   }
@@ -380,6 +384,11 @@ export class RelaysService {
    * This method batches saves to avoid excessive storage writes
    */
   private async saveRelayStatsToStorage(stats: RelayStats): Promise<void> {
+    // Don't try to save if database is not initialized yet
+    if (!this.database.initialized()) {
+      return;
+    }
+
     const url = stats.url;
     const now = Date.now();
     const lastSave = this.lastSaveTime.get(url) || 0;
