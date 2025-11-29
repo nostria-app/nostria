@@ -193,8 +193,16 @@
     </div>
   </div>
   <div class="messages-right" [class.mobile-hidden]="layout.isHandset() && showMobileList()">
+    @if (!selectedChat()) {
+    <div class="no-chat-selected">
+      <h2>Select a message</h2>
+      <p>Choose from your existing conversations or start a new one.</p>
+      <button mat-flat-button (click)="startNewChat()">
+        New message
+      </button>
+    </div>
+    } @else {
     <div class="message-list-header">
-      @if (selectedChat()) {
       <div class="chat-header-user">
         @if (layout.isHandset() && !showMobileList()) {
         <button mat-icon-button class="back-button" (click)="backToList()">
@@ -203,7 +211,6 @@
         }
         <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
       </div>
-      }
     </div>
 
     <div class="message-list" #messagesWrapper>
@@ -255,7 +262,6 @@
       }
     </div>
     <div class="message-input-container">
-      @if (selectedChat()) {
       <mat-form-field appearance="outline" class="message-input" subscriptSizing="dynamic">
         <input #messageInput matInput [ngModel]="newMessageText()" (ngModelChange)="newMessageText.set($event)"
           placeholder="Type a message..." [disabled]="isSending()" (keyup.enter)="sendMessage()" />
@@ -268,8 +274,8 @@
         <mat-icon>send</mat-icon>
         }
       </button>
-      }
     </div>
+    }
   </div>
   }
 </div>
