@@ -19,6 +19,7 @@ import { LayoutService } from '../../services/layout.service';
 import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
 import { Event as NostrEvent } from 'nostr-tools';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
+import { RelayPoolService } from '../../services/relays/relay-pool';
 
 interface SocialPreview {
   url: string;
@@ -55,6 +56,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   private parsing = inject(ParsingService);
   layoutService = inject(LayoutService);
   data = inject(DataService);
+  private relayPool = inject(RelayPoolService);
 
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   // Input for raw content
@@ -224,8 +226,32 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
             ? mention.nostrData.data.id
             : mention.nostrData?.data;
 
+          // Get relay hints from nevent if available
+          const relayHints = mention.nostrData?.type === 'nevent'
+            ? mention.nostrData.data.relays as string[] | undefined
+            : undefined;
+
           try {
-            const eventData = await this.data.getEventById(eventId);
+            let eventData: NostrRecord | null = null;
+
+            // If we have relay hints, try those first (10 second timeout)
+            if (relayHints && relayHints.length > 0) {
+              try {
+                const relayEvent = await this.relayPool.getEventById(relayHints, eventId, 10000);
+                if (relayEvent) {
+                  eventData = this.data.toRecord(relayEvent);
+                }
+              } catch {
+                // Relay hints failed, will try regular fetch
+                console.debug(`Relay hints fetch failed for ${eventId}, trying regular fetch`);
+              }
+            }
+
+            // If relay hints didn't work, fall back to regular fetch (no artificial timeout - let it complete)
+            if (!eventData) {
+              eventData = await this.data.getEventById(eventId);
+            }
+
             if (eventData) {
               const contentTokens = await this.parsing.parseContent(eventData?.data, eventData?.event.tags);
 
