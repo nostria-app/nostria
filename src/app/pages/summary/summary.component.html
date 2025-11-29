@@ -1,0 +1,206 @@
+@if (!app.authenticated()) {
+<div class="unauthenticated-state">
+  <mat-icon>account_circle</mat-icon>
+  <h2>Sign in to see your Summary</h2>
+  <p>Get a quick overview of what's happening in your network.</p>
+</div>
+} @else {
+<div class="summary-container">
+  <!-- Header -->
+  <div class="summary-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>dashboard</mat-icon>
+        Summary
+      </h1>
+      <p class="last-visit">Since {{ timeSinceLastCheck() }}</p>
+    </div>
+    <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isLoading()">
+      <mat-icon>refresh</mat-icon>
+    </button>
+  </div>
+
+  @if (isLoading()) {
+  <div class="loading-state">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>Loading your summary...</p>
+  </div>
+  } @else {
+  <div class="summary-content">
+    <!-- Activity Stats Cards -->
+    <section class="stats-section">
+      <h2 class="section-title">
+        <mat-icon>analytics</mat-icon>
+        Activity Overview
+      </h2>
+      <div class="stats-grid">
+        <div class="stat-card notes">
+          <mat-icon>chat</mat-icon>
+          <div class="stat-value">{{ formatNumber(activitySummary().notesCount) }}</div>
+          <div class="stat-label">New Notes</div>
+        </div>
+        <div class="stat-card articles">
+          <mat-icon>article</mat-icon>
+          <div class="stat-value">{{ formatNumber(activitySummary().articlesCount) }}</div>
+          <div class="stat-label">New Articles</div>
+        </div>
+        <div class="stat-card media">
+          <mat-icon>perm_media</mat-icon>
+          <div class="stat-value">{{ formatNumber(activitySummary().mediaCount) }}</div>
+          <div class="stat-label">New Media</div>
+        </div>
+        <div class="stat-card profiles">
+          <mat-icon>person</mat-icon>
+          <div class="stat-value">{{ activitySummary().profileUpdates.length }}</div>
+          <div class="stat-label">Profile Updates</div>
+        </div>
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+
+    <!-- Favorites Section -->
+    @if (hasFavorites()) {
+    <section class="favorites-section">
+      <h2 class="section-title">
+        <mat-icon>star</mat-icon>
+        Your Favorites
+      </h2>
+      <div class="user-grid">
+        @for (favorite of favorites(); track favorite) {
+        <div class="user-card">
+          <app-user-profile [pubkey]="favorite" view="small"></app-user-profile>
+        </div>
+        }
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+    }
+
+    <!-- Top Ranked Users Section -->
+    @if (topRankedUsers().length > 0) {
+    <section class="top-ranked-section">
+      <h2 class="section-title">
+        <mat-icon>trending_up</mat-icon>
+        Top Engaged Users
+      </h2>
+      <p class="section-description">People you interact with the most</p>
+      <div class="user-grid">
+        @for (user of topRankedUsers(); track user.pubkey) {
+        <div class="user-card ranked">
+          <app-user-profile [pubkey]="user.pubkey" view="small"></app-user-profile>
+          @if (user.engagementScore) {
+          <div class="engagement-score">
+            <mat-icon>insights</mat-icon>
+            {{ user.engagementScore | number:'1.0-0' }}
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+    }
+
+    <!-- Top Note Posters Section -->
+    @if (topNotePosters().length > 0) {
+    <section class="top-posters-section">
+      <h2 class="section-title">
+        <mat-icon>chat</mat-icon>
+        Most Active Note Posters
+      </h2>
+      <div class="poster-list">
+        @for (poster of topNotePosters(); track poster.pubkey) {
+        <div class="poster-item">
+          <app-user-profile [pubkey]="poster.pubkey" view="small"></app-user-profile>
+          <mat-chip>{{ poster.count }} {{ poster.count === 1 ? 'note' : 'notes' }}</mat-chip>
+        </div>
+        }
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+    }
+
+    <!-- Top Article Posters Section -->
+    @if (topArticlePosters().length > 0) {
+    <section class="top-posters-section">
+      <h2 class="section-title">
+        <mat-icon>article</mat-icon>
+        Most Active Article Writers
+      </h2>
+      <div class="poster-list">
+        @for (poster of topArticlePosters(); track poster.pubkey) {
+        <div class="poster-item">
+          <app-user-profile [pubkey]="poster.pubkey" view="small"></app-user-profile>
+          <mat-chip>{{ poster.count }} {{ poster.count === 1 ? 'article' : 'articles' }}</mat-chip>
+        </div>
+        }
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+    }
+
+    <!-- Top Media Posters Section -->
+    @if (topMediaPosters().length > 0) {
+    <section class="top-posters-section">
+      <h2 class="section-title">
+        <mat-icon>perm_media</mat-icon>
+        Most Active Media Posters
+      </h2>
+      <div class="poster-list">
+        @for (poster of topMediaPosters(); track poster.pubkey) {
+        <div class="poster-item">
+          <app-user-profile [pubkey]="poster.pubkey" view="small"></app-user-profile>
+          <mat-chip>{{ poster.count }} {{ poster.count === 1 ? 'post' : 'posts' }}</mat-chip>
+        </div>
+        }
+      </div>
+    </section>
+
+    <mat-divider></mat-divider>
+    }
+
+    <!-- Updated Profiles Section -->
+    @if (updatedProfiles().length > 0) {
+    <section class="updated-profiles-section">
+      <h2 class="section-title">
+        <mat-icon>person</mat-icon>
+        Recently Updated Profiles
+      </h2>
+      <p class="section-description">People who have updated their profiles</p>
+      <div class="user-grid">
+        @for (profile of updatedProfiles(); track profile.event.pubkey) {
+        <div class="user-card">
+          <app-user-profile [pubkey]="profile.event.pubkey" view="small"></app-user-profile>
+        </div>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Empty State -->
+    @if (!hasFollowing()) {
+    <section class="empty-state">
+      <mat-icon>group_add</mat-icon>
+      <h3>Start Following People</h3>
+      <p>Follow people to see activity summaries here.</p>
+      <a mat-flat-button routerLink="/people/discover">
+        <mat-icon>explore</mat-icon>
+        Discover People
+      </a>
+    </section>
+    } @else if (activitySummary().notesCount === 0 && activitySummary().articlesCount === 0 && activitySummary().mediaCount === 0) {
+    <section class="no-activity-state">
+      <mat-icon>inbox</mat-icon>
+      <h3>No New Activity</h3>
+      <p>There's no new activity from the people you follow since your last visit.</p>
+    </section>
+    }
+  </div>
+  }
+</div>
+}
