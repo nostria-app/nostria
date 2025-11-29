@@ -47,6 +47,12 @@
   align-items: center;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .spacer {
   flex: 1;
   /* takes remaining space */
@@ -141,6 +147,22 @@
   z-index: 10; // Ensure it appears above other content
   background-color: var(--mat-sys-color-surface);
   border-top: 1px solid var(--mat-sys-color-outline-variant);
+}
+
+.load-more-chats {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+
+  .load-more-chats-button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-spinner {
+      display: inline-block;
+    }
+  }
 }
 
 .messages-right {
