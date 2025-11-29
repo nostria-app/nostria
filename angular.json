@@ -64,6 +64,9 @@
               "outputMode": "server",
               "ssr": {
                 "entry": "src/server.ts"
+              },
+              "optimization": {
+                "fonts": false
               }
             },
             "development": {
