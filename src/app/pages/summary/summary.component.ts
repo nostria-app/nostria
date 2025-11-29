@@ -21,7 +21,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { FavoritesService } from '../../services/favorites.service';
 import { Algorithms } from '../../services/algorithms';
-import { StorageService } from '../../services/storage.service';
+import { DatabaseService } from '../../services/database.service';
 import { DataService } from '../../services/data.service';
 import { LoggerService } from '../../services/logger.service';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -76,7 +76,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly favoritesService = inject(FavoritesService);
   private readonly algorithms = inject(Algorithms);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly data = inject(DataService);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
@@ -271,13 +271,16 @@ export class SummaryComponent implements OnInit, OnDestroy {
         return;
       }
 
-      // Get events from storage since last check
+      // Ensure database is initialized
+      await this.database.init();
+
+      // Get events from database since last check
       // Kind 1 = notes, Kind 30023 = articles, Kind 20 = media
       const [notes, articles, media, profiles] = await Promise.all([
-        this.storage.getEventsByPubkeyAndKindSince(following, 1, sinceTimestamp),
-        this.storage.getEventsByPubkeyAndKindSince(following, 30023, sinceTimestamp),
-        this.storage.getEventsByPubkeyAndKindSince(following, 20, sinceTimestamp),
-        this.storage.getEventsByPubkeyAndKindSince(following, 0, sinceTimestamp),
+        this.database.getEventsByPubkeyAndKindSince(following, 1, sinceTimestamp),
+        this.database.getEventsByPubkeyAndKindSince(following, 30023, sinceTimestamp),
+        this.database.getEventsByPubkeyAndKindSince(following, 20, sinceTimestamp),
+        this.database.getEventsByPubkeyAndKindSince(following, 0, sinceTimestamp),
       ]);
 
       // Calculate activity summary - update immediately
