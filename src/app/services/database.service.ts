@@ -1938,7 +1938,13 @@ export class DatabaseService {
 
         // Only save if this is newer or doesn't exist
         if (!existing || badgeEvent.created_at > existing.created_at) {
-          const putRequest = store.put(badgeEvent, compositeKey);
+          // Store with composite key as the id (required for in-line keyPath)
+          const badgeRecord = {
+            ...badgeEvent,
+            id: compositeKey, // Override the event id with composite key for storage
+            originalEventId: badgeEvent.id, // Preserve the original event id
+          };
+          const putRequest = store.put(badgeRecord);
           putRequest.onsuccess = () => {
             this.logger.debug(`Saved badge definition: ${compositeKey}`);
             resolve();
@@ -1966,7 +1972,17 @@ export class DatabaseService {
       const compositeKey = `${pubkey}::${slug}`;
       const request = store.get(compositeKey);
 
-      request.onsuccess = () => resolve(request.result || null);
+      request.onsuccess = () => {
+        const result = request.result;
+        if (result) {
+          // Restore original event ID if present
+          if (result.originalEventId) {
+            result.id = result.originalEventId;
+            delete result.originalEventId;
+          }
+        }
+        resolve(result || null);
+      };
       request.onerror = () => reject(request.error);
     });
   }
@@ -1984,7 +2000,17 @@ export class DatabaseService {
 
       const request = index.getAll(pubkey);
 
-      request.onsuccess = () => resolve(request.result || []);
+      request.onsuccess = () => {
+        const results = request.result || [];
+        // Restore original event IDs
+        for (const result of results) {
+          if (result.originalEventId) {
+            result.id = result.originalEventId;
+            delete result.originalEventId;
+          }
+        }
+        resolve(results);
+      };
       request.onerror = () => reject(request.error);
     });
   }
