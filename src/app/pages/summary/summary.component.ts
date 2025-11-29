@@ -44,6 +44,14 @@ interface TopPoster {
   profile?: NostrRecord;
 }
 
+// Constants for configurable limits
+const DEFAULT_DAYS_LOOKBACK = 7;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+const MAX_FAVORITES_DISPLAY = 10;
+const MAX_TOP_RANKED_USERS = 10;
+const MAX_TOP_POSTERS = 5;
+const MAX_UPDATED_PROFILES = 10;
+
 @Component({
   selector: 'app-summary',
   imports: [
@@ -161,7 +169,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
       this.lastCheckTimestamp.set(lastCheck);
 
       // Calculate the timestamp in seconds for Nostr queries
-      const sinceTimestamp = lastCheck ? Math.floor(lastCheck / 1000) : Math.floor((Date.now() - 7 * 24 * 60 * 60 * 1000) / 1000); // Default to 7 days ago
+      // Default to DEFAULT_DAYS_LOOKBACK days ago if no previous check
+      const sinceTimestamp = lastCheck 
+        ? Math.floor(lastCheck / 1000) 
+        : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
       
       // Load all data in parallel
       await Promise.all([
@@ -186,8 +197,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
     const profiles: NostrRecord[] = [];
     
-    // Load profiles for each favorite (limit to 10 for performance)
-    for (const pubkey of favPubkeys.slice(0, 10)) {
+    // Load profiles for each favorite (limited for performance)
+    for (const pubkey of favPubkeys.slice(0, MAX_FAVORITES_DISPLAY)) {
       try {
         const profile = await this.data.getProfile(pubkey);
         if (profile) {
@@ -203,7 +214,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   private async loadTopRankedUsers(): Promise<void> {
     try {
-      const users = await this.algorithms.getRecommendedUsers(10);
+      const users = await this.algorithms.getRecommendedUsers(MAX_TOP_RANKED_USERS);
       this.topRankedUsers.set(users);
     } catch (error) {
       this.logger.warn('Failed to load top ranked users:', error);
@@ -264,7 +275,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
     const sorted = Array.from(posterCounts.entries())
       .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
+      .slice(0, MAX_TOP_POSTERS)
       .map(([pubkey, count]) => ({ pubkey, count }));
 
     switch (type) {
@@ -282,7 +293,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   private async loadUpdatedProfiles(profileEvents: Event[]): Promise<void> {
     // Get unique pubkeys
-    const uniquePubkeys = [...new Set(profileEvents.map(p => p.pubkey))].slice(0, 10);
+    const uniquePubkeys = [...new Set(profileEvents.map(p => p.pubkey))].slice(0, MAX_UPDATED_PROFILES);
     
     const profiles: NostrRecord[] = [];
     
