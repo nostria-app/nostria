@@ -97,6 +97,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Timer for periodic timestamp saves
   private saveTimestampInterval: ReturnType<typeof setInterval> | null = null;
 
+  // Flag to prevent operations after component destruction
+  private isDestroyed = false;
+
   // Max date for date picker
   readonly today = new Date();
 
@@ -215,6 +218,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Mark as destroyed to prevent further operations
+    this.isDestroyed = true;
+
     // Stop the interval
     this.stopTimestampSaveInterval();
 
@@ -252,6 +258,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   async loadSummaryData(): Promise<void> {
+    // Don't load if component is destroyed
+    if (this.isDestroyed) return;
+
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       this.isLoading.set(false);
@@ -296,6 +305,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   private async loadFavoritesProfiles(): Promise<void> {
+    // Don't load if component is destroyed
+    if (this.isDestroyed) return;
+
     const favPubkeys = this.favorites();
     if (favPubkeys.length === 0) {
       this.favoritesProfiles.set([]);
@@ -320,6 +332,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   private async loadTopRankedUsers(): Promise<void> {
+    // Don't load if component is destroyed
+    if (this.isDestroyed) return;
+
     try {
       const users = await this.algorithms.getRecommendedUsers(MAX_TOP_RANKED_USERS);
       this.topRankedUsers.set(users);
@@ -332,6 +347,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   private async loadActivitySummary(sinceTimestamp: number): Promise<void> {
+    // Don't load if component is destroyed
+    if (this.isDestroyed) return;
+
     try {
       const following = this.accountState.followingList();
       if (following.length === 0) {
