@@ -54,9 +54,6 @@
     <!-- Right section: action buttons and profile -->
     @if (!layout.search()) {
     <div class="toolbar-section toolbar-right">
-      <button mat-icon-button (click)="layout.toggleSearch()">
-        <mat-icon>search</mat-icon>
-      </button>
       @if (pwaUpdateService.updateAvailable()) {
       <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
         matTooltip="Update ready!" aria-label="Update application">
