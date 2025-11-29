@@ -224,6 +224,54 @@
     outline: 2px solid var(--mat-sys-primary, #6200ea);
     outline-offset: 2px;
   }
+
+  // Loading state for event mentions
+  &.loading-card {
+    cursor: default;
+
+    &:hover {
+      box-shadow: none;
+      transform: none;
+    }
+  }
+
+  // Not found state for event mentions
+  &.not-found-card {
+    cursor: default;
+    opacity: 0.7;
+
+    &:hover {
+      box-shadow: none;
+      transform: none;
+    }
+  }
+}
+
+// Event loading placeholder
+.event-loading-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 0;
+  color: var(--mat-sys-on-surface-variant);
+
+  .loading-text {
+    font-size: 0.875rem;
+  }
+}
+
+// Event not found placeholder
+.event-not-found-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0;
+  color: var(--mat-sys-on-surface-variant);
+
+  .not-found-text {
+    font-size: 0.875rem;
+    font-style: italic;
+  }
 }
 
 .dark .event-mention-card {
