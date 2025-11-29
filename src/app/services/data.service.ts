@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
 import { Event, kinds } from 'nostr-tools';
@@ -21,6 +22,7 @@ export interface DataOptions {
 })
 export class DataService {
   private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly userRelayEx = inject(UserRelayService);
   private readonly discoveryRelayEx = inject(DiscoveryRelayService);
@@ -95,7 +97,7 @@ export class DataService {
     // 2. Event is replaceable/parameterized replaceable (need latest version)
     if (!event || this.utilities.shouldAlwaysFetchFromRelay(event.kind)) {
       let relayEvent: Event | null = null;
-      
+
       // If the caller explicitly supplies user relay, don't attempt to use account relay.
       if (userRelays) {
         // If userRelays is true, we will try to get the event from user relays.
@@ -414,7 +416,9 @@ export class DataService {
 
     // If the caller explicitly don't want to save, we will not check the storage.
     if (events.length === 0 && options?.save) {
-      events = await this.storage.getEventsByPubkeyAndKind(pubkey, kind);
+      // Use new DatabaseService for event queries
+      await this.database.init();
+      events = await this.database.getEventsByPubkeyAndKind(pubkey, kind);
     }
 
     if (events.length === 0) {
@@ -437,8 +441,10 @@ export class DataService {
     }
 
     if (options?.save && eventFromRelays) {
+      // Use new DatabaseService for saving events
+      await this.database.init();
       for (const event of events) {
-        await this.storage.saveEvent(event);
+        await this.database.saveEvent(event);
         // Process relay hints when saving events from relays
         await this.processEventForRelayHints(event);
       }

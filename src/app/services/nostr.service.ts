@@ -11,6 +11,7 @@ import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { nip19, nip98, nip04, nip44 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { NostrEventData, StorageService, UserMetadata } from './storage.service';
+import { DatabaseService } from './database.service';
 import { kinds, SimplePool } from 'nostr-tools';
 import { finalizeEvent } from 'nostr-tools/pure';
 import { BunkerPointer, BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
@@ -78,6 +79,7 @@ export class NostrService implements NostriaService {
   private readonly sharedRelay = inject(SharedRelayService);
 
   private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);
@@ -493,9 +495,10 @@ export class NostrService implements NostriaService {
     const onEvent = async (event: Event) => {
       console.log('Received event on account subscription:', event);
 
-      // Save all events to storage
+      // Save all events to storage using new DatabaseService
       try {
-        await this.storage.saveEvent(event);
+        await this.database.init();
+        await this.database.saveEvent(event);
         this.logger.debug(`Saved event from account subscription: ${event.id} (kind: ${event.kind})`);
       } catch (error) {
         this.logger.warn(`Failed to save event from account subscription: ${event.id}`, error);
@@ -954,8 +957,9 @@ export class NostrService implements NostriaService {
       return cachedMetadata;
     }
 
-    // Not in cache, get from storage
-    const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.Metadata);
+    // Not in cache, get from storage using new DatabaseService
+    await this.database.init();
+    const events = await this.database.getEventsByPubkeyAndKind(pubkey, kinds.Metadata);
     const records = this.data.toRecords(events);
 
     if (records.length > 0) {
@@ -1439,8 +1443,9 @@ export class NostrService implements NostriaService {
       return cachedRelays;
     }
 
-    // Not in cache, get from storage
-    const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.RelayList);
+    // Not in cache, get from storage using new DatabaseService
+    await this.database.init();
+    const events = await this.database.getEventsByPubkeyAndKind(pubkey, kinds.RelayList);
     if (events.length > 0) {
       // Add to cache
       this.updateRelaysCache(pubkey, events[0]);
@@ -1503,8 +1508,9 @@ export class NostrService implements NostriaService {
   async getAccountsMetadata() {
     const pubkeys = this.accountState.accounts().map(user => user.pubkey);
 
-    // Get metadata for all accounts from storage, we have not initialized accounts pool yet so cannot get from relays.
-    const events = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
+    // Get metadata for all accounts from storage using new DatabaseService
+    await this.database.init();
+    const events = await this.database.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
     // const events = await this.data.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
     return events;
   }
@@ -1512,7 +1518,9 @@ export class NostrService implements NostriaService {
   async getAccountsRelays() {
     const pubkeys = this.accountState.accounts().map(user => user.pubkey);
 
-    const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
+    // Use new DatabaseService for relay queries
+    await this.database.init();
+    const relays = await this.database.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
     return relays;
   }
 
