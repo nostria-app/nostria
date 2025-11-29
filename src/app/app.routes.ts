@@ -174,7 +174,7 @@ export const routes: Routes = [
       { path: 'about', component: AboutComponent, title: 'About' },
     ],
   },
-  { path: 'media-queue', component: MediaQueueComponent, title: 'Media Queue' },
+  { path: 'queue', component: MediaQueueComponent, title: 'Media Queue' },
   {
     path: 'stream/:encodedEvent',
     component: StreamViewerComponent,
