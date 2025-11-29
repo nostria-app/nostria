@@ -23,6 +23,18 @@ export interface StoredDirectMessage {
 }
 
 /**
+ * Interface for cached feed events
+ */
+export interface CachedFeedEvent {
+  id: string; // composite key: accountPubkey::columnId::eventId
+  accountPubkey: string; // The pubkey of the account viewing this feed
+  columnId: string; // The column ID this event belongs to
+  eventId: string; // The event ID
+  event: Event; // The actual event data
+  cachedAt: number; // Timestamp when this was cached
+}
+
+/**
  * Database configuration
  */
 const DB_NAME = 'nostria-db';
@@ -1114,6 +1126,281 @@ export class DatabaseService {
 
       request.onsuccess = () => {
         this.logger.info('Cleared all messages from database');
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // ============================================
+  // Feed Event Caching Methods
+  // ============================================
+
+  private readonly CACHE_LIMIT = 200;
+
+  /**
+   * Save cached events for a feed column
+   * Limits to approximately 200 events per column to prevent unbounded growth
+   */
+  async saveCachedEvents(
+    accountPubkey: string,
+    columnId: string,
+    events: Event[]
+  ): Promise<void> {
+    const db = this.ensureInitialized();
+
+    const cachedAt = Date.now();
+
+    // Sort events by created_at (newest first) and take the top CACHE_LIMIT
+    const eventsToCache = [...events]
+      .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
+      .slice(0, this.CACHE_LIMIT);
+
+    // First, delete existing cached events for this column
+    await this.deleteCachedEventsForColumn(accountPubkey, columnId);
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readwrite');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+
+      for (const event of eventsToCache) {
+        const cachedEvent: CachedFeedEvent = {
+          id: `${accountPubkey}::${columnId}::${event.id}`,
+          accountPubkey,
+          columnId,
+          eventId: event.id,
+          event,
+          cachedAt,
+        };
+        store.put(cachedEvent);
+      }
+
+      transaction.oncomplete = () => {
+        this.logger.debug(`💾 Saved ${eventsToCache.length} events to cache for column ${columnId}`);
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Load cached events for a feed column
+   */
+  async loadCachedEvents(accountPubkey: string, columnId: string): Promise<Event[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+      const index = store.index('by-account-column');
+
+      const request = index.getAll([accountPubkey, columnId]);
+
+      request.onsuccess = () => {
+        const cachedEvents = request.result || [];
+
+        // Extract and sort events by created_at (newest first)
+        const events = cachedEvents
+          .map((cached: CachedFeedEvent) => cached.event)
+          .sort((a: Event, b: Event) => (b.created_at || 0) - (a.created_at || 0));
+
+        if (events.length > 0) {
+          this.logger.info(`✅ Loaded ${events.length} cached events for column ${columnId}`);
+        }
+
+        resolve(events);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Delete cached events for a specific column
+   */
+  async deleteCachedEventsForColumn(
+    accountPubkey: string,
+    columnId: string
+  ): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readwrite');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+      const index = store.index('by-account-column');
+
+      const keysRequest = index.getAllKeys([accountPubkey, columnId]);
+
+      keysRequest.onsuccess = () => {
+        const keys = keysRequest.result || [];
+        for (const key of keys) {
+          store.delete(key);
+        }
+      };
+
+      transaction.oncomplete = () => {
+        this.logger.debug(`Deleted cached events for column ${columnId}`);
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Delete all cached events for an account
+   */
+  async deleteCachedEventsForAccount(accountPubkey: string): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readwrite');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+      const index = store.index('by-account');
+
+      const keysRequest = index.getAllKeys(accountPubkey);
+
+      keysRequest.onsuccess = () => {
+        const keys = keysRequest.result || [];
+        for (const key of keys) {
+          store.delete(key);
+        }
+      };
+
+      transaction.oncomplete = () => {
+        this.logger.debug(`Deleted cached events for account ${accountPubkey}`);
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Clean up old cached events across all accounts
+   * This method is called periodically to prevent unbounded growth
+   * Keeps only the most recent CACHE_LIMIT events per column
+   */
+  async cleanupCachedEvents(): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readwrite');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+
+      const getAllRequest = store.getAll();
+
+      getAllRequest.onsuccess = () => {
+        const allCachedEvents: CachedFeedEvent[] = getAllRequest.result || [];
+
+        // Group by account and column
+        const eventsByAccountColumn = new Map<string, CachedFeedEvent[]>();
+
+        for (const cached of allCachedEvents) {
+          const key = `${cached.accountPubkey}::${cached.columnId}`;
+          if (!eventsByAccountColumn.has(key)) {
+            eventsByAccountColumn.set(key, []);
+          }
+          eventsByAccountColumn.get(key)!.push(cached);
+        }
+
+        // For each group, keep only the newest CACHE_LIMIT events
+        for (const [, events] of eventsByAccountColumn) {
+          if (events.length <= this.CACHE_LIMIT) {
+            continue;
+          }
+
+          // Sort by cachedAt, newest first
+          events.sort((a, b) => b.cachedAt - a.cachedAt);
+
+          // Delete events beyond the limit
+          const toDelete = events.slice(this.CACHE_LIMIT);
+          for (const cached of toDelete) {
+            store.delete(cached.id);
+          }
+        }
+      };
+
+      transaction.oncomplete = () => {
+        this.logger.info('Cleaned up old cached events');
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Get the total count of cached events
+   */
+  async getCachedEventsCount(): Promise<number> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+      const countRequest = store.count();
+
+      countRequest.onsuccess = () => resolve(countRequest.result);
+      countRequest.onerror = () => reject(countRequest.error);
+    });
+  }
+
+  /**
+   * Get cached events statistics for debugging
+   */
+  async getCachedEventsStats(): Promise<{
+    totalEvents: number;
+    eventsByAccount: Map<string, number>;
+    eventsByColumn: Map<string, number>;
+  }> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+      const getAllRequest = store.getAll();
+
+      getAllRequest.onsuccess = () => {
+        const allCachedEvents: CachedFeedEvent[] = getAllRequest.result || [];
+        const eventsByAccount = new Map<string, number>();
+        const eventsByColumn = new Map<string, number>();
+
+        for (const cached of allCachedEvents) {
+          // Count by account
+          eventsByAccount.set(
+            cached.accountPubkey,
+            (eventsByAccount.get(cached.accountPubkey) || 0) + 1
+          );
+
+          // Count by column
+          eventsByColumn.set(
+            cached.columnId,
+            (eventsByColumn.get(cached.columnId) || 0) + 1
+          );
+        }
+
+        resolve({
+          totalEvents: allCachedEvents.length,
+          eventsByAccount,
+          eventsByColumn,
+        });
+      };
+
+      getAllRequest.onerror = () => reject(getAllRequest.error);
+    });
+  }
+
+  /**
+   * Clear all cached events from the database
+   */
+  async clearAllCachedEvents(): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readwrite');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+
+      const request = store.clear();
+
+      request.onsuccess = () => {
+        this.logger.info('Cleared all cached events from database');
         resolve();
       };
       request.onerror = () => reject(request.error);

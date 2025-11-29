@@ -17,6 +17,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
+import { MatSelectModule } from '@angular/material/select';
+import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { FavoritesService } from '../../services/favorites.service';
@@ -58,6 +64,7 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
   imports: [
     CommonModule,
     RouterModule,
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -65,6 +72,11 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     MatDividerModule,
     MatTooltipModule,
     MatChipsModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
+    MatFormFieldModule,
+    MatInputModule,
+    MatSelectModule,
     UserProfileComponent,
   ],
   templateUrl: './summary.component.html',
@@ -84,6 +96,25 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Timer for periodic timestamp saves
   private saveTimestampInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Max date for date picker
+  readonly today = new Date();
+
+  // Time range presets
+  readonly timePresets = [
+    { label: '1 hour', hours: 1 },
+    { label: '2 hours', hours: 2 },
+    { label: '6 hours', hours: 6 },
+    { label: '12 hours', hours: 12 },
+    { label: '1 day', hours: 24 },
+    { label: '2 days', hours: 48 },
+    { label: '3 days', hours: 72 },
+    { label: '1 week', hours: 168 },
+  ];
+
+  // Selected time range
+  selectedPreset = signal<number | null>(null); // hours, null = since last visit
+  customDate = signal<Date | null>(null);
 
   // State signals
   isLoading = signal(true);
@@ -114,8 +145,22 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Profile updates
   updatedProfiles = signal<NostrRecord[]>([]);
 
-  // Time since last check
+  // Time since last check - reflects the selected time range
   timeSinceLastCheck = computed(() => {
+    // If a preset is selected
+    const preset = this.selectedPreset();
+    if (preset !== null) {
+      const presetInfo = this.timePresets.find(p => p.hours === preset);
+      return presetInfo ? presetInfo.label + ' ago' : `${preset} hours ago`;
+    }
+
+    // If a custom date is selected
+    const custom = this.customDate();
+    if (custom) {
+      return this.formatDate(custom);
+    }
+
+    // Default: since last visit
     const lastCheck = this.lastCheckTimestamp();
     if (!lastCheck) return 'your first visit';
 
@@ -131,6 +176,22 @@ export class SummaryComponent implements OnInit, OnDestroy {
     if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
     return 'just now';
   });
+
+  // Format date for display
+  private formatDate(date: Date): string {
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffDays === 0) {
+      return 'today at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else if (diffDays === 1) {
+      return 'yesterday at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
+        ' at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  }
 
   // Check if user has any favorites
   hasFavorites = computed(() => this.favorites().length > 0);
@@ -201,11 +262,24 @@ export class SummaryComponent implements OnInit, OnDestroy {
     const lastCheck = this.accountLocalState.getLastSummaryCheck(pubkey);
     this.lastCheckTimestamp.set(lastCheck);
 
-    // Calculate the timestamp in seconds for Nostr queries
-    // Default to DEFAULT_DAYS_LOOKBACK days ago if no previous check
-    const sinceTimestamp = lastCheck
-      ? Math.floor(lastCheck / 1000)
-      : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
+    // Calculate the timestamp based on selected time range
+    let sinceTimestamp: number;
+
+    const preset = this.selectedPreset();
+    const custom = this.customDate();
+
+    if (preset !== null) {
+      // Use preset hours
+      sinceTimestamp = Math.floor((Date.now() - preset * 60 * 60 * 1000) / 1000);
+    } else if (custom) {
+      // Use custom date
+      sinceTimestamp = Math.floor(custom.getTime() / 1000);
+    } else {
+      // Default: since last visit or DEFAULT_DAYS_LOOKBACK days ago
+      sinceTimestamp = lastCheck
+        ? Math.floor(lastCheck / 1000)
+        : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
+    }
 
     // Stop showing main loading spinner - show content progressively
     this.isLoading.set(false);
@@ -352,6 +426,34 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
 
     this.updatedProfiles.set(profiles);
+  }
+
+  // Select a time preset
+  selectPreset(hours: number): void {
+    this.selectedPreset.set(hours);
+    this.customDate.set(null);
+    this.loadSummaryData();
+  }
+
+  // Select custom date
+  onCustomDateChange(date: Date | null): void {
+    if (date) {
+      this.customDate.set(date);
+      this.selectedPreset.set(null);
+      this.loadSummaryData();
+    }
+  }
+
+  // Reset to "since last visit"
+  resetToLastVisit(): void {
+    this.selectedPreset.set(null);
+    this.customDate.set(null);
+    this.loadSummaryData();
+  }
+
+  // Check if using custom time range
+  isUsingCustomRange(): boolean {
+    return this.selectedPreset() !== null || this.customDate() !== null;
   }
 
   // Refresh data

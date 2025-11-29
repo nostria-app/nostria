@@ -12,7 +12,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 
   .header-content {
     h1 {
@@ -35,6 +35,62 @@
       margin: 0.5rem 0 0 2.75rem;
       font-size: 0.9rem;
       color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
+.time-range-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-medium);
+
+  .time-presets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+
+    button {
+      font-size: 0.8rem;
+      min-width: auto;
+      padding: 0 12px;
+      height: 32px;
+      border-radius: var(--mat-sys-corner-full);
+
+      &.active {
+        background-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+        border-color: var(--mat-sys-primary);
+      }
+    }
+  }
+
+  .custom-date-picker {
+    mat-form-field {
+      width: 160px;
+
+      ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+        display: none;
+      }
+    }
+  }
+
+  @media (max-width: 599px) {
+    flex-direction: column;
+    align-items: stretch;
+
+    .time-presets {
+      justify-content: center;
+    }
+
+    .custom-date-picker {
+      mat-form-field {
+        width: 100%;
+      }
     }
   }
 }
