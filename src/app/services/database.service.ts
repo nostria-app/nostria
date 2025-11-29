@@ -1406,4 +1406,84 @@ export class DatabaseService {
       request.onerror = () => reject(request.error);
     });
   }
+
+  /**
+   * Get cached events by account, filtered by pubkeys, kind, and timestamp
+   * This is used by the Summary page to query feed cache data
+   */
+  async getCachedEventsByPubkeyKindSince(
+    accountPubkey: string,
+    pubkeys: string[],
+    kind: number,
+    sinceTimestamp: number
+  ): Promise<Event[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS_CACHE, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS_CACHE);
+      const index = store.index('by-account');
+
+      const request = index.getAll(accountPubkey);
+
+      request.onsuccess = () => {
+        const allCachedEvents: CachedFeedEvent[] = request.result || [];
+
+        // Create a set of valid pubkeys for faster lookup
+        const pubkeySet = new Set(pubkeys);
+
+        // Filter by pubkey, kind, and timestamp
+        const events = allCachedEvents
+          .map(cached => cached.event)
+          .filter(event =>
+            pubkeySet.has(event.pubkey) &&
+            event.kind === kind &&
+            event.created_at >= sinceTimestamp
+          )
+          // Remove duplicates by event ID
+          .filter((event, index, self) =>
+            self.findIndex(e => e.id === event.id) === index
+          );
+
+        this.logger.debug(`Found ${events.length} cached events for kind ${kind} since ${sinceTimestamp}`);
+        resolve(events);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all events from both events store and events cache, filtered by pubkeys, kind, and timestamp
+   * This combines data from both sources for the Summary page
+   */
+  async getAllEventsByPubkeyKindSince(
+    accountPubkey: string,
+    pubkeys: string[],
+    kind: number,
+    sinceTimestamp: number
+  ): Promise<Event[]> {
+    // Get from both sources in parallel
+    const [eventsStoreEvents, cachedEvents] = await Promise.all([
+      this.getEventsByPubkeyAndKindSince(pubkeys, kind, sinceTimestamp),
+      this.getCachedEventsByPubkeyKindSince(accountPubkey, pubkeys, kind, sinceTimestamp),
+    ]);
+
+    // Combine and deduplicate by event ID
+    const eventMap = new Map<string, Event>();
+
+    for (const event of eventsStoreEvents) {
+      eventMap.set(event.id, event);
+    }
+
+    for (const event of cachedEvents) {
+      if (!eventMap.has(event.id)) {
+        eventMap.set(event.id, event);
+      }
+    }
+
+    const allEvents = Array.from(eventMap.values());
+
+    return allEvents;
+  }
 }

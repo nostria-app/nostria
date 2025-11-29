@@ -348,13 +348,20 @@ export class SummaryComponent implements OnInit, OnDestroy {
       // Ensure database is initialized
       await this.database.init();
 
-      // Get events from database since last check
+      // Get the current account pubkey for cache queries
+      const accountPubkey = this.accountState.pubkey();
+      if (!accountPubkey) {
+        this.isLoadingActivity.set(false);
+        return;
+      }
+
+      // Get events from both events store and feed cache since last check
       // Kind 1 = notes, Kind 30023 = articles, Kind 20 = media
       const [notes, articles, media, profiles] = await Promise.all([
-        this.database.getEventsByPubkeyAndKindSince(following, 1, sinceTimestamp),
-        this.database.getEventsByPubkeyAndKindSince(following, 30023, sinceTimestamp),
-        this.database.getEventsByPubkeyAndKindSince(following, 20, sinceTimestamp),
-        this.database.getEventsByPubkeyAndKindSince(following, 0, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 1, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 30023, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 20, sinceTimestamp),
+        this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 0, sinceTimestamp),
       ]);
 
       // Calculate activity summary - update immediately

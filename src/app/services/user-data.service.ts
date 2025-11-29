@@ -105,6 +105,8 @@ export class UserDataService {
 
     if (options?.save && eventFromRelays) {
       await this.storage.saveEvent(event);
+      // Also save to new DatabaseService for Summary queries
+      await this.saveEventToDatabase(event);
     }
 
     return record;
@@ -234,6 +236,8 @@ export class UserDataService {
         record = this.toRecord(metadata);
         this.cache.set(cacheKey, record);
         await this.storage.saveEvent(metadata);
+        // Also save to new DatabaseService for Summary queries
+        await this.saveEventToDatabase(metadata);
       }
     }
 
@@ -253,11 +257,25 @@ export class UserDataService {
           const freshRecord = this.toRecord(fresh);
           this.cache.set(cacheKey, freshRecord);
           await this.storage.saveEvent(fresh);
+          // Also save to new DatabaseService for Summary queries
+          await this.saveEventToDatabase(fresh);
         }
       } catch (error) {
         this.logger.warn(`Failed to refresh profile in background for ${pubkey}:`, error);
       }
     });
+  }
+
+  /**
+   * Save an event to the new DatabaseService for Summary queries
+   */
+  private async saveEventToDatabase(event: Event): Promise<void> {
+    try {
+      await this.database.init();
+      await this.database.saveEvent(event);
+    } catch (error) {
+      this.logger.warn(`Failed to save event to DatabaseService: ${event.id}`, error);
+    }
   }
 
   /** Will read event from local database, if available, or get from relay, and then save to database. */
@@ -315,6 +333,8 @@ export class UserDataService {
 
     if (options?.save) {
       await this.storage.saveEvent(event);
+      // Also save to new DatabaseService for Summary queries
+      await this.saveEventToDatabase(event);
     }
 
     return record;
@@ -378,6 +398,8 @@ export class UserDataService {
 
     if (options?.save) {
       await this.storage.saveEvent(event);
+      // Also save to new DatabaseService for Summary queries
+      await this.saveEventToDatabase(event);
     }
 
     return record;
@@ -504,6 +526,8 @@ export class UserDataService {
     if (options?.save) {
       for (const event of events) {
         await this.storage.saveEvent(event);
+        // Also save to new DatabaseService for Summary queries
+        await this.saveEventToDatabase(event);
       }
     }
 
@@ -566,6 +590,8 @@ export class UserDataService {
     if (options?.save) {
       for (const event of events) {
         await this.storage.saveEvent(event);
+        // Also save to new DatabaseService for Summary queries
+        await this.saveEventToDatabase(event);
       }
     }
 
@@ -632,6 +658,8 @@ export class UserDataService {
     if (options?.save) {
       for (const event of events) {
         await this.storage.saveEvent(event);
+        // Also save to new DatabaseService for Summary queries
+        await this.saveEventToDatabase(event);
       }
     }
 

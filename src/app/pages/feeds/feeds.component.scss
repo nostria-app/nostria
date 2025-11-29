@@ -108,6 +108,8 @@ app-user-profile {
     left 0.3s ease;
     // Ensure it's above other content
     z-index: 100;
+    // Allow clicks to pass through transparent areas between glass containers
+    pointer-events: none;
 
     // Hidden state class (applied via JS when scrolling down)
     // Move up by 100% of own height + toolbar height to completely hide
@@ -138,6 +140,8 @@ app-user-profile {
           padding: 0 8px;
           border-radius: 24px;
           gap: 4px;
+          // Re-enable clicks on the glass container
+          pointer-events: auto;
 
           // Glass effect - light mode
           background-color: rgba(255, 255, 255, 0.7);
@@ -189,13 +193,13 @@ app-user-profile {
                 font-weight: 600;
               }
             }
-            
+
             // Summary tab special styling
             &.summary-tab {
               mat-icon {
                 color: var(--mat-sys-tertiary);
               }
-              
+
               &:hover {
                 background-color: var(--mat-sys-tertiary-container);
                 color: var(--mat-sys-on-tertiary-container);
@@ -211,6 +215,8 @@ app-user-profile {
           height: 48px;
           padding: 0 4px;
           border-radius: 24px;
+          // Re-enable clicks on the glass container
+          pointer-events: auto;
 
           // Glass effect - light mode
           background-color: rgba(255, 255, 255, 0.7);
