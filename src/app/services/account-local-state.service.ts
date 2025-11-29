@@ -51,6 +51,7 @@ const ACCOUNT_STATE_KEY = 'nostria-state';
 /**
  * Service for managing per-account state in localStorage
  * This centralizes state that should be stored per-account rather than globally
+ * Uses in-memory caching to avoid repeated localStorage reads
  */
 @Injectable({
   providedIn: 'root',
@@ -58,27 +59,39 @@ const ACCOUNT_STATE_KEY = 'nostria-state';
 export class AccountLocalStateService {
   private localStorage = inject(LocalStorageService);
 
+  // In-memory cache of account states to avoid repeated localStorage reads
+  private cachedStates: AccountStatesRoot | null = null;
+
   /**
-   * Get all account states from localStorage
+   * Get all account states from cache or localStorage
    */
   private getAllStates(): AccountStatesRoot {
+    // Return cached states if available
+    if (this.cachedStates !== null) {
+      return this.cachedStates;
+    }
+
     try {
       const data = this.localStorage.getItem(ACCOUNT_STATE_KEY);
       if (data) {
-        return JSON.parse(data);
+        this.cachedStates = JSON.parse(data);
+        return this.cachedStates!;
       }
-      return {};
+      this.cachedStates = {};
+      return this.cachedStates;
     } catch (error) {
       console.error('Failed to load account states:', error);
-      return {};
+      this.cachedStates = {};
+      return this.cachedStates;
     }
   }
 
   /**
-   * Save all account states to localStorage
+   * Save all account states to localStorage and update cache
    */
   private saveAllStates(states: AccountStatesRoot): void {
     try {
+      this.cachedStates = states;
       this.localStorage.setItem(ACCOUNT_STATE_KEY, JSON.stringify(states));
     } catch (error) {
       console.error('Failed to save account states:', error);
@@ -451,6 +464,7 @@ export class AccountLocalStateService {
    * Clear all account states (used during app wipe)
    */
   clearAllStates(): void {
+    this.cachedStates = null;
     this.localStorage.removeItem(ACCOUNT_STATE_KEY);
   }
 }
