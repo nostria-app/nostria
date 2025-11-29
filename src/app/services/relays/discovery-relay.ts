@@ -3,7 +3,7 @@ import { RelayServiceBase } from './relay';
 import { NostriaService } from '../../interfaces';
 import { LocalStorageService } from '../local-storage.service';
 import { ApplicationStateService } from '../application-state.service';
-import { StorageService } from '../storage.service';
+import { DatabaseService } from '../database.service';
 import { kinds, SimplePool } from 'nostr-tools';
 
 @Injectable({
@@ -12,7 +12,7 @@ import { kinds, SimplePool } from 'nostr-tools';
 export class DiscoveryRelayService extends RelayServiceBase implements NostriaService {
   private localStorage = inject(LocalStorageService);
   private appState = inject(ApplicationStateService);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private initialized = false;
 
   private readonly DEFAULT_BOOTSTRAP_RELAYS = ['wss://discovery.eu.nostria.app/'];
@@ -37,7 +37,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
 
       // Save the relay list event to the database for future use
       try {
-        await this.storage.saveEvent(event);
+        await this.database.saveEvent(event);
         this.logger.debug(`Saved relay list event (kind 10002) for pubkey ${pubkey} to database`);
       } catch (error) {
         this.logger.warn(`Failed to save relay list event for pubkey ${pubkey}:`, error);
@@ -50,7 +50,7 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
         // Save the contacts event to the database for future use
 
         try {
-          await this.storage.saveEvent(event);
+          await this.database.saveEvent(event);
           this.logger.debug(`Saved contacts event (kind 3) for pubkey ${pubkey} to database`);
         } catch (error) {
           this.logger.warn(`Failed to save contacts event for pubkey ${pubkey}:`, error);

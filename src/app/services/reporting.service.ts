@@ -3,7 +3,6 @@ import { Event, UnsignedEvent } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { UtilitiesService } from './utilities.service';
 import { DataService } from './data.service';
-import { StorageService } from './storage.service';
 import { LoggerService } from './logger.service';
 import { NostrService } from './nostr.service';
 import { SettingsService } from './settings.service';
@@ -39,7 +38,6 @@ export class ReportingService {
   private accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
   private data = inject(DataService);
-  private storage = inject(StorageService);
   private logger = inject(LoggerService);
   private nostr = inject(NostrService);
   private settings = inject(SettingsService);

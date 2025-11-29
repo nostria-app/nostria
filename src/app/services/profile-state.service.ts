@@ -5,7 +5,7 @@ import { UserRelayService } from './relays/user-relay';
 import { kinds } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { TimelineFilterOptions, DEFAULT_TIMELINE_FILTER } from '../interfaces/timeline-filter';
 
 @Injectable({
@@ -15,7 +15,7 @@ export class ProfileStateService {
   private readonly logger = inject(LoggerService);
   private readonly userRelayService = inject(UserRelayService);
   private readonly utilities = inject(UtilitiesService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
 
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
@@ -221,7 +221,7 @@ export class ProfileStateService {
       this.logger.info(`Loading cached events from database for: ${pubkey}`);
 
       // Get all cached events by pubkey from storage
-      const cachedEvents = await this.storage.getEventsByPubkey(pubkey);
+      const cachedEvents = await this.database.getEventsByPubkey(pubkey);
 
       if (!cachedEvents || cachedEvents.length === 0) {
         this.logger.debug(`No cached events found for: ${pubkey}`);

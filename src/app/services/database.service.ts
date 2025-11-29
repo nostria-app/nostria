@@ -755,6 +755,14 @@ export class DatabaseService {
     await this.deleteInfoRecord(compositeKey);
   }
 
+  /**
+   * Update an existing info record
+   */
+  async updateInfo(record: Record<string, unknown>): Promise<void> {
+    record['updated'] = Date.now();
+    await this.saveInfoRecord(record as { compositeKey: string; key: string; type: string; updated: number;[key: string]: unknown });
+  }
+
   // ============================================================================
   // TRUST METRICS OPERATIONS
   // ============================================================================
@@ -944,6 +952,49 @@ export class DatabaseService {
 
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Wipe the entire database
+   */
+  async wipe(): Promise<void> {
+    this.logger.info('Wiping IndexedDB database');
+
+    // Close the current database connection if it exists
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+
+    // Delete the entire database
+    return new Promise((resolve, reject) => {
+      const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+
+      deleteRequest.onsuccess = async () => {
+        // Reset initialization status
+        this.initialized.set(false);
+
+        this.logger.info('Database wiped successfully');
+
+        // Re-initialize the database
+        try {
+          await this.init();
+          resolve();
+        } catch (error) {
+          this.logger.error('Error re-initializing database after wipe', error);
+          reject(error);
+        }
+      };
+
+      deleteRequest.onerror = () => {
+        this.logger.error('Error wiping database', deleteRequest.error);
+        reject(deleteRequest.error);
+      };
+
+      deleteRequest.onblocked = () => {
+        this.logger.warn('Database deletion blocked - other connections may be open');
+      };
     });
   }
 
@@ -1704,5 +1755,522 @@ export class DatabaseService {
     const allEvents = Array.from(eventMap.values());
 
     return allEvents;
+  }
+
+  // ============================================================================
+  // NOTIFICATION METHODS
+  // ============================================================================
+
+  /**
+   * Save a notification to the notifications store
+   */
+  async saveNotification(notification: Record<string, unknown>): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.NOTIFICATIONS, 'readwrite');
+      const store = transaction.objectStore(STORES.NOTIFICATIONS);
+
+      const request = store.put(notification);
+
+      request.onsuccess = () => {
+        this.logger.debug(`Saved notification to IndexedDB: ${notification['id']}`);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get a notification by ID
+   */
+  async getNotification(id: string): Promise<Record<string, unknown> | undefined> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.NOTIFICATIONS, 'readonly');
+      const store = transaction.objectStore(STORES.NOTIFICATIONS);
+
+      const request = store.get(id);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all notifications sorted by timestamp (newest first)
+   */
+  async getAllNotifications(): Promise<Record<string, unknown>[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.NOTIFICATIONS, 'readonly');
+      const store = transaction.objectStore(STORES.NOTIFICATIONS);
+      const index = store.index('by-timestamp');
+
+      const request = index.getAll();
+
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all notifications for a specific pubkey
+   */
+  async getAllNotificationsForPubkey(pubkey: string): Promise<Record<string, unknown>[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.NOTIFICATIONS, 'readonly');
+      const store = transaction.objectStore(STORES.NOTIFICATIONS);
+      const index = store.index('by-recipient');
+
+      // Get notifications with matching recipientPubkey
+      const indexRequest = index.getAll(pubkey);
+
+      indexRequest.onsuccess = () => {
+        const notificationsWithPubkey = indexRequest.result || [];
+
+        // Also get notifications with undefined recipientPubkey (for backward compatibility)
+        const allRequest = store.getAll();
+
+        allRequest.onsuccess = () => {
+          const allNotifications = allRequest.result || [];
+          const notificationsWithoutPubkey = allNotifications.filter(
+            (n: Record<string, unknown>) => !n['recipientPubkey']
+          );
+
+          // Combine both sets and deduplicate by ID
+          const combinedNotifications = [...notificationsWithPubkey, ...notificationsWithoutPubkey];
+          const uniqueNotifications = Array.from(
+            new Map(combinedNotifications.map((n: Record<string, unknown>) => [n['id'], n])).values()
+          );
+
+          // Sort by timestamp (newest first)
+          uniqueNotifications.sort(
+            (a: Record<string, unknown>, b: Record<string, unknown>) =>
+              (b['timestamp'] as number) - (a['timestamp'] as number)
+          );
+
+          resolve(uniqueNotifications);
+        };
+
+        allRequest.onerror = () => reject(allRequest.error);
+      };
+
+      indexRequest.onerror = () => reject(indexRequest.error);
+    });
+  }
+
+  /**
+   * Delete a notification by ID
+   */
+  async deleteNotification(id: string): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.NOTIFICATIONS, 'readwrite');
+      const store = transaction.objectStore(STORES.NOTIFICATIONS);
+
+      const request = store.delete(id);
+
+      request.onsuccess = () => {
+        this.logger.debug(`Deleted notification from IndexedDB: ${id}`);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Clear all notifications
+   */
+  async clearAllNotifications(): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.NOTIFICATIONS, 'readwrite');
+      const store = transaction.objectStore(STORES.NOTIFICATIONS);
+
+      const request = store.clear();
+
+      request.onsuccess = () => {
+        this.logger.debug('Cleared all notifications from IndexedDB');
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // ============================================================================
+  // BADGE DEFINITION METHODS
+  // ============================================================================
+
+  /**
+   * Save a badge definition event to IndexedDB
+   * Uses composite key: pubkey::slug
+   */
+  async saveBadgeDefinition(badgeEvent: Event): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      // Extract the d-tag (slug)
+      const dTag = badgeEvent.tags.find(tag => tag[0] === 'd');
+      if (!dTag || !dTag[1]) {
+        this.logger.warn('Badge definition missing d-tag (slug)');
+        resolve();
+        return;
+      }
+
+      const slug = dTag[1];
+      const compositeKey = `${badgeEvent.pubkey}::${slug}`;
+
+      const transaction = db.transaction(STORES.BADGE_DEFINITIONS, 'readwrite');
+      const store = transaction.objectStore(STORES.BADGE_DEFINITIONS);
+
+      // Check if an existing definition exists
+      const getRequest = store.get(compositeKey);
+
+      getRequest.onsuccess = () => {
+        const existing = getRequest.result;
+
+        // Only save if this is newer or doesn't exist
+        if (!existing || badgeEvent.created_at > existing.created_at) {
+          const putRequest = store.put(badgeEvent, compositeKey);
+          putRequest.onsuccess = () => {
+            this.logger.debug(`Saved badge definition: ${compositeKey}`);
+            resolve();
+          };
+          putRequest.onerror = () => reject(putRequest.error);
+        } else {
+          resolve();
+        }
+      };
+
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
+  /**
+   * Get a badge definition by pubkey and slug
+   */
+  async getBadgeDefinition(pubkey: string, slug: string): Promise<Event | null> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.BADGE_DEFINITIONS, 'readonly');
+      const store = transaction.objectStore(STORES.BADGE_DEFINITIONS);
+
+      const compositeKey = `${pubkey}::${slug}`;
+      const request = store.get(compositeKey);
+
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all badge definitions by pubkey
+   */
+  async getBadgeDefinitionsByPubkey(pubkey: string): Promise<Event[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.BADGE_DEFINITIONS, 'readonly');
+      const store = transaction.objectStore(STORES.BADGE_DEFINITIONS);
+      const index = store.index('by-pubkey');
+
+      const request = index.getAll(pubkey);
+
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Delete a badge definition
+   */
+  async deleteBadgeDefinition(pubkey: string, slug: string): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.BADGE_DEFINITIONS, 'readwrite');
+      const store = transaction.objectStore(STORES.BADGE_DEFINITIONS);
+
+      const compositeKey = `${pubkey}::${slug}`;
+      const request = store.delete(compositeKey);
+
+      request.onsuccess = () => {
+        this.logger.debug(`Deleted badge definition: ${compositeKey}`);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // ============================================================================
+  // OBSERVED RELAY METHODS
+  // ============================================================================
+
+  /**
+   * Save or update observed relay statistics
+   */
+  async saveObservedRelay(stats: Record<string, unknown>): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readwrite');
+      const store = transaction.objectStore(STORES.OBSERVED_RELAYS);
+
+      const request = store.put(stats);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get observed relay statistics by URL
+   */
+  async getObservedRelay(url: string): Promise<Record<string, unknown> | undefined> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readonly');
+      const store = transaction.objectStore(STORES.OBSERVED_RELAYS);
+
+      const request = store.get(url);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all observed relay statistics
+   */
+  async getAllObservedRelays(): Promise<Record<string, unknown>[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readonly');
+      const store = transaction.objectStore(STORES.OBSERVED_RELAYS);
+
+      const request = store.getAll();
+
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get observed relays sorted by a specific criterion
+   */
+  async getObservedRelaysSorted(
+    sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated'
+  ): Promise<Record<string, unknown>[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readonly');
+      const store = transaction.objectStore(STORES.OBSERVED_RELAYS);
+
+      const indexName =
+        sortBy === 'eventsReceived'
+          ? 'by-events-received'
+          : sortBy === 'firstObserved'
+            ? 'by-first-observed'
+            : 'by-last-updated';
+
+      const index = store.index(indexName);
+      const request = index.getAll();
+
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Delete observed relay statistics by URL
+   */
+  async deleteObservedRelay(url: string): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readwrite');
+      const store = transaction.objectStore(STORES.OBSERVED_RELAYS);
+
+      const request = store.delete(url);
+
+      request.onsuccess = () => {
+        this.logger.debug(`Deleted observed relay stats for: ${url}`);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // ============================================================================
+  // PUBKEY-RELAY MAPPING METHODS
+  // ============================================================================
+
+  /**
+   * Save or update a pubkey-relay mapping
+   */
+  async savePubkeyRelayMapping(mapping: Record<string, unknown>): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.PUBKEY_RELAY_MAPPINGS, 'readwrite');
+      const store = transaction.objectStore(STORES.PUBKEY_RELAY_MAPPINGS);
+
+      const request = store.put(mapping);
+
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get a specific pubkey-relay mapping
+   */
+  async getPubkeyRelayMapping(
+    pubkey: string,
+    relayUrl: string
+  ): Promise<Record<string, unknown> | undefined> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.PUBKEY_RELAY_MAPPINGS, 'readonly');
+      const store = transaction.objectStore(STORES.PUBKEY_RELAY_MAPPINGS);
+
+      const id = `${pubkey}::${relayUrl}`;
+      const request = store.get(id);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all relay URLs for a pubkey (excluding kind 10002 relay lists)
+   */
+  async getRelayUrlsForPubkey(pubkey: string): Promise<string[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.PUBKEY_RELAY_MAPPINGS, 'readonly');
+      const store = transaction.objectStore(STORES.PUBKEY_RELAY_MAPPINGS);
+      const index = store.index('by-pubkey');
+
+      const request = index.getAll(pubkey);
+
+      request.onsuccess = () => {
+        const mappings = request.result || [];
+        // Filter out user_list source since those are kind 10002 events which should not be included
+        const urls = mappings
+          .filter((mapping: Record<string, unknown>) => mapping['source'] !== 'user_list')
+          .map((mapping: Record<string, unknown>) => mapping['relayUrl'] as string);
+        resolve(urls);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Update or create a pubkey-relay mapping from relay hint
+   */
+  async updatePubkeyRelayMappingFromHint(pubkey: string, relayUrl: string): Promise<void> {
+    const existing = await this.getPubkeyRelayMapping(pubkey, relayUrl);
+    const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+
+    if (existing) {
+      // Update existing mapping
+      existing['lastSeen'] = now;
+      existing['eventCount'] = ((existing['eventCount'] as number) || 0) + 1;
+      await this.savePubkeyRelayMapping(existing);
+    } else {
+      // Create new mapping
+      const id = `${pubkey}::${relayUrl}`;
+      const newMapping: Record<string, unknown> = {
+        id,
+        pubkey,
+        relayUrl,
+        source: 'hint',
+        firstSeen: now,
+        lastSeen: now,
+        eventCount: 1,
+      };
+      await this.savePubkeyRelayMapping(newMapping);
+    }
+  }
+
+  /**
+   * Clean up old pubkey-relay mappings (older than specified days)
+   */
+  async cleanupOldPubkeyRelayMappings(olderThanDays = 30): Promise<number> {
+    const db = this.ensureInitialized();
+    const cutoffTime = Math.floor(Date.now() / 1000) - olderThanDays * 24 * 60 * 60;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.PUBKEY_RELAY_MAPPINGS, 'readwrite');
+      const store = transaction.objectStore(STORES.PUBKEY_RELAY_MAPPINGS);
+
+      const request = store.getAll();
+
+      request.onsuccess = async () => {
+        const allMappings = request.result || [];
+        let deletedCount = 0;
+
+        for (const mapping of allMappings) {
+          if ((mapping['lastSeen'] as number) < cutoffTime) {
+            store.delete(mapping['id'] as string);
+            deletedCount++;
+          }
+        }
+
+        this.logger.debug(`Cleaned up ${deletedCount} old pubkey-relay mappings`);
+        resolve(deletedCount);
+      };
+
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  // ============================================================================
+  // UTILITY METHODS
+  // ============================================================================
+
+  /**
+   * Get all events by pubkey
+   */
+  async getUserEvents(pubkey: string): Promise<Event[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS, 'readonly');
+      const store = transaction.objectStore(STORES.EVENTS);
+      const index = store.index('by-pubkey');
+
+      const request = index.getAll(pubkey);
+
+      request.onsuccess = () => resolve(request.result || []);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Format bytes to human readable size
+   */
+  formatSize(bytes: number): string {
+    if (bytes === 0) return '0 Bytes';
+
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   }
 }

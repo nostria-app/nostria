@@ -7,7 +7,7 @@ import { LayoutService } from './layout.service';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { UserRelayService } from './relays/user-relay';
 
 @Injectable({
@@ -22,7 +22,7 @@ export class PinnedService {
   accountState = inject(AccountStateService);
   snackBar = inject(MatSnackBar);
   layout = inject(LayoutService);
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
 
   pinnedEvent = signal<Event | null>(null);
 
@@ -48,7 +48,7 @@ export class PinnedService {
 
   async initialize() {
     // Pinned list (kind 10001) should be fetched from storage
-    const pinnedEvent = await this.storage.getEventByPubkeyAndKind(
+    const pinnedEvent = await this.database.getEventByPubkeyAndKind(
       this.accountState.pubkey()!,
       10001
     );
@@ -60,7 +60,7 @@ export class PinnedService {
    */
   async getPinnedNotesForUser(pubkey: string): Promise<string[]> {
     // Try to get from storage first
-    let pinnedEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 10001);
+    let pinnedEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10001);
 
     // If not in storage, try to fetch from user relays
     if (!pinnedEvent) {
@@ -68,7 +68,7 @@ export class PinnedService {
 
       // If found, save to storage for future use
       if (pinnedEvent) {
-        await this.storage.saveEvent(pinnedEvent);
+        await this.database.saveEvent(pinnedEvent);
       }
     }
 
@@ -185,7 +185,7 @@ export class PinnedService {
     const signedEvent = await this.nostr.signEvent(event);
 
     // Save to storage immediately for instant local updates
-    await this.storage.saveEvent(signedEvent);
+    await this.database.saveEvent(signedEvent);
 
     // Update the local pinned event with the signed event
     this.pinnedEvent.set(signedEvent);

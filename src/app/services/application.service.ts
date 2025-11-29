@@ -8,7 +8,7 @@ import {
   untracked,
 } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { Router } from '@angular/router';
 import { FeatureLevel, LoggerService } from './logger.service';
 import { ApplicationStateService } from './application-state.service';
@@ -29,7 +29,7 @@ import { AccountLocalStateService } from './account-local-state.service';
 })
 export class ApplicationService {
   nostrService = inject(NostrService);
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
   router = inject(Router);
   logger = inject(LoggerService);
   appState = inject(ApplicationStateService);
@@ -47,7 +47,7 @@ export class ApplicationService {
   readonly isBrowser = signal(isPlatformBrowser(this.platformId));
 
   /** Check the status on fully initialized, which ensures Nostr, Storage and user is logged in. */
-  initialized = computed(() => this.nostrService.initialized() && this.storage.initialized());
+  initialized = computed(() => this.nostrService.initialized() && this.database.initialized());
 
   /** User is "authenticated" if there is any account set. */
   authenticated = computed(() => this.accountState.account() != null);
@@ -102,7 +102,7 @@ export class ApplicationService {
               await this.accountState.loadProfilesFromStorageToCache(
                 pubkey,
                 this.dataService,
-                this.storage
+                this.database
               );
             } else {
               console.log('⚠️ [Profile Loading Effect] Skipping - processing already in progress');
@@ -215,7 +215,7 @@ export class ApplicationService {
     // Clear notifications from memory
     this.notificationService.clearNotifications();
 
-    await this.storage.wipe(); // Assuming this method clears all app data
+    await this.database.wipe(); // Assuming this method clears all app data
 
     // Navigate to home page before reloading
     await this.router.navigate(['/']);

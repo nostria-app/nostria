@@ -1,5 +1,4 @@
 import { inject, Injectable } from '@angular/core';
-import { StorageService } from './storage.service';
 import { DatabaseService } from './database.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
@@ -21,7 +20,6 @@ export interface DataOptions {
   providedIn: 'root',
 })
 export class DataService {
-  private readonly storage = inject(StorageService);
   private readonly database = inject(DatabaseService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly userRelayEx = inject(UserRelayService);
@@ -75,7 +73,7 @@ export class DataService {
 
     // If the caller explicitly don't want to save, we will not check the storage.
     if (options?.save) {
-      event = await this.storage.getEventById(id);
+      event = await this.database.getEventById(id);
     }
 
     // For non-replaceable events found in storage, return them directly without fetching from relays
@@ -127,7 +125,7 @@ export class DataService {
     }
 
     if (options?.save && eventFromRelays) {
-      await this.storage.saveEvent(event);
+      await this.database.saveEvent(event);
       // Process relay hints when saving events from relays
       await this.processEventForRelayHints(event);
     }
@@ -141,14 +139,14 @@ export class DataService {
 
   async getUserRelays(pubkey: string) {
     let relayUrls: string[] = [];
-    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+    const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
     if (relayListEvent) {
       relayUrls = this.utilities.getRelayUrls(relayListEvent);
     }
 
     if (!relayUrls || relayUrls.length === 0) {
-      const followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, 3);
+      const followingEvent = await this.database.getEventByPubkeyAndKind(pubkey, 3);
       if (followingEvent) {
         relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
       }
@@ -239,7 +237,7 @@ export class DataService {
       if (metadata) {
         record = this.toRecord(metadata);
         this.cache.set(cacheKey, record);
-        await this.storage.saveEvent(metadata);
+        await this.database.saveEvent(metadata);
         // Also save to new DatabaseService for Summary queries
         await this.saveEventToDatabase(metadata);
         // Process relay hints when saving metadata
@@ -247,7 +245,7 @@ export class DataService {
       }
     } else {
       // Normal flow: try storage first, then relays if not found
-      metadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+      metadata = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
 
       if (metadata) {
         record = this.toRecord(metadata);
@@ -262,7 +260,7 @@ export class DataService {
         if (metadata) {
           record = this.toRecord(metadata);
           this.cache.set(cacheKey, record);
-          await this.storage.saveEvent(metadata);
+          await this.database.saveEvent(metadata);
           // Also save to new DatabaseService for Summary queries
           await this.saveEventToDatabase(metadata);
           // Process relay hints when saving metadata
@@ -286,7 +284,7 @@ export class DataService {
         if (fresh) {
           const freshRecord = this.toRecord(fresh);
           this.cache.set(cacheKey, freshRecord);
-          await this.storage.saveEvent(fresh);
+          await this.database.saveEvent(fresh);
           // Also save to new DatabaseService for Summary queries
           await this.saveEventToDatabase(fresh);
           // Process relay hints when saving fresh metadata
@@ -334,7 +332,7 @@ export class DataService {
     // If the caller explicitly don't want to save, we will not check the storage.
     if (options?.save) {
       event =
-        (await this.storage.getParameterizedReplaceableEvent(pubkey, kind, dTagValue)) || null;
+        (await this.database.getParameterizedReplaceableEvent(pubkey, kind, dTagValue)) || null;
     }
 
     // If the caller explicitly supplies user relay, don't attempt to user account relay.
@@ -359,7 +357,7 @@ export class DataService {
     }
 
     if (options?.save && eventFromRelays) {
-      await this.storage.saveEvent(event);
+      await this.database.saveEvent(event);
       // Also save to new DatabaseService for Summary queries
       await this.saveEventToDatabase(event);
     }
@@ -388,7 +386,7 @@ export class DataService {
 
     // If the caller explicitly don't want to save, we will not check the storage.
     if (options?.save) {
-      event = await this.storage.getEventByPubkeyAndKind(pubkey, kind);
+      event = await this.database.getEventByPubkeyAndKind(pubkey, kind);
     }
 
     // If the caller explicitly supplies user relay, don't attempt to user account relay.
@@ -409,7 +407,7 @@ export class DataService {
     }
 
     if (options?.save && eventFromRelays) {
-      await this.storage.saveEvent(event);
+      await this.database.saveEvent(event);
       // Also save to new DatabaseService for Summary queries
       await this.saveEventToDatabase(event);
       // Process relay hints when saving events from relays
@@ -497,7 +495,7 @@ export class DataService {
 
     // If the caller explicitly don't want to save, we will not check the storage.
     if (events.length === 0 && options?.save) {
-      const allEvents = await this.storage.getEventsByKind(kind);
+      const allEvents = await this.database.getEventsByKind(kind);
       events = allEvents.filter(e => this.utilities.getTagValues('#e', e.tags)[0] === eventTag);
     }
 
@@ -527,7 +525,7 @@ export class DataService {
 
     if (options?.save && eventFromRelays) {
       for (const event of events) {
-        await this.storage.saveEvent(event);
+        await this.database.saveEvent(event);
         // Also save to new DatabaseService for Summary queries
         await this.saveEventToDatabase(event);
         // Process relay hints when saving events from relays

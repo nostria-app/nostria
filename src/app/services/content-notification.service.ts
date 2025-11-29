@@ -2,7 +2,8 @@ import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
-import { ContentNotification, NotificationType, StorageService } from './storage.service';
+import { ContentNotification, NotificationType } from './storage.service';
+import { DatabaseService } from './database.service';
 import { kinds, nip57 } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
@@ -35,7 +36,7 @@ export class ContentNotificationService {
   private accountRelay = inject(AccountRelayService);
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
 
   // Track the last check timestamp to avoid duplicate notifications
   private _lastCheckTimestamp = signal<number>(0);
@@ -517,7 +518,7 @@ export class ContentNotificationService {
 
     // Check if notification already exists in storage to prevent duplicates
     // This is a defensive check in case we re-fetch old events
-    const existingNotification = await this.storage.getNotification(notificationId);
+    const existingNotification = await this.database.getNotification(notificationId);
     if (existingNotification) {
       this.logger.debug(`Skipping duplicate notification: ${notificationId} (already exists in storage)`);
       return;

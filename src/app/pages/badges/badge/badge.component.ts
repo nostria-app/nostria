@@ -11,7 +11,7 @@ import {
 import { MatCardModule } from '@angular/material/card';
 import { NostrService } from '../../../services/nostr.service';
 import { kinds, NostrEvent } from 'nostr-tools';
-import { StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
 import { DataService } from '../../../services/data.service';
 import { BadgeService, ParsedBadge } from '../../../services/badge.service';
 import { MatButtonModule } from '@angular/material/button';
@@ -59,7 +59,7 @@ export class BadgeComponent {
   @Output() removeClicked = new EventEmitter<void>();
 
   nostr = inject(NostrService);
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
   data = inject(DataService);
   badgeService = inject(BadgeService);
   relay = inject(AccountRelayService);

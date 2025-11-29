@@ -21,7 +21,7 @@ import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ApplicationService } from '../../../services/application.service';
-import { StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
 import { Metrics } from '../../../services/metrics';
@@ -69,7 +69,7 @@ export class DetailsComponent implements OnInit {
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
   app = inject(ApplicationService);
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
   private metricsService = inject(Metrics);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
@@ -109,7 +109,7 @@ export class DetailsComponent implements OnInit {
     effect(async () => {
       if (this.app.authenticated()) {
         // TODO: make sure that the "npub" is hex.
-        const info = await this.storage.getInfo(this.npub(), 'user');
+        const info = await this.database.getInfo(this.npub(), 'user');
         this.info.set(info);
 
         // Load metrics for this user
@@ -125,7 +125,7 @@ export class DetailsComponent implements OnInit {
   }
 
   async broadcastProfile() {
-    const event = await this.storage.getEventByPubkeyAndKind(this.npub(), 0);
+    const event = await this.database.getEventByPubkeyAndKind(this.npub(), 0);
 
     if (event) {
       console.log('Broadcasting metadata event:', event);
@@ -136,7 +136,7 @@ export class DetailsComponent implements OnInit {
   }
 
   async broadcastRelayList() {
-    const event = await this.storage.getEventByPubkeyAndKind(this.npub(), kinds.RelayList);
+    const event = await this.database.getEventByPubkeyAndKind(this.npub(), kinds.RelayList);
 
     if (event) {
       console.log('Broadcasting Relay List event:', event);

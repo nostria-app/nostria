@@ -28,7 +28,7 @@ import { kinds, SimplePool, UnsignedEvent } from 'nostr-tools';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { LayoutService } from '../../../services/layout.service';
-import { StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
 import { NotificationService } from '../../../services/notification.service';
 import { ApplicationService } from '../../../services/application.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
@@ -69,7 +69,7 @@ export class RelaysComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private layout = inject(LayoutService);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private notifications = inject(NotificationService);
   private app = inject(ApplicationService);
   private profileState = inject(ProfileStateService);
@@ -189,7 +189,7 @@ export class RelaysComponent implements OnInit {
 
       if (!followingEvent) {
         // Fallback to storage if relay fetch fails (e.g., offline)
-        followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+        followingEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
       }
 
       if (!followingEvent) {
@@ -254,7 +254,7 @@ export class RelaysComponent implements OnInit {
   private async checkForMalformedRelayList(pubkey: string) {
     try {
       // Get the relay list event from storage
-      const event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+      const event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
       if (!event) {
         this.hasMalformedRelayList.set(false);
@@ -300,11 +300,11 @@ export class RelaysComponent implements OnInit {
 
         if (followingEvent) {
           // Save fresh following list to storage
-          await this.storage.saveEvent(followingEvent);
+          await this.database.saveEvent(followingEvent);
         } else {
           // Fallback to storage only if relay fetch fails
           console.warn('Could not fetch following list from relay, falling back to storage');
-          followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+          followingEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
         }
 
         if (!followingEvent) {
@@ -332,7 +332,7 @@ export class RelaysComponent implements OnInit {
         };
         const signed = await this.nostr.signEvent(updatedEvent);
         await this.accountRelay.publish(signed); // publish to user relays
-        await this.storage.saveEvent(signed);
+        await this.database.saveEvent(signed);
         this.showMessage('Deprecated relays removed from following list');
         this.showFollowingRelayCleanup.set(false);
       } catch (err) {
@@ -539,7 +539,7 @@ export class RelaysComponent implements OnInit {
 
     // this.relay.getUserPool();
 
-    await this.storage.saveEvent(signedEvent);
+    await this.database.saveEvent(signedEvent);
     this.logger.debug('Saved relay list event to storage');
   }
 
@@ -608,7 +608,7 @@ export class RelaysComponent implements OnInit {
 
     const signedEvent = await this.nostr.signEvent(relayListEvent);
     await this.accountRelay.publish(signedEvent);
-    await this.storage.saveEvent(signedEvent);
+    await this.database.saveEvent(signedEvent);
 
     // Hide the warning after updating
     this.showUpdateDMRelays.set(false);
@@ -770,7 +770,7 @@ export class RelaysComponent implements OnInit {
 
   async deleteObservedRelay(url: string): Promise<void> {
     try {
-      await this.storage.deleteObservedRelay(url);
+      await this.database.deleteObservedRelay(url);
       this.relaysService.removeRelay(url);
       await this.relaysService.loadObservedRelays();
       this.snackBar.open(`Removed observed relay: ${url}`, 'OK', { duration: 3000 });

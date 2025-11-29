@@ -17,7 +17,7 @@ import { SettingsService } from '../../../services/settings.service';
 import { StorageStatsComponent } from '../../../components/storage-stats/storage-stats.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { AccountStateService } from '../../../services/account-state.service';
-import { StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
 import { NotificationService } from '../../../services/notification.service';
 import { ContentNotificationService } from '../../../services/content-notification.service';
 
@@ -52,7 +52,7 @@ export class GeneralSettingsComponent {
   localSettings = inject(LocalSettingsService);
   settings = inject(SettingsService);
   accountState = inject(AccountStateService);
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
   notificationService = inject(NotificationService);
   contentNotificationService = inject(ContentNotificationService);
 
@@ -136,7 +136,7 @@ export class GeneralSettingsComponent {
     dialogRef.afterClosed().subscribe(async confirmed => {
       if (confirmed) {
         // Clear notifications from IndexedDB
-        await this.storage.clearAllNotifications();
+        await this.database.clearAllNotifications();
 
         // Clear in-memory notification cache
         this.notificationService.clearNotifications();

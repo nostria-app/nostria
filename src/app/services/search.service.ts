@@ -6,7 +6,7 @@ import { NostrRecord } from '../interfaces';
 import { UserDataService } from './user-data.service';
 import { RelaysService } from './relays/relays';
 import { RelayPoolService } from './relays/relay-pool';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { FollowingService } from './following.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AddMediaDialog } from '../pages/media-queue/add-media-dialog/add-media-dialog';
@@ -31,7 +31,7 @@ export class SearchService {
   userData = inject(UserDataService);
   relaysService = inject(RelaysService);
   relayPool = inject(RelayPoolService);
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
   dialog = inject(MatDialog);
   eventService = inject(EventService);
   mediaPlayer = inject(MediaPlayerService);
@@ -271,7 +271,7 @@ export class SearchService {
             this.layout.toggleSearch();
 
             // Save the event for future use
-            await this.storage.saveEvent(event);
+            await this.database.saveEvent(event);
             return;
           }
         } catch (error) {

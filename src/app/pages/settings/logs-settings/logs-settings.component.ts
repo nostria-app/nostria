@@ -12,7 +12,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
-import { InfoRecord, StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
+import { InfoRecord } from '../../../services/storage.service';
 import { RelaysService, RelayStats } from '../../../services/relays/relays';
 import { ApplicationService } from '../../../services/application.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -57,7 +58,7 @@ export interface RelayConnection {
 export class LogsSettingsComponent {
   accountState = inject(AccountStateService);
   nostr = inject(NostrService);
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
   accountRelay = inject(AccountRelayService);
   relaysService = inject(RelaysService);
   app = inject(ApplicationService);
@@ -94,7 +95,7 @@ export class LogsSettingsComponent {
   constructor() {
     effect(async () => {
       if (this.app.initialized() && this.app.authenticated()) {
-        const relaysInfo = await this.storage.getInfoByType('relay');
+        const relaysInfo = await this.database.getInfoByType('relay');
         const disabledRelays = relaysInfo.filter((relay: any) => relay.disabled);
         this.disabledRelays.set(disabledRelays);
         this.logger.info('Disabled relays:', disabledRelays);
@@ -112,7 +113,7 @@ export class LogsSettingsComponent {
   async removeDisabledRelay(relay: InfoRecord) {
     relay['disabled'] = false;
     relay['suspendedCount'] = 0;
-    await this.storage.updateInfo(relay);
+    await this.database.updateInfo(relay);
     this.disabledRelays.update(relays => relays.filter((r: InfoRecord) => r.key !== relay.key));
   }
 

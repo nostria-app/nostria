@@ -4,7 +4,7 @@ import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { DataService } from './data.service';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { NostrUser } from './nostr.service';
 import { AccountService } from '../api/services';
 import { Account, Feature } from '../api/models';
@@ -41,7 +41,7 @@ export class AccountStateService implements OnDestroy {
   private readonly appState = inject(ApplicationStateService);
   private readonly data = inject(DataService);
   private readonly accountService = inject(AccountService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly utilities = inject(UtilitiesService);
   private readonly wallets = inject(Wallets);
   private readonly cache = inject(Cache);
@@ -231,12 +231,12 @@ export class AccountStateService implements OnDestroy {
 
     if (existingFollowingEvent) {
       // Save fresh following list to storage
-      await this.storage.saveEvent(existingFollowingEvent);
+      await this.database.saveEvent(existingFollowingEvent);
       console.log('Fetched fresh following list from relay before unfollowing');
     } else {
       // Fallback to storage only if relay fetch fails
       console.warn('Could not fetch following list from relay, falling back to storage');
-      existingFollowingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+      existingFollowingEvent = await this.database.getEventByPubkeyAndKind([account.pubkey], 3);
     }
 
     if (!existingFollowingEvent) {
@@ -376,12 +376,12 @@ export class AccountStateService implements OnDestroy {
 
     if (existingFollowingEvent) {
       // Save fresh following list to storage (relay always returns signed Event)
-      await this.storage.saveEvent(existingFollowingEvent);
+      await this.database.saveEvent(existingFollowingEvent);
       console.log('Fetched fresh following list from relay before following');
     } else {
       // Fallback to storage only if relay fetch fails
       console.warn('Could not fetch following list from relay, falling back to storage');
-      existingFollowingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+      existingFollowingEvent = await this.database.getEventByPubkeyAndKind([account.pubkey], 3);
     }
 
     // Get existing tags (p-tags for followed users)
@@ -442,7 +442,7 @@ export class AccountStateService implements OnDestroy {
       const hasChanged = !this.utilities.arraysEqual(currentFollowingList, followingTags);
       if (hasChanged) {
         this.followingList.set(followingTags);
-        await this.storage.saveEvent(event);
+        await this.database.saveEvent(event);
       }
     }
   }
@@ -1027,7 +1027,7 @@ export class AccountStateService implements OnDestroy {
   async loadProfilesFromStorageToCache(
     pubkey: string,
     dataService: DataService,
-    storageService: StorageService
+    databaseService: DatabaseService
   ): Promise<void> {
     if (!this.hasProfileDiscoveryBeenDone(pubkey)) {
       console.log(`⏭️ [Profile Loading] Skipping storage load - discovery not done for ${pubkey.substring(0, 8)}...`);
@@ -1047,7 +1047,7 @@ export class AccountStateService implements OnDestroy {
       const startTime = Date.now();
 
       // Load metadata events from storage for all following users
-      const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
+      const events = await databaseService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
       const records = dataService.toRecords(events);
 
       console.log(`💾 [Profile Loading] Found ${records.length} metadata records in storage`);
