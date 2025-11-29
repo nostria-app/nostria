@@ -45,12 +45,13 @@ interface TopPoster {
 }
 
 // Constants for configurable limits
-const DEFAULT_DAYS_LOOKBACK = 7;
+const DEFAULT_DAYS_LOOKBACK = 2;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MAX_FAVORITES_DISPLAY = 10;
 const MAX_TOP_RANKED_USERS = 10;
 const MAX_TOP_POSTERS = 5;
 const MAX_UPDATED_PROFILES = 10;
+const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 
 @Component({
   selector: 'app-summary',
@@ -81,17 +82,20 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   protected readonly app = inject(ApplicationService);
 
+  // Timer for periodic timestamp saves
+  private saveTimestampInterval: ReturnType<typeof setInterval> | null = null;
+
   // State signals
   isLoading = signal(true);
   lastCheckTimestamp = signal(0);
-  
+
   // Favorites
   favorites = computed(() => this.favoritesService.favorites());
   favoritesProfiles = signal<NostrRecord[]>([]);
-  
+
   // Algorithm recommended users
   topRankedUsers = signal<UserMetric[]>([]);
-  
+
   // Activity summary
   activitySummary = signal<ActivitySummary>({
     notesCount: 0,
@@ -99,27 +103,27 @@ export class SummaryComponent implements OnInit, OnDestroy {
     mediaCount: 0,
     profileUpdates: [],
   });
-  
+
   // Top posters by category
   topNotePosters = signal<TopPoster[]>([]);
   topArticlePosters = signal<TopPoster[]>([]);
   topMediaPosters = signal<TopPoster[]>([]);
-  
+
   // Profile updates
   updatedProfiles = signal<NostrRecord[]>([]);
-  
+
   // Time since last check
   timeSinceLastCheck = computed(() => {
     const lastCheck = this.lastCheckTimestamp();
     if (!lastCheck) return 'your first visit';
-    
+
     const now = Date.now();
     const diff = now - lastCheck;
-    
+
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
-    
+
     if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
     if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
     if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
@@ -128,7 +132,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Check if user has any favorites
   hasFavorites = computed(() => this.favorites().length > 0);
-  
+
   // Check if user has following list
   hasFollowing = computed(() => this.accountState.followingList().length > 0);
 
@@ -143,11 +147,41 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit(): void {
-    // Data loading happens in the effect
+    // Start periodic timestamp saving while on the summary page
+    this.startTimestampSaveInterval();
   }
 
   ngOnDestroy(): void {
-    // Update last check timestamp when leaving the page
+    // Stop the interval
+    this.stopTimestampSaveInterval();
+
+    // Save final timestamp when leaving the page
+    this.saveCurrentTimestamp();
+  }
+
+  /**
+   * Start the interval to periodically save the last summary check timestamp
+   */
+  private startTimestampSaveInterval(): void {
+    this.saveTimestampInterval = setInterval(() => {
+      this.saveCurrentTimestamp();
+    }, SAVE_INTERVAL_MS);
+  }
+
+  /**
+   * Stop the timestamp save interval
+   */
+  private stopTimestampSaveInterval(): void {
+    if (this.saveTimestampInterval) {
+      clearInterval(this.saveTimestampInterval);
+      this.saveTimestampInterval = null;
+    }
+  }
+
+  /**
+   * Save the current timestamp as the last summary check
+   */
+  private saveCurrentTimestamp(): void {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setLastSummaryCheck(pubkey, Date.now());
@@ -156,7 +190,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   async loadSummaryData(): Promise<void> {
     this.isLoading.set(true);
-    
+
     try {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) {
@@ -170,10 +204,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
       // Calculate the timestamp in seconds for Nostr queries
       // Default to DEFAULT_DAYS_LOOKBACK days ago if no previous check
-      const sinceTimestamp = lastCheck 
-        ? Math.floor(lastCheck / 1000) 
+      const sinceTimestamp = lastCheck
+        ? Math.floor(lastCheck / 1000)
         : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
-      
+
       // Load all data in parallel
       await Promise.all([
         this.loadFavoritesProfiles(),
@@ -196,7 +230,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
 
     const profiles: NostrRecord[] = [];
-    
+
     // Load profiles for each favorite (limited for performance)
     for (const pubkey of favPubkeys.slice(0, MAX_FAVORITES_DISPLAY)) {
       try {
@@ -208,7 +242,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.logger.warn(`Failed to load profile for ${pubkey}:`, error);
       }
     }
-    
+
     this.favoritesProfiles.set(profiles);
   }
 
@@ -267,7 +301,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   private calculateTopPosters(events: Event[], type: 'notes' | 'articles' | 'media'): void {
     const posterCounts = new Map<string, number>();
-    
+
     for (const event of events) {
       const count = posterCounts.get(event.pubkey) || 0;
       posterCounts.set(event.pubkey, count + 1);
@@ -294,9 +328,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private async loadUpdatedProfiles(profileEvents: Event[]): Promise<void> {
     // Get unique pubkeys
     const uniquePubkeys = [...new Set(profileEvents.map(p => p.pubkey))].slice(0, MAX_UPDATED_PROFILES);
-    
+
     const profiles: NostrRecord[] = [];
-    
+
     for (const pubkey of uniquePubkeys) {
       try {
         const profile = await this.data.getProfile(pubkey);
@@ -307,7 +341,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.logger.warn(`Failed to load updated profile for ${pubkey}:`, error);
       }
     }
-    
+
     this.updatedProfiles.set(profiles);
   }
 
