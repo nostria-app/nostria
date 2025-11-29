@@ -99,7 +99,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Social previews for URLs
   socialPreviews = signal<SocialPreview[]>([]);
 
-  eventMentions = signal<{ event: NostrRecord; contentTokens: ContentToken[] }[]>([]);
+  // Event mentions with loading state
+  eventMentions = signal<{ event: NostrRecord | null; contentTokens: ContentToken[]; loading: boolean; eventId: string }[]>([]);
 
   @Input() set content(value: string) {
     const newContent = value || '';
@@ -121,7 +122,13 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       const shouldRender = this._isVisible() || this._hasBeenVisible();
       const currentContent = this._content() as string;
 
-      if (!shouldRender || this._isParsing()) {
+      if (!shouldRender) {
+        return;
+      }
+
+      // Read isParsing without creating a dependency to avoid re-triggering
+      const isParsing = untracked(() => this._isParsing());
+      if (isParsing) {
         return;
       }
 
@@ -183,32 +190,82 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         this._isParsing.set(true);
         const newTokens = await this.parsing.parseContent(content, this.event()?.tags);
 
-        const eventMentions = await Promise.all(
-          newTokens
-            .filter(t => t.type === 'nostr-mention' && (t.nostrData?.type === 'nevent' || t.nostrData?.type === 'note'))
-            .map(async mention => {
-              // For 'nevent', data is an object with .id
-              // For 'note', data is the event ID string directly
-              const eventId = mention.nostrData?.type === 'nevent'
-                ? mention.nostrData.data.id
-                : mention.nostrData?.data;
-
-              const eventData = await this.data.getEventById(eventId);
-              if (!eventData) return null;
-              const contentTokens = await this.parsing.parseContent(eventData?.data, eventData?.event.tags);
-              return {
-                event: eventData,
-                contentTokens,
-              };
-            })
+        // Extract event mention tokens and create initial loading placeholders
+        const mentionTokens = newTokens.filter(
+          t => t.type === 'nostr-mention' && (t.nostrData?.type === 'nevent' || t.nostrData?.type === 'note')
         );
 
-        // Use untracked to prevent triggering effects during token update
+        // Create initial placeholders with loading state
+        const initialMentions = mentionTokens.map(mention => {
+          const eventId = mention.nostrData?.type === 'nevent'
+            ? mention.nostrData.data.id
+            : mention.nostrData?.data;
+          return {
+            event: null,
+            contentTokens: [],
+            loading: true,
+            eventId: eventId as string,
+          };
+        });
+
+        // Immediately update tokens and show loading placeholders
         untracked(() => {
           this._cachedTokens.set(newTokens);
-          this.eventMentions.set(eventMentions.filter(m => !!m));
+          this.eventMentions.set(initialMentions);
           this._lastParsedContent = content;
         });
+
+        // Now fetch each event mention individually and update as they load
+        for (let i = 0; i < mentionTokens.length; i++) {
+          const mention = mentionTokens[i];
+          const eventId = mention.nostrData?.type === 'nevent'
+            ? mention.nostrData.data.id
+            : mention.nostrData?.data;
+
+          try {
+            const eventData = await this.data.getEventById(eventId);
+            if (eventData) {
+              const contentTokens = await this.parsing.parseContent(eventData?.data, eventData?.event.tags);
+
+              // Update this specific mention
+              this.eventMentions.update(mentions => {
+                const updated = [...mentions];
+                updated[i] = {
+                  event: eventData,
+                  contentTokens,
+                  loading: false,
+                  eventId: eventId as string,
+                };
+                return updated;
+              });
+            } else {
+              // Event not found - mark as not loading but with null event
+              this.eventMentions.update(mentions => {
+                const updated = [...mentions];
+                updated[i] = {
+                  event: null,
+                  contentTokens: [],
+                  loading: false,
+                  eventId: eventId as string,
+                };
+                return updated;
+              });
+            }
+          } catch (error) {
+            console.error(`Error loading event ${eventId}:`, error);
+            // Mark this mention as failed to load
+            this.eventMentions.update(mentions => {
+              const updated = [...mentions];
+              updated[i] = {
+                event: null,
+                contentTokens: [],
+                loading: false,
+                eventId: eventId as string,
+              };
+              return updated;
+            });
+          }
+        }
       } catch (error) {
         console.error('Error parsing content:', error);
 

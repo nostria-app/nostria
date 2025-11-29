@@ -2,7 +2,18 @@
   @if (shouldShowContent()) {
   <app-note-content [contentTokens]="contentTokens()" [authorPubkey]="event()?.pubkey"></app-note-content>
 
-  @for (mention of eventMentions(); track mention.event.event.id) {
+  @for (mention of eventMentions(); track mention.eventId) {
+  @if (mention.loading) {
+  <!-- Loading placeholder for event mention -->
+  <mat-card appearance="outlined" class="event-mention-card loading-card">
+    <mat-card-content>
+      <div class="event-loading-placeholder">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span class="loading-text">Loading referenced event...</span>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  } @else if (mention.event) {
   @if (mention.event.event.kind === 8) {
   <!-- Badge Award (kind 8) -->
   <app-badge [badge]="mention.event.event"></app-badge>
@@ -24,6 +35,16 @@
       <div class="content-container">
         <app-note-content [contentTokens]="mention.contentTokens"
           [authorPubkey]="mention.event.event.pubkey"></app-note-content>
+      </div>
+    </mat-card-content>
+  </mat-card>
+  }
+  } @else {
+  <!-- Event not found placeholder -->
+  <mat-card appearance="outlined" class="event-mention-card not-found-card">
+    <mat-card-content>
+      <div class="event-not-found-placeholder">
+        <span class="not-found-text">Unable to load referenced event</span>
       </div>
     </mat-card-content>
   </mat-card>
