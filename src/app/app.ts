@@ -651,15 +651,15 @@ export class App implements OnInit {
       this.logger.info('[App] Initializing storage');
 
       // Add timeout for storage initialization
-      const storageInitPromise = this.storage.init();
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(new Error('Storage initialization timeout after 15 seconds'));
-        }, 15000);
-      });
+      // const storageInitPromise = this.storage.init();
+      // const timeoutPromise = new Promise<never>((_, reject) => {
+      //   setTimeout(() => {
+      //     reject(new Error('Storage initialization timeout after 15 seconds'));
+      //   }, 15000);
+      // });
 
-      await Promise.race([storageInitPromise, timeoutPromise]);
-      this.logger.info('[App] Storage initialized successfully');
+      // await Promise.race([storageInitPromise, timeoutPromise]);
+      // this.logger.info('[App] Storage initialized successfully');
 
       // Initialize the new DatabaseService
       this.logger.info('[App] Initializing database');
