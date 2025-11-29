@@ -3,6 +3,26 @@ import { LoggerService } from './logger.service';
 import { Event } from 'nostr-tools';
 
 /**
+ * Interface for stored direct messages
+ */
+export interface StoredDirectMessage {
+  id: string; // composite key: accountPubkey::chatId::messageId
+  accountPubkey: string; // The pubkey of the account that owns this message
+  chatId: string; // The chat ID (format: otherPubkey-nip04 or otherPubkey-nip44)
+  messageId: string; // The original event ID
+  pubkey: string; // The author's pubkey
+  created_at: number; // Timestamp in seconds
+  content: string; // Decrypted message content
+  isOutgoing: boolean; // Whether this is an outgoing message
+  tags: string[][]; // Original event tags
+  encryptionType: 'nip04' | 'nip44'; // Which encryption was used
+  read: boolean; // Whether the message has been read
+  received: boolean; // Whether the message was successfully received
+  pending?: boolean; // Whether the message is still being sent
+  failed?: boolean; // Whether the message failed to send
+}
+
+/**
  * Database configuration
  */
 const DB_NAME = 'nostria-db';
@@ -772,5 +792,331 @@ export class DatabaseService {
       }
     }
     return {};
+  }
+
+  // ============================================================================
+  // DIRECT MESSAGE OPERATIONS
+  // ============================================================================
+
+  /**
+   * Save a direct message to the database
+   */
+  async saveDirectMessage(message: StoredDirectMessage): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
+      const store = transaction.objectStore(STORES.MESSAGES);
+
+      const request = store.put(message);
+
+      request.onsuccess = () => {
+        this.logger.debug(`Saved direct message ${message.messageId} to database`);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Save multiple direct messages in a single transaction
+   */
+  async saveDirectMessages(messages: StoredDirectMessage[]): Promise<void> {
+    if (messages.length === 0) return;
+
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
+      const store = transaction.objectStore(STORES.MESSAGES);
+
+      for (const message of messages) {
+        store.put(message);
+      }
+
+      transaction.oncomplete = () => {
+        this.logger.debug(`Saved ${messages.length} direct messages to database`);
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Get all messages for a specific chat
+   */
+  async getMessagesForChat(accountPubkey: string, chatId: string): Promise<StoredDirectMessage[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readonly');
+      const store = transaction.objectStore(STORES.MESSAGES);
+      const index = store.index('by-account-chat');
+
+      const request = index.getAll([accountPubkey, chatId]);
+
+      request.onsuccess = () => {
+        const messages = request.result || [];
+        // Sort by creation time ascending
+        messages.sort((a, b) => a.created_at - b.created_at);
+        resolve(messages);
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Get all chats for an account (returns unique chat IDs with message counts)
+   */
+  async getChatsForAccount(accountPubkey: string): Promise<{
+    chatId: string;
+    messageCount: number;
+    lastMessageTime: number;
+    unreadCount: number;
+  }[]> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readonly');
+      const store = transaction.objectStore(STORES.MESSAGES);
+      const index = store.index('by-account');
+
+      const request = index.getAll(accountPubkey);
+
+      request.onsuccess = () => {
+        const messages = request.result || [];
+
+        // Group messages by chat
+        const chatMap = new Map<string, {
+          messageCount: number;
+          lastMessageTime: number;
+          unreadCount: number;
+        }>();
+
+        for (const message of messages) {
+          const existing = chatMap.get(message.chatId);
+          if (!existing) {
+            chatMap.set(message.chatId, {
+              messageCount: 1,
+              lastMessageTime: message.created_at,
+              unreadCount: !message.read && !message.isOutgoing ? 1 : 0,
+            });
+          } else {
+            existing.messageCount++;
+            existing.lastMessageTime = Math.max(existing.lastMessageTime, message.created_at);
+            if (!message.read && !message.isOutgoing) {
+              existing.unreadCount++;
+            }
+          }
+        }
+
+        resolve(Array.from(chatMap.entries()).map(([chatId, stats]) => ({
+          chatId,
+          ...stats,
+        })));
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Check if a message already exists in the database
+   */
+  async messageExists(accountPubkey: string, chatId: string, messageId: string): Promise<boolean> {
+    const db = this.ensureInitialized();
+    const id = `${accountPubkey}::${chatId}::${messageId}`;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readonly');
+      const store = transaction.objectStore(STORES.MESSAGES);
+
+      const request = store.get(id);
+
+      request.onsuccess = () => resolve(!!request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Mark a message as read
+   */
+  async markMessageAsRead(accountPubkey: string, chatId: string, messageId: string): Promise<void> {
+    const db = this.ensureInitialized();
+    const id = `${accountPubkey}::${chatId}::${messageId}`;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
+      const store = transaction.objectStore(STORES.MESSAGES);
+
+      const getRequest = store.get(id);
+
+      getRequest.onsuccess = () => {
+        const message = getRequest.result;
+        if (message) {
+          message.read = true;
+          const putRequest = store.put(message);
+          putRequest.onsuccess = () => {
+            this.logger.debug(`Marked message ${messageId} as read`);
+            resolve();
+          };
+          putRequest.onerror = () => reject(putRequest.error);
+        } else {
+          resolve();
+        }
+      };
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  }
+
+  /**
+   * Mark all messages in a chat as read
+   */
+  async markChatAsRead(accountPubkey: string, chatId: string): Promise<void> {
+    const messages = await this.getMessagesForChat(accountPubkey, chatId);
+    const unreadMessages = messages.filter(msg => !msg.read && !msg.isOutgoing);
+
+    if (unreadMessages.length === 0) {
+      return;
+    }
+
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
+      const store = transaction.objectStore(STORES.MESSAGES);
+
+      for (const msg of unreadMessages) {
+        msg.read = true;
+        store.put(msg);
+      }
+
+      transaction.oncomplete = () => {
+        this.logger.debug(`Marked ${unreadMessages.length} messages as read in chat ${chatId}`);
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Delete a specific message
+   */
+  async deleteDirectMessage(accountPubkey: string, chatId: string, messageId: string): Promise<void> {
+    const db = this.ensureInitialized();
+    const id = `${accountPubkey}::${chatId}::${messageId}`;
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
+      const store = transaction.objectStore(STORES.MESSAGES);
+
+      const request = store.delete(id);
+
+      request.onsuccess = () => {
+        this.logger.debug(`Deleted message ${messageId}`);
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Delete all messages for a specific chat
+   */
+  async deleteChat(accountPubkey: string, chatId: string): Promise<void> {
+    const messages = await this.getMessagesForChat(accountPubkey, chatId);
+
+    if (messages.length === 0) {
+      return;
+    }
+
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
+      const store = transaction.objectStore(STORES.MESSAGES);
+
+      for (const msg of messages) {
+        store.delete(msg.id);
+      }
+
+      transaction.oncomplete = () => {
+        this.logger.debug(`Deleted ${messages.length} messages from chat ${chatId}`);
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Delete all messages for an account
+   */
+  async deleteAllMessagesForAccount(accountPubkey: string): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
+      const store = transaction.objectStore(STORES.MESSAGES);
+      const index = store.index('by-account');
+
+      const request = index.getAllKeys(accountPubkey);
+
+      request.onsuccess = () => {
+        const keys = request.result || [];
+        for (const key of keys) {
+          store.delete(key);
+        }
+      };
+
+      transaction.oncomplete = () => {
+        this.logger.debug(`Deleted messages for account ${accountPubkey}`);
+        resolve();
+      };
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
+   * Get the most recent message timestamp for an account (used for pagination)
+   */
+  async getMostRecentMessageTimestamp(accountPubkey: string): Promise<number> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readonly');
+      const store = transaction.objectStore(STORES.MESSAGES);
+      const index = store.index('by-account');
+
+      const request = index.getAll(accountPubkey);
+
+      request.onsuccess = () => {
+        const messages = request.result || [];
+        if (messages.length === 0) {
+          resolve(0);
+        } else {
+          resolve(Math.max(...messages.map(msg => msg.created_at)));
+        }
+      };
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
+   * Clear all messages from the database (reset local messages cache)
+   */
+  async clearAllMessages(): Promise<void> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.MESSAGES, 'readwrite');
+      const store = transaction.objectStore(STORES.MESSAGES);
+
+      const request = store.clear();
+
+      request.onsuccess = () => {
+        this.logger.info('Cleared all messages from database');
+        resolve();
+      };
+      request.onerror = () => reject(request.error);
+    });
   }
 }

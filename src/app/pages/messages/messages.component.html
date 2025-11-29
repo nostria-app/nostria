@@ -14,10 +14,19 @@
     <div class="message-threads-header">
       <h2>Chats</h2>
       <div class="spacer"></div>
-      <div>
+      <div class="header-actions">
         <button mat-icon-button aria-label="New chat" (click)="startNewChat()">
           <mat-icon>edit</mat-icon>
         </button>
+        <button mat-icon-button [matMenuTriggerFor]="chatSettingsMenu" aria-label="Chat settings">
+          <mat-icon>settings</mat-icon>
+        </button>
+        <mat-menu #chatSettingsMenu="matMenu">
+          <button mat-menu-item (click)="resetLocalMessagesCache()">
+            <mat-icon>delete_sweep</mat-icon>
+            <span>Reset Local Messages Cache</span>
+          </button>
+        </mat-menu>
       </div>
     </div>
     <div class="message-threads" #messageThreads>
@@ -88,19 +97,17 @@
 
             <!-- Load more chats button for Following tab -->
             @if (messaging.hasMoreChats()) {
-            <!-- <div class="load-more-chats">
-              <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()"
-                (click)="loadMoreChats()" class="load-more-chats-button">
+            <div class="load-more-chats">
+              <button mat-stroked-button [disabled]="messaging.isLoadingMoreChats()" (click)="loadMoreChats()"
+                class="load-more-chats-button">
                 @if (messaging.isLoadingMoreChats()) {
                 <mat-spinner diameter="20"></mat-spinner>
                 <span>Loading...</span>
                 } @else {
-                <ng-container>
-                  <span>Load more conversations</span>
-                </ng-container>
+                <span>Load more conversations</span>
                 }
               </button>
-            </div> -->
+            </div>
             }
           </div>
           } @else {
@@ -157,19 +164,17 @@
 
             <!-- Load more chats button for Others tab -->
             @if (messaging.hasMoreChats()) {
-            <!-- <div class="load-more-chats">
-              <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()"
-                (click)="loadMoreChats()" class="load-more-chats-button">
+            <div class="load-more-chats">
+              <button mat-stroked-button [disabled]="messaging.isLoadingMoreChats()" (click)="loadMoreChats()"
+                class="load-more-chats-button">
                 @if (messaging.isLoadingMoreChats()) {
                 <mat-spinner diameter="20"></mat-spinner>
                 <span>Loading...</span>
                 } @else {
-                <ng-container>
-                  <span>Load more conversations</span>
-                </ng-container>
+                <span>Load more conversations</span>
                 }
               </button>
-            </div> -->
+            </div>
             }
           </div>
           } @else {
@@ -184,23 +189,6 @@
           }
         </mat-tab>
       </mat-tab-group>
-      }
-    </div>
-    <div class="message-threads-load-more">
-      @if (messaging.hasMoreChats()) {
-      <div class="load-more-chats">
-        <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()" (click)="loadMoreChats()"
-          class="load-more-chats-button">
-          @if (messaging.isLoadingMoreChats()) {
-          <mat-spinner diameter="20"></mat-spinner>
-          <span>Loading...</span>
-          } @else {
-          <ng-container>
-            <span>Load more conversations</span>
-          </ng-container>
-          }
-        </button>
-      </div>
       }
     </div>
   </div>

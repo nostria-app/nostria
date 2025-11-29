@@ -17,7 +17,7 @@ import { EncryptionPermissionService } from './encryption-permission.service';
 import { NostriaService } from '../interfaces';
 import { bytesToHex } from 'nostr-tools/utils';
 import { AccountRelayService } from './relays/account-relay';
-import { StorageService, StoredDirectMessage } from './storage.service';
+import { DatabaseService, StoredDirectMessage } from './database.service';
 import { AccountLocalStateService } from './account-local-state.service';
 
 // Define interfaces for our DM data structures
@@ -57,7 +57,7 @@ export class MessagingService implements NostriaService {
   readonly utilities = inject(UtilitiesService);
   private readonly encryption = inject(EncryptionService);
   private readonly encryptionPermission = inject(EncryptionPermissionService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
   isLoading = signal<boolean>(false);
   isLoadingMoreChats = signal<boolean>(false);
@@ -100,6 +100,12 @@ export class MessagingService implements NostriaService {
 
   // Helper method to add a message to a chat (prevents duplicates and updates sorting)
   addMessageToChat(pubkey: string, message: DirectMessage): void {
+    // Validate pubkey to prevent creating invalid chats
+    if (!pubkey || pubkey === 'undefined') {
+      this.logger.warn('Cannot add message to chat: invalid pubkey', { pubkey, messageId: message.id });
+      return;
+    }
+
     const currentMap = this.chatsMap();
     const chatId = message.encryptionType === 'nip04' ? `${pubkey}-nip04` : `${pubkey}-nip44`;
 
@@ -164,7 +170,8 @@ export class MessagingService implements NostriaService {
 
     try {
       // Check if message already exists in storage to avoid duplicates
-      const exists = await this.storage.messageExists(myPubkey, chatId, message.id);
+      await this.database.init();
+      const exists = await this.database.messageExists(myPubkey, chatId, message.id);
       if (exists) {
         this.logger.debug(`Message ${message.id} already in storage, skipping save`);
         return;
@@ -187,7 +194,7 @@ export class MessagingService implements NostriaService {
         failed: message.failed,
       };
 
-      await this.storage.saveDirectMessage(storedMessage);
+      await this.database.saveDirectMessage(storedMessage);
       this.logger.debug(`Saved message ${message.id} to storage`);
     } catch (error) {
       this.logger.error('Error saving message to storage:', error);
@@ -226,13 +233,14 @@ export class MessagingService implements NostriaService {
 
     try {
       // Load messages from IndexedDB first for instant display
-      const storedChats = await this.storage.getChatsForAccount(myPubkey);
+      await this.database.init();
+      const storedChats = await this.database.getChatsForAccount(myPubkey);
 
       this.logger.info(`Found ${storedChats.length} stored chats`);
 
       // Build chat map from stored messages
       for (const chatSummary of storedChats) {
-        const messages = await this.storage.getMessagesForChat(myPubkey, chatSummary.chatId);
+        const messages = await this.database.getMessagesForChat(myPubkey, chatSummary.chatId);
 
         if (messages.length === 0) continue;
 
@@ -240,6 +248,12 @@ export class MessagingService implements NostriaService {
         const parts = chatSummary.chatId.split('-');
         const encryptionType = parts[parts.length - 1] as 'nip04' | 'nip44';
         const pubkey = parts.slice(0, -1).join('-');
+
+        // Validate pubkey - skip invalid chats
+        if (!pubkey || pubkey === 'undefined' || pubkey.length < 10) {
+          this.logger.warn('Skipping chat with invalid pubkey', { chatId: chatSummary.chatId, pubkey });
+          continue;
+        }
 
         // Convert stored messages to DirectMessage format
         const messagesMap = new Map<string, DirectMessage>();
@@ -490,7 +504,20 @@ export class MessagingService implements NostriaService {
 
             // If this is outgoing, it means the target is in the tags on the kind 14.
             if (directMessage.isOutgoing) {
-              targetPubkey = this.utilities.getPTagsValuesFromEvent(wrappedevent)[0];
+              const pTags = this.utilities.getPTagsValuesFromEvent(wrappedevent);
+              if (pTags.length > 0 && pTags[0]) {
+                targetPubkey = pTags[0];
+              } else {
+                // No valid recipient found, skip this message
+                this.logger.warn('NIP-44 outgoing message has no valid recipient p-tag, skipping', { eventId: wrappedevent.id });
+                return;
+              }
+            } else {
+              // For incoming messages, validate that the sender pubkey is valid
+              if (!targetPubkey || targetPubkey === myPubkey) {
+                this.logger.warn('NIP-44 incoming message has invalid sender pubkey, skipping', { eventId: wrappedevent.id });
+                return;
+              }
             }
 
             // Add the message to the chat
@@ -640,7 +667,20 @@ export class MessagingService implements NostriaService {
 
             // If this is outgoing, it means the target is in the tags on the kind 14.
             if (directMessage.isOutgoing) {
-              targetPubkey = this.utilities.getPTagsValuesFromEvent(wrappedevent)[0];
+              const pTags = this.utilities.getPTagsValuesFromEvent(wrappedevent);
+              if (pTags.length > 0 && pTags[0]) {
+                targetPubkey = pTags[0];
+              } else {
+                // No valid recipient found, skip this message
+                this.logger.warn('NIP-44 outgoing message has no valid recipient p-tag, skipping', { eventId: wrappedevent.id });
+                return;
+              }
+            } else {
+              // For incoming messages, validate that the sender pubkey is valid
+              if (!targetPubkey || targetPubkey === myPubkey) {
+                this.logger.warn('NIP-44 incoming message has invalid sender pubkey, skipping', { eventId: wrappedevent.id });
+                return;
+              }
             }
 
             // Add the message to the chat
@@ -1180,7 +1220,7 @@ export class MessagingService implements NostriaService {
                 created_at: wrappedevent.created_at,
                 content: wrappedevent.content,
                 tags: wrappedevent.tags || [],
-                isOutgoing: event.pubkey === myPubkey,
+                isOutgoing: wrappedevent.pubkey === myPubkey,
                 pending: false,
                 failed: false,
                 received: true,
@@ -1188,14 +1228,34 @@ export class MessagingService implements NostriaService {
                 encryptionType: 'nip44',
               };
 
+              // Determine target pubkey for the chat
+              let targetPubkey = wrappedevent.pubkey;
+
               if (directMessage.isOutgoing) {
                 messagesSentFound++;
+                // For outgoing messages, get recipient from p-tags
+                const pTags = this.utilities.getPTagsValuesFromEvent(wrappedevent);
+                if (pTags.length > 0 && pTags[0]) {
+                  targetPubkey = pTags[0];
+                } else {
+                  this.logger.warn('NIP-44 outgoing message has no valid recipient p-tag, skipping', { eventId: wrappedevent.id });
+                  completedDecryptions++;
+                  checkCompletion();
+                  return;
+                }
               } else {
                 messagesReceivedFound++;
+                // For incoming messages, validate sender pubkey
+                if (!targetPubkey || targetPubkey === myPubkey) {
+                  this.logger.warn('NIP-44 incoming message has invalid sender pubkey, skipping', { eventId: wrappedevent.id });
+                  completedDecryptions++;
+                  checkCompletion();
+                  return;
+                }
               }
 
               // Add the message to the chat (this will create new chats if needed)
-              this.addMessageToChat(wrappedevent.pubkey, directMessage);
+              this.addMessageToChat(targetPubkey, directMessage);
             } else if (event.kind === kinds.EncryptedDirectMessage) {
               // Handle incoming NIP-04 direct messages
               let targetPubkey = event.pubkey;
@@ -1300,7 +1360,7 @@ export class MessagingService implements NostriaService {
                 created_at: wrappedevent.created_at,
                 content: wrappedevent.content,
                 tags: wrappedevent.tags || [],
-                isOutgoing: event.pubkey === myPubkey,
+                isOutgoing: wrappedevent.pubkey === myPubkey,
                 pending: false,
                 failed: false,
                 received: true,
@@ -1308,14 +1368,34 @@ export class MessagingService implements NostriaService {
                 encryptionType: 'nip44',
               };
 
+              // Determine target pubkey for the chat
+              let targetPubkey = wrappedevent.pubkey;
+
               if (directMessage.isOutgoing) {
                 messagesSentFound++;
+                // For outgoing messages, get recipient from p-tags
+                const pTags = this.utilities.getPTagsValuesFromEvent(wrappedevent);
+                if (pTags.length > 0 && pTags[0]) {
+                  targetPubkey = pTags[0];
+                } else {
+                  this.logger.warn('NIP-44 outgoing message has no valid recipient p-tag, skipping', { eventId: wrappedevent.id });
+                  completedDecryptions++;
+                  checkCompletion();
+                  return;
+                }
               } else {
                 messagesReceivedFound++;
+                // For incoming messages, validate sender pubkey
+                if (!targetPubkey || targetPubkey === myPubkey) {
+                  this.logger.warn('NIP-44 incoming message has invalid sender pubkey, skipping', { eventId: wrappedevent.id });
+                  completedDecryptions++;
+                  checkCompletion();
+                  return;
+                }
               }
 
               // Add the message to the chat (this will create new chats if needed)
-              this.addMessageToChat(wrappedevent.pubkey, directMessage);
+              this.addMessageToChat(targetPubkey, directMessage);
             } else if (event.kind === kinds.EncryptedDirectMessage) {
               // Handle incoming NIP-04 direct messages
               let targetPubkey = event.pubkey;
@@ -1427,7 +1507,8 @@ export class MessagingService implements NostriaService {
 
     try {
       // Mark all messages as read in storage
-      await this.storage.markChatAsRead(myPubkey, chatId);
+      await this.database.init();
+      await this.database.markChatAsRead(myPubkey, chatId);
 
       // Update the in-memory chat's unread count and mark messages as read
       const currentMap = this.chatsMap();

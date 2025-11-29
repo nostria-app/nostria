@@ -62,6 +62,8 @@ import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
+import { DatabaseService } from '../../services/database.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -139,6 +141,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly encryption = inject(EncryptionService);
   private readonly encryptionPermission = inject(EncryptionPermissionService);
   layout = inject(LayoutService); // UI state signals
+  private readonly database = inject(DatabaseService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   isLoading = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
   isSending = signal<boolean>(false);
@@ -244,6 +248,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // Throttling for scroll handler
   private scrollThrottleTimeout: any = null;
   private chatListScrollThrottleTimeout: any = null;
+  private chatListScrollElement: HTMLElement | null = null;
 
   constructor() {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
@@ -406,21 +411,63 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Set up scroll event listener for loading more messages with a delay to ensure DOM is ready
     setTimeout(() => {
       this.setupScrollListener();
-      this.setupChatListScrollListener();
     }, 100);
+
+    // Set up chat list scroll listener with longer delay to ensure tabs are rendered
+    setTimeout(() => {
+      this.setupChatListScrollListener();
+    }, 500);
   }
 
   /**
    * Set up scroll event listener for chat list to auto-load more chats
    */
-  private setupChatListScrollListener(): void {
-    const scrollElement = this.messageThreads?.nativeElement;
-    if (!scrollElement) {
+  private setupChatListScrollListener(retryCount = 0): void {
+    const messageThreadsEl = this.messageThreads?.nativeElement;
+    if (!messageThreadsEl) {
       this.logger.warn('Message threads element not found for scroll listener');
       return;
     }
 
-    this.logger.debug('Setting up scroll listener for chat list auto-load');
+    // The actual scrollable element is the mat-mdc-tab-body-content inside the tab group
+    // Try multiple selectors to find the scrollable element
+    let scrollElement: Element | null = null;
+
+    // First try: active tab body content
+    scrollElement = messageThreadsEl.querySelector('.mat-mdc-tab-body-active .mat-mdc-tab-body-content');
+
+    // Second try: any tab body content (there might only be one rendered)
+    if (!scrollElement) {
+      scrollElement = messageThreadsEl.querySelector('.mat-mdc-tab-body-content');
+    }
+
+    // If we couldn't find the tab content and haven't retried too many times, try again
+    if (!scrollElement && retryCount < 5) {
+      this.logger.debug(`Tab content not found, retrying in 200ms (attempt ${retryCount + 1})`);
+      setTimeout(() => this.setupChatListScrollListener(retryCount + 1), 200);
+      return;
+    }
+
+    // Fallback to the message threads element itself
+    if (!scrollElement) {
+      scrollElement = messageThreadsEl;
+    }
+
+    this.logger.info('Setting up scroll listener for chat list auto-load', {
+      foundActiveTab: !!messageThreadsEl.querySelector('.mat-mdc-tab-body-active .mat-mdc-tab-body-content'),
+      foundAnyTab: !!messageThreadsEl.querySelector('.mat-mdc-tab-body-content'),
+      scrollElementClass: scrollElement.className,
+      scrollHeight: (scrollElement as HTMLElement).scrollHeight,
+      clientHeight: (scrollElement as HTMLElement).clientHeight,
+    });
+
+    // Remove listener from previous element if different
+    if (this.chatListScrollElement && this.chatListScrollElement !== scrollElement) {
+      this.chatListScrollElement.removeEventListener('scroll', this.chatListScrollHandler);
+    }
+
+    // Store reference for the handler
+    this.chatListScrollElement = scrollElement as HTMLElement;
 
     // Remove any existing listener to avoid duplicates
     scrollElement.removeEventListener('scroll', this.chatListScrollHandler);
@@ -441,20 +488,34 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.chatListScrollThrottleTimeout = setTimeout(() => {
       this.chatListScrollThrottleTimeout = null;
 
-      const scrollElement = this.messageThreads?.nativeElement;
-      if (!scrollElement) return;
+      const scrollElement = this.chatListScrollElement;
+      if (!scrollElement) {
+        this.logger.warn('Chat list scroll element not set');
+        return;
+      }
 
       // Check if user is near the bottom
       const { scrollTop, scrollHeight, clientHeight } = scrollElement;
       const threshold = 200; // pixels from bottom
       const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
 
+      // Log scroll state for debugging
+      this.logger.info('Chat list scroll check', {
+        distanceFromBottom,
+        scrollTop,
+        scrollHeight,
+        clientHeight,
+        hasMoreChats: this.messaging.hasMoreChats(),
+        isLoadingMoreChats: this.messaging.isLoadingMoreChats(),
+        threshold,
+      });
+
       if (
         distanceFromBottom < threshold &&
         this.messaging.hasMoreChats() &&
         !this.messaging.isLoadingMoreChats()
       ) {
-        this.logger.debug('Near bottom of chat list, loading more chats...');
+        this.logger.info('Loading more chats from scroll...');
         this.loadMoreChats();
       }
     }, 150); // Throttle interval
@@ -797,6 +858,37 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
+   * Reset local messages cache - clears all decrypted messages from IndexedDB
+   */
+  async resetLocalMessagesCache(): Promise<void> {
+    try {
+      await this.database.init();
+      await this.database.clearAllMessages();
+
+      // Clear the in-memory chats
+      this.messaging.clear();
+
+      // Reset the messages last check timestamp so we fetch all messages again
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.accountLocalState.setMessagesLastCheck(pubkey, 0);
+      }
+
+      // Clear selection
+      this.selectedChatId.set(null);
+      this.showMobileList.set(true);
+
+      this.snackBar.open('Local messages cache cleared successfully', 'Close', { duration: 3000 });
+
+      // Reload chats from relays
+      await this.messaging.loadChats();
+    } catch (error) {
+      this.logger.error('Failed to reset local messages cache:', error);
+      this.snackBar.open('Failed to clear messages cache', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
    * Start a new chat with a specific pubkey (public method for external navigation)
    */
   startChatWithPubkey(pubkey: string): void {
@@ -847,6 +939,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   onTabChange(index: number): void {
     this.selectedTabIndex.set(index);
+    // Re-attach scroll listener since each tab has its own scroll container
+    setTimeout(() => this.setupChatListScrollListener(), 50);
   }
 
   /**
