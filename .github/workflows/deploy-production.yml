@@ -1,19 +1,23 @@
-name: Build and Deploy to Beta
+name: Deploy to Production
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "deploy" to confirm deployment to production'
+        required: true
+        type: string
 
 env:
-  AZURE_WEBAPP_NAME: nostria-beta
+  AZURE_WEBAPP_NAME: nostria
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   IMAGE_TAG: ${{ github.sha }}
 
 jobs:
-  build-and-deploy:
+  deploy-production:
     runs-on: ubuntu-latest
+    if: github.event.inputs.confirm == 'deploy'
     permissions:
       contents: read
       packages: write
@@ -57,7 +61,7 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}, ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}, ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:production
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -66,7 +70,7 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Web App for Containers (Beta)
+      - name: Deploy to Azure Web App for Containers (Production)
         uses: azure/webapps-deploy@v2
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
