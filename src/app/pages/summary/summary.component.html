@@ -15,9 +15,15 @@
       </h1>
       <p class="last-visit">Since {{ timeSinceLastCheck() }}</p>
     </div>
-    <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isLoading()">
-      <mat-icon>refresh</mat-icon>
-    </button>
+    <div class="header-actions">
+      <a mat-stroked-button routerLink="/notifications" matTooltip="View all notifications">
+        <mat-icon>notifications</mat-icon>
+        Notifications
+      </a>
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isLoading()">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
   </div>
 
   <!-- Time Range Selector -->
@@ -58,108 +64,13 @@
   </div>
   } @else {
   <div class="summary-content">
-    <!-- Activity Stats Cards -->
-    <section class="stats-section">
-      <h2 class="section-title">
-        <mat-icon>analytics</mat-icon>
-        Activity Overview
-      </h2>
-      <div class="stats-grid">
-        <button class="stat-card notes" (click)="togglePanel('notes')" [class.expanded]="expandedPanel() === 'notes'"
-          [disabled]="activitySummary().notesCount === 0">
-          <mat-icon>chat</mat-icon>
-          <div class="stat-value">{{ formatNumber(activitySummary().notesCount) }}</div>
-          <div class="stat-label">New Notes</div>
-          @if (activitySummary().notesCount > 0) {
-          <mat-icon class="expand-icon">{{ expandedPanel() === 'notes' ? 'expand_less' : 'expand_more' }}</mat-icon>
-          }
-        </button>
-        <button class="stat-card articles" (click)="togglePanel('articles')"
-          [class.expanded]="expandedPanel() === 'articles'" [disabled]="activitySummary().articlesCount === 0">
-          <mat-icon>article</mat-icon>
-          <div class="stat-value">{{ formatNumber(activitySummary().articlesCount) }}</div>
-          <div class="stat-label">New Articles</div>
-          @if (activitySummary().articlesCount > 0) {
-          <mat-icon class="expand-icon">{{ expandedPanel() === 'articles' ? 'expand_less' : 'expand_more' }}</mat-icon>
-          }
-        </button>
-        <button class="stat-card media" (click)="togglePanel('media')" [class.expanded]="expandedPanel() === 'media'"
-          [disabled]="activitySummary().mediaCount === 0">
-          <mat-icon>perm_media</mat-icon>
-          <div class="stat-value">{{ formatNumber(activitySummary().mediaCount) }}</div>
-          <div class="stat-label">New Media</div>
-          @if (activitySummary().mediaCount > 0) {
-          <mat-icon class="expand-icon">{{ expandedPanel() === 'media' ? 'expand_less' : 'expand_more' }}</mat-icon>
-          }
-        </button>
-        <div class="stat-card profiles">
-          <mat-icon>person</mat-icon>
-          <div class="stat-value">{{ activitySummary().profileUpdatesCount }}</div>
-          <div class="stat-label">Profile Updates</div>
-        </div>
-      </div>
-
-      <!-- Expanded Event Lists -->
-      @if (expandedPanel() === 'notes' && noteEvents().length > 0) {
-      <div class="expanded-events">
-        <h3><mat-icon>chat</mat-icon> Recent Notes</h3>
-        <div class="event-list">
-          @for (event of noteEvents().slice(0, 10); track event.id) {
-          <a class="event-item" [routerLink]="['/e', event.id]">
-            <app-user-profile [pubkey]="event.pubkey" view="icon" class="event-author"></app-user-profile>
-            <div class="event-content">
-              <p class="event-preview">{{ getEventPreview(event) }}</p>
-            </div>
-            <span class="event-time">{{ event.created_at | ago }}</span>
-          </a>
-          }
-        </div>
-      </div>
-      }
-
-      @if (expandedPanel() === 'articles' && articleEvents().length > 0) {
-      <div class="expanded-events">
-        <h3><mat-icon>article</mat-icon> Recent Articles</h3>
-        <div class="event-list">
-          @for (event of articleEvents().slice(0, 10); track event.id) {
-          <a class="event-item" [routerLink]="getArticleRoute(event)">
-            <app-user-profile [pubkey]="event.pubkey" view="icon" class="event-author"></app-user-profile>
-            <div class="event-content">
-              <p class="event-preview">{{ getEventPreview(event) }}</p>
-            </div>
-            <span class="event-time">{{ event.created_at | ago }}</span>
-          </a>
-          }
-        </div>
-      </div>
-      }
-
-      @if (expandedPanel() === 'media' && mediaEvents().length > 0) {
-      <div class="expanded-events">
-        <h3><mat-icon>perm_media</mat-icon> Recent Media</h3>
-        <div class="event-list">
-          @for (event of mediaEvents().slice(0, 10); track event.id) {
-          <a class="event-item" [routerLink]="['/e', event.id]">
-            <app-user-profile [pubkey]="event.pubkey" view="icon" class="event-author"></app-user-profile>
-            <div class="event-content">
-              <p class="event-preview">{{ getEventPreview(event) }}</p>
-            </div>
-            <span class="event-time">{{ event.created_at | ago }}</span>
-          </a>
-          }
-        </div>
-      </div>
-      }
-    </section>
-
     <!-- Active Posters Section -->
     @if (activePosters().length > 0) {
-    <mat-divider></mat-divider>
-
     <section class="active-posters-section">
       <h2 class="section-title">
         <mat-icon>group</mat-icon>
         Who Posted
+        <span class="section-count">{{ activePosters().length }}</span>
       </h2>
       <p class="section-description">People who were active during this period</p>
       <div class="poster-grid">
@@ -200,6 +111,7 @@
       <h2 class="section-title">
         <mat-icon>badge</mat-icon>
         Profile Updates
+        <span class="section-count">{{ profileUpdates().length }}</span>
       </h2>
       <p class="section-description">People who updated their profiles</p>
       <div class="poster-grid">
