@@ -263,6 +263,7 @@ export class FeedService {
   // Active feed subscription management
   private readonly _activeFeedId = signal<string | null>(null);
   private activeFeedSubscriptions = new Set<string>(); // Track column IDs with active subscriptions
+  private subscriptionInProgress: string | null = null; // Track feed currently being subscribed to
 
   // Track whether the Feeds page is currently active/mounted
   private readonly _feedsPageActive = signal<boolean>(false);
@@ -505,6 +506,12 @@ export class FeedService {
       return;
     }
 
+    // Prevent concurrent subscription attempts to the same feed
+    if (this.subscriptionInProgress === feedId) {
+      this.logger.debug(`Subscription to feed ${feedId} already in progress, skipping duplicate call`);
+      return;
+    }
+
     const previousActiveFeedId = this._activeFeedId();
 
     // If same feed is already active AND has active subscriptions, do nothing
@@ -521,24 +528,32 @@ export class FeedService {
       }
     }
 
-    // Unsubscribe from previous active feed
-    if (previousActiveFeedId && previousActiveFeedId !== feedId) {
-      this.unsubscribeFromFeed(previousActiveFeedId);
-      this.logger.debug(`Unsubscribed from previous active feed: ${previousActiveFeedId}`);
-    }
+    // Mark subscription as in progress
+    this.subscriptionInProgress = feedId;
 
-    // Set new active feed
-    this._activeFeedId.set(feedId);
-
-    // Subscribe to new active feed
-    if (feedId) {
-      const activeFeed = this.getFeedById(feedId);
-      if (activeFeed) {
-        await this.subscribeToFeed(activeFeed);
-        this.logger.debug(`Subscribed to new active feed: ${feedId}`);
-      } else {
-        this.logger.warn(`Active feed with id ${feedId} not found`);
+    try {
+      // Unsubscribe from previous active feed
+      if (previousActiveFeedId && previousActiveFeedId !== feedId) {
+        this.unsubscribeFromFeed(previousActiveFeedId);
+        this.logger.debug(`Unsubscribed from previous active feed: ${previousActiveFeedId}`);
       }
+
+      // Set new active feed
+      this._activeFeedId.set(feedId);
+
+      // Subscribe to new active feed
+      if (feedId) {
+        const activeFeed = this.getFeedById(feedId);
+        if (activeFeed) {
+          await this.subscribeToFeed(activeFeed);
+          this.logger.debug(`Subscribed to new active feed: ${feedId}`);
+        } else {
+          this.logger.warn(`Active feed with id ${feedId} not found`);
+        }
+      }
+    } finally {
+      // Clear subscription in progress flag
+      this.subscriptionInProgress = null;
     }
   }
 
@@ -629,9 +644,14 @@ export class FeedService {
 
     // Add 'since' parameter based on lastRetrieved timestamp to prevent re-fetching old events
     // Use lastRetrieved instead of event.created_at since users can set arbitrary timestamps
-    if (column.lastRetrieved && item.filter) {
+    // IMPORTANT: Only use lastRetrieved if we have cached events to display.
+    // If there are no cached events, we need to fetch historical events without the 'since' filter,
+    // otherwise the feed will appear empty.
+    if (column.lastRetrieved && item.filter && cachedEvents.length > 0) {
       item.filter.since = column.lastRetrieved;
       this.logger.info(`📅 Column ${column.id}: Using since=${column.lastRetrieved} (lastRetrieved) to fetch only new events`);
+    } else if (column.lastRetrieved && cachedEvents.length === 0) {
+      this.logger.info(`📅 Column ${column.id}: No cached events, ignoring lastRetrieved=${column.lastRetrieved} to fetch historical events`);
     }
 
     // Now start async loading of fresh events
@@ -1109,7 +1129,10 @@ export class FeedService {
 
         // Add 'since' parameter based on column's lastRetrieved timestamp
         // This prevents re-fetching old events when reopening the column
-        if (feedData.column.lastRetrieved) {
+        // IMPORTANT: Only use lastRetrieved if we have existing events to display.
+        // If there are no events, we need to fetch historical events without the 'since' filter.
+        const existingEvents = feedData.events();
+        if (feedData.column.lastRetrieved && existingEvents.length > 0) {
           filterConfig.since = feedData.column.lastRetrieved;
         }
 
