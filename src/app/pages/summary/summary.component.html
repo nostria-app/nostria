@@ -45,6 +45,12 @@
     </div>
   </div>
 
+  <!-- Info Banner -->
+  <div class="info-banner">
+    <mat-icon>info</mat-icon>
+    <p>This summary shows cached data from your local database. It may not include all events from the network.</p>
+  </div>
+
   @if (isLoading()) {
   <div class="loading-state">
     <mat-spinner diameter="48"></mat-spinner>
@@ -59,27 +65,91 @@
         Activity Overview
       </h2>
       <div class="stats-grid">
-        <div class="stat-card notes">
+        <button class="stat-card notes" (click)="togglePanel('notes')" [class.expanded]="expandedPanel() === 'notes'"
+          [disabled]="activitySummary().notesCount === 0">
           <mat-icon>chat</mat-icon>
           <div class="stat-value">{{ formatNumber(activitySummary().notesCount) }}</div>
           <div class="stat-label">New Notes</div>
-        </div>
-        <div class="stat-card articles">
+          @if (activitySummary().notesCount > 0) {
+          <mat-icon class="expand-icon">{{ expandedPanel() === 'notes' ? 'expand_less' : 'expand_more' }}</mat-icon>
+          }
+        </button>
+        <button class="stat-card articles" (click)="togglePanel('articles')"
+          [class.expanded]="expandedPanel() === 'articles'" [disabled]="activitySummary().articlesCount === 0">
           <mat-icon>article</mat-icon>
           <div class="stat-value">{{ formatNumber(activitySummary().articlesCount) }}</div>
           <div class="stat-label">New Articles</div>
-        </div>
-        <div class="stat-card media">
+          @if (activitySummary().articlesCount > 0) {
+          <mat-icon class="expand-icon">{{ expandedPanel() === 'articles' ? 'expand_less' : 'expand_more' }}</mat-icon>
+          }
+        </button>
+        <button class="stat-card media" (click)="togglePanel('media')" [class.expanded]="expandedPanel() === 'media'"
+          [disabled]="activitySummary().mediaCount === 0">
           <mat-icon>perm_media</mat-icon>
           <div class="stat-value">{{ formatNumber(activitySummary().mediaCount) }}</div>
           <div class="stat-label">New Media</div>
-        </div>
+          @if (activitySummary().mediaCount > 0) {
+          <mat-icon class="expand-icon">{{ expandedPanel() === 'media' ? 'expand_less' : 'expand_more' }}</mat-icon>
+          }
+        </button>
         <div class="stat-card profiles">
           <mat-icon>person</mat-icon>
           <div class="stat-value">{{ activitySummary().profileUpdatesCount }}</div>
           <div class="stat-label">Profile Updates</div>
         </div>
       </div>
+
+      <!-- Expanded Event Lists -->
+      @if (expandedPanel() === 'notes' && noteEvents().length > 0) {
+      <div class="expanded-events">
+        <h3><mat-icon>chat</mat-icon> Recent Notes</h3>
+        <div class="event-list">
+          @for (event of noteEvents().slice(0, 10); track event.id) {
+          <a class="event-item" [routerLink]="['/e', event.id]">
+            <app-user-profile [pubkey]="event.pubkey" view="icon" class="event-author"></app-user-profile>
+            <div class="event-content">
+              <p class="event-preview">{{ getEventPreview(event) }}</p>
+            </div>
+            <span class="event-time">{{ event.created_at | ago }}</span>
+          </a>
+          }
+        </div>
+      </div>
+      }
+
+      @if (expandedPanel() === 'articles' && articleEvents().length > 0) {
+      <div class="expanded-events">
+        <h3><mat-icon>article</mat-icon> Recent Articles</h3>
+        <div class="event-list">
+          @for (event of articleEvents().slice(0, 10); track event.id) {
+          <a class="event-item" [routerLink]="getArticleRoute(event)">
+            <app-user-profile [pubkey]="event.pubkey" view="icon" class="event-author"></app-user-profile>
+            <div class="event-content">
+              <p class="event-preview">{{ getEventPreview(event) }}</p>
+            </div>
+            <span class="event-time">{{ event.created_at | ago }}</span>
+          </a>
+          }
+        </div>
+      </div>
+      }
+
+      @if (expandedPanel() === 'media' && mediaEvents().length > 0) {
+      <div class="expanded-events">
+        <h3><mat-icon>perm_media</mat-icon> Recent Media</h3>
+        <div class="event-list">
+          @for (event of mediaEvents().slice(0, 10); track event.id) {
+          <a class="event-item" [routerLink]="['/e', event.id]">
+            <app-user-profile [pubkey]="event.pubkey" view="icon" class="event-author"></app-user-profile>
+            <div class="event-content">
+              <p class="event-preview">{{ getEventPreview(event) }}</p>
+            </div>
+            <span class="event-time">{{ event.created_at | ago }}</span>
+          </a>
+          }
+        </div>
+      </div>
+      }
     </section>
 
     <!-- Active Posters Section -->
@@ -137,6 +207,36 @@
         <a class="poster-card" [routerLink]="['/p', pubkey]">
           <div class="poster-avatar">
             <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
+          </div>
+        </a>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Timeline Section -->
+    @if (timelineEvents().length > 0) {
+    <mat-divider></mat-divider>
+
+    <section class="timeline-section">
+      <h2 class="section-title">
+        <mat-icon>schedule</mat-icon>
+        Activity Timeline
+      </h2>
+      <p class="section-description">Recent activity from people you follow</p>
+      <div class="timeline">
+        @for (event of timelineEvents(); track event.id) {
+        <a class="timeline-item" [routerLink]="getEventRoute(event)">
+          <div class="timeline-marker">
+            <mat-icon>{{ getEventKindIcon(event.kind) }}</mat-icon>
+          </div>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <app-user-profile [pubkey]="event.pubkey" view="icon" class="timeline-author"></app-user-profile>
+              <span class="timeline-type">{{ getEventKindLabel(event.kind) }}</span>
+              <span class="timeline-time">{{ event.created_at | ago }}</span>
+            </div>
+            <p class="timeline-preview">{{ getEventPreview(event) }}</p>
           </div>
         </a>
         }
