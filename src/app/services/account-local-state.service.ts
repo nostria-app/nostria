@@ -38,6 +38,9 @@ interface AccountLocalState {
   subscriptionSettings?: DeviceNotificationPreferences[];
   translationSourceLang?: string;
   translationTargetLang?: string;
+  lastSummaryCheck?: number; // Timestamp when user last viewed the Summary page
+  summaryTimePreset?: number | null; // Selected time preset in hours, null = last visit
+  summaryCustomDate?: number | null; // Custom date timestamp if selected
 }
 
 /**
@@ -50,6 +53,7 @@ const ACCOUNT_STATE_KEY = 'nostria-state';
 /**
  * Service for managing per-account state in localStorage
  * This centralizes state that should be stored per-account rather than globally
+ * Uses in-memory caching to avoid repeated localStorage reads
  */
 @Injectable({
   providedIn: 'root',
@@ -57,27 +61,39 @@ const ACCOUNT_STATE_KEY = 'nostria-state';
 export class AccountLocalStateService {
   private localStorage = inject(LocalStorageService);
 
+  // In-memory cache of account states to avoid repeated localStorage reads
+  private cachedStates: AccountStatesRoot | null = null;
+
   /**
-   * Get all account states from localStorage
+   * Get all account states from cache or localStorage
    */
   private getAllStates(): AccountStatesRoot {
+    // Return cached states if available
+    if (this.cachedStates !== null) {
+      return this.cachedStates;
+    }
+
     try {
       const data = this.localStorage.getItem(ACCOUNT_STATE_KEY);
       if (data) {
-        return JSON.parse(data);
+        this.cachedStates = JSON.parse(data);
+        return this.cachedStates!;
       }
-      return {};
+      this.cachedStates = {};
+      return this.cachedStates;
     } catch (error) {
       console.error('Failed to load account states:', error);
-      return {};
+      this.cachedStates = {};
+      return this.cachedStates;
     }
   }
 
   /**
-   * Save all account states to localStorage
+   * Save all account states to localStorage and update cache
    */
   private saveAllStates(states: AccountStatesRoot): void {
     try {
+      this.cachedStates = states;
       this.localStorage.setItem(ACCOUNT_STATE_KEY, JSON.stringify(states));
     } catch (error) {
       console.error('Failed to save account states:', error);
@@ -423,6 +439,51 @@ export class AccountLocalStateService {
   }
 
   /**
+   * Get last summary check timestamp for an account
+   */
+  getLastSummaryCheck(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.lastSummaryCheck || 0;
+  }
+
+  /**
+   * Set last summary check timestamp for an account
+   */
+  setLastSummaryCheck(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { lastSummaryCheck: timestamp });
+  }
+
+  /**
+   * Get summary time preset for an account
+   */
+  getSummaryTimePreset(pubkey: string): number | null | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.summaryTimePreset;
+  }
+
+  /**
+   * Set summary time preset for an account
+   */
+  setSummaryTimePreset(pubkey: string, preset: number | null | undefined): void {
+    this.updateAccountState(pubkey, { summaryTimePreset: preset });
+  }
+
+  /**
+   * Get summary custom date for an account
+   */
+  getSummaryCustomDate(pubkey: string): number | null | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.summaryCustomDate;
+  }
+
+  /**
+   * Set summary custom date for an account
+   */
+  setSummaryCustomDate(pubkey: string, timestamp: number | null | undefined): void {
+    this.updateAccountState(pubkey, { summaryCustomDate: timestamp });
+  }
+
+  /**
    * Clear state for a specific account
    */
   clearAccountState(pubkey: string): void {
@@ -435,6 +496,7 @@ export class AccountLocalStateService {
    * Clear all account states (used during app wipe)
    */
   clearAllStates(): void {
+    this.cachedStates = null;
     this.localStorage.removeItem(ACCOUNT_STATE_KEY);
   }
 }

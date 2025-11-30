@@ -14,10 +14,19 @@
     <div class="message-threads-header">
       <h2>Chats</h2>
       <div class="spacer"></div>
-      <div>
+      <div class="header-actions">
         <button mat-icon-button aria-label="New chat" (click)="startNewChat()">
           <mat-icon>edit</mat-icon>
         </button>
+        <button mat-icon-button [matMenuTriggerFor]="chatSettingsMenu" aria-label="Chat settings">
+          <mat-icon>settings</mat-icon>
+        </button>
+        <mat-menu #chatSettingsMenu="matMenu">
+          <button mat-menu-item (click)="resetLocalMessagesCache()">
+            <mat-icon>delete_sweep</mat-icon>
+            <span>Reset Local Messages Cache</span>
+          </button>
+        </mat-menu>
       </div>
     </div>
     <div class="message-threads" #messageThreads>
@@ -88,19 +97,17 @@
 
             <!-- Load more chats button for Following tab -->
             @if (messaging.hasMoreChats()) {
-            <!-- <div class="load-more-chats">
-              <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()"
-                (click)="loadMoreChats()" class="load-more-chats-button">
+            <div class="load-more-chats">
+              <button mat-stroked-button [disabled]="messaging.isLoadingMoreChats()" (click)="loadMoreChats()"
+                class="load-more-chats-button">
                 @if (messaging.isLoadingMoreChats()) {
                 <mat-spinner diameter="20"></mat-spinner>
                 <span>Loading...</span>
                 } @else {
-                <ng-container>
-                  <span>Load more conversations</span>
-                </ng-container>
+                <span>Load more conversations</span>
                 }
               </button>
-            </div> -->
+            </div>
             }
           </div>
           } @else {
@@ -157,19 +164,17 @@
 
             <!-- Load more chats button for Others tab -->
             @if (messaging.hasMoreChats()) {
-            <!-- <div class="load-more-chats">
-              <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()"
-                (click)="loadMoreChats()" class="load-more-chats-button">
+            <div class="load-more-chats">
+              <button mat-stroked-button [disabled]="messaging.isLoadingMoreChats()" (click)="loadMoreChats()"
+                class="load-more-chats-button">
                 @if (messaging.isLoadingMoreChats()) {
                 <mat-spinner diameter="20"></mat-spinner>
                 <span>Loading...</span>
                 } @else {
-                <ng-container>
-                  <span>Load more conversations</span>
-                </ng-container>
+                <span>Load more conversations</span>
                 }
               </button>
-            </div> -->
+            </div>
             }
           </div>
           } @else {
@@ -186,27 +191,18 @@
       </mat-tab-group>
       }
     </div>
-    <div class="message-threads-load-more">
-      @if (messaging.hasMoreChats()) {
-      <div class="load-more-chats">
-        <button mat-stroked-button color="primary" [disabled]="messaging.isLoadingMoreChats()" (click)="loadMoreChats()"
-          class="load-more-chats-button">
-          @if (messaging.isLoadingMoreChats()) {
-          <mat-spinner diameter="20"></mat-spinner>
-          <span>Loading...</span>
-          } @else {
-          <ng-container>
-            <span>Load more conversations</span>
-          </ng-container>
-          }
-        </button>
-      </div>
-      }
-    </div>
   </div>
   <div class="messages-right" [class.mobile-hidden]="layout.isHandset() && showMobileList()">
+    @if (!selectedChat()) {
+    <div class="no-chat-selected">
+      <h2>Select a message</h2>
+      <p>Choose from your existing conversations or start a new one.</p>
+      <button mat-flat-button (click)="startNewChat()">
+        New message
+      </button>
+    </div>
+    } @else {
     <div class="message-list-header">
-      @if (selectedChat()) {
       <div class="chat-header-user">
         @if (layout.isHandset() && !showMobileList()) {
         <button mat-icon-button class="back-button" (click)="backToList()">
@@ -215,7 +211,6 @@
         }
         <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
       </div>
-      }
     </div>
 
     <div class="message-list" #messagesWrapper>
@@ -267,7 +262,6 @@
       }
     </div>
     <div class="message-input-container">
-      @if (selectedChat()) {
       <mat-form-field appearance="outline" class="message-input" subscriptSizing="dynamic">
         <input #messageInput matInput [ngModel]="newMessageText()" (ngModelChange)="newMessageText.set($event)"
           placeholder="Type a message..." [disabled]="isSending()" (keyup.enter)="sendMessage()" />
@@ -280,8 +274,8 @@
         <mat-icon>send</mat-icon>
         }
       </button>
-      }
     </div>
+    }
   </div>
   }
 </div>

@@ -10,7 +10,7 @@ import {
 } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { Event, kinds } from 'nostr-tools';
 import { ApplicationStateService } from './application-state.service';
 import { AccountStateService } from './account-state.service';
@@ -233,7 +233,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
 export class FeedService {
   private readonly localStorageService = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
@@ -320,7 +320,8 @@ export class FeedService {
     if (!pubkey) return [];
 
     try {
-      const cachedEvents = await this.storage.loadCachedEvents(pubkey, columnId);
+      await this.database.init();
+      const cachedEvents = await this.database.loadCachedEvents(pubkey, columnId);
 
       if (cachedEvents.length > 0) {
         this.logger.info(`✅ Loaded ${cachedEvents.length} cached events for column ${columnId}`);
@@ -337,6 +338,7 @@ export class FeedService {
 
   /**
    * Save events to cache for a column (debounced to prevent duplicates)
+   * Also saves events to the main events store for querying by Summary page
    */
   private async saveCachedEvents(columnId: string, events: Event[]): Promise<void> {
     const pubkey = this.accountState.pubkey();
@@ -355,8 +357,21 @@ export class FeedService {
     // Create the save promise
     const savePromise = (async () => {
       try {
-        await this.storage.saveCachedEvents(pubkey, columnId, events);
+        await this.database.init();
+
+        // Save to cache for instant loading
+        await this.database.saveCachedEvents(pubkey, columnId, events);
         this.logger.debug(`💾 Saved ${events.length} events to cache for column ${columnId}`);
+
+        // Also save each event to the main events store for Summary queries
+        // This enables the Summary page to query events by pubkey and kind
+        for (const event of events) {
+          try {
+            await this.database.saveEvent(event);
+          } catch {
+            // Ignore duplicate key errors - event already exists
+          }
+        }
       } catch (error) {
         this.logger.error('Error saving cached events:', error);
       } finally {
@@ -368,6 +383,18 @@ export class FeedService {
     // Track the pending save
     this.pendingCacheSaves.set(cacheKey, savePromise);
     return savePromise;
+  }
+
+  /**
+   * Save a single event to the database (for Summary page queries)
+   */
+  private async saveEventToDatabase(event: Event): Promise<void> {
+    try {
+      await this.database.init();
+      await this.database.saveEvent(event);
+    } catch {
+      // Ignore errors - event might already exist
+    }
   }
 
 
@@ -637,6 +664,9 @@ export class FeedService {
         sub = this.relayPool.subscribe(column.customRelays, item.filter, (event: Event) => {
           console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
 
+          // Save event to database for Summary page queries
+          this.saveEventToDatabase(event);
+
           // Filter out live events that are muted.
           if (this.accountState.muted(event)) {
             console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
@@ -682,6 +712,9 @@ export class FeedService {
 
         sub = this.accountRelay.subscribe(item.filter, (event: Event) => {
           console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
+
+          // Save event to database for Summary page queries
+          this.saveEventToDatabase(event);
 
           // Filter out live events that are muted.
           if (this.accountState.muted(event)) {

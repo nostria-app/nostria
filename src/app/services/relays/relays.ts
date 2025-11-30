@@ -1,6 +1,7 @@
 import { Injectable, inject, signal, effect } from '@angular/core';
 import { UtilitiesService } from '../utilities.service';
-import { StorageService, ObservedRelayStats } from '../storage.service';
+import { ObservedRelayStats, Nip11Info } from '../storage.service';
+import { DatabaseService } from '../database.service';
 import { LocalSettingsService } from '../local-settings.service';
 
 export interface RelayStats {
@@ -64,7 +65,7 @@ export interface Nip11RelayInfo {
 export class RelaysService {
   private utilities = inject(UtilitiesService);
 
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
 
   // Map of relay URL to relay statistics
   private relayStats = new Map<string, RelayStats>();
@@ -88,10 +89,14 @@ export class RelaysService {
     // Initialize with preferred relays
     this.initializePreferredRelays();
 
-    // Load observed relays only when the storage is initialized
+    // Load observed relays and save initial stats when the storage is initialized
     effect(() => {
-      if (this.storage.initialized()) {
+      if (this.database.initialized()) {
         this.loadObservedRelays();
+        // Save any relay stats that were added before database was ready
+        this.relayStats.forEach(stats => {
+          this.saveRelayStatsToStorage(stats);
+        });
       }
     });
   }
@@ -349,7 +354,7 @@ export class RelaysService {
    */
   async loadObservedRelays(): Promise<void> {
     try {
-      const observedRelays = await this.storage.getAllObservedRelays();
+      const observedRelays = await this.database.getAllObservedRelays() as unknown as ObservedRelayStats[];
       this.observedRelaysSignal.set(observedRelays);
     } catch (error) {
       console.error('Failed to load observed relays from storage:', error);
@@ -379,6 +384,11 @@ export class RelaysService {
    * This method batches saves to avoid excessive storage writes
    */
   private async saveRelayStatsToStorage(stats: RelayStats): Promise<void> {
+    // Don't try to save if database is not initialized yet
+    if (!this.database.initialized()) {
+      return;
+    }
+
     const url = stats.url;
     const now = Date.now();
     const lastSave = this.lastSaveTime.get(url) || 0;
@@ -409,16 +419,16 @@ export class RelaysService {
    */
   private async performSave(stats: RelayStats): Promise<void> {
     try {
-      const existing = await this.storage.getObservedRelay(stats.url);
+      const existing = await this.database.getObservedRelay(stats.url) as unknown as ObservedRelayStats | null;
       const observedStats = this.toObservedRelayStats(stats);
 
       if (existing) {
         // Preserve the first observed time and merge with existing NIP-11 info
-        observedStats.firstObserved = existing.firstObserved;
-        observedStats.nip11 = existing.nip11;
+        observedStats.firstObserved = existing['firstObserved'] as number;
+        observedStats.nip11 = existing['nip11'] as Nip11Info | undefined;
       }
 
-      await this.storage.saveObservedRelay(observedStats);
+      await this.database.saveObservedRelay(observedStats as unknown as Record<string, unknown>);
       this.lastSaveTime.set(stats.url, Date.now());
 
       // Update the signal with fresh data
@@ -432,7 +442,7 @@ export class RelaysService {
    * Get all observed relays from storage
    */
   async getAllObservedRelays(): Promise<ObservedRelayStats[]> {
-    return await this.storage.getAllObservedRelays();
+    return await this.database.getAllObservedRelays() as unknown as ObservedRelayStats[];
   }
 
   /**
@@ -441,7 +451,7 @@ export class RelaysService {
   async getObservedRelaysSorted(
     sortBy: 'eventsReceived' | 'lastUpdated' | 'firstObserved' = 'lastUpdated'
   ): Promise<ObservedRelayStats[]> {
-    return await this.storage.getObservedRelaysSorted(sortBy);
+    return await this.database.getObservedRelaysSorted(sortBy) as unknown as ObservedRelayStats[];
   }
 
   /**
@@ -456,7 +466,7 @@ export class RelaysService {
       this.addRelay(normalizedUrl);
 
       // Update pubkey-relay mapping in storage
-      await this.storage.updatePubkeyRelayMappingFromHint(pubkey, normalizedUrl);
+      await this.database.updatePubkeyRelayMappingFromHint(pubkey, normalizedUrl);
     }
   }
 
@@ -464,14 +474,14 @@ export class RelaysService {
    * Get relay URLs discovered for a specific pubkey (fallback method)
    */
   async getFallbackRelaysForPubkey(pubkey: string): Promise<string[]> {
-    return await this.storage.getRelayUrlsForPubkey(pubkey);
+    return await this.database.getRelayUrlsForPubkey(pubkey);
   }
 
   /**
    * Clean up old relay data
    */
   async cleanupOldRelayData(olderThanDays = 30): Promise<void> {
-    await this.storage.cleanupOldPubkeyRelayMappings(olderThanDays);
+    await this.database.cleanupOldPubkeyRelayMappings(olderThanDays);
   }
 
   /**
@@ -479,7 +489,7 @@ export class RelaysService {
    * This ensures that relays added during initialization are properly persisted
    */
   async persistInitialRelayStats(): Promise<void> {
-    if (!this.storage.initialized()) {
+    if (!this.database.initialized()) {
       return; // Database not ready yet
     }
 

@@ -1101,6 +1101,34 @@ export class StorageService {
     }
   }
 
+  /**
+   * Get events by pubkey(s) and kind since a specific timestamp
+   * @param pubkey Single pubkey or array of pubkeys
+   * @param kind Event kind
+   * @param sinceTimestamp Timestamp in seconds (Nostr format)
+   * @returns Array of events created after the timestamp
+   */
+  async getEventsByPubkeyAndKindSince(
+    pubkey: string | string[],
+    kind: number,
+    sinceTimestamp: number
+  ): Promise<Event[]> {
+    try {
+      // Get all events by pubkey and kind
+      const events = await this.getEventsByPubkeyAndKind(pubkey, kind);
+      
+      // Filter events since the timestamp
+      return events.filter(event => event.created_at >= sinceTimestamp);
+    } catch (error) {
+      const pubkeyDisplay = Array.isArray(pubkey) ? `[multiple keys: ${pubkey.length}]` : pubkey;
+      this.logger.error(
+        `Error getting events by pubkey ${pubkeyDisplay} and kind ${kind} since ${sinceTimestamp}`,
+        error
+      );
+      return [];
+    }
+  }
+
   async getParameterizedReplaceableEvent(
     pubkey: string | string[],
     kind: number,

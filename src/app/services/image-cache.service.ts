@@ -14,50 +14,40 @@ export class ImageCacheService {
 
   /**
    * Gets the optimized image URL with proper cache headers
+   * Uses standard size 96x96 for all profile images
    */
-  getOptimizedImageUrl(originalUrl: string, width = 128, height = 128): string {
+  getOptimizedImageUrl(originalUrl: string): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
       return originalUrl;
     }
 
-    // Enforce standard sizes: 48x48 or 128x128
-    // If requested size is larger than 48x48, use 128x128
-    // Otherwise use 48x48
-    const targetSize = (width > 48 || height > 48) ? 128 : 48;
-
     const encodedUrl = encodeURIComponent(originalUrl);
-    return `${this.PROXY_BASE_URL}?w=${targetSize}&h=${targetSize}&url=${encodedUrl}`;
+    return `${this.PROXY_BASE_URL}?w=96&h=96&url=${encodedUrl}`;
   }
 
   /**
    * Preload an image for faster display
    * @param originalUrl The original image URL
-   * @param width Target width
-   * @param height Target height
    */
-  async preloadImage(originalUrl: string, width = 128, height = 128): Promise<void> {
+  async preloadImage(originalUrl: string): Promise<void> {
     if (!originalUrl || !this.settingsService.settings().imageCacheEnabled) {
       return;
     }
 
-    const optimizedUrl = this.getOptimizedImageUrl(originalUrl, width, height);
+    const optimizedUrl = this.getOptimizedImageUrl(originalUrl);
     await this.imagePreloader.preloadImage(optimizedUrl);
   }
 
   /**
    * Preload multiple images in parallel
-   * @param imageUrls Array of {url, width, height} objects
+   * @param imageUrls Array of image URLs
    */
-  async preloadImages(
-    imageUrls: { url: string; width?: number; height?: number }[]
-  ): Promise<void> {
+  async preloadImages(imageUrls: string[]): Promise<void> {
     if (!this.settingsService.settings().imageCacheEnabled) {
       return;
     }
 
-    const optimizedUrls = imageUrls.map(({ url, width = 128, height = 128 }) =>
-      this.getOptimizedImageUrl(url, width, height)
-    );
+    const optimizedUrls = imageUrls.map(url => this.getOptimizedImageUrl(url));
 
     await this.imagePreloader.preloadImages(optimizedUrls);
   }

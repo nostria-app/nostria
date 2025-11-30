@@ -16,7 +16,7 @@ import { kinds } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { NostrService } from '../../services/nostr.service';
 import { AccountStateService } from '../../services/account-state.service';
-import { StorageService } from '../../services/storage.service';
+import { DatabaseService } from '../../services/database.service';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 
 interface EventKindInfo {
@@ -48,7 +48,7 @@ export class DeleteAccountComponent implements OnInit {
   private readonly dataService = inject(DataService);
   private readonly nostrService = inject(NostrService);
   private readonly accountStateService = inject(AccountStateService);
-  private readonly storageService = inject(StorageService);
+  private readonly databaseService = inject(DatabaseService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly router = inject(Router);
@@ -101,7 +101,7 @@ export class DeleteAccountComponent implements OnInit {
 
     try {
       // Get all user events from storage
-      const events = await this.storageService.getUserEvents(currentAccount.pubkey);
+      const events = await this.databaseService.getUserEvents(currentAccount.pubkey);
 
       // Group events by kind and count them
       const kindCounts = new Map<number, number>();
@@ -219,7 +219,7 @@ export class DeleteAccountComponent implements OnInit {
 
     try {
       // Get all user events again (in case of changes)
-      const events = await this.storageService.getUserEvents(currentAccount.pubkey);
+      const events = await this.databaseService.getUserEvents(currentAccount.pubkey);
       const totalEvents = events.length;
 
       if (totalEvents === 0) {

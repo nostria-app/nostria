@@ -38,6 +38,11 @@ export abstract class RelayServiceBase {
   protected currentRequests = 0;
   protected requestQueue: (() => void)[] = [];
 
+  // Request deduplication cache for get() requests
+  // Key: JSON stringified filter, Value: Promise of the request
+  protected readonly getRequestCache = new Map<string, Promise<Event | null>>();
+  protected readonly GET_CACHE_TIMEOUT = 5000; // 5 seconds cache
+
   // Signal to store the relays
   // relays: Relay[] = [];
   relays = signal<Relay[]>([]);
@@ -469,6 +474,66 @@ export abstract class RelayServiceBase {
   ): Promise<T | null> {
     const urls = relayUrls;
 
+    if (urls.length === 0) {
+      this.logger.warn(`[${this.constructor.name}] No relays available for query`);
+      return null;
+    }
+
+    // Create cache key for request deduplication
+    const cacheKey = JSON.stringify({ filter, urls: urls.sort() });
+
+    // Check for existing pending request SYNCHRONOUSLY
+    if (this.getRequestCache.has(cacheKey)) {
+      if (filter.kinds?.includes(0)) {
+        this.logger.debug(`[${this.constructor.name}] Dedup: returning cached request for authors: ${filter.authors?.[0]?.substring(0, 8)}...`);
+      }
+      return this.getRequestCache.get(cacheKey) as Promise<T | null>;
+    }
+
+    // Create deferred promise and cache it SYNCHRONOUSLY before any async work
+    let resolvePromise: (value: T | null) => void;
+    let rejectPromise: (error: unknown) => void;
+    const requestPromise = new Promise<T | null>((resolve, reject) => {
+      resolvePromise = resolve;
+      rejectPromise = reject;
+    });
+
+    // Cache the promise IMMEDIATELY (synchronously)
+    this.getRequestCache.set(cacheKey, requestPromise as Promise<Event | null>);
+
+    // Clean up cache after timeout
+    setTimeout(() => {
+      this.getRequestCache.delete(cacheKey);
+    }, this.GET_CACHE_TIMEOUT);
+
+    // Now do the async work
+    try {
+      const result = await this.executeGetWithRelays<T>(filter, urls, options);
+      resolvePromise!(result);
+      return result;
+    } catch (error) {
+      rejectPromise!(error as unknown);
+      throw error;
+    }
+  }
+
+  /**
+   * Internal method to execute the actual relay request
+   */
+  private async executeGetWithRelays<T extends Event = Event>(
+    filter: {
+      ids?: string[];
+      kinds?: number[];
+      authors?: string[];
+      '#e'?: string[];
+      '#p'?: string[];
+      since?: number;
+      until?: number;
+      limit?: number;
+    },
+    urls: string[],
+    options: { timeout?: number } = {},
+  ): Promise<T | null> {
     // Don't apply optimization to explicit relay URLs - use them as provided
     // if (this.useOptimizedRelays) {
     //   urls = this.relaysService.getOptimalRelays(relayUrls);
@@ -479,20 +544,6 @@ export abstract class RelayServiceBase {
 
     if (isNpub) {
       // TODO: Handle npub format if needed
-    }
-
-    // Reduced logging - only log for non-metadata and when needed
-    // if (!filter.kinds?.includes(0)) {
-    //   this.logger.debug(
-    //     `[${this.constructor.name}] Getting events with filters (explicit relays):`,
-    //     filter,
-    //     urls
-    //   );
-    // }
-
-    if (urls.length === 0) {
-      this.logger.warn(`[${this.constructor.name}] No relays available for query`);
-      return null;
     }
 
     // Register the request with the subscription manager

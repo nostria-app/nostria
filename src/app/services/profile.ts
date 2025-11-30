@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { DataService } from './data.service';
 import { AccountStateService } from './account-state.service';
 import { MediaService } from './media.service';
@@ -58,7 +58,7 @@ export class Profile {
   private nostr = inject(NostrService);
   // private relay = inject(RelayService);
   private accountRelay = inject(AccountRelayService);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private data = inject(DataService);
   private accountState = inject(AccountStateService);
   private media = inject(MediaService);
@@ -161,7 +161,7 @@ export class Profile {
       this.logger.debug('Profile published to relays');
 
       // Save locally
-      await this.storage.saveEvent(profileEvent);
+      await this.database.saveEvent(profileEvent);
       this.logger.debug('Profile saved locally');
 
       // Update account state

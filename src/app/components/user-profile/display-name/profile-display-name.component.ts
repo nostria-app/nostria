@@ -271,8 +271,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private preloadProfileImage(profile: any): void {
     if (profile?.data?.picture && this.settingsService.settings().imageCacheEnabled) {
       // Preload the image in the background - don't await
-      // Use 48x48 for display name (likely icon size)
-      this.imageCacheService.preloadImage(profile.data.picture, 48, 48).catch(error => {
+      this.imageCacheService.preloadImage(profile.data.picture).catch(error => {
         this.logger.debug('Failed to preload profile image:', error);
       });
     }

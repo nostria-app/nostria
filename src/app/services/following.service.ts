@@ -1,13 +1,21 @@
 import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
-import { StorageService, InfoRecord, TrustMetrics } from './storage.service';
+import { DatabaseService, TrustMetrics } from './database.service';
 import { UserDataService } from './user-data.service';
 import { Metrics } from './metrics';
 import { LoggerService } from './logger.service';
 import { NostrRecord } from '../interfaces';
 import { UserMetric } from '../interfaces/metrics';
 import { ImageCacheService } from './image-cache.service';
+
+// Define InfoRecord locally for type compatibility
+interface InfoRecord {
+  key: string;
+  type: string;
+  updated: number;
+  [key: string]: unknown;
+}
 
 /**
  * Complete profile data structure for a followed user
@@ -31,7 +39,7 @@ export interface FollowingProfile {
 })
 export class FollowingService {
   private readonly accountState = inject(AccountStateService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly userData = inject(UserDataService);
   private readonly metrics = inject(Metrics);
   private readonly logger = inject(LoggerService);
@@ -71,10 +79,10 @@ export class FollowingService {
         // Initial load happens when:
         // 1. No previous following list was tracked, AND
         // 2. Service hasn't been initialized yet, OR profiles map is empty
-        const isInitialLoad = 
-          this.previousFollowingList.length === 0 && 
+        const isInitialLoad =
+          this.previousFollowingList.length === 0 &&
           (!this.isInitialized() || this.profilesMap().size === 0);
-        
+
         if (isInitialLoad) {
           // Initial load - load all profiles
           this.logger.info(`[FollowingService] Initial load of ${followingList.length} profiles`);
@@ -102,8 +110,26 @@ export class FollowingService {
     this.logger.info(`[FollowingService] Loading ${pubkeys.length} following profiles...`);
 
     try {
+      // Wait for profile cache to be loaded from storage by ApplicationService
+      // This ensures we don't make duplicate requests for profiles already in cache
+      // Both services are triggered by the same followingList signal change
+      const maxWaitTime = 2000; // 2 seconds max
+      const pollInterval = 50; // Check every 50ms
+      let waited = 0;
+
+      while (!this.accountState.profileCacheLoaded() && waited < maxWaitTime) {
+        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        waited += pollInterval;
+      }
+
+      if (waited > 0) {
+        this.logger.debug(`[FollowingService] Waited ${waited}ms for profile cache to load`);
+      }
+
       // Create a new map to store all profiles
       const newMap = new Map<string, FollowingProfile>();
+      let cachedCount = 0;
+      let loadedCount = 0;
 
       // Load all profiles in parallel batches
       const batchSize = 50;
@@ -112,9 +138,32 @@ export class FollowingService {
         await Promise.all(
           batch.map(async (pubkey) => {
             try {
-              // Skip relay fetch for initial bulk load to prevent network spam
-              const profile = await this.loadSingleProfile(pubkey, true);
-              newMap.set(pubkey, profile);
+              // Check if profile is already in the shared cache (populated by loadProfilesFromStorageToCache)
+              const cachedProfile = this.accountState.getCachedProfile(pubkey);
+              if (cachedProfile) {
+                // Use cached profile data directly without making any requests
+                cachedCount++;
+                const now = Math.floor(Date.now() / 1000);
+                const [infoRecord, trustMetrics, metricData] = await Promise.all([
+                  this.database.getInfo(pubkey, 'user').catch(() => null) as Promise<InfoRecord | null>,
+                  this.database.getInfo(pubkey, 'trust').catch(() => null),
+                  this.metrics.getUserMetric(pubkey).catch(() => null),
+                ]);
+                newMap.set(pubkey, {
+                  pubkey,
+                  event: cachedProfile.event || null,
+                  profile: cachedProfile,
+                  info: infoRecord || null,
+                  trust: trustMetrics as TrustMetrics | null,
+                  metric: metricData,
+                  lastUpdated: now,
+                });
+              } else {
+                // Not in cache, load from storage/relay (with skipRelay=true for bulk load)
+                loadedCount++;
+                const profile = await this.loadSingleProfile(pubkey, true);
+                newMap.set(pubkey, profile);
+              }
             } catch (error) {
               this.logger.error(`[FollowingService] Failed to load profile for ${pubkey}:`, error);
               // Create a minimal profile even on error
@@ -132,7 +181,7 @@ export class FollowingService {
       // Update the signal with the new map
       this.profilesMap.set(newMap);
       this.isInitialized.set(true);
-      this.logger.info(`[FollowingService] Successfully loaded ${newMap.size} following profiles`);
+      this.logger.info(`[FollowingService] Successfully loaded ${newMap.size} following profiles (${cachedCount} from cache, ${loadedCount} from storage)`);
 
       // Preload profile images in the background
       this.preloadProfileImages(newMap);
@@ -234,17 +283,13 @@ export class FollowingService {
 
     schedulePreload(async () => {
       try {
-        const imagesToPreload: { url: string; width: number; height: number }[] = [];
+        const imagesToPreload: string[] = [];
 
         // Collect all profile image URLs
         for (const profile of profilesMap.values()) {
           if (profile.profile?.data?.picture) {
-            // Preload images in different sizes commonly used
-            imagesToPreload.push(
-              { url: profile.profile.data.picture, width: 40, height: 40 }, // list view
-              { url: profile.profile.data.picture, width: 48, height: 48 }, // small/icon view
-              { url: profile.profile.data.picture, width: 128, height: 128 } // medium view
-            );
+            // Preload images at 96x96 (standard size for all profile images)
+            imagesToPreload.push(profile.profile.data.picture);
           }
         }
 
@@ -270,8 +315,8 @@ export class FollowingService {
     // Load all data in parallel
     const [profileData, infoRecord, trustMetrics, metricData] = await Promise.all([
       this.userData.getProfile(pubkey, { skipRelay }).catch(() => null),
-      this.storage.getInfo(pubkey, 'user').catch(() => null),
-      this.storage.getInfo(pubkey, 'trust').catch(() => null),
+      this.database.getInfo(pubkey, 'user').catch(() => null) as Promise<InfoRecord | null>,
+      this.database.getInfo(pubkey, 'trust').catch(() => null),
       this.metrics.getUserMetric(pubkey).catch(() => null),
     ]);
 
