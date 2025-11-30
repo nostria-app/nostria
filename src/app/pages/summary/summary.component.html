@@ -103,6 +103,40 @@
     </section>
     }
 
+    <!-- Media Section -->
+    @if (mediaEvents().length > 0) {
+    <mat-divider></mat-divider>
+
+    <section class="media-section">
+      <h2 class="section-title">
+        <mat-icon>perm_media</mat-icon>
+        Media
+        <span class="section-count">{{ mediaEvents().length }}</span>
+      </h2>
+      <p class="section-description">Photos and videos shared recently</p>
+      <div class="media-grid">
+        @for (event of mediaEvents().slice(0, 12); track event.id) {
+        @if (getMediaUrl(event); as mediaUrl) {
+        <a class="media-card" [routerLink]="['/e', event.id]">
+          <div class="media-preview">
+            @if (isVideoUrl(mediaUrl)) {
+            <div class="video-indicator">
+              <mat-icon>play_circle</mat-icon>
+            </div>
+            }
+            <img [src]="mediaUrl" alt="Media content" title="View media" loading="lazy" />
+          </div>
+          <div class="media-overlay">
+            <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
+            <span class="media-time">{{ event.created_at | ago }}</span>
+          </div>
+        </a>
+        }
+        }
+      </div>
+    </section>
+    }
+
     <!-- Profile Updates Section -->
     @if (profileUpdates().length > 0) {
     <mat-divider></mat-divider>

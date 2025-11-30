@@ -375,6 +375,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
         kind: e.kind,
         created_at: e.created_at,
         content: e.content,
+        tags: e.tags, // Include tags for media URL extraction
       })));
 
       this.calculatePosterStats(notes, articles, media);
@@ -556,5 +557,44 @@ export class SummaryComponent implements OnInit, OnDestroy {
       return (num / 1000).toFixed(1) + 'K';
     }
     return num.toString();
+  }
+
+  /**
+   * Extract media URL from event tags (imeta tag format: ["imeta", "url <url>", ...])
+   */
+  getMediaUrl(event: TimelineEvent): string | null {
+    if (!event.tags) return null;
+
+    // Look for imeta tag
+    const imetaTag = event.tags.find(t => t[0] === 'imeta');
+    if (imetaTag) {
+      // Find the url entry in imeta tag
+      const urlEntry = imetaTag.find(v => v.startsWith('url '));
+      if (urlEntry) {
+        return urlEntry.substring(4).trim();
+      }
+    }
+
+    // Fallback: check content for URL
+    if (event.content) {
+      const urlMatch = event.content.match(/https?:\/\/[^\s]+/);
+      if (urlMatch) return urlMatch[0];
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if a URL is likely a video based on extension or common video hosts
+   */
+  isVideoUrl(url: string): boolean {
+    const videoExtensions = ['.mp4', '.webm', '.mov', '.avi', '.mkv', '.m3u8'];
+    const videoHosts = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.tv'];
+
+    const lowerUrl = url.toLowerCase();
+    if (videoExtensions.some(ext => lowerUrl.includes(ext))) return true;
+    if (videoHosts.some(host => lowerUrl.includes(host))) return true;
+
+    return false;
   }
 }
