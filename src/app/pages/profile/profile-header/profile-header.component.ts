@@ -29,7 +29,7 @@ import {
   PublishDialogData,
 } from '../../../components/publish-dialog/publish-dialog.component';
 import { kinds } from 'nostr-tools';
-import { StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
 import type { ReportTarget } from '../../../services/reporting.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { ZapButtonComponent } from '../../../components/zap-button/zap-button.component';
@@ -80,7 +80,7 @@ export class ProfileHeaderComponent {
   private snackBar = inject(MatSnackBar);
   private favoritesService = inject(FavoritesService);
   private dialog = inject(MatDialog);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private accountService = inject(AccountService);
   private reportingService = inject(ReportingService);
   private zapService = inject(ZapService);
@@ -855,7 +855,7 @@ export class ProfileHeaderComponent {
 
     try {
       // Get the relay list event (kind 10002)
-      const relayListEvent = await this.storage.getEventByPubkeyAndKind(
+      const relayListEvent = await this.database.getEventByPubkeyAndKind(
         currentPubkey,
         kinds.RelayList
       );
@@ -893,7 +893,7 @@ export class ProfileHeaderComponent {
 
     try {
       // Get the following list event (kind 3)
-      const followingListEvent = await this.storage.getEventByPubkeyAndKind(
+      const followingListEvent = await this.database.getEventByPubkeyAndKind(
         currentPubkey,
         kinds.Contacts
       );

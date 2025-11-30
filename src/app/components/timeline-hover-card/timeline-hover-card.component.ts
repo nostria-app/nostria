@@ -14,7 +14,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Router, RouterModule } from '@angular/router';
 import { DataService } from '../../services/data.service';
 import { UtilitiesService } from '../../services/utilities.service';
-import { StorageService } from '../../services/storage.service';
+import { DatabaseService } from '../../services/database.service';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { FavoritesService } from '../../services/favorites.service';
 import { kinds } from 'nostr-tools';
@@ -38,7 +38,7 @@ import type { NostrRecord } from '../../interfaces';
 export class TimelineHoverCardComponent {
   private dataService = inject(DataService);
   private utilities = inject(UtilitiesService);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private userRelayService = inject(UserRelayService);
   private favoritesService = inject(FavoritesService);
   private router = inject(Router);
@@ -108,7 +108,7 @@ export class TimelineHoverCardComponent {
         this.recentNotes.set(notes);
       } else {
         // Fallback to storage if relay query fails or returns nothing
-        const storageEvents = await this.storage.getUserEvents(pubkey);
+        const storageEvents = await this.database.getUserEvents(pubkey);
         const rootNotes = storageEvents
           .filter(event => event.kind === kinds.ShortTextNote && this.utilities.isRootPost(event))
           .sort((a, b) => b.created_at - a.created_at)

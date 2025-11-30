@@ -4,7 +4,7 @@ import { NostrRecord } from '../interfaces';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 import { DataService } from './data.service';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { NostrUser } from './nostr.service';
 import { AccountService } from '../api/services';
 import { Account, Feature } from '../api/models';
@@ -41,7 +41,7 @@ export class AccountStateService implements OnDestroy {
   private readonly appState = inject(ApplicationStateService);
   private readonly data = inject(DataService);
   private readonly accountService = inject(AccountService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly utilities = inject(UtilitiesService);
   private readonly wallets = inject(Wallets);
   private readonly cache = inject(Cache);
@@ -90,6 +90,10 @@ export class AccountStateService implements OnDestroy {
   account = signal<NostrUser | null>(null);
   accounts = signal<NostrUser[]>([]);
 
+  // Signal to track when profile cache has been loaded from storage
+  // FollowingService waits for this before making individual profile requests
+  profileCacheLoaded = signal(false);
+
   // Signal to store pre-loaded account profiles for fast access
   accountProfiles = signal<Map<string, NostrRecord>>(new Map());
 
@@ -97,6 +101,8 @@ export class AccountStateService implements OnDestroy {
   private isPreloadingProfiles = false;
   // Track the last set of account pubkeys we preloaded for
   private lastPreloadedAccountPubkeys = new Set<string>();
+  // Track pending background profile loads to prevent duplicate requests
+  private pendingProfileBackgroundLoads = new Set<string>();
 
   hasAccounts = computed(() => {
     return this.accounts().length > 0;
@@ -231,12 +237,12 @@ export class AccountStateService implements OnDestroy {
 
     if (existingFollowingEvent) {
       // Save fresh following list to storage
-      await this.storage.saveEvent(existingFollowingEvent);
+      await this.database.saveEvent(existingFollowingEvent);
       console.log('Fetched fresh following list from relay before unfollowing');
     } else {
       // Fallback to storage only if relay fetch fails
       console.warn('Could not fetch following list from relay, falling back to storage');
-      existingFollowingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+      existingFollowingEvent = await this.database.getEventByPubkeyAndKind([account.pubkey], 3);
     }
 
     if (!existingFollowingEvent) {
@@ -376,12 +382,12 @@ export class AccountStateService implements OnDestroy {
 
     if (existingFollowingEvent) {
       // Save fresh following list to storage (relay always returns signed Event)
-      await this.storage.saveEvent(existingFollowingEvent);
+      await this.database.saveEvent(existingFollowingEvent);
       console.log('Fetched fresh following list from relay before following');
     } else {
       // Fallback to storage only if relay fetch fails
       console.warn('Could not fetch following list from relay, falling back to storage');
-      existingFollowingEvent = await this.storage.getEventByPubkeyAndKind([account.pubkey], 3);
+      existingFollowingEvent = await this.database.getEventByPubkeyAndKind([account.pubkey], 3);
     }
 
     // Get existing tags (p-tags for followed users)
@@ -442,12 +448,16 @@ export class AccountStateService implements OnDestroy {
       const hasChanged = !this.utilities.arraysEqual(currentFollowingList, followingTags);
       if (hasChanged) {
         this.followingList.set(followingTags);
-        await this.storage.saveEvent(event);
+        await this.database.saveEvent(event);
       }
     }
   }
 
   changeAccount(account: NostrUser | null): void {
+    // Reset profile cache loaded flag when account changes
+    // This ensures FollowingService waits for the new account's profiles to load
+    this.profileCacheLoaded.set(false);
+
     // this.accountChanging.set(account?.pubkey || '');
     this.account.set(account);
 
@@ -727,7 +737,7 @@ export class AccountStateService implements OnDestroy {
       return;
     }
 
-    console.log('🔄 [Profile Loading] Starting profile processing');
+    console.log('🔄 [Profile Loading] Starting batch profile processing');
     console.log(`📊 [Profile Loading] Total profiles to load: ${pubkeys.length}`);
     console.log(`👤 [Profile Loading] Account: ${this.pubkey()?.substring(0, 8)}...`);
 
@@ -740,51 +750,40 @@ export class AccountStateService implements OnDestroy {
     });
 
     const startTime = Date.now();
-    let successCount = 0;
-    let failureCount = 0;
-    let skippedCount = 0;
 
     try {
-      // Use parallel processing with the optimized discovery queue
-      await Promise.allSettled(
-        pubkeys.map(async pubkey => {
-          try {
-            this.profileProcessingState.update(state => ({
-              ...state,
-              currentProfile: pubkey,
-            }));
-
-            const profile = await dataService.getProfile(pubkey);
-
-            if (profile) {
-              this.addToCache(pubkey, profile);
-              successCount++;
-            } else {
-              skippedCount++;
-              console.warn(`⚠️ [Profile Loading] No profile found for ${pubkey.substring(0, 8)}...`);
-            }
-
-            this.profileProcessingState.update(state => ({
-              ...state,
-              processed: state.processed + 1,
-            }));
-          } catch (error) {
-            failureCount++;
-            console.error(`❌ [Profile Loading] Failed to cache profile for ${pubkey.substring(0, 8)}...:`, error);
-            this.profileProcessingState.update(state => ({
-              ...state,
-              processed: state.processed + 1,
-            }));
-          }
-        })
+      // Use batch loading instead of individual requests
+      const results = await dataService.batchLoadProfiles(
+        pubkeys,
+        (loaded, total, pubkey) => {
+          this.profileProcessingState.update(state => ({
+            ...state,
+            processed: loaded,
+            currentProfile: pubkey,
+          }));
+        }
       );
 
+      // Add all loaded profiles to cache
+      let successCount = 0;
+      for (const [pubkey, profile] of results) {
+        this.addToCache(pubkey, profile);
+        successCount++;
+      }
+
+      const skippedCount = pubkeys.length - successCount;
       const duration = Date.now() - startTime;
-      console.log(`✅ [Profile Loading] Profile processing completed in ${duration}ms`);
-      console.log(`📈 [Profile Loading] Results: ${successCount} succeeded, ${failureCount} failed, ${skippedCount} skipped`);
+
+      console.log(`✅ [Profile Loading] Batch processing completed in ${duration}ms`);
+      console.log(`📈 [Profile Loading] Results: ${successCount} loaded, ${skippedCount} not found`);
       console.log(`💾 [Profile Loading] Total cached profiles: ${this.cache.keys().filter(k => k.startsWith('metadata-')).length}`);
+
+      // Signal that cache loading is complete - FollowingService waits for this
+      this.profileCacheLoaded.set(true);
     } catch (error) {
-      console.error('❌ [Profile Loading] Failed to start profile processing:', error);
+      console.error('❌ [Profile Loading] Failed to complete batch profile processing:', error);
+      // Still mark as loaded on error so FollowingService doesn't wait forever
+      this.profileCacheLoaded.set(true);
     } finally {
       // Mark processing as complete only if we're still in the processing state
       // This prevents race conditions with restart attempts
@@ -994,7 +993,11 @@ export class AccountStateService implements OnDestroy {
 
     // If not found anywhere, trigger async load in background
     // Use setTimeout to schedule for next tick
-    setTimeout(() => this.loadAccountProfileInBackground(pubkey), 0);
+    // Check if we already have a pending load for this pubkey
+    if (!this.pendingProfileBackgroundLoads.has(pubkey)) {
+      this.pendingProfileBackgroundLoads.add(pubkey);
+      setTimeout(() => this.loadAccountProfileInBackground(pubkey), 0);
+    }
 
     return undefined;
   }
@@ -1011,9 +1014,26 @@ export class AccountStateService implements OnDestroy {
           newProfiles.set(pubkey, profile);
           return newProfiles;
         });
+      } else {
+        // Even if profile is not found, add a marker to prevent repeated requests
+        // Use a minimal placeholder to indicate we tried but found nothing
+        this.accountProfiles.update(profiles => {
+          const newProfiles = new Map(profiles);
+          newProfiles.set(pubkey, { isEmpty: true, pubkey } as unknown as NostrRecord);
+          return newProfiles;
+        });
       }
     } catch (error) {
       console.warn('Failed to load account profile in background:', pubkey, error);
+      // Add empty placeholder to prevent repeated failed requests
+      this.accountProfiles.update(profiles => {
+        const newProfiles = new Map(profiles);
+        newProfiles.set(pubkey, { isEmpty: true, pubkey, error: true } as unknown as NostrRecord);
+        return newProfiles;
+      });
+    } finally {
+      // Remove from pending set when done
+      this.pendingProfileBackgroundLoads.delete(pubkey);
     }
   }
 
@@ -1027,7 +1047,7 @@ export class AccountStateService implements OnDestroy {
   async loadProfilesFromStorageToCache(
     pubkey: string,
     dataService: DataService,
-    storageService: StorageService
+    databaseService: DatabaseService
   ): Promise<void> {
     if (!this.hasProfileDiscoveryBeenDone(pubkey)) {
       console.log(`⏭️ [Profile Loading] Skipping storage load - discovery not done for ${pubkey.substring(0, 8)}...`);
@@ -1047,7 +1067,7 @@ export class AccountStateService implements OnDestroy {
       const startTime = Date.now();
 
       // Load metadata events from storage for all following users
-      const events = await storageService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
+      const events = await databaseService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
       const records = dataService.toRecords(events);
 
       console.log(`💾 [Profile Loading] Found ${records.length} metadata records in storage`);
@@ -1068,8 +1088,13 @@ export class AccountStateService implements OnDestroy {
         console.warn(`⚠️ [Profile Loading] Missing ${missingCount} profiles from storage (${followingList.length - records.length}/${followingList.length})`);
       }
       console.log(`💾 [Profile Loading] Total cached profiles now: ${this.cache.keys().filter(k => k.startsWith('metadata-')).length}`);
+
+      // Signal that cache loading is complete - FollowingService waits for this
+      this.profileCacheLoaded.set(true);
     } catch (error) {
       console.error('❌ [Profile Loading] Failed to load profiles from storage to cache:', error);
+      // Still mark as loaded on error so FollowingService doesn't wait forever
+      this.profileCacheLoaded.set(true);
     }
   }
 

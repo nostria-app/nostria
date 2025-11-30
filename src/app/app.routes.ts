@@ -21,6 +21,7 @@ import { NotificationSettingsComponent } from './pages/notifications/settings/se
 import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
 import { ProfileEditComponent } from './pages/profile/profile-edit/profile-edit.component';
 import { FeedsComponent } from './pages/feeds/feeds.component';
+import { SummaryComponent } from './pages/summary/summary.component';
 import { ArticleComponent } from './pages/article/article.component';
 import { EditorComponent } from './pages/article/editor/editor.component';
 import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
@@ -87,6 +88,7 @@ export const routes: Routes = [
     title: 'Home',
   },
   { path: 'share-target', component: ShareTargetComponent },
+  { path: 'summary', component: SummaryComponent, data: { isRoot: true }, title: 'Summary' },
   { path: 'f', component: FeedsComponent, title: 'Feeds' },
   { path: 'f/:path', component: FeedsComponent, title: 'Feeds' },
   {

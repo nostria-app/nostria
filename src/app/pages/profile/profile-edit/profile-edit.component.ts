@@ -10,7 +10,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { NostrService } from '../../../services/nostr.service';
 import { Router } from '@angular/router';
-import { StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { DataService } from '../../../services/data.service';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -36,7 +36,7 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 })
 export class ProfileEditComponent implements OnInit {
   nostr = inject(NostrService);
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
   data = inject(DataService);
   accountRelay = inject(AccountRelayService);
   router = inject(Router);

@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { kinds, SimplePool } from 'nostr-tools';
-import { StorageService } from '../storage.service';
+import { DatabaseService } from '../database.service';
 import { RelayServiceBase } from './relay';
 import { DiscoveryRelayService } from './discovery-relay';
 
@@ -8,7 +8,7 @@ import { DiscoveryRelayService } from './discovery-relay';
   providedIn: 'root',
 })
 export class AccountRelayService extends RelayServiceBase {
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private discoveryRelay = inject(DiscoveryRelayService);
 
   constructor() {
@@ -35,7 +35,7 @@ export class AccountRelayService extends RelayServiceBase {
     let malformedEvent: any = undefined;
 
     // Get the relays URLs from storage, if available.
-    let event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+    let event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
     if (event) {
       this.logger.debug(`Found relay list for pubkey ${pubkey} in storage`);
@@ -54,7 +54,7 @@ export class AccountRelayService extends RelayServiceBase {
         relayUrls = this.utilities.getRelayUrls(event);
       }
     } else {
-      event = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
       if (event) {
         relayUrls = this.utilities.getRelayUrlsFromFollowing(event);

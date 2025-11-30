@@ -12,6 +12,7 @@ import { TimelineHoverCardService } from '../../services/timeline-hover-card.ser
 import { AccountStateService } from '../../services/account-state.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { FollowingService } from '../../services/following.service';
 
 @Component({
   selector: 'app-favorites-overlay',
@@ -33,6 +34,7 @@ export class FavoritesOverlayComponent {
   private accountState = inject(AccountStateService);
   private imageCacheService = inject(ImageCacheService);
   private accountLocalState = inject(AccountLocalStateService);
+  private followingService = inject(FollowingService);
   layout = inject(LayoutService);
 
   // Signal to track if overlay is visible
@@ -92,18 +94,26 @@ export class FavoritesOverlayComponent {
       }
     });
 
-    // Effect to load profiles when favorites change
+    // Effect to load profiles when favorites change - use cached profiles when available
     effect(() => {
       const favs = this.favorites();
+      // Track FollowingService initialization to re-run when profiles are loaded
+      const isInitialized = this.followingService.isInitialized();
 
-      // Run async operations untracked
+      // Run untracked to avoid re-triggering
       untracked(async () => {
         if (favs.length === 0) {
           this.favoritesWithProfiles.set([]);
           return;
         }
 
+        // Use profiles from FollowingService cache, only fetch if not available
         const profilesPromises = favs.map(async (pubkey) => {
+          const cachedProfile = this.followingService.getProfile(pubkey);
+          if (cachedProfile?.profile) {
+            return { pubkey, profile: cachedProfile.profile };
+          }
+          // Fallback to fetching if not in cache (shouldn't happen for following)
           const profile = await this.data.getProfile(pubkey);
           return { pubkey, profile };
         });
@@ -112,15 +122,13 @@ export class FavoritesOverlayComponent {
         this.favoritesWithProfiles.set(profiles);
 
         // Preload images for favorites
-        const imagesToPreload: { url: string; width: number; height: number }[] = [];
+        const imagesToPreload: string[] = [];
 
         profiles.forEach((p) => {
           const url = p.profile?.data?.picture;
           if (url) {
-            // Preload 128x128 for overlay
-            imagesToPreload.push({ url, width: 128, height: 128 });
-            // Preload 48x48 for preview bar
-            imagesToPreload.push({ url, width: 48, height: 48 });
+            // Preload at 96x96 (standard size for all profile images)
+            imagesToPreload.push(url);
           }
         });
 
@@ -130,30 +138,31 @@ export class FavoritesOverlayComponent {
       });
     });
 
-    // Effect to load profiles for all following
+    // Effect to load profiles for all following - use FollowingService's cached profiles
     effect(() => {
       const followingList = this.following();
+      // Track FollowingService initialization to re-run when profiles are loaded
+      const isInitialized = this.followingService.isInitialized();
 
-      // Run async operations untracked
-      untracked(async () => {
+      // Run untracked to avoid re-triggering
+      untracked(() => {
         if (followingList.length === 0) {
           this.followingWithProfiles.set([]);
           return;
         }
 
-        const profilesPromises = followingList.map(async (pubkey) => {
-          const profile = await this.data.getProfile(pubkey);
-          return { pubkey, profile };
+        // Use profiles already loaded by FollowingService instead of making new requests
+        const profiles = followingList.map((pubkey) => {
+          const followingProfile = this.followingService.getProfile(pubkey);
+          return { pubkey, profile: followingProfile?.profile || undefined };
         });
 
-        const profiles = await Promise.all(profilesPromises);
         this.followingWithProfiles.set(profiles);
 
-        // Preload images for following (only used in overlay at 128x128)
+        // Preload images for following at 96x96 (standard size)
         const imagesToPreload = profiles
           .map((p) => p.profile?.data?.picture)
-          .filter((url) => !!url)
-          .map((url) => ({ url: url!, width: 128, height: 128 }));
+          .filter((url): url is string => !!url);
 
         if (imagesToPreload.length > 0) {
           this.imageCacheService.preloadImages(imagesToPreload);
@@ -250,17 +259,16 @@ export class FavoritesOverlayComponent {
     const pictureUrl = profile?.data?.picture;
     if (!pictureUrl) return undefined;
 
-    // Always use the same size regardless of dock state to prevent re-downloading
-    // Use 128px (standard large size)
-    return this.imageCacheService.getOptimizedImageUrl(pictureUrl, 128, 128);
+    // Use 96px (standard size for all profile images)
+    return this.imageCacheService.getOptimizedImageUrl(pictureUrl);
   }
 
   getPreviewAvatarUrl(profile?: NostrRecord): string | undefined {
     const pictureUrl = profile?.data?.picture;
     if (!pictureUrl) return undefined;
 
-    // Preview avatars are 36px, use 48px (standard small size)
-    return this.imageCacheService.getOptimizedImageUrl(pictureUrl, 48, 48);
+    // Use 96px (standard size for all profile images)
+    return this.imageCacheService.getOptimizedImageUrl(pictureUrl);
   }
 
   getInitials(profile?: NostrRecord): string {

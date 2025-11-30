@@ -1,6 +1,5 @@
 import { inject, Injectable } from '@angular/core';
 import { AccountStateService } from './account-state.service';
-import { StorageService } from './storage.service';
 import { Metrics } from './metrics';
 import { UserMetric } from '../interfaces/metrics';
 import { FavoritesService } from './favorites.service';
@@ -12,7 +11,6 @@ import { RegionService } from './region.service';
 })
 export class Algorithms {
   private readonly accountState = inject(AccountStateService);
-  private readonly storage = inject(StorageService);
   private readonly metrics = inject(Metrics);
   private readonly favoritesService = inject(FavoritesService);
   private readonly utilities = inject(UtilitiesService);

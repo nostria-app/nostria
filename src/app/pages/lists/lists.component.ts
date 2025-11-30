@@ -25,7 +25,7 @@ import { PublishService } from '../../services/publish.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
 import { EncryptionService } from '../../services/encryption.service';
-import { StorageService } from '../../services/storage.service';
+import { DatabaseService } from '../../services/database.service';
 import { ListEditorDialogComponent } from './list-editor-dialog/list-editor-dialog.component';
 
 // NIP-51 List type definitions
@@ -334,7 +334,7 @@ export class ListsComponent implements OnInit {
   private readonly dialog = inject(MatDialog);
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
 
   // Available list types
   standardLists = STANDARD_LISTS;
@@ -846,7 +846,7 @@ export class ListsComponent implements OnInit {
         }
 
         // Also save to local database immediately
-        await this.storage.saveEvent(signedEvent);
+        await this.database.saveEvent(signedEvent);
 
         // Invalidate cache so next load gets the fresh data
         await this.data.getEventByPubkeyAndKind(pubkey, listType.kind, {

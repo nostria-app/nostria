@@ -88,6 +88,7 @@ import { AppsMenuComponent } from './components/apps-menu/apps-menu.component';
 import { AiService } from './services/ai.service';
 import { CustomDialogService } from './services/custom-dialog.service';
 import { CommandPaletteDialogComponent } from './components/command-palette-dialog/command-palette-dialog.component';
+import { DatabaseService } from './services/database.service';
 
 interface NavItem {
   path: string;
@@ -175,6 +176,7 @@ export class App implements OnInit {
   cacheCleanup = inject(CacheCleanupService);
   ai = inject(AiService);
   customDialog = inject(CustomDialogService);
+  database = inject(DatabaseService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -321,6 +323,7 @@ export class App implements OnInit {
 
   navItems: NavItem[] = [
     { path: '', label: 'Feeds', icon: 'stacks', authenticated: false },
+    { path: 'summary', label: 'Summary', icon: 'dashboard', authenticated: true },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
     // {
     //   path: 'articles',
@@ -648,15 +651,27 @@ export class App implements OnInit {
       this.logger.info('[App] Initializing storage');
 
       // Add timeout for storage initialization
-      const storageInitPromise = this.storage.init();
-      const timeoutPromise = new Promise<never>((_, reject) => {
+      // const storageInitPromise = this.storage.init();
+      // const timeoutPromise = new Promise<never>((_, reject) => {
+      //   setTimeout(() => {
+      //     reject(new Error('Storage initialization timeout after 15 seconds'));
+      //   }, 15000);
+      // });
+
+      // await Promise.race([storageInitPromise, timeoutPromise]);
+      // this.logger.info('[App] Storage initialized successfully');
+
+      // Initialize the new DatabaseService
+      this.logger.info('[App] Initializing database');
+      const databaseInitPromise = this.database.init();
+      const databaseTimeoutPromise = new Promise<never>((_, reject) => {
         setTimeout(() => {
-          reject(new Error('Storage initialization timeout after 15 seconds'));
+          reject(new Error('Database initialization timeout after 15 seconds'));
         }, 15000);
       });
 
-      await Promise.race([storageInitPromise, timeoutPromise]);
-      this.logger.info('[App] Storage initialized successfully');
+      await Promise.race([databaseInitPromise, databaseTimeoutPromise]);
+      this.logger.info('[App] Database initialized successfully');
 
       // Migrate feed cache from localStorage to IndexedDB (one-time operation)
       this.logger.info('[App] Checking for feed cache migration');

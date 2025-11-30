@@ -7,7 +7,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { StorageService } from '../../services/storage.service';
+import { DatabaseService } from '../../services/database.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import JSZip from '@progress/jszip-esm';
@@ -42,7 +42,7 @@ interface BackupStats {
   styleUrl: './backup.component.scss',
 })
 export class BackupComponent {
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private nostr = inject(NostrService);
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);
@@ -78,8 +78,8 @@ export class BackupComponent {
       const pubkey = this.accountState.pubkey();
       if (!pubkey) return;
 
-      const userEvents = await this.storage.getUserEvents(pubkey);
-      // const userRelays = await this.storage.getUserRelays(pubkey);
+      const userEvents = await this.database.getUserEvents(pubkey);
+      // const userRelays = await this.database.getUserRelays(pubkey);
 
       // Estimate size by converting events to JSON and measuring string length
       // This is just an approximation
@@ -91,7 +91,7 @@ export class BackupComponent {
         relaysCount: 0,
         // relaysCount: userRelays?.relays?.length || 0,
         totalSize: eventsSize,
-        formattedSize: this.storage.formatSize(eventsSize),
+        formattedSize: this.database.formatSize(eventsSize),
       });
     } catch (error) {
       this.logger.error('Error loading backup stats', error);
@@ -113,9 +113,9 @@ export class BackupComponent {
       }
 
       // Fetch all user data
-      const userEvents = await this.storage.getUserEvents(pubkey);
-      // const userRelays = await this.storage.getUserRelays(pubkey);
-      // const userMetadata = await this.storage.getUserMetadata(pubkey);
+      const userEvents = await this.database.getUserEvents(pubkey);
+      // const userRelays = await this.database.getUserRelays(pubkey);
+      // const userMetadata = await this.database.getUserMetadata(pubkey);
 
       if (userEvents.length === 0) {
         this.showMessage('No events found to back up');
@@ -238,12 +238,12 @@ export class BackupComponent {
       let importedCount = 0;
 
       for (const event of backupData.events) {
-        await this.storage.saveEvent(event);
+        await this.database.saveEvent(event);
         importedCount++;
         this.importProgress.set((importedCount / totalEvents) * 100);
       }
 
-      const relayListEvent = await this.storage.getEventByPubkeyAndKind(
+      const relayListEvent = await this.database.getEventByPubkeyAndKind(
         currentPubkey,
         kinds.RelayList
       );

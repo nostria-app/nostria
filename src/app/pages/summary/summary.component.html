@@ -1,0 +1,214 @@
+@if (!app.authenticated()) {
+<div class="unauthenticated-state">
+  <mat-icon>account_circle</mat-icon>
+  <h2>Sign in to see your Summary</h2>
+  <p>Get a quick overview of what's happening in your network.</p>
+</div>
+} @else {
+<div class="summary-container">
+  <!-- Header -->
+  <div class="summary-header">
+    <div class="header-content">
+      <h1>
+        <mat-icon>dashboard</mat-icon>
+        Summary
+      </h1>
+      <p class="last-visit">Since {{ timeSinceLastCheck() }}</p>
+    </div>
+    <div class="header-actions">
+      <a mat-stroked-button routerLink="/notifications" matTooltip="View all notifications">
+        <mat-icon>notifications</mat-icon>
+        Notifications
+      </a>
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isLoading()">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Time Range Selector -->
+  <div class="time-range-selector">
+    <div class="time-presets">
+      <button mat-stroked-button [class.active]="selectedPreset() === null && customDate() === null"
+        (click)="resetToLastVisit()">
+        Last visit
+      </button>
+      @for (preset of timePresets; track preset.hours) {
+      <button mat-stroked-button [class.active]="selectedPreset() === preset.hours"
+        (click)="selectPreset(preset.hours)">
+        {{ preset.label }}
+      </button>
+      }
+    </div>
+    <div class="custom-date-picker">
+      <mat-form-field appearance="outline" subscriptSizing="dynamic">
+        <mat-label>Custom date</mat-label>
+        <input matInput [matDatepicker]="picker" placeholder="Select date" [ngModel]="customDate()"
+          (dateChange)="onCustomDateChange($event.value)" [max]="today">
+        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
+        <mat-datepicker #picker></mat-datepicker>
+      </mat-form-field>
+    </div>
+  </div>
+
+  <!-- Info Banner -->
+  <div class="info-banner">
+    <mat-icon>info</mat-icon>
+    <p>This summary shows cached data from your local database. It may not include all events from the network.</p>
+  </div>
+
+  @if (isLoading()) {
+  <div class="loading-state">
+    <mat-spinner diameter="48"></mat-spinner>
+    <p>Loading your summary...</p>
+  </div>
+  } @else {
+  <div class="summary-content">
+    <!-- Active Posters Section -->
+    @if (activePosters().length > 0) {
+    <section class="active-posters-section">
+      <h2 class="section-title">
+        <mat-icon>group</mat-icon>
+        Who Posted
+        <span class="section-count">{{ activePosters().length }}</span>
+      </h2>
+      <p class="section-description">People who were active during this period</p>
+      <div class="poster-grid">
+        @for (poster of activePosters(); track poster.pubkey) {
+        <a class="poster-card" [routerLink]="['/p', poster.pubkey]">
+          <div class="poster-avatar">
+            <app-user-profile [pubkey]="poster.pubkey" view="icon"></app-user-profile>
+          </div>
+          <div class="poster-stats-badge">
+            <span class="stat-item" matTooltip="Notes">
+              <mat-icon>chat</mat-icon>
+              {{ poster.notesCount }}
+            </span>
+            @if (poster.articlesCount > 0) {
+            <span class="stat-item" matTooltip="Articles">
+              <mat-icon>article</mat-icon>
+              {{ poster.articlesCount }}
+            </span>
+            }
+            @if (poster.mediaCount > 0) {
+            <span class="stat-item" matTooltip="Media">
+              <mat-icon>perm_media</mat-icon>
+              {{ poster.mediaCount }}
+            </span>
+            }
+          </div>
+        </a>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Media Section -->
+    @if (mediaEvents().length > 0) {
+    <mat-divider></mat-divider>
+
+    <section class="media-section">
+      <h2 class="section-title">
+        <mat-icon>perm_media</mat-icon>
+        Media
+        <span class="section-count">{{ mediaEvents().length }}</span>
+      </h2>
+      <p class="section-description">Photos and videos shared recently</p>
+      <div class="media-grid">
+        @for (event of mediaEvents().slice(0, 12); track event.id) {
+        @if (getMediaUrl(event); as mediaUrl) {
+        <a class="media-card" [routerLink]="['/e', event.id]">
+          <div class="media-preview">
+            @if (isVideoUrl(mediaUrl)) {
+            <div class="video-indicator">
+              <mat-icon>play_circle</mat-icon>
+            </div>
+            }
+            <img [src]="mediaUrl" alt="Media content" title="View media" loading="lazy" />
+          </div>
+          <div class="media-overlay">
+            <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
+            <span class="media-time">{{ event.created_at | ago }}</span>
+          </div>
+        </a>
+        }
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Profile Updates Section -->
+    @if (profileUpdates().length > 0) {
+    <mat-divider></mat-divider>
+
+    <section class="profile-updates-section">
+      <h2 class="section-title">
+        <mat-icon>badge</mat-icon>
+        Profile Updates
+        <span class="section-count">{{ profileUpdates().length }}</span>
+      </h2>
+      <p class="section-description">People who updated their profiles</p>
+      <div class="poster-grid">
+        @for (pubkey of profileUpdates(); track pubkey) {
+        <a class="poster-card" [routerLink]="['/p', pubkey]">
+          <div class="poster-avatar">
+            <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
+          </div>
+        </a>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Timeline Section -->
+    @if (timelineEvents().length > 0) {
+    <mat-divider></mat-divider>
+
+    <section class="timeline-section">
+      <h2 class="section-title">
+        <mat-icon>schedule</mat-icon>
+        Activity Timeline
+      </h2>
+      <p class="section-description">Recent activity from people you follow</p>
+      <div class="timeline">
+        @for (event of timelineEvents(); track event.id) {
+        <a class="timeline-item" [routerLink]="getEventRoute(event)">
+          <div class="timeline-marker">
+            <mat-icon>{{ getEventKindIcon(event.kind) }}</mat-icon>
+          </div>
+          <div class="timeline-content">
+            <div class="timeline-header">
+              <app-user-profile [pubkey]="event.pubkey" view="icon" class="timeline-author"></app-user-profile>
+              <span class="timeline-type">{{ getEventKindLabel(event.kind) }}</span>
+              <span class="timeline-time">{{ event.created_at | ago }}</span>
+            </div>
+            <p class="timeline-preview">{{ getEventPreview(event) }}</p>
+          </div>
+        </a>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Empty States -->
+    @if (!hasFollowing()) {
+    <section class="empty-state">
+      <mat-icon>group_add</mat-icon>
+      <h3>Start Following People</h3>
+      <p>Follow people to see activity summaries here.</p>
+      <a mat-flat-button routerLink="/people/discover">
+        <mat-icon>explore</mat-icon>
+        Discover People
+      </a>
+    </section>
+    } @else if (!hasActivity()) {
+    <section class="no-activity-state">
+      <mat-icon>inbox</mat-icon>
+      <h3>No New Activity</h3>
+      <p>There's no new activity from the people you follow during this time period.</p>
+    </section>
+    }
+  </div>
+  }
+</div>
+}

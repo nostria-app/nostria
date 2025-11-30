@@ -15,7 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterModule } from '@angular/router';
 import { BadgeService, ParsedBadge } from '../../../services/badge.service';
 import { NostrEvent } from 'nostr-tools';
-import { StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 
 @Component({
@@ -36,7 +36,7 @@ export class BadgeHoverCardComponent {
   slug = input.required<string>();
 
   private badgeService = inject(BadgeService);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private utilities = inject(UtilitiesService);
 
   npub = computed(() => {
@@ -90,7 +90,7 @@ export class BadgeHoverCardComponent {
         this.parsedBadge.set(parsed);
 
         // Load issuer name
-        const event = await this.storage.getEventByPubkeyAndKind(
+        const event = await this.database.getEventByPubkeyAndKind(
           pubkey,
           0
         );

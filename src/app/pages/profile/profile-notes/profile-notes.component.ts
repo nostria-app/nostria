@@ -15,7 +15,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { EventComponent } from '../../../components/event/event.component';
 import { PinnedService } from '../../../services/pinned.service';
-import { StorageService } from '../../../services/storage.service';
+import { DatabaseService } from '../../../services/database.service';
 import { NostrRecord } from '../../../interfaces';
 import { DataService } from '../../../services/data.service';
 import { UserRelayService } from '../../../services/relays/user-relay';
@@ -47,7 +47,7 @@ export class ProfileNotesComponent {
   bookmark = inject(BookmarkService);
   layout = inject(LayoutService);
   pinned = inject(PinnedService);
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
   data = inject(DataService);
   userRelay = inject(UserRelayService);
 
@@ -138,7 +138,7 @@ export class ProfileNotesComponent {
 
       // Fetch the actual events from storage
       this.logger.info('Fetching pinned events from storage:', pinnedEventIds);
-      const eventPromises = pinnedEventIds.map(id => this.storage.getEventById(id));
+      const eventPromises = pinnedEventIds.map(id => this.database.getEventById(id));
       const events = await Promise.all(eventPromises);
 
       this.logger.info('Retrieved events from storage:', events.filter(e => e !== null).length, 'of', pinnedEventIds.length);
@@ -154,7 +154,7 @@ export class ProfileNotesComponent {
         for (let i = 0; i < relayEvents.length; i++) {
           const event = relayEvents[i];
           if (event) {
-            await this.storage.saveEvent(event);
+            await this.database.saveEvent(event);
             // Replace the null entry with the found event
             const originalIndex = pinnedEventIds.indexOf(missingEventIds[i]);
             events[originalIndex] = event;

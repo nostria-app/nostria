@@ -1,5 +1,5 @@
 import { computed, inject, Injectable, signal, NgZone } from '@angular/core';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { NostrService } from './nostr.service';
 import { Event, kinds, NostrEvent } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
@@ -43,7 +43,7 @@ interface ParsedReward {
   providedIn: 'root',
 })
 export class BadgeService implements NostriaService {
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly nostr = inject(NostrService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly utilities = inject(UtilitiesService);
@@ -118,7 +118,7 @@ export class BadgeService implements NostriaService {
       });
 
       // Save to storage for persistence
-      this.storage.saveBadgeDefinition(badge);
+      this.database.saveBadgeDefinition(badge);
     }
   }
 
@@ -139,7 +139,7 @@ export class BadgeService implements NostriaService {
 
       if (profileBadgesEvent) {
         this.parseBadgeTags(profileBadgesEvent.tags);
-        await this.storage.saveEvent(profileBadgesEvent);
+        await this.database.saveEvent(profileBadgesEvent);
       } else {
         // Clear accepted badges if no profile badges event found
         this.acceptedBadges.set([]);
@@ -165,7 +165,7 @@ export class BadgeService implements NostriaService {
       console.log('badgeAwardsEvent:', badgeAwardEvents);
 
       for (const event of badgeAwardEvents) {
-        await this.storage.saveEvent(event);
+        await this.database.saveEvent(event);
       }
 
       this.issuedBadges.set(badgeAwardEvents);
@@ -195,7 +195,7 @@ export class BadgeService implements NostriaService {
 
       // If not in memory, check storage
       if (!definition) {
-        definition = await this.storage.getBadgeDefinition(pubkey, slug);
+        definition = await this.database.getBadgeDefinition(pubkey, slug);
 
         // If found in storage, add to memory
         if (definition) {
@@ -259,7 +259,7 @@ export class BadgeService implements NostriaService {
 
       if (definition) {
         this.putBadgeDefinition(definition);
-        await this.storage.saveEvent(definition);
+        await this.database.saveEvent(definition);
       }
 
       return definition;
@@ -313,7 +313,7 @@ export class BadgeService implements NostriaService {
     this.isLoadingDefinitions.set(true);
     try {
       // First, load from storage
-      const cachedDefinitions = await this.storage.getBadgeDefinitionsByPubkey(pubkey);
+      const cachedDefinitions = await this.database.getBadgeDefinitionsByPubkey(pubkey);
 
       // Add cached definitions to memory
       for (const event of cachedDefinitions) {
@@ -328,7 +328,7 @@ export class BadgeService implements NostriaService {
       console.log('badgeDefinitionEvents:', badgeDefinitionEvents);
 
       for (const event of badgeDefinitionEvents) {
-        await this.storage.saveEvent(event);
+        await this.database.saveEvent(event);
         this.putBadgeDefinition(event);
       }
 

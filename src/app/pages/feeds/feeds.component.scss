@@ -108,6 +108,8 @@ app-user-profile {
     left 0.3s ease;
     // Ensure it's above other content
     z-index: 100;
+    // Allow clicks to pass through transparent areas between glass containers
+    pointer-events: none;
 
     // Hidden state class (applied via JS when scrolling down)
     // Move up by 100% of own height + toolbar height to completely hide
@@ -138,6 +140,8 @@ app-user-profile {
           padding: 0 8px;
           border-radius: 24px;
           gap: 4px;
+          // Re-enable clicks on the glass container
+          pointer-events: auto;
 
           // Glass effect - light mode
           background-color: rgba(255, 255, 255, 0.7);
@@ -160,6 +164,7 @@ app-user-profile {
             cursor: pointer;
             white-space: nowrap;
             transition: all 0.2s ease;
+            text-decoration: none;
 
             mat-icon {
               font-size: 1.1rem;
@@ -188,6 +193,18 @@ app-user-profile {
                 font-weight: 600;
               }
             }
+
+            // Summary tab special styling
+            &.summary-tab {
+              mat-icon {
+                color: var(--mat-sys-tertiary);
+              }
+
+              &:hover {
+                background-color: var(--mat-sys-tertiary-container);
+                color: var(--mat-sys-on-tertiary-container);
+              }
+            }
           }
         }
 
@@ -198,6 +215,8 @@ app-user-profile {
           height: 48px;
           padding: 0 4px;
           border-radius: 24px;
+          // Re-enable clicks on the glass container
+          pointer-events: auto;
 
           // Glass effect - light mode
           background-color: rgba(255, 255, 255, 0.7);
@@ -356,8 +375,8 @@ app-user-profile {
         flex-direction: column;
         width: 700px;
         max-width: 700px;
-        min-width: 0; // Allow content to shrink below min-width
-        flex: 1 0 auto; // Allow growing (1), prevent shrinking (0), use auto basis
+        min-width: 700px; // Ensure consistent width during loading
+        flex: 0 0 700px; // Fixed width, don't grow or shrink
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
@@ -366,14 +385,18 @@ app-user-profile {
 
         // Set a preferred width but allow shrinking when necessary
         @media (max-width: 1500px) {
-          width: min(700px, 100%);
-          flex: 1 1 min(700px, 100%); // Allow both growing and shrinking
+          width: 700px;
+          min-width: 500px; // Fixed minimum, not percentage-based
+          max-width: 100%;
+          flex: 1 1 700px; // Allow growing and shrinking with fixed basis
         }
 
         // When really constrained, adapt further
         @media (max-width: 1100px) and (min-width: 1024px) {
-          width: min(600px, 100%);
-          flex: 1 1 min(600px, 50%);
+          width: 600px;
+          min-width: 400px; // Fixed minimum, not percentage-based
+          max-width: 100%;
+          flex: 1 1 600px;
         }
 
         &.cdk-drag {
@@ -760,9 +783,10 @@ app-user-profile {
   &.two-columns-layout {
     .columns-wrapper {
       .column-unit {
-        width: min(700px, 50%);
-        max-width: min(700px, 100%);
-        flex: 1 1 min(700px, 50%); // Allow growing and shrinking to 50% of container
+        width: 700px;
+        min-width: 350px; // Fixed minimum width for two columns
+        max-width: 700px;
+        flex: 1 1 700px; // Allow growing and shrinking with fixed basis
       }
     }
   }
@@ -770,9 +794,10 @@ app-user-profile {
   &.three-columns-layout {
     .columns-wrapper {
       .column-unit {
-        width: min(700px, 33.333%);
-        max-width: min(700px, 100%);
-        flex: 1 1 min(700px, 33.333%); // Allow growing and shrinking to 33.333% of container
+        width: 700px;
+        min-width: 300px; // Fixed minimum width for three columns
+        max-width: 700px;
+        flex: 1 1 700px; // Allow growing and shrinking with fixed basis
       }
     }
   }
@@ -2061,6 +2086,8 @@ h1 {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  width: 100%; // Ensure skeleton fills column width
+  box-sizing: border-box;
   animation:
     fadeInUp 0.3s ease-out,
     breathe 4s ease-in-out infinite;
@@ -2070,6 +2097,8 @@ h1 {
 .feed-item-skeleton {
   padding: 1rem;
   border-radius: 8px;
+  width: 100%; // Ensure skeleton items fill container width
+  box-sizing: border-box;
   background-color: var(--mat-sys-surface-container);
   border: 1px solid var(--mat-sys-outline-variant);
   animation: pulse 2s ease-in-out infinite;
@@ -2157,6 +2186,7 @@ h1 {
     margin-bottom: 0.75rem;
 
     .content-line-skeleton {
+      width: 100%; // Default to full width
       height: 14px;
       border-radius: 4px;
       background: linear-gradient(90deg,
@@ -2342,6 +2372,13 @@ h1 {
       font-size: 20px;
     }
   }
+}
+
+// Invisible trigger for Intersection Observer (auto-load more detection)
+.load-more-trigger {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
 }
 
 // Dark mode glass styling for feed header

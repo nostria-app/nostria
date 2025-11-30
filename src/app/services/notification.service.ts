@@ -6,9 +6,9 @@ import {
   NotificationType,
   RelayPublishingNotification,
   RelayPublishPromise,
-  StorageService,
   ContentNotification,
 } from './storage.service';
+import { DatabaseService } from './database.service';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { PublishEventBus } from './publish-event-bus.service';
@@ -18,7 +18,7 @@ import { PublishEventBus } from './publish-event-bus.service';
 })
 export class NotificationService {
   private logger = inject(LoggerService);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   private accountState = inject(AccountStateService);
   private eventBus = inject(PublishEventBus);
 
@@ -216,7 +216,7 @@ export class NotificationService {
       this.logger.info('Loading notifications from storage');
 
       // Ensure storage is initialized
-      if (!this.storage.initialized()) {
+      if (!this.database.initialized()) {
         this.logger.warn('Storage not initialized yet, delaying notification loading');
         return;
       }
@@ -227,12 +227,12 @@ export class NotificationService {
       if (pubkey) {
         // Load notifications for the current account
         this.logger.info(`Loading notifications for account: ${pubkey}`);
-        storedNotifications = await this.storage.getAllNotificationsForPubkey(pubkey);
+        storedNotifications = await this.database.getAllNotificationsForPubkey(pubkey) as unknown as Notification[];
         this.logger.info(`Found ${storedNotifications.length} notifications for account ${pubkey}`);
       } else {
         // No account logged in, load all notifications (for backward compatibility)
         this.logger.info('No account logged in, loading all notifications');
-        storedNotifications = await this.storage.getAllNotifications();
+        storedNotifications = await this.database.getAllNotifications() as unknown as Notification[];
       }
 
       if (storedNotifications && storedNotifications.length > 0) {
@@ -369,7 +369,7 @@ export class NotificationService {
    * Persist a single notification to storage
    */
   async persistNotificationToStorage(notification: Notification): Promise<void> {
-    if (!this.storage.initialized()) {
+    if (!this.database.initialized()) {
       this.logger.warn('Storage not initialized, skipping notification persistence');
       return;
     }
@@ -401,7 +401,7 @@ export class NotificationService {
         notificationToStore = notificationWithoutAction;
       }
 
-      await this.storage.saveNotification(notificationToStore);
+      await this.database.saveNotification(notificationToStore as unknown as Record<string, unknown>);
       this.logger.debug(`Successfully persisted notification ${notification.id}`);
     } catch (error) {
       this.logger.error(`Failed to persist notification ${notification.id} to storage`, error);
@@ -491,9 +491,9 @@ export class NotificationService {
     );
 
     // Also remove from storage directly
-    this.storage
+    this.database
       .deleteNotification(id)
-      .catch(error => this.logger.error(`Failed to delete notification ${id} from storage`, error));
+      .catch((error: unknown) => this.logger.error(`Failed to delete notification ${id} from storage`, error));
   }
 
   /**
@@ -510,19 +510,19 @@ export class NotificationService {
       );
 
       // Delete each notification for this account from storage
-      this.storage.getAllNotificationsForPubkey(pubkey)
+      this.database.getAllNotificationsForPubkey(pubkey)
         .then(notifications => {
           return Promise.all(
-            notifications.map(n => this.storage.deleteNotification(n.id))
+            notifications.map(n => this.database.deleteNotification(n['id'] as string))
           );
         })
-        .catch(error => this.logger.error('Failed to clear notifications from storage', error));
+        .catch((error: unknown) => this.logger.error('Failed to clear notifications from storage', error));
     } else {
       // No account, clear all (legacy behavior)
       this._notifications.set([]);
-      this.storage
+      this.database
         .clearAllNotifications()
-        .catch(error => this.logger.error('Failed to clear notifications from storage', error));
+        .catch((error: unknown) => this.logger.error('Failed to clear notifications from storage', error));
     }
   }
 
@@ -606,12 +606,12 @@ export class NotificationService {
     // First, check storage for the most up-to-date version to preserve the read status
     let readStatusFromStorage: boolean | undefined;
     try {
-      const storedNotification = await this.storage.getNotification(notificationId);
+      const storedNotification = await this.database.getNotification(notificationId);
       if (storedNotification) {
-        readStatusFromStorage = storedNotification.read;
+        readStatusFromStorage = storedNotification['read'] as boolean | undefined;
       }
-    } catch (error) {
-      this.logger.warn('Could not fetch notification from storage, using in-memory version', error);
+    } catch (storageError) {
+      this.logger.warn('Could not fetch notification from storage, using in-memory version', storageError);
     }
 
     this._notifications.update(notifications => {
@@ -717,7 +717,7 @@ export class NotificationService {
     // Remove from storage
     try {
       await Promise.all(
-        notificationIdsToRemove.map(id => this.storage.deleteNotification(id))
+        notificationIdsToRemove.map(id => this.database.deleteNotification(id))
       );
       this.logger.info(`Successfully removed ${notificationIdsToRemove.length} notifications from storage`);
     } catch (error) {

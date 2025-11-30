@@ -24,9 +24,17 @@ export class SharedRelayService {
 
   /**
    * Creates a unique cache key for request deduplication
+   * Only uses the filter for metadata requests since that's what we're actually querying
+   * The pubkey parameter is only used for relay selection and shouldn't affect dedup
    */
   private createCacheKey(pubkey: string, filter: any, timeout: number): string {
-    return JSON.stringify({ pubkey, filter, timeout });
+    // For metadata requests (kind 0), only use the author being queried
+    // This ensures we deduplicate even if called from different contexts
+    if (filter.kinds?.includes(0) && filter.authors?.length === 1) {
+      return `metadata-${filter.authors[0]}`;
+    }
+    // For other requests, include all parameters
+    return JSON.stringify({ filter, timeout });
   }
 
   /**
@@ -138,27 +146,46 @@ export class SharedRelayService {
     // Create cache key for request deduplication
     const cacheKey = this.createCacheKey(pubkey, filter, timeout);
 
-    // Check if we already have a pending request for the same parameters
+    // CRITICAL: Check cache synchronously before any async work
     if (this.requestCache.has(cacheKey)) {
-      // Only log deduplication for non-metadata to reduce noise
-      if (!filter.kinds?.includes(0)) {
-        this.logger.debug('Returning cached request for duplicate query');
+      // Log deduplication for metadata requests too during debugging
+      if (filter.kinds?.includes(0)) {
+        this.logger.debug(`[Relay Dedup] Returning cached metadata request for: ${pubkey.substring(0, 8)}...`);
       }
       return this.requestCache.get(cacheKey) as Promise<T | null>;
     }
 
-    // Create the request promise
-    const requestPromise = this.executeGetRequest<T>(pubkey, filter, timeout);
+    // CRITICAL: Create a deferred promise and cache it SYNCHRONOUSLY before any async work
+    // This prevents race conditions where multiple calls slip through before the promise is cached
+    let resolvePromise: (value: T | null) => void;
+    let rejectPromise: (error: unknown) => void;
+    const requestPromise = new Promise<T | null>((resolve, reject) => {
+      resolvePromise = resolve;
+      rejectPromise = reject;
+    });
 
-    // Cache the promise
+    // Cache the promise IMMEDIATELY (synchronously)
     this.requestCache.set(cacheKey, requestPromise);
+
+    // Only log when cache is getting large (indicates potential issue)
+    if (filter.kinds?.includes(0) && this.requestCache.size > 20) {
+      this.logger.debug(`[Relay] Metadata request for: ${pubkey.substring(0, 8)}... (cache: ${this.requestCache.size})`);
+    }
 
     // Clean up cache after timeout
     setTimeout(() => {
       this.requestCache.delete(cacheKey);
     }, this.cacheTimeout);
 
-    return requestPromise;
+    // Now do the async work
+    try {
+      const result = await this.executeGetRequest<T>(pubkey, filter, timeout);
+      resolvePromise!(result);
+      return result;
+    } catch (error) {
+      rejectPromise!(error as unknown);
+      throw error;
+    }
   }
 
   /**

@@ -1,6 +1,6 @@
 import { Injectable, inject, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
-import { StorageService } from './storage.service';
+import { DatabaseService } from './database.service';
 import { LoggerService } from './logger.service';
 import { MEDIA_SERVERS_EVENT_KIND, NostriaService } from '../interfaces';
 import { standardizedTag } from '../standardized-tags';
@@ -36,7 +36,7 @@ export interface NostrEvent {
 export class MediaService implements NostriaService {
   private readonly nostrService = inject(NostrService);
   readonly accountRelay = inject(AccountRelayService);
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
   private readonly app = inject(ApplicationService);
   private readonly region = inject(RegionService);
@@ -139,7 +139,7 @@ export class MediaService implements NostriaService {
 
   private async loadMediaServers(): Promise<void> {
     // First try to load from localStorage for faster initial load
-    let mediaServerEvent = await this.storage.getEventByPubkeyAndKind(
+    let mediaServerEvent = await this.database.getEventByPubkeyAndKind(
       this.accountState.pubkey(),
       MEDIA_SERVERS_EVENT_KIND
     );
@@ -360,7 +360,7 @@ export class MediaService implements NostriaService {
       const signedEvent = await this.nostrService.signEvent(event);
 
       // Save the event to our storage
-      await this.storage.saveEvent(signedEvent);
+      await this.database.saveEvent(signedEvent);
 
       const result = await this.accountRelay.publish(signedEvent);
 
@@ -1133,7 +1133,7 @@ export class MediaService implements NostriaService {
       // Save the reordered server list
       const event = this.nostrService.createEvent(MEDIA_SERVERS_EVENT_KIND, '', tags);
       const signedEvent = await this.nostrService.signEvent(event);
-      await this.storage.saveEvent(signedEvent);
+      await this.database.saveEvent(signedEvent);
       await this.accountRelay.publish(signedEvent);
     } catch (error) {
       this.logger.error('Failed to save server order:', error);

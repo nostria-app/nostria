@@ -3,7 +3,6 @@ import { DataService } from './data.service';
 import { nip19 } from 'nostr-tools';
 import type { ProfilePointer } from 'nostr-tools/nip19';
 import { NostrService } from './nostr.service';
-import { StorageService } from './storage.service';
 import type { NostrRecord } from '../interfaces';
 import { UtilitiesService } from './utilities.service';
 import { LoggerService } from './logger.service';
@@ -57,7 +56,6 @@ export interface ContentToken {
 export class ParsingService {
   data = inject(DataService);
   nostr = inject(NostrService);
-  storage = inject(StorageService);
   utilities = inject(UtilitiesService);
   logger = inject(LoggerService);
   readonly media = inject(MediaPlayerService);

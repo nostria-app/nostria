@@ -10,7 +10,8 @@ import {
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { nip19, nip98, nip04, nip44 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
-import { NostrEventData, StorageService, UserMetadata } from './storage.service';
+import { NostrEventData, UserMetadata } from './storage.service';
+import { DatabaseService } from './database.service';
 import { kinds, SimplePool } from 'nostr-tools';
 import { finalizeEvent } from 'nostr-tools/pure';
 import { BunkerPointer, BunkerSigner, parseBunkerInput } from 'nostr-tools/nip46';
@@ -77,7 +78,7 @@ export class NostrService implements NostriaService {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly sharedRelay = inject(SharedRelayService);
 
-  private readonly storage = inject(StorageService);
+  private readonly database = inject(DatabaseService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);
@@ -126,7 +127,7 @@ export class NostrService implements NostriaService {
     // This eliminates circular dependencies and simplifies the publishing flow
 
     effect(async () => {
-      if (this.storage.initialized()) {
+      if (this.database.initialized()) {
         this.logger.info('Storage initialized, loading Nostr Service');
         await this.initialize();
       }
@@ -344,7 +345,7 @@ export class NostrService implements NostriaService {
       const pubkey = account.pubkey;
       this.logger.info('Account changed, loading data for new account', { pubkey });
 
-      let info: any = await this.storage.getInfo(pubkey, 'user');
+      let info: any = await this.database.getInfo(pubkey, 'user');
       if (!info) {
         info = {};
       }
@@ -352,7 +353,7 @@ export class NostrService implements NostriaService {
       // Load cached data from storage immediately for instant display
       this.logger.info('Loading cached account data from storage', { pubkey });
 
-      const storedMetadata = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
+      const storedMetadata = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Metadata);
       if (storedMetadata) {
         const metadata = this.data.toRecord(storedMetadata);
 
@@ -368,13 +369,13 @@ export class NostrService implements NostriaService {
         // Removed loading message to improve perceived performance
       }
 
-      const storedFollowing = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      const storedFollowing = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
       if (storedFollowing) {
         const followingTags = this.getTags(storedFollowing, 'p');
         this.accountState.followingList.set(followingTags);
       }
 
-      const storedMuteList = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+      const storedMuteList = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
       if (storedMuteList) {
         this.accountState.muteList.set(storedMuteList);
       }
@@ -383,7 +384,7 @@ export class NostrService implements NostriaService {
       // and keep us updated with any changes in real-time
       await this.subscribeToAccountMetadata(pubkey);
 
-      await this.storage.saveInfo(pubkey, 'user', info);
+      await this.database.saveInfo(pubkey, 'user', info);
 
       if (!this.initialized()) {
         this.initialized.set(true);
@@ -493,9 +494,10 @@ export class NostrService implements NostriaService {
     const onEvent = async (event: Event) => {
       console.log('Received event on account subscription:', event);
 
-      // Save all events to storage
+      // Save all events to storage using new DatabaseService
       try {
-        await this.storage.saveEvent(event);
+        await this.database.init();
+        await this.database.saveEvent(event);
         this.logger.debug(`Saved event from account subscription: ${event.id} (kind: ${event.kind})`);
       } catch (error) {
         this.logger.warn(`Failed to save event from account subscription: ${event.id}`, error);
@@ -592,7 +594,9 @@ export class NostrService implements NostriaService {
 
     if (followingEvent) {
       // Save the latest event to storage
-      await this.storage.saveEvent(followingEvent);
+      await this.database.saveEvent(followingEvent);
+      // Also save to new DatabaseService for Summary queries
+      await this.database.saveEvent(followingEvent);
       this.logger.info('Loaded fresh following list from relay', {
         pubkey,
         followingCount: followingEvent.tags.filter(t => t[0] === 'p').length,
@@ -600,7 +604,7 @@ export class NostrService implements NostriaService {
     } else {
       // Fallback to storage only if relay fetch completely fails
       this.logger.warn('Could not fetch following list from relay, falling back to storage');
-      followingEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+      followingEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
     }
 
     if (followingEvent) {
@@ -616,7 +620,9 @@ export class NostrService implements NostriaService {
 
     if (muteListEvent) {
       // Save the latest event to storage
-      await this.storage.saveEvent(muteListEvent);
+      await this.database.saveEvent(muteListEvent);
+      // Also save to new DatabaseService for Summary queries
+      await this.database.saveEvent(muteListEvent);
       this.logger.info('Loaded fresh mute list from relay', {
         pubkey,
         mutedCount: muteListEvent.tags.filter(t => t[0] === 'p').length,
@@ -624,7 +630,7 @@ export class NostrService implements NostriaService {
     } else {
       // Fallback to storage only if relay fetch completely fails
       this.logger.warn('Could not fetch mute list from relay, falling back to storage');
-      muteListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+      muteListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
     }
 
     if (muteListEvent) {
@@ -947,6 +953,8 @@ export class NostrService implements NostriaService {
           if (metadata) {
             const record = this.data.toRecord(metadata);
             this.accountState.addToCache(pubkey, record);
+            // Save refreshed metadata to database for Summary queries
+            await this.database.saveEvent(metadata);
           }
         }, 0);
       }
@@ -954,8 +962,9 @@ export class NostrService implements NostriaService {
       return cachedMetadata;
     }
 
-    // Not in cache, get from storage
-    const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.Metadata);
+    // Not in cache, get from storage using new DatabaseService
+    await this.database.init();
+    const events = await this.database.getEventsByPubkeyAndKind(pubkey, kinds.Metadata);
     const records = this.data.toRecords(events);
 
     if (records.length > 0) {
@@ -969,7 +978,8 @@ export class NostrService implements NostriaService {
       if (metadata) {
         const record = this.data.toRecord(metadata);
         this.accountState.addToCache(pubkey, record);
-        // this.updateMetadataCache(pubkey, record);
+        // Save discovered metadata to database for Summary queries
+        await this.database.saveEvent(metadata);
         return record;
       }
 
@@ -995,7 +1005,7 @@ export class NostrService implements NostriaService {
   async getMediaServers(pubkey: string): Promise<Event | null> {
     // Media server list (kind 10063) is already fetched in the consolidated account query
     // in the load() method, so we just retrieve from storage
-    const event = await this.storage.getEventByPubkeyAndKind(pubkey, 10063);
+    const event = await this.database.getEventByPubkeyAndKind(pubkey, 10063);
 
     if (!event) {
       this.logger.warn('No media server list found in storage for pubkey:', pubkey);
@@ -1044,7 +1054,7 @@ export class NostrService implements NostriaService {
     }
 
     if (metadata) {
-      await this.storage.saveEvent(metadata);
+      await this.database.saveEvent(metadata);
     }
 
     return metadata;
@@ -1052,13 +1062,13 @@ export class NostrService implements NostriaService {
 
   async discoverMetadata(pubkey: string, disconnect = true): Promise<Event | undefined | null> {
     // Get or create info object for this user
-    let info: any = await this.storage.getInfo(pubkey, 'user');
+    let info: any = await this.database.getInfo(pubkey, 'user');
     if (!info) {
       info = {};
     }
 
     // Check if we have a relay list in storage (it may have been fetched by discoveryRelay.getUserRelayUrls)
-    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+    const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
     if (relayListEvent) {
       info.hasRelayList = true;
       info.foundOnDiscoveryRelays = true;
@@ -1076,7 +1086,7 @@ export class NostrService implements NostriaService {
     }
 
     // Save updated info
-    await this.storage.saveInfo(pubkey, 'user', info);
+    await this.database.saveInfo(pubkey, 'user', info);
 
     return data;
   }
@@ -1088,7 +1098,7 @@ export class NostrService implements NostriaService {
     // Get the metadata from the user's relays, not from the account relays. We truly do not want to fall back to get metadata
     // from the current account relays.
 
-    let info: any = await this.storage.getInfo(pubkey, 'user');
+    let info: any = await this.database.getInfo(pubkey, 'user');
 
     if (!info) {
       info = {};
@@ -1123,7 +1133,9 @@ export class NostrService implements NostriaService {
         //   this.logger.error('Failed to publish relay list to discovery relays', { error });
         // }
 
-        await this.storage.saveEvent(relayListEvent);
+        await this.database.saveEvent(relayListEvent);
+        // Also save to new DatabaseService for Summary queries
+        await this.database.saveEvent(relayListEvent);
 
         relayUrls = this.utilities.pickOptimalRelays(
           this.utilities.getRelayUrls(relayListEvent),
@@ -1152,7 +1164,9 @@ export class NostrService implements NostriaService {
             }
           }
 
-          await this.storage.saveEvent(followingEvent);
+          await this.database.saveEvent(followingEvent);
+          // Also save to new DatabaseService for Summary queries
+          await this.database.saveEvent(followingEvent);
           relayUrls = this.utilities.getRelayUrlsFromFollowing(followingEvent);
         } else {
           this.logger.warn('No relay list or following event found for user', {
@@ -1195,7 +1209,9 @@ export class NostrService implements NostriaService {
             info.foundMetadataOnUserRelays = true;
           }
 
-          await this.storage.saveEvent(metadataEvent);
+          await this.database.saveEvent(metadataEvent);
+          // Also save to new DatabaseService for Summary queries
+          await this.database.saveEvent(metadataEvent);
           return metadataEvent;
         } else {
           this.logger.warn('No metadata event found for user', { pubkey });
@@ -1208,7 +1224,7 @@ export class NostrService implements NostriaService {
         }
       }
     } finally {
-      await this.storage.saveInfo(pubkey, 'user', info);
+      await this.database.saveInfo(pubkey, 'user', info);
     }
   }
 
@@ -1439,8 +1455,9 @@ export class NostrService implements NostriaService {
       return cachedRelays;
     }
 
-    // Not in cache, get from storage
-    const events = await this.storage.getEventsByPubkeyAndKind(pubkey, kinds.RelayList);
+    // Not in cache, get from storage using new DatabaseService
+    await this.database.init();
+    const events = await this.database.getEventsByPubkeyAndKind(pubkey, kinds.RelayList);
     if (events.length > 0) {
       // Add to cache
       this.updateRelaysCache(pubkey, events[0]);
@@ -1503,8 +1520,9 @@ export class NostrService implements NostriaService {
   async getAccountsMetadata() {
     const pubkeys = this.accountState.accounts().map(user => user.pubkey);
 
-    // Get metadata for all accounts from storage, we have not initialized accounts pool yet so cannot get from relays.
-    const events = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
+    // Get metadata for all accounts from storage using new DatabaseService
+    await this.database.init();
+    const events = await this.database.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
     // const events = await this.data.getEventsByPubkeyAndKind(pubkeys, kinds.Metadata);
     return events;
   }
@@ -1512,7 +1530,9 @@ export class NostrService implements NostriaService {
   async getAccountsRelays() {
     const pubkeys = this.accountState.accounts().map(user => user.pubkey);
 
-    const relays = await this.storage.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
+    // Use new DatabaseService for relay queries
+    await this.database.init();
+    const relays = await this.database.getEventsByPubkeyAndKind(pubkeys, kinds.RelayList);
     return relays;
   }
 
@@ -1704,7 +1724,7 @@ export class NostrService implements NostriaService {
     // Use the existing sign method which handles all account types properly
     const signedRelayEvent = await sign(relayListEvent);
 
-    await this.storage.saveEvent(signedRelayEvent);
+    await this.database.saveEvent(signedRelayEvent);
     await this.accountRelay.publish(signedRelayEvent);
     await this.discoveryRelay.publish(signedRelayEvent);
 
@@ -1722,7 +1742,7 @@ export class NostrService implements NostriaService {
 
     const signedMediaEvent = await sign(mediaServerEvent);
 
-    await this.storage.saveEvent(signedMediaEvent);
+    await this.database.saveEvent(signedMediaEvent);
     await this.accountRelay.publish(signedMediaEvent);
 
     // Create and publish DM Relay List event
@@ -1738,7 +1758,7 @@ export class NostrService implements NostriaService {
 
     const signedDMEvent = await sign(relayDMListEvent);
 
-    await this.storage.saveEvent(signedDMEvent);
+    await this.database.saveEvent(signedDMEvent);
     await this.accountRelay.publish(signedDMEvent);
 
     // Update the user to mark as activated
@@ -1758,7 +1778,7 @@ export class NostrService implements NostriaService {
     this.logger.debug('Checking relay configuration for user', { pubkey });
 
     // First check local storage
-    const relayListEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
+    const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
     if (relayListEvent) {
       const relayUrls = this.utilities.getRelayUrls(relayListEvent);
       if (relayUrls.length > 0) {
@@ -1771,7 +1791,7 @@ export class NostrService implements NostriaService {
     }
 
     // Check contacts event (kind 3) in storage
-    const contactsEvent = await this.storage.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+    const contactsEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
     if (contactsEvent) {
       const relayUrls = this.utilities.getRelayUrlsFromFollowing(contactsEvent);
       if (relayUrls.length > 0) {
