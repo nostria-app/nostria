@@ -97,10 +97,10 @@ export class FeedsCollectionService {
           this.saveActiveFeed();
           // Also set in FeedService
           this.feedService.setActiveFeed(feeds[0].id);
-        } else if (activeFeedId && feeds.length > 0) {
-          // Ensure FeedService is in sync with loaded active feed
-          this.feedService.setActiveFeed(activeFeedId);
         }
+        // Removed: the else-if branch that always synced with FeedService
+        // This was causing duplicate subscription attempts. FeedService is already
+        // synced through the first effect and through setActiveFeed calls.
       });
     });
   }
