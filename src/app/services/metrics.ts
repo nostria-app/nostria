@@ -261,6 +261,107 @@ export class Metrics {
   }
 
   /**
+   * Engagement point values for different action types
+   */
+  static readonly ENGAGEMENT_POINTS = {
+    LIKE: 1,
+    REPOST: 3,
+    ZAP: 5,
+    REPLY: 10,
+  } as const;
+
+  /**
+   * Check if an event has already been processed for metrics
+   */
+  async isEventProcessed(eventId: string, accountPubkey?: string): Promise<boolean> {
+    const currentAccount = accountPubkey || this.accountState.pubkey();
+    if (!currentAccount) return false;
+
+    const key = `processed:${currentAccount}:${eventId}`;
+    const record = await this.database.getInfo(key, 'metric-processed');
+    return record !== null;
+  }
+
+  /**
+   * Mark an event as processed for metrics
+   */
+  async markEventProcessed(eventId: string, accountPubkey?: string): Promise<void> {
+    const currentAccount = accountPubkey || this.accountState.pubkey();
+    if (!currentAccount) return;
+
+    const key = `processed:${currentAccount}:${eventId}`;
+    await this.database.saveInfo(key, 'metric-processed', {
+      eventId,
+      accountPubkey: currentAccount,
+      processedAt: Date.now(),
+    });
+  }
+
+  /**
+   * Add engagement points for a specific action type
+   * This method also increments the corresponding counter (liked, reposted, zapped, replied)
+   */
+  async addEngagementPoints(
+    pubkey: string,
+    actionType: keyof typeof Metrics.ENGAGEMENT_POINTS,
+    eventId: string,
+    accountPubkey?: string
+  ): Promise<boolean> {
+    const currentAccount = accountPubkey || this.accountState.pubkey();
+    if (!currentAccount) {
+      console.warn('No account context for addEngagementPoints');
+      return false;
+    }
+
+    // Validate pubkey
+    const validHexPubkey = this.utilities.safeGetHexPubkey(pubkey);
+    if (!validHexPubkey) {
+      console.warn('Invalid pubkey provided to addEngagementPoints:', pubkey);
+      return false;
+    }
+
+    // Check if event has already been processed
+    const alreadyProcessed = await this.isEventProcessed(eventId, currentAccount);
+    if (alreadyProcessed) {
+      console.debug(`Event ${eventId} already processed for metrics, skipping`);
+      return false;
+    }
+
+    const points = Metrics.ENGAGEMENT_POINTS[actionType];
+
+    // Map action type to metric field
+    const metricMap: Record<keyof typeof Metrics.ENGAGEMENT_POINTS, keyof UserMetric> = {
+      LIKE: 'liked',
+      REPOST: 'reposted',
+      ZAP: 'zapped',
+      REPLY: 'replied',
+    };
+
+    const metricField = metricMap[actionType];
+
+    // Update the specific counter and engagement points
+    await this.updateMetric({
+      pubkey: validHexPubkey,
+      metric: metricField as 'liked' | 'reposted' | 'zapped' | 'replied',
+      increment: 1,
+      accountPubkey: currentAccount,
+    });
+
+    await this.updateMetric({
+      pubkey: validHexPubkey,
+      metric: 'engagementPoints',
+      increment: points,
+      accountPubkey: currentAccount,
+    });
+
+    // Mark event as processed
+    await this.markEventProcessed(eventId, currentAccount);
+
+    console.debug(`Added ${points} engagement points to ${validHexPubkey} for ${actionType} (event: ${eventId})`);
+    return true;
+  }
+
+  /**
    * Get top users by a specific metric
    */
   async getTopUsers(metric: keyof UserMetric, limit = 10): Promise<UserMetric[]> {
@@ -341,10 +442,12 @@ export class Metrics {
       replied: 0,
       reposted: 0,
       quoted: 0,
+      zapped: 0,
       messaged: 0,
       mentioned: 0,
       timeSpent: 0,
       lastInteraction: timestamp,
+      engagementPoints: 0,
       averageTimePerView: 0,
       engagementScore: 0,
       firstInteraction: timestamp,
@@ -387,10 +490,12 @@ export class Metrics {
       replied: (record['replied'] as number) || 0,
       reposted: (record['reposted'] as number) || 0,
       quoted: (record['quoted'] as number) || 0,
+      zapped: (record['zapped'] as number) || 0,
       messaged: (record['messaged'] as number) || 0,
       mentioned: (record['mentioned'] as number) || 0,
       timeSpent: (record['timeSpent'] as number) || 0,
       lastInteraction: (record['lastInteraction'] as number) || 0,
+      engagementPoints: (record['engagementPoints'] as number) || 0,
       averageTimePerView: (record['averageTimePerView'] as number) || 0,
       engagementScore: (record['engagementScore'] as number) || 0,
       firstInteraction: (record['firstInteraction'] as number) || Date.now(),
@@ -408,9 +513,11 @@ export class Metrics {
       replied: 5,
       reposted: 4,
       quoted: 6,
+      zapped: 10,
       messaged: 8,
       mentioned: 4,
       timeSpent: 0.001, // Per second
+      engagementPoints: 1, // Direct contribution from point-based tracking
     };
 
     const score =
@@ -421,9 +528,11 @@ export class Metrics {
       metric.replied * weights.replied +
       metric.reposted * weights.reposted +
       metric.quoted * weights.quoted +
+      metric.zapped * weights.zapped +
       metric.messaged * weights.messaged +
       metric.mentioned * weights.mentioned +
-      metric.timeSpent * weights.timeSpent;
+      metric.timeSpent * weights.timeSpent +
+      metric.engagementPoints * weights.engagementPoints;
 
     return Math.round(score * 100) / 100; // Round to 2 decimal places
   }

@@ -89,6 +89,7 @@ import { AiService } from './services/ai.service';
 import { CustomDialogService } from './services/custom-dialog.service';
 import { CommandPaletteDialogComponent } from './components/command-palette-dialog/command-palette-dialog.component';
 import { DatabaseService } from './services/database.service';
+import { MetricsTrackingService } from './services/metrics-tracking.service';
 
 interface NavItem {
   path: string;
@@ -177,6 +178,7 @@ export class App implements OnInit {
   ai = inject(AiService);
   customDialog = inject(CustomDialogService);
   database = inject(DatabaseService);
+  metricsTracking = inject(MetricsTrackingService);
   private readonly wallets = inject(Wallets);
   private readonly platform = inject(PLATFORM_ID);
   private readonly document = inject(DOCUMENT);
@@ -752,6 +754,15 @@ export class App implements OnInit {
       }, 5 * 60 * 1000); // 5 minutes
     } catch (error) {
       this.logger.error('[App] Failed to initialize content notification service', error);
+    }
+
+    // Initialize metrics tracking service
+    this.logger.info('[App] Initializing metrics tracking service');
+    try {
+      this.metricsTracking.initialize();
+      this.logger.info('[App] Metrics tracking service initialized successfully');
+    } catch (error) {
+      this.logger.error('[App] Failed to initialize metrics tracking service', error);
     }
 
     // Start cache cleanup service
