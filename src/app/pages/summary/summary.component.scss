@@ -279,40 +279,79 @@
   }
 }
 
-// Poster List
-.poster-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+// Poster Grid
+.poster-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 1rem;
+
+  @media (min-width: 600px) {
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  }
+
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  }
 }
 
-.poster-item {
+.poster-card {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  padding: 0.5rem 0.75rem;
-  border-radius: var(--mat-sys-corner-medium);
+  padding: 0.75rem 0.5rem;
+  border-radius: var(--mat-sys-corner-large);
   background-color: var(--mat-sys-surface-container);
-  transition: background-color 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  text-decoration: none;
+  cursor: pointer;
 
   &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--mat-sys-level2);
     background-color: var(--mat-sys-surface-container-high);
   }
 
-  .poster-stats {
-    display: flex;
-    gap: 0.5rem;
-    flex-shrink: 0;
+  .poster-avatar {
+    width: 56px;
+    height: 56px;
+    margin-bottom: 0.5rem;
 
-    mat-chip {
+    ::ng-deep {
+      app-user-profile {
+        width: 56px;
+        height: 56px;
+
+        .avatar-container,
+        .avatar-image,
+        img {
+          width: 56px !important;
+          height: 56px !important;
+          border-radius: 50%;
+        }
+      }
+    }
+  }
+
+  .poster-stats-badge {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.25rem;
+
+    .stat-item {
       display: flex;
       align-items: center;
-      gap: 0.25rem;
-      
+      gap: 2px;
+      font-size: 0.7rem;
+      color: var(--mat-sys-on-surface-variant);
+      padding: 2px 4px;
+      border-radius: var(--mat-sys-corner-small);
+      background-color: var(--mat-sys-surface-container-high);
+
       mat-icon {
-        font-size: 1rem;
-        width: 1rem;
-        height: 1rem;
+        font-size: 0.75rem;
+        width: 0.75rem;
+        height: 0.75rem;
       }
     }
   }

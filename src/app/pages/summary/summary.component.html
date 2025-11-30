@@ -92,31 +92,31 @@
         Who Posted
       </h2>
       <p class="section-description">People who were active during this period</p>
-      <div class="poster-list">
+      <div class="poster-grid">
         @for (poster of activePosters(); track poster.pubkey) {
-        <div class="poster-item">
-          <app-user-profile [pubkey]="poster.pubkey" view="small"></app-user-profile>
-          <div class="poster-stats">
-            @if (poster.notesCount > 0) {
-            <mat-chip>
+        <a class="poster-card" [routerLink]="['/p', poster.pubkey]">
+          <div class="poster-avatar">
+            <app-user-profile [pubkey]="poster.pubkey" view="icon"></app-user-profile>
+          </div>
+          <div class="poster-stats-badge">
+            <span class="stat-item" matTooltip="Notes">
               <mat-icon>chat</mat-icon>
               {{ poster.notesCount }}
-            </mat-chip>
-            }
+            </span>
             @if (poster.articlesCount > 0) {
-            <mat-chip>
+            <span class="stat-item" matTooltip="Articles">
               <mat-icon>article</mat-icon>
               {{ poster.articlesCount }}
-            </mat-chip>
+            </span>
             }
             @if (poster.mediaCount > 0) {
-            <mat-chip>
+            <span class="stat-item" matTooltip="Media">
               <mat-icon>perm_media</mat-icon>
               {{ poster.mediaCount }}
-            </mat-chip>
+            </span>
             }
           </div>
-        </div>
+        </a>
         }
       </div>
     </section>
@@ -132,11 +132,13 @@
         Profile Updates
       </h2>
       <p class="section-description">People who updated their profiles</p>
-      <div class="user-grid">
+      <div class="poster-grid">
         @for (pubkey of profileUpdates(); track pubkey) {
-        <div class="user-card">
-          <app-user-profile [pubkey]="pubkey" view="small"></app-user-profile>
-        </div>
+        <a class="poster-card" [routerLink]="['/p', pubkey]">
+          <div class="poster-avatar">
+            <app-user-profile [pubkey]="pubkey" view="icon"></app-user-profile>
+          </div>
+        </a>
         }
       </div>
     </section>
