@@ -304,7 +304,7 @@ body {
 
 .blur-backdrop.cdk-overlay-container {
   position: fixed;
-  z-index: 1000;
+  z-index: 1200;
   pointer-events: none;
 }
 
@@ -1365,4 +1365,33 @@ app-media-queue {
     box-shadow: none !important;
     padding: 0;
   }
+}
+
+// Ensure CDK overlay (tooltips, menus) appears above custom dialogs
+// Custom dialogs use z-index: 1100, so we need CDK overlay to be higher
+// Using body > selector to ensure higher specificity
+body>.cdk-overlay-container {
+  z-index: 1200 !important;
+}
+
+.cdk-overlay-container {
+  z-index: 1200 !important;
+}
+
+// Ensure mat-menu and tooltip panels appear above custom dialogs
+.cdk-overlay-pane {
+  z-index: 1200 !important;
+}
+
+.mat-mdc-tooltip {
+  z-index: 1200 !important;
+}
+
+.mat-mdc-menu-panel {
+  z-index: 1200 !important;
+}
+
+// Ensure connected overlay appears above custom dialogs
+.cdk-overlay-connected-position-bounding-box {
+  z-index: 1200 !important;
 }

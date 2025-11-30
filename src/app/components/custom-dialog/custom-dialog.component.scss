@@ -357,12 +357,17 @@
 
 // Ensure Material tooltips appear above the dialog backdrop
 ::ng-deep .mat-mdc-tooltip {
-  z-index: 1001 !important; // Higher than dialog's z-index of 1000
+  z-index: 1200 !important; // Higher than dialog's z-index of 1100
 }
 
 // Ensure tooltip backdrop/overlay appears above dialog
 ::ng-deep .cdk-overlay-container {
-  z-index: 1002 !important;
+  z-index: 1200 !important;
+}
+
+// Ensure mat-menu panels appear above dialog
+::ng-deep .mat-mdc-menu-panel {
+  z-index: 1200 !important;
 }
 
 // Animations
