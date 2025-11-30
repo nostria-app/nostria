@@ -198,14 +198,33 @@ export class FavoritesOverlayComponent {
     return this.following().length > 0;
   });
 
+  // Maximum number of profiles to show in overlay (excluding favorites)
+  private readonly MAX_FOLLOWING_IN_OVERLAY = 300;
+
   // Favorites in the overlay - same as favoritesWithProfiles but matches the name pattern
   favoritesInOverlay = computed(() => {
     return this.favoritesWithProfiles();
   });
 
+  // Non-favorites limited to MAX_FOLLOWING_IN_OVERLAY
   nonFavoritesInOverlay = computed(() => {
     const favPubkeys = this.favorites();
-    return this.followingWithProfiles().filter(item => !favPubkeys.includes(item.pubkey));
+    const nonFavorites = this.followingWithProfiles().filter(item => !favPubkeys.includes(item.pubkey));
+    return nonFavorites.slice(0, this.MAX_FOLLOWING_IN_OVERLAY);
+  });
+
+  // Check if there are more profiles beyond the overlay limit
+  hasMoreFollowing = computed(() => {
+    const favPubkeys = this.favorites();
+    const nonFavoritesCount = this.followingWithProfiles().filter(item => !favPubkeys.includes(item.pubkey)).length;
+    return nonFavoritesCount > this.MAX_FOLLOWING_IN_OVERLAY;
+  });
+
+  // Total count of following not shown in overlay
+  remainingFollowingCount = computed(() => {
+    const favPubkeys = this.favorites();
+    const nonFavoritesCount = this.followingWithProfiles().filter(item => !favPubkeys.includes(item.pubkey)).length;
+    return Math.max(0, nonFavoritesCount - this.MAX_FOLLOWING_IN_OVERLAY);
   });
 
   toggleOverlay(): void {
@@ -260,6 +279,11 @@ export class FavoritesOverlayComponent {
   navigateToProfile(pubkey: string): void {
     this.hideOverlay();
     this.router.navigate(['/p', pubkey]);
+  }
+
+  navigateToPeople(): void {
+    this.isVisible.set(false);
+    this.router.navigate(['/people']);
   }
 
   getDisplayName(profile?: NostrRecord): string {

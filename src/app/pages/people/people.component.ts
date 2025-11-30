@@ -126,6 +126,27 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
     return this.filteredAndSortedProfiles().map(p => p.pubkey);
   });
 
+  // Pagination: limit how many items are rendered to avoid thousands of event listeners
+  private readonly PAGE_SIZE = 100;
+  displayLimit = signal(this.PAGE_SIZE);
+
+  // Visible people (limited for performance)
+  visiblePeople = computed(() => {
+    const allPeople = this.sortedPeople();
+    const limit = this.displayLimit();
+    return allPeople.slice(0, limit);
+  });
+
+  // Check if there are more people to load
+  hasMorePeople = computed(() => {
+    return this.sortedPeople().length > this.displayLimit();
+  });
+
+  // How many more people are available
+  remainingCount = computed(() => {
+    return Math.max(0, this.sortedPeople().length - this.displayLimit());
+  });
+
   // Loading and error states from FollowingService
   isLoading = computed(() => this.followingService.isLoading());
   error = signal<string | null>(null);
@@ -290,6 +311,13 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
 
   updateSearch(term: string) {
     this.searchChanged.next(term);
+    // Reset display limit when search changes
+    this.displayLimit.set(this.PAGE_SIZE);
+  }
+
+  // Load more people (pagination)
+  loadMore(): void {
+    this.displayLimit.update(limit => limit + this.PAGE_SIZE);
   }
 
   changeViewMode(mode: string) {
@@ -302,6 +330,8 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
 
   changeSortOption(option: SortOption) {
     this.sortOption.set(option);
+    // Reset display limit when sort changes
+    this.displayLimit.set(this.PAGE_SIZE);
   }
 
   toggleFilter(filterName: keyof FilterOptions) {
@@ -319,6 +349,8 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
       favoritesOnly: false,
       showRank: true,
     });
+    // Reset display limit when filters are reset
+    this.displayLimit.set(this.PAGE_SIZE);
   }
 
   preventPropagation(event: Event) {

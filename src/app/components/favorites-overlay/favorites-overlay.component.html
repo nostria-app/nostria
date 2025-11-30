@@ -109,6 +109,16 @@
         </button>
         }
       </div>
+
+      <!-- View All button when there are more profiles -->
+      @if (hasMoreFollowing()) {
+      <div class="view-all-container">
+        <button mat-button (click)="navigateToPeople()">
+          <mat-icon>groups</mat-icon>
+          View All ({{remainingFollowingCount()}} more)
+        </button>
+      </div>
+      }
     </div>
     }
   </div>
