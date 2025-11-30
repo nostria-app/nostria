@@ -97,19 +97,56 @@
   <!-- Participants View -->
   @if (viewMode() === 'participants') {
   <div class="participants-view">
-    @if (participants().length === 0) {
-    <div class="no-participants">
-      <mat-icon>people_outline</mat-icon>
-      <p>No participants yet</p>
+    @if (participants().length > 0) {
+    <div class="participants-section">
+      <h4 class="section-title">
+        <mat-icon>star</mat-icon>
+        Hosts
+      </h4>
+      <div class="participants-list">
+        @for (participant of participants(); track participant.pubkey) {
+        <div class="participant-item">
+          <app-user-profile [pubkey]="participant.pubkey" view="list" />
+          @if (participant.role && participant.role !== 'Participant') {
+          <span class="participant-role-badge">{{ participant.role }}</span>
+          }
+        </div>
+        }
+      </div>
     </div>
     }
 
-    <div class="participants-list">
-      @for (participant of participants(); track participant.pubkey) {
-      <div class="participant-item">
-        <app-user-profile [pubkey]="participant.pubkey" view="list" />
-        @if (participant.role && participant.role !== 'Participant') {
-        <span class="participant-role-badge">{{ participant.role }}</span>
+    <div class="participants-section">
+      <h4 class="section-title">
+        <mat-icon>forum</mat-icon>
+        Active in Chat ({{ activeParticipants().length }})
+      </h4>
+      @if (activeParticipants().length === 0) {
+      <div class="no-participants">
+        <mat-icon>people_outline</mat-icon>
+        <p>No activity yet</p>
+        <span>Be the first to chat or zap!</span>
+      </div>
+      } @else {
+      <div class="participants-list">
+        @for (participant of activeParticipants(); track participant.pubkey) {
+        <div class="participant-item active-participant">
+          <app-user-profile [pubkey]="participant.pubkey" view="list" />
+          <div class="participant-stats">
+            @if (participant.chatCount > 0) {
+            <span class="stat-badge chat-badge" matTooltip="Messages sent">
+              <mat-icon>chat</mat-icon>
+              {{ participant.chatCount }}
+            </span>
+            }
+            @if (participant.zapCount > 0) {
+            <span class="stat-badge zap-badge" matTooltip="Zaps sent">
+              <mat-icon>bolt</mat-icon>
+              {{ participant.totalZapAmount | number }}
+            </span>
+            }
+          </div>
+        </div>
         }
       </div>
       }

@@ -104,7 +104,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   // Store bound scroll handler for proper cleanup
   private boundScrollHandler?: () => void;
 
-  // Computed participants from event
+  // Computed participants from event (hosts/co-hosts from p tags)
   participants = computed(() => {
     const event = this.liveEvent();
     if (!event) return [];
@@ -115,6 +115,38 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       role: tag[3] || 'Participant',
       relayUrl: tag[2],
     }));
+  });
+
+  // Computed active participants (people who have chatted or zapped)
+  activeParticipants = computed(() => {
+    const msgs = this.messages();
+    const participantMap = new Map<string, { pubkey: string; chatCount: number; zapCount: number; totalZapAmount: number }>();
+
+    for (const msg of msgs) {
+      // Get the actual sender pubkey (for zaps, use zapSender)
+      const senderPubkey = msg.type === 'zap' && msg.zapSender ? msg.zapSender : msg.pubkey;
+
+      if (!participantMap.has(senderPubkey)) {
+        participantMap.set(senderPubkey, {
+          pubkey: senderPubkey,
+          chatCount: 0,
+          zapCount: 0,
+          totalZapAmount: 0,
+        });
+      }
+
+      const participant = participantMap.get(senderPubkey)!;
+      if (msg.type === 'chat') {
+        participant.chatCount++;
+      } else if (msg.type === 'zap') {
+        participant.zapCount++;
+        participant.totalZapAmount += msg.zapAmount || 0;
+      }
+    }
+
+    // Convert to array and sort by total activity (zaps weighted more)
+    return Array.from(participantMap.values())
+      .sort((a, b) => (b.totalZapAmount + b.chatCount) - (a.totalZapAmount + a.chatCount));
   });
 
   // Computed event address for querying
