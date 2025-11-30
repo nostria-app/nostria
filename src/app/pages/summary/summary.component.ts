@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -21,19 +20,12 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
 import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
-import { FavoritesService } from '../../services/favorites.service';
-import { Algorithms } from '../../services/algorithms';
 import { DatabaseService } from '../../services/database.service';
-import { DataService } from '../../services/data.service';
 import { LoggerService } from '../../services/logger.service';
-import { UtilitiesService } from '../../services/utilities.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
-import { NostrRecord } from '../../interfaces';
-import { UserMetric } from '../../interfaces/metrics';
 import { Event } from 'nostr-tools';
 import { ApplicationService } from '../../services/application.service';
 
@@ -41,22 +33,22 @@ interface ActivitySummary {
   notesCount: number;
   articlesCount: number;
   mediaCount: number;
-  profileUpdates: string[]; // pubkeys of users who updated profiles
+  profileUpdatesCount: number;
 }
 
-interface TopPoster {
+interface PosterStats {
   pubkey: string;
-  count: number;
-  profile?: NostrRecord;
+  notesCount: number;
+  articlesCount: number;
+  mediaCount: number;
+  totalCount: number;
 }
 
 // Constants for configurable limits
 const DEFAULT_DAYS_LOOKBACK = 2;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const MAX_FAVORITES_DISPLAY = 10;
-const MAX_TOP_RANKED_USERS = 10;
-const MAX_TOP_POSTERS = 5;
-const MAX_UPDATED_PROFILES = 10;
+const MAX_POSTERS_DISPLAY = 20;
+const MAX_PROFILE_UPDATES = 10;
 const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 
 @Component({
@@ -65,7 +57,6 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     CommonModule,
     RouterModule,
     FormsModule,
-    MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -76,7 +67,6 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     MatNativeDateModule,
     MatFormFieldModule,
     MatInputModule,
-    MatSelectModule,
     UserProfileComponent,
   ],
   templateUrl: './summary.component.html',
@@ -86,12 +76,8 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 export class SummaryComponent implements OnInit, OnDestroy {
   private readonly accountState = inject(AccountStateService);
   private readonly accountLocalState = inject(AccountLocalStateService);
-  private readonly favoritesService = inject(FavoritesService);
-  private readonly algorithms = inject(Algorithms);
   private readonly database = inject(DatabaseService);
-  private readonly data = inject(DataService);
   private readonly logger = inject(LoggerService);
-  private readonly utilities = inject(UtilitiesService);
   protected readonly app = inject(ApplicationService);
 
   // Timer for periodic timestamp saves
@@ -106,12 +92,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Time range presets
   readonly timePresets = [
     { label: '1 hour', hours: 1 },
-    { label: '2 hours', hours: 2 },
     { label: '6 hours', hours: 6 },
     { label: '12 hours', hours: 12 },
     { label: '1 day', hours: 24 },
     { label: '2 days', hours: 48 },
-    { label: '3 days', hours: 72 },
     { label: '1 week', hours: 168 },
   ];
 
@@ -121,32 +105,31 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // State signals
   isLoading = signal(true);
-  isLoadingActivity = signal(true);
-  isLoadingTopRanked = signal(true);
   lastCheckTimestamp = signal(0);
-
-  // Favorites
-  favorites = computed(() => this.favoritesService.favorites());
-  favoritesProfiles = signal<NostrRecord[]>([]);
-
-  // Algorithm recommended users
-  topRankedUsers = signal<UserMetric[]>([]);
 
   // Activity summary
   activitySummary = signal<ActivitySummary>({
     notesCount: 0,
     articlesCount: 0,
     mediaCount: 0,
-    profileUpdates: [],
+    profileUpdatesCount: 0,
   });
 
-  // Top posters by category
-  topNotePosters = signal<TopPoster[]>([]);
-  topArticlePosters = signal<TopPoster[]>([]);
-  topMediaPosters = signal<TopPoster[]>([]);
+  // Active posters (people who posted in the time period)
+  activePosters = signal<PosterStats[]>([]);
 
-  // Profile updates
-  updatedProfiles = signal<NostrRecord[]>([]);
+  // Profile updates (pubkeys of people who updated their profiles)
+  profileUpdates = signal<string[]>([]);
+
+  // Check if user has following list
+  hasFollowing = computed(() => this.accountState.followingList().length > 0);
+
+  // Check if there's any activity
+  hasActivity = computed(() => {
+    const summary = this.activitySummary();
+    return summary.notesCount > 0 || summary.articlesCount > 0 || 
+           summary.mediaCount > 0 || summary.profileUpdatesCount > 0;
+  });
 
   // Time since last check - reflects the selected time range
   timeSinceLastCheck = computed(() => {
@@ -196,12 +179,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Check if user has any favorites
-  hasFavorites = computed(() => this.favorites().length > 0);
-
-  // Check if user has following list
-  hasFollowing = computed(() => this.accountState.followingList().length > 0);
-
   constructor() {
     // Load data when account changes
     effect(() => {
@@ -228,18 +205,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.saveCurrentTimestamp();
   }
 
-  /**
-   * Start the interval to periodically save the last summary check timestamp
-   */
   private startTimestampSaveInterval(): void {
     this.saveTimestampInterval = setInterval(() => {
       this.saveCurrentTimestamp();
     }, SAVE_INTERVAL_MS);
   }
 
-  /**
-   * Stop the timestamp save interval
-   */
   private stopTimestampSaveInterval(): void {
     if (this.saveTimestampInterval) {
       clearInterval(this.saveTimestampInterval);
@@ -247,9 +218,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  /**
-   * Save the current timestamp as the last summary check
-   */
   private saveCurrentTimestamp(): void {
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
@@ -258,7 +226,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   async loadSummaryData(): Promise<void> {
-    // Don't load if component is destroyed
     if (this.isDestroyed) return;
 
     const pubkey = this.accountState.pubkey();
@@ -267,7 +234,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // Get last check timestamp immediately
+    this.isLoading.set(true);
+
+    // Get last check timestamp
     const lastCheck = this.accountLocalState.getLastSummaryCheck(pubkey);
     this.lastCheckTimestamp.set(lastCheck);
 
@@ -278,76 +247,20 @@ export class SummaryComponent implements OnInit, OnDestroy {
     const custom = this.customDate();
 
     if (preset !== null) {
-      // Use preset hours
       sinceTimestamp = Math.floor((Date.now() - preset * 60 * 60 * 1000) / 1000);
     } else if (custom) {
-      // Use custom date
       sinceTimestamp = Math.floor(custom.getTime() / 1000);
     } else {
-      // Default: since last visit or DEFAULT_DAYS_LOOKBACK days ago
       sinceTimestamp = lastCheck
         ? Math.floor(lastCheck / 1000)
         : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
     }
 
-    // Stop showing main loading spinner - show content progressively
+    await this.loadActivitySummary(sinceTimestamp);
     this.isLoading.set(false);
-
-    // Reset section loading states
-    this.isLoadingActivity.set(true);
-    this.isLoadingTopRanked.set(true);
-
-    // Load all data in parallel - each section updates independently
-    // Don't await - let each section render as it completes
-    this.loadFavoritesProfiles();
-    this.loadTopRankedUsers();
-    this.loadActivitySummary(sinceTimestamp);
-  }
-
-  private async loadFavoritesProfiles(): Promise<void> {
-    // Don't load if component is destroyed
-    if (this.isDestroyed) return;
-
-    const favPubkeys = this.favorites();
-    if (favPubkeys.length === 0) {
-      this.favoritesProfiles.set([]);
-      return;
-    }
-
-    const profiles: NostrRecord[] = [];
-
-    // Load profiles for each favorite (limited for performance)
-    for (const pubkey of favPubkeys.slice(0, MAX_FAVORITES_DISPLAY)) {
-      try {
-        const profile = await this.data.getProfile(pubkey);
-        if (profile) {
-          profiles.push(profile);
-        }
-      } catch (error) {
-        this.logger.warn(`Failed to load profile for ${pubkey}:`, error);
-      }
-    }
-
-    this.favoritesProfiles.set(profiles);
-  }
-
-  private async loadTopRankedUsers(): Promise<void> {
-    // Don't load if component is destroyed
-    if (this.isDestroyed) return;
-
-    try {
-      const users = await this.algorithms.getRecommendedUsers(MAX_TOP_RANKED_USERS);
-      this.topRankedUsers.set(users);
-    } catch (error) {
-      this.logger.warn('Failed to load top ranked users:', error);
-      this.topRankedUsers.set([]);
-    } finally {
-      this.isLoadingTopRanked.set(false);
-    }
   }
 
   private async loadActivitySummary(sinceTimestamp: number): Promise<void> {
-    // Don't load if component is destroyed
     if (this.isDestroyed) return;
 
     try {
@@ -357,24 +270,19 @@ export class SummaryComponent implements OnInit, OnDestroy {
           notesCount: 0,
           articlesCount: 0,
           mediaCount: 0,
-          profileUpdates: [],
+          profileUpdatesCount: 0,
         });
-        this.isLoadingActivity.set(false);
+        this.activePosters.set([]);
+        this.profileUpdates.set([]);
         return;
       }
 
-      // Ensure database is initialized
       await this.database.init();
 
-      // Get the current account pubkey for cache queries
       const accountPubkey = this.accountState.pubkey();
-      if (!accountPubkey) {
-        this.isLoadingActivity.set(false);
-        return;
-      }
+      if (!accountPubkey) return;
 
-      // Get events from both events store and feed cache since last check
-      // Kind 1 = notes, Kind 30023 = articles, Kind 20 = media
+      // Get events from database
       const [notes, articles, media, profiles] = await Promise.all([
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 1, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 30023, sinceTimestamp),
@@ -382,85 +290,78 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 0, sinceTimestamp),
       ]);
 
-      // Calculate activity summary - update immediately
+      const profileUpdatePubkeys = [...new Set(profiles.map(p => p.pubkey))];
+
       this.activitySummary.set({
         notesCount: notes.length,
         articlesCount: articles.length,
         mediaCount: media.length,
-        profileUpdates: [...new Set(profiles.map(p => p.pubkey))],
+        profileUpdatesCount: profileUpdatePubkeys.length,
       });
 
-      // Activity stats are now available
-      this.isLoadingActivity.set(false);
-
-      // Calculate top posters
-      this.calculateTopPosters(notes, 'notes');
-      this.calculateTopPosters(articles, 'articles');
-      this.calculateTopPosters(media, 'media');
-
-      // Load profiles for updated users (don't block)
-      this.loadUpdatedProfiles(profiles);
+      this.calculatePosterStats(notes, articles, media);
+      this.profileUpdates.set(profileUpdatePubkeys.slice(0, MAX_PROFILE_UPDATES));
 
     } catch (error) {
       this.logger.warn('Failed to load activity summary:', error);
-      this.isLoadingActivity.set(false);
     }
   }
 
-  private calculateTopPosters(events: Event[], type: 'notes' | 'articles' | 'media'): void {
-    const posterCounts = new Map<string, number>();
+  private calculatePosterStats(notes: Event[], articles: Event[], media: Event[]): void {
+    const statsMap = new Map<string, PosterStats>();
 
-    for (const event of events) {
-      const count = posterCounts.get(event.pubkey) || 0;
-      posterCounts.set(event.pubkey, count + 1);
+    for (const event of notes) {
+      const existing = statsMap.get(event.pubkey) || {
+        pubkey: event.pubkey,
+        notesCount: 0,
+        articlesCount: 0,
+        mediaCount: 0,
+        totalCount: 0,
+      };
+      existing.notesCount++;
+      existing.totalCount++;
+      statsMap.set(event.pubkey, existing);
     }
 
-    const sorted = Array.from(posterCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, MAX_TOP_POSTERS)
-      .map(([pubkey, count]) => ({ pubkey, count }));
-
-    switch (type) {
-      case 'notes':
-        this.topNotePosters.set(sorted);
-        break;
-      case 'articles':
-        this.topArticlePosters.set(sorted);
-        break;
-      case 'media':
-        this.topMediaPosters.set(sorted);
-        break;
+    for (const event of articles) {
+      const existing = statsMap.get(event.pubkey) || {
+        pubkey: event.pubkey,
+        notesCount: 0,
+        articlesCount: 0,
+        mediaCount: 0,
+        totalCount: 0,
+      };
+      existing.articlesCount++;
+      existing.totalCount++;
+      statsMap.set(event.pubkey, existing);
     }
+
+    for (const event of media) {
+      const existing = statsMap.get(event.pubkey) || {
+        pubkey: event.pubkey,
+        notesCount: 0,
+        articlesCount: 0,
+        mediaCount: 0,
+        totalCount: 0,
+      };
+      existing.mediaCount++;
+      existing.totalCount++;
+      statsMap.set(event.pubkey, existing);
+    }
+
+    const sorted = Array.from(statsMap.values())
+      .sort((a, b) => b.totalCount - a.totalCount)
+      .slice(0, MAX_POSTERS_DISPLAY);
+
+    this.activePosters.set(sorted);
   }
 
-  private async loadUpdatedProfiles(profileEvents: Event[]): Promise<void> {
-    // Get unique pubkeys
-    const uniquePubkeys = [...new Set(profileEvents.map(p => p.pubkey))].slice(0, MAX_UPDATED_PROFILES);
-
-    const profiles: NostrRecord[] = [];
-
-    for (const pubkey of uniquePubkeys) {
-      try {
-        const profile = await this.data.getProfile(pubkey);
-        if (profile) {
-          profiles.push(profile);
-        }
-      } catch (error) {
-        this.logger.warn(`Failed to load updated profile for ${pubkey}:`, error);
-      }
-    }
-
-    this.updatedProfiles.set(profiles);
-  }
-
-  // Select a time preset
   selectPreset(hours: number): void {
     this.selectedPreset.set(hours);
     this.customDate.set(null);
     this.loadSummaryData();
   }
 
-  // Select custom date
   onCustomDateChange(date: Date | null): void {
     if (date) {
       this.customDate.set(date);
@@ -469,29 +370,16 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Reset to "since last visit"
   resetToLastVisit(): void {
     this.selectedPreset.set(null);
     this.customDate.set(null);
     this.loadSummaryData();
   }
 
-  // Check if using custom time range
-  isUsingCustomRange(): boolean {
-    return this.selectedPreset() !== null || this.customDate() !== null;
-  }
-
-  // Refresh data
   async refresh(): Promise<void> {
     await this.loadSummaryData();
   }
 
-  // Navigate to people discover page
-  navigateToPeople(): void {
-    // Router navigation will be handled by routerLink in template
-  }
-
-  // Format large numbers
   formatNumber(num: number): string {
     if (num >= 1000000) {
       return (num / 1000000).toFixed(1) + 'M';

@@ -331,10 +331,10 @@ export class DataService {
       rejectPromise!(error);
       throw error;
     } finally {
-      // Clean up the pending request after a short delay to catch any late duplicates
+      // Clean up the pending request after a longer delay to catch late duplicates (5 seconds)
       setTimeout(() => {
         this.pendingProfileRequests.delete(pubkey);
-      }, 100);
+      }, 5000);
     }
   }
 

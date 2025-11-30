@@ -299,8 +299,22 @@
     background-color: var(--mat-sys-surface-container-high);
   }
 
-  mat-chip {
+  .poster-stats {
+    display: flex;
+    gap: 0.5rem;
     flex-shrink: 0;
+
+    mat-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.25rem;
+      
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+      }
+    }
   }
 }
 
