@@ -127,8 +127,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Check if there's any activity
   hasActivity = computed(() => {
     const summary = this.activitySummary();
-    return summary.notesCount > 0 || summary.articlesCount > 0 || 
-           summary.mediaCount > 0 || summary.profileUpdatesCount > 0;
+    return summary.notesCount > 0 || summary.articlesCount > 0 ||
+      summary.mediaCount > 0 || summary.profileUpdatesCount > 0;
   });
 
   // Time since last check - reflects the selected time range
