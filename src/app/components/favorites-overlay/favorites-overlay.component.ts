@@ -63,11 +63,26 @@ export class FavoritesOverlayComponent {
   // Get all following from account state
   following = this.accountState.followingList;
 
-  // Preload profiles for favorites
+  // Preload profiles for favorites - signal that gets updated by effect
   favoritesWithProfiles = signal<{ pubkey: string; profile?: NostrRecord }[]>([]);
 
-  // Preload profiles for all following
-  followingWithProfiles = signal<{ pubkey: string; profile?: NostrRecord }[]>([]);
+  // Computed signal for following profiles - uses FollowingService.profiles() directly for reactivity
+  // This ensures the UI updates when profiles are loaded
+  followingWithProfiles = computed(() => {
+    const followingList = this.following();
+    // Track the profiles signal to ensure reactivity when profiles are loaded
+    const allProfiles = this.followingService.profiles();
+
+    if (followingList.length === 0) {
+      return [];
+    }
+
+    // Map following list to profiles, using the reactive profiles array
+    return followingList.map((pubkey) => {
+      const followingProfile = allProfiles.find(p => p.pubkey === pubkey);
+      return { pubkey, profile: followingProfile?.profile || undefined };
+    });
+  });
 
   constructor() {
     // Load docked preference from account local state
@@ -97,10 +112,11 @@ export class FavoritesOverlayComponent {
     // Effect to load profiles when favorites change - use cached profiles when available
     effect(() => {
       const favs = this.favorites();
-      // Track FollowingService initialization to re-run when profiles are loaded
-      const isInitialized = this.followingService.isInitialized();
+      // Track FollowingService profiles to re-run when profiles are loaded
+      // This ensures the effect re-runs when profiles become available
+      const allProfiles = this.followingService.profiles();
 
-      // Run untracked to avoid re-triggering
+      // Run untracked for the async operations to avoid re-triggering loops
       untracked(async () => {
         if (favs.length === 0) {
           this.favoritesWithProfiles.set([]);
@@ -109,11 +125,12 @@ export class FavoritesOverlayComponent {
 
         // Use profiles from FollowingService cache, only fetch if not available
         const profilesPromises = favs.map(async (pubkey) => {
-          const cachedProfile = this.followingService.getProfile(pubkey);
-          if (cachedProfile?.profile) {
-            return { pubkey, profile: cachedProfile.profile };
+          // First try to find in the already-loaded profiles array
+          const followingProfile = allProfiles.find(p => p.pubkey === pubkey);
+          if (followingProfile?.profile) {
+            return { pubkey, profile: followingProfile.profile };
           }
-          // Fallback to fetching if not in cache (shouldn't happen for following)
+          // Fallback to fetching if not in cache (e.g., favorited user not in following list)
           const profile = await this.data.getProfile(pubkey);
           return { pubkey, profile };
         });
@@ -138,36 +155,18 @@ export class FavoritesOverlayComponent {
       });
     });
 
-    // Effect to load profiles for all following - use FollowingService's cached profiles
+    // Effect to preload images for all following profiles
     effect(() => {
-      const followingList = this.following();
-      // Track FollowingService initialization to re-run when profiles are loaded
-      const isInitialized = this.followingService.isInitialized();
+      const profiles = this.followingWithProfiles();
 
-      // Run untracked to avoid re-triggering
-      untracked(() => {
-        if (followingList.length === 0) {
-          this.followingWithProfiles.set([]);
-          return;
-        }
+      // Preload images for following at 96x96 (standard size)
+      const imagesToPreload = profiles
+        .map((p) => p.profile?.data?.picture)
+        .filter((url): url is string => !!url);
 
-        // Use profiles already loaded by FollowingService instead of making new requests
-        const profiles = followingList.map((pubkey) => {
-          const followingProfile = this.followingService.getProfile(pubkey);
-          return { pubkey, profile: followingProfile?.profile || undefined };
-        });
-
-        this.followingWithProfiles.set(profiles);
-
-        // Preload images for following at 96x96 (standard size)
-        const imagesToPreload = profiles
-          .map((p) => p.profile?.data?.picture)
-          .filter((url): url is string => !!url);
-
-        if (imagesToPreload.length > 0) {
-          this.imageCacheService.preloadImages(imagesToPreload);
-        }
-      });
+      if (imagesToPreload.length > 0) {
+        this.imageCacheService.preloadImages(imagesToPreload);
+      }
     });
   }
 
