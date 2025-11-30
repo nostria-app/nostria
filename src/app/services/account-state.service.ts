@@ -1014,9 +1014,23 @@ export class AccountStateService implements OnDestroy {
           newProfiles.set(pubkey, profile);
           return newProfiles;
         });
+      } else {
+        // Even if profile is not found, add a marker to prevent repeated requests
+        // Use a minimal placeholder to indicate we tried but found nothing
+        this.accountProfiles.update(profiles => {
+          const newProfiles = new Map(profiles);
+          newProfiles.set(pubkey, { isEmpty: true, pubkey } as unknown as NostrRecord);
+          return newProfiles;
+        });
       }
     } catch (error) {
       console.warn('Failed to load account profile in background:', pubkey, error);
+      // Add empty placeholder to prevent repeated failed requests
+      this.accountProfiles.update(profiles => {
+        const newProfiles = new Map(profiles);
+        newProfiles.set(pubkey, { isEmpty: true, pubkey, error: true } as unknown as NostrRecord);
+        return newProfiles;
+      });
     } finally {
       // Remove from pending set when done
       this.pendingProfileBackgroundLoads.delete(pubkey);

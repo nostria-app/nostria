@@ -214,10 +214,10 @@ export class UserDataService {
       rejectPromise!(error);
       throw error;
     } finally {
-      // Clean up after a short delay to catch any late duplicates
+      // Clean up after a longer delay to catch late duplicates (5 seconds)
       setTimeout(() => {
         this.pendingProfileRequests.delete(pubkey);
-      }, 100);
+      }, 5000);
     }
   }
 

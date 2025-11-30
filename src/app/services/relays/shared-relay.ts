@@ -24,9 +24,17 @@ export class SharedRelayService {
 
   /**
    * Creates a unique cache key for request deduplication
+   * Only uses the filter for metadata requests since that's what we're actually querying
+   * The pubkey parameter is only used for relay selection and shouldn't affect dedup
    */
   private createCacheKey(pubkey: string, filter: any, timeout: number): string {
-    return JSON.stringify({ pubkey, filter, timeout });
+    // For metadata requests (kind 0), only use the author being queried
+    // This ensures we deduplicate even if called from different contexts
+    if (filter.kinds?.includes(0) && filter.authors?.length === 1) {
+      return `metadata-${filter.authors[0]}`;
+    }
+    // For other requests, include all parameters
+    return JSON.stringify({ filter, timeout });
   }
 
   /**
