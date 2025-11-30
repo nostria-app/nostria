@@ -4,6 +4,7 @@ import { Event, SimplePool } from 'nostr-tools';
 import { RelaysService } from './relays';
 import { UtilitiesService } from '../utilities.service';
 import { SubscriptionManagerService } from './subscription-manager';
+import { RelayAuthService } from './relay-auth.service';
 
 export interface Relay {
   url: string;
@@ -20,6 +21,7 @@ export abstract class RelayServiceBase {
   protected utilities = inject(UtilitiesService);
   protected injector = inject(Injector);
   protected subscriptionManager = inject(SubscriptionManagerService);
+  protected relayAuth = inject(RelayAuthService);
   protected useOptimizedRelays = false;
 
   // Pool instance identifier for tracking
@@ -534,6 +536,17 @@ export abstract class RelayServiceBase {
     urls: string[],
     options: { timeout?: number } = {},
   ): Promise<T | null> {
+    // Filter out relays that have failed authentication
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(urls);
+    if (filteredUrls.length === 0) {
+      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot execute query`);
+      return null;
+    }
+    if (filteredUrls.length < urls.length) {
+      this.logger.debug(`[${this.constructor.name}] Filtered out ${urls.length - filteredUrls.length} auth-failed relays`);
+    }
+    urls = filteredUrls;
+
     // Don't apply optimization to explicit relay URLs - use them as provided
     // if (this.useOptimizedRelays) {
     //   urls = this.relaysService.getOptimalRelays(relayUrls);
@@ -666,7 +679,15 @@ export abstract class RelayServiceBase {
     relayUrls: string[],
     options: { timeout?: number } = {},
   ): Promise<T[]> {
-    const urls = relayUrls;
+    // Filter out relays that have failed authentication
+    const urls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    if (urls.length === 0) {
+      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot execute query`);
+      return [];
+    }
+    if (urls.length < relayUrls.length) {
+      this.logger.debug(`[${this.constructor.name}] Filtered out ${relayUrls.length - urls.length} auth-failed relays`);
+    }
 
     // Check if the value of "authors" array starts with "npub" or not.
     const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
@@ -687,6 +708,9 @@ export abstract class RelayServiceBase {
 
     await this.acquireSemaphore();
 
+    // Get auth callback for NIP-42 authentication
+    const authCallback = this.relayAuth.getAuthCallback();
+
     try {
       // Default timeout is 5 seconds if not specified
       const timeout = options.timeout || 5000;
@@ -696,6 +720,7 @@ export abstract class RelayServiceBase {
       return new Promise<T[]>((resolve) => {
         this.#pool!.subscribeEose(urls, filter, {
           maxWait: timeout,
+          onauth: authCallback,
           onevent: (event) => {
             // Check if event has expired according to NIP-40
             if (this.utilities.isEventExpired(event)) {
@@ -742,17 +767,22 @@ export abstract class RelayServiceBase {
       return null;
     }
 
-    // Use provided relay URLs or default to the user's relays
-    const urls = this.relayUrls;
-
+    // Filter out relays that have failed authentication
+    const urls = this.relayAuth.filterAuthFailedRelays(this.relayUrls);
     if (urls.length === 0) {
-      this.logger.warn('No relays available for publishing');
+      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot publish`);
       return null;
     }
+    if (urls.length < this.relayUrls.length) {
+      this.logger.debug(`[${this.constructor.name}] Filtered out ${this.relayUrls.length - urls.length} auth-failed relays for publish`);
+    }
+
+    // Get auth callback for NIP-42 authentication
+    const authCallback = this.relayAuth.getAuthCallback();
 
     try {
-      // Publish the event
-      const publishResults = this.#pool.publish(urls, event);
+      // Publish the event with auth support
+      const publishResults = this.#pool.publish(urls, event, { onauth: authCallback });
       this.logger.debug('Publish results:', publishResults);
 
       // Lazy-load NotificationService to avoid circular dependency
@@ -778,6 +808,10 @@ export abstract class RelayServiceBase {
             .catch((error: unknown) => {
               const errorMsg = error instanceof Error ? error.message : 'Failed';
               this.logger.error(`Relay ${relayUrl} failed: ${errorMsg}`);
+              // Check if this was an auth failure
+              if (errorMsg.includes('auth-required') || errorMsg.includes('auth')) {
+                this.relayAuth.markAuthFailed(relayUrl, errorMsg);
+              }
               throw new Error(`${relayUrl}: ${errorMsg}`);
             });
           relayPromises.set(wrappedPromise, relayUrl);
@@ -819,16 +853,21 @@ export abstract class RelayServiceBase {
       return null;
     }
 
-    const urls = Array.isArray(relayUrls) ? relayUrls : [relayUrls];
+    let urls = Array.isArray(relayUrls) ? relayUrls : [relayUrls];
 
+    // Filter out relays that have failed authentication
+    urls = this.relayAuth.filterAuthFailedRelays(urls);
     if (urls.length === 0) {
-      this.logger.warn('No relays available for publishing');
+      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot publish`);
       return null;
     }
 
+    // Get auth callback for NIP-42 authentication
+    const authCallback = this.relayAuth.getAuthCallback();
+
     try {
-      // Publish the event
-      const publishResults = this.#pool.publish(urls, event);
+      // Publish the event with auth support
+      const publishResults = this.#pool.publish(urls, event, { onauth: authCallback });
       this.logger.debug('Publish results:', publishResults);
 
       // Update lastUsed for all relays used in this publish operation
@@ -869,6 +908,17 @@ export abstract class RelayServiceBase {
 
     if (this.useOptimizedRelays) {
       urls = this.relaysService.getOptimalRelays(this.relayUrls);
+    }
+
+    // Filter out relays that have failed authentication
+    urls = this.relayAuth.filterAuthFailedRelays(urls);
+    if (urls.length === 0) {
+      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot subscribe`);
+      return {
+        close: () => {
+          this.logger.debug(`[${this.constructor.name}] No subscription to close (all relays auth-failed)`);
+        },
+      };
     }
 
     if (!this.#pool) {
@@ -931,6 +981,9 @@ export abstract class RelayServiceBase {
       };
     }
 
+    // Get auth callback for NIP-42 authentication
+    const authCallback = this.relayAuth.getAuthCallback();
+
     try {
       this.logger.info(`[${this.constructor.name}] Creating subscription`, {
         subscriptionId,
@@ -939,8 +992,9 @@ export abstract class RelayServiceBase {
         filter,
       });
 
-      // Create the subscription
+      // Create the subscription with auth support
       const sub = this.#pool.subscribeMany(urls, filter, {
+        onauth: authCallback,
         onevent: (evt) => {
           // Check if event has expired according to NIP-40
           if (this.utilities.isEventExpired(evt)) {
