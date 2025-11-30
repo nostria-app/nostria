@@ -167,18 +167,17 @@
         <mat-icon>schedule</mat-icon>
         Activity Timeline
       </h2>
-      <p class="section-description">Recent activity from people you follow</p>
       <div class="timeline">
         @for (event of timelineEvents(); track event.id) {
         <a class="timeline-item" [routerLink]="getEventRoute(event)">
+          <app-user-profile [pubkey]="event.pubkey" view="icon" class="timeline-author"></app-user-profile>
           <div class="timeline-content">
             <div class="timeline-header">
-              <app-user-profile [pubkey]="event.pubkey" view="icon" class="timeline-author"></app-user-profile>
               <span class="timeline-type">{{ getEventKindLabel(event.kind) }}</span>
-              <span class="timeline-time">{{ event.created_at | ago }}</span>
             </div>
             <p class="timeline-preview">{{ getEventPreview(event) }}</p>
           </div>
+          <span class="timeline-time-external">{{ event.created_at | ago }}</span>
         </a>
         }
       </div>
