@@ -39,6 +39,8 @@ interface AccountLocalState {
   translationSourceLang?: string;
   translationTargetLang?: string;
   lastSummaryCheck?: number; // Timestamp when user last viewed the Summary page
+  summaryTimePreset?: number | null; // Selected time preset in hours, null = last visit
+  summaryCustomDate?: number | null; // Custom date timestamp if selected
 }
 
 /**
@@ -449,6 +451,36 @@ export class AccountLocalStateService {
    */
   setLastSummaryCheck(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { lastSummaryCheck: timestamp });
+  }
+
+  /**
+   * Get summary time preset for an account
+   */
+  getSummaryTimePreset(pubkey: string): number | null | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.summaryTimePreset;
+  }
+
+  /**
+   * Set summary time preset for an account
+   */
+  setSummaryTimePreset(pubkey: string, preset: number | null | undefined): void {
+    this.updateAccountState(pubkey, { summaryTimePreset: preset });
+  }
+
+  /**
+   * Get summary custom date for an account
+   */
+  getSummaryCustomDate(pubkey: string): number | null | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.summaryCustomDate;
+  }
+
+  /**
+   * Set summary custom date for an account
+   */
+  setSummaryCustomDate(pubkey: string, timestamp: number | null | undefined): void {
+    this.updateAccountState(pubkey, { summaryCustomDate: timestamp });
   }
 
   /**

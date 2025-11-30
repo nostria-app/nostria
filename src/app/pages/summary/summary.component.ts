@@ -20,14 +20,16 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatNativeDateModule } from '@angular/material/core';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatExpansionModule } from '@angular/material/expansion';
 import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { DatabaseService } from '../../services/database.service';
 import { LoggerService } from '../../services/logger.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
-import { Event } from 'nostr-tools';
+import { Event, nip19 } from 'nostr-tools';
 import { ApplicationService } from '../../services/application.service';
+import { AgoPipe } from '../../pipes/ago.pipe';
 
 interface ActivitySummary {
   notesCount: number;
@@ -44,11 +46,21 @@ interface PosterStats {
   totalCount: number;
 }
 
+interface TimelineEvent {
+  id: string;
+  pubkey: string;
+  kind: number;
+  created_at: number;
+  content: string;
+  tags?: string[][]; // For article d-tag
+}
+
 // Constants for configurable limits
 const DEFAULT_DAYS_LOOKBACK = 2;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MAX_POSTERS_DISPLAY = 20;
 const MAX_PROFILE_UPDATES = 10;
+const MAX_TIMELINE_EVENTS = 50;
 const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 
 @Component({
@@ -67,7 +79,9 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     MatNativeDateModule,
     MatFormFieldModule,
     MatInputModule,
+    MatExpansionModule,
     UserProfileComponent,
+    AgoPipe,
   ],
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
@@ -120,6 +134,24 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Profile updates (pubkeys of people who updated their profiles)
   profileUpdates = signal<string[]>([]);
+
+  // Raw events for timeline and drill-down
+  noteEvents = signal<TimelineEvent[]>([]);
+  articleEvents = signal<TimelineEvent[]>([]);
+  mediaEvents = signal<TimelineEvent[]>([]);
+
+  // Timeline events (combined and sorted)
+  timelineEvents = computed(() => {
+    const notes = this.noteEvents().map(e => ({ ...e, type: 'note' as const }));
+    const articles = this.articleEvents().map(e => ({ ...e, type: 'article' as const }));
+    const media = this.mediaEvents().map(e => ({ ...e, type: 'media' as const }));
+    return [...notes, ...articles, ...media]
+      .sort((a, b) => b.created_at - a.created_at)
+      .slice(0, MAX_TIMELINE_EVENTS);
+  });
+
+  // Expanded panel state
+  expandedPanel = signal<'notes' | 'articles' | 'media' | null>(null);
 
   // Check if user has following list
   hasFollowing = computed(() => this.accountState.followingList().length > 0);
@@ -184,9 +216,28 @@ export class SummaryComponent implements OnInit, OnDestroy {
     effect(() => {
       const pubkey = this.accountState.pubkey();
       if (pubkey) {
+        // Restore saved time selection
+        this.restoreTimeSelection(pubkey);
         this.loadSummaryData();
       }
     });
+  }
+
+  private restoreTimeSelection(pubkey: string): void {
+    const savedPreset = this.accountLocalState.getSummaryTimePreset(pubkey);
+    const savedCustomDate = this.accountLocalState.getSummaryCustomDate(pubkey);
+
+    if (savedPreset !== undefined && savedPreset !== null) {
+      this.selectedPreset.set(savedPreset);
+      this.customDate.set(null);
+    } else if (savedCustomDate) {
+      this.customDate.set(new Date(savedCustomDate));
+      this.selectedPreset.set(null);
+    } else {
+      // Default to last visit
+      this.selectedPreset.set(null);
+      this.customDate.set(null);
+    }
   }
 
   ngOnInit(): void {
@@ -274,6 +325,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
         });
         this.activePosters.set([]);
         this.profileUpdates.set([]);
+        this.noteEvents.set([]);
+        this.articleEvents.set([]);
+        this.mediaEvents.set([]);
         return;
       }
 
@@ -298,6 +352,30 @@ export class SummaryComponent implements OnInit, OnDestroy {
         mediaCount: media.length,
         profileUpdatesCount: profileUpdatePubkeys.length,
       });
+
+      // Store events for timeline and drill-down
+      this.noteEvents.set(notes.map(e => ({
+        id: e.id,
+        pubkey: e.pubkey,
+        kind: e.kind,
+        created_at: e.created_at,
+        content: e.content,
+      })));
+      this.articleEvents.set(articles.map(e => ({
+        id: e.id,
+        pubkey: e.pubkey,
+        kind: e.kind,
+        created_at: e.created_at,
+        content: e.content,
+        tags: e.tags, // Include tags for naddr generation
+      })));
+      this.mediaEvents.set(media.map(e => ({
+        id: e.id,
+        pubkey: e.pubkey,
+        kind: e.kind,
+        created_at: e.created_at,
+        content: e.content,
+      })));
 
       this.calculatePosterStats(notes, articles, media);
       this.profileUpdates.set(profileUpdatePubkeys.slice(0, MAX_PROFILE_UPDATES));
@@ -359,6 +437,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
   selectPreset(hours: number): void {
     this.selectedPreset.set(hours);
     this.customDate.set(null);
+    // Save selection
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setSummaryTimePreset(pubkey, hours);
+      this.accountLocalState.setSummaryCustomDate(pubkey, null);
+    }
     this.loadSummaryData();
   }
 
@@ -366,6 +450,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
     if (date) {
       this.customDate.set(date);
       this.selectedPreset.set(null);
+      // Save selection
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.accountLocalState.setSummaryTimePreset(pubkey, null);
+        this.accountLocalState.setSummaryCustomDate(pubkey, date.getTime());
+      }
       this.loadSummaryData();
     }
   }
@@ -373,7 +463,85 @@ export class SummaryComponent implements OnInit, OnDestroy {
   resetToLastVisit(): void {
     this.selectedPreset.set(null);
     this.customDate.set(null);
+    // Save selection
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setSummaryTimePreset(pubkey, null);
+      this.accountLocalState.setSummaryCustomDate(pubkey, null);
+    }
     this.loadSummaryData();
+  }
+
+  togglePanel(panel: 'notes' | 'articles' | 'media'): void {
+    this.expandedPanel.set(this.expandedPanel() === panel ? null : panel);
+  }
+
+  getEventKindIcon(kind: number): string {
+    switch (kind) {
+      case 1: return 'chat';
+      case 30023: return 'article';
+      case 20: return 'perm_media';
+      default: return 'event';
+    }
+  }
+
+  getEventKindLabel(kind: number): string {
+    switch (kind) {
+      case 1: return 'Note';
+      case 30023: return 'Article';
+      case 20: return 'Media';
+      default: return 'Event';
+    }
+  }
+
+  getArticleRoute(event: TimelineEvent): string[] {
+    // For articles (kind 30023), generate naddr route
+    if (event.tags) {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+      try {
+        const naddr = nip19.naddrEncode({
+          kind: 30023,
+          pubkey: event.pubkey,
+          identifier: dTag,
+        });
+        return ['/a', naddr];
+      } catch {
+        // Fallback to event ID
+        return ['/e', event.id];
+      }
+    }
+    return ['/e', event.id];
+  }
+
+  getEventRoute(event: TimelineEvent & { type: string }): string[] {
+    // For articles (kind 30023), generate naddr route
+    if (event.kind === 30023 && event.tags) {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+      try {
+        const naddr = nip19.naddrEncode({
+          kind: 30023,
+          pubkey: event.pubkey,
+          identifier: dTag,
+        });
+        return ['/a', naddr];
+      } catch {
+        // Fallback to event ID
+        return ['/e', event.id];
+      }
+    }
+    // For notes and media, use event ID
+    return ['/e', event.id];
+  }
+
+  getEventPreview(event: TimelineEvent): string {
+    if (event.kind === 30023 && event.tags) {
+      // For articles, get title from tags
+      const title = event.tags.find(t => t[0] === 'title')?.[1];
+      if (title) return title;
+    }
+    // Truncate content for preview
+    const content = event.content || '';
+    return content.length > 100 ? content.substring(0, 100) + '...' : content;
   }
 
   async refresh(): Promise<void> {
