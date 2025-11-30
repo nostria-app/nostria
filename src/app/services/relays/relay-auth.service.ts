@@ -5,6 +5,12 @@ import { DatabaseService } from '../database.service';
 import { UtilitiesService } from '../utilities.service';
 import { ObservedRelayStats } from '../storage.service';
 
+/** Type for the onauth callback used by nostr-tools SimplePool operations */
+export type AuthCallback = (evt: EventTemplate) => Promise<VerifiedEvent>;
+
+/** Type for the signing function that signs auth events */
+export type AuthSignFunction = (evt: EventTemplate) => Promise<Event>;
+
 /**
  * Service to handle NIP-42 relay authentication.
  * 
@@ -28,13 +34,13 @@ export class RelayAuthService {
   // Signing function - will be set by NostrService to avoid circular dependency
   // Note: Event type is used since that's what NostrService.signEvent returns
   // nostr-tools internally uses VerifiedEvent but Event is compatible
-  private signAuthEventFn: ((evt: EventTemplate) => Promise<Event>) | null = null;
+  private signAuthEventFn: AuthSignFunction | null = null;
 
   /**
    * Set the signing function for auth events.
    * This should be called by NostrService during initialization.
    */
-  setSignFunction(signFn: (evt: EventTemplate) => Promise<Event>): void {
+  setSignFunction(signFn: AuthSignFunction): void {
     this.signAuthEventFn = signFn;
     this.logger.debug('[RelayAuthService] Sign function set');
   }
@@ -48,9 +54,9 @@ export class RelayAuthService {
 
   /**
    * Get the `onauth` callback to use with nostr-tools SimplePool operations.
-   * Returns null if signing is not available (e.g., preview account).
+   * Returns undefined if signing is not available (e.g., preview account).
    */
-  getAuthCallback(): ((evt: EventTemplate) => Promise<VerifiedEvent>) | undefined {
+  getAuthCallback(): AuthCallback | undefined {
     if (!this.signAuthEventFn) {
       this.logger.debug('[RelayAuthService] No sign function available, auth callback will be undefined');
       return undefined;

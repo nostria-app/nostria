@@ -122,6 +122,25 @@ export abstract class RelayServiceBase {
   }
 
   /**
+   * Filter relay URLs to exclude those that have failed authentication.
+   * Returns the filtered URLs and logs a warning if all relays were filtered out.
+   * 
+   * @param urls Array of relay URLs to filter
+   * @returns Object with filtered URLs and whether the operation should proceed
+   */
+  protected filterAuthFailedRelays(urls: string[]): { urls: string[]; shouldProceed: boolean } {
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(urls);
+    if (filteredUrls.length === 0) {
+      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot execute operation`);
+      return { urls: [], shouldProceed: false };
+    }
+    if (filteredUrls.length < urls.length) {
+      this.logger.debug(`[${this.constructor.name}] Filtered out ${urls.length - filteredUrls.length} auth-failed relays`);
+    }
+    return { urls: filteredUrls, shouldProceed: true };
+  }
+
+  /**
    * Track a subscription as active
    */
   protected addActiveSubscription(subscriptionId: string): void {
@@ -537,15 +556,11 @@ export abstract class RelayServiceBase {
     options: { timeout?: number } = {},
   ): Promise<T | null> {
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(urls);
-    if (filteredUrls.length === 0) {
-      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot execute query`);
+    const authResult = this.filterAuthFailedRelays(urls);
+    if (!authResult.shouldProceed) {
       return null;
     }
-    if (filteredUrls.length < urls.length) {
-      this.logger.debug(`[${this.constructor.name}] Filtered out ${urls.length - filteredUrls.length} auth-failed relays`);
-    }
-    urls = filteredUrls;
+    urls = authResult.urls;
 
     // Don't apply optimization to explicit relay URLs - use them as provided
     // if (this.useOptimizedRelays) {
@@ -680,14 +695,11 @@ export abstract class RelayServiceBase {
     options: { timeout?: number } = {},
   ): Promise<T[]> {
     // Filter out relays that have failed authentication
-    const urls = this.relayAuth.filterAuthFailedRelays(relayUrls);
-    if (urls.length === 0) {
-      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot execute query`);
+    const authResult = this.filterAuthFailedRelays(relayUrls);
+    if (!authResult.shouldProceed) {
       return [];
     }
-    if (urls.length < relayUrls.length) {
-      this.logger.debug(`[${this.constructor.name}] Filtered out ${relayUrls.length - urls.length} auth-failed relays`);
-    }
+    const urls = authResult.urls;
 
     // Check if the value of "authors" array starts with "npub" or not.
     const isNpub = filter.authors?.some((author) => author.startsWith('npub'));
@@ -768,14 +780,11 @@ export abstract class RelayServiceBase {
     }
 
     // Filter out relays that have failed authentication
-    const urls = this.relayAuth.filterAuthFailedRelays(this.relayUrls);
-    if (urls.length === 0) {
-      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot publish`);
+    const authResult = this.filterAuthFailedRelays(this.relayUrls);
+    if (!authResult.shouldProceed) {
       return null;
     }
-    if (urls.length < this.relayUrls.length) {
-      this.logger.debug(`[${this.constructor.name}] Filtered out ${this.relayUrls.length - urls.length} auth-failed relays for publish`);
-    }
+    const urls = authResult.urls;
 
     // Get auth callback for NIP-42 authentication
     const authCallback = this.relayAuth.getAuthCallback();
@@ -853,14 +862,14 @@ export abstract class RelayServiceBase {
       return null;
     }
 
-    let urls = Array.isArray(relayUrls) ? relayUrls : [relayUrls];
+    const inputUrls = Array.isArray(relayUrls) ? relayUrls : [relayUrls];
 
     // Filter out relays that have failed authentication
-    urls = this.relayAuth.filterAuthFailedRelays(urls);
-    if (urls.length === 0) {
-      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot publish`);
+    const authResult = this.filterAuthFailedRelays(inputUrls);
+    if (!authResult.shouldProceed) {
       return null;
     }
+    const urls = authResult.urls;
 
     // Get auth callback for NIP-42 authentication
     const authCallback = this.relayAuth.getAuthCallback();
@@ -911,15 +920,15 @@ export abstract class RelayServiceBase {
     }
 
     // Filter out relays that have failed authentication
-    urls = this.relayAuth.filterAuthFailedRelays(urls);
-    if (urls.length === 0) {
-      this.logger.warn(`[${this.constructor.name}] All relays have failed authentication, cannot subscribe`);
+    const authResult = this.filterAuthFailedRelays(urls);
+    if (!authResult.shouldProceed) {
       return {
         close: () => {
           this.logger.debug(`[${this.constructor.name}] No subscription to close (all relays auth-failed)`);
         },
       };
     }
+    urls = authResult.urls;
 
     if (!this.#pool) {
       this.logger.error(`[${this.constructor.name}] Cannot subscribe: user pool is not initialized`);
