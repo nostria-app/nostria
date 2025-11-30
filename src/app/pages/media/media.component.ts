@@ -820,23 +820,36 @@ export class MediaComponent {
   setSortOption(option: 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'size-asc' | 'size-desc'): void {
     this.sortOption.set(option);
     // Re-sort the current lists
-    this.images.update(items => this.sortMediaItems([...items]));
-    this.videos.update(items => this.sortMediaItems([...items]));
-    this.files.update(items => this.sortMediaItems([...items]));
+    this.images.update(items => this.sortMediaItems(items));
+    this.videos.update(items => this.sortMediaItems(items));
+    this.files.update(items => this.sortMediaItems(items));
   }
 
   private sortMediaItems(items: MediaItem[]): MediaItem[] {
     const sortOption = this.sortOption();
+    
+    // For name sorting, pre-compute filenames to avoid repeated URL parsing
+    if (sortOption === 'name-asc' || sortOption === 'name-desc') {
+      const itemsWithNames = items.map(item => ({
+        item,
+        name: this.getFileName(item.url)
+      }));
+      
+      itemsWithNames.sort((a, b) => {
+        return sortOption === 'name-asc' 
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
+      });
+      
+      return itemsWithNames.map(x => x.item);
+    }
+    
     return [...items].sort((a, b) => {
       switch (sortOption) {
         case 'newest':
           return (b.uploaded || 0) - (a.uploaded || 0);
         case 'oldest':
           return (a.uploaded || 0) - (b.uploaded || 0);
-        case 'name-asc':
-          return this.getFileName(a.url).localeCompare(this.getFileName(b.url));
-        case 'name-desc':
-          return this.getFileName(b.url).localeCompare(this.getFileName(a.url));
         case 'size-asc':
           return (a.size || 0) - (b.size || 0);
         case 'size-desc':
