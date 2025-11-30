@@ -441,13 +441,16 @@ export class AccountStateService implements OnDestroy {
     if (event) {
       const followingTags = this.utilities.getTags(event, 'p');
 
+      // Filter out invalid pubkeys - some clients incorrectly put hashtag names in p-tags
+      const validFollowingTags = followingTags.filter(pubkey => this.utilities.isValidPubkey(pubkey));
+
       // Get current following list to compare
       const currentFollowingList = this.followingList();
 
       // Check if the lists are different
-      const hasChanged = !this.utilities.arraysEqual(currentFollowingList, followingTags);
+      const hasChanged = !this.utilities.arraysEqual(currentFollowingList, validFollowingTags);
       if (hasChanged) {
-        this.followingList.set(followingTags);
+        this.followingList.set(validFollowingTags);
         await this.database.saveEvent(event);
       }
     }
