@@ -68,12 +68,17 @@ export class FavoritesOverlayComponent {
   // Preload profiles for favorites - signal that gets updated by effect
   favoritesWithProfiles = signal<{ pubkey: string; profile?: NostrRecord }[]>([]);
 
+  // Additional profiles fetched for following users not in FollowingService cache
+  private additionalProfiles = signal<Map<string, NostrRecord>>(new Map());
+
   // Computed signal for following profiles - uses FollowingService.profiles() directly for reactivity
   // This ensures the UI updates when profiles are loaded
   followingWithProfiles = computed(() => {
     const followingList = this.following();
     // Track the profiles signal to ensure reactivity when profiles are loaded
     const allProfiles = this.followingService.profiles();
+    // Also track additional profiles that were fetched separately
+    const additionalProfilesMap = this.additionalProfiles();
 
     if (followingList.length === 0) {
       return [];
@@ -85,7 +90,9 @@ export class FavoritesOverlayComponent {
     // Map following list to profiles, using the reactive profiles array
     return validFollowingList.map((pubkey) => {
       const followingProfile = allProfiles.find(p => p.pubkey === pubkey);
-      return { pubkey, profile: followingProfile?.profile || undefined };
+      // Use FollowingService profile first, then fall back to additionally fetched profiles
+      const profile = followingProfile?.profile || additionalProfilesMap.get(pubkey) || undefined;
+      return { pubkey, profile };
     });
   });
 
@@ -181,6 +188,54 @@ export class FavoritesOverlayComponent {
         this.imageCacheService.preloadImages(imagesToPreload);
       }
     });
+
+    // Effect to fetch profiles for following users that don't have profile data yet
+    // This fixes "Unknown" profiles that appear when FollowingService hasn't loaded all profiles
+    effect(() => {
+      const profiles = this.followingWithProfiles();
+      // Also track the additional profiles to avoid fetching already-fetched ones
+      const additionalProfilesMap = this.additionalProfiles();
+
+      // Find profiles that are still missing (showing as "Unknown")
+      const missingProfiles = profiles
+        .filter(p => !p.profile)
+        .map(p => p.pubkey)
+        // Don't re-fetch profiles we've already tried to fetch
+        .filter(pubkey => !additionalProfilesMap.has(pubkey))
+        // Limit to avoid too many parallel requests
+        .slice(0, 50);
+
+      if (missingProfiles.length === 0) {
+        return;
+      }
+
+      // Fetch missing profiles in the background
+      untracked(async () => {
+        const fetchedProfiles = await Promise.all(
+          missingProfiles.map(async (pubkey) => {
+            try {
+              const profile = await this.data.getProfile(pubkey);
+              return { pubkey, profile };
+            } catch {
+              return { pubkey, profile: undefined };
+            }
+          })
+        );
+
+        // Update the additional profiles map with newly fetched profiles
+        const newMap = new Map(this.additionalProfiles());
+        fetchedProfiles.forEach(({ pubkey, profile }) => {
+          if (profile) {
+            newMap.set(pubkey, profile);
+          }
+        });
+
+        // Only update if we actually fetched new profiles
+        if (newMap.size > additionalProfilesMap.size) {
+          this.additionalProfiles.set(newMap);
+        }
+      });
+    });
   }
 
   // Computed to get top 5 favorites
@@ -199,7 +254,7 @@ export class FavoritesOverlayComponent {
   });
 
   // Maximum number of profiles to show in overlay (excluding favorites)
-  private readonly MAX_FOLLOWING_IN_OVERLAY = 300;
+  private readonly MAX_FOLLOWING_IN_OVERLAY = 100;
 
   // Favorites in the overlay - same as favoritesWithProfiles but matches the name pattern
   favoritesInOverlay = computed(() => {

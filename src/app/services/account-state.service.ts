@@ -446,7 +446,8 @@ export class AccountStateService implements OnDestroy {
         const isValid = this.utilities.isValidPubkey(pubkey);
         if (!isValid) {
           console.warn('[AccountStateService] Invalid pubkey in following list:', pubkey);
-          debugger; // Debug invalid pubkeys
+          // console.log(JSON.stringify(event));
+          // debugger; // Debug invalid pubkeys
         }
         return isValid;
       });
