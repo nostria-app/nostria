@@ -442,7 +442,14 @@ export class AccountStateService implements OnDestroy {
       const followingTags = this.utilities.getTags(event, 'p');
 
       // Filter out invalid pubkeys - some clients incorrectly put hashtag names in p-tags
-      const validFollowingTags = followingTags.filter(pubkey => this.utilities.isValidPubkey(pubkey));
+      const validFollowingTags = followingTags.filter(pubkey => {
+        const isValid = this.utilities.isValidPubkey(pubkey);
+        if (!isValid) {
+          console.warn('[AccountStateService] Invalid pubkey in following list:', pubkey);
+          debugger; // Debug invalid pubkeys
+        }
+        return isValid;
+      });
 
       // Get current following list to compare
       const currentFollowingList = this.followingList();

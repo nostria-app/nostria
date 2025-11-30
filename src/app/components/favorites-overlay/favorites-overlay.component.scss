@@ -457,6 +457,25 @@
   }
 }
 
+// View All button container
+.view-all-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+
+  button {
+    mat-icon {
+      margin-right: 0.5rem;
+    }
+  }
+
+  :host-context(.dark) & {
+    border-top-color: rgba(255, 255, 255, 0.08);
+  }
+}
+
 // Dark theme adjustments
 .dark {
   .favorite-avatar {

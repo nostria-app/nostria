@@ -162,7 +162,7 @@
       } @else {
       <mat-icon>people_outline</mat-icon>
       <p>You aren't following anyone yet</p>
-      <button mat-flat-button color="primary" routerLink="/people/discover">
+      <button mat-flat-button routerLink="/people/discover">
         Discover People
       </button>
       }
@@ -175,13 +175,23 @@
             'small-grid': viewMode() === 'small',
             'details-list': viewMode() === 'details' || viewMode() === 'list',
           }">
-      @for (pubkey of sortedPeople(); track pubkey) {
+      @for (pubkey of visiblePeople(); track pubkey) {
       <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
         [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey" [view]="$any(viewMode())"
         [hostWidthAuto]="viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
         [showRank]="filters().showRank"></app-user-profile>
       }
     </div>
+
+    <!-- Load More button -->
+    @if (hasMorePeople()) {
+    <div class="load-more-container">
+      <button mat-button (click)="loadMore()">
+        <mat-icon>expand_more</mat-icon>
+        Load More ({{remainingCount()}} remaining)
+      </button>
+    </div>
+    }
     }
   </div>
 </div>
