@@ -260,6 +260,12 @@ export class FeedsComponent implements OnDestroy {
   // Track rendered event counts per column (virtual list)
   private renderedEventCounts = signal<Record<string, number>>({});
 
+  // Intersection Observer for auto-loading more content
+  private loadMoreObservers = new Map<string, IntersectionObserver>(); // One observer per column
+  private loadMoreCooldowns = new Map<string, number>(); // Track cooldowns per column
+  private readonly LOAD_MORE_COOLDOWN_MS = 300; // Minimum time between loads
+  private scrollCheckCleanup: (() => void) | null = null;
+
   // Computed signal for ALL events (in-memory, not rendered)
   allColumnEvents = computed(() => {
     const columns = this.columns();
@@ -644,62 +650,112 @@ export class FeedsComponent implements OnDestroy {
 
   /**
    * Set up scroll listeners for each column to detect when user scrolls to bottom
+   * Uses a scroll event with visibility check for reliable detection
    */
   private setupColumnScrollListeners(columns: ColumnDefinition[]) {
-    console.log('[ScrollListeners] Setting up scroll listeners for', columns.length, 'columns');
+    // Clean up existing listeners
+    this.cleanupLoadMoreObserver();
 
+    // Find all possible scroll containers
+    const scrollContainers: HTMLElement[] = [];
+
+    // Check content-wrapper (main app scrolling container)
+    const contentWrapper = document.querySelector('.content-wrapper') as HTMLElement;
+    if (contentWrapper) {
+      scrollContainers.push(contentWrapper);
+    }
+
+    // Check home container (mobile scrolling)
+    const homeContainer = document.querySelector('.home-container') as HTMLElement;
+    if (homeContainer) {
+      scrollContainers.push(homeContainer);
+    }
+
+    // Check each column's content (desktop per-column scrolling)
     columns.forEach(column => {
-      // FIX: Changed selector from .column-scroll-container to .column-content
-      const columnElement = document.querySelector(`[data-column-id="${column.id}"] .column-content`);
-
-      console.log(`[ScrollListeners] Column ${column.id}:`, columnElement ? 'FOUND' : 'NOT FOUND');
-
-      if (columnElement) {
-        // Remove any existing listener to prevent duplicates
-        const existingListener = (columnElement as HTMLElement & { __scrollListener?: () => void }).__scrollListener;
-        if (existingListener) {
-          columnElement.removeEventListener('scroll', existingListener);
-        }
-
-        // Track last scroll check time for throttling
-        let lastScrollCheck = 0;
-        const THROTTLE_MS = 300; // Only check scroll position every 300ms
-
-        // Create throttled scroll listener
-        const scrollListener = () => {
-          const now = Date.now();
-
-          // Throttle: Only process scroll events every THROTTLE_MS milliseconds
-          if (now - lastScrollCheck < THROTTLE_MS) {
-            return;
-          }
-          lastScrollCheck = now;
-
-          const scrollTop = columnElement.scrollTop;
-          const scrollHeight = columnElement.scrollHeight;
-          const clientHeight = columnElement.clientHeight;
-
-          // Check if scrolled near the bottom (within 100px)
-          const scrolledToBottom = scrollTop + clientHeight >= scrollHeight - 100;
-
-          if (scrolledToBottom) {
-            // First, check if we need to render more events from the in-memory list (virtual scroll)
-            if (this.hasMoreEventsToRender(column.id)) {
-              console.log(`[VirtualScroll] Rendering more events for column ${column.id}`);
-              this.loadMoreRenderedEvents(column.id);
-            } else {
-              // If all in-memory events are rendered, fetch more from relay
-              console.log(`[ScrollToBottom] Loading more from relay for column ${column.id}`);
-              this.loadMoreForColumn(column.id);
-            }
-          }
-        };
-
-        // Store listener reference for cleanup
-        (columnElement as HTMLElement & { __scrollListener?: () => void }).__scrollListener = scrollListener;
-        columnElement.addEventListener('scroll', scrollListener, { passive: true });
+      const columnElement = document.querySelector(`[data-column-id="${column.id}"]`);
+      const scrollContainer = columnElement?.querySelector('.column-content') as HTMLElement;
+      if (scrollContainer) {
+        scrollContainers.push(scrollContainer);
       }
     });
+
+    // Create a single check function
+    const checkTriggerVisibility = () => {
+      columns.forEach(column => {
+        // Check cooldown
+        const now = Date.now();
+        const lastLoad = this.loadMoreCooldowns.get(column.id) || 0;
+        if (now - lastLoad < this.LOAD_MORE_COOLDOWN_MS) {
+          return;
+        }
+
+        const columnElement = document.querySelector(`[data-column-id="${column.id}"]`);
+        const trigger = columnElement?.querySelector('.load-more-trigger') as HTMLElement;
+
+        if (!trigger) {
+          return;
+        }
+
+        // Check if the trigger is visible in the viewport
+        const rect = trigger.getBoundingClientRect();
+        const viewportHeight = window.innerHeight;
+
+        // Trigger is "visible" if it's within 200px of the viewport bottom
+        const isNearViewport = rect.top < viewportHeight + 200;
+
+        if (isNearViewport) {
+          this.loadMoreCooldowns.set(column.id, now);
+
+          if (this.hasMoreEventsToRender(column.id)) {
+            this.loadMoreRenderedEvents(column.id);
+          } else {
+            this.loadMoreForColumn(column.id);
+          }
+        }
+      });
+    };
+
+    // Add scroll listener to all possible containers
+    const scrollHandler = () => {
+      requestAnimationFrame(checkTriggerVisibility);
+    };
+
+    scrollContainers.forEach(container => {
+      container.addEventListener('scroll', scrollHandler, { passive: true });
+    });
+
+    // Also listen on window for any missed scroll events
+    window.addEventListener('scroll', scrollHandler, { passive: true });
+
+    // Store cleanup function
+    this.scrollCheckCleanup = () => {
+      scrollContainers.forEach(container => {
+        container.removeEventListener('scroll', scrollHandler);
+      });
+      window.removeEventListener('scroll', scrollHandler);
+    };
+
+    // Do initial check in case we're already scrolled to bottom
+    setTimeout(checkTriggerVisibility, 100);
+  }
+
+  /**
+   * Clean up all scroll listeners
+   */
+  private cleanupLoadMoreObserver(): void {
+    // Clean up scroll listeners
+    if (this.scrollCheckCleanup) {
+      this.scrollCheckCleanup();
+      this.scrollCheckCleanup = null;
+    }
+
+    // Clean up any remaining observers
+    this.loadMoreObservers.forEach(observer => {
+      observer.disconnect();
+    });
+    this.loadMoreObservers.clear();
+    this.loadMoreCooldowns.clear();
   }
 
   /**
@@ -1384,6 +1440,9 @@ export class FeedsComponent implements OnDestroy {
     if (this.scrollSaveInterval) {
       clearInterval(this.scrollSaveInterval);
     }
+
+    // Clean up Intersection Observer
+    this.cleanupLoadMoreObserver();
 
     // Save the current scroll position for the active feed before destroying
     const currentFeedId = this.lastActiveFeedId || this.feedsCollectionService.activeFeedId();
