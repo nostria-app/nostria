@@ -112,12 +112,14 @@ export class Algorithms {
       replied: 0,
       reposted: 0,
       quoted: 0,
+      zapped: 0,
       messaged: 0,
       mentioned: 0,
       timeSpent: 0,
       lastInteraction: Date.now(),
       firstInteraction: Date.now(),
       updated: Date.now(),
+      engagementPoints: 0,
       engagementScore: 1, // Very small positive score for favorites without metrics
     }));
 
@@ -129,14 +131,15 @@ export class Algorithms {
       return [];
     }
 
-    // Calculate final score with favorite boost
+    // Calculate final score with favorite boost and engagement points
     const scoredUsers = allCandidates.map(metric => {
       const baseScore = metric.engagementScore || 0;
       const favoriteBoost = validFavorites.includes(metric.pubkey) ? 2 : 0; // Small boost for favorites
+      const pointsBoost = (metric.engagementPoints || 0) * 0.5; // Engagement points contribute to score
 
       return {
         ...metric,
-        finalScore: baseScore + favoriteBoost,
+        finalScore: baseScore + favoriteBoost + pointsBoost,
       };
     });
 
@@ -159,14 +162,17 @@ export class Algorithms {
     if (!userMetric) return 0;
 
     // Weight different types of engagement
+    // Using point values: Like=1, Repost=3, Zap=5, Reply=10
     const affinityScore =
-      userMetric.liked * 3 +
-      userMetric.replied * 5 +
-      userMetric.reposted * 4 +
+      userMetric.liked * 1 +
+      userMetric.replied * 10 +
+      userMetric.reposted * 3 +
+      userMetric.zapped * 5 +
       userMetric.quoted * 6 +
       userMetric.messaged * 8 +
       userMetric.timeSpent * 0.01 + // Time spent in seconds
-      userMetric.viewed * 1;
+      userMetric.viewed * 1 +
+      userMetric.engagementPoints * 1; // Direct engagement points
 
     return affinityScore;
   }
@@ -228,6 +234,14 @@ export class Algorithms {
   }
 
   /**
+   * Get users with highest engagement points
+   * This reflects the point-based scoring: Like=1, Repost=3, Zap=5, Reply=10
+   */
+  async getHighEngagementPointsUsers(limit = 10): Promise<UserMetric[]> {
+    return await this.metrics.getTopUsers('engagementPoints', limit);
+  }
+
+  /**
    * Get users for article content - uses more lenient criteria since articles are rarer
    */
   async getRecommendedUsersForArticles(limit = 20): Promise<UserMetric[]> {
@@ -273,12 +287,14 @@ export class Algorithms {
       replied: 0,
       reposted: 0,
       quoted: 0,
+      zapped: 0,
       messaged: 0,
       mentioned: 0,
       timeSpent: 0,
       lastInteraction: Date.now(),
       firstInteraction: Date.now(),
       updated: Date.now(),
+      engagementPoints: 0,
       engagementScore: 1,
     }));
 
@@ -300,12 +316,14 @@ export class Algorithms {
           replied: 0,
           reposted: 0,
           quoted: 0,
+          zapped: 0,
           messaged: 0,
           mentioned: 0,
           timeSpent: 0,
           lastInteraction: Date.now(),
           firstInteraction: Date.now(),
           updated: Date.now(),
+          engagementPoints: 0,
           engagementScore: 0.5,
         }));
 

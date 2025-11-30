@@ -11,6 +11,7 @@ export interface UserMetric {
   replied: number; // Number of times we replied to this author
   reposted: number; // Number of times we reposted this author's content
   quoted: number; // Number of times we quoted this author
+  zapped: number; // Number of times we zapped this author's content
 
   // Interaction metrics
   messaged: number; // Number of direct messages sent to this author
@@ -19,6 +20,10 @@ export interface UserMetric {
   // Time-based metrics
   timeSpent: number; // Total time spent viewing this author's content (in seconds)
   lastInteraction: number; // Timestamp of last interaction with this author
+
+  // Point-based engagement metrics
+  // Like = 1 point, Repost = 3 points, Zap = 5 points, Reply = 10 points
+  engagementPoints: number; // Total engagement points accumulated
 
   // Derived metrics (can be calculated)
   averageTimePerView?: number; // timeSpent / viewed
