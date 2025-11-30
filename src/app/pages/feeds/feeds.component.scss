@@ -2374,6 +2374,13 @@ h1 {
   }
 }
 
+// Invisible trigger for Intersection Observer (auto-load more detection)
+.load-more-trigger {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
+}
+
 // Dark mode glass styling for feed header
 :host-context(.dark) .home-container .header-section {
   .feed-selector {
