@@ -13,6 +13,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { FollowingService } from '../../services/following.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-favorites-overlay',
@@ -35,6 +36,7 @@ export class FavoritesOverlayComponent {
   private imageCacheService = inject(ImageCacheService);
   private accountLocalState = inject(AccountLocalStateService);
   private followingService = inject(FollowingService);
+  private utilities = inject(UtilitiesService);
   layout = inject(LayoutService);
 
   // Signal to track if overlay is visible
@@ -77,8 +79,11 @@ export class FavoritesOverlayComponent {
       return [];
     }
 
+    // Filter out invalid pubkeys to prevent rendering errors
+    const validFollowingList = followingList.filter(pubkey => this.utilities.isValidPubkey(pubkey));
+
     // Map following list to profiles, using the reactive profiles array
-    return followingList.map((pubkey) => {
+    return validFollowingList.map((pubkey) => {
       const followingProfile = allProfiles.find(p => p.pubkey === pubkey);
       return { pubkey, profile: followingProfile?.profile || undefined };
     });
@@ -123,8 +128,16 @@ export class FavoritesOverlayComponent {
           return;
         }
 
+        // Filter out invalid pubkeys to prevent rendering errors
+        const validFavs = favs.filter(pubkey => this.utilities.isValidPubkey(pubkey));
+
+        if (validFavs.length === 0) {
+          this.favoritesWithProfiles.set([]);
+          return;
+        }
+
         // Use profiles from FollowingService cache, only fetch if not available
-        const profilesPromises = favs.map(async (pubkey) => {
+        const profilesPromises = validFavs.map(async (pubkey) => {
           // First try to find in the already-loaded profiles array
           const followingProfile = allProfiles.find(p => p.pubkey === pubkey);
           if (followingProfile?.profile) {
