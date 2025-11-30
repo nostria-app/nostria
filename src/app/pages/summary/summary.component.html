@@ -72,7 +72,6 @@
         Who Posted
         <span class="section-count">{{ activePosters().length }}</span>
       </h2>
-      <p class="section-description">People who were active during this period</p>
       <div class="poster-grid">
         @for (poster of activePosters(); track poster.pubkey) {
         <a class="poster-card" [routerLink]="['/p', poster.pubkey]">
@@ -147,7 +146,6 @@
         Profile Updates
         <span class="section-count">{{ profileUpdates().length }}</span>
       </h2>
-      <p class="section-description">People who updated their profiles</p>
       <div class="poster-grid">
         @for (pubkey of profileUpdates(); track pubkey) {
         <a class="poster-card" [routerLink]="['/p', pubkey]">
@@ -173,9 +171,6 @@
       <div class="timeline">
         @for (event of timelineEvents(); track event.id) {
         <a class="timeline-item" [routerLink]="getEventRoute(event)">
-          <div class="timeline-marker">
-            <mat-icon>{{ getEventKindIcon(event.kind) }}</mat-icon>
-          </div>
           <div class="timeline-content">
             <div class="timeline-header">
               <app-user-profile [pubkey]="event.pubkey" view="icon" class="timeline-author"></app-user-profile>
