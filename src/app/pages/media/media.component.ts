@@ -85,6 +85,9 @@ export class MediaComponent {
   activeTab = signal<'images' | 'videos' | 'files' | 'servers'>('images');
   selectedItems = signal<string[]>([]);
 
+  // Sort options
+  sortOption = signal<'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'size-asc' | 'size-desc'>('newest');
+
   // For automatic media server setup
   isSettingUpMediaServer = signal(false);
 
@@ -112,13 +115,14 @@ export class MediaComponent {
     // Update filtered lists whenever media items change
     effect(() => {
       const allMedia = this.mediaService.mediaItems();
-      this.images.set(allMedia.filter(item => item.type?.startsWith('image') || false));
-      this.videos.set(allMedia.filter(item => item.type?.startsWith('video') || false));
-      this.files.set(
-        allMedia.filter(
-          item => !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video'))
-        )
-      );
+      const sortedImages = this.sortMediaItems(allMedia.filter(item => item.type?.startsWith('image') || false));
+      const sortedVideos = this.sortMediaItems(allMedia.filter(item => item.type?.startsWith('video') || false));
+      const sortedFiles = this.sortMediaItems(allMedia.filter(
+        item => !item.type || (!item.type.startsWith('image') && !item.type.startsWith('video'))
+      ));
+      this.images.set(sortedImages);
+      this.videos.set(sortedVideos);
+      this.files.set(sortedFiles);
       this.selectedItems.set([]);
     });
 
@@ -810,6 +814,55 @@ export class MediaComponent {
 
     if (tab !== 'servers') {
       this.selectedItems.set([]);
+    }
+  }
+
+  setSortOption(option: 'newest' | 'oldest' | 'name-asc' | 'name-desc' | 'size-asc' | 'size-desc'): void {
+    this.sortOption.set(option);
+    // Re-sort the current lists
+    this.images.update(items => this.sortMediaItems([...items]));
+    this.videos.update(items => this.sortMediaItems([...items]));
+    this.files.update(items => this.sortMediaItems([...items]));
+  }
+
+  private sortMediaItems(items: MediaItem[]): MediaItem[] {
+    const sortOption = this.sortOption();
+    return [...items].sort((a, b) => {
+      switch (sortOption) {
+        case 'newest':
+          return (b.uploaded || 0) - (a.uploaded || 0);
+        case 'oldest':
+          return (a.uploaded || 0) - (b.uploaded || 0);
+        case 'name-asc':
+          return this.getFileName(a.url).localeCompare(this.getFileName(b.url));
+        case 'name-desc':
+          return this.getFileName(b.url).localeCompare(this.getFileName(a.url));
+        case 'size-asc':
+          return (a.size || 0) - (b.size || 0);
+        case 'size-desc':
+          return (b.size || 0) - (a.size || 0);
+        default:
+          return 0;
+      }
+    });
+  }
+
+  getSortLabel(): string {
+    switch (this.sortOption()) {
+      case 'newest':
+        return 'Newest First';
+      case 'oldest':
+        return 'Oldest First';
+      case 'name-asc':
+        return 'Name (A-Z)';
+      case 'name-desc':
+        return 'Name (Z-A)';
+      case 'size-asc':
+        return 'Size (Small-Large)';
+      case 'size-desc':
+        return 'Size (Large-Small)';
+      default:
+        return 'Sort';
     }
   }
 
