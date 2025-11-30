@@ -611,6 +611,14 @@ app-user-profile {
       justify-content: center;
       padding: 2rem;
       min-height: 400px;
+      width: 100%;
+      // Ensure it takes full viewport width when inside flex container
+      min-width: calc(100vw - 2rem);
+
+      @media (min-width: 1024px) {
+        // Account for sidenav on desktop
+        min-width: calc(100vw - 200px - 2rem);
+      }
 
       .empty-state-content {
         display: flex;
