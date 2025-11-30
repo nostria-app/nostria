@@ -5,6 +5,7 @@ import { Metrics } from './metrics';
 import { AccountStateService } from './account-state.service';
 import { LoggerService } from './logger.service';
 import { UtilitiesService } from './utilities.service';
+import { AccountRelayService } from './relays/account-relay';
 
 /**
  * Service that tracks outgoing events from the current account
@@ -27,8 +28,10 @@ export class MetricsTrackingService {
   private readonly accountState = inject(AccountStateService);
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly accountRelay = inject(AccountRelayService);
 
   private initialized = false;
+  private historicalScanInProgress = false;
 
   /**
    * Initialize the metrics tracking service.
@@ -45,6 +48,87 @@ export class MetricsTrackingService {
     this.logger.info('MetricsTrackingService initialized');
   }
 
+  /**
+   * Scan historical events from relays for the current account and calculate metrics.
+   * This should be called when a user logs in to process their existing interactions.
+   * Events that have already been processed will be skipped (duplicate prevention).
+   */
+  async scanHistoricalEvents(): Promise<void> {
+    const currentPubkey = this.accountState.pubkey();
+    if (!currentPubkey) {
+      this.logger.warn('No current account, cannot scan historical events');
+      return;
+    }
+
+    if (this.historicalScanInProgress) {
+      this.logger.debug('Historical scan already in progress, skipping');
+      return;
+    }
+
+    this.historicalScanInProgress = true;
+    this.logger.info(`Starting historical metrics scan for account ${currentPubkey.substring(0, 8)}...`);
+
+    try {
+      // Fetch reactions (kind 7 and 17)
+      const reactions = await this.accountRelay.getMany({
+        kinds: [kinds.Reaction, 17],
+        authors: [currentPubkey],
+        limit: 1000,
+      });
+      this.logger.debug(`Found ${reactions.length} historical reactions`);
+
+      // Fetch reposts (kind 6 and 16)
+      const reposts = await this.accountRelay.getMany({
+        kinds: [kinds.Repost, 16],
+        authors: [currentPubkey],
+        limit: 1000,
+      });
+      this.logger.debug(`Found ${reposts.length} historical reposts`);
+
+      // Fetch zap requests (kind 9734)
+      const zapRequests = await this.accountRelay.getMany({
+        kinds: [9734],
+        authors: [currentPubkey],
+        limit: 1000,
+      });
+      this.logger.debug(`Found ${zapRequests.length} historical zap requests`);
+
+      // Fetch notes that could be replies (kind 1)
+      const notes = await this.accountRelay.getMany({
+        kinds: [kinds.ShortTextNote],
+        authors: [currentPubkey],
+        limit: 1000,
+      });
+      // Filter to only replies (have e tag with reply/root marker)
+      const replies = notes.filter(event =>
+        event.tags.some(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'))
+      );
+      this.logger.debug(`Found ${replies.length} historical replies out of ${notes.length} notes`);
+
+      // Process all events
+      let processedCount = 0;
+      let skippedCount = 0;
+
+      const allEvents = [...reactions, ...reposts, ...zapRequests, ...replies];
+      for (const event of allEvents) {
+        const wasProcessed = await this.processReceivedEvent(event);
+        if (wasProcessed) {
+          processedCount++;
+        } else {
+          skippedCount++;
+        }
+      }
+
+      this.logger.info(
+        `Historical metrics scan complete: ${processedCount} events processed, ${skippedCount} skipped (already processed or invalid)`
+      );
+    } catch (error) {
+      this.logger.error('Failed to scan historical events', error);
+    } finally {
+      this.historicalScanInProgress = false;
+    }
+  }
+
   private subscribeToPublishEvents(): void {
     // Listen for completed publish events
     this.eventBus.on('completed').subscribe(async publishEvent => {
@@ -58,39 +142,52 @@ export class MetricsTrackingService {
    * Process a successfully published event and update metrics
    */
   private async processPublishedEvent(event: Event): Promise<void> {
+    await this.processEvent(event);
+  }
+
+  /**
+   * Process a received event (from relay) and update metrics
+   * Returns true if the event was processed, false if skipped
+   */
+  private async processReceivedEvent(event: Event): Promise<boolean> {
+    return await this.processEvent(event);
+  }
+
+  /**
+   * Core event processing logic
+   * Returns true if the event was processed, false if skipped
+   */
+  private async processEvent(event: Event): Promise<boolean> {
     const currentPubkey = this.accountState.pubkey();
     if (!currentPubkey) {
       this.logger.debug('No current account, skipping metrics tracking');
-      return;
+      return false;
     }
 
     // Only process events authored by the current user
     if (event.pubkey !== currentPubkey) {
-      return;
+      return false;
     }
 
     try {
       switch (event.kind) {
         case kinds.Reaction: // kind 7
         case 17: // kind 17 - External content reaction (NIP-25)
-          await this.handleReaction(event, currentPubkey);
-          break;
+          return await this.handleReaction(event, currentPubkey);
         case kinds.Repost: // kind 6
         case 16: // kind 16 - Generic repost (NIP-18)
-          await this.handleRepost(event, currentPubkey);
-          break;
+          return await this.handleRepost(event, currentPubkey);
         case 9734: // Zap request
-          await this.handleZapRequest(event, currentPubkey);
-          break;
+          return await this.handleZapRequest(event, currentPubkey);
         case kinds.ShortTextNote: // kind 1
-          await this.handleNote(event, currentPubkey);
-          break;
+          return await this.handleNote(event, currentPubkey);
         default:
           // Other event types are not tracked for engagement points
-          break;
+          return false;
       }
     } catch (error) {
       this.logger.error(`Failed to process event ${event.id} for metrics`, error);
+      return false;
     }
   }
 
@@ -99,25 +196,24 @@ export class MetricsTrackingService {
    * Supports kind 7 (standard reactions) and kind 17 (external content reactions per NIP-25)
    * Reactions reference the target event via 'e' tag and author via 'p' tag
    */
-  private async handleReaction(event: Event, currentPubkey: string): Promise<void> {
+  private async handleReaction(event: Event, currentPubkey: string): Promise<boolean> {
     // Get the author of the event we reacted to
     const pTag = event.tags.find(tag => tag[0] === 'p');
     if (!pTag || !pTag[1]) {
       this.logger.debug('Reaction event missing p tag, skipping metrics');
-      return;
+      return false;
     }
 
     const targetPubkey = pTag[1];
 
     // Don't track self-reactions
     if (targetPubkey === currentPubkey) {
-      return;
+      return false;
     }
-
     // Validate target pubkey
     if (!this.utilities.isValidPubkey(targetPubkey)) {
       this.logger.debug('Invalid target pubkey in reaction, skipping metrics');
-      return;
+      return false;
     }
 
     const added = await this.metrics.addEngagementPoints(
@@ -130,6 +226,8 @@ export class MetricsTrackingService {
     if (added) {
       this.logger.debug(`Tracked LIKE (1 point) for ${targetPubkey}`);
     }
+
+    return added;
   }
 
   /**
@@ -137,25 +235,25 @@ export class MetricsTrackingService {
    * Supports kind 6 (standard reposts of kind 1) and kind 16 (generic reposts per NIP-18)
    * Reposts reference the original event via 'e' tag and author via 'p' tag
    */
-  private async handleRepost(event: Event, currentPubkey: string): Promise<void> {
+  private async handleRepost(event: Event, currentPubkey: string): Promise<boolean> {
     // Get the author of the event we reposted
     const pTag = event.tags.find(tag => tag[0] === 'p');
     if (!pTag || !pTag[1]) {
       this.logger.debug('Repost event missing p tag, skipping metrics');
-      return;
+      return false;
     }
 
     const targetPubkey = pTag[1];
 
     // Don't track self-reposts
     if (targetPubkey === currentPubkey) {
-      return;
+      return false;
     }
 
     // Validate target pubkey
     if (!this.utilities.isValidPubkey(targetPubkey)) {
       this.logger.debug('Invalid target pubkey in repost, skipping metrics');
-      return;
+      return false;
     }
 
     const added = await this.metrics.addEngagementPoints(
@@ -168,31 +266,33 @@ export class MetricsTrackingService {
     if (added) {
       this.logger.debug(`Tracked REPOST (3 points) for ${targetPubkey}`);
     }
+
+    return added;
   }
 
   /**
    * Handle zap request events
    * Zap requests reference the recipient via 'p' tag
    */
-  private async handleZapRequest(event: Event, currentPubkey: string): Promise<void> {
+  private async handleZapRequest(event: Event, currentPubkey: string): Promise<boolean> {
     // Get the zap recipient
     const pTag = event.tags.find(tag => tag[0] === 'p');
     if (!pTag || !pTag[1]) {
       this.logger.debug('Zap request missing p tag, skipping metrics');
-      return;
+      return false;
     }
 
     const targetPubkey = pTag[1];
 
     // Don't track self-zaps
     if (targetPubkey === currentPubkey) {
-      return;
+      return false;
     }
 
     // Validate target pubkey
     if (!this.utilities.isValidPubkey(targetPubkey)) {
       this.logger.debug('Invalid target pubkey in zap request, skipping metrics');
-      return;
+      return false;
     }
 
     const added = await this.metrics.addEngagementPoints(
@@ -205,13 +305,15 @@ export class MetricsTrackingService {
     if (added) {
       this.logger.debug(`Tracked ZAP (5 points) for ${targetPubkey}`);
     }
+
+    return added;
   }
 
   /**
    * Handle note events (replies)
    * Only tracks notes that are replies (have 'e' tag with reply/root marker)
    */
-  private async handleNote(event: Event, currentPubkey: string): Promise<void> {
+  private async handleNote(event: Event, currentPubkey: string): Promise<boolean> {
     // Check if this is a reply (has 'e' tag with reply or root marker)
     const isReply = event.tags.some(
       tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root')
@@ -219,7 +321,7 @@ export class MetricsTrackingService {
 
     if (!isReply) {
       // Not a reply, just a regular note - don't track
-      return;
+      return false;
     }
 
     // Get the author of the original note we're replying to
@@ -227,8 +329,10 @@ export class MetricsTrackingService {
     const pTags = event.tags.filter(tag => tag[0] === 'p');
     if (pTags.length === 0) {
       this.logger.debug('Reply event missing p tags, skipping metrics');
-      return;
+      return false;
     }
+
+    let anyAdded = false;
 
     // Track engagement for all referenced authors (usually the original author)
     for (const pTag of pTags) {
@@ -257,7 +361,10 @@ export class MetricsTrackingService {
 
       if (added) {
         this.logger.debug(`Tracked REPLY (10 points) for ${targetPubkey}`);
+        anyAdded = true;
       }
     }
+
+    return anyAdded;
   }
 }

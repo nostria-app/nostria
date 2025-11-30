@@ -12,6 +12,7 @@ import { DiscoveryRelayService } from './relays/discovery-relay';
 import { AccountRelayService } from './relays/account-relay';
 import { ReportingService } from './reporting.service';
 import { FollowingService } from './following.service';
+import { MetricsTrackingService } from './metrics-tracking.service';
 
 /** Service that handles changing account, will clear and load data in different services. */
 @Injectable({
@@ -31,6 +32,7 @@ export class StateService implements NostriaService {
   accountRelay = inject(AccountRelayService);
   reporting = inject(ReportingService);
   following = inject(FollowingService);
+  metricsTracking = inject(MetricsTrackingService);
 
   constructor() {
     effect(async () => {
@@ -89,6 +91,12 @@ export class StateService implements NostriaService {
     }
 
     await this.media.load();
+
+    // Scan historical events for engagement metrics
+    // This runs in the background and doesn't block the UI
+    this.metricsTracking.scanHistoricalEvents().catch(error => {
+      console.error('Error scanning historical events for metrics:', error);
+    });
 
     // NOTE: We don't automatically load chats here anymore
     // Chats are loaded on-demand when the user navigates to the messages page
