@@ -37,6 +37,29 @@
       color: var(--mat-sys-on-surface-variant);
     }
   }
+
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+
+// Section title with inline count
+.section-title {
+  .section-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 0.5rem;
+    margin-left: 0.5rem;
+    font-size: 0.9rem;
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    border-radius: var(--mat-sys-corner-full);
+  }
 }
 
 .time-range-selector {
