@@ -416,3 +416,20 @@ app-stream-info-bar {
     }
   }
 }
+
+.volume-menu-item {
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 48px;
+  gap: 12px;
+
+  mat-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .volume-slider {
+    flex: 1;
+    min-width: 100px;
+  }
+}

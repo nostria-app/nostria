@@ -16,6 +16,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatSliderModule } from '@angular/material/slider';
 import { LiveChatComponent } from '../../live-chat/live-chat.component';
 import { StreamInfoBarComponent } from '../../stream-info-bar/stream-info-bar.component';
 import { MediaPlayerService } from '../../../services/media-player.service';
@@ -32,6 +33,7 @@ import { Filter, Event } from 'nostr-tools';
     MatIconModule,
     MatTooltipModule,
     MatMenuModule,
+    MatSliderModule,
     LiveChatComponent,
     StreamInfoBarComponent,
   ],
@@ -256,5 +258,15 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   exitStream(): void {
     // The media.exit() method now handles navigation based on fullscreen state
     this.media.exit();
+  }
+
+  onVolumeChange(value: number): void {
+    if (this.videoElement?.nativeElement) {
+      this.videoElement.nativeElement.volume = value / 100;
+    }
+  }
+
+  get volume(): number {
+    return this.videoElement?.nativeElement ? Math.round(this.videoElement.nativeElement.volume * 100) : 100;
   }
 }
