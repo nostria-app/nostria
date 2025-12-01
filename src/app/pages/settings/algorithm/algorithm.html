@@ -1,26 +1,29 @@
 <div class="content-medium">
-  <h2>Algorithm Settings</h2>
+  <h2 i18n="@@settings.algorithm.title">Algorithm Settings</h2>
 
-  <p class="subtitle">Manage your content recommendation algorithm and user engagement metrics</p>
+  <p class="subtitle" i18n="@@settings.algorithm.subtitle">Manage your content recommendation algorithm and user
+    engagement metrics</p>
 
   <p class="subtitle">
-    <strong>Privacy:</strong> All these metrics are locally on your device and not shared with
-    anyone.
+    <strong i18n="@@settings.algorithm.privacy">Privacy:</strong> <span
+      i18n="@@settings.algorithm.privacy.description">All these metrics are locally on your device and not shared with
+      anyone.</span>
   </p>
 
   <!-- Loading Spinner -->
   @if (isLoading()) {
   <div class="loading-container">
     <mat-spinner></mat-spinner>
-    <p>Loading algorithm data...</p>
+    <p i18n="@@settings.algorithm.loading">Loading algorithm data...</p>
   </div>
   }
   @if (!isLoading()) {
   <!-- Algorithm Stats -->
   <mat-card class="stats-card">
     <mat-card-header>
-      <mat-card-title>Algorithm Statistics</mat-card-title>
-      <mat-card-subtitle>Overview of your engagement metrics</mat-card-subtitle>
+      <mat-card-title i18n="@@settings.algorithm.stats.title">Algorithm Statistics</mat-card-title>
+      <mat-card-subtitle i18n="@@settings.algorithm.stats.subtitle">Overview of your engagement
+        metrics</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       <div class="stats-grid">
@@ -28,28 +31,28 @@
           <mat-icon>people</mat-icon>
           <div class="stat-content">
             <span class="stat-number">{{ algorithmStats().totalUsers }}</span>
-            <span class="stat-label">Total Users</span>
+            <span class="stat-label" i18n="@@settings.algorithm.stats.total-users">Total Users</span>
           </div>
         </div>
         <div class="stat-item">
           <mat-icon>favorite</mat-icon>
           <div class="stat-content">
             <span class="stat-number">{{ algorithmStats().favoriteUsers }}</span>
-            <span class="stat-label">Favorites</span>
+            <span class="stat-label" i18n="@@settings.algorithm.stats.favorites">Favorites</span>
           </div>
         </div>
         <div class="stat-item">
           <mat-icon>trending_up</mat-icon>
           <div class="stat-content">
             <span class="stat-number">{{ algorithmStats().activeUsers }}</span>
-            <span class="stat-label">Active (7d)</span>
+            <span class="stat-label" i18n="@@settings.algorithm.stats.active">Active (7d)</span>
           </div>
         </div>
         <div class="stat-item">
           <mat-icon>analytics</mat-icon>
           <div class="stat-content">
             <span class="stat-number">{{ algorithmStats().averageEngagement }}</span>
-            <span class="stat-label">Avg Engagement</span>
+            <span class="stat-label" i18n="@@settings.algorithm.stats.avg-engagement">Avg Engagement</span>
           </div>
         </div>
       </div>
@@ -59,20 +62,21 @@
   <!-- User Metrics Tabs -->
   <mat-card class="metrics-card">
     <mat-card-header>
-      <mat-card-title>User Metrics</mat-card-title>
-      <mat-card-subtitle>View and manage user engagement data</mat-card-subtitle>
+      <mat-card-title i18n="@@settings.algorithm.metrics.title">User Metrics</mat-card-title>
+      <mat-card-subtitle i18n="@@settings.algorithm.metrics.subtitle">View and manage user engagement
+        data</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       <mat-tab-group [(selectedIndex)]="selectedTabIndex">
         <!-- Top Engaged Users Tab -->
-        <mat-tab label="Top Engaged">
+        <mat-tab label="Top Engaged" i18n-label="@@settings.algorithm.top-engaged">
           <div class="tab-content">
-            <p>Users with highest engagement scores</p>
+            <p i18n="@@settings.algorithm.top-engaged.description">Users with highest engagement scores</p>
             <div class="table-container">
               <table mat-table [dataSource]="topEngagedUsers()" class="metrics-table">
                 <!-- Position Column -->
                 <ng-container matColumnDef="position">
-                  <th mat-header-cell *matHeaderCellDef>#</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.position">#</th>
                   <td mat-cell *matCellDef="let element; let i = index">
                     @if (isFavorite(element.pubkey)) {
                     <mat-icon class="favorite-icon" matTooltip="Favorite">heart_minus</mat-icon>
@@ -84,12 +88,12 @@
 
                 <!-- User Column -->
                 <ng-container matColumnDef="user">
-                  <th mat-header-cell *matHeaderCellDef>User</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.user">User</th>
                   <td mat-cell *matCellDef="let element">
                     <div class="user-cell">
                       <app-user-profile [pubkey]="element.pubkey" [view]="'list'" />
                       @if (isFavorite(element.pubkey)) {
-                      <mat-chip color="primary">Favorite</mat-chip>
+                      <mat-chip color="primary" i18n="@@settings.algorithm.favorites">Favorite</mat-chip>
                       }
                     </div>
                   </td>
@@ -97,7 +101,7 @@
 
                 <!-- Engagement Score Column -->
                 <ng-container matColumnDef="engagementScore">
-                  <th mat-header-cell *matHeaderCellDef>Score</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.score">Score</th>
                   <td mat-cell *matCellDef="let element">
                     <mat-chip [color]="getEngagementColor(element.engagementScore || 0)">
                       {{ element.engagementScore || 0 }}
@@ -107,7 +111,7 @@
 
                 <!-- Viewed Column -->
                 <ng-container matColumnDef="viewed">
-                  <th mat-header-cell *matHeaderCellDef>Views</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.views">Views</th>
                   <td mat-cell *matCellDef="let element">
                     {{ element.viewed }}
                   </td>
@@ -115,7 +119,7 @@
 
                 <!-- Liked Column -->
                 <ng-container matColumnDef="liked">
-                  <th mat-header-cell *matHeaderCellDef>Likes</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.likes">Likes</th>
                   <td mat-cell *matCellDef="let element">
                     {{ element.liked }}
                   </td>
@@ -123,7 +127,7 @@
 
                 <!-- Time Spent Column -->
                 <ng-container matColumnDef="timeSpent">
-                  <th mat-header-cell *matHeaderCellDef>Time</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.time">Time</th>
                   <td mat-cell *matCellDef="let element">
                     {{ formatTimeSpent(element.timeSpent) }}
                   </td>
@@ -131,7 +135,7 @@
 
                 <!-- Actions Column -->
                 <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.actions">Actions</th>
                   <td mat-cell *matCellDef="let element">
                     <button mat-icon-button [matMenuTriggerFor]="userMenu">
                       <mat-icon>more_vert</mat-icon>
@@ -150,7 +154,7 @@
                       </button>
                       <button mat-menu-item (click)="resetUserMetrics(element.pubkey)">
                         <mat-icon>refresh</mat-icon>
-                        <span>Reset Metrics</span>
+                        <span i18n="@@settings.algorithm.action.reset-metrics">Reset Metrics</span>
                       </button>
                     </mat-menu>
                   </td>
@@ -164,14 +168,14 @@
         </mat-tab>
 
         <!-- Recently Viewed Tab -->
-        <mat-tab label="Recently Viewed">
+        <mat-tab label="Recently Viewed" i18n-label="@@settings.algorithm.recently-viewed">
           <div class="tab-content">
-            <p>Users you've recently interacted with</p>
+            <p i18n="@@settings.algorithm.recently-viewed.description">Users you've recently interacted with</p>
             <div class="table-container">
               <table mat-table [dataSource]="recentlyViewed()" class="metrics-table">
                 <!-- Position Column -->
                 <ng-container matColumnDef="position">
-                  <th mat-header-cell *matHeaderCellDef>#</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.position">#</th>
                   <td mat-cell *matCellDef="let element; let i = index">
                     @if (isFavorite(element.pubkey)) {
                     <mat-icon class="favorite-icon" matTooltip="Favorite">heart_minus</mat-icon>
@@ -183,12 +187,12 @@
 
                 <!-- User Column -->
                 <ng-container matColumnDef="user">
-                  <th mat-header-cell *matHeaderCellDef>User</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.user">User</th>
                   <td mat-cell *matCellDef="let element">
                     <div class="user-cell">
                       <app-user-profile [pubkey]="element.pubkey" [view]="'list'" />
                       @if (isFavorite(element.pubkey)) {
-                      <mat-chip color="primary">Favorite</mat-chip>
+                      <mat-chip color="primary" i18n="@@settings.algorithm.favorites">Favorite</mat-chip>
                       }
                     </div>
                   </td>
@@ -196,7 +200,7 @@
 
                 <!-- Last Interaction Column -->
                 <ng-container matColumnDef="lastInteraction">
-                  <th mat-header-cell *matHeaderCellDef>Last Seen</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.last-seen">Last Seen</th>
                   <td mat-cell *matCellDef="let element">
                     {{ formatLastInteraction(element.lastInteraction) }}
                   </td>
@@ -204,7 +208,7 @@
 
                 <!-- Viewed Column -->
                 <ng-container matColumnDef="viewed">
-                  <th mat-header-cell *matHeaderCellDef>Views</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.views">Views</th>
                   <td mat-cell *matCellDef="let element">
                     {{ element.viewed }}
                   </td>
@@ -212,7 +216,7 @@
 
                 <!-- Liked Column -->
                 <ng-container matColumnDef="liked">
-                  <th mat-header-cell *matHeaderCellDef>Likes</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.likes">Likes</th>
                   <td mat-cell *matCellDef="let element">
                     {{ element.liked }}
                   </td>
@@ -220,7 +224,7 @@
 
                 <!-- Time Spent Column -->
                 <ng-container matColumnDef="timeSpent">
-                  <th mat-header-cell *matHeaderCellDef>Time</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.time">Time</th>
                   <td mat-cell *matCellDef="let element">
                     {{ formatTimeSpent(element.timeSpent) }}
                   </td>
@@ -228,7 +232,7 @@
 
                 <!-- Actions Column -->
                 <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.actions">Actions</th>
                   <td mat-cell *matCellDef="let element">
                     <button mat-icon-button [matMenuTriggerFor]="userMenu">
                       <mat-icon>more_vert</mat-icon>
@@ -246,7 +250,7 @@
                       </button>
                       <button mat-menu-item (click)="resetUserMetrics(element.pubkey)">
                         <mat-icon>refresh</mat-icon>
-                        <span>Reset Metrics</span>
+                        <span i18n="@@settings.algorithm.action.reset-metrics">Reset Metrics</span>
                       </button>
                     </mat-menu>
                   </td>
@@ -260,14 +264,15 @@
         </mat-tab>
 
         <!-- Declining Engagement Tab -->
-        <mat-tab label="Declining Engagement">
+        <mat-tab label="Declining Engagement" i18n-label="@@settings.algorithm.declining">
           <div class="tab-content">
-            <p>Users with declining engagement that might need re-engagement</p>
+            <p i18n="@@settings.algorithm.declining.description">Users with declining engagement that might need
+              re-engagement</p>
             <div class="table-container">
               <table mat-table [dataSource]="decliningUsers()" class="metrics-table">
                 <!-- Position Column -->
                 <ng-container matColumnDef="position">
-                  <th mat-header-cell *matHeaderCellDef>#</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.position">#</th>
                   <td mat-cell *matCellDef="let element; let i = index">
                     @if (isFavorite(element.pubkey)) {
                     <mat-icon class="favorite-icon" matTooltip="Favorite">heart_minus</mat-icon>
@@ -279,12 +284,12 @@
 
                 <!-- User Column -->
                 <ng-container matColumnDef="user">
-                  <th mat-header-cell *matHeaderCellDef>User</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.user">User</th>
                   <td mat-cell *matCellDef="let element">
                     <div class="user-cell">
                       <app-user-profile [pubkey]="element.pubkey" [view]="'list'" />
                       @if (isFavorite(element.pubkey)) {
-                      <mat-chip color="primary">Favorite</mat-chip>
+                      <mat-chip color="primary" i18n="@@settings.algorithm.favorites">Favorite</mat-chip>
                       }
                     </div>
                   </td>
@@ -292,7 +297,7 @@
 
                 <!-- Engagement Score Column -->
                 <ng-container matColumnDef="engagementScore">
-                  <th mat-header-cell *matHeaderCellDef>Score</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.score">Score</th>
                   <td mat-cell *matCellDef="let element">
                     <mat-chip [color]="getEngagementColor(element.engagementScore || 0)">
                       {{ element.engagementScore || 0 }}
@@ -302,7 +307,7 @@
 
                 <!-- Last Interaction Column -->
                 <ng-container matColumnDef="lastInteraction">
-                  <th mat-header-cell *matHeaderCellDef>Last Seen</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.last-seen">Last Seen</th>
                   <td mat-cell *matCellDef="let element">
                     {{ formatLastInteraction(element.lastInteraction) }}
                   </td>
@@ -310,7 +315,7 @@
 
                 <!-- Viewed Column -->
                 <ng-container matColumnDef="viewed">
-                  <th mat-header-cell *matHeaderCellDef>Views</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.views">Views</th>
                   <td mat-cell *matCellDef="let element">
                     {{ element.viewed }}
                   </td>
@@ -318,7 +323,7 @@
 
                 <!-- Liked Column -->
                 <ng-container matColumnDef="liked">
-                  <th mat-header-cell *matHeaderCellDef>Likes</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.likes">Likes</th>
                   <td mat-cell *matCellDef="let element">
                     {{ element.liked }}
                   </td>
@@ -326,7 +331,7 @@
 
                 <!-- Actions Column -->
                 <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.actions">Actions</th>
                   <td mat-cell *matCellDef="let element">
                     <button mat-icon-button [matMenuTriggerFor]="userMenu">
                       <mat-icon>more_vert</mat-icon>
@@ -344,7 +349,7 @@
                       </button>
                       <button mat-menu-item (click)="resetUserMetrics(element.pubkey)">
                         <mat-icon>refresh</mat-icon>
-                        <span>Reset Metrics</span>
+                        <span i18n="@@settings.algorithm.action.reset-metrics">Reset Metrics</span>
                       </button>
                     </mat-menu>
                   </td>
@@ -358,14 +363,14 @@
         </mat-tab>
 
         <!-- Favorites Tab -->
-        <mat-tab label="Favorites">
+        <mat-tab label="Favorites" i18n-label="@@settings.algorithm.favorites">
           <div class="tab-content">
-            <p>Your favorite users (always ranked at the top)</p>
+            <p i18n="@@settings.algorithm.favorites.description">Your favorite users (always ranked at the top)</p>
             @if (favoriteUsers().length === 0) {
             <div class="empty-state">
               <mat-icon>favorite</mat-icon>
-              <h3>No favorites yet</h3>
-              <p>
+              <h3 i18n="@@settings.algorithm.favorites.empty.title">No favorites yet</h3>
+              <p i18n="@@settings.algorithm.favorites.empty.description">
                 Add users to your favorites to ensure they always appear at the top of your
                 feed.
               </p>
@@ -375,7 +380,7 @@
               <table mat-table [dataSource]="favoriteUsersData()" class="metrics-table">
                 <!-- Position Column -->
                 <ng-container matColumnDef="position">
-                  <th mat-header-cell *matHeaderCellDef>#</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.position">#</th>
                   <td mat-cell *matCellDef="let element; let i = index">
                     <mat-icon class="favorite-icon" matTooltip="Favorite">heart_minus</mat-icon>
                   </td>
@@ -383,18 +388,18 @@
 
                 <!-- User Column -->
                 <ng-container matColumnDef="user">
-                  <th mat-header-cell *matHeaderCellDef>User</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.user">User</th>
                   <td mat-cell *matCellDef="let element">
                     <div class="user-cell">
                       <app-user-profile [pubkey]="element.pubkey" [view]="'list'" />
-                      <mat-chip color="primary">Favorite</mat-chip>
+                      <mat-chip color="primary" i18n="@@settings.algorithm.favorites">Favorite</mat-chip>
                     </div>
                   </td>
                 </ng-container>
 
                 <!-- Engagement Score Column -->
                 <ng-container matColumnDef="engagementScore">
-                  <th mat-header-cell *matHeaderCellDef>Score</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.score">Score</th>
                   <td mat-cell *matCellDef="let element">
                     <mat-chip [color]="getEngagementColor(element.engagementScore || 0)">
                       {{ element.engagementScore || 0 }}
@@ -404,7 +409,7 @@
 
                 <!-- Viewed Column -->
                 <ng-container matColumnDef="viewed">
-                  <th mat-header-cell *matHeaderCellDef>Views</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.views">Views</th>
                   <td mat-cell *matCellDef="let element">
                     {{ element.viewed || 0 }}
                   </td>
@@ -412,7 +417,7 @@
 
                 <!-- Liked Column -->
                 <ng-container matColumnDef="liked">
-                  <th mat-header-cell *matHeaderCellDef>Likes</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.likes">Likes</th>
                   <td mat-cell *matCellDef="let element">
                     {{ element.liked || 0 }}
                   </td>
@@ -420,7 +425,7 @@
 
                 <!-- Time Spent Column -->
                 <ng-container matColumnDef="timeSpent">
-                  <th mat-header-cell *matHeaderCellDef>Time</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.time">Time</th>
                   <td mat-cell *matCellDef="let element">
                     {{ formatTimeSpent(element.timeSpent || 0) }}
                   </td>
@@ -428,7 +433,7 @@
 
                 <!-- Actions Column -->
                 <ng-container matColumnDef="actions">
-                  <th mat-header-cell *matHeaderCellDef>Actions</th>
+                  <th mat-header-cell *matHeaderCellDef i18n="@@settings.algorithm.table.actions">Actions</th>
                   <td mat-cell *matCellDef="let element">
                     <button mat-icon-button [matMenuTriggerFor]="userMenu">
                       <mat-icon>more_vert</mat-icon>
@@ -436,11 +441,11 @@
                     <mat-menu #userMenu="matMenu">
                       <button mat-menu-item (click)="toggleFavorite(element.pubkey)">
                         <mat-icon class="yellow filled">heart_minus</mat-icon>
-                        <span>Remove from Favorites</span>
+                        <span i18n="@@settings.algorithm.action.remove-favorite">Remove from Favorites</span>
                       </button>
                       <button mat-menu-item (click)="resetUserMetrics(element.pubkey)">
                         <mat-icon>refresh</mat-icon>
-                        <span>Reset Metrics</span>
+                        <span i18n="@@settings.algorithm.action.reset-metrics">Reset Metrics</span>
                       </button>
                     </mat-menu>
                   </td>
@@ -460,17 +465,17 @@
   <!-- Action Buttons -->
   <mat-card class="actions-card">
     <mat-card-header>
-      <mat-card-title>Actions</mat-card-title>
+      <mat-card-title i18n="@@settings.algorithm.actions.title">Actions</mat-card-title>
     </mat-card-header>
     <mat-card-content>
       <div class="action-buttons">
         <button mat-flat-button (click)="refreshData()">
           <mat-icon>refresh</mat-icon>
-          Refresh Data
+          <span i18n="@@settings.algorithm.actions.refresh">Refresh Data</span>
         </button>
         <button mat-raised-button class="warn" (click)="resetAllMetrics()">
           <mat-icon>delete_forever</mat-icon>
-          Reset All Metrics
+          <span i18n="@@settings.algorithm.actions.reset-all">Reset All Metrics</span>
         </button>
       </div>
     </mat-card-content>

@@ -1,27 +1,27 @@
 <div class="content-medium">
-  <h2>Trust</h2>
+  <h2 i18n="@@settings.trust.title">Trust</h2>
 
   <div class="setting-item">
-    <span>Enable Web of Trust Features</span>
+    <span i18n="@@settings.trust.enable">Enable Web of Trust Features</span>
     <mat-slide-toggle [checked]="localSettings.trustEnabled()" (change)="toggleTrustEnabled()">
     </mat-slide-toggle>
   </div>
-  <p class="setting-description">
+  <p class="setting-description" i18n="@@settings.trust.description">
     Enable Web of Trust features using NIP-85 trusted assertions. This allows you to view
     reputation metrics and user statistics calculated by trusted service providers.
   </p>
 
   @if (localSettings.trustEnabled()) {
   <div>
-    <h2>Trust Relay</h2>
-    <p>
+    <h2 i18n="@@settings.trust.relay.title">Trust Relay</h2>
+    <p i18n="@@settings.trust.relay.description">
       Select which relay to use for fetching NIP-85 trusted assertions (kind 30382 events).
       These relays provide calculated metrics like follower counts, user ranks, and activity
       statistics.
     </p>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Trust Relay</mat-label>
+      <mat-label i18n="@@settings.trust.relay.label">Trust Relay</mat-label>
       <mat-select [ngModel]="localSettings.trustRelay()" (selectionChange)="setTrustRelay($event.value)">
         @for (relay of trustRelays; track relay.url) {
         <mat-option [value]="relay.url">
@@ -32,14 +32,14 @@
         </mat-option>
         }
       </mat-select>
-      <mat-hint>Current: {{ localSettings.trustRelay() }}</mat-hint>
+      <mat-hint i18n="@@settings.trust.relay.current">Current: {{ localSettings.trustRelay() }}</mat-hint>
     </mat-form-field>
 
     <div class="info-card">
       <mat-icon>info</mat-icon>
       <div>
-        <strong>About NIP-85 Trusted Assertions</strong>
-        <p>
+        <strong i18n="@@settings.trust.about.title">About NIP-85 Trusted Assertions</strong>
+        <p i18n="@@settings.trust.about.description">
           NIP-85 allows service providers to calculate and publish metrics about users and
           events that would be too resource-intensive to compute on clients. These include
           follower counts, user ranks, post counts, zap amounts, and more. The relay setting
