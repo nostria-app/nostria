@@ -5,11 +5,11 @@ import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { map } from 'rxjs';
 import { RouteDataService } from '../../services/route-data.service';
-import { CommonModule } from '@angular/common';
+
 
 @Component({
   selector: 'app-navigation',
-  imports: [MatButtonModule, MatIconModule, CommonModule, RouterModule],
+  imports: [MatButtonModule, MatIconModule, RouterModule],
   templateUrl: './navigation.html',
   styleUrl: './navigation.scss',
 })

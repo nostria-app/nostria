@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
-import { CommonModule } from '@angular/common';
+
 import { NgOptimizedImage } from '@angular/common';
 
 interface FeatureUpdate {
@@ -92,14 +92,13 @@ interface FeatureUpdate {
   `,
   styleUrl: './whats-new-dialog.component.scss',
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
     MatDividerModule,
-    NgOptimizedImage,
-  ],
+    NgOptimizedImage
+],
 })
 export class WhatsNewDialogComponent {
   private dialogRef = inject(MatDialogRef<WhatsNewDialogComponent>);

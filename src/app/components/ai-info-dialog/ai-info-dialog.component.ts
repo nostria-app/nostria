@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCheckboxModule } from '@angular/material/checkbox';
@@ -9,7 +9,7 @@ import { SettingsService } from '../../services/settings.service';
 @Component({
   selector: 'app-ai-info-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatCheckboxModule, FormsModule],
+  imports: [MatDialogModule, MatButtonModule, MatCheckboxModule, FormsModule],
   templateUrl: './ai-info-dialog.component.html',
   styleUrl: './ai-info-dialog.component.scss',
 })

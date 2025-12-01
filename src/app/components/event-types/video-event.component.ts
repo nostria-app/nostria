@@ -1,5 +1,5 @@
 import { Component, computed, effect, input, signal, inject, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -25,7 +25,7 @@ interface VideoData {
 @Component({
   selector: 'app-video-event',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatTooltipModule, CommentsListComponent],
+  imports: [MatIconModule, MatButtonModule, MatTooltipModule, CommentsListComponent],
   templateUrl: './video-event.component.html',
   styleUrl: './video-event.component.scss',
 })

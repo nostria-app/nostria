@@ -1,6 +1,6 @@
 import { Component, inject, signal, computed } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -67,7 +67,6 @@ const VIDEO_HOSTING_DOMAINS = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.t
 @Component({
   selector: 'app-zap-dialog',
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatFormFieldModule,
@@ -79,8 +78,8 @@ const VIDEO_HOSTING_DOMAINS = ['youtube.com', 'youtu.be', 'vimeo.com', 'twitch.t
     MatTooltipModule,
     ReactiveFormsModule,
     UserProfileComponent,
-    QrCodeComponent,
-  ],
+    QrCodeComponent
+],
   templateUrl: './zap-dialog.component.html',
   styleUrls: ['./zap-dialog.component.scss'],
 })

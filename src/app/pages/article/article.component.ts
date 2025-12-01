@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import {
   afterNextRender,
   Component,
@@ -42,10 +42,9 @@ import { NostrRecord } from '../../interfaces';
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    CommonModule,
     ArticleDisplayComponent,
     MatMenuModule
-  ],
+],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
 })

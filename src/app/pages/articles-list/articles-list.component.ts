@@ -21,7 +21,7 @@ import { DataService } from '../../services/data.service';
 import { ApplicationService } from '../../services/application.service';
 import { standardizedTag } from '../../standardized-tags';
 import { AccountRelayService } from '../../services/relays/account-relay';
-import { CommonModule } from '@angular/common';
+
 import { LayoutService } from '../../services/layout.service';
 import { NostrRecord } from '../../interfaces';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
@@ -56,9 +56,8 @@ export interface ArticleItem {
     MatProgressSpinnerModule,
     MatDialogModule,
     MatTabsModule,
-    AgoPipe,
-    CommonModule
-  ],
+    AgoPipe
+],
   templateUrl: './articles-list.component.html',
   styleUrl: './articles-list.component.scss',
 })

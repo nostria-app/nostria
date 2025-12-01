@@ -1,5 +1,5 @@
 import { Component, inject, signal, Input, OnChanges, SimpleChanges, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
@@ -18,15 +18,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
   selector: 'app-profile-reads',
   standalone: true,
   imports: [
-    CommonModule,
     MatIconModule,
     MatCardModule,
     RouterModule,
     MatTooltipModule,
     MatButtonModule,
     ArticleEventComponent,
-    MatProgressSpinnerModule,
-  ],
+    MatProgressSpinnerModule
+],
   templateUrl: './profile-reads.component.html',
   styleUrl: './profile-reads.component.scss',
 })

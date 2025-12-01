@@ -1,5 +1,5 @@
 import { Component, computed, input, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
@@ -32,14 +32,13 @@ interface PlaylistData {
   selector: 'app-playlist-event',
   standalone: true,
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
     MatMenuModule,
     MatDividerModule,
-    CommentsListComponent,
-  ],
+    CommentsListComponent
+],
   templateUrl: './playlist-event.component.html',
   styleUrl: './playlist-event.component.scss',
 })

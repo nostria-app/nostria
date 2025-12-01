@@ -10,7 +10,7 @@ import {
   ElementRef,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -41,12 +41,11 @@ export interface MentionAutocompleteConfig {
   selector: 'app-mention-autocomplete',
   standalone: true,
   imports: [
-    CommonModule,
     MatListModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    UserProfileComponent,
-  ],
+    UserProfileComponent
+],
   template: `
     @if (isVisible() && searchResults().length > 0) {
       <div 

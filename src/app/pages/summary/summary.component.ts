@@ -8,7 +8,7 @@ import {
   effect,
   ChangeDetectionStrategy,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -66,7 +66,6 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 @Component({
   selector: 'app-summary',
   imports: [
-    CommonModule,
     RouterModule,
     FormsModule,
     MatButtonModule,
@@ -81,8 +80,8 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     MatInputModule,
     MatExpansionModule,
     UserProfileComponent,
-    AgoPipe,
-  ],
+    AgoPipe
+],
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,

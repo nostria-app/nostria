@@ -7,7 +7,7 @@ import {
   untracked,
   computed,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -21,13 +21,12 @@ import { UtilitiesService } from '../../../services/utilities.service';
 @Component({
   selector: 'app-badge-hover-card',
   imports: [
-    CommonModule,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    RouterModule,
-  ],
+    RouterModule
+],
   templateUrl: './badge-hover-card.component.html',
   styleUrl: './badge-hover-card.component.scss',
 })

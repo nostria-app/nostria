@@ -1,5 +1,5 @@
 import { Component, computed, inject, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -33,15 +33,14 @@ interface CommentTags {
 @Component({
   selector: 'app-comment',
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
     ContentComponent,
     EventHeaderComponent,
     MatTooltipModule,
-    EventMenuComponent,
-  ],
+    EventMenuComponent
+],
   templateUrl: './comment.component.html',
   styleUrl: './comment.component.scss',
 })

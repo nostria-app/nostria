@@ -1,5 +1,5 @@
 import { Component, inject, computed, effect, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatListModule } from '@angular/material/list';
@@ -40,7 +40,6 @@ export interface RelayConnection {
   selector: 'app-logs-settings',
   standalone: true,
   imports: [
-    CommonModule,
     MatTabsModule,
     MatCardModule,
     MatListModule,
@@ -50,8 +49,8 @@ export interface RelayConnection {
     MatProgressBarModule,
     MatChipsModule,
     MatTooltipModule,
-    MatExpansionModule,
-  ],
+    MatExpansionModule
+],
   templateUrl: './logs-settings.component.html',
   styleUrls: ['./logs-settings.component.scss'],
 })

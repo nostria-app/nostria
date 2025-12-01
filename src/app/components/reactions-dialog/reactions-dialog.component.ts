@@ -2,7 +2,7 @@ import { Component, inject, signal, computed } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -33,15 +33,14 @@ export interface ReactionsDialogData {
 @Component({
   selector: 'app-reactions-dialog',
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
     MatListModule,
     UserProfileComponent,
-    AgoPipe,
-  ],
+    AgoPipe
+],
   template: `
     <div class="reactions-dialog">
       <div class="dialog-header">

@@ -11,7 +11,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { CommonModule } from '@angular/common';
+
 import { nip19 } from 'nostr-tools';
 
 import { AccountStateService } from '../../services/account-state.service';
@@ -29,7 +29,6 @@ export interface StartChatDialogResult {
   selector: 'app-start-chat-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     MatDialogModule,
     MatButtonModule,
@@ -42,8 +41,8 @@ export interface StartChatDialogResult {
     MatDividerModule,
     MatTooltipModule,
     UserProfileComponent,
-    NPubPipe,
-  ],
+    NPubPipe
+],
   templateUrl: './start-chat-dialog.component.html',
   styleUrl: './start-chat-dialog.component.scss',
 })

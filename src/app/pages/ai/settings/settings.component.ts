@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSelectModule } from '@angular/material/select';
@@ -14,14 +14,13 @@ import { AiInfoDialogComponent } from '../../../components/ai-info-dialog/ai-inf
   selector: 'app-ai-settings',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatSlideToggleModule,
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
-    FormsModule,
-  ],
+    FormsModule
+],
   templateUrl: './settings.component.html',
   styleUrl: './settings.component.scss',
 })
