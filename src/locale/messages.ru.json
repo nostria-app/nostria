@@ -283,7 +283,9 @@
     "introduction.new-user.description": "Создайте новый аккаунт в два клика",
     "introduction.login.title": "Войти",
     "introduction.login.description": "Войдите в существующий аккаунт",
-    "introduction.terms-of-use": "Используя Nostria, вы соглашаетесь с Условиями использования.",
+    "introduction.terms-of-use.prefix": "Используя Nostria, вы соглашаетесь с",
+    "introduction.terms-of-use.link": "Условиями использования",
+    "introduction.terms-of-use.suffix": ".",
     "introduction.language.label": "Язык",
     "introduction.slogan": "Ваша социальная сеть"
   }

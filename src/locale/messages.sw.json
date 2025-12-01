@@ -283,7 +283,9 @@
     "introduction.new-user.description": "Unda akaunti mpya kwa mibofyo miwili",
     "introduction.login.title": "Ingia",
     "introduction.login.description": "Ingia kwa akaunti yako iliyopo",
-    "introduction.terms-of-use": "Kwa kutumia Nostria, unakubaliana na Masharti ya Matumizi.",
+    "introduction.terms-of-use.prefix": "Kwa kutumia Nostria, unakubaliana na",
+    "introduction.terms-of-use.link": "Masharti ya Matumizi",
+    "introduction.terms-of-use.suffix": ".",
     "introduction.language.label": "Lugha",
     "introduction.slogan": "Mtandao Wako wa Kijamii"
   }

@@ -266,7 +266,9 @@
     "introduction.new-user.description": "Kreirajte novi nalog sa dva klika",
     "introduction.login.title": "Prijava",
     "introduction.login.description": "Prijavite se sa svojim postojećim nalogom",
-    "introduction.terms-of-use": "Korišćenjem Nostrie, slažete se sa Uslovima korišćenja.",
+    "introduction.terms-of-use.prefix": "Korišćenjem Nostrie, slažete se sa",
+    "introduction.terms-of-use.link": "Uslovima korišćenja",
+    "introduction.terms-of-use.suffix": ".",
     "introduction.language.label": "Jezik",
     "introduction.slogan": "Vaša društvena mreža"
   }
