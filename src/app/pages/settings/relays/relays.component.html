@@ -96,8 +96,20 @@
           <mat-card-content>
             <mat-list>
               @for (relay of userRelays(); track relay.url) {
-              <mat-list-item>
+              <mat-list-item [class.relay-has-error]="hasRelayAuthFailed(relay.url)">
                 <div class="relay-item-container">
+                  <div class="relay-status-icon">
+                    @if (hasRelayAuthFailed(relay.url)) {
+                    @if (isRelayRestricted(getObservedRelayByUrl(relay.url))) {
+                    <mat-icon class="status-icon status-restricted"
+                      matTooltip="Access restricted - payment or signup required">block</mat-icon>
+                    } @else {
+                    <mat-icon class="status-icon status-error" matTooltip="Publishing failed">error</mat-icon>
+                    }
+                    } @else {
+                    <mat-icon class="status-icon status-ok">check_circle</mat-icon>
+                    }
+                  </div>
                   <div class="relay-url">
                     {{ formatRelayUrl(relay.url) }}
                   </div>
@@ -293,13 +305,17 @@
           </div>
 
           @for (relay of observedRelays(); track relay.url) {
-          <div class="relay-row" [class.is-connected]="relay.isConnected">
+          <div class="relay-row" [class.is-connected]="relay.isConnected"
+            [class.auth-failed]="hasRelayAuthFailed(relay.url)">
             <button class="relay-expand" mat-icon-button (click)="toggleRelayDetails(relay.url)">
               <mat-icon>{{ isRelayExpanded(relay.url) ? 'expand_less' : 'expand_more' }}</mat-icon>
             </button>
 
             <div class="relay-info">
               <div class="relay-icon">
+                @if (hasRelayAuthFailed(relay.url)) {
+                <mat-icon class="text-red-500">lock</mat-icon>
+                } @else {
                 <mat-icon
                   [ngClass]="relay.isConnected ? 'text-green-500' : relay.isOffline ? 'text-red-500' : 'text-orange-500'">
                   {{
@@ -310,9 +326,21 @@
                   : 'wifi_tethering'
                   }}
                 </mat-icon>
+                }
               </div>
               <div class="relay-details">
-                <div class="relay-name">{{ getRelayDisplayName(relay.url) }}</div>
+                <div class="relay-name">
+                  {{ getRelayDisplayName(relay.url) }}
+                  @if (hasRelayAuthFailed(relay.url)) {
+                  @if (isRelayRestricted(relay)) {
+                  <span class="auth-badge auth-restricted-badge">Restricted</span>
+                  } @else {
+                  <span class="auth-badge auth-failed-badge">Auth Failed</span>
+                  }
+                  } @else if (relayRequiresAuth(relay.url)) {
+                  <span class="auth-badge auth-required-badge">Auth Required</span>
+                  }
+                </div>
                 <div class="relay-url-row">
                   <span class="relay-url">{{ formatRelayUrl(relay.url) }}</span>
                   <span class="relay-signal" [class]="getSignalClass(relay)">
@@ -335,14 +363,84 @@
             </div>
 
             <div class="relay-actions">
+              @if (hasRelayAuthFailed(relay.url)) {
+              <button mat-button color="warn" (click)="resetRelayAuth(relay.url)">
+                <mat-icon>refresh</mat-icon>
+                Reset Auth
+              </button>
+              } @else {
               <button mat-button color="primary" (click)="viewRelayInfo(relay.url)">
                 Explore
               </button>
+              }
             </div>
           </div>
 
           @if (isRelayExpanded(relay.url)) {
           <div class="relay-expanded-details">
+            @if (relayRequiresAuth(relay.url) || hasRelayAuthFailed(relay.url)) {
+            <div class="detail-section auth-section">
+              <h4 class="section-title">
+                <mat-icon class="section-icon">security</mat-icon>
+                Authentication (NIP-42)
+              </h4>
+              @if (hasRelayAuthFailed(relay.url)) {
+              @if (isRelayRestricted(relay)) {
+              <div class="auth-status auth-status-restricted">
+                <mat-icon>block</mat-icon>
+                <div class="auth-info">
+                  <span class="auth-status-text">Access Restricted</span>
+                  <p class="auth-description">
+                    This relay restricts access. You may need to sign up or pay to use this relay.
+                  </p>
+                  @if (relay.authFailureReason) {
+                  <p class="auth-reason">{{ relay.authFailureReason }}</p>
+                  }
+                  @if (getRelaySignupUrl(relay); as signupUrl) {
+                  <a [href]="signupUrl" target="_blank" rel="noopener noreferrer" mat-flat-button>
+                    <mat-icon>open_in_new</mat-icon>
+                    Sign Up / Payment
+                  </a>
+                  }
+                  <button mat-stroked-button color="warn" (click)="resetRelayAuth(relay.url)">
+                    <mat-icon>refresh</mat-icon>
+                    Retry
+                  </button>
+                </div>
+              </div>
+              } @else {
+              <div class="auth-status auth-status-failed">
+                <mat-icon>error</mat-icon>
+                <div class="auth-info">
+                  <span class="auth-status-text">Authentication Failed</span>
+                  <p class="auth-description">
+                    This relay requires authentication, but the authentication attempt failed.
+                    The relay will not be used until authentication is reset.
+                  </p>
+                  @if (relay.authFailureReason) {
+                  <p class="auth-reason">Reason: {{ relay.authFailureReason }}</p>
+                  }
+                  <button mat-flat-button color="warn" (click)="resetRelayAuth(relay.url)">
+                    <mat-icon>refresh</mat-icon>
+                    Reset Authentication
+                  </button>
+                </div>
+              </div>
+              }
+              } @else {
+              <div class="auth-status auth-status-required">
+                <mat-icon>lock</mat-icon>
+                <div class="auth-info">
+                  <span class="auth-status-text">Authentication Required</span>
+                  <p class="auth-description">
+                    This relay requires authentication. Authentication will be attempted automatically when connecting.
+                  </p>
+                </div>
+              </div>
+              }
+            </div>
+            }
+
             <div class="detail-section">
               <h4 class="section-title">Statistics</h4>
               <div class="detail-row">

@@ -222,6 +222,11 @@ export interface ObservedRelayStats {
   firstObserved: number; // timestamp when first discovered
   lastUpdated: number; // timestamp of last update
   nip11?: Nip11Info; // NIP-11 relay information if available
+  // NIP-42 authentication tracking
+  authenticationFailed?: boolean; // If true, relay required auth and we failed to authenticate
+  authenticationRequired?: boolean; // If true, relay indicated it requires authentication
+  lastAuthAttempt?: number; // timestamp of last authentication attempt in seconds
+  authFailureReason?: string; // Reason for authentication failure (e.g., "rejected", "timeout", "no_signer")
 }
 
 // Interface for pubkey-relay mapping stored in IndexedDB
