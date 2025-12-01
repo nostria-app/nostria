@@ -1,5 +1,5 @@
 import { Component, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -17,14 +17,13 @@ interface PollDetailsData {
 @Component({
   selector: 'app-poll-details-dialog',
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatProgressBarModule,
     MatListModule,
-    MatChipsModule,
-  ],
+    MatChipsModule
+],
   template: `
     <h2 mat-dialog-title>
       <mat-icon>poll</mat-icon>

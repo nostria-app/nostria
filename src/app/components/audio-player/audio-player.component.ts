@@ -1,5 +1,5 @@
 import { Component, Input, signal, ViewChild, ElementRef, AfterViewInit, SimpleChanges, OnChanges, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatSliderModule } from '@angular/material/slider';
@@ -9,7 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 @Component({
   selector: 'app-audio-player',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, MatSliderModule, FormsModule, MatProgressSpinnerModule],
+  imports: [MatIconModule, MatButtonModule, MatSliderModule, FormsModule, MatProgressSpinnerModule],
   templateUrl: './audio-player.component.html',
   styleUrls: ['./audio-player.component.scss']
 })

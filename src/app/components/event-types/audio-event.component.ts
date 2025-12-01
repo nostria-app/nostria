@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
 import { AudioPlayerComponent } from '../audio-player/audio-player.component';
@@ -9,11 +9,10 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
   selector: 'app-audio-event',
   standalone: true,
   imports: [
-    CommonModule,
     MatIconModule,
     AudioPlayerComponent,
     CommentsListComponent
-  ],
+],
   templateUrl: './audio-event.component.html',
   styleUrl: './audio-event.component.scss',
 })

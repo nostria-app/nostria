@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -23,7 +23,6 @@ interface EditorData {
 @Component({
   selector: 'app-list-editor-dialog',
   imports: [
-    CommonModule,
     FormsModule,
     MatButtonModule,
     MatChipsModule,
@@ -35,8 +34,8 @@ interface EditorData {
     MatSelectModule,
     MatSlideToggleModule,
     MatTabsModule,
-    MatTooltipModule,
-  ],
+    MatTooltipModule
+],
   templateUrl: './list-editor-dialog.component.html',
   styleUrl: './list-editor-dialog.component.scss',
 })

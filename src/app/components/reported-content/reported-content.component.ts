@@ -1,5 +1,5 @@
 import { Component, input, inject, signal, effect, untracked } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -12,7 +12,7 @@ import { ReportsDialogComponent } from '../reports-dialog/reports-dialog.compone
 
 @Component({
   selector: 'app-reported-content',
-  imports: [CommonModule, MatButtonModule, MatIconModule, MatCardModule, MatChipsModule],
+  imports: [MatButtonModule, MatIconModule, MatCardModule, MatChipsModule],
   templateUrl: './reported-content.component.html',
   styleUrl: './reported-content.component.scss',
 })

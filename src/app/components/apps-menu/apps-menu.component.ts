@@ -1,5 +1,5 @@
 import { Component, inject, output } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { Router } from '@angular/router';
@@ -25,7 +25,7 @@ interface MenuItem {
 @Component({
   selector: 'app-apps-menu',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule],
+  imports: [MatIconModule, MatButtonModule],
   templateUrl: './apps-menu.component.html',
   styleUrl: './apps-menu.component.scss',
 })

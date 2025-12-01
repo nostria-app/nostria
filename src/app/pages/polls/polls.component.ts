@@ -1,6 +1,6 @@
 import { Component, inject, signal, effect } from '@angular/core';
 import { Router } from '@angular/router';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -22,7 +22,6 @@ import { PollDetailsDialogComponent } from '../../components/poll-details-dialog
 @Component({
   selector: 'app-polls',
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatCardModule,
@@ -31,8 +30,8 @@ import { PollDetailsDialogComponent } from '../../components/poll-details-dialog
     MatProgressSpinnerModule,
     MatChipsModule,
     MatProgressBarModule,
-    PollCardComponent,
-  ],
+    PollCardComponent
+],
   templateUrl: './polls.component.html',
   styleUrl: './polls.component.scss',
 })

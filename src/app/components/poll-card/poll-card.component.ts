@@ -1,5 +1,5 @@
 import { Component, input, output, computed, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,7 +13,6 @@ import { Poll, PollResults } from '../../interfaces';
 @Component({
   selector: 'app-poll-card',
   imports: [
-    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -21,8 +20,8 @@ import { Poll, PollResults } from '../../interfaces';
     MatChipsModule,
     MatRadioModule,
     MatCheckboxModule,
-    FormsModule,
-  ],
+    FormsModule
+],
   templateUrl: './poll-card.component.html',
   styleUrl: './poll-card.component.scss',
 })

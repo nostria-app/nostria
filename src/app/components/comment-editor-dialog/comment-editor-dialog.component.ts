@@ -14,7 +14,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { NostrService } from '../../services/nostr.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ContentComponent } from '../content/content.component';
@@ -33,7 +33,6 @@ export interface CommentEditorDialogData {
 @Component({
   selector: 'app-comment-editor-dialog',
   imports: [
-    CommonModule,
     FormsModule,
     MatDialogModule,
     MatButtonModule,
@@ -41,8 +40,8 @@ export interface CommentEditorDialogData {
     MatFormFieldModule,
     MatInputModule,
     MatProgressBarModule,
-    ContentComponent,
-  ],
+    ContentComponent
+],
   templateUrl: './comment-editor-dialog.component.html',
   styleUrl: './comment-editor-dialog.component.scss',
 })

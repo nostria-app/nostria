@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -29,7 +29,6 @@ export interface CreateEventResult {
 @Component({
   selector: 'app-create-event-dialog',
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     MatDialogModule,
     MatFormFieldModule,
@@ -41,8 +40,8 @@ export interface CreateEventResult {
     MatChipsModule,
     MatSlideToggleModule,
     MatSelectModule,
-    MatNativeDateModule,
-  ],
+    MatNativeDateModule
+],
   templateUrl: './create-event-dialog.component.html',
   styleUrl: './create-event-dialog.component.scss',
 })

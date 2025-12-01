@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit, computed, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -35,7 +35,6 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
 @Component({
   selector: 'app-notifications',
   imports: [
-    CommonModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -47,8 +46,8 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     MatTooltipModule,
     RouterModule,
     AgoPipe,
-    UserProfileComponent,
-  ],
+    UserProfileComponent
+],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
 })

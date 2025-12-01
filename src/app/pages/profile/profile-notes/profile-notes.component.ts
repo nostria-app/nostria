@@ -1,5 +1,5 @@
 import { Component, effect, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
 import { LoggerService } from '../../../services/logger.service';
@@ -25,7 +25,6 @@ import { TimelineFilterOptions } from '../../../interfaces/timeline-filter';
   selector: 'app-profile-notes',
   standalone: true,
   imports: [
-    CommonModule,
     EventComponent,
     MatIconModule,
     LoadingOverlayComponent,
@@ -36,8 +35,8 @@ import { TimelineFilterOptions } from '../../../interfaces/timeline-filter';
     MatSlideToggleModule,
     FormsModule,
     MatProgressSpinnerModule,
-    MatExpansionModule,
-  ],
+    MatExpansionModule
+],
   templateUrl: './profile-notes.component.html',
   styleUrl: './profile-notes.component.scss',
 })

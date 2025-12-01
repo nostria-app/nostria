@@ -1,5 +1,5 @@
 import { Component, input, output, signal, effect, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,14 +12,13 @@ import { MemoDeleteDialogComponent } from '../memos-delete-dialog/memo-delete-di
 @Component({
   selector: 'app-memo-card',
   imports: [
-    CommonModule,
     FormsModule,
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
     MatTooltipModule,
-    MatDialogModule,
-  ],
+    MatDialogModule
+],
   template: `
     <div class="note-card" [class.no-color]="currentColor() === 'default'" [class.has-custom-color]="currentColor() !== 'default'" [style.background-color]="currentColor() !== 'default' ? currentColor() : null">
       <textarea

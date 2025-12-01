@@ -1,5 +1,5 @@
 import { Component, Input, OnInit, OnDestroy, signal, computed, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCardModule } from '@angular/material/card';
@@ -15,7 +15,7 @@ interface LogMessage {
 @Component({
   selector: 'app-loading-overlay',
   standalone: true,
-  imports: [MatProgressSpinnerModule, MatCardModule, CommonModule],
+  imports: [MatProgressSpinnerModule, MatCardModule],
   templateUrl: './loading-overlay.component.html',
   styleUrl: './loading-overlay.component.scss',
 })

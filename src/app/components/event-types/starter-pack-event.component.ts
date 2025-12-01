@@ -1,5 +1,5 @@
 import { Component, computed, input, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,7 +12,7 @@ import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-starter-pack-event',
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, RouterModule, UserProfileComponent],
+  imports: [MatCardModule, MatIconModule, MatButtonModule, MatTooltipModule, RouterModule, UserProfileComponent],
   templateUrl: './starter-pack-event.component.html',
   styleUrl: './starter-pack-event.component.scss',
 })

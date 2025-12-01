@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, ElementRef, ViewChild, ViewChildren, QueryList, AfterViewInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -26,13 +26,12 @@ export interface Command {
   selector: 'app-command-palette-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     FormsModule,
     MatIconModule,
     MatButtonModule,
     MatListModule,
     MatInputModule
-  ],
+],
   templateUrl: './command-palette-dialog.component.html',
   styleUrls: ['./command-palette-dialog.component.scss']
 })

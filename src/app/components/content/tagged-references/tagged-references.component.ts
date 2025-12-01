@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -31,14 +31,13 @@ interface ParsedArticle {
 @Component({
   selector: 'app-tagged-references',
   imports: [
-    CommonModule,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatChipsModule,
     MatProgressSpinnerModule,
-    ProfileDisplayNameComponent,
-  ],
+    ProfileDisplayNameComponent
+],
   templateUrl: './tagged-references.component.html',
   styleUrl: './tagged-references.component.scss',
 })

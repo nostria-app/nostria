@@ -1,5 +1,5 @@
 import { Component, OnInit, inject, signal, computed, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -301,7 +301,6 @@ const LIST_SETS: ListType[] = [
 @Component({
   selector: 'app-lists',
   imports: [
-    CommonModule,
     FormsModule,
     ReactiveFormsModule,
     MatButtonModule,
@@ -317,8 +316,8 @@ const LIST_SETS: ListType[] = [
     MatSelectModule,
     MatSnackBarModule,
     MatTabsModule,
-    MatTooltipModule,
-  ],
+    MatTooltipModule
+],
   templateUrl: './lists.component.html',
   styleUrl: './lists.component.scss',
 })

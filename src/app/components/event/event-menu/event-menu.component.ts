@@ -23,7 +23,7 @@ import {
 } from '../../event-details-dialog/event-details-dialog.component';
 import { LayoutService } from '../../../services/layout.service';
 import type { ReportTarget } from '../../../services/reporting.service';
-import { CommonModule } from '@angular/common';
+
 import { BookmarkService } from '../../../services/bookmark.service';
 import { PinnedService } from '../../../services/pinned.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
@@ -37,13 +37,12 @@ import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dia
   selector: 'app-event-menu',
   standalone: true,
   imports: [
-    CommonModule,
     MatIconModule,
     MatButtonModule,
     MatTooltipModule,
     MatDividerModule,
-    MatMenuModule,
-  ],
+    MatMenuModule
+],
   templateUrl: './event-menu.component.html',
   styleUrl: './event-menu.component.scss',
 })

@@ -26,7 +26,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSliderModule } from '@angular/material/slider';
 import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+
 import { NostrService } from '../../services/nostr.service';
 import { MediaService } from '../../services/media.service';
 import { LocalStorageService } from '../../services/local-storage.service';
@@ -101,7 +101,6 @@ interface NoteAutoDraft {
 @Component({
   selector: 'app-note-editor-dialog',
   imports: [
-    CommonModule,
     FormsModule,
     MatButtonModule,
     MatIconModule,
@@ -118,7 +117,7 @@ interface NoteAutoDraft {
     ContentComponent,
     MentionAutocompleteComponent,
     MatMenuModule
-  ],
+],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
   styleUrl: './note-editor-dialog.component.scss',

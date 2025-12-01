@@ -1,5 +1,5 @@
 import { Component, inject, signal, effect } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -17,7 +17,6 @@ import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-histor
 @Component({
   selector: 'app-memos',
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
@@ -25,8 +24,8 @@ import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-histor
     MatDialogModule,
     MatTooltipModule,
     MemoCardComponent,
-    InfoTooltipComponent,
-  ],
+    InfoTooltipComponent
+],
   template: `
 
 
