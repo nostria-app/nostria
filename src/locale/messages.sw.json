@@ -278,6 +278,13 @@
     "streams.empty.scheduled": "Hakuna matangazo yaliyopangwa. Angalia baadaye kwa matukio yajayo.",
     "streams.empty.ended": "Hakuna matangazo yaliyoisha kuonyesha.",
     "streams.refresh": "Sasisha",
-    "stream-viewer.loading": "Inapakia tangazo..."
+    "stream-viewer.loading": "Inapakia tangazo...",
+    "introduction.new-user.title": "Mtumiaji Mpya",
+    "introduction.new-user.description": "Unda akaunti mpya kwa mibofyo miwili",
+    "introduction.login.title": "Ingia",
+    "introduction.login.description": "Ingia kwa akaunti yako iliyopo",
+    "introduction.terms-of-use": "Kwa kutumia Nostria, unakubaliana na Masharti ya Matumizi.",
+    "introduction.language.label": "Lugha",
+    "introduction.slogan": "Mtandao Wako wa Kijamii"
   }
 }

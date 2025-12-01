@@ -278,6 +278,13 @@
     "streams.empty.scheduled": "Det er ingen planlagte strømmer. Sjekk tilbake senere for kommende arrangementer.",
     "streams.empty.ended": "Det er ingen avsluttede strømmer å vise.",
     "streams.refresh": "Oppdater",
-    "stream-viewer.loading": "Laster strøm..."
+    "stream-viewer.loading": "Laster strøm...",
+    "introduction.new-user.title": "Ny bruker",
+    "introduction.new-user.description": "Opprett en ny konto med to klikk",
+    "introduction.login.title": "Logg inn",
+    "introduction.login.description": "Logg inn med din eksisterende konto",
+    "introduction.terms-of-use": "Ved å bruke Nostria godtar du våre bruksvilkår.",
+    "introduction.language.label": "Språk",
+    "introduction.slogan": "Ditt sosiale nettverk"
   }
 }

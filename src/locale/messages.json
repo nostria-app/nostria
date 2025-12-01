@@ -278,6 +278,13 @@
     "streams.empty.scheduled": "There are no scheduled streams. Check back later for upcoming events.",
     "streams.empty.ended": "There are no ended streams to display.",
     "streams.refresh": "Refresh",
-    "stream-viewer.loading": "Loading stream..."
+    "stream-viewer.loading": "Loading stream...",
+    "introduction.new-user.title": "New User",
+    "introduction.new-user.description": "Create a new account with two clicks",
+    "introduction.login.title": "Login",
+    "introduction.login.description": "Sign in with your existing account",
+    "introduction.terms-of-use": "By using Nostria, you agree to our Terms of Use.",
+    "introduction.language.label": "Language",
+    "introduction.slogan": "Your Social Network"
   }
 }

@@ -261,6 +261,13 @@
     "streams.empty.scheduled": "Nema zakazanih prenosa. Provjerite kasnije za nadolazeće događaje.",
     "streams.empty.ended": "Nema završenih prenosa za prikaz.",
     "streams.refresh": "Osvježi",
-    "stream-viewer.loading": "Učitavanje prenosa..."
+    "stream-viewer.loading": "Učitavanje prenosa...",
+    "introduction.new-user.title": "Novi korisnik",
+    "introduction.new-user.description": "Kreirajte novi nalog sa dva klika",
+    "introduction.login.title": "Prijava",
+    "introduction.login.description": "Prijavite se sa svojim postojećim nalogom",
+    "introduction.terms-of-use": "Korišćenjem Nostrie, slažete se sa Uslovima korišćenja.",
+    "introduction.language.label": "Jezik",
+    "introduction.slogan": "Vaša društvena mreža"
   }
 }

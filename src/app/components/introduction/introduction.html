@@ -9,8 +9,8 @@
               <mat-icon>person_add</mat-icon>
             </div>
             <div class="card-text">
-              <h3>New User</h3>
-              <p>Create a new account with two clicks</p>
+              <h3 i18n="@@introduction.new-user.title">New User</h3>
+              <p i18n="@@introduction.new-user.description">Create a new account with two clicks</p>
             </div>
           </div>
         </mat-card-content>
@@ -23,27 +23,31 @@
               <mat-icon>login</mat-icon>
             </div>
             <div class="card-text">
-              <h3>Login</h3>
-              <p>Sign in with your existing account</p>
+              <h3 i18n="@@introduction.login.title">Login</h3>
+              <p i18n="@@introduction.login.description">Sign in with your existing account</p>
             </div>
           </div>
         </mat-card-content>
       </mat-card>
 
       <div class="terms-of-use-notice">
-        <p>
+        <p i18n="@@introduction.terms-of-use">
           By using Nostria, you agree to our
           <a href="#" (click)="$event.preventDefault(); openTermsOfUse()">Terms of Use</a>.
         </p>
       </div>
 
-      <!-- Learn more link button -->
-      <!-- <div class="learn-more-section">
-        <button mat-button class="learn-more-button" (click)="showWelcomeDialog()">
-          <mat-icon>info</mat-icon>
-          Learn about Nostr and Nostria
-        </button>
-      </div> -->
+      <!-- Language selection -->
+      <div class="language-section">
+        <mat-form-field appearance="outline" class="language-select">
+          <mat-label i18n="@@introduction.language.label">Language</mat-label>
+          <mat-select [ngModel]="localSettings.locale()" (selectionChange)="setLanguage($event.value)">
+            @for (language of languages; track language.code) {
+              <mat-option [value]="language.code">{{ language.name }}</mat-option>
+            }
+          </mat-select>
+        </mat-form-field>
+      </div>
     </div>
 
     <!-- Logo and branding section -->
@@ -52,7 +56,7 @@
         <img src="/icons/nostria.png" alt="Nostria Logo" class="nostria-logo" />
       </div>
       <h1 class="app-title">Nostria</h1>
-      <p class="app-slogan">Your Social Network</p>
+      <p class="app-slogan" i18n="@@introduction.slogan">Your Social Network</p>
     </div>
   </div>
 </div>
