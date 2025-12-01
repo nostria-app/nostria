@@ -5,6 +5,9 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
+import { Router, NavigationStart } from '@angular/router';
+import { filter } from 'rxjs/operators';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Event } from 'nostr-tools';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { BookmarkService } from '../../services/bookmark.service';
@@ -47,8 +50,19 @@ interface VideoData {
 export class MediaWithCommentsDialogComponent {
   private dialogRef = inject(MatDialogRef<MediaWithCommentsDialogComponent>);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
   data: MediaWithCommentsDialogData = inject(MAT_DIALOG_DATA);
   bookmark = inject(BookmarkService);
+
+  constructor() {
+    // Close dialog on navigation (e.g., when clicking a profile)
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationStart),
+      takeUntilDestroyed()
+    ).subscribe(() => {
+      this.dialogRef.close();
+    });
+  }
 
   // Navigation support
   allEvents = signal<Event[]>(this.data.allEvents || [this.data.event]);
