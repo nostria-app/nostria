@@ -146,6 +146,19 @@ interface NavItem {
 })
 export class App implements OnInit {
   title = 'Nostria';
+
+  // Translated labels for use in templates
+  createLabel = $localize`:@@app.create.label:Create`;
+  publishingEventLabel = $localize`:@@app.tooltip.publishing-event:Publishing event...`;
+
+  // Computed tooltip for profile caching progress
+  cachingTooltip = computed(() => {
+    const progress = this.accountState.processingProgress();
+    const processed = this.accountState.profileProcessingState().processed;
+    const total = this.accountState.profileProcessingState().total;
+    return $localize`:@@app.tooltip.caching-profiles:Caching profiles: ${progress}:PROGRESS:% (${processed}:PROCESSED:/${total}:TOTAL:)`;
+  });
+
   themeService = inject(ThemeService);
   pwaUpdateService = inject(PwaUpdateService);
   dialog = inject(MatDialog);
@@ -324,8 +337,8 @@ export class App implements OnInit {
   });
 
   navItems: NavItem[] = [
-    { path: '', label: 'Feeds', icon: 'stacks', authenticated: false },
-    { path: 'summary', label: 'Summary', icon: 'dashboard', authenticated: true },
+    { path: '', label: $localize`:@@app.nav.feeds:Feeds`, icon: 'stacks', authenticated: false },
+    { path: 'summary', label: $localize`:@@app.nav.summary:Summary`, icon: 'dashboard', authenticated: true },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
     // {
     //   path: 'articles',
@@ -335,22 +348,22 @@ export class App implements OnInit {
     //   authenticated: true,
     // },
     // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
-    { path: 'people', label: 'People', icon: 'people', authenticated: true },
+    { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
     {
       path: 'messages',
-      label: 'Messages',
+      label: $localize`:@@app.nav.messages:Messages`,
       icon: 'mail',
       authenticated: true,
     },
     {
       path: 'media',
-      label: 'Media',
+      label: $localize`:@@app.nav.media:Media`,
       icon: 'photo_library',
       authenticated: true,
     },
     {
       path: 'streams',
-      label: 'Streams',
+      label: $localize`:@@app.nav.streams:Streams`,
       icon: 'live_tv',
     },
     // {
@@ -364,7 +377,7 @@ export class App implements OnInit {
     // { path: 'backup', label: 'Backup', icon: 'archive', showInMobile: false },
     {
       path: 'premium',
-      label: 'Premium',
+      label: $localize`:@@app.nav.premium:Premium`,
       icon: 'diamond',
       authenticated: true,
       hideOnSubscribed: true,
@@ -835,7 +848,7 @@ export class App implements OnInit {
                 secret: parsed.secret,
               });
 
-              this.snackBar.open('Wallet added successfully', 'Dismiss', {
+              this.snackBar.open($localize`:@@app.snackbar.wallet-added:Wallet added successfully`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
                 duration: 3000,
                 horizontalPosition: 'center',
                 verticalPosition: 'bottom',
@@ -843,8 +856,8 @@ export class App implements OnInit {
             } catch (error) {
               console.error('Failed to add wallet:', error);
               this.snackBar.open(
-                'Failed to add wallet. Please check the connection string.',
-                'Dismiss',
+                $localize`:@@app.snackbar.wallet-failed:Failed to add wallet. Please check the connection string.`,
+                $localize`:@@app.snackbar.dismiss:Dismiss`,
                 {
                   duration: 3000,
                   horizontalPosition: 'center',
@@ -864,7 +877,7 @@ export class App implements OnInit {
 
           // Handle any other formats - show a generic message
           this.logger.info('Unrecognized QR code format:', result);
-          this.snackBar.open('QR code scanned, but format not recognized.', 'Dismiss', {
+          this.snackBar.open($localize`:@@app.snackbar.qr-unrecognized:QR code scanned, but format not recognized.`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
             duration: 3000,
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
@@ -872,7 +885,7 @@ export class App implements OnInit {
 
         } catch (error) {
           this.logger.error('Error processing QR code result:', error);
-          this.snackBar.open('Error processing QR code.', 'Dismiss', {
+          this.snackBar.open($localize`:@@app.snackbar.qr-error:Error processing QR code.`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
             duration: 3000,
             horizontalPosition: 'center',
             verticalPosition: 'bottom',
@@ -915,7 +928,7 @@ export class App implements OnInit {
           }
         }
 
-        this.snackBar.open('Opening profile...', 'Dismiss', {
+        this.snackBar.open($localize`:@@app.snackbar.opening-profile:Opening profile...`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
           duration: 2000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
@@ -925,7 +938,7 @@ export class App implements OnInit {
         // Handle note/event entities - use the layout service
         this.layout.openGenericEvent(entity);
 
-        this.snackBar.open('Opening event...', 'Dismiss', {
+        this.snackBar.open($localize`:@@app.snackbar.opening-event:Opening event...`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
           duration: 2000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
@@ -935,7 +948,7 @@ export class App implements OnInit {
         // Handle address entities - use the layout service
         this.layout.openArticle(entity);
 
-        this.snackBar.open('Opening article...', 'Dismiss', {
+        this.snackBar.open($localize`:@@app.snackbar.opening-article:Opening article...`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
           duration: 2000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
@@ -943,7 +956,7 @@ export class App implements OnInit {
 
       } else if (entity.startsWith('nsec')) {
         // Warn about private key
-        this.snackBar.open('Warning: This appears to be a private key! Do not share it.', 'Dismiss', {
+        this.snackBar.open($localize`:@@app.snackbar.private-key-warning:Warning: This appears to be a private key! Do not share it.`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
           duration: 5000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
@@ -952,7 +965,7 @@ export class App implements OnInit {
 
       } else {
         this.logger.warn('Unhandled Nostr entity type:', entity);
-        this.snackBar.open('Unsupported Nostr entity type.', 'Dismiss', {
+        this.snackBar.open($localize`:@@app.snackbar.unsupported-entity:Unsupported Nostr entity type.`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
           duration: 3000,
           horizontalPosition: 'center',
           verticalPosition: 'bottom',
@@ -961,7 +974,7 @@ export class App implements OnInit {
 
     } catch (error) {
       this.logger.error('Error handling Nostr entity from QR:', error);
-      this.snackBar.open('Error processing Nostr entity.', 'Dismiss', {
+      this.snackBar.open($localize`:@@app.snackbar.entity-error:Error processing Nostr entity.`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'bottom',

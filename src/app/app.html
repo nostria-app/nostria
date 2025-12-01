@@ -36,6 +36,7 @@
       <div class="search-container toolbar-section">
         <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
           (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
+          i18n-placeholder="@@app.search.placeholder"
           placeholder="Search for cached profiles or paste identifiers..." />
         <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
           <mat-icon>qr_code_scanner</mat-icon>
@@ -56,7 +57,8 @@
     <div class="toolbar-section toolbar-right">
       @if (pwaUpdateService.updateAvailable()) {
       <button mat-icon-button class="update-button" (click)="pwaUpdateService.updateApplication()"
-        matTooltip="Update ready!" aria-label="Update application">
+        i18n-matTooltip="@@app.update.ready" matTooltip="Update ready!" i18n-aria-label="@@app.update.aria"
+        aria-label="Update application">
         <mat-icon class="update-icon">system_update</mat-icon>
       </button>
       } @else {
@@ -66,23 +68,16 @@
       }
 
       @if (app.authenticated() && accountState.profileProcessingState().isProcessing) {
-      <button mat-icon-button class="profile-cache-button" [matTooltip]="
-              'Caching profiles: ' +
-              accountState.processingProgress() +
-              '% (' +
-              accountState.profileProcessingState().processed +
-              '/' +
-              accountState.profileProcessingState().total +
-              ')'
-            " aria-label="Profile caching progress">
+      <button mat-icon-button class="profile-cache-button" [matTooltip]="cachingTooltip()"
+        i18n-aria-label="@@app.tooltip.caching-aria" aria-label="Profile caching progress">
         <mat-icon class="spinning-icon">cached</mat-icon>
         <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
       </button>
       }
       @if (app.authenticated() && (appState.isPublishing() || ai.processingState().isProcessing)) {
       <button mat-icon-button class="profile-cache-button"
-        [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : 'Publishing event...'"
-        aria-label="Processing in progress">
+        [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel"
+        i18n-aria-label="@@app.tooltip.processing-aria" aria-label="Processing in progress">
         <mat-icon class="spinning-icon">sync</mat-icon>
       </button>
       }
@@ -126,12 +121,12 @@
         <mat-divider></mat-divider>
         <button mat-menu-item routerLink="/notifications">
           <mat-icon>visibility</mat-icon>
-          <span>See all notifications</span>
+          <span i18n="@@app.notifications.see-all">See all notifications</span>
         </button>
         } @else {
         <button mat-menu-item routerLink="/notifications">
           <mat-icon>notifications_off</mat-icon>
-          <span>No notifications</span>
+          <span i18n="@@app.notifications.none">No notifications</span>
         </button>
         }
         <mat-divider></mat-divider>
@@ -140,7 +135,7 @@
 
         <button mat-menu-item (click)="openWhatsNewDialog()">
           <mat-icon>campaign</mat-icon>
-          <span>What's New</span>
+          <span i18n="@@app.notifications.whats-new">What's New</span>
         </button>
 
         <mat-divider></mat-divider>
@@ -148,13 +143,13 @@
         <!-- @if (!isPushNotificationEnabled()) {
       <button mat-menu-item (click)="enablePushNotifications()">
         <mat-icon>notifications_active</mat-icon>
-        <span>Enable Push Notifications</span>
+        <span i18n="@@app.notifications.enable-push">Enable Push Notifications</span>
       </button>
       } -->
 
         <button mat-menu-item routerLink="/notifications/settings">
           <mat-icon>settings</mat-icon>
-          <span>Notification settings</span>
+          <span i18n="@@app.notifications.settings">Notification settings</span>
         </button>
       </mat-menu>
 
@@ -184,7 +179,7 @@
   <div class="floating-offline-indicator">
     <div class="offline-content">
       <mat-icon class="offline-icon">wifi_off</mat-icon>
-      <span>You are currently offline</span>
+      <span i18n="@@app.offline.message">You are currently offline</span>
       <button mat-icon-button class="dismiss-button" (click)="app.reload()">
         <mat-icon>refresh</mat-icon>
       </button>
@@ -206,7 +201,8 @@
       @if (app.authenticated()) {
       <div class="sidenav-fab-container">
         <button mat-mini-fab color="primary" class="sidenav-create-fab" (click)="openCreateOptions()"
-          aria-label="Create new content" [matTooltip]="displayLabels() ? '' : 'Create'">
+          i18n-aria-label="@@app.create.aria" aria-label="Create new content"
+          [matTooltip]="displayLabels() ? '' : createLabel">
           <mat-icon>add</mat-icon>
         </button>
       </div>
@@ -244,7 +240,8 @@
           </button>
           @if (child.feedId) {
           <button mat-icon-button class="feed-edit-button"
-            (click)="$event.stopPropagation(); openFeedEditDialog(child.feedId)" matTooltip="Edit board" tabindex="0">
+            (click)="$event.stopPropagation(); openFeedEditDialog(child.feedId)" i18n-matTooltip="@@app.feed.edit"
+            matTooltip="Edit board" tabindex="0">
             <mat-icon>settings</mat-icon>
           </button>
           }
@@ -308,17 +305,17 @@
             {{ accountState.account()?.name || (accountState.pubkey() | npub) }}
           </h2>
           } @else {
-          <h2>Not logged in</h2>
+          <h2 i18n="@@app.profile.not-logged-in">Not logged in</h2>
           }
           }
 
           @if (accountState.hasActiveSubscription()) {
-          <span class="premium-label">Premium</span>
+          <span class="premium-label" i18n="@@app.profile.premium">Premium</span>
           <div class="premium-expires">
             Expires {{ accountState.expiresWhen() | date: 'MMM d yyyy' }}
           </div>
           } @else {
-          <span class="premium-label">Free</span>
+          <span class="premium-label" i18n="@@app.profile.free">Free</span>
           }
         </div>
 
@@ -327,31 +324,32 @@
           <div class="profile-nav-item-container">
             <a mat-list-item [routerLink]="accountState.profilePath()" (click)="toggleProfileSidenav()">
               <mat-icon matListItemIcon>person</mat-icon>
-              <span>My Profile</span>
+              <span i18n="@@app.profile.my-profile">My Profile</span>
             </a>
             <button mat-icon-button class="profile-edit-button"
               (click)="$event.stopPropagation(); toggleProfileSidenav()"
-              [routerLink]="accountState.profilePath() + '/edit'" matTooltip="Edit profile" tabindex="0">
+              [routerLink]="accountState.profilePath() + '/edit'" i18n-matTooltip="@@app.profile.edit"
+              matTooltip="Edit profile" tabindex="0">
               <mat-icon>edit</mat-icon>
             </button>
           </div>
           <a mat-list-item routerLink="/credentials" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>key</mat-icon>
-            <span>Credentials</span>
+            <span i18n="@@app.profile.credentials">Credentials</span>
           </a>
           }
 
           <a mat-list-item (click)="addAccount(); toggleProfileSidenav()">
             <mat-icon matListItemIcon>person_add</mat-icon>
-            <span>Add account</span>
+            <span i18n="@@app.profile.add-account">Add account</span>
           </a>
           <a mat-list-item routerLink="/accounts" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>manage_accounts</mat-icon>
-            <span>Manage accounts</span>
+            <span i18n="@@app.profile.manage-accounts">Manage accounts</span>
           </a>
           <a mat-list-item routerLink="/settings" (click)="toggleProfileSidenav()">
             <mat-icon matListItemIcon>settings</mat-icon>
-            <span>Settings</span>
+            <span i18n="@@app.profile.settings">Settings</span>
           </a>
         </mat-nav-list>
         <mat-divider></mat-divider>
@@ -419,20 +417,20 @@
     <a mat-button class="mobile-nav-button" [routerLink]="['/']" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
       <mat-icon>home</mat-icon>
-      <div class="mobile-nav-label">Home</div>
+      <div class="mobile-nav-label" i18n="@@app.mobile.home">Home</div>
     </a>
 
     <a mat-button class="mobile-nav-button" [routerLink]="['/people']" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
       <mat-icon>people</mat-icon>
-      <div class="mobile-nav-label">People</div>
+      <div class="mobile-nav-label" i18n="@@app.mobile.people">People</div>
     </a>
 
     <!-- FAB button in the middle with circular cut-out -->
     @if (app.authenticated()) {
     <div class="fab-container">
-      <button mat-mini-fab color="primary" class="create-fab" aria-label="Create new content"
-        (click)="openCreateOptions()">
+      <button mat-mini-fab color="primary" class="create-fab" i18n-aria-label="@@app.create.aria"
+        aria-label="Create new content" (click)="openCreateOptions()">
         <mat-icon>add</mat-icon>
       </button>
     </div>
@@ -442,25 +440,25 @@
     <a mat-button class="mobile-nav-button" [routerLink]="['/messages']" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
       <mat-icon>mail</mat-icon>
-      <div class="mobile-nav-label">Messages</div>
+      <div class="mobile-nav-label" i18n="@@app.mobile.messages">Messages</div>
     </a>
 
     <a mat-button class="mobile-nav-button" [routerLink]="['/p', accountState.pubkey()]" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: false }">
       <mat-icon>account_circle</mat-icon>
-      <div class="mobile-nav-label">Profile</div>
+      <div class="mobile-nav-label" i18n="@@app.mobile.profile">Profile</div>
     </a>
     } @else {
     <a mat-button class="mobile-nav-button" [routerLink]="['/settings']" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
       <mat-icon>settings</mat-icon>
-      <div class="mobile-nav-label">Settings</div>
+      <div class="mobile-nav-label" i18n="@@app.mobile.settings">Settings</div>
     </a>
 
     <a mat-button class="mobile-nav-button" (click)="addAccount()" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: false }">
       <mat-icon>person_add</mat-icon>
-      <div class="mobile-nav-label">Add account</div>
+      <div class="mobile-nav-label" i18n="@@app.mobile.add-account">Add account</div>
     </a>
     }
   </div>
@@ -472,7 +470,8 @@
 
 <!-- Global fullscreen video container -->
 <div id="global-fullscreen-container" class="global-fullscreen-video" style="display: none">
-  <button class="fullscreen-minimize-button" (click)="exitFullscreen()" aria-label="Exit fullscreen">
+  <button class="fullscreen-minimize-button" (click)="exitFullscreen()" i18n-aria-label="@@app.fullscreen.exit"
+    aria-label="Exit fullscreen">
     <mat-icon>close</mat-icon>
   </button>
 </div>
