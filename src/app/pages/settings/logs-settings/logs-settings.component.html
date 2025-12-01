@@ -1,29 +1,29 @@
 <div class="content-medium">
-  <h2>Logs and debugging</h2>
+  <h2 i18n="@@settings.logs.title">Logs and debugging</h2>
 
   <!-- Relay Statistics Section -->
   <section class="mute-section">
-    <h3>Relay Statistics</h3>
+    <h3 i18n="@@settings.logs.relay-stats.title">Relay Statistics</h3>
     <div class="stats-overview">
       <div class="stat-card">
         <mat-icon>wifi</mat-icon>
         <div class="stat-content">
           <span class="stat-number">{{ connectedRelays().length }}</span>
-          <span class="stat-label">Connected</span>
+          <span class="stat-label" i18n="@@settings.logs.relay-stats.connected">Connected</span>
         </div>
       </div>
       <div class="stat-card">
         <mat-icon>wifi_off</mat-icon>
         <div class="stat-content">
           <span class="stat-number">{{ offlineRelays().length }}</span>
-          <span class="stat-label">Offline</span>
+          <span class="stat-label" i18n="@@settings.logs.relay-stats.offline">Offline</span>
         </div>
       </div>
       <div class="stat-card">
         <mat-icon>dns</mat-icon>
         <div class="stat-content">
           <span class="stat-number">{{ relayStats().size }}</span>
-          <span class="stat-label">Total Relays</span>
+          <span class="stat-label" i18n="@@settings.logs.relay-stats.total">Total Relays</span>
         </div>
       </div>
     </div>
@@ -31,15 +31,15 @@
 
   <!-- All Relays Section -->
   <section class="mute-section">
-    <h3>All Relays ({{ allRelayStats().length }})</h3>
+    <h3 i18n="@@settings.logs.all-relays">All Relays ({{ allRelayStats().length }})</h3>
     <div class="relay-actions">
       <button mat-stroked-button (click)="generateClusterOutput()" color="primary">
         <mat-icon>refresh</mat-icon>
-        Refresh Cluster Data
+        <span i18n="@@settings.logs.refresh-cluster">Refresh Cluster Data</span>
       </button>
       <button mat-stroked-button (click)="exportClusterData()" color="accent">
         <mat-icon>download</mat-icon>
-        Export Cluster Data
+        <span i18n="@@settings.logs.export-cluster">Export Cluster Data</span>
       </button>
     </div>
 
@@ -47,84 +47,68 @@
       <mat-expansion-panel-header>
         <mat-panel-title>
           <mat-icon>dns</mat-icon>
-          Detailed Relay Statistics
+          <span i18n="@@settings.logs.detailed-stats">Detailed Relay Statistics</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
 
       <div class="relay-list">
         @for (relayEntry of allRelayStats(); track relayEntry[0]) {
-          <div class="relay-item">
-            <div class="relay-header">
-              <div class="relay-status">
-                <mat-icon
-                  [color]="getConnectionStatusIcon(relayEntry[1]).color"
-                  [matTooltip]="getConnectionStatusIcon(relayEntry[1]).tooltip"
-                >
-                  {{ getConnectionStatusIcon(relayEntry[1]).icon }}
-                </mat-icon>
-                <span class="relay-url">{{ relayEntry[0] }}</span>
-                <a
-                  [href]="getWebUrl(relayEntry[0])"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="web-link"
-                >
-                  <mat-icon>open_in_new</mat-icon>
-                </a>
-              </div>
-              <div class="relay-actions">
-                <button
-                  mat-icon-button
-                  (click)="resetRelayStats(relayEntry[0])"
-                  matTooltip="Reset statistics for this relay"
-                  color="warn"
-                >
-                  <mat-icon>refresh</mat-icon>
-                </button>
-              </div>
+        <div class="relay-item">
+          <div class="relay-header">
+            <div class="relay-status">
+              <mat-icon [color]="getConnectionStatusIcon(relayEntry[1]).color"
+                [matTooltip]="getConnectionStatusIcon(relayEntry[1]).tooltip">
+                {{ getConnectionStatusIcon(relayEntry[1]).icon }}
+              </mat-icon>
+              <span class="relay-url">{{ relayEntry[0] }}</span>
+              <a [href]="getWebUrl(relayEntry[0])" target="_blank" rel="noopener noreferrer" class="web-link">
+                <mat-icon>open_in_new</mat-icon>
+              </a>
             </div>
+            <div class="relay-actions">
+              <button mat-icon-button (click)="resetRelayStats(relayEntry[0])"
+                matTooltip="Reset statistics for this relay" color="warn">
+                <mat-icon>refresh</mat-icon>
+              </button>
+            </div>
+          </div>
 
-            <div class="relay-stats">
-              <div class="stat-row">
-                <span class="stat-label">Events Received:</span>
-                <span class="stat-value">{{ relayEntry[1].eventsReceived }}</span>
-              </div>
-              <div class="stat-row">
-                <span class="stat-label">Connection Attempts:</span>
-                <span class="stat-value">{{ relayEntry[1].connectionAttempts }}</span>
-              </div>
-              <div class="stat-row">
-                <span class="stat-label">Last Retry:</span>
-                <span class="stat-value">{{
-                  formatRelativeTime(relayEntry[1].lastConnectionRetry)
+          <div class="relay-stats">
+            <div class="stat-row">
+              <span class="stat-label" i18n="@@settings.logs.events-received">Events Received:</span>
+              <span class="stat-value">{{ relayEntry[1].eventsReceived }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label" i18n="@@settings.logs.connection-attempts">Connection Attempts:</span>
+              <span class="stat-value">{{ relayEntry[1].connectionAttempts }}</span>
+            </div>
+            <div class="stat-row">
+              <span class="stat-label" i18n="@@settings.logs.last-retry">Last Retry:</span>
+              <span class="stat-value">{{
+                formatRelativeTime(relayEntry[1].lastConnectionRetry)
                 }}</span>
-              </div>
-              <div class="stat-row">
-                <span class="stat-label">Last Success:</span>
-                <span class="stat-value">{{
-                  formatRelativeTime(relayEntry[1].lastSuccessfulConnection)
+            </div>
+            <div class="stat-row">
+              <span class="stat-label" i18n="@@settings.logs.last-success">Last Success:</span>
+              <span class="stat-value">{{
+                formatRelativeTime(relayEntry[1].lastSuccessfulConnection)
                 }}</span>
-              </div>
-              <div class="stat-row">
-                <span class="stat-label">Performance Score:</span>
-                <div class="performance-score">
-                  <mat-progress-bar
-                    mode="determinate"
-                    [value]="relaysService.getRelayPerformanceScore(relayEntry[0])"
-                    [color]="
+            </div>
+            <div class="stat-row">
+              <span class="stat-label" i18n="@@settings.relays.observed.performance-score">Performance Score:</span>
+              <div class="performance-score">
+                <mat-progress-bar mode="determinate" [value]="relaysService.getRelayPerformanceScore(relayEntry[0])"
+                  [color]="
                       getPerformanceScoreColor(
                         relaysService.getRelayPerformanceScore(relayEntry[0])
                       )
-                    "
-                  >
-                  </mat-progress-bar>
-                  <span class="score-value"
-                    >{{ relaysService.getRelayPerformanceScore(relayEntry[0]) }}/100</span
-                  >
-                </div>
+                    ">
+                </mat-progress-bar>
+                <span class="score-value">{{ relaysService.getRelayPerformanceScore(relayEntry[0]) }}/100</span>
               </div>
             </div>
           </div>
+        </div>
         }
       </div>
     </mat-expansion-panel>
@@ -132,56 +116,51 @@
 
   <!-- Cluster Analysis Section -->
   <section class="mute-section">
-    <h3>Relay Cluster Analysis</h3>
+    <h3 i18n="@@settings.logs.cluster-analysis">Relay Cluster Analysis</h3>
     <mat-expansion-panel class="cluster-panel">
       <mat-expansion-panel-header>
         <mat-panel-title>
           <mat-icon>account_tree</mat-icon>
-          Relay Connections & User Overlap
+          <span i18n="@@settings.logs.cluster-connections">Relay Connections & User Overlap</span>
         </mat-panel-title>
       </mat-expansion-panel-header>
 
       <div class="cluster-list">
         @for (cluster of clusterOutput(); track cluster.relay) {
-          <div class="cluster-item">
-            <div class="cluster-header">
-              <div class="cluster-relay">
-                <mat-icon [color]="cluster.connectionStatus === 'connected' ? 'primary' : 'warn'">
-                  {{ cluster.connectionStatus === 'connected' ? 'wifi' : 'wifi_off' }}
-                </mat-icon>
-                <span class="relay-url">{{ cluster.relay }}</span>
-                <mat-chip-set>
-                  <mat-chip>{{ cluster.userCount }} users</mat-chip>
-                  <mat-chip>{{ cluster.eventsReceived }} events</mat-chip>
-                  <mat-chip [color]="getPerformanceScoreColor(cluster.performanceScore)">
-                    {{ cluster.performanceScore }}% performance
-                  </mat-chip>
-                </mat-chip-set>
-              </div>
+        <div class="cluster-item">
+          <div class="cluster-header">
+            <div class="cluster-relay">
+              <mat-icon [color]="cluster.connectionStatus === 'connected' ? 'primary' : 'warn'">
+                {{ cluster.connectionStatus === 'connected' ? 'wifi' : 'wifi_off' }}
+              </mat-icon>
+              <span class="relay-url">{{ cluster.relay }}</span>
+              <mat-chip-set>
+                <mat-chip>{{ cluster.userCount }} <span i18n="@@settings.logs.users">users</span></mat-chip>
+                <mat-chip>{{ cluster.eventsReceived }} <span i18n="@@settings.logs.events">events</span></mat-chip>
+                <mat-chip [color]="getPerformanceScoreColor(cluster.performanceScore)">
+                  {{ cluster.performanceScore }}% <span i18n="@@settings.logs.performance">performance</span>
+                </mat-chip>
+              </mat-chip-set>
             </div>
+          </div>
 
-            @if (cluster.sharedWithRelays.length > 0) {
-              <div class="cluster-connections">
-                <h4>Shared with:</h4>
-                @for (connection of cluster.sharedWithRelays; track connection.relay) {
-                  <div class="connection-item">
-                    <span class="connection-relay">{{ connection.relay }}</span>
-                    <mat-progress-bar
-                      mode="determinate"
-                      [value]="connection.connectionStrength"
-                      color="accent"
-                    >
-                    </mat-progress-bar>
-                    <span class="connection-strength"
-                      >{{ connection.sharedUsers }} users ({{
-                        connection.connectionStrength
-                      }}%)</span
-                    >
-                  </div>
-                }
-              </div>
+          @if (cluster.sharedWithRelays.length > 0) {
+          <div class="cluster-connections">
+            <h4 i18n="@@settings.logs.cluster-shared-with">Shared with:</h4>
+            @for (connection of cluster.sharedWithRelays; track connection.relay) {
+            <div class="connection-item">
+              <span class="connection-relay">{{ connection.relay }}</span>
+              <mat-progress-bar mode="determinate" [value]="connection.connectionStrength" color="accent">
+              </mat-progress-bar>
+              <span class="connection-strength">{{ connection.sharedUsers }} <span
+                  i18n="@@settings.logs.users">users</span> ({{
+                connection.connectionStrength
+                }}%)</span>
+            </div>
             }
           </div>
+          }
+        </div>
         }
       </div>
     </mat-expansion-panel>

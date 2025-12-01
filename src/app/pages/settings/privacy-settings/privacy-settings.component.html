@@ -1,11 +1,12 @@
 <div class="content-medium">
-  <h2>Privacy and Safety Settings</h2>
+  <h2 i18n="@@settings.privacy.title">Privacy and Safety Settings</h2>
 
   <section class="sharing-section">
-    <h3>URL Privacy</h3>
+    <h3 i18n="@@settings.privacy.url.title">URL Privacy</h3>
     <div class="settings-option">
-      <mat-checkbox [checked]="localSettingsService.removeTrackingParameters()" (change)="toggleRemoveTrackingParameters()">
-        Remove tracking parameters from pasted URLs
+      <mat-checkbox [checked]="localSettingsService.removeTrackingParameters()"
+        (change)="toggleRemoveTrackingParameters()">
+        <span i18n="@@settings.privacy.url.remove-tracking">Remove tracking parameters from pasted URLs</span>
       </mat-checkbox>
       <app-info-tooltip [content]="trackingRemovalInfoContent"
         ariaLabel="Learn about URL tracking parameter removal"></app-info-tooltip>
@@ -15,10 +16,10 @@
   <mat-divider></mat-divider>
 
   <section class="sharing-section">
-    <h3>Image Cache Service</h3>
+    <h3 i18n="@@settings.privacy.image-cache.title">Image Cache Service</h3>
     <div class="settings-option">
       <mat-checkbox [checked]="settingsService.settings().imageCacheEnabled" (change)="toggleImageCache()">
-        Enable image cache
+        <span i18n="@@settings.privacy.image-cache.enable">Enable image cache</span>
       </mat-checkbox>
       <app-info-tooltip [content]="imageCacheInfoContent"
         ariaLabel="Learn about image cache service"></app-info-tooltip>
@@ -28,17 +29,17 @@
     <div class="cache-actions">
       <button mat-raised-button color="warn" (click)="clearImageCache()">
         <mat-icon>delete</mat-icon>
-        Clear Cache
+        <span i18n="@@settings.privacy.image-cache.clear">Clear Cache</span>
       </button>
     </div>
     }
   </section>
 
   <section class="sharing-section">
-    <h3>Social Sharing Options</h3>
+    <h3 i18n="@@settings.privacy.social-sharing.title">Social Sharing Options</h3>
     <div class="settings-option">
       <mat-checkbox [checked]="settingsService.settings().socialSharingPreview" (change)="toggleSocialSharingPreview()">
-        Enable social sharing preview
+        <span i18n="@@settings.privacy.social-sharing.enable">Enable social sharing preview</span>
       </mat-checkbox>
       <app-info-tooltip [content]="socialSharingInfoContent"
         ariaLabel="Learn about social sharing preview"></app-info-tooltip>
@@ -48,8 +49,8 @@
   <mat-divider></mat-divider>
 
   <section class="report-settings-section">
-    <h3>Reported Content Settings</h3>
-    <p class="section-description">
+    <h3 i18n="@@settings.privacy.reported.title">Reported Content Settings</h3>
+    <p class="section-description" i18n="@@settings.privacy.reported.description">
       Choose which types of reported content to automatically hide. When content is hidden, you can
       still choose to reveal it.
     </p>
@@ -70,7 +71,7 @@
   <mat-divider></mat-divider>
 
   <section class="mute-section">
-    <h3>Blocked Accounts</h3>
+    <h3 i18n="@@settings.privacy.blocked.title">Blocked Accounts</h3>
     <div class="muted-section">
       @if (mutedAccounts().length > 0) {
       <mat-list>
@@ -95,13 +96,13 @@
         }
       </mat-list>
       } @else {
-      <p class="empty-state">No blocked accounts.</p>
+      <p class="empty-state" i18n="@@settings.privacy.blocked.empty">No blocked accounts.</p>
       }
     </div>
   </section>
 
   <section class="mute-section">
-    <h3>Muted Words</h3>
+    <h3 i18n="@@settings.privacy.muted-words.title">Muted Words</h3>
     <div class="muted-section">
       @if (mutedWords().length > 0) {
       <mat-list>
@@ -116,13 +117,13 @@
         }
       </mat-list>
       } @else {
-      <p class="empty-state">No muted words.</p>
+      <p class="empty-state" i18n="@@settings.privacy.muted-words.empty">No muted words.</p>
       }
     </div>
   </section>
 
   <section class="mute-section">
-    <h3>Muted Tags</h3>
+    <h3 i18n="@@settings.privacy.muted-tags.title">Muted Tags</h3>
     <div class="muted-section">
       @if (mutedTags().length > 0) {
       <mat-list>
@@ -137,13 +138,13 @@
         }
       </mat-list>
       } @else {
-      <p class="empty-state">No muted tags.</p>
+      <p class="empty-state" i18n="@@settings.privacy.muted-tags.empty">No muted tags.</p>
       }
     </div>
   </section>
 
   <section class="mute-section">
-    <h3>Muted Threads</h3>
+    <h3 i18n="@@settings.privacy.muted-threads.title">Muted Threads</h3>
     <div class="muted-section">
       @if (mutedThreads().length > 0) {
       <mat-list>
@@ -158,7 +159,7 @@
         }
       </mat-list>
       } @else {
-      <p class="empty-state">No muted threads.</p>
+      <p class="empty-state" i18n="@@settings.privacy.muted-threads.empty">No muted threads.</p>
       }
     </div>
   </section>
@@ -166,18 +167,18 @@
   <mat-divider></mat-divider>
 
   <section class="delete-section">
-    <h3>Event Management</h3>
-    <p class="section-description">
+    <h3 i18n="@@settings.privacy.event-management.title">Event Management</h3>
+    <p class="section-description" i18n="@@settings.privacy.event-management.description">
       Manage and delete events you've published on Nostr.
     </p>
     <div class="delete-actions">
       <button mat-raised-button color="primary" (click)="navigateToDeleteEventPage()">
         <mat-icon>delete_outline</mat-icon>
-        Delete Specific Event
+        <span i18n="@@settings.privacy.event-management.delete-event">Delete Specific Event</span>
       </button>
       <button mat-raised-button color="warn" (click)="navigateToDeleteAccountPage()">
         <mat-icon>delete_forever</mat-icon>
-        Delete All Account Data
+        <span i18n="@@settings.privacy.event-management.delete-account">Delete All Account Data</span>
       </button>
     </div>
   </section>
@@ -188,19 +189,19 @@
       <mat-card-title>
         <div class="info-title">
           <mat-icon class="info-icon">link_off</mat-icon>
-          URL Tracking Parameter Removal
+          <span i18n="@@settings.privacy.info.tracking.title">URL Tracking Parameter Removal</span>
         </div>
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <p>
+      <p i18n="@@settings.privacy.info.tracking.p1">
         When enabled, tracking parameters are automatically removed from URLs you paste.
       </p>
-      <p>
+      <p i18n="@@settings.privacy.info.tracking.p2">
         This removes parameters like utm_*, fbclid, gclid, and other tracking codes used by
         YouTube, Twitter/X, Facebook, and other platforms to track your activity across the web.
       </p>
-      <p>
+      <p i18n="@@settings.privacy.info.tracking.p3">
         Disable if you need to preserve all URL parameters, though this may reduce your privacy.
       </p>
     </mat-card-content>
@@ -211,20 +212,20 @@
       <mat-card-title>
         <div class="info-title">
           <mat-icon class="info-icon">cached</mat-icon>
-          Image Cache Service
+          <span i18n="@@settings.privacy.info.image-cache.title">Image Cache Service</span>
         </div>
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <p>
+      <p i18n="@@settings.privacy.info.image-cache.p1">
         When enabled, profile images and other images are optimized and cached using Angular Service
         Worker for improved loading times and offline availability.
       </p>
-      <p>
+      <p i18n="@@settings.privacy.info.image-cache.p2">
         Images are cached for up to 7 days and automatically managed. This reduces bandwidth usage
         and improves performance, especially on slower connections.
       </p>
-      <p>
+      <p i18n="@@settings.privacy.info.image-cache.p3">
         Disable if you want to ensure images are always loaded directly from the source, which will
         increase bandwidth usage and loading times.
       </p>
@@ -236,12 +237,13 @@
       <mat-card-title>
         <div class="info-title">
           <mat-icon class="info-icon">share</mat-icon>
-          Social Sharing Preview
+          <span i18n="@@settings.privacy.info.social.title">Social Sharing Preview</span>
         </div>
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <p>When enabled, content previews will be shown for external links shared in posts.</p>
+      <p i18n="@@settings.privacy.info.social.description">When enabled, content previews will be shown for external
+        links shared in posts.</p>
     </mat-card-content>
   </ng-template>
 </div>
