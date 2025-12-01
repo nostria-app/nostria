@@ -176,12 +176,12 @@ export class FormatService {
         ? `<span class="embed-verified-badge" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--mat-sys-primary,#6200ea);color:white;font-size:9px;margin-left:4px;vertical-align:middle;">✓</span>`
         : '';
 
-      return `<div class="nostr-embed-preview" data-event-id="${eventId}" data-author="${author}" data-kind="${kind}">
+      return `<div class="nostr-embed-preview" data-event-id="${eventId}" data-author="${author}" data-kind="${kind}" style="margin:0.5rem 0;border:1px solid var(--mat-sys-outline-variant,rgba(255,255,255,0.12));border-radius:10px;background:var(--mat-sys-surface-container-low,#1e1e1e);overflow:hidden;">
         <a href="/e/${nip19.noteEncode(eventId)}" class="nostr-embed-link" style="display:block;padding:10px 12px;text-decoration:none;color:inherit;">
           ${avatarHtml}
-          <span class="embed-author-name" style="color:var(--mat-sys-on-surface,#000);">${this.escapeHtml(authorName)}</span>${verifiedBadge}
-          <span class="embed-time" style="color:var(--mat-sys-on-surface-variant,#666);font-size:0.8rem;margin-left:6px;">· ${relativeTime}</span>
-          <div class="embed-content" style="color:var(--mat-sys-on-surface,#000);line-height:1.45;margin-top:2px;">${escapedContent}</div>
+          <span class="embed-author-name" style="color:var(--mat-sys-on-surface,#fff);">${this.escapeHtml(authorName)}</span>${verifiedBadge}
+          <span class="embed-time" style="color:var(--mat-sys-on-surface-variant,#999);font-size:0.8rem;margin-left:6px;">· ${relativeTime}</span>
+          <div class="embed-content" style="color:var(--mat-sys-on-surface,#fff);line-height:1.45;margin-top:2px;">${escapedContent}</div>
         </a>
       </div>`;
     } catch (error) {
