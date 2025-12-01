@@ -283,7 +283,9 @@
     "introduction.new-user.description": "Opprett en ny konto med to klikk",
     "introduction.login.title": "Logg inn",
     "introduction.login.description": "Logg inn med din eksisterende konto",
-    "introduction.terms-of-use": "Ved å bruke Nostria godtar du våre bruksvilkår.",
+    "introduction.terms-of-use.prefix": "Ved å bruke Nostria godtar du våre",
+    "introduction.terms-of-use.link": "bruksvilkår",
+    "introduction.terms-of-use.suffix": ".",
     "introduction.language.label": "Språk",
     "introduction.slogan": "Ditt sosiale nettverk"
   }

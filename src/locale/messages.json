@@ -283,7 +283,9 @@
     "introduction.new-user.description": "Create a new account with two clicks",
     "introduction.login.title": "Login",
     "introduction.login.description": "Sign in with your existing account",
-    "introduction.terms-of-use": "By using Nostria, you agree to our Terms of Use.",
+    "introduction.terms-of-use.prefix": "By using Nostria, you agree to our",
+    "introduction.terms-of-use.link": "Terms of Use",
+    "introduction.terms-of-use.suffix": ".",
     "introduction.language.label": "Language",
     "introduction.slogan": "Your Social Network"
   }

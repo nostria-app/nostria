@@ -275,7 +275,9 @@
     "introduction.new-user.description": "Dala i-akhawunti entsha ngokuchofoza kabili",
     "introduction.login.title": "Ngena",
     "introduction.login.description": "Ngena nge-akhawunti yakho ekhona",
-    "introduction.terms-of-use": "Ngokusebenzisa i-Nostria, uyavumelana neMigomo Yokusebenzisa.",
+    "introduction.terms-of-use.prefix": "Ngokusebenzisa i-Nostria, uyavumelana ne",
+    "introduction.terms-of-use.link": "Migomo Yokusebenzisa",
+    "introduction.terms-of-use.suffix": ".",
     "introduction.language.label": "Ulimi",
     "introduction.slogan": "Inethiwekhi Yakho Yezenhlalakahle"
   }

@@ -31,9 +31,10 @@
       </mat-card>
 
       <div class="terms-of-use-notice">
-        <p i18n="@@introduction.terms-of-use">
-          By using Nostria, you agree to our
-          <a href="#" (click)="$event.preventDefault(); openTermsOfUse()">Terms of Use</a>.
+        <p>
+          <span i18n="@@introduction.terms-of-use.prefix">By using Nostria, you agree to our</span>&nbsp;
+          <a href="#" (click)="$event.preventDefault(); openTermsOfUse()" i18n="@@introduction.terms-of-use.link">Terms
+            of Use</a><span i18n="@@introduction.terms-of-use.suffix">.</span>
         </p>
       </div>
 

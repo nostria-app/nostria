@@ -283,7 +283,9 @@
     "introduction.new-user.description": "با دو کلیک حساب کاربری جدید بسازید",
     "introduction.login.title": "ورود",
     "introduction.login.description": "با حساب کاربری موجود وارد شوید",
-    "introduction.terms-of-use": "با استفاده از نوستریا، شما با شرایط استفاده موافقت می‌کنید.",
+    "introduction.terms-of-use.prefix": "با استفاده از نوستریا، شما با",
+    "introduction.terms-of-use.link": "شرایط استفاده",
+    "introduction.terms-of-use.suffix": "موافقت می‌کنید.",
     "introduction.language.label": "زبان",
     "introduction.slogan": "شبکه اجتماعی شما"
   }
