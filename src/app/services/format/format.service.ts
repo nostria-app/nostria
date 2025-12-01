@@ -136,12 +136,16 @@ export class FormatService {
       // Truncate content for preview
       const maxContentLength = 280;
       let previewContent = content.trim();
+
+      // Collapse multiple newlines into single newline for cleaner display
+      previewContent = previewContent.replace(/\n{2,}/g, '\n');
+
       if (previewContent.length > maxContentLength) {
         previewContent = previewContent.substring(0, maxContentLength) + '…';
       }
 
-      // Escape HTML in content
-      const escapedContent = this.escapeHtml(previewContent);
+      // Escape HTML in content, then convert newlines to <br> for proper display
+      const escapedContent = this.escapeHtml(previewContent).replace(/\n/g, '<br>');
 
       // Fetch author profile for avatar and display name
       let authorName = this.utilities.getTruncatedNpub(author);
