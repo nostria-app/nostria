@@ -53,20 +53,20 @@ export class SettingsComponent implements OnInit {
 
   // Define settings sections
   sections: SettingsSection[] = [
-    { id: 'general', title: 'General', icon: 'settings' },
-    { id: 'algorithm', title: 'Algorithm', icon: 'model_training' },
-    { id: 'relays', title: 'Relays', icon: 'dns', authenticated: true },
+    { id: 'general', title: $localize`:@@settings.sections.general:General`, icon: 'settings' },
+    { id: 'algorithm', title: $localize`:@@settings.sections.algorithm:Algorithm`, icon: 'model_training' },
+    { id: 'relays', title: $localize`:@@settings.sections.relays:Relays`, icon: 'dns', authenticated: true },
     {
       id: 'privacy',
-      title: 'Privacy & Safety',
+      title: $localize`:@@settings.sections.privacy:Privacy & Safety`,
       icon: 'security',
       authenticated: true,
     },
-    { id: 'trust', title: 'Trust', icon: 'verified_user', authenticated: true },
-    { id: 'backup', title: 'Backup', icon: 'archive', authenticated: true, premium: true },
-    { id: 'premium', title: 'Premium', icon: 'diamond', authenticated: true },
-    { id: 'logs', title: 'Logs', icon: 'article', authenticated: false },
-    { id: 'about', title: 'About', icon: 'info' },
+    { id: 'trust', title: $localize`:@@settings.sections.trust:Trust`, icon: 'verified_user', authenticated: true },
+    { id: 'backup', title: $localize`:@@settings.sections.backup:Backup`, icon: 'archive', authenticated: true, premium: true },
+    { id: 'premium', title: $localize`:@@settings.sections.premium:Premium`, icon: 'diamond', authenticated: true },
+    { id: 'logs', title: $localize`:@@settings.sections.logs:Logs`, icon: 'article', authenticated: false },
+    { id: 'about', title: $localize`:@@settings.sections.about:About`, icon: 'info' },
   ];
 
   constructor() {
