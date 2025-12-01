@@ -2,9 +2,10 @@
   <div class="streams-header">
     <h1>
       <mat-icon>sensors</mat-icon>
-      Live Streams
+      <span i18n="@@streams.title">Live Streams</span>
     </h1>
-    <button mat-icon-button (click)="refresh()" [disabled]="loading()">
+    <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@streams.refresh.aria"
+      aria-label="Refresh streams">
       <mat-icon>refresh</mat-icon>
     </button>
   </div>
@@ -13,7 +14,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">radio_button_checked</mat-icon>
-        Live Now
+        <span i18n="@@streams.tabs.live">Live Now</span>
         @if (liveStreams().length > 0) {
         <span class="tab-count">{{ liveStreams().length }}</span>
         }
@@ -23,7 +24,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">schedule</mat-icon>
-        Scheduled
+        <span i18n="@@streams.tabs.scheduled">Scheduled</span>
         @if (plannedStreams().length > 0) {
         <span class="tab-count">{{ plannedStreams().length }}</span>
         }
@@ -33,7 +34,7 @@
     <mat-tab>
       <ng-template mat-tab-label>
         <mat-icon class="tab-icon">stop_circle</mat-icon>
-        Ended
+        <span i18n="@@streams.tabs.ended">Ended</span>
         @if (endedStreams().length > 0) {
         <span class="tab-count">{{ endedStreams().length }}</span>
         }
@@ -45,24 +46,26 @@
     @if (loading()) {
     <div class="loading-container">
       <mat-spinner diameter="50"></mat-spinner>
-      <p>Loading streams...</p>
+      <p i18n="@@streams.loading">Loading streams...</p>
     </div>
     } @else if (currentStreams().length === 0) {
     <div class="empty-state">
       <mat-icon>video_library</mat-icon>
-      <h2>No streams found</h2>
+      <h2 i18n="@@streams.empty.title">No streams found</h2>
       <p>
         @if (selectedTabIndex() === 0) {
-        There are no live streams at the moment. Check back later or explore scheduled streams.
+        <span i18n="@@streams.empty.live">There are no live streams at the moment. Check back later or explore scheduled
+          streams.</span>
         } @else if (selectedTabIndex() === 1) {
-        There are no scheduled streams. Check back later for upcoming events.
+        <span i18n="@@streams.empty.scheduled">There are no scheduled streams. Check back later for upcoming
+          events.</span>
         } @else {
-        There are no ended streams to display.
+        <span i18n="@@streams.empty.ended">There are no ended streams to display.</span>
         }
       </p>
       <button mat-flat-button (click)="refresh()">
         <mat-icon>refresh</mat-icon>
-        Refresh
+        <span i18n="@@streams.refresh">Refresh</span>
       </button>
     </div>
     } @else {

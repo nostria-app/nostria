@@ -266,6 +266,18 @@
     "settings.logs.users": "brukere",
     "settings.logs.events": "hendelser",
     "settings.logs.performance": "ytelse",
-    "settings.logs.last-success": "Siste suksess:"
+    "settings.logs.last-success": "Siste suksess:",
+    "streams.title": "Direktesendinger",
+    "streams.refresh.aria": "Oppdater strømmer",
+    "streams.tabs.live": "Live nå",
+    "streams.tabs.scheduled": "Planlagt",
+    "streams.tabs.ended": "Avsluttet",
+    "streams.loading": "Laster strømmer...",
+    "streams.empty.title": "Ingen strømmer funnet",
+    "streams.empty.live": "Det er ingen direktesendinger for øyeblikket. Sjekk tilbake senere eller utforsk planlagte strømmer.",
+    "streams.empty.scheduled": "Det er ingen planlagte strømmer. Sjekk tilbake senere for kommende arrangementer.",
+    "streams.empty.ended": "Det er ingen avsluttede strømmer å vise.",
+    "streams.refresh": "Oppdater",
+    "stream-viewer.loading": "Laster strøm..."
   }
 }

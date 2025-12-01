@@ -266,6 +266,18 @@
     "settings.logs.users": "watumiaji",
     "settings.logs.events": "matukio",
     "settings.logs.performance": "utendaji",
-    "settings.logs.last-success": "Mafanikio ya Mwisho:"
+    "settings.logs.last-success": "Mafanikio ya Mwisho:",
+    "streams.title": "Matangazo ya Moja kwa Moja",
+    "streams.refresh.aria": "Sasisha matangazo",
+    "streams.tabs.live": "Moja kwa Moja Sasa",
+    "streams.tabs.scheduled": "Imepangwa",
+    "streams.tabs.ended": "Imeisha",
+    "streams.loading": "Inapakia matangazo...",
+    "streams.empty.title": "Hakuna matangazo yaliyopatikana",
+    "streams.empty.live": "Hakuna matangazo ya moja kwa moja kwa sasa. Angalia baadaye au tazama matangazo yaliyopangwa.",
+    "streams.empty.scheduled": "Hakuna matangazo yaliyopangwa. Angalia baadaye kwa matukio yajayo.",
+    "streams.empty.ended": "Hakuna matangazo yaliyoisha kuonyesha.",
+    "streams.refresh": "Sasisha",
+    "stream-viewer.loading": "Inapakia tangazo..."
   }
 }

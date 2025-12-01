@@ -266,6 +266,18 @@
     "settings.logs.users": "مستخدمين",
     "settings.logs.events": "أحداث",
     "settings.logs.performance": "أداء",
-    "settings.logs.last-success": "آخر نجاح:"
+    "settings.logs.last-success": "آخر نجاح:",
+    "streams.title": "البث المباشر",
+    "streams.refresh.aria": "تحديث البث",
+    "streams.tabs.live": "مباشر الآن",
+    "streams.tabs.scheduled": "مجدول",
+    "streams.tabs.ended": "انتهى",
+    "streams.loading": "جاري تحميل البث...",
+    "streams.empty.title": "لم يتم العثور على بث",
+    "streams.empty.live": "لا توجد بثوث مباشرة في الوقت الحالي. تحقق لاحقاً أو استكشف البثوث المجدولة.",
+    "streams.empty.scheduled": "لا توجد بثوث مجدولة. تحقق لاحقاً من الأحداث القادمة.",
+    "streams.empty.ended": "لا توجد بثوث منتهية للعرض.",
+    "streams.refresh": "تحديث",
+    "stream-viewer.loading": "جاري تحميل البث..."
   }
 }
