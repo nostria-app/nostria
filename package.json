@@ -42,6 +42,8 @@
     "@getalby/sdk": "^6.0.2",
     "@noble/hashes": "^2.0.1",
     "@progress/jszip-esm": "^1.0.4",
+    "@scure/bip32": "^2.0.1",
+    "@scure/bip39": "^2.0.1",
     "@tauri-apps/api": "^2",
     "@tauri-apps/plugin-opener": "^2",
     "@xenova/transformers": "^2.17.2",
