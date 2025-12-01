@@ -373,7 +373,7 @@
         <app-reply-button [event]="targetItem.event"></app-reply-button>
         @if (!compact()) {
         <button mat-button class="count-button" disabled>
-          <span>...</span>
+          <span>{{ replyCount() }}</span>
         </button>
         }
       </div>

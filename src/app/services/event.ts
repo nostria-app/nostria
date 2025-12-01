@@ -49,6 +49,7 @@ export interface EventInteractions {
   reactions: ReactionEvents;
   reposts: NostrRecord[];
   reports: ReportEvents;
+  replyCount: number;
 }
 
 export interface ThreadedEvent {
@@ -565,10 +566,10 @@ export class EventService {
           // Determine the repost kind based on the event kind
           const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
 
-          // Fetch all interaction types in a single query
+          // Fetch all interaction types including replies in a single query
           const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
             pubkey,
-            [kinds.Reaction, repostKind, kinds.Report],
+            [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote],
             eventId,
             {
               cache: true,
@@ -581,6 +582,8 @@ export class EventService {
           const reactionRecords = allRecords.filter((r) => r.event.kind === kinds.Reaction);
           const repostRecords = allRecords.filter((r) => r.event.kind === repostKind);
           const reportRecords = allRecords.filter((r) => r.event.kind === kinds.Report);
+          // Count replies (kind 1 events that reference this event)
+          const replyRecords = allRecords.filter((r) => r.event.kind === kinds.ShortTextNote);
 
           // Process reactions
           const reactionCounts = new Map<string, number>();
@@ -614,6 +617,8 @@ export class EventService {
             repostRecords.length,
             'reports:',
             reportRecords.length,
+            'replies:',
+            replyRecords.length,
           );
 
           return {
@@ -626,6 +631,7 @@ export class EventService {
               events: reportRecords,
               data: reportCounts,
             },
+            replyCount: replyRecords.length,
           };
         } catch (error) {
           this.logger.error('Error loading event interactions:', error);
@@ -633,6 +639,7 @@ export class EventService {
             reactions: { events: [], data: new Map() },
             reposts: [],
             reports: { events: [], data: new Map() },
+            replyCount: 0,
           };
         }
       },
