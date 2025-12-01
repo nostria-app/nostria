@@ -3,6 +3,7 @@ import { SimplePool, Event, Filter } from 'nostr-tools';
 import { RelaysService, RelayStats } from './relays';
 import { SubscriptionManagerService } from './subscription-manager';
 import { LoggerService } from '../logger.service';
+import { RelayAuthService } from './relay-auth.service';
 
 @Injectable({
   providedIn: 'root'
@@ -12,6 +13,7 @@ export class RelayPoolService {
   private readonly relaysService = inject(RelaysService);
   private readonly subscriptionManager = inject(SubscriptionManagerService);
   private readonly logger = inject(LoggerService);
+  private readonly relayAuth = inject(RelayAuthService);
 
   // Pool instance identifier
   private readonly poolInstanceId = `RelayPoolService_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -41,34 +43,41 @@ export class RelayPoolService {
       return null;
     }
 
+    // Filter out relays that have failed authentication
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    if (filteredUrls.length === 0) {
+      this.logger.warn('[RelayPoolService] All relays have failed authentication, cannot execute get');
+      return null;
+    }
+
     // Add any new relays to the pool
-    this.addRelays(relayUrls);
+    this.addRelays(filteredUrls);
 
     // Register the request
     const requestId = this.subscriptionManager.registerRequest(
-      relayUrls,
+      filteredUrls,
       'RelayPoolService',
       this.poolInstanceId
     );
 
     this.logger.debug('[RelayPoolService] Executing get request', {
       requestId,
-      relayCount: relayUrls.length,
+      relayCount: filteredUrls.length,
       filter,
       timeout: timeoutMs,
     });
 
     try {
-      const event = await this.#pool.get(relayUrls, filter, { maxWait: timeoutMs });
+      const event = await this.#pool.get(filteredUrls, filter, { maxWait: timeoutMs });
 
       // Track successful event retrieval
       if (event) {
-        relayUrls.forEach(url => {
+        filteredUrls.forEach(url => {
           this.relaysService.incrementEventCount(url);
           this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
       } else {
-        relayUrls.forEach(url => {
+        filteredUrls.forEach(url => {
           this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
       }
@@ -78,14 +87,14 @@ export class RelayPoolService {
       this.logger.error('[RelayPoolService] Error fetching events:', error);
 
       // Record connection issues for all relays
-      relayUrls.forEach(url => {
+      filteredUrls.forEach(url => {
         this.relaysService.recordConnectionRetry(url);
         this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
       });
 
       return null;
     } finally {
-      this.subscriptionManager.unregisterRequest(requestId, relayUrls);
+      this.subscriptionManager.unregisterRequest(requestId, filteredUrls);
     }
   }
 
@@ -97,25 +106,32 @@ export class RelayPoolService {
       return [];
     }
 
+    // Filter out relays that have failed authentication
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    if (filteredUrls.length === 0) {
+      this.logger.warn('[RelayPoolService] All relays have failed authentication, cannot execute query');
+      return [];
+    }
+
     // Add any new relays to the pool
-    this.addRelays(relayUrls);
+    this.addRelays(filteredUrls);
 
     // Register the request
     const requestId = this.subscriptionManager.registerRequest(
-      relayUrls,
+      filteredUrls,
       'RelayPoolService',
       this.poolInstanceId
     );
 
     this.logger.debug('[RelayPoolService] Executing query request', {
       requestId,
-      relayCount: relayUrls.length,
+      relayCount: filteredUrls.length,
       filter: JSON.stringify(filter),
       timeout: timeoutMs,
     });
 
     try {
-      const events = await this.#pool.querySync(relayUrls, filter, { maxWait: timeoutMs });
+      const events = await this.#pool.querySync(filteredUrls, filter, { maxWait: timeoutMs });
 
       // Debug: Log pagination results
       if (filter.until) {
@@ -130,12 +146,12 @@ export class RelayPoolService {
 
       // Track successful event retrieval
       if (events.length > 0) {
-        relayUrls.forEach(url => {
+        filteredUrls.forEach(url => {
           this.relaysService.incrementEventCount(url);
           this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
       } else {
-        relayUrls.forEach(url => {
+        filteredUrls.forEach(url => {
           this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
       }
@@ -145,14 +161,14 @@ export class RelayPoolService {
       this.logger.error('[RelayPoolService] Error fetching events:', error);
 
       // Record connection issues for all relays
-      relayUrls.forEach(url => {
+      filteredUrls.forEach(url => {
         this.relaysService.recordConnectionRetry(url);
         this.subscriptionManager.updateConnectionStatus(url, false, this.poolInstanceId);
       });
 
       return [];
     } finally {
-      this.subscriptionManager.unregisterRequest(requestId, relayUrls);
+      this.subscriptionManager.unregisterRequest(requestId, filteredUrls);
     }
   }
 
@@ -160,8 +176,19 @@ export class RelayPoolService {
    * Subscribe to events
    */
   subscribe(relayUrls: string[], filter: Filter, onEvent: (event: Event) => void) {
+    // Filter out relays that have failed authentication
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    if (filteredUrls.length === 0) {
+      this.logger.warn('[RelayPoolService] All relays have failed authentication, cannot subscribe');
+      return {
+        close: () => {
+          this.logger.debug('[RelayPoolService] No subscription to close (all relays auth-failed)');
+        },
+      };
+    }
+
     // Add any new relays to the pool
-    this.addRelays(relayUrls);
+    this.addRelays(filteredUrls);
 
     // Generate subscription ID
     const subscriptionId = `sub_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -170,7 +197,7 @@ export class RelayPoolService {
     const registered = this.subscriptionManager.registerSubscription(
       subscriptionId,
       filter,
-      relayUrls,
+      filteredUrls,
       'RelayPoolService',
       this.poolInstanceId
     );
@@ -179,7 +206,7 @@ export class RelayPoolService {
       this.logger.error('[RelayPoolService] Cannot create subscription: limits reached', {
         subscriptionId,
         filter,
-        relayUrls,
+        relayUrls: filteredUrls,
       });
       return {
         close: () => {
@@ -190,15 +217,19 @@ export class RelayPoolService {
 
     this.logger.info('[RelayPoolService] Creating subscription', {
       subscriptionId,
-      relayCount: relayUrls.length,
+      relayCount: filteredUrls.length,
       filter,
     });
 
-    const sub = this.#pool.subscribe(relayUrls, filter, {
+    // Get auth callback for NIP-42 authentication
+    const authCallback = this.relayAuth.getAuthCallback();
+
+    const sub = this.#pool.subscribe(filteredUrls, filter, {
+      onauth: authCallback,
       onevent: (event) => {
         // Track event received for all relays in this subscription
         // Note: We don't know which specific relay sent this event, so we increment all
-        relayUrls.forEach(url => {
+        filteredUrls.forEach(url => {
           this.relaysService.incrementEventCount(url);
           this.subscriptionManager.updateConnectionStatus(url, true, this.poolInstanceId);
         });
@@ -235,19 +266,28 @@ export class RelayPoolService {
       throw new Error('No relays provided');
     }
 
+    // Filter out relays that have failed authentication
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    if (filteredUrls.length === 0) {
+      throw new Error('All relays have failed authentication, cannot publish');
+    }
+
     console.log('[RelayPoolService] DEBUG publish called:', {
-      relayCount: relayUrls.length,
-      relayUrls: relayUrls,
+      relayCount: filteredUrls.length,
+      relayUrls: filteredUrls,
       eventKind: event.kind,
       eventId: event.id,
       timeout: timeoutMs,
     });
 
     // Add any new relays to the pool
-    this.addRelays(relayUrls);
+    this.addRelays(filteredUrls);
+
+    // Get auth callback for NIP-42 authentication
+    const authCallback = this.relayAuth.getAuthCallback();
 
     try {
-      const publishPromises = this.#pool.publish(relayUrls, event);
+      const publishPromises = this.#pool.publish(filteredUrls, event, { onauth: authCallback });
 
       console.log('[RelayPoolService] DEBUG: Got publish promises:', {
         promiseCount: publishPromises.length,
@@ -265,7 +305,7 @@ export class RelayPoolService {
         // Timeout occurred - collect whatever results we have
         this.logger.warn('[RelayPoolService] Publish timeout, collecting results', {
           timeout: timeoutMs,
-          relayCount: relayUrls.length
+          relayCount: filteredUrls.length
         });
 
         // Give a small grace period to collect results
@@ -278,7 +318,7 @@ export class RelayPoolService {
         fulfilled: results.filter(r => r.status === 'fulfilled').length,
         rejected: results.filter(r => r.status === 'rejected').length,
         details: results.map((r, i) => ({
-          relay: relayUrls[i],
+          relay: filteredUrls[i],
           status: r.status,
           reason: r.status === 'rejected' ? r.reason : undefined,
         })),
@@ -286,16 +326,27 @@ export class RelayPoolService {
 
       // Track publish results
       results.forEach((result, index) => {
-        const relayUrl = relayUrls[index];
+        const relayUrl = filteredUrls[index];
         if (result.status === 'fulfilled') {
           // Successful publish - update connection status
           this.relaysService.updateRelayConnection(relayUrl, true);
         } else {
           // Failed publish - record retry attempt
+          let errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+          // Handle empty error messages
+          if (!errorMsg || errorMsg.trim() === '') {
+            errorMsg = 'Unknown error (relay returned empty response)';
+          }
           console.warn('[RelayPoolService] Failed to publish to relay:', {
             relay: relayUrl,
-            reason: result.reason,
+            reason: errorMsg,
           });
+          // Check for NIP-42 auth failures using proper prefixes
+          // auth-required: means client needs to authenticate first
+          // restricted: means client authenticated but key is not authorized (e.g., not paid, not whitelisted)
+          if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
+            this.relayAuth.markAuthFailed(relayUrl, errorMsg);
+          }
           this.relaysService.recordConnectionRetry(relayUrl);
           this.relaysService.updateRelayConnection(relayUrl, false);
         }
@@ -305,7 +356,7 @@ export class RelayPoolService {
       console.error('[RelayPoolService] Error publishing event:', error);
 
       // Record connection issues for all relays
-      relayUrls.forEach(url => {
+      filteredUrls.forEach(url => {
         this.relaysService.recordConnectionRetry(url);
         this.relaysService.updateRelayConnection(url, false);
       });

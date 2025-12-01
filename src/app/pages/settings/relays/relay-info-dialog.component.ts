@@ -3,6 +3,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -44,6 +45,7 @@ interface RelayInfo {
     MatButtonModule,
     MatProgressSpinnerModule,
     MatSlideToggleModule,
+    MatIconModule,
     RouterModule,
   ],
   template: `
@@ -142,7 +144,14 @@ interface RelayInfo {
             {{ relayInfo()?.limitation?.payment_required ? 'Yes' : 'No' }}
           </div>
           @if (relayInfo()?.payments_url) {
-            <div class="info-row"><strong>Payment:</strong> {{ relayInfo()?.payments_url }}</div>
+            <div class="info-row">
+              <strong>Payment:</strong>&nbsp;<a
+                [href]="relayInfo()?.payments_url"
+                target="_blank"
+                rel="noopener noreferrer"
+                >{{ relayInfo()?.payments_url }}</a
+              >
+            </div>
           }
           <div class="info-row">
             <strong>Restricted Writes:</strong>
@@ -153,6 +162,32 @@ interface RelayInfo {
             {{ relayInfo()?.limitation?.auth_required ? 'Yes' : 'No' }}
           </div>
         </div>
+
+        @if (hasRestrictions()) {
+          <div class="restriction-warning">
+            <mat-icon class="warning-icon">warning</mat-icon>
+            <div class="warning-content">
+              <strong>This relay has access restrictions</strong>
+              <p>
+                @if (relayInfo()?.limitation?.payment_required) {
+                  This relay requires payment to publish events.
+                } @else if (relayInfo()?.limitation?.restricted_writes) {
+                  This relay restricts who can write events.
+                }
+              </p>
+              @if (relayInfo()?.payments_url) {
+                <a [href]="relayInfo()?.payments_url" target="_blank" rel="noopener noreferrer" class="signup-link">
+                  Sign up or pay for access →
+                </a>
+              }
+              @if (adding()) {
+                <p class="warning-note">
+                  You can still add this relay, but publishing events may fail until you have access.
+                </p>
+              }
+            </div>
+          </div>
+        }
 
         <div class="migration-container">
           <h3>Data Migration (Coming soon)</h3>
@@ -247,6 +282,60 @@ interface RelayInfo {
       border-radius: 4px;
       box-shadow: var(--mat-sys-level1);
     }
+
+    .restriction-warning {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      margin: 16px 0;
+      background-color: var(--mat-sys-error-container);
+      border-radius: 8px;
+      border-left: 4px solid var(--mat-sys-error);
+    }
+
+    .warning-icon {
+      color: var(--mat-sys-error);
+      flex-shrink: 0;
+    }
+
+    .warning-content {
+      flex: 1;
+    }
+
+    .warning-content strong {
+      color: var(--mat-sys-on-error-container);
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .warning-content p {
+      margin: 0 0 8px 0;
+      color: var(--mat-sys-on-error-container);
+      font-size: 0.875rem;
+    }
+
+    .warning-content a {
+      color: var(--mat-sys-primary);
+    }
+
+    .warning-content .signup-link {
+      display: inline-block;
+      padding: 8px 16px;
+      margin: 8px 0;
+      background-color: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+      border-radius: 4px;
+      text-decoration: none;
+    }
+
+    .warning-content .signup-link:hover {
+      opacity: 0.9;
+    }
+
+    .warning-note {
+      font-style: italic;
+      opacity: 0.8;
+    }
   `,
 })
 export class RelayInfoDialogComponent {
@@ -338,6 +427,15 @@ export class RelayInfoDialogComponent {
     // If icon fails to load, clear it
     this.iconUrl.set(null);
     this.logger.warn('Failed to load relay icon');
+  }
+
+  /**
+   * Check if the relay has restrictions that would prevent writing events
+   */
+  hasRestrictions(): boolean {
+    const info = this.relayInfo();
+    if (!info?.limitation) return false;
+    return !!(info.limitation.payment_required || info.limitation.restricted_writes);
   }
 
   confirmAdd(): void {

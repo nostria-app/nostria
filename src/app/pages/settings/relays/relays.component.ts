@@ -20,6 +20,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatDialog } from '@angular/material/dialog';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSelectModule } from '@angular/material/select';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { RelayInfoDialogComponent } from './relay-info-dialog.component';
@@ -40,10 +41,10 @@ import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tool
 import { Relay } from '../../../services/relays/relay';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
+import { RelayAuthService } from '../../../services/relays/relay-auth.service';
 
 @Component({
   selector: 'app-relays-page',
-  standalone: true,
   imports: [
     CommonModule,
     FormsModule,
@@ -57,6 +58,7 @@ import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
     MatTabsModule,
     MatDividerModule,
     MatSelectModule,
+    MatTooltipModule,
     InfoTooltipComponent,
   ],
   templateUrl: './relays.component.html',
@@ -79,6 +81,7 @@ export class RelaysComponent implements OnInit {
   private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly data = inject(DataService);
   private readonly relaysService = inject(RelaysService);
+  readonly relayAuth = inject(RelayAuthService);
 
   followingRelayUrls = signal<string[]>([]);
   newRelayUrl = signal('');
@@ -1013,5 +1016,62 @@ export class RelaysComponent implements OnInit {
       this.showMessage('Error checking relay latency. Please try again.');
       this.isSettingUpNostriaRelays.set(false);
     }
+  }
+
+  /**
+   * Reset authentication failure for a relay.
+   * This allows the user to retry authentication with the relay.
+   */
+  async resetRelayAuth(relayUrl: string): Promise<void> {
+    try {
+      await this.relayAuth.resetAuthFailure(relayUrl);
+      this.snackBar.open('Authentication reset. The relay will be tried again.', 'OK', { duration: 3000 });
+      this.logger.info(`Reset authentication failure for relay: ${relayUrl}`);
+    } catch (error) {
+      this.logger.error(`Failed to reset authentication for relay: ${relayUrl}`, error);
+      this.snackBar.open('Failed to reset authentication', 'OK', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Check if a relay has failed authentication
+   */
+  hasRelayAuthFailed(relayUrl: string): boolean {
+    return this.relayAuth.hasAuthFailed(relayUrl);
+  }
+
+  /**
+   * Check if a relay requires authentication
+   */
+  relayRequiresAuth(relayUrl: string): boolean {
+    return this.relayAuth.requiresAuth(relayUrl);
+  }
+
+  /**
+   * Check if a relay failure is due to "restricted:" (paid/whitelist) vs "auth-required:"
+   * Per NIP-42:
+   * - "auth-required:" means client needs to authenticate first
+   * - "restricted:" means client authenticated but key is not authorized
+   */
+  isRelayRestricted(relay: { authFailureReason?: string }): boolean {
+    return relay.authFailureReason?.includes('restricted:') ?? false;
+  }
+
+  /**
+   * Extract a signup/payment URL from a restricted relay's failure message
+   */
+  getRelaySignupUrl(relay: { authFailureReason?: string }): string | null {
+    if (!relay.authFailureReason) return null;
+    // Look for URLs in the failure reason (common pattern: "sign up at https://...")
+    const urlMatch = relay.authFailureReason.match(/https?:\/\/[^\s]+/);
+    return urlMatch ? urlMatch[0] : null;
+  }
+
+  /**
+   * Get observed relay data by URL for status display in Account Relays
+   */
+  getObservedRelayByUrl(url: string): { authFailureReason?: string } {
+    const observedRelay = this.observedRelays().find(r => r.url === url);
+    return observedRelay || {};
   }
 }

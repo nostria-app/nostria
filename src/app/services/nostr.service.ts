@@ -34,6 +34,7 @@ import { SigningDialogComponent } from '../components/signing-dialog/signing-dia
 import { ExternalSignerDialogComponent } from '../components/external-signer-dialog/external-signer-dialog.component';
 import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.service';
 import { PinPromptService } from './pin-prompt.service';
+import { RelayAuthService } from './relays/relay-auth.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -91,6 +92,7 @@ export class NostrService implements NostriaService {
   private readonly dialog = inject(MatDialog);
   private readonly crypto = inject(CryptoEncryptionService);
   private readonly pinPrompt = inject(PinPromptService);
+  private readonly relayAuth = inject(RelayAuthService);
 
   initialized = signal(false);
   private accountsInitialized = false;
@@ -122,6 +124,9 @@ export class NostrService implements NostriaService {
     // Set the signing function in AccountStateService to avoid circular dependency
     this.accountState.setSignFunction((event: UnsignedEvent) => this.sign(event));
 
+    // Set the signing function for NIP-42 relay authentication
+    this.relayAuth.setSignFunction((event: EventTemplate) => this.signEvent(event));
+
     // DEPRECATED: Old signal-based publishing removed
     // The accountState.publish signal has been replaced with direct publishEvent() calls
     // This eliminates circular dependencies and simplifies the publishing flow
@@ -130,6 +135,8 @@ export class NostrService implements NostriaService {
       if (this.database.initialized()) {
         this.logger.info('Storage initialized, loading Nostr Service');
         await this.initialize();
+        // Load relay authentication state from storage
+        await this.relayAuth.loadAuthStateFromStorage();
       }
     });
 
