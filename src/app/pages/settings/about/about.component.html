@@ -13,15 +13,16 @@
 
       <div class="about-header">
         <div>
-          <h1>About Nostria</h1>
-          <h3>Version: {{ version() }}</h3>
+          <h1 i18n="@@settings.about.title">About Nostria</h1>
+          <h3><span i18n="@@settings.about.version">Version:</span> {{ version() }}</h3>
           @if (buildDate()) {
           <p class=".build-info
-          ">Built on: {{ buildDate() }}</p>
+          "><span i18n="@@settings.about.built-on">Built on:</span> {{ buildDate() }}</p>
           }
           @if (commitShort() && commitSha()) {
           <p class="build-info">
-            Commit: <a [href]="'https://github.com/nostria-app/nostria/commit/' + commitSha()" target="_blank"
+            <span i18n="@@settings.about.commit">Commit:</span> <a
+              [href]="'https://github.com/nostria-app/nostria/commit/' + commitSha()" target="_blank"
               rel="noopener noreferrer">{{ commitShort() }}</a>
           </p>
           }
@@ -31,48 +32,51 @@
         </div>
       </div>
 
-      <p class="description">
+      <p class="description" i18n="@@settings.about.description">
         Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your
         profile and data under your control, and share and explore a decentralized space that resists censorship while
         being quick to join and friendly to use. Your Social Network.
       </p>
 
-      <h3>What is Nostria?</h3>
-      <p>
+      <h3 i18n="@@settings.about.what-is.title">What is Nostria?</h3>
+      <p i18n="@@settings.about.what-is.p1">
         Nostria is a client for the Nostr protocol, which is a decentralized social network
         protocol. It allows users to communicate and share information without relying on a central
         server.
       </p>
-      <p>
+      <p i18n="@@settings.about.what-is.p2">
         Nostria implements the usage of the Nostr protocol to ensure maximum decentralization and
         global scalability, without compromising on user experience. The client is designed to be
         fast, responsive, and easy to use, with a focus on providing a great user experience.
       </p>
 
       <p>
-        <button mat-button (click)="resetIntroduction()">Learn about Nostr and Nostria</button>
+        <button mat-button (click)="resetIntroduction()" i18n="@@settings.about.learn">Learn about Nostr and
+          Nostria</button>
       </p>
 
-      <h3>Desktop</h3>
-      <p>Nostria is also accessible as desktop app:</p>
+      <h3 i18n="@@settings.about.desktop">Desktop</h3>
+      <p i18n="@@settings.about.desktop.description">Nostria is also accessible as desktop app:</p>
       <ul>
         <li>
-          <a href="https://github.com/nostria-app/nostria/releases" target="_blank"
-            rel="noopener noreferrer">Downloads</a>
+          <a href="https://github.com/nostria-app/nostria/releases" target="_blank" rel="noopener noreferrer"
+            i18n="@@settings.about.downloads">Downloads</a>
         </li>
       </ul>
 
-      <h3>More information</h3>
-      <p>Visit our website for more information, documentation, and support.</p>
+      <h3 i18n="@@settings.about.more-info">More information</h3>
+      <p i18n="@@settings.about.more-info.description">Visit our website for more information, documentation, and
+        support.</p>
       <ul>
         <li>
-          <a href="https://www.nostria.app" target="_blank" rel="noopener noreferrer">Nostria Website</a>
+          <a href="https://www.nostria.app" target="_blank" rel="noopener noreferrer"
+            i18n="@@settings.about.website">Nostria Website</a>
         </li>
       </ul>
 
       <div class="credits-section">
-        <h3>Credits & Acknowledgments</h3>
-        <p>
+        <h3 i18n="@@settings.about.credits.title">Credits & Acknowledgments</h3>
+        <p i18n="@@settings.about.credits.description">
           We would like to extend our heartfelt gratitude to our investors who have made Nostria
           possible:
         </p>
@@ -90,31 +94,31 @@
             Serregan
           </mat-list-item>
         </mat-list>
-        <p>
+        <p i18n="@@settings.about.credits.thanks">
           Thank you for believing in our vision of making the Nostr protocol accessible to everyone
           and supporting the development of a truly decentralized social network.
         </p>
       </div>
 
       <div class="links-section">
-        <h3>Useful Links</h3>
+        <h3 i18n="@@settings.about.links">Useful Links</h3>
         <mat-list>
           <mat-list-item>
             <a href="https://github.com/nostria-app/nostria" target="_blank" rel="noopener noreferrer">
               <mat-icon>code</mat-icon>
-              GitHub Repository
+              <span i18n="@@settings.about.links.github">GitHub Repository</span>
             </a>
           </mat-list-item>
           <mat-list-item>
             <a href="https://nostr.com" target="_blank" rel="noopener noreferrer">
               <mat-icon>info</mat-icon>
-              Nostr Protocol
+              <span i18n="@@settings.about.links.protocol">Nostr Protocol</span>
             </a>
           </mat-list-item>
           <mat-list-item>
             <a href="https://github.com/nostria-app/nostria/issues" target="_blank" rel="noopener noreferrer">
               <mat-icon>bug_report</mat-icon>
-              Report Issues
+              <span i18n="@@settings.about.links.issues">Report Issues</span>
             </a>
           </mat-list-item>
         </mat-list>

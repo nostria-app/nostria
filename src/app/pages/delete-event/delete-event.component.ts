@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal, OnInit } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -21,14 +21,13 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/conf
   selector: 'app-delete-event',
   standalone: true,
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     MatButtonModule,
     MatCardModule,
     MatFormFieldModule,
     MatIconModule,
-    MatInputModule,
-  ],
+    MatInputModule
+],
   templateUrl: './delete-event.component.html',
   styleUrl: './delete-event.component.scss',
 })

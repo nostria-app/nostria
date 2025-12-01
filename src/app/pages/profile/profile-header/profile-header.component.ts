@@ -42,7 +42,7 @@ import { UserRelayService } from '../../../services/relays/user-relay';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { BadgeService } from '../../../services/badge.service';
 import { BadgeHoverCardService } from '../../../services/badge-hover-card.service';
-import { CommonModule } from '@angular/common';
+
 import { Router } from '@angular/router';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { TrustService } from '../../../services/trust.service';
@@ -51,7 +51,6 @@ import { TrustService } from '../../../services/trust.service';
   selector: 'app-profile-header',
   standalone: true,
   imports: [
-    CommonModule,
     MatIconModule,
     MatListModule,
     MatProgressSpinnerModule,
@@ -61,8 +60,8 @@ import { TrustService } from '../../../services/trust.service';
     MatDividerModule,
     MatTooltipModule,
     QrCodeComponent,
-    ZapButtonComponent,
-  ],
+    ZapButtonComponent
+],
   templateUrl: './profile-header.component.html',
   styleUrl: './profile-header.component.scss',
 })

@@ -146,7 +146,7 @@ export class ProfileComponent {
     }
 
     // Check for router navigation state (browser only)
-    const navigation = this.app.isBrowser() ? this.router.getCurrentNavigation() : null;
+    const navigation = this.app.isBrowser() ? this.router.currentNavigation() : null;
     if (navigation?.extras.state?.['event']) {
       console.log('Router state event data for profile:', navigation.extras.state['event']);
       // Handle the event data as needed for profile context

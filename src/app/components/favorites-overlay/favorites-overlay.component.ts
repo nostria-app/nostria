@@ -1,5 +1,5 @@
 import { Component, inject, computed, signal, effect, untracked } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -19,11 +19,10 @@ import { UtilitiesService } from '../../services/utilities.service';
   selector: 'app-favorites-overlay',
   standalone: true,
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
-    MatTooltipModule,
-  ],
+    MatTooltipModule
+],
   templateUrl: './favorites-overlay.component.html',
   styleUrl: './favorites-overlay.component.scss',
 })

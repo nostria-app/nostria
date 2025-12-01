@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,15 +15,14 @@ import { LiveEventComponent } from '../../components/event-types/live-event.comp
 @Component({
   selector: 'app-streams',
   imports: [
-    CommonModule,
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
     MatTabsModule,
     MatCardModule,
-    LiveEventComponent,
-  ],
+    LiveEventComponent
+],
   templateUrl: './streams.component.html',
   styleUrl: './streams.component.scss',
 })

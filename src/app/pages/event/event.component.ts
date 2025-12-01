@@ -108,7 +108,7 @@ export class EventPageComponent {
     }
 
     // Check for router navigation state
-    const navigation = this.router.getCurrentNavigation();
+    const navigation = this.router.currentNavigation();
     if (navigation?.extras.state?.['event']) {
       console.log('Router state event data:', navigation.extras.state['event']);
       this.event.set(navigation.extras.state['event'] as Event);

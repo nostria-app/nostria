@@ -11,7 +11,7 @@ import {
   OnChanges,
   SimpleChanges,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -37,7 +37,6 @@ import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
   selector: 'app-rich-text-editor',
   standalone: true,
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatTooltipModule,
@@ -48,8 +47,8 @@ import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
     MatProgressBarModule,
     MatSnackBarModule,
     MatDialogModule,
-    FloatingToolbarComponent,
-  ],
+    FloatingToolbarComponent
+],
   templateUrl: './rich-text-editor.component.html',
   styleUrl: './rich-text-editor.component.scss',
 })

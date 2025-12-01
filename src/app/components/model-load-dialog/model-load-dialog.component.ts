@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatButtonModule } from '@angular/material/button';
@@ -12,7 +12,7 @@ export interface ModelLoadDialogData {
 @Component({
   selector: 'app-model-load-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatProgressBarModule, MatButtonModule],
+  imports: [MatDialogModule, MatProgressBarModule, MatButtonModule],
   template: `
     <h2 mat-dialog-title>Loading AI Model</h2>
     <div mat-dialog-content>

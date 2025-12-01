@@ -1,5 +1,5 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
@@ -17,7 +17,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 @Component({
   selector: 'app-photo-event',
   standalone: true,
-  imports: [CommonModule, MatIconModule, MatButtonModule, CommentsListComponent],
+  imports: [MatIconModule, MatButtonModule, CommentsListComponent],
   templateUrl: './photo-event.component.html',
   styleUrl: './photo-event.component.scss',
 })

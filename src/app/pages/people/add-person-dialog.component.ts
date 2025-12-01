@@ -1,5 +1,5 @@
 import { Component, inject, signal } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -20,7 +20,6 @@ type DialogState = 'input' | 'loading' | 'preview' | 'error' | 'success';
   selector: 'app-add-person-dialog',
   standalone: true,
   imports: [
-    CommonModule,
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
@@ -28,8 +27,8 @@ type DialogState = 'input' | 'loading' | 'preview' | 'error' | 'success';
     MatFormFieldModule,
     MatProgressSpinnerModule,
     FormsModule,
-    UserProfileComponent,
-  ],
+    UserProfileComponent
+],
   template: `
     <div class="add-person-dialog">
       <h2 mat-dialog-title>

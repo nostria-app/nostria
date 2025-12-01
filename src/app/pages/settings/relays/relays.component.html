@@ -1,22 +1,23 @@
 <div class="content-medium">
-  <h2>Manage Relays</h2>
+  <h2 i18n="@@settings.relays.title">Manage Relays</h2>
 
   <mat-tab-group animationDuration="300ms">
     <!-- Your Relays Tab -->
-    <mat-tab label="Account Relays">
+    <mat-tab label="Account Relays" i18n-label="@@settings.relays.account-relays">
       <div class="tab-content">
         @if (userRelays().length === 0 && !hasMalformedRelayList()) {
         <mat-card class="user-relays-card zero-relays-card">
           <mat-card-header>
-            <mat-card-title>Account Relays</mat-card-title>
-            <mat-card-subtitle>You have {{ userRelays().length }} relays configured</mat-card-subtitle>
+            <mat-card-title i18n="@@settings.relays.account-relays">Account Relays</mat-card-title>
+            <mat-card-subtitle i18n="@@settings.relays.you-have">You have {{ userRelays().length }} relays
+              configured</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <div class="zero-relays-container">
               <div class="text-center py-8">
                 <mat-icon class="large-icon text-gray-400">cloud_off</mat-icon>
-                <h3>No Account Relays Configured</h3>
-                <p class="text-gray-500">
+                <h3 i18n="@@settings.relays.no-relays.title">No Account Relays Configured</h3>
+                <p class="text-gray-500" i18n="@@settings.relays.no-relays.description">
                   You don't have any relays configured yet. Relays are essential for using Nostr.
                 </p>
 
@@ -24,13 +25,13 @@
                   <button mat-flat-button color="primary" class="setup-nostria-button" (click)="setupNostriaRelays()"
                     [disabled]="isSettingUpNostriaRelays()">
                     <mat-icon>auto_awesome</mat-icon>
-                    <span>Quick Setup with Nostria</span>
+                    <span i18n="@@settings.relays.quick-setup">Quick Setup with Nostria</span>
                     @if (isSettingUpNostriaRelays()) {
                     <mat-icon class="spinning-icon">sync</mat-icon>
                     }
                   </button>
 
-                  <p class="setup-description">
+                  <p class="setup-description" i18n="@@settings.relays.manual-add">
                     Or manually add a relay using the input below
                   </p>
                 </div>
@@ -46,16 +47,16 @@
             <mat-card-title>
               <div class="info-title">
                 <mat-icon class="info-icon">build</mat-icon>
-                Malformed Relay Configuration Detected
+                <span i18n="@@settings.relays.malformed.title">Malformed Relay Configuration Detected</span>
               </div>
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <p>
+            <p i18n="@@settings.relays.malformed.description">
               Your relay list (kind 10002) was created by another Nostr client with incorrect tag names.
               The event uses 'relay' tags instead of the correct 'r' tags according to the Nostr protocol.
             </p>
-            <p>
+            <p i18n="@@settings.relays.malformed.action">
               This may prevent some Nostr clients from properly loading your relays. Click the button below to
               automatically repair and republish your relay list with the correct format.
             </p>
@@ -65,22 +66,23 @@
                 @if (isRepairingRelayList()) {
                 <mat-icon class="spinning-icon">sync</mat-icon>
                 }
-                Repair and Republish Relay List
+                <span i18n="@@settings.relays.malformed.button">Repair and Republish Relay List</span>
               </button>
             </p>
           </mat-card-content>
         </mat-card>
         }
 
-        <h3>Add New Relay</h3>
+        <h3 i18n="@@settings.relays.add-new">Add New Relay</h3>
 
         <div class="flex-container add-relay-container">
           <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
-            <mat-label>Relay URL (wss://...)</mat-label>
+            <mat-label i18n="@@settings.relays.add-url">Relay URL (wss://...)</mat-label>
             <input matInput placeholder="wss://relay.example.com" [value]="newRelayUrl()"
               (input)="newRelayUrl.set($any($event.target).value)" (keyup.enter)="addRelay()" />
           </mat-form-field>
-          <button mat-flat-button color="primary" class="add-button" (click)="addRelay()">
+          <button mat-flat-button color="primary" class="add-button" (click)="addRelay()"
+            i18n="@@settings.relays.add-button">
             Add Relay
           </button>
         </div>
@@ -90,14 +92,27 @@
           <app-info-tooltip [content]="userRelaysInfoContent"
             ariaLabel="Learn how acocunt relays work"></app-info-tooltip>
           <mat-card-header>
-            <mat-card-title>Account Relays</mat-card-title>
-            <mat-card-subtitle>You have {{ userRelays().length }} relays configured</mat-card-subtitle>
+            <mat-card-title i18n="@@settings.relays.account-relays">Account Relays</mat-card-title>
+            <mat-card-subtitle i18n="@@settings.relays.you-have">You have {{ userRelays().length }} relays
+              configured</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             <mat-list>
               @for (relay of userRelays(); track relay.url) {
-              <mat-list-item>
+              <mat-list-item [class.relay-has-error]="hasRelayAuthFailed(relay.url)">
                 <div class="relay-item-container">
+                  <div class="relay-status-icon">
+                    @if (hasRelayAuthFailed(relay.url)) {
+                    @if (isRelayRestricted(getObservedRelayByUrl(relay.url))) {
+                    <mat-icon class="status-icon status-restricted"
+                      matTooltip="Access restricted - payment or signup required">block</mat-icon>
+                    } @else {
+                    <mat-icon class="status-icon status-error" matTooltip="Publishing failed">error</mat-icon>
+                    }
+                    } @else {
+                    <mat-icon class="status-icon status-ok">check_circle</mat-icon>
+                    }
+                  </div>
                   <div class="relay-url">
                     {{ formatRelayUrl(relay.url) }}
                   </div>
@@ -127,12 +142,12 @@
             <mat-card-title>
               <div class="info-title">
                 <mat-icon class="info-icon">dns</mat-icon>
-                Direct Message relays
+                <span i18n="@@settings.relays.dm-relays.title">Direct Message relays</span>
               </div>
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <p>
+            <p i18n="@@settings.relays.dm-relays.description">
               Nostria advices Nostr users to not use different relays for Direct Messages. If you
               want this advanced feature, you can use a different Nostr client that supports it.
             </p>
@@ -141,7 +156,8 @@
               as your Account Relays.
             </p>
             <p>
-              <button mat-flat-button (click)="updateDirectMessageRelayList()">
+              <button mat-flat-button (click)="updateDirectMessageRelayList()"
+                i18n="@@settings.relays.dm-relays.update">
                 Update Direct Message Relay List
               </button>
             </p>
@@ -155,12 +171,12 @@
             <mat-card-title>
               <div class="info-title">
                 <mat-icon class="info-icon">warning</mat-icon>
-                Deprecated Warning
+                <span i18n="@@settings.relays.deprecated.title">Deprecated Warning</span>
               </div>
             </mat-card-title>
           </mat-card-header>
           <mat-card-content>
-            <p>
+            <p i18n="@@settings.relays.deprecated.description">
               Your following list contains a list of
               {{ followingRelayUrls().length }} relays. This is deprecated in the protocol.
             </p>
@@ -172,7 +188,8 @@
                 @if (isCleaningFollowingList()) {
                 <mat-icon class="spinning-icon">sync</mat-icon>
                 }
-                Remove {{ followingRelayUrls().length }} Relays from Following List
+                <span i18n="@@settings.relays.deprecated.remove">Remove relays from Following List</span> ({{
+                followingRelayUrls().length }})
               </button>
             </p>
           </mat-card-content>
@@ -182,13 +199,13 @@
     </mat-tab>
 
     <!-- Discovery Relays Tab -->
-    <mat-tab label="Discovery Relays">
+    <mat-tab label="Discovery Relays" i18n-label="@@settings.relays.discovery-relays">
       <div class="tab-content">
         <div class="action-buttons-container">
           <button mat-flat-button color="accent" class="find-closest-button" (click)="findClosestRelay()"
             [disabled]="isCheckingRelays()">
             <mat-icon>network_check</mat-icon>
-            <span>Find Closest Discovery Relay</span>
+            <span i18n="@@settings.relays.find-closest">Find Closest Discovery Relay</span>
             @if (isCheckingRelays()) {
             <mat-icon class="spinning-icon">sync</mat-icon>
             }
@@ -198,15 +215,16 @@
           </button> -->
         </div>
 
-        <h3>Add Discovery Relay</h3>
+        <h3 i18n="@@settings.relays.add-discovery">Add Discovery Relay</h3>
 
         <div class="flex-container add-relay-container">
           <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
-            <mat-label>Relay URL (wss://...)</mat-label>
+            <mat-label i18n="@@settings.relays.add-url">Relay URL (wss://...)</mat-label>
             <input matInput placeholder="wss://relay.example.com" [value]="newBootstrapUrl()"
               (input)="newBootstrapUrl.set($any($event.target).value)" (keyup.enter)="addBootstrapRelay()" />
           </mat-form-field>
-          <button mat-flat-button color="primary" class="add-button" (click)="addBootstrapRelay()">
+          <button mat-flat-button color="primary" class="add-button" (click)="addBootstrapRelay()"
+            i18n="@@settings.relays.add-discovery.button">
             Add Discovery Relay
           </button>
         </div>
@@ -215,14 +233,15 @@
           <app-info-tooltip [content]="discoveryRelaysInfoContent"
             ariaLabel="Learn how discovery relays work"></app-info-tooltip>
           <mat-card-header>
-            <mat-card-title>Discovery Relays</mat-card-title>
-            <mat-card-subtitle>These relays are used for discovery of Relay Lists of users</mat-card-subtitle>
+            <mat-card-title i18n="@@settings.relays.discovery-relays">Discovery Relays</mat-card-title>
+            <mat-card-subtitle i18n="@@settings.relays.discovery.subtitle">These relays are used for discovery of Relay
+              Lists of users</mat-card-subtitle>
           </mat-card-header>
           <mat-card-content>
             @if (discoveryRelays().length === 0) {
             <div class="text-center py-8 text-gray-500">
-              <p>You don't have any discovery relays configured.</p>
-              <p>Add a discovery relay using the input above.</p>
+              <p i18n="@@settings.relays.discovery.empty.title">You don't have any discovery relays configured.</p>
+              <p i18n="@@settings.relays.discovery.empty.description">Add a discovery relay using the input above.</p>
             </div>
             } @else {
             <mat-list>
@@ -256,50 +275,58 @@
     </mat-tab>
 
     <!-- Observed Relays Tab -->
-    <mat-tab label="Observed Relays">
+    <mat-tab label="Observed Relays" i18n-label="@@settings.relays.observed-relays">
       <div class="tab-content">
         <div class="observed-relays-header">
           <div class="sort-controls">
             <mat-form-field appearance="outline" subscriptSizing="dynamic">
-              <mat-label>Sort by</mat-label>
+              <mat-label i18n="@@settings.relays.observed.sort-by">Sort by</mat-label>
               <mat-select [value]="observedRelaysSortBy()" (selectionChange)="observedRelaysSortBy.set($event.value)">
-                <mat-option value="eventsReceived">Events Received</mat-option>
-                <mat-option value="lastUpdated">Last Updated</mat-option>
-                <mat-option value="firstObserved">First Observed</mat-option>
+                <mat-option value="eventsReceived" i18n="@@settings.relays.observed.sort-events">Events
+                  Received</mat-option>
+                <mat-option value="lastUpdated" i18n="@@settings.relays.observed.sort-updated">Last Updated</mat-option>
+                <mat-option value="firstObserved" i18n="@@settings.relays.observed.sort-observed">First
+                  Observed</mat-option>
               </mat-select>
             </mat-form-field>
           </div>
           <button mat-flat-button color="warn" (click)="clearObservedRelayData()"
             [disabled]="observedRelays().length === 0">
             <mat-icon>clear_all</mat-icon>
-            <span>Clear All Data</span>
+            <span i18n="@@settings.relays.observed.clear-all">Clear All Data</span>
           </button>
         </div>
 
         @if (observedRelays().length === 0) {
         <div class="empty-state">
           <mat-icon class="empty-icon">cloud_off</mat-icon>
-          <h3>No Observed Relays</h3>
-          <p>Relay statistics will appear here as you interact with the network.</p>
+          <h3 i18n="@@settings.relays.observed.empty.title">No Observed Relays</h3>
+          <p i18n="@@settings.relays.observed.empty.description">Relay statistics will appear here as you interact with
+            the network.</p>
         </div>
         } @else {
         <div class="observed-relays-list">
           <div class="list-header">
-            <div class="header-relay">Relay</div>
-            <div class="header-events">Events</div>
-            <div class="header-connects">Connects</div>
-            <div class="header-last-connected">Last Connected</div>
+            <div class="header-relay" i18n="@@settings.relays.observed.header.relay">Relay</div>
+            <div class="header-events" i18n="@@settings.relays.observed.header.events">Events</div>
+            <div class="header-connects" i18n="@@settings.relays.observed.header.connects">Connects</div>
+            <div class="header-last-connected" i18n="@@settings.relays.observed.header.last-connected">Last Connected
+            </div>
             <div class="header-actions"></div>
           </div>
 
           @for (relay of observedRelays(); track relay.url) {
-          <div class="relay-row" [class.is-connected]="relay.isConnected">
+          <div class="relay-row" [class.is-connected]="relay.isConnected"
+            [class.auth-failed]="hasRelayAuthFailed(relay.url)">
             <button class="relay-expand" mat-icon-button (click)="toggleRelayDetails(relay.url)">
               <mat-icon>{{ isRelayExpanded(relay.url) ? 'expand_less' : 'expand_more' }}</mat-icon>
             </button>
 
             <div class="relay-info">
               <div class="relay-icon">
+                @if (hasRelayAuthFailed(relay.url)) {
+                <mat-icon class="text-red-500">lock</mat-icon>
+                } @else {
                 <mat-icon
                   [ngClass]="relay.isConnected ? 'text-green-500' : relay.isOffline ? 'text-red-500' : 'text-orange-500'">
                   {{
@@ -310,9 +337,21 @@
                   : 'wifi_tethering'
                   }}
                 </mat-icon>
+                }
               </div>
               <div class="relay-details">
-                <div class="relay-name">{{ getRelayDisplayName(relay.url) }}</div>
+                <div class="relay-name">
+                  {{ getRelayDisplayName(relay.url) }}
+                  @if (hasRelayAuthFailed(relay.url)) {
+                  @if (isRelayRestricted(relay)) {
+                  <span class="auth-badge auth-restricted-badge">Restricted</span>
+                  } @else {
+                  <span class="auth-badge auth-failed-badge">Auth Failed</span>
+                  }
+                  } @else if (relayRequiresAuth(relay.url)) {
+                  <span class="auth-badge auth-required-badge">Auth Required</span>
+                  }
+                </div>
                 <div class="relay-url-row">
                   <span class="relay-url">{{ formatRelayUrl(relay.url) }}</span>
                   <span class="relay-signal" [class]="getSignalClass(relay)">
@@ -335,29 +374,99 @@
             </div>
 
             <div class="relay-actions">
+              @if (hasRelayAuthFailed(relay.url)) {
+              <button mat-button color="warn" (click)="resetRelayAuth(relay.url)">
+                <mat-icon>refresh</mat-icon>
+                Reset Auth
+              </button>
+              } @else {
               <button mat-button color="primary" (click)="viewRelayInfo(relay.url)">
                 Explore
               </button>
+              }
             </div>
           </div>
 
           @if (isRelayExpanded(relay.url)) {
           <div class="relay-expanded-details">
+            @if (relayRequiresAuth(relay.url) || hasRelayAuthFailed(relay.url)) {
+            <div class="detail-section auth-section">
+              <h4 class="section-title">
+                <mat-icon class="section-icon">security</mat-icon>
+                Authentication (NIP-42)
+              </h4>
+              @if (hasRelayAuthFailed(relay.url)) {
+              @if (isRelayRestricted(relay)) {
+              <div class="auth-status auth-status-restricted">
+                <mat-icon>block</mat-icon>
+                <div class="auth-info">
+                  <span class="auth-status-text">Access Restricted</span>
+                  <p class="auth-description">
+                    This relay restricts access. You may need to sign up or pay to use this relay.
+                  </p>
+                  @if (relay.authFailureReason) {
+                  <p class="auth-reason">{{ relay.authFailureReason }}</p>
+                  }
+                  @if (getRelaySignupUrl(relay); as signupUrl) {
+                  <a [href]="signupUrl" target="_blank" rel="noopener noreferrer" mat-flat-button>
+                    <mat-icon>open_in_new</mat-icon>
+                    Sign Up / Payment
+                  </a>
+                  }
+                  <button mat-stroked-button color="warn" (click)="resetRelayAuth(relay.url)">
+                    <mat-icon>refresh</mat-icon>
+                    Retry
+                  </button>
+                </div>
+              </div>
+              } @else {
+              <div class="auth-status auth-status-failed">
+                <mat-icon>error</mat-icon>
+                <div class="auth-info">
+                  <span class="auth-status-text">Authentication Failed</span>
+                  <p class="auth-description">
+                    This relay requires authentication, but the authentication attempt failed.
+                    The relay will not be used until authentication is reset.
+                  </p>
+                  @if (relay.authFailureReason) {
+                  <p class="auth-reason">Reason: {{ relay.authFailureReason }}</p>
+                  }
+                  <button mat-flat-button color="warn" (click)="resetRelayAuth(relay.url)">
+                    <mat-icon>refresh</mat-icon>
+                    Reset Authentication
+                  </button>
+                </div>
+              </div>
+              }
+              } @else {
+              <div class="auth-status auth-status-required">
+                <mat-icon>lock</mat-icon>
+                <div class="auth-info">
+                  <span class="auth-status-text">Authentication Required</span>
+                  <p class="auth-description">
+                    This relay requires authentication. Authentication will be attempted automatically when connecting.
+                  </p>
+                </div>
+              </div>
+              }
+            </div>
+            }
+
             <div class="detail-section">
-              <h4 class="section-title">Statistics</h4>
+              <h4 class="section-title" i18n="@@settings.relays.observed.statistics">Statistics</h4>
               <div class="detail-row">
                 <mat-icon class="detail-icon">schedule</mat-icon>
-                <span class="detail-label">First Observed:</span>
+                <span class="detail-label" i18n="@@settings.relays.observed.first-observed">First Observed:</span>
                 <span class="detail-value">{{ formatTimestamp(relay.firstObserved) }}</span>
               </div>
               <div class="detail-row">
                 <mat-icon class="detail-icon">update</mat-icon>
-                <span class="detail-label">Last Updated:</span>
+                <span class="detail-label" i18n="@@settings.relays.observed.last-updated">Last Updated:</span>
                 <span class="detail-value">{{ formatTimestamp(relay.lastUpdated) }}</span>
               </div>
               <div class="detail-row">
                 <mat-icon class="detail-icon">speed</mat-icon>
-                <span class="detail-label">Performance Score:</span>
+                <span class="detail-label" i18n="@@settings.relays.observed.performance-score">Performance Score:</span>
                 <span class="detail-value">
                   <span class="performance-badge" [ngClass]="getPerformanceClass(getRelayPerformanceScore(relay.url))">
                     {{ getRelayPerformanceScore(relay.url) }}%
@@ -368,7 +477,7 @@
 
             <div class="detail-section">
               <h4 class="section-title">
-                Relay Information (NIP-11)
+                <span i18n="@@settings.relays.observed.nip11.title">Relay Information (NIP-11)</span>
                 @if (isNip11Loading(relay.url)) {
                 <mat-icon class="spinning-icon">sync</mat-icon>
                 }
@@ -376,14 +485,14 @@
 
               @if (isNip11Loading(relay.url)) {
               <div class="nip11-loading">
-                <p>Loading relay information...</p>
+                <p i18n="@@settings.relays.observed.nip11.loading">Loading relay information...</p>
               </div>
               } @else if (getNip11Info(relay.url)) {
               <div class="nip11-info">
                 @if (getNip11Info(relay.url)?.name) {
                 <div class="detail-row">
                   <mat-icon class="detail-icon">dns</mat-icon>
-                  <span class="detail-label">Name:</span>
+                  <span class="detail-label" i18n="@@settings.relays.observed.nip11.name">Name:</span>
                   <span class="detail-value">{{ getNip11Info(relay.url)?.name }}</span>
                 </div>
                 }
@@ -391,7 +500,7 @@
                 @if (getNip11Info(relay.url)?.description) {
                 <div class="detail-row description-row">
                   <mat-icon class="detail-icon">info</mat-icon>
-                  <span class="detail-label">Description:</span>
+                  <span class="detail-label" i18n="@@settings.relays.observed.nip11.description">Description:</span>
                   <span class="detail-value description-text">{{ getNip11Info(relay.url)?.description }}</span>
                 </div>
                 }
@@ -399,7 +508,7 @@
                 @if (getNip11Info(relay.url)?.software) {
                 <div class="detail-row">
                   <mat-icon class="detail-icon">code</mat-icon>
-                  <span class="detail-label">Software:</span>
+                  <span class="detail-label" i18n="@@settings.relays.observed.nip11.software">Software:</span>
                   <span class="detail-value">
                     <a [href]="getNip11Info(relay.url)?.software" target="_blank" rel="noopener noreferrer">
                       {{ getNip11Info(relay.url)?.software }}
@@ -411,7 +520,7 @@
                 @if (getNip11Info(relay.url)?.version) {
                 <div class="detail-row">
                   <mat-icon class="detail-icon">label</mat-icon>
-                  <span class="detail-label">Version:</span>
+                  <span class="detail-label" i18n="@@settings.relays.observed.nip11.version">Version:</span>
                   <span class="detail-value">{{ getNip11Info(relay.url)?.version }}</span>
                 </div>
                 }
@@ -419,7 +528,8 @@
                 @if (getNip11Info(relay.url)?.supported_nips && getNip11Info(relay.url)!.supported_nips!.length > 0) {
                 <div class="detail-row nips-row">
                   <mat-icon class="detail-icon">extension</mat-icon>
-                  <span class="detail-label">Supported NIPs:</span>
+                  <span class="detail-label" i18n="@@settings.relays.observed.nip11.supported-nips">Supported
+                    NIPs:</span>
                   <span class="detail-value nips-list">
                     @for (nip of getNip11Info(relay.url)?.supported_nips; track nip) {
                     <span class="nip-badge">{{ nip }}</span>
@@ -431,19 +541,23 @@
                 @if (getNip11Info(relay.url)?.limitation) {
                 <div class="detail-row limitations-row">
                   <mat-icon class="detail-icon">warning</mat-icon>
-                  <span class="detail-label">Limitations:</span>
+                  <span class="detail-label" i18n="@@settings.relays.observed.nip11.limitations">Limitations:</span>
                   <div class="detail-value limitations-list">
                     @if (getNip11Info(relay.url)?.limitation?.payment_required) {
-                    <span class="limitation-badge payment">Payment Required</span>
+                    <span class="limitation-badge payment"
+                      i18n="@@settings.relays.observed.nip11.limitation.payment">Payment Required</span>
                     }
                     @if (getNip11Info(relay.url)?.limitation?.auth_required) {
-                    <span class="limitation-badge auth">Auth Required</span>
+                    <span class="limitation-badge auth" i18n="@@settings.relays.observed.nip11.limitation.auth">Auth
+                      Required</span>
                     }
                     @if (getNip11Info(relay.url)?.limitation?.restricted_writes) {
-                    <span class="limitation-badge restricted">Restricted Writes</span>
+                    <span class="limitation-badge restricted"
+                      i18n="@@settings.relays.observed.nip11.limitation.restricted">Restricted Writes</span>
                     }
                     @if (getNip11Info(relay.url)?.limitation?.max_message_length) {
-                    <span class="limitation-badge">Max Message: {{
+                    <span class="limitation-badge"><span
+                        i18n="@@settings.relays.observed.nip11.limitation.max-message">Max Message:</span> {{
                       getNip11Info(relay.url)?.limitation?.max_message_length }} bytes</span>
                     }
                   </div>
@@ -453,7 +567,7 @@
                 @if (getNip11Info(relay.url)?.contact || getNip11Info(relay.url)?.pubkey) {
                 <div class="detail-row">
                   <mat-icon class="detail-icon">contact_mail</mat-icon>
-                  <span class="detail-label">Contact:</span>
+                  <span class="detail-label" i18n="@@settings.relays.observed.nip11.contact">Contact:</span>
                   <span class="detail-value">
                     {{ getNip11Info(relay.url)?.contact || ('npub: ' + getNip11Info(relay.url)?.pubkey?.slice(0, 16) +
                     '...') }}
@@ -463,11 +577,12 @@
               </div>
               } @else if (getNip11Info(relay.url) === null) {
               <div class="nip11-error">
-                <p>Unable to fetch relay information. The relay may not support NIP-11.</p>
+                <p i18n="@@settings.relays.observed.nip11.unavailable">Unable to fetch relay information. The relay may
+                  not support NIP-11.</p>
               </div>
               } @else {
               <div class="nip11-placeholder">
-                <p>Relay information not yet loaded.</p>
+                <p i18n="@@settings.relays.observed.nip11.not-loaded">Relay information not yet loaded.</p>
               </div>
               }
             </div>
@@ -475,7 +590,7 @@
             <div class="detail-actions">
               <button mat-stroked-button color="warn" (click)="deleteObservedRelay(relay.url)">
                 <mat-icon>delete</mat-icon>
-                Remove from List
+                <span i18n="@@settings.relays.observed.remove">Remove from List</span>
               </button>
             </div>
           </div>
@@ -493,22 +608,23 @@
       <mat-card-title>
         <div class="info-title">
           <mat-icon class="info-icon">info</mat-icon>
-          How Your Relays Work
+          <span i18n="@@settings.relays.info.title">How Your Relays Work</span>
         </div>
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <p>Account Relays are used to publish your profile and events for others to discovery.</p>
-      <p>
+      <p i18n="@@settings.relays.info.p1">Account Relays are used to publish your profile and events for others to
+        discovery.</p>
+      <p i18n="@@settings.relays.info.p2">
         Account Relays is your Home. This is where your data is stored and persisted. It's where
         other users retrieve your events from. Make sure you choose a relay that you trust and that
         is reliable.
       </p>
-      <p>
+      <p i18n="@@settings.relays.info.p3">
         You should normally not need more than four relays. You don't need to pick the most popular
         relays, other user's will still find you thanks to Discovery Relays.
       </p>
-      <p>
+      <p i18n="@@settings.relays.info.p4">
         When you save Account Relays, your Relays List is additionally publishes to the Discovery
         Relays to help others find you.
       </p>
@@ -520,22 +636,23 @@
       <mat-card-title>
         <div class="info-title">
           <mat-icon class="info-icon">info</mat-icon>
-          How Discovery Relays Work
+          <span i18n="@@settings.relays.discovery-info.title">How Discovery Relays Work</span>
         </div>
       </mat-card-title>
     </mat-card-header>
     <mat-card-content>
-      <p>
+      <p i18n="@@settings.relays.discovery-info.p1">
         Discovery Relays are used to find which relays other Nostr users prefer. Nostria will
         attempt to retrieve the User Relay list (kind:10002 events) from these relays, not the
         profile or other events.
       </p>
-      <p>
+      <p i18n="@@settings.relays.discovery-info.p2">
         After a user's preferred relays have been discovered, Nostria connects to the user's
         preferred relays to retrieve profile, posts, and other events.
       </p>
-      <p>You should normally not need more than one or two discovery relays.</p>
-      <p>
+      <p i18n="@@settings.relays.discovery-info.p3">You should normally not need more than one or two discovery relays.
+      </p>
+      <p i18n="@@settings.relays.discovery-info.p4">
         When you save Your Relays, they are additionally publishes to these Discovery Relays to help
         others discover You.
       </p>

@@ -8,7 +8,7 @@ import {
   untracked,
   ViewEncapsulation,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -51,15 +51,14 @@ interface ProfileData {
 @Component({
   selector: 'app-profile-hover-card',
   imports: [
-    CommonModule,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
     MatMenuModule,
     MatDividerModule,
-    RouterModule,
-  ],
+    RouterModule
+],
   templateUrl: './profile-hover-card.component.html',
   styleUrl: './profile-hover-card.component.scss',
   encapsulation: ViewEncapsulation.None,

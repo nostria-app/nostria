@@ -6,7 +6,7 @@ import {
   inject,
   untracked,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -25,13 +25,12 @@ import type { NostrRecord } from '../../interfaces';
   selector: 'app-timeline-hover-card',
   standalone: true,
   imports: [
-    CommonModule,
     MatCardModule,
     MatIconModule,
     MatButtonModule,
     MatProgressSpinnerModule,
-    RouterModule,
-  ],
+    RouterModule
+],
   templateUrl: './timeline-hover-card.component.html',
   styleUrl: './timeline-hover-card.component.scss',
 })

@@ -18,7 +18,7 @@ import { UnsignedEvent } from 'nostr-tools/pure';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
-import { CommonModule } from '@angular/common';
+
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { DataService } from '../../services/data.service';
@@ -37,9 +37,8 @@ import { NostrRecord } from '../../interfaces';
     BadgeComponent,
     MatListModule,
     MatProgressSpinnerModule,
-    CommonModule,
-    DragDropModule,
-  ],
+    DragDropModule
+],
   templateUrl: './badges.component.html',
   styleUrl: './badges.component.scss',
 })

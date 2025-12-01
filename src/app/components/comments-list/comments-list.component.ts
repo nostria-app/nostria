@@ -1,5 +1,5 @@
 import { Component, computed, inject, input, signal, ElementRef, ViewChild, AfterViewInit, effect, untracked } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -16,13 +16,12 @@ import { SharedRelayService } from '../../services/relays/shared-relay';
 @Component({
   selector: 'app-comments-list',
   imports: [
-    CommonModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
-    CommentComponent,
-  ],
+    CommentComponent
+],
   templateUrl: './comments-list.component.html',
   styleUrl: './comments-list.component.scss',
 })

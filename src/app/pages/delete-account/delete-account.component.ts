@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators, AbstractControl } from '@angular/forms';
 import { MatCardModule } from '@angular/material/card';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -29,7 +29,6 @@ interface EventKindInfo {
 @Component({
   selector: 'app-delete-account',
   imports: [
-    CommonModule,
     ReactiveFormsModule,
     MatCardModule,
     MatFormFieldModule,
@@ -38,8 +37,8 @@ interface EventKindInfo {
     MatIconModule,
     MatDividerModule,
     MatProgressBarModule,
-    MatDialogModule,
-  ],
+    MatDialogModule
+],
   templateUrl: './delete-account.component.html',
   styleUrl: './delete-account.component.scss',
 })

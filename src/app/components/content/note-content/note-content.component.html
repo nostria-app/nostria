@@ -4,7 +4,12 @@
 } @else if (token.type === 'linebreak') {
 <br />
 } @else if (token.type === 'emoji') {
+@if (token.customEmoji) {
+<!-- NIP-30 custom emoji rendered as image -->
+<img class="custom-emoji" [src]="token.customEmoji" [alt]="token.content" [title]="token.content" loading="lazy" />
+} @else {
 <span class="emoji-token" [title]="token.content">{{ token.emoji }}</span>
+}
 } @else if (token.type === 'cashu') {
 <div class="cashu-container">
   <app-cashu-token [token]="token.content" [mint]="token.cashuData?.mint" [amount]="token.cashuData?.amount"
