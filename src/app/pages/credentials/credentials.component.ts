@@ -74,7 +74,7 @@ export class CredentialsComponent implements OnInit {
 
   // Cached nsec value (decrypted on demand)
   private cachedNsec = signal<string>('');
-  
+
   // Cached mnemonic value (decrypted on demand)
   private cachedMnemonic = signal<string>('');
 
@@ -256,16 +256,9 @@ export class CredentialsComponent implements OnInit {
 
   getMaskedMnemonic(mnemonic: string): string {
     if (!mnemonic) return '';
-    // Mask all words except the first and last
+    // Mask all words completely
     const words = mnemonic.split(' ');
-    if (words.length <= 2) return mnemonic;
-    
-    return words.map((word, index) => {
-      if (index === 0 || index === words.length - 1) {
-        return word;
-      }
-      return '•'.repeat(word.length);
-    }).join(' ');
+    return words.map(word => '•'.repeat(word.length)).join(' ');
   }
 
   hasMnemonic(): boolean {
