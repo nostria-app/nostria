@@ -1,7 +1,8 @@
-import { Injectable, computed, effect, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal, DOCUMENT, PLATFORM_ID } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
+import { isPlatformBrowser } from '@angular/common';
 
 export interface LocalSettings {
   menuOpen: boolean;
@@ -42,7 +43,21 @@ export class LocalSettingsService {
   private readonly localStorage = inject(LocalStorageService);
   private readonly logger = inject(LoggerService);
   private readonly breakpointObserver = inject(BreakpointObserver);
+  private readonly document = inject(DOCUMENT);
+  private readonly platformId = inject(PLATFORM_ID);
   private readonly STORAGE_KEY = 'nostria-settings';
+
+  // Locales that require special font handling
+  private readonly RTL_LOCALES = ['ar', 'fa'];
+
+  // Font URLs for dynamic loading
+  private readonly LOCALE_FONTS: Record<string, string> = {
+    ar: 'https://fonts.googleapis.com/css2?family=Noto+Sans+Arabic:wght@100..900&display=swap',
+    fa: 'https://fonts.googleapis.com/css2?family=Vazirmatn:wght@100..900&display=swap',
+  };
+
+  // Track which fonts have been loaded
+  private loadedFonts = new Set<string>();
 
   // Signal containing all local settings
   readonly settings = signal<LocalSettings>({ ...DEFAULT_LOCAL_SETTINGS });
@@ -68,6 +83,78 @@ export class LocalSettingsService {
       const currentSettings = this.settings();
       this.saveSettings(currentSettings);
     });
+
+    // Apply locale class to document element for font styling
+    effect(() => {
+      const currentLocale = this.locale();
+      this.applyLocaleClass(currentLocale);
+    });
+  }
+
+  /**
+   * Apply locale-specific class to document element for font styling
+   * This enables different fonts for Arabic and Persian languages
+   */
+  private applyLocaleClass(locale: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return; // Don't modify DOM during SSR
+    }
+
+    const htmlElement = this.document.documentElement;
+
+    // Remove any existing locale classes
+    htmlElement.classList.forEach(className => {
+      if (className.startsWith('locale-')) {
+        htmlElement.classList.remove(className);
+      }
+    });
+
+    // Add the current locale class for RTL languages that need special fonts
+    if (this.RTL_LOCALES.includes(locale)) {
+      // Dynamically load the font if not already loaded
+      this.loadFontForLocale(locale);
+      htmlElement.classList.add(`locale-${locale}`);
+      this.logger.debug(`Applied locale class: locale-${locale}`);
+    }
+  }
+
+  /**
+   * Dynamically load a Google Font for a specific locale
+   * Only loads the font once, subsequent calls are no-ops
+   */
+  private loadFontForLocale(locale: string): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    // Check if font is already loaded
+    if (this.loadedFonts.has(locale)) {
+      this.logger.debug(`Font for locale ${locale} already loaded`);
+      return;
+    }
+
+    const fontUrl = this.LOCALE_FONTS[locale];
+    if (!fontUrl) {
+      this.logger.warn(`No font URL configured for locale: ${locale}`);
+      return;
+    }
+
+    // Check if link element already exists in the document
+    const existingLink = this.document.querySelector(`link[href="${fontUrl}"]`);
+    if (existingLink) {
+      this.loadedFonts.add(locale);
+      this.logger.debug(`Font link for locale ${locale} already exists in document`);
+      return;
+    }
+
+    // Create and append the font link element
+    const linkElement = this.document.createElement('link');
+    linkElement.rel = 'stylesheet';
+    linkElement.href = fontUrl;
+
+    this.document.head.appendChild(linkElement);
+    this.loadedFonts.add(locale);
+    this.logger.info(`Dynamically loaded font for locale: ${locale}`);
   }
 
   /**

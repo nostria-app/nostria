@@ -54,6 +54,20 @@ body {
   padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
+// Arabic locale font styling
+html.locale-ar,
+html.locale-ar body {
+  font-family: 'Noto Sans Arabic', Roboto, 'Helvetica Neue', sans-serif;
+  direction: rtl;
+}
+
+// Persian/Farsi locale font styling
+html.locale-fa,
+html.locale-fa body {
+  font-family: 'Vazirmatn', Roboto, 'Helvetica Neue', sans-serif;
+  direction: rtl;
+}
+
 // Scrollbar styling
 ::-webkit-scrollbar {
   width: 10px;
