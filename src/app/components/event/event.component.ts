@@ -280,6 +280,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Reposts and quotes state
   reposts = signal<NostrRecord[]>([]);
   quotes = signal<NostrRecord[]>([]);
+  replyCount = signal<number>(0);
 
   repostCount = computed<number>(() => {
     return this.reposts().length;
@@ -664,6 +665,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       console.log('   - Reactions:', interactions.reactions.events.length);
       console.log('   - Reposts:', interactions.reposts.length);
       console.log('   - Reports:', interactions.reports.events.length);
+      console.log('   - Replies:', interactions.replyCount);
 
       // CRITICAL: Filter out interactions from muted accounts
       const mutedAccounts = this.accountState.mutedAccounts();
@@ -702,6 +704,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         events: filteredReportEvents,
         data: filteredReportData
       });
+      this.replyCount.set(interactions.replyCount);
     } catch (error) {
       console.error('Error loading event interactions:', error);
     } finally {
