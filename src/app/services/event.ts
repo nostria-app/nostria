@@ -250,26 +250,30 @@ export class EventService {
   }
 
   /**
-   * Build a threaded tree structure from events
+   * Build a threaded tree structure from events.
+   * Only includes replies that are downstream of the rootEventId.
+   * Filters out replies to other thread branches (e.g., replies to parent events).
    */
   buildThreadTree(events: Event[], rootEventId: string, maxDepth = 5): ThreadedEvent[] {
-    const eventMap = new Map<string, Event>();
     const childrenMap = new Map<string, Event[]>();
 
-    // Build maps
+    // First pass: build parent-child relationships using explicit replyId only
     events.forEach((event) => {
-      eventMap.set(event.id, event);
-
       const { replyId } = this.getEventTags(event);
-      const parentId = replyId || rootEventId;
 
-      if (!childrenMap.has(parentId)) {
-        childrenMap.set(parentId, []);
+      // Only add events that have an explicit replyId
+      // Do NOT fallback to rootEventId - we want strict parent-child relationships
+      if (replyId) {
+        if (!childrenMap.has(replyId)) {
+          childrenMap.set(replyId, []);
+        }
+        childrenMap.get(replyId)!.push(event);
       }
-      childrenMap.get(parentId)!.push(event);
     });
 
-    // Build tree recursively with depth limit
+    // Build tree recursively with depth limit, starting from rootEventId
+    // This naturally only includes downstream replies since we start from the root
+    // and only traverse children
     const buildNode = (eventId: string, level = 0): ThreadedEvent[] => {
       const children = childrenMap.get(eventId) || [];
 
