@@ -56,6 +56,12 @@ export class ProfileNotesComponent {
   pinnedNotes = signal<NostrRecord[]>([]);
   isLoadingPinned = signal<boolean>(false);
 
+  // Track the previous scrolledToBottom state to detect transitions
+  private wasScrolledToBottom = false;
+  // Cooldown to prevent rapid-fire loading
+  private lastLoadTime = 0;
+  private readonly LOAD_COOLDOWN_MS = 1000;
+
   // Timeline filter - access the signal from profileState
   get timelineFilter(): TimelineFilterOptions {
     return this.profileState.timelineFilter();
@@ -106,18 +112,48 @@ export class ProfileNotesComponent {
     });
 
     // Effect to handle scroll events from layout service when user scrolls to bottom
+    // Only reacts to scrolledToBottom signal changes, checks other conditions imperatively
     effect(() => {
-      // Only react if scroll monitoring is ready to prevent early triggers
-      if (
-        this.layout.scrollMonitoringReady() &&
-        this.layout.scrolledToBottom() &&
-        !this.profileState.isLoadingMoreNotes() &&
-        this.profileState.hasMoreNotes() &&
-        this.profileState.sortedTimeline().length > 0
-      ) {
-        this.logger.debug('Scrolled to bottom, loading more timeline content...');
-        this.loadMoreNotes();
+      const isAtBottom = this.layout.scrolledToBottom();
+      const isReady = this.layout.scrollMonitoringReady();
+
+      // Detect transition from not-at-bottom to at-bottom
+      const justScrolledToBottom = isReady && isAtBottom && !this.wasScrolledToBottom;
+
+      // Update the previous state BEFORE any async operations
+      this.wasScrolledToBottom = isAtBottom;
+
+      // Only proceed if we just scrolled to bottom
+      if (!justScrolledToBottom) {
+        return;
       }
+
+      // Check cooldown to prevent rapid-fire loading
+      const now = Date.now();
+      if (now - this.lastLoadTime < this.LOAD_COOLDOWN_MS) {
+        this.logger.debug('Load cooldown active, skipping');
+        return;
+      }
+
+      // Check other conditions imperatively (not as signal dependencies)
+      if (this.profileState.isLoadingMoreNotes()) {
+        this.logger.debug('Already loading more notes, skipping');
+        return;
+      }
+
+      if (!this.profileState.hasMoreNotes()) {
+        this.logger.debug('No more notes available, skipping');
+        return;
+      }
+
+      if (this.profileState.sortedTimeline().length === 0) {
+        this.logger.debug('No timeline content yet, skipping');
+        return;
+      }
+
+      this.logger.debug('Scrolled to bottom (transition detected), loading more timeline content...');
+      this.lastLoadTime = now;
+      this.loadMoreNotes();
     });
   }
 
