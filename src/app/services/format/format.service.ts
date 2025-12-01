@@ -131,9 +131,10 @@ export class FormatService {
       const author = event.pubkey;
       const content = event.content || '';
       const kind = event.kind;
+      const createdAt = event.created_at;
 
       // Truncate content for preview
-      const maxContentLength = 200;
+      const maxContentLength = 280;
       let previewContent = content.trim();
       if (previewContent.length > maxContentLength) {
         previewContent = previewContent.substring(0, maxContentLength) + '…';
@@ -141,43 +142,69 @@ export class FormatService {
 
       // Escape HTML in content
       const escapedContent = this.escapeHtml(previewContent);
-      const authorShort = this.utilities.getTruncatedNpub(author);
 
+      // Fetch author profile for avatar and display name
+      let authorName = this.utilities.getTruncatedNpub(author);
+      let authorPicture = '';
+      let isNip05Verified = false;
 
-      // Determine icon based on kind
-      let icon = '📝';
-      let kindLabel = 'Note';
-      if (kind === 1) {
-        icon = '📝';
-        kindLabel = 'Note';
-      } else if (kind === 30023) {
-        icon = '📄';
-        kindLabel = 'Article';
-      } else if (kind === 6) {
-        icon = '🔁';
-        kindLabel = 'Repost';
-      } else if (kind === 7) {
-        icon = '❤️';
-        kindLabel = 'Reaction';
-      } else {
-        kindLabel = `Kind ${kind}`;
+      try {
+        const profile = await this.dataService.getProfile(author);
+        if (profile?.data) {
+          authorName = profile.data.display_name || profile.data.name || authorName;
+          authorPicture = profile.data.picture || '';
+          isNip05Verified = !!profile.data.nip05;
+        }
+      } catch (error) {
+        this.logger.debug('[fetchEventPreview] Could not fetch author profile:', error);
       }
 
+      // Calculate relative time
+      const relativeTime = this.getRelativeTime(createdAt);
+
+      // Build avatar HTML with inline styles to ensure proper sizing
+      const avatarHtml = authorPicture
+        ? `<img src="${this.escapeHtml(authorPicture)}" alt="${this.escapeHtml(authorName)}" class="embed-avatar" style="width:36px;height:36px;min-width:36px;min-height:36px;border-radius:50%;object-fit:cover;float:left;margin-right:10px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><div class="embed-avatar-fallback" style="display:none;width:36px;height:36px;min-width:36px;border-radius:50%;float:left;margin-right:10px;align-items:center;justify-content:center;font-size:18px;background:var(--mat-sys-surface-container-highest,#e0e0e0);">👤</div>`
+        : `<div class="embed-avatar-fallback" style="width:36px;height:36px;min-width:36px;border-radius:50%;float:left;margin-right:10px;display:flex;align-items:center;justify-content:center;font-size:18px;background:var(--mat-sys-surface-container-highest,#e0e0e0);">👤</div>`;
+
+      // Build verification badge HTML
+      const verifiedBadge = isNip05Verified
+        ? `<span class="embed-verified-badge" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--mat-sys-primary,#6200ea);color:white;font-size:9px;margin-left:4px;vertical-align:middle;">✓</span>`
+        : '';
+
       return `<div class="nostr-embed-preview" data-event-id="${eventId}" data-author="${author}" data-kind="${kind}">
-        <a href="/e/${nip19.noteEncode(eventId)}" class="nostr-embed-link">
-          <div class="nostr-embed-icon">
-            <span class="embed-icon">${icon}</span>
-          </div>
-          <div class="nostr-embed-content">
-            <div class="nostr-embed-title">${escapedContent}</div>
-            <div class="nostr-embed-meta">${kindLabel} · by ${authorShort}</div>
-          </div>
+        <a href="/e/${nip19.noteEncode(eventId)}" class="nostr-embed-link" style="display:block;padding:10px 12px;text-decoration:none;color:inherit;">
+          ${avatarHtml}
+          <span class="embed-author-name" style="color:var(--mat-sys-on-surface,#000);">${this.escapeHtml(authorName)}</span>${verifiedBadge}
+          <span class="embed-time" style="color:var(--mat-sys-on-surface-variant,#666);font-size:0.8rem;margin-left:6px;">· ${relativeTime}</span>
+          <div class="embed-content" style="color:var(--mat-sys-on-surface,#000);line-height:1.45;margin-top:2px;">${escapedContent}</div>
         </a>
       </div>`;
     } catch (error) {
       this.logger.error('[fetchEventPreview] Error fetching event preview:', error);
       return null;
     }
+  }
+
+  /**
+   * Calculate relative time from a Nostr timestamp (seconds since epoch)
+   */
+  private getRelativeTime(timestamp: number): string {
+    const now = Math.floor(Date.now() / 1000);
+    const diff = now - timestamp;
+
+    if (diff < 0) return 'in the future';
+
+    const minute = 60;
+    const hour = minute * 60;
+    const day = hour * 24;
+    const week = day * 7;
+
+    if (diff < minute) return 'just now';
+    if (diff < hour) return `${Math.floor(diff / minute)}m ago`;
+    if (diff < day) return `${Math.floor(diff / hour)}h ago`;
+    if (diff < week) return `${Math.floor(diff / day)}d ago`;
+    return `${Math.floor(diff / week)}w ago`;
   }
 
   // Helper method to process Nostr tokens and replace them with @username
