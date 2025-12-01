@@ -100,13 +100,14 @@
                 <div class="relay-item-container">
                   <div class="relay-status-icon">
                     @if (hasRelayAuthFailed(relay.url)) {
-                      @if (isRelayRestricted(getObservedRelayByUrl(relay.url))) {
-                        <mat-icon class="status-icon status-restricted" matTooltip="Access restricted - payment or signup required">block</mat-icon>
-                      } @else {
-                        <mat-icon class="status-icon status-error" matTooltip="Publishing failed">error</mat-icon>
-                      }
+                    @if (isRelayRestricted(getObservedRelayByUrl(relay.url))) {
+                    <mat-icon class="status-icon status-restricted"
+                      matTooltip="Access restricted - payment or signup required">block</mat-icon>
                     } @else {
-                      <mat-icon class="status-icon status-ok">check_circle</mat-icon>
+                    <mat-icon class="status-icon status-error" matTooltip="Publishing failed">error</mat-icon>
+                    }
+                    } @else {
+                    <mat-icon class="status-icon status-ok">check_circle</mat-icon>
                     }
                   </div>
                   <div class="relay-url">
