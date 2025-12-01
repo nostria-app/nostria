@@ -61,8 +61,11 @@ export class GeneralSettingsComponent {
   // Available languages
   languages: Language[] = [
     { code: 'en', name: 'English' },
-    { code: 'ru', name: 'Русский' },
+    { code: 'ar', name: 'العربية' },
+    { code: 'cnr', name: 'Crnogorski' },
+    { code: 'fa', name: 'فارسی' },
     { code: 'no', name: 'Norsk' },
+    { code: 'ru', name: 'Русский' },
     { code: 'sw', name: 'Kiswahili' },
     { code: 'zu', name: 'isiZulu' },
   ];
