@@ -133,9 +133,20 @@ export class FormatService {
       const kind = event.kind;
       const createdAt = event.created_at;
 
-      // Truncate content for preview
-      const maxContentLength = 280;
-      let previewContent = content.trim();
+      // Extract image URLs from content
+      const imageRegex = /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|svg)(?:\?[^\s]*)?)/gi;
+      const imageUrls = content.match(imageRegex) || [];
+      const firstImage = imageUrls.length > 0 ? imageUrls[0] : null;
+
+      // Remove image URLs from text content for cleaner display
+      let textContent = content;
+      for (const imgUrl of imageUrls) {
+        textContent = textContent.replace(imgUrl, '').trim();
+      }
+
+      // Truncate text content for preview
+      const maxContentLength = 380;
+      let previewContent = textContent.trim();
 
       // Collapse multiple newlines into single newline for cleaner display
       previewContent = previewContent.replace(/\n{2,}/g, '\n');
@@ -146,6 +157,11 @@ export class FormatService {
 
       // Escape HTML in content, then convert newlines to <br> for proper display
       const escapedContent = this.escapeHtml(previewContent).replace(/\n/g, '<br>');
+
+      // Build image HTML if there's an image
+      const imageHtml = firstImage
+        ? `<div style="margin-top:8px;clear:both;"><img src="${this.escapeHtml(firstImage)}" alt="Image" style="max-width:100%;max-height:400px;border-radius:8px;object-fit:contain;" onerror="this.parentElement.style.display='none';" /></div>`
+        : '';
 
       // Fetch author profile for avatar and display name
       let authorName = this.utilities.getTruncatedNpub(author);
@@ -176,14 +192,7 @@ export class FormatService {
         ? `<span class="embed-verified-badge" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--mat-sys-primary,#6200ea);color:white;font-size:9px;margin-left:4px;vertical-align:middle;">✓</span>`
         : '';
 
-      return `<div class="nostr-embed-preview" data-event-id="${eventId}" data-author="${author}" data-kind="${kind}" style="margin:0.5rem 0;border:1px solid var(--mat-sys-outline-variant,rgba(255,255,255,0.12));border-radius:10px;background:var(--mat-sys-surface-container-low,#1e1e1e);overflow:hidden;">
-        <a href="/e/${nip19.noteEncode(eventId)}" class="nostr-embed-link" style="display:block;padding:10px 12px;text-decoration:none;color:inherit;">
-          ${avatarHtml}
-          <span class="embed-author-name" style="color:var(--mat-sys-on-surface,#fff);">${this.escapeHtml(authorName)}</span>${verifiedBadge}
-          <span class="embed-time" style="color:var(--mat-sys-on-surface-variant,#999);font-size:0.8rem;margin-left:6px;">· ${relativeTime}</span>
-          <div class="embed-content" style="color:var(--mat-sys-on-surface,#fff);line-height:1.45;margin-top:2px;">${escapedContent}</div>
-        </a>
-      </div>`;
+      return `<div class="nostr-embed-preview" data-event-id="${eventId}" data-author="${author}" data-kind="${kind}" style="margin:0.5rem 0;border:1px solid var(--mat-sys-outline-variant,rgba(255,255,255,0.12));border-radius:10px;background:var(--mat-sys-surface-container-low,#1e1e1e);overflow:hidden;"><a href="/e/${nip19.noteEncode(eventId)}" class="nostr-embed-link" style="display:block;padding:10px 12px;text-decoration:none;color:inherit;">${avatarHtml}<span class="embed-author-name" style="color:var(--mat-sys-on-surface,#fff);">${this.escapeHtml(authorName)}</span>${verifiedBadge}<span class="embed-time" style="color:var(--mat-sys-on-surface-variant,#999);font-size:0.8rem;margin-left:6px;">· ${relativeTime}</span><div class="embed-content" style="color:var(--mat-sys-on-surface,#fff);line-height:1.45;margin-top:2px;">${escapedContent}</div>${imageHtml}</a></div>`;
     } catch (error) {
       this.logger.error('[fetchEventPreview] Error fetching event preview:', error);
       return null;
