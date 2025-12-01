@@ -266,6 +266,18 @@
     "settings.logs.users": "пользователей",
     "settings.logs.events": "событий",
     "settings.logs.performance": "производительность",
-    "settings.logs.last-success": "Последний успех:"
+    "settings.logs.last-success": "Последний успех:",
+    "streams.title": "Прямые трансляции",
+    "streams.refresh.aria": "Обновить трансляции",
+    "streams.tabs.live": "Сейчас в эфире",
+    "streams.tabs.scheduled": "Запланировано",
+    "streams.tabs.ended": "Завершено",
+    "streams.loading": "Загрузка трансляций...",
+    "streams.empty.title": "Трансляции не найдены",
+    "streams.empty.live": "В данный момент нет прямых трансляций. Проверьте позже или посмотрите запланированные трансляции.",
+    "streams.empty.scheduled": "Нет запланированных трансляций. Проверьте позже для предстоящих событий.",
+    "streams.empty.ended": "Нет завершённых трансляций для отображения.",
+    "streams.refresh": "Обновить",
+    "stream-viewer.loading": "Загрузка трансляции..."
   }
 }

@@ -266,6 +266,18 @@
     "settings.logs.users": "users",
     "settings.logs.events": "events",
     "settings.logs.performance": "performance",
-    "settings.logs.last-success": "Last Success:"
+    "settings.logs.last-success": "Last Success:",
+    "streams.title": "Live Streams",
+    "streams.refresh.aria": "Refresh streams",
+    "streams.tabs.live": "Live Now",
+    "streams.tabs.scheduled": "Scheduled",
+    "streams.tabs.ended": "Ended",
+    "streams.loading": "Loading streams...",
+    "streams.empty.title": "No streams found",
+    "streams.empty.live": "There are no live streams at the moment. Check back later or explore scheduled streams.",
+    "streams.empty.scheduled": "There are no scheduled streams. Check back later for upcoming events.",
+    "streams.empty.ended": "There are no ended streams to display.",
+    "streams.refresh": "Refresh",
+    "stream-viewer.loading": "Loading stream..."
   }
 }

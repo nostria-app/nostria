@@ -16,7 +16,7 @@ import { isPlatformServer, isPlatformBrowser } from '@angular/common';
   template: `
     @if (loading) {
       <div class="loading-container">
-        <p>Loading stream...</p>
+        <p i18n="@@stream-viewer.loading">Loading stream...</p>
       </div>
     }
   `,

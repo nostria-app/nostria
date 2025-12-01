@@ -249,6 +249,18 @@
     "settings.privacy.muted-threads.unmute": "Ukloni utišavanje niti",
     "settings.privacy.event-management.title": "Upravljanje događajima",
     "settings.privacy.event-management.description": "Upravljajte događajima koje ste objavili na mreži.",
-    "settings.privacy.event-management.view": "Pogledaj zahtjev za brisanje"
+    "settings.privacy.event-management.view": "Pogledaj zahtjev za brisanje",
+    "streams.title": "Prenosi uživo",
+    "streams.refresh.aria": "Osvježi prenose",
+    "streams.tabs.live": "Uživo sada",
+    "streams.tabs.scheduled": "Zakazano",
+    "streams.tabs.ended": "Završeno",
+    "streams.loading": "Učitavanje prenosa...",
+    "streams.empty.title": "Nema pronađenih prenosa",
+    "streams.empty.live": "Trenutno nema prenosa uživo. Provjerite kasnije ili istražite zakazane prenose.",
+    "streams.empty.scheduled": "Nema zakazanih prenosa. Provjerite kasnije za nadolazeće događaje.",
+    "streams.empty.ended": "Nema završenih prenosa za prikaz.",
+    "streams.refresh": "Osvježi",
+    "stream-viewer.loading": "Učitavanje prenosa..."
   }
 }

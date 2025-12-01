@@ -258,6 +258,18 @@
     "settings.privacy.muted-threads.unmute": "Susa Ukuthulisa Ingxoxo",
     "settings.privacy.event-management.title": "Ukulawulwa Kwezigameko",
     "settings.privacy.event-management.description": "Phatha izigameko obhalise ngazo ku-network.",
-    "settings.privacy.event-management.view": "Buka Isicelo Sokususa"
+    "settings.privacy.event-management.view": "Buka Isicelo Sokususa",
+    "streams.title": "Ukusakaza Bukhoma",
+    "streams.refresh.aria": "Vuselela ukusakaza",
+    "streams.tabs.live": "Bukhoma Manje",
+    "streams.tabs.scheduled": "Okuhleliwe",
+    "streams.tabs.ended": "Kuphelile",
+    "streams.loading": "Kulayisha ukusakaza...",
+    "streams.empty.title": "Akukho ukusakaza okutholakele",
+    "streams.empty.live": "Akukho ukusakaza bukhoma okwamanje. Hlola kamuva noma uhlole ukusakaza okuhleliwe.",
+    "streams.empty.scheduled": "Akukho ukusakaza okuhleliwe. Hlola kamuva izigameko ezizayo.",
+    "streams.empty.ended": "Akukho ukusakaza okuphelile okuzoboniswa.",
+    "streams.refresh": "Vuselela",
+    "stream-viewer.loading": "Kulayisha ukusakaza..."
   }
 }

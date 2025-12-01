@@ -266,6 +266,18 @@
     "settings.logs.users": "کاربر",
     "settings.logs.events": "رویداد",
     "settings.logs.performance": "عملکرد",
-    "settings.logs.last-success": "آخرین موفقیت:"
+    "settings.logs.last-success": "آخرین موفقیت:",
+    "streams.title": "پخش زنده",
+    "streams.refresh.aria": "بازخوانی پخش‌ها",
+    "streams.tabs.live": "اکنون زنده",
+    "streams.tabs.scheduled": "برنامه‌ریزی شده",
+    "streams.tabs.ended": "پایان یافته",
+    "streams.loading": "در حال بارگذاری پخش‌ها...",
+    "streams.empty.title": "پخشی یافت نشد",
+    "streams.empty.live": "در حال حاضر پخش زنده‌ای وجود ندارد. بعداً بررسی کنید یا پخش‌های برنامه‌ریزی شده را ببینید.",
+    "streams.empty.scheduled": "پخش برنامه‌ریزی شده‌ای وجود ندارد. بعداً برای رویدادهای آینده بررسی کنید.",
+    "streams.empty.ended": "پخش پایان یافته‌ای برای نمایش وجود ندارد.",
+    "streams.refresh": "بازخوانی",
+    "stream-viewer.loading": "در حال بارگذاری پخش..."
   }
 }
