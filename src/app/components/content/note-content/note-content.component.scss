@@ -65,67 +65,81 @@
 // Nostr event preview styling
 // Use ::ng-deep to apply styles to dynamically inserted HTML
 ::ng-deep .nostr-event-preview {
-  margin: 1rem 0;
+  margin: 0.5rem 0;
 
   .nostr-embed-preview {
     display: block;
     border: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
-    border-radius: 12px;
+    border-radius: 10px;
     overflow: hidden;
     background: var(--mat-sys-surface-container-low, #ffffff);
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease;
 
     &:hover {
       background: var(--mat-sys-surface-container, #f5f5f5);
-      border-color: var(--mat-sys-primary, #6200ea);
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
 
     .nostr-embed-link {
-      display: flex;
-      align-items: center;
-      padding: 12px;
+      display: block;
+      padding: 10px 12px;
       text-decoration: none;
       color: inherit;
-      gap: 12px;
+      overflow: hidden; // Clear floats
     }
 
-    .nostr-embed-icon {
-      flex-shrink: 0;
-      width: 48px;
-      height: 48px;
+    .embed-avatar {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      min-height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      float: left;
+      margin-right: 10px;
+    }
+
+    .embed-avatar-fallback {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      border-radius: 50%;
+      float: left;
+      margin-right: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      background-color: var(--mat-sys-primary-container, rgba(98, 0, 234, 0.1));
-      border-radius: 8px;
-
-      .embed-icon {
-        font-size: 24px;
-      }
+      font-size: 18px;
+      background: var(--mat-sys-surface-container-highest, #e0e0e0);
     }
 
-    .nostr-embed-content {
-      flex: 1;
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }
-
-    .nostr-embed-title {
-      font-weight: 500;
+    .embed-author-name {
       color: var(--mat-sys-on-surface, #000000);
-      margin-bottom: 0.25rem;
-      word-wrap: break-word;
-      overflow-wrap: break-word;
-      line-height: 1.4;
     }
 
-    .nostr-embed-meta {
-      font-size: 0.875rem;
+    .embed-verified-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--mat-sys-primary, #6200ea);
+      color: white;
+      font-size: 9px;
+      margin-left: 4px;
+      vertical-align: middle;
+    }
+
+    .embed-time {
+      font-size: 0.8rem;
       color: var(--mat-sys-on-surface-variant, #666666);
+      margin-left: 6px;
+    }
+
+    .embed-content {
+      color: var(--mat-sys-on-surface, #000000);
+      line-height: 1.45;
+      margin-top: 2px;
     }
   }
 
