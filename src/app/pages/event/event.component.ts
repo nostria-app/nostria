@@ -263,6 +263,7 @@ export class EventPageComponent {
 
   /**
    * Scrolls to the main event after thread context has been loaded
+   * The CSS scroll-margin-top on #main-event handles the toolbar offset
    */
   private scrollToMainEvent(): void {
     const mainEventElement = document.getElementById('main-event');
@@ -278,6 +279,7 @@ export class EventPageComponent {
   /**
    * Scrolls to the main event with retry logic to handle async content loading
    * Retries multiple times with increasing delays to ensure DOM is fully rendered
+   * The CSS scroll-margin-top on #main-event handles the toolbar offset
    */
   private scrollToMainEventWithRetry(attempt = 0, maxAttempts = 5): void {
     const mainEventElement = document.getElementById('main-event');
@@ -290,7 +292,7 @@ export class EventPageComponent {
           const mainEventElement = document.getElementById('main-event');
           if (mainEventElement) {
             mainEventElement.scrollIntoView({
-              behavior: attempt === 0 ? 'auto' : 'smooth', // First attempt instant, subsequent smooth
+              behavior: attempt === 0 ? 'auto' : 'smooth',
               block: 'start',
               inline: 'nearest',
             });
