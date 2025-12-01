@@ -8,9 +8,10 @@
   left: 0;
   width: 100%;
   height: 100dvh;
-  // Use a higher z-index than Material dialogs (cdk-overlay-container)
+  // Use a higher z-index than Material dialogs (cdk-overlay-container is 1200)
+  // and thread dialog (event-dialog-container is 1100)
   // to ensure custom dialogs appear above when opened from Material dialogs
-  z-index: 1100;
+  z-index: 1300;
 }
 
 // Backdrop

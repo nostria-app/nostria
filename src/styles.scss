@@ -1237,15 +1237,18 @@ app-media-queue {
   }
 }
 
-// Event dialog styles
+// Lower priority dialog - allows other dialogs to appear above (e.g., thread dialog)
+// The event-dialog-container needs lower z-index so reply dialogs appear on top
+// Standard CDK overlay is 1200, toolbar is 1000, so we use 1100 for thread dialog
 .event-dialog-container {
-  .mat-mdc-dialog-container {
-    padding: 0;
-
-    .mdc-dialog__surface {
-      border-radius: 0;
-    }
+  &.cdk-overlay-pane {
+    z-index: 1100 !important;
   }
+}
+
+// Also apply to the global overlay wrapper that contains the event dialog
+.cdk-global-overlay-wrapper:has(.event-dialog-container) {
+  z-index: 1100 !important;
 }
 
 .multiline-tooltip {
