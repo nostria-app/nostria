@@ -254,7 +254,7 @@ export class EventService {
    * Only includes replies that are downstream of the rootEventId.
    * Filters out replies to other thread branches (e.g., replies to parent events).
    */
-  buildThreadTree(events: Event[], rootEventId: string, maxDepth = 5): ThreadedEvent[] {
+  buildThreadTree(events: Event[], rootEventId: string): ThreadedEvent[] {
     const childrenMap = new Map<string, Event[]>();
 
     // First pass: build parent-child relationships
@@ -282,7 +282,7 @@ export class EventService {
       }
     });
 
-    // Build tree recursively with depth limit, starting from rootEventId
+    // Build tree recursively starting from rootEventId - no depth limit
     const buildNode = (eventId: string, level = 0): ThreadedEvent[] => {
       const children = childrenMap.get(eventId) || [];
 
@@ -299,22 +299,9 @@ export class EventService {
         .map((child) => {
           const threadedEvent: ThreadedEvent = {
             event: child,
-            replies: [],
+            replies: buildNode(child.id, level + 1),
             level,
           };
-
-          // If we're at max depth, check if there are deeper replies
-          if (level >= maxDepth - 1) {
-            const hasDeepReplies =
-              childrenMap.has(child.id) && childrenMap.get(child.id)!.length > 0;
-            if (hasDeepReplies) {
-              threadedEvent.hasMoreReplies = true;
-              threadedEvent.deepestReplyId = child.id;
-            }
-          } else {
-            // Continue building the tree if we haven't reached max depth
-            threadedEvent.replies = buildNode(child.id, level + 1);
-          }
 
           return threadedEvent;
         });
@@ -923,7 +910,7 @@ export class EventService {
     const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
 
     // Build threaded structure starting from the current event
-    const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
+    const threadedReplies = this.buildThreadTree(filteredReplies, event.id);
 
     return {
       event,
@@ -1011,7 +998,7 @@ export class EventService {
 
       // Build thread tree starting from the current event
       // This will only include downstream descendants of the current event
-      const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
+      const threadedReplies = this.buildThreadTree(filteredReplies, event.id);
 
       yield {
         event,
@@ -1045,7 +1032,7 @@ export class EventService {
 
         // Filter out the current event from replies
         const filteredReplies = replies.filter((reply) => reply.id !== event.id);
-        const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
+        const threadedReplies = this.buildThreadTree(filteredReplies, event.id);
 
         const finalData: ThreadData = {
           event,
