@@ -68,6 +68,66 @@ html.locale-fa body {
   direction: rtl;
 }
 
+// Elements that should remain LTR even in RTL locales
+html.locale-ar,
+html.locale-fa {
+
+  // Sidenavs should stay on their original sides
+  .mat-drawer,
+  .mat-sidenav,
+  .sidenav,
+  .profile-sidenav,
+  mat-sidenav,
+  mat-sidenav-container,
+  .mat-sidenav-container {
+    direction: ltr;
+  }
+
+  // Navigation lists should stay LTR for consistent layout
+  mat-nav-list,
+  .mat-nav-list,
+  .mat-mdc-nav-list {
+    direction: ltr;
+  }
+
+  // Toolbar should stay LTR
+  mat-toolbar,
+  .mat-toolbar,
+  .app-toolbar {
+    direction: ltr;
+  }
+
+  // Mobile navigation should stay LTR
+  .mobile-nav {
+    direction: ltr;
+  }
+
+  // Content inside these elements can be RTL for proper text rendering
+  .mat-drawer-content,
+  .mat-sidenav-content,
+  .content-wrapper {
+    direction: rtl;
+  }
+
+  // Buttons and form controls should keep LTR layout
+  .mat-mdc-button,
+  .mat-mdc-icon-button,
+  .mat-mdc-fab,
+  .mat-mdc-mini-fab {
+    direction: ltr;
+  }
+
+  // Menu panels should stay LTR
+  .mat-mdc-menu-panel {
+    direction: ltr;
+  }
+
+  // Dialog content can be RTL
+  .mat-mdc-dialog-content {
+    direction: rtl;
+  }
+}
+
 // Scrollbar styling
 ::-webkit-scrollbar {
   width: 10px;
