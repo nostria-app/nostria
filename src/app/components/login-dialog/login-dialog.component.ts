@@ -14,6 +14,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
 import { NostrService, NostrUser } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
+import { MnemonicService } from '../../services/mnemonic.service';
 import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dialog.component';
 import { StandaloneTermsDialogComponent } from '../standalone-terms-dialog/standalone-terms-dialog.component';
 import { SetupNewAccountDialogComponent } from '../setup-new-account-dialog/setup-new-account-dialog.component';
@@ -63,6 +64,7 @@ export class LoginDialogComponent {
   private snackBar = inject(MatSnackBar);
   nostrService = inject(NostrService);
   private logger = inject(LoggerService);
+  private mnemonicService = inject(MnemonicService);
   region = inject(RegionService);
   private discoveryService = inject(DiscoveryService);
   private profileService = inject(Profile);
@@ -134,7 +136,7 @@ export class LoginDialogComponent {
   }
 
   /**
-   * Validates if the nsecKey is in a valid format (nsec or 64-char hex)
+   * Validates if the nsecKey is in a valid format (nsec, 64-char hex, or mnemonic phrase)
    */
   isNsecKeyValid(): boolean {
     const trimmedKey = this.nsecKey.trim();
@@ -150,7 +152,12 @@ export class LoginDialogComponent {
 
     // Check if it's a valid 64-character hex string
     const hexRegex = /^[0-9a-fA-F]{64}$/;
-    return hexRegex.test(trimmedKey);
+    if (hexRegex.test(trimmedKey)) {
+      return true;
+    }
+
+    // Check if it's a valid mnemonic phrase
+    return this.mnemonicService.isMnemonic(trimmedKey);
   }
 
   // Navigation methods
