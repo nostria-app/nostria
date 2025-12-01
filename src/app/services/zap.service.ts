@@ -435,21 +435,31 @@ export class ZapService {
     // Don't include lnurl in zap request - it's only used for the callback
 
     if (eventAddress) {
+      // For addressable events (like streams), use the "a" tag instead of "e" tag
       tags.push(['a', eventAddress]);
-    }
-
-    if (eventId) {
-      tags.push(['e', eventId]);
-      // Add the kind of the target event if provided, otherwise default to 1 (text note)
+      // Add the kind tag for addressable events
       if (eventKind !== undefined) {
         tags.push(['k', eventKind.toString()]);
-      } else {
-        tags.push(['k', '1']);
       }
-    }
-
-    if (goalEventId) {
-      tags.push(['e', goalEventId]);
+      // For addressable events with a zap goal, only add the goal's "e" tag
+      if (goalEventId) {
+        tags.push(['e', goalEventId]);
+      }
+    } else {
+      // For non-addressable events, use the "e" tag as before
+      if (eventId) {
+        tags.push(['e', eventId]);
+        // Add the kind of the target event if provided, otherwise default to 1 (text note)
+        if (eventKind !== undefined) {
+          tags.push(['k', eventKind.toString()]);
+        } else {
+          tags.push(['k', '1']);
+        }
+      }
+      // Add goal event ID for non-addressable events
+      if (goalEventId) {
+        tags.push(['e', goalEventId]);
+      }
     }
 
     const zapRequest: UnsignedEvent = {
