@@ -39,14 +39,17 @@
 
       <!-- Language selection -->
       <div class="language-section">
-        <mat-form-field appearance="outline" class="language-select">
-          <mat-label i18n="@@introduction.language.label">Language</mat-label>
-          <mat-select [ngModel]="localSettings.locale()" (selectionChange)="setLanguage($event.value)">
-            @for (language of languages; track language.code) {
-              <mat-option [value]="language.code">{{ language.name }}</mat-option>
-            }
-          </mat-select>
-        </mat-form-field>
+        <button mat-icon-button [matMenuTriggerFor]="languageMenu" class="language-button" aria-label="Select language">
+          <mat-icon>translate</mat-icon>
+        </button>
+        <mat-menu #languageMenu="matMenu">
+          @for (language of languages; track language.code) {
+          <button mat-menu-item (click)="setLanguage(language.code)"
+            [class.selected]="localSettings.locale() === language.code">
+            {{ language.name }}
+          </button>
+          }
+        </mat-menu>
       </div>
     </div>
 
