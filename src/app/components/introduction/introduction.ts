@@ -2,17 +2,47 @@ import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatSelectModule } from '@angular/material/select';
+import { FormsModule } from '@angular/forms';
 import { LayoutService } from '../../services/layout.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
+import { ApplicationService } from '../../services/application.service';
+
+interface Language {
+  code: string;
+  name: string;
+}
 
 @Component({
   selector: 'app-introduction',
-  standalone: true,
-  imports: [MatButtonModule, MatCardModule, MatIconModule],
+  imports: [
+    MatButtonModule,
+    MatCardModule,
+    MatIconModule,
+    MatFormFieldModule,
+    MatSelectModule,
+    FormsModule,
+  ],
   templateUrl: './introduction.html',
   styleUrl: './introduction.scss',
 })
 export class Introduction {
   private layout = inject(LayoutService);
+  localSettings = inject(LocalSettingsService);
+  private app = inject(ApplicationService);
+
+  // Available languages - same as general settings
+  languages: Language[] = [
+    { code: 'en', name: 'English' },
+    { code: 'ar', name: 'العربية' },
+    { code: 'cnr', name: 'Crnogorski' },
+    { code: 'fa', name: 'فارسی' },
+    { code: 'no', name: 'Norsk' },
+    { code: 'ru', name: 'Русский' },
+    { code: 'sw', name: 'Kiswahili' },
+    { code: 'zu', name: 'isiZulu' },
+  ];
 
   openNewUserFlow(): void {
     this.layout.showLoginDialogWithStep('new-user');
@@ -28,5 +58,12 @@ export class Introduction {
 
   openTermsOfUse(): void {
     this.layout.openTermsOfUse();
+  }
+
+  setLanguage(languageCode: string): void {
+    this.localSettings.setLocale(languageCode);
+    if (this.app.isBrowser()) {
+      window.location.reload();
+    }
   }
 }

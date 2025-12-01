@@ -278,6 +278,13 @@
     "streams.empty.scheduled": "Нет запланированных трансляций. Проверьте позже для предстоящих событий.",
     "streams.empty.ended": "Нет завершённых трансляций для отображения.",
     "streams.refresh": "Обновить",
-    "stream-viewer.loading": "Загрузка трансляции..."
+    "stream-viewer.loading": "Загрузка трансляции...",
+    "introduction.new-user.title": "Новый пользователь",
+    "introduction.new-user.description": "Создайте новый аккаунт в два клика",
+    "introduction.login.title": "Войти",
+    "introduction.login.description": "Войдите в существующий аккаунт",
+    "introduction.terms-of-use": "Используя Nostria, вы соглашаетесь с Условиями использования.",
+    "introduction.language.label": "Язык",
+    "introduction.slogan": "Ваша социальная сеть"
   }
 }

@@ -278,6 +278,13 @@
     "streams.empty.scheduled": "پخش برنامه‌ریزی شده‌ای وجود ندارد. بعداً برای رویدادهای آینده بررسی کنید.",
     "streams.empty.ended": "پخش پایان یافته‌ای برای نمایش وجود ندارد.",
     "streams.refresh": "بازخوانی",
-    "stream-viewer.loading": "در حال بارگذاری پخش..."
+    "stream-viewer.loading": "در حال بارگذاری پخش...",
+    "introduction.new-user.title": "کاربر جدید",
+    "introduction.new-user.description": "با دو کلیک حساب کاربری جدید بسازید",
+    "introduction.login.title": "ورود",
+    "introduction.login.description": "با حساب کاربری موجود وارد شوید",
+    "introduction.terms-of-use": "با استفاده از نوستریا، شما با شرایط استفاده موافقت می‌کنید.",
+    "introduction.language.label": "زبان",
+    "introduction.slogan": "شبکه اجتماعی شما"
   }
 }

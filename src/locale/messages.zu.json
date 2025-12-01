@@ -270,6 +270,13 @@
     "streams.empty.scheduled": "Akukho ukusakaza okuhleliwe. Hlola kamuva izigameko ezizayo.",
     "streams.empty.ended": "Akukho ukusakaza okuphelile okuzoboniswa.",
     "streams.refresh": "Vuselela",
-    "stream-viewer.loading": "Kulayisha ukusakaza..."
+    "stream-viewer.loading": "Kulayisha ukusakaza...",
+    "introduction.new-user.title": "Umsebenzisi Omusha",
+    "introduction.new-user.description": "Dala i-akhawunti entsha ngokuchofoza kabili",
+    "introduction.login.title": "Ngena",
+    "introduction.login.description": "Ngena nge-akhawunti yakho ekhona",
+    "introduction.terms-of-use": "Ngokusebenzisa i-Nostria, uyavumelana neMigomo Yokusebenzisa.",
+    "introduction.language.label": "Ulimi",
+    "introduction.slogan": "Inethiwekhi Yakho Yezenhlalakahle"
   }
 }

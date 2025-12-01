@@ -278,6 +278,13 @@
     "streams.empty.scheduled": "لا توجد بثوث مجدولة. تحقق لاحقاً من الأحداث القادمة.",
     "streams.empty.ended": "لا توجد بثوث منتهية للعرض.",
     "streams.refresh": "تحديث",
-    "stream-viewer.loading": "جاري تحميل البث..."
+    "stream-viewer.loading": "جاري تحميل البث...",
+    "introduction.new-user.title": "مستخدم جديد",
+    "introduction.new-user.description": "أنشئ حساباً جديداً بنقرتين",
+    "introduction.login.title": "تسجيل الدخول",
+    "introduction.login.description": "سجل الدخول بحسابك الحالي",
+    "introduction.terms-of-use": "باستخدام نوستريا، فإنك توافق على شروط الاستخدام.",
+    "introduction.language.label": "اللغة",
+    "introduction.slogan": "شبكتك الاجتماعية"
   }
 }
