@@ -815,10 +815,17 @@ export abstract class RelayServiceBase {
               return relayUrl;
             })
             .catch((error: unknown) => {
-              const errorMsg = error instanceof Error ? error.message : 'Failed';
+              let errorMsg = error instanceof Error ? error.message : 'Failed';
+              // Handle empty error messages - likely auth-required but relay doesn't follow NIP-42 properly
+              if (!errorMsg || errorMsg.trim() === '') {
+                errorMsg = 'auth-required: relay returned empty response (likely requires authentication)';
+                this.logger.warn(`Relay ${relayUrl} returned empty error - treating as auth-required`);
+              }
               this.logger.error(`Relay ${relayUrl} failed: ${errorMsg}`);
-              // Check if this was an auth failure
-              if (errorMsg.includes('auth-required') || errorMsg.includes('auth')) {
+              // Check for NIP-42 auth failures using proper prefixes
+              // auth-required: means client needs to authenticate first
+              // restricted: means client authenticated but key is not authorized (e.g., not paid, not whitelisted)
+              if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
                 this.relayAuth.markAuthFailed(relayUrl, errorMsg);
               }
               throw new Error(`${relayUrl}: ${errorMsg}`);
@@ -1129,8 +1136,12 @@ export abstract class RelayServiceBase {
     }
 
     try {
-      // Create the subscription
+      // Get auth callback for NIP-42 authentication
+      const authCallback = this.relayAuth.getAuthCallback();
+
+      // Create the subscription with auth support
       const sub = this.#pool.subscribeManyEose(urls, filter, {
+        onauth: authCallback,
         onevent: (evt) => {
           // Check if event has expired according to NIP-40
           if (this.utilities.isEventExpired(evt)) {

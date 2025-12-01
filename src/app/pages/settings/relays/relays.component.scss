@@ -1,10 +1,40 @@
 .relay-item-container {
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   grid-gap: 12px;
   align-items: center;
   width: 100%;
   padding: 4px 0;
+}
+
+.relay-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  .status-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .status-ok {
+    color: var(--mat-success-color);
+  }
+
+  .status-error {
+    color: var(--mat-sys-error);
+  }
+
+  .status-restricted {
+    color: var(--mat-sys-tertiary);
+  }
+}
+
+.relay-has-error {
+  background-color: var(--mat-sys-error-container);
+  border-radius: 8px;
+  margin: 4px 0;
 }
 
 app-info-tooltip {
@@ -1185,6 +1215,11 @@ app-info-tooltip {
     color: var(--mat-sys-on-error-container);
   }
 
+  &.auth-restricted-badge {
+    background-color: var(--mat-sys-tertiary-container);
+    color: var(--mat-sys-on-tertiary-container);
+  }
+
   &.auth-required-badge {
     background-color: var(--mat-sys-secondary-container);
     color: var(--mat-sys-on-secondary-container);
@@ -1223,7 +1258,7 @@ app-info-tooltip {
     gap: 12px;
     align-items: flex-start;
 
-    > mat-icon {
+    >mat-icon {
       font-size: 24px;
       width: 24px;
       height: 24px;
@@ -1231,13 +1266,19 @@ app-info-tooltip {
     }
 
     &.auth-status-failed {
-      > mat-icon {
+      >mat-icon {
         color: var(--mat-sys-error);
       }
     }
 
+    &.auth-status-restricted {
+      >mat-icon {
+        color: var(--mat-sys-tertiary);
+      }
+    }
+
     &.auth-status-required {
-      > mat-icon {
+      >mat-icon {
         color: var(--mat-sys-secondary);
       }
     }
@@ -1258,11 +1299,16 @@ app-info-tooltip {
 
       .auth-reason {
         font-size: 0.75rem;
-        color: var(--mat-sys-error);
+        color: var(--mat-sys-on-surface-variant);
         margin: 0 0 12px 0;
         padding: 8px;
-        background-color: var(--mat-sys-error-container);
+        background-color: var(--mat-sys-surface-container-high);
         border-radius: 4px;
+        word-break: break-word;
+      }
+
+      a[mat-flat-button] {
+        margin-right: 8px;
       }
 
       button {

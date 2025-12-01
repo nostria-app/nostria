@@ -332,13 +332,19 @@ export class RelayPoolService {
           this.relaysService.updateRelayConnection(relayUrl, true);
         } else {
           // Failed publish - record retry attempt
-          const errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+          let errorMsg = result.reason instanceof Error ? result.reason.message : String(result.reason);
+          // Handle empty error messages
+          if (!errorMsg || errorMsg.trim() === '') {
+            errorMsg = 'Unknown error (relay returned empty response)';
+          }
           console.warn('[RelayPoolService] Failed to publish to relay:', {
             relay: relayUrl,
             reason: errorMsg,
           });
-          // Check if this was an auth failure
-          if (errorMsg.includes('auth-required') || errorMsg.includes('auth')) {
+          // Check for NIP-42 auth failures using proper prefixes
+          // auth-required: means client needs to authenticate first
+          // restricted: means client authenticated but key is not authorized (e.g., not paid, not whitelisted)
+          if (errorMsg.includes('auth-required:') || errorMsg.includes('restricted:')) {
             this.relayAuth.markAuthFailed(relayUrl, errorMsg);
           }
           this.relaysService.recordConnectionRetry(relayUrl);
