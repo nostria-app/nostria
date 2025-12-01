@@ -1,5 +1,5 @@
 <div class="content-medium">
-  <h2>General</h2>
+  <h2 i18n="@@settings.general.title">General</h2>
 
   <div class="setting-item">
     <span i18n="@@settings.dark-mode">Dark Mode</span>
@@ -22,11 +22,12 @@
   </div>
 
   <div>
-    <h2>Max relays per user</h2>
-    <p>Number of relays to use per user</p>
+    <h2 i18n="@@settings.max-relays.title">Max relays per user</h2>
+    <p i18n="@@settings.max-relays.description">Number of relays to use per user</p>
 
     <div class="setting-item">
-      <span>{{ localSettings.maxRelaysPerUser() }} relays</span>
+      <span>{{ localSettings.maxRelaysPerUser() }} <ng-container
+          i18n="@@settings.max-relays.unit">relays</ng-container></span>
       <mat-slider min="1" max="14" step="1" discrete>
         <input matSliderThumb [value]="localSettings.maxRelaysPerUser()"
           (valueChange)="setMaxRelaysPerUser({ value: $event })" aria-label="Max relays per user" />
@@ -35,79 +36,88 @@
   </div>
 
   <div>
-    <h2>Client Tags</h2>
+    <h2 i18n="@@settings.client-tags.title">Client Tags</h2>
 
     <div class="setting-item">
-      <span>Add Client Tag</span>
+      <span i18n="@@settings.client-tags.add">Add Client Tag</span>
       <mat-slide-toggle [checked]="localSettings.addClientTag()" (change)="toggleAddClientTag()">
       </mat-slide-toggle>
     </div>
-    <p class="setting-description">Add the Nostria client tag to events you publish</p>
+    <p class="setting-description" i18n="@@settings.client-tags.add.description">Add the Nostria client tag to events
+      you publish</p>
 
     <div class="setting-item">
-      <span>Show Client Tag</span>
+      <span i18n="@@settings.client-tags.show">Show Client Tag</span>
       <mat-slide-toggle [checked]="localSettings.showClientTag()" (change)="toggleShowClientTag()">
       </mat-slide-toggle>
     </div>
-    <p class="setting-description">Show what client that authors are using</p>
+    <p class="setting-description" i18n="@@settings.client-tags.show.description">Show what client that authors are
+      using</p>
   </div>
 
   <div>
-    <h2>Media</h2>
-    <p class="setting-description">Control how media content is displayed based on your following status</p>
+    <h2 i18n="@@settings.media.title">Media</h2>
+    <p class="setting-description" i18n="@@settings.media.description">Control how media content is displayed based on
+      your following status</p>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Media Display Mode</mat-label>
+      <mat-label i18n="@@settings.media.display-mode">Media Display Mode</mat-label>
       <mat-select [ngModel]="settings.settings()?.mediaPrivacy || 'show-always'"
         (selectionChange)="setMediaPrivacy($event.value)">
-        <mat-option value="show-always">Always Show Media</mat-option>
-        <mat-option value="blur-non-following">Blur Media from Non-Following</mat-option>
-        <mat-option value="blur-always">Always Blur Media</mat-option>
+        <mat-option value="show-always" i18n="@@settings.media.show-always">Always Show Media</mat-option>
+        <mat-option value="blur-non-following" i18n="@@settings.media.blur-non-following">Blur Media from
+          Non-Following</mat-option>
+        <mat-option value="blur-always" i18n="@@settings.media.blur-always">Always Blur Media</mat-option>
       </mat-select>
     </mat-form-field>
     <p>
       @switch (settings.settings()?.mediaPrivacy || 'show-always') {
       @case ('show-always') {
-      All media content will be displayed immediately without blurring.
+      <ng-container i18n="@@settings.media.show-always.description">All media content will be displayed immediately
+        without blurring.</ng-container>
       }
       @case ('blur-non-following') {
-      Media from accounts you don't follow will be blurred. Click to reveal.
+      <ng-container i18n="@@settings.media.blur-non-following.description">Media from accounts you don't follow will be
+        blurred. Click to reveal.</ng-container>
       }
       @case ('blur-always') {
-      All media will be blurred by default. Click to reveal individual items.
+      <ng-container i18n="@@settings.media.blur-always.description">All media will be blurred by default. Click to
+        reveal individual items.</ng-container>
       }
       }
     </p>
 
     <div class="setting-item">
-      <span>Auto-Play Short Form Videos</span>
+      <span i18n="@@settings.media.auto-play">Auto-Play Short Form Videos</span>
       <mat-slide-toggle [checked]="settings.settings().autoPlayShortForm ?? true" (change)="toggleAutoPlayShortForm()">
       </mat-slide-toggle>
     </div>
 
     <div class="setting-item">
-      <span>Repeat Short Form Videos</span>
+      <span i18n="@@settings.media.repeat">Repeat Short Form Videos</span>
       <mat-slide-toggle [checked]="settings.settings().repeatShortForm ?? true" (change)="toggleRepeatShortForm()">
       </mat-slide-toggle>
     </div>
   </div>
 
   <div>
-    <h2>Navigation</h2>
+    <h2 i18n="@@settings.navigation.title">Navigation</h2>
 
     <div class="setting-item">
-      <span>Start on Last Page</span>
+      <span i18n="@@settings.navigation.start-last-page">Start on Last Page</span>
       <mat-slide-toggle [checked]="localSettings.startOnLastRoute()" (change)="toggleStartOnLastRoute()">
       </mat-slide-toggle>
     </div>
-    <p class="setting-description">When opening the app, restore the last page you were viewing.</p>
+    <p class="setting-description" i18n="@@settings.navigation.start-last-page.description">When opening the app,
+      restore the last page you were viewing.</p>
 
     <div class="setting-item">
-      <span>Start Feeds on Last Event</span>
+      <span i18n="@@settings.navigation.start-feeds-last-event">Start Feeds on Last Event</span>
       <mat-slide-toggle [checked]="localSettings.startFeedsOnLastEvent()" (change)="toggleStartFeedsOnLastEvent()">
       </mat-slide-toggle>
     </div>
-    <p class="setting-description">Show previously loaded events first when opening feeds, with new posts appearing via
+    <p class="setting-description" i18n="@@settings.navigation.start-feeds-last-event.description">Show previously
+      loaded events first when opening feeds, with new posts appearing via
       a button. Prevents the feed from jumping to the latest events on reload.</p>
   </div>
 
@@ -136,31 +146,33 @@
     <p i18n="@@settings.logging.description">Configure application logging levels</p>
 
     <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Log Level</mat-label>
+      <mat-label i18n="@@settings.logging.log-level">Log Level</mat-label>
       <mat-select [ngModel]="logger.logLevel" (selectionChange)="setLogLevel($event.value)">
-        <mat-option value="debug">Debug</mat-option>
-        <mat-option value="info">Info</mat-option>
-        <mat-option value="warn">Warning</mat-option>
-        <mat-option value="error">Error</mat-option>
-        <mat-option value="none">None</mat-option>
+        <mat-option value="debug" i18n="@@settings.logging.debug">Debug</mat-option>
+        <mat-option value="info" i18n="@@settings.logging.info">Info</mat-option>
+        <mat-option value="warn" i18n="@@settings.logging.warn">Warning</mat-option>
+        <mat-option value="error" i18n="@@settings.logging.error">Error</mat-option>
+        <mat-option value="none" i18n="@@settings.logging.none">None</mat-option>
       </mat-select>
     </mat-form-field>
     <p>
       @switch (logger.logLevel) {
       @case ('debug') {
-      Shows all log messages including detailed debug information.
+      <ng-container i18n="@@settings.logging.debug.description">Shows all log messages including detailed debug
+        information.</ng-container>
       }
       @case ('info') {
-      Shows informational messages, warnings and errors.
+      <ng-container i18n="@@settings.logging.info.description">Shows informational messages, warnings and
+        errors.</ng-container>
       }
       @case ('warn') {
-      Shows only warnings and errors.
+      <ng-container i18n="@@settings.logging.warn.description">Shows only warnings and errors.</ng-container>
       }
       @case ('error') {
-      Shows only error messages.
+      <ng-container i18n="@@settings.logging.error.description">Shows only error messages.</ng-container>
       }
       @case ('none') {
-      Disables all logging output.
+      <ng-container i18n="@@settings.logging.none.description">Disables all logging output.</ng-container>
       }
       }
     </p>
@@ -173,23 +185,27 @@
 
   <div class="setting-item danger-zone">
     <div>
-      <h2>Danger Zone</h2>
+      <h2 i18n="@@settings.danger-zone.title">Danger Zone</h2>
 
       <div class="danger-action">
         <div>
-          <h3>Reset Notifications Cache</h3>
-          <p>This will delete all cached notifications from local storage. Your notifications will be refetched from
+          <h3 i18n="@@settings.danger-zone.reset-notifications">Reset Notifications Cache</h3>
+          <p i18n="@@settings.danger-zone.reset-notifications.description">This will delete all cached notifications
+            from local storage. Your notifications will be refetched from
             relays.</p>
         </div>
-        <button mat-flat-button class="danger-button" (click)="resetNotificationsCache()">Reset Notifications</button>
+        <button mat-flat-button class="danger-button" (click)="resetNotificationsCache()"
+          i18n="@@settings.danger-zone.reset-notifications.button">Reset Notifications</button>
       </div>
 
       <div class="danger-action">
         <div>
-          <h3>Wipe All Data</h3>
-          <p>This will delete all your local app data and reload the application.</p>
+          <h3 i18n="@@settings.danger-zone.wipe-data">Wipe All Data</h3>
+          <p i18n="@@settings.danger-zone.wipe-data.description">This will delete all your local app data and reload the
+            application.</p>
         </div>
-        <button mat-flat-button class="wipe-data-button" (click)="wipeData()">Wipe Data</button>
+        <button mat-flat-button class="wipe-data-button" (click)="wipeData()"
+          i18n="@@settings.danger-zone.wipe-data.button">Wipe Data</button>
       </div>
     </div>
   </div>
