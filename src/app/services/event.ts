@@ -257,23 +257,32 @@ export class EventService {
   buildThreadTree(events: Event[], rootEventId: string, maxDepth = 5): ThreadedEvent[] {
     const childrenMap = new Map<string, Event[]>();
 
-    // First pass: build parent-child relationships using explicit replyId only
+    // First pass: build parent-child relationships
     events.forEach((event) => {
-      const { replyId } = this.getEventTags(event);
+      const { replyId, rootId } = this.getEventTags(event);
 
-      // Only add events that have an explicit replyId
-      // Do NOT fallback to rootEventId - we want strict parent-child relationships
+      // Determine the actual parent this event replies to:
+      // 1. If replyId is set, use it (explicit reply marker)
+      // 2. If no replyId but rootId matches our rootEventId, it's a direct reply to root
+      // 3. Otherwise, skip this event (it belongs to a different branch)
+      let parentId: string | null = null;
+
       if (replyId) {
-        if (!childrenMap.has(replyId)) {
-          childrenMap.set(replyId, []);
+        parentId = replyId;
+      } else if (rootId === rootEventId) {
+        // Direct reply to root (has root marker but no reply marker)
+        parentId = rootEventId;
+      }
+
+      if (parentId) {
+        if (!childrenMap.has(parentId)) {
+          childrenMap.set(parentId, []);
         }
-        childrenMap.get(replyId)!.push(event);
+        childrenMap.get(parentId)!.push(event);
       }
     });
 
     // Build tree recursively with depth limit, starting from rootEventId
-    // This naturally only includes downstream replies since we start from the root
-    // and only traverse children
     const buildNode = (eventId: string, level = 0): ThreadedEvent[] => {
       const children = childrenMap.get(eventId) || [];
 
@@ -965,7 +974,6 @@ export class EventService {
     try {
       const parents = await parentsPromise;
       const rootEvent = parents.length > 0 ? parents[0] : isThreadRoot ? event : null;
-      const actualThreadRootId = rootEvent?.id || event.id;
 
       // Yield with parent events
       yield {
@@ -978,21 +986,13 @@ export class EventService {
         rootEvent,
       };
 
-      // Determine which replies to use based on thread structure
-      let finalRepliesPromise = currentEventRepliesPromise;
-      let finalReactionsPromise = currentEventReactionsPromise;
-
-      // If this event is part of a larger thread, load replies for the root
-      if (actualThreadRootId !== event.id) {
-        finalRepliesPromise = this.loadReplies(
-          actualThreadRootId,
-          rootEvent?.pubkey || event.pubkey,
-        );
-        finalReactionsPromise = this.loadReactions(
-          actualThreadRootId,
-          rootEvent?.pubkey || event.pubkey,
-        );
-      }
+      // OPTIMIZATION: Only load replies for the current event, not the entire thread root.
+      // This reduces unnecessary data transfer since we only show downstream replies anyway.
+      // The tradeoff is that deeply nested replies (replies to replies) may not be found
+      // if they don't reference the current event in their e-tags.
+      // For most use cases, direct replies are sufficient.
+      const finalRepliesPromise = currentEventRepliesPromise;
+      const finalReactionsPromise = currentEventReactionsPromise;
 
       // Load replies and yield them as soon as available
       const replies = await finalRepliesPromise;
