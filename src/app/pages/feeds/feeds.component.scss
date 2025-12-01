@@ -405,6 +405,14 @@ app-user-profile {
           flex: 1 1 600px;
         }
 
+        // Mobile: full width, no fixed dimensions
+        @media (max-width: 1023px) {
+          width: 100%;
+          min-width: 100%;
+          max-width: 100%;
+          flex: none;
+        }
+
         &.cdk-drag {
           z-index: 2;
         }
@@ -1979,6 +1987,7 @@ h1 {
       .column-unit {
         border-radius: 0 !important;
         box-shadow: none !important;
+        overflow: visible !important; // Allow content to flow without clipping on mobile
 
         // Remove internal column scrolling on mobile - page scrolls instead
         .column-content {
