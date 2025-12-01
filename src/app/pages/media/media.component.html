@@ -91,6 +91,36 @@
           <button mat-button color="primary" (click)="selectAll()" [disabled]="images().length === 0">
             Select All
           </button>
+          <button mat-button [matMenuTriggerFor]="imageSortMenu" [disabled]="images().length === 0">
+            <mat-icon>sort</mat-icon>
+            {{ getSortLabel() }}
+          </button>
+          <mat-menu #imageSortMenu="matMenu">
+            <button mat-menu-item (click)="setSortOption('newest')" [class.selected-sort]="sortOption() === 'newest'">
+              <mat-icon>arrow_downward</mat-icon>
+              <span>Newest First</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('oldest')" [class.selected-sort]="sortOption() === 'oldest'">
+              <mat-icon>arrow_upward</mat-icon>
+              <span>Oldest First</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('name-asc')" [class.selected-sort]="sortOption() === 'name-asc'">
+              <mat-icon>sort_by_alpha</mat-icon>
+              <span>Name (A-Z)</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('name-desc')" [class.selected-sort]="sortOption() === 'name-desc'">
+              <mat-icon>sort_by_alpha</mat-icon>
+              <span>Name (Z-A)</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('size-desc')" [class.selected-sort]="sortOption() === 'size-desc'">
+              <mat-icon>expand_more</mat-icon>
+              <span>Size (Large-Small)</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('size-asc')" [class.selected-sort]="sortOption() === 'size-asc'">
+              <mat-icon>expand_less</mat-icon>
+              <span>Size (Small-Large)</span>
+            </button>
+          </mat-menu>
         </div>
         }
 
@@ -194,6 +224,36 @@
           <button mat-button color="primary" (click)="selectAll()" [disabled]="videos().length === 0">
             Select All
           </button>
+          <button mat-button [matMenuTriggerFor]="videoSortMenu" [disabled]="videos().length === 0">
+            <mat-icon>sort</mat-icon>
+            {{ getSortLabel() }}
+          </button>
+          <mat-menu #videoSortMenu="matMenu">
+            <button mat-menu-item (click)="setSortOption('newest')" [class.selected-sort]="sortOption() === 'newest'">
+              <mat-icon>arrow_downward</mat-icon>
+              <span>Newest First</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('oldest')" [class.selected-sort]="sortOption() === 'oldest'">
+              <mat-icon>arrow_upward</mat-icon>
+              <span>Oldest First</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('name-asc')" [class.selected-sort]="sortOption() === 'name-asc'">
+              <mat-icon>sort_by_alpha</mat-icon>
+              <span>Name (A-Z)</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('name-desc')" [class.selected-sort]="sortOption() === 'name-desc'">
+              <mat-icon>sort_by_alpha</mat-icon>
+              <span>Name (Z-A)</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('size-desc')" [class.selected-sort]="sortOption() === 'size-desc'">
+              <mat-icon>expand_more</mat-icon>
+              <span>Size (Large-Small)</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('size-asc')" [class.selected-sort]="sortOption() === 'size-asc'">
+              <mat-icon>expand_less</mat-icon>
+              <span>Size (Small-Large)</span>
+            </button>
+          </mat-menu>
         </div>
         }
 
@@ -301,6 +361,36 @@
           <button mat-button color="primary" (click)="selectAll()" [disabled]="files().length === 0">
             Select All
           </button>
+          <button mat-button [matMenuTriggerFor]="fileSortMenu" [disabled]="files().length === 0">
+            <mat-icon>sort</mat-icon>
+            {{ getSortLabel() }}
+          </button>
+          <mat-menu #fileSortMenu="matMenu">
+            <button mat-menu-item (click)="setSortOption('newest')" [class.selected-sort]="sortOption() === 'newest'">
+              <mat-icon>arrow_downward</mat-icon>
+              <span>Newest First</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('oldest')" [class.selected-sort]="sortOption() === 'oldest'">
+              <mat-icon>arrow_upward</mat-icon>
+              <span>Oldest First</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('name-asc')" [class.selected-sort]="sortOption() === 'name-asc'">
+              <mat-icon>sort_by_alpha</mat-icon>
+              <span>Name (A-Z)</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('name-desc')" [class.selected-sort]="sortOption() === 'name-desc'">
+              <mat-icon>sort_by_alpha</mat-icon>
+              <span>Name (Z-A)</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('size-desc')" [class.selected-sort]="sortOption() === 'size-desc'">
+              <mat-icon>expand_more</mat-icon>
+              <span>Size (Large-Small)</span>
+            </button>
+            <button mat-menu-item (click)="setSortOption('size-asc')" [class.selected-sort]="sortOption() === 'size-asc'">
+              <mat-icon>expand_less</mat-icon>
+              <span>Size (Small-Large)</span>
+            </button>
+          </mat-menu>
         </div>
         }
 
