@@ -196,9 +196,9 @@
 
     <div class="nsec-input-container">
       <mat-form-field class="nsec-input">
-        <mat-label>Private Key (nsec...)</mat-label>
-        <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1..." autocomplete="off"
-          autocorrect="off" spellcheck="false" name="nostr-private-key" readonly
+        <mat-label>Private Key or Recovery Phrase</mat-label>
+        <input matInput [(ngModel)]="nsecKey" type="password" placeholder="nsec1... or 12-word phrase"
+          autocomplete="off" autocorrect="off" spellcheck="false" name="nostr-private-key" readonly
           onfocus="this.removeAttribute('readonly');" />
       </mat-form-field>
 

@@ -34,6 +34,7 @@ import { SigningDialogComponent } from '../components/signing-dialog/signing-dia
 import { ExternalSignerDialogComponent } from '../components/external-signer-dialog/external-signer-dialog.component';
 import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.service';
 import { PinPromptService } from './pin-prompt.service';
+import { MnemonicService } from './mnemonic.service';
 import { RelayAuthService } from './relays/relay-auth.service';
 
 export interface NostrUser {
@@ -44,6 +45,12 @@ export interface NostrUser {
    * - JSON string of EncryptedData (encrypted with PIN)
    */
   privkey?: string;
+  /** 
+   * Mnemonic phrase storage (BIP39)
+   * - JSON string of EncryptedData (encrypted with PIN)
+   * - Only present for accounts created with mnemonic support (NIP-06)
+   */
+  mnemonic?: string;
   name?: string;
   source: 'extension' | 'nsec' | 'preview' | 'remote' | 'external';
   lastUsed?: number; // Timestamp when this account was last used
@@ -63,6 +70,12 @@ export interface NostrUser {
    * If false or undefined, privkey is plain hex (backwards compatible)
    */
   isEncrypted?: boolean;
+
+  /** 
+   * Indicates if the mnemonic is encrypted with a PIN
+   * If true, mnemonic contains JSON-stringified EncryptedData
+   */
+  isMnemonicEncrypted?: boolean;
 }
 
 export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
@@ -92,6 +105,7 @@ export class NostrService implements NostriaService {
   private readonly dialog = inject(MatDialog);
   private readonly crypto = inject(CryptoEncryptionService);
   private readonly pinPrompt = inject(PinPromptService);
+  private readonly mnemonicService = inject(MnemonicService);
   private readonly relayAuth = inject(RelayAuthService);
 
   initialized = signal(false);
@@ -1636,13 +1650,18 @@ export class NostrService implements NostriaService {
   }
 
   async generateNewKey(region?: string) {
-    this.logger.info('Generating new Nostr keypair');
-    // Generate a proper Nostr key pair using nostr-tools
-    const secretKey = generateSecretKey(); // Returns a Uint8Array
-    const pubkey = getPublicKey(secretKey); // Converts to hex string
+    this.logger.info('Generating new Nostr keypair with BIP39 mnemonic (NIP-06)');
+    
+    // Generate a BIP39 mnemonic phrase
+    const mnemonic = this.mnemonicService.generateMnemonic();
+    this.logger.debug('Generated 12-word mnemonic phrase, deriving keypair via NIP-06 path m/44\'/1237\'/0\'/0/0');
 
-    // Store the hex string representation of the private key
-    const privkeyHex = bytesToHex(secretKey);
+    // Derive the private key from the mnemonic using NIP-06
+    const privkeyHex = this.mnemonicService.derivePrivateKeyFromMnemonic(mnemonic);
+    
+    // Get the public key from the derived private key
+    const secretKey = hexToBytes(privkeyHex);
+    const pubkey = getPublicKey(secretKey);
 
     // Try to encrypt the private key with default PIN
     // Fall back to plaintext storage if encryption fails (e.g., on HTTP connections)
@@ -1660,14 +1679,31 @@ export class NostrService implements NostriaService {
       isEncrypted = false;
     }
 
+    // Try to encrypt the mnemonic with default PIN
+    let storedMnemonic: string;
+    let isMnemonicEncrypted: boolean;
+
+    try {
+      const encryptedMnemonic = await this.mnemonicService.encryptMnemonic(mnemonic, this.crypto.DEFAULT_PIN);
+      storedMnemonic = JSON.stringify(encryptedMnemonic);
+      isMnemonicEncrypted = true;
+      this.logger.info('Mnemonic encrypted successfully');
+    } catch (encryptError) {
+      this.logger.warn('Failed to encrypt mnemonic, storing in plaintext. This may occur on HTTP connections.', encryptError);
+      storedMnemonic = mnemonic;
+      isMnemonicEncrypted = false;
+    }
+
     const newUser: NostrUser = {
       pubkey,
       privkey: storedPrivkey,
+      mnemonic: storedMnemonic,
       source: 'nsec',
       lastUsed: Date.now(),
       region: region,
       hasActivated: false,
       isEncrypted,
+      isMnemonicEncrypted,
     };
 
     this.logger.debug(`New keypair generated successfully (${isEncrypted ? 'encrypted' : 'plaintext'})`, { pubkey, region });
@@ -1870,16 +1906,43 @@ export class NostrService implements NostriaService {
     }
   }
 
-  async loginWithNsec(nsec: string) {
+  async loginWithNsec(nsecOrMnemonic: string) {
     try {
-      this.logger.info('Attempting to login with nsec');
+      const trimmed = nsecOrMnemonic.trim();
+      this.logger.info('Attempting to login with nsec or mnemonic');
 
       let privkeyHex = '';
       let privkeyArray: Uint8Array;
+      let mnemonic: string | undefined;
+      let storedMnemonic: string | undefined;
+      let isMnemonicEncrypted: boolean | undefined;
 
-      if (nsec.startsWith('nsec')) {
+      // Check if it's a mnemonic phrase
+      if (this.mnemonicService.isMnemonic(trimmed)) {
+        this.logger.info('Detected mnemonic phrase, deriving key (NIP-06)');
+        
+        // Normalize the mnemonic
+        mnemonic = this.mnemonicService.normalizeMnemonic(trimmed);
+        
+        // Derive the private key from the mnemonic
+        privkeyHex = this.mnemonicService.derivePrivateKeyFromMnemonic(mnemonic);
+        privkeyArray = hexToBytes(privkeyHex);
+
+        // Try to encrypt the mnemonic with default PIN
+        try {
+          const encryptedMnemonic = await this.mnemonicService.encryptMnemonic(mnemonic, this.crypto.DEFAULT_PIN);
+          storedMnemonic = JSON.stringify(encryptedMnemonic);
+          isMnemonicEncrypted = true;
+          this.logger.info('Mnemonic encrypted successfully');
+        } catch (encryptError) {
+          this.logger.warn('Failed to encrypt mnemonic, storing in plaintext. This may occur on HTTP connections.', encryptError);
+          storedMnemonic = mnemonic;
+          isMnemonicEncrypted = false;
+        }
+      } else if (trimmed.startsWith('nsec')) {
+        this.logger.info('Detected nsec format');
         // Decode the nsec to get the private key bytes
-        const { type, data } = nip19.decode(nsec);
+        const { type, data } = nip19.decode(trimmed);
         privkeyArray = data as Uint8Array;
 
         if (type !== 'nsec') {
@@ -1893,11 +1956,12 @@ export class NostrService implements NostriaService {
       } else {
         // Validate hex format: must be 64 characters and valid hex
         const hexRegex = /^[0-9a-fA-F]{64}$/;
-        if (!hexRegex.test(nsec)) {
-          throw new Error('Invalid private key format. Must be nsec or 64-character hex string.');
+        if (!hexRegex.test(trimmed)) {
+          throw new Error('Invalid input. Must be nsec (nsec1...), 12-word mnemonic phrase, or 64-character hex private key.');
         }
 
-        privkeyHex = nsec.toLowerCase(); // Normalize to lowercase
+        this.logger.info('Detected hex private key');
+        privkeyHex = trimmed.toLowerCase(); // Normalize to lowercase
         privkeyArray = hexToBytes(privkeyHex);
       }
 
@@ -1924,10 +1988,12 @@ export class NostrService implements NostriaService {
       const newUser: NostrUser = {
         pubkey,
         privkey: storedPrivkey,
+        mnemonic: storedMnemonic,
         source: 'nsec',
         lastUsed: Date.now(),
         hasActivated: true, // Assume activation is done via nsec
         isEncrypted,
+        isMnemonicEncrypted,
       };
 
       this.logger.info(`Login successful (${isEncrypted ? 'encrypted' : 'plaintext'})`, { pubkey });
