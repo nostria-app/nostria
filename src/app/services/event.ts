@@ -974,6 +974,7 @@ export class EventService {
     try {
       const parents = await parentsPromise;
       const rootEvent = parents.length > 0 ? parents[0] : isThreadRoot ? event : null;
+      const threadRootId = rootEvent?.id || event.id;
 
       // Yield with parent events
       yield {
@@ -986,13 +987,18 @@ export class EventService {
         rootEvent,
       };
 
-      // OPTIMIZATION: Only load replies for the current event, not the entire thread root.
-      // This reduces unnecessary data transfer since we only show downstream replies anyway.
-      // The tradeoff is that deeply nested replies (replies to replies) may not be found
-      // if they don't reference the current event in their e-tags.
-      // For most use cases, direct replies are sufficient.
-      const finalRepliesPromise = currentEventRepliesPromise;
-      const finalReactionsPromise = currentEventReactionsPromise;
+      // Determine which replies to load:
+      // - If this is the thread root, just load direct replies
+      // - If this is a nested event, load all replies to the thread root so we can
+      //   build the complete downstream tree from the current event
+      let finalRepliesPromise = currentEventRepliesPromise;
+      let finalReactionsPromise = currentEventReactionsPromise;
+
+      if (!isThreadRoot && threadRootId !== event.id) {
+        // Load replies to the thread root to get the full thread tree
+        finalRepliesPromise = this.loadReplies(threadRootId, rootEvent?.pubkey || event.pubkey);
+        finalReactionsPromise = this.loadReactions(threadRootId, rootEvent?.pubkey || event.pubkey);
+      }
 
       // Load replies and yield them as soon as available
       const replies = await finalRepliesPromise;
@@ -1003,8 +1009,8 @@ export class EventService {
 
       const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
 
-      // Build thread tree starting from the current event, not the thread root
-      // This will show replies TO the current event and its descendants
+      // Build thread tree starting from the current event
+      // This will only include downstream descendants of the current event
       const threadedReplies = this.buildThreadTree(filteredReplies, event.id, 4);
 
       yield {
