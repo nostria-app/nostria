@@ -254,8 +254,8 @@ export class FeedsComponent implements OnDestroy {
   private scrollSaveInterval?: number;
 
   // Virtual list configuration
-  private readonly INITIAL_RENDER_COUNT = 10; // Render only 10 events initially
-  private readonly RENDER_BATCH_SIZE = 10; // Add 10 more events when scrolling
+  private readonly INITIAL_RENDER_COUNT = 15; // Render 15 events initially for smoother initial view
+  private readonly RENDER_BATCH_SIZE = 15; // Add 15 more events when scrolling for smoother experience
 
   // Track rendered event counts per column (virtual list)
   private renderedEventCounts = signal<Record<string, number>>({});
@@ -701,8 +701,9 @@ export class FeedsComponent implements OnDestroy {
         const rect = trigger.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
 
-        // Trigger is "visible" if it's within 200px of the viewport bottom
-        const isNearViewport = rect.top < viewportHeight + 200;
+        // Trigger is "visible" if it's within 600px of the viewport bottom
+        // Using a larger threshold (600px) to start loading earlier and avoid jumpy UI
+        const isNearViewport = rect.top < viewportHeight + 600;
 
         if (isNearViewport) {
           this.loadMoreCooldowns.set(column.id, now);
