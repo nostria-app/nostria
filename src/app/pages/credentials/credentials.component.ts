@@ -54,6 +54,7 @@ export class CredentialsComponent implements OnInit {
   pinPrompt = inject(PinPromptService);
   dialog = inject(MatDialog);
   isNsecVisible = signal(false);
+  isMnemonicVisible = signal(false);
   wallets = inject(Wallets);
 
   connectionStringControl = new FormControl('', [
@@ -74,6 +75,9 @@ export class CredentialsComponent implements OnInit {
   // Cached nsec value (decrypted on demand)
   private cachedNsec = signal<string>('');
 
+  // Cached mnemonic value (decrypted on demand)
+  private cachedMnemonic = signal<string>('');
+
   // Donation-related properties
   developerPubkeys = ['17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', 'cbec30a9038fe934b55272b046df47eb4d20ef006de0acbe46b0c0dae06e5d5b', '5f432a9f39b58ff132fc0a4c8af10d42efd917d8076f68bb7f2f91ed7d4f6a41', '7e2b09f951ed9be483284e7469ac20ac427d3264633d250c9d01e4265c99ed42'];
   selectedConnectionString = signal<string | null>(null);
@@ -84,21 +88,24 @@ export class CredentialsComponent implements OnInit {
   donationError = signal<string | null>(null);
 
   constructor() {
-    // Watch for account changes and reload nsec when account changes
+    // Watch for account changes and reload nsec and mnemonic when account changes
     effect(() => {
       const account = this.accountState.account();
       // Trigger reload when account changes
       if (account) {
         this.loadNsec();
+        this.loadMnemonic();
       } else {
         this.cachedNsec.set('');
+        this.cachedMnemonic.set('');
       }
     });
   }
 
   ngOnInit(): void {
-    // Load nsec on component initialization
+    // Load nsec and mnemonic on component initialization
     this.loadNsec();
+    this.loadMnemonic();
   }
 
   private async loadNsec(): Promise<void> {
@@ -165,6 +172,97 @@ export class CredentialsComponent implements OnInit {
       this.snackBar.open('Incorrect PIN. Please try again.', 'Dismiss', { duration: 3000 });
       return null;
     }
+  }
+
+  private async loadMnemonic(): Promise<void> {
+    const account = this.accountState.account();
+    if (!account?.mnemonic || account.source !== 'nsec') {
+      this.cachedMnemonic.set('');
+      return;
+    }
+
+    try {
+      // Try to get decrypted mnemonic (will prompt for PIN if needed)
+      const mnemonic = await this.getDecryptedMnemonicWithPrompt();
+      if (!mnemonic) {
+        this.cachedMnemonic.set('');
+        return;
+      }
+      this.cachedMnemonic.set(mnemonic);
+    } catch {
+      this.cachedMnemonic.set('');
+    }
+  }
+
+  /**
+   * Gets the decrypted mnemonic, prompting for PIN if the default PIN fails
+   */
+  private async getDecryptedMnemonicWithPrompt(): Promise<string | null> {
+    const account = this.accountState.account();
+    if (!account?.mnemonic) {
+      return null;
+    }
+
+    try {
+      // If not encrypted, return plaintext
+      if (!account.isMnemonicEncrypted) {
+        return account.mnemonic;
+      }
+
+      // Try with default PIN first
+      const encryptedData = JSON.parse(account.mnemonic);
+      const mnemonic = await this.crypto.decryptPrivateKey(encryptedData, this.crypto.DEFAULT_PIN);
+      return mnemonic;
+    } catch {
+      // Default PIN failed, prompt user for their PIN
+      return await this.promptForPinAndDecryptMnemonic();
+    }
+  }
+
+  private async promptForPinAndDecryptMnemonic(): Promise<string | null> {
+    const account = this.accountState.account();
+    if (!account?.mnemonic) {
+      return null;
+    }
+
+    const pin = await this.pinPrompt.promptForPin();
+
+    if (!pin) {
+      // User cancelled
+      this.snackBar.open('PIN required to access recovery phrase', 'Dismiss', { duration: 3000 });
+      return null;
+    }
+
+    try {
+      // Try to decrypt with the provided PIN
+      const encryptedData = JSON.parse(account.mnemonic);
+      const mnemonic = await this.crypto.decryptPrivateKey(encryptedData, pin);
+      this.snackBar.open('Recovery phrase unlocked', 'Dismiss', { duration: 2000 });
+      return mnemonic;
+    } catch {
+      // Wrong PIN
+      this.snackBar.open('Incorrect PIN. Please try again.', 'Dismiss', { duration: 3000 });
+      return null;
+    }
+  }
+
+  toggleMnemonicVisibility(): void {
+    this.isMnemonicVisible.update(current => !current);
+  }
+
+  getMnemonic(): string {
+    return this.cachedMnemonic();
+  }
+
+  getMaskedMnemonic(mnemonic: string): string {
+    if (!mnemonic) return '';
+    // Mask all words completely
+    const words = mnemonic.split(' ');
+    return words.map(word => '•'.repeat(word.length)).join(' ');
+  }
+
+  hasMnemonic(): boolean {
+    return !!this.accountState.account()?.mnemonic;
   }
 
   toggleNsecVisibility(): void {
