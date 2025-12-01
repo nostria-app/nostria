@@ -1513,6 +1513,27 @@ export class LayoutService implements OnDestroy {
   }
 
   /**
+   * Gets the main scrollable content element
+   * Returns the mat-drawer-content element or falls back to content-wrapper or document.documentElement
+   */
+  getMainContentElement(): Element {
+    // Try the mat-drawer-content first (main layout container)
+    const matDrawerContent = document.querySelector('.mat-drawer-content');
+    if (matDrawerContent) {
+      return matDrawerContent;
+    }
+
+    // Fallback to content-wrapper
+    const contentWrapper = document.querySelector('.content-wrapper');
+    if (contentWrapper) {
+      return contentWrapper;
+    }
+
+    // Final fallback to document element
+    return document.documentElement;
+  }
+
+  /**
    * Scrolls an element into view
    * @param elementSelector CSS selector for the element to scroll into view
    * @param block Position of the element relative to the viewport after scrolling

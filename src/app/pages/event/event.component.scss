@@ -112,6 +112,8 @@
 
 #main-event {
   margin-bottom: 1rem;
+  // Account for fixed toolbar and favorites bar when scrolling into view
+  scroll-margin-top: calc(var(--toolbar-height, 64px) + 80px);
 
   // Ensure main event has no left border
   ::ng-deep app-event .note-card {
