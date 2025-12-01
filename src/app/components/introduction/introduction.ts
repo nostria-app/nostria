@@ -2,9 +2,7 @@ import { Component, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSelectModule } from '@angular/material/select';
-import { FormsModule } from '@angular/forms';
+import { MatMenuModule } from '@angular/material/menu';
 import { LayoutService } from '../../services/layout.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { ApplicationService } from '../../services/application.service';
@@ -20,9 +18,7 @@ interface Language {
     MatButtonModule,
     MatCardModule,
     MatIconModule,
-    MatFormFieldModule,
-    MatSelectModule,
-    FormsModule,
+    MatMenuModule,
   ],
   templateUrl: './introduction.html',
   styleUrl: './introduction.scss',
