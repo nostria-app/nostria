@@ -19,6 +19,7 @@ export class ProfileHoverCardService implements OnDestroy {
   // Track active overlay and component references
   private overlayRef: OverlayRef | null = null;
   private hoverCardComponentRef: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+  private currentPubkey: string | null = null;
 
   // Track mouse state
   private isMouseOverTrigger = signal(false);
@@ -52,13 +53,18 @@ export class ProfileHoverCardService implements OnDestroy {
       this.closeTimeout = undefined;
     }
 
+    // If already showing the same profile, just keep it open
+    if (this.overlayRef && this.currentPubkey === pubkey) {
+      return;
+    }
+
     // Clear any existing hover timeout
     if (this.hoverTimeout) {
       window.clearTimeout(this.hoverTimeout);
       this.hoverTimeout = undefined;
     }
 
-    // If already showing a hover card, close it immediately
+    // If already showing a different profile, close it immediately
     if (this.overlayRef) {
       this.closeHoverCard();
     }
@@ -286,6 +292,7 @@ export class ProfileHoverCardService implements OnDestroy {
     const componentRef = this.overlayRef.attach(portal);
     componentRef.setInput('pubkey', pubkey);
     this.hoverCardComponentRef = componentRef;
+    this.currentPubkey = pubkey;
 
     // Add mouse enter/leave listeners to overlay
     const overlayElement = this.overlayRef.overlayElement;
@@ -305,14 +312,21 @@ export class ProfileHoverCardService implements OnDestroy {
 
   /**
    * Schedules closing the hover card
+   * Uses a longer delay (500ms) to give users time to move from the trigger to the card
    */
   private scheduleClose(): void {
+    // Clear any existing close timeout to avoid premature closing
+    if (this.closeTimeout) {
+      window.clearTimeout(this.closeTimeout);
+      this.closeTimeout = undefined;
+    }
+
     this.closeTimeout = window.setTimeout(() => {
       const isMenuOpen = this.hoverCardComponentRef?.instance?.isMenuOpen?.();
       if (!this.isMouseOverTrigger() && !this.isMouseOverCard() && !isMenuOpen) {
         this.closeHoverCard();
       }
-    }, 300);
+    }, 500);
   }
 
   /**
@@ -333,6 +347,7 @@ export class ProfileHoverCardService implements OnDestroy {
       this.overlayRef.dispose();
       this.overlayRef = null;
       this.hoverCardComponentRef = null;
+      this.currentPubkey = null;
     }
   }
 
