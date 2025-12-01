@@ -37,7 +37,7 @@
     "@angular/service-worker": "^21.0.2",
     "@angular/ssr": "^21.0.1",
     "@cashu/cashu-ts": "^2.7.4",
-    "@getalby/sdk": "^6.0.2",
+    "@getalby/sdk": "^7.0.0",
     "@noble/hashes": "^2.0.1",
     "@progress/jszip-esm": "^1.0.4",
     "@tauri-apps/api": "^2",
