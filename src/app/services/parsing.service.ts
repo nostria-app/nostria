@@ -39,6 +39,7 @@ export interface ContentToken {
   content: string;
   nostrData?: NostrData;
   emoji?: string;
+  customEmoji?: string; // NIP-30: URL to custom emoji image
   processedUrl?: SafeResourceUrl; // For YouTube embed URLs that are pre-processed
   waveform?: number[];
   duration?: number;
@@ -304,7 +305,8 @@ export class ParsingService {
       /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const nostrRegex =
       /(nostr:(?:npub|nprofile|note|nevent|naddr)1[a-zA-Z0-9]+)(?=\s|##LINEBREAK##|$|[^\w])/g;
-    const emojiRegex = /(:[a-zA-Z_]+:)/g;
+    // NIP-30: emoji shortcodes must be alphanumeric characters and underscores only
+    const emojiRegex = /(:[a-zA-Z0-9_]+:)/g;
     // Cashu regex: matches cashuA or cashuB tokens, which can span multiple lines
     // Must handle tokens that may be split across linebreaks or continue on same line
     const cashuRegex = /(cashu[AB][a-zA-Z0-9+/=_-]+)/g;
@@ -318,6 +320,18 @@ export class ParsingService {
     const tokens: ContentToken[] = [];
     let lastIndex = 0;
 
+    // Extract custom emojis from tags according to NIP-30
+    // Format: ["emoji", <shortcode>, <image-url>]
+    const customEmojiMap = new Map<string, string>();
+    if (tags) {
+      for (const tag of tags) {
+        if (tag[0] === 'emoji' && tag[1] && tag[2]) {
+          // Store as :shortcode: -> image-url
+          customEmojiMap.set(`:${tag[1]}:`, tag[2]);
+        }
+      }
+    }
+
     // Find all matches and their positions
     const matches: {
       start: number;
@@ -326,6 +340,7 @@ export class ParsingService {
       type: ContentToken['type'];
       nostrData?: NostrData;
       emoji?: string;
+      customEmoji?: string; // NIP-30: URL to custom emoji image
       processedUrl?: SafeResourceUrl;
       waveform?: number[];
       duration?: number;
@@ -338,17 +353,22 @@ export class ParsingService {
     }[] = [];
 
     // Find emoji codes first (highest priority after nostr)
+    // Updated regex to match NIP-30: alphanumeric characters and underscores only
     let match: RegExpExecArray | null;
     while ((match = emojiRegex.exec(processedContent)) !== null) {
       const emojiCode = match[0];
+      // Check custom emoji from tags first (NIP-30)
+      const customEmojiUrl = customEmojiMap.get(emojiCode);
+      // Fallback to built-in emoji map
       const emoji = this.emojiMap[emojiCode];
-      if (emoji) {
+      if (customEmojiUrl || emoji) {
         matches.push({
           start: match.index,
           end: match.index + match[0].length,
           content: emojiCode,
           type: 'emoji',
-          emoji,
+          emoji: emoji, // Unicode emoji (if available)
+          customEmoji: customEmojiUrl, // Custom emoji URL (NIP-30)
         });
       }
     }
@@ -622,6 +642,10 @@ export class ParsingService {
 
       if (match.emoji) {
         token.emoji = match.emoji;
+      }
+
+      if (match.customEmoji) {
+        token.customEmoji = match.customEmoji;
       }
 
       if (match.processedUrl) {

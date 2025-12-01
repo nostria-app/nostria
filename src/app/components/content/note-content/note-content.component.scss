@@ -303,3 +303,21 @@
     }
   }
 }
+
+// NIP-30 Custom emoji styling
+.custom-emoji {
+  display: inline-block;
+  height: 1.5em;
+  width: auto;
+  vertical-align: middle;
+  margin: 0 0.1em;
+  object-fit: contain;
+}
+
+// Standard emoji token styling
+.emoji-token {
+  font-size: 1.2em;
+  display: inline-block;
+  vertical-align: middle;
+  line-height: 1;
+}
