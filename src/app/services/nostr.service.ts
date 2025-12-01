@@ -1643,13 +1643,13 @@ export class NostrService implements NostriaService {
   }
 
   async generateNewKey(region?: string) {
-    this.logger.info('Generating new Nostr keypair with mnemonic (NIP-06)');
+    this.logger.info('Generating new Nostr keypair with BIP39 mnemonic (NIP-06)');
     
     // Generate a BIP39 mnemonic phrase
     const mnemonic = this.mnemonicService.generateMnemonic();
-    this.logger.debug('Generated 12-word mnemonic phrase');
+    this.logger.debug('Generated 12-word mnemonic phrase, deriving keypair via NIP-06 path m/44\'/1237\'/0\'/0/0');
 
-    // Derive the private key from the mnemonic
+    // Derive the private key from the mnemonic using NIP-06
     const privkeyHex = this.mnemonicService.derivePrivateKeyFromMnemonic(mnemonic);
     
     // Get the public key from the derived private key
@@ -1950,7 +1950,7 @@ export class NostrService implements NostriaService {
         // Validate hex format: must be 64 characters and valid hex
         const hexRegex = /^[0-9a-fA-F]{64}$/;
         if (!hexRegex.test(trimmed)) {
-          throw new Error('Invalid input. Must be nsec, mnemonic phrase, or 64-character hex string.');
+          throw new Error('Invalid input. Must be nsec (nsec1...), 12-word mnemonic phrase, or 64-character hex private key.');
         }
 
         this.logger.info('Detected hex private key');

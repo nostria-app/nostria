@@ -32,11 +32,14 @@ export class MnemonicService {
   /**
    * Generates a new 12-word BIP39 mnemonic phrase
    * 
+   * Uses 128 bits of entropy which generates a 12-word mnemonic.
+   * For increased security, 256 bits (24 words) could be used instead.
+   * 
    * @returns A 12-word mnemonic phrase
    */
   generateMnemonic(): string {
     this.logger.debug('Generating new 12-word mnemonic');
-    // 128 bits = 12 words, 256 bits = 24 words
+    // 128 bits of entropy = 12 words, 256 bits = 24 words
     // Using 12 words as it's more user-friendly while still secure
     const mnemonic = generateMnemonic(wordlist, 128);
     this.logger.debug('Mnemonic generated successfully');
