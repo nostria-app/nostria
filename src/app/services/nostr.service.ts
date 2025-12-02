@@ -1651,14 +1651,14 @@ export class NostrService implements NostriaService {
 
   async generateNewKey(region?: string) {
     this.logger.info('Generating new Nostr keypair with BIP39 mnemonic (NIP-06)');
-    
+
     // Generate a BIP39 mnemonic phrase
     const mnemonic = this.mnemonicService.generateMnemonic();
     this.logger.debug('Generated 12-word mnemonic phrase, deriving keypair via NIP-06 path m/44\'/1237\'/0\'/0/0');
 
     // Derive the private key from the mnemonic using NIP-06
     const privkeyHex = this.mnemonicService.derivePrivateKeyFromMnemonic(mnemonic);
-    
+
     // Get the public key from the derived private key
     const secretKey = hexToBytes(privkeyHex);
     const pubkey = getPublicKey(secretKey);
@@ -1920,10 +1920,10 @@ export class NostrService implements NostriaService {
       // Check if it's a mnemonic phrase
       if (this.mnemonicService.isMnemonic(trimmed)) {
         this.logger.info('Detected mnemonic phrase, deriving key (NIP-06)');
-        
+
         // Normalize the mnemonic
         mnemonic = this.mnemonicService.normalizeMnemonic(trimmed);
-        
+
         // Derive the private key from the mnemonic
         privkeyHex = this.mnemonicService.derivePrivateKeyFromMnemonic(mnemonic);
         privkeyArray = hexToBytes(privkeyHex);

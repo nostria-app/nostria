@@ -50,7 +50,7 @@ export interface RelayConnection {
     MatChipsModule,
     MatTooltipModule,
     MatExpansionModule
-],
+  ],
   templateUrl: './logs-settings.component.html',
   styleUrls: ['./logs-settings.component.scss'],
 })
