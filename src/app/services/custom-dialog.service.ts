@@ -100,6 +100,33 @@ export class CustomDialogService {
   // Track open dialogs
   private openDialogs = new Set<ComponentRef<CustomDialogComponent>>();
 
+  // Dedicated container for custom dialogs - ensures they render above CDK overlays
+  private dialogContainer: HTMLElement | null = null;
+
+  /**
+   * Get or create the dialog container element
+   * This container is always appended last to document.body to ensure
+   * custom dialogs appear above CDK overlay container
+   */
+  private getDialogContainer(): HTMLElement {
+    if (!this.dialogContainer || !document.body.contains(this.dialogContainer)) {
+      this.dialogContainer = document.createElement('div');
+      this.dialogContainer.id = 'custom-dialog-container';
+      this.dialogContainer.style.position = 'fixed';
+      this.dialogContainer.style.top = '0';
+      this.dialogContainer.style.left = '0';
+      this.dialogContainer.style.width = '100%';
+      this.dialogContainer.style.height = '100%';
+      this.dialogContainer.style.zIndex = '99999';
+      this.dialogContainer.style.pointerEvents = 'none';
+      document.body.appendChild(this.dialogContainer);
+    } else {
+      // Move to end of body to ensure it's above any newly created CDK overlays
+      document.body.appendChild(this.dialogContainer);
+    }
+    return this.dialogContainer;
+  }
+
   /**
    * Opens a custom dialog with the specified component and configuration
    */
@@ -183,8 +210,22 @@ export class CustomDialogService {
       });
     }
 
-    // Attach dialog to the DOM
-    document.body.appendChild(dialogRef.location.nativeElement);
+    // Apply critical positioning styles directly to the host element
+    const hostElement = dialogRef.location.nativeElement as HTMLElement;
+    hostElement.style.position = 'fixed';
+    hostElement.style.top = '0';
+    hostElement.style.left = '0';
+    hostElement.style.width = '100%';
+    hostElement.style.height = '100dvh';
+    hostElement.style.zIndex = '1'; // Relative to container which has z-index 99999
+    hostElement.style.display = 'block';
+    hostElement.style.pointerEvents = 'auto';
+
+    // Get or create dialog container and move it to end of body
+    // This ensures custom dialogs always appear above CDK overlay container
+    const container = this.getDialogContainer();
+    container.appendChild(hostElement);
+
     this.appRef.attachView(dialogRef.hostView);
     this.appRef.attachView(contentRef.hostView);
 

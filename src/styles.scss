@@ -1300,7 +1300,8 @@ app-media-queue {
   }
 }
 
-// Event dialog styles
+// Event dialog styles (legacy - can be removed once all dialogs use CustomDialog)
+// Keeping for backwards compatibility in case any references remain
 .event-dialog-container {
   .mat-mdc-dialog-container {
     padding: 0;
@@ -1309,20 +1310,6 @@ app-media-queue {
       border-radius: 0;
     }
   }
-}
-
-// Lower priority dialog - allows other dialogs to appear above (e.g., thread dialog)
-// The event-dialog-container needs lower z-index so reply dialogs appear on top
-// Standard CDK overlay is 1200, toolbar is 1000, so we use 1100 for thread dialog
-.event-dialog-container {
-  &.cdk-overlay-pane {
-    z-index: 1100 !important;
-  }
-}
-
-// Also apply to the global overlay wrapper that contains the event dialog
-.cdk-global-overlay-wrapper:has(.event-dialog-container) {
-  z-index: 1100 !important;
 }
 
 .multiline-tooltip {
@@ -1444,9 +1431,15 @@ app-media-queue {
   }
 }
 
-// Ensure CDK overlay (tooltips, menus) appears above custom dialogs
-// Custom dialogs use z-index: 1100, so we need CDK overlay to be higher
-// Using body > selector to ensure higher specificity
+// CDK overlay z-index hierarchy:
+// - Event dialog (thread dialog): z-index 1100 (lowered to allow reply dialogs above)
+// - CDK overlay container (default): z-index 1200
+// - Custom dialogs (note-editor, article-editor): z-index 1400 (highest, above all Material dialogs)
+//
+// Important: Custom dialogs render directly on document.body, outside CDK overlay,
+// so they need a higher z-index than the CDK overlay container to appear above Material dialogs.
+
+// Base CDK overlay z-index - should be above event-dialog but below custom dialogs
 body>.cdk-overlay-container {
   z-index: 1200 !important;
 }
@@ -1455,22 +1448,41 @@ body>.cdk-overlay-container {
   z-index: 1200 !important;
 }
 
-// Ensure mat-menu and tooltip panels appear above custom dialogs
-.cdk-overlay-pane {
+// Exception: event-dialog should stay at 1100 even within CDK overlay
+// This allows custom dialogs (like note-editor) to appear above when replying to an event
+.cdk-overlay-pane:not(.event-dialog-container) {
   z-index: 1200 !important;
 }
 
+// Tooltips and menus should be highest among CDK overlays
 .mat-mdc-tooltip {
-  z-index: 1200 !important;
+  z-index: 1300 !important;
 }
 
 .mat-mdc-menu-panel {
-  z-index: 1200 !important;
+  z-index: 1300 !important;
 }
 
-// Ensure connected overlay appears above custom dialogs
+// Connected overlays (dropdowns, autocompletes) - above dialogs but below tooltips
 .cdk-overlay-connected-position-bounding-box {
-  z-index: 1200 !important;
+  z-index: 1300 !important;
+}
+
+// Custom dialog container - always renders above CDK overlay container
+// This container is created by CustomDialogService and holds all custom dialogs
+#custom-dialog-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 99999 !important;
+  pointer-events: none;
+
+  // Child dialogs need pointer events
+  >* {
+    pointer-events: auto;
+  }
 }
 
 // Profile hover card glass effect - dark mode

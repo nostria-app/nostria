@@ -36,6 +36,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { UserRelayService } from './relays/user-relay';
 import { FeedService } from './feed.service';
 import { ReportTarget } from './reporting.service';
+import { EventDialogComponent } from '../pages/event/event-dialog/event-dialog.component';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
@@ -72,7 +73,7 @@ export class LayoutService implements OnDestroy {
   localStorage = inject(LocalStorageService);
 
   // Track currently open event dialog for back button handling
-  private currentEventDialogRef: ReturnType<MatDialog['open']> | null = null;
+  private currentEventDialogRef: CustomDialogRef<EventDialogComponent> | null = null;
 
   // Scroll position management for feeds
   private feedScrollPositions = new Map<string, number>();
@@ -953,23 +954,21 @@ export class LayoutService implements OnDestroy {
     const previousUrl = this.location.path();
     this.location.go(`/e/${eventId}`);
 
-    // Import and open dialog
-    import('../pages/event/event-dialog/event-dialog.component').then(m => {
-      this.currentEventDialogRef = this.dialog.open(m.EventDialogComponent, {
-        data: { eventId, event },
-        width: '100%',
-        maxWidth: '800px',
-        height: '100vh',
-        panelClass: 'event-dialog-container',
-        hasBackdrop: true,
-        autoFocus: false,
-      });
+    // Open dialog using CustomDialogService
+    this.currentEventDialogRef = this.customDialog.open<EventDialogComponent>(EventDialogComponent, {
+      title: 'Thread',
+      width: '800px',
+      maxWidth: '100%',
+      data: { eventId, event },
+    });
 
-      // Restore URL when dialog is closed
-      this.currentEventDialogRef.afterClosed().subscribe(() => {
-        this.location.go(previousUrl);
-        this.currentEventDialogRef = null;
-      });
+    // Set the data on the component instance
+    this.currentEventDialogRef.componentInstance.data = { eventId, event };
+
+    // Restore URL when dialog is closed
+    this.currentEventDialogRef.afterClosed$.subscribe(() => {
+      this.location.go(previousUrl);
+      this.currentEventDialogRef = null;
     });
   }
 
