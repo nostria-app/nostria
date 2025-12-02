@@ -5,6 +5,7 @@ import { LoggerService } from '../logger.service';
 import { RelaysService } from './relays';
 import { RelayPoolService } from './relay-pool';
 import { UserRelaysService } from './user-relays';
+import { AccountRelayService } from './account-relay';
 
 @Injectable({
   providedIn: 'root',
@@ -15,6 +16,7 @@ export class UserRelayService {
   private logger = inject(LoggerService);
   private relaysService = inject(RelaysService);
   private userRelaysService = inject(UserRelaysService);
+  private accountRelay = inject(AccountRelayService);
   private injector = inject(Injector);
 
   // Private SimplePool instance for publishing with notification support
@@ -193,8 +195,17 @@ export class UserRelayService {
 
   /**
    * Get events by kind and event tag (using broader relay set for better discovery)
+   * @param pubkey The pubkey(s) whose relays to query
+   * @param kind The event kind to search for
+   * @param eventTag The event tag(s) to filter by
+   * @param includeAccountRelays If true, also include the current logged-in account's relays for better event discovery
    */
-  async getEventsByKindAndEventTag(pubkey: string | string[], kind: number, eventTag: string | string[]): Promise<Event[]> {
+  async getEventsByKindAndEventTag(
+    pubkey: string | string[],
+    kind: number,
+    eventTag: string | string[],
+    includeAccountRelays = false
+  ): Promise<Event[]> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
     const allRelayUrls = new Set<string>();
@@ -203,6 +214,13 @@ export class UserRelayService {
       await this.ensureRelaysForPubkey(pk);
       const relayUrls = this.getRelaysForPubkey(pk);
       relayUrls.forEach(url => allRelayUrls.add(url));
+    }
+
+    // Include account relays for better discovery of interactions (replies, reactions, etc.)
+    if (includeAccountRelays) {
+      const accountRelayUrls = this.accountRelay.getRelayUrls();
+      accountRelayUrls.forEach(url => allRelayUrls.add(url));
+      this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for broader discovery`);
     }
 
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
@@ -221,8 +239,17 @@ export class UserRelayService {
 
   /**
    * Get events by multiple kinds and event tag (optimized for fetching reactions, reposts, reports in one query)
+   * @param pubkey The pubkey(s) whose relays to query
+   * @param kinds The event kinds to search for
+   * @param eventTag The event tag(s) to filter by
+   * @param includeAccountRelays If true, also include the current logged-in account's relays for better event discovery
    */
-  async getEventsByKindsAndEventTag(pubkey: string | string[], kinds: number[], eventTag: string | string[]): Promise<Event[]> {
+  async getEventsByKindsAndEventTag(
+    pubkey: string | string[],
+    kinds: number[],
+    eventTag: string | string[],
+    includeAccountRelays = false
+  ): Promise<Event[]> {
     // For multiple pubkeys, we need to get relays for each one
     const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
     // Filter out any undefined or invalid values
@@ -239,6 +266,13 @@ export class UserRelayService {
       await this.ensureRelaysForPubkey(pk);
       const relayUrls = this.getRelaysForPubkey(pk);
       relayUrls.forEach(url => allRelayUrls.add(url));
+    }
+
+    // Include account relays for better discovery of interactions (replies, reactions, etc.)
+    if (includeAccountRelays) {
+      const accountRelayUrls = this.accountRelay.getRelayUrls();
+      accountRelayUrls.forEach(url => allRelayUrls.add(url));
+      this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for broader discovery`);
     }
 
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));

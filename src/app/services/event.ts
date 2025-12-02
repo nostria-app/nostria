@@ -547,15 +547,19 @@ export class EventService {
 
   /**
    * Load replies for an event
+   * Uses both the profile's relays and the current account's relays to ensure
+   * we discover all replies, even if the profile has private relays.
    */
   async loadReplies(eventId: string, pubkey: string): Promise<Event[]> {
     this.logger.info('loadReplies called with eventId:', eventId, 'pubkey:', pubkey);
 
     try {
       // Load replies (kind 1 events that reference this event)
+      // Include account relays to discover replies that may not be on the profile's relays
       const replyRecords = await this.userDataService.getEventsByKindAndEventTag(pubkey, kinds.ShortTextNote, eventId, {
         cache: true,
         ttl: minutes.five,
+        includeAccountRelays: true,
       });
 
       // Extract events from records and filter valid replies
@@ -579,7 +583,9 @@ export class EventService {
 
   /**
    * Load event interactions (reactions, reposts, reports) in a single optimized query
-   * This is more efficient than calling loadReactions, loadReposts, and loadReports separately
+   * This is more efficient than calling loadReactions, loadReposts, and loadReports separately.
+   * Uses both the profile's relays and the current account's relays to ensure
+   * we discover all interactions, even if the profile has private relays.
    */
   async loadEventInteractions(
     eventId: string,
@@ -606,6 +612,7 @@ export class EventService {
           const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
 
           // Fetch all interaction types including replies in a single query
+          // Include account relays to discover interactions that may not be on the profile's relays
           const allRecords = await this.userDataService.getEventsByKindsAndEventTag(
             pubkey,
             [kinds.Reaction, repostKind, kinds.Report, kinds.ShortTextNote],
@@ -614,6 +621,7 @@ export class EventService {
               cache: true,
               ttl: minutes.five,
               invalidateCache,
+              includeAccountRelays: true,
             },
           );
 
@@ -688,7 +696,9 @@ export class EventService {
   }
 
   /**
-   * Load reactions for an event
+   * Load reactions for an event.
+   * Uses both the profile's relays and the current account's relays to ensure
+   * we discover all reactions, even if the profile has private relays.
    * Note: For better performance when loading multiple interaction types,
    * consider using loadEventInteractions() which fetches reactions, reposts, and reports in a single query.
    */
@@ -713,6 +723,7 @@ export class EventService {
       async () => {
         try {
           // Load reactions (kind 7 events that reference this event)
+          // Include account relays to discover reactions that may not be on the profile's relays
           const reactionRecords = await this.userDataService.getEventsByKindAndEventTag(
             pubkey,
             kinds.Reaction,
@@ -721,6 +732,7 @@ export class EventService {
               cache: true,
               ttl: minutes.five,
               invalidateCache,
+              includeAccountRelays: true,
             },
           );
 
@@ -758,7 +770,9 @@ export class EventService {
   }
 
   /**
-   * Load reports for an event
+   * Load reports for an event.
+   * Uses both the profile's relays and the current account's relays to ensure
+   * we discover all reports, even if the profile has private relays.
    * Note: For better performance when loading multiple interaction types,
    * consider using loadEventInteractions() which fetches reactions, reposts, and reports in a single query.
    */
@@ -771,10 +785,12 @@ export class EventService {
 
     try {
       // Load reports (kind 1984 events that reference this event)
+      // Include account relays to discover reports that may not be on the profile's relays
       const reportRecords = await this.userDataService.getEventsByKindAndEventTag(pubkey, kinds.Report, eventId, {
         cache: true,
         ttl: minutes.five,
         invalidateCache,
+        includeAccountRelays: true,
       });
 
       // Count reports by type from tags (NIP-56)
@@ -1200,10 +1216,12 @@ export class EventService {
         const repostKind = eventKind === kinds.ShortTextNote ? kinds.Repost : kinds.GenericRepost;
 
         try {
+          // Include account relays to discover reposts that may not be on the profile's relays
           const reposts = await this.userDataService.getEventsByKindAndEventTag(userPubkey, repostKind, eventId, {
             save: false,
             cache: true,
             invalidateCache,
+            includeAccountRelays: true,
           });
 
           this.logger.info(
