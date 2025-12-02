@@ -27,6 +27,14 @@
   padding: 16px;
   animation: fadeIn 0.2s ease-out;
 
+  // When opening a dialog from another dialog, use fixed positioning
+  // so the backdrop covers everything including the previous dialog
+  &.stacked-backdrop {
+    position: fixed;
+    // Darken slightly less since there's already a backdrop behind
+    background-color: rgba(0, 0, 0, 0.4);
+  }
+
   @media (max-width: 600px),
   (max-height: 700px) {
     padding: 0;

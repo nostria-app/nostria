@@ -150,6 +150,10 @@ export class CustomDialogService {
     if (config.maxWidth) dialogRef.setInput('maxWidth', config.maxWidth);
     if (config.panelClass) dialogRef.setInput('panelClass', config.panelClass);
 
+    // Mark as stacked if there's already an open dialog
+    // This makes the backdrop cover the previous dialog with fixed positioning
+    dialogRef.setInput('isStacked', this.openDialogs.size > 0);
+
     // Create dialog ref first to provide it to the component
     const customDialogRef = new CustomDialogRef<T, R>(
       () => {
