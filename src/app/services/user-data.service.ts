@@ -13,6 +13,12 @@ export interface DataOptions {
   cache?: boolean; // Whether to use cache
   invalidateCache?: boolean;
   save?: boolean; // Whether to save the event to storage
+  /**
+   * Whether to include the current logged-in account's relays when querying.
+   * Useful for discovering interactions (replies, reactions, zaps) that may not
+   * be on the target user's relays but are on the current account's relays.
+   */
+  includeAccountRelays?: boolean;
 }
 
 @Injectable({
@@ -562,7 +568,12 @@ export class UserDataService {
     // 2. Kind is replaceable (need latest version), OR
     // 3. invalidateCache is true
     if (events.length === 0 || isReplaceable || options?.invalidateCache) {
-      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(pubkey, kind, eventTag);
+      const relayEvents = await this.userRelayEx.getEventsByKindAndEventTag(
+        pubkey,
+        kind,
+        eventTag,
+        options?.includeAccountRelays
+      );
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }
@@ -628,7 +639,12 @@ export class UserDataService {
     // 2. Any kind is replaceable (need latest version), OR
     // 3. invalidateCache is true
     if (events.length === 0 || hasReplaceableKind || options?.invalidateCache) {
-      const relayEvents = await this.userRelayEx.getEventsByKindsAndEventTag(pubkey, kinds, eventTag);
+      const relayEvents = await this.userRelayEx.getEventsByKindsAndEventTag(
+        pubkey,
+        kinds,
+        eventTag,
+        options?.includeAccountRelays
+      );
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
       }
