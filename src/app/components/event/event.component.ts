@@ -852,6 +852,20 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
+   * Handler for when a zap is successfully sent from the zap button.
+   * Refreshes the zap data from relays after a short delay to allow propagation.
+   */
+  async onZapSent(amount: number): Promise<void> {
+    console.log('⚡ [Zap Sent] Received zap sent event for amount:', amount);
+
+    // Wait a short time for the zap receipt to propagate to relays
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Reload zaps from relays to get the latest data including the new zap
+    await this.loadZaps();
+  }
+
+  /**
    * Load reposts for an event
    * Note: For initial loads, prefer using loadAllInteractions() which is more efficient.
    * Use this method only when you need to refresh reposts independently.
