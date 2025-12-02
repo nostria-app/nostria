@@ -36,7 +36,7 @@
       <div class="search-container toolbar-section">
         <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
           (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
-          i18n-placeholder="@@app.search.placeholder"
+          (paste)="onSearchInputPaste($event)" i18n-placeholder="@@app.search.placeholder"
           placeholder="Search for cached profiles or paste identifiers..." />
         <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
           <mat-icon>qr_code_scanner</mat-icon>
