@@ -43,6 +43,7 @@ import { MatButtonModule } from '@angular/material/button';
   template: `
     <div 
       class="dialog-backdrop" 
+      [class.stacked-backdrop]="isStacked()"
       (click)="onBackdropClick()"
       role="presentation">
       <div 
@@ -113,6 +114,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   width = input<string>('600px');
   maxWidth = input<string>('95vw');
   panelClass = input<string | string[]>('');
+  isStacked = input<boolean>(false); // True when this dialog is opened from another dialog
 
   // Modern signal-based outputs
   closed = output<void>();
