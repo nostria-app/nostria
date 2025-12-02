@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, OnDestroy } from '@angular/core';
+import { Injectable, inject, signal, OnDestroy, NgZone } from '@angular/core';
 import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Router, NavigationStart } from '@angular/router';
@@ -15,6 +15,7 @@ import { ProfileHoverCardComponent } from '../components/user-profile/hover-card
 export class ProfileHoverCardService implements OnDestroy {
   private overlay = inject(Overlay);
   private router = inject(Router);
+  private ngZone = inject(NgZone);
 
   // Track active overlay and component references
   private overlayRef: OverlayRef | null = null;
@@ -29,6 +30,9 @@ export class ProfileHoverCardService implements OnDestroy {
   private hoverTimeout?: number;
   private closeTimeout?: number;
 
+  // Scroll listener bound function
+  private scrollListener = this.onScroll.bind(this);
+
   constructor() {
     // Close hover card on navigation
     this.router.events
@@ -36,6 +40,14 @@ export class ProfileHoverCardService implements OnDestroy {
       .subscribe(() => {
         this.closeHoverCard();
       });
+  }
+
+  /**
+   * Handles scroll events - closes hover card when user scrolls
+   */
+  private onScroll(): void {
+    // Close immediately on scroll
+    this.closeHoverCard();
   }
 
   /**
@@ -294,6 +306,11 @@ export class ProfileHoverCardService implements OnDestroy {
     this.hoverCardComponentRef = componentRef;
     this.currentPubkey = pubkey;
 
+    // Add scroll listener to close on any scroll (capture phase to catch all scroll events)
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('scroll', this.scrollListener, { capture: true, passive: true });
+    });
+
     // Add mouse enter/leave listeners to overlay
     const overlayElement = this.overlayRef.overlayElement;
     overlayElement.addEventListener('mouseenter', () => {
@@ -343,6 +360,9 @@ export class ProfileHoverCardService implements OnDestroy {
       this.closeTimeout = undefined;
     }
 
+    // Remove scroll listener
+    window.removeEventListener('scroll', this.scrollListener, { capture: true });
+
     if (this.overlayRef) {
       this.overlayRef.dispose();
       this.overlayRef = null;
@@ -355,6 +375,8 @@ export class ProfileHoverCardService implements OnDestroy {
    * Clean up on service destruction
    */
   ngOnDestroy(): void {
+    // Remove scroll listener on destroy
+    window.removeEventListener('scroll', this.scrollListener, { capture: true });
     this.closeHoverCard();
   }
 }
