@@ -169,8 +169,9 @@ export class App implements OnInit {
       return '';
     }
     
-    if (this.ai.processingState().isProcessing) {
-      return this.ai.getTaskName(this.ai.processingState().task);
+    const aiProcessingState = this.ai.processingState();
+    if (aiProcessingState.isProcessing) {
+      return this.ai.getTaskName(aiProcessingState.task);
     }
     
     return this.publishingEventLabel;

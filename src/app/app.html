@@ -77,7 +77,6 @@
       @if (app.authenticated()) {
       <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
         #notificationMenuTrigger="matMenuTrigger"
-        [class.processing]="isProcessing()"
         [matTooltip]="notificationProcessingTooltip()">
         <mat-icon
           [class.spinning-icon]="isProcessing()"
