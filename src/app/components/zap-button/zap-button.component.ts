@@ -1,4 +1,4 @@
-import { Component, inject, input, signal } from '@angular/core';
+import { Component, inject, input, output, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -18,7 +18,7 @@ import { LayoutService } from '../../services/layout.service';
   template: `
     <button
       mat-icon-button
-      [ngClass]="{
+      [class]="{
         'zap-button': true,
         zapped: hasZapped(),
       }"
@@ -75,6 +75,9 @@ export class ZapButtonComponent {
   recipientPubkey = input<string | null>(null);
   recipientName = input<string | null>(null);
   recipientMetadata = input<Record<string, unknown> | null>(null);
+
+  // Outputs
+  zapSent = output<number>();
 
   // Services
   private dialog = inject(MatDialog);
@@ -256,8 +259,8 @@ export class ZapButtonComponent {
     this.totalZaps.update(current => current + amount);
     this.hasZapped.set(true);
 
-    // TODO: Optionally refresh zap data from relays
-    // to get the latest zap receipts
+    // Emit the zap sent event so parent components can refresh their data
+    this.zapSent.emit(amount);
   }
 
   // TODO: Implement methods to load and refresh zap data

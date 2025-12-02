@@ -405,7 +405,8 @@
 
       <!-- Zap -->
       <div class="reaction-group">
-        <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey">
+        <app-zap-button [event]="targetItem.event" [recipientPubkey]="targetItem.event.pubkey"
+          (zapSent)="onZapSent($event)">
         </app-zap-button>
         @if (!compact()) {
         <button mat-button class="count-button" (click)="openReactionsDialog('zaps'); $event.stopPropagation()">
