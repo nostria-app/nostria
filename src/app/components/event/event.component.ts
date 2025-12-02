@@ -150,6 +150,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isLoadingThread = signal<boolean>(false);
   isLoadingReactions = signal<boolean>(false);
   isLoadingParent = signal<boolean>(false);
+  isLoadingZaps = signal<boolean>(false);
   loadingError = signal<string | null>(null);
 
   // Parent and root events for replies
@@ -858,11 +859,18 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   async onZapSent(amount: number): Promise<void> {
     console.log('⚡ [Zap Sent] Received zap sent event for amount:', amount);
 
-    // Wait a short time for the zap receipt to propagate to relays
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Show loading indicator while waiting for zap receipt
+    this.isLoadingZaps.set(true);
 
-    // Reload zaps from relays to get the latest data including the new zap
-    await this.loadZaps();
+    try {
+      // Wait a short time for the zap receipt to propagate to relays
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Reload zaps from relays to get the latest data including the new zap
+      await this.loadZaps();
+    } finally {
+      this.isLoadingZaps.set(false);
+    }
   }
 
   /**
