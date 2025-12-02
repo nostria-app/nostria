@@ -412,7 +412,7 @@
   }
 
   <!-- Mobile navigation footer - now outside of sidenav container -->
-  @if (layout.isHandset() && !layout.showMediaPlayer()) {
+  @if (layout.isHandset() && !layout.showMediaPlayer() && app.authenticated()) {
   <div class="mobile-nav no-print">
     <a mat-button class="mobile-nav-button" [routerLink]="['/']" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
@@ -427,16 +427,13 @@
     </a>
 
     <!-- FAB button in the middle with circular cut-out -->
-    @if (app.authenticated()) {
     <div class="fab-container">
       <button mat-mini-fab color="primary" class="create-fab" i18n-aria-label="@@app.create.aria"
         aria-label="Create new content" (click)="openCreateOptions()">
         <mat-icon>add</mat-icon>
       </button>
     </div>
-    }
 
-    @if (app.authenticated()) {
     <a mat-button class="mobile-nav-button" [routerLink]="['/messages']" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
       <mat-icon>mail</mat-icon>
@@ -448,19 +445,6 @@
       <mat-icon>account_circle</mat-icon>
       <div class="mobile-nav-label" i18n="@@app.mobile.profile">Profile</div>
     </a>
-    } @else {
-    <a mat-button class="mobile-nav-button" [routerLink]="['/settings']" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{ exact: true }">
-      <mat-icon>settings</mat-icon>
-      <div class="mobile-nav-label" i18n="@@app.mobile.settings">Settings</div>
-    </a>
-
-    <a mat-button class="mobile-nav-button" (click)="addAccount()" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{ exact: false }">
-      <mat-icon>person_add</mat-icon>
-      <div class="mobile-nav-label" i18n="@@app.mobile.add-account">Add account</div>
-    </a>
-    }
   </div>
   }
   }
