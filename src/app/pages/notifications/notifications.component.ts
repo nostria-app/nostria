@@ -47,7 +47,7 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     RouterModule,
     AgoPipe,
     UserProfileComponent
-],
+  ],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
 })

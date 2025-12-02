@@ -87,7 +87,7 @@ export class RelayAuthService {
       try {
         // Sign the auth event
         const signedEvent = await this.signAuthEventFn!(authEventTemplate);
-        
+
         this.logger.info(`[RelayAuthService] Successfully signed auth event for relay: ${normalizedUrl}`);
 
         // Update storage to track successful authentication
@@ -130,7 +130,7 @@ export class RelayAuthService {
    */
   async markAuthFailed(relayUrl: string, reason: string): Promise<void> {
     const normalizedUrl = this.utilities.normalizeRelayUrl(relayUrl);
-    
+
     this.logger.warn(`[RelayAuthService] Marking relay as auth failed: ${normalizedUrl} - Reason: ${reason}`);
 
     this.failedAuthRelays.update(relays => {
@@ -153,7 +153,7 @@ export class RelayAuthService {
    */
   async resetAuthFailure(relayUrl: string): Promise<void> {
     const normalizedUrl = this.utilities.normalizeRelayUrl(relayUrl);
-    
+
     this.logger.info(`[RelayAuthService] Resetting auth failure for relay: ${normalizedUrl}`);
 
     this.failedAuthRelays.update(relays => {
@@ -263,7 +263,7 @@ export class RelayAuthService {
     try {
       const observedRelaysRaw = await this.database.getAllObservedRelays();
       const observedRelays = observedRelaysRaw as unknown as ObservedRelayStats[];
-      
+
       const failedRelays = new Set<string>();
       const authRequiredRelays = new Set<string>();
 
