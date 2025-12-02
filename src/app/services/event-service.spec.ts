@@ -127,5 +127,74 @@ describe('EventService getEventTags', () => {
       expect(result.replyRelays).toEqual([]);
       expect(result.pTags).toEqual(['mention-pubkey']);
     });
+    it('should extract replyAuthor from marked reply e-tag', () => {
+      const mockEvent: Event = {
+        id: 'test-id',
+        pubkey: 'test-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 1,
+        content: 'Test reply',
+        sig: 'test-sig',
+        tags: [
+          ['e', 'root-event-id', 'wss://relay1.example.com', 'root', 'root-author-pubkey'],
+          ['e', 'reply-event-id', 'wss://relay2.example.com', 'reply', 'reply-author-pubkey'],
+          ['p', 'mention-pubkey'],
+        ],
+      };
+
+      const result = service.getEventTags(mockEvent);
+
+      expect(result.author).toBe('root-author-pubkey');
+      expect(result.replyAuthor).toBe('reply-author-pubkey');
+    });
+
+    it('should extract relay hints from p-tags', () => {
+      const mockEvent: Event = {
+        id: 'test-id',
+        pubkey: 'test-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 1,
+        content: 'Test reply',
+        sig: 'test-sig',
+        tags: [
+          ['e', 'root-event-id', 'wss://relay1.example.com', 'root', 'root-author-pubkey'],
+          ['e', 'reply-event-id', 'wss://relay2.example.com', 'reply', 'reply-author-pubkey'],
+          ['p', 'user1-pubkey', 'wss://user1-relay.example.com'],
+          ['p', 'user2-pubkey', 'wss://user2-relay.example.com'],
+          ['p', 'user1-pubkey', 'wss://user1-second-relay.example.com'],
+        ],
+      };
+
+      const result = service.getEventTags(mockEvent);
+
+      expect(result.pTags).toEqual(['user1-pubkey', 'user2-pubkey', 'user1-pubkey']);
+      expect(result.pTagRelays.get('user1-pubkey')).toEqual([
+        'wss://user1-relay.example.com',
+        'wss://user1-second-relay.example.com',
+      ]);
+      expect(result.pTagRelays.get('user2-pubkey')).toEqual(['wss://user2-relay.example.com']);
+    });
+
+    it('should handle p-tags without relay hints', () => {
+      const mockEvent: Event = {
+        id: 'test-id',
+        pubkey: 'test-pubkey',
+        created_at: Math.floor(Date.now() / 1000),
+        kind: 1,
+        content: 'Test reply',
+        sig: 'test-sig',
+        tags: [
+          ['e', 'root-event-id', '', 'root'],
+          ['p', 'user1-pubkey'],
+          ['p', 'user2-pubkey', ''],
+          ['p', 'user3-pubkey', '   '],
+        ],
+      };
+
+      const result = service.getEventTags(mockEvent);
+
+      expect(result.pTags).toEqual(['user1-pubkey', 'user2-pubkey', 'user3-pubkey']);
+      expect(result.pTagRelays.size).toBe(0);
+    });
   });
 });

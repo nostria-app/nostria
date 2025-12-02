@@ -61,12 +61,14 @@ export interface ThreadedEvent {
 }
 
 export interface EventTags {
-  author: string | null;
+  author: string | null; // Author of the root event
+  replyAuthor: string | null; // Author of the reply event (5th element of reply e-tag)
   rootId: string | null;
   replyId: string | null;
   pTags: string[];
   rootRelays: string[];
   replyRelays: string[];
+  pTagRelays: Map<string, string[]>; // Map of pubkey to relay hints from p-tags
   mentionIds: string[]; // Event IDs that are mentioned (not replies)
   quoteId: string | null; // Event ID from q tag (NIP-18)
   quoteAuthor: string | null; // Author pubkey from q tag
@@ -112,11 +114,27 @@ export class EventService {
    */
   getEventTags(event: Event): EventTags {
     const eTags = event.tags.filter((tag) => tag[0] === 'e');
-    const pTags = event.tags.filter((tag) => tag[0] === 'p').map((tag) => tag[1]);
+    const pTagsRaw = event.tags.filter((tag) => tag[0] === 'p');
+    const pTags = pTagsRaw.map((tag) => tag[1]);
+
+    // Extract relay hints from p-tags: ["p", pubkey, relay-url]
+    const pTagRelays = new Map<string, string[]>();
+    pTagsRaw.forEach((tag) => {
+      const pubkey = tag[1];
+      const relayUrl = tag[2];
+      if (pubkey && relayUrl && relayUrl.trim() !== '') {
+        const existing = pTagRelays.get(pubkey) || [];
+        if (!existing.includes(relayUrl)) {
+          existing.push(relayUrl);
+        }
+        pTagRelays.set(pubkey, existing);
+      }
+    });
 
     let rootId: string | null = null;
     let replyId: string | null = null;
     let author: string | null = null;
+    let replyAuthor: string | null = null;
     const rootRelays: string[] = [];
     const replyRelays: string[] = [];
     const mentionIds: string[] = [];
@@ -162,6 +180,8 @@ export class EventService {
       } else {
         // Normal case: we have both root and reply markers
         replyId = replyTag[1];
+        // Extract author pubkey from reply tag if present (5th element)
+        replyAuthor = replyTag[4] || null;
         // Extract relay URL from reply tag if present (3rd element)
         if (replyTag[2] && replyTag[2].trim() !== '') {
           replyRelays.push(replyTag[2]);
@@ -171,6 +191,8 @@ export class EventService {
       // Fallback to positional format: assume replying to the last e tag (that's not a mention)
       const lastThreadTag = threadTags[threadTags.length - 1];
       replyId = lastThreadTag[1];
+      // Extract author pubkey from last thread tag if present (5th element)
+      replyAuthor = lastThreadTag[4] || null;
       // Extract relay URL from last thread tag if present
       if (lastThreadTag[2] && lastThreadTag[2].trim() !== '') {
         replyRelays.push(lastThreadTag[2]);
@@ -241,7 +263,7 @@ export class EventService {
       }
     }
 
-    return { author, rootId, replyId, pTags, rootRelays, replyRelays, mentionIds, quoteId, quoteAuthor, quoteRelays };
+    return { author, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays, mentionIds, quoteId, quoteAuthor, quoteRelays };
   }
 
   /**
@@ -820,11 +842,15 @@ export class EventService {
    * Load parent events in a thread using outbox model. Only the initially opened
    * reply is retrieved from user A relays. Everything else is fetched
    * from user B relays (root author).
+   *
+   * This method also uses relay hints from event tags to improve discovery
+   * of parent events, especially when the original author has private relays.
    */
   async loadParentEvents(event: Event, eventTags?: EventTags): Promise<Event[]> {
     const parents: Event[] = [];
 
-    const { author: initialAuthor, rootId, replyId, pTags } = eventTags ?? this.getEventTags(event);
+    const tags = eventTags ?? this.getEventTags(event);
+    const { author: initialAuthor, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays } = tags;
 
     let author = initialAuthor;
 
@@ -840,10 +866,36 @@ export class EventService {
       author = pTags[0];
     }
 
+    /**
+     * Collect relay hints for a given event author.
+     * Combines relay hints from e-tags (root/reply) with p-tag relay hints for the author.
+     */
+    const collectRelayHints = (eventRelays: string[], authorPubkey: string | null): string[] => {
+      const hints: string[] = [...eventRelays];
+
+      // Add relay hints from p-tags for this author
+      if (authorPubkey && pTagRelays.has(authorPubkey)) {
+        const pRelays = pTagRelays.get(authorPubkey)!;
+        pRelays.forEach(relay => {
+          if (!hints.includes(relay)) {
+            hints.push(relay);
+          }
+        });
+      }
+
+      return hints;
+    };
+
     try {
       // Load immediate parent (reply)
       if (replyId && replyId !== rootId) {
-        const replyEvent = await this.loadParentEvent(replyId, author);
+        // Use replyAuthor if available, otherwise fall back to author
+        const replyEventAuthor = replyAuthor || author;
+        const replyHints = collectRelayHints(replyRelays, replyEventAuthor);
+
+        this.logger.debug(`[loadParentEvents] Loading reply parent ${replyId.slice(0, 16)} with hints:`, replyHints);
+
+        const replyEvent = await this.loadParentEvent(replyId, replyEventAuthor, replyHints);
 
         if (replyEvent) {
           parents.unshift(replyEvent);
@@ -856,7 +908,11 @@ export class EventService {
 
       // Load root event if different from reply
       if (rootId && rootId !== replyId) {
-        const rootEvent = await this.loadParentEvent(rootId, author);
+        const rootHints = collectRelayHints(rootRelays, author);
+
+        this.logger.debug(`[loadParentEvents] Loading root event ${rootId.slice(0, 16)} with hints:`, rootHints);
+
+        const rootEvent = await this.loadParentEvent(rootId, author, rootHints);
 
         if (rootEvent && !parents.find((p) => p.id === rootEvent.id)) {
           parents.unshift(rootEvent);
@@ -872,8 +928,11 @@ export class EventService {
 
   /**
    * Load a parent event which could be either a regular event (hex ID) or an addressable event (kind:pubkey:d-tag)
+   * @param eventRef The event ID or addressable event reference (kind:pubkey:d-tag)
+   * @param author The author pubkey to use for discovering relays
+   * @param relayHints Optional relay hints from event tags to try first
    */
-  private async loadParentEvent(eventRef: string, author: string): Promise<Event | null> {
+  private async loadParentEvent(eventRef: string, author: string, relayHints?: string[]): Promise<Event | null> {
     // Check if this is an addressable event reference (kind:pubkey:d-tag)
     const addressableMatch = eventRef.match(/^(\d+):([0-9a-f]{64}):(.+)$/);
 
@@ -894,6 +953,22 @@ export class EventService {
       return record?.event || null;
     } else {
       // This is a regular event ID
+      // First, try relay hints if provided (these are from e-tag and p-tag relay hints)
+      if (relayHints && relayHints.length > 0) {
+        this.logger.debug(`[loadParentEvent] Trying relay hints first for event ${eventRef.slice(0, 16)}:`, relayHints);
+        try {
+          const event = await this.relayPool.getEventById(relayHints, eventRef, 3000);
+          if (event) {
+            this.logger.debug(`[loadParentEvent] Found event via relay hints`);
+            return event;
+          }
+          this.logger.debug(`[loadParentEvent] Event not found via relay hints, falling back to author relays`);
+        } catch (error) {
+          this.logger.warn(`[loadParentEvent] Error querying relay hints:`, error);
+        }
+      }
+
+      // Fall back to using author's relays
       const record = await this.userDataService.getEventById(author, eventRef, {
         cache: true,
         ttl: minutes.five,
