@@ -319,6 +319,9 @@ export class DatabaseService {
   // Signal to track errors
   readonly lastError = signal<string | null>(null);
 
+  // Old database name that was used before refactoring to DatabaseService
+  private readonly OLD_DB_NAME = 'nostria';
+
   /**
    * Initialize the database connection
    * Returns a promise that resolves when the database is ready
@@ -334,13 +337,61 @@ export class DatabaseService {
       return Promise.resolve();
     }
 
-    this.initPromise = this.openDatabase();
+    this.initPromise = this.performInit();
 
     try {
       await this.initPromise;
     } finally {
       this.initPromise = null;
     }
+  }
+
+  /**
+   * Perform initialization - clean up old database and open new one
+   */
+  private async performInit(): Promise<void> {
+    // First, delete the old database if it exists (from before the refactor)
+    // This ensures a clean slate for users updating from the old version
+    await this.deleteOldDatabase();
+
+    // Now open the new database
+    await this.openDatabase();
+  }
+
+  /**
+   * Delete the old 'nostria' database if it exists
+   * This handles migration from the old StorageService that used 'idb' library
+   */
+  private deleteOldDatabase(): Promise<void> {
+    return new Promise((resolve) => {
+      this.logger.info(`Checking for old database: ${this.OLD_DB_NAME}`);
+
+      const deleteRequest = indexedDB.deleteDatabase(this.OLD_DB_NAME);
+
+      deleteRequest.onsuccess = () => {
+        this.logger.info(`Old database '${this.OLD_DB_NAME}' deleted or did not exist`);
+        resolve();
+      };
+
+      deleteRequest.onerror = () => {
+        // Don't fail if we can't delete - just log and continue
+        this.logger.warn(`Could not delete old database '${this.OLD_DB_NAME}':`, deleteRequest.error);
+        resolve();
+      };
+
+      deleteRequest.onblocked = () => {
+        // Old database is blocked by another tab - log but continue
+        // The user may need to close other tabs
+        this.logger.warn(`Old database '${this.OLD_DB_NAME}' deletion blocked - another tab may be using it`);
+        resolve();
+      };
+
+      // Timeout to prevent hanging
+      setTimeout(() => {
+        this.logger.warn(`Old database deletion timed out - continuing anyway`);
+        resolve();
+      }, 3000);
+    });
   }
 
   /**
@@ -399,8 +450,11 @@ export class DatabaseService {
       };
 
       request.onblocked = () => {
+        clearTimeout(timeout);
         this.logger.warn('Database upgrade blocked - close other tabs');
         this.lastError.set('Database blocked - close other tabs');
+        // Reject immediately when blocked - user needs to close other tabs
+        reject(new Error('Database blocked by another tab. Please close all other Nostria tabs and try again.'));
       };
     });
   }
@@ -1151,10 +1205,10 @@ export class DatabaseService {
   }
 
   /**
-   * Wipe the entire database
+   * Wipe the entire database (both old and new)
    */
   async wipe(): Promise<void> {
-    this.logger.info('Wiping IndexedDB database');
+    this.logger.info('Wiping IndexedDB databases');
 
     // Close the current database connection if it exists
     if (this.db) {
@@ -1162,34 +1216,53 @@ export class DatabaseService {
       this.db = null;
     }
 
-    // Delete the entire database
+    // Delete both the new and old databases
+    const deletePromises: Promise<void>[] = [];
+
+    // Delete new database
+    deletePromises.push(this.deleteDatabaseByName(DB_NAME));
+
+    // Delete old database (from before refactor)
+    deletePromises.push(this.deleteDatabaseByName(this.OLD_DB_NAME));
+
+    try {
+      await Promise.all(deletePromises);
+      this.initialized.set(false);
+      this.logger.info('All databases wiped successfully');
+    } catch (error) {
+      this.logger.error('Error wiping databases', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Helper to delete a specific database by name (internal use)
+   */
+  private deleteDatabaseByName(dbName: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const deleteRequest = indexedDB.deleteDatabase(DB_NAME);
+      this.logger.info(`Deleting database: ${dbName}`);
+      const deleteRequest = indexedDB.deleteDatabase(dbName);
 
-      deleteRequest.onsuccess = async () => {
-        // Reset initialization status
-        this.initialized.set(false);
-
-        this.logger.info('Database wiped successfully');
-
-        // Re-initialize the database
-        try {
-          await this.init();
-          resolve();
-        } catch (error) {
-          this.logger.error('Error re-initializing database after wipe', error);
-          reject(error);
-        }
+      deleteRequest.onsuccess = () => {
+        this.logger.info(`Database '${dbName}' deleted successfully`);
+        resolve();
       };
 
       deleteRequest.onerror = () => {
-        this.logger.error('Error wiping database', deleteRequest.error);
+        this.logger.error(`Error deleting database '${dbName}':`, deleteRequest.error);
         reject(deleteRequest.error);
       };
 
       deleteRequest.onblocked = () => {
-        this.logger.warn('Database deletion blocked - other connections may be open');
+        this.logger.warn(`Database '${dbName}' deletion blocked - other connections may be open`);
+        // Don't reject - the deletion will still happen once connections close
       };
+
+      // Timeout to prevent hanging
+      setTimeout(() => {
+        this.logger.warn(`Database '${dbName}' deletion timed out`);
+        reject(new Error(`Database '${dbName}' deletion timed out`));
+      }, 5000);
     });
   }
 
