@@ -1258,15 +1258,58 @@ export class App implements OnInit {
   onSearchInputPaste(event: ClipboardEvent): void {
     // Handle paste events for nostr URLs
     event.preventDefault();
-    const pastedText = event.clipboardData?.getData('text')?.trim();
+    let pastedText = event.clipboardData?.getData('text')?.trim();
 
     if (pastedText) {
+      // Check if it's a Nostria URL and extract the entity
+      const nostriaEntity = this.extractNostriaEntity(pastedText);
+      if (nostriaEntity) {
+        pastedText = nostriaEntity;
+      }
+
       // Set the input value
       this.layout.searchInput = pastedText;
 
       // Trigger the search handling
       this.layout.onSearchInput({ target: { value: pastedText } });
     }
+  }
+
+  /**
+   * Extract nostr entity from Nostria URLs
+   * Supports formats like:
+   * - https://nostria.app/e/nevent1...
+   * - https://nostria.app/e/note1...
+   * - https://nostria.app/p/npub1...
+   * - https://nostria.app/p/nprofile1...
+   * - https://nostria.app/u/username
+   * - https://nostria.app/a/naddr1...
+   */
+  private extractNostriaEntity(url: string): string | null {
+    // Match nostria.app URLs with various paths
+    const nostriaPattern = /^https?:\/\/(?:www\.)?nostria\.app\/(e|p|u|a)\/(.+)$/i;
+    const match = url.match(nostriaPattern);
+
+    if (!match) {
+      return null;
+    }
+
+    const [, pathType, entity] = match;
+
+    // For /u/ (username) routes, we need to handle NIP-05 lookup
+    // Return the username as-is and let the search handler deal with it
+    if (pathType === 'u') {
+      // If it looks like a NIP-05 identifier (contains @), return as-is
+      if (entity.includes('@')) {
+        return entity;
+      }
+      // For simple usernames, append @nostria.app for NIP-05 lookup
+      return `${entity}@nostria.app`;
+    }
+
+    // For /e/, /p/, /a/ routes, return the nostr entity directly
+    // These should be nevent, note, npub, nprofile, naddr, etc.
+    return entity;
   }
 
   /**
