@@ -74,17 +74,13 @@
         <span class="progress-badge">{{ accountState.processingProgress() }}%</span>
       </button>
       }
-      @if (app.authenticated() && (appState.isPublishing() || ai.processingState().isProcessing)) {
-      <button mat-icon-button class="profile-cache-button"
-        [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel"
-        i18n-aria-label="@@app.tooltip.processing-aria" aria-label="Processing in progress">
-        <mat-icon class="spinning-icon">sync</mat-icon>
-      </button>
-      }
       @if (app.authenticated()) {
       <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
-        #notificationMenuTrigger="matMenuTrigger">
+        #notificationMenuTrigger="matMenuTrigger"
+        [class.processing]="appState.isPublishing() || ai.processingState().isProcessing"
+        [matTooltip]="(appState.isPublishing() || ai.processingState().isProcessing) ? (ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel) : ''">
         <mat-icon
+          [class.spinning-icon]="appState.isPublishing() || ai.processingState().isProcessing"
           [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
       </button>
       }
