@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -58,7 +58,7 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' |
   templateUrl: './people.component.html',
   styleUrls: ['./people.component.scss'],
 })
-export class PeopleComponent implements AfterViewInit, OnDestroy {
+export class PeopleComponent {
   private router = inject(Router);
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);
@@ -75,9 +75,6 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
   // Search functionality
   searchTerm = signal<string>('');
   private searchChanged = new Subject<string>();
-
-  // Scroll position tracking
-  private scrollSaveTimeout?: number;
 
   // View mode
   viewMode = signal<string>('medium');
@@ -261,53 +258,7 @@ export class PeopleComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  ngAfterViewInit(): void {
-    // Restore scroll position after view is initialized
-    setTimeout(() => {
-      const pubkey = this.accountState.pubkey();
-      if (pubkey) {
-        const savedPosition = this.accountLocalState.getPeopleScrollPosition(pubkey);
 
-        if (savedPosition !== undefined && savedPosition > 0) {
-          window.scrollTo(0, savedPosition);
-          this.logger.debug('Restored scroll position via window.scrollTo:', { savedPosition });
-        }
-      }
-
-      // Add scroll event listener to auto-save scroll position
-      window.addEventListener('scroll', this.onScroll);
-    }, 500);
-  }
-
-  ngOnDestroy(): void {
-    // Remove scroll listener
-    window.removeEventListener('scroll', this.onScroll);
-
-    // Clear any pending scroll save timeout
-    if (this.scrollSaveTimeout) {
-      clearTimeout(this.scrollSaveTimeout);
-    }
-
-    // Save scroll position when leaving the component
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      this.accountLocalState.setPeopleScrollPosition(pubkey, window.scrollY);
-    }
-  }
-
-  private onScroll = () => {
-    // Debounce the save operation to avoid saving too frequently
-    if (this.scrollSaveTimeout) {
-      clearTimeout(this.scrollSaveTimeout);
-    }
-
-    this.scrollSaveTimeout = window.setTimeout(() => {
-      const pubkey = this.accountState.pubkey();
-      if (pubkey) {
-        this.accountLocalState.setPeopleScrollPosition(pubkey, window.scrollY);
-      }
-    }, 500); // Save 500ms after user stops scrolling
-  };
 
   updateSearch(term: string) {
     this.searchChanged.next(term);
