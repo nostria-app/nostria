@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
-import { ContentNotification, NotificationType } from './storage.service';
+import { ContentNotification, NotificationType } from './database.service';
 import { DatabaseService } from './database.service';
 import { kinds, nip57 } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';

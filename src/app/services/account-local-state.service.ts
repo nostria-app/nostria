@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
-import { DeviceNotificationPreferences } from './storage.service';
+import { DeviceNotificationPreferences } from './database.service';
 
 /**
  * Filter options for People page

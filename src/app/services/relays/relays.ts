@@ -1,6 +1,6 @@
 import { Injectable, inject, signal, effect } from '@angular/core';
 import { UtilitiesService } from '../utilities.service';
-import { ObservedRelayStats, Nip11Info } from '../storage.service';
+import { ObservedRelayStats, Nip11Info } from '../database.service';
 import { DatabaseService } from '../database.service';
 import { LocalSettingsService } from '../local-settings.service';
 

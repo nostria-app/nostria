@@ -13,7 +13,7 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
 import { WebPushService, Device } from '../../../services/webpush.service';
-import { UserNotificationType } from '../../../services/storage.service';
+import { UserNotificationType } from '../../../services/database.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 

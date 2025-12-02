@@ -3,7 +3,7 @@ import { Event, EventTemplate, VerifiedEvent } from 'nostr-tools';
 import { LoggerService } from '../logger.service';
 import { DatabaseService } from '../database.service';
 import { UtilitiesService } from '../utilities.service';
-import { ObservedRelayStats } from '../storage.service';
+import { ObservedRelayStats } from '../database.service';
 
 /** Type for the onauth callback used by nostr-tools SimplePool operations */
 export type AuthCallback = (evt: EventTemplate) => Promise<VerifiedEvent>;
