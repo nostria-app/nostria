@@ -77,10 +77,10 @@
       @if (app.authenticated()) {
       <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
         #notificationMenuTrigger="matMenuTrigger"
-        [class.processing]="appState.isPublishing() || ai.processingState().isProcessing"
-        [matTooltip]="(appState.isPublishing() || ai.processingState().isProcessing) ? (ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel) : ''">
+        [class.processing]="isProcessing()"
+        [matTooltip]="notificationProcessingTooltip()">
         <mat-icon
-          [class.spinning-icon]="appState.isPublishing() || ai.processingState().isProcessing"
+          [class.spinning-icon]="isProcessing()"
           [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
       </button>
       }

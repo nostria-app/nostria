@@ -158,6 +158,24 @@ export class App implements OnInit {
     return $localize`:@@app.tooltip.caching-profiles:Caching profiles: ${progress}:PROGRESS:% (${processed}:PROCESSED:/${total}:TOTAL:)`;
   });
 
+  // Computed signal to check if any processing is happening
+  isProcessing = computed(() => {
+    return this.appState.isPublishing() || this.ai.processingState().isProcessing;
+  });
+
+  // Computed tooltip for notification icon when processing
+  notificationProcessingTooltip = computed(() => {
+    if (!this.isProcessing()) {
+      return '';
+    }
+    
+    if (this.ai.processingState().isProcessing) {
+      return this.ai.getTaskName(this.ai.processingState().task);
+    }
+    
+    return this.publishingEventLabel;
+  });
+
   themeService = inject(ThemeService);
   pwaUpdateService = inject(PwaUpdateService);
   dialog = inject(MatDialog);
