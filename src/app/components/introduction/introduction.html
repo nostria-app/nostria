@@ -1,49 +1,64 @@
 <div class="introduction-container no-select">
   <div class="introduction-content">
-    <!-- Action buttons section -->
-    <div class="actions-section">
-      <mat-card class="action-card new-user" (click)="openNewUserFlow()">
-        <mat-card-content>
-          <div class="card-content">
-            <div class="card-icon">
-              <mat-icon>person_add</mat-icon>
+    <!-- Main content: cards and branding side by side -->
+    <div class="main-section">
+      <!-- Action buttons section -->
+      <div class="actions-section">
+        <mat-card class="action-card new-user" (click)="openNewUserFlow()">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-icon">
+                <mat-icon>person_add</mat-icon>
+              </div>
+              <div class="card-text">
+                <h3 i18n="@@introduction.new-user.title">New User</h3>
+                <p i18n="@@introduction.new-user.description">Create a new account with two clicks</p>
+              </div>
             </div>
-            <div class="card-text">
-              <h3 i18n="@@introduction.new-user.title">New User</h3>
-              <p i18n="@@introduction.new-user.description">Create a new account with two clicks</p>
-            </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
+          </mat-card-content>
+        </mat-card>
 
-      <mat-card class="action-card login" (click)="openLoginFlow()">
-        <mat-card-content>
-          <div class="card-content">
-            <div class="card-icon">
-              <mat-icon>login</mat-icon>
+        <mat-card class="action-card login" (click)="openLoginFlow()">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-icon">
+                <mat-icon>login</mat-icon>
+              </div>
+              <div class="card-text">
+                <h3 i18n="@@introduction.login.title">Login</h3>
+                <p i18n="@@introduction.login.description">Sign in with your existing account</p>
+              </div>
             </div>
-            <div class="card-text">
-              <h3 i18n="@@introduction.login.title">Login</h3>
-              <p i18n="@@introduction.login.description">Sign in with your existing account</p>
-            </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
+          </mat-card-content>
+        </mat-card>
 
-      <mat-card class="action-card preview" (click)="loginWithPreview()">
-        <mat-card-content>
-          <div class="card-content">
-            <div class="card-icon">
-              <mat-icon>visibility</mat-icon>
+        <mat-card class="action-card preview" (click)="loginWithPreview()">
+          <mat-card-content>
+            <div class="card-content">
+              <div class="card-icon">
+                <mat-icon>visibility</mat-icon>
+              </div>
+              <div class="card-text">
+                <h3 i18n="@@introduction.preview.title">Preview</h3>
+                <p i18n="@@introduction.preview.description">Explore Nostr in read-only mode</p>
+              </div>
             </div>
-            <div class="card-text">
-              <h3 i18n="@@introduction.preview.title">Preview</h3>
-              <p i18n="@@introduction.preview.description">Explore Nostr in read-only mode</p>
-            </div>
-          </div>
-        </mat-card-content>
-      </mat-card>
+          </mat-card-content>
+        </mat-card>
+      </div>
 
+      <!-- Logo and branding section -->
+      <div class="branding-section">
+        <div class="logo-container">
+          <img src="/icons/nostria.png" alt="Nostria Logo" class="nostria-logo" />
+        </div>
+        <h1 class="app-title">Nostria</h1>
+        <p class="app-slogan" i18n="@@introduction.slogan">Your Social Network</p>
+      </div>
+    </div>
+
+    <!-- Footer section: terms and language -->
+    <div class="footer-section">
       <div class="terms-of-use-notice">
         <p>
           <span i18n="@@introduction.terms-of-use.prefix">By using Nostria, you agree to our</span>&nbsp;
@@ -66,15 +81,6 @@
           }
         </mat-menu>
       </div>
-    </div>
-
-    <!-- Logo and branding section -->
-    <div class="branding-section">
-      <div class="logo-container">
-        <img src="/icons/nostria.png" alt="Nostria Logo" class="nostria-logo" />
-      </div>
-      <h1 class="app-title">Nostria</h1>
-      <p class="app-slogan" i18n="@@introduction.slogan">Your Social Network</p>
     </div>
   </div>
 </div>
