@@ -29,10 +29,9 @@ import { FormsModule } from '@angular/forms';
 import {
   NotificationType,
   RelayPublishingNotification,
-  StorageService,
   Notification,
   ContentNotification,
-} from './services/storage.service';
+} from './services/database.service';
 import { LayoutService } from './services/layout.service';
 import { ApplicationStateService } from './services/application-state.service';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -163,7 +162,6 @@ export class App implements OnInit {
   pwaUpdateService = inject(PwaUpdateService);
   dialog = inject(MatDialog);
   nostrService = inject(NostrService);
-  storage = inject(StorageService);
   relaysService = inject(RelaysService);
   appState = inject(ApplicationStateService);
   app = inject(ApplicationService);
@@ -688,25 +686,6 @@ export class App implements OnInit {
       await Promise.race([databaseInitPromise, databaseTimeoutPromise]);
       this.logger.info('[App] Database initialized successfully');
 
-      // Migrate feed cache from localStorage to IndexedDB (one-time operation)
-      this.logger.info('[App] Checking for feed cache migration');
-      try {
-        const migrationResult = await this.storage.migrateFeedCacheFromLocalStorage();
-        if (migrationResult.migratedEvents > 0) {
-          this.logger.info('[App] Feed cache migration completed', {
-            accounts: migrationResult.migratedAccounts,
-            columns: migrationResult.migratedColumns,
-            events: migrationResult.migratedEvents,
-          });
-        }
-        if (migrationResult.errors.length > 0) {
-          this.logger.warn('[App] Feed cache migration had errors:', migrationResult.errors);
-        }
-      } catch (error) {
-        this.logger.error('[App] Feed cache migration failed:', error);
-        // Don't block app initialization if migration fails
-      }
-
       // Persist relay statistics that were added during initialization
       try {
         await this.relaysService.persistInitialRelayStats();
@@ -716,28 +695,17 @@ export class App implements OnInit {
       }
 
       // Get diagnostic info if there were any issues
-      if (!this.storage.initialized()) {
-        const diagnostics = await this.storage.getDiagnosticInfo();
-        this.logger.warn('[App] Storage not properly initialized, diagnostic info:', diagnostics);
+      if (!this.database.initialized()) {
+        this.logger.warn('[App] Database not properly initialized');
       }
     } catch (error: any) {
-      this.logger.error('[App] Storage initialization failed', {
+      this.logger.error('[App] Database initialization failed', {
         error: error?.message || 'Unknown error',
         name: error?.name || 'Unknown',
       });
 
-      // Get diagnostic information
-      try {
-        const diagnostics = await this.storage.getDiagnosticInfo();
-        this.logger.error('[App] Storage diagnostic info after failure:', diagnostics);
-
-        // Show user-friendly error message
-        this.showStorageError(error, diagnostics);
-      } catch (diagError) {
-        this.logger.error('[App] Failed to collect diagnostic info', diagError);
-        // Show error dialog even if diagnostics fail
-        this.showStorageError(error, null);
-      }
+      // Show user-friendly error message
+      this.showStorageError(error, null);
 
       // Stop initialization - do not continue without working database
       this.logger.error('[App] Halting initialization due to database failure');

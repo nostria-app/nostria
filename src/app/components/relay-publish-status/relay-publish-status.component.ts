@@ -11,7 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
 import { RouterModule } from '@angular/router';
-import { RelayPublishingNotification, RelayPublishPromise } from '../../services/storage.service';
+import { RelayPublishingNotification, RelayPublishPromise } from '../../services/database.service';
 import {
   EventDetailsDialogComponent,
   type EventDetailsDialogData,

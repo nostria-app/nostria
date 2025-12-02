@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { StorageService } from '../../services/storage.service';
+import { DatabaseService } from '../../services/database.service';
 import { NostrService } from '../../services/nostr.service';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoggerService } from '../../services/logger.service';
@@ -24,7 +24,7 @@ import { LoggerService } from '../../services/logger.service';
   styleUrl: './storage-stats.component..scss',
 })
 export class StorageStatsComponent {
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
   nostr = inject(NostrService);
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);
@@ -32,36 +32,38 @@ export class StorageStatsComponent {
   isClearing = signal(false);
   stats = signal({
     relaysCount: 0,
-    // userMetadataCount: 0,
-    // userRelaysCount: 0,
+    eventsCount: 0,
     estimatedSize: 0,
   });
   formattedSize = signal('0 KB');
-  // isLoggedIn = signal(false);
 
   constructor() {
-    // effect(async () => {
-    //   if (this.storage.initialized()) {
-    //     // Initialize stats
-    //     await this.refreshStats();
-    //   }
-    // });
-
-    // Keep logged in status updated
-    // effect(() => {
-    //   this.isLoggedIn.set(this.nostr.isLoggedIn());
-    // });
-
     // Update the formatted size when stats change
     effect(() => {
       const currentStats = this.stats();
-      this.formattedSize.set(this.storage.formatSize(currentStats.estimatedSize));
+      this.formattedSize.set(this.formatSize(currentStats.estimatedSize));
     });
   }
 
+  private formatSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+  }
+
   async refreshStats(): Promise<void> {
-    await this.storage.updateStats();
-    this.stats.set(this.storage.dbStats());
+    try {
+      const eventsCount = await this.database.countEvents();
+      const storageEstimate = await this.database.getStorageEstimate();
+      this.stats.set({
+        relaysCount: 0, // Relays are managed separately
+        eventsCount,
+        estimatedSize: storageEstimate.usage || 0,
+      });
+    } catch (error) {
+      this.logger.error('Error refreshing stats', error);
+    }
   }
 
   async clearCache(): Promise<void> {
@@ -72,7 +74,7 @@ export class StorageStatsComponent {
     this.isClearing.set(true);
 
     try {
-      // await this.nostr.clearCache();
+      await this.database.clearEvents();
       await this.refreshStats();
 
       this.snackBar.open('Cache cleared successfully', 'Close', {

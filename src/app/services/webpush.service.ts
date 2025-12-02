@@ -5,7 +5,7 @@ import { SwPush } from '@angular/service-worker';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
-import { UserNotificationType, DeviceNotificationPreferences } from './storage.service';
+import { UserNotificationType, DeviceNotificationPreferences } from './database.service';
 import { environment } from './../../environments/environment';
 import { WebRequest } from './web-request';
 import { isPlatformBrowser } from '@angular/common';

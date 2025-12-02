@@ -10,7 +10,7 @@ import {
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils.js';
 import { nip19, nip98, nip04, nip44 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
-import { NostrEventData, UserMetadata } from './storage.service';
+import { NostrEventData, UserMetadata } from './database.service';
 import { DatabaseService } from './database.service';
 import { kinds, SimplePool } from 'nostr-tools';
 import { finalizeEvent } from 'nostr-tools/pure';

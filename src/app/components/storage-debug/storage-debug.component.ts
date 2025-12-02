@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
-import { StorageService } from '../../services/storage.service';
+import { DatabaseService } from '../../services/database.service';
 import { LoggerService } from '../../services/logger.service';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -23,11 +23,11 @@ import { CommonModule } from '@angular/common';
             <h3>Current Status</h3>
             <p>
               <strong>Initialized:</strong>
-              {{ storage.initialized() ? 'Yes' : 'No' }}
+              {{ database.initialized() ? 'Yes' : 'No' }}
             </p>
             <p>
-              <strong>Fallback Mode:</strong>
-              {{ storage.useFallbackMode() ? 'Yes' : 'No' }}
+              <strong>Last Error:</strong>
+              {{ database.lastError() || 'None' }}
             </p>
             <p>
               <strong>Storage Health:</strong>
@@ -47,20 +47,12 @@ import { CommonModule } from '@angular/common';
             }
           </mat-expansion-panel>
 
-          <mat-expansion-panel>
-            <mat-expansion-panel-header>
-              <mat-panel-title>Storage Info</mat-panel-title>
-            </mat-expansion-panel-header>
-
-            <pre>{{ storage.storageInfo() | json }}</pre>
-          </mat-expansion-panel>
-
           <div class="actions-section">
-            <button mat-raised-button color="primary" (click)="runDiagnostics()">
+            <button mat-raised-button (click)="runDiagnostics()">
               Run Diagnostics
             </button>
 
-            <button mat-raised-button color="accent" (click)="checkHealth()">
+            <button mat-raised-button (click)="checkHealth()">
               Check Storage Health
             </button>
 
@@ -111,10 +103,10 @@ import { CommonModule } from '@angular/common';
   ],
 })
 export class StorageDebugComponent implements OnInit {
-  storage = inject(StorageService);
+  database = inject(DatabaseService);
   logger = inject(LoggerService);
 
-  diagnosticInfo = signal<any>(null);
+  diagnosticInfo = signal<unknown>(null);
   storageHealth = signal<string>('');
 
   async ngOnInit() {
@@ -123,7 +115,14 @@ export class StorageDebugComponent implements OnInit {
 
   async runDiagnostics() {
     try {
-      const info = await this.storage.getDiagnosticInfo();
+      const storageEstimate = await this.database.getStorageEstimate();
+      const eventsCount = await this.database.countEvents();
+      const info = {
+        initialized: this.database.initialized(),
+        lastError: this.database.lastError(),
+        storageEstimate,
+        eventsCount,
+      };
       this.diagnosticInfo.set(info);
       this.logger.info('Diagnostic information collected', info);
     } catch (error) {
@@ -134,7 +133,7 @@ export class StorageDebugComponent implements OnInit {
 
   async checkHealth() {
     try {
-      const isHealthy = await this.storage.checkStorageHealth();
+      const isHealthy = this.database.initialized();
       this.storageHealth.set(isHealthy ? 'Healthy' : 'Unhealthy');
     } catch (error) {
       this.storageHealth.set('Error checking health');
@@ -145,7 +144,7 @@ export class StorageDebugComponent implements OnInit {
   async clearStorage() {
     if (confirm('This will clear all stored data and restart the app. Continue?')) {
       try {
-        await this.storage.wipe();
+        await this.database.wipe();
         window.location.reload();
       } catch (error) {
         this.logger.error('Failed to clear storage', error);

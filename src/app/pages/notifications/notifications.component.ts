@@ -14,11 +14,11 @@ import {
   NotificationType,
   Notification,
   RelayPublishingNotification,
-} from '../../services/storage.service';
+} from '../../services/database.service';
 import { RouterModule } from '@angular/router';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { Router } from '@angular/router';
-import { ContentNotification } from '../../services/storage.service';
+import { ContentNotification } from '../../services/database.service';
 import { nip19 } from 'nostr-tools';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { LocalStorageService } from '../../services/local-storage.service';

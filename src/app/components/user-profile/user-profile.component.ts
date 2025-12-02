@@ -23,7 +23,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatButtonModule } from '@angular/material/button';
-import { InfoRecord, TrustMetrics } from '../../services/storage.service';
+import { InfoRecord, TrustMetrics } from '../../services/database.service';
 import { Event, nip19 } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { DataService } from '../../services/data.service';

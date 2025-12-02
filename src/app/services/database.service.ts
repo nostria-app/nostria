@@ -2,6 +2,201 @@ import { Injectable, inject, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { Event } from 'nostr-tools';
 
+// Interface for NIP-11 relay information
+export interface Nip11Info {
+  name?: string;
+  description?: string;
+  pubkey?: string;
+  contact?: string;
+  supported_nips?: number[];
+  software?: string;
+  version?: string;
+  limitation?: {
+    max_message_length?: number;
+    max_subscriptions?: number;
+    max_filters?: number;
+    max_limit?: number;
+    max_subid_length?: number;
+    min_prefix?: number;
+    max_event_tags?: number;
+    max_content_length?: number;
+    min_pow_difficulty?: number;
+    auth_required?: boolean;
+    payment_required?: boolean;
+  };
+  relay_countries?: string[];
+  language_tags?: string[];
+  tags?: string[];
+  posting_policy?: string;
+  retention?: {
+    events?: {
+      max_bytes?: number;
+      max_time?: number;
+      count?: number;
+    };
+    kinds?: Record<
+      number,
+      {
+        max_bytes?: number;
+        max_time?: number;
+        count?: number;
+      }
+    >;
+  };
+  icon?: string;
+  last_checked?: number;
+}
+
+// Interface for raw event data storage
+export interface NostrEventData<T = unknown> {
+  pubkey?: string; // Public key of the user
+  content: Partial<T>; // Parsed JSON content
+  tags: string[][]; // Original tags array
+  updated?: number; // Timestamp of the last update
+}
+
+// Interface for user metadata
+export interface UserMetadata {
+  pubkey: string;
+  name?: string;
+  about?: string;
+  picture?: string;
+  nip05?: string;
+  nip05valid?: boolean;
+  lud16?: string;
+  banner?: string;
+  website?: string;
+  tags?: string[][]; // Add tags field to store event tags
+  eventData?: NostrEventData; // New field to store full content and tags
+  last_updated?: number;
+}
+
+// Interface for user relays
+export interface UserRelays {
+  pubkey: string;
+  relays: string[];
+  updated: number;
+}
+
+// Notification type enum
+export enum NotificationType {
+  // System notifications (technical, not counted in badge)
+  RELAY_PUBLISHING = 'relaypublishing',
+  GENERAL = 'general',
+  ERROR = 'error',
+  SUCCESS = 'success',
+  WARNING = 'warning',
+
+  // Content notifications (social interactions, counted in badge)
+  NEW_FOLLOWER = 'newfollower',
+  MENTION = 'mention',
+  REPOST = 'repost',
+  REPLY = 'reply',
+  REACTION = 'reaction',
+  ZAP = 'zap',
+}
+
+// User-facing notification types for push notifications
+export enum UserNotificationType {
+  DIRECT_MESSAGES = 'directmessages',
+  REPLIES = 'replies',
+  MENTIONS = 'mentions',
+  REPOSTS = 'reposts',
+  ZAPS = 'zaps',
+  NEWS = 'news',
+  APP_UPDATES = 'appupdates',
+}
+
+// Interface for device notification preferences
+export interface DeviceNotificationPreferences {
+  deviceId: string;
+  preferences: Record<UserNotificationType, boolean>;
+}
+
+// Base notification interface
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  timestamp: number;
+  read: boolean;
+  title: string;
+  message?: string;
+  recipientPubkey?: string; // The pubkey of the account that received this notification
+}
+
+// Relay publishing notification with event tracking
+export interface RelayPublishingNotification extends Notification {
+  event: Event;
+  relayPromises?: RelayPublishPromise[];
+  complete: boolean;
+}
+
+// Track status of publishing to an individual relay
+export interface RelayPublishPromise {
+  relayUrl: string;
+  status: 'pending' | 'success' | 'failed';
+  promise?: Promise<unknown>;
+  error?: unknown;
+}
+
+// General notification with optional action
+export interface GeneralNotification extends Notification {
+  action?: {
+    label: string;
+    callback: () => void;
+  };
+}
+
+// Content notification (social interactions)
+export interface ContentNotification extends Notification {
+  // The pubkey of the user who triggered the notification (follower, reposter, etc.)
+  authorPubkey: string;
+  // Optional: the event ID that triggered this notification
+  eventId?: string;
+  // Optional: the kind of the event that triggered this notification
+  kind?: number;
+  // Optional: additional metadata
+  metadata?: {
+    content?: string; // For mentions/replies, the text content
+    reactionContent?: string; // For reactions, the emoji/content
+    reactionEventId?: string; // For reactions, the reaction event ID (kind 7)
+    zapAmount?: number; // For zaps, the amount in sats
+    zappedEventId?: string; // For zaps, the event that was zapped (if any)
+    zapReceiptId?: string; // For zaps, the zap receipt event ID (kind 9735)
+    recipientPubkey?: string; // For profile zaps, the recipient's pubkey
+  };
+}
+
+// Interface for observed relay statistics stored in IndexedDB
+export interface ObservedRelayStats {
+  url: string; // Primary key
+  isConnected: boolean;
+  isOffline: boolean;
+  eventsReceived: number;
+  lastConnectionRetry: number; // timestamp in seconds
+  lastSuccessfulConnection: number; // timestamp in seconds
+  connectionAttempts: number;
+  firstObserved: number; // timestamp when first discovered
+  lastUpdated: number; // timestamp of last update
+  nip11?: Nip11Info; // NIP-11 relay information if available
+  // NIP-42 authentication tracking
+  authenticationFailed?: boolean; // If true, relay required auth and we failed to authenticate
+  authenticationRequired?: boolean; // If true, relay indicated it requires authentication
+  lastAuthAttempt?: number; // timestamp of last authentication attempt in seconds
+  authFailureReason?: string; // Reason for authentication failure (e.g., "rejected", "timeout", "no_signer")
+}
+
+// Interface for pubkey-relay mapping stored in IndexedDB
+export interface PubkeyRelayMapping {
+  id: string; // composite key: pubkey::relayUrl
+  pubkey: string;
+  relayUrl: string;
+  source: 'hint' | 'user_list' | 'discovery'; // How this mapping was discovered
+  firstSeen: number; // timestamp when first discovered
+  lastSeen: number; // timestamp when last seen
+  eventCount: number; // Number of events seen from this pubkey on this relay
+}
+
 /**
  * Interface for stored direct messages
  */

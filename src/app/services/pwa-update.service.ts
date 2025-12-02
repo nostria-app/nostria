@@ -3,7 +3,7 @@ import { SwUpdate, VersionReadyEvent } from '@angular/service-worker';
 import { filter } from 'rxjs/operators';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
-import { NotificationType } from './storage.service';
+import { NotificationType } from './database.service';
 
 @Injectable({
   providedIn: 'root',

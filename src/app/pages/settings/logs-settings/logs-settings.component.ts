@@ -13,7 +13,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
 import { DatabaseService } from '../../../services/database.service';
-import { InfoRecord } from '../../../services/storage.service';
+import { InfoRecord } from '../../../services/database.service';
 import { RelaysService, RelayStats } from '../../../services/relays/relays';
 import { ApplicationService } from '../../../services/application.service';
 import { LoggerService } from '../../../services/logger.service';

@@ -7,7 +7,7 @@ import {
   RelayPublishingNotification,
   RelayPublishPromise,
   ContentNotification,
-} from './storage.service';
+} from './database.service';
 import { DatabaseService } from './database.service';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';

@@ -3,7 +3,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { StorageService } from '../../services/storage.service';
+import { DatabaseService } from '../../services/database.service';
 
 @Component({
   selector: 'app-database-error-dialog',
@@ -34,34 +34,16 @@ import { StorageService } from '../../services/storage.service';
           <li style="margin-bottom: 8px;">Close ALL browser tabs and windows running Nostria</li>
           <li style="margin-bottom: 8px;">Completely restart your browser (close and reopen)</li>
           <li style="margin-bottom: 8px;">
-            <strong>If the problem persists</strong>, use "Recreate Cache Database" to create a fresh database
+            <strong>If the problem persists</strong>, use "Delete Database" to create a fresh database
           </li>
           <li style="margin-bottom: 8px;">
-            <strong>Only as last resort</strong>, restart your device or use "Attempt Database Deletion"
+            <strong>Only as last resort</strong>, restart your device
           </li>
         </ol>
 
         @if (operationStatus()) {
           <div style="padding: 12px; background-color: var(--mat-sys-surface-container); border-radius: 8px; margin-bottom: 16px;">
-            @if (operationStatus() === 'recreate-success') {
-              <div style="display: flex; align-items: start; gap: 8px;">
-                <mat-icon style="color: var(--mat-success-color);">check_circle</mat-icon>
-                <div>
-                  <p style="margin: 0 0 8px 0;"><strong>New cache database created successfully!</strong></p>
-                  <p style="margin: 0;">Please reload this page to use the new database.</p>
-                </div>
-              </div>
-            } @else if (operationStatus() === 'recreate-failed') {
-              <div style="display: flex; align-items: start; gap: 8px;">
-                <mat-icon style="color: #f44336;">error</mat-icon>
-                <div>
-                  <p style="margin: 0 0 8px 0;"><strong>Failed to create new database</strong></p>
-                  <p style="margin: 0;">
-                    Please close all browser tabs, restart your browser, and try again.
-                  </p>
-                </div>
-              </div>
-            } @else if (operationStatus() === 'delete-success') {
+            @if (operationStatus() === 'delete-success') {
               <div style="display: flex; align-items: start; gap: 8px;">
                 <mat-icon style="color: var(--mat-success-color);">check_circle</mat-icon>
                 <div>
@@ -89,9 +71,9 @@ import { StorageService } from '../../services/storage.service';
             <div style="display: flex; align-items: start; gap: 8px;">
               <mat-icon style="color: #2196f3;">info</mat-icon>
               <div style="flex: 1;">
-                <p style="margin: 0 0 8px 0;"><strong>About Recreate Cache Database:</strong></p>
+                <p style="margin: 0 0 8px 0;"><strong>About Delete Database:</strong></p>
                 <p style="margin: 0 0 8px 0;">
-                  This creates a new cache database with a unique name, allowing the app to bypass the locked database.
+                  This deletes the cache database, allowing the app to create a fresh database.
                   <strong>This is the recommended solution if restarting doesn't help.</strong>
                 </p>
                 <p style="margin: 0;">
@@ -103,31 +85,20 @@ import { StorageService } from '../../services/storage.service';
         }
       </mat-dialog-content>
       <mat-dialog-actions align="end">
-        @if (operationStatus() === 'recreate-success' || operationStatus() === 'delete-success') {
-          <button mat-flat-button color="primary" (click)="reloadPage()">
+        @if (operationStatus() === 'delete-success') {
+          <button mat-flat-button (click)="reloadPage()">
             Reload Page
           </button>
         } @else {
           @if (!isProcessing()) {
             <button 
-              mat-flat-button 
-              color="primary" 
-              (click)="recreateDatabase()"
-              [disabled]="operationStatus() === 'recreate-failed'">
-              @if (operationStatus() === 'recreate-failed') {
-                Recreation Failed
-              } @else {
-                Recreate Cache Database
-              }
-            </button>
-            <button 
-              mat-button 
+              mat-flat-button  
               (click)="attemptDeletion()"
               [disabled]="operationStatus() === 'delete-failed'">
               @if (operationStatus() === 'delete-failed') {
                 Deletion Failed
               } @else {
-                Attempt Database Deletion
+                Delete Database
               }
             </button>
           } @else {
@@ -162,28 +133,11 @@ import { StorageService } from '../../services/storage.service';
 })
 export class DatabaseErrorDialogComponent {
   private dialogRef = inject(MatDialogRef<DatabaseErrorDialogComponent>);
-  private storage = inject(StorageService);
+  private database = inject(DatabaseService);
 
   isProcessing = signal(false);
   processingMessage = signal('');
-  operationStatus = signal<'recreate-success' | 'recreate-failed' | 'delete-success' | 'delete-failed' | null>(null);
-
-  async recreateDatabase(): Promise<void> {
-    this.isProcessing.set(true);
-    this.processingMessage.set('Creating new database...');
-    this.operationStatus.set(null);
-
-    try {
-      await this.storage.recreateCacheDatabase();
-      this.operationStatus.set('recreate-success');
-    } catch (error) {
-      console.error('Failed to recreate database:', error);
-      this.operationStatus.set('recreate-failed');
-    } finally {
-      this.isProcessing.set(false);
-      this.processingMessage.set('');
-    }
-  }
+  operationStatus = signal<'delete-success' | 'delete-failed' | null>(null);
 
   async attemptDeletion(): Promise<void> {
     this.isProcessing.set(true);
@@ -191,7 +145,7 @@ export class DatabaseErrorDialogComponent {
     this.operationStatus.set(null);
 
     try {
-      await this.storage.wipe();
+      await this.database.wipe();
       this.operationStatus.set('delete-success');
     } catch (error) {
       console.error('Failed to delete database:', error);

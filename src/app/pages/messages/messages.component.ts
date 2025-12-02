@@ -31,7 +31,7 @@ import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
 import { NotificationService } from '../../services/notification.service';
-import { NotificationType } from '../../services/storage.service';
+import { NotificationType } from '../../services/database.service';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
