@@ -1,7 +1,6 @@
 // Custom Dialog Component Styles
 // Provides responsive dialog with mobile keyboard support
-// Note: Critical positioning/z-index styles are applied inline by CustomDialogService
-// to ensure they work correctly when the component is dynamically created
+// Note: z-index is handled by #custom-dialog-container (z-index: 99999) in styles.scss
 
 :host {
   display: block;
@@ -10,9 +9,6 @@
   left: 0;
   width: 100%;
   height: 100dvh;
-  // z-index is applied inline by CustomDialogService (1400) to ensure it works
-  // when component is dynamically created and appended to document.body
-  z-index: 1400;
 }
 
 // Backdrop
@@ -49,7 +45,7 @@
     0 9px 46px 8px rgba(0, 0, 0, 0.12);
   max-width: var(--dialog-max-width, 95vw);
   width: var(--dialog-width, 600px);
-  max-height: 90vh;
+  max-height: calc(100vh - 32px); // Allow full height minus padding
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -357,20 +353,8 @@
   }
 }
 
-// Ensure Material tooltips appear above the dialog backdrop
-::ng-deep .mat-mdc-tooltip {
-  z-index: 1200 !important; // Higher than dialog's z-index of 1100
-}
-
-// Ensure tooltip backdrop/overlay appears above dialog
-::ng-deep .cdk-overlay-container {
-  z-index: 1200 !important;
-}
-
-// Ensure mat-menu panels appear above dialog
-::ng-deep .mat-mdc-menu-panel {
-  z-index: 1200 !important;
-}
+// Note: z-index handling is done by #custom-dialog-container in styles.scss
+// Tooltips and menus use CDK overlay which renders outside the dialog container
 
 // Animations
 @keyframes fadeIn {
