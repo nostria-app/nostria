@@ -1,14 +1,15 @@
 .introduction-container {
   display: flex;
-  align-items: center;
+  align-items: flex-start; // Start from top, let content handle centering
   justify-content: center;
   min-height: calc(100vh - 64px); // Account for toolbar height (64px on desktop)
   padding: 2rem 1rem;
   background-color: var(--mat-app-background-color);
+  overflow-y: auto; // Allow scrolling if content doesn't fit
 
-  // On mobile, toolbar is 56px
+  // On mobile, toolbar is 56px (no mobile nav since user is not authenticated)
   @media (max-width: 599px) {
-    min-height: calc(100vh - 56px - 56px); // Account for toolbar (56px) + mobile nav (56px)
+    min-height: calc(100vh - 56px);
   }
 
   // On tablet/desktop, just account for toolbar
@@ -25,6 +26,17 @@
   max-width: 1000px;
   width: 100%;
   gap: 2rem;
+  // Use margin to push content down and center it better
+  // margin-top: auto + margin-bottom: auto centers, but we want it slightly lower
+  margin-top: auto;
+  margin-bottom: auto;
+  // Add extra top margin to push it down from perfect center
+  padding-top: 8vh;
+
+  // On smaller screens, add more padding to clear the toolbar
+  @media (max-width: 599px) {
+    padding-top: 12vh;
+  }
 }
 
 .main-section {
