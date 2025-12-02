@@ -125,10 +125,6 @@ export class UtilitiesService {
       try {
         // First check if the content is already an object (not a string)
         if (typeof content === 'string') {
-          // Sanitize the JSON string to remove problematic characters
-          // Example npub that is problematic: npub1xdn5apqgt2fyuace95cv7lvx344wdw5ppac7kvwycdqzlg7zdnds2ly4d0
-          content = this.sanitizeJsonString(content);
-
           // Check if it looks like JSON (starts with { or [)
           const trimmedContent = content.trim();
 
@@ -136,10 +132,13 @@ export class UtilitiesService {
             (trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
             (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))
           ) {
+            // Only sanitize JSON strings to remove problematic characters
+            // Example npub that is problematic: npub1xdn5apqgt2fyuace95cv7lvx344wdw5ppac7kvwycdqzlg7zdnds2ly4d0
+            const sanitizedContent = this.sanitizeJsonString(content);
             // Try parsing it as JSON
-            content = JSON.parse(content);
+            content = JSON.parse(sanitizedContent);
           }
-          // If it doesn't look like JSON or parsing fails, the catch block will keep it as a string
+          // If it doesn't look like JSON, keep the original content with newlines preserved
         }
       } catch (e) {
         this.logger.error('Failed to parse event content', e);
@@ -1068,10 +1067,10 @@ export class UtilitiesService {
     const CONTACT_LIST_KIND = 3;
     const REPLACEABLE_MIN = 10000;
     const REPLACEABLE_MAX = 20000; // Exclusive upper bound (includes 10000-19999)
-    
-    return kind === METADATA_KIND || 
-           kind === CONTACT_LIST_KIND || 
-           (kind >= REPLACEABLE_MIN && kind < REPLACEABLE_MAX);
+
+    return kind === METADATA_KIND ||
+      kind === CONTACT_LIST_KIND ||
+      (kind >= REPLACEABLE_MIN && kind < REPLACEABLE_MAX);
   }
 
   /**
@@ -1083,7 +1082,7 @@ export class UtilitiesService {
     // NIP-01 defines parameterized replaceable events as kinds 30000-39999
     const PARAMETERIZED_REPLACEABLE_MIN = 30000;
     const PARAMETERIZED_REPLACEABLE_MAX = 40000; // Exclusive upper bound (includes 30000-39999)
-    
+
     return kind >= PARAMETERIZED_REPLACEABLE_MIN && kind < PARAMETERIZED_REPLACEABLE_MAX;
   }
 
