@@ -1,4 +1,4 @@
-import { Directive, ElementRef, inject, OnDestroy, ViewContainerRef } from '@angular/core';
+import { Directive, ElementRef, inject, NgZone, OnDestroy, ViewContainerRef } from '@angular/core';
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Router, NavigationStart } from '@angular/router';
@@ -11,13 +11,13 @@ import { ProfileHoverCardComponent } from '../components/user-profile/hover-card
  */
 @Directive({
   selector: '[appMentionHover]',
-  standalone: true,
 })
 export class MentionHoverDirective implements OnDestroy {
   private el = inject(ElementRef);
   private overlay = inject(Overlay);
   private viewContainerRef = inject(ViewContainerRef);
   private router = inject(Router);
+  private ngZone = inject(NgZone);
 
   private overlayRef: OverlayRef | null = null;
   private hoverCardComponentRef: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -28,6 +28,9 @@ export class MentionHoverDirective implements OnDestroy {
   private isMouseOverTrigger = false;
   private isMouseOverCard = false;
   private routerSubscription?: Subscription;
+
+  // Scroll listener bound function
+  private scrollListener = this.onScroll.bind(this);
 
   constructor() {
     // Use event delegation to handle dynamically created mention links
@@ -154,6 +157,11 @@ export class MentionHoverDirective implements OnDestroy {
     this.hoverCardComponentRef = this.overlayRef.attach(portal);
     this.hoverCardComponentRef.setInput('pubkey', pubkey);
 
+    // Add scroll listener to close on any scroll (capture phase to catch all scroll events)
+    this.ngZone.runOutsideAngular(() => {
+      window.addEventListener('scroll', this.scrollListener, { capture: true, passive: true });
+    });
+
     // Track mouse over card
     const cardElement = this.overlayRef.overlayElement;
     cardElement.addEventListener('mouseenter', () => {
@@ -194,6 +202,13 @@ export class MentionHoverDirective implements OnDestroy {
     this.currentTrigger = null;
   }
 
+  /**
+   * Handles scroll events - closes hover card when user scrolls
+   */
+  private onScroll(): void {
+    this.closeHoverCard();
+  }
+
   private cleanup(): void {
     if (this.hoverTimeout) {
       clearTimeout(this.hoverTimeout);
@@ -203,6 +218,8 @@ export class MentionHoverDirective implements OnDestroy {
       clearTimeout(this.closeTimeout);
       this.closeTimeout = undefined;
     }
+    // Remove scroll listener
+    window.removeEventListener('scroll', this.scrollListener, { capture: true });
     if (this.overlayRef) {
       this.overlayRef.dispose();
       this.overlayRef = null;
