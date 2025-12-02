@@ -19,9 +19,18 @@
 
 .introduction-content {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   max-width: 1000px;
+  width: 100%;
+  gap: 2rem;
+}
+
+.main-section {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   width: 100%;
   gap: 4rem;
 
@@ -35,10 +44,17 @@
   }
 }
 
+.footer-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .actions-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   width: 100%;
   max-width: 400px;
 
@@ -47,7 +63,7 @@
     transition: all 0.3s ease;
     box-shadow: var(--mat-sys-level1);
     width: 100%;
-    min-height: 100px; // Ensure consistent height
+    min-height: 80px; // Reduced height for better alignment with 3 cards
 
     &:hover {
       box-shadow: var(--mat-sys-level3);
@@ -82,30 +98,30 @@
     }
 
     mat-card-content {
-      padding: 1.5rem;
+      padding: 1rem;
       height: 100%; // Ensure content takes full height
     }
 
     .card-content {
       display: flex;
       align-items: center;
-      gap: 1rem;
+      gap: 0.75rem;
       height: 100%; // Ensure consistent internal height
 
       .card-icon {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 48px;
-        height: 48px;
+        width: 40px;
+        height: 40px;
         flex-shrink: 0; // Prevent icon from shrinking
         border-radius: 50%;
         background-color: rgba(255, 255, 255, 0.1);
 
         mat-icon {
-          font-size: 24px;
-          width: 24px;
-          height: 24px;
+          font-size: 20px;
+          width: 20px;
+          height: 20px;
         }
       }
 
@@ -115,23 +131,38 @@
         min-width: 0; // Allow text to wrap if needed
 
         h3 {
-          margin: 0 0 0.25rem 0;
-          font-size: 1.25rem;
+          margin: 0 0 0.15rem 0;
+          font-size: 1.1rem;
           line-height: 1.2; // Consistent line height
         }
 
         p {
           margin: 0;
-          font-size: 0.9rem;
+          font-size: 0.85rem;
           opacity: 0.8;
           line-height: 1.3; // Consistent line height
         }
       }
     }
   }
+}
+
+.footer-section {
+  .terms-of-use-notice {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--mat-sys-on-surface-variant);
+
+    p {
+      margin: 0;
+    }
+
+    a {
+      color: var(--mat-sys-primary);
+    }
+  }
 
   .language-section {
-    margin-top: 0.5rem;
     display: flex;
     justify-content: center;
 
