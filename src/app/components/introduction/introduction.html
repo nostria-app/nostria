@@ -30,6 +30,20 @@
         </mat-card-content>
       </mat-card>
 
+      <mat-card class="action-card preview" (click)="loginWithPreview()">
+        <mat-card-content>
+          <div class="card-content">
+            <div class="card-icon">
+              <mat-icon>visibility</mat-icon>
+            </div>
+            <div class="card-text">
+              <h3 i18n="@@introduction.preview.title">Preview</h3>
+              <p i18n="@@introduction.preview.description">Explore Nostr in read-only mode</p>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
+
       <div class="terms-of-use-notice">
         <p>
           <span i18n="@@introduction.terms-of-use.prefix">By using Nostria, you agree to our</span>&nbsp;
