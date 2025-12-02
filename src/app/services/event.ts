@@ -145,10 +145,27 @@ export class EventService {
     // Find reply tag (NIP-10 marked format)
     const replyTag = threadTags.find((tag) => tag[3] === 'reply');
     if (replyTag) {
-      replyId = replyTag[1];
-      // Extract relay URL from reply tag if present (3rd element)
-      if (replyTag[2] && replyTag[2].trim() !== '') {
-        replyRelays.push(replyTag[2]);
+      // NIP-10 special case: if there's only a "reply" marker without a "root" marker,
+      // treat the reply target as the root (some clients don't set root marker
+      // when replying directly to the root event). In this case, don't set replyId
+      // so that the parent loading logic correctly loads just the root event.
+      if (!rootTag) {
+        rootId = replyTag[1];
+        // Extract author pubkey from reply tag if present (5th element),
+        // otherwise use the first p tag as the author of the root event
+        author = replyTag[4] || (pTags.length > 0 ? pTags[0] : null);
+        // Use the relay for root
+        if (replyTag[2] && replyTag[2].trim() !== '') {
+          rootRelays.push(replyTag[2]);
+        }
+        // replyId stays null - this is a direct reply to root
+      } else {
+        // Normal case: we have both root and reply markers
+        replyId = replyTag[1];
+        // Extract relay URL from reply tag if present (3rd element)
+        if (replyTag[2] && replyTag[2].trim() !== '') {
+          replyRelays.push(replyTag[2]);
+        }
       }
     } else if (threadTags.length > 0 && !rootTag) {
       // Fallback to positional format: assume replying to the last e tag (that's not a mention)
@@ -160,7 +177,7 @@ export class EventService {
       }
     }
 
-    // If no marked root but we have thread tags, use positional format
+    // If no marked root but we have thread tags, use positional format (for unmarked tags)
     if (!rootId && threadTags.length > 0) {
       if (threadTags.length === 1) {
         // Single thread tag is both root and reply
@@ -804,10 +821,10 @@ export class EventService {
    * reply is retrieved from user A relays. Everything else is fetched
    * from user B relays (root author).
    */
-  async loadParentEvents(event: Event): Promise<Event[]> {
+  async loadParentEvents(event: Event, eventTags?: EventTags): Promise<Event[]> {
     const parents: Event[] = [];
 
-    const { author: initialAuthor, rootId, replyId, pTags } = this.getEventTags(event);
+    const { author: initialAuthor, rootId, replyId, pTags } = eventTags ?? this.getEventTags(event);
 
     let author = initialAuthor;
 
@@ -943,7 +960,8 @@ export class EventService {
       throw new Error('Event not found');
     }
 
-    const { rootId, replyId } = this.getEventTags(event);
+    const eventTags = this.getEventTags(event);
+    const { rootId, replyId } = eventTags;
     const isThreadRoot = !rootId && !replyId;
 
     // Yield the main event immediately
@@ -957,8 +975,8 @@ export class EventService {
       rootEvent: null,
     };
 
-    // Load parent events in the background
-    const parentsPromise = this.loadParentEvents(event);
+    // Load parent events in the background (pass eventTags to avoid parsing twice)
+    const parentsPromise = this.loadParentEvents(event, eventTags);
 
     // Start loading replies and reactions for the current event initially
     const currentEventRepliesPromise = this.loadReplies(event.id, event.pubkey);
