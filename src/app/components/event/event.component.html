@@ -410,6 +410,9 @@
         </app-zap-button>
         @if (!compact()) {
         <button mat-button class="count-button" (click)="openReactionsDialog('zaps'); $event.stopPropagation()">
+          @if (isLoadingZaps()) {
+          <mat-spinner diameter="16"></mat-spinner>
+          } @else {
           <span>
             @if (totalZapAmount() > 0) {
             {{ formatZapAmount(totalZapAmount()) }} sats
@@ -417,6 +420,7 @@
             0
             }
           </span>
+          }
         </button>
         }
       </div>
