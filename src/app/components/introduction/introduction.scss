@@ -72,6 +72,15 @@
       }
     }
 
+    &.preview {
+      background-color: var(--mat-sys-surface-container-low);
+      border: 1px dashed var(--mat-sys-outline-variant);
+
+      .card-content {
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+
     mat-card-content {
       padding: 1.5rem;
       height: 100%; // Ensure content takes full height
