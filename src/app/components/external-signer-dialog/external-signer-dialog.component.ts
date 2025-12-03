@@ -35,7 +35,7 @@ export interface ExternalSignerDialogData {
       </p>
 
       <div class="actions">
-        <a mat-flat-button [href]="safeUrl">
+        <a mat-flat-button [href]="safeUrl" (click)="onOpenSignerApp()">
           <mat-icon>open_in_new</mat-icon>
           Open Signer App
         </a>
@@ -57,7 +57,7 @@ export interface ExternalSignerDialogData {
       } @else {
         <div class="status-notice" [class.monitoring]="isMonitoring()">
           <mat-icon>{{ isMonitoring() ? 'sync' : 'info' }}</mat-icon>
-          <span>{{ isMonitoring() ? 'Monitoring clipboard for signature...' : 'Waiting for signed event' }}</span>
+          <span>{{ isMonitoring() ? 'Monitoring clipboard for signature...' : 'Click "Open Signer App" to begin' }}</span>
         </div>
       }
 
@@ -170,16 +170,25 @@ export class ExternalSignerDialogComponent implements AfterViewInit, OnDestroy {
 
   ngAfterViewInit() {
     this.resultInput.nativeElement.focus();
-    window.addEventListener('focus', this.onWindowFocus);
-
-    // Start clipboard polling for better UX
-    this.startClipboardPolling();
   }
 
   ngOnDestroy() {
     window.removeEventListener('focus', this.onWindowFocus);
     this.stopAutoConfirm();
     this.stopClipboardPolling();
+  }
+
+  onOpenSignerApp() {
+    // Store current clipboard content to ignore it
+    navigator.clipboard.readText().then(text => {
+      this.lastClipboardContent = text.trim();
+    }).catch(() => {
+      // Ignore errors
+    });
+
+    // Start monitoring clipboard after user opens the signer app
+    window.addEventListener('focus', this.onWindowFocus);
+    this.startClipboardPolling();
   }
 
   private startClipboardPolling() {
