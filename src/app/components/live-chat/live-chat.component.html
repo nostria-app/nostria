@@ -63,14 +63,15 @@
       <div class="chat-message" [class.has-reply]="message.replyTo">
         <div class="message-content">
           @if (message.replyTo) {
-            @let replyMsg = getReplyMessage(message.replyTo);
-            @if (replyMsg) {
-            <div class="reply-reference">
-              <mat-icon>reply</mat-icon>
-              <app-profile-display-name [pubkey]="replyMsg.pubkey" class="reply-author" />
-              <span class="reply-preview">{{ replyMsg.content | slice:0:50 }}{{ replyMsg.content.length > 50 ? '...' : '' }}</span>
-            </div>
-            }
+          @let replyMsg = getReplyMessage(message.replyTo);
+          @if (replyMsg) {
+          <div class="reply-reference">
+            <mat-icon>reply</mat-icon>
+            <app-profile-display-name [pubkey]="replyMsg.pubkey" class="reply-author" />
+            <span class="reply-preview">{{ replyMsg.content | slice:0:50 }}{{ replyMsg.content.length > 50 ? '...' : ''
+              }}</span>
+          </div>
+          }
           }
           <div class="message-header">
             <app-user-profile [pubkey]="message.pubkey" view="compact" [hostWidthAuto]="true" class="chat-avatar" />
