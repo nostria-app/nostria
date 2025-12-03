@@ -6,67 +6,60 @@
 
   <mat-dialog-content>
     @if (isLoading()) {
-      <div class="loading-container">
-        <mat-spinner diameter="32"></mat-spinner>
-        <p>Loading reports...</p>
-      </div>
+    <div class="loading-container">
+      <mat-spinner diameter="32"></mat-spinner>
+      <p>Loading reports...</p>
+    </div>
     } @else if (error()) {
-      <div class="error-container">
-        <mat-icon>error</mat-icon>
-        <p>{{ error() }}</p>
-      </div>
+    <div class="error-container">
+      <mat-icon>error</mat-icon>
+      <p>{{ error() }}</p>
+    </div>
     } @else {
-      <div class="reports-summary">
-        <p class="summary-text">
-          This event has been reported <strong>{{ getTotalReports() }}</strong> time{{
-            getTotalReports() !== 1 ? 's' : ''
-          }}.
-        </p>
+    <div class="reports-summary">
+      <p class="summary-text">
+        This event has been reported <strong>{{ getTotalReports() }}</strong> time{{
+        getTotalReports() !== 1 ? 's' : ''
+        }}.
+      </p>
 
-        @if (getUniqueReportTypes().length > 0) {
-          <div class="report-types">
-            <h3>Report Categories:</h3>
-            <div class="report-chips">
-              @for (reportType of getUniqueReportTypes(); track reportType.type) {
-                <mat-chip class="report-chip" [class]="'report-type-' + reportType.type">
-                  <mat-icon>{{ getReportTypeIcon(reportType.type) }}</mat-icon>
-                  {{ getReportTypeLabel(reportType.type) }}
-                  <span class="report-count">{{ reportType.count }}</span>
-                </mat-chip>
-              }
-            </div>
-          </div>
-        }
+      @if (getUniqueReportTypes().length > 0) {
+      <div class="report-types">
+        <h3>Report Categories:</h3>
+        <div class="report-chips">
+          @for (reportType of getUniqueReportTypes(); track reportType.type) {
+          <mat-chip class="report-chip" [class]="'report-type-' + reportType.type">
+            <mat-icon>{{ getReportTypeIcon(reportType.type) }}</mat-icon>
+            {{ getReportTypeLabel(reportType.type) }}
+            <span class="report-count">{{ reportType.count }}</span>
+          </mat-chip>
+          }
+        </div>
       </div>
-
-      @if (reports().events.length > 0) {
-        <div class="reports-list">
-          <h3>Individual Reports:</h3>
-          <mat-list>
-            @for (reportRecord of reports().events; track reportRecord.event.id) {
-              <mat-list-item class="report-item">
-                <mat-icon matListItemIcon>person</mat-icon>
-                <div matListItemTitle>
-                  <app-profile-display-name
-                    [pubkey]="reportRecord.event.pubkey"
-                  ></app-profile-display-name>
-                </div>
-                <div matListItemLine>
-                  @if (reportRecord.event.content) {
-                    <p class="report-content">{{ reportRecord.event.content }}</p>
-                  }
-                  <small class="report-time">{{ reportRecord.event.created_at | ago }}</small>
-                </div>
-              </mat-list-item>
-            }
-          </mat-list>
-        </div>
-      } @else {
-        <div class="no-reports">
-          <mat-icon>info</mat-icon>
-          <p>No detailed report information available.</p>
-        </div>
       }
+    </div>
+
+    @if (reports().events.length > 0) {
+    <div class="reports-list">
+      <h3>Individual Reports:</h3>
+      @for (reportRecord of reports().events; track reportRecord.event.id) {
+      <div class="report-item">
+        <app-user-profile [pubkey]="reportRecord.event.pubkey" [view]="'list'"></app-user-profile>
+        <div class="report-details">
+          @if (reportRecord.event.content) {
+          <p class="report-content">{{ reportRecord.event.content }}</p>
+          }
+          <small class="report-time">{{ reportRecord.event.created_at | ago }}</small>
+        </div>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="no-reports">
+      <mat-icon>info</mat-icon>
+      <p>No detailed report information available.</p>
+    </div>
+    }
     }
   </mat-dialog-content>
 
