@@ -205,6 +205,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private isLoadingMoreMessages = signal<boolean>(false);
   // Track the previous account pubkey to detect actual account changes
   private lastAccountPubkey = signal<string | null>(null);
+  // Track the last message count to detect new incoming messages
+  private lastMessageCount = signal<number>(0);
 
   // Computed helpers
   hasChats = computed(() => this.messaging.sortedChats().length > 0);
@@ -295,6 +297,8 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             // Clear pending messages when switching chats
             this.pendingMessages.set([]);
             this.hasMoreMessages.set(true);
+            // Reset message count tracking for the new chat
+            this.lastMessageCount.set(chatMessages.length);
             this.scrollToBottom();
 
             // Re-setup scroll listener for the new chat
@@ -319,6 +323,29 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           }
         });
       }
+    });
+
+    // Effect to scroll to bottom when new messages arrive in the selected chat
+    effect(() => {
+      const currentMessages = this.messages();
+      const messageCount = currentMessages.length;
+      const chatId = this.selectedChatId();
+
+      if (!chatId || messageCount === 0) {
+        this.lastMessageCount.set(0);
+        return;
+      }
+
+      const previousCount = this.lastMessageCount();
+
+      // If we have more messages than before and we're not loading older messages,
+      // scroll to bottom (new message received)
+      if (messageCount > previousCount && previousCount > 0 && !this.isLoadingMoreMessages()) {
+        this.scrollToBottom();
+      }
+
+      // Update the last message count
+      this.lastMessageCount.set(messageCount);
     });
 
     // Listen to connection status changes
