@@ -295,8 +295,11 @@ export class EventService {
    * Build a threaded tree structure from events.
    * Only includes replies that are downstream of the rootEventId.
    * Filters out replies to other thread branches (e.g., replies to parent events).
+   * @param events - All reply events to process
+   * @param rootEventId - The event ID to build the tree from
+   * @param isViewingThreadRoot - Whether the user is viewing the actual thread root (OP)
    */
-  buildThreadTree(events: Event[], rootEventId: string): ThreadedEvent[] {
+  buildThreadTree(events: Event[], rootEventId: string, isViewingThreadRoot = false): ThreadedEvent[] {
     const childrenMap = new Map<string, Event[]>();
 
     // First pass: build parent-child relationships
@@ -330,12 +333,12 @@ export class EventService {
 
       return children
         .sort((a, b) => {
-          // Replies to root post (level 0): newest first (descending)
-          // Replies to replies (level > 0): oldest first (ascending)
-          if (level === 0) {
-            return b.created_at - a.created_at; // Newest first for root replies
+          // Only when viewing the thread root (OP), direct replies (level 0) are newest first
+          // All other cases: oldest first for chronological conversation flow
+          if (isViewingThreadRoot && level === 0) {
+            return b.created_at - a.created_at; // Newest first for OP's direct replies
           } else {
-            return a.created_at - b.created_at; // Oldest first for nested replies
+            return a.created_at - b.created_at; // Oldest first for all other replies
           }
         })
         .map((child) => {
@@ -363,7 +366,6 @@ export class EventService {
     eventId: string,
     onProgress?: (currentBatch: number, totalBatches: number, relayUrls: string[]) => void
   ): Promise<Event | null> {
-    // debugger;
     const BATCH_SIZE = 10;
 
     // Get observed relays sorted by events received (most active first)
@@ -1138,7 +1140,8 @@ export class EventService {
     const filteredReplies = replies.filter((reply) => !parentEventIds.has(reply.id));
 
     // Build threaded structure starting from the current event
-    const threadedReplies = this.buildThreadTree(filteredReplies, event.id);
+    // Pass isThreadRoot so sorting is correct: newest first only for OP's direct replies
+    const threadedReplies = this.buildThreadTree(filteredReplies, event.id, isThreadRoot);
 
     return {
       event,
@@ -1227,7 +1230,8 @@ export class EventService {
 
       // Build thread tree starting from the current event
       // This will only include downstream descendants of the current event
-      const threadedReplies = this.buildThreadTree(filteredReplies, event.id);
+      // Pass isThreadRoot so sorting is correct: newest first only for OP's direct replies
+      const threadedReplies = this.buildThreadTree(filteredReplies, event.id, isThreadRoot);
 
       yield {
         event,
@@ -1261,7 +1265,8 @@ export class EventService {
 
         // Filter out the current event from replies
         const filteredReplies = replies.filter((reply) => reply.id !== event.id);
-        const threadedReplies = this.buildThreadTree(filteredReplies, event.id);
+        // Pass isThreadRoot so sorting is correct: newest first only for OP's direct replies
+        const threadedReplies = this.buildThreadTree(filteredReplies, event.id, isThreadRoot);
 
         const finalData: ThreadData = {
           event,
