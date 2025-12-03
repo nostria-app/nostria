@@ -59,7 +59,7 @@ export class Followset {
   private readonly STARTER_PACK_SOURCES: { pubkey: string; dTags: string[] }[] = [
     {
       pubkey: 'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria official
-      dTags: ['popular', 'coax9y2o26yu', 'hvlcz1ze2lja', 'bdun4nttqp9x'],
+      dTags: ['popular', 'coax9y2o26yu'],
     },
     {
       pubkey: 'f901616f00a63f4f9c7881d4871a03df3d4cee7291eafd7adcbeea7c95c58e27',

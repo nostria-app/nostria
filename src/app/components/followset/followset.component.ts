@@ -2,6 +2,7 @@ import { Component, input, output, computed } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
 
 export interface Interest {
@@ -27,7 +28,7 @@ export interface SuggestedProfile {
  */
 @Component({
   selector: 'app-followset',
-  imports: [MatIconModule, MatButtonModule, MatCheckboxModule, FormsModule],
+  imports: [MatIconModule, MatButtonModule, MatCheckboxModule, MatProgressSpinnerModule, FormsModule],
   templateUrl: './followset.component.html',
   styleUrl: './followset.component.scss',
 })
@@ -42,6 +43,8 @@ export class FollowsetComponent {
   selectedInterests = input<string[]>([]);
   followingProfiles = input<string[]>([]);
   detectedRegion = input<string>('');
+  isLoadingInterests = input<boolean>(false);
+  isLoadingProfiles = input<boolean>(false);
 
   // Outputs
   interestToggled = output<string>();

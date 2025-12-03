@@ -32,6 +32,7 @@ export class DiscoverComponent implements OnInit {
 
   // Signals for reactive updates
   isLoadingInterests = signal<boolean>(false);
+  isLoadingProfiles = signal<boolean>(false);
   availableInterests = signal<Interest[]>([]);
   suggestedProfiles = signal<SuggestedProfile[]>([]);
   selectedInterests = signal<string[]>([]);
@@ -81,12 +82,17 @@ export class DiscoverComponent implements OnInit {
 
     // Fetch suggested profiles based on selected interests
     if (newSelected.length > 0) {
-      const starterPacks = this.followsetService.starterPacks();
-      const profiles = await this.followsetService.convertStarterPacksToProfiles(
-        starterPacks,
-        newSelected
-      );
-      this.suggestedProfiles.set(profiles);
+      this.isLoadingProfiles.set(true);
+      try {
+        const starterPacks = this.followsetService.starterPacks();
+        const profiles = await this.followsetService.convertStarterPacksToProfiles(
+          starterPacks,
+          newSelected
+        );
+        this.suggestedProfiles.set(profiles);
+      } finally {
+        this.isLoadingProfiles.set(false);
+      }
     } else {
       this.suggestedProfiles.set([]);
     }

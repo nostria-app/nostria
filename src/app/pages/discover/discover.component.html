@@ -10,6 +10,7 @@
     <app-followset [title]="'Welcome! Let\'s get you started'" [availableInterests]="availableInterests()"
       [suggestedProfiles]="suggestedProfiles()" [selectedInterests]="selectedInterests()"
       [detectedRegion]="detectedRegion()" [followingProfiles]="followingProfiles()"
+      [isLoadingInterests]="isLoadingInterests()" [isLoadingProfiles]="isLoadingProfiles()"
       (interestToggled)="toggleInterest($event)" (followProfile)="onFollowProfile($event)" />
   </div>
 </div>
