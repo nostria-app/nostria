@@ -247,12 +247,20 @@
     transition: opacity 0.2s ease;
     width: 24px;
     height: 24px;
-    line-height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     mat-icon {
       font-size: 16px;
       width: 16px;
       height: 16px;
+    }
+
+    // Always show on touch devices
+    @media (hover: none),
+    (pointer: coarse) {
+      opacity: 0.7;
     }
   }
 
