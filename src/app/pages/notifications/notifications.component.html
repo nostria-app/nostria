@@ -120,6 +120,16 @@
                 matTooltip="Remove" class="action-icon-button">
                 <mat-icon>close</mat-icon>
               </button>
+              <button mat-icon-button [matMenuTriggerFor]="notificationMenu" (click)="$event.stopPropagation()"
+                matTooltip="More options" class="action-icon-button">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #notificationMenu="matMenu">
+                <button mat-menu-item (click)="copyNotificationData(notification)">
+                  <mat-icon>content_copy</mat-icon>
+                  <span>Copy event data</span>
+                </button>
+              </mat-menu>
             </div>
           </div>
         </cdk-virtual-scroll-viewport>
@@ -186,6 +196,16 @@
                 class="action-icon-button">
                 <mat-icon>close</mat-icon>
               </button>
+              <button mat-icon-button [matMenuTriggerFor]="systemNotificationMenu" matTooltip="More options"
+                class="action-icon-button">
+                <mat-icon>more_vert</mat-icon>
+              </button>
+              <mat-menu #systemNotificationMenu="matMenu">
+                <button mat-menu-item (click)="copyNotificationData(notification)">
+                  <mat-icon>content_copy</mat-icon>
+                  <span>Copy event data</span>
+                </button>
+              </mat-menu>
             </div>
           </div>
           }

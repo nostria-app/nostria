@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit, computed, effect } from '@angular/core';
-
+import { Clipboard } from '@angular/cdk/clipboard';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -9,6 +9,7 @@ import { ScrollingModule } from '@angular/cdk/scrolling';
 import { RelayPublishStatusComponent } from '../../components/relay-publish-status/relay-publish-status.component';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { NotificationService } from '../../services/notification.service';
 import {
   NotificationType,
@@ -46,7 +47,8 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     MatTooltipModule,
     RouterModule,
     AgoPipe,
-    UserProfileComponent
+    UserProfileComponent,
+    MatSnackBarModule
   ],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
@@ -59,6 +61,8 @@ export class NotificationsComponent implements OnInit {
   private contentNotificationService = inject(ContentNotificationService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
+  private clipboard = inject(Clipboard);
+  private snackBar = inject(MatSnackBar);
 
   notifications = this.notificationService.notifications;
   notificationType = NotificationType;
@@ -296,11 +300,26 @@ export class NotificationsComponent implements OnInit {
       return;
     }
 
-    // For zaps with a specific event, navigate to that event
-    if (contentNotif.eventId && contentNotif.authorPubkey) {
+    // Handle navigation based on notification type
+    if (contentNotif.eventId) {
+      // Determine the correct author for the nevent encoding
+      // - For reactions: eventId is the event being reacted to (your note), author is YOU
+      // - For replies/mentions/reposts: eventId is the triggering event, author is the person who triggered it
+      // - For zaps: eventId is the zapped event (your note), author is YOU
+      let eventAuthor: string | undefined;
+
+      if (contentNotif.type === NotificationType.REACTION || contentNotif.type === NotificationType.ZAP) {
+        // For reactions and zaps, the eventId refers to YOUR note that was reacted to/zapped
+        // So the author should be the current user
+        eventAuthor = this.accountState.pubkey() ?? undefined;
+      } else {
+        // For replies, mentions, reposts - the eventId is the event created by the other person
+        eventAuthor = contentNotif.authorPubkey;
+      }
+
       const neventId = nip19.neventEncode({
         id: contentNotif.eventId,
-        author: contentNotif.authorPubkey,
+        author: eventAuthor,
         kind: contentNotif.kind,
       });
       this.router.navigate(['/e', neventId]);
@@ -457,5 +476,18 @@ export class NotificationsComponent implements OnInit {
       }
     }
     return undefined;
+  }
+
+  /**
+   * Copy notification event data to clipboard for debugging
+   */
+  copyNotificationData(notification: Notification): void {
+    const data = JSON.stringify(notification, null, 2);
+    this.clipboard.copy(data);
+    this.snackBar.open('Notification data copied to clipboard', 'Close', {
+      duration: 2000,
+      horizontalPosition: 'center',
+      verticalPosition: 'bottom'
+    });
   }
 }
