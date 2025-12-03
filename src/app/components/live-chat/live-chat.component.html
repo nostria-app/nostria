@@ -60,11 +60,24 @@
       </div>
       }
       } @else {
-      <div class="chat-message" [class.reply]="message.replyTo">
+      <div class="chat-message" [class.has-reply]="message.replyTo">
         <div class="message-content">
+          @if (message.replyTo) {
+            @let replyMsg = getReplyMessage(message.replyTo);
+            @if (replyMsg) {
+            <div class="reply-reference">
+              <mat-icon>reply</mat-icon>
+              <app-profile-display-name [pubkey]="replyMsg.pubkey" class="reply-author" />
+              <span class="reply-preview">{{ replyMsg.content | slice:0:50 }}{{ replyMsg.content.length > 50 ? '...' : '' }}</span>
+            </div>
+            }
+          }
           <div class="message-header">
             <app-user-profile [pubkey]="message.pubkey" view="compact" [hostWidthAuto]="true" class="chat-avatar" />
             <span class="message-time">{{ message.formattedTime }}</span>
+            <button mat-icon-button class="reply-button" (click)="replyTo(message)" matTooltip="Reply">
+              <mat-icon>reply</mat-icon>
+            </button>
           </div>
 
           <div class="message-text">{{ message.content }}</div>
@@ -82,6 +95,16 @@
 
     <!-- Chat Input -->
     <div class="chat-input-container">
+      @if (replyingTo()) {
+      <div class="reply-indicator">
+        <mat-icon>reply</mat-icon>
+        <span class="reply-label">Replying to</span>
+        <app-profile-display-name [pubkey]="replyingTo()!.pubkey" class="reply-to-author" />
+        <button mat-icon-button class="cancel-reply" (click)="cancelReply()" matTooltip="Cancel reply">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+      }
       <mat-form-field class="chat-input-field" appearance="outline">
         <input matInput [ngModel]="messageInput()" (ngModelChange)="messageInput.set($event)"
           (keydown.enter)="sendMessage()" placeholder="Type your message" autocomplete="off" />

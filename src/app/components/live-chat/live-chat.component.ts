@@ -83,6 +83,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   // Message input
   messageInput = signal('');
 
+  // Reply state
+  replyingTo = signal<ChatMessage | null>(null);
+
   // View mode: 'chat' or 'participants' or 'settings'
   viewMode = signal<'chat' | 'participants' | 'settings'>('chat');
 
@@ -369,20 +372,31 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
+      // Build tags array
+      const tags: string[][] = [
+        ['a', address, relayHint, 'root'],
+        ['client', 'nostria'],
+      ];
+
+      // Add reply tag if replying to a message
+      const replyMessage = this.replyingTo();
+      if (replyMessage) {
+        tags.push(['e', replyMessage.event.id, '', 'reply']);
+        tags.push(['p', replyMessage.pubkey]);
+      }
+
       // Create the chat message event
       const chatEvent = {
         kind: 1311,
         pubkey: pubkey,
-        tags: [
-          ['a', address, relayHint, 'root'],
-          ['client', 'nostria'],
-        ],
+        tags,
         content: message,
         created_at: Math.floor(Date.now() / 1000),
       };
 
-      // Clear input immediately for better UX
+      // Clear input and reply state immediately for better UX
       this.messageInput.set('');
+      this.replyingTo.set(null);
 
       // Sign and publish the event
       const result = await this.nostrService.signAndPublish(chatEvent);
@@ -413,6 +427,18 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
 
   toggleVisibility(): void {
     this.isVisible.update(v => !v);
+  }
+
+  replyTo(message: ChatMessage): void {
+    this.replyingTo.set(message);
+  }
+
+  cancelReply(): void {
+    this.replyingTo.set(null);
+  }
+
+  getReplyMessage(replyToId: string): ChatMessage | undefined {
+    return this.messages().find(m => m.event.id === replyToId);
   }
 
   formatTimestamp(timestamp: number): string {

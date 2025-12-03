@@ -242,12 +242,67 @@
     color: var(--mat-sys-on-surface-variant);
   }
 
+  .reply-button {
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &:hover .reply-button {
+    opacity: 1;
+  }
+
   .message-text {
     font-size: 0.875rem;
     line-height: 1.5;
     word-wrap: break-word;
     overflow-wrap: break-word;
     white-space: pre-wrap;
+  }
+
+  &.has-reply {
+    .reply-reference {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      margin-bottom: 4px;
+      background: var(--mat-sys-surface-container-highest);
+      border-radius: 8px;
+      border-left: 2px solid var(--mat-sys-primary);
+      font-size: 0.8rem;
+      color: var(--mat-sys-on-surface-variant);
+      overflow: hidden;
+
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
+        color: var(--mat-sys-primary);
+        flex-shrink: 0;
+      }
+
+      .reply-author {
+        color: var(--mat-sys-primary);
+        flex-shrink: 0;
+      }
+
+      .reply-preview {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        flex: 1;
+        min-width: 0;
+      }
+    }
   }
 }
 
@@ -256,6 +311,48 @@
   padding: 12px;
   border-top: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container-high);
+
+  .reply-indicator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    margin-bottom: 8px;
+    background: var(--mat-sys-surface-container);
+    border-radius: 8px;
+    border-left: 3px solid var(--mat-sys-primary);
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      color: var(--mat-sys-primary);
+    }
+
+    .reply-label {
+      font-size: 0.8rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .reply-to-author {
+      color: var(--mat-sys-primary);
+      font-size: 0.875rem;
+    }
+
+    .cancel-reply {
+      margin-left: auto;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+  }
 
   .chat-input-field {
     width: 100%;
