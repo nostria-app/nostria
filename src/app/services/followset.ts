@@ -58,6 +58,11 @@ export class Followset {
   private readonly NOSTRIA_CURATORS = [
     'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria official
     'f901616f00a63f4f9c7881d4871a03df3d4cee7291eafd7adcbeea7c95c58e27', // Community curator - starter pack: odenjo2n582o
+    '17538dc2a62769d09443f18c37cbe358fab5bbf981173542aa7c5ff171ed77c4', // Starter pack: y156932o9xfh
+    'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52', // Starter pack: 5gj7p3ctxvje
+    '85df00a2f6a91845354c8d2d9fbab4002bb85b4225baeab60fafb2587c5038ea', // Starter pack: 8b8a3825-ddc2-4085-a58d-a5b33a1a934d
+    'ede41352397758154514148b24112308ced96d121229b0e6a66bc5a2b40c03ec', // Starter pack: streamersFollowPackh8Kz3P2q
+    '64bfa9abffe5b18d0731eed57b38173adc2ba89bf87c168da90517f021e722b5', // Starter pack: frwuenx3icsi
   ];
 
   /**
