@@ -40,7 +40,7 @@ import { ApplicationService } from './services/application.service';
 import { NPubPipe } from './pipes/npub.pipe';
 import { AgoPipe } from './pipes/ago.pipe';
 import { MatBadgeModule } from '@angular/material/badge';
-import { nip19 } from 'nostr-tools';
+import { nip19, kinds } from 'nostr-tools';
 import { NotificationService } from './services/notification.service';
 import { ContentNotificationService } from './services/content-notification.service';
 import { MatBottomSheet, MatBottomSheetModule } from '@angular/material/bottom-sheet';
@@ -168,12 +168,12 @@ export class App implements OnInit {
     if (!this.isProcessing()) {
       return '';
     }
-    
+
     const aiProcessingState = this.ai.processingState();
     if (aiProcessingState.isProcessing) {
       return this.ai.getTaskName(aiProcessingState.task);
     }
-    
+
     return this.publishingEventLabel;
   });
 
@@ -932,14 +932,35 @@ export class App implements OnInit {
         });
 
       } else if (entity.startsWith('naddr')) {
-        // Handle address entities - use the layout service
-        this.layout.openArticle(entity);
+        // Handle address entities - check kind to decide route
+        try {
+          const decoded = nip19.decode(entity).data as { kind: number; pubkey: string; identifier: string };
 
-        this.snackBar.open($localize`:@@app.snackbar.opening-article:Opening article...`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
-          duration: 2000,
-          horizontalPosition: 'center',
-          verticalPosition: 'bottom',
-        });
+          if (decoded.kind === kinds.LongFormArticle) {
+            // Route to article page for long-form articles
+            this.layout.openArticle(entity);
+            this.snackBar.open($localize`:@@app.snackbar.opening-article:Opening article...`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
+              duration: 2000,
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom',
+            });
+          } else {
+            // Route to event page for other addressable events (starter packs, etc.)
+            this.layout.openGenericEvent(entity);
+            this.snackBar.open($localize`:@@app.snackbar.opening-event:Opening event...`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
+              duration: 2000,
+              horizontalPosition: 'center',
+              verticalPosition: 'bottom',
+            });
+          }
+        } catch (error) {
+          this.logger.error('Error decoding naddr:', error);
+          this.snackBar.open($localize`:@@app.snackbar.entity-error:Error processing Nostr entity.`, $localize`:@@app.snackbar.dismiss:Dismiss`, {
+            duration: 3000,
+            horizontalPosition: 'center',
+            verticalPosition: 'bottom',
+          });
+        }
 
       } else if (entity.startsWith('nsec')) {
         // Warn about private key
