@@ -65,7 +65,7 @@
     }
   }
 
-  input[type='checkbox']:checked + .interest-label {
+  input[type='checkbox']:checked+.interest-label {
     background-color: var(--mat-sys-primary-container);
     border-color: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary-container);
@@ -113,6 +113,7 @@
   border-radius: 12px;
   background-color: var(--mat-sys-surface-container-low);
   transition: all 0.2s ease;
+  overflow: hidden;
 
   &:hover {
     background-color: var(--mat-sys-surface-container);
@@ -148,8 +149,10 @@
   h4 {
     margin: 0 0 0.5rem 0;
     font-size: 1rem;
-    font-weight: 500;
     color: var(--mat-sys-on-surface);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .profile-bio {
@@ -157,6 +160,12 @@
     color: var(--mat-sys-on-surface-variant);
     margin-bottom: 0.75rem;
     line-height: 1.4;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical;
+    word-break: break-word;
   }
 
   .profile-region {
@@ -171,6 +180,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
+  overflow: hidden;
+  max-height: 3.5rem;
 }
 
 .interest-tag {
@@ -179,7 +190,10 @@
   color: var(--mat-sys-on-secondary-container);
   border-radius: 6px;
   font-size: 0.75rem;
-  font-weight: 500;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-card button {
