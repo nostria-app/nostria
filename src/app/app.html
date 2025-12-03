@@ -76,7 +76,7 @@
       }
       @if (app.authenticated()) {
       @if (appState.isPublishing() || ai.processingState().isProcessing) {
-      <button mat-icon-button class="profile-cache-button"
+      <button mat-icon-button class="profile-cache-button" [matMenuTriggerFor]="menuNotifications"
         [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel"
         i18n-aria-label="@@app.tooltip.processing-aria" aria-label="Processing in progress">
         <mat-icon class="spinning-icon">sync</mat-icon>
