@@ -725,17 +725,27 @@ export class EventService {
             }
           });
 
-          // Process reports
+          // Process reports - only accept valid NIP-56 report types
           const reportCounts = new Map<string, number>();
+          const validReportRecords: NostrRecord[] = [];
+
           reportRecords.forEach((record: NostrRecord) => {
             const event = record.event;
             const eTags = event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
+
+            let hasValidReportType = false;
             eTags.forEach((tag: string[]) => {
-              const reportType = tag[2];
-              if (reportType && reportType.trim()) {
+              const reportType = tag[2]?.trim().toLowerCase();
+              if (reportType && this.VALID_REPORT_TYPES.has(reportType)) {
                 reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
+                hasValidReportType = true;
               }
             });
+
+            // Only include records with valid report types
+            if (hasValidReportType) {
+              validReportRecords.push(record);
+            }
           });
 
           this.logger.info(
@@ -746,7 +756,10 @@ export class EventService {
             'reposts:',
             repostRecords.length,
             'reports:',
-            reportRecords.length,
+            validReportRecords.length,
+            '(filtered',
+            reportRecords.length - validReportRecords.length,
+            'invalid)',
             'replies:',
             replyRecords.length,
           );
@@ -758,7 +771,7 @@ export class EventService {
             },
             reposts: repostRecords,
             reports: {
-              events: reportRecords,
+              events: validReportRecords,
               data: reportCounts,
             },
             replyCount: replyRecords.length,
