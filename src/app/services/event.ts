@@ -28,6 +28,7 @@ import { AudioRecordDialogComponent } from '../pages/media/audio-record-dialog/a
 import { MediaService } from './media.service';
 import { AccountRelayService } from './relays/account-relay';
 import { UnsignedEvent } from 'nostr-tools';
+import { DatabaseService } from './database.service';
 import { ConfirmDialogComponent } from '../components/confirm-dialog/confirm-dialog.component';
 
 export interface Reaction {
@@ -91,6 +92,7 @@ export interface ThreadData {
 export class EventService {
   private readonly logger = inject(LoggerService);
   private readonly data = inject(DataService);
+  private readonly database = inject(DatabaseService);
   private readonly utilities = inject(UtilitiesService);
   private readonly nostrService = inject(NostrService);
   private readonly discoveryRelay = inject(DiscoveryRelayService);
@@ -471,6 +473,20 @@ export class EventService {
       const { kind, pubkey, identifier } = decoded.data;
       this.logger.info('Loading addressable event:', { kind, pubkey, identifier });
 
+      // Strategy for addressable events: Try multiple sources
+      // 1. Local database first
+      // 2. Author's relays
+      // 3. Account relays
+      // 4. Discovery relays
+
+      // Step 1: Check local database
+      const cachedEvent = await this.database.getParameterizedReplaceableEvent(pubkey, kind, identifier);
+      if (cachedEvent) {
+        this.logger.info('Loaded addressable event from local database:', cachedEvent.id);
+        return cachedEvent;
+      }
+
+      // Step 2: Try author's relays via userDataService
       try {
         const event = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
           pubkey,
@@ -480,13 +496,49 @@ export class EventService {
         );
 
         if (event) {
-          this.logger.info('Loaded addressable event from storage or relays:', event.event.id);
+          this.logger.info('Loaded addressable event from author relays:', event.event.id);
           return event.event;
         }
       } catch (error) {
-        this.logger.error('Error loading addressable event:', error);
+        this.logger.error('Error loading addressable event from author relays:', error);
       }
 
+      // Step 3: Try account relays
+      try {
+        const event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+          pubkey,
+          kind,
+          identifier,
+          { cache: true, ttl: minutes.five, save: true }
+        );
+
+        if (event) {
+          this.logger.info('Loaded addressable event from account relays:', event.event.id);
+          return event.event;
+        }
+      } catch (error) {
+        this.logger.error('Error loading addressable event from account relays:', error);
+      }
+
+      // Step 4: Try discovery relays
+      try {
+        await this.discoveryRelay.load();
+        const discoveryEvent = await this.discoveryRelay.getEventByPubkeyAndKindAndTag(
+          pubkey,
+          kind,
+          { key: 'd', value: identifier }
+        );
+
+        if (discoveryEvent) {
+          this.logger.info('Loaded addressable event from discovery relays:', discoveryEvent.id);
+          await this.database.saveEvent(discoveryEvent);
+          return discoveryEvent;
+        }
+      } catch (error) {
+        this.logger.error('Error loading addressable event from discovery relays:', error);
+      }
+
+      this.logger.warn('Addressable event not found:', { kind, pubkey, identifier });
       return null;
     }
 
@@ -500,7 +552,6 @@ export class EventService {
     // For 'nevent' type, decoded.data is an object with id and author
     const hex = decoded.type === 'note' ? decoded.data : decoded.data.id;
     const author = decoded.type === 'nevent' ? decoded.data.author : null;
-    // this.logger.info('Decoded event ID:', hex, 'Author:', author);
 
     // Check if we have cached event in item
     if (item?.event && item.event.id === hex) {
@@ -509,31 +560,63 @@ export class EventService {
     }
 
     try {
+      // Strategy: Try multiple sources in order of efficiency
+      // 1. Local database first (fastest, no network)
+      // 2. Author's relays (if author provided in nevent) - most likely to have the event
+      // 3. Account relays - for events from followed accounts
+      // 4. Discovery relays - broad coverage fallback
+      // This ensures we find events even if the author's relay list isn't discoverable
+
+      // First, always check local database regardless of author
+      const cachedEvent = await this.database.getEventById(hex);
+      if (cachedEvent) {
+        this.logger.info('Loaded event from local database:', cachedEvent.id);
+        return cachedEvent;
+      }
+
       if (author) {
         // Try to get from user data service with author pubkey
         try {
-          const event = await this.userDataService.getEventById(author, hex, { cache: true, ttl: minutes.five });
+          const event = await this.userDataService.getEventById(author, hex, { cache: true, ttl: minutes.five, save: true });
 
           if (event) {
-            // this.logger.info('Loaded event from storage or relays:', event.event.id);
+            this.logger.info('Loaded event from author relays:', event.event.id);
             return event.event;
           }
         } catch (error) {
-          this.logger.error('Error loading event from data service:', error);
+          this.logger.error('Error loading event from user data service:', error);
         }
-      } else {
-        // Try to get from account data service.
-        try {
-          // Attempt to get from account relays.
-          const event = await this.data.getEventById(hex, { cache: true, ttl: minutes.five });
+      }
 
-          if (event) {
-            // this.logger.info('Loaded event from storage or relays:', event.event.id);
-            return event.event;
-          }
-        } catch (error) {
-          this.logger.error('Error loading event from data service:', error);
+      // Fallback: Try account relays
+      // This helps when the author's relay list isn't discoverable but the event
+      // is available on the current account's relays (e.g., for followed accounts)
+      try {
+        const event = await this.data.getEventById(hex, { cache: true, ttl: minutes.five, save: true });
+
+        if (event) {
+          this.logger.info('Loaded event from account relays:', event.event.id);
+          return event.event;
         }
+      } catch (error) {
+        this.logger.error('Error loading event from account relays:', error);
+      }
+
+      // Final fallback: Try discovery relays
+      // This provides broad coverage when all other methods fail
+      try {
+        // Ensure discovery relay is loaded (it lazy-loads on first use)
+        await this.discoveryRelay.load();
+        const discoveryEvent = await this.discoveryRelay.getEventById(hex);
+
+        if (discoveryEvent) {
+          this.logger.info('Loaded event from discovery relays:', discoveryEvent.id);
+          // Save to database for future lookups
+          await this.database.saveEvent(discoveryEvent);
+          return discoveryEvent;
+        }
+      } catch (error) {
+        this.logger.error('Error loading event from discovery relays:', error);
       }
 
       // If event not found through normal means, we return null.
