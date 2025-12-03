@@ -27,6 +27,7 @@ import type { ReportTarget } from '../../../services/reporting.service';
 import { BookmarkService } from '../../../services/bookmark.service';
 import { PinnedService } from '../../../services/pinned.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
+import { UtilitiesService } from '../../../services/utilities.service';
 import { AiService } from '../../../services/ai.service';
 import { SettingsService } from '../../../services/settings.service';
 import { TranslateDialogComponent, TranslateDialogData } from '../translate-dialog/translate-dialog.component';
@@ -59,6 +60,7 @@ export class EventMenuComponent {
   ai = inject(AiService);
   settings = inject(SettingsService);
   mediaPlayer = inject(MediaPlayerService);
+  utilities = inject(UtilitiesService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -214,16 +216,12 @@ export class EventMenuComponent {
       return '';
     }
 
-    const neventId = nip19.neventEncode({
-      id: event.id,
-      author: event.pubkey,
-    });
+    // Use encodeEventForUrl which handles addressable events (naddr) vs regular events (nevent)
+    const encoded = this.utilities.encodeEventForUrl(event);
 
-    // const url = new URL(window.location.href);
     const url = new URL('https://nostria.app/');
-
     url.search = '';
-    url.pathname = `/e/${neventId}`;
+    url.pathname = `/e/${encoded}`;
     return url.toString();
   });
 
