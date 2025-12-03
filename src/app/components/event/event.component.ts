@@ -308,8 +308,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   quotes = signal<NostrRecord[]>([]);
   replyCount = signal<number>(0);
 
+  // Combined count of reposts + quotes for display
   repostCount = computed<number>(() => {
-    return this.reposts().length;
+    return this.reposts().length + this.quotes().length;
   });
 
   quoteCount = computed<number>(() => {
@@ -604,9 +605,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
             // Double-check event ID before loading to prevent race conditions
             if (this.record()?.event.id === currentEventId) {
+              // loadAllInteractions now also loads quotes
               this.loadAllInteractions();
               this.loadZaps();
-              this.loadQuotes();
             } else {
               console.warn('⚠️ [Lazy Load] Event changed between intersection and loading, skipping:', currentEventId.substring(0, 8));
             }
@@ -672,12 +673,20 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
     this.isLoadingReactions.set(true);
     try {
-      const interactions = await this.eventService.loadEventInteractions(
-        targetEventId,
-        record.event.kind,
-        userPubkey,
-        invalidateCache
-      );
+      // Load main interactions and quotes in parallel
+      const [interactions, quotesResult] = await Promise.all([
+        this.eventService.loadEventInteractions(
+          targetEventId,
+          record.event.kind,
+          userPubkey,
+          invalidateCache
+        ),
+        this.eventService.loadQuotes(
+          targetEventId,
+          userPubkey,
+          invalidateCache
+        )
+      ]);
 
       // CRITICAL: Verify we're still showing the same event before updating state
       // This prevents interactions from one event being applied to another
@@ -691,6 +700,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       console.log('✅ [Loading Interactions] Successfully loaded for event:', targetEventId.substring(0, 8));
       console.log('   - Reactions:', interactions.reactions.events.length);
       console.log('   - Reposts:', interactions.reposts.length);
+      console.log('   - Quotes:', quotesResult.length);
       console.log('   - Reports:', interactions.reports.events.length);
       console.log('   - Replies:', interactions.replyCount);
 
@@ -708,6 +718,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       // Filter reposts
       const filteredReposts = interactions.reposts.filter(r => !mutedAccounts.includes(r.event.pubkey));
 
+      // Filter quotes
+      const filteredQuotes = quotesResult.filter(r => !mutedAccounts.includes(r.event.pubkey));
+
       // Filter reports
       const filteredReportEvents = interactions.reports.events.filter(r => !mutedAccounts.includes(r.event.pubkey));
       const filteredReportData = new Map<string, number>();
@@ -719,14 +732,16 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       console.log('🔒 [Mute Filter] Filtered interactions from', mutedAccounts.length, 'muted accounts');
       console.log('   - Reactions after filter:', filteredReactionEvents.length);
       console.log('   - Reposts after filter:', filteredReposts.length);
+      console.log('   - Quotes after filter:', filteredQuotes.length);
       console.log('   - Reports after filter:', filteredReportEvents.length);
 
-      // Update all three states from the filtered results
+      // Update all states from the filtered results
       this.reactions.set({
         events: filteredReactionEvents,
         data: filteredReactionData
       });
       this.reposts.set(filteredReposts);
+      this.quotes.set(filteredQuotes);
       this.reports.set({
         events: filteredReportEvents,
         data: filteredReportData
@@ -937,9 +952,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const targetEventId = currentEvent.id;
 
     try {
-      // For now, quotes are complex to find - they're regular notes that reference this event
-      // This would require a more complex query to find notes with 'q' tags referencing this event
-      // TODO: Implement proper quotes loading when EventService supports it
+      // Load quotes using the EventService method (queries for 'q' tags)
+      const quotes = await this.eventService.loadQuotes(
+        currentEvent.id,
+        currentEvent.pubkey,
+        false
+      );
 
       // CRITICAL: Verify we're still showing the same event before updating state
       const stillCurrentEvent = this.event() || this.record()?.event;
@@ -948,7 +966,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      this.quotes.set([]);
+      this.quotes.set(quotes);
     } catch (error) {
       console.error('Error loading quotes:', error);
     }
