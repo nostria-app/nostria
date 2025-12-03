@@ -6,6 +6,16 @@
 
   <div class="interests-selection">
     <h3>Pick your interests:</h3>
+    @if (isLoadingInterests()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading starter packs...</p>
+    </div>
+    } @else if (availableInterests().length === 0) {
+    <div class="empty-state">
+      <p>No starter packs available at the moment.</p>
+    </div>
+    } @else {
     <div class="interests-grid">
       @for (interest of availableInterests(); track interest.id) {
       <label class="interest-checkbox">
@@ -18,6 +28,7 @@
       </label>
       }
     </div>
+    }
   </div>
 
   @if (selectedInterests().length > 0) {
@@ -25,6 +36,12 @@
     <h3>People to follow</h3>
     <p>Here are some popular creators in your areas of interest:</p>
 
+    @if (isLoadingProfiles()) {
+    <div class="loading-container">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Loading profiles...</p>
+    </div>
+    } @else {
     <div class="profiles-grid">
       @for (profile of filteredProfiles(); track profile.id) {
       <div class="profile-card" [class.following]="followingProfiles().includes(profile.id)">
@@ -54,6 +71,7 @@
       </div>
       }
     </div>
+    }
   </div>
   }
 </div>
