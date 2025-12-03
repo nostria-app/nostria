@@ -57,7 +57,7 @@ export class Followset {
   // Well-known pubkeys for different categories
   private readonly NOSTRIA_CURATORS = [
     'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria official
-    // Add more curator pubkeys here
+    'f901616f00a63f4f9c7881d4871a03df3d4cee7291eafd7adcbeea7c95c58e27', // Community curator - starter pack: odenjo2n582o
   ];
 
   /**
@@ -251,7 +251,7 @@ export class Followset {
     });
 
     // Fetch profiles for these pubkeys
-    const pubkeyArray = Array.from(allPubkeys).slice(0, 20); // Limit to 20 profiles
+    const pubkeyArray = Array.from(allPubkeys);
 
     try {
       const profileRecords = await this.dataService.getProfiles(pubkeyArray);
