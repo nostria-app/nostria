@@ -53,6 +53,7 @@ import { Introduction } from '../../components/introduction/introduction';
 import { AccountStateService } from '../../services/account-state.service';
 import { RepostService } from '../../services/repost.service';
 import { EventComponent } from '../../components/event/event.component';
+import { UtilitiesService } from '../../services/utilities.service';
 
 // NavLink interface removed because it was unused.
 
@@ -100,6 +101,7 @@ export class FeedsComponent implements OnDestroy {
   private snackBar = inject(MatSnackBar);
   protected app = inject(ApplicationService);
   protected accountState = inject(AccountStateService);
+  private utilities = inject(UtilitiesService);
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -276,18 +278,25 @@ export class FeedsComponent implements OnDestroy {
     const feedDataMap = this.feedService.feedDataReactive();
 
     columns.forEach(column => {
+      let events: Event[];
       if (isDragging) {
         // During drag operations, use cached events to prevent DOM updates
-        eventsMap.set(column.id, this._eventCache.get(column.id) || []);
+        events = this._eventCache.get(column.id) || [];
       } else {
         // Normal operation: get fresh events from reactive service
         const columnData = feedDataMap.get(column.id);
-        const events = columnData?.events() || [];
+        events = columnData?.events() || [];
 
         // Update cache for potential drag operations
         this._eventCache.set(column.id, events);
-        eventsMap.set(column.id, events);
       }
+
+      // Filter out replies if showReplies is false (default)
+      if (!column.showReplies) {
+        events = events.filter(event => this.utilities.isRootPost(event));
+      }
+
+      eventsMap.set(column.id, events);
     });
 
     return eventsMap;
@@ -1382,6 +1391,14 @@ export class FeedsComponent implements OnDestroy {
     await this.feedsCollectionService.continueColumn(column.id);
     // this.notificationService.notify(`Column "${column.label}" continued`);
     console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
+  }
+
+  /**
+   * Toggle whether replies are shown in a column
+   */
+  toggleShowReplies(column: ColumnDefinition): void {
+    const newValue = !column.showReplies;
+    this.feedsCollectionService.updateColumn(column.id, { showReplies: newValue });
   }
 
   /**

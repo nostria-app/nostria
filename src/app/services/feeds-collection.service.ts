@@ -19,6 +19,7 @@ export interface ColumnDefinition {
   relayConfig: 'account' | 'custom';
   customRelays?: string[];
   filters?: Record<string, unknown>;
+  showReplies?: boolean; // Whether to show replies in the feed (default: false)
   createdAt: number;
   updatedAt: number;
   lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
@@ -413,5 +414,21 @@ export class FeedsCollectionService {
   async continueColumn(columnId: string): Promise<void> {
     await this.feedService.continueColumn(columnId);
     this.logger.debug(`Continued column: ${columnId}`);
+  }
+
+  /**
+   * Update a column in the active feed
+   * Convenience method that finds the column in the active feed and updates it
+   */
+  async updateColumn(
+    columnId: string,
+    updates: Partial<Omit<ColumnDefinition, 'id' | 'createdAt'>>
+  ): Promise<boolean> {
+    const activeFeedId = this._activeFeedId();
+    if (!activeFeedId) {
+      this.logger.warn('No active feed to update column in');
+      return false;
+    }
+    return await this.updateColumnInFeed(activeFeedId, columnId, updates);
   }
 }

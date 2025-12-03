@@ -168,6 +168,10 @@
                   <mat-icon>more_vert</mat-icon>
                 </button>
                 <mat-menu #columnMenu="matMenu">
+                  <button mat-menu-item (click)="toggleShowReplies(column)">
+                    <mat-icon>{{ column.showReplies ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+                    <span>Show Replies</span>
+                  </button>
                   <button mat-menu-item (click)="editColumn(i)">
                     <mat-icon>edit</mat-icon>
                     <span>Edit Column</span>
