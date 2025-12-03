@@ -43,7 +43,7 @@ import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dia
     MatTooltipModule,
     MatDividerModule,
     MatMenuModule
-],
+  ],
   templateUrl: './event-menu.component.html',
   styleUrl: './event-menu.component.scss',
 })
@@ -223,6 +223,15 @@ export class EventMenuComponent {
     url.search = '';
     url.pathname = `/e/${encoded}`;
     return url.toString();
+  });
+
+  // Returns encoded event ID (naddr for addressable events, nevent for regular events)
+  eventEncodedId = computed<string>(() => {
+    const event = this.event();
+    if (!event) {
+      return '';
+    }
+    return this.utilities.encodeEventForUrl(event);
   });
 
   constructor() {

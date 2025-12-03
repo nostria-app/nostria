@@ -94,9 +94,9 @@
     <mat-icon>link</mat-icon>
     Copy Note Link
   </button>
-  <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'nevent', event().pubkey)">
+  <button mat-menu-item (click)="layout.copyToClipboard(eventEncodedId(), 'text')">
     <mat-icon>content_copy</mat-icon>
-    Copy Note ID (nevent)
+    Copy Event ID
   </button>
   <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'hex')">
     <mat-icon>content_copy</mat-icon>
