@@ -853,6 +853,19 @@ export class EventService {
   }
 
   /**
+   * Valid report types according to NIP-56
+   */
+  private readonly VALID_REPORT_TYPES = new Set([
+    'nudity',
+    'malware',
+    'profanity',
+    'illegal',
+    'spam',
+    'impersonation',
+    'other',
+  ]);
+
+  /**
    * Load reports for an event.
    * Uses both the profile's relays and the current account's relays to ensure
    * we discover all reports, even if the profile has private relays.
@@ -876,30 +889,31 @@ export class EventService {
         includeAccountRelays: true,
       });
 
-      // Count reports by type from tags (NIP-56)
+      // Filter and count reports by type from tags (NIP-56)
+      // Only accept valid report types according to NIP-56
       const reportCounts = new Map<string, number>();
+      const validReportRecords: NostrRecord[] = [];
+
       reportRecords.forEach((record: NostrRecord) => {
         const event = record.event;
 
         // Look for report type in e-tags that reference this event
         const eTags = event.tags.filter((tag: string[]) => tag[0] === 'e' && tag[1] === eventId);
 
+        let hasValidReportType = false;
         eTags.forEach((tag: string[]) => {
           // Report type is the 3rd element (index 2) in the tag according to NIP-56
-          const reportType = tag[2];
-          if (reportType && reportType.trim()) {
+          const reportType = tag[2]?.trim().toLowerCase();
+          if (reportType && this.VALID_REPORT_TYPES.has(reportType)) {
             reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
+            hasValidReportType = true;
           }
         });
 
-        // Also check p-tags for user reports (in case this is being used for user reports)
-        // const pTags = event.tags.filter((tag) => tag[0] === 'p');
-        // pTags.forEach((tag) => {
-        //   const reportType = tag[2];
-        //   if (reportType && reportType.trim()) {
-        //     reportCounts.set(reportType, (reportCounts.get(reportType) || 0) + 1);
-        //   }
-        // });
+        // Only include records with valid report types
+        if (hasValidReportType) {
+          validReportRecords.push(record);
+        }
       });
 
       this.logger.info(
@@ -907,10 +921,13 @@ export class EventService {
         eventId,
         'report types:',
         Array.from(reportCounts.keys()),
+        'filtered:',
+        reportRecords.length - validReportRecords.length,
+        'invalid reports',
       );
 
       return {
-        events: reportRecords,
+        events: validReportRecords,
         data: reportCounts,
       };
     } catch (error) {
