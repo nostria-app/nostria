@@ -67,7 +67,7 @@ export class MessagingService implements NostriaService {
   private chatsMap = signal<Map<string, Chat>>(new Map());
   private oldestChatTimestamp = signal<number | null>(null);
 
-  MESSAGE_SIZE = 20;
+  MESSAGE_SIZE = 100;
 
   getChat(chatId: string): Chat | null {
     const chat = this.chatsMap().get(chatId);
