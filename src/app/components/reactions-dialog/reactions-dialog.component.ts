@@ -1,7 +1,8 @@
 import { Component, inject, signal, computed } from '@angular/core';
-import { Router, NavigationStart } from '@angular/router';
+import { Router, NavigationStart, RouterLink } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { nip19 } from 'nostr-tools';
 
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -39,8 +40,9 @@ export interface ReactionsDialogData {
     MatTabsModule,
     MatListModule,
     UserProfileComponent,
-    AgoPipe
-],
+    AgoPipe,
+    RouterLink
+  ],
   template: `
     <div class="reactions-dialog">
       <div class="dialog-header">
@@ -59,7 +61,7 @@ export interface ReactionsDialogData {
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon>favorite</mat-icon>
-              <span>Reactions ({{ reactions().length }})</span>
+              <span><span class="hide-small">Reactions</span> ({{ reactions().length }})</span>
             </ng-template>
 
             <div class="tab-content">
@@ -95,7 +97,7 @@ export interface ReactionsDialogData {
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon>bolt</mat-icon>
-              <span>Zaps ({{ totalZapAmount() }} sats)</span>
+              <span><span class="hide-small">Zaps</span> ({{ totalZapAmount() }} sats)</span>
             </ng-template>
 
             <div class="tab-content">
@@ -135,7 +137,7 @@ export interface ReactionsDialogData {
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon>repeat</mat-icon>
-              <span>Reposts ({{ reposts().length }})</span>
+              <span><span class="hide-small">Reposts</span> ({{ reposts().length }})</span>
             </ng-template>
 
             <div class="tab-content">
@@ -166,7 +168,7 @@ export interface ReactionsDialogData {
           <mat-tab>
             <ng-template mat-tab-label>
               <mat-icon>format_quote</mat-icon>
-              <span>Quotes ({{ quotes().length }})</span>
+              <span><span class="hide-small">Quotes</span> ({{ quotes().length }})</span>
             </ng-template>
 
             <div class="tab-content">
@@ -177,14 +179,16 @@ export interface ReactionsDialogData {
                 </div>
               } @else {
                 <mat-list>
-                  @for (quote of quotes(); track quote.event.id) {
+                  @for (quote of sortedQuotes(); track quote.event.id) {
                     <mat-list-item class="reaction-item">
                       <div class="reaction-content">
                         <app-user-profile
                           [pubkey]="quote.event.pubkey"
                           view="compact"
                         ></app-user-profile>
-                        <span class="reaction-time">{{ quote.event.created_at | ago }}</span>
+                        <a class="reaction-time quote-link" [routerLink]="['/e', getNevent(quote.event)]">
+                          {{ quote.event.created_at | ago }}
+                        </a>
                       </div>
                     </mat-list-item>
                   }
@@ -297,6 +301,17 @@ export interface ReactionsDialogData {
         color: var(--mat-sys-on-surface-variant);
         font-size: 12px;
         white-space: nowrap;
+      }
+
+      .quote-link {
+        text-decoration: none;
+        cursor: pointer;
+        transition: color 0.2s ease;
+      }
+
+      .quote-link:hover {
+        color: var(--mat-sys-secondary);
+        text-decoration: underline;
       }
 
       .zaps-container {
@@ -451,6 +466,10 @@ export class ReactionsDialogComponent {
     return [...this.reposts()].sort((a, b) => b.event.created_at - a.event.created_at);
   });
 
+  sortedQuotes = computed(() => {
+    return [...this.quotes()].sort((a, b) => b.event.created_at - a.event.created_at);
+  });
+
   sortedReactions = computed(() => {
     return [...this.reactions()].sort((a, b) => b.event.created_at - a.event.created_at);
   });
@@ -473,6 +492,14 @@ export class ReactionsDialogComponent {
   formatAmount(amount: number | null): string {
     if (!amount) return '0';
     return amount.toLocaleString();
+  }
+
+  getNevent(event: { id: string; pubkey: string; kind: number }): string {
+    return nip19.neventEncode({
+      id: event.id,
+      author: event.pubkey,
+      kind: event.kind,
+    });
   }
 
   close(): void {
