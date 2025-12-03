@@ -404,7 +404,14 @@ export class FeedsComponent implements OnDestroy {
     columns.forEach(column => {
       const columnData = feedDataMap.get(column.id);
       if (columnData && columnData.pendingEvents) {
-        countsMap.set(column.id, columnData.pendingEvents().length);
+        let pendingEvents = columnData.pendingEvents();
+        
+        // Filter out replies if showReplies is false (same logic as allColumnEvents)
+        if (!column.showReplies) {
+          pendingEvents = pendingEvents.filter(event => this.utilities.isRootPost(event));
+        }
+        
+        countsMap.set(column.id, pendingEvents.length);
       } else {
         countsMap.set(column.id, 0);
       }
