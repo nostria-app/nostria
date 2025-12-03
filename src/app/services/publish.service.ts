@@ -7,6 +7,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { UserRelaysService } from './relays/user-relays';
 import { ApplicationStateService } from './application-state.service';
 import { PublishEventBus } from './publish-event-bus.service';
+import { UtilitiesService } from './utilities.service';
 
 /**
  * Options for publishing events
@@ -62,6 +63,7 @@ export class PublishService {
   private readonly userRelaysService = inject(UserRelaysService);
   private readonly appState = inject(ApplicationStateService);
   private readonly eventBus = inject(PublishEventBus);
+  private readonly utilities = inject(UtilitiesService);
 
   /**
    * Publish a signed event to relays.
@@ -332,13 +334,14 @@ export class PublishService {
     event: Event,
     options: PublishOptions
   ): Promise<string[]> {
-    // If explicit relay URLs provided, use those (deduplicated)
+    // If explicit relay URLs provided, use those (deduplicated and normalized)
     if (options.relayUrls && options.relayUrls.length > 0) {
-      const uniqueRelays = Array.from(new Set(options.relayUrls));
-      return this.applyRelayOptimization(uniqueRelays, options.useOptimizedRelays);
+      const normalizedRelays = this.utilities.getUniqueNormalizedRelayUrls(options.relayUrls);
+      return this.applyRelayOptimization(normalizedRelays, options.useOptimizedRelays);
     }
 
-    const accountRelayUrls = this.accountRelay.getRelayUrls();
+    // Normalize account relay URLs to ensure consistent comparison
+    const accountRelayUrls = this.utilities.normalizeRelayUrls(this.accountRelay.getRelayUrls());
     const allRelayUrls = new Set<string>(accountRelayUrls);
 
     console.log('[PublishService] DEBUG getRelayUrlsForPublish:', {
@@ -350,6 +353,7 @@ export class PublishService {
 
     // Special handling for kind 3 (follow list) events
     if (event.kind === kinds.Contacts && options.notifyFollowed !== false) {
+      // Note: getFollowedUsersRelays returns already normalized URLs
       const followedRelayUrls = await this.getFollowedUsersRelays(event, options.newlyFollowedPubkeys);
 
       followedRelayUrls.forEach(url => allRelayUrls.add(url));
@@ -407,9 +411,8 @@ export class PublishService {
       }
     }
 
-    // For other events, use account relays with optional optimization (deduplicated)
-    const uniqueAccountRelays = Array.from(new Set(accountRelayUrls));
-    return this.applyRelayOptimization(uniqueAccountRelays, options.useOptimizedRelays);
+    // For other events, use account relays with optional optimization (already normalized above)
+    return this.applyRelayOptimization(accountRelayUrls, options.useOptimizedRelays);
   }
 
   /**
