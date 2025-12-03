@@ -54,16 +54,43 @@ export class Followset {
   isLoading = signal<boolean>(false);
   error = signal<string | null>(null);
 
-  // Well-known pubkeys for different categories
-  private readonly NOSTRIA_CURATORS = [
-    'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria official
-    'f901616f00a63f4f9c7881d4871a03df3d4cee7291eafd7adcbeea7c95c58e27', // Community curator - starter pack: odenjo2n582o
-    '17538dc2a62769d09443f18c37cbe358fab5bbf981173542aa7c5ff171ed77c4', // Starter pack: y156932o9xfh
-    'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52', // Starter pack: 5gj7p3ctxvje
-    '85df00a2f6a91845354c8d2d9fbab4002bb85b4225baeab60fafb2587c5038ea', // Starter pack: 8b8a3825-ddc2-4085-a58d-a5b33a1a934d
-    'ede41352397758154514148b24112308ced96d121229b0e6a66bc5a2b40c03ec', // Starter pack: streamersFollowPackh8Kz3P2q
-    '64bfa9abffe5b18d0731eed57b38173adc2ba89bf87c168da90517f021e722b5', // Starter pack: frwuenx3icsi
+  // Well-known starter packs with specific d-tags
+  // Each entry specifies a pubkey and the specific d-tags to fetch from that pubkey
+  private readonly STARTER_PACK_SOURCES: { pubkey: string; dTags: string[] }[] = [
+    {
+      pubkey: 'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b', // Nostria official
+      dTags: ['popular', 'coax9y2o26yu', 'hvlcz1ze2lja', 'bdun4nttqp9x'],
+    },
+    {
+      pubkey: 'f901616f00a63f4f9c7881d4871a03df3d4cee7291eafd7adcbeea7c95c58e27',
+      dTags: ['odenjo2n582o'],
+    },
+    {
+      pubkey: '17538dc2a62769d09443f18c37cbe358fab5bbf981173542aa7c5ff171ed77c4',
+      dTags: ['y156932o9xfh'],
+    },
+    {
+      pubkey: 'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52',
+      dTags: ['5gj7p3ctxvje'],
+    },
+    {
+      pubkey: '85df00a2f6a91845354c8d2d9fbab4002bb85b4225baeab60fafb2587c5038ea',
+      dTags: ['8b8a3825-ddc2-4085-a58d-a5b33a1a934d'],
+    },
+    {
+      pubkey: 'ede41352397758154514148b24112308ced96d121229b0e6a66bc5a2b40c03ec',
+      dTags: ['streamersFollowPackh8Kz3P2q'],
+    },
+    {
+      pubkey: '64bfa9abffe5b18d0731eed57b38173adc2ba89bf87c168da90517f021e722b5',
+      dTags: ['frwuenx3icsi'],
+    },
   ];
+
+  // Set of all allowed d-tags for quick lookup
+  private readonly ALLOWED_DTAGS = new Set(
+    this.STARTER_PACK_SOURCES.flatMap(source => source.dTags)
+  );
 
   /**
    * Fetch starter packs from known curators using DataService
@@ -84,29 +111,32 @@ export class Followset {
     try {
       const starterPacks: StarterPack[] = [];
 
-      // Fetch starter packs from each curator
+      // Fetch starter packs from each source
       // This will return cached data if available, or fetch from relays if not
-      for (const pubkey of this.NOSTRIA_CURATORS) {
+      for (const source of this.STARTER_PACK_SOURCES) {
         try {
           // One-shot fetch via on-demand service to avoid holding sockets
           // This uses cache: true, save: true - so it returns cached data quickly
           const events = await this.onDemandUserData.getEventsByPubkeyAndKind(
-            pubkey,
+            source.pubkey,
             39089 // Starter pack kind
           );
 
-          // Parse each event and add to starter packs
+          // Parse each event and add to starter packs if it matches allowed d-tags
           events.forEach(record => {
             const starterPack = this.parseStarterPackEvent(record.event);
             if (starterPack) {
-              // Filter by d-tag if specified
-              if (!dTagFilter || starterPack.dTag === dTagFilter) {
+              // Only include if the d-tag is in the allowed list for this source
+              const isAllowedDTag = source.dTags.includes(starterPack.dTag);
+              const matchesFilter = !dTagFilter || starterPack.dTag === dTagFilter;
+
+              if (isAllowedDTag && matchesFilter) {
                 starterPacks.push(starterPack);
               }
             }
           });
         } catch (error) {
-          this.logger.error(`Failed to fetch starter packs from ${pubkey}:`, error);
+          this.logger.error(`Failed to fetch starter packs from ${source.pubkey}:`, error);
         }
       }
 
@@ -144,13 +174,13 @@ export class Followset {
 
         const refreshedPacks: StarterPack[] = [];
 
-        for (const pubkey of this.NOSTRIA_CURATORS) {
+        for (const source of this.STARTER_PACK_SOURCES) {
           try {
             // Fetch fresh data from relays by bypassing cache
             // invalidateCache: true forces fetching from relays, not cache/storage
             // save: true ensures the fresh data is saved to storage for next time
             const events = await this.userDataService.getEventsByPubkeyAndKind(
-              pubkey,
+              source.pubkey,
               39089, // Starter pack kind
               {
                 cache: true,        // Enable caching for future fast reads
@@ -159,18 +189,21 @@ export class Followset {
               }
             );
 
-            // Parse and collect the refreshed starter packs
+            // Parse and collect the refreshed starter packs if they match allowed d-tags
             events.forEach(record => {
               const starterPack = this.parseStarterPackEvent(record.event);
               if (starterPack) {
-                // Filter by d-tag if specified
-                if (!dTagFilter || starterPack.dTag === dTagFilter) {
+                // Only include if the d-tag is in the allowed list for this source
+                const isAllowedDTag = source.dTags.includes(starterPack.dTag);
+                const matchesFilter = !dTagFilter || starterPack.dTag === dTagFilter;
+
+                if (isAllowedDTag && matchesFilter) {
                   refreshedPacks.push(starterPack);
                 }
               }
             });
           } catch (error) {
-            this.logger.debug(`Background refresh failed for ${pubkey}:`, error);
+            this.logger.debug(`Background refresh failed for ${source.pubkey}:`, error);
             // Don't throw - this is best-effort background refresh
           }
         }
