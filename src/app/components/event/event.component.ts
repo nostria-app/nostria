@@ -334,10 +334,42 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return repostedContent;
   });
 
+  // Check if this event is a quote-only event (has q tags or inline nostr: references but no meaningful reply context)
+  // Quote events should NOT show the "replied to" header because the quoted content is rendered inline
+  isQuoteOnly = computed<boolean>(() => {
+    const event = this.event() || this.record()?.event;
+    if (!event) return false;
+
+    // Check for q tags (NIP-18 quote reposts)
+    const hasQTags = event.tags.some((tag: string[]) => tag[0] === 'q');
+    if (hasQTags) return true;
+
+    // Check if content contains inline nostr: references (nevent, note, naddr)
+    // These are quotes rendered inline, so we shouldn't show the reply header
+    const hasInlineQuotes = /nostr:(nevent|note|naddr)1[a-z0-9]+/i.test(event.content);
+
+    // If there are inline quotes and the e-tag references the same event being quoted inline,
+    // it's likely a quote, not a reply
+    if (hasInlineQuotes) {
+      const eventTags = this.eventService.getEventTags(event);
+      // If the only "reply" context is the quoted event itself, treat as quote-only
+      // This handles legacy quotes that used e tags instead of q tags
+      if (eventTags.rootId && !eventTags.replyId) {
+        // Single e-tag that might be a quote reference
+        return true;
+      }
+    }
+
+    return false;
+  });
+
   // Check if this event is a reply (has e-tags that are replies, not just mentions)
   isReply = computed<boolean>(() => {
     const event = this.event() || this.record()?.event;
     if (!event) return false;
+
+    // Quote-only events are NOT replies - they render their context inline
+    if (this.isQuoteOnly()) return false;
 
     // Use eventService to properly parse tags and distinguish mentions from replies
     const eventTags = this.eventService.getEventTags(event);
