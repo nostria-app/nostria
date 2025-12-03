@@ -668,5 +668,56 @@ export class UserDataService {
 
     return records;
   }
+
+  /**
+   * Get events by kind and quote tag (for finding quote reposts - NIP-18)
+   */
+  async getEventsByKindAndQuoteTag(
+    pubkey: string,
+    kinds: number[],
+    quoteEventId: string,
+    options?: CacheOptions & DataOptions,
+  ): Promise<NostrRecord[]> {
+    const cacheKey = `quotes-${kinds.join(',')}-${quoteEventId}`;
+    let events: Event[] = [];
+    let records: NostrRecord[] = [];
+
+    if (options?.cache && !options?.invalidateCache) {
+      const cachedRecords = this.cache.get<NostrRecord[]>(cacheKey);
+      if (cachedRecords) {
+        return cachedRecords;
+      }
+    }
+
+    // Fetch from relays using #q tag filter
+    const relayEvents = await this.userRelayEx.getEventsByKindAndQuoteTag(
+      pubkey,
+      kinds,
+      quoteEventId,
+      options?.includeAccountRelays
+    );
+
+    if (relayEvents && relayEvents.length > 0) {
+      events = relayEvents;
+    }
+
+    if (events.length === 0) {
+      return [];
+    }
+
+    records = events.map((event) => this.toRecord(event));
+
+    if (options?.cache || options?.invalidateCache) {
+      this.cache.set(cacheKey, records, options);
+    }
+
+    if (options?.save) {
+      for (const event of events) {
+        await this.database.saveEvent(event);
+      }
+    }
+
+    return records;
+  }
 }
 

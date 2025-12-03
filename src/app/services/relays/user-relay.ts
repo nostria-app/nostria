@@ -290,6 +290,56 @@ export class UserRelayService {
   }
 
   /**
+   * Get events by kind and quote tag (#q filter)
+   * Used to find quote reposts (NIP-18) that reference a specific event
+   * @param pubkey The pubkey(s) whose relays to query
+   * @param kinds The event kinds to search for (typically kind 1 for quote posts)
+   * @param quoteEventId The event ID(s) being quoted
+   * @param includeAccountRelays If true, also include the current logged-in account's relays for better event discovery
+   */
+  async getEventsByKindAndQuoteTag(
+    pubkey: string | string[],
+    kinds: number[],
+    quoteEventId: string | string[],
+    includeAccountRelays = false
+  ): Promise<Event[]> {
+    const pubkeys = Array.isArray(pubkey) ? pubkey : [pubkey];
+    const validPubkeys = pubkeys.filter(pk => pk && typeof pk === 'string');
+
+    if (validPubkeys.length === 0) {
+      this.logger.warn('[UserRelayService] getEventsByKindAndQuoteTag called with no valid pubkeys');
+      return [];
+    }
+
+    const allRelayUrls = new Set<string>();
+
+    for (const pk of validPubkeys) {
+      await this.ensureRelaysForPubkey(pk);
+      const relayUrls = this.getRelaysForPubkey(pk);
+      relayUrls.forEach(url => allRelayUrls.add(url));
+    }
+
+    if (includeAccountRelays) {
+      const accountRelayUrls = this.accountRelay.getRelayUrls();
+      accountRelayUrls.forEach(url => allRelayUrls.add(url));
+      this.logger.debug(`[UserRelayService] Including ${accountRelayUrls.length} account relays for quote discovery`);
+    }
+
+    const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
+
+    if (relayUrls.length === 0) {
+      this.logger.warn(`[UserRelayService] No relays available for quote query`);
+      return [];
+    }
+
+    const quoteIds = Array.isArray(quoteEventId) ? quoteEventId : [quoteEventId];
+
+    this.logger.debug(`[UserRelayService] Searching for quotes (kinds ${kinds.join(', ')}) with #q tag across ${relayUrls.length} relays`);
+
+    return this.getEventsWithSubscription(relayUrls, { '#q': quoteIds, kinds });
+  }
+
+  /**
    * Get a single event by pubkey, kind and tag
    */
   async getEventByPubkeyAndKindAndTag(
@@ -354,6 +404,7 @@ export class UserRelayService {
       kinds?: number[];
       '#e'?: string[];
       '#p'?: string[];
+      '#q'?: string[];
       since?: number;
       until?: number;
       limit?: number;

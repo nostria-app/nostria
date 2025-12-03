@@ -51,6 +51,7 @@ export interface EventInteractions {
   reposts: NostrRecord[];
   reports: ReportEvents;
   replyCount: number;
+  quotes: NostrRecord[];
 }
 
 export interface ThreadedEvent {
@@ -766,6 +767,7 @@ export class EventService {
             replyRecords.length,
           );
 
+          // Note: Quotes are loaded separately via loadQuotes() since they use 'q' tag, not 'e' tag
           return {
             reactions: {
               events: reactionRecords,
@@ -777,6 +779,7 @@ export class EventService {
               data: reportCounts,
             },
             replyCount: replyRecords.length,
+            quotes: [], // Quotes are loaded separately
           };
         } catch (error) {
           this.logger.error('Error loading event interactions:', error);
@@ -785,6 +788,7 @@ export class EventService {
             reposts: [],
             reports: { events: [], data: new Map() },
             replyCount: 0,
+            quotes: [],
           };
         }
       },
@@ -1351,6 +1355,55 @@ export class EventService {
           return reposts;
         } catch (error) {
           this.logger.error('Error loading reposts for event:', eventId, error);
+          return [];
+        }
+      },
+    );
+
+    return cachedResult;
+  }
+
+  /**
+   * Load quotes for an event (NIP-18 quote reposts with 'q' tag)
+   * Queries for kind 1 events that have a 'q' tag referencing this event
+   */
+  async loadQuotes(
+    eventId: string,
+    userPubkey: string,
+    invalidateCache = false,
+  ): Promise<NostrRecord[]> {
+    this.logger.info('loadQuotes called with eventId:', eventId, 'userPubkey:', userPubkey);
+
+    // Handle cache invalidation if requested
+    if (invalidateCache) {
+      this.subscriptionCache.invalidateEventCache([eventId]);
+    }
+
+    // Use subscription cache to prevent duplicate subscriptions
+    const cacheKey = `quotes-${eventId}-${userPubkey}`;
+    const cachedResult = await this.subscriptionCache.getOrCreateSubscription<NostrRecord[]>(
+      cacheKey,
+      [eventId], // eventIds array
+      'quotes', // subscription type
+      async () => {
+        try {
+          // Quotes are kind 1 events with a 'q' tag referencing this event
+          const quotes = await this.userDataService.getEventsByKindAndQuoteTag(userPubkey, [kinds.ShortTextNote], eventId, {
+            save: false,
+            cache: true,
+            invalidateCache,
+            includeAccountRelays: true,
+          });
+
+          this.logger.info(
+            'Successfully loaded quotes for event:',
+            eventId,
+            'count:',
+            quotes.length,
+          );
+          return quotes;
+        } catch (error) {
+          this.logger.error('Error loading quotes for event:', eventId, error);
           return [];
         }
       },

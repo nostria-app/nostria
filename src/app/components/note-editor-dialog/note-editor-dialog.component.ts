@@ -117,7 +117,7 @@ interface NoteAutoDraft {
     ContentComponent,
     MentionAutocompleteComponent,
     MatMenuModule
-],
+  ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
   styleUrl: './note-editor-dialog.component.scss',
@@ -877,13 +877,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   /**
    * Extract NIP-27 references from content and add corresponding tags
    * According to NIP-27, adding tags is optional but recommended for notifications
+   * According to NIP-18, inline event references (note/nevent/naddr) should use 'q' tags (quotes),
+   * NOT 'e' tags which are for thread participation (replies).
    */
   private extractNip27Tags(content: string, tags: string[][]): void {
     // Match all nostr: URIs in content
     const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)/g;
     const matches = content.matchAll(nostrUriPattern);
 
-    const addedEventIds = new Set(tags.filter(tag => tag[0] === 'e').map(tag => tag[1]));
+    // Track added quote event IDs (q tags) separately from reply event IDs (e tags)
+    const addedQuoteEventIds = new Set(tags.filter(tag => tag[0] === 'q').map(tag => tag[1]));
     const addedPubkeys = new Set(tags.filter(tag => tag[0] === 'p').map(tag => tag[1]));
 
     for (const match of matches) {
@@ -894,22 +897,25 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
         switch (decoded.type) {
           case 'note':
-            // Add e tag for note reference
-            if (!addedEventIds.has(decoded.data)) {
-              tags.push(['e', decoded.data, '']);
-              addedEventIds.add(decoded.data);
+            // NIP-18: Add q tag for quote reference (NOT e tag which is for thread participation)
+            if (!addedQuoteEventIds.has(decoded.data)) {
+              // Format: ["q", "<event-id>", "<relay-url>", "<pubkey>"]
+              // We don't have pubkey for note format, so leave it empty
+              tags.push(['q', decoded.data, '', '']);
+              addedQuoteEventIds.add(decoded.data);
             }
             break;
 
           case 'nevent':
-            // Add e tag for event reference with optional relay and pubkey
-            if (!addedEventIds.has(decoded.data.id)) {
+            // NIP-18: Add q tag for quote reference (NOT e tag which is for thread participation)
+            if (!addedQuoteEventIds.has(decoded.data.id)) {
               const relay = decoded.data.relays?.[0] || '';
               const pubkey = decoded.data.author || '';
-              tags.push(['e', decoded.data.id, relay, '', pubkey]);
-              addedEventIds.add(decoded.data.id);
+              // Format: ["q", "<event-id>", "<relay-url>", "<pubkey>"]
+              tags.push(['q', decoded.data.id, relay, pubkey]);
+              addedQuoteEventIds.add(decoded.data.id);
             }
-            // Also add p tag for the author if available
+            // Also add p tag for the author if available (for notifications)
             if (decoded.data.author && !addedPubkeys.has(decoded.data.author)) {
               tags.push(['p', decoded.data.author, '']);
               addedPubkeys.add(decoded.data.author);
@@ -933,10 +939,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             break;
 
           case 'naddr': {
-            // Add a tag for addressable event reference
+            // NIP-18: For addressable events, use q tag with the event address
             const aTagValue = `${decoded.data.kind}:${decoded.data.pubkey}:${decoded.data.identifier}`;
             const relay = decoded.data.relays?.[0] || '';
-            tags.push(['a', aTagValue, relay]);
+            // Format: ["q", "<event-address>", "<relay-url>", "<pubkey>"]
+            tags.push(['q', aTagValue, relay, decoded.data.pubkey]);
+            // Also add p tag for the author (for notifications)
+            if (!addedPubkeys.has(decoded.data.pubkey)) {
+              tags.push(['p', decoded.data.pubkey, '']);
+              addedPubkeys.add(decoded.data.pubkey);
+            }
             break;
           }
         }
