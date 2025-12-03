@@ -268,6 +268,17 @@ export class FeedsComponent implements OnDestroy {
   private readonly LOAD_MORE_COOLDOWN_MS = 300; // Minimum time between loads
   private scrollCheckCleanup: (() => void) | null = null;
 
+  /**
+   * Helper method to filter events based on column's showReplies setting
+   * Filters out reply events when showReplies is false
+   */
+  private filterEventsByReplySetting(events: Event[], column: ColumnDefinition): Event[] {
+    if (!column.showReplies) {
+      return events.filter(event => this.utilities.isRootPost(event));
+    }
+    return events;
+  }
+
   // Computed signal for ALL events (in-memory, not rendered)
   allColumnEvents = computed(() => {
     const columns = this.columns();
@@ -292,9 +303,7 @@ export class FeedsComponent implements OnDestroy {
       }
 
       // Filter out replies if showReplies is false (default)
-      if (!column.showReplies) {
-        events = events.filter(event => this.utilities.isRootPost(event));
-      }
+      events = this.filterEventsByReplySetting(events, column);
 
       eventsMap.set(column.id, events);
     });
@@ -404,13 +413,11 @@ export class FeedsComponent implements OnDestroy {
     columns.forEach(column => {
       const columnData = feedDataMap.get(column.id);
       if (columnData && columnData.pendingEvents) {
-        let pendingEvents = columnData.pendingEvents();
-        
-        // Filter out replies if showReplies is false (same logic as allColumnEvents)
-        if (!column.showReplies) {
-          pendingEvents = pendingEvents.filter(event => this.utilities.isRootPost(event));
-        }
-        
+        // Get pending events and filter based on showReplies setting
+        const pendingEvents = this.filterEventsByReplySetting(
+          columnData.pendingEvents(),
+          column
+        );
         countsMap.set(column.id, pendingEvents.length);
       } else {
         countsMap.set(column.id, 0);
