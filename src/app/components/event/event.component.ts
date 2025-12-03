@@ -179,6 +179,31 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return parentRecordData?.event.kind === 1;
   });
 
+  // Event kinds that support reactions (NIP-25)
+  // This includes: short text notes, photos, videos (short/long), audio, articles, polls, playlists, live events, starter packs
+  private readonly REACTABLE_KINDS = new Set([
+    1,      // Short text note (kind 1)
+    20,     // Photo (kind 20)
+    21,     // Video (kind 21) - NIP-71 horizontal video
+    22,     // Short video (kind 22) - NIP-71 vertical video
+    1068,   // Poll (kind 1068)
+    1222,   // Audio track (kind 1222)
+    1244,   // Audio file (kind 1244)
+    30023,  // Long-form article (kind 30023)
+    30311,  // Live event (kind 30311)
+    32100,  // M3U Playlist (kind 32100)
+    34235,  // Video (kind 34235) - NIP-71 addressable horizontal video
+    34236,  // Short video (kind 34236) - NIP-71 addressable vertical video
+    39089,  // Starter pack (kind 39089)
+  ]);
+
+  // Check if the current event kind supports reactions
+  supportsReactions = computed<boolean>(() => {
+    const currentEvent = this.event() || this.record()?.event;
+    if (!currentEvent) return false;
+    return this.REACTABLE_KINDS.has(currentEvent.kind);
+  });
+
   // Check if this event is currently the one being displayed on the event page
   isCurrentlySelected = computed<boolean>(() => {
     // If navigation is disabled, treat as selected (e.g., in thread view or dialog)
@@ -573,8 +598,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           this.hasLoadedInteractions.set(true);
 
           // Load interactions for the specific event that became visible
-          if (currentRecord.event.kind === kinds.ShortTextNote) {
-            console.log('🚀 [Lazy Load] Loading interactions for visible event:', currentEventId.substring(0, 8));
+          // Only load for event kinds that support reactions (NIP-25)
+          if (this.REACTABLE_KINDS.has(currentRecord.event.kind)) {
+            console.log('🚀 [Lazy Load] Loading interactions for visible event:', currentEventId.substring(0, 8), 'kind:', currentRecord.event.kind);
 
             // Double-check event ID before loading to prevent race conditions
             if (this.record()?.event.id === currentEventId) {

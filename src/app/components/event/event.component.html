@@ -366,7 +366,7 @@
 
   @if (!hideFooter()) {
   <mat-card-actions class="note-footer">
-    @if (item.event.kind === 1) {
+    @if (supportsReactions()) {
     <div class="reactions-row" [class.compact]="compact()">
       <!-- Reply -->
       <div class="reaction-group">
