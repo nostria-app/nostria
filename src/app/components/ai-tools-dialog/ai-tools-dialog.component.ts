@@ -9,6 +9,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { FormsModule } from '@angular/forms';
 import { AiService } from '../../services/ai.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 export interface AiToolsDialogData {
   content: string;
@@ -53,19 +55,36 @@ export interface AiToolsDialogData {
 
         @if (selectedAction() === 'translate') {
             <p>Translates the current content.</p>
-            <mat-form-field appearance="outline" class="full-width">
-              <mat-label>Target Language</mat-label>
-              <mat-select [ngModel]="selectedTranslationModel()" (ngModelChange)="selectedTranslationModel.set($event)">
-                <mat-option value="Xenova/opus-mt-en-de">German (De)</mat-option>
-                <mat-option value="Xenova/opus-mt-en-es">Spanish (Es)</mat-option>
-                <mat-option value="Xenova/opus-mt-en-fr">French (Fr)</mat-option>
-              </mat-select>
-            </mat-form-field>
+            <div class="language-selectors">
+              <mat-form-field appearance="outline">
+                <mat-label>Source Language</mat-label>
+                <mat-select [ngModel]="sourceLang()" (ngModelChange)="setSourceLang($event)">
+                  @for (lang of availableLanguages(); track lang.code) {
+                    <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+
+              <mat-icon>arrow_forward</mat-icon>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Target Language</mat-label>
+                <mat-select [ngModel]="targetLang()" (ngModelChange)="setTargetLang($event)">
+                  @for (lang of availableLanguages(); track lang.code) {
+                    <mat-option [value]="lang.code">{{ lang.name }}</mat-option>
+                  }
+                </mat-select>
+              </mat-form-field>
+            </div>
 
              @if (!aiService.isModelLoaded(selectedTranslationModel())) {
                 <button mat-stroked-button (click)="loadTranslationModel()" [disabled]="aiService.isModelLoaded(selectedTranslationModel())">
                     {{ aiService.isModelLoaded(selectedTranslationModel()) ? 'Model Loaded' : 'Load Model' }}
                 </button>
+            }
+
+            @if (translationError()) {
+              <p class="error">{{ translationError() }}</p>
             }
         }
 
@@ -130,18 +149,99 @@ export interface AiToolsDialogData {
     }
     .positive { color: var(--mat-success-color, #4caf50); }
     .negative { color: var(--mat-sys-error, #f44336); }
+    .language-selectors {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      mat-form-field {
+        flex: 1;
+      }
+    }
+    .error {
+      color: var(--mat-sys-error);
+    }
   `]
 })
 export class AiToolsDialogComponent {
   readonly dialogRef = inject(MatDialogRef<AiToolsDialogComponent>);
   readonly data = inject<AiToolsDialogData>(MAT_DIALOG_DATA);
   readonly aiService = inject(AiService);
+  private accountLocalState = inject(AccountLocalStateService);
+  private accountState = inject(AccountStateService);
 
   content = signal(this.data.content);
   selectedAction = signal<'generate' | 'translate' | 'sentiment'>(this.data.initialAction || 'generate');
-  selectedTranslationModel = signal<string>('Xenova/opus-mt-en-de');
+  sourceLang = signal('en');
+  targetLang = signal('es');
+  translationError = signal('');
   isProcessing = signal(false);
   sentimentResult = signal<{ label: string, score: number } | null>(null);
+
+  availableLanguages = computed(() => {
+    const models = this.aiService.availableTranslationModels;
+    const languages = new Set<string>();
+
+    models.forEach(model => {
+      const parts = model.replace('Xenova/opus-mt-', '').split('-');
+      if (parts.length >= 2) {
+        parts.forEach(p => {
+          if (p.length >= 2 && p.length <= 3 && p !== 'mul' && p !== 'gem' && p !== 'gmw' && p !== 'big' && p !== 'tc') {
+            languages.add(p);
+          }
+        });
+      }
+    });
+
+    const displayNames = new Intl.DisplayNames(['en'], { type: 'language' });
+
+    return Array.from(languages)
+      .map(code => {
+        try {
+          return { code, name: displayNames.of(code) || code };
+        } catch {
+          return { code, name: code };
+        }
+      })
+      .sort((a, b) => a.name.localeCompare(b.name));
+  });
+
+  selectedTranslationModel = computed(() => {
+    const model = this.aiService.getTranslationModel(this.sourceLang(), this.targetLang());
+    return model || 'Xenova/opus-mt-en-de';
+  });
+
+  constructor() {
+    // Load saved translation preferences and validate against available languages
+    const pubkey = this.accountState.pubkey();
+    const savedSourceLang = pubkey ? this.accountLocalState.getTranslationSourceLang(pubkey) : undefined;
+    const savedTargetLang = pubkey ? this.accountLocalState.getTranslationTargetLang(pubkey) : undefined;
+    const availableCodes = this.availableLanguages().map(lang => lang.code);
+
+    if (savedSourceLang && availableCodes.includes(savedSourceLang)) {
+      this.sourceLang.set(savedSourceLang);
+    }
+    if (savedTargetLang && availableCodes.includes(savedTargetLang)) {
+      this.targetLang.set(savedTargetLang);
+    }
+  }
+
+  setSourceLang(lang: string): void {
+    this.sourceLang.set(lang);
+    this.translationError.set('');
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setTranslationSourceLang(pubkey, lang);
+    }
+  }
+
+  setTargetLang(lang: string): void {
+    this.targetLang.set(lang);
+    this.translationError.set('');
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setTranslationTargetLang(pubkey, lang);
+    }
+  }
 
   sentimentIcon = computed(() => {
     const result = this.sentimentResult();
@@ -176,6 +276,7 @@ export class AiToolsDialogComponent {
   async process() {
     this.isProcessing.set(true);
     this.sentimentResult.set(null);
+    this.translationError.set('');
     try {
       let result: unknown;
       if (this.selectedAction() === 'generate') {
@@ -185,7 +286,13 @@ export class AiToolsDialogComponent {
           this.content.set(typedResult[0].generated_text);
         }
       } else if (this.selectedAction() === 'translate') {
-        result = await this.aiService.translateText(this.content(), this.selectedTranslationModel());
+        const model = this.aiService.getTranslationModel(this.sourceLang(), this.targetLang());
+        if (!model) {
+          this.translationError.set(`No translation model found for ${this.sourceLang()} to ${this.targetLang()}`);
+          this.isProcessing.set(false);
+          return;
+        }
+        result = await this.aiService.translateText(this.content(), model);
         const typedResult = result as { translation_text: string }[];
         if (Array.isArray(typedResult) && typedResult.length > 0 && typedResult[0].translation_text) {
           this.content.set(typedResult[0].translation_text);
@@ -199,6 +306,9 @@ export class AiToolsDialogComponent {
       }
     } catch (e) {
       console.error(e);
+      if (this.selectedAction() === 'translate') {
+        this.translationError.set(e instanceof Error ? e.message : 'Translation failed');
+      }
     } finally {
       this.isProcessing.set(false);
     }
