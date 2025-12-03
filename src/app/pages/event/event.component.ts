@@ -199,11 +199,10 @@ export class EventPageComponent {
           const hex = partialData.event.id;
           this.id.set(hex);
 
-          // Update URL with proper nevent encoding
-          const encoded = nip19.neventEncode({
-            author: partialData.event.pubkey,
-            id: partialData.event.id,
-          });
+          // Update URL with proper encoding (naddr for addressable events, nevent for others)
+          const encoded = this.utilities.encodeEventForUrl(partialData.event);
+
+          // Always use /e/ route for event page (articles use /a/ route separately)
           this.url.updatePathSilently(['/e', encoded]);
 
           // Hide main loading spinner once we have the main event

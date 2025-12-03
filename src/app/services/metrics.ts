@@ -323,7 +323,7 @@ export class Metrics {
     // Check if event has already been processed
     const alreadyProcessed = await this.isEventProcessed(eventId, currentAccount);
     if (alreadyProcessed) {
-      console.debug(`Event ${eventId} already processed for metrics, skipping`);
+      // console.debug(`Event ${eventId} already processed for metrics, skipping`);
       return false;
     }
 

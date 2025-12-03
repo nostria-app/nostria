@@ -999,14 +999,15 @@ export class UtilitiesService {
    * Encode a Nostr event to a NIP-19 nevent string for sharing
    * @param event The Nostr event to encode
    * @param relays Optional relay hints for the event
-   * @returns NIP-19 nevent string
+   * @returns NIP-19 nevent or naddr string
    */
   encodeEventForUrl(event: Event, relays?: string[]): string {
-    // For kind 30311 (live events), use naddr encoding for replaceable events
-    if (event.kind === 30311) {
+    // For parameterized replaceable events (kinds 30000-39999), use naddr encoding
+    // These events are identified by kind + pubkey + d-tag, not by event ID
+    if (event.kind >= 30000 && event.kind < 40000) {
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
       return nip19.naddrEncode({
-        kind: 30311,
+        kind: event.kind,
         pubkey: event.pubkey,
         identifier: dTag,
         relays: relays || [],
