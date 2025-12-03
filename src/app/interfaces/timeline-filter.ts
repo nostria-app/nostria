@@ -10,7 +10,7 @@ export interface TimelineFilterOptions {
 export const DEFAULT_TIMELINE_FILTER: TimelineFilterOptions = {
   showNotes: true,
   showReposts: true,
-  showReplies: true,
+  showReplies: false,
   showReactions: false,
   showAudio: true,
   showVideo: true,
