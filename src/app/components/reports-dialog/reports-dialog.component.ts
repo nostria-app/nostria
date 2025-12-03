@@ -3,12 +3,11 @@ import { Component, inject, signal, effect, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatChipsModule } from '@angular/material/chips';
 import { EventService, ReportEvents } from '../../services/event';
 import { AgoPipe } from '../../pipes/ago.pipe';
-import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 export interface ReportsDialogData {
   eventId: string;
@@ -21,12 +20,11 @@ export interface ReportsDialogData {
     MatButtonModule,
     MatDialogModule,
     MatIconModule,
-    MatListModule,
     MatProgressSpinnerModule,
     MatChipsModule,
     AgoPipe,
-    ProfileDisplayNameComponent
-],
+    UserProfileComponent,
+  ],
   templateUrl: './reports-dialog.component.html',
   styleUrl: './reports-dialog.component.scss',
 })
