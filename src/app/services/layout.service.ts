@@ -825,11 +825,14 @@ export class LayoutService implements OnDestroy {
       this.toggleSearch();
       try {
         const decoded = nip19.decode(value).data as AddressPointer;
-        // If the naddr has a pubkey, we can discover them if not found locally.
-        if (decoded.pubkey) {
-          // Potential for profile discovery logic here
+
+        if (decoded.kind === kinds.LongFormArticle) {
+          // Route to article page for long-form articles
+          this.openArticle(value);
+        } else {
+          // Route to event page for other addressable events (starter packs, etc.)
+          this.openGenericEvent(value);
         }
-        this.openArticle(value);
       } catch (error) {
         console.warn('Failed to decode naddr:', value, error);
         this.toast('Invalid address format', 3000, 'error-snackbar');
