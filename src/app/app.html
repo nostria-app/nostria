@@ -75,13 +75,20 @@
       </button>
       }
       @if (app.authenticated()) {
+      @if (appState.isPublishing() || ai.processingState().isProcessing) {
+      <button mat-icon-button class="profile-cache-button"
+        [matTooltip]="ai.processingState().isProcessing ? ai.getTaskName(ai.processingState().task) : publishingEventLabel"
+        i18n-aria-label="@@app.tooltip.processing-aria" aria-label="Processing in progress">
+        <mat-icon class="spinning-icon">sync</mat-icon>
+      </button>
+      }
+      @else {
       <button class="notification-toolbar" mat-icon-button [matMenuTriggerFor]="menuNotifications"
-        #notificationMenuTrigger="matMenuTrigger"
-        [matTooltip]="notificationProcessingTooltip()">
+        #notificationMenuTrigger="matMenuTrigger" [matTooltip]="notificationProcessingTooltip()">
         <mat-icon
-          [class.spinning-icon]="isProcessing()"
           [matBadge]="unreadNotificationsCount() > 0 ? unreadNotificationsCount() : null">notifications</mat-icon>
       </button>
+      }
       }
 
       <mat-menu #menuNotifications="matMenu">
