@@ -231,6 +231,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   });
   powMinedEvent = signal<UnsignedEvent | null>(null);
 
+  // Zap split options (NIP-57 Appendix G)
+  zapSplitEnabled = signal(false);
+  zapSplitOriginalPercent = signal(90); // Default 90% to original author
+  zapSplitQuoterPercent = signal(10); // Default 10% to quoter
+
   // Computed properties
   characterCount = computed(() => this.processContentForPublishing(this.content()).length);
 
@@ -824,6 +829,23 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const existingPubkeys = tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
       if (!existingPubkeys.includes(this.data.quote.pubkey)) {
         tags.push(['p', this.data.quote.pubkey]);
+      }
+
+      // Add zap split tags if enabled (NIP-57 Appendix G)
+      if (this.zapSplitEnabled()) {
+        const currentUserPubkey = this.currentAccountPubkey();
+        if (currentUserPubkey) {
+          // Calculate normalized weights (NIP-57 uses weights, not percentages)
+          // Weights should sum to total, and will be normalized by recipients
+          const originalWeight = this.zapSplitOriginalPercent();
+          const quoterWeight = this.zapSplitQuoterPercent();
+
+          // Add zap tag for original author (the person being quoted)
+          tags.push(['zap', this.data.quote.pubkey, relay, originalWeight.toString()]);
+
+          // Add zap tag for quoter (current user)
+          tags.push(['zap', currentUserPubkey, '', quoterWeight.toString()]);
+        }
       }
     }
 
@@ -1955,6 +1977,25 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       isRunning: false,
       bestEvent: null,
     });
+  }
+
+  // Zap split methods
+  onZapSplitToggle(enabled: boolean): void {
+    this.zapSplitEnabled.set(enabled);
+  }
+
+  onZapSplitOriginalChange(value: number): void {
+    // Ensure the total is always 100%
+    const quoterPercent = 100 - value;
+    this.zapSplitOriginalPercent.set(value);
+    this.zapSplitQuoterPercent.set(quoterPercent);
+  }
+
+  onZapSplitQuoterChange(value: number): void {
+    // Ensure the total is always 100%
+    const originalPercent = 100 - value;
+    this.zapSplitQuoterPercent.set(value);
+    this.zapSplitOriginalPercent.set(originalPercent);
   }
 
   openAiDialog(action: 'generate' | 'translate' | 'sentiment' = 'generate') {

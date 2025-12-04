@@ -160,6 +160,52 @@
           }
         </div>
       </div>
+
+      <!-- Zap Split Option (only shown when quoting) -->
+      @if (isQuote()) {
+      <div class="option-row">
+        <div class="option-header">
+          <mat-slide-toggle [checked]="zapSplitEnabled()" (change)="onZapSplitToggle($event.checked)" color="primary">
+            Enable Zap Split
+          </mat-slide-toggle>
+          <span class="option-description">
+            Split zaps between the original author and yourself when people zap your quote
+          </span>
+        </div>
+
+        @if (zapSplitEnabled()) {
+        <div class="option-content">
+          <div class="zap-split-sliders">
+            <div class="zap-split-slider">
+              <div class="slider-label">
+                <span>Original Author</span>
+                <span class="slider-value">{{ zapSplitOriginalPercent() }}%</span>
+              </div>
+              <mat-slider min="0" max="100" step="1" showTickMarks discrete>
+                <input matSliderThumb [value]="zapSplitOriginalPercent()" (valueChange)="onZapSplitOriginalChange($event)"
+                  aria-label="Original Author Percentage">
+              </mat-slider>
+            </div>
+
+            <div class="zap-split-slider">
+              <div class="slider-label">
+                <span>You (Quoter)</span>
+                <span class="slider-value">{{ zapSplitQuoterPercent() }}%</span>
+              </div>
+              <mat-slider min="0" max="100" step="1" showTickMarks discrete>
+                <input matSliderThumb [value]="zapSplitQuoterPercent()" (valueChange)="onZapSplitQuoterChange($event)"
+                  aria-label="Quoter Percentage">
+              </mat-slider>
+            </div>
+          </div>
+
+          <mat-hint class="zap-split-hint">
+            When someone zaps your quote, the zap will be automatically split according to these percentages (NIP-57).
+          </mat-hint>
+        </div>
+        }
+      </div>
+      }
     </div>
     }
 
