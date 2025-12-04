@@ -9,6 +9,7 @@ import {
   OnDestroy,
   AfterViewInit,
   computed,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
@@ -56,6 +57,7 @@ import { MatBadgeModule } from '@angular/material/badge';
   host: {
     '[style.width]': 'hostWidthAuto() ? "auto" : "100%"',
   },
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private route = inject(ActivatedRoute);
