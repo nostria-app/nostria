@@ -443,9 +443,10 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Check if user already reacted with this emoji
-    const existingReaction = message.reactions?.get(emoji);
-    if (existingReaction?.userReacted) {
+    // Check if user already reacted with this emoji (check current state)
+    const currentMessage = this.messages().find(m => m.event.id === message.event.id);
+    const existingReaction = currentMessage?.reactions?.get(emoji);
+    if (existingReaction?.pubkeys.includes(currentUserPubkey)) {
       // Already reacted, could implement remove reaction here
       return;
     }
@@ -453,14 +454,20 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     try {
       const success = await this.reactionService.addReaction(emoji, message.event);
       if (success) {
-        // Optimistically update UI
+        // Optimistically update UI - but check again to prevent duplicates
         this.messages.update(msgs => {
           return msgs.map(msg => {
             if (msg.event.id !== message.event.id) return msg;
 
             const reactions = new Map(msg.reactions || []);
             const existing = reactions.get(emoji);
+
+            // Check if user already in the list (could have been added by subscription)
             if (existing) {
+              if (existing.pubkeys.includes(currentUserPubkey)) {
+                // Already added, don't duplicate
+                return msg;
+              }
               existing.count++;
               existing.pubkeys.push(currentUserPubkey);
               existing.userReacted = true;
