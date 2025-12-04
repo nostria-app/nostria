@@ -34,14 +34,15 @@ export class BookmarkService {
   bookmarkEvent = signal<Event | null>(null);
 
   bookmarks = computed<any[]>(() => {
-    return this.bookmarkEvent()?.tags.map(tag => ({ id: tag[1] })) || [];
+    return this.bookmarkEvent()?.tags.map(tag => ({ id: tag[1] })).reverse() || [];
   });
 
   bookmarkEvents = computed<any[]>(() => {
     return (
       this.bookmarkEvent()
         ?.tags.filter(tag => tag[0] === 'e')
-        .map(tag => ({ id: tag[1] })) || []
+        .map(tag => ({ id: tag[1] }))
+        .reverse() || []
     );
   });
 
@@ -49,7 +50,8 @@ export class BookmarkService {
     return (
       this.bookmarkEvent()
         ?.tags.filter(tag => tag[0] === 'a')
-        .map(tag => ({ id: tag[1] })) || []
+        .map(tag => ({ id: tag[1] }))
+        .reverse() || []
     );
   });
 
@@ -57,7 +59,8 @@ export class BookmarkService {
     return (
       this.bookmarkEvent()
         ?.tags.filter(tag => tag[0] === 'r')
-        .map(tag => ({ id: tag[1] })) || []
+        .map(tag => ({ id: tag[1] }))
+        .reverse() || []
     );
   });
 
