@@ -14,6 +14,8 @@ import { RouterModule } from '@angular/router';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { UserProfileComponent } from '../../user-profile/user-profile.component';
+import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-video-player',
@@ -22,6 +24,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
     MatIconModule,
     MatTooltipModule,
     RouterModule,
+    UserProfileComponent,
   ],
   templateUrl: './video-player.component.html',
   styleUrl: './video-player.component.scss',
@@ -71,5 +74,21 @@ export class VideoPlayerComponent implements OnDestroy {
 
   async pictureInPicture(): Promise<void> {
     await this.media.pictureInPicture();
+  }
+
+  isNpubArtist(artist: string | undefined): boolean {
+    return !!artist && artist.startsWith('npub1');
+  }
+
+  getNpubPubkey(artist: string): string {
+    try {
+      const decoded = nip19.decode(artist);
+      if (decoded.type === 'npub') {
+        return decoded.data;
+      }
+    } catch {
+      // Ignore decoding errors
+    }
+    return '';
   }
 }

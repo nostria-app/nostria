@@ -13,6 +13,8 @@ import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
+import { UserProfileComponent } from '../../user-profile/user-profile.component';
+import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-audio-player',
@@ -24,6 +26,7 @@ import { LayoutService } from '../../../services/layout.service';
     MatMenuModule,
     FormsModule,
     RouterModule,
+    UserProfileComponent,
   ],
   templateUrl: './audio-player.component.html',
   styleUrl: './audio-player.component.scss',
@@ -88,5 +91,21 @@ export class AudioPlayerComponent {
 
   close(): void {
     this.media.exit();
+  }
+
+  isNpubArtist(artist: string | undefined): boolean {
+    return !!artist && artist.startsWith('npub1');
+  }
+
+  getNpubPubkey(artist: string): string {
+    try {
+      const decoded = nip19.decode(artist);
+      if (decoded.type === 'npub') {
+        return decoded.data;
+      }
+    } catch {
+      // Ignore decoding errors
+    }
+    return '';
   }
 }
