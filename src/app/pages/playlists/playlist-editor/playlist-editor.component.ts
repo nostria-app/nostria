@@ -16,6 +16,7 @@ import { PlaylistService } from '../../../services/playlist.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { PlaylistTrack } from '../../../interfaces';
 import { AddTrackDialogComponent } from './add-track-dialog/add-track-dialog.component';
+import { EditTrackDialogComponent, EditTrackDialogData, EditTrackDialogResult } from './edit-track-dialog/edit-track-dialog.component';
 
 @Component({
   selector: 'app-playlist-editor',
@@ -154,6 +155,31 @@ export class PlaylistEditorComponent implements OnInit {
 
   removeTrack(index: number): void {
     this.playlistService.removeTrackFromCurrentPlaylist(index);
+  }
+
+  editTrack(track: PlaylistTrack, index: number): void {
+    const dialogRef = this.dialog.open(EditTrackDialogComponent, {
+      width: '500px',
+      data: {
+        url: track.url,
+        title: track.title,
+        artist: track.artist,
+        duration: track.duration,
+        index,
+      } as EditTrackDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe((result: EditTrackDialogResult) => {
+      if (result) {
+        const updatedTrack: PlaylistTrack = {
+          url: result.url,
+          title: result.title,
+          artist: result.artist,
+          duration: result.duration,
+        };
+        this.playlistService.updateTrackInCurrentPlaylist(result.index, updatedTrack);
+      }
+    });
   }
 
   onTrackDrop(event: CdkDragDrop<PlaylistTrack[]>): void {

@@ -504,6 +504,19 @@ export class PlaylistService implements OnInitialized {
     });
   }
 
+  // Update track in current playlist
+  updateTrackInCurrentPlaylist(index: number, track: PlaylistTrack): void {
+    const current = this._currentEditingPlaylist();
+    if (!current) return;
+
+    const newTracks = [...current.tracks];
+    newTracks[index] = track;
+
+    this.updateCurrentPlaylist({
+      tracks: newTracks,
+    });
+  }
+
   // Reorder tracks in current playlist
   reorderTracksInCurrentPlaylist(fromIndex: number, toIndex: number): void {
     const current = this._currentEditingPlaylist();

@@ -1,4 +1,4 @@
-import { Component, inject, NgZone, signal, OnInit } from '@angular/core';
+import { Component, inject, NgZone, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -17,9 +17,12 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatTabsModule } from '@angular/material/tabs';
 import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 import { PlaylistsTabComponent } from './playlists-tab/playlists-tab.component';
+import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-media-queue',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,
@@ -29,6 +32,7 @@ import { PlaylistsTabComponent } from './playlists-tab/playlists-tab.component';
     MatTabsModule,
     DragDropModule,
     PlaylistsTabComponent,
+    UserProfileComponent,
   ],
   templateUrl: './media-queue.component.html',
   styleUrl: './media-queue.component.scss',
@@ -141,6 +145,28 @@ export class MediaQueueComponent implements OnInit {
   hasArtwork(item: MediaItem): boolean {
     const artwork = this.getArtwork(item);
     return artwork !== '';
+  }
+
+  /**
+   * Check if artist is an npub
+   */
+  isNpubArtist(artist: string | undefined): boolean {
+    return !!artist && artist.startsWith('npub1');
+  }
+
+  /**
+   * Get hex pubkey from npub artist
+   */
+  getNpubPubkey(artist: string): string {
+    try {
+      const decoded = nip19.decode(artist);
+      if (decoded.type === 'npub') {
+        return decoded.data;
+      }
+    } catch {
+      // Ignore decoding errors
+    }
+    return '';
   }
 
   /**

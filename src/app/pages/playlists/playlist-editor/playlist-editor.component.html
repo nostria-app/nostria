@@ -157,6 +157,10 @@
             <div class="track-duration">{{ track.duration }}</div>
             }
 
+            <button mat-icon-button class="edit-button" (click)="editTrack(track, i)" matTooltip="Edit track">
+              <mat-icon>edit</mat-icon>
+            </button>
+
             <button mat-icon-button class="remove-button" (click)="removeTrack(i)" matTooltip="Remove track">
               <mat-icon>close</mat-icon>
             </button>

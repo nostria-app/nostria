@@ -60,8 +60,9 @@ New methods added to `PlaylistService`:
   - Added `addToPlaylist(item: MediaItem)` method
   - Added `addQueueToPlaylist()` method
   - Updated template with new buttons and tooltips
+  - Includes `PlaylistsTabComponent` for playlist management
 
-- **PlaylistsComponent**: `/src/app/pages/playlists/`
+- **PlaylistsTabComponent**: `/src/app/pages/media-queue/playlists-tab/`
   - Added `renamePlaylist(playlist: Playlist)` method
   - Updated template with rename menu item
 
