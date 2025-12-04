@@ -79,9 +79,35 @@
             <button mat-icon-button class="reply-button" (click)="replyTo(message)" matTooltip="Reply">
               <mat-icon>reply</mat-icon>
             </button>
+            <button mat-icon-button class="reaction-button" [matMenuTriggerFor]="reactionMenu"
+              matTooltip="Add reaction">
+              <mat-icon>add_reaction</mat-icon>
+            </button>
+            <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">
+              <div class="reaction-picker" (click)="$event.stopPropagation()">
+                @for (emoji of quickReactions; track emoji) {
+                <button mat-icon-button class="emoji-button" (click)="addReaction(message, emoji)">
+                  {{ emoji }}
+                </button>
+                }
+              </div>
+            </mat-menu>
           </div>
 
           <div class="message-text">{{ message.content }}</div>
+
+          @if (getReactionsArray(message).length > 0) {
+          <div class="message-reactions">
+            @for (reaction of getReactionsArray(message); track reaction.content) {
+            <button class="reaction-chip" [class.user-reacted]="reaction.userReacted"
+              [matTooltip]="reaction.pubkeys.length + ' reaction' + (reaction.pubkeys.length > 1 ? 's' : '')"
+              (click)="addReaction(message, reaction.content)">
+              <span class="reaction-emoji">{{ reaction.content }}</span>
+              <span class="reaction-count">{{ reaction.count }}</span>
+            </button>
+            }
+          </div>
+          }
         </div>
       </div>
       }
