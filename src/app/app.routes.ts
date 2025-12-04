@@ -32,6 +32,7 @@ import { PollsComponent } from './pages/polls/polls.component';
 import { PollEditorComponent } from './pages/polls/poll-editor/poll-editor.component';
 import { DataResolver } from './data-resolver';
 import { ArticleResolver } from './articleResolver';
+import { UsernameResolver } from './usernameResolver';
 import { streamResolver } from './stream-resolver';
 import { MessagesMain } from './pages/messages/main/main';
 import { MessagesList } from './pages/messages/list/list';
@@ -272,7 +273,7 @@ export const routes: Routes = [
   {
     path: 'u/:username',
     component: ProfileComponent,
-    resolve: { data: DataResolver },
+    resolve: { data: DataResolver, user: UsernameResolver },
     children: profileChildren,
   },
   {
