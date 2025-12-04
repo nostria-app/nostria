@@ -88,8 +88,15 @@ export class ExternalSignerDialogComponent implements AfterViewInit, OnDestroy {
       // Ignore errors
     });
 
-    // Open the signer app
-    window.location.href = this.data.nostrSignerUrl;
+    // Open the signer app using an anchor element instead of window.location.href
+    // This prevents the main app window from closing/navigating away on Android
+    // The nostrsigner: protocol will trigger the Android intent system to open the signer app
+    const anchor = document.createElement('a');
+    anchor.href = this.data.nostrSignerUrl;
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
 
     // Start monitoring clipboard
     window.addEventListener('focus', this.onWindowFocus);

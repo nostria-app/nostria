@@ -711,6 +711,22 @@ export class LoginDialogComponent {
     return this.sanitizer.bypassSecurityTrustUrl(this.getExternalSignerUrl());
   }
 
+  /**
+   * Opens the external signer app without navigating away from the main app.
+   * Uses an anchor element click to trigger the Android intent system
+   * while keeping the web app running in the background.
+   */
+  openExternalSignerApp(event: Event): void {
+    event.preventDefault();
+
+    const anchor = document.createElement('a');
+    anchor.href = this.getExternalSignerUrl();
+    anchor.style.display = 'none';
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+  }
+
   async loginWithExternalSigner(): Promise<void> {
     this.logger.debug('Attempting login with external signer');
     this.loading.set(true);
