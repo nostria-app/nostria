@@ -845,10 +845,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           const quoterWeight = this.zapSplitQuoterPercent();
 
           // Add zap tag for original author (the person being quoted)
-          tags.push(['zap', this.data.quote.pubkey, relay, originalWeight.toString()]);
+          // Only add if weight is greater than 0 (per NIP-57 spec)
+          if (originalWeight > 0) {
+            tags.push(['zap', this.data.quote.pubkey, relay, originalWeight.toString()]);
+          }
 
           // Add zap tag for quoter (current user)
-          tags.push(['zap', currentUserPubkey, '', quoterWeight.toString()]);
+          // Only add if weight is greater than 0 (per NIP-57 spec)
+          if (quoterWeight > 0) {
+            tags.push(['zap', currentUserPubkey, '', quoterWeight.toString()]);
+          }
         }
       }
     }
