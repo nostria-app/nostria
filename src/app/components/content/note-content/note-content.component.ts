@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { ImageDialogComponent } from '../../image-dialog/image-dialog.component';
+import { MediaPreviewDialogComponent } from '../../media-preview-dialog/media-preview.component';
 import { ContentToken } from '../../../services/parsing.service';
 import { FormatService } from '../../../services/format/format.service';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
@@ -18,6 +19,14 @@ import { AudioPlayerComponent } from '../../audio-player/audio-player.component'
 import { SettingsService } from '../../../services/settings.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { decode } from 'blurhash';
+
+// Type for grouped display items - either single token or image group
+export interface DisplayItem {
+  type: 'single' | 'image-group';
+  token?: ContentToken;
+  images?: ContentToken[];
+  id: number;
+}
 
 @Component({
   selector: 'app-note-content',
@@ -61,6 +70,86 @@ export class NoteContentComponent implements OnDestroy {
   // Image blur state
   private generatedBlurhashes = signal<Map<string, string>>(new Map());
   private revealedImages = signal<Set<string>>(new Set());
+
+  // Carousel state for image groups - maps group ID to current index
+  private carouselIndices = signal<Map<number, number>>(new Map());
+
+  // Touch tracking for swipe gestures
+  private touchStartX = 0;
+  private readonly SWIPE_THRESHOLD = 50;
+
+  // Computed: Group consecutive images into display items for Instagram-style carousel
+  // Images separated only by linebreaks are treated as a single group
+  displayItems = computed<DisplayItem[]>(() => {
+    const tokens = this.contentTokens();
+    const items: DisplayItem[] = [];
+    let currentImageGroup: ContentToken[] = [];
+    let pendingLinebreaks: ContentToken[] = [];
+    let groupIdCounter = 0;
+
+    for (const token of tokens) {
+      const isImage = token.type === 'image' || token.type === 'base64-image';
+      const isLinebreak = token.type === 'linebreak';
+
+      if (isImage) {
+        // Add to current image group, discard any pending linebreaks between images
+        currentImageGroup.push(token);
+        pendingLinebreaks = [];
+      } else if (isLinebreak && currentImageGroup.length > 0) {
+        // We're in an image group and hit a linebreak - save it temporarily
+        // in case more images follow
+        pendingLinebreaks.push(token);
+      } else {
+        // Non-image, non-linebreak token (or linebreak with no prior images)
+        // Flush any accumulated images as a group
+        if (currentImageGroup.length > 0) {
+          items.push({
+            type: 'image-group',
+            images: [...currentImageGroup],
+            id: groupIdCounter++,
+          });
+          currentImageGroup = [];
+        }
+
+        // Add any pending linebreaks that weren't followed by more images
+        for (const lb of pendingLinebreaks) {
+          items.push({
+            type: 'single',
+            token: lb,
+            id: groupIdCounter++,
+          });
+        }
+        pendingLinebreaks = [];
+
+        // Add non-image token as single item
+        items.push({
+          type: 'single',
+          token,
+          id: groupIdCounter++,
+        });
+      }
+    }
+
+    // Flush any remaining images
+    if (currentImageGroup.length > 0) {
+      items.push({
+        type: 'image-group',
+        images: [...currentImageGroup],
+        id: groupIdCounter++,
+      });
+    }
+
+    // Add any trailing linebreaks
+    for (const lb of pendingLinebreaks) {
+      items.push({
+        type: 'single',
+        token: lb,
+        id: groupIdCounter++,
+      });
+    }
+
+    return items;
+  });
 
   // Computed: Should blur images based on privacy settings
   shouldBlurImages = computed(() => {
@@ -268,6 +357,124 @@ export class NoteContentComponent implements OnDestroy {
     if (target) {
       console.warn('Video failed to load:', videoUrl);
       // The template will handle showing the fallback
+    }
+  }
+
+  // ============ Image Carousel Methods ============
+
+  /**
+   * Get current carousel index for an image group
+   */
+  getCarouselIndex(groupId: number): number {
+    return this.carouselIndices().get(groupId) || 0;
+  }
+
+  /**
+   * Navigate to previous image in carousel
+   */
+  goToPrevious(groupId: number, images: ContentToken[]): void {
+    const currentIndex = this.getCarouselIndex(groupId);
+    if (currentIndex > 0) {
+      this.setCarouselIndex(groupId, currentIndex - 1);
+    }
+  }
+
+  /**
+   * Navigate to next image in carousel
+   */
+  goToNext(groupId: number, images: ContentToken[]): void {
+    const currentIndex = this.getCarouselIndex(groupId);
+    if (currentIndex < images.length - 1) {
+      this.setCarouselIndex(groupId, currentIndex + 1);
+    }
+  }
+
+  /**
+   * Set carousel index for a specific group
+   */
+  setCarouselIndex(groupId: number, index: number): void {
+    this.carouselIndices.update(map => {
+      const newMap = new Map(map);
+      newMap.set(groupId, index);
+      return newMap;
+    });
+  }
+
+  /**
+   * Check if can go to previous image
+   */
+  canGoToPrevious(groupId: number): boolean {
+    return this.getCarouselIndex(groupId) > 0;
+  }
+
+  /**
+   * Check if can go to next image
+   */
+  canGoToNext(groupId: number, images: ContentToken[]): boolean {
+    return this.getCarouselIndex(groupId) < images.length - 1;
+  }
+
+  /**
+   * Handle touch start for swipe gestures
+   */
+  onTouchStart(event: TouchEvent): void {
+    this.touchStartX = event.touches[0].clientX;
+  }
+
+  /**
+   * Handle touch end for swipe gestures
+   */
+  onTouchEnd(event: TouchEvent, groupId: number, images: ContentToken[]): void {
+    const touchEndX = event.changedTouches[0].clientX;
+    const diff = this.touchStartX - touchEndX;
+
+    if (Math.abs(diff) > this.SWIPE_THRESHOLD) {
+      if (diff > 0) {
+        // Swipe left - go to next
+        this.goToNext(groupId, images);
+      } else {
+        // Swipe right - go to previous
+        this.goToPrevious(groupId, images);
+      }
+    }
+  }
+
+  /**
+   * Open image dialog for carousel - supports multi-image preview
+   */
+  openCarouselImageDialog(images: ContentToken[], currentIndex: number): void {
+    // If image should be blurred and not revealed, reveal it instead
+    const currentImage = images[currentIndex];
+    if (this.shouldBlurImages() && !this.isImageRevealed(currentImage.content)) {
+      this.revealImage(currentImage.content);
+      return;
+    }
+
+    if (images.length > 1) {
+      // Multiple images - use MediaPreviewDialogComponent for carousel view
+      const mediaItems = images.map((img, index) => ({
+        url: img.content,
+        type: 'image/jpeg',
+        title: `Image ${index + 1}`,
+      }));
+
+      this.dialog.open(MediaPreviewDialogComponent, {
+        data: {
+          mediaItems,
+          initialIndex: currentIndex,
+        },
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        panelClass: 'media-preview-dialog',
+      });
+    } else {
+      // Single image - use ImageDialogComponent
+      this.dialog.open(ImageDialogComponent, {
+        data: { imageUrl: images[0].content },
+        maxWidth: '95vw',
+        maxHeight: '95vh',
+        panelClass: ['image-dialog', 'responsive-dialog'],
+      });
     }
   }
 

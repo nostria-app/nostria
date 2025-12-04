@@ -1,4 +1,80 @@
-@for (token of contentTokens(); track token.id) {
+@for (item of displayItems(); track item.id) {
+@if (item.type === 'image-group' && item.images) {
+<!-- Image Group Carousel -->
+@if (item.images.length === 1) {
+<!-- Single image - render normally -->
+@let token = item.images[0];
+<div class="media-container image-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
+  [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)">
+  @if (shouldBlurImages() && getBlurhashDataUrl(token.content); as blurhashUrl) {
+  <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" loading="lazy" />
+  }
+  <img [src]="token.content" alt="Content image" loading="lazy" (click)="openImageDialog(token.content)"
+    [class.clickable-image]="!shouldBlurImages() || isImageRevealed(token.content)"
+    [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" />
+  @if (shouldBlurImages() && !isImageRevealed(token.content)) {
+  <div class="reveal-overlay" (click)="revealImage(token.content); $event.stopPropagation()">
+    <mat-icon>visibility</mat-icon>
+    <span>Click to reveal</span>
+  </div>
+  }
+</div>
+} @else {
+<!-- Multiple images - render as carousel -->
+@let currentIndex = getCarouselIndex(item.id);
+@let currentImage = item.images[currentIndex];
+<div class="image-carousel-container" (touchstart)="onTouchStart($event)"
+  (touchend)="onTouchEnd($event, item.id, item.images)">
+  <div class="image-carousel">
+    <div class="carousel-image-wrapper" [class.blurred]="shouldBlurImages() && !isImageRevealed(currentImage.content)"
+      [class.revealing]="shouldBlurImages() && isImageRevealed(currentImage.content)">
+      @if (shouldBlurImages() && getBlurhashDataUrl(currentImage.content); as blurhashUrl) {
+      <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" loading="lazy" />
+      }
+      <img [src]="currentImage.content" alt="Image {{ currentIndex + 1 }} of {{ item.images.length }}" loading="lazy"
+        (click)="openCarouselImageDialog(item.images, currentIndex)"
+        [class.clickable-image]="!shouldBlurImages() || isImageRevealed(currentImage.content)"
+        [class.hidden]="shouldBlurImages() && !isImageRevealed(currentImage.content)" />
+      @if (shouldBlurImages() && !isImageRevealed(currentImage.content)) {
+      <div class="reveal-overlay" (click)="revealImage(currentImage.content); $event.stopPropagation()">
+        <mat-icon>visibility</mat-icon>
+        <span>Click to reveal</span>
+      </div>
+      }
+    </div>
+
+    <!-- Navigation arrows -->
+    @if (canGoToPrevious(item.id)) {
+    <button mat-icon-button class="carousel-nav-btn carousel-prev"
+      (click)="goToPrevious(item.id, item.images); $event.stopPropagation()" aria-label="Previous image">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    }
+    @if (canGoToNext(item.id, item.images)) {
+    <button mat-icon-button class="carousel-nav-btn carousel-next"
+      (click)="goToNext(item.id, item.images); $event.stopPropagation()" aria-label="Next image">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+    }
+
+    <!-- Indicator dots -->
+    <div class="carousel-indicators">
+      @for (img of item.images; track img.id; let i = $index) {
+      <button class="carousel-dot" [class.active]="i === currentIndex"
+        (click)="setCarouselIndex(item.id, i); $event.stopPropagation()" [attr.aria-label]="'Go to image ' + (i + 1)"
+        [attr.title]="'Image ' + (i + 1)">
+      </button>
+      }
+    </div>
+
+    <!-- Image counter -->
+    <div class="carousel-counter">{{ currentIndex + 1 }} / {{ item.images.length }}</div>
+  </div>
+</div>
+}
+} @else if (item.type === 'single' && item.token) {
+@let token = item.token;
+<!-- Single token rendering -->
 @if (token.type === 'text') {
 <span>{{ token.content }}</span>
 } @else if (token.type === 'linebreak') {
@@ -23,38 +99,6 @@
   <iframe width="560" height="315" [src]="token.processedUrl" frameborder="0"
     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen>
   </iframe>
-</div>
-} @else if (token.type === 'image') {
-<div class="media-container image-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
-  [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)">
-  @if (shouldBlurImages() && getBlurhashDataUrl(token.content); as blurhashUrl) {
-  <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" loading="lazy" />
-  }
-  <img [src]="token.content" alt="Content image" loading="lazy" (click)="openImageDialog(token.content)"
-    [class.clickable-image]="!shouldBlurImages() || isImageRevealed(token.content)"
-    [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" />
-  @if (shouldBlurImages() && !isImageRevealed(token.content)) {
-  <div class="reveal-overlay" (click)="revealImage(token.content); $event.stopPropagation()">
-    <mat-icon>visibility</mat-icon>
-    <span>Click to reveal</span>
-  </div>
-  }
-</div>
-} @else if (token.type === 'base64-image') {
-<div class="media-container image-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
-  [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)">
-  @if (shouldBlurImages() && getBlurhashDataUrl(token.content); as blurhashUrl) {
-  <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" loading="lazy" />
-  }
-  <img [src]="token.content" alt="Embedded image" (click)="openImageDialog(token.content)"
-    [class.clickable-image]="!shouldBlurImages() || isImageRevealed(token.content)"
-    [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" />
-  @if (shouldBlurImages() && !isImageRevealed(token.content)) {
-  <div class="reveal-overlay" (click)="revealImage(token.content); $event.stopPropagation()">
-    <mat-icon>visibility</mat-icon>
-    <span>Click to reveal</span>
-  </div>
-  }
 </div>
 } @else if (token.type === 'audio') {
 <div class="media-container">
@@ -112,16 +156,12 @@
   </div>
   }
 </div>
-} @else if (
-token.type === 'nostr-mention' &&
-(token.nostrData?.type === 'npub' || token.nostrData?.type === 'nprofile')
-) {
+} @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'npub' || token.nostrData?.type ===
+'nprofile')) {
 &nbsp;<a class="nostr-mention" (click)="onNostrMentionClick(token)" (mouseenter)="onMentionMouseEnter($event, token)"
   (mouseleave)="onMentionMouseLeave()">&#64;{{ token.nostrData?.displayName }}</a>&nbsp;
-} @else if (
-token.type === 'nostr-mention' &&
-(token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note')
-) {
+} @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note'))
+{
 @if (getEventLoadingState(token.id) === 'loading') {
 <div class="nostr-event-placeholder loading">
   <div class="placeholder-content">
@@ -140,6 +180,7 @@ token.type === 'nostr-mention' &&
 <div class="nostr-event-preview" [innerHTML]="preview"></div>
 } @else {
 &nbsp;<a class="nostr-reference">{{ token.nostrData?.displayName }}</a>&nbsp;
+}
 }
 }
 }

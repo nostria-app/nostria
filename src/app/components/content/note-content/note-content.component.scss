@@ -321,3 +321,223 @@
   vertical-align: middle;
   line-height: 1;
 }
+
+// Image Carousel Styles (Instagram-style)
+.image-carousel-container {
+  position: relative;
+  width: 100%;
+  margin: 8px 0;
+  touch-action: pan-y pinch-zoom;
+}
+
+.image-carousel {
+  position: relative;
+  width: 100%;
+  background: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.carousel-image-wrapper {
+  position: relative;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  max-height: 600px;
+
+  img {
+    max-width: 100%;
+    max-height: 600px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    display: block;
+    cursor: pointer;
+
+    &.clickable-image {
+      cursor: pointer;
+    }
+  }
+
+  .blurhash-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+  }
+
+  &.blurred {
+    .blurhash-placeholder {
+      opacity: 1 !important;
+      filter: blur(20px);
+    }
+
+    .hidden {
+      opacity: 0;
+    }
+  }
+
+  &.revealing {
+    .blurhash-placeholder {
+      opacity: 0;
+      transition: opacity 0.6s ease-out;
+    }
+
+    img:not(.blurhash-placeholder) {
+      opacity: 1;
+      transition: opacity 0.6s ease-out;
+    }
+  }
+
+  .reveal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    cursor: pointer;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    transition: background-color 0.3s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.7);
+    }
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      margin-bottom: 8px;
+    }
+
+    span {
+      font-size: 14px;
+      font-weight: 500;
+    }
+  }
+}
+
+// Navigation buttons
+.carousel-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: rgba(0, 0, 0, 0.5) !important;
+  color: white !important;
+  width: 40px;
+  height: 40px;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.7) !important;
+  }
+
+  mat-icon {
+    font-size: 24px;
+    color: white;
+  }
+
+  &.carousel-prev {
+    left: 8px;
+  }
+
+  &.carousel-next {
+    right: 8px;
+  }
+}
+
+// Indicator dots
+.carousel-indicators {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+  padding: 4px 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+}
+
+.carousel-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  padding: 0;
+  transition: background-color 0.2s, transform 0.2s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.8);
+  }
+
+  &.active {
+    background: white;
+    transform: scale(1.2);
+  }
+}
+
+// Image counter
+.carousel-counter {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 10;
+}
+
+// Responsive adjustments
+@media (max-width: 600px) {
+  .carousel-nav-btn {
+    width: 36px;
+    height: 36px;
+
+    &.carousel-prev {
+      left: 4px;
+    }
+
+    &.carousel-next {
+      right: 4px;
+    }
+  }
+
+  .carousel-indicators {
+    bottom: 8px;
+    gap: 4px;
+  }
+
+  .carousel-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .carousel-counter {
+    top: 8px;
+    right: 8px;
+    font-size: 11px;
+    padding: 3px 8px;
+  }
+}

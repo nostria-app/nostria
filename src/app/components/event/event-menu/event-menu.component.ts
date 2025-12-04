@@ -101,15 +101,17 @@ export class EventMenuComponent {
   // Regex patterns for detecting media URLs
   private audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg|m4a)(\?[^\s##]*)?)/gi;
   private videoRegex = /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?)/gi;
+  // YouTube URL patterns: youtube.com/watch?v=, youtu.be/, youtube.com/embed/, youtube.com/shorts/
+  private youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})(?:[^\s]*)?/gi;
 
   // Extract media URLs from event content
-  mediaUrls = computed<{ url: string; type: 'audio' | 'video' }[]>(() => {
+  mediaUrls = computed<{ url: string; type: 'audio' | 'video'; isYouTube?: boolean; youtubeId?: string }[]>(() => {
     const event = this.event();
     if (!event || !event.content) {
       return [];
     }
 
-    const urls: { url: string; type: 'audio' | 'video' }[] = [];
+    const urls: { url: string; type: 'audio' | 'video'; isYouTube?: boolean; youtubeId?: string }[] = [];
     const content = event.content;
 
     // Find audio URLs
@@ -123,6 +125,17 @@ export class EventMenuComponent {
     this.videoRegex.lastIndex = 0;
     while ((match = this.videoRegex.exec(content)) !== null) {
       urls.push({ url: match[0], type: 'video' });
+    }
+
+    // Find YouTube URLs
+    this.youtubeRegex.lastIndex = 0;
+    while ((match = this.youtubeRegex.exec(content)) !== null) {
+      urls.push({
+        url: match[0],
+        type: 'video',
+        isYouTube: true,
+        youtubeId: match[1]
+      });
     }
 
     return urls;
@@ -333,13 +346,23 @@ export class EventMenuComponent {
     }
 
     for (const media of urls) {
-      this.mediaPlayer.enque({
-        source: media.url,
-        title: this.extractFilename(media.url),
-        artist: '',
-        artwork: '',
-        type: media.type === 'video' ? 'Video' : 'Music',
-      });
+      if (media.isYouTube && media.youtubeId) {
+        this.mediaPlayer.enque({
+          source: `https://www.youtube.com/watch?v=${media.youtubeId}`,
+          title: `YouTube Video`,
+          artist: '',
+          artwork: `https://img.youtube.com/vi/${media.youtubeId}/hqdefault.jpg`,
+          type: 'YouTube',
+        });
+      } else {
+        this.mediaPlayer.enque({
+          source: media.url,
+          title: this.extractFilename(media.url),
+          artist: '',
+          artwork: '',
+          type: media.type === 'video' ? 'Video' : 'Music',
+        });
+      }
     }
 
     this.snackBar.open(
@@ -361,13 +384,23 @@ export class EventMenuComponent {
     const startIndex = this.mediaPlayer.media().length;
 
     for (const media of urls) {
-      this.mediaPlayer.enque({
-        source: media.url,
-        title: this.extractFilename(media.url),
-        artist: '',
-        artwork: '',
-        type: media.type === 'video' ? 'Video' : 'Music',
-      });
+      if (media.isYouTube && media.youtubeId) {
+        this.mediaPlayer.enque({
+          source: `https://www.youtube.com/watch?v=${media.youtubeId}`,
+          title: `YouTube Video`,
+          artist: '',
+          artwork: `https://img.youtube.com/vi/${media.youtubeId}/hqdefault.jpg`,
+          type: 'YouTube',
+        });
+      } else {
+        this.mediaPlayer.enque({
+          source: media.url,
+          title: this.extractFilename(media.url),
+          artist: '',
+          artwork: '',
+          type: media.type === 'video' ? 'Video' : 'Music',
+        });
+      }
     }
 
     // Start playing from the first added item
