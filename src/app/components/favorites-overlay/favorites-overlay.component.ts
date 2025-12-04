@@ -253,7 +253,7 @@ export class FavoritesOverlayComponent {
   });
 
   // Maximum number of profiles to show in overlay (excluding favorites)
-  private readonly MAX_FOLLOWING_IN_OVERLAY = 100;
+  private readonly MAX_FOLLOWING_IN_OVERLAY = 200;
 
   // Favorites in the overlay - same as favoritesWithProfiles but matches the name pattern
   favoritesInOverlay = computed(() => {

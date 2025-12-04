@@ -124,7 +124,7 @@ export class PeopleComponent {
   });
 
   // Pagination: limit how many items are rendered to avoid thousands of event listeners
-  private readonly PAGE_SIZE = 100;
+  private readonly PAGE_SIZE = 200;
   displayLimit = signal(this.PAGE_SIZE);
 
   // Visible people (limited for performance)
