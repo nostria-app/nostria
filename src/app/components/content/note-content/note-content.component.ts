@@ -74,8 +74,9 @@ export class NoteContentComponent implements OnDestroy {
   // Carousel state for image groups - maps group ID to current index
   private carouselIndices = signal<Map<number, number>>(new Map());
 
-  // Touch tracking for swipe gestures
+  // Touch tracking for swipe gestures (horizontal and vertical)
   private touchStartX = 0;
+  private touchStartY = 0;
   private readonly SWIPE_THRESHOLD = 50;
 
   // Computed: Group consecutive images into display items for Instagram-style carousel
@@ -419,22 +420,41 @@ export class NoteContentComponent implements OnDestroy {
    */
   onTouchStart(event: TouchEvent): void {
     this.touchStartX = event.touches[0].clientX;
+    this.touchStartY = event.touches[0].clientY;
   }
 
   /**
-   * Handle touch end for swipe gestures
+   * Handle touch end for swipe gestures (horizontal and vertical)
    */
   onTouchEnd(event: TouchEvent, groupId: number, images: ContentToken[]): void {
     const touchEndX = event.changedTouches[0].clientX;
-    const diff = this.touchStartX - touchEndX;
+    const touchEndY = event.changedTouches[0].clientY;
+    const diffX = this.touchStartX - touchEndX;
+    const diffY = this.touchStartY - touchEndY;
 
-    if (Math.abs(diff) > this.SWIPE_THRESHOLD) {
-      if (diff > 0) {
-        // Swipe left - go to next
-        this.goToNext(groupId, images);
+    // Determine if swipe is more horizontal or vertical
+    const absX = Math.abs(diffX);
+    const absY = Math.abs(diffY);
+
+    if (absX > this.SWIPE_THRESHOLD || absY > this.SWIPE_THRESHOLD) {
+      if (absX >= absY) {
+        // Horizontal swipe
+        if (diffX > 0) {
+          // Swipe left - go to next
+          this.goToNext(groupId, images);
+        } else {
+          // Swipe right - go to previous
+          this.goToPrevious(groupId, images);
+        }
       } else {
-        // Swipe right - go to previous
-        this.goToPrevious(groupId, images);
+        // Vertical swipe
+        if (diffY > 0) {
+          // Swipe up - go to next
+          this.goToNext(groupId, images);
+        } else {
+          // Swipe down - go to previous
+          this.goToPrevious(groupId, images);
+        }
       }
     }
   }
