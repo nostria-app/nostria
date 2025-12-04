@@ -1,12 +1,8 @@
-import { Component, inject, AfterViewInit, OnDestroy, ViewChild, ElementRef, signal, ChangeDetectionStrategy, NgZone } from '@angular/core';
+import { Component, inject, AfterViewInit, OnDestroy, ChangeDetectionStrategy, NgZone } from '@angular/core';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { FormsModule } from '@angular/forms';
-import { ClipboardModule } from '@angular/cdk/clipboard';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 
 export interface ExternalSignerDialogData {
   eventJson: string;
@@ -19,123 +15,64 @@ export interface ExternalSignerDialogData {
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
-    FormsModule,
-    ClipboardModule
+    MatProgressSpinnerModule
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <h2 mat-dialog-title>Sign with External App</h2>
+    <h2 mat-dialog-title>Waiting for Signature</h2>
     <mat-dialog-content class="dialog-content">
-      <p>
-        Click the button below to open your external signer app (like Amber), or copy the event JSON manually.
+      <div class="spinner-container">
+        <mat-spinner diameter="48"></mat-spinner>
+      </div>
+      <p class="status-text">
+        Please approve the signing request in your external signer app (like Amber).
       </p>
-
-      <div class="actions">
-        <a mat-flat-button [href]="safeUrl" (click)="onOpenSignerApp()">
-          <mat-icon>open_in_new</mat-icon>
-          Open Signer App
-        </a>
-        <button mat-stroked-button [cdkCopyToClipboard]="data.eventJson">
-          <mat-icon>content_copy</mat-icon>
-          Copy Event JSON
-        </button>
-      </div>
-
-      <div class="status-notice" [class.monitoring]="isMonitoring()">
-        <mat-icon>{{ isMonitoring() ? 'sync' : 'info' }}</mat-icon>
-        <span>{{ isMonitoring() ? 'Monitoring clipboard for signature...' : 'Click "Open Signer App" to begin' }}</span>
-      </div>
-
-      <div class="divider">
-        <span>OR PASTE MANUALLY</span>
-      </div>
-
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Paste Signature or Signed Event JSON</mat-label>
-        <textarea matInput [(ngModel)]="resultJson" rows="4" placeholder='{"id": "...", "pubkey": "...", "sig": "..."}' #resultInput></textarea>
-      </mat-form-field>
-
+      <p class="hint-text">
+        The signed event will be detected automatically.
+      </p>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
       <button mat-button mat-dialog-close>Cancel</button>
-      <button mat-flat-button [disabled]="!resultJson" (click)="confirm()">
-        Confirm
-      </button>
     </mat-dialog-actions>
   `,
   styles: [`
     .dialog-content {
       display: flex;
       flex-direction: column;
+      align-items: center;
       gap: 16px;
-      min-width: 300px;
-      max-width: 500px;
+      min-width: 280px;
+      max-width: 400px;
+      padding: 24px 16px;
     }
-    .actions {
-      display: flex;
-      justify-content: center;
-      gap: 8px;
+    .spinner-container {
       padding: 16px 0;
-      flex-wrap: wrap;
     }
-    .status-notice {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 12px 16px;
-      background-color: var(--mat-sys-surface-container);
-      color: var(--mat-sys-on-surface-variant);
-      border-radius: var(--mat-sys-corner-small);
-    }
-    .status-notice.monitoring mat-icon {
-      animation: spin 2s linear infinite;
-    }
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
-    .divider {
-      display: flex;
-      align-items: center;
+    .status-text {
       text-align: center;
-      color: var(--mat-sys-outline);
+      margin: 0;
+      color: var(--mat-sys-on-surface);
     }
-    .divider::before, .divider::after {
-      content: '';
-      flex: 1;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
-    }
-    .divider span {
-      padding: 0 10px;
-      font-size: 12px;
-    }
-    .full-width {
-      width: 100%;
+    .hint-text {
+      text-align: center;
+      margin: 0;
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
     }
   `]
 })
 export class ExternalSignerDialogComponent implements AfterViewInit, OnDestroy {
   readonly dialogRef = inject(MatDialogRef<ExternalSignerDialogComponent>);
   readonly data = inject<ExternalSignerDialogData>(MAT_DIALOG_DATA);
-  private sanitizer = inject(DomSanitizer);
   private ngZone = inject(NgZone);
 
-  @ViewChild('resultInput') resultInput!: ElementRef<HTMLTextAreaElement>;
-
-  resultJson = '';
-  isMonitoring = signal(false);
-
+  private resultJson = '';
   private clipboardPollTimer: ReturnType<typeof setInterval> | null = null;
   private lastClipboardContent = '';
 
-  get safeUrl(): SafeUrl {
-    return this.sanitizer.bypassSecurityTrustUrl(this.data.nostrSignerUrl);
-  }
-
   ngAfterViewInit() {
-    this.resultInput.nativeElement.focus();
+    // Automatically open the signer app and start monitoring
+    this.openSignerApp();
   }
 
   ngOnDestroy() {
@@ -143,7 +80,7 @@ export class ExternalSignerDialogComponent implements AfterViewInit, OnDestroy {
     this.stopClipboardPolling();
   }
 
-  onOpenSignerApp() {
+  private openSignerApp() {
     // Store current clipboard content to ignore it
     navigator.clipboard.readText().then(text => {
       this.lastClipboardContent = text.trim();
@@ -151,14 +88,15 @@ export class ExternalSignerDialogComponent implements AfterViewInit, OnDestroy {
       // Ignore errors
     });
 
-    // Start monitoring clipboard after user opens the signer app
+    // Open the signer app
+    window.location.href = this.data.nostrSignerUrl;
+
+    // Start monitoring clipboard
     window.addEventListener('focus', this.onWindowFocus);
     this.startClipboardPolling();
   }
 
   private startClipboardPolling() {
-    this.isMonitoring.set(true);
-
     // Poll clipboard every 500ms
     this.clipboardPollTimer = setInterval(() => {
       this.checkClipboard();
@@ -170,7 +108,6 @@ export class ExternalSignerDialogComponent implements AfterViewInit, OnDestroy {
       clearInterval(this.clipboardPollTimer);
       this.clipboardPollTimer = null;
     }
-    this.isMonitoring.set(false);
   }
 
   private async checkClipboard() {
@@ -216,13 +153,12 @@ export class ExternalSignerDialogComponent implements AfterViewInit, OnDestroy {
     return null;
   }
 
-  onWindowFocus = async () => {
-    this.resultInput.nativeElement.focus();
+  private onWindowFocus = async () => {
     // Immediately check clipboard on window focus for faster detection
     await this.checkClipboard();
   };
 
-  confirm() {
+  private confirm() {
     this.stopClipboardPolling();
     this.dialogRef.close(this.resultJson);
   }
