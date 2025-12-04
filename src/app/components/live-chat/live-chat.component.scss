@@ -550,6 +550,15 @@
             color: var(--mat-sys-on-surface);
           }
 
+          &.reaction-badge {
+            background: rgba(197, 192, 255, 0.15);
+            color: var(--mat-sys-primary);
+
+            mat-icon {
+              color: var(--mat-sys-primary);
+            }
+          }
+
           &.zap-badge {
             background: rgba(255, 152, 0, 0.15);
             color: #ff9800;
