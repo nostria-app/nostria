@@ -318,6 +318,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Dialog mode indicators
   isReply = computed(() => !!this.data?.replyTo);
   isQuote = computed(() => !!this.data?.quote);
+  
+  // Check if zap split is available (requires quote and logged in user)
+  zapSplitAvailable = computed(() => this.isQuote() && !!this.currentAccountPubkey());
 
   // Date constraints
   minDate = computed(() => new Date());
@@ -835,8 +838,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       if (this.zapSplitEnabled()) {
         const currentUserPubkey = this.currentAccountPubkey();
         if (currentUserPubkey) {
-          // Calculate normalized weights (NIP-57 uses weights, not percentages)
-          // Weights should sum to total, and will be normalized by recipients
+          // Use percentage values as weights (0-100 range)
+          // According to NIP-57 Appendix G, weights can be any positive numbers
+          // and will be normalized by recipients when calculating splits
           const originalWeight = this.zapSplitOriginalPercent();
           const quoterWeight = this.zapSplitQuoterPercent();
 
@@ -1985,17 +1989,24 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   onZapSplitOriginalChange(value: number): void {
-    // Ensure the total is always 100%
-    const quoterPercent = 100 - value;
-    this.zapSplitOriginalPercent.set(value);
-    this.zapSplitQuoterPercent.set(quoterPercent);
+    this.updateZapSplitPercentages(value, 'original');
   }
 
   onZapSplitQuoterChange(value: number): void {
+    this.updateZapSplitPercentages(value, 'quoter');
+  }
+
+  private updateZapSplitPercentages(value: number, changedSlider: 'original' | 'quoter'): void {
     // Ensure the total is always 100%
-    const originalPercent = 100 - value;
-    this.zapSplitQuoterPercent.set(value);
-    this.zapSplitOriginalPercent.set(originalPercent);
+    const complement = 100 - value;
+    
+    if (changedSlider === 'original') {
+      this.zapSplitOriginalPercent.set(value);
+      this.zapSplitQuoterPercent.set(complement);
+    } else {
+      this.zapSplitQuoterPercent.set(value);
+      this.zapSplitOriginalPercent.set(complement);
+    }
   }
 
   openAiDialog(action: 'generate' | 'translate' | 'sentiment' = 'generate') {
