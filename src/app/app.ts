@@ -249,6 +249,10 @@ export class App implements OnInit {
   // Track if we've already restored the route for the current session
   private hasRestoredRoute = false;
 
+  // Capture the initial URL from window.location before Angular navigation
+  // This is used to determine if we should restore the last route
+  private readonly initialUrl: string = typeof window !== 'undefined' ? window.location.pathname + window.location.search : '/';
+
   // Computed signal for account profiles with reactive updates
   accountProfilesMap = computed(() => {
     // This will reactively update when accountProfiles signal changes
@@ -607,16 +611,17 @@ export class App implements OnInit {
         // Mark as restored immediately to prevent re-triggering
         this.hasRestoredRoute = true;
 
-        // Use untracked to avoid triggering the effect again
-        const currentUrl = this.router.url;
-        const isRootOrFeeds = currentUrl === '/' || currentUrl.startsWith('/?') || currentUrl === '';
+        // Use the initial URL captured at app startup (before Angular navigation)
+        // This prevents restoring last route when user directly navigated to a specific URL
+        const isRootOrFeeds = this.initialUrl === '/' || this.initialUrl.startsWith('/?') || this.initialUrl === '';
 
-        this.logger.debug(`[App] Route restoration check - currentUrl: ${currentUrl}, isRootOrFeeds: ${isRootOrFeeds}`);
+        this.logger.debug(`[App] Route restoration check - initialUrl: ${this.initialUrl}, isRootOrFeeds: ${isRootOrFeeds}`);
 
         if (isRootOrFeeds) {
           const lastRoute = this.accountLocalState.getLastRoute(pubkey);
           this.logger.debug(`[App] Last route from storage: ${lastRoute}`);
 
+          const currentUrl = this.router.url;
           if (lastRoute && lastRoute !== '/' && lastRoute !== currentUrl) {
             this.logger.info(`[App] Restoring last route: ${lastRoute}`);
             // Use setTimeout to avoid navigation during change detection
@@ -629,7 +634,7 @@ export class App implements OnInit {
             this.logger.debug('[App] No last route to restore or already on that route');
           }
         } else {
-          this.logger.debug(`[App] Not restoring last route - already on a specific route: ${currentUrl}`);
+          this.logger.debug(`[App] Not restoring last route - user navigated directly to: ${this.initialUrl}`);
         }
       } else if (authenticated && initialized && pubkey && !this.hasRestoredRoute && !startOnLastRoute) {
         // Mark as "restored" even though we're not restoring, to prevent checking again

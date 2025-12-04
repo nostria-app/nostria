@@ -209,11 +209,15 @@ export class ProfileComponent {
           // For username routes (/u/:username), get username from params and resolve to pubkey
           username = this.routeParams()?.get('username');
           if (username) {
-            // In browser, resolve username to pubkey
-            // In SSR, this was already done by DataResolver
-            if (this.app.isBrowser()) {
+            // Check if UsernameResolver already resolved the pubkey (handles NIP-05 and premium usernames)
+            const resolvedUser = this.routeData()?.['user'] as { id: string | undefined; username: string } | undefined;
+            if (resolvedUser?.id) {
+              id = resolvedUser.id;
+              this.logger.info('[ProfileComponent] Using resolved user from UsernameResolver:', { username, id });
+            } else if (this.app.isBrowser()) {
+              // Fallback: resolve username to pubkey (shouldn't normally happen if resolver works)
               id = await this.username.getPubkey(username);
-              this.logger.info('[ProfileComponent] Resolved username in browser:', { username, id });
+              this.logger.info('[ProfileComponent] Resolved username in browser (fallback):', { username, id });
             } else {
               // During SSR, we don't have the id here, but the component will still render
               // and the metadata is already loaded by DataResolver
