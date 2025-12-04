@@ -62,7 +62,7 @@
               </span>
               <span matListItemLine class="artist-line">
                 @if (isNpubArtist(item.artist)) {
-                <app-user-profile [pubkey]="getNpubPubkey(item.artist)" view="name" />
+                <app-user-profile [pubkey]="getNpubPubkey(item.artist)" view="compact" />
                 } @else {
                 {{ item.artist }}
                 }
