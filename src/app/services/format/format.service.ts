@@ -192,7 +192,10 @@ export class FormatService {
         ? `<span class="embed-verified-badge" style="display:inline-flex;align-items:center;justify-content:center;width:14px;height:14px;border-radius:50%;background:var(--mat-sys-primary,#6200ea);color:white;font-size:9px;margin-left:4px;vertical-align:middle;">✓</span>`
         : '';
 
-      return `<div class="nostr-embed-preview" data-event-id="${eventId}" data-author="${author}" data-kind="${kind}" style="margin:0.5rem 0;border:1px solid var(--mat-sys-outline-variant,rgba(255,255,255,0.12));border-radius:10px;background:var(--mat-sys-surface-container-low,#1e1e1e);overflow:hidden;"><a href="/e/${nip19.noteEncode(eventId)}" class="nostr-embed-link" style="display:block;padding:10px 12px;text-decoration:none;color:inherit;">${avatarHtml}<span class="embed-author-name" style="color:var(--mat-sys-on-surface,#fff);">${this.escapeHtml(authorName)}</span>${verifiedBadge}<span class="embed-time" style="color:var(--mat-sys-on-surface-variant,#999);font-size:0.8rem;margin-left:6px;">· ${relativeTime}</span><div class="embed-content" style="color:var(--mat-sys-on-surface,#fff);line-height:1.45;margin-top:2px;">${escapedContent}</div>${imageHtml}</a></div>`;
+      // Use nevent encoding with full event data (id, pubkey, kind) for proper routing
+      const neventEncoded = nip19.neventEncode({ id: eventId, author: author, kind: kind });
+
+      return `<div class="nostr-embed-preview" data-event-id="${eventId}" data-author="${author}" data-kind="${kind}" style="margin:0.5rem 0;border:1px solid var(--mat-sys-outline-variant,rgba(255,255,255,0.12));border-radius:10px;background:var(--mat-sys-surface-container-low,#1e1e1e);overflow:hidden;"><a href="/e/${neventEncoded}" class="nostr-embed-link" style="display:block;padding:10px 12px;text-decoration:none;color:inherit;">${avatarHtml}<span class="embed-author-name" style="color:var(--mat-sys-on-surface,#fff);">${this.escapeHtml(authorName)}</span>${verifiedBadge}<span class="embed-time" style="color:var(--mat-sys-on-surface-variant,#999);font-size:0.8rem;margin-left:6px;">· ${relativeTime}</span><div class="embed-content" style="color:var(--mat-sys-on-surface,#fff);line-height:1.45;margin-top:2px;">${escapedContent}</div>${imageHtml}</a></div>`;
     } catch (error) {
       this.logger.error('[fetchEventPreview] Error fetching event preview:', error);
       return null;
@@ -263,12 +266,23 @@ export class FormatService {
                   };
                 }
 
-                // Fallback to simple reference link if preview fails
+                // Fallback: try to fetch event data for proper nevent encoding
                 const noteRef = nostrData.displayName || `note${noteId.substring(0, 8)}`;
-                const noteEncoded = nip19.noteEncode(noteId);
+                let neventEncoded: string;
+                try {
+                  const record = await this.dataService.getEventById(noteId, { cache: true, save: false });
+                  if (record?.event) {
+                    neventEncoded = nip19.neventEncode({ id: noteId, author: record.event.pubkey, kind: record.event.kind });
+                  } else {
+                    // If we can't get the event, encode with just the ID (kind 1 assumed for notes)
+                    neventEncoded = nip19.neventEncode({ id: noteId });
+                  }
+                } catch {
+                  neventEncoded = nip19.neventEncode({ id: noteId });
+                }
                 return {
                   original: match[0],
-                  replacement: `<a href="/e/${noteEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`,
+                  replacement: `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`,
                 };
               }
 
@@ -405,15 +419,16 @@ export class FormatService {
                 // For notes, show placeholder first then fetch preview in background
                 const noteId = nostrData.data;
                 const noteRef = nostrData.displayName || `note${noteId.substring(0, 8)}`;
-                const noteEncoded = nip19.noteEncode(noteId);
+                // Use nevent with just id for immediate placeholder (will be replaced with full data in preview)
+                const neventEncoded = nip19.neventEncode({ id: noteId });
 
                 // Immediate fallback link
-                replacement = `<a href="/e/${noteEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`;
+                replacement = `<a href="/e/${neventEncoded}" class="nostr-reference" data-event-id="${noteId}" data-type="note" title="View note">📝 ${noteRef}</a>`;
                 if (onPreviewLoaded) {
                   onPreviewLoaded(match[0], replacement);
                 }
 
-                // Fetch preview in background
+                // Fetch preview in background - this will have proper nevent with full event data
                 this.fetchEventPreview(noteId).then(preview => {
                   if (preview && onPreviewLoaded) {
                     onPreviewLoaded(match[0], preview);
