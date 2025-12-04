@@ -19,6 +19,15 @@ import { AccountStateService } from '../../services/account-state.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { UserDataService } from '../../services/user-data.service';
 import { ZapService } from '../../services/zap.service';
+import { ReactionService } from '../../services/reaction.service';
+import { MatMenuModule } from '@angular/material/menu';
+
+interface ChatReaction {
+  content: string; // emoji or + or -
+  count: number;
+  pubkeys: string[]; // who reacted
+  userReacted: boolean; // current user reacted with this
+}
 
 interface ChatMessage {
   id: string;
@@ -31,6 +40,7 @@ interface ChatMessage {
   type: 'chat' | 'zap';
   zapAmount?: number;
   zapSender?: string;
+  reactions?: Map<string, ChatReaction>; // emoji -> reaction info
 }
 
 @Component({
@@ -45,6 +55,7 @@ interface ChatMessage {
     MatTooltipModule,
     MatButtonToggleModule,
     MatSlideToggleModule,
+    MatMenuModule,
     UserProfileComponent,
     ProfileDisplayNameComponent,
   ],
@@ -61,6 +72,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   private snackBar = inject(MatSnackBar);
   private userDataService = inject(UserDataService);
   private zapService = inject(ZapService);
+  private reactionService = inject(ReactionService);
 
   @ViewChild('messagesContainer') messagesContainer?: ElementRef<HTMLDivElement>;
 
@@ -78,7 +90,12 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
 
   // Subscription management
   private chatSubscription: { close: () => void } | null = null;
+  private reactionSubscription: { close: () => void } | null = null;
   private messageIds = new Set<string>();
+  private reactionIds = new Set<string>();
+
+  // Quick reactions for the picker
+  readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
 
   // Message input
   messageInput = signal('');
@@ -191,6 +208,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     if (this.chatSubscription) {
       this.chatSubscription.close();
     }
+    if (this.reactionSubscription) {
+      this.reactionSubscription.close();
+    }
   } scrollToBottom(): void {
     if (this.messagesContainer) {
       const element = this.messagesContainer.nativeElement;
@@ -216,15 +236,20 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
     this.showScrollToBottom.set(!isNearBottom);
   } private async subscribeToChatMessages(eventAddress: string): Promise<void> {
-    // Close existing subscription if any
+    // Close existing subscriptions if any
     if (this.chatSubscription) {
       this.chatSubscription.close();
       this.chatSubscription = null;
+    }
+    if (this.reactionSubscription) {
+      this.reactionSubscription.close();
+      this.reactionSubscription = null;
     }
 
     // Reset messages and message IDs for new subscription
     this.messages.set([]);
     this.messageIds.clear();
+    this.reactionIds.clear();
     this.activeRelays.set([]);
     this.oldestMessageTimestamp = null;
     this.hasMoreMessages.set(true);
@@ -344,6 +369,123 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
         }
       }
     );
+
+    // Subscribe to reactions (kind 7) for chat messages
+    this.subscribeToReactions(relayUrls);
+  }
+
+  private subscribeToReactions(relayUrls: string[]): void {
+    // Subscribe to kind 7 reactions that reference kind 1311 events
+    const reactionFilter = {
+      kinds: [7],
+      '#k': ['1311'], // Filter for reactions to kind 1311 (chat messages)
+    };
+
+    this.reactionSubscription = this.relayPool.subscribe(
+      relayUrls,
+      reactionFilter,
+      (event: Event) => {
+        this.handleReactionEvent(event);
+      }
+    );
+  }
+
+  private handleReactionEvent(event: Event): void {
+    // Skip if already processed
+    if (this.reactionIds.has(event.id)) return;
+    this.reactionIds.add(event.id);
+
+    // Get the event ID this reaction is for
+    const targetEventId = event.tags.find(tag => tag[0] === 'e')?.[1];
+    if (!targetEventId) return;
+
+    const reactionContent = event.content || '+';
+    const reactorPubkey = event.pubkey;
+    const currentUserPubkey = this.accountState.pubkey();
+
+    // Update the message with this reaction
+    this.messages.update(msgs => {
+      return msgs.map(msg => {
+        if (msg.event.id !== targetEventId) return msg;
+
+        // Initialize reactions map if needed
+        const reactions = new Map(msg.reactions || []);
+
+        // Get or create reaction entry
+        const existingReaction = reactions.get(reactionContent);
+        if (existingReaction) {
+          // Only add if this user hasn't already reacted with this emoji
+          if (!existingReaction.pubkeys.includes(reactorPubkey)) {
+            existingReaction.count++;
+            existingReaction.pubkeys.push(reactorPubkey);
+            if (reactorPubkey === currentUserPubkey) {
+              existingReaction.userReacted = true;
+            }
+          }
+        } else {
+          reactions.set(reactionContent, {
+            content: reactionContent,
+            count: 1,
+            pubkeys: [reactorPubkey],
+            userReacted: reactorPubkey === currentUserPubkey
+          });
+        }
+
+        return { ...msg, reactions };
+      });
+    });
+  }
+
+  async addReaction(message: ChatMessage, emoji: string): Promise<void> {
+    const currentUserPubkey = this.accountState.pubkey();
+    if (!currentUserPubkey) {
+      this.snackBar.open('Please log in to react', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Check if user already reacted with this emoji
+    const existingReaction = message.reactions?.get(emoji);
+    if (existingReaction?.userReacted) {
+      // Already reacted, could implement remove reaction here
+      return;
+    }
+
+    try {
+      const success = await this.reactionService.addReaction(emoji, message.event);
+      if (success) {
+        // Optimistically update UI
+        this.messages.update(msgs => {
+          return msgs.map(msg => {
+            if (msg.event.id !== message.event.id) return msg;
+
+            const reactions = new Map(msg.reactions || []);
+            const existing = reactions.get(emoji);
+            if (existing) {
+              existing.count++;
+              existing.pubkeys.push(currentUserPubkey);
+              existing.userReacted = true;
+            } else {
+              reactions.set(emoji, {
+                content: emoji,
+                count: 1,
+                pubkeys: [currentUserPubkey],
+                userReacted: true
+              });
+            }
+
+            return { ...msg, reactions };
+          });
+        });
+      }
+    } catch (error) {
+      console.error('[LiveChat] Error adding reaction:', error);
+      this.snackBar.open('Failed to add reaction', 'Close', { duration: 3000 });
+    }
+  }
+
+  getReactionsArray(message: ChatMessage): ChatReaction[] {
+    if (!message.reactions) return [];
+    return Array.from(message.reactions.values());
   }
 
   async sendMessage(): Promise<void> {
