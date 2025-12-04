@@ -10,6 +10,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
+import { UserProfileComponent } from '../../user-profile/user-profile.component';
+import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-youtube-player',
@@ -18,6 +20,7 @@ import { LayoutService } from '../../../services/layout.service';
     MatIconModule,
     MatTooltipModule,
     RouterModule,
+    UserProfileComponent,
   ],
   templateUrl: './youtube-player.component.html',
   styleUrl: './youtube-player.component.scss',
@@ -34,5 +37,21 @@ export class YouTubePlayerComponent {
 
   toggleFullscreen(): void {
     this.layout.fullscreenMediaPlayer.set(!this.layout.fullscreenMediaPlayer());
+  }
+
+  isNpubArtist(artist: string | undefined): boolean {
+    return !!artist && artist.startsWith('npub1');
+  }
+
+  getNpubPubkey(artist: string): string {
+    try {
+      const decoded = nip19.decode(artist);
+      if (decoded.type === 'npub') {
+        return decoded.data;
+      }
+    } catch {
+      // Ignore decoding errors
+    }
+    return '';
   }
 }

@@ -25,7 +25,13 @@
   <!-- Media Info (Footer Mode Only) -->
   <div class="media-info-text" [class.hidden]="!footer()">
     <div class="media-title">{{ media.current()?.title }}</div>
-    <div class="media-artist">{{ media.current()?.artist }}</div>
+    <div class="media-artist">
+      @if (isNpubArtist(media.current()?.artist)) {
+      <app-user-profile [pubkey]="getNpubPubkey(media.current()!.artist!)" view="compact" />
+      } @else {
+      {{ media.current()?.artist }}
+      }
+    </div>
   </div>
 
   <!-- Footer Controls (Footer Mode Only) -->
