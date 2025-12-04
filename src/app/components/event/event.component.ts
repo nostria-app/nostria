@@ -545,6 +545,36 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       });
     });
 
+    // Effect to load event by ID when only id is provided (not event)
+    effect(() => {
+      if (this.app.initialized()) {
+        const eventId = this.id();
+        const type = this.type();
+        const existingEvent = this.event();
+
+        // Only load by ID if no event is provided directly
+        if (!eventId || !type || existingEvent) {
+          return;
+        }
+
+        untracked(async () => {
+          if (type === 'e' || type === 'a') {
+            this.isLoadingEvent.set(true);
+            this.loadingError.set(null);
+            try {
+              const eventData = await this.data.getEventById(eventId);
+              this.record.set(eventData);
+            } catch (error) {
+              console.error('Error loading event:', error);
+              this.loadingError.set('Failed to load event');
+            } finally {
+              this.isLoadingEvent.set(false);
+            }
+          }
+        });
+      }
+    });
+
     // Effect to load parent event when parentEventId changes
     effect(() => {
       const replyId = this.replyEventId();
