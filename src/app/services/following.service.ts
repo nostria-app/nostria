@@ -554,4 +554,33 @@ export class FollowingService {
       .filter(p => p.profile !== null)
       .map(p => p.profile!);
   }
+
+  /**
+   * Update trust metrics for a specific profile
+   * Called when trust metrics are fetched from the relay
+   */
+  updateTrustMetrics(pubkey: string, trust: TrustMetrics | null): void {
+    const currentMap = this.profilesMap();
+    const profile = currentMap.get(pubkey);
+
+    if (!profile) {
+      // Not in following list, nothing to update
+      return;
+    }
+
+    // Update the trust metrics for this profile
+    this.profilesMap.update((map) => {
+      const newMap = new Map(map);
+      const existingProfile = newMap.get(pubkey);
+      if (existingProfile) {
+        newMap.set(pubkey, {
+          ...existingProfile,
+          trust,
+          lastUpdated: Math.floor(Date.now() / 1000),
+        });
+        this.logger.debug(`[FollowingService] Updated trust metrics for ${pubkey}`);
+      }
+      return newMap;
+    });
+  }
 }

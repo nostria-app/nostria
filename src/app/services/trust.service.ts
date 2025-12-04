@@ -1,4 +1,4 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, Injector, runInInjectionContext } from '@angular/core';
 import { LocalSettingsService } from './local-settings.service';
 import { LoggerService } from './logger.service';
 import { RelayPoolService } from './relays/relay-pool';
@@ -17,6 +17,7 @@ export class TrustService {
   private logger = inject(LoggerService);
   private relayPool = inject(RelayPoolService);
   private database = inject(DatabaseService);
+  private injector = inject(Injector);
 
   // In-memory cache for quick access
   private metricsCache = new Map<string, TrustMetrics>();
@@ -148,17 +149,15 @@ export class TrustService {
       const event = events[0];
       const metrics = this.parseMetrics(event);
 
-      // Debug: Log the full event and parsed metrics
-      console.log('Trust event received for', pubkey);
-      console.log('Event tags:', event.tags);
-      console.log('Parsed metrics:', metrics);
-
       // Save to database
       await this.database.saveTrustMetrics(pubkey, metrics);
 
       // Cache in memory
       this.metricsCache.set(pubkey, metrics);
       this.loadedPubkeys.update(set => new Set(set).add(pubkey));
+
+      // Notify FollowingService to update its cache (lazy inject to avoid circular dependency)
+      this.notifyFollowingService(pubkey, metrics);
 
       this.logger.debug(`Trust metrics loaded from relay for ${pubkey}:`, metrics);
       return metrics;
@@ -214,6 +213,20 @@ export class TrustService {
       } catch (error) {
         this.logger.error(`Background refresh failed for ${pubkey}`, error);
       }
+    });
+  }
+
+  /**
+   * Notify FollowingService about trust metrics update
+   * Uses lazy injection to avoid circular dependency
+   */
+  private notifyFollowingService(pubkey: string, metrics: TrustMetrics): void {
+    // Use dynamic import pattern to avoid circular dependency
+    runInInjectionContext(this.injector, () => {
+      import('./following.service').then(({ FollowingService }) => {
+        const followingService = this.injector.get(FollowingService);
+        followingService.updateTrustMetrics(pubkey, metrics);
+      });
     });
   }
 
