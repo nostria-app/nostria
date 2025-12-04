@@ -231,6 +231,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   });
   powMinedEvent = signal<UnsignedEvent | null>(null);
 
+  // Zap split options (NIP-57 Appendix G)
+  zapSplitEnabled = signal(false);
+  zapSplitOriginalPercent = signal(90); // Default 90% to original author
+  zapSplitQuoterPercent = signal(10); // Default 10% to quoter
+
   // Computed properties
   characterCount = computed(() => this.processContentForPublishing(this.content()).length);
 
@@ -313,6 +318,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Dialog mode indicators
   isReply = computed(() => !!this.data?.replyTo);
   isQuote = computed(() => !!this.data?.quote);
+  
+  // Check if zap split is available (requires quote and logged in user)
+  zapSplitAvailable = computed(() => this.isQuote() && !!this.currentAccountPubkey());
 
   // Date constraints
   minDate = computed(() => new Date());
@@ -824,6 +832,30 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const existingPubkeys = tags.filter(tag => tag[0] === 'p').map(tag => tag[1]);
       if (!existingPubkeys.includes(this.data.quote.pubkey)) {
         tags.push(['p', this.data.quote.pubkey]);
+      }
+
+      // Add zap split tags if enabled (NIP-57 Appendix G)
+      if (this.zapSplitEnabled()) {
+        const currentUserPubkey = this.currentAccountPubkey();
+        if (currentUserPubkey) {
+          // Use percentage values as weights (0-100 range)
+          // According to NIP-57 Appendix G, weights can be any positive numbers
+          // and will be normalized by recipients when calculating splits
+          const originalWeight = this.zapSplitOriginalPercent();
+          const quoterWeight = this.zapSplitQuoterPercent();
+
+          // Add zap tag for original author (the person being quoted)
+          // Only add if weight is greater than 0 (per NIP-57 spec)
+          if (originalWeight > 0) {
+            tags.push(['zap', this.data.quote.pubkey, relay, originalWeight.toString()]);
+          }
+
+          // Add zap tag for quoter (current user)
+          // Only add if weight is greater than 0 (per NIP-57 spec)
+          if (quoterWeight > 0) {
+            tags.push(['zap', currentUserPubkey, '', quoterWeight.toString()]);
+          }
+        }
       }
     }
 
@@ -1955,6 +1987,32 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       isRunning: false,
       bestEvent: null,
     });
+  }
+
+  // Zap split methods
+  onZapSplitToggle(enabled: boolean): void {
+    this.zapSplitEnabled.set(enabled);
+  }
+
+  onZapSplitOriginalChange(value: number): void {
+    this.updateZapSplitPercentages(value, 'original');
+  }
+
+  onZapSplitQuoterChange(value: number): void {
+    this.updateZapSplitPercentages(value, 'quoter');
+  }
+
+  private updateZapSplitPercentages(value: number, changedSlider: 'original' | 'quoter'): void {
+    // Ensure the total is always 100%
+    const complement = 100 - value;
+    
+    if (changedSlider === 'original') {
+      this.zapSplitOriginalPercent.set(value);
+      this.zapSplitQuoterPercent.set(complement);
+    } else {
+      this.zapSplitQuoterPercent.set(value);
+      this.zapSplitOriginalPercent.set(complement);
+    }
   }
 
   openAiDialog(action: 'generate' | 'translate' | 'sentiment' = 'generate') {
