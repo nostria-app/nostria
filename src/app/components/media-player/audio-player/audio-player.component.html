@@ -2,7 +2,7 @@
   @if (footer()) {
   <!-- Footer mode - full player with album art -->
   <div class="audio-player-footer">
-    <div class="media-info">
+    <div class="media-info" [class.no-artwork]="!media.current()?.artwork">
       @if (media.current()?.artwork) {
       <img class="album-art" [src]="media.current()?.artwork" alt="{{ media.current()?.title || 'Album artwork' }}" />
       }
