@@ -256,14 +256,10 @@ export class EventService {
         }
       }
 
-      // If we don't have a rootId from e-tags but we have a quote, use the quote as root
-      if (!rootId && quoteId) {
-        rootId = quoteId;
-        author = quoteAuthor;
-        if (quoteRelays.length > 0) {
-          rootRelays.push(...quoteRelays);
-        }
-      }
+      // NOTE: We intentionally do NOT treat quotes as parent/root events.
+      // Per NIP-18, quotes (q tags) are inline embeds, not thread relationships.
+      // The quoted event is rendered inline in the content, so it should not
+      // appear in the parent events list above the main event.
     }
 
     return { author, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays, mentionIds, quoteId, quoteAuthor, quoteRelays };
