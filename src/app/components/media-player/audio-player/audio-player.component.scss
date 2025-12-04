@@ -24,17 +24,17 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 0 16px 0 0;
-  gap: 24px;
+  padding: 0 8px 0 0;
+  gap: 16px;
   position: relative;
   /* For mobile progress bar positioning */
 
   @media (max-width: 1024px) {
-    gap: 16px;
+    gap: 12px;
   }
 
   @media (max-width: 768px) {
-    padding: 0 12px 0 0;
+    padding: 0 8px 0 0;
     gap: 8px;
   }
 }
@@ -45,7 +45,11 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
-  padding-left: 0;
+  overflow: hidden;
+
+  &.no-artwork {
+    padding-left: 16px;
+  }
 
   @media (max-width: 768px) {
     flex: 1 1 auto;
@@ -81,6 +85,7 @@
 .media-info-text {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
 }
 
 .media-title {
@@ -101,6 +106,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   padding-right: 8px;
+
+  app-user-profile {
+    display: inline-block;
+    vertical-align: middle;
+    max-width: 100%;
+    overflow: hidden;
+  }
 }
 
 .media-controls {
@@ -177,7 +189,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  gap: 12px;
+  gap: 4px;
 
   @media (max-width: 1024px) {
     flex: 0 0 auto;
