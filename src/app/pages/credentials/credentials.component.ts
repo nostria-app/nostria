@@ -414,6 +414,18 @@ export class CredentialsComponent implements OnInit {
     return this.accountState.account()?.source === 'remote';
   }
 
+  isExtensionAccount(): boolean {
+    return this.accountState.account()?.source === 'extension';
+  }
+
+  isExternalSignerAccount(): boolean {
+    return this.accountState.account()?.source === 'external';
+  }
+
+  isPreviewAccount(): boolean {
+    return this.accountState.account()?.source === 'preview';
+  }
+
   async addWallet(): Promise<void> {
     if (this.connectionStringControl.invalid) {
       this.snackBar.open('Please enter a valid Nostr Wallet Connect connection string', 'Dismiss', {
