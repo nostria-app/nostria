@@ -189,6 +189,12 @@
               {{ participant.chatCount }}
             </span>
             }
+            @if (participant.reactionCount > 0) {
+            <span class="stat-badge reaction-badge" matTooltip="Reactions">
+              <mat-icon>add_reaction</mat-icon>
+              {{ participant.reactionCount }}
+            </span>
+            }
             @if (participant.zapCount > 0) {
             <span class="stat-badge zap-badge" matTooltip="Zaps sent">
               <mat-icon>bolt</mat-icon>

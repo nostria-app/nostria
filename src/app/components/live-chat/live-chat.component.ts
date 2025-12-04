@@ -137,10 +137,10 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     }));
   });
 
-  // Computed active participants (people who have chatted or zapped)
+  // Computed active participants (people who have chatted, zapped, or reacted)
   activeParticipants = computed(() => {
     const msgs = this.messages();
-    const participantMap = new Map<string, { pubkey: string; chatCount: number; zapCount: number; totalZapAmount: number }>();
+    const participantMap = new Map<string, { pubkey: string; chatCount: number; zapCount: number; totalZapAmount: number; reactionCount: number }>();
 
     for (const msg of msgs) {
       // Get the actual sender pubkey (for zaps, use zapSender)
@@ -152,6 +152,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
           chatCount: 0,
           zapCount: 0,
           totalZapAmount: 0,
+          reactionCount: 0,
         });
       }
 
@@ -162,11 +163,29 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
         participant.zapCount++;
         participant.totalZapAmount += msg.zapAmount || 0;
       }
+
+      // Count reactions from this message
+      if (msg.reactions) {
+        for (const reaction of msg.reactions.values()) {
+          for (const reactorPubkey of reaction.pubkeys) {
+            if (!participantMap.has(reactorPubkey)) {
+              participantMap.set(reactorPubkey, {
+                pubkey: reactorPubkey,
+                chatCount: 0,
+                zapCount: 0,
+                totalZapAmount: 0,
+                reactionCount: 0,
+              });
+            }
+            participantMap.get(reactorPubkey)!.reactionCount++;
+          }
+        }
+      }
     }
 
     // Convert to array and sort by total activity (zaps weighted more)
     return Array.from(participantMap.values())
-      .sort((a, b) => (b.totalZapAmount + b.chatCount) - (a.totalZapAmount + a.chatCount));
+      .sort((a, b) => (b.totalZapAmount + b.chatCount + b.reactionCount) - (a.totalZapAmount + a.chatCount + a.reactionCount));
   });
 
   // Computed event address for querying
