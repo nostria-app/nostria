@@ -123,7 +123,7 @@ export class EventDetailsDialogComponent {
   }
 
   copyNeventId(): void {
-    this.layout.copyToClipboard(this.eventId(), 'nevent', this.eventPubkey());
+    this.layout.copyToClipboard(this.eventId(), 'nevent', this.eventPubkey(), this.eventKind());
   }
 
   copyPubkey(): void {

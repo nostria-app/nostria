@@ -29,6 +29,7 @@ export class Link {
     const encoded = nip19.neventEncode({
       id: eventData.id,
       author: eventData.pubkey,
+      kind: eventData.kind,
     });
 
     if (eventData.kind === 1) {

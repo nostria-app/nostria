@@ -1018,7 +1018,8 @@ export class UtilitiesService {
     return nip19.neventEncode({
       id: event.id,
       relays: relays || [],
-      author: event.pubkey
+      author: event.pubkey,
+      kind: event.kind,
     });
   }
 

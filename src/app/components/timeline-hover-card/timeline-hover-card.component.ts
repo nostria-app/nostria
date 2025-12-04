@@ -30,7 +30,7 @@ import type { NostrRecord } from '../../interfaces';
     MatButtonModule,
     MatProgressSpinnerModule,
     RouterModule
-],
+  ],
   templateUrl: './timeline-hover-card.component.html',
   styleUrl: './timeline-hover-card.component.scss',
 })
@@ -169,11 +169,12 @@ export class TimelineHoverCardComponent {
     return `${Math.floor(diff / 604800)}w ago`;
   }
 
-  navigateToEvent(eventId: string): void {
+  navigateToEvent(eventId: string, kind: number): void {
     const pubkey = this.pubkey();
     const neventId = nip19.neventEncode({
       id: eventId,
       author: pubkey,
+      kind: kind,
     });
     this.router.navigate(['/e', neventId]);
   }

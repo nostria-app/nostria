@@ -124,6 +124,7 @@ export class RepostButtonComponent {
       quote: {
         id: event.id,
         pubkey: event.pubkey,
+        kind: event.kind,
         // TODO: pass relay part of 'q' tag
       },
     });

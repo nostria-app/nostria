@@ -61,6 +61,7 @@ export interface NoteEditorDialogData {
     id: string;
     pubkey: string;
     content?: string;
+    kind?: number;
   };
   mentions?: string[]; // Array of pubkeys to mention
   content?: string; // Initial content
@@ -382,6 +383,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const nevent = nip19.neventEncode({
         id: this.data.quote.id,
         author: this.data.quote.pubkey,
+        kind: this.data.quote.kind,
       });
 
       // Append quote to existing content (e.g. draft) or set it
@@ -709,6 +711,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             const nevent = nip19.neventEncode({
               id: signedEvent.id,
               author: signedEvent.pubkey,
+              kind: signedEvent.kind,
             });
             this.router.navigate(['/e', nevent], { state: { event: signedEvent } });
 
