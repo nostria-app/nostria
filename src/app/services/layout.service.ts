@@ -514,7 +514,7 @@ export class LayoutService implements OnDestroy {
 
   private debounceTimer: any;
 
-  copyToClipboard(text: any | undefined | null, type: string, author?: string): void {
+  copyToClipboard(text: any | undefined | null, type: string, author?: string, kind?: number): void {
     if (text === null || text === undefined) {
       return;
     }
@@ -529,7 +529,7 @@ export class LayoutService implements OnDestroy {
     }
 
     if (type === 'nevent') {
-      const eventPointer: EventPointer = { id: text, author: author };
+      const eventPointer: EventPointer = { id: text, author: author, kind: kind };
       text = nip19.neventEncode(eventPointer);
     }
 
@@ -1763,6 +1763,7 @@ export class LayoutService implements OnDestroy {
     const neventId = nip19.neventEncode({
       id: event.id,
       author: event.pubkey,
+      kind: event.kind,
     });
 
     this.router.navigate(['/delete-event'], {

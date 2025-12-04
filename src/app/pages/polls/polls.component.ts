@@ -31,7 +31,7 @@ import { PollDetailsDialogComponent } from '../../components/poll-details-dialog
     MatChipsModule,
     MatProgressBarModule,
     PollCardComponent
-],
+  ],
   templateUrl: './polls.component.html',
   styleUrl: './polls.component.scss',
 })
@@ -65,7 +65,7 @@ export class PollsComponent {
     this.isLoading.set(true);
     try {
       await this.pollService.fetchPollsFromNostr(pubkey);
-      
+
       // Load responses for each poll
       const polls = this.polls();
       for (const poll of polls) {
@@ -104,7 +104,7 @@ export class PollsComponent {
     try {
       const responses = await this.pollService.fetchPollResponses(poll.eventId || poll.id, poll.endsAt);
       const results = this.pollService.calculateResults(poll, responses);
-      
+
       const currentMap = this.pollResults();
       currentMap.set(poll.id, { responses, results });
       this.pollResults.set(new Map(currentMap));
@@ -138,7 +138,7 @@ export class PollsComponent {
   async viewPollResults(poll: Poll): Promise<void> {
     // First load results if not cached
     await this.loadPollResults(poll);
-    
+
     const pollData = this.pollResults().get(poll.id);
     if (!pollData) {
       this.snackBar.open('Failed to load poll results', 'Close', { duration: 3000 });
@@ -165,13 +165,13 @@ export class PollsComponent {
         horizontalPosition: 'center',
         verticalPosition: 'bottom'
       });
-      
+
       // Clear caches to force fresh data
       this.pollService.clearResponseCache(poll.id);
       const currentMap = this.pollResults();
       currentMap.delete(poll.id);
       this.pollResults.set(new Map(currentMap));
-      
+
       // Reload with fresh data
       await this.loadPollResults(poll);
     } catch (error) {
@@ -217,10 +217,10 @@ export class PollsComponent {
   hasUserVoted(poll: Poll): boolean {
     const pubkey = this.app.accountState.pubkey();
     if (!pubkey) return false;
-    
+
     const pollData = this.pollResults().get(poll.id);
     if (!pollData) return false;
-    
+
     return pollData.results.voters.includes(pubkey);
   }
 
@@ -250,6 +250,7 @@ export class PollsComponent {
       const nevent = nip19.neventEncode({
         id: poll.eventId,
         relays: poll.relays,
+        kind: 1068,
       });
 
       await navigator.clipboard.writeText(nevent);

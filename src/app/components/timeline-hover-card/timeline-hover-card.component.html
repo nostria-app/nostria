@@ -33,7 +33,7 @@
     } @else if (recentNotes().length > 0) {
     <div class="timeline-content">
       @for (note of recentNotes(); track note.event.id) {
-      <button class="note-item" (click)="navigateToEvent(note.event.id)" type="button">
+      <button class="note-item" (click)="navigateToEvent(note.event.id, note.event.kind)" type="button">
         <div class="note-content">{{ truncateContent(note.data) }}</div>
         <div class="note-time">{{ getTimeAgo(note.event.created_at) }}</div>
       </button>
