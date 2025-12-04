@@ -85,6 +85,9 @@ export class MediaPlayerService implements OnInitialized {
   currentTimeSig = signal(0);
   durationSig = signal(0);
 
+  // Signal for paused state - updated by play/pause actions and video element events
+  private _isPaused = signal(true);
+
   // Video element reference
   private videoElement?: HTMLVideoElement;
 
@@ -122,29 +125,13 @@ export class MediaPlayerService implements OnInitialized {
     });
 
     navigator.mediaSession.setActionHandler('play', async () => {
-      if (!this.audio) {
-        return;
-      }
-
-      // Resume playback
-      try {
-        await this.audio.play();
-      } catch (err) {
-        if (err instanceof Error) {
-          console.error(err.name, err.message);
-        } else {
-          console.error('Unknown error:', err);
-        }
-      }
+      // Use the centralized resume method
+      await this.resume();
     });
 
     navigator.mediaSession.setActionHandler('pause', () => {
-      if (!this.audio) {
-        return;
-      }
-
-      // Pause active playback
-      this.audio.pause();
+      // Use the centralized pause method
+      this.pause();
     });
 
     navigator.mediaSession.setActionHandler('seekbackward', () => {
@@ -338,6 +325,7 @@ export class MediaPlayerService implements OnInitialized {
     this.videoUrl.set(undefined);
     this.pausedYouTubeUrl.set(undefined);
     this._isFullscreen.set(false);
+    this._isPaused.set(true);
 
     // Clear media queue
     // this.media.set([]);
@@ -773,6 +761,7 @@ export class MediaPlayerService implements OnInitialized {
       this.videoUrl.set(undefined);
       const youTubeUrl = this.getYouTubeEmbedUrl()(file.source, 'autoplay=1');
       this.youtubeUrl.set(youTubeUrl);
+      this._isPaused.set(false); // YouTube autoplays
 
       // Initialize YouTube player to detect when video ends
       // Use small initial delay, then poll for iframe readiness
@@ -827,6 +816,7 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
 
       await this.audio.play();
+      this._isPaused.set(false);
     }
 
     navigator.mediaSession.metadata = new MediaMetadata({
@@ -870,6 +860,7 @@ export class MediaPlayerService implements OnInitialized {
           if (this.videoElement) {
             try {
               await this.videoElement.play();
+              this._isPaused.set(false);
               console.log('Video started playing');
             } catch (error) {
               console.error('Error playing video:', error);
@@ -912,6 +903,7 @@ export class MediaPlayerService implements OnInitialized {
           console.log('HLS manifest parsed, starting playback');
           try {
             await videoElement.play();
+            this._isPaused.set(false);
             console.log('HLS stream started playing');
           } catch (error) {
             console.error('Error playing HLS stream:', error);
@@ -943,6 +935,7 @@ export class MediaPlayerService implements OnInitialized {
         videoElement.src = url;
         try {
           await videoElement.play();
+          this._isPaused.set(false);
           console.log('HLS stream started playing (native)');
         } catch (error) {
           console.error('Error playing HLS stream:', error);
@@ -1022,12 +1015,14 @@ export class MediaPlayerService implements OnInitialized {
       if (currentItem?.type === 'Video' && this.videoElement) {
         try {
           await this.videoElement.play();
+          this._isPaused.set(false);
         } catch (err) {
           console.error('Error resuming video:', err);
         }
       } else {
         this.youtubeUrl.set(this.pausedYouTubeUrl());
         this.pausedYouTubeUrl.set(undefined);
+        this._isPaused.set(false);
       }
     } else {
       if (!this.audio) {
@@ -1038,6 +1033,7 @@ export class MediaPlayerService implements OnInitialized {
       console.log('RESUME!');
       try {
         await this.audio.play();
+        this._isPaused.set(false);
       } catch (err) {
         console.error(err);
       }
@@ -1067,6 +1063,7 @@ export class MediaPlayerService implements OnInitialized {
           }
         }
       }
+      this._isPaused.set(true);
       navigator.mediaSession.playbackState = 'none';
       return;
     }
@@ -1087,6 +1084,7 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.pause();
     }
 
+    this._isPaused.set(true);
     navigator.mediaSession.playbackState = 'paused';
   }
 
@@ -1177,21 +1175,8 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   get paused() {
-    const currentItem = this.current();
-    if (this.videoMode()) {
-      // For Video and HLS live streams, check the video element
-      if ((currentItem?.type === 'Video' || currentItem?.isLiveStream) && this.videoElement) {
-        return this.videoElement.paused;
-      } else {
-        return this.youtubeUrl() == null;
-      }
-    } else {
-      if (!this.audio) {
-        return true;
-      }
-
-      return this.audio.paused;
-    }
+    // Use the signal for reactive updates
+    return this._isPaused();
   }
 
   get muted() {

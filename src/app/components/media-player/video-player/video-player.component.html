@@ -30,6 +30,16 @@
     </div>
   </div>
 
+  <!-- Media Info (Footer Mode Only) -->
+  <div class="media-info" [class.hidden]="!footer()">
+    <div class="media-info-text">
+      <div class="media-title">{{ media.current()?.title || 'Video' }}</div>
+      @if (media.current()?.artist) {
+      <div class="media-artist">{{ media.current()?.artist }}</div>
+      }
+    </div>
+  </div>
+
   <!-- Footer Controls (Footer Mode Only) -->
   <div class="video-controls" [class.hidden]="!footer()">
     <div class="control-buttons">

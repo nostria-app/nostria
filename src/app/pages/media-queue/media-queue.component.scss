@@ -79,6 +79,40 @@
   font-size: 24px;
 }
 
+.artist-line {
+  ::ng-deep app-user-profile {
+    display: inline-block;
+
+    .user-profile-content.name-view {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+
+      .user-profile-avatar.name-avatar {
+        width: 18px;
+        height: 18px;
+
+        img.user-avatar {
+          width: 18px;
+          height: 18px;
+          border-radius: 50%;
+        }
+
+        mat-icon {
+          font-size: 18px !important;
+          width: 18px !important;
+          height: 18px !important;
+        }
+      }
+
+      .user-profile-name.name-label {
+        font-size: inherit;
+        color: inherit;
+      }
+    }
+  }
+}
+
 .queue-item {
   position: relative;
   overflow: hidden;
