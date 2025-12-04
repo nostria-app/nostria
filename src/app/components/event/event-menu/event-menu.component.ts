@@ -345,12 +345,15 @@ export class EventMenuComponent {
       return;
     }
 
+    const event = this.event();
+    const author = event?.pubkey ? nip19.npubEncode(event.pubkey) : '';
+
     for (const media of urls) {
       if (media.isYouTube && media.youtubeId) {
         this.mediaPlayer.enque({
           source: `https://www.youtube.com/watch?v=${media.youtubeId}`,
           title: `YouTube Video`,
-          artist: '',
+          artist: author,
           artwork: `https://img.youtube.com/vi/${media.youtubeId}/hqdefault.jpg`,
           type: 'YouTube',
         });
@@ -358,7 +361,7 @@ export class EventMenuComponent {
         this.mediaPlayer.enque({
           source: media.url,
           title: this.extractFilename(media.url),
-          artist: '',
+          artist: author,
           artwork: '',
           type: media.type === 'video' ? 'Video' : 'Music',
         });
@@ -381,6 +384,8 @@ export class EventMenuComponent {
       return;
     }
 
+    const event = this.event();
+    const author = event?.pubkey ? nip19.npubEncode(event.pubkey) : '';
     const startIndex = this.mediaPlayer.media().length;
 
     for (const media of urls) {
@@ -388,7 +393,7 @@ export class EventMenuComponent {
         this.mediaPlayer.enque({
           source: `https://www.youtube.com/watch?v=${media.youtubeId}`,
           title: `YouTube Video`,
-          artist: '',
+          artist: author,
           artwork: `https://img.youtube.com/vi/${media.youtubeId}/hqdefault.jpg`,
           type: 'YouTube',
         });
@@ -396,7 +401,7 @@ export class EventMenuComponent {
         this.mediaPlayer.enque({
           source: media.url,
           title: this.extractFilename(media.url),
-          artist: '',
+          artist: author,
           artwork: '',
           type: media.type === 'video' ? 'Video' : 'Music',
         });
