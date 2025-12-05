@@ -67,7 +67,7 @@
       <h2 class="section-title">
         <mat-icon>group</mat-icon>
         Who Posted
-        <span class="section-count">{{ activePosters().length }}</span>
+        <span class="section-count">{{ activePosters().length }} / {{ totalPostersCount() }}</span>
       </h2>
       <div class="poster-grid">
         @for (poster of activePosters(); track poster.pubkey) {
@@ -96,6 +96,14 @@
         </a>
         }
       </div>
+      @if (hasMorePosters()) {
+      <div class="load-more-container">
+        <button mat-stroked-button (click)="loadMorePosters()">
+          <mat-icon>expand_more</mat-icon>
+          Load More
+        </button>
+      </div>
+      }
     </section>
     }
 
@@ -185,6 +193,8 @@
           <mat-icon>expand_more</mat-icon>
           Load More
         </button>
+        <!-- Sentinel for IntersectionObserver auto-loading -->
+        <div #loadMoreSentinel class="load-more-sentinel"></div>
       </div>
       }
     </section>

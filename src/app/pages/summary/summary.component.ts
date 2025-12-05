@@ -7,7 +7,8 @@ import {
   computed,
   effect,
   ChangeDetectionStrategy,
-  NgZone,
+  ElementRef,
+  viewChild,
 } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
@@ -77,9 +78,6 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: {
-    '(window:scroll)': 'onWindowScroll()',
-  },
 })
 export class SummaryComponent implements OnInit, OnDestroy {
   private readonly accountState = inject(AccountStateService);
@@ -87,14 +85,16 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
   private readonly relayBatch = inject(RelayBatchService);
-  private readonly ngZone = inject(NgZone);
   protected readonly app = inject(ApplicationService);
+
+  // ViewChild for load more sentinel
+  loadMoreSentinel = viewChild<ElementRef<HTMLDivElement>>('loadMoreSentinel');
 
   // Timer for periodic timestamp saves
   private saveTimestampInterval: ReturnType<typeof setInterval> | null = null;
 
-  // Scroll detection throttle
-  private scrollThrottleTimeout: ReturnType<typeof setTimeout> | null = null;
+  // IntersectionObserver for infinite scroll
+  private loadMoreObserver: IntersectionObserver | null = null;
 
   // Flag to prevent operations after component destruction
   private isDestroyed = false;
@@ -127,7 +127,27 @@ export class SummaryComponent implements OnInit, OnDestroy {
   });
 
   // Active posters (people who posted in the time period)
-  activePosters = signal<PosterStats[]>([]);
+  allActivePosters = signal<PosterStats[]>([]);
+
+  // Posters pagination
+  postersPage = signal(1);
+
+  // Paginated active posters
+  activePosters = computed(() => {
+    const all = this.allActivePosters();
+    const page = this.postersPage();
+    return all.slice(0, page * MAX_POSTERS_DISPLAY);
+  });
+
+  // Check if there are more posters to load
+  hasMorePosters = computed(() => {
+    const all = this.allActivePosters();
+    const shown = this.activePosters();
+    return shown.length < all.length;
+  });
+
+  // Total posters count
+  totalPostersCount = computed(() => this.allActivePosters().length);
 
   // Profile updates (pubkeys of people who updated their profiles)
   profileUpdates = signal<string[]>([]);
@@ -215,6 +235,18 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.loadSummaryData();
       }
     });
+
+    // Setup IntersectionObserver when sentinel becomes available
+    effect(() => {
+      const sentinel = this.loadMoreSentinel();
+      const hasMore = this.hasMoreTimelineEvents();
+
+      // Only setup observer if we have the sentinel and more data to load
+      if (sentinel && hasMore) {
+        // Use setTimeout to ensure DOM is updated
+        setTimeout(() => this.setupLoadMoreObserver(), 0);
+      }
+    });
   }
 
   private restoreTimeSelection(pubkey: string): void {
@@ -240,40 +272,37 @@ export class SummaryComponent implements OnInit, OnDestroy {
     // Stop the interval
     this.stopTimestampSaveInterval();
 
-    // Clear scroll throttle
-    if (this.scrollThrottleTimeout) {
-      clearTimeout(this.scrollThrottleTimeout);
-    }
+    // Cleanup IntersectionObserver
+    this.cleanupLoadMoreObserver();
 
     // Save final timestamp when leaving the page
     this.saveCurrentTimestamp();
   }
 
-  /**
-   * Handle window scroll for infinite loading of timeline events
-   */
-  onWindowScroll(): void {
-    // Throttle scroll events
-    if (this.scrollThrottleTimeout) return;
+  private setupLoadMoreObserver(): void {
+    // Cleanup any existing observer first
+    this.cleanupLoadMoreObserver();
 
-    this.scrollThrottleTimeout = setTimeout(() => {
-      this.scrollThrottleTimeout = null;
-    }, 100);
+    const sentinel = this.loadMoreSentinel();
+    if (!sentinel) return;
 
-    // Check if we should load more
-    if (!this.hasMoreTimelineEvents() || this.isLoading()) return;
+    this.loadMoreObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && this.hasMoreTimelineEvents() && !this.isLoading()) {
+          this.loadMoreTimelineEvents();
+        }
+      },
+      { rootMargin: '300px' }
+    );
 
-    // Calculate scroll position
-    const scrollTop = window.scrollY || document.documentElement.scrollTop;
-    const scrollHeight = document.documentElement.scrollHeight;
-    const clientHeight = document.documentElement.clientHeight;
+    this.loadMoreObserver.observe(sentinel.nativeElement);
+  }
 
-    // Load more when within 300px of bottom
-    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
-    if (distanceFromBottom < 300) {
-      this.ngZone.run(() => {
-        this.loadMoreTimelineEvents();
-      });
+  private cleanupLoadMoreObserver(): void {
+    if (this.loadMoreObserver) {
+      this.loadMoreObserver.disconnect();
+      this.loadMoreObserver = null;
     }
   }
 
@@ -401,7 +430,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
           mediaCount: 0,
           profileUpdatesCount: 0,
         });
-        this.activePosters.set([]);
+        this.allActivePosters.set([]);
+        this.postersPage.set(1);
         this.profileUpdates.set([]);
         this.noteEvents.set([]);
         this.articleEvents.set([]);
@@ -509,17 +539,20 @@ export class SummaryComponent implements OnInit, OnDestroy {
       statsMap.set(event.pubkey, existing);
     }
 
+    // Sort by total count (no more slice limit here)
     const sorted = Array.from(statsMap.values())
-      .sort((a, b) => b.totalCount - a.totalCount)
-      .slice(0, MAX_POSTERS_DISPLAY);
+      .sort((a, b) => b.totalCount - a.totalCount);
 
-    this.activePosters.set(sorted);
+    this.allActivePosters.set(sorted);
+    this.postersPage.set(1); // Reset pagination
   }
 
   selectPreset(hours: number): void {
     this.selectedPreset.set(hours);
     // Reset timeline pagination when changing time range
     this.timelinePage.set(1);
+    // Reset posters pagination when changing time range
+    this.postersPage.set(1);
     // Save selection
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
@@ -542,6 +575,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   loadMoreTimelineEvents(): void {
     this.timelinePage.update(p => p + 1);
+  }
+
+  loadMorePosters(): void {
+    this.postersPage.update(p => p + 1);
   }
 
   togglePanel(panel: 'notes' | 'articles' | 'media'): void {
