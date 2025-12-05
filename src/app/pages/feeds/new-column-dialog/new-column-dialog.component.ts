@@ -158,6 +158,11 @@ export class NewColumnDialogComponent {
     return this.followingService.toNostrRecords(profiles);
   });
 
+  // Count of following users for display
+  followingCount = computed(() => {
+    return this.accountState.followingList().length;
+  });
+
   // Filtered options for autocomplete
   filteredKinds = computed(() => {
     const input = this.kindInputValue().toLowerCase();
@@ -408,7 +413,7 @@ export class NewColumnDialogComponent {
         label: '',
         icon: existingColumn?.icon || 'chat', // Default icon (not displayed in UI)
         type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
-        source: (formValue.source || 'public') as 'following' | 'public' | 'custom' | 'for-you',
+        source: (formValue.source || 'public') as 'following' | 'public' | 'custom' | 'for-you' | 'all-following',
         kinds: this.selectedKinds(),
         relayConfig: formValue.relayConfig as 'account' | 'custom',
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,

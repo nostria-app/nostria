@@ -73,6 +73,10 @@
                 <mat-icon>people</mat-icon>
                 <span class="hide-tiny">Following</span>
               </mat-button-toggle>
+              <mat-button-toggle value="all-following">
+                <mat-icon>group</mat-icon>
+                <span class="hide-tiny">All Following</span>
+              </mat-button-toggle>
               <mat-button-toggle value="public">
                 <mat-icon>public</mat-icon>
                 <span class="hide-tiny">Public</span>
@@ -82,7 +86,17 @@
                 <span class="hide-tiny">Custom</span>
               </mat-button-toggle>
             </mat-button-toggle-group>
-            <br><br>
+
+            <!-- Description for selected source -->
+            @if (columnForm.get('source')?.value === 'all-following') {
+            <div class="source-description">
+              <mat-icon>info</mat-icon>
+              <span>Fetches events from ALL your following ({{followingCount()}}) without algorithm filtering.
+                Optimizes queries by batching users with shared relays.
+                Only loads events from the last 24 hours or since you last opened the app.</span>
+            </div>
+            }
+            <br>
           </div>
 
           <!-- Custom Source Configuration -->

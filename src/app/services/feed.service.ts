@@ -29,6 +29,7 @@ import { Followset } from './followset';
 import { RegionService } from './region.service';
 import { EncryptionService } from './encryption.service';
 import { LocalSettingsService } from './local-settings.service';
+import { RelayBatchService } from './relay-batch.service';
 
 export interface FeedItem {
   column: ColumnConfig;
@@ -59,7 +60,7 @@ export interface ColumnConfig {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
-  source?: 'following' | 'public' | 'custom' | 'for-you';
+  source?: 'following' | 'public' | 'custom' | 'for-you' | 'all-following';
   customUsers?: string[]; // Array of pubkeys for custom user selection
   customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
@@ -252,6 +253,7 @@ export class FeedService {
   private readonly regionService = inject(RegionService);
   private readonly encryption = inject(EncryptionService);
   private readonly localSettings = inject(LocalSettingsService);
+  private readonly relayBatchService = inject(RelayBatchService);
 
   private readonly algorithms = inject(Algorithms);
 
@@ -660,6 +662,9 @@ export class FeedService {
     if (column.source === 'following') {
       console.log(`📍 Loading FOLLOWING feed for column ${column.id}`);
       await this.loadFollowingStrictFeed(item);
+    } else if (column.source === 'all-following') {
+      console.log(`📍 Loading ALL-FOLLOWING feed for column ${column.id}`);
+      await this.loadAllFollowingFeed(item);
     } else if (column.source === 'for-you') {
       console.log(`📍 Loading FOR-YOU feed for column ${column.id}`);
       await this.loadForYouFeed(item);
@@ -1039,6 +1044,157 @@ export class FeedService {
   }
 
   /**
+   * Load ALL following feed - fetches events from ALL users the current user follows.
+   * 
+   * This method uses an optimized batch strategy:
+   * 1. Groups following users by shared relay sets
+   * 2. Sends batched queries to minimize relay connections
+   * 3. Only fetches events since last app open (or max 24 hours)
+   * 4. Updates UI incrementally as events arrive
+   * 
+   * This is different from 'following' which limits to recent follows for performance,
+   * and 'for-you' which uses algorithm-based recommendations.
+   */
+  private async loadAllFollowingFeed(feedData: FeedItem) {
+    try {
+      const followingList = this.accountState.followingList();
+
+      // If following list is empty, return early
+      if (followingList.length === 0) {
+        this.logger.debug('Following list is empty, no users to fetch from');
+        return;
+      }
+
+      this.logger.info(`📢 Loading ALL-FOLLOWING feed with ${followingList.length} users`);
+
+      const kinds = feedData.filter?.kinds || [1]; // Default to text notes
+
+      // Use the relay batch service for efficient fetching
+      const events = await this.relayBatchService.fetchAllFollowingEvents(
+        kinds,
+        {
+          limitPerUser: 5,
+          timeout: 15000, // 15 second timeout per batch
+        },
+        // Incremental update callback
+        (newEvents: Event[]) => {
+          this.handleAllFollowingIncrementalUpdate(feedData, newEvents);
+        }
+      );
+
+      // Final update with all events
+      this.handleAllFollowingFinalUpdate(feedData, events);
+
+      this.logger.info(`✅ Loaded ALL-FOLLOWING feed with ${events.length} events from ${followingList.length} users`);
+    } catch (error) {
+      this.logger.error('Error loading all-following feed:', error);
+    }
+  }
+
+  /**
+   * Handle incremental updates for all-following feed as events arrive
+   */
+  private handleAllFollowingIncrementalUpdate(feedData: FeedItem, newEvents: Event[]) {
+    if (newEvents.length === 0) return;
+
+    const existingEvents = feedData.events();
+
+    // Filter out muted events
+    const filteredEvents = newEvents.filter(event => !this.accountState.muted(event));
+
+    if (filteredEvents.length === 0) return;
+
+    // If initial load is already complete and we have existing events, queue to pending
+    if (feedData.initialLoadComplete && existingEvents.length > 0) {
+      const existingIds = new Set(existingEvents.map(e => e.id));
+      const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
+
+      const trulyNewEvents = filteredEvents.filter(
+        e => !existingIds.has(e.id) && !pendingIds.has(e.id)
+      );
+
+      if (trulyNewEvents.length > 0) {
+        feedData.pendingEvents?.update((pending: Event[]) => {
+          const newPending = [...pending, ...trulyNewEvents];
+          return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        });
+      }
+    } else {
+      // Initial load - merge events directly
+      const existingIds = new Set(existingEvents.map(e => e.id));
+      const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
+
+      if (trulyNewEvents.length > 0) {
+        const mergedEvents = [...existingEvents, ...trulyNewEvents]
+          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+        feedData.events.set(mergedEvents);
+
+        // Save to database for Summary page queries
+        for (const event of trulyNewEvents) {
+          this.saveEventToDatabase(event);
+        }
+      }
+    }
+  }
+
+  /**
+   * Finalize all-following feed with all fetched events
+   */
+  private handleAllFollowingFinalUpdate(feedData: FeedItem, allEvents: Event[]) {
+    // Filter out muted events
+    const filteredEvents = allEvents.filter(event => !this.accountState.muted(event));
+
+    const existingEvents = feedData.events();
+
+    if (feedData.initialLoadComplete && existingEvents.length > 0) {
+      // Queue remaining events to pending
+      const existingIds = new Set(existingEvents.map(e => e.id));
+      const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
+
+      const trulyNewEvents = filteredEvents.filter(
+        e => !existingIds.has(e.id) && !pendingIds.has(e.id)
+      );
+
+      if (trulyNewEvents.length > 0) {
+        feedData.pendingEvents?.update((pending: Event[]) => {
+          const newPending = [...pending, ...trulyNewEvents];
+          return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        });
+      }
+
+      // Save all events for cache
+      const allEventsForCache = [...existingEvents, ...trulyNewEvents];
+      this.saveCachedEvents(feedData.column.id, allEventsForCache);
+    } else {
+      // Merge all events
+      const existingIds = new Set(existingEvents.map(e => e.id));
+      const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
+
+      const mergedEvents = [...existingEvents, ...trulyNewEvents]
+        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+      feedData.events.set(mergedEvents);
+
+      // Save to cache
+      this.saveCachedEvents(feedData.column.id, mergedEvents);
+
+      // Save to database for Summary page queries
+      for (const event of trulyNewEvents) {
+        this.saveEventToDatabase(event);
+      }
+    }
+
+    // Mark initial load as complete
+    feedData.initialLoadComplete = true;
+
+    // Update lastRetrieved timestamp
+    this.updateColumnLastRetrieved(feedData.column.id);
+
+    this.logger.info(`✅ All-following feed finalized with ${feedData.events().length} total events`);
+  }
+
+  /**
    * Load "For You" feed - combines multiple sources for personalized content
    * 
    * This method implements a personalized feed strategy:
@@ -1383,6 +1539,10 @@ export class FeedService {
         // For following, use all following users (strict)
         const followingList = this.accountState.followingList();
         await this.fetchOlderEventsFromUsers(followingList, feedData);
+      } else if (column.source === 'all-following') {
+        // For all-following, use ALL following users without limit
+        const followingList = this.accountState.followingList();
+        await this.fetchOlderEventsFromAllFollowing(followingList, feedData);
       } else if (column.source === 'for-you') {
         // For "For You" feed, combine all sources like in initial load
         const allPubkeys = new Set<string>();
@@ -1704,7 +1864,71 @@ export class FeedService {
     } else {
       this.logger.debug(`[Feed Pagination] Got ${totalEventsFromUsers} events from ${userEventsMap.size} users, can load more`);
     }
-  } /**
+  }
+
+  /**
+   * Fetch older events for ALL following users using batched relay queries.
+   * This method uses the RelayBatchService for efficient pagination.
+   */
+  private async fetchOlderEventsFromAllFollowing(pubkeys: string[], feedData: FeedItem) {
+    const existingEvents = feedData.events();
+
+    // Calculate the oldest timestamp from existing events
+    const oldestTimestamp = existingEvents.length > 0
+      ? Math.min(...existingEvents.map(e => e.created_at || 0)) - 1
+      : Math.floor(Date.now() / 1000);
+
+    const kinds = feedData.filter?.kinds || [1];
+
+    this.logger.info(`[All-Following Pagination] Loading older events before ${new Date(oldestTimestamp * 1000).toISOString()}`);
+
+    try {
+      const result = await this.relayBatchService.fetchEventsFromAllFollowing(
+        pubkeys,
+        kinds,
+        {
+          limitPerUser: 5,
+          timeout: 15000,
+          useSinceTimestamp: false, // Don't use since for pagination
+          customSince: undefined,
+        }
+      );
+
+      // Filter events to only include those older than our current oldest
+      const olderEvents = result.events.filter(e => (e.created_at || 0) < oldestTimestamp);
+
+      // Also filter out duplicates
+      const existingIds = new Set(existingEvents.map(e => e.id));
+      const uniqueOlderEvents = olderEvents.filter(e => !existingIds.has(e.id));
+
+      // Filter out muted events
+      const filteredEvents = uniqueOlderEvents.filter(e => !this.accountState.muted(e));
+
+      if (filteredEvents.length > 0) {
+        // Merge with existing events
+        const mergedEvents = [...existingEvents, ...filteredEvents]
+          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+        feedData.events.set(mergedEvents);
+
+        // Update last timestamp
+        feedData.lastTimestamp = Math.min(...filteredEvents.map(e => (e.created_at || 0) * 1000));
+
+        // Save to cache
+        this.saveCachedEvents(feedData.column.id, mergedEvents);
+
+        this.logger.info(`[All-Following Pagination] Added ${filteredEvents.length} older events`);
+      } else {
+        // No older events found
+        feedData.hasMore?.set(false);
+        this.logger.info('[All-Following Pagination] No more older events available');
+      }
+    } catch (error) {
+      this.logger.error('[All-Following Pagination] Error:', error);
+    }
+  }
+
+  /**
    * Unsubscribe from a single feed (unsubscribes from all its columns)
    */
   private unsubscribeFromFeed(feedId: string): void {
