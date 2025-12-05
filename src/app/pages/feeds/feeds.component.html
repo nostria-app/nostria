@@ -359,3 +359,15 @@
   }
 </div>
 }
+
+<!-- New Feed Dialog -->
+@if (showNewFeedDialog()) {
+<app-new-feed-dialog [icons]="feedIcons" [feed]="editingFeed()" (closed)="onFeedDialogClosed($event)">
+</app-new-feed-dialog>
+}
+
+<!-- New Column Dialog -->
+@if (showNewColumnDialog()) {
+<app-new-column-dialog [icons]="columnIcons" [column]="editingColumn()" (closed)="onColumnDialogClosed($event)">
+</app-new-column-dialog>
+}

@@ -1,6 +1,7 @@
 // Custom Dialog Component Styles
 // Provides responsive dialog with mobile keyboard support
-// Note: z-index is handled by #custom-dialog-container (z-index: 99999) in styles.scss
+// Component moves itself to document.body for proper z-index stacking
+// Portal host styles are in src/styles.scss (.custom-dialog-portal-host)
 
 :host {
   display: block;

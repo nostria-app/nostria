@@ -1,23 +1,13 @@
-<div class="dialog-container">
-  <div mat-dialog-title class="dialog-header">
-    <span>
-      <mat-icon>{{ isEditMode() ? 'edit' : 'stacks' }}</mat-icon>
-      {{ isEditMode() ? 'Edit Feed' : 'Create New Feed' }}
-    </span>
-    <button mat-icon-button mat-dialog-close class="close-button">
-      <mat-icon>close</mat-icon>
-    </button>
-  </div>
+<app-custom-dialog [title]="isEditMode() ? 'Edit Feed' : 'Create New Feed'" (closed)="onClose()">
 
-  <div mat-dialog-content class="dialog-content">
+  <div dialog-content>
     <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
       <!-- Basic Feed Configuration -->
       <div class="basic-config">
         <div class="name-icon-row">
           <mat-form-field appearance="outline" class="name-field">
             <mat-label>Feed Name</mat-label>
-            <input matInput formControlName="label" placeholder="My Custom Feed"
-              (keydown.enter)="$event.preventDefault(); onSubmit()" cdkFocusInitial />
+            <input matInput formControlName="label" placeholder="My Custom Feed" />
             @if (feedForm.get('label')?.hasError('required')) {
             <mat-error>Feed name is required</mat-error>
             }
@@ -25,7 +15,7 @@
 
           <mat-form-field appearance="outline" class="icon-field">
             <mat-select formControlName="icon">
-              @for (icon of data.icons; track icon) {
+              @for (icon of icons(); track icon) {
               <mat-option [value]="icon">
                 <mat-icon>{{ icon }}</mat-icon>
               </mat-option>
@@ -51,10 +41,13 @@
     </form>
   </div>
 
-  <div class="dialog-actions" mat-dialog-actions>
-    <button mat-button mat-dialog-close type="button">Cancel</button>
-    <button mat-flat-button color="primary" (click)="onSubmit()" [disabled]="!feedForm.valid">
-      {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
-    </button>
+  <div dialog-actions class="action-container">
+    <div class="left-actions"></div>
+    <div class="right-actions">
+      <button mat-button type="button" (click)="onClose()">Cancel</button>
+      <button mat-flat-button (click)="onSubmit()" [disabled]="!feedForm.valid">
+        {{ isEditMode() ? 'Save Changes' : 'Create Feed' }}
+      </button>
+    </div>
   </div>
-</div>
+</app-custom-dialog>
