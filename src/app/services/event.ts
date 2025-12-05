@@ -62,6 +62,12 @@ export interface ThreadedEvent {
   deepestReplyId?: string;
 }
 
+export interface IntermediateEvent {
+  id: string;
+  author: string | null;
+  relays: string[];
+}
+
 export interface EventTags {
   author: string | null; // Author of the root event
   replyAuthor: string | null; // Author of the reply event (5th element of reply e-tag)
@@ -72,6 +78,7 @@ export interface EventTags {
   replyRelays: string[];
   pTagRelays: Map<string, string[]>; // Map of pubkey to relay hints from p-tags
   mentionIds: string[]; // Event IDs that are mentioned (not replies)
+  intermediates: IntermediateEvent[]; // Intermediate events between root and reply (empty marker e-tags)
   quoteId: string | null; // Event ID from q tag (NIP-18)
   quoteAuthor: string | null; // Author pubkey from q tag
   quoteRelays: string[]; // Relay hints from q tag
@@ -141,6 +148,7 @@ export class EventService {
     const rootRelays: string[] = [];
     const replyRelays: string[] = [];
     const mentionIds: string[] = [];
+    const intermediates: IntermediateEvent[] = [];
 
     // Separate mention tags from thread tags
     const mentionTags = eTags.filter((tag) => tag[3] === 'mention');
@@ -228,6 +236,34 @@ export class EventService {
       }
     }
 
+    // Collect intermediate events: e-tags with empty marker (not root, reply, or mention)
+    // These are events in the thread chain between root and the direct reply
+    // They appear when users copy the full thread history when replying
+    if (rootId && replyId && rootId !== replyId) {
+      threadTags.forEach((tag) => {
+        const eventId = tag[1];
+        const marker = tag[3];
+        // Skip root, reply, and marked mentions - only collect empty/unmarked intermediate events
+        if (eventId !== rootId && eventId !== replyId && (!marker || marker === '')) {
+          const relays: string[] = [];
+          if (tag[2] && tag[2].trim() !== '') {
+            relays.push(tag[2]);
+          }
+          intermediates.push({
+            id: eventId,
+            author: tag[4] || null,
+            relays,
+          });
+        }
+      });
+
+      if (intermediates.length > 0) {
+        this.logger.info(`[getEventTags] Found ${intermediates.length} intermediate events for event ${event.id.slice(0, 16)}:`,
+          intermediates.map(i => i.id.slice(0, 16))
+        );
+      }
+    }
+
     // Extract quote information from q tag (NIP-18)
     // q tag format: ["q", <event-id or addressable-event>, <relay-url>, <pubkey>]
     // For addressable events: "kind:pubkey:d-tag"
@@ -262,7 +298,18 @@ export class EventService {
       // appear in the parent events list above the main event.
     }
 
-    return { author, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays, mentionIds, quoteId, quoteAuthor, quoteRelays };
+    // Log extracted thread info for debugging
+    if (rootId || replyId) {
+      this.logger.info(`[getEventTags] Event ${event.id.slice(0, 16)} thread info:`, {
+        rootId: rootId?.slice(0, 16),
+        rootAuthor: author?.slice(0, 8),
+        replyId: replyId?.slice(0, 16),
+        replyAuthor: replyAuthor?.slice(0, 8),
+        intermediateCount: intermediates.length,
+      });
+    }
+
+    return { author, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays, mentionIds, intermediates, quoteId, quoteAuthor, quoteRelays };
   }
 
   /**
@@ -981,7 +1028,7 @@ export class EventService {
     const parents: Event[] = [];
 
     const tags = eventTags ?? this.getEventTags(event);
-    const { author: initialAuthor, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays } = tags;
+    const { author: initialAuthor, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays, intermediates } = tags;
 
     let author = initialAuthor;
 
@@ -1024,16 +1071,60 @@ export class EventService {
         const replyEventAuthor = replyAuthor || author;
         const replyHints = collectRelayHints(replyRelays, replyEventAuthor);
 
-        this.logger.debug(`[loadParentEvents] Loading reply parent ${replyId.slice(0, 16)} with hints:`, replyHints);
+        this.logger.info(`[loadParentEvents] Loading reply parent ${replyId.slice(0, 16)} with author ${replyEventAuthor?.slice(0, 8)} and hints:`, replyHints);
 
         const replyEvent = await this.loadParentEvent(replyId, replyEventAuthor, replyHints);
 
         if (replyEvent) {
+          this.logger.info(`[loadParentEvents] Successfully loaded reply event ${replyId.slice(0, 16)}`);
           parents.unshift(replyEvent);
 
           // Recursively load parents of the reply
           const grandParents = await this.loadParentEvents(replyEvent);
           parents.unshift(...grandParents);
+        } else {
+          this.logger.warn(`[loadParentEvents] Failed to load reply event ${replyId.slice(0, 16)}`);
+        }
+      } else {
+        this.logger.info(`[loadParentEvents] No reply to load. replyId=${replyId?.slice(0, 16)}, rootId=${rootId?.slice(0, 16)}`);
+      }
+
+      // Load intermediate events (those with empty markers between root and reply)
+      // These are thread chain events that may not be captured by recursive loading
+      if (intermediates && intermediates.length > 0) {
+        this.logger.info(`[loadParentEvents] Loading ${intermediates.length} intermediate events:`,
+          intermediates.map(i => ({ id: i.id.slice(0, 16), author: i.author?.slice(0, 8), relays: i.relays }))
+        );
+
+        for (const intermediate of intermediates) {
+          // Skip if already loaded (from recursive parent loading)
+          if (parents.find((p) => p.id === intermediate.id)) {
+            this.logger.debug(`[loadParentEvents] Skipping intermediate ${intermediate.id.slice(0, 16)} - already loaded`);
+            continue;
+          }
+
+          const intermediateHints = collectRelayHints(intermediate.relays, intermediate.author);
+          const intermediateEvent = await this.loadParentEvent(
+            intermediate.id,
+            intermediate.author || author,
+            intermediateHints
+          );
+
+          if (intermediateEvent) {
+            this.logger.info(`[loadParentEvents] Loaded intermediate event ${intermediate.id.slice(0, 16)}`);
+            // Insert intermediate events after root but before reply
+            // Find the position of the reply event (which should be last)
+            const replyIndex = parents.findIndex((p) => p.id === replyId);
+            if (replyIndex > 0) {
+              // Insert before the reply
+              parents.splice(replyIndex, 0, intermediateEvent);
+            } else {
+              // If no reply found yet, just add to the list
+              parents.push(intermediateEvent);
+            }
+          } else {
+            this.logger.warn(`[loadParentEvents] Failed to load intermediate event ${intermediate.id.slice(0, 16)}`);
+          }
         }
       }
 
@@ -1041,7 +1132,7 @@ export class EventService {
       if (rootId && rootId !== replyId) {
         const rootHints = collectRelayHints(rootRelays, author);
 
-        this.logger.debug(`[loadParentEvents] Loading root event ${rootId.slice(0, 16)} with hints:`, rootHints);
+        this.logger.info(`[loadParentEvents] Loading root event ${rootId.slice(0, 16)} with hints:`, rootHints);
 
         const rootEvent = await this.loadParentEvent(rootId, author, rootHints);
 
@@ -1049,6 +1140,14 @@ export class EventService {
           parents.unshift(rootEvent);
         }
       }
+
+      // Sort parents by created_at to ensure proper chronological order
+      // This is important because intermediate events may be loaded out of order
+      parents.sort((a, b) => a.created_at - b.created_at);
+
+      this.logger.info(`[loadParentEvents] Returning ${parents.length} parent events:`,
+        parents.map(p => ({ id: p.id.slice(0, 16), created_at: p.created_at }))
+      );
 
       return parents;
     } catch (error) {
@@ -1086,24 +1185,32 @@ export class EventService {
       // This is a regular event ID
       // First, try relay hints if provided (these are from e-tag and p-tag relay hints)
       if (relayHints && relayHints.length > 0) {
-        this.logger.debug(`[loadParentEvent] Trying relay hints first for event ${eventRef.slice(0, 16)}:`, relayHints);
+        this.logger.info(`[loadParentEvent] Trying relay hints first for event ${eventRef.slice(0, 16)}:`, relayHints);
         try {
           const event = await this.relayPool.getEventById(relayHints, eventRef, 3000);
           if (event) {
-            this.logger.debug(`[loadParentEvent] Found event via relay hints`);
+            this.logger.info(`[loadParentEvent] Found event ${eventRef.slice(0, 16)} via relay hints`);
             return event;
           }
-          this.logger.debug(`[loadParentEvent] Event not found via relay hints, falling back to author relays`);
+          this.logger.info(`[loadParentEvent] Event ${eventRef.slice(0, 16)} not found via relay hints, falling back to author relays`);
         } catch (error) {
           this.logger.warn(`[loadParentEvent] Error querying relay hints:`, error);
         }
       }
 
       // Fall back to using author's relays
+      this.logger.info(`[loadParentEvent] Trying author ${author?.slice(0, 8)} relays for event ${eventRef.slice(0, 16)}`);
       const record = await this.userDataService.getEventById(author, eventRef, {
         cache: true,
         ttl: minutes.five,
+        save: true,  // This enables checking the local database first
       });
+
+      if (record) {
+        this.logger.info(`[loadParentEvent] Found event ${eventRef.slice(0, 16)} via author relays or database`);
+      } else {
+        this.logger.warn(`[loadParentEvent] Event ${eventRef.slice(0, 16)} NOT FOUND via author ${author?.slice(0, 8)} relays or database`);
+      }
 
       return record?.event || null;
     }
