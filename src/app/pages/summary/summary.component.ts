@@ -7,6 +7,7 @@ import {
   computed,
   effect,
   ChangeDetectionStrategy,
+  NgZone,
 } from '@angular/core';
 
 import { RouterModule } from '@angular/router';
@@ -76,6 +77,9 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  host: {
+    '(window:scroll)': 'onWindowScroll()',
+  },
 })
 export class SummaryComponent implements OnInit, OnDestroy {
   private readonly accountState = inject(AccountStateService);
@@ -83,10 +87,14 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
   private readonly relayBatch = inject(RelayBatchService);
+  private readonly ngZone = inject(NgZone);
   protected readonly app = inject(ApplicationService);
 
   // Timer for periodic timestamp saves
   private saveTimestampInterval: ReturnType<typeof setInterval> | null = null;
+
+  // Scroll detection throttle
+  private scrollThrottleTimeout: ReturnType<typeof setTimeout> | null = null;
 
   // Flag to prevent operations after component destruction
   private isDestroyed = false;
@@ -232,8 +240,41 @@ export class SummaryComponent implements OnInit, OnDestroy {
     // Stop the interval
     this.stopTimestampSaveInterval();
 
+    // Clear scroll throttle
+    if (this.scrollThrottleTimeout) {
+      clearTimeout(this.scrollThrottleTimeout);
+    }
+
     // Save final timestamp when leaving the page
     this.saveCurrentTimestamp();
+  }
+
+  /**
+   * Handle window scroll for infinite loading of timeline events
+   */
+  onWindowScroll(): void {
+    // Throttle scroll events
+    if (this.scrollThrottleTimeout) return;
+
+    this.scrollThrottleTimeout = setTimeout(() => {
+      this.scrollThrottleTimeout = null;
+    }, 100);
+
+    // Check if we should load more
+    if (!this.hasMoreTimelineEvents() || this.isLoading()) return;
+
+    // Calculate scroll position
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    const scrollHeight = document.documentElement.scrollHeight;
+    const clientHeight = document.documentElement.clientHeight;
+
+    // Load more when within 300px of bottom
+    const distanceFromBottom = scrollHeight - scrollTop - clientHeight;
+    if (distanceFromBottom < 300) {
+      this.ngZone.run(() => {
+        this.loadMoreTimelineEvents();
+      });
+    }
   }
 
   private startTimestampSaveInterval(): void {
