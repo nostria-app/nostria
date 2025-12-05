@@ -1,3 +1,11 @@
+.page {
+
+  // Add bottom padding for mobile navigation menu
+  @media (max-width: 600px) {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
 .mat-mdc-card-footer {
   padding-right: 1rem;
   padding-bottom: 1rem;
