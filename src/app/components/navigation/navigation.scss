@@ -18,6 +18,10 @@
   justify-content: center;
   outline: none;
 
+  &.show-small-only {
+    display: none;
+  }
+
   &:hover {
     opacity: 0.8;
   }
@@ -26,6 +30,16 @@
     outline: 2px solid currentColor;
     outline-offset: 2px;
     border-radius: 4px;
+  }
+}
+
+@media screen and (max-width: 600px) {
+  .hide-small {
+    display: none !important;
+  }
+
+  .icon-button.show-small-only {
+    display: inline-flex !important;
   }
 }
 
