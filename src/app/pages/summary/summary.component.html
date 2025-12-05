@@ -29,7 +29,7 @@
   <!-- Time Range Selector -->
   <div class="time-range-selector">
     <div class="time-presets">
-      <button mat-stroked-button [class.active]="selectedPreset() === null && customDate() === null"
+      <button mat-stroked-button [class.active]="selectedPreset() === null"
         (click)="resetToLastVisit()">
         Last visit
       </button>
@@ -39,15 +39,6 @@
         {{ preset.label }}
       </button>
       }
-    </div>
-    <div class="custom-date-picker">
-      <mat-form-field appearance="outline" subscriptSizing="dynamic">
-        <mat-label>Custom date</mat-label>
-        <input matInput [matDatepicker]="picker" placeholder="Select date" [ngModel]="customDate()"
-          (dateChange)="onCustomDateChange($event.value)" [max]="today">
-        <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
-        <mat-datepicker #picker></mat-datepicker>
-      </mat-form-field>
     </div>
   </div>
 

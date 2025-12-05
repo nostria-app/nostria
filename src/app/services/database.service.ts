@@ -1674,11 +1674,12 @@ export class DatabaseService {
   // Feed Event Caching Methods
   // ============================================
 
-  private readonly CACHE_LIMIT = 200;
+  // Keep events for 1 week (in seconds)
+  private readonly CACHE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
 
   /**
    * Save cached events for a feed column
-   * Limits to approximately 200 events per column to prevent unbounded growth
+   * Keeps events from the last week to match Summary page maximum time range
    */
   async saveCachedEvents(
     accountPubkey: string,
@@ -1688,11 +1689,13 @@ export class DatabaseService {
     const db = this.ensureInitialized();
 
     const cachedAt = Date.now();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoffTimestamp = now - this.CACHE_MAX_AGE_SECONDS;
 
-    // Sort events by created_at (newest first) and take the top CACHE_LIMIT
+    // Filter events to only include those within the last week, sorted by created_at (newest first)
     const eventsToCache = [...events]
-      .sort((a, b) => (b.created_at || 0) - (a.created_at || 0))
-      .slice(0, this.CACHE_LIMIT);
+      .filter(e => (e.created_at || 0) >= cutoffTimestamp)
+      .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
 
     // First, delete existing cached events for this column
     await this.deleteCachedEventsForColumn(accountPubkey, columnId);
@@ -1814,10 +1817,12 @@ export class DatabaseService {
   /**
    * Clean up old cached events across all accounts
    * This method is called periodically to prevent unbounded growth
-   * Keeps only the most recent CACHE_LIMIT events per column
+   * Removes events older than 1 week
    */
   async cleanupCachedEvents(): Promise<void> {
     const db = this.ensureInitialized();
+    const now = Math.floor(Date.now() / 1000);
+    const cutoffTimestamp = now - this.CACHE_MAX_AGE_SECONDS;
 
     return new Promise((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS_CACHE, 'readwrite');
@@ -1827,33 +1832,18 @@ export class DatabaseService {
 
       getAllRequest.onsuccess = () => {
         const allCachedEvents: CachedFeedEvent[] = getAllRequest.result || [];
+        let deletedCount = 0;
 
-        // Group by account and column
-        const eventsByAccountColumn = new Map<string, CachedFeedEvent[]>();
-
+        // Delete events older than the cutoff
         for (const cached of allCachedEvents) {
-          const key = `${cached.accountPubkey}::${cached.columnId}`;
-          if (!eventsByAccountColumn.has(key)) {
-            eventsByAccountColumn.set(key, []);
-          }
-          eventsByAccountColumn.get(key)!.push(cached);
-        }
-
-        // For each group, keep only the newest CACHE_LIMIT events
-        for (const [, events] of eventsByAccountColumn) {
-          if (events.length <= this.CACHE_LIMIT) {
-            continue;
-          }
-
-          // Sort by cachedAt, newest first
-          events.sort((a, b) => b.cachedAt - a.cachedAt);
-
-          // Delete events beyond the limit
-          const toDelete = events.slice(this.CACHE_LIMIT);
-          for (const cached of toDelete) {
+          const eventTimestamp = cached.event?.created_at || 0;
+          if (eventTimestamp < cutoffTimestamp) {
             store.delete(cached.id);
+            deletedCount++;
           }
         }
+
+        this.logger.debug(`Cleanup: found ${allCachedEvents.length} cached events, deleting ${deletedCount} older than 1 week`);
       };
 
       transaction.oncomplete = () => {

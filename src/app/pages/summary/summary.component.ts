@@ -16,12 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatNativeDateModule } from '@angular/material/core';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
 import { MatExpansionModule } from '@angular/material/expansion';
-import { FormsModule } from '@angular/forms';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { DatabaseService } from '../../services/database.service';
@@ -67,17 +62,12 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
   selector: 'app-summary',
   imports: [
     RouterModule,
-    FormsModule,
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
     MatDividerModule,
     MatTooltipModule,
     MatChipsModule,
-    MatDatepickerModule,
-    MatNativeDateModule,
-    MatFormFieldModule,
-    MatInputModule,
     MatExpansionModule,
     UserProfileComponent,
     AgoPipe
@@ -99,9 +89,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Flag to prevent operations after component destruction
   private isDestroyed = false;
 
-  // Max date for date picker
-  readonly today = new Date();
-
   // Time range presets
   readonly timePresets = [
     { label: '1 hour', hours: 1 },
@@ -114,7 +101,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // Selected time range
   selectedPreset = signal<number | null>(null); // hours, null = since last visit
-  customDate = signal<Date | null>(null);
 
   // State signals
   isLoading = signal(true);
@@ -171,12 +157,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
       return presetInfo ? presetInfo.label + ' ago' : `${preset} hours ago`;
     }
 
-    // If a custom date is selected
-    const custom = this.customDate();
-    if (custom) {
-      return this.formatDate(custom);
-    }
-
     // Default: since last visit
     const lastCheck = this.lastCheckTimestamp();
     if (!lastCheck) return 'your first visit';
@@ -194,22 +174,6 @@ export class SummaryComponent implements OnInit, OnDestroy {
     return 'just now';
   });
 
-  // Format date for display
-  private formatDate(date: Date): string {
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / 86400000);
-
-    if (diffDays === 0) {
-      return 'today at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else if (diffDays === 1) {
-      return 'yesterday at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    } else {
-      return date.toLocaleDateString([], { month: 'short', day: 'numeric' }) +
-        ' at ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-  }
-
   constructor() {
     // Load data when account changes
     effect(() => {
@@ -224,18 +188,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   private restoreTimeSelection(pubkey: string): void {
     const savedPreset = this.accountLocalState.getSummaryTimePreset(pubkey);
-    const savedCustomDate = this.accountLocalState.getSummaryCustomDate(pubkey);
 
     if (savedPreset !== undefined && savedPreset !== null) {
       this.selectedPreset.set(savedPreset);
-      this.customDate.set(null);
-    } else if (savedCustomDate) {
-      this.customDate.set(new Date(savedCustomDate));
-      this.selectedPreset.set(null);
     } else {
       // Default to last visit
       this.selectedPreset.set(null);
-      this.customDate.set(null);
     }
   }
 
@@ -294,12 +252,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
     let sinceTimestamp: number;
 
     const preset = this.selectedPreset();
-    const custom = this.customDate();
 
     if (preset !== null) {
       sinceTimestamp = Math.floor((Date.now() - preset * 60 * 60 * 1000) / 1000);
-    } else if (custom) {
-      sinceTimestamp = Math.floor(custom.getTime() / 1000);
     } else {
       sinceTimestamp = lastCheck
         ? Math.floor(lastCheck / 1000)
@@ -436,38 +391,20 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   selectPreset(hours: number): void {
     this.selectedPreset.set(hours);
-    this.customDate.set(null);
     // Save selection
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setSummaryTimePreset(pubkey, hours);
-      this.accountLocalState.setSummaryCustomDate(pubkey, null);
     }
     this.loadSummaryData();
   }
 
-  onCustomDateChange(date: Date | null): void {
-    if (date) {
-      this.customDate.set(date);
-      this.selectedPreset.set(null);
-      // Save selection
-      const pubkey = this.accountState.pubkey();
-      if (pubkey) {
-        this.accountLocalState.setSummaryTimePreset(pubkey, null);
-        this.accountLocalState.setSummaryCustomDate(pubkey, date.getTime());
-      }
-      this.loadSummaryData();
-    }
-  }
-
   resetToLastVisit(): void {
     this.selectedPreset.set(null);
-    this.customDate.set(null);
     // Save selection
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setSummaryTimePreset(pubkey, null);
-      this.accountLocalState.setSummaryCustomDate(pubkey, null);
     }
     this.loadSummaryData();
   }
