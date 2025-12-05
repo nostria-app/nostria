@@ -109,6 +109,33 @@
   }
 }
 
+// Description box for source options
+.source-description {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  border-left: 3px solid var(--mat-sys-primary);
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+    flex-shrink: 0;
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-top: 2px;
+  }
+
+  span {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
 .source-toggle,
 .relay-toggle {
   width: 100%;
