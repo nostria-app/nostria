@@ -33,6 +33,7 @@ import { SettingsService } from '../../../services/settings.service';
 import { TranslateDialogComponent, TranslateDialogData } from '../translate-dialog/translate-dialog.component';
 import { AiInfoDialogComponent } from '../../ai-info-dialog/ai-info-dialog.component';
 import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dialog.component';
+import { CustomDialogService } from '../../../services/custom-dialog.service';
 
 @Component({
   selector: 'app-event-menu',
@@ -52,6 +53,7 @@ export class EventMenuComponent {
   accountState = inject(AccountStateService);
   profileState = inject(ProfileStateService);
   dialog = inject(MatDialog);
+  customDialog = inject(CustomDialogService);
   data = inject(DataService);
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
@@ -326,14 +328,15 @@ export class EventMenuComponent {
       return;
     }
 
-    this.dialog.open(EventDetailsDialogComponent, {
-      data: {
-        event: event,
-      } as EventDetailsDialogData,
-      width: '80vw',
-      maxWidth: '800px',
-      maxHeight: '90vh',
+    const dialogRef = this.customDialog.open(EventDetailsDialogComponent, {
+      title: 'Event Details',
+      width: '800px',
+      maxWidth: '95vw',
+      data: { event } as EventDetailsDialogData,
     });
+
+    dialogRef.componentInstance.dialogRef = dialogRef;
+    dialogRef.componentInstance.dialogData = { event };
   }
 
   /**

@@ -8,7 +8,6 @@ import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDialog } from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
 import { RouterModule } from '@angular/router';
 import { RelayPublishingNotification, RelayPublishPromise } from '../../services/database.service';
@@ -16,6 +15,7 @@ import {
   EventDetailsDialogComponent,
   type EventDetailsDialogData,
 } from '../event-details-dialog/event-details-dialog.component';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 
 @Component({
   selector: 'app-relay-publish-status',
@@ -39,7 +39,7 @@ export class RelayPublishStatusComponent {
   @Output() republish = new EventEmitter<string>();
 
   private nostrService = inject(NostrService);
-  private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
 
   get successCount(): number {
     if (!this.notification.relayPromises || this.notification.relayPromises.length === 0) {
@@ -106,13 +106,14 @@ export class RelayPublishStatusComponent {
   }
 
   viewEventJson(): void {
-    this.dialog.open(EventDetailsDialogComponent, {
-      data: {
-        event: this.notification.event,
-      } as EventDetailsDialogData,
-      width: '80vw',
-      maxWidth: '800px',
-      maxHeight: '90vh',
+    const dialogRef = this.customDialog.open(EventDetailsDialogComponent, {
+      title: 'Event Details',
+      width: '800px',
+      maxWidth: '95vw',
+      data: { event: this.notification.event } as EventDetailsDialogData,
     });
+
+    dialogRef.componentInstance.dialogRef = dialogRef;
+    dialogRef.componentInstance.dialogData = { event: this.notification.event };
   }
 }

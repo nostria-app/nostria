@@ -1,208 +1,204 @@
-<div class="event-details-dialog">
-  <h2 mat-dialog-title>Event Details</h2>
+<div dialog-content class="event-details-dialog">
+  <mat-tab-group>
+    <!-- General Information Tab -->
+    <mat-tab label="General">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Basic Information</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-list>
+              <mat-list-item>
+                <mat-icon matListItemIcon>fingerprint</mat-icon>
+                <div matListItemTitle>Event ID</div>
+                <div matListItemLine class="monospace">{{ eventId() }}</div>
+                <button mat-icon-button matListItemMeta (click)="copyEventId()" matTooltip="Copy Event ID (hex)">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </mat-list-item>
 
-  <mat-dialog-content>
-    <mat-tab-group>
-      <!-- General Information Tab -->
-      <mat-tab label="General">
-        <div class="tab-content">
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>Basic Information</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <mat-list>
-                <mat-list-item>
-                  <mat-icon matListItemIcon>fingerprint</mat-icon>
-                  <div matListItemTitle>Event ID</div>
-                  <div matListItemLine class="monospace">{{ eventId() }}</div>
-                  <button mat-icon-button matListItemMeta (click)="copyEventId()" matTooltip="Copy Event ID (hex)">
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                </mat-list-item>
+              <mat-list-item>
+                <mat-icon matListItemIcon>category</mat-icon>
+                <div matListItemTitle>Kind</div>
+                <div matListItemLine>{{ eventKind() }} - {{ getKindDescription(eventKind()) }}</div>
+              </mat-list-item>
 
-                <mat-list-item>
-                  <mat-icon matListItemIcon>category</mat-icon>
-                  <div matListItemTitle>Kind</div>
-                  <div matListItemLine>{{ eventKind() }} - {{ getKindDescription(eventKind()) }}</div>
-                </mat-list-item>
+              <mat-list-item>
+                <mat-icon matListItemIcon>person</mat-icon>
+                <div matListItemTitle>Author (pubkey)</div>
+                <div matListItemLine class="monospace">{{ eventPubkey() }}</div>
+                <button mat-icon-button matListItemMeta (click)="copyPubkey()" matTooltip="Copy Pubkey (hex)">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </mat-list-item>
 
-                <mat-list-item>
-                  <mat-icon matListItemIcon>person</mat-icon>
-                  <div matListItemTitle>Author (pubkey)</div>
-                  <div matListItemLine class="monospace">{{ eventPubkey() }}</div>
-                  <button mat-icon-button matListItemMeta (click)="copyPubkey()" matTooltip="Copy Pubkey (hex)">
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                </mat-list-item>
+              <mat-list-item>
+                <mat-icon matListItemIcon>schedule</mat-icon>
+                <div matListItemTitle>Created</div>
+                <div matListItemLine>{{ eventCreatedAt() | date:'full' }}</div>
+                <div matListItemLine class="subtitle">{{ eventCreatedAt().getTime() / 1000 }} (Unix timestamp)</div>
+              </mat-list-item>
 
-                <mat-list-item>
-                  <mat-icon matListItemIcon>schedule</mat-icon>
-                  <div matListItemTitle>Created</div>
-                  <div matListItemLine>{{ eventCreatedAt() | date:'full' }}</div>
-                  <div matListItemLine class="subtitle">{{ eventCreatedAt().getTime() / 1000 }} (Unix timestamp)</div>
-                </mat-list-item>
+              @if (clientInfo()) {
+              <mat-list-item>
+                <mat-icon matListItemIcon>computer</mat-icon>
+                <div matListItemTitle>Client</div>
+                <div matListItemLine>{{ clientInfo() }}</div>
+              </mat-list-item>
+              }
 
-                @if (clientInfo()) {
-                <mat-list-item>
-                  <mat-icon matListItemIcon>computer</mat-icon>
-                  <div matListItemTitle>Client</div>
-                  <div matListItemLine>{{ clientInfo() }}</div>
-                </mat-list-item>
+              @if (proofOfWork()) {
+              <mat-list-item>
+                <mat-icon matListItemIcon>security</mat-icon>
+                <div matListItemTitle>Proof of Work</div>
+                <div matListItemLine>Difficulty: {{ proofOfWork()!.difficulty }}</div>
+                <div matListItemLine class="monospace">Nonce: {{ proofOfWork()!.nonce }}</div>
+              </mat-list-item>
+              }
+            </mat-list>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+
+    <!-- Mentions Tab -->
+    <mat-tab [label]="'Mentions (' + mentionedAccounts().length + ')'">
+      <div class="tab-content">
+        @if (mentionedAccounts().length > 0) {
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Mentioned Accounts (p tags)</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-list>
+              @for (mention of mentionedAccounts(); track mention.pubkey) {
+              <mat-list-item>
+                <mat-icon matListItemIcon>alternate_email</mat-icon>
+                <div matListItemTitle class="monospace">{{ mention.pubkey }}</div>
+                @if (mention.petname) {
+                <div matListItemLine>Petname: {{ mention.petname }}</div>
                 }
-
-                @if (proofOfWork()) {
-                <mat-list-item>
-                  <mat-icon matListItemIcon>security</mat-icon>
-                  <div matListItemTitle>Proof of Work</div>
-                  <div matListItemLine>Difficulty: {{ proofOfWork()!.difficulty }}</div>
-                  <div matListItemLine class="monospace">Nonce: {{ proofOfWork()!.nonce }}</div>
-                </mat-list-item>
+                @if (mention.relay) {
+                <div matListItemLine>Relay: {{ mention.relay }}</div>
                 }
-              </mat-list>
-            </mat-card-content>
-          </mat-card>
-        </div>
-      </mat-tab>
+                <button mat-icon-button matListItemMeta (click)="layout.copyToClipboard(mention.npub, 'text')"
+                  matTooltip="Copy npub">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </mat-list-item>
+              <mat-divider></mat-divider>
+              }
+            </mat-list>
+          </mat-card-content>
+        </mat-card>
+        } @else {
+        <mat-card>
+          <mat-card-content>
+            <p class="no-data">No accounts mentioned in this event.</p>
+          </mat-card-content>
+        </mat-card>
+        }
+      </div>
+    </mat-tab>
 
-      <!-- Mentions Tab -->
-      <mat-tab [label]="'Mentions (' + mentionedAccounts().length + ')'">
-        <div class="tab-content">
-          @if (mentionedAccounts().length > 0) {
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>Mentioned Accounts (p tags)</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <mat-list>
-                @for (mention of mentionedAccounts(); track mention.pubkey) {
-                <mat-list-item>
-                  <mat-icon matListItemIcon>alternate_email</mat-icon>
-                  <div matListItemTitle class="monospace">{{ mention.pubkey }}</div>
-                  @if (mention.petname) {
-                  <div matListItemLine>Petname: {{ mention.petname }}</div>
-                  }
-                  @if (mention.relay) {
-                  <div matListItemLine>Relay: {{ mention.relay }}</div>
-                  }
-                  <button mat-icon-button matListItemMeta (click)="layout.copyToClipboard(mention.npub, 'text')"
-                    matTooltip="Copy npub">
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                </mat-list-item>
-                <mat-divider></mat-divider>
+    <!-- References Tab -->
+    <mat-tab [label]="'References (' + referencedEvents().length + ')'">
+      <div class="tab-content">
+        @if (referencedEvents().length > 0) {
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Referenced Events (e tags)</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-list>
+              @for (reference of referencedEvents(); track reference.eventId) {
+              <mat-list-item>
+                <mat-icon matListItemIcon>link</mat-icon>
+                <div matListItemTitle class="monospace">{{ reference.eventId }}</div>
+                @if (reference.marker) {
+                <div matListItemLine>Marker: {{ reference.marker }}</div>
                 }
-              </mat-list>
-            </mat-card-content>
-          </mat-card>
-          } @else {
-          <mat-card>
-            <mat-card-content>
-              <p class="no-data">No accounts mentioned in this event.</p>
-            </mat-card-content>
-          </mat-card>
-          }
-        </div>
-      </mat-tab>
-
-      <!-- References Tab -->
-      <mat-tab [label]="'References (' + referencedEvents().length + ')'">
-        <div class="tab-content">
-          @if (referencedEvents().length > 0) {
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>Referenced Events (e tags)</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <mat-list>
-                @for (reference of referencedEvents(); track reference.eventId) {
-                <mat-list-item>
-                  <mat-icon matListItemIcon>link</mat-icon>
-                  <div matListItemTitle class="monospace">{{ reference.eventId }}</div>
-                  @if (reference.marker) {
-                  <div matListItemLine>Marker: {{ reference.marker }}</div>
-                  }
-                  @if (reference.relay) {
-                  <div matListItemLine>Relay: {{ reference.relay }}</div>
-                  }
-                  <button mat-icon-button matListItemMeta (click)="layout.copyToClipboard(reference.nevent, 'text')"
-                    matTooltip="Copy nevent">
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                </mat-list-item>
-                <mat-divider></mat-divider>
+                @if (reference.relay) {
+                <div matListItemLine>Relay: {{ reference.relay }}</div>
                 }
-              </mat-list>
-            </mat-card-content>
-          </mat-card>
-          } @else {
-          <mat-card>
-            <mat-card-content>
-              <p class="no-data">No events referenced in this event.</p>
-            </mat-card-content>
-          </mat-card>
-          }
-        </div>
-      </mat-tab>
+                <button mat-icon-button matListItemMeta (click)="layout.copyToClipboard(reference.nevent, 'text')"
+                  matTooltip="Copy nevent">
+                  <mat-icon>content_copy</mat-icon>
+                </button>
+              </mat-list-item>
+              <mat-divider></mat-divider>
+              }
+            </mat-list>
+          </mat-card-content>
+        </mat-card>
+        } @else {
+        <mat-card>
+          <mat-card-content>
+            <p class="no-data">No events referenced in this event.</p>
+          </mat-card-content>
+        </mat-card>
+        }
+      </div>
+    </mat-tab>
 
-      <!-- Tags Tab -->
-      <mat-tab [label]="'Tags (' + otherTags().length + ')'">
-        <div class="tab-content">
-          @if (otherTags().length > 0) {
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>Other Tags</mat-card-title>
-            </mat-card-header>
-            <mat-card-content>
-              <mat-list>
-                @for (tag of otherTags(); track $index) {
-                <mat-list-item>
-                  <mat-icon matListItemIcon>label</mat-icon>
-                  <div matListItemTitle>{{ tag[0] }}</div>
-                  @if (tag.length > 1) {
-                  <div matListItemLine>
-                    @for (value of tag.slice(1); track $index) {
-                    <mat-chip class="tag-value">{{ value }}</mat-chip>
-                    }
-                  </div>
+    <!-- Tags Tab -->
+    <mat-tab [label]="'Tags (' + otherTags().length + ')'">
+      <div class="tab-content">
+        @if (otherTags().length > 0) {
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Other Tags</mat-card-title>
+          </mat-card-header>
+          <mat-card-content>
+            <mat-list>
+              @for (tag of otherTags(); track $index) {
+              <mat-list-item>
+                <mat-icon matListItemIcon>label</mat-icon>
+                <div matListItemTitle>{{ tag[0] }}</div>
+                @if (tag.length > 1) {
+                <div matListItemLine>
+                  @for (value of tag.slice(1); track $index) {
+                  <mat-chip class="tag-value">{{ value }}</mat-chip>
                   }
-                </mat-list-item>
-                <mat-divider></mat-divider>
+                </div>
                 }
-              </mat-list>
-            </mat-card-content>
-          </mat-card>
-          } @else {
-          <mat-card>
-            <mat-card-content>
-              <p class="no-data">No additional tags found in this event.</p>
-            </mat-card-content>
-          </mat-card>
-          }
-        </div>
-      </mat-tab>
+              </mat-list-item>
+              <mat-divider></mat-divider>
+              }
+            </mat-list>
+          </mat-card-content>
+        </mat-card>
+        } @else {
+        <mat-card>
+          <mat-card-content>
+            <p class="no-data">No additional tags found in this event.</p>
+          </mat-card-content>
+        </mat-card>
+        }
+      </div>
+    </mat-tab>
 
-      <!-- Raw JSON Tab -->
-      <mat-tab label="Raw JSON">
-        <div class="tab-content">
-          <mat-card>
-            <mat-card-header>
-              <mat-card-title>Raw Event Data</mat-card-title>
-              <div class="spacer"></div>
-              <button mat-icon-button (click)="copyRawJson()" matTooltip="Copy Raw JSON">
-                <mat-icon>content_copy</mat-icon>
-              </button>
-            </mat-card-header>
-            <mat-card-content>
-              <pre class="json-content">{{ eventJson() }}</pre>
-            </mat-card-content>
-          </mat-card>
-        </div>
-      </mat-tab>
-    </mat-tab-group>
-  </mat-dialog-content>
+    <!-- Raw JSON Tab -->
+    <mat-tab label="Raw JSON">
+      <div class="tab-content">
+        <mat-card>
+          <mat-card-header>
+            <mat-card-title>Raw Event Data</mat-card-title>
+            <div class="spacer"></div>
+            <button mat-icon-button (click)="copyRawJson()" matTooltip="Copy Raw JSON">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </mat-card-header>
+          <mat-card-content>
+            <pre class="json-content">{{ eventJson() }}</pre>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>
 
-  <mat-dialog-actions align="end">
-    <button mat-button (click)="close()">Close</button>
-  </mat-dialog-actions>
+<div dialog-actions>
+  <button mat-button (click)="close()">Close</button>
 </div>
