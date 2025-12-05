@@ -580,6 +580,32 @@ mat-divider {
     color: var(--mat-sys-on-surface-variant);
     line-height: 1.4;
   }
+
+  &.fetching {
+    border-left-color: var(--mat-sys-secondary);
+    background-color: var(--mat-sys-secondary-container);
+
+    mat-icon {
+      color: var(--mat-sys-on-secondary-container);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    p {
+      color: var(--mat-sys-on-secondary-container);
+    }
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
 }
 
 // Clickable stat cards
