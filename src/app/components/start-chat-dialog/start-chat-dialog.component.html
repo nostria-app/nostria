@@ -1,146 +1,125 @@
-<div class="start-chat-dialog">
-  <div class="dialog-header">
-    <h2 mat-dialog-title>Start New Chat</h2>
-    <button mat-icon-button (click)="close()" aria-label="Close dialog">
-      <mat-icon>close</mat-icon>
+<div dialog-content class="start-chat-content">
+  <!-- Selected profile display -->
+  @if (selectedProfile()) {
+  <div class="selected-profile">
+    <div class="profile-info">
+      <app-user-profile [pubkey]="selectedProfile()!.event.pubkey" view="small"></app-user-profile>
+      <div class="profile-details">
+        @if (selectedProfile()!.data.display_name || selectedProfile()!.data.name) {
+        <span class="profile-display-name">{{ selectedProfile()!.data.display_name || selectedProfile()!.data.name
+          }}</span>
+        }
+        <span class="profile-npub">{{ selectedProfile()!.event.pubkey | npub }}</span>
+      </div>
+    </div>
+    <button mat-icon-button (click)="clearSelection()" matTooltip="Clear selection">
+      <mat-icon>clear</mat-icon>
     </button>
   </div>
 
-  <div mat-dialog-content class="dialog-content">
-    <!-- Selected profile display -->
-    @if (selectedProfile()) {
-      <div class="selected-profile">
-        <div class="profile-info">
-          <app-user-profile
-            [pubkey]="selectedProfile()!.event.pubkey"
-            view="small"
-          ></app-user-profile>
-          <span class="profile-name">{{ selectedProfile()!.event.pubkey | npub }}</span>
-        </div>
-        <button mat-icon-button (click)="clearSelection()" matTooltip="Clear selection">
-          <mat-icon>clear</mat-icon>
-        </button>
-      </div>
+  <mat-divider></mat-divider>
+  } @else {
+  <!-- Search for cached profiles -->
+  <div class="search-section">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Search people you follow</mat-label>
+      <input matInput [(ngModel)]="searchQuery" placeholder="Search by name or npub..." autocomplete="off" />
+      <mat-icon matSuffix>search</mat-icon>
+    </mat-form-field>
 
-      <mat-divider></mat-divider>
-    } @else {
-      <!-- Search for cached profiles -->
-      <div class="search-section">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Search people you follow</mat-label>
-          <input
-            matInput
-            [(ngModel)]="searchQuery"
-            placeholder="Search by name or npub..."
-            autocomplete="off"
-          />
-          <mat-icon matSuffix>search</mat-icon>
-        </mat-form-field>
-
-        @if (searchResults().length > 0) {
-          <div class="search-results">
-            <mat-list>
-              @for (profile of searchResults(); track profile.event.pubkey) {
-                <mat-list-item (click)="selectProfile(profile)" class="search-result-item">
-                  <div class="search-result-content">
-                    <app-user-profile
-                      [pubkey]="profile.event.pubkey"
-                      view="small"
-                    ></app-user-profile>
-                    <div class="profile-details">
-                      <span class="profile-name">{{ profile.event.pubkey | npub }}</span>
-                      @if (profile.data.display_name || profile.data.name) {
-                        <span class="profile-display-name">{{
-                          profile.data.display_name || profile.data.name
-                        }}</span>
-                      }
-                    </div>
-                  </div>
-                </mat-list-item>
+    @if (searchResults().length > 0) {
+    <div class="search-results">
+      <mat-list>
+        @for (profile of searchResults(); track profile.event.pubkey) {
+        <mat-list-item (click)="selectProfile(profile)" class="search-result-item">
+          <div class="search-result-content">
+            <app-user-profile [pubkey]="profile.event.pubkey" view="small"></app-user-profile>
+            <div class="profile-details">
+              <span class="profile-name">{{ profile.event.pubkey | npub }}</span>
+              @if (profile.data.display_name || profile.data.name) {
+              <span class="profile-display-name">{{
+                profile.data.display_name || profile.data.name
+                }}</span>
               }
-            </mat-list>
+            </div>
           </div>
-        } @else if (searchQuery().length >= 2) {
-          <div class="no-results">
-            <mat-icon>person_search</mat-icon>
-            <p>No cached profiles found</p>
-            <small>Try entering their npub directly below</small>
-          </div>
+        </mat-list-item>
         }
-      </div>
-
-      <div class="divider-section">
-        <mat-divider></mat-divider>
-        <span class="divider-text">OR</span>
-        <mat-divider></mat-divider>
-      </div>
-
-      <!-- Direct npub input -->
-      <div class="npub-section">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Enter npub directly</mat-label>
-          <input matInput [(ngModel)]="npubInput" placeholder="npub1..." autocomplete="off" />
-          <mat-icon matSuffix>key</mat-icon>
-          @if (npubError()) {
-            <mat-error>{{ npubError() }}</mat-error>
-          }
-        </mat-form-field>
-
-        @if (hasValidNpub()) {
-          <div class="npub-actions">
-            <button
-              mat-stroked-button
-              color="primary"
-              (click)="discoverRelays()"
-              [disabled]="isDiscoveringRelays()"
-            >
-              @if (isDiscoveringRelays()) {
-                <mat-spinner diameter="20"></mat-spinner>
-                <span>Discovering relays...</span>
-              } @else {
-                <ng-container>
-                  <mat-icon>wifi_find</mat-icon>
-                  <span>Discover relays</span>
-                </ng-container>
-              }
-            </button>
-          </div>
-        }
-      </div>
+      </mat-list>
+    </div>
+    } @else if (searchQuery().length >= 2) {
+    <div class="no-results">
+      <mat-icon>person_search</mat-icon>
+      <p>No cached profiles found</p>
+      <small>Try entering their npub directly below</small>
+    </div>
     }
+  </div>
 
-    <!-- Chat type selection -->
-    <div class="chat-type-section">
-      <h3>Chat Type</h3>
-      <div class="chat-type-toggle">
-        <mat-slide-toggle [(ngModel)]="isLegacy" color="primary">
-          Legacy Mode (NIP-04)
-        </mat-slide-toggle>
-        <div class="chat-type-info">
-          @if (isLegacy()) {
-            <div class="legacy-info">
-              <mat-icon color="warn">warning</mat-icon>
-              <span
-                >Legacy mode uses older encryption. Use only for compatibility with older
-                clients.</span
-              >
-            </div>
-          } @else {
-            <div class="modern-info">
-              <mat-icon color="primary">security</mat-icon>
-              <span>Modern mode uses improved encryption (NIP-44) for better security.</span>
-            </div>
-          }
+  <div class="divider-section">
+    <mat-divider></mat-divider>
+    <span class="divider-text">OR</span>
+    <mat-divider></mat-divider>
+  </div>
+
+  <!-- Direct npub input -->
+  <div class="npub-section">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Enter npub directly</mat-label>
+      <input matInput [(ngModel)]="npubInput" placeholder="npub1..." autocomplete="off" />
+      <mat-icon matSuffix>key</mat-icon>
+      @if (npubError()) {
+      <mat-error>{{ npubError() }}</mat-error>
+      }
+    </mat-form-field>
+
+    @if (hasValidNpub()) {
+    <div class="npub-actions">
+      <button mat-stroked-button (click)="discoverRelays()" [disabled]="isDiscoveringRelays()">
+        @if (isDiscoveringRelays()) {
+        <mat-spinner diameter="20"></mat-spinner>
+        <span>Discovering relays...</span>
+        } @else {
+        <ng-container>
+          <mat-icon>wifi_find</mat-icon>
+          <span>Discover relays</span>
+        </ng-container>
+        }
+      </button>
+    </div>
+    }
+  </div>
+  }
+
+  <!-- Chat type selection -->
+  <div class="chat-type-section">
+    <h3>Chat Type</h3>
+    <div class="chat-type-toggle">
+      <mat-slide-toggle [(ngModel)]="isLegacy">
+        Legacy Mode (NIP-04)
+      </mat-slide-toggle>
+      <div class="chat-type-info">
+        @if (isLegacy()) {
+        <div class="legacy-info">
+          <mat-icon>warning</mat-icon>
+          <span>Legacy mode uses older encryption. Use only for compatibility with older
+            clients.</span>
         </div>
+        } @else {
+        <div class="modern-info">
+          <mat-icon>security</mat-icon>
+          <span>Modern mode uses improved encryption (NIP-44) for better security.</span>
+        </div>
+        }
       </div>
     </div>
   </div>
+</div>
 
-  <div mat-dialog-actions class="dialog-actions">
-    <button mat-button (click)="close()">Cancel</button>
-    <button mat-flat-button color="primary" (click)="startChat()" [disabled]="!canStartChat()">
-      <mat-icon>chat</mat-icon>
-      Start Chat
-    </button>
-  </div>
+<div dialog-actions class="dialog-actions">
+  <button mat-button (click)="close()">Cancel</button>
+  <button mat-flat-button (click)="startChat()" [disabled]="!canStartChat()">
+    <mat-icon>chat</mat-icon>
+    Start Chat
+  </button>
 </div>

@@ -1,7 +1,5 @@
 import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { MatDialogRef } from '@angular/material/dialog';
-import { MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
@@ -16,6 +14,7 @@ import { nip19 } from 'nostr-tools';
 
 import { AccountStateService } from '../../services/account-state.service';
 import { FollowingService } from '../../services/following.service';
+import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { NPubPipe } from '../../pipes/npub.pipe';
@@ -27,10 +26,8 @@ export interface StartChatDialogResult {
 
 @Component({
   selector: 'app-start-chat-dialog',
-  standalone: true,
   imports: [
     FormsModule,
-    MatDialogModule,
     MatButtonModule,
     MatIconModule,
     MatInputModule,
@@ -41,13 +38,13 @@ export interface StartChatDialogResult {
     MatDividerModule,
     MatTooltipModule,
     UserProfileComponent,
-    NPubPipe
-],
+    NPubPipe,
+  ],
   templateUrl: './start-chat-dialog.component.html',
   styleUrl: './start-chat-dialog.component.scss',
 })
 export class StartChatDialogComponent {
-  private readonly dialogRef = inject(MatDialogRef<StartChatDialogComponent>);
+  private readonly dialogRef = inject(CustomDialogRef<StartChatDialogComponent, StartChatDialogResult | undefined>);
   private readonly accountState = inject(AccountStateService);
   private readonly followingService = inject(FollowingService);
 
