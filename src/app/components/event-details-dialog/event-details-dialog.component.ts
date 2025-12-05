@@ -1,10 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import {
-  MatDialogModule,
-  MatDialogRef,
-  MAT_DIALOG_DATA,
-} from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatListModule } from '@angular/material/list';
@@ -16,7 +11,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { type Event, nip19 } from 'nostr-tools';
 import { standardizedTag } from '../../standardized-tags';
 import { LayoutService } from '../../services/layout.service';
-import { DataService } from '../../services/data.service';
+import { CustomDialogRef } from '../../services/custom-dialog.service';
 
 export interface EventDetailsDialogData {
   event: Event;
@@ -24,10 +19,8 @@ export interface EventDetailsDialogData {
 
 @Component({
   selector: 'app-event-details-dialog',
-  standalone: true,
   imports: [
     CommonModule,
-    MatDialogModule,
     MatButtonModule,
     MatTabsModule,
     MatListModule,
@@ -41,11 +34,10 @@ export interface EventDetailsDialogData {
   styleUrl: './event-details-dialog.component.scss',
 })
 export class EventDetailsDialogComponent {
-  private dialogRef = inject(MatDialogRef<EventDetailsDialogComponent>);
-  layout = inject(LayoutService);
-  private data = inject(DataService);
+  dialogRef?: CustomDialogRef<EventDetailsDialogComponent>;
+  dialogData: EventDetailsDialogData = { event: {} as Event };
 
-  dialogData: EventDetailsDialogData = inject(MAT_DIALOG_DATA);
+  layout = inject(LayoutService);
   showRawJson = signal(false);
 
   event = computed(() => this.dialogData.event);
@@ -115,7 +107,7 @@ export class EventDetailsDialogComponent {
   eventJson = computed(() => JSON.stringify(this.event(), null, 2));
 
   close(): void {
-    this.dialogRef.close();
+    this.dialogRef?.close();
   }
 
   copyEventId(): void {
