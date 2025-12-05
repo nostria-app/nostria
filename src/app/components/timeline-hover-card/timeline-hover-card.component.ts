@@ -55,15 +55,25 @@ export class TimelineHoverCardComponent {
   isHovering = signal(false);
   effectTransform = signal('');
 
+  // Track to prevent duplicate loads
+  private loadedPubkey: string | null = null;
+  private loadingPubkey: string | null = null;
+
   constructor() {
     effect(() => {
       const pubkey = this.pubkey();
 
       if (pubkey) {
         untracked(() => {
+          // Skip if already loaded or currently loading this pubkey
+          if (this.loadedPubkey === pubkey || this.loadingPubkey === pubkey) {
+            return;
+          }
+
+          this.loadingPubkey = pubkey;
+          this.npubValue.set(nip19.npubEncode(pubkey));
           this.loadProfile(pubkey);
           this.loadRecentNotes(pubkey);
-          this.npubValue.set(nip19.npubEncode(pubkey));
         });
       }
     });
@@ -72,10 +82,15 @@ export class TimelineHoverCardComponent {
   private async loadProfile(pubkey: string): Promise<void> {
     try {
       const profile = await this.dataService.getProfile(pubkey);
-      this.profile.set(profile || null);
+      // Only update if this is still the current pubkey
+      if (this.pubkey() === pubkey) {
+        this.profile.set(profile || null);
+      }
     } catch (error) {
       console.error('Failed to load profile for timeline hover card:', error);
-      this.profile.set(null);
+      if (this.pubkey() === pubkey) {
+        this.profile.set(null);
+      }
     }
   }
 
@@ -93,6 +108,11 @@ export class TimelineHoverCardComponent {
         since: thirtyDaysAgo,
         limit: 20, // Fetch more to ensure we have enough root posts
       });
+
+      // Only update if this is still the current pubkey
+      if (this.pubkey() !== pubkey) {
+        return;
+      }
 
       if (events && events.length > 0) {
         const notes = events
@@ -120,10 +140,16 @@ export class TimelineHoverCardComponent {
           })));
         }
       }
+
+      // Mark as successfully loaded
+      this.loadedPubkey = pubkey;
     } catch (error) {
       console.error('Failed to load recent notes for timeline hover card:', error);
     } finally {
-      this.isLoading.set(false);
+      if (this.pubkey() === pubkey) {
+        this.isLoading.set(false);
+        this.loadingPubkey = null;
+      }
     }
   }
 
