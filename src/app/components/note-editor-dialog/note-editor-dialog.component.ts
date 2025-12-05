@@ -318,7 +318,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Dialog mode indicators
   isReply = computed(() => !!this.data?.replyTo);
   isQuote = computed(() => !!this.data?.quote);
-  
+
   // Check if zap split is available (requires quote and logged in user)
   zapSplitAvailable = computed(() => this.isQuote() && !!this.currentAccountPubkey());
 
@@ -376,6 +376,14 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const powDifficulty = this.accountLocalState.getPowTargetDifficulty(pubkey);
       this.powEnabled.set(powEnabled);
       this.powTargetDifficulty.set(powEnabled ? powDifficulty : 0);
+
+      // Load zap split settings from account state
+      const zapSplitEnabled = this.accountLocalState.getZapSplitEnabled(pubkey);
+      const zapSplitOriginalPercent = this.accountLocalState.getZapSplitOriginalPercent(pubkey);
+      const zapSplitQuoterPercent = this.accountLocalState.getZapSplitQuoterPercent(pubkey);
+      this.zapSplitEnabled.set(zapSplitEnabled);
+      this.zapSplitOriginalPercent.set(zapSplitOriginalPercent);
+      this.zapSplitQuoterPercent.set(zapSplitQuoterPercent);
     }
 
     // Set up auto-save effects
@@ -1992,6 +2000,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Zap split methods
   onZapSplitToggle(enabled: boolean): void {
     this.zapSplitEnabled.set(enabled);
+    // Persist to account state
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setZapSplitEnabled(pubkey, enabled);
+    }
   }
 
   onZapSplitOriginalChange(value: number): void {
@@ -2005,13 +2018,20 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private updateZapSplitPercentages(value: number, changedSlider: 'original' | 'quoter'): void {
     // Ensure the total is always 100%
     const complement = 100 - value;
-    
+
     if (changedSlider === 'original') {
       this.zapSplitOriginalPercent.set(value);
       this.zapSplitQuoterPercent.set(complement);
     } else {
       this.zapSplitQuoterPercent.set(value);
       this.zapSplitOriginalPercent.set(complement);
+    }
+
+    // Persist to account state
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setZapSplitOriginalPercent(pubkey, this.zapSplitOriginalPercent());
+      this.accountLocalState.setZapSplitQuoterPercent(pubkey, this.zapSplitQuoterPercent());
     }
   }
 

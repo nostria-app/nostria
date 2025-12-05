@@ -41,6 +41,9 @@ interface AccountLocalState {
   lastSummaryCheck?: number; // Timestamp when user last viewed the Summary page
   summaryTimePreset?: number | null; // Selected time preset in hours, null = last visit
   summaryCustomDate?: number | null; // Custom date timestamp if selected
+  zapSplitEnabled?: boolean; // Whether zap split is enabled when quoting
+  zapSplitOriginalPercent?: number; // Percentage to original author (0-100)
+  zapSplitQuoterPercent?: number; // Percentage to quoter (0-100)
 }
 
 /**
@@ -481,6 +484,51 @@ export class AccountLocalStateService {
    */
   setSummaryCustomDate(pubkey: string, timestamp: number | null | undefined): void {
     this.updateAccountState(pubkey, { summaryCustomDate: timestamp });
+  }
+
+  /**
+   * Get zap split enabled state for an account
+   */
+  getZapSplitEnabled(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.zapSplitEnabled ?? false;
+  }
+
+  /**
+   * Set zap split enabled state for an account
+   */
+  setZapSplitEnabled(pubkey: string, enabled: boolean): void {
+    this.updateAccountState(pubkey, { zapSplitEnabled: enabled });
+  }
+
+  /**
+   * Get zap split original author percentage for an account
+   */
+  getZapSplitOriginalPercent(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.zapSplitOriginalPercent ?? 90; // Default 90%
+  }
+
+  /**
+   * Set zap split original author percentage for an account
+   */
+  setZapSplitOriginalPercent(pubkey: string, percent: number): void {
+    this.updateAccountState(pubkey, { zapSplitOriginalPercent: percent });
+  }
+
+  /**
+   * Get zap split quoter percentage for an account
+   */
+  getZapSplitQuoterPercent(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.zapSplitQuoterPercent ?? 10; // Default 10%
+  }
+
+  /**
+   * Set zap split quoter percentage for an account
+   */
+  setZapSplitQuoterPercent(pubkey: string, percent: number): void {
+    this.updateAccountState(pubkey, { zapSplitQuoterPercent: percent });
   }
 
   /**
