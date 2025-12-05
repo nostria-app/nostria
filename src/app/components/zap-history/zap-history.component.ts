@@ -111,34 +111,36 @@ interface ZapHistoryEntry {
                               ></app-user-profile>
                             </span>
                           </div>
-                          <div class="zap-amount">
-                            <mat-icon class="bolt-icon">bolt</mat-icon>
-                            <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
-                          </div>
-                          <div
-                            class="zap-time"
-                            [matTooltip]="zap.timestamp * 1000 | date: 'medium'"
-                          >
-                            {{ zap.timestamp | ago }}
-                          </div>
-                          <button
-                            mat-icon-button
-                            [matMenuTriggerFor]="zapMenu"
-                            class="zap-menu-button"
-                            matTooltip="More options"
-                          >
-                            <mat-icon>more_vert</mat-icon>
-                          </button>
-                          <mat-menu #zapMenu="matMenu">
-                            <button mat-menu-item (click)="copyEventData(zap)">
-                              <mat-icon>content_copy</mat-icon>
-                              <span>Copy Event Data</span>
+                          <div class="zap-info">
+                            <div class="zap-amount">
+                              <mat-icon class="bolt-icon">bolt</mat-icon>
+                              <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
+                            </div>
+                            <div
+                              class="zap-time"
+                              [matTooltip]="zap.timestamp * 1000 | date: 'medium'"
+                            >
+                              {{ zap.timestamp | ago }}
+                            </div>
+                            <button
+                              mat-icon-button
+                              [matMenuTriggerFor]="zapMenu"
+                              class="zap-menu-button"
+                              matTooltip="More options"
+                            >
+                              <mat-icon>more_vert</mat-icon>
                             </button>
-                            <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                              <mat-icon>publish</mat-icon>
-                              <span>Publish Event</span>
-                            </button>
-                          </mat-menu>
+                            <mat-menu #zapMenu="matMenu">
+                              <button mat-menu-item (click)="copyEventData(zap)">
+                                <mat-icon>content_copy</mat-icon>
+                                <span>Copy Event Data</span>
+                              </button>
+                              <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                                <mat-icon>publish</mat-icon>
+                                <span>Publish Event</span>
+                              </button>
+                            </mat-menu>
+                          </div>
                         </div>
 
                         @if (zap.comment) {
@@ -191,34 +193,36 @@ interface ZapHistoryEntry {
                               ></app-user-profile>
                             </span>
                           </div>
-                          <div class="zap-amount">
-                            <mat-icon class="bolt-icon">bolt</mat-icon>
-                            <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
-                          </div>
-                          <div
-                            class="zap-time"
-                            [matTooltip]="zap.timestamp * 1000 | date: 'medium'"
-                          >
-                            {{ zap.timestamp | ago }}
-                          </div>
-                          <button
-                            mat-icon-button
-                            [matMenuTriggerFor]="sentZapMenu"
-                            class="zap-menu-button"
-                            matTooltip="More options"
-                          >
-                            <mat-icon>more_vert</mat-icon>
-                          </button>
-                          <mat-menu #sentZapMenu="matMenu">
-                            <button mat-menu-item (click)="copyEventData(zap)">
-                              <mat-icon>content_copy</mat-icon>
-                              <span>Copy Event Data</span>
+                          <div class="zap-info">
+                            <div class="zap-amount">
+                              <mat-icon class="bolt-icon">bolt</mat-icon>
+                              <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
+                            </div>
+                            <div
+                              class="zap-time"
+                              [matTooltip]="zap.timestamp * 1000 | date: 'medium'"
+                            >
+                              {{ zap.timestamp | ago }}
+                            </div>
+                            <button
+                              mat-icon-button
+                              [matMenuTriggerFor]="sentZapMenu"
+                              class="zap-menu-button"
+                              matTooltip="More options"
+                            >
+                              <mat-icon>more_vert</mat-icon>
                             </button>
-                            <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                              <mat-icon>publish</mat-icon>
-                              <span>Publish Event</span>
-                            </button>
-                          </mat-menu>
+                            <mat-menu #sentZapMenu="matMenu">
+                              <button mat-menu-item (click)="copyEventData(zap)">
+                                <mat-icon>content_copy</mat-icon>
+                                <span>Copy Event Data</span>
+                              </button>
+                              <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                                <mat-icon>publish</mat-icon>
+                                <span>Publish Event</span>
+                              </button>
+                            </mat-menu>
+                          </div>
                         </div>
 
                         @if (zap.comment) {
@@ -268,34 +272,36 @@ interface ZapHistoryEntry {
                               ></app-user-profile>
                             </span>
                           </div>
-                          <div class="zap-amount">
-                            <mat-icon class="bolt-icon">bolt</mat-icon>
-                            <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
-                          </div>
-                          <div
-                            class="zap-time"
-                            [matTooltip]="zap.timestamp * 1000 | date: 'medium'"
-                          >
-                            {{ zap.timestamp | ago }}
-                          </div>
-                          <button
-                            mat-icon-button
-                            [matMenuTriggerFor]="receivedZapMenu"
-                            class="zap-menu-button"
-                            matTooltip="More options"
-                          >
-                            <mat-icon>more_vert</mat-icon>
-                          </button>
-                          <mat-menu #receivedZapMenu="matMenu">
-                            <button mat-menu-item (click)="copyEventData(zap)">
-                              <mat-icon>content_copy</mat-icon>
-                              <span>Copy Event Data</span>
+                          <div class="zap-info">
+                            <div class="zap-amount">
+                              <mat-icon class="bolt-icon">bolt</mat-icon>
+                              <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
+                            </div>
+                            <div
+                              class="zap-time"
+                              [matTooltip]="zap.timestamp * 1000 | date: 'medium'"
+                            >
+                              {{ zap.timestamp | ago }}
+                            </div>
+                            <button
+                              mat-icon-button
+                              [matMenuTriggerFor]="receivedZapMenu"
+                              class="zap-menu-button"
+                              matTooltip="More options"
+                            >
+                              <mat-icon>more_vert</mat-icon>
                             </button>
-                            <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
-                              <mat-icon>publish</mat-icon>
-                              <span>Publish Event</span>
-                            </button>
-                          </mat-menu>
+                            <mat-menu #receivedZapMenu="matMenu">
+                              <button mat-menu-item (click)="copyEventData(zap)">
+                                <mat-icon>content_copy</mat-icon>
+                                <span>Copy Event Data</span>
+                              </button>
+                              <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                                <mat-icon>publish</mat-icon>
+                                <span>Publish Event</span>
+                              </button>
+                            </mat-menu>
+                          </div>
                         </div>
 
                         @if (zap.comment) {
@@ -423,7 +429,7 @@ interface ZapHistoryEntry {
       .zap-header {
         display: flex;
         align-items: center;
-        gap: 16px;
+        gap: 12px;
         margin-bottom: 8px;
       }
 
@@ -431,7 +437,14 @@ interface ZapHistoryEntry {
         display: flex;
         align-items: center;
         gap: 8px;
-        flex: 1;
+        min-width: 0;
+      }
+
+      .zap-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-left: auto;
       }
 
       .type-icon {
@@ -486,8 +499,8 @@ interface ZapHistoryEntry {
       }
 
       .zap-menu-button {
-        margin-left: 8px;
         color: var(--mat-sys-on-surface-variant);
+        flex-shrink: 0;
       }
 
       .zap-comment {
@@ -582,9 +595,17 @@ interface ZapHistoryEntry {
         }
 
         .zap-header {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 8px;
+          flex-wrap: wrap;
+        }
+
+        .zap-type {
+          flex: 1 1 100%;
+          margin-bottom: 4px;
+        }
+
+        .zap-info {
+          flex: 1 1 100%;
+          justify-content: space-between;
         }
 
         .zap-time {
