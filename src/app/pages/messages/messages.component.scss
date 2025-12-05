@@ -65,7 +65,9 @@
   flex: 1;
   /* takes remaining space */
   overflow-y: auto;
+}
 
+.tab-content {
   @media (max-width: 599px) {
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
@@ -112,6 +114,10 @@
   gap: 16px;
   padding: 48px 24px;
   text-align: center;
+
+  @media (max-width: 599px) {
+    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 
   mat-icon {
     font-size: 64px;
