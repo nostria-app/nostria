@@ -25,6 +25,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { Event, nip19 } from 'nostr-tools';
 import { ApplicationService } from '../../services/application.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { RelayBatchService } from '../../services/relay-batch.service';
 
 interface ActivitySummary {
   notesCount: number;
@@ -71,7 +72,7 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     MatExpansionModule,
     UserProfileComponent,
     AgoPipe
-],
+  ],
   templateUrl: './summary.component.html',
   styleUrl: './summary.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -81,6 +82,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
+  private readonly relayBatch = inject(RelayBatchService);
   protected readonly app = inject(ApplicationService);
 
   // Timer for periodic timestamp saves
@@ -104,6 +106,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   // State signals
   isLoading = signal(true);
+  isFetching = signal(false); // Whether we're fetching from relays
+  fetchProgress = signal({ fetched: 0, total: 0 });
   lastCheckTimestamp = signal(0);
 
   // Activity summary
@@ -261,8 +265,68 @@ export class SummaryComponent implements OnInit, OnDestroy {
         : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
     }
 
+    // First, fetch events from relays
+    await this.fetchEventsFromRelays(sinceTimestamp);
+
+    // Then load from database (which now includes newly fetched events)
     await this.loadActivitySummary(sinceTimestamp);
     this.isLoading.set(false);
+  }
+
+  /**
+   * Fetch events from relays for the given time range.
+   * Events are saved to the database for future queries.
+   */
+  private async fetchEventsFromRelays(sinceTimestamp: number): Promise<void> {
+    if (this.isDestroyed) return;
+
+    const following = this.accountState.followingList();
+    if (following.length === 0) return;
+
+    this.isFetching.set(true);
+    this.fetchProgress.set({ fetched: 0, total: following.length });
+
+    try {
+      this.logger.info(`[Summary] Fetching events from relays since ${new Date(sinceTimestamp * 1000).toISOString()}`);
+
+      // Fetch notes (kind 1), articles (kind 30023), and media (kind 20)
+      const result = await this.relayBatch.fetchEventsFromAllFollowing(
+        following,
+        [1, 20, 30023], // Notes, Media, Articles
+        {
+          limitPerUser: 10,
+          timeout: 15000,
+          useSinceTimestamp: true,
+          customSince: sinceTimestamp,
+        },
+        (events) => {
+          // Incremental progress update
+          this.fetchProgress.update(p => ({
+            ...p,
+            fetched: p.fetched + events.length,
+          }));
+        }
+      );
+
+      this.logger.info(`[Summary] Fetched ${result.events.length} events from ${result.batchesExecuted} batches`);
+
+      // Save events to database for future queries
+      await this.database.init();
+      for (const event of result.events) {
+        try {
+          await this.database.saveEvent(event);
+        } catch {
+          // Ignore duplicate key errors
+        }
+      }
+
+      this.logger.info(`[Summary] Saved ${result.events.length} events to database`);
+
+    } catch (error) {
+      this.logger.warn('[Summary] Error fetching from relays:', error);
+    } finally {
+      this.isFetching.set(false);
+    }
   }
 
   private async loadActivitySummary(sinceTimestamp: number): Promise<void> {
@@ -297,6 +361,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 20, sinceTimestamp),
         this.database.getAllEventsByPubkeyKindSince(accountPubkey, following, 0, sinceTimestamp),
       ]);
+
+      this.logger.debug(`[Summary] Queried since timestamp: ${sinceTimestamp} (${new Date(sinceTimestamp * 1000).toISOString()})`);
+      this.logger.debug(`[Summary] Found ${notes.length} notes, ${articles.length} articles, ${media.length} media, ${profiles.length} profile updates`);
 
       const profileUpdatePubkeys = [...new Set(profiles.map(p => p.pubkey))];
 

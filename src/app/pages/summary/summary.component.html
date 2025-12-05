@@ -29,8 +29,7 @@
   <!-- Time Range Selector -->
   <div class="time-range-selector">
     <div class="time-presets">
-      <button mat-stroked-button [class.active]="selectedPreset() === null"
-        (click)="resetToLastVisit()">
+      <button mat-stroked-button [class.active]="selectedPreset() === null" (click)="resetToLastVisit()">
         Last visit
       </button>
       @for (preset of timePresets; track preset.hours) {
@@ -43,10 +42,17 @@
   </div>
 
   <!-- Info Banner -->
+  @if (isFetching()) {
+  <div class="info-banner fetching">
+    <mat-icon>cloud_download</mat-icon>
+    <p>Fetching latest events from relays... ({{ fetchProgress().fetched }} events)</p>
+  </div>
+  } @else {
   <div class="info-banner">
     <mat-icon>info</mat-icon>
-    <p>This summary shows cached data from your local database. It may not include all events from the network.</p>
+    <p>Showing events from your following list. Click refresh to fetch the latest from relays.</p>
   </div>
+  }
 
   @if (isLoading()) {
   <div class="loading-state">

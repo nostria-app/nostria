@@ -1161,6 +1161,11 @@ export class FeedService {
           const newPending = [...pending, ...trulyNewEvents];
           return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
         });
+
+        // Save new events to database for Summary page queries
+        for (const event of trulyNewEvents) {
+          this.saveEventToDatabase(event);
+        }
       }
 
       // Save all events for cache
