@@ -1,4 +1,6 @@
-// Prevent horizontal scroll in dialog
+// Column dialog content styles
+// Dialog container styles are handled by CustomDialogComponent
+
 .settings-container {
   overflow-x: hidden;
   max-width: 100%;
@@ -250,7 +252,6 @@
   }
 }
 
-// Prevent horizontal scroll in dialog content
-mat-dialog-content {
-  overflow-x: hidden !important;
+.full-width {
+  width: 100%;
 }

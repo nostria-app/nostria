@@ -1,5 +1,5 @@
 import { Component, input, output, effect, ElementRef, inject, viewChild, AfterViewInit, OnDestroy } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 
@@ -13,6 +13,7 @@ import { MatButtonModule } from '@angular/material/button';
  * - Backdrop click to close (optional)
  * - Smooth animations
  * - Body scroll prevention when open
+ * - Moves to document root for proper z-index stacking
  * 
  * Supports both modern signals and legacy @Input/@Output for compatibility
  * 
@@ -38,7 +39,6 @@ import { MatButtonModule } from '@angular/material/button';
  */
 @Component({
   selector: 'app-custom-dialog',
-  standalone: true,
   imports: [CommonModule, MatIconModule, MatButtonModule],
   template: `
     <div 
@@ -125,7 +125,9 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   dialogContainer = viewChild<ElementRef>('dialogContainer');
   dialogContent = viewChild<ElementRef>('dialogContent');
 
+  private document = inject(DOCUMENT);
   private elementRef = inject(ElementRef);
+  private portalHost: HTMLElement | null = null;
 
   constructor() {
     // Set up keyboard handling immediately
@@ -150,6 +152,7 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
+    this.moveToBody();
     this.disableBodyScroll();
 
     // Focus the dialog container for keyboard accessibility
@@ -160,7 +163,36 @@ export class CustomDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
+    this.removeFromBody();
     this.enableBodyScroll();
+  }
+
+  /**
+   * Move the component's host element to a container at document.body
+   * This ensures proper z-index stacking above all other content
+   */
+  private moveToBody(): void {
+    if (typeof this.document === 'undefined') return;
+
+    const hostElement = this.elementRef.nativeElement as HTMLElement;
+
+    // Create or get portal host
+    this.portalHost = this.document.createElement('div');
+    this.portalHost.classList.add('custom-dialog-portal-host');
+    this.document.body.appendChild(this.portalHost);
+
+    // Move host element to portal
+    this.portalHost.appendChild(hostElement);
+  }
+
+  /**
+   * Clean up the portal host when the dialog is destroyed
+   */
+  private removeFromBody(): void {
+    if (this.portalHost && this.portalHost.parentNode) {
+      this.portalHost.parentNode.removeChild(this.portalHost);
+    }
+    this.portalHost = null;
   }
 
   // Helper methods to support both signal and legacy inputs

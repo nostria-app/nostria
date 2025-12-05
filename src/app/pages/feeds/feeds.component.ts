@@ -9,6 +9,7 @@ import {
   OnDestroy,
   ChangeDetectorRef,
   untracked,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Location } from '@angular/common';
@@ -59,7 +60,6 @@ import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-feeds',
-  standalone: true,
   imports: [
     CommonModule,
     MatCardModule,
@@ -77,9 +77,12 @@ import { UtilitiesService } from '../../services/utilities.service';
     MatDividerModule,
     Introduction,
     EventComponent,
+    NewFeedDialogComponent,
+    NewColumnDialogComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class FeedsComponent implements OnDestroy {
   // Services
@@ -102,6 +105,42 @@ export class FeedsComponent implements OnDestroy {
   protected app = inject(ApplicationService);
   protected accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
+
+  // Dialog State Signals
+  showNewFeedDialog = signal(false);
+  showNewColumnDialog = signal(false);
+  editingFeed = signal<import('../../services/feed.service').FeedConfig | undefined>(undefined);
+  editingColumn = signal<ColumnConfig | undefined>(undefined);
+  editingColumnIndex = signal<number>(-1);
+
+  // Dialog icon options
+  feedIcons = [
+    'dynamic_feed',
+    'bookmark',
+    'explore',
+    'trending_up',
+    'star',
+    'favorite',
+    'rss_feed',
+  ];
+
+  columnIcons = [
+    'chat',
+    'reply_all',
+    'bookmark',
+    'image',
+    'people',
+    'tag',
+    'filter_list',
+    'article',
+    'video_library',
+    'music_note',
+    'photo',
+    'explore',
+    'trending_up',
+    'group',
+    'public',
+  ];
 
   // UI State Signals
   activeSection = signal<'discover' | 'following' | 'media'>('discover');
@@ -1252,35 +1291,34 @@ export class FeedsComponent implements OnDestroy {
       return;
     }
 
-    const dialogRef = this.dialog.open(NewColumnDialogComponent, {
-      width: '900px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-      panelClass: 'responsive-dialog',
-      data: {
-        icons: [
-          'chat',
-          'reply_all',
-          'bookmark',
-          'image',
-          'people',
-          'tag',
-          'filter_list',
-          'article',
-          'video_library',
-          'music_note',
-          'photo',
-          'explore',
-          'trending_up',
-          'group',
-          'public',
-        ],
-      },
-    });
+    this.editingColumn.set(undefined);
+    this.editingColumnIndex.set(-1);
+    this.showNewColumnDialog.set(true);
+  }
 
-    dialogRef.afterClosed().subscribe(async result => {
-      if (result && activeFeed) {
-        // Add the new feed to the current board
+  async onColumnDialogClosed(result: ColumnConfig | null): Promise<void> {
+    this.showNewColumnDialog.set(false);
+
+    if (result) {
+      const activeFeed = this.activeFeed();
+      if (!activeFeed) return;
+
+      const editingIndex = this.editingColumnIndex();
+
+      if (editingIndex >= 0) {
+        // Update existing column
+        const updatedColumns = [...activeFeed.columns];
+        updatedColumns[editingIndex] = result;
+
+        const updatedFeed = {
+          ...activeFeed,
+          columns: updatedColumns,
+          updatedAt: Date.now(),
+        };
+
+        await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
+      } else {
+        // Add new column
         const updatedFeed = {
           ...activeFeed,
           columns: [...activeFeed.columns, result],
@@ -1303,11 +1341,14 @@ export class FeedsComponent implements OnDestroy {
           ...loaded,
           [result.id]: false,
         }));
-
-        // this.notificationService.notify(`Feed "${result.label}" added to "${activeFeed.label}"`);
       }
-    });
+    }
+
+    // Reset editing state
+    this.editingColumn.set(undefined);
+    this.editingColumnIndex.set(-1);
   }
+
   editColumn(index: number): void {
     const activeFeed = this.activeFeed();
     const columns = this.columns();
@@ -1316,49 +1357,9 @@ export class FeedsComponent implements OnDestroy {
 
     const column = columns[index];
 
-    const dialogRef = this.dialog.open(NewColumnDialogComponent, {
-      width: '900px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-      panelClass: 'responsive-dialog',
-      data: {
-        column: column,
-        icons: [
-          'chat',
-          'reply_all',
-          'bookmark',
-          'image',
-          'people',
-          'tag',
-          'filter_list',
-          'article',
-          'video_library',
-          'music_note',
-          'photo',
-          'explore',
-          'trending_up',
-          'group',
-          'public',
-        ],
-      },
-    });
-
-    dialogRef.afterClosed().subscribe(async result => {
-      if (result && activeFeed) {
-        // Update the specific column in the feed
-        const updatedColumns = [...activeFeed.columns];
-        updatedColumns[index] = result;
-
-        const updatedFeed = {
-          ...activeFeed,
-          columns: updatedColumns,
-          updatedAt: Date.now(),
-        };
-
-        await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
-        // this.notificationService.notify(`Column "${result.label}" updated`);
-      }
-    });
+    this.editingColumn.set(column);
+    this.editingColumnIndex.set(index);
+    this.showNewColumnDialog.set(true);
   }
   async removeColumn(index: number): Promise<void> {
     const activeFeed = this.activeFeed();
@@ -1645,26 +1646,28 @@ export class FeedsComponent implements OnDestroy {
 
   /**
    * Add a new board
-   */ addNewFeed(): void {
-    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
-      width: '900px',
-      maxWidth: '90vw',
-      panelClass: 'responsive-dialog',
-      data: {
-        icons: [
-          'dynamic_feed',
-          'bookmark',
-          'explore',
-          'trending_up',
-          'star',
-          'favorite',
-          'rss_feed',
-        ],
-      },
-    });
-    dialogRef.afterClosed().subscribe(async result => {
-      if (result) {
-        // The dialog returns a FeedConfig, but FeedsCollectionService.addFeed expects FeedDefinition data
+   */
+  addNewFeed(): void {
+    this.editingFeed.set(undefined);
+    this.showNewFeedDialog.set(true);
+  }
+
+  async onFeedDialogClosed(result: import('../../services/feed.service').FeedConfig | null): Promise<void> {
+    this.showNewFeedDialog.set(false);
+
+    if (result) {
+      const editingFeedData = this.editingFeed();
+
+      if (editingFeedData) {
+        // Update existing feed
+        await this.feedsCollectionService.updateFeed(editingFeedData.id, {
+          label: result.label,
+          icon: result.icon,
+          description: result.description,
+          path: result.path,
+        });
+      } else {
+        // Add new feed
         const newBoard = await this.feedsCollectionService.addFeed({
           label: result.label,
           icon: result.icon,
@@ -1680,43 +1683,21 @@ export class FeedsComponent implements OnDestroy {
         // Set as active board
         this.feedsCollectionService.setActiveFeed(newBoard.id);
       }
-    });
+    }
+
+    // Reset editing state
+    this.editingFeed.set(undefined);
   }
 
   /**
    * Edit the current board
-   */ editCurrentFeed(): void {
+   */
+  editCurrentFeed(): void {
     const activeFeed = this.activeFeed();
     if (!activeFeed) return;
 
-    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
-      width: '900px',
-      maxWidth: '90vw',
-      panelClass: 'responsive-dialog',
-      data: {
-        icons: [
-          'dynamic_feed',
-          'bookmark',
-          'explore',
-          'trending_up',
-          'star',
-          'favorite',
-          'rss_feed',
-        ],
-        feed: activeFeed,
-      },
-    });
-
-    dialogRef.afterClosed().subscribe(async result => {
-      if (result && activeFeed) {
-        await this.feedsCollectionService.updateFeed(activeFeed.id, {
-          label: result.label,
-          icon: result.icon,
-          description: result.description,
-          path: result.path,
-        });
-      }
-    });
+    this.editingFeed.set(activeFeed);
+    this.showNewFeedDialog.set(true);
   }
   /**
    * Delete the current board

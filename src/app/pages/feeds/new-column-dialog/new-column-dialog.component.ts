@@ -1,6 +1,5 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, input, output, ChangeDetectionStrategy, effect } from '@angular/core';
 
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -23,6 +22,7 @@ import { DataService } from '../../../services/data.service';
 import { EncryptionService } from '../../../services/encryption.service';
 import { LoggerService } from '../../../services/logger.service';
 import { FollowingService } from '../../../services/following.service';
+import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 
 export interface FollowSet {
   id: string; // event id
@@ -33,12 +33,6 @@ export interface FollowSet {
   created: number;
 }
 
-interface DialogData {
-  icons: string[];
-  column?: ColumnConfig;
-}
-
-// Common Nostr event kinds
 const NOSTR_KINDS = [
   { value: 0, label: 'Metadata (0)' },
   { value: 1, label: 'Text Note (1)' },
@@ -79,9 +73,7 @@ const NOSTR_KINDS = [
 
 @Component({
   selector: 'app-new-column-dialog',
-  standalone: true,
   imports: [
-    MatDialogModule,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -93,13 +85,14 @@ const NOSTR_KINDS = [
     MatDividerModule,
     ReactiveFormsModule,
     MatButtonToggleModule,
+    CustomDialogComponent,
   ],
   templateUrl: './new-column-dialog.component.html',
   styleUrls: ['./new-column-dialog.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class NewColumnDialogComponent {
   private fb = inject(FormBuilder);
-  private dialogRef = inject(MatDialogRef<NewColumnDialogComponent>);
   private feedService = inject(FeedService);
   private accountState = inject(AccountStateService);
   private followingService = inject(FollowingService);
@@ -107,23 +100,29 @@ export class NewColumnDialogComponent {
   private dataService = inject(DataService);
   private encryption = inject(EncryptionService);
   private logger = inject(LoggerService);
-  readonly data: DialogData = inject(MAT_DIALOG_DATA);
 
-  // Form controls
+  // Inputs
+  icons = input<string[]>([]);
+  column = input<ColumnConfig | undefined>(undefined);
+
+  // Outputs
+  closed = output<ColumnConfig | null>();
+
+  // Form controls - initialized in constructor
   columnForm = this.fb.group({
-    kinds: [this.data.column?.kinds || []],
-    source: [this.data.column?.source || 'following'],
-    relayConfig: [this.data.column?.relayConfig || 'account'],
-    customRelays: [this.data.column?.customRelays || []],
-    type: [this.data.column?.type || 'custom'],
+    kinds: [[] as number[]],
+    source: ['following'],
+    relayConfig: ['account'],
+    customRelays: [[] as string[]],
+    type: ['custom'],
   });
 
   // Signals and state
-  isEditMode = signal(!!this.data.column);
-  selectedColumnType = signal<string>(this.data.column?.type || 'custom');
-  selectedKinds = signal<number[]>(this.data.column?.kinds || []);
-  customRelays = signal<string[]>(this.data.column?.customRelays || []);
-  selectedRelayConfig = signal<string>(this.data.column?.relayConfig || 'account');
+  isEditMode = signal(false);
+  selectedColumnType = signal<string>('custom');
+  selectedKinds = signal<number[]>([]);
+  customRelays = signal<string[]>([]);
+  selectedRelayConfig = signal<string>('account');
   showCustomRelays = computed(() => this.selectedRelayConfig() === 'custom');
 
   // Custom source signals
@@ -220,7 +219,29 @@ export class NewColumnDialogComponent {
     });
   });
 
+  private initialized = false;
+
   constructor() {
+    // Use effect to detect when column input is set (signal inputs aren't available in constructor)
+    effect(() => {
+      const columnData = this.column();
+      if (columnData && !this.initialized) {
+        this.initialized = true;
+        this.columnForm.patchValue({
+          kinds: columnData.kinds || [],
+          source: columnData.source || 'following',
+          relayConfig: columnData.relayConfig || 'account',
+          customRelays: columnData.customRelays || [],
+          type: columnData.type || 'custom',
+        });
+        this.isEditMode.set(true);
+        this.selectedColumnType.set(columnData.type || 'custom');
+        this.selectedKinds.set(columnData.kinds || []);
+        this.customRelays.set(columnData.customRelays || []);
+        this.selectedRelayConfig.set(columnData.relayConfig || 'account');
+      }
+    });
+
     // Set up reactive input value tracking
     this.kindInputControl.valueChanges.subscribe(value => {
       this.kindInputValue.set(value || '');
@@ -243,6 +264,10 @@ export class NewColumnDialogComponent {
     this.initializeData();
   }
 
+  onClose(): void {
+    this.closed.emit(null);
+  }
+
   private async initializeData(): Promise<void> {
     // Load data in parallel
     await Promise.all([
@@ -252,7 +277,8 @@ export class NewColumnDialogComponent {
 
     // Initialize selected items if editing existing column
     // This must happen AFTER the data is loaded
-    if (this.data.column) {
+    const columnData = this.column();
+    if (columnData) {
       this.initializeSelectedItems();
     }
   }
@@ -371,17 +397,18 @@ export class NewColumnDialogComponent {
   onSubmit(): void {
     if (this.columnForm.valid) {
       const formValue = this.columnForm.value;
+      const existingColumn = this.column();
 
       // Build filters object (empty for now, PoW filtering removed)
       const filters: Record<string, unknown> = {};
 
       // Create column config
       const columnConfig: ColumnConfig = {
-        id: this.data.column?.id || crypto.randomUUID(),
+        id: existingColumn?.id || crypto.randomUUID(),
         label: '',
-        icon: this.data.column?.icon || 'chat', // Default icon (not displayed in UI)
+        icon: existingColumn?.icon || 'chat', // Default icon (not displayed in UI)
         type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
-        source: formValue.source || 'public',
+        source: (formValue.source || 'public') as 'following' | 'public' | 'custom' | 'for-you',
         kinds: this.selectedKinds(),
         relayConfig: formValue.relayConfig as 'account' | 'custom',
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
@@ -389,11 +416,11 @@ export class NewColumnDialogComponent {
         customStarterPacks: formValue.source === 'custom' ? this.selectedStarterPacks().map(p => p.dTag) : undefined,
         customFollowSets: formValue.source === 'custom' ? this.selectedFollowSets().map(s => s.dTag) : undefined,
         filters: Object.keys(filters).length > 0 ? filters : {},
-        createdAt: this.data.column?.createdAt || Date.now(),
+        createdAt: existingColumn?.createdAt || Date.now(),
         updatedAt: Date.now(),
       };
 
-      this.dialogRef.close(columnConfig);
+      this.closed.emit(columnConfig);
     }
   }
 
@@ -494,16 +521,16 @@ export class NewColumnDialogComponent {
 
 
   initializeSelectedItems(): void {
-    const column = this.data.column;
-    if (!column) return;
+    const columnData = this.column();
+    if (!columnData) return;
 
-    this.logger.debug('[NewColumnDialog] Initializing selected items for column:', column.id);
+    this.logger.debug('[NewColumnDialog] Initializing selected items for column:', columnData.id);
 
     // Initialize selected users if customUsers exist
-    if (column.customUsers && column.customUsers.length > 0) {
-      this.logger.debug('[NewColumnDialog] Loading', column.customUsers.length, 'custom users');
+    if (columnData.customUsers && columnData.customUsers.length > 0) {
+      this.logger.debug('[NewColumnDialog] Loading', columnData.customUsers.length, 'custom users');
       const profiles: NostrRecord[] = [];
-      for (const pubkey of column.customUsers) {
+      for (const pubkey of columnData.customUsers) {
         const cacheKey = `metadata-${pubkey}`;
         const profile = this.accountState['cache'].get<NostrRecord>(cacheKey);
         if (profile) {
@@ -515,22 +542,22 @@ export class NewColumnDialogComponent {
     }
 
     // Initialize selected starter packs if customStarterPacks exist
-    if (column.customStarterPacks && column.customStarterPacks.length > 0) {
-      this.logger.debug('[NewColumnDialog] Loading', column.customStarterPacks.length, 'starter packs from dTags:', column.customStarterPacks);
+    if (columnData.customStarterPacks && columnData.customStarterPacks.length > 0) {
+      this.logger.debug('[NewColumnDialog] Loading', columnData.customStarterPacks.length, 'starter packs from dTags:', columnData.customStarterPacks);
       this.logger.debug('[NewColumnDialog] Available starter packs:', this.availableStarterPacks().length);
       const packs = this.availableStarterPacks().filter(pack =>
-        column.customStarterPacks!.includes(pack.dTag)
+        columnData.customStarterPacks!.includes(pack.dTag)
       );
       this.selectedStarterPacks.set(packs);
       this.logger.debug('[NewColumnDialog] Loaded', packs.length, 'starter packs');
     }
 
     // Initialize selected follow sets if customFollowSets exist
-    if (column.customFollowSets && column.customFollowSets.length > 0) {
-      this.logger.debug('[NewColumnDialog] Loading', column.customFollowSets.length, 'follow sets from dTags:', column.customFollowSets);
+    if (columnData.customFollowSets && columnData.customFollowSets.length > 0) {
+      this.logger.debug('[NewColumnDialog] Loading', columnData.customFollowSets.length, 'follow sets from dTags:', columnData.customFollowSets);
       this.logger.debug('[NewColumnDialog] Available follow sets:', this.availableFollowSets().length, this.availableFollowSets().map(s => ({ dTag: s.dTag, title: s.title })));
       const sets = this.availableFollowSets().filter(set =>
-        column.customFollowSets!.includes(set.dTag)
+        columnData.customFollowSets!.includes(set.dTag)
       );
       this.selectedFollowSets.set(sets);
       this.logger.debug('[NewColumnDialog] Loaded', sets.length, 'follow sets:', sets.map(s => ({ dTag: s.dTag, title: s.title, pubkeys: s.pubkeys.length })));

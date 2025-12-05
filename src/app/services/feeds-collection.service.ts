@@ -10,7 +10,7 @@ export interface ColumnDefinition {
   label: string;
   icon: string;
   path?: string;
-  type: 'notes' | 'articles' | 'photos' | 'videos' | 'polls' | 'custom';
+  type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
   source?: 'following' | 'public' | 'custom' | 'for-you';
   customUsers?: string[]; // Array of pubkeys for custom user selection
