@@ -37,6 +37,7 @@ import { UserRelayService } from './relays/user-relay';
 import { FeedService } from './feed.service';
 import { ReportTarget } from './reporting.service';
 import { EventDialogComponent } from '../pages/event/event-dialog/event-dialog.component';
+import { OnDemandUserDataService } from './on-demand-user-data.service';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
@@ -66,6 +67,7 @@ export class LayoutService implements OnDestroy {
   private userRelayService = inject(UserRelayService);
   private feedService = inject(FeedService);
   private pool = inject(RelayPoolService);
+  private onDemandUserData = inject(OnDemandUserDataService);
   showMediaPlayer = signal(false);
   fullscreenMediaPlayer = signal(false);
   private readonly platformId = inject(PLATFORM_ID);
@@ -957,9 +959,13 @@ export class LayoutService implements OnDestroy {
     const previousUrl = this.location.path();
     this.location.go(`/e/${eventId}`);
 
+    // Determine dialog title based on event author
+    let dialogTitle = 'Thread';
+    const pubkey = event?.pubkey;
+
     // Open dialog using CustomDialogService
     this.currentEventDialogRef = this.customDialog.open<EventDialogComponent>(EventDialogComponent, {
-      title: 'Thread',
+      title: dialogTitle,
       width: '800px',
       maxWidth: '100%',
       data: { eventId, event },
@@ -967,6 +973,22 @@ export class LayoutService implements OnDestroy {
 
     // Set the data on the component instance
     this.currentEventDialogRef.componentInstance.data = { eventId, event };
+
+    // Fetch author profile to update dialog title
+    if (pubkey) {
+      this.onDemandUserData.getProfile(pubkey).then(profile => {
+        if (profile && this.currentEventDialogRef) {
+          const authorName = profile.data?.display_name || profile.data?.name;
+          if (authorName) {
+            dialogTitle = `${authorName}'s post`;
+            // Update the dialog title dynamically
+            this.currentEventDialogRef.updateTitle(dialogTitle);
+          }
+        }
+      }).catch(() => {
+        // Silently ignore profile fetch errors, keep default title
+      });
+    }
 
     // Restore URL when dialog is closed
     this.currentEventDialogRef.afterClosed$.subscribe(() => {

@@ -27,9 +27,27 @@ export class CustomDialogRef<T = unknown, R = unknown> {
 
   public componentInstance!: T;
 
+  private dialogComponentRef: ComponentRef<CustomDialogComponent> | null = null;
+
   constructor(
     private onCloseCallback: (result?: R) => void
   ) { }
+
+  /**
+   * Set the dialog component reference (used internally by CustomDialogService)
+   */
+  setDialogComponentRef(ref: ComponentRef<CustomDialogComponent>): void {
+    this.dialogComponentRef = ref;
+  }
+
+  /**
+   * Update the dialog title dynamically
+   */
+  updateTitle(title: string): void {
+    if (this.dialogComponentRef && !this.hasBeenClosed()) {
+      this.dialogComponentRef.setInput('title', title);
+    }
+  }
 
   /**
    * Close the dialog with an optional result
@@ -177,6 +195,9 @@ export class CustomDialogService {
 
     // Set the component instance on the dialog ref
     customDialogRef.componentInstance = contentRef.instance;
+
+    // Store the dialog component reference for dynamic updates (like title)
+    customDialogRef.setDialogComponentRef(dialogRef);
 
     // Attach content to dialog
     const dialogElement = dialogRef.location.nativeElement;
