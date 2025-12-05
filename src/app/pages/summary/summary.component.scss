@@ -811,4 +811,16 @@ mat-divider {
       padding-top: 0.125rem;
     }
   }
+
+  .load-more-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 1rem;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+  }
 }

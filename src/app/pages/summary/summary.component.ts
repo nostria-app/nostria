@@ -56,7 +56,7 @@ const DEFAULT_DAYS_LOOKBACK = 2;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MAX_POSTERS_DISPLAY = 20;
 const MAX_PROFILE_UPDATES = 10;
-const MAX_TIMELINE_EVENTS = 50;
+const TIMELINE_PAGE_SIZE = 20; // Events per page
 const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
 
 @Component({
@@ -129,15 +129,34 @@ export class SummaryComponent implements OnInit, OnDestroy {
   articleEvents = signal<TimelineEvent[]>([]);
   mediaEvents = signal<TimelineEvent[]>([]);
 
-  // Timeline events (combined and sorted)
-  timelineEvents = computed(() => {
+  // Timeline pagination
+  timelinePage = signal(1);
+
+  // All timeline events (combined and sorted)
+  allTimelineEvents = computed(() => {
     const notes = this.noteEvents().map(e => ({ ...e, type: 'note' as const }));
     const articles = this.articleEvents().map(e => ({ ...e, type: 'article' as const }));
     const media = this.mediaEvents().map(e => ({ ...e, type: 'media' as const }));
     return [...notes, ...articles, ...media]
-      .sort((a, b) => b.created_at - a.created_at)
-      .slice(0, MAX_TIMELINE_EVENTS);
+      .sort((a, b) => b.created_at - a.created_at);
   });
+
+  // Paginated timeline events
+  timelineEvents = computed(() => {
+    const all = this.allTimelineEvents();
+    const page = this.timelinePage();
+    return all.slice(0, page * TIMELINE_PAGE_SIZE);
+  });
+
+  // Check if there are more events to load
+  hasMoreTimelineEvents = computed(() => {
+    const all = this.allTimelineEvents();
+    const shown = this.timelineEvents();
+    return shown.length < all.length;
+  });
+
+  // Total timeline events count
+  totalTimelineCount = computed(() => this.allTimelineEvents().length);
 
   // Expanded panel state
   expandedPanel = signal<'notes' | 'articles' | 'media' | null>(null);
@@ -458,6 +477,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   selectPreset(hours: number): void {
     this.selectedPreset.set(hours);
+    // Reset timeline pagination when changing time range
+    this.timelinePage.set(1);
     // Save selection
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
@@ -468,12 +489,18 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   resetToLastVisit(): void {
     this.selectedPreset.set(null);
+    // Reset timeline pagination when changing time range
+    this.timelinePage.set(1);
     // Save selection
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       this.accountLocalState.setSummaryTimePreset(pubkey, null);
     }
     this.loadSummaryData();
+  }
+
+  loadMoreTimelineEvents(): void {
+    this.timelinePage.update(p => p + 1);
   }
 
   togglePanel(panel: 'notes' | 'articles' | 'media'): void {

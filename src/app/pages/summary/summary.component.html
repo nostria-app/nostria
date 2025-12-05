@@ -163,6 +163,7 @@
       <h2 class="section-title">
         <mat-icon>schedule</mat-icon>
         Activity Timeline
+        <span class="section-count">{{ timelineEvents().length }} / {{ totalTimelineCount() }}</span>
       </h2>
       <div class="timeline">
         @for (event of timelineEvents(); track event.id) {
@@ -178,6 +179,14 @@
         </a>
         }
       </div>
+      @if (hasMoreTimelineEvents()) {
+      <div class="load-more-container">
+        <button mat-stroked-button (click)="loadMoreTimelineEvents()">
+          <mat-icon>expand_more</mat-icon>
+          Load More
+        </button>
+      </div>
+      }
     </section>
     }
 
