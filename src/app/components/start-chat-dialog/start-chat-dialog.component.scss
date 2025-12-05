@@ -1,223 +1,208 @@
-.start-chat-dialog {
-  width: 500px;
-  max-width: 90vw;
-  max-height: 80vh;
+.start-chat-content {
   display: flex;
   flex-direction: column;
+  gap: 24px;
 
-  .dialog-header {
+  .selected-profile {
     display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 16px 24px 8px;
-    margin-bottom: 0;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background-color: var(--mat-sys-surface-container-high);
+    border-radius: 8px;
+    margin-bottom: 8px;
 
-    h2 {
-      margin: 0;
-    }
-  }
-
-  .dialog-content {
-    padding: 0 24px;
-    max-height: 60vh;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-
-    .selected-profile {
+    .profile-info {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 12px 16px;
-      background-color: var(--mat-sys-color-surface-container-high);
-      border-radius: 8px;
-      margin-bottom: 8px;
+      gap: 12px;
+      overflow: hidden;
 
-      .profile-info {
+      .profile-details {
         display: flex;
-        align-items: center;
-        gap: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        overflow: hidden;
 
-        .profile-name {
-          font-weight: 500;
+        .profile-display-name {
+          font-size: 16px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+
+        .profile-npub {
+          font-size: 12px;
+          color: var(--mat-sys-on-surface-variant);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
         }
       }
     }
+  }
 
-    .search-section {
-      .search-results {
-        max-height: 300px;
-        overflow-y: auto;
-        border: 1px solid var(--mat-divider-color);
-        border-radius: 8px;
-        margin-top: 8px;
+  .search-section {
+    .full-width {
+      width: 100%;
+    }
 
-        .search-result-item {
-          cursor: pointer;
-          transition: background-color 0.2s;
+    .search-results {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 8px;
+      margin-top: 8px;
 
-          &:hover {
-            background-color: var(--mat-sys-color-surface-container);
-          }
+      .search-result-item {
+        cursor: pointer;
+        transition: background-color 0.2s;
 
-          .search-result-content {
+        &:hover {
+          background-color: var(--mat-sys-surface-container);
+        }
+
+        .search-result-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+
+          .profile-details {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            width: 100%;
+            flex-direction: column;
+            align-items: flex-start;
 
-            .profile-details {
-              display: flex;
-              flex-direction: column;
-              align-items: flex-start;
+            .profile-name {
+              font-size: 14px;
+            }
 
-              .profile-name {
-                font-weight: 500;
-                font-size: 14px;
-              }
-
-              .profile-display-name {
-                font-size: 12px;
-                color: var(--mat-sys-color-on-surface-variant);
-              }
+            .profile-display-name {
+              font-size: 12px;
+              color: var(--mat-sys-on-surface-variant);
             }
           }
         }
       }
-
-      .no-results {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 32px;
-        text-align: center;
-        color: var(--mat-sys-color-on-surface-variant);
-
-        mat-icon {
-          font-size: 48px;
-          width: 48px;
-          height: 48px;
-          margin-bottom: 16px;
-          opacity: 0.6;
-        }
-
-        p {
-          margin: 0 0 8px;
-        }
-
-        small {
-          opacity: 0.8;
-        }
-      }
     }
 
-    .divider-section {
+    .no-results {
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 16px;
-      margin: 8px 0;
+      justify-content: center;
+      padding: 32px;
+      text-align: center;
+      color: var(--mat-sys-on-surface-variant);
 
-      .divider-text {
-        font-size: 12px;
-        color: var(--mat-sys-color-on-surface-variant);
-        white-space: nowrap;
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        margin-bottom: 16px;
+        opacity: 0.6;
       }
 
-      mat-divider {
-        flex: 1;
+      p {
+        margin: 0 0 8px;
+      }
+
+      small {
+        opacity: 0.8;
       }
     }
+  }
 
-    .npub-section {
-      .npub-actions {
-        margin-top: 12px;
+  .divider-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 8px 0;
+
+    .divider-text {
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      white-space: nowrap;
+    }
+
+    mat-divider {
+      flex: 1;
+    }
+  }
+
+  .npub-section {
+    .full-width {
+      width: 100%;
+    }
+
+    .npub-actions {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+
+      button {
         display: flex;
-        justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
 
-        button {
+        mat-spinner {
+          margin-right: 4px;
+        }
+      }
+    }
+  }
+
+  .chat-type-section {
+    h3 {
+      margin: 0 0 16px;
+      font-size: 16px;
+    }
+
+    .chat-type-toggle {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+
+      .chat-type-info {
+
+        .legacy-info,
+        .modern-info {
           display: flex;
           align-items: center;
           gap: 8px;
+          font-size: 14px;
+          padding: 8px 12px;
+          border-radius: 6px;
 
-          mat-spinner {
-            margin-right: 4px;
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
           }
         }
-      }
-    }
 
-    .chat-type-section {
-      h3 {
-        margin: 0 0 16px;
-        font-size: 16px;
-        font-weight: 500;
-      }
+        .legacy-info {
+          background-color: var(--mat-sys-error-container);
+          color: var(--mat-sys-on-error-container);
+        }
 
-      .chat-type-toggle {
-        display: flex;
-        flex-direction: column;
-        gap: 12px;
-
-        .chat-type-info {
-          .legacy-info,
-          .modern-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 14px;
-            padding: 8px 12px;
-            border-radius: 6px;
-
-            mat-icon {
-              font-size: 18px;
-              width: 18px;
-              height: 18px;
-            }
-          }
-
-          .legacy-info {
-            background-color: var(--mat-sys-color-error-container);
-            color: var(--mat-sys-color-on-error-container);
-          }
-
-          .modern-info {
-            background-color: var(--mat-sys-color-primary-container);
-            color: var(--mat-sys-color-on-primary-container);
-          }
+        .modern-info {
+          background-color: var(--mat-sys-primary-container);
+          color: var(--mat-sys-on-primary-container);
         }
       }
-    }
-  }
-
-  .dialog-actions {
-    padding: 16px 24px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 12px;
-    border-top: 1px solid var(--mat-divider-color);
-    margin-top: auto;
-
-    button {
-      display: flex;
-      align-items: center;
-      gap: 8px;
     }
   }
 }
 
-// Mobile responsive
-@media (max-width: 599px) {
-  .start-chat-dialog {
-    width: 100vw;
-    max-width: 100vw;
-    height: 100vh;
-    max-height: 100vh;
-    border-radius: 0;
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 
-    .dialog-content {
-      max-height: calc(100vh - 140px);
-    }
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 }

@@ -22,7 +22,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
@@ -35,6 +34,7 @@ import { NotificationType } from '../../services/database.service';
 import { ApplicationStateService } from '../../services/application-state.service';
 import { LoadingOverlayComponent } from '../../components/loading-overlay/loading-overlay.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { CustomDialogService } from '../../services/custom-dialog.service';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { AgoPipe } from '../../pipes/ago.pipe';
@@ -108,7 +108,6 @@ interface DirectMessage {
     MatBadgeModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
-    MatDialogModule,
     MatTabsModule,
     RouterModule,
     LoadingOverlayComponent,
@@ -129,7 +128,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   messaging = inject(MessagingService);
   private notifications = inject(NotificationService);
   private userRelayService = inject(UserRelayService);
-  private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private appState = inject(ApplicationStateService);
@@ -868,15 +867,16 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Start a new chat with a user
    */
   startNewChat(): void {
-    const dialogRef = this.dialog.open(StartChatDialogComponent, {
-      width: '500px',
-      maxWidth: '90vw',
-      maxHeight: '80vh',
-      disableClose: false,
-      autoFocus: true,
-    });
+    const dialogRef = this.customDialog.open<StartChatDialogComponent, StartChatDialogResult | undefined>(
+      StartChatDialogComponent,
+      {
+        title: 'Start New Chat',
+        width: '500px',
+        maxWidth: '90vw',
+      }
+    );
 
-    dialogRef.afterClosed().subscribe((result: StartChatDialogResult | undefined) => {
+    dialogRef.afterClosed$.subscribe((result: StartChatDialogResult | undefined) => {
       if (result) {
         this.startChatWithUser(result.pubkey, result.isLegacy);
       }
