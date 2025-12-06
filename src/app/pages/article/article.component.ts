@@ -44,7 +44,7 @@ import { NostrRecord } from '../../interfaces';
     MatProgressSpinnerModule,
     ArticleDisplayComponent,
     MatMenuModule
-],
+  ],
   templateUrl: './article.component.html',
   styleUrl: './article.component.scss',
 })
@@ -77,6 +77,9 @@ export class ArticleComponent implements OnDestroy {
   isSpeaking = signal(false);
   isPaused = signal(false);
   useAiVoice = signal(false);
+  availableVoices = signal<SpeechSynthesisVoice[]>([]);
+  selectedVoice = signal<SpeechSynthesisVoice | null>(null);
+  playbackRate = signal<number>(1);
   private speechSynthesis: SpeechSynthesis | null = null;
   private currentUtterance: SpeechSynthesisUtterance | null = null;
   private audioPlayer: HTMLAudioElement | null = null;
@@ -88,6 +91,13 @@ export class ArticleComponent implements OnDestroy {
 
     // Initialize speech synthesis
     this.speechSynthesis = window.speechSynthesis;
+
+    // Load available voices
+    this.loadVoices();
+    // Voices may load asynchronously
+    if (this.speechSynthesis) {
+      this.speechSynthesis.onvoiceschanged = () => this.loadVoices();
+    }
 
     // Subscribe to route parameter changes
     this.routeSubscription = this.route.paramMap.subscribe(params => {
@@ -559,12 +569,12 @@ export class ArticleComponent implements OnDestroy {
 
       // Split text into chunks if too long?
       // For now, just try the first 500 chars as a demo/limit
-      const chunk = text.slice(0, 500); 
+      const chunk = text.slice(0, 500);
 
       const result = await this.aiService.synthesizeSpeech(chunk, {
         speaker_embeddings: 'https://huggingface.co/datasets/Xenova/transformers.js-docs/resolve/main/speaker_embeddings.bin'
       }) as { audio: Float32Array, sampling_rate: number };
-      
+
       if (result && result.audio) {
         this.playAudio(result.audio, result.sampling_rate);
         this.isSpeaking.set(true);
@@ -588,7 +598,7 @@ export class ArticleComponent implements OnDestroy {
     source.buffer = buffer;
     source.connect(audioContext.destination);
     source.start();
-    
+
     source.onended = () => {
       this.stopSpeech();
     };
@@ -604,6 +614,16 @@ export class ArticleComponent implements OnDestroy {
     this.stopSpeech();
 
     const utterance = new SpeechSynthesisUtterance(text);
+
+    // Apply selected voice
+    const voice = this.selectedVoice();
+    if (voice) {
+      utterance.voice = voice;
+    }
+
+    // Apply playback rate
+    utterance.rate = this.playbackRate();
+
     utterance.onend = () => {
       this.isSpeaking.set(false);
       this.isPaused.set(false);
@@ -613,6 +633,70 @@ export class ArticleComponent implements OnDestroy {
     this.speechSynthesis.speak(utterance);
     this.isSpeaking.set(true);
     this.isPaused.set(false);
+  }
+
+  /**
+   * Load available speech synthesis voices
+   */
+  private loadVoices() {
+    if (!this.speechSynthesis) return;
+
+    const voices = this.speechSynthesis.getVoices();
+
+    // Sort voices: natural/online voices first, then by name
+    const sortedVoices = voices.sort((a, b) => {
+      const aIsNatural = a.name.includes('Natural') || a.name.includes('Online');
+      const bIsNatural = b.name.includes('Natural') || b.name.includes('Online');
+
+      if (aIsNatural && !bIsNatural) return -1;
+      if (!aIsNatural && bIsNatural) return 1;
+
+      return a.name.localeCompare(b.name);
+    });
+
+    this.availableVoices.set(sortedVoices);
+
+    // Set default voice if not already selected
+    if (!this.selectedVoice() && sortedVoices.length > 0) {
+      // Try to find a natural English voice as default
+      const naturalEnglish = sortedVoices.find(
+        v => (v.name.includes('Natural') || v.name.includes('Online')) && v.lang.startsWith('en')
+      );
+      if (naturalEnglish) {
+        this.selectedVoice.set(naturalEnglish);
+      } else {
+        // Fall back to first English voice or first voice
+        const englishVoice = sortedVoices.find(v => v.lang.startsWith('en'));
+        this.selectedVoice.set(englishVoice || sortedVoices[0]);
+      }
+    }
+  }
+
+  /**
+   * Handle voice selection change
+   */
+  onVoiceChange(voice: SpeechSynthesisVoice) {
+    this.selectedVoice.set(voice);
+
+    // If currently speaking, restart with new voice
+    if (this.isSpeaking() && !this.useAiVoice()) {
+      const text = this.stripMarkdown(this.content() || '');
+      this.startNativeSpeech(text);
+    }
+  }
+
+  /**
+   * Handle playback rate change
+   */
+  onPlaybackRateChange(rate: number) {
+    this.playbackRate.set(rate);
+
+    // If currently speaking with native voice, update rate
+    if (this.currentUtterance && this.isSpeaking() && !this.useAiVoice()) {
+      // Need to restart speech to apply new rate
+      const text = this.stripMarkdown(this.content() || '');
+      this.startNativeSpeech(text);
+    }
   }
 
   pauseSpeech() {
@@ -643,7 +727,7 @@ export class ArticleComponent implements OnDestroy {
       this.speechSynthesis.cancel();
     }
     // Stop Web Audio if playing
-    
+
     this.isSpeaking.set(false);
     this.isPaused.set(false);
     this.currentUtterance = null;
@@ -665,7 +749,7 @@ export class ArticleComponent implements OnDestroy {
 
       // Translate summary or first part of content
       const text = this.stripMarkdown(this.content() || '').slice(0, 500);
-      
+
       // In a real app, we would detect language or let user choose
       const result = await this.aiService.translateText(text, model, {
         src_lang: 'eng_Latn', // Assuming English source for now
@@ -673,8 +757,8 @@ export class ArticleComponent implements OnDestroy {
       });
 
       if (Array.isArray(result) && result.length > 0) {
-         const translated = (result[0] as { translation_text: string }).translation_text;
-         this.translatedSummary.set(translated);
+        const translated = (result[0] as { translation_text: string }).translation_text;
+        this.translatedSummary.set(translated);
       }
 
     } catch (err) {
