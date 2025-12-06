@@ -115,9 +115,12 @@ export class ZapChipsComponent {
   maxDisplay = input<number>(4);
 
   private data = inject(DataService);
-  
+
   // Cache for profile data
   private profileCache = signal<Map<string, ProfileCache>>(new Map());
+
+  // Track which pubkeys we've already requested to prevent duplicate fetches
+  private loadedPubkeys = new Set<string>();
 
   // Colors for initial avatars
   private colors = [
@@ -129,33 +132,44 @@ export class ZapChipsComponent {
     // Load profile data when zappers change
     effect(() => {
       const zappersList = this.zappers();
-      for (const zapper of zappersList) {
+      // Only load profiles for displayed zappers, not all
+      const displayed = zappersList.slice(0, this.maxDisplay());
+      for (const zapper of displayed) {
+        // Skip if already loaded or loading
+        if (this.loadedPubkeys.has(zapper.pubkey)) {
+          continue;
+        }
+        this.loadedPubkeys.add(zapper.pubkey);
         this.loadProfile(zapper.pubkey);
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
-  private async loadProfile(pubkey: string) {
-    // Check cache first
+  private loadProfile(pubkey: string) {
+    // Check cache first (sync)
     const cached = this.data.getCachedProfile(pubkey);
     if (cached?.data) {
-      this.updateProfileCache(pubkey, cached.data);
+      this.updateProfileCacheSync(pubkey, cached.data);
       return;
     }
 
-    // Load from relay if not cached
-    try {
-      const profile = await this.data.getProfile(pubkey);
+    // Load from relay if not cached (async, outside effect)
+    this.data.getProfile(pubkey).then(profile => {
       if (profile?.data) {
-        this.updateProfileCache(pubkey, profile.data);
+        this.updateProfileCacheSync(pubkey, profile.data);
       }
-    } catch {
+    }).catch(() => {
       // Ignore errors
-    }
+    });
   }
 
-  private updateProfileCache(pubkey: string, data: { picture?: string; name?: string; display_name?: string }) {
+  private updateProfileCacheSync(pubkey: string, data: { picture?: string; name?: string; display_name?: string }) {
     const current = this.profileCache();
+    // Don't update if already in cache with same data
+    const existing = current.get(pubkey);
+    if (existing?.picture === data.picture && existing?.name === data.name && existing?.display_name === data.display_name) {
+      return;
+    }
     const updated = new Map(current);
     updated.set(pubkey, {
       picture: data.picture,
