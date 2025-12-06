@@ -17,6 +17,7 @@ import { ReactionButtonComponent } from '../event/reaction-button/reaction-butto
 import { EventMenuComponent } from '../event/event-menu/event-menu.component';
 import { MentionHoverDirective } from '../../directives/mention-hover.directive';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
+import { ZapChipsComponent } from '../zap-chips/zap-chips.component';
 import { BookmarkService } from '../../services/bookmark.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
@@ -64,7 +65,8 @@ interface TopZapper {
     ReactionButtonComponent,
     EventMenuComponent,
     MentionHoverDirective,
-    CommentsListComponent
+    CommentsListComponent,
+    ZapChipsComponent
   ],
   templateUrl: './article-display.component.html',
   styleUrl: './article-display.component.scss',
