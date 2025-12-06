@@ -413,7 +413,7 @@ export class NewColumnDialogComponent {
         label: '',
         icon: existingColumn?.icon || 'chat', // Default icon (not displayed in UI)
         type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
-        source: (formValue.source || 'public') as 'following' | 'public' | 'custom' | 'for-you' | 'all-following',
+        source: (formValue.source || 'public') as 'following' | 'public' | 'custom' | 'for-you',
         kinds: this.selectedKinds(),
         relayConfig: formValue.relayConfig as 'account' | 'custom',
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,

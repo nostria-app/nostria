@@ -418,6 +418,7 @@ export class RelayBatchService {
     options: {
       limitPerUser?: number;
       timeout?: number;
+      since?: number; // Custom since timestamp to fetch only newer events
     } = {},
     onEventsReceived?: (events: Event[]) => void
   ): Promise<Event[]> {
@@ -436,8 +437,10 @@ export class RelayBatchService {
       followingList,
       kinds,
       {
-        ...options,
+        limitPerUser: options.limitPerUser,
+        timeout: options.timeout,
         useSinceTimestamp: true, // Always use time-based filtering for all-following
+        customSince: options.since, // Pass custom since if provided
       },
       onEventsReceived ? (events) => onEventsReceived(events) : undefined
     );

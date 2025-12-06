@@ -27,7 +27,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
 import { Event, nip19 } from 'nostr-tools';
 import { ApplicationService } from '../../services/application.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
-import { RelayBatchService } from '../../services/relay-batch.service';
+import { FollowingDataService } from '../../services/following-data.service';
 
 interface ActivitySummary {
   notesCount: number;
@@ -84,7 +84,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
-  private readonly relayBatch = inject(RelayBatchService);
+  private readonly followingData = inject(FollowingDataService);
   protected readonly app = inject(ApplicationService);
 
   // ViewChild for load more sentinel
@@ -354,17 +354,23 @@ export class SummaryComponent implements OnInit, OnDestroy {
         : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
     }
 
-    // First, fetch events from relays
+    // STEP 1: Load from database FIRST for instant UI
+    await this.loadActivitySummary(sinceTimestamp);
+    this.isLoading.set(false); // Show cached data immediately
+
+    // STEP 2: Fetch new events from relays in the background
     await this.fetchEventsFromRelays(sinceTimestamp);
 
-    // Then load from database (which now includes newly fetched events)
+    // STEP 3: Reload from database to include newly fetched events
     await this.loadActivitySummary(sinceTimestamp);
-    this.isLoading.set(false);
   }
 
   /**
    * Fetch events from relays for the given time range.
    * Events are saved to the database for future queries.
+   * 
+   * Note: We already loaded from database first in loadSummaryData,
+   * so here we only fetch NEW events since last fetch.
    */
   private async fetchEventsFromRelays(sinceTimestamp: number): Promise<void> {
     if (this.isDestroyed) return;
@@ -376,40 +382,22 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.fetchProgress.set({ fetched: 0, total: following.length });
 
     try {
-      this.logger.info(`[Summary] Fetching events from relays since ${new Date(sinceTimestamp * 1000).toISOString()}`);
+      this.logger.info(`[Summary] Fetching new events from relays...`);
 
-      // Fetch notes (kind 1), articles (kind 30023), and media (kind 20)
-      const result = await this.relayBatch.fetchEventsFromAllFollowing(
-        following,
+      // Use the FollowingDataService - respects cache freshness
+      const events = await this.followingData.ensureFollowingData(
         [1, 20, 30023], // Notes, Media, Articles
-        {
-          limitPerUser: 10,
-          timeout: 15000,
-          useSinceTimestamp: true,
-          customSince: sinceTimestamp,
-        },
-        (events) => {
-          // Incremental progress update
+        false, // DON'T force - respect cache freshness (only fetch if stale)
+        // Progress callback for new events from relays
+        (newEvents: Event[]) => {
           this.fetchProgress.update(p => ({
             ...p,
-            fetched: p.fetched + events.length,
+            fetched: p.fetched + newEvents.length,
           }));
         }
       );
 
-      this.logger.info(`[Summary] Fetched ${result.events.length} events from ${result.batchesExecuted} batches`);
-
-      // Save events to database for future queries
-      await this.database.init();
-      for (const event of result.events) {
-        try {
-          await this.database.saveEvent(event);
-        } catch {
-          // Ignore duplicate key errors
-        }
-      }
-
-      this.logger.info(`[Summary] Saved ${result.events.length} events to database`);
+      this.logger.info(`[Summary] Total ${events.length} events available from following`);
 
     } catch (error) {
       this.logger.warn('[Summary] Error fetching from relays:', error);

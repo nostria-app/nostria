@@ -29,7 +29,7 @@ import { Followset } from './followset';
 import { RegionService } from './region.service';
 import { EncryptionService } from './encryption.service';
 import { LocalSettingsService } from './local-settings.service';
-import { RelayBatchService } from './relay-batch.service';
+import { FollowingDataService } from './following-data.service';
 
 export interface FeedItem {
   column: ColumnConfig;
@@ -60,7 +60,7 @@ export interface ColumnConfig {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
-  source?: 'following' | 'public' | 'custom' | 'for-you' | 'all-following';
+  source?: 'following' | 'public' | 'custom' | 'for-you';
   customUsers?: string[]; // Array of pubkeys for custom user selection
   customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
@@ -72,7 +72,6 @@ export interface ColumnConfig {
   updatedAt: number;
   lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
 }
-
 export interface FeedConfig {
   id: string;
   label: string;
@@ -253,7 +252,7 @@ export class FeedService {
   private readonly regionService = inject(RegionService);
   private readonly encryption = inject(EncryptionService);
   private readonly localSettings = inject(LocalSettingsService);
-  private readonly relayBatchService = inject(RelayBatchService);
+  private readonly followingData = inject(FollowingDataService);
 
   private readonly algorithms = inject(Algorithms);
 
@@ -658,13 +657,10 @@ export class FeedService {
     }
 
     // Now start async loading of fresh events
-    // If the source is following, load only from following list (strict)
+    // If the source is following, fetch from ALL following users
     if (column.source === 'following') {
       console.log(`📍 Loading FOLLOWING feed for column ${column.id}`);
-      await this.loadFollowingStrictFeed(item);
-    } else if (column.source === 'all-following') {
-      console.log(`📍 Loading ALL-FOLLOWING feed for column ${column.id}`);
-      await this.loadAllFollowingFeed(item);
+      await this.loadFollowingFeed(item);
     } else if (column.source === 'for-you') {
       console.log(`📍 Loading FOR-YOU feed for column ${column.id}`);
       await this.loadForYouFeed(item);
@@ -800,71 +796,6 @@ export class FeedService {
 
     // Note: item was already added to data map at the beginning of this method
     // for instant rendering of cached events
-  }
-
-  /**
-   * Load following feed using algorithm-based approach
-   *
-   * This method implements an optimized feed loading strategy:
-   * 1. Gets top 10 most engaged users from the algorithm
-   * 2. Fetches latest 5 events from each user using the outbox model
-   * 3. Aggregates events ensuring diversity (at least one from each user)
-   * 4. Sorts by creation time with newest first
-   * 5. Tracks lastTimestamp for pagination
-   * 6. Supports infinite scrolling with no time restrictions
-   */
-  private async loadFollowingFeed(feedData: FeedItem) {
-    try {
-      // Check if this is an articles feed - use different algorithm
-      const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
-
-      this.logger.debug(
-        `Loading following feed - isArticles: ${isArticlesFeed}, kinds: ${JSON.stringify(feedData.filter?.kinds)}`
-      );
-
-      // Get recommended users based on content type
-      const topEngagedUsers = isArticlesFeed
-        ? await this.algorithms.getRecommendedUsersForArticles(20)
-        : await this.algorithms.getRecommendedUsers(10);
-
-      this.logger.debug(
-        `Found ${topEngagedUsers.length} engaged users for ${isArticlesFeed ? 'articles' : 'notes'} feed`
-      );
-
-      if (topEngagedUsers.length === 0) {
-        this.logger.warn('No engaged users found, falling back to recent following');
-        // Fallback to users from following list
-        const followingList = this.accountState.followingList();
-
-        // If following list is empty, use empty array
-        if (followingList.length === 0) {
-          this.logger.debug('Following list is empty, no users to fetch from');
-          return;
-        }
-
-        this.logger.debug(`Following list size: ${followingList.length}`);
-
-        // For articles, use more users since articles are rarer
-        const fallbackCount = isArticlesFeed ? 25 : 10;
-        const fallbackUsers = [...followingList].slice(-fallbackCount).reverse();
-
-        this.logger.debug(`Using ${fallbackUsers.length} fallback users`);
-        await this.fetchEventsFromUsers(fallbackUsers, feedData);
-        return;
-      }
-
-      // Extract pubkeys from top engaged users
-      const topPubkeys = topEngagedUsers.map(user => user.pubkey);
-
-      // Fetch events from these top engaged users
-      await this.fetchEventsFromUsers(topPubkeys, feedData);
-
-      this.logger.debug(
-        `Loaded following feed with ${topPubkeys.length} top engaged users${isArticlesFeed ? ' (articles)' : ''}`
-      );
-    } catch (error) {
-      this.logger.error('Error loading following feed:', error);
-    }
   }
 
   /**
@@ -1011,51 +942,16 @@ export class FeedService {
   }
 
   /**
-   * Load following-strict feed - shows ONLY accounts the user follows
+   * Load following feed - fetches events from ALL users the current user follows.
    * 
-   * This method fetches content strictly from the user's following list
-   * without any algorithm-based filtering or recommendations.
-   */
-  private async loadFollowingStrictFeed(feedData: FeedItem) {
-    try {
-      const followingList = this.accountState.followingList();
-
-      // If following list is empty, return early
-      if (followingList.length === 0) {
-        this.logger.debug('Following list is empty, no users to fetch from');
-        return;
-      }
-
-      // Limit to 20 users for performance - prioritize recent follows
-      const maxUsers = 20; // Reduced from 50 to 20 for faster initial load
-      const limitedUsers = followingList.length > maxUsers
-        ? followingList.slice(-maxUsers) // Get most recent follows
-        : followingList;
-
-      this.logger.debug(`Loading following-strict feed with ${limitedUsers.length} users (total following: ${followingList.length})`);
-
-      // Fetch events from limited set of following users
-      await this.fetchEventsFromUsers(limitedUsers, feedData);
-
-      this.logger.debug(`Loaded following-strict feed with ${limitedUsers.length} users`);
-    } catch (error) {
-      this.logger.error('Error loading following-strict feed:', error);
-    }
-  }
-
-  /**
-   * Load ALL following feed - fetches events from ALL users the current user follows.
-   * 
-   * This method uses an optimized batch strategy:
+   * This method uses the FollowingDataService for efficient batched fetching:
    * 1. Groups following users by shared relay sets
    * 2. Sends batched queries to minimize relay connections
-   * 3. Only fetches events since last app open (or max 24 hours)
+   * 3. Only fetches events since last fetch (or max 6 hours)
    * 4. Updates UI incrementally as events arrive
-   * 
-   * This is different from 'following' which limits to recent follows for performance,
-   * and 'for-you' which uses algorithm-based recommendations.
+   * 5. Shares data with Summary page
    */
-  private async loadAllFollowingFeed(feedData: FeedItem) {
+  private async loadFollowingFeed(feedData: FeedItem) {
     try {
       const followingList = this.accountState.followingList();
 
@@ -1064,37 +960,34 @@ export class FeedService {
         this.logger.debug('Following list is empty, no users to fetch from');
         return;
       }
-
-      this.logger.info(`📢 Loading ALL-FOLLOWING feed with ${followingList.length} users`);
 
       const kinds = feedData.filter?.kinds || [1]; // Default to text notes
 
-      // Use the relay batch service for efficient fetching
-      const events = await this.relayBatchService.fetchAllFollowingEvents(
+      this.logger.info(`📢 Loading FOLLOWING feed with ${followingList.length} users`);
+
+      // Use the centralized FollowingDataService for efficient fetching
+      const events = await this.followingData.ensureFollowingData(
         kinds,
-        {
-          limitPerUser: 5,
-          timeout: 15000, // 15 second timeout per batch
-        },
+        false, // Don't force refresh if data is fresh
         // Incremental update callback
         (newEvents: Event[]) => {
-          this.handleAllFollowingIncrementalUpdate(feedData, newEvents);
+          this.handleFollowingIncrementalUpdate(feedData, newEvents);
         }
       );
 
       // Final update with all events
-      this.handleAllFollowingFinalUpdate(feedData, events);
+      this.handleFollowingFinalUpdate(feedData, events);
 
-      this.logger.info(`✅ Loaded ALL-FOLLOWING feed with ${events.length} events from ${followingList.length} users`);
+      this.logger.info(`✅ Loaded FOLLOWING feed with ${events.length} events from ${followingList.length} users`);
     } catch (error) {
-      this.logger.error('Error loading all-following feed:', error);
+      this.logger.error('Error loading following feed:', error);
     }
   }
 
   /**
-   * Handle incremental updates for all-following feed as events arrive
+   * Handle incremental updates for following feed as events arrive
    */
-  private handleAllFollowingIncrementalUpdate(feedData: FeedItem, newEvents: Event[]) {
+  private handleFollowingIncrementalUpdate(feedData: FeedItem, newEvents: Event[]) {
     if (newEvents.length === 0) return;
 
     const existingEvents = feedData.events();
@@ -1139,9 +1032,9 @@ export class FeedService {
   }
 
   /**
-   * Finalize all-following feed with all fetched events
+   * Finalize following feed with all fetched events
    */
-  private handleAllFollowingFinalUpdate(feedData: FeedItem, allEvents: Event[]) {
+  private handleFollowingFinalUpdate(feedData: FeedItem, allEvents: Event[]) {
     // Filter out muted events
     const filteredEvents = allEvents.filter(event => !this.accountState.muted(event));
 
@@ -1196,7 +1089,7 @@ export class FeedService {
     // Update lastRetrieved timestamp
     this.updateColumnLastRetrieved(feedData.column.id);
 
-    this.logger.info(`✅ All-following feed finalized with ${feedData.events().length} total events`);
+    this.logger.info(`✅ Following feed finalized with ${feedData.events().length} total events`);
   }
 
   /**
@@ -1541,13 +1434,9 @@ export class FeedService {
       const column = feedData.column;
 
       if (column.source === 'following') {
-        // For following, use all following users (strict)
+        // For following, use all following users
         const followingList = this.accountState.followingList();
         await this.fetchOlderEventsFromUsers(followingList, feedData);
-      } else if (column.source === 'all-following') {
-        // For all-following, use ALL following users without limit
-        const followingList = this.accountState.followingList();
-        await this.fetchOlderEventsFromAllFollowing(followingList, feedData);
       } else if (column.source === 'for-you') {
         // For "For You" feed, combine all sources like in initial load
         const allPubkeys = new Set<string>();
@@ -1868,68 +1757,6 @@ export class FeedService {
       feedData.hasMore?.set(false);
     } else {
       this.logger.debug(`[Feed Pagination] Got ${totalEventsFromUsers} events from ${userEventsMap.size} users, can load more`);
-    }
-  }
-
-  /**
-   * Fetch older events for ALL following users using batched relay queries.
-   * This method uses the RelayBatchService for efficient pagination.
-   */
-  private async fetchOlderEventsFromAllFollowing(pubkeys: string[], feedData: FeedItem) {
-    const existingEvents = feedData.events();
-
-    // Calculate the oldest timestamp from existing events
-    const oldestTimestamp = existingEvents.length > 0
-      ? Math.min(...existingEvents.map(e => e.created_at || 0)) - 1
-      : Math.floor(Date.now() / 1000);
-
-    const kinds = feedData.filter?.kinds || [1];
-
-    this.logger.info(`[All-Following Pagination] Loading older events before ${new Date(oldestTimestamp * 1000).toISOString()}`);
-
-    try {
-      const result = await this.relayBatchService.fetchEventsFromAllFollowing(
-        pubkeys,
-        kinds,
-        {
-          limitPerUser: 5,
-          timeout: 15000,
-          useSinceTimestamp: false, // Don't use since for pagination
-          customSince: undefined,
-        }
-      );
-
-      // Filter events to only include those older than our current oldest
-      const olderEvents = result.events.filter(e => (e.created_at || 0) < oldestTimestamp);
-
-      // Also filter out duplicates
-      const existingIds = new Set(existingEvents.map(e => e.id));
-      const uniqueOlderEvents = olderEvents.filter(e => !existingIds.has(e.id));
-
-      // Filter out muted events
-      const filteredEvents = uniqueOlderEvents.filter(e => !this.accountState.muted(e));
-
-      if (filteredEvents.length > 0) {
-        // Merge with existing events
-        const mergedEvents = [...existingEvents, ...filteredEvents]
-          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-
-        feedData.events.set(mergedEvents);
-
-        // Update last timestamp
-        feedData.lastTimestamp = Math.min(...filteredEvents.map(e => (e.created_at || 0) * 1000));
-
-        // Save to cache
-        this.saveCachedEvents(feedData.column.id, mergedEvents);
-
-        this.logger.info(`[All-Following Pagination] Added ${filteredEvents.length} older events`);
-      } else {
-        // No older events found
-        feedData.hasMore?.set(false);
-        this.logger.info('[All-Following Pagination] No more older events available');
-      }
-    } catch (error) {
-      this.logger.error('[All-Following Pagination] Error:', error);
     }
   }
 
