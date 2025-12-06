@@ -56,7 +56,7 @@ interface TimelineEvent {
 // Constants for configurable limits
 const DEFAULT_DAYS_LOOKBACK = 2;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-const MAX_POSTERS_DISPLAY = 20;
+const MAX_POSTERS_DISPLAY = 100;
 const MAX_PROFILE_UPDATES = 10;
 const TIMELINE_PAGE_SIZE = 20; // Events per page
 const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
