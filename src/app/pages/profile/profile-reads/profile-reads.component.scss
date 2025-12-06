@@ -169,12 +169,13 @@
 
     // Style for the action button components
     ::ng-deep {
+
       app-reaction-button,
       app-zap-button {
         button {
           width: 32px;
           height: 32px;
-          
+
           mat-icon {
             font-size: 18px;
             width: 18px;

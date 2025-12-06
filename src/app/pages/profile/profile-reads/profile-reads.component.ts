@@ -210,7 +210,7 @@ export class ProfileReadsComponent implements OnChanges {
   shareArticle(event: Event): void {
     const slug = this.utilities.getTagValues('d', event.tags)[0];
     const title = this.getArticleTitle(event);
-    
+
     if (slug) {
       const naddr = nip19.naddrEncode({
         identifier: slug,
@@ -218,7 +218,7 @@ export class ProfileReadsComponent implements OnChanges {
         kind: event.kind,
       });
       const url = `${window.location.origin}/a/${naddr}`;
-      
+
       if (navigator.share) {
         navigator.share({
           title: title || 'Article',
