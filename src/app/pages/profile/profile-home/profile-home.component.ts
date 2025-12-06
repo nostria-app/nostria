@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule, NavigationEnd } from '@angular/router';
@@ -7,6 +7,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { MatTabsModule } from '@angular/material/tabs';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
+import { ProfileStateService } from '../../../services/profile-state.service';
 import { filter } from 'rxjs';
 
 interface NavLink {
@@ -29,16 +30,28 @@ export class ProfileHomeComponent {
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
+  profileState = inject(ProfileStateService);
 
-  // Updated navigation links for the profile tabs
+  // Computed label for articles tab with count
+  articlesLabel = computed(() => {
+    const count = this.profileState.articles().length;
+    return count > 0 ? `Articles (${count})` : 'Articles';
+  });
+
+  // Navigation links for the profile tabs - articles uses dynamic label via getLabel()
   navLinks: NavLink[] = [
     { path: 'notes', label: 'Timeline', icon: 'timeline' },
     { path: 'reads', label: 'Articles', icon: 'article' },
     { path: 'media', label: 'Media', icon: 'image' },
-    // { path: 'about', label: 'About', icon: 'info' },
-    // { path: 'connections', label: 'Connections', icon: 'people' },
-    // { path: 'following', label: 'Following', icon: 'people' }
   ];
+
+  // Get dynamic label for a nav link
+  getLabel(link: NavLink): string {
+    if (link.path === 'reads') {
+      return this.articlesLabel();
+    }
+    return link.label;
+  }
 
   constructor() {
     // Listen for navigation end to save the active tab

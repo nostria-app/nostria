@@ -4,24 +4,6 @@
   position: relative;
 }
 
-.articles-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-  padding: 0 0.5rem;
-
-  .articles-label {
-    font-size: 1.25rem;
-    color: var(--mat-sys-primary);
-  }
-
-  .articles-count {
-    font-size: 0.875rem;
-    color: var(--mat-sys-on-surface-variant);
-  }
-}
-
 .empty-state,
 .error-state {
   display: flex;
