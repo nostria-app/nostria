@@ -92,11 +92,18 @@
 
     .article-meta {
       display: flex;
-      align-items: center;
-      gap: 16px;
-      flex-wrap: wrap;
+      flex-direction: column;
+      gap: 12px;
 
-      .publish-date {
+      .meta-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+      }
+
+      .publish-date,
+      .read-time {
         color: var(--mat-sys-on-surface-variant);
         font-size: 0.875rem;
         display: flex;
@@ -107,6 +114,64 @@
           font-size: 16px;
           width: 16px;
           height: 16px;
+        }
+      }
+
+      .engagement-row {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+
+        .engagement-item {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          color: var(--mat-sys-on-surface-variant);
+          font-size: 0.875rem;
+
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+
+          .count {
+            color: var(--mat-sys-on-surface);
+          }
+        }
+      }
+
+      .top-zappers {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .zappers-label {
+          color: var(--mat-sys-on-surface-variant);
+          font-size: 0.875rem;
+        }
+
+        .zappers-list {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          .zapper-item {
+            display: flex;
+            align-items: center;
+            cursor: pointer;
+
+            ::ng-deep app-user-profile {
+
+              img,
+              .avatar {
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+              }
+            }
+          }
         }
       }
 

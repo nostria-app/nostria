@@ -16,10 +16,46 @@
 
       <div class="article-meta">
         @if (mode() === 'full') {
-        <div class="publish-date">
-          <mat-icon>schedule</mat-icon>
-          <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
+        <div class="meta-row">
+          <div class="publish-date">
+            <mat-icon>schedule</mat-icon>
+            <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
+          </div>
+          <div class="read-time">
+            <mat-icon>timer</mat-icon>
+            <span>{{ readTime() }} min read</span>
+          </div>
         </div>
+
+        <!-- Engagement Metrics Row -->
+        <div class="engagement-row">
+          <span class="engagement-item">
+            <mat-icon>thumb_up</mat-icon>
+            <span class="count">{{ reactionCount() }}</span>
+          </span>
+          <span class="engagement-item">
+            <mat-icon>chat_bubble</mat-icon>
+            <span class="count">{{ commentCount() }}</span>
+          </span>
+          <span class="engagement-item">
+            <mat-icon>bolt</mat-icon>
+            <span class="count">{{ formatZapAmount(zapTotal()) }}</span>
+          </span>
+        </div>
+
+        <!-- Top Zappers -->
+        @if (topZappers().length > 0) {
+        <div class="top-zappers">
+          <span class="zappers-label">Top zappers:</span>
+          <div class="zappers-list">
+            @for (zapper of topZappers(); track zapper.pubkey) {
+            <div class="zapper-item" [title]="formatZapAmount(zapper.amount) + ' sats'">
+              <app-user-profile [pubkey]="zapper.pubkey" view="icon"></app-user-profile>
+            </div>
+            }
+          </div>
+        </div>
+        }
         }
 
         @if (hashtags().length > 0) {

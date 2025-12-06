@@ -465,9 +465,9 @@ export class ZapService {
     const zapRequest: UnsignedEvent = {
       kind: 9734,
       content: message,
+      created_at: Math.floor(Date.now() / 1000),
       tags,
       pubkey: currentUser.pubkey,
-      created_at: Math.floor(Date.now() / 1000),
     };
 
     return zapRequest;
