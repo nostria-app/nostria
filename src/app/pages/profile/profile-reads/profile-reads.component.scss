@@ -164,13 +164,19 @@
   .article-actions {
     display: flex;
     align-items: center;
-    gap: 0;
+    gap: 4px;
     margin-top: 4px;
 
-    // Style for the action button components
-    ::ng-deep {
+    .reaction-action,
+    .comment-action,
+    .zap-action {
+      display: flex;
+      align-items: center;
+      height: 32px;
+    }
 
-      app-reaction-button {
+    .reaction-action {
+      ::ng-deep app-reaction-button {
         button {
           width: 32px;
           height: 32px;
@@ -182,12 +188,15 @@
           }
         }
       }
+
+      .count-badge {
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+        margin-left: 2px;
+      }
     }
 
     .zap-action {
-      display: flex;
-      align-items: center;
-
       ::ng-deep app-zap-button {
         button {
           width: 32px;
@@ -204,19 +213,28 @@
       .zap-count {
         font-size: 0.75rem;
         color: var(--nostria-bitcoin, #f7931a);
-        margin-left: -4px;
+        margin-left: 2px;
+      }
+    }
+
+    .comment-action {
+      .count-badge {
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+        margin-left: 2px;
+      }
+
+      &:hover .count-badge {
+        color: var(--mat-sys-primary);
       }
     }
 
     .action-btn {
-      width: auto;
-      min-width: 32px;
+      width: 32px;
       height: 32px;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 0 4px;
-      position: relative;
 
       mat-icon {
         font-size: 18px;
@@ -229,15 +247,6 @@
         color: var(--mat-sys-primary);
       }
 
-      .count-badge {
-        font-size: 0.75rem;
-        color: var(--mat-sys-on-surface-variant);
-        margin-left: 2px;
-      }
-
-      &.comment-btn:hover .count-badge {
-        color: var(--mat-sys-primary);
-      }
     }
   }
 }

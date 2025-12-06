@@ -24,6 +24,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 
 /** Engagement metrics for an article */
 interface ArticleEngagement {
+  reactionCount: number;
   commentCount: number;
   zapTotal: number;
   isLoading: boolean;
@@ -273,6 +274,7 @@ export class ProfileReadsComponent implements OnChanges {
     const currentEngagement = new Map(this.articleEngagement());
     for (const event of events) {
       currentEngagement.set(event.id, {
+        reactionCount: 0,
         commentCount: 0,
         zapTotal: 0,
         isLoading: true,
@@ -283,7 +285,8 @@ export class ProfileReadsComponent implements OnChanges {
     // Load engagement for each article in parallel
     const loadPromises = events.map(async (event) => {
       try {
-        const [commentCount, zapTotal] = await Promise.all([
+        const [reactionCount, commentCount, zapTotal] = await Promise.all([
+          this.loadReactionCount(event, userPubkey),
           this.loadCommentCount(event, userPubkey),
           this.loadZapTotal(event),
         ]);
@@ -291,6 +294,7 @@ export class ProfileReadsComponent implements OnChanges {
         // Update engagement data
         const updated = new Map(this.articleEngagement());
         updated.set(event.id, {
+          reactionCount,
           commentCount,
           zapTotal,
           isLoading: false,
@@ -301,6 +305,7 @@ export class ProfileReadsComponent implements OnChanges {
         // Set loading to false even on error
         const updated = new Map(this.articleEngagement());
         updated.set(event.id, {
+          reactionCount: 0,
           commentCount: 0,
           zapTotal: 0,
           isLoading: false,
@@ -310,6 +315,19 @@ export class ProfileReadsComponent implements OnChanges {
     });
 
     await Promise.all(loadPromises);
+  }
+
+  /**
+   * Load reaction count for an addressable event (article)
+   */
+  private async loadReactionCount(event: Event, userPubkey: string): Promise<number> {
+    try {
+      const reactions = await this.eventService.loadReactions(event.id, userPubkey);
+      return reactions.events.length;
+    } catch (err) {
+      this.logger.error('Failed to load reactions for article:', err);
+      return 0;
+    }
   }
 
   /**

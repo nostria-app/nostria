@@ -629,11 +629,12 @@ export class UtilitiesService {
   }
 
   createEvent(kind: number, content: string, tags: string[][], pubkey: string): UnsignedEvent {
+    // Order fields so content appears before tags for easier user review when signing
     const event: UnsignedEvent = {
       kind: kind,
+      content,
       created_at: this.currentDate(),
       tags,
-      content,
       pubkey: pubkey,
     };
 

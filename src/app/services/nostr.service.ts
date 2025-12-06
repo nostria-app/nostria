@@ -703,11 +703,12 @@ export class NostrService implements NostriaService {
     switch (currentUser?.source) {
       case 'external': {
         // Create the event object with pubkey
+        // Order fields so content appears before tags for easier user review when signing
         const unsignedEvent: UnsignedEvent = {
           kind: event.kind,
+          content: event.content,
           created_at: event.created_at ?? this.currentDate(),
           tags: event.tags,
-          content: event.content,
           pubkey: eventPubkey,
         };
 
@@ -825,11 +826,12 @@ export class NostrService implements NostriaService {
       case 'remote': {
         // For remote signing, we need to include pubkey
         // Preserve created_at if already set (important for PoW)
+        // Order fields so content appears before tags for easier user review when signing
         const cleanEvent: UnsignedEvent = {
           kind: event.kind,
+          content: event.content,
           created_at: event.created_at ?? this.currentDate(),
           tags: event.tags,
-          content: event.content,
           pubkey: eventPubkey,
         };
 
@@ -854,11 +856,12 @@ export class NostrService implements NostriaService {
       case 'nsec': {
         // For nsec signing, we need to include pubkey
         // Preserve created_at if already set (important for PoW)
+        // Order fields so content appears before tags for easier user review when signing
         const cleanEvent: UnsignedEvent = {
           kind: event.kind,
+          content: event.content,
           created_at: event.created_at ?? this.currentDate(),
           tags: event.tags,
-          content: event.content,
           pubkey: eventPubkey,
         };
 
@@ -909,11 +912,12 @@ export class NostrService implements NostriaService {
   }
 
   createEvent(kind: number, content: string, tags: string[][]): UnsignedEvent {
+    // Order fields so content appears before tags for easier user review when signing
     const event: UnsignedEvent = {
       kind: kind,
+      content,
       created_at: this.currentDate(),
       tags,
-      content,
       pubkey: this.accountState.pubkey(),
     };
 

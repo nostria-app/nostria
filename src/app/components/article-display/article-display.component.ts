@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input, output, signal, effect, untracked } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -19,6 +19,10 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 import { BookmarkService } from '../../services/bookmark.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
+import { SharedRelayService } from '../../services/relays/shared-relay';
+import { EventService } from '../../services/event';
+import { ZapService } from '../../services/zap.service';
+import { LoggerService } from '../../services/logger.service';
 
 export interface ArticleData {
   event?: Event;
@@ -34,6 +38,11 @@ export interface ArticleData {
   id: string;
   isJsonContent: boolean;
   jsonData: Record<string, unknown> | unknown[] | null;
+}
+
+interface TopZapper {
+  pubkey: string;
+  amount: number;
 }
 
 @Component({
@@ -54,7 +63,7 @@ export interface ArticleData {
     EventMenuComponent,
     MentionHoverDirective,
     CommentsListComponent
-],
+  ],
   templateUrl: './article-display.component.html',
   styleUrl: './article-display.component.scss',
 })
@@ -86,6 +95,17 @@ export class ArticleDisplayComponent {
   // Services
   bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
+  private sharedRelay = inject(SharedRelayService);
+  private eventService = inject(EventService);
+  private zapService = inject(ZapService);
+  private logger = inject(LoggerService);
+
+  // Engagement metrics signals
+  reactionCount = signal<number>(0);
+  commentCount = signal<number>(0);
+  zapTotal = signal<number>(0);
+  topZappers = signal<TopZapper[]>([]);
+  engagementLoading = signal<boolean>(false);
 
   // Computed properties for convenience
   event = computed(() => this.article().event);
@@ -100,6 +120,135 @@ export class ArticleDisplayComponent {
   id = computed(() => this.article().id);
   isJsonContent = computed(() => this.article().isJsonContent);
   jsonData = computed(() => this.article().jsonData);
+
+  // Computed read time based on word count (~200 words per minute)
+  readTime = computed(() => {
+    const content = this.parsedContent();
+    if (!content) return 0;
+
+    // Strip HTML tags and get plain text
+    const plainText = content.toString().replace(/<[^>]*>/g, '');
+    const words = plainText.trim().split(/\s+/).filter(word => word.length > 0);
+    const wordCount = words.length;
+
+    // Average reading speed is ~200-250 words per minute, use 200 for a comfortable pace
+    const minutes = Math.ceil(wordCount / 200);
+    return Math.max(1, minutes); // At least 1 minute
+  });
+
+  constructor() {
+    // Load engagement metrics when article changes
+    effect(() => {
+      const article = this.article();
+      const currentMode = this.mode();
+
+      // Only load engagement in full mode
+      if (currentMode === 'full' && article.event) {
+        untracked(() => {
+          this.loadEngagementMetrics(article.event!);
+        });
+      }
+    });
+  }
+
+  private async loadEngagementMetrics(event: Event): Promise<void> {
+    this.engagementLoading.set(true);
+
+    try {
+      // Load reactions, comments, and zaps in parallel
+      const [reactionCount, commentCount, zapData] = await Promise.all([
+        this.loadReactionCount(event),
+        this.loadCommentCount(event),
+        this.loadZaps(event),
+      ]);
+
+      this.reactionCount.set(reactionCount);
+      this.commentCount.set(commentCount);
+      this.zapTotal.set(zapData.total);
+      this.topZappers.set(zapData.topZappers);
+    } catch (err) {
+      this.logger.error('Failed to load engagement metrics:', err);
+    } finally {
+      this.engagementLoading.set(false);
+    }
+  }
+
+  private async loadReactionCount(event: Event): Promise<number> {
+    try {
+      const reactions = await this.eventService.loadReactions(event.id, event.pubkey);
+      return reactions.events.length;
+    } catch (err) {
+      this.logger.error('Failed to load reactions for article:', err);
+      return 0;
+    }
+  }
+
+  private async loadCommentCount(event: Event): Promise<number> {
+    try {
+      // Get the 'd' tag (identifier) for addressable events
+      const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+
+      // Query for kind 1111 comments using the 'A' tag for addressable events
+      const filter = {
+        kinds: [1111],
+        '#A': [aTagValue],
+        limit: 100,
+      };
+
+      const comments = await this.sharedRelay.getMany(event.pubkey, filter);
+      return comments?.length || 0;
+    } catch (err) {
+      this.logger.error('Failed to load comments for article:', err);
+      return 0;
+    }
+  }
+
+  private async loadZaps(event: Event): Promise<{ total: number; topZappers: TopZapper[] }> {
+    try {
+      const zapReceipts = await this.zapService.getZapsForEvent(event.id);
+      let total = 0;
+      const zapperAmounts = new Map<string, number>();
+
+      for (const receipt of zapReceipts) {
+        const { zapRequest, amount } = this.zapService.parseZapReceipt(receipt);
+        if (amount) {
+          total += amount;
+
+          // Track zapper amounts
+          if (zapRequest) {
+            const zapperPubkey = zapRequest.pubkey;
+            const current = zapperAmounts.get(zapperPubkey) || 0;
+            zapperAmounts.set(zapperPubkey, current + amount);
+          }
+        }
+      }
+
+      // Get top 3 zappers
+      const topZappers = Array.from(zapperAmounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([pubkey, amount]) => ({ pubkey, amount }));
+
+      return { total, topZappers };
+    } catch (err) {
+      this.logger.error('Failed to load zaps for article:', err);
+      return { total: 0, topZappers: [] };
+    }
+  }
+
+  /**
+   * Format zap amount for display (e.g., 1000 -> "1k", 1500000 -> "1.5M")
+   */
+  formatZapAmount(sats: number): string {
+    if (sats >= 1000000) {
+      return (sats / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    }
+    if (sats >= 1000) {
+      return (sats / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    }
+    return sats.toString();
+  }
 
   /**
    * Get keys from an object for template iteration
