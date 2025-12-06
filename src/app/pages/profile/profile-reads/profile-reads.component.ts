@@ -1,7 +1,7 @@
-import { Component, inject, signal, Input, OnChanges, SimpleChanges, effect } from '@angular/core';
+import { Component, inject, signal, Input, OnChanges, SimpleChanges, effect, ChangeDetectionStrategy } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
-import { ActivatedRoute, RouterModule } from '@angular/router';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ProfileStateService } from '../../../services/profile-state.service';
@@ -10,29 +10,33 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
 import { MatButtonModule } from '@angular/material/button';
 import { UtilitiesService } from '../../../services/utilities.service';
-import { ArticleEventComponent } from '../../../components/event-types';
 import { LayoutService } from '../../../services/layout.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { AgoPipe } from '../../../pipes/ago.pipe';
+import { Event, nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-profile-reads',
-  standalone: true,
   imports: [
     MatIconModule,
     MatCardModule,
     RouterModule,
     MatTooltipModule,
     MatButtonModule,
-    ArticleEventComponent,
-    MatProgressSpinnerModule
-],
+    MatProgressSpinnerModule,
+    UserProfileComponent,
+    AgoPipe,
+  ],
   templateUrl: './profile-reads.component.html',
   styleUrl: './profile-reads.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ProfileReadsComponent implements OnChanges {
   @Input() isVisible = false;
 
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
@@ -151,6 +155,35 @@ export class ProfileReadsComponent implements OnChanges {
     } catch (err) {
       this.logger.error('Failed to load more articles', err);
       this.error.set('Failed to load older articles. Please try again.');
+    }
+  }
+
+  /**
+   * Get the article title from the event tags
+   */
+  getArticleTitle(event: Event): string {
+    return this.utilities.getTagValues('title', event.tags)[0] || '';
+  }
+
+  /**
+   * Get the article image from the event tags
+   */
+  getArticleImage(event: Event): string {
+    return this.utilities.getTagValues('image', event.tags)[0] || '';
+  }
+
+  /**
+   * Open the full article page
+   */
+  openArticle(event: Event): void {
+    const slug = this.utilities.getTagValues('d', event.tags)[0];
+    if (slug) {
+      const naddr = nip19.naddrEncode({
+        identifier: slug,
+        pubkey: event.pubkey,
+        kind: event.kind,
+      });
+      this.router.navigate(['/a', naddr]);
     }
   }
 }

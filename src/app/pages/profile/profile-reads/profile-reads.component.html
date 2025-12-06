@@ -1,30 +1,67 @@
 <div class="tab-content">
-  @if (profileState.articles().length === 0) {
-    <div class="empty-state">
-      <mat-icon>bookmark</mat-icon>
-      <p>No articles to display yet</p>
-    </div>
+  <div class="articles-header">
+    <span class="articles-label">Articles</span>
+    <span class="articles-count">{{ profileState.articles().length }} articles</span>
+  </div>
+
+  @if (profileState.articles().length === 0 && !profileState.isLoadingMoreArticles()) {
+  <div class="empty-state">
+    <mat-icon>article</mat-icon>
+    <p>No articles to display yet</p>
+  </div>
   } @else {
-    <div class="reads-list">
-      @for (note of profileState.articles(); track note.event.id) {
-        <app-article-event [event]="note.event"></app-article-event>
-      }
-
-      <!-- Loading more indicator -->
-      @if (profileState.isLoadingMoreArticles()) {
-        <div class="loading-more-indicator">
-          <mat-spinner diameter="24"></mat-spinner>
-          <p>Loading more articles...</p>
-        </div>
-      }
-
-      <!-- No more content indicator -->
-      @if (!profileState.hasMoreArticles() && profileState.articles().length > 0) {
-        <div class="no-more-content">
+  <div class="articles-grid">
+    @for (note of profileState.articles(); track note.event.id) {
+    <div class="article-card" (click)="openArticle(note.event)" (keydown.enter)="openArticle(note.event)" tabindex="0"
+      role="button">
+      <div class="article-image-container">
+        @if (getArticleImage(note.event); as image) {
+        <img [src]="image" [alt]="getArticleTitle(note.event)" [title]="getArticleTitle(note.event)" loading="lazy" />
+        } @else {
+        <div class="image-placeholder">
           <mat-icon>article</mat-icon>
-          <p>No more articles to load</p>
         </div>
-      }
+        }
+      </div>
+      <div class="article-content">
+        <div class="article-author-row">
+          <app-user-profile [pubkey]="note.event.pubkey" view="compact" [showRank]="false"></app-user-profile>
+          <span class="article-date">{{ note.event.created_at | ago }}</span>
+        </div>
+        <h3 class="article-title">{{ getArticleTitle(note.event) || 'Untitled' }}</h3>
+        <div class="article-actions">
+          <button mat-icon-button class="action-btn" (click)="$event.stopPropagation()" matTooltip="Like">
+            <mat-icon>favorite_border</mat-icon>
+          </button>
+          <button mat-icon-button class="action-btn" (click)="$event.stopPropagation()" matTooltip="Comments">
+            <mat-icon>chat_bubble_outline</mat-icon>
+          </button>
+          <button mat-icon-button class="action-btn" (click)="$event.stopPropagation()" matTooltip="Zaps">
+            <mat-icon>bolt</mat-icon>
+          </button>
+          <button mat-icon-button class="action-btn" (click)="$event.stopPropagation()" matTooltip="Share">
+            <mat-icon>share</mat-icon>
+          </button>
+        </div>
+      </div>
     </div>
+    }
+  </div>
+
+  <!-- Loading more indicator -->
+  @if (profileState.isLoadingMoreArticles()) {
+  <div class="loading-more-indicator">
+    <mat-spinner diameter="24"></mat-spinner>
+    <p>Loading more articles...</p>
+  </div>
+  }
+
+  <!-- No more content indicator -->
+  @if (!profileState.hasMoreArticles() && profileState.articles().length > 0) {
+  <div class="no-more-content">
+    <mat-icon>check_circle</mat-icon>
+    <p>You've seen all articles</p>
+  </div>
+  }
   }
 </div>
