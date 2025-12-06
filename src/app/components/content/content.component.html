@@ -65,8 +65,8 @@
   }
   }
 
-  <!-- Tagged references (mentions and articles) -->
-  @if (event()) {
+  <!-- Tagged references (mentions and articles) - hidden when in comment context -->
+  @if (event() && !hideTaggedReferences()) {
   <app-tagged-references [event]="event()!"></app-tagged-references>
   }
   } @else {
