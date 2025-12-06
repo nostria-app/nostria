@@ -196,6 +196,19 @@ export class CustomDialogService {
     // Set the component instance on the dialog ref
     customDialogRef.componentInstance = contentRef.instance;
 
+    // Pass dialogRef to the component if it has that property
+    const instance = contentRef.instance as Record<string, unknown>;
+    if ('dialogRef' in instance) {
+      instance['dialogRef'] = customDialogRef;
+    }
+
+    // Pass data to the component if provided
+    if (config.data !== undefined) {
+      if ('data' in instance) {
+        instance['data'] = config.data;
+      }
+    }
+
     // Store the dialog component reference for dynamic updates (like title)
     customDialogRef.setDialogComponentRef(dialogRef);
 
