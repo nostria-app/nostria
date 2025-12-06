@@ -26,11 +26,23 @@
         <h3 class="article-title">{{ getArticleTitle(note.event) || 'Untitled' }}</h3>
         <div class="article-actions">
           <app-reaction-button [event]="note.event"></app-reaction-button>
-          <button mat-icon-button class="action-btn" (click)="openComments(note.event); $event.stopPropagation()"
-            matTooltip="Comments">
+          <button mat-icon-button class="action-btn comment-btn"
+            (click)="openComments(note.event); $event.stopPropagation()" matTooltip="Comments">
             <mat-icon>chat_bubble_outline</mat-icon>
+            @if (getEngagement(note.event.id); as engagement) {
+            @if (!engagement.isLoading && engagement.commentCount > 0) {
+            <span class="count-badge">{{ engagement.commentCount }}</span>
+            }
+            }
           </button>
-          <app-zap-button [event]="note.event" (click)="$event.stopPropagation()"></app-zap-button>
+          <span class="zap-action" (click)="$event.stopPropagation()">
+            <app-zap-button [event]="note.event"></app-zap-button>
+            @if (getEngagement(note.event.id); as engagement) {
+            @if (!engagement.isLoading && engagement.zapTotal > 0) {
+            <span class="zap-count">{{ formatZapAmount(engagement.zapTotal) }}</span>
+            }
+            }
+          </span>
           <button mat-icon-button class="action-btn" (click)="shareArticle(note.event); $event.stopPropagation()"
             matTooltip="Share">
             <mat-icon>share</mat-icon>
