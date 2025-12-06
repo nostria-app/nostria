@@ -65,6 +65,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Input for the event (to access tags for mentions/articles)
   event = input<NostrEvent | null>(null);
 
+  // Input to hide tagged references (useful for comments/replies where the parent is already visible)
+  hideTaggedReferences = input<boolean>(false);
+
   // Track visibility of the component
   private _isVisible = signal<boolean>(false);
   private _hasBeenVisible = signal<boolean>(false);
