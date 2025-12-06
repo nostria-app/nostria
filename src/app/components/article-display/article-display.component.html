@@ -46,14 +46,7 @@
         <!-- Top Zappers -->
         @if (topZappers().length > 0) {
         <div class="top-zappers">
-          <span class="zappers-label">Top zappers:</span>
-          <div class="zappers-list">
-            @for (zapper of topZappers(); track zapper.pubkey) {
-            <div class="zapper-item" [title]="formatZapAmount(zapper.amount) + ' sats'">
-              <app-user-profile [pubkey]="zapper.pubkey" view="icon"></app-user-profile>
-            </div>
-            }
-          </div>
+          <app-zap-chips [zappers]="topZappers()" [maxDisplay]="4"></app-zap-chips>
         </div>
         }
         }

@@ -305,7 +305,6 @@ export class InstallDialogComponent {
   }
 
   openWindowsStore(): void {
-    // TODO: Replace with actual Microsoft Store link when available
     window.open('https://apps.microsoft.com/store/detail/9N7F0TWQ0D8G', '_blank');
     this.dialogRef.close();
   }
@@ -322,9 +321,7 @@ export class InstallDialogComponent {
   }
 
   openAppStore(): void {
-    alert('App Store link is not available yet.');
-    // TODO: Replace with actual App Store link when available
-    // window.open('https://apps.apple.com/', '_blank');
-    // this.dialogRef.close();
+    window.open('https://testflight.apple.com/join/ysTpCtum', '_blank');
+    this.dialogRef.close();
   }
 }
