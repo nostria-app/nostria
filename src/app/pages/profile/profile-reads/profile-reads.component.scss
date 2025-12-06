@@ -164,25 +164,37 @@
   .article-actions {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 0;
     margin-top: 4px;
+
+    // Style for the action button components
+    ::ng-deep {
+      app-reaction-button,
+      app-zap-button {
+        button {
+          width: 32px;
+          height: 32px;
+          
+          mat-icon {
+            font-size: 18px;
+            width: 18px;
+            height: 18px;
+          }
+        }
+      }
+    }
 
     .action-btn {
       width: 32px;
       height: 32px;
       display: flex;
       align-items: center;
-      gap: 2px;
+      justify-content: center;
 
       mat-icon {
         font-size: 18px;
         width: 18px;
         height: 18px;
-        color: var(--mat-sys-on-surface-variant);
-      }
-
-      .action-count {
-        font-size: 0.75rem;
         color: var(--mat-sys-on-surface-variant);
       }
 
