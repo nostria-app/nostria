@@ -2,9 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatListModule } from '@angular/material/list';
 import { CustomDialogService } from '../../services/custom-dialog.service';
 import { NoteEditorDialogComponent, NoteEditorDialogData } from '../note-editor-dialog/note-editor-dialog.component';
 import { nip19 } from 'nostr-tools';
@@ -21,82 +19,83 @@ export interface ShareArticleDialogData {
 
 @Component({
   selector: 'app-share-article-dialog',
-  imports: [MatDialogModule, MatButtonModule, MatIconModule, MatDividerModule, MatListModule],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule],
   template: `
-    <div class="dialog-header">
-      <h2 mat-dialog-title>Share Article</h2>
-      <button mat-icon-button (click)="close()" class="close-button" aria-label="Close dialog">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
+    <h2 mat-dialog-title>Share Article</h2>
     <mat-dialog-content>
-      <mat-nav-list>
-        <button mat-list-item (click)="shareAsNote()">
-          <mat-icon matListItemIcon>edit_note</mat-icon>
-          <span matListItemTitle>Share as Note</span>
-          <span matListItemLine>Create a new note mentioning this article</span>
+      <div class="share-options">
+        <button mat-stroked-button class="share-option" (click)="shareAsNote()">
+          <mat-icon>edit_note</mat-icon>
+          <div class="option-text">
+            <span class="option-title">Share as Note</span>
+            <span class="option-description">Create a new note mentioning this article</span>
+          </div>
         </button>
 
-        <mat-divider></mat-divider>
-
         @if (canNativeShare()) {
-          <button mat-list-item (click)="nativeShare()">
-            <mat-icon matListItemIcon>share</mat-icon>
-            <span matListItemTitle>Share via Device</span>
-            <span matListItemLine>Use your device's native sharing options</span>
+          <button mat-stroked-button class="share-option" (click)="nativeShare()">
+            <mat-icon>share</mat-icon>
+            <div class="option-text">
+              <span class="option-title">Share via Device</span>
+              <span class="option-description">Use your device's native sharing options</span>
+            </div>
           </button>
         }
 
-        <button mat-list-item (click)="copyLink()">
-          <mat-icon matListItemIcon>link</mat-icon>
-          <span matListItemTitle>Copy Link</span>
-          <span matListItemLine>Copy article link to clipboard</span>
+        <button mat-stroked-button class="share-option" (click)="copyLink()">
+          <mat-icon>link</mat-icon>
+          <div class="option-text">
+            <span class="option-title">Copy Link</span>
+            <span class="option-description">Copy article link to clipboard</span>
+          </div>
         </button>
 
-        <button mat-list-item (click)="copyNostrLink()">
-          <mat-icon matListItemIcon>tag</mat-icon>
-          <span matListItemTitle>Copy Nostr Address</span>
-          <span matListItemLine>Copy naddr identifier for Nostr clients</span>
+        <button mat-stroked-button class="share-option" (click)="copyNostrLink()">
+          <mat-icon>tag</mat-icon>
+          <div class="option-text">
+            <span class="option-title">Copy Nostr Address</span>
+            <span class="option-description">Copy naddr identifier for Nostr clients</span>
+          </div>
         </button>
-      </mat-nav-list>
+      </div>
     </mat-dialog-content>
     <mat-dialog-actions align="end">
-      <button mat-button (click)="close()">Cancel</button>
+      <button mat-button mat-dialog-close>Cancel</button>
     </mat-dialog-actions>
   `,
-  styles: [`
-    .dialog-header {
+  styles: `
+    .share-options {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 300px;
+    }
+
+    .share-option {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding-right: 8px;
+      justify-content: flex-start;
+      gap: 16px;
+      padding: 12px 16px;
+      height: auto;
+      text-align: left;
     }
 
-    .dialog-header h2 {
-      margin: 0;
+    .option-text {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
     }
 
-    .close-button {
-      margin-top: -8px;
+    .option-title {
+      line-height: 1.4;
     }
 
-    mat-dialog-content {
-      min-width: 280px;
-      padding: 0 !important;
+    .option-description {
+      font-size: 12px;
+      opacity: 0.7;
     }
-
-    mat-nav-list {
-      padding-top: 0;
-    }
-
-    a[mat-list-item] {
-      cursor: pointer;
-    }
-
-    mat-icon[matListItemIcon] {
-      color: var(--mat-sys-primary);
-    }
-  `],
+  `,
 })
 export class ShareArticleDialogComponent {
   private dialogRef = inject(MatDialogRef<ShareArticleDialogComponent>);
@@ -105,10 +104,6 @@ export class ShareArticleDialogComponent {
   private customDialog = inject(CustomDialogService);
 
   canNativeShare = signal(typeof navigator !== 'undefined' && !!navigator.share);
-
-  close() {
-    this.dialogRef.close();
-  }
 
   shareAsNote() {
     // Create the naddr for the article

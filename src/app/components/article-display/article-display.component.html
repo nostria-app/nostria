@@ -230,7 +230,7 @@
       }
 
       <!-- Text-to-Speech Controls -->
-      @if (!isSpeaking()) {
+      <!-- @if (!isSpeaking()) {
       <button mat-button color="primary" (click)="startSpeech.emit()" title="Read article aloud">
         <mat-icon>volume_up</mat-icon>
         Read Aloud
@@ -251,7 +251,7 @@
         <mat-icon>stop</mat-icon>
         Stop
       </button>
-      }
+      } -->
 
       @if (event()) {
       <app-event-menu [event]="event()!" [view]="'full'"></app-event-menu>
