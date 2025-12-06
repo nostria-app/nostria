@@ -1,4 +1,4 @@
-import { Component, inject, signal, Input, OnChanges, SimpleChanges, effect, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, Input, OnChanges, SimpleChanges, effect, ChangeDetectionStrategy, computed } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
@@ -15,6 +15,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { AgoPipe } from '../../../pipes/ago.pipe';
 import { Event, nip19 } from 'nostr-tools';
+import { ReactionButtonComponent } from '../../../components/event/reaction-button/reaction-button.component';
+import { ZapButtonComponent } from '../../../components/zap-button/zap-button.component';
+import { EventService } from '../../../services/event';
 
 @Component({
   selector: 'app-profile-reads',
@@ -27,6 +30,8 @@ import { Event, nip19 } from 'nostr-tools';
     MatProgressSpinnerModule,
     UserProfileComponent,
     AgoPipe,
+    ReactionButtonComponent,
+    ZapButtonComponent,
   ],
   templateUrl: './profile-reads.component.html',
   styleUrl: './profile-reads.component.scss',
@@ -43,6 +48,10 @@ export class ProfileReadsComponent implements OnChanges {
   bookmark = inject(BookmarkService);
   utilities = inject(UtilitiesService);
   private layoutService = inject(LayoutService);
+  private eventService = inject(EventService);
+
+  // Use sorted articles from profile state
+  sortedArticles = computed(() => this.profileState.sortedArticles());
 
   isLoading = signal(true);
   error = signal<string | null>(null);
@@ -184,6 +193,42 @@ export class ProfileReadsComponent implements OnChanges {
         kind: event.kind,
       });
       this.router.navigate(['/a', naddr]);
+    }
+  }
+
+  /**
+   * Open comments for an article
+   */
+  openComments(event: Event): void {
+    // Navigate to the article page which shows comments
+    this.openArticle(event);
+  }
+
+  /**
+   * Share an article
+   */
+  shareArticle(event: Event): void {
+    const slug = this.utilities.getTagValues('d', event.tags)[0];
+    const title = this.getArticleTitle(event);
+    
+    if (slug) {
+      const naddr = nip19.naddrEncode({
+        identifier: slug,
+        pubkey: event.pubkey,
+        kind: event.kind,
+      });
+      const url = `${window.location.origin}/a/${naddr}`;
+      
+      if (navigator.share) {
+        navigator.share({
+          title: title || 'Article',
+          text: `Check out this article on Nostria`,
+          url: url,
+        }).catch(err => this.logger.error('Error sharing article:', err));
+      } else {
+        // Fallback to clipboard - copyToClipboard shows its own snackbar
+        this.layoutService.copyToClipboard(url, 'Article link');
+      }
     }
   }
 }

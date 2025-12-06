@@ -1,12 +1,12 @@
 <div class="tab-content">
-  @if (profileState.articles().length === 0 && !profileState.isLoadingMoreArticles()) {
+  @if (sortedArticles().length === 0 && !profileState.isLoadingMoreArticles()) {
   <div class="empty-state">
     <mat-icon>article</mat-icon>
     <p>No articles to display yet</p>
   </div>
   } @else {
   <div class="articles-grid">
-    @for (note of profileState.articles(); track note.event.id) {
+    @for (note of sortedArticles(); track note.event.id) {
     <div class="article-card" (click)="openArticle(note.event)" (keydown.enter)="openArticle(note.event)" tabindex="0"
       role="button">
       <div class="article-image-container">
@@ -25,16 +25,12 @@
         </div>
         <h3 class="article-title">{{ getArticleTitle(note.event) || 'Untitled' }}</h3>
         <div class="article-actions">
-          <button mat-icon-button class="action-btn" (click)="$event.stopPropagation()" matTooltip="Like">
-            <mat-icon>favorite_border</mat-icon>
-          </button>
-          <button mat-icon-button class="action-btn" (click)="$event.stopPropagation()" matTooltip="Comments">
+          <app-reaction-button [event]="note.event"></app-reaction-button>
+          <button mat-icon-button class="action-btn" (click)="openComments(note.event); $event.stopPropagation()" matTooltip="Comments">
             <mat-icon>chat_bubble_outline</mat-icon>
           </button>
-          <button mat-icon-button class="action-btn" (click)="$event.stopPropagation()" matTooltip="Zaps">
-            <mat-icon>bolt</mat-icon>
-          </button>
-          <button mat-icon-button class="action-btn" (click)="$event.stopPropagation()" matTooltip="Share">
+          <app-zap-button [event]="note.event" (click)="$event.stopPropagation()"></app-zap-button>
+          <button mat-icon-button class="action-btn" (click)="shareArticle(note.event); $event.stopPropagation()" matTooltip="Share">
             <mat-icon>share</mat-icon>
           </button>
         </div>
