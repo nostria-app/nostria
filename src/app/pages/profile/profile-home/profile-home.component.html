@@ -3,7 +3,7 @@
   <a mat-tab-link [routerLink]="link.path" routerLinkActive #rla="routerLinkActive"
     [active]="isLinkActive(link.path, rla.isActive)" [queryParamsHandling]="'preserve'">
     <mat-icon>{{ link.icon }}</mat-icon>
-    <span class="nav-link-text hide-tiny">{{ link.label }}</span>
+    <span class="nav-link-text hide-tiny">{{ getLabel(link) }}</span>
   </a>
   }
 </nav>

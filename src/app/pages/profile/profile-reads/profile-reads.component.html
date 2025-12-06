@@ -1,9 +1,4 @@
 <div class="tab-content">
-  <div class="articles-header">
-    <span class="articles-label">Articles</span>
-    <span class="articles-count">{{ profileState.articles().length }} articles</span>
-  </div>
-
   @if (profileState.articles().length === 0 && !profileState.isLoadingMoreArticles()) {
   <div class="empty-state">
     <mat-icon>article</mat-icon>
