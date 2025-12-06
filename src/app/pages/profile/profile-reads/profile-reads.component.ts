@@ -18,6 +18,16 @@ import { Event, nip19 } from 'nostr-tools';
 import { ReactionButtonComponent } from '../../../components/event/reaction-button/reaction-button.component';
 import { ZapButtonComponent } from '../../../components/zap-button/zap-button.component';
 import { EventService } from '../../../services/event';
+import { SharedRelayService } from '../../../services/relays/shared-relay';
+import { ZapService } from '../../../services/zap.service';
+import { AccountStateService } from '../../../services/account-state.service';
+
+/** Engagement metrics for an article */
+interface ArticleEngagement {
+  commentCount: number;
+  zapTotal: number;
+  isLoading: boolean;
+}
 
 @Component({
   selector: 'app-profile-reads',
@@ -49,9 +59,15 @@ export class ProfileReadsComponent implements OnChanges {
   utilities = inject(UtilitiesService);
   private layoutService = inject(LayoutService);
   private eventService = inject(EventService);
+  private sharedRelay = inject(SharedRelayService);
+  private zapService = inject(ZapService);
+  private accountState = inject(AccountStateService);
 
   // Use sorted articles from profile state
   sortedArticles = computed(() => this.profileState.sortedArticles());
+
+  // Store engagement data per article (keyed by event id)
+  articleEngagement = signal<Map<string, ArticleEngagement>>(new Map());
 
   isLoading = signal(true);
   error = signal<string | null>(null);
@@ -83,6 +99,20 @@ export class ProfileReadsComponent implements OnChanges {
       ) {
         this.logger.debug('Scrolled to bottom, loading more articles...');
         this.loadMoreArticles();
+      }
+    });
+
+    // Effect to load engagement data when articles change
+    effect(() => {
+      const articles = this.sortedArticles();
+      const currentEngagement = this.articleEngagement();
+
+      // Find articles without engagement data
+      const newArticles = articles.filter(a => !currentEngagement.has(a.event.id));
+
+      if (newArticles.length > 0) {
+        // Load engagement data for new articles
+        this.loadEngagementForArticles(newArticles.map(a => a.event));
       }
     });
   }
@@ -182,7 +212,7 @@ export class ProfileReadsComponent implements OnChanges {
   }
 
   /**
-   * Open the full article page
+   * Open the full article page - passes event through router state for instant rendering
    */
   openArticle(event: Event): void {
     const slug = this.utilities.getTagValues('d', event.tags)[0];
@@ -192,7 +222,7 @@ export class ProfileReadsComponent implements OnChanges {
         pubkey: event.pubkey,
         kind: event.kind,
       });
-      this.router.navigate(['/a', naddr]);
+      this.router.navigate(['/a', naddr], { state: { event } });
     }
   }
 
@@ -230,5 +260,121 @@ export class ProfileReadsComponent implements OnChanges {
         this.layoutService.copyToClipboard(url, 'Article link');
       }
     }
+  }
+
+  /**
+   * Load engagement data (comments count, zaps total) for articles
+   */
+  async loadEngagementForArticles(events: Event[]): Promise<void> {
+    const userPubkey = this.accountState.pubkey();
+    if (!userPubkey) return;
+
+    // Initialize loading state for each article
+    const currentEngagement = new Map(this.articleEngagement());
+    for (const event of events) {
+      currentEngagement.set(event.id, {
+        commentCount: 0,
+        zapTotal: 0,
+        isLoading: true,
+      });
+    }
+    this.articleEngagement.set(currentEngagement);
+
+    // Load engagement for each article in parallel
+    const loadPromises = events.map(async (event) => {
+      try {
+        const [commentCount, zapTotal] = await Promise.all([
+          this.loadCommentCount(event, userPubkey),
+          this.loadZapTotal(event),
+        ]);
+
+        // Update engagement data
+        const updated = new Map(this.articleEngagement());
+        updated.set(event.id, {
+          commentCount,
+          zapTotal,
+          isLoading: false,
+        });
+        this.articleEngagement.set(updated);
+      } catch (err) {
+        this.logger.error('Failed to load engagement for article:', event.id, err);
+        // Set loading to false even on error
+        const updated = new Map(this.articleEngagement());
+        updated.set(event.id, {
+          commentCount: 0,
+          zapTotal: 0,
+          isLoading: false,
+        });
+        this.articleEngagement.set(updated);
+      }
+    });
+
+    await Promise.all(loadPromises);
+  }
+
+  /**
+   * Load comment count for an addressable event (article)
+   */
+  private async loadCommentCount(event: Event, userPubkey: string): Promise<number> {
+    try {
+      // Get the 'd' tag (identifier) for addressable events
+      const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+
+      // Query for kind 1111 comments using the 'A' tag for addressable events
+      const filter = {
+        kinds: [1111],
+        '#A': [aTagValue],
+        limit: 100,
+      };
+
+      const comments = await this.sharedRelay.getMany(userPubkey, filter);
+      return comments?.length || 0;
+    } catch (err) {
+      this.logger.error('Failed to load comments for article:', err);
+      return 0;
+    }
+  }
+
+  /**
+   * Load total zap amount for an event
+   */
+  private async loadZapTotal(event: Event): Promise<number> {
+    try {
+      const zapReceipts = await this.zapService.getZapsForEvent(event.id);
+      let total = 0;
+
+      for (const receipt of zapReceipts) {
+        const parsed = this.zapService.parseZapReceipt(receipt);
+        if (parsed.amount) {
+          total += parsed.amount;
+        }
+      }
+
+      return total;
+    } catch (err) {
+      this.logger.error('Failed to load zaps for article:', err);
+      return 0;
+    }
+  }
+
+  /**
+   * Get engagement data for an article
+   */
+  getEngagement(eventId: string): ArticleEngagement | undefined {
+    return this.articleEngagement().get(eventId);
+  }
+
+  /**
+   * Format zap amount with K/M suffix for display
+   */
+  formatZapAmount(amount: number): string {
+    if (amount >= 1000000) {
+      return (amount / 1000000).toFixed(1) + 'M';
+    }
+    if (amount >= 1000) {
+      return (amount / 1000).toFixed(1) + 'k';
+    }
+    return amount.toString();
   }
 }
