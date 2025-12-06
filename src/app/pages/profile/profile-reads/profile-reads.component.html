@@ -26,11 +26,13 @@
         <h3 class="article-title">{{ getArticleTitle(note.event) || 'Untitled' }}</h3>
         <div class="article-actions">
           <app-reaction-button [event]="note.event"></app-reaction-button>
-          <button mat-icon-button class="action-btn" (click)="openComments(note.event); $event.stopPropagation()" matTooltip="Comments">
+          <button mat-icon-button class="action-btn" (click)="openComments(note.event); $event.stopPropagation()"
+            matTooltip="Comments">
             <mat-icon>chat_bubble_outline</mat-icon>
           </button>
           <app-zap-button [event]="note.event" (click)="$event.stopPropagation()"></app-zap-button>
-          <button mat-icon-button class="action-btn" (click)="shareArticle(note.event); $event.stopPropagation()" matTooltip="Share">
+          <button mat-icon-button class="action-btn" (click)="shareArticle(note.event); $event.stopPropagation()"
+            matTooltip="Share">
             <mat-icon>share</mat-icon>
           </button>
         </div>
