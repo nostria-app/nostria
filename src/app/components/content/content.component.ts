@@ -20,6 +20,13 @@ import { TaggedReferencesComponent } from './tagged-references/tagged-references
 import { Event as NostrEvent } from 'nostr-tools';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 import { RelayPoolService } from '../../services/relays/relay-pool';
+import { ArticleComponent } from '../article/article.component';
+
+interface ArticleMention {
+  pubkey: string;
+  identifier: string;
+  kind: number;
+}
 
 interface SocialPreview {
   url: string;
@@ -45,6 +52,7 @@ interface SocialPreview {
     UserProfileComponent,
     TaggedReferencesComponent,
     BadgeComponent,
+    ArticleComponent,
   ],
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss',
@@ -95,11 +103,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       return [];
     }
 
-    // Return the cached tokens, but filter out nevent and note mentions
-    // since they're rendered separately in eventMentions()
+    // Return the cached tokens, but filter out nevent, note, and naddr mentions
+    // since they're rendered separately in eventMentions() and articleMentions()
     return this._cachedTokens().filter(
       token => !(token.type === 'nostr-mention' &&
-        (token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note'))
+        (token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note' || token.nostrData?.type === 'naddr'))
     );
   });
 
@@ -108,6 +116,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
   // Event mentions with loading state
   eventMentions = signal<{ event: NostrRecord | null; contentTokens: ContentToken[]; loading: boolean; eventId: string }[]>([]);
+
+  // Article mentions (naddr) - these use the ArticleComponent which handles its own loading
+  articleMentions = signal<ArticleMention[]>([]);
 
   @Input() set content(value: string) {
     const newContent = value || '';
@@ -202,6 +213,21 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           t => t.type === 'nostr-mention' && (t.nostrData?.type === 'nevent' || t.nostrData?.type === 'note')
         );
 
+        // Extract article mention tokens (naddr)
+        const articleTokens = newTokens.filter(
+          t => t.type === 'nostr-mention' && t.nostrData?.type === 'naddr'
+        );
+
+        // Create article mentions from naddr tokens
+        const articles: ArticleMention[] = articleTokens.map(token => {
+          const data = token.nostrData?.data as { pubkey: string; identifier: string; kind: number };
+          return {
+            pubkey: data.pubkey,
+            identifier: data.identifier,
+            kind: data.kind,
+          };
+        });
+
         // Create initial placeholders with loading state
         const initialMentions = mentionTokens.map(mention => {
           const eventId = mention.nostrData?.type === 'nevent'
@@ -219,6 +245,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         untracked(() => {
           this._cachedTokens.set(newTokens);
           this.eventMentions.set(initialMentions);
+          this.articleMentions.set(articles);
           this._lastParsedContent = content;
         });
 
@@ -310,6 +337,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           }];
           this._cachedTokens.set(fallbackTokens);
           this.eventMentions.set([]);
+          this.articleMentions.set([]);
           this._lastParsedContent = content;
         });
       } finally {
