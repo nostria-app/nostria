@@ -3,6 +3,7 @@ import { Component, computed, inject, input, output, signal, effect, untracked }
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -51,6 +52,7 @@ interface TopZapper {
   imports: [
     MatCardModule,
     MatButtonModule,
+    MatDividerModule,
     MatIconModule,
     MatChipsModule,
     MatMenuModule,
@@ -80,6 +82,9 @@ export class ArticleDisplayComponent {
   isSynthesizing = input<boolean>(false);
   useAiVoice = input<boolean>(false);
   isTranslating = input<boolean>(false);
+  availableVoices = input<SpeechSynthesisVoice[]>([]);
+  selectedVoice = input<SpeechSynthesisVoice | null>(null);
+  playbackRate = input<number>(1);
 
   // Text-to-speech outputs (only used in full mode)
   startSpeech = output<void>();
@@ -87,8 +92,78 @@ export class ArticleDisplayComponent {
   resumeSpeech = output<void>();
   stopSpeech = output<void>();
   toggleAiVoice = output<boolean>();
+  voiceChange = output<SpeechSynthesisVoice>();
+  playbackRateChange = output<number>();
   share = output<void>();
   translate = output<string>();
+
+  // Playback speed options
+  playbackRates = [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
+
+  // Group voices by language for display
+  groupedVoices = computed(() => {
+    const voices = this.availableVoices();
+    const groups: Record<string, SpeechSynthesisVoice[]> = {};
+
+    for (const voice of voices) {
+      // Extract language name from lang code (e.g., "en-US" -> "English")
+      const langCode = voice.lang.split('-')[0];
+      const langName = this.getLanguageName(langCode);
+
+      if (!groups[langName]) {
+        groups[langName] = [];
+      }
+      groups[langName].push(voice);
+    }
+
+    return groups;
+  });
+
+  languageGroups = computed(() => Object.keys(this.groupedVoices()).sort());
+
+  private getLanguageName(code: string): string {
+    const names: Record<string, string> = {
+      'en': 'English',
+      'es': 'Spanish',
+      'fr': 'French',
+      'de': 'German',
+      'it': 'Italian',
+      'pt': 'Portuguese',
+      'ru': 'Russian',
+      'zh': 'Chinese',
+      'ja': 'Japanese',
+      'ko': 'Korean',
+      'ar': 'Arabic',
+      'hi': 'Hindi',
+      'nl': 'Dutch',
+      'pl': 'Polish',
+      'sv': 'Swedish',
+      'da': 'Danish',
+      'no': 'Norwegian',
+      'fi': 'Finnish',
+      'tr': 'Turkish',
+      'cs': 'Czech',
+      'el': 'Greek',
+      'he': 'Hebrew',
+      'th': 'Thai',
+      'vi': 'Vietnamese',
+      'id': 'Indonesian',
+      'ms': 'Malay',
+      'fil': 'Filipino',
+      'uk': 'Ukrainian',
+      'ro': 'Romanian',
+      'hu': 'Hungarian',
+      'sk': 'Slovak',
+      'bg': 'Bulgarian',
+      'hr': 'Croatian',
+      'sl': 'Slovenian',
+      'lt': 'Lithuanian',
+      'lv': 'Latvian',
+      'et': 'Estonian',
+      'af': 'Afrikaans',
+    };
+    return names[code] || code.toUpperCase();
+  }
 
   layout = inject(LayoutService);
 

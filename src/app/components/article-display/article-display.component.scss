@@ -14,6 +14,56 @@
   padding: 0;
 }
 
+// Voice and speed menu styles
+::ng-deep {
+  .menu-header {
+    padding: 8px 16px;
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .voice-group {
+    .voice-group-label {
+      padding: 8px 16px 4px;
+      font-size: 0.7rem;
+      color: var(--mat-sys-on-surface-variant);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      background: var(--mat-sys-surface-container);
+    }
+
+    button.selected {
+      background-color: var(--mat-sys-primary-container);
+    }
+
+    button.natural-voice .voice-name {
+      color: var(--mat-sys-primary);
+    }
+
+    .voice-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .voice-badge {
+      font-size: 0.65rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background-color: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+      margin-left: 8px;
+    }
+  }
+
+  .mat-mdc-menu-item.selected {
+    background-color: var(--mat-sys-primary-container);
+  }
+}
+
 // Article header
 .article-header {
   margin-bottom: 32px;

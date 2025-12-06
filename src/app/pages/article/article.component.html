@@ -35,8 +35,10 @@
   <!-- Use ArticleDisplayComponent for rendering -->
   <app-article-display [article]="articleData()" mode="full" [isSpeaking]="isSpeaking()" [isPaused]="isPaused()"
     [useAiVoice]="useAiVoice()" [isSynthesizing]="isSynthesizing()" [isTranslating]="isTranslating()"
+    [availableVoices]="availableVoices()" [selectedVoice]="selectedVoice()" [playbackRate]="playbackRate()"
     (startSpeech)="startSpeech()" (pauseSpeech)="pauseSpeech()" (resumeSpeech)="resumeSpeech()"
-    (stopSpeech)="stopSpeech()" (toggleAiVoice)="useAiVoice.set($event)" (share)="shareArticle()"
+    (stopSpeech)="stopSpeech()" (toggleAiVoice)="useAiVoice.set($event)" (voiceChange)="onVoiceChange($event)"
+    (playbackRateChange)="onPlaybackRateChange($event)" (share)="shareArticle()"
     (translate)="onTranslate($event)"></app-article-display>
 </div>
 } @else {

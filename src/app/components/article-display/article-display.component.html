@@ -93,14 +93,49 @@
             <button mat-menu-item (click)="translate.emit('jpn_Jpan')">Japanese</button>
           </mat-menu>
 
+          <!-- Playback Speed Menu -->
+          <button mat-icon-button [matMenuTriggerFor]="speedMenu" matTooltip="Playback Speed">
+            <mat-icon>speed</mat-icon>
+          </button>
+          <mat-menu #speedMenu="matMenu">
+            <div class="menu-header">Playback Speed</div>
+            @for (rate of playbackRates; track rate) {
+            <button mat-menu-item (click)="playbackRateChange.emit(rate)" [class.selected]="playbackRate() === rate">
+              <mat-icon>{{ playbackRate() === rate ? 'check' : '' }}</mat-icon>
+              <span>{{ rate }}x</span>
+            </button>
+            }
+          </mat-menu>
+
+          <!-- Voice Selection Menu -->
           <button mat-icon-button [matMenuTriggerFor]="voiceMenu" matTooltip="Voice Settings">
             <mat-icon>settings_voice</mat-icon>
           </button>
-          <mat-menu #voiceMenu="matMenu">
+          <mat-menu #voiceMenu="matMenu" class="voice-menu">
             <button mat-menu-item (click)="toggleAiVoice.emit(!useAiVoice())">
               <mat-icon>{{ useAiVoice() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
               <span>Use AI Voice (SpeechT5)</span>
             </button>
+            @if (!useAiVoice() && availableVoices().length > 0) {
+            <mat-divider></mat-divider>
+            <div class="menu-header">Select Voice</div>
+            @for (lang of languageGroups(); track lang) {
+            <div class="voice-group">
+              <div class="voice-group-label">{{ lang }}</div>
+              @for (voice of groupedVoices()[lang]; track voice.name) {
+              <button mat-menu-item (click)="voiceChange.emit(voice)"
+                [class.selected]="selectedVoice()?.name === voice.name"
+                [class.natural-voice]="voice.name.includes('Natural') || voice.name.includes('Online')">
+                <mat-icon>{{ selectedVoice()?.name === voice.name ? 'check' : '' }}</mat-icon>
+                <span class="voice-name">{{ voice.name.replace('Microsoft ', '').replace(' Online', '') }}</span>
+                @if (voice.name.includes('Natural') || voice.name.includes('Online')) {
+                <span class="voice-badge">Natural</span>
+                }
+              </button>
+              }
+            </div>
+            }
+            }
           </mat-menu>
 
           @if (!isSpeaking()) {
