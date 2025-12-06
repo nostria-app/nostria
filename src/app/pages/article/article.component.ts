@@ -32,6 +32,7 @@ import { Cache } from '../../services/cache';
 import { BookmarkService } from '../../services/bookmark.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
+import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 import { NostrRecord } from '../../interfaces';
 
 @Component({
@@ -390,37 +391,22 @@ export class ArticleComponent implements OnDestroy {
     // Parse title and summary from the Nostr event tags
     const title = this.title();
     const summary = this.summary();
+    const identifier = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
 
-    const shareData: ShareData = {
+    const dialogData: ShareArticleDialogData = {
       title: title || 'Nostr Article',
-      text: summary || `Check out this article: ${title || 'Nostr Article'}`,
+      summary: summary || undefined,
       url: window.location.href,
+      eventId: event.id,
+      pubkey: event.pubkey,
+      identifier: identifier,
+      kind: event.kind,
     };
 
-    try {
-      if (navigator.share && navigator.canShare(shareData)) {
-        await navigator.share(shareData);
-      } else {
-        // Fallback to clipboard
-        const textToShare = `${title || 'Nostr Article'}\n\n${summary || ''}\n\n${window.location.href}`;
-        await navigator.clipboard.writeText(textToShare);
-
-        // You might want to show a toast/snackbar here indicating the content was copied
-        console.log('Article details copied to clipboard');
-      }
-    } catch (error) {
-      if ((error as Error).name !== 'AbortError') {
-        console.error('Error sharing article:', error);
-        // Fallback to clipboard if sharing fails
-        try {
-          const textToShare = `${title || 'Nostr Article'}\n\n${summary || ''}\n\n${window.location.href}`;
-          await navigator.clipboard.writeText(textToShare);
-          console.log('Article details copied to clipboard');
-        } catch (clipboardError) {
-          console.error('Failed to copy to clipboard:', clipboardError);
-        }
-      }
-    }
+    this.dialog.open(ShareArticleDialogComponent, {
+      data: dialogData,
+      width: '360px',
+    });
   }
 
   private setupImageClickListeners(): void {
@@ -656,8 +642,27 @@ export class ArticleComponent implements OnDestroy {
 
     this.availableVoices.set(sortedVoices);
 
+    // Restore saved playback rate
+    const savedRate = localStorage.getItem('tts-playback-rate');
+    if (savedRate) {
+      const rate = parseFloat(savedRate);
+      if (!isNaN(rate) && rate >= 0.5 && rate <= 2) {
+        this.playbackRate.set(rate);
+      }
+    }
+
     // Set default voice if not already selected
     if (!this.selectedVoice() && sortedVoices.length > 0) {
+      // Try to restore previously selected voice from localStorage
+      const savedVoiceName = localStorage.getItem('tts-selected-voice');
+      if (savedVoiceName) {
+        const savedVoice = sortedVoices.find(v => v.name === savedVoiceName);
+        if (savedVoice) {
+          this.selectedVoice.set(savedVoice);
+          return;
+        }
+      }
+
       // Try to find a natural English voice as default
       const naturalEnglish = sortedVoices.find(
         v => (v.name.includes('Natural') || v.name.includes('Online')) && v.lang.startsWith('en')
@@ -678,6 +683,9 @@ export class ArticleComponent implements OnDestroy {
   onVoiceChange(voice: SpeechSynthesisVoice) {
     this.selectedVoice.set(voice);
 
+    // Save to localStorage for persistence
+    localStorage.setItem('tts-selected-voice', voice.name);
+
     // If currently speaking, restart with new voice
     if (this.isSpeaking() && !this.useAiVoice()) {
       const text = this.stripMarkdown(this.content() || '');
@@ -690,6 +698,9 @@ export class ArticleComponent implements OnDestroy {
    */
   onPlaybackRateChange(rate: number) {
     this.playbackRate.set(rate);
+
+    // Save to localStorage for persistence
+    localStorage.setItem('tts-playback-rate', rate.toString());
 
     // If currently speaking with native voice, update rate
     if (this.currentUtterance && this.isSpeaking() && !this.useAiVoice()) {
