@@ -1,7 +1,25 @@
 .tab-content {
-  padding: 2rem 1rem;
+  padding: 1.5rem;
   min-height: 300px;
   position: relative;
+}
+
+.articles-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 0 0.5rem;
+
+  .articles-label {
+    font-size: 1.25rem;
+    color: var(--mat-sys-primary);
+  }
+
+  .articles-count {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
 }
 
 .empty-state,
@@ -28,14 +46,169 @@
   }
 }
 
-.reads-list {
-  margin-top: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 25px;
-  width: 700px;
-  margin-left: auto;
-  margin-right: auto;
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.5rem;
+
+  @media (min-width: 1200px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.article-card {
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  outline: none;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--mat-sys-level3);
+  }
+
+  &:focus {
+    box-shadow: 0 0 0 2px var(--mat-sys-primary);
+  }
+
+  .article-image-container {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    overflow: hidden;
+    background-color: var(--mat-sys-surface-variant);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .image-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
+
+      mat-icon {
+        font-size: 48px;
+        width: 48px;
+        height: 48px;
+        color: var(--mat-sys-on-primary-container);
+        opacity: 0.5;
+      }
+    }
+  }
+
+  &:hover .article-image-container img {
+    transform: scale(1.05);
+  }
+
+  .article-content {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .article-author-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+
+    ::ng-deep app-user-profile {
+      flex: 1;
+      min-width: 0;
+
+      .user-profile {
+        padding: 0;
+      }
+
+      .user-profile-avatar-container {
+        .user-profile-avatar {
+          width: 24px;
+          height: 24px;
+
+          img,
+          mat-icon {
+            width: 24px !important;
+            height: 24px !important;
+            font-size: 24px !important;
+          }
+        }
+      }
+
+      .user-profile-content {
+        .user-profile-name-link {
+          font-size: 0.8125rem;
+        }
+      }
+    }
+
+    .article-date {
+      font-size: 0.75rem;
+      color: var(--mat-sys-on-surface-variant);
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+  }
+
+  .article-title {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.4;
+    color: var(--mat-sys-on-surface);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .article-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+
+    .action-btn {
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 2px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .action-count {
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      &:hover mat-icon {
+        color: var(--mat-sys-primary);
+      }
+    }
+  }
 }
 
 .loading-more-indicator {
@@ -44,7 +217,7 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.6));
+  color: var(--mat-sys-on-surface-variant);
 
   mat-spinner {
     margin-bottom: 1rem;
@@ -62,7 +235,7 @@
   align-items: center;
   justify-content: center;
   padding: 2rem;
-  color: var(--mat-subtitle-text-color, rgba(0, 0, 0, 0.6));
+  color: var(--mat-sys-on-surface-variant);
 
   mat-icon {
     font-size: 32px;
