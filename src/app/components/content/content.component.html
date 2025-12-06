@@ -59,6 +59,11 @@
   }
   }
 
+  @for (article of articleMentions(); track article.identifier + article.pubkey) {
+  <app-article [slug]="article.identifier" [pubkey]="article.pubkey" [kind]="article.kind" mode="compact"
+    [showAuthor]="true" [showMetadata]="true" [clickable]="true"></app-article>
+  }
+
   @for (preview of socialPreviews(); track preview.url) {
   @if (settings.settings().socialSharingPreview) {
   <app-social-preview class="social-preview" [url]="preview.url"></app-social-preview>
