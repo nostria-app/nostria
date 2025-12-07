@@ -358,21 +358,22 @@ export class SummaryComponent implements OnInit, OnDestroy {
     await this.loadActivitySummary(sinceTimestamp);
     this.isLoading.set(false); // Show cached data immediately
 
-    // STEP 2: Fetch new events from relays in the background
-    await this.fetchEventsFromRelays(sinceTimestamp);
+    // STEP 2: Fetch new events from relays (incremental - only new events)
+    await this.fetchEventsFromRelays(false);
 
     // STEP 3: Reload from database to include newly fetched events
     await this.loadActivitySummary(sinceTimestamp);
   }
 
   /**
-   * Fetch events from relays for the given time range.
+   * Fetch events from relays.
    * Events are saved to the database for future queries.
    * 
-   * Note: We already loaded from database first in loadSummaryData,
-   * so here we only fetch NEW events since last fetch.
+   * @param forceFullRange If true, fetches the full time range (for manual refresh).
+   *                       If false, only fetches new events since last fetch (incremental).
+   * @param sinceTimestamp The timestamp for full range fetches (only used when forceFullRange=true)
    */
-  private async fetchEventsFromRelays(sinceTimestamp: number): Promise<void> {
+  private async fetchEventsFromRelays(forceFullRange: boolean, sinceTimestamp?: number): Promise<void> {
     if (this.isDestroyed) return;
 
     const following = this.accountState.followingList();
@@ -382,19 +383,27 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.fetchProgress.set({ fetched: 0, total: following.length });
 
     try {
-      this.logger.info(`[Summary] Fetching new events from relays...`);
+      if (forceFullRange && sinceTimestamp) {
+        this.logger.info(`[Summary] Force refreshing - fetching all events since ${new Date(sinceTimestamp * 1000).toISOString()}`);
+      } else {
+        this.logger.info(`[Summary] Incremental fetch - getting new events only`);
+      }
 
-      // Use the FollowingDataService - respects cache freshness
+      // Use the FollowingDataService
+      // - For incremental fetches: don't pass customSince, let service use its internal logic
+      // - For full refresh: pass the user's selected time range
       const events = await this.followingData.ensureFollowingData(
         [1, 20, 30023], // Notes, Media, Articles
-        false, // DON'T force - respect cache freshness (only fetch if stale)
+        forceFullRange, // Force fetch if doing full refresh
         // Progress callback for new events from relays
         (newEvents: Event[]) => {
           this.fetchProgress.update(p => ({
             ...p,
             fetched: p.fetched + newEvents.length,
           }));
-        }
+        },
+        undefined, // onCacheLoaded - not needed here
+        forceFullRange ? sinceTimestamp : undefined // Only pass time range for full refresh
       );
 
       this.logger.info(`[Summary] Total ${events.length} events available from following`);
@@ -642,7 +651,33 @@ export class SummaryComponent implements OnInit, OnDestroy {
   }
 
   async refresh(): Promise<void> {
-    await this.loadSummaryData();
+    if (this.isDestroyed) return;
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    // Calculate the timestamp based on selected time range
+    const preset = this.selectedPreset();
+    let sinceTimestamp: number;
+
+    if (preset !== null) {
+      sinceTimestamp = Math.floor((Date.now() - preset * 60 * 60 * 1000) / 1000);
+    } else {
+      const lastCheck = this.accountLocalState.getLastSummaryCheck(pubkey);
+      sinceTimestamp = lastCheck
+        ? Math.floor(lastCheck / 1000)
+        : Math.floor((Date.now() - DEFAULT_DAYS_LOOKBACK * MS_PER_DAY) / 1000);
+    }
+
+    this.isLoading.set(true);
+
+    // Force full refresh from relays for the selected time range
+    await this.fetchEventsFromRelays(true, sinceTimestamp);
+
+    // Reload from database to show all events
+    await this.loadActivitySummary(sinceTimestamp);
+
+    this.isLoading.set(false);
   }
 
   formatNumber(num: number): string {

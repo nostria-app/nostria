@@ -160,12 +160,14 @@ export class FollowingDataService {
    * @param force Force a fresh fetch even if data is fresh
    * @param onProgress Callback for incremental updates as events arrive
    * @param onCacheLoaded Callback when cached events are loaded (before fetch)
+   * @param customSince Override the since timestamp for fetching (in seconds)
    */
   async ensureFollowingData(
     kinds: number[] = [1],
     force = false,
     onProgress?: (events: Event[]) => void,
-    onCacheLoaded?: (events: Event[]) => void
+    onCacheLoaded?: (events: Event[]) => void,
+    customSince?: number
   ): Promise<Event[]> {
     const followingList = this.accountState.followingList();
 
@@ -175,7 +177,7 @@ export class FollowingDataService {
     }
 
     // ALWAYS load cached events first for instant UI
-    const cachedEvents = await this.getCachedEvents(kinds);
+    const cachedEvents = await this.getCachedEvents(kinds, customSince);
     if (cachedEvents.length > 0) {
       this.logger.debug(`[FollowingDataService] Loaded ${cachedEvents.length} cached events`);
       // Notify caller about cached events immediately
@@ -198,8 +200,8 @@ export class FollowingDataService {
       return this.currentFetchPromise;
     }
 
-    // Start a new fetch for events SINCE last fetch only
-    this.currentFetchPromise = this.fetchFromRelays(kinds, cachedEvents, onProgress);
+    // Start a new fetch for events SINCE the specified time (or last fetch)
+    this.currentFetchPromise = this.fetchFromRelays(kinds, cachedEvents, onProgress, customSince);
 
     try {
       const newEvents = await this.currentFetchPromise;
@@ -235,19 +237,21 @@ export class FollowingDataService {
   /**
    * Fetch events from relays using batch strategy.
    * Only fetches events SINCE last fetch to avoid re-downloading.
+   * @param customSince Override the since timestamp (in seconds)
    */
   private async fetchFromRelays(
     kinds: number[],
     existingEvents: Event[],
-    onProgress?: (events: Event[]) => void
+    onProgress?: (events: Event[]) => void,
+    customSince?: number
   ): Promise<Event[]> {
     const followingList = this.accountState.followingList();
 
     this.isLoading.set(true);
     this.isFetching.set(true);
 
-    // Calculate since timestamp - only fetch what we don't have
-    const sinceTimestamp = this.calculateSinceTimestamp();
+    // Calculate since timestamp - use custom if provided, otherwise calculate based on last fetch
+    const sinceTimestamp = customSince ?? this.calculateSinceTimestamp();
 
     try {
       this.logger.info(
