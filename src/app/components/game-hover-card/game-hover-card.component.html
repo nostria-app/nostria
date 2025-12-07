@@ -1,0 +1,101 @@
+<mat-card class="game-hover-card">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner [diameter]="40"></mat-spinner>
+  </div>
+  } @else if (error()) {
+  <div class="error-container">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ error() }}</p>
+  </div>
+  } @else if (gameData()) {
+  @let game = gameData()!;
+  <div class="card-content">
+    <!-- Game Cover with Gradient Background -->
+    <div class="game-cover-container">
+      @if (coverUrl()) {
+      <img [src]="coverUrl()" [alt]="game.name" [title]="game.name" class="game-cover" />
+      } @else {
+      <div class="game-placeholder">
+        <mat-icon>sports_esports</mat-icon>
+      </div>
+      }
+      <!-- Rating Badge -->
+      @if (rating()) {
+      <div class="rating-badge" [class.high]="rating()! >= 75" [class.medium]="rating()! >= 50 && rating()! < 75"
+        [class.low]="rating()! < 50">
+        {{ rating() }}
+      </div>
+      }
+    </div>
+
+    <!-- Game Info Section -->
+    <div class="game-info">
+      <!-- Game Name -->
+      <h2 class="game-title">{{ game.name }}</h2>
+
+      <!-- Meta info (year, platforms) -->
+      <div class="game-meta">
+        @if (releaseYear()) {
+        <span class="meta-item">
+          <mat-icon>calendar_today</mat-icon>
+          {{ releaseYear() }}
+        </span>
+        }
+        @if (platforms()) {
+        <span class="meta-item">
+          <mat-icon>devices</mat-icon>
+          {{ platforms() }}
+        </span>
+        }
+      </div>
+
+      <!-- Genres -->
+      @if (genres()) {
+      <div class="game-genres">
+        <mat-chip-set>
+          @for (genre of game.genres?.slice(0, 3); track genre.id) {
+          <mat-chip class="genre-chip">{{ genre.name }}</mat-chip>
+          }
+        </mat-chip-set>
+      </div>
+      }
+
+      <!-- Summary -->
+      @if (game.summary) {
+      <div class="game-summary">
+        <p>{{ game.summary.length > 200 ? game.summary.substring(0, 200) + '...' : game.summary }}</p>
+      </div>
+      }
+
+      <!-- Developer/Publisher -->
+      @if (developers() || publishers()) {
+      <div class="game-companies">
+        @if (developers()) {
+        <div class="company-item">
+          <span class="company-label">Developer:</span>
+          <span class="company-value">{{ developers() }}</span>
+        </div>
+        }
+        @if (publishers() && publishers() !== developers()) {
+        <div class="company-item">
+          <span class="company-label">Publisher:</span>
+          <span class="company-value">{{ publishers() }}</span>
+        </div>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- View on IGDB Button -->
+    @if (game.url) {
+    <div class="card-actions">
+      <button mat-flat-button (click)="openIgdbPage()" class="view-button">
+        <mat-icon>open_in_new</mat-icon>
+        View on IGDB
+      </button>
+    </div>
+    }
+  </div>
+  }
+</mat-card>

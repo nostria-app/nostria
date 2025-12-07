@@ -42,6 +42,15 @@
     </div>
     }
 
+    <!-- Game cover overlay -->
+    @if (gameCoverUrl()) {
+    <div class="game-cover-overlay" #gameCover
+         (mouseenter)="onGameCoverHover(gameCover)" 
+         (mouseleave)="onGameCoverLeave()">
+      <img [src]="gameCoverUrl()" [alt]="gameData()?.name || 'Game'" title="{{ gameData()?.name || 'Game' }}" class="game-cover-image" />
+    </div>
+    }
+
     <!-- Participant avatars overlay on thumbnail -->
     @if (participantsList.length > 0) {
     <div class="participant-avatars-overlay">
@@ -80,6 +89,15 @@
     <div class="viewer-count-badge">
       <mat-icon>visibility</mat-icon>
       <span>{{ currentParticipants() || 0 }} viewers</span>
+    </div>
+    }
+
+    <!-- Game cover overlay -->
+    @if (gameCoverUrl()) {
+    <div class="game-cover-overlay" #gameCoverFallback
+         (mouseenter)="onGameCoverHover(gameCoverFallback)" 
+         (mouseleave)="onGameCoverLeave()">
+      <img [src]="gameCoverUrl()" [alt]="gameData()?.name || 'Game'" title="{{ gameData()?.name || 'Game' }}" class="game-cover-image" />
     </div>
     }
   </div>
