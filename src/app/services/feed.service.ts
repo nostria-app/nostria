@@ -1041,28 +1041,59 @@ export class FeedService {
     const existingEvents = feedData.events();
 
     if (feedData.initialLoadComplete && existingEvents.length > 0) {
-      // Queue remaining events to pending
+      // Find the most recent event in the existing feed
+      const mostRecentExistingTimestamp = Math.max(...existingEvents.map(e => e.created_at || 0));
+
       const existingIds = new Set(existingEvents.map(e => e.id));
       const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
 
-      const trulyNewEvents = filteredEvents.filter(
-        e => !existingIds.has(e.id) && !pendingIds.has(e.id)
-      );
+      // Separate events into:
+      // 1. Events that should be merged (older than or equal to most recent existing, not duplicates)
+      // 2. Events that should be queued (newer than most recent existing)
+      const eventsToMerge: Event[] = [];
+      const eventsToQueue: Event[] = [];
 
-      if (trulyNewEvents.length > 0) {
+      for (const event of filteredEvents) {
+        if (existingIds.has(event.id) || pendingIds.has(event.id)) {
+          // Already exists, skip
+          continue;
+        }
+
+        if (event.created_at <= mostRecentExistingTimestamp) {
+          // Older or same age as existing events - merge directly (fill gaps)
+          eventsToMerge.push(event);
+        } else {
+          // Newer than existing events - queue for "new posts" button
+          eventsToQueue.push(event);
+        }
+      }
+
+      // Merge older events directly into the feed
+      if (eventsToMerge.length > 0) {
+        const mergedEvents = [...existingEvents, ...eventsToMerge]
+          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        feedData.events.set(mergedEvents);
+
+        this.logger.debug(`✅ Merged ${eventsToMerge.length} older events into feed`);
+      }
+
+      // Queue newer events
+      if (eventsToQueue.length > 0) {
         feedData.pendingEvents?.update((pending: Event[]) => {
-          const newPending = [...pending, ...trulyNewEvents];
+          const newPending = [...pending, ...eventsToQueue];
           return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
         });
 
         // Save new events to database for Summary page queries
-        for (const event of trulyNewEvents) {
+        for (const event of eventsToQueue) {
           this.saveEventToDatabase(event);
         }
+
+        this.logger.debug(`📥 Queued ${eventsToQueue.length} new events to pending`);
       }
 
-      // Save all events for cache
-      const allEventsForCache = [...existingEvents, ...trulyNewEvents];
+      // Save all events for cache (existing + merged + queued)
+      const allEventsForCache = [...feedData.events(), ...eventsToQueue];
       this.saveCachedEvents(feedData.column.id, allEventsForCache);
     } else {
       // Merge all events

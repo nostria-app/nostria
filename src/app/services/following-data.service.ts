@@ -36,8 +36,13 @@ export class FollowingDataService {
   // How long before data is considered stale (5 minutes)
   private readonly STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
-  // Maximum lookback period for fetching (6 hours in seconds)
-  private readonly MAX_LOOKBACK_SECONDS = 6 * 60 * 60;
+  // Maximum lookback period for RELAY fetching (6 hours in seconds)
+  // This limits how far back we fetch from relays to avoid excessive data transfer
+  private readonly MAX_RELAY_LOOKBACK_SECONDS = 6 * 60 * 60;
+
+  // Maximum lookback period for DATABASE queries (1 week in seconds)
+  // This matches the column cache max age and allows showing all locally stored events
+  private readonly MAX_DATABASE_LOOKBACK_SECONDS = 7 * 24 * 60 * 60;
 
   // Loading state
   readonly isLoading = signal(false);
@@ -89,13 +94,14 @@ export class FollowingDataService {
   }
 
   /**
-   * Calculate the 'since' timestamp for queries.
+   * Calculate the 'since' timestamp for RELAY fetching.
    * Uses the last fetch time or max 6 hours ago.
+   * This limits data volume when fetching from relays.
    */
-  private calculateSinceTimestamp(): number {
+  private calculateRelayFetchSinceTimestamp(): number {
     const lastFetch = this.getLastFetchTimestamp();
     const now = Math.floor(Date.now() / 1000);
-    const maxLookback = now - this.MAX_LOOKBACK_SECONDS;
+    const maxLookback = now - this.MAX_RELAY_LOOKBACK_SECONDS;
 
     if (lastFetch === null) {
       return maxLookback;
@@ -109,15 +115,26 @@ export class FollowingDataService {
   }
 
   /**
+   * Calculate the 'since' timestamp for DATABASE queries.
+   * Uses a longer lookback (1 week) to show all locally cached events.
+   */
+  private calculateDatabaseSinceTimestamp(): number {
+    const now = Math.floor(Date.now() / 1000);
+    return now - this.MAX_DATABASE_LOOKBACK_SECONDS;
+  }
+
+  /**
    * Get events from the database cache.
    * This provides immediate data while fresh data is being fetched.
+   * Uses a 1-week lookback by default to show all locally stored events.
    */
   async getCachedEvents(kinds: number[], since?: number): Promise<Event[]> {
     const pubkey = this.accountState.pubkey();
     const followingList = this.accountState.followingList();
     if (!pubkey || followingList.length === 0) return [];
 
-    const sinceTimestamp = since ?? this.calculateSinceTimestamp();
+    // Use provided since timestamp, or default to 1 week lookback for database queries
+    const sinceTimestamp = since ?? this.calculateDatabaseSinceTimestamp();
 
     try {
       // Fetch events for each kind and combine
@@ -250,8 +267,9 @@ export class FollowingDataService {
     this.isLoading.set(true);
     this.isFetching.set(true);
 
-    // Calculate since timestamp - use custom if provided, otherwise calculate based on last fetch
-    const sinceTimestamp = customSince ?? this.calculateSinceTimestamp();
+    // Calculate since timestamp for relay fetching
+    // Use custom if provided (e.g., for Summary page), otherwise use 6-hour limit
+    const sinceTimestamp = customSince ?? this.calculateRelayFetchSinceTimestamp();
 
     try {
       this.logger.info(
