@@ -26,6 +26,7 @@ interface ArticleMention {
   pubkey: string;
   identifier: string;
   kind: number;
+  relayHints?: string[];
 }
 
 interface SocialPreview {
@@ -220,11 +221,12 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
         // Create article mentions from naddr tokens
         const articles: ArticleMention[] = articleTokens.map(token => {
-          const data = token.nostrData?.data as { pubkey: string; identifier: string; kind: number };
+          const data = token.nostrData?.data as { pubkey: string; identifier: string; kind: number; relays?: string[] };
           return {
             pubkey: data.pubkey,
             identifier: data.identifier,
             kind: data.kind,
+            relayHints: data.relays,
           };
         });
 

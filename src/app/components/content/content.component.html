@@ -60,8 +60,9 @@
   }
 
   @for (article of articleMentions(); track article.identifier + article.pubkey) {
-  <app-article [slug]="article.identifier" [pubkey]="article.pubkey" [kind]="article.kind" mode="compact"
-    [showAuthor]="true" [showMetadata]="true" [clickable]="true"></app-article>
+  <app-article [slug]="article.identifier" [pubkey]="article.pubkey" [kind]="article.kind"
+    [relayHints]="article.relayHints" mode="compact" [showAuthor]="true" [showMetadata]="true"
+    [clickable]="true"></app-article>
   }
 
   @for (preview of socialPreviews(); track preview.url) {
