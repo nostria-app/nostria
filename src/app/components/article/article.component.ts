@@ -13,6 +13,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { Cache } from '../../services/cache';
 import { UserDataService } from '../../services/user-data.service';
+import { RelayPoolService } from '../../services/relays/relay-pool';
 
 @Component({
   selector: 'app-article',
@@ -39,6 +40,7 @@ export class ArticleComponent {
   showMetadata = input<boolean>(true);
   showActions = input<boolean>(false);
   clickable = input<boolean>(true);
+  relayHints = input<string[] | undefined>(undefined);
 
   // Services
   private data = inject(DataService);
@@ -47,6 +49,7 @@ export class ArticleComponent {
   private utilities = inject(UtilitiesService);
   private accountState = inject(AccountStateService);
   private cache = inject(Cache);
+  private relayPool = inject(RelayPoolService);
 
   // State
   record = signal<NostrRecord | null>(null);
@@ -119,6 +122,40 @@ export class ArticleComponent {
     return ev?.pubkey || '';
   });
 
+  /**
+   * Filter out invalid relay hints (localhost, private IPs, etc.)
+   */
+  private getValidRelayHints(): string[] {
+    const hints = this.relayHints();
+    if (!hints || hints.length === 0) return [];
+
+    return hints.filter(relay => {
+      try {
+        const url = new URL(relay);
+        // Filter out localhost and private IP addresses
+        const hostname = url.hostname.toLowerCase();
+        if (
+          hostname === 'localhost' ||
+          hostname === '127.0.0.1' ||
+          hostname.startsWith('192.168.') ||
+          hostname.startsWith('10.') ||
+          hostname.startsWith('172.16.') ||
+          hostname.startsWith('172.17.') ||
+          hostname.startsWith('172.18.') ||
+          hostname.startsWith('172.19.') ||
+          hostname.startsWith('172.2') ||
+          hostname.startsWith('172.30.') ||
+          hostname.startsWith('172.31.')
+        ) {
+          return false;
+        }
+        return true;
+      } catch {
+        return false;
+      }
+    });
+  }
+
   // Load article data
   private async loadArticle(): Promise<void> {
     // Prevent multiple simultaneous loads
@@ -129,23 +166,46 @@ export class ArticleComponent {
     this.loading.set(true);
 
     try {
-      const isNotCurrentUser = !this.accountState.isCurrentUser(this.pubkey());
       let event: NostrRecord | null = null;
 
-      if (isNotCurrentUser) {
-        event = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
-          this.pubkey(),
-          this.kind(),
-          this.slug(),
-          { save: false, cache: false }
-        );
-      } else {
-        event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
-          this.pubkey(),
-          this.kind(),
-          this.slug(),
-          { save: false, cache: false }
-        );
+      // First, try relay hints if available and valid
+      const validRelayHints = this.getValidRelayHints();
+      if (validRelayHints.length > 0) {
+        try {
+          const filter = {
+            authors: [this.pubkey()],
+            kinds: [this.kind()],
+            '#d': [this.slug()],
+          };
+          const relayEvent = await this.relayPool.get(validRelayHints, filter, 10000);
+          if (relayEvent) {
+            event = this.data.toRecord(relayEvent);
+          }
+        } catch {
+          // Relay hints failed, will try regular fetch
+          console.debug(`Relay hints fetch failed for article ${this.slug()}, trying regular fetch`);
+        }
+      }
+
+      // If relay hints didn't work, fall back to discovered relays
+      if (!event) {
+        const isNotCurrentUser = !this.accountState.isCurrentUser(this.pubkey());
+
+        if (isNotCurrentUser) {
+          event = await this.userDataService.getEventByPubkeyAndKindAndReplaceableEvent(
+            this.pubkey(),
+            this.kind(),
+            this.slug(),
+            { save: false, cache: false }
+          );
+        } else {
+          event = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
+            this.pubkey(),
+            this.kind(),
+            this.slug(),
+            { save: false, cache: false }
+          );
+        }
       }
 
       this.record.set(event);
