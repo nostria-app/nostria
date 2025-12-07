@@ -44,10 +44,10 @@
 
     <!-- Game cover overlay -->
     @if (gameCoverUrl()) {
-    <div class="game-cover-overlay" #gameCover
-         (mouseenter)="onGameCoverHover(gameCover)" 
-         (mouseleave)="onGameCoverLeave()">
-      <img [src]="gameCoverUrl()" [alt]="gameData()?.name || 'Game'" title="{{ gameData()?.name || 'Game' }}" class="game-cover-image" />
+    <div class="game-cover-overlay" #gameCover (mouseenter)="onGameCoverHover(gameCover)"
+      (mouseleave)="onGameCoverLeave()">
+      <img [src]="gameCoverUrl()" [alt]="gameData()?.name || 'Game'" title="{{ gameData()?.name || 'Game' }}"
+        class="game-cover-image" />
     </div>
     }
 
@@ -94,10 +94,10 @@
 
     <!-- Game cover overlay -->
     @if (gameCoverUrl()) {
-    <div class="game-cover-overlay" #gameCoverFallback
-         (mouseenter)="onGameCoverHover(gameCoverFallback)" 
-         (mouseleave)="onGameCoverLeave()">
-      <img [src]="gameCoverUrl()" [alt]="gameData()?.name || 'Game'" title="{{ gameData()?.name || 'Game' }}" class="game-cover-image" />
+    <div class="game-cover-overlay" #gameCoverFallback (mouseenter)="onGameCoverHover(gameCoverFallback)"
+      (mouseleave)="onGameCoverLeave()">
+      <img [src]="gameCoverUrl()" [alt]="gameData()?.name || 'Game'" title="{{ gameData()?.name || 'Game' }}"
+        class="game-cover-image" />
     </div>
     }
   </div>
