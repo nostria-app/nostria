@@ -1,0 +1,203 @@
+:host {
+  display: block;
+}
+
+.game-hover-card {
+  width: 340px;
+  max-width: 90vw;
+  padding: 0;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  background-color: var(--mat-sys-surface);
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 64px;
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+.card-content {
+  display: flex;
+  flex-direction: column;
+}
+
+.game-cover-container {
+  width: 100%;
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    145deg,
+    var(--mat-sys-primary-container) 0%,
+    var(--mat-sys-secondary-container) 50%,
+    var(--mat-sys-tertiary-container) 100%
+  );
+  position: relative;
+  overflow: hidden;
+
+  .game-cover {
+    height: 100%;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+  }
+
+  .game-placeholder {
+    width: 120px;
+    height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--mat-sys-surface-variant);
+    border-radius: 8px;
+
+    mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: var(--mat-sys-on-surface-variant);
+      opacity: 0.6;
+    }
+  }
+
+  .rating-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    min-width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    font-weight: 600;
+    color: white;
+    background: rgba(0, 0, 0, 0.7);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+
+    &.high {
+      background: linear-gradient(135deg, #4caf50, #2e7d32);
+    }
+
+    &.medium {
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+    }
+
+    &.low {
+      background: linear-gradient(135deg, #f44336, #c62828);
+    }
+  }
+}
+
+.game-info {
+  padding: 16px 20px 12px 20px;
+
+  .game-title {
+    margin: 0 0 8px 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--mat-sys-on-surface);
+    line-height: 1.3;
+  }
+
+  .game-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 12px;
+
+    .meta-item {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+      }
+    }
+  }
+
+  .game-genres {
+    margin-bottom: 12px;
+
+    .genre-chip {
+      font-size: 12px;
+      height: 24px;
+      padding: 0 10px;
+    }
+  }
+
+  .game-summary {
+    margin-bottom: 12px;
+
+    p {
+      margin: 0;
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .game-companies {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 8px;
+    border-top: 1px solid var(--mat-sys-outline-variant);
+
+    .company-item {
+      display: flex;
+      gap: 6px;
+      font-size: 12px;
+
+      .company-label {
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .company-value {
+        color: var(--mat-sys-on-surface);
+      }
+    }
+  }
+}
+
+.card-actions {
+  padding: 8px 20px 16px 20px;
+
+  .view-button {
+    width: 100%;
+  }
+}

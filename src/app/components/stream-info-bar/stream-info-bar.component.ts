@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect, OnDestroy } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, OnDestroy, ElementRef, ViewChild } from '@angular/core';
 import { Event, Filter } from 'nostr-tools';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -15,6 +15,8 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { IgdbService, GameData } from '../../services/igdb.service';
+import { GameHoverCardService } from '../../services/game-hover-card.service';
 
 @Component({
   selector: 'app-stream-info-bar',
@@ -93,6 +95,28 @@ import { MatSnackBar } from '@angular/material/snack-bar';
           <mat-chip>{{ tag }}</mat-chip>
           }
         </mat-chip-set>
+      </div>
+      }
+
+      <!-- Game Info Section -->
+      @if (gameData()) {
+      @let game = gameData()!;
+      <div class="game-section" #gameCover
+           (mouseenter)="onGameCoverHover(gameCover)" 
+           (mouseleave)="onGameCoverLeave()">
+        @if (gameCoverUrl()) {
+        <img [src]="gameCoverUrl()" [alt]="game.name" title="{{ game.name }}" class="game-cover-image" />
+        }
+        <div class="game-info">
+          <span class="game-label">
+            <mat-icon>sports_esports</mat-icon>
+            Playing
+          </span>
+          <span class="game-name">{{ game.name }}</span>
+          @if (gameGenres()) {
+          <span class="game-genres">{{ gameGenres() }}</span>
+          }
+        </div>
       </div>
       }
     </div>
@@ -275,6 +299,70 @@ import { MatSnackBar } from '@angular/material/snack-bar';
       }
     }
 
+    .game-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: var(--mat-sys-surface-container-high);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+
+      &:hover {
+        background: var(--mat-sys-surface-container-highest);
+      }
+
+      .game-cover-image {
+        width: 48px;
+        height: 64px;
+        object-fit: cover;
+        border-radius: 6px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+      }
+
+      .game-info {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 0;
+      }
+
+      .game-label {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+
+        mat-icon {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+          color: var(--mat-sys-primary);
+        }
+      }
+
+      .game-name {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--mat-sys-on-surface);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .game-genres {
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
     /* Compact mode for smaller viewports or when sidebar is visible */
     @container (max-width: 900px) {
       .stream-info-bar {
@@ -414,12 +502,20 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 export class StreamInfoBarComponent implements OnDestroy {
   liveEvent = input.required<Event>();
 
+  @ViewChild('gameCover') gameCoverElement?: ElementRef<HTMLElement>;
+
   private dialog = inject(MatDialog);
   private dataService = inject(DataService);
   private relayPool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
+  private igdbService = inject(IgdbService);
+  private gameHoverCardService = inject(GameHoverCardService);
+
+  // Game data for IGDB integration
+  gameData = signal<GameData | null>(null);
+  gameLoading = signal(false);
 
   // Current stream event (may be updated via subscription)
   private currentEvent = signal<Event | null>(null);
@@ -527,6 +623,23 @@ export class StreamInfoBarComponent implements OnDestroy {
       .slice(0, 5); // Limit to 5 tags
   });
 
+  // IGDB game ID from tags
+  igdbGameId = computed(() => {
+    const event = this.currentEvent() || this.liveEvent();
+    if (!event) return null;
+    return this.igdbService.extractIgdbId(event.tags);
+  });
+
+  // Game cover URL
+  gameCoverUrl = computed(() => {
+    return this.igdbService.getBestCoverUrl(this.gameData(), 'medium');
+  });
+
+  // Game genres
+  gameGenres = computed(() => {
+    return this.igdbService.getGenreString(this.gameData());
+  });
+
   // Event address for tracking viewers
   eventAddress = computed(() => {
     const event = this.currentEvent() || this.liveEvent();
@@ -541,6 +654,16 @@ export class StreamInfoBarComponent implements OnDestroy {
       const event = this.liveEvent();
       if (event) {
         this.subscribeToStreamUpdates(event);
+      }
+    });
+
+    // Load game data when IGDB ID is present
+    effect(() => {
+      const gameId = this.igdbGameId();
+      if (gameId) {
+        this.loadGameData(gameId);
+      } else {
+        this.gameData.set(null);
       }
     });
 
@@ -581,6 +704,34 @@ export class StreamInfoBarComponent implements OnDestroy {
     if (this.zapSubscription) {
       this.zapSubscription.close();
     }
+  }
+
+  private async loadGameData(gameId: number): Promise<void> {
+    // Check if already cached
+    if (this.igdbService.isGameCached(gameId)) {
+      this.gameData.set(this.igdbService.getCachedGame(gameId)!);
+      return;
+    }
+
+    this.gameLoading.set(true);
+    try {
+      const data = await this.igdbService.fetchGameData(gameId);
+      this.gameData.set(data);
+    } finally {
+      this.gameLoading.set(false);
+    }
+  }
+
+  // Game hover card methods
+  onGameCoverHover(element: HTMLElement): void {
+    const gameId = this.igdbGameId();
+    if (gameId) {
+      this.gameHoverCardService.showHoverCard(element, gameId);
+    }
+  }
+
+  onGameCoverLeave(): void {
+    this.gameHoverCardService.hideHoverCard();
   }
 
   private subscribeToStreamUpdates(event: Event): void {

@@ -192,6 +192,31 @@
   }
 }
 
+.game-cover-overlay {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 48px;
+  height: 64px;
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  z-index: 5;
+
+  &:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  }
+
+  .game-cover-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+}
+
 @keyframes pulse {
 
   0%,

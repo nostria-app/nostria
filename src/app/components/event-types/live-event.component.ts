@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, ElementRef, ViewChild } from '@angular/core';
 import { CommonModule, DatePipe } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -9,10 +9,11 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { Event } from 'nostr-tools';
-import { ProfileDisplayNameComponent } from '../user-profile/display-name/profile-display-name.component';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MediaItem } from '../../interfaces';
+import { IgdbService, GameData } from '../../services/igdb.service';
+import { GameHoverCardService } from '../../services/game-hover-card.service';
 
 @Component({
   selector: 'app-live-event',
@@ -24,7 +25,6 @@ import { MediaItem } from '../../interfaces';
     MatTooltipModule,
     MatMenuModule,
     DatePipe,
-    ProfileDisplayNameComponent,
     UserProfileComponent,
   ],
   templateUrl: './live-event.component.html',
@@ -33,13 +33,21 @@ import { MediaItem } from '../../interfaces';
 export class LiveEventComponent {
   event = input.required<Event>();
 
+  @ViewChild('gameCoverElement') gameCoverElement?: ElementRef<HTMLElement>;
+
   private router = inject(Router);
   private mediaPlayer = inject(MediaPlayerService);
   private clipboard = inject(Clipboard);
   private snackBar = inject(MatSnackBar);
+  private igdbService = inject(IgdbService);
+  private gameHoverCardService = inject(GameHoverCardService);
 
   // Track thumbnail load errors
   thumbnailError = signal(false);
+
+  // Game data for IGDB integration
+  gameData = signal<GameData | null>(null);
+  gameLoading = signal(false);
 
   // Live event title
   title = computed(() => {
@@ -175,6 +183,18 @@ export class LiveEventComponent {
       .map(tag => tag[1]);
   });
 
+  // IGDB game ID from tags
+  igdbGameId = computed(() => {
+    const event = this.event();
+    if (!event) return null;
+    return this.igdbService.extractIgdbId(event.tags);
+  });
+
+  // Game cover URL
+  gameCoverUrl = computed(() => {
+    return this.igdbService.getBestCoverUrl(this.gameData(), 'small');
+  });
+
   // Extract URL from alt tag
   altUrl = computed(() => {
     const event = this.event();
@@ -218,6 +238,44 @@ export class LiveEventComponent {
   isLive = computed(() => {
     return this.status() === 'live';
   });
+
+  constructor() {
+    // Load game data when IGDB ID is present
+    effect(() => {
+      const gameId = this.igdbGameId();
+      if (gameId) {
+        this.loadGameData(gameId);
+      }
+    });
+  }
+
+  private async loadGameData(gameId: number): Promise<void> {
+    // Check if already cached
+    if (this.igdbService.isGameCached(gameId)) {
+      this.gameData.set(this.igdbService.getCachedGame(gameId)!);
+      return;
+    }
+
+    this.gameLoading.set(true);
+    try {
+      const data = await this.igdbService.fetchGameData(gameId);
+      this.gameData.set(data);
+    } finally {
+      this.gameLoading.set(false);
+    }
+  }
+
+  // Game hover card methods
+  onGameCoverHover(element: HTMLElement): void {
+    const gameId = this.igdbGameId();
+    if (gameId) {
+      this.gameHoverCardService.showHoverCard(element, gameId);
+    }
+  }
+
+  onGameCoverLeave(): void {
+    this.gameHoverCardService.hideHoverCard();
+  }
 
   // Play stream in media player
   openStream(): void {
