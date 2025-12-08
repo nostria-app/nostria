@@ -188,6 +188,15 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       .sort((a, b) => (b.totalZapAmount + b.chatCount + b.reactionCount) - (a.totalZapAmount + a.chatCount + a.reactionCount));
   });
 
+  // Total zaps summary
+  totalZapsAmount = computed(() => {
+    return this.activeParticipants().reduce((sum, p) => sum + p.totalZapAmount, 0);
+  });
+
+  totalZapsCount = computed(() => {
+    return this.activeParticipants().reduce((sum, p) => sum + p.zapCount, 0);
+  });
+
   // Computed event address for querying
   eventAddress = computed(() => {
     const event = this.liveEvent();
