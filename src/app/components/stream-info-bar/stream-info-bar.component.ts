@@ -614,12 +614,18 @@ export class StreamInfoBarComponent implements OnDestroy {
     return this.utilities.getNpubFromPubkey(this.streamerPubkey());
   });
 
-  // Tags
+  // Tags (with igdb:* replaced by game name)
   tags = computed(() => {
     const event = this.currentEvent() || this.liveEvent();
+    const game = this.gameData();
     return event.tags
       .filter(tag => tag[0] === 't')
-      .map(tag => tag[1])
+      .map(tag => {
+        if (tag[1]?.startsWith('igdb:') && game?.name) {
+          return game.name;
+        }
+        return tag[1];
+      })
       .slice(0, 5); // Limit to 5 tags
   });
 
