@@ -1,6 +1,5 @@
 import { Component, inject, signal, output, effect, ViewChild, ElementRef } from '@angular/core';
 import { nip19 } from 'nostr-tools';
-import { DomSanitizer, SafeUrl } from '@angular/platform-browser';
 
 import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
@@ -71,7 +70,6 @@ export class LoginDialogComponent {
   private accountState = inject(AccountStateService);
   private data = inject(DataService);
   layout = inject(LayoutService);
-  private sanitizer = inject(DomSanitizer);
 
   // Event emitter for when dialog should close (used in standalone mode)
   dialogClosed = output<void>();
@@ -707,24 +705,50 @@ export class LoginDialogComponent {
     return `nostrsigner:?compressionType=none&returnType=signature&type=get_public_key&appName=Nostria`;
   }
 
-  get safeExternalSignerUrl(): SafeUrl {
-    return this.sanitizer.bypassSecurityTrustUrl(this.getExternalSignerUrl());
-  }
-
   /**
    * Opens the external signer app without navigating away from the main app.
-   * Uses an anchor element click to trigger the Android intent system
-   * while keeping the web app running in the background.
+   * Uses an iframe to trigger the Android intent system while keeping
+   * the web app running in the background.
    */
   openExternalSignerApp(event: Event): void {
     event.preventDefault();
 
-    const anchor = document.createElement('a');
-    anchor.href = this.getExternalSignerUrl();
-    anchor.style.display = 'none';
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
+    const url = this.getExternalSignerUrl();
+
+    // Store current location to verify we're still in the app
+    const currentOrigin = window.location.origin;
+    const currentHref = window.location.href;
+
+    // Use an invisible iframe to trigger the intent URL
+    // This prevents any navigation in the main window
+    const iframe = document.createElement('iframe');
+    iframe.style.display = 'none';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = 'none';
+    iframe.style.position = 'absolute';
+    document.body.appendChild(iframe);
+
+    // Set the iframe src to trigger the intent
+    try {
+      iframe.src = url;
+    } catch {
+      // If iframe approach fails, the signer may not be installed
+      this.logger.warn('Failed to open external signer via iframe');
+    }
+
+    // Remove the iframe after a short delay and verify we're still in the app
+    setTimeout(() => {
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+
+      // Safety check: verify we're still on our app
+      if (window.location.origin !== currentOrigin || window.location.href !== currentHref) {
+        // Try to navigate back if we somehow left the app
+        window.location.href = currentHref;
+      }
+    }, 500);
   }
 
   async loginWithExternalSigner(): Promise<void> {
