@@ -10,8 +10,9 @@ import {
   AfterViewInit,
   computed,
   ChangeDetectionStrategy,
+  PLATFORM_ID,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { ActivatedRoute, RouterModule } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
@@ -35,6 +36,7 @@ import { ProfileDisplayNameComponent } from './display-name/profile-display-name
 import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
 import { TrustService } from '../../services/trust.service';
 import { MatBadgeModule } from '@angular/material/badge';
+import { LongPressDirective } from '../../directives/long-press.directive';
 
 @Component({
   selector: 'app-user-profile',
@@ -51,6 +53,7 @@ import { MatBadgeModule } from '@angular/material/badge';
     MatButtonModule,
     MatBadgeModule,
     RouterModule,
+    LongPressDirective,
   ],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.scss',
@@ -65,6 +68,7 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private data = inject(DataService);
   private logger = inject(LoggerService);
   private elementRef = inject(ElementRef);
+  private platformId = inject(PLATFORM_ID);
   readonly utilities = inject(UtilitiesService);
   settingsService = inject(SettingsService);
   private readonly sharedRelay = inject(SharedRelayService);
@@ -72,6 +76,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private hoverCardService = inject(ProfileHoverCardService);
   private trustService = inject(TrustService);
   layout = inject(LayoutService);
+
+  // Detect touch device for hover card behavior
+  isTouchDevice = isPlatformBrowser(this.platformId) && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
 
   publicKey = '';
   pubkey = input<string>('');
@@ -553,11 +560,16 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   }
 
   /**
-   * Shows the profile hover card
+   * Shows the profile hover card (for desktop mouse hover)
    */
   onMouseEnter(event: MouseEvent, triggerElement: HTMLElement): void {
     // Don't show hover card for tiny/name-only views
     if (this.view() === 'tiny' || this.view() === 'name') {
+      return;
+    }
+
+    // Skip hover on touch devices - they use long press instead
+    if (this.isTouchDevice) {
       return;
     }
 
@@ -569,5 +581,17 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   onMouseLeave(): void {
     this.hoverCardService.hideHoverCard();
+  }
+
+  /**
+   * Shows the profile hover card immediately on long press (for touch devices)
+   */
+  onLongPress(event: TouchEvent | MouseEvent, triggerElement: HTMLElement): void {
+    // Don't show hover card for tiny/name-only views
+    if (this.view() === 'tiny' || this.view() === 'name') {
+      return;
+    }
+
+    this.hoverCardService.showHoverCardImmediately(triggerElement, this.pubkey());
   }
 }
