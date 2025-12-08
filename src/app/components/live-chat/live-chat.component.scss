@@ -132,6 +132,29 @@
       transform: rotate(360deg);
     }
   }
+
+  .load-more-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+    padding: 8px;
+    color: var(--mat-sys-primary);
+    font-size: 0.875rem;
+    border-radius: 8px;
+    margin-bottom: 8px;
+
+    &:hover {
+      background: var(--mat-sys-surface-container-highest);
+    }
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
 }
 
 .chat-message {
