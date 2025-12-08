@@ -23,10 +23,11 @@
     <!-- Avatar section - single image element -->
     @if (view() !== 'name' && view() !== 'tiny') {
     <div class="user-profile-avatar-container">
-      <a [routerLink]="['/p', npubValue()]" class="user-profile-avatar"
+      <a [routerLink]="disableLink() ? null : ['/p', npubValue()]" class="user-profile-avatar"
         [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
         [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)" #avatarElement
-        (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()">
+        (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()"
+        (click)="disableLink() && $event.preventDefault()">
         @if (isLoading()) {
         <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
         } @else if (profile()?.data?.picture && !imageLoadError()) {
