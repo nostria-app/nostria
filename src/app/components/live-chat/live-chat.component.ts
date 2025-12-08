@@ -284,12 +284,25 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     if (this.zapSubscription) {
       this.zapSubscription.close();
     }
-  } scrollToBottom(): void {
+  }
+
+  scrollToBottom(): void {
     if (this.messagesContainer) {
       const element = this.messagesContainer.nativeElement;
       element.scrollTop = element.scrollHeight;
       this.showScrollToBottom.set(false);
     }
+  }
+
+  /**
+   * Check if user is scrolled near the bottom of the chat.
+   * Used to decide whether to auto-scroll when new messages arrive.
+   */
+  private isUserNearBottom(): boolean {
+    if (!this.messagesContainer) return true; // Default to true if no container
+    const container = this.messagesContainer.nativeElement;
+    const threshold = 200; // pixels from bottom
+    return container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
   }
 
   onScroll(): void {
@@ -438,6 +451,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
             this.initialMessageCount++;
           }
 
+          // Check if user is near bottom BEFORE updating messages
+          const wasNearBottom = this.isUserNearBottom();
+
           this.messages.update(msgs => {
             const newMsgs = [...msgs, newMessage!].sort((a, b) => a.created_at - b.created_at);
 
@@ -454,10 +470,11 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
             return newMsgs;
           });
 
-          // Scroll to bottom if user was already at bottom
-          // For now, just scroll to bottom on new messages if it's not initial load
-          // We might want to add "new messages" indicator later
-          setTimeout(() => this.scrollToBottom(), 50);
+          // Only scroll to bottom if user was already near the bottom
+          // Don't scroll if user is reading older messages (scrolled up)
+          if (wasNearBottom && !this.isLoadingOlderMessages()) {
+            setTimeout(() => this.scrollToBottom(), 50);
+          }
         }
       }
     );
