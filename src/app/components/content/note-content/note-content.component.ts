@@ -18,6 +18,7 @@ import { CashuTokenComponent } from '../../cashu-token/cashu-token.component';
 import { AudioPlayerComponent } from '../../audio-player/audio-player.component';
 import { SettingsService } from '../../../services/settings.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { decode } from 'blurhash';
 
 // Type for grouped display items - either single token or image group
@@ -48,6 +49,7 @@ export class NoteContentComponent implements OnDestroy {
   private viewContainerRef = inject(ViewContainerRef);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
+  private videoPlayback = inject(VideoPlaybackService);
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
@@ -358,6 +360,17 @@ export class NoteContentComponent implements OnDestroy {
     if (target) {
       console.warn('Video failed to load:', videoUrl);
       // The template will handle showing the fallback
+    }
+  }
+
+  /**
+   * Handle video play event - register this video as currently playing
+   * so other videos get paused.
+   */
+  onVideoPlay(event: Event): void {
+    const videoElement = event.target as HTMLVideoElement;
+    if (videoElement) {
+      this.videoPlayback.registerPlaying(videoElement);
     }
   }
 

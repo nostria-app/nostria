@@ -114,7 +114,7 @@
 <div class="media-container video-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)">
   @if (isVideoFormatSupported(token.content)) {
-  <video controls (error)="onVideoError($event, token.content)"
+  <video controls (error)="onVideoError($event, token.content)" (play)="onVideoPlay($event)"
     [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)">
     <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
     Your browser does not support the video element.
@@ -145,7 +145,7 @@
 } @else if (token.type === 'base64-video') {
 <div class="media-container video-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)">
-  <video controls [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)">
+  <video controls (play)="onVideoPlay($event)" [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)">
     <source [src]="token.content" />
     Your browser does not support the video element.
   </video>
