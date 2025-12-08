@@ -171,6 +171,13 @@
         <mat-icon>forum</mat-icon>
         Active in Chat ({{ activeParticipants().length }})
       </h4>
+      @if (totalZapsAmount() > 0) {
+      <div class="zaps-summary">
+        <mat-icon>bolt</mat-icon>
+        <span class="zaps-total">{{ totalZapsAmount() | number }}</span>
+        <span class="zaps-label">sats from {{ totalZapsCount() }} zap{{ totalZapsCount() === 1 ? '' : 's' }}</span>
+      </div>
+      }
       @if (activeParticipants().length === 0) {
       <div class="no-participants">
         <mat-icon>people_outline</mat-icon>

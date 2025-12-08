@@ -462,6 +462,34 @@
         height: 18px;
       }
     }
+
+    .zaps-summary {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px;
+      background: rgba(255, 152, 0, 0.1);
+      border: 1px solid rgba(255, 152, 0, 0.3);
+      border-radius: 8px;
+
+      mat-icon {
+        color: #ff9800;
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      .zaps-total {
+        color: #ff9800;
+        font-size: 1.1rem;
+        font-weight: 600;
+      }
+
+      .zaps-label {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 0.875rem;
+      }
+    }
   }
 
   .no-participants {
