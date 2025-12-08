@@ -574,6 +574,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.timelinePage.set(1);
     // Reset posters pagination when changing time range
     this.postersPage.set(1);
+    // Clear poster filter when changing time range
+    this.selectedPosters.set(new Set());
     // Save selection
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
@@ -586,6 +588,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.selectedPreset.set(null);
     // Reset timeline pagination when changing time range
     this.timelinePage.set(1);
+    // Clear poster filter when changing time range
+    this.selectedPosters.set(new Set());
     // Save selection
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
