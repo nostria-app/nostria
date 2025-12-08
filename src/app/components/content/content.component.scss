@@ -346,3 +346,91 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
   }
 }
+
+// Photo and video mention card specific styling
+.photo-mention-card,
+.video-mention-card {
+  .media-mention-content {
+    padding: 0 !important;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+}
+
+// Inline photo rendering for kind 20 events
+.mention-photo {
+  width: 100%;
+  max-height: 400px;
+  object-fit: contain;
+  border-radius: 0 0 8px 8px;
+  background-color: var(--mat-sys-surface-container);
+}
+
+.more-photos-indicator {
+  width: 100%;
+  padding: 8px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 0 0 8px 8px;
+}
+
+// Inline video rendering for kind 21/22 events
+.video-thumbnail-container {
+  position: relative;
+  width: 100%;
+
+  .mention-video-thumbnail {
+    width: 100%;
+    max-height: 400px;
+    object-fit: contain;
+    border-radius: 0 0 8px 8px;
+    background-color: var(--mat-sys-surface-container);
+  }
+
+  .video-play-overlay {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 64px;
+    height: 64px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: white;
+    }
+  }
+}
+
+.video-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px;
+  width: 100%;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 0 0 8px 8px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+  }
+
+  span {
+    font-size: 0.875rem;
+  }
+}
