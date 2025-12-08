@@ -570,10 +570,8 @@ export class FeedService {
    * Subscribe to a single feed and all its columns
    */
   private async subscribeToFeed(feed: FeedConfig): Promise<void> {
-    // Subscribe to each column in the feed
-    for (const column of feed.columns) {
-      await this.subscribeToColumn(column);
-    }
+    // Subscribe to all columns in parallel for faster initial load
+    await Promise.all(feed.columns.map(column => this.subscribeToColumn(column)));
   }
 
   /**
@@ -656,17 +654,24 @@ export class FeedService {
       this.logger.info(`📅 Column ${column.id}: No cached events, ignoring lastRetrieved=${column.lastRetrieved} to fetch historical events`);
     }
 
-    // Now start async loading of fresh events
+    // Now start loading fresh events in the BACKGROUND (don't await)
+    // This allows cached events to display immediately while fresh data loads
     // If the source is following, fetch from ALL following users
     if (column.source === 'following') {
       console.log(`📍 Loading FOLLOWING feed for column ${column.id}`);
-      await this.loadFollowingFeed(item);
+      this.loadFollowingFeed(item).catch(err =>
+        this.logger.error(`Error loading following feed for ${column.id}:`, err)
+      );
     } else if (column.source === 'for-you') {
       console.log(`📍 Loading FOR-YOU feed for column ${column.id}`);
-      await this.loadForYouFeed(item);
+      this.loadForYouFeed(item).catch(err =>
+        this.logger.error(`Error loading for-you feed for ${column.id}:`, err)
+      );
     } else if (column.source === 'custom') {
       console.log(`📍 Loading CUSTOM feed for column ${column.id}`);
-      await this.loadCustomFeed(item);
+      this.loadCustomFeed(item).catch(err =>
+        this.logger.error(`Error loading custom feed for ${column.id}:`, err)
+      );
     } else {
       console.log(`📍 Loading GLOBAL/OTHER feed for column ${column.id}, source:`, column.source);
 
