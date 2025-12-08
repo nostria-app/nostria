@@ -10,7 +10,7 @@ import {
   ElementRef,
   viewChild,
 } from '@angular/core';
-
+import { Location } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -19,6 +19,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatExpansionModule } from '@angular/material/expansion';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { DatabaseService } from '../../services/database.service';
@@ -28,6 +29,9 @@ import { Event, nip19 } from 'nostr-tools';
 import { ApplicationService } from '../../services/application.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
 import { FollowingDataService } from '../../services/following-data.service';
+import { CustomDialogService, CustomDialogRef } from '../../services/custom-dialog.service';
+import { EventDialogComponent } from '../event/event-dialog/event-dialog.component';
+import { OnDemandUserDataService } from '../../services/on-demand-user-data.service';
 
 interface ActivitySummary {
   notesCount: number;
@@ -72,6 +76,7 @@ const SAVE_INTERVAL_MS = 5000; // Save timestamp every 5 seconds
     MatTooltipModule,
     MatChipsModule,
     MatExpansionModule,
+    MatCheckboxModule,
     UserProfileComponent,
     AgoPipe
   ],
@@ -85,7 +90,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly database = inject(DatabaseService);
   private readonly logger = inject(LoggerService);
   private readonly followingData = inject(FollowingDataService);
+  private readonly customDialog = inject(CustomDialogService);
+  private readonly location = inject(Location);
+  private readonly onDemandUserData = inject(OnDemandUserDataService);
   protected readonly app = inject(ApplicationService);
+
+  // Current event dialog reference
+  private currentEventDialogRef: CustomDialogRef<EventDialogComponent> | null = null;
 
   // ViewChild for load more sentinel
   loadMoreSentinel = viewChild<ElementRef<HTMLDivElement>>('loadMoreSentinel');
@@ -132,6 +143,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Posters pagination
   postersPage = signal(1);
 
+  // Selected posters for filtering the timeline (empty means show all)
+  selectedPosters = signal<Set<string>>(new Set());
+
+  // Whether filter mode is active
+  isFilterMode = computed(() => this.selectedPosters().size > 0);
+
   // Paginated active posters
   activePosters = computed(() => {
     const all = this.allActivePosters();
@@ -160,13 +177,20 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Timeline pagination
   timelinePage = signal(1);
 
-  // All timeline events (combined and sorted)
+  // All timeline events (combined, filtered by selected posters, and sorted)
   allTimelineEvents = computed(() => {
     const notes = this.noteEvents().map(e => ({ ...e, type: 'note' as const }));
     const articles = this.articleEvents().map(e => ({ ...e, type: 'article' as const }));
     const media = this.mediaEvents().map(e => ({ ...e, type: 'media' as const }));
-    return [...notes, ...articles, ...media]
+    const allEvents = [...notes, ...articles, ...media]
       .sort((a, b) => b.created_at - a.created_at);
+
+    // Filter by selected posters if any are selected
+    const selected = this.selectedPosters();
+    if (selected.size === 0) {
+      return allEvents;
+    }
+    return allEvents.filter(e => selected.has(e.pubkey));
   });
 
   // Paginated timeline events
@@ -576,6 +600,98 @@ export class SummaryComponent implements OnInit, OnDestroy {
 
   loadMorePosters(): void {
     this.postersPage.update(p => p + 1);
+  }
+
+  // Poster filter methods
+  togglePosterSelection(pubkey: string): void {
+    this.selectedPosters.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(pubkey)) {
+        newSet.delete(pubkey);
+      } else {
+        newSet.add(pubkey);
+      }
+      return newSet;
+    });
+    // Reset timeline pagination when filter changes
+    this.timelinePage.set(1);
+  }
+
+  isPosterSelected(pubkey: string): boolean {
+    return this.selectedPosters().has(pubkey);
+  }
+
+  clearPosterFilter(): void {
+    this.selectedPosters.set(new Set());
+    this.timelinePage.set(1);
+  }
+
+  selectAllPosters(): void {
+    const allPubkeys = this.allActivePosters().map(p => p.pubkey);
+    this.selectedPosters.set(new Set(allPubkeys));
+    this.timelinePage.set(1);
+  }
+
+  // Event dialog methods
+  openEventDialog(event: MouseEvent, timelineEvent: TimelineEvent & { type: string }): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    // Close existing dialog if any
+    if (this.currentEventDialogRef) {
+      this.currentEventDialogRef.close();
+    }
+
+    // Determine the event ID
+    let eventId: string;
+    if (timelineEvent.kind === 30023 && timelineEvent.tags) {
+      // For articles, generate naddr
+      const dTag = timelineEvent.tags.find(t => t[0] === 'd')?.[1] || '';
+      try {
+        eventId = nip19.naddrEncode({
+          kind: 30023,
+          pubkey: timelineEvent.pubkey,
+          identifier: dTag,
+        });
+      } catch {
+        eventId = timelineEvent.id;
+      }
+    } else {
+      eventId = timelineEvent.id;
+    }
+
+    // Update URL without navigation to support back button
+    const previousUrl = this.location.path();
+    this.location.go(`/e/${eventId}`);
+
+    // Open dialog using CustomDialogService
+    this.currentEventDialogRef = this.customDialog.open<EventDialogComponent>(EventDialogComponent, {
+      title: 'Thread',
+      width: '800px',
+      maxWidth: '100%',
+      data: { eventId },
+    });
+
+    // Set the data on the component instance
+    this.currentEventDialogRef.componentInstance.data = { eventId };
+
+    // Fetch author profile to update dialog title
+    this.onDemandUserData.getProfile(timelineEvent.pubkey).then(profile => {
+      if (profile && this.currentEventDialogRef) {
+        const authorName = profile.data?.display_name || profile.data?.name;
+        if (authorName) {
+          this.currentEventDialogRef.updateTitle(`${authorName}'s post`);
+        }
+      }
+    }).catch(() => {
+      // Silently ignore profile fetch errors, keep default title
+    });
+
+    // Restore URL when dialog is closed
+    this.currentEventDialogRef.afterClosed$.subscribe(() => {
+      this.location.go(previousUrl);
+      this.currentEventDialogRef = null;
+    });
   }
 
   togglePanel(panel: 'notes' | 'articles' | 'media'): void {

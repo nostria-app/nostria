@@ -64,16 +64,35 @@
     <!-- Active Posters Section -->
     @if (activePosters().length > 0) {
     <section class="active-posters-section">
-      <h2 class="section-title">
-        <mat-icon>group</mat-icon>
-        Who Posted
-        <span class="section-count">{{ activePosters().length }} / {{ totalPostersCount() }}</span>
-      </h2>
+      <div class="section-header-with-actions">
+        <h2 class="section-title">
+          <mat-icon>group</mat-icon>
+          Who Posted
+          <span class="section-count">{{ activePosters().length }} / {{ totalPostersCount() }}</span>
+        </h2>
+        <div class="filter-actions">
+          @if (isFilterMode()) {
+          <button mat-stroked-button (click)="clearPosterFilter()" class="filter-action-btn">
+            <mat-icon>clear</mat-icon>
+            Clear Filter
+          </button>
+          }
+          <span class="filter-hint">Click to filter timeline</span>
+        </div>
+      </div>
       <div class="poster-grid">
         @for (poster of activePosters(); track poster.pubkey) {
-        <a class="poster-card" [routerLink]="['/p', poster.pubkey]">
+        <div class="poster-card" [class.selected]="isPosterSelected(poster.pubkey)"
+          (click)="togglePosterSelection(poster.pubkey)" (keydown.enter)="togglePosterSelection(poster.pubkey)"
+          (keydown.space)="togglePosterSelection(poster.pubkey); $event.preventDefault()" role="checkbox" tabindex="0"
+          [attr.aria-checked]="isPosterSelected(poster.pubkey)">
           <div class="poster-avatar">
             <app-user-profile [pubkey]="poster.pubkey" view="icon"></app-user-profile>
+            @if (isPosterSelected(poster.pubkey)) {
+            <div class="selection-indicator">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            }
           </div>
           <div class="poster-stats-badge">
             <span class="stat-item" matTooltip="Notes">
@@ -93,7 +112,7 @@
             </span>
             }
           </div>
-        </a>
+        </div>
         }
       </div>
       @if (hasMorePosters()) {
@@ -171,11 +190,15 @@
       <h2 class="section-title">
         <mat-icon>schedule</mat-icon>
         Activity Timeline
+        @if (isFilterMode()) {
+        <span class="filter-badge">Filtered</span>
+        }
         <span class="section-count">{{ timelineEvents().length }} / {{ totalTimelineCount() }}</span>
       </h2>
       <div class="timeline">
         @for (event of timelineEvents(); track event.id) {
-        <a class="timeline-item" [routerLink]="getEventRoute(event)">
+        <div class="timeline-item" (click)="openEventDialog($event, event)"
+          (keydown.enter)="openEventDialog($any($event), event)" tabindex="0" role="button">
           <app-user-profile [pubkey]="event.pubkey" view="icon" class="timeline-author"></app-user-profile>
           <div class="timeline-content">
             <div class="timeline-header">
@@ -184,7 +207,7 @@
             <p class="timeline-preview">{{ getEventPreview(event) }}</p>
           </div>
           <span class="timeline-time-external">{{ event.created_at | ago }}</span>
-        </a>
+        </div>
         }
       </div>
       @if (hasMoreTimelineEvents()) {
