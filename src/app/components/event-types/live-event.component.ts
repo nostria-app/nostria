@@ -183,6 +183,19 @@ export class LiveEventComponent {
       .map(tag => tag[1]);
   });
 
+  // Display hashtags with igdb tags replaced by game name
+  displayHashtags = computed(() => {
+    const tags = this.hashtags();
+    const game = this.gameData();
+
+    return tags.map(tag => {
+      if (tag.startsWith('igdb:') && game?.name) {
+        return game.name;
+      }
+      return tag;
+    });
+  });
+
   // IGDB game ID from tags
   igdbGameId = computed(() => {
     const event = this.event();

@@ -143,7 +143,7 @@
     </div>
 
     <!-- Hashtags -->
-    @let tags = hashtags();
+    @let tags = displayHashtags();
     @if (tags.length > 0) {
     <div class="hashtags">
       @for (tag of tags; track tag) {
