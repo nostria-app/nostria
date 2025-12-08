@@ -55,7 +55,7 @@
           <span class="zap-info">zapped <span class="zap-amount">{{ message.zapAmount | number }}</span> sats</span>
         </div>
         @if (message.content) {
-        <div class="zap-content">{{ message.content }}</div>
+        <div class="zap-content"><app-chat-content [content]="message.content" /></div>
         }
       </div>
       }
@@ -94,7 +94,7 @@
             </mat-menu>
           </div>
 
-          <div class="message-text">{{ message.content }}</div>
+          <div class="message-text"><app-chat-content [content]="message.content" /></div>
 
           @if (getReactionsArray(message).length > 0) {
           <div class="message-reactions">
