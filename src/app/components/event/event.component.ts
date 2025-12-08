@@ -198,10 +198,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   ]);
 
   // Check if the current event kind supports reactions
+  // For reposts, check the reposted event's kind, not the repost kind itself
   supportsReactions = computed<boolean>(() => {
-    const currentEvent = this.event() || this.record()?.event;
-    if (!currentEvent) return false;
-    return this.REACTABLE_KINDS.has(currentEvent.kind);
+    const targetEvent = this.targetRecord()?.event;
+    if (!targetEvent) return false;
+    return this.REACTABLE_KINDS.has(targetEvent.kind);
   });
 
   // Check if this event is currently the one being displayed on the event page
@@ -332,6 +333,14 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
 
     return repostedContent;
+  });
+
+  // Target record: for reposts, use the reposted content; otherwise use the regular record
+  // This is the event that reactions, zaps, etc. should be associated with
+  targetRecord = computed<NostrRecord | null>(() => {
+    const reposted = this.repostedRecord();
+    if (reposted) return reposted;
+    return this.record();
   });
 
   // Check if this event is a quote-only event (has q tags or inline nostr: references but no meaningful reply context)
@@ -661,9 +670,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           this.hasLoadedInteractions.set(true);
 
           // Load interactions for the specific event that became visible
-          // Only load for event kinds that support reactions (NIP-25)
-          if (this.REACTABLE_KINDS.has(currentRecord.event.kind)) {
-            console.log('🚀 [Lazy Load] Loading interactions for visible event:', currentEventId.substring(0, 8), 'kind:', currentRecord.event.kind);
+          // Use supportsReactions() which correctly checks the target event kind for reposts
+          if (this.supportsReactions()) {
+            // Get the target record (reposted event for reposts, regular event otherwise)
+            const targetRecordData = this.targetRecord();
+            console.log('🚀 [Lazy Load] Loading interactions for visible event:',
+              targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
 
             // Double-check event ID before loading to prevent race conditions
             if (this.record()?.event.id === currentEventId) {
@@ -697,17 +709,20 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Load reports for an event
    * Note: For initial loads, prefer using loadAllInteractions() which is more efficient.
    * Use this method only when you need to refresh reports independently.
+   * For reposts, loads reports for the reposted event, not the repost itself.
    */
   async loadReports(invalidateCache = false) {
-    const record = this.record();
-    if (!record) return;
+    // Use targetRecord to get the actual event for reports
+    // For reposts, this will be the reposted event, not the repost event
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return;
 
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) return;
 
     try {
       const reports = await this.eventService.loadReports(
-        record.event.id,
+        targetRecordData.event.id,
         userPubkey,
         invalidateCache
       );
@@ -720,16 +735,19 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   /**
    * Load all event interactions (reactions, reposts, reports) in a single optimized query
    * This is more efficient than calling loadReactions, loadReposts, and loadReports separately
+   * For reposts, loads interactions for the reposted event, not the repost itself
    */
   async loadAllInteractions(invalidateCache = false) {
-    const record = this.record();
-    if (!record) return;
+    // Use targetRecord to get the actual event for interactions
+    // For reposts, this will be the reposted event, not the repost event
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return;
 
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) return;
 
     // Capture the event ID we're loading for to prevent race conditions
-    const targetEventId = record.event.id;
+    const targetEventId = targetRecordData.event.id;
 
     console.log('📊 [Loading Interactions] Starting load for event:', targetEventId.substring(0, 8));
 
@@ -739,7 +757,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const [interactions, quotesResult] = await Promise.all([
         this.eventService.loadEventInteractions(
           targetEventId,
-          record.event.kind,
+          targetRecordData.event.kind,
           userPubkey,
           invalidateCache
         ),
@@ -752,10 +770,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
       // CRITICAL: Verify we're still showing the same event before updating state
       // This prevents interactions from one event being applied to another
-      const currentRecord = this.record();
-      if (currentRecord?.event.id !== targetEventId) {
+      // For reposts, we compare against targetRecord which is the reposted event
+      const currentTargetRecord = this.targetRecord();
+      if (currentTargetRecord?.event.id !== targetEventId) {
         console.warn('⚠️ [Loading Interactions] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
-        console.warn('⚠️ [Loading Interactions] Current event is now:', currentRecord?.event.id.substring(0, 8));
+        console.warn('⚠️ [Loading Interactions] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
         return;
       }
 
@@ -820,10 +839,13 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Load reactions for an event
    * Note: For initial loads, prefer using loadAllInteractions() which is more efficient.
    * Use this method only when you need to refresh reactions independently (e.g., after liking).
+   * For reposts, loads reactions for the reposted event, not the repost itself.
    */
   async loadReactions(invalidateCache = false) {
-    const record = this.record();
-    if (!record) return;
+    // Use targetRecord to get the actual event for reactions
+    // For reposts, this will be the reposted event, not the repost event
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return;
 
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) return;
@@ -831,7 +853,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     this.isLoadingReactions.set(true);
     try {
       const reactions = await this.eventService.loadReactions(
-        record.event.id,
+        targetRecordData.event.id,
         userPubkey,
         invalidateCache
       );
@@ -911,12 +933,18 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * Load zaps for an event
+   * For reposts, loads zaps for the reposted event, not the repost itself
+   */
   async loadZaps() {
-    const currentEvent = this.event() || this.record()?.event;
-    if (!currentEvent) return;
+    // Use targetRecord to get the actual event for zaps
+    // For reposts, this will be the reposted event, not the repost event
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return;
 
     // Capture the event ID we're loading for to prevent race conditions
-    const targetEventId = currentEvent.id;
+    const targetEventId = targetRecordData.event.id;
 
     console.log('⚡ [Loading Zaps] Starting load for event:', targetEventId.substring(0, 8));
 
@@ -924,10 +952,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       const zapReceipts = await this.zapService.getZapsForEvent(targetEventId);
 
       // CRITICAL: Verify we're still showing the same event before updating state
-      const stillCurrentEvent = this.event() || this.record()?.event;
-      if (stillCurrentEvent?.id !== targetEventId) {
+      // For reposts, we compare against targetRecord which is the reposted event
+      const currentTargetRecord = this.targetRecord();
+      if (currentTargetRecord?.event.id !== targetEventId) {
         console.warn('⚠️ [Loading Zaps] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
-        console.warn('⚠️ [Loading Zaps] Current event is now:', stillCurrentEvent?.id.substring(0, 8));
+        console.warn('⚠️ [Loading Zaps] Current event is now:', currentTargetRecord?.event.id.substring(0, 8));
         return;
       }
 
@@ -980,18 +1009,21 @@ export class EventComponent implements AfterViewInit, OnDestroy {
    * Load reposts for an event
    * Note: For initial loads, prefer using loadAllInteractions() which is more efficient.
    * Use this method only when you need to refresh reposts independently.
+   * For reposts, loads reposts for the reposted event, not the repost itself.
    */
   async loadReposts() {
-    const currentEvent = this.event() || this.record()?.event;
-    if (!currentEvent) return;
+    // Use targetRecord to get the actual event for reposts
+    // For reposts, this will be the reposted event, not the repost event
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return;
 
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) return;
 
     try {
       const reposts = await this.eventService.loadReposts(
-        currentEvent.id,
-        currentEvent.kind,
+        targetRecordData.event.id,
+        targetRecordData.event.kind,
         userPubkey,
         false
       );
@@ -1007,23 +1039,25 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   async loadQuotes() {
-    const currentEvent = this.event() || this.record()?.event;
-    if (!currentEvent) return;
+    // Use targetRecord to get the actual event for quotes
+    // For reposts, this will be the reposted event, not the repost event
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return;
 
     // Capture the event ID we're loading for to prevent race conditions
-    const targetEventId = currentEvent.id;
+    const targetEventId = targetRecordData.event.id;
 
     try {
       // Load quotes using the EventService method (queries for 'q' tags)
       const quotes = await this.eventService.loadQuotes(
-        currentEvent.id,
-        currentEvent.pubkey,
+        targetRecordData.event.id,
+        targetRecordData.event.pubkey,
         false
       );
 
       // CRITICAL: Verify we're still showing the same event before updating state
-      const stillCurrentEvent = this.event() || this.record()?.event;
-      if (stillCurrentEvent?.id !== targetEventId) {
+      const currentTargetRecord = this.targetRecord();
+      if (currentTargetRecord?.event.id !== targetEventId) {
         console.warn('⚠️ [Loading Quotes] Event changed during load, discarding results for:', targetEventId.substring(0, 8));
         return;
       }
@@ -1045,15 +1079,17 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   openReactionsDialog(selectedTab: 'likes' | 'zaps' | 'reposts' | 'quotes' = 'likes') {
-    const currentEvent = this.event() || this.record()?.event;
-    if (!currentEvent) return;
+    // Use targetRecord to get the actual event for reactions dialog
+    // For reposts, this will be the reposted event, not the repost event
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return;
 
     this.dialog.open(ReactionsDialogComponent, {
       width: '650px',
       maxWidth: '90vw',
       panelClass: 'responsive-dialog',
       data: {
-        event: currentEvent,
+        event: targetRecordData.event,
         reactions: this.likes(), // Now contains all reactions, not just '+'
         zaps: this.zaps(),
         reposts: this.reposts(),
@@ -1068,8 +1104,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       event.stopPropagation();
     }
 
-    const currentEvent = this.event() || this.record()?.event;
-    if (!currentEvent) return;
+    // Use targetRecord to get the actual event for liking
+    // For reposts, this will be the reposted event, not the repost event
+    const targetRecordData = this.targetRecord();
+    if (!targetRecordData) return;
+    const targetEvent = targetRecordData.event;
 
     const userPubkey = this.accountState.pubkey();
     const currentAccount = this.accountState.account();
@@ -1101,7 +1140,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         // Add like - optimistically update UI first
         this.updateReactionsOptimistically(userPubkey, '+', true);
 
-        const success = await this.reactionService.addLike(currentEvent);
+        const success = await this.reactionService.addLike(targetEvent);
         if (!success) {
           // Revert optimistic update if failed
           this.updateReactionsOptimistically(userPubkey, '+', false);
@@ -1129,7 +1168,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const currentReactions = this.reactions();
     const currentEvents = [...currentReactions.events];
     const currentData = new Map(currentReactions.data);
-    const currentEvent = this.event() || this.record()?.event;
+    // Use targetRecord to get the actual event for reactions (reposted event for reposts)
+    const targetEvent = this.targetRecord()?.event;
 
     if (isAdding) {
       // Create a temporary reaction event for optimistic UI
@@ -1140,8 +1180,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         kind: kinds.Reaction,
         content: emoji,
         tags: [
-          ['e', currentEvent?.id || ''],
-          ['p', currentEvent?.pubkey || '']
+          ['e', targetEvent?.id || ''],
+          ['p', targetEvent?.pubkey || '']
         ],
         sig: ''
       };
