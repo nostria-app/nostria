@@ -130,6 +130,8 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   // Track if initial load has completed (used to determine hasMoreMessages)
   private initialLoadComplete = false;
   private initialMessageCount = 0;
+  // Flag to prevent scroll events during scroll position restoration
+  private isRestoringScrollPosition = false;
 
   // Store bound scroll handler for proper cleanup
   private boundScrollHandler?: () => void;
@@ -238,8 +240,13 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit(): void {
-    // Initial scroll to bottom
-    setTimeout(() => this.scrollToBottom(), 100);
+    // Initial scroll to bottom - wait for messages to render
+    // Use longer delay and requestAnimationFrame for reliability
+    setTimeout(() => {
+      requestAnimationFrame(() => {
+        this.scrollToBottom();
+      });
+    }, 500);
 
     // Check periodically if we need to auto-load more messages
     // This handles the case where initial messages don't fill the container
@@ -307,6 +314,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
 
   onScroll(): void {
     if (!this.messagesContainer) return;
+
+    // Ignore scroll events while restoring scroll position
+    if (this.isRestoringScrollPosition) return;
 
     const container = this.messagesContainer.nativeElement;
     const scrollTop = container.scrollTop;
@@ -909,6 +919,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
           console.log('[LiveChat] No messages returned but timestamp not from real message, keeping hasMoreMessages true');
           // Keep trying - the initial load might not have completed
         }
+        this.isLoadingOlderMessages.set(false);
       } else {
         // Add older messages to the beginning
         this.messages.update(msgs => {
@@ -927,26 +938,43 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
           return newMsgs;
         });
 
-        // Restore scroll position
-        if (container) {
-          setTimeout(() => {
-            const newScrollHeight = container.scrollHeight;
-            const scrollDiff = newScrollHeight - previousScrollHeight;
-            container.scrollTop = scrollDiff;
-          }, 50);
-        }
-
         // Only set hasMoreMessages to false if we received significantly fewer messages
         // This accounts for relay variability - some relays might not have all messages
         // We only conclude there are no more messages when we get very few (less than 5)
-        if (olderMessages.length < 5) {
+        const noMoreMessages = olderMessages.length < 5;
+        if (noMoreMessages) {
           console.log('[LiveChat] Received only', olderMessages.length, 'messages, likely no more older messages');
-          this.hasMoreMessages.set(false);
+        }
+
+        // Restore scroll position - use flag to prevent scroll events during restoration
+        // IMPORTANT: Set isLoadingOlderMessages to false AFTER scroll is restored to prevent re-render issues
+        if (container) {
+          this.isRestoringScrollPosition = true;
+          // Use requestAnimationFrame for smoother scroll restoration after DOM update
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const newScrollHeight = container.scrollHeight;
+              const scrollDiff = newScrollHeight - previousScrollHeight;
+              container.scrollTop = scrollDiff;
+              // Reset flags after scroll is set
+              setTimeout(() => {
+                this.isRestoringScrollPosition = false;
+                this.isLoadingOlderMessages.set(false);
+                if (noMoreMessages) {
+                  this.hasMoreMessages.set(false);
+                }
+              }, 50);
+            });
+          });
+        } else {
+          this.isLoadingOlderMessages.set(false);
+          if (noMoreMessages) {
+            this.hasMoreMessages.set(false);
+          }
         }
       }
     } catch (error) {
       console.error('[LiveChat] Error loading older messages:', error);
-    } finally {
       this.isLoadingOlderMessages.set(false);
     }
   }
