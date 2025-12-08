@@ -87,7 +87,7 @@
           (keydown.space)="togglePosterSelection(poster.pubkey); $event.preventDefault()" role="checkbox" tabindex="0"
           [attr.aria-checked]="isPosterSelected(poster.pubkey)">
           <div class="poster-avatar">
-            <app-user-profile [pubkey]="poster.pubkey" view="icon"></app-user-profile>
+            <app-user-profile [pubkey]="poster.pubkey" view="icon" [disableLink]="true"></app-user-profile>
             @if (isPosterSelected(poster.pubkey)) {
             <div class="selection-indicator">
               <mat-icon>check_circle</mat-icon>

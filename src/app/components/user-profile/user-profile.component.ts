@@ -98,6 +98,12 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   showRank = input<boolean>(true);
 
+  /**
+   * If true, clicking the avatar/name will not navigate to the profile page.
+   * Hover cards will still work. Useful when the profile is used in a selectable context.
+   */
+  disableLink = input<boolean>(false);
+
   // Trust rank - computed from trust input
   trustRank = computed(() => this.trust()?.rank);
   trustEnabled = computed(() => this.trustService.isEnabled());
