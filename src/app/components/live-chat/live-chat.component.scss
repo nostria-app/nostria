@@ -276,6 +276,39 @@
     word-wrap: break-word;
     overflow-wrap: break-word;
     white-space: pre-wrap;
+
+    app-chat-content {
+      display: inline;
+
+      ::ng-deep {
+        .nostr-mention {
+          color: var(--mat-sys-primary);
+          text-decoration: none;
+          cursor: pointer;
+
+          &:hover {
+            text-decoration: underline;
+          }
+
+          app-profile-display-name {
+            display: inline;
+          }
+        }
+
+        .nostr-event-link {
+          color: var(--mat-sys-tertiary);
+          text-decoration: none;
+          padding: 2px 6px;
+          background: var(--mat-sys-surface-container-highest);
+          border-radius: 4px;
+          font-size: 0.85em;
+
+          &:hover {
+            background: var(--mat-sys-surface-container-high);
+          }
+        }
+      }
+    }
   }
 
   .message-reactions {
