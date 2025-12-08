@@ -480,9 +480,12 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
             return newMsgs;
           });
 
-          // Only scroll to bottom if user was already near the bottom
-          // Don't scroll if user is reading older messages (scrolled up)
-          if (wasNearBottom && !this.isLoadingOlderMessages()) {
+          // Only scroll to bottom if:
+          // 1. During initial load (always scroll to show latest messages), OR
+          // 2. User was already near the bottom (following along)
+          // Don't scroll if user is reading older messages (scrolled up) after initial load
+          const shouldScroll = !this.initialLoadComplete || (wasNearBottom && !this.isLoadingOlderMessages());
+          if (shouldScroll) {
             setTimeout(() => this.scrollToBottom(), 50);
           }
         }
