@@ -285,14 +285,8 @@ export class FeedsComponent implements OnDestroy {
   // Cache to store events during drag operations
   private _eventCache = new Map<string, Event[]>();
 
-  // Track the last active feed ID for scroll restoration
-  private lastActiveFeedId: string | null = null;
-
   // Flag to track if we're processing a URL-based navigation (prevents URL sync loop)
   private isProcessingUrlNavigation = false;
-
-  // Scroll position auto-save
-  private scrollSaveInterval?: number;
 
   // Virtual list configuration
   private readonly INITIAL_RENDER_COUNT = 15; // Render 15 events initially for smoother initial view
@@ -495,12 +489,8 @@ export class FeedsComponent implements OnDestroy {
         untracked(async () => {
           try {
             // Re-establish subscriptions when component loads
-            this.feedService.subscribe();
-
-            // Give a small delay to let the feeds initialize
-            setTimeout(() => {
-              this.isLoading.set(false);
-            }, 1000);
+            await this.feedService.subscribe();
+            this.isLoading.set(false);
           } catch (error) {
             console.error('Error initializing feeds:', error);
             this.isLoading.set(false);
@@ -509,25 +499,7 @@ export class FeedsComponent implements OnDestroy {
       }
     });
 
-    // Set up automatic scroll position saving
-    effect(() => {
-      if (this.layoutService.isBrowser() && this.accountState.account()) {
-        // Clear any existing interval
-        if (this.scrollSaveInterval) {
-          clearInterval(this.scrollSaveInterval);
-        }
-
-        // Save scroll position every 2 seconds while user is on the feeds page
-        this.scrollSaveInterval = window.setInterval(() => {
-          const currentFeedId = this.feedsCollectionService.activeFeedId();
-          if (currentFeedId) {
-            this.layoutService.saveFeedScrollPosition(currentFeedId);
-          }
-        }, 2000);
-      }
-    });
-
-    // Monitor active feed changes for scroll position save/restore and URL sync
+    // Monitor active feed changes for URL sync
     effect(() => {
       const currentFeedId = this.feedsCollectionService.activeFeedId();
 
@@ -536,27 +508,10 @@ export class FeedsComponent implements OnDestroy {
         return;
       }
 
-      console.log('🔄 Feed change detected. Current:', currentFeedId, 'Previous:', this.lastActiveFeedId);
-
       untracked(() => {
-        // Save scroll position of the previous feed
-        if (this.lastActiveFeedId && this.lastActiveFeedId !== currentFeedId) {
-          console.log('💾 Saving scroll position for previous feed:', this.lastActiveFeedId);
-          this.layoutService.saveFeedScrollPosition(this.lastActiveFeedId);
-          this.logger.debug('Saved scroll position for previous feed:', this.lastActiveFeedId);
-        }
-
-        // Update tracking
-        this.lastActiveFeedId = currentFeedId;
-
-        // Restore scroll position for the new feed
+        // Log active feed change
         if (currentFeedId) {
-          console.log('📍 Scheduling restore for feed:', currentFeedId, 'in 1000ms');
           this.logger.debug('Active feed changed to:', currentFeedId);
-          setTimeout(() => {
-            console.log('⏰ Restore timeout fired for feed:', currentFeedId);
-            this.layoutService.restoreFeedScrollPosition(currentFeedId);
-          }, 1000); // Increased delay to ensure content is loaded
         }
 
         // Sync URL with active feed (only if not triggered by route change)
@@ -1469,21 +1424,8 @@ export class FeedsComponent implements OnDestroy {
     console.log('🧹 FeedsComponent destroying...');
     this.logger.debug('Cleaning up resources...');
 
-    // Clear scroll save interval
-    if (this.scrollSaveInterval) {
-      clearInterval(this.scrollSaveInterval);
-    }
-
     // Clean up Intersection Observer
     this.cleanupLoadMoreObserver();
-
-    // Save the current scroll position for the active feed before destroying
-    const currentFeedId = this.lastActiveFeedId || this.feedsCollectionService.activeFeedId();
-    if (currentFeedId) {
-      console.log('💾 Saving scroll position on destroy for feed:', currentFeedId);
-      this.layoutService.saveFeedScrollPosition(currentFeedId);
-      this.logger.debug('Saved scroll position on component destroy for feed:', currentFeedId);
-    }
 
     // Mark feeds page as inactive - this will trigger unsubscribe in FeedService
     this.feedService.setFeedsPageActive(false);
