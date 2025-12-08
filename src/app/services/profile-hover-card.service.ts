@@ -88,6 +88,20 @@ export class ProfileHoverCardService implements OnDestroy {
   }
 
   /**
+   * Shows a hover card immediately (no delay).
+   * Use this for long-press/touch gestures on mobile.
+   * @param element The HTML element to attach the hover card to
+   * @param pubkey The public key of the profile to display
+   */
+  showHoverCardImmediately(element: HTMLElement, pubkey: string): void {
+    // Close any existing card
+    this.closeHoverCard();
+
+    // Create immediately
+    this.createHoverCard(element, pubkey);
+  }
+
+  /**
    * Hides the currently displayed hover card
    */
   hideHoverCard(): void {
