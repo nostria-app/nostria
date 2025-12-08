@@ -368,19 +368,48 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 0.5rem 0.75rem;
+    gap: 0.5rem;
+    padding: 2rem 0.5rem 0.5rem 0.5rem;
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
     opacity: 0;
     transition: opacity 0.2s ease;
 
     .media-author {
-      width: 28px;
-      height: 28px;
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+
+      ::ng-deep {
+
+        app-user-profile,
+        .user-profile,
+        .user-profile-container,
+        .user-profile-avatar-container,
+        a.user-profile-avatar {
+          width: 32px !important;
+          height: 32px !important;
+          display: block !important;
+        }
+
+        img.user-avatar {
+          width: 32px !important;
+          height: 32px !important;
+          border-radius: 50% !important;
+          object-fit: cover !important;
+        }
+
+        mat-icon.default-user-avatar {
+          font-size: 32px !important;
+          width: 32px !important;
+          height: 32px !important;
+        }
+      }
     }
 
     .media-time {
       font-size: 0.75rem;
       color: white;
+      flex-shrink: 0;
     }
   }
 }
