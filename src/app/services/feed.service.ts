@@ -217,7 +217,7 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         icon: 'article',
         type: 'articles',
         kinds: [30023], // Long-form content
-        source: 'for-you',
+        source: 'following',
         relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
