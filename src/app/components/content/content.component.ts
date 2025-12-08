@@ -504,4 +504,105 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   shouldShowContent = computed(() => {
     return this._isVisible() || this._hasBeenVisible();
   });
+
+  // Helper methods for inline photo event rendering (to avoid circular dependency with PhotoEventComponent)
+
+  /**
+   * Parse an imeta tag into a key-value object
+   */
+  private parseImetaTag(tag: string[]): Record<string, string> {
+    const parsed: Record<string, string> = {};
+    // Skip the first element which is 'imeta'
+    for (let i = 1; i < tag.length; i++) {
+      const part = tag[i];
+      const spaceIndex = part.indexOf(' ');
+      if (spaceIndex > 0) {
+        const key = part.substring(0, spaceIndex);
+        const value = part.substring(spaceIndex + 1);
+        parsed[key] = value;
+      }
+    }
+    return parsed;
+  }
+
+  /**
+   * Get photo URLs from a kind 20 event
+   */
+  getPhotoUrls(event: NostrEvent): string[] {
+    const imageUrls: string[] = [];
+
+    if (event.kind === 20) {
+      // NIP-68: Get URLs from 'imeta' tags
+      const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
+      for (const imetaTag of imetaTags) {
+        const parsed = this.parseImetaTag(imetaTag);
+        if (parsed['url']) {
+          imageUrls.push(parsed['url']);
+        }
+      }
+    }
+
+    // Fallback: Get URLs from 'url' or 'image' tags
+    if (imageUrls.length === 0) {
+      const urlTags = event.tags.filter(tag => tag[0] === 'url');
+      imageUrls.push(...urlTags.map(tag => tag[1]));
+
+      const imageTags = event.tags.filter(tag => tag[0] === 'image');
+      imageUrls.push(...imageTags.map(tag => tag[1]));
+    }
+
+    return [...new Set(imageUrls)];
+  }
+
+  /**
+   * Get alt text for a photo at a specific index
+   */
+  getPhotoAlt(event: NostrEvent, imageIndex = 0): string {
+    if (event.kind === 20) {
+      const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
+      const targetImeta = imetaTags[imageIndex];
+      if (targetImeta) {
+        const parsed = this.parseImetaTag(targetImeta);
+        if (parsed['alt']) {
+          return parsed['alt'];
+        }
+      }
+    }
+
+    // Fallback to regular alt tag or title
+    const altTag = event.tags.find(tag => tag[0] === 'alt');
+    const titleTag = event.tags.find(tag => tag[0] === 'title');
+    return altTag?.[1] || titleTag?.[1] || 'Photo';
+  }
+
+  /**
+   * Get video thumbnail from a video event (kind 21/22/34235/34236)
+   */
+  getVideoThumbnail(event: NostrEvent): string | null {
+    // Try imeta tags first
+    const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
+    for (const imetaTag of imetaTags) {
+      const parsed = this.parseImetaTag(imetaTag);
+      if (parsed['image']) {
+        return parsed['image'];
+      }
+    }
+
+    // Try thumb or image tag
+    const thumbTag = event.tags.find(tag => tag[0] === 'thumb');
+    if (thumbTag?.[1]) return thumbTag[1];
+
+    const imageTag = event.tags.find(tag => tag[0] === 'image');
+    if (imageTag?.[1]) return imageTag[1];
+
+    return null;
+  }
+
+  /**
+   * Get video title from a video event
+   */
+  getVideoTitle(event: NostrEvent): string | null {
+    const titleTag = event.tags.find(tag => tag[0] === 'title');
+    return titleTag?.[1] || null;
+  }
 }

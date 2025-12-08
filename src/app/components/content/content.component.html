@@ -24,6 +24,63 @@
   @if (mention.event.event.kind === 8) {
   <!-- Badge Award (kind 8) -->
   <app-badge [badge]="mention.event.event"></app-badge>
+  } @else if (mention.event.event.kind === 20) {
+  <!-- Photo Event (kind 20, NIP-68) - Inline rendering to avoid circular dependency -->
+  <mat-card appearance="outlined" class="event-mention-card photo-mention-card" tabindex="0" role="button"
+    (click)="onEventMentionClick($event, mention.event.event)"
+    (keydown.enter)="onEventMentionClick($event, mention.event.event)"
+    (keydown.space)="onEventMentionClick($event, mention.event.event)">
+    <mat-card-header>
+      <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
+        <span class="date-link" [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
+          matTooltipPosition="below">
+          {{ mention.event.event.created_at | ago }}
+        </span>
+      </app-user-profile>
+    </mat-card-header>
+    <mat-card-content class="media-mention-content">
+      @for (imageUrl of getPhotoUrls(mention.event.event); track imageUrl; let i = $index) {
+      @if (i
+      < 4) { <img [src]="imageUrl" [alt]="getPhotoAlt(mention.event.event, i)" class="mention-photo" loading="lazy" />
+      }
+      }
+      @if (getPhotoUrls(mention.event.event).length > 4) {
+      <div class="more-photos-indicator">+{{ getPhotoUrls(mention.event.event).length - 4 }} more</div>
+      }
+    </mat-card-content>
+  </mat-card>
+  } @else if (mention.event.event.kind === 21 || mention.event.event.kind === 22 || mention.event.event.kind === 34235
+  || mention.event.event.kind === 34236) {
+  <!-- Video Event (kind 21/22/34235/34236, NIP-71) - Inline rendering -->
+  <mat-card appearance="outlined" class="event-mention-card video-mention-card" tabindex="0" role="button"
+    (click)="onEventMentionClick($event, mention.event.event)"
+    (keydown.enter)="onEventMentionClick($event, mention.event.event)"
+    (keydown.space)="onEventMentionClick($event, mention.event.event)">
+    <mat-card-header>
+      <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
+        <span class="date-link" [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
+          matTooltipPosition="below">
+          {{ mention.event.event.created_at | ago }}
+        </span>
+      </app-user-profile>
+    </mat-card-header>
+    <mat-card-content class="media-mention-content">
+      @if (getVideoThumbnail(mention.event.event); as thumbnail) {
+      <div class="video-thumbnail-container">
+        <img [src]="thumbnail" [alt]="getVideoTitle(mention.event.event) || 'Video thumbnail'"
+          class="mention-video-thumbnail" loading="lazy" />
+        <div class="video-play-overlay">
+          <mat-icon>play_circle</mat-icon>
+        </div>
+      </div>
+      } @else {
+      <div class="video-placeholder">
+        <mat-icon>videocam</mat-icon>
+        <span>{{ getVideoTitle(mention.event.event) || 'Video' }}</span>
+      </div>
+      }
+    </mat-card-content>
+  </mat-card>
   } @else {
   <!-- Regular event mention -->
   <mat-card appearance="outlined" class="event-mention-card" tabindex="0" role="button"
