@@ -300,21 +300,11 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     const scrollHeight = container.scrollHeight;
     const clientHeight = container.clientHeight;
 
-    console.log('[LiveChat] onScroll:', {
-      scrollTop,
-      scrollHeight,
-      clientHeight,
-      threshold: this.SCROLL_THRESHOLD,
-      isLoading: this.isLoadingOlderMessages(),
-      hasMore: this.hasMoreMessages(),
-      oldestTimestamp: this.oldestMessageTimestamp
-    });
-
     // Check if user scrolled near the top to load older messages
     // Use <= to include scrollTop of exactly 0
-    if (scrollTop <= this.SCROLL_THRESHOLD && !this.isLoadingOlderMessages() && this.hasMoreMessages()) {
-      console.log('[LiveChat] Triggering loadOlderMessages...');
-      this.loadOlderMessages();
+    // Always try to load when user scrolls to top (use forceLoadOlderMessages to bypass hasMoreMessages check)
+    if (scrollTop <= this.SCROLL_THRESHOLD && !this.isLoadingOlderMessages()) {
+      this.forceLoadOlderMessages();
     }
 
     // Check if user is near bottom to toggle "Go to end" button
