@@ -93,8 +93,13 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   // Subscription management
   private chatSubscription: { close: () => void } | null = null;
   private reactionSubscription: { close: () => void } | null = null;
+  private zapSubscription: { close: () => void } | null = null;
   private messageIds = new Set<string>();
   private reactionIds = new Set<string>();
+  private zapIds = new Set<string>();
+
+  // All zaps (loaded separately without limit for accurate totals)
+  allZaps = signal<{ pubkey: string; amount: number }[]>([]);
 
   // Quick reactions for the picker
   readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
@@ -122,6 +127,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   private readonly LOAD_MORE_LIMIT = 30;
   // Scroll threshold in pixels to trigger loading older messages
   private readonly SCROLL_THRESHOLD = 200;
+  // Track if initial load has completed (used to determine hasMoreMessages)
+  private initialLoadComplete = false;
+  private initialMessageCount = 0;
 
   // Store bound scroll handler for proper cleanup
   private boundScrollHandler?: () => void;
@@ -190,13 +198,13 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       .sort((a, b) => (b.totalZapAmount + b.chatCount + b.reactionCount) - (a.totalZapAmount + a.chatCount + a.reactionCount));
   });
 
-  // Total zaps summary
+  // Total zaps summary (from separate zap subscription that loads all zaps)
   totalZapsAmount = computed(() => {
-    return this.activeParticipants().reduce((sum, p) => sum + p.totalZapAmount, 0);
+    return this.allZaps().reduce((sum, z) => sum + z.amount, 0);
   });
 
   totalZapsCount = computed(() => {
-    return this.activeParticipants().reduce((sum, p) => sum + p.zapCount, 0);
+    return this.allZaps().length;
   });
 
   // Computed event address for querying
@@ -232,6 +240,38 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   ngAfterViewInit(): void {
     // Initial scroll to bottom
     setTimeout(() => this.scrollToBottom(), 100);
+
+    // Check periodically if we need to auto-load more messages
+    // This handles the case where initial messages don't fill the container
+    setTimeout(() => this.checkIfNeedsMoreContent(), 2500);
+  }
+
+  /**
+   * Check if the chat container has scrollable content.
+   * If not, automatically load older messages so the user can scroll.
+   */
+  private checkIfNeedsMoreContent(): void {
+    if (!this.messagesContainer) return;
+
+    const container = this.messagesContainer.nativeElement;
+    const hasScrollableContent = container.scrollHeight > container.clientHeight;
+
+    console.log('[LiveChat] checkIfNeedsMoreContent:', {
+      scrollHeight: container.scrollHeight,
+      clientHeight: container.clientHeight,
+      hasScrollableContent,
+      hasMore: this.hasMoreMessages(),
+      messagesCount: this.messages().length
+    });
+
+    // If container doesn't have scrollable content and there are more messages, load them
+    if (!hasScrollableContent && this.hasMoreMessages() && this.messages().length > 0 && !this.isLoadingOlderMessages()) {
+      console.log('[LiveChat] Container not scrollable, auto-loading older messages...');
+      this.loadOlderMessages().then(() => {
+        // Check again after loading
+        setTimeout(() => this.checkIfNeedsMoreContent(), 500);
+      });
+    }
   }
 
   ngOnDestroy(): void {
@@ -240,6 +280,9 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     }
     if (this.reactionSubscription) {
       this.reactionSubscription.close();
+    }
+    if (this.zapSubscription) {
+      this.zapSubscription.close();
     }
   } scrollToBottom(): void {
     if (this.messagesContainer) {
@@ -257,8 +300,20 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     const scrollHeight = container.scrollHeight;
     const clientHeight = container.clientHeight;
 
+    console.log('[LiveChat] onScroll:', {
+      scrollTop,
+      scrollHeight,
+      clientHeight,
+      threshold: this.SCROLL_THRESHOLD,
+      isLoading: this.isLoadingOlderMessages(),
+      hasMore: this.hasMoreMessages(),
+      oldestTimestamp: this.oldestMessageTimestamp
+    });
+
     // Check if user scrolled near the top to load older messages
-    if (scrollTop < this.SCROLL_THRESHOLD && !this.isLoadingOlderMessages() && this.hasMoreMessages()) {
+    // Use <= to include scrollTop of exactly 0
+    if (scrollTop <= this.SCROLL_THRESHOLD && !this.isLoadingOlderMessages() && this.hasMoreMessages()) {
+      console.log('[LiveChat] Triggering loadOlderMessages...');
       this.loadOlderMessages();
     }
 
@@ -280,9 +335,21 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     this.messages.set([]);
     this.messageIds.clear();
     this.reactionIds.clear();
+    this.zapIds.clear();
+    this.allZaps.set([]);
     this.activeRelays.set([]);
-    this.oldestMessageTimestamp = null;
+    // Initialize to current time so we can load older messages even if no new messages arrive
+    this.oldestMessageTimestamp = Math.floor(Date.now() / 1000);
     this.hasMoreMessages.set(true);
+    // Reset initial load tracking
+    this.initialLoadComplete = false;
+    this.initialMessageCount = 0;
+
+    // Close existing zap subscription
+    if (this.zapSubscription) {
+      this.zapSubscription.close();
+      this.zapSubscription = null;
+    }
 
     // Get streamer pubkey from event
     const event = this.liveEvent();
@@ -376,6 +443,11 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
         }
 
         if (newMessage) {
+          // Track initial load messages count (before initial load is complete)
+          if (!this.initialLoadComplete) {
+            this.initialMessageCount++;
+          }
+
           this.messages.update(msgs => {
             const newMsgs = [...msgs, newMessage!].sort((a, b) => a.created_at - b.created_at);
 
@@ -400,8 +472,56 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       }
     );
 
+    // After initial messages arrive (2 seconds), evaluate if there are more messages
+    setTimeout(() => {
+      if (!this.initialLoadComplete) {
+        this.initialLoadComplete = true;
+        console.log('[LiveChat] Initial load complete, received', this.initialMessageCount, 'messages');
+
+        // If we received fewer messages than the limit, there might not be more
+        // But we should still allow at least one attempt to load older messages
+        // Only set hasMoreMessages to false if we received 0 messages
+        if (this.initialMessageCount === 0) {
+          this.hasMoreMessages.set(false);
+          console.log('[LiveChat] No initial messages received, setting hasMoreMessages to false');
+        } else {
+          // Keep hasMoreMessages true - let the user try to load more
+          // It will be set to false when loadOlderMessages returns 0 results
+          console.log('[LiveChat] Initial messages received, hasMoreMessages stays true');
+        }
+      }
+    }, 2000);
+
     // Subscribe to reactions (kind 7) for chat messages
     this.subscribeToReactions(relayUrls);
+
+    // Subscribe to ALL zaps (no limit) for accurate zap totals
+    this.subscribeToAllZaps(relayUrls, eventAddress);
+  }
+
+  private subscribeToAllZaps(relayUrls: string[], eventAddress: string): void {
+    // Subscribe to kind 9735 zaps without limit to get accurate totals
+    const zapFilter = {
+      kinds: [9735],
+      '#a': [eventAddress],
+    };
+
+    this.zapSubscription = this.relayPool.subscribe(
+      relayUrls,
+      zapFilter,
+      (event: Event) => {
+        // Skip if already processed
+        if (this.zapIds.has(event.id)) return;
+        this.zapIds.add(event.id);
+
+        // Parse zap receipt
+        const { zapRequest, amount } = this.zapService.parseZapReceipt(event);
+
+        if (zapRequest && amount) {
+          this.allZaps.update(zaps => [...zaps, { pubkey: zapRequest.pubkey, amount }]);
+        }
+      }
+    );
   }
 
   private subscribeToReactions(relayUrls: string[]): void {
@@ -600,7 +720,11 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   toggleView(mode: string) {
     this.viewMode.set(mode as 'chat' | 'participants' | 'settings');
     if (mode === 'chat') {
-      setTimeout(() => this.scrollToBottom(), 50);
+      setTimeout(() => {
+        this.scrollToBottom();
+        // Check if we need more content after switching back to chat
+        this.checkIfNeedsMoreContent();
+      }, 50);
     }
   }
 
@@ -646,28 +770,46 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
 
-  private async loadOlderMessages(): Promise<void> {
+  /**
+   * Force load older messages, resetting the hasMoreMessages flag first.
+   * Use this when the user explicitly clicks "Load more" button.
+   */
+  async forceLoadOlderMessages(): Promise<void> {
+    // Reset hasMoreMessages to allow loading
+    this.hasMoreMessages.set(true);
+    await this.loadOlderMessages();
+  }
+
+  async loadOlderMessages(): Promise<void> {
+    console.log('[LiveChat] loadOlderMessages called');
+
     // Don't load if already loading or no more messages
     if (this.isLoadingOlderMessages() || !this.hasMoreMessages()) {
+      console.log('[LiveChat] Skipping - isLoading:', this.isLoadingOlderMessages(), 'hasMore:', this.hasMoreMessages());
       return;
     }
 
     // Don't load if we don't have an oldest timestamp yet
     if (this.oldestMessageTimestamp === null) {
+      console.log('[LiveChat] Skipping - no oldestMessageTimestamp');
       return;
     }
 
     const address = this.eventAddress();
-    if (!address) return;
+    if (!address) {
+      console.log('[LiveChat] Skipping - no event address');
+      return;
+    }
 
     const relayUrls = this.activeRelays();
     if (relayUrls.length === 0) {
+      console.log('[LiveChat] Skipping - no active relays');
       return;
     }
 
     this.isLoadingOlderMessages.set(true);
 
-    console.log('[LiveChat] Loading older messages before:', this.oldestMessageTimestamp);
+    console.log('[LiveChat] Loading older messages before:', this.oldestMessageTimestamp, 'from relays:', relayUrls);
 
     // Save current scroll position to restore it later
     const container = this.messagesContainer?.nativeElement;
@@ -746,8 +888,20 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
       });
 
       if (olderMessages.length === 0) {
-        // No more messages to load
-        this.hasMoreMessages.set(false);
+        // No more messages to load - but only if we actually tried to query
+        // and the query was valid (oldestMessageTimestamp was set from actual messages)
+        const currentOldest = this.oldestMessageTimestamp;
+        const currentTime = Math.floor(Date.now() / 1000);
+        // If oldestMessageTimestamp is within 10 seconds of current time, it wasn't updated from real messages
+        const timestampIsFromRealMessage = currentOldest !== null && (currentTime - currentOldest) > 10;
+
+        if (timestampIsFromRealMessage) {
+          console.log('[LiveChat] No older messages found, setting hasMoreMessages to false');
+          this.hasMoreMessages.set(false);
+        } else {
+          console.log('[LiveChat] No messages returned but timestamp not from real message, keeping hasMoreMessages true');
+          // Keep trying - the initial load might not have completed
+        }
       } else {
         // Add older messages to the beginning
         this.messages.update(msgs => {
@@ -775,8 +929,11 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
           }, 50);
         }
 
-        // If we received fewer messages than the limit, we've reached the end
-        if (olderMessages.length < this.LOAD_MORE_LIMIT) {
+        // Only set hasMoreMessages to false if we received significantly fewer messages
+        // This accounts for relay variability - some relays might not have all messages
+        // We only conclude there are no more messages when we get very few (less than 5)
+        if (olderMessages.length < 5) {
+          console.log('[LiveChat] Received only', olderMessages.length, 'messages, likely no more older messages');
           this.hasMoreMessages.set(false);
         }
       }
