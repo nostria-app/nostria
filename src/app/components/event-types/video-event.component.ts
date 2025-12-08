@@ -12,6 +12,7 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { VideoPlaybackService } from '../../services/video-playback.service';
 
 interface VideoData {
   url: string;
@@ -45,6 +46,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
   private hostElement = inject(ElementRef);
+  private videoPlayback = inject(VideoPlaybackService);
 
   // Viewport visibility
   private intersectionObserver?: IntersectionObserver;
@@ -182,6 +184,11 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     if (this.intersectionObserver) {
       this.intersectionObserver.disconnect();
     }
+    // Unregister video from playback service if it was playing
+    const videoElement = this.videoPlayerRef?.nativeElement;
+    if (videoElement) {
+      this.videoPlayback.unregisterPlaying(videoElement);
+    }
   }
 
   shouldBlurMedia = computed(() => {
@@ -313,6 +320,17 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
   collapseVideo(): void {
     this.isExpanded.set(false);
+  }
+
+  /**
+   * Handle video play event - register this video as currently playing
+   * so other videos get paused.
+   */
+  onVideoPlay(event: globalThis.Event): void {
+    const videoElement = event.target as HTMLVideoElement;
+    if (videoElement) {
+      this.videoPlayback.registerPlaying(videoElement);
+    }
   }
 
   revealMedia(): void {
