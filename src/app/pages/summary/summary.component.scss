@@ -365,10 +365,9 @@
     bottom: 0;
     left: 0;
     right: 0;
+    z-index: 1;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
     padding: 2rem 0.5rem 0.5rem 0.5rem;
     background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
     opacity: 0;
@@ -378,10 +377,17 @@
       width: 32px;
       height: 32px;
       flex-shrink: 0;
+      overflow: hidden;
 
       ::ng-deep {
+        app-user-profile {
+          width: 32px !important;
+          height: 32px !important;
+          display: block !important;
+          min-width: 32px !important;
+          max-width: 32px !important;
+        }
 
-        app-user-profile,
         .user-profile,
         .user-profile-container,
         .user-profile-avatar-container,
@@ -407,9 +413,12 @@
     }
 
     .media-time {
+      position: absolute;
+      bottom: 0.5rem;
+      right: 0.5rem;
       font-size: 0.75rem;
       color: white;
-      flex-shrink: 0;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
     }
   }
 }
