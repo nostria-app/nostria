@@ -26,6 +26,7 @@ import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSliderModule } from '@angular/material/slider';
 import { DomSanitizer } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
+import { DragDropModule, CdkDragDrop, moveItemInArray } from '@angular/cdk/drag-drop';
 
 import { NostrService } from '../../services/nostr.service';
 import { MediaService } from '../../services/media.service';
@@ -36,6 +37,7 @@ import { AccountLocalStateService } from '../../services/account-local-state.ser
 import { ContentComponent } from '../content/content.component';
 import { Router } from '@angular/router';
 import { nip19, Event as NostrEvent, UnsignedEvent } from 'nostr-tools';
+import { getEventHash } from 'nostr-tools/pure';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { PowService, PowProgress } from '../../services/pow.service';
 import { MentionAutocompleteComponent, MentionSelection, MentionAutocompleteConfig } from '../mention-autocomplete/mention-autocomplete.component';
@@ -97,6 +99,10 @@ interface NoteAutoDraft {
   // Context data to ensure draft matches current dialog state
   replyToId?: string;
   quoteId?: string;
+  // Media Mode
+  mediaMetadata?: MediaMetadata[];
+  isMediaMode?: boolean;
+  title?: string;
 }
 
 @Component({
@@ -117,7 +123,8 @@ interface NoteAutoDraft {
     MatSliderModule,
     ContentComponent,
     MentionAutocompleteComponent,
-    MatMenuModule
+    MatMenuModule,
+    DragDropModule
   ],
   providers: [provideNativeDateAdapter()],
   templateUrl: './note-editor-dialog.component.html',
@@ -316,10 +323,108 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     const content = this.content();
 
+    if (this.isMediaMode()) {
+      // In Media Mode, content (description) is used as is (URLs already removed from text area)
+      // But we need to simulate the Kind 1 wrapper
+      // The wrapper has: content + "\n\nnostr:" + nevent
+
+      const mediaEvent = this.previewMediaEvent();
+      if (mediaEvent) {
+        const nevent = nip19.neventEncode({
+          id: mediaEvent.id,
+          author: mediaEvent.pubkey,
+          kind: mediaEvent.kind,
+        });
+        return this.processContentForPublishing(content) + '\n\nnostr:' + nevent;
+      }
+
+      return this.processContentForPublishing(content) + '\n\n[Media Story will be attached here]';
+    }
+
     if (!content.trim()) return 'Nothing to preview...';
 
     return this.processContentForPublishing(content);
   });
+
+  // Computed property for the unsigned media event for preview
+  previewMediaEvent = computed((): NostrEvent | null => {
+    if (!this.isMediaMode() || this.mediaMetadata().length === 0) return null;
+
+    // 1. Determine Kind
+    const kind = this.getMediaEventKind();
+
+    // 2. Prepare Content (remove URLs)
+    let content = this.content();
+    this.mediaMetadata().forEach(m => {
+      const escapedUrl = m.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedUrl, 'g');
+      content = content.replace(regex, '').trim();
+    });
+    content = this.processContentForPublishing(content);
+
+    // 3. Build Media Event Tags
+    const mediaTags: string[][] = [];
+    // Title
+    if (this.title()) {
+      mediaTags.push(['title', this.title()]);
+    }
+    // Imeta
+    this.mediaMetadata().forEach(metadata => {
+      const imetaTag = this.buildImetaTag(metadata);
+      if (imetaTag) {
+        mediaTags.push(imetaTag);
+      }
+    });
+    // Hashtags
+    this.extractHashtags(content, mediaTags);
+    // Mentions
+    this.mentions().forEach(pubkey => {
+      mediaTags.push(['p', pubkey]);
+    });
+    // Client
+    if (this.addClientTag()) {
+      mediaTags.push(['client', 'nostria']);
+    }
+    // Alt tag
+    mediaTags.push(['alt', `Media post: ${this.title() || 'Untitled'}`]);
+
+    // 4. Create Unsigned Media Event
+    const pubkey = this.accountState.pubkey() || '';
+    const created_at = Math.floor(Date.now() / 1000);
+
+    const unsignedEvent: UnsignedEvent = {
+      kind,
+      content,
+      tags: mediaTags,
+      pubkey,
+      created_at,
+    };
+
+    // 5. Calculate ID
+    const id = getEventHash(unsignedEvent);
+
+    return {
+      ...unsignedEvent,
+      id,
+      sig: '', // No signature for preview
+    };
+  });
+
+  // Map of preloaded events for preview
+  previewEventsMap = computed(() => {
+    const map = new Map<string, NostrEvent>();
+    const mediaEvent = this.previewMediaEvent();
+    if (mediaEvent) {
+      map.set(mediaEvent.id, mediaEvent);
+    }
+    return map;
+  });
+
+  drop(event: CdkDragDrop<MediaMetadata[]>) {
+    const currentMetadata = [...this.mediaMetadata()];
+    moveItemInArray(currentMetadata, event.previousIndex, event.currentIndex);
+    this.mediaMetadata.set(currentMetadata);
+  }
 
   // Dialog mode indicators
   isReply = computed(() => !!this.data?.replyTo);
@@ -477,27 +582,42 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const mentionsSignal = this.mentions;
     const expirationEnabledSignal = this.expirationEnabled;
     const expirationTimeSignal = this.expirationTime;
+    const mediaMetadataSignal = this.mediaMetadata;
+    const isMediaModeSignal = this.isMediaMode;
+    const titleSignal = this.title;
 
     let previousMentions = JSON.stringify(mentionsSignal());
     let previousExpirationEnabled = expirationEnabledSignal();
     let previousExpirationTime = expirationTimeSignal();
+    let previousMediaMetadata = JSON.stringify(mediaMetadataSignal());
+    let previousIsMediaMode = isMediaModeSignal();
+    let previousTitle = titleSignal();
 
     const checkOtherChanges = () => {
       const currentMentions = JSON.stringify(mentionsSignal());
       const currentExpirationEnabled = expirationEnabledSignal();
       const currentExpirationTime = expirationTimeSignal();
+      const currentMediaMetadata = JSON.stringify(mediaMetadataSignal());
+      const currentIsMediaMode = isMediaModeSignal();
+      const currentTitle = titleSignal();
 
       if (
         currentMentions !== previousMentions ||
         currentExpirationEnabled !== previousExpirationEnabled ||
-        currentExpirationTime !== previousExpirationTime
+        currentExpirationTime !== previousExpirationTime ||
+        currentMediaMetadata !== previousMediaMetadata ||
+        currentIsMediaMode !== previousIsMediaMode ||
+        currentTitle !== previousTitle
       ) {
         previousMentions = currentMentions;
         previousExpirationEnabled = currentExpirationEnabled;
         previousExpirationTime = currentExpirationTime;
+        previousMediaMetadata = currentMediaMetadata;
+        previousIsMediaMode = currentIsMediaMode;
+        previousTitle = currentTitle;
 
-        // Only schedule auto-save if there's content
-        if (this.content().trim()) {
+        // Only schedule auto-save if there's content or media
+        if (this.content().trim() || this.mediaMetadata().length > 0) {
           this.scheduleAutoSave();
         }
       }
@@ -513,9 +633,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       clearTimeout(this.autoSaveTimer);
     }
 
-    // Only auto-save if there's meaningful content
+    // Only auto-save if there's meaningful content or media
     const content = this.content().trim();
-    if (!content) return;
+    const hasMedia = this.mediaMetadata().length > 0;
+
+    if (!content && !hasMedia) return;
 
     // Schedule new auto-save
     this.autoSaveTimer = setTimeout(() => {
@@ -528,7 +650,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (!pubkey) return;
 
     const content = this.content().trim();
-    if (!content) return;
+    const hasMedia = this.mediaMetadata().length > 0;
+
+    if (!content && !hasMedia) return;
 
     const autoDraft: NoteAutoDraft = {
       content: this.content(),
@@ -545,6 +669,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       lastModified: Date.now(),
       replyToId: this.data?.replyTo?.id,
       quoteId: this.data?.quote?.id,
+      mediaMetadata: this.mediaMetadata(),
+      isMediaMode: this.isMediaMode(),
+      title: this.title(),
     };
 
     const key = this.getAutoDraftKey();
@@ -589,12 +716,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const twoHoursInMs = 2 * 60 * 60 * 1000;
       const isExpired = Date.now() - autoDraft.lastModified > twoHoursInMs;
 
-      if (!isExpired && autoDraft.content.trim()) {
+      const hasContent = autoDraft.content.trim().length > 0;
+      const hasMedia = autoDraft.mediaMetadata && autoDraft.mediaMetadata.length > 0;
+
+      if (!isExpired && (hasContent || hasMedia)) {
         // Don't overwrite existing content from quote/reply initialization
         const existingContent = this.content().trim();
         const draftHasMoreContent = autoDraft.content.trim().length > existingContent.length;
 
-        if (draftHasMoreContent) {
+        if (draftHasMoreContent || hasMedia) {
           this.content.set(autoDraft.content);
           this.mentions.set([...autoDraft.mentions]);
 
@@ -612,6 +742,16 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           this.expirationTime.set(autoDraft.expirationTime);
           this.uploadOriginal.set(autoDraft.uploadOriginal ?? false);
           this.addClientTag.set(autoDraft.addClientTag ?? this.localSettings.addClientTag());
+
+          if (autoDraft.mediaMetadata) {
+            this.mediaMetadata.set(autoDraft.mediaMetadata);
+          }
+          if (autoDraft.isMediaMode !== undefined) {
+            this.isMediaMode.set(autoDraft.isMediaMode);
+          }
+          if (autoDraft.title) {
+            this.title.set(autoDraft.title);
+          }
 
           // Show restoration message
           this.snackBar.open('Draft restored', 'Dismiss', {
@@ -680,7 +820,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     // 2. Prepare Content (remove URLs)
     let content = this.content();
     this.mediaMetadata().forEach(m => {
-      content = content.replace(m.url, '').trim();
+      const escapedUrl = m.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedUrl, 'g');
+      content = content.replace(regex, '').trim();
     });
     content = this.processContentForPublishing(content);
 
@@ -1683,7 +1825,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           console.log(`Upload result for ${file.name}:`, result);
 
           if (result.status === 'success' && result.item) {
-            this.insertFileUrl(result.item.url);
+            if (!this.isMediaMode()) {
+              this.insertFileUrl(result.item.url);
+            }
 
             // Extract metadata for imeta tag (NIP-92)
             const metadata = await this.extractMediaMetadata(
@@ -1755,6 +1899,32 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     } finally {
       this.isUploading.set(false);
     }
+  }
+
+  setMediaMode(enabled: boolean): void {
+    this.isMediaMode.set(enabled);
+
+    let currentContent = this.content();
+    const mediaUrls = this.mediaMetadata().map(m => m.url);
+
+    if (enabled) {
+      // Remove URLs
+      mediaUrls.forEach(url => {
+        // Escape special regex characters in URL
+        const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        // Create global regex
+        const regex = new RegExp(escapedUrl, 'g');
+        currentContent = currentContent.replace(regex, '').trim();
+      });
+    } else {
+      // Add URLs if missing
+      mediaUrls.forEach(url => {
+        if (!currentContent.includes(url)) {
+          currentContent += (currentContent ? '\n' : '') + url;
+        }
+      });
+    }
+    this.content.set(currentContent);
   }
 
   private insertFileUrl(url: string): void {
