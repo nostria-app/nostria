@@ -20,6 +20,7 @@ import { TaggedReferencesComponent } from './tagged-references/tagged-references
 import { Event as NostrEvent } from 'nostr-tools';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 import { RelayPoolService } from '../../services/relays/relay-pool';
+import { UserRelayService } from '../../services/relays/user-relay';
 import { ArticleComponent } from '../article/article.component';
 
 interface ArticleMention {
@@ -66,6 +67,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   layoutService = inject(LayoutService);
   data = inject(DataService);
   private relayPool = inject(RelayPoolService);
+  private userRelayService = inject(UserRelayService);
 
   @ViewChild('contentContainer') contentContainer!: ElementRef;
   // Input for raw content
@@ -119,7 +121,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   socialPreviews = signal<SocialPreview[]>([]);
 
   // Event mentions with loading state
-  eventMentions = signal<{ event: NostrRecord | null; contentTokens: ContentToken[]; loading: boolean; eventId: string }[]>([]);
+  eventMentions = signal<{ event: NostrRecord | null; contentTokens: ContentToken[]; loading: boolean; eventId: string; currentImageIndex: number }[]>([]);
 
   // Article mentions (naddr) - these use the ArticleComponent which handles its own loading
   articleMentions = signal<ArticleMention[]>([]);
@@ -243,6 +245,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
             contentTokens: [],
             loading: true,
             eventId: eventId as string,
+            currentImageIndex: 0,
           };
         });
 
@@ -306,6 +309,24 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
               eventData = await this.data.getEventById(eventId);
             }
 
+            // If still not found, and we have an author hint, try fetching from author's relays
+            if (!eventData) {
+              const author = mention.nostrData?.type === 'nevent'
+                ? mention.nostrData.data.author
+                : undefined;
+
+              if (author) {
+                try {
+                  const authorEvent = await this.userRelayService.getEventById(author, eventId);
+                  if (authorEvent) {
+                    eventData = this.data.toRecord(authorEvent);
+                  }
+                } catch (err) {
+                  console.warn(`Failed to fetch event ${eventId} from author ${author} relays`, err);
+                }
+              }
+            }
+
             if (eventData) {
               const contentTokens = await this.parsing.parseContent(eventData?.data, eventData?.event.tags);
 
@@ -317,6 +338,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
                   contentTokens,
                   loading: false,
                   eventId: eventId as string,
+                  currentImageIndex: 0,
                 };
                 return updated;
               });
@@ -329,6 +351,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
                   contentTokens: [],
                   loading: false,
                   eventId: eventId as string,
+                  currentImageIndex: 0,
                 };
                 return updated;
               });
@@ -343,6 +366,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
                 contentTokens: [],
                 loading: false,
                 eventId: eventId as string,
+                currentImageIndex: 0,
               };
               return updated;
             });
@@ -520,6 +544,53 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
     // Use the layout service to navigate, which properly uses Angular router
     this.layoutService.openEvent(nostrEvent.id, nostrEvent);
+  }
+
+  nextImage(mentionIndex: number, event: MouseEvent) {
+    event.stopPropagation();
+    this.eventMentions.update(mentions => {
+      const updated = [...mentions];
+      const mention = updated[mentionIndex];
+      if (mention && mention.event) {
+        const totalImages = this.getPhotoUrls(mention.event.event).length;
+        updated[mentionIndex] = {
+          ...mention,
+          currentImageIndex: (mention.currentImageIndex + 1) % totalImages
+        };
+      }
+      return updated;
+    });
+  }
+
+  prevImage(mentionIndex: number, event: MouseEvent) {
+    event.stopPropagation();
+    this.eventMentions.update(mentions => {
+      const updated = [...mentions];
+      const mention = updated[mentionIndex];
+      if (mention && mention.event) {
+        const totalImages = this.getPhotoUrls(mention.event.event).length;
+        updated[mentionIndex] = {
+          ...mention,
+          currentImageIndex: (mention.currentImageIndex - 1 + totalImages) % totalImages
+        };
+      }
+      return updated;
+    });
+  }
+
+  setImage(mentionIndex: number, imageIndex: number, event: MouseEvent) {
+    event.stopPropagation();
+    this.eventMentions.update(mentions => {
+      const updated = [...mentions];
+      const mention = updated[mentionIndex];
+      if (mention) {
+        updated[mentionIndex] = {
+          ...mention,
+          currentImageIndex: imageIndex
+        };
+      }
+      return updated;
+    });
   }
 
   // Control when content should be shown - once visible, always show

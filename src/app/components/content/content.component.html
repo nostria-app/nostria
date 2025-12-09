@@ -2,7 +2,7 @@
   @if (shouldShowContent()) {
   <app-note-content [contentTokens]="contentTokens()" [authorPubkey]="event()?.pubkey"></app-note-content>
 
-  @for (mention of eventMentions(); track mention.eventId) {
+  @for (mention of eventMentions(); track mention.eventId; let mentionIndex = $index) {
   @if (mention.loading) {
   <!-- Loading placeholder for event mention -->
   <mat-card appearance="outlined" class="event-mention-card loading-card">
@@ -39,14 +39,37 @@
       </app-user-profile>
     </mat-card-header>
     <mat-card-content class="media-mention-content">
-      @for (imageUrl of getPhotoUrls(mention.event.event); track imageUrl; let i = $index) {
-      @if (i
-      < 4) { <img [src]="imageUrl" [alt]="getPhotoAlt(mention.event.event, i)" class="mention-photo" loading="lazy" />
-      }
-      }
-      @if (getPhotoUrls(mention.event.event).length > 4) {
-      <div class="more-photos-indicator">+{{ getPhotoUrls(mention.event.event).length - 4 }} more</div>
-      }
+      @let imageUrls = getPhotoUrls(mention.event.event);
+      @let currentIndex = mention.currentImageIndex;
+
+      <div class="photo-carousel">
+        <div class="photo-container">
+          <img [src]="imageUrls[currentIndex]" [alt]="getPhotoAlt(mention.event.event, currentIndex)"
+            class="mention-photo" loading="lazy" />
+        </div>
+
+        @if (imageUrls.length > 1) {
+        <!-- Navigation buttons -->
+        <button mat-icon-button class="carousel-nav-button carousel-nav-left" (click)="prevImage(mentionIndex, $event)"
+          aria-label="Previous photo">
+          <mat-icon>chevron_left</mat-icon>
+        </button>
+
+        <button mat-icon-button class="carousel-nav-button carousel-nav-right" (click)="nextImage(mentionIndex, $event)"
+          aria-label="Next photo">
+          <mat-icon>chevron_right</mat-icon>
+        </button>
+
+        <!-- Indicator dots -->
+        <div class="carousel-indicators">
+          @for (url of imageUrls; track url; let imgIndex = $index) {
+          <button class="indicator-dot" [class.active]="currentIndex === imgIndex"
+            (click)="setImage(mentionIndex, imgIndex, $event)" [attr.aria-label]="'Go to photo ' + (imgIndex + 1)">
+          </button>
+          }
+        </div>
+        }
+      </div>
     </mat-card-content>
   </mat-card>
   } @else if (mention.event.event.kind === 21 || mention.event.event.kind === 22 || mention.event.event.kind === 34235
