@@ -53,7 +53,7 @@
             <span class="media-description">Create a rich media event optimized for media clients</span>
           </div>
         </div>
-        <mat-slide-toggle [checked]="isMediaMode()" (change)="isMediaMode.set($event.checked)" color="primary">
+        <mat-slide-toggle [checked]="isMediaMode()" (change)="setMediaMode($event.checked)" color="primary">
         </mat-slide-toggle>
       </div>
       }
@@ -66,9 +66,28 @@
       </mat-form-field>
       }
 
+      <!-- Media Thumbnails (Media Mode) -->
+      @if (isMediaModeEnabled() && mediaMetadata().length > 0) {
+      <div class="media-thumbnails" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)">
+        @for (media of mediaMetadata(); track media.url) {
+        <div class="media-thumbnail" cdkDrag>
+          @if (media.mimeType?.startsWith('video/')) {
+          <mat-icon class="video-icon">videocam</mat-icon>
+          <!-- Use image preview if available -->
+          @if (media.image) {
+          <img [src]="media.image" class="thumbnail-img" alt="Video thumbnail">
+          }
+          } @else {
+          <img [src]="media.url" class="thumbnail-img" alt="Image thumbnail">
+          }
+        </div>
+        }
+      </div>
+      }
+
       <div class="textarea-container">
         <mat-form-field appearance="outline" class="content-field">
-          <mat-label>What's on your mind?</mat-label>
+          <mat-label>{{ isMediaModeEnabled() ? 'Description' : "What's on your mind?" }}</mat-label>
           <textarea matInput [value]="content()" (input)="onContentInput($event)" (keydown)="onContentKeyDown($event)"
             (keyup)="onContentKeyUp($event)" (click)="onContentClick($event)"
             placeholder="Write your note... Use @ to mention someone" rows="4" class="content-textarea"
@@ -240,7 +259,8 @@
         <mat-icon class="preview-icon">visibility</mat-icon>
         <span class="preview-title">Preview</span>
       </div>
-      <app-content class="preview-content" [content]="previewContent()"></app-content>
+      <app-content class="preview-content" [content]="previewContent()"
+        [preloadedEvents]="previewEventsMap()"></app-content>
       <!-- <div class="preview-content" [innerHTML]="previewContent()"></div> -->
     </div>
     }

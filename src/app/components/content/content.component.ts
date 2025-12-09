@@ -74,6 +74,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Input for the event (to access tags for mentions/articles)
   event = input<NostrEvent | null>(null);
 
+  // Input for preloaded events (to render previews of events not yet published)
+  preloadedEvents = input<Map<string, NostrEvent>>(new Map());
+
   // Input to hide tagged references (useful for comments/replies where the parent is already visible)
   hideTaggedReferences = input<boolean>(false);
 
@@ -266,8 +269,27 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           try {
             let eventData: NostrRecord | null = null;
 
-            // If we have relay hints, try those first (10 second timeout)
-            if (relayHints && relayHints.length > 0) {
+            // Check preloaded events first
+            const preloadedMap = this.preloadedEvents();
+            if (preloadedMap.has(eventId)) {
+              const preloadedEvent = preloadedMap.get(eventId)!;
+              // Wrap in NostrRecord structure
+              eventData = {
+                event: preloadedEvent,
+                data: preloadedEvent.content,
+                // Add other required fields with defaults
+                id: preloadedEvent.id,
+                pubkey: preloadedEvent.pubkey,
+                created_at: preloadedEvent.created_at,
+                kind: preloadedEvent.kind,
+                tags: preloadedEvent.tags,
+                sig: preloadedEvent.sig,
+                relays: []
+              } as unknown as NostrRecord; // Cast to avoid strict type issues with missing fields if any
+            }
+
+            // If not preloaded, try relay hints
+            if (!eventData && relayHints && relayHints.length > 0) {
               try {
                 const relayEvent = await this.relayPool.getEventById(relayHints, eventId, 10000);
                 if (relayEvent) {
