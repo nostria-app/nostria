@@ -463,12 +463,32 @@
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    background-color: rgba(0, 0, 0, 0.5);
-    color: white;
     z-index: 10;
+    background-color: rgba(255, 255, 255, 0.7);
+    color: rgba(0, 0, 0, 0.8);
+    width: 32px;
+    height: 32px;
+    min-width: 32px;
+    min-height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    border-radius: 50%;
 
     &:hover {
-      background-color: rgba(0, 0, 0, 0.7);
+      background-color: rgba(255, 255, 255, 0.9);
+    }
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     &.carousel-nav-left {
@@ -477,6 +497,10 @@
 
     &.carousel-nav-right {
       right: 8px;
+
+      mat-icon {
+        margin-left: 2px;
+      }
     }
   }
 
