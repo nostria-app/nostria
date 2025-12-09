@@ -207,6 +207,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Media metadata for imeta tags (NIP-92)
   mediaMetadata = signal<MediaMetadata[]>([]);
 
+  // Media Mode
+  title = signal('');
+  isMediaMode = signal(false);
+  isMediaModeAvailable = computed(() => this.mediaMetadata().length > 0);
+  isMediaModeEnabled = computed(() => this.isMediaModeAvailable() && this.isMediaMode());
+
   // Mention autocomplete state
   mentionConfig = signal<MentionAutocompleteConfig | null>(null);
   mentionPosition = signal<{ top: number; left: number }>({ top: 0, left: 0 });
@@ -644,119 +650,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.isPublishing.set(true);
 
     try {
-      let eventToSign: UnsignedEvent;
-
-      // Use processed content for mining and publishing
-      const contentToPublish = this.processContentForPublishing(this.content().trim());
-
-      // If PoW is enabled, ensure we have a mined event
-      if (this.powEnabled()) {
-        // If we don't have a mined event yet, or content has changed, mine it now
-        if (!this.powMinedEvent() || this.powMinedEvent()?.content !== contentToPublish) {
-          // Build the base event for mining
-          const tags = this.buildTags();
-          const baseEvent = this.nostrService.createEvent(1, contentToPublish, tags);
-
-          // Start mining
-          this.snackBar.open('Mining Proof-of-Work before publishing...', '', { duration: 2000 });
-
-          const result = await this.powService.mineEvent(
-            baseEvent,
-            this.powTargetDifficulty(),
-            (progress: PowProgress) => {
-              this.powProgress.set(progress);
-            }
-          );
-
-          if (result && result.event) {
-            this.powMinedEvent.set(result.event);
-            eventToSign = result.event;
-          } else if (!this.powService.isRunning()) {
-            // Mining was stopped or failed
-            this.snackBar.open('Proof-of-Work mining was stopped or failed', 'Close', {
-              duration: 5000,
-            });
-            this.isPublishing.set(false);
-            return;
-          } else {
-            throw new Error('Failed to mine Proof-of-Work');
-          }
-        } else {
-          // Use existing mined event
-          eventToSign = this.powMinedEvent()!;
-        }
+      if (this.isMediaModeEnabled()) {
+        await this.publishMediaFlow();
       } else {
-        // PoW is not enabled, create event normally
-        const tags = this.buildTags();
-        eventToSign = this.nostrService.createEvent(1, contentToPublish, tags);
-      }
-
-      // Use the centralized publishing service which handles relay distribution
-      // This ensures replies, quotes, and mentions are published to all relevant relays
-
-      // Set up a flag to track if dialog has been closed
-      let dialogClosed = false;
-      let publishedEventId: string | undefined;
-
-      // Subscribe to relay results to close dialog on first success
-      this.publishSubscription = this.publishEventBus.on('relay-result').subscribe((event) => {
-        if (!dialogClosed && event.type === 'relay-result') {
-          const relayEvent = event as PublishRelayResultEvent;
-
-          // Check if this is for our event (match by content since we don't have ID yet)
-          // Once we have the event ID, match by that
-          const isOurEvent = publishedEventId
-            ? relayEvent.event.id === publishedEventId
-            : relayEvent.event.content === contentToPublish;
-
-          if (isOurEvent && relayEvent.success) {
-            dialogClosed = true;
-            publishedEventId = relayEvent.event.id;
-
-            // Clear draft and close dialog immediately after first successful publish
-            this.clearAutoDraft();
-            this.snackBar.open('Note published successfully!', 'Close', {
-              duration: 3000,
-            });
-
-            // Close dialog with the signed event
-            const signedEvent = relayEvent.event;
-            this.dialogRef?.close({ published: true, event: signedEvent });
-
-            // Navigate to the published event
-            const nevent = nip19.neventEncode({
-              id: signedEvent.id,
-              author: signedEvent.pubkey,
-              kind: signedEvent.kind,
-            });
-            this.router.navigate(['/e', nevent], { state: { event: signedEvent } });
-
-            // Unsubscribe after handling
-            if (this.publishSubscription) {
-              this.publishSubscription.unsubscribe();
-              this.publishSubscription = undefined;
-            }
-          }
-        }
-      });
-
-      // Start the publish operation (will continue in background even after dialog closes)
-      const result = await this.nostrService.signAndPublish(eventToSign);
-
-      console.log('[NoteEditorDialog] Publish result:', {
-        success: result.success,
-        hasEvent: !!result.event,
-        eventId: result.event?.id
-      });
-
-      // Store the event ID for matching in the subscription
-      if (result.event) {
-        publishedEventId = result.event.id;
-      }
-
-      // If no relay succeeded at all (dialog would still be open)
-      if (!dialogClosed && (!result.success || !result.event)) {
-        throw new Error('Failed to publish event');
+        await this.publishStandardFlow();
       }
     } catch (error) {
       console.error('Error publishing note:', error);
@@ -767,6 +664,208 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       console.log('[NoteEditorDialog] Finally block - resetting isPublishing and publishInitiated');
       this.isPublishing.set(false);
       this.publishInitiated.set(false);
+    }
+  }
+
+  private async publishStandardFlow(): Promise<void> {
+    const content = this.processContentForPublishing(this.content().trim());
+    const tags = this.buildTags();
+    await this.publishEvent(content, tags);
+  }
+
+  private async publishMediaFlow(): Promise<void> {
+    // 1. Determine Kind
+    const kind = this.getMediaEventKind();
+
+    // 2. Prepare Content (remove URLs)
+    let content = this.content();
+    this.mediaMetadata().forEach(m => {
+      content = content.replace(m.url, '').trim();
+    });
+    content = this.processContentForPublishing(content);
+
+    // 3. Build Media Event Tags
+    const mediaTags: string[][] = [];
+    // Title
+    if (this.title()) {
+      mediaTags.push(['title', this.title()]);
+    }
+    // Imeta
+    this.mediaMetadata().forEach(metadata => {
+      const imetaTag = this.buildImetaTag(metadata);
+      if (imetaTag) {
+        mediaTags.push(imetaTag);
+      }
+    });
+    // Hashtags
+    this.extractHashtags(content, mediaTags);
+    // Mentions
+    this.mentions().forEach(pubkey => {
+      mediaTags.push(['p', pubkey]);
+    });
+    // Client
+    if (this.addClientTag()) {
+      mediaTags.push(['client', 'nostria']);
+    }
+    // Alt tag
+    mediaTags.push(['alt', `Media post: ${this.title() || 'Untitled'}`]);
+
+    // 4. Create and Sign Media Event
+    const mediaEvent = this.nostrService.createEvent(kind, content, mediaTags);
+
+    // 5. Publish Media Event
+    const result = await this.nostrService.signAndPublish(mediaEvent);
+
+    if (!result.success || !result.event) {
+      throw new Error('Failed to publish media event');
+    }
+
+    const signedMediaEvent = result.event;
+
+    // 6. Create Kind 1 Event Wrapper
+    const nevent = nip19.neventEncode({
+      id: signedMediaEvent.id,
+      author: signedMediaEvent.pubkey,
+      kind: signedMediaEvent.kind,
+    });
+
+    // Kind 1 content: Text + Reference
+    const kind1Content = `${content}\n\nnostr:${nevent}`;
+
+    // Kind 1 tags
+    const kind1Tags = this.buildTags();
+    // Remove imeta tags from Kind 1 (since they are in Kind 20)
+    const filteredKind1Tags = kind1Tags.filter(t => t[0] !== 'imeta');
+
+    // Add 'q' tag for the media event
+    filteredKind1Tags.push(['q', signedMediaEvent.id, '', signedMediaEvent.pubkey]);
+
+    // 7. Publish Kind 1 Event
+    await this.publishEvent(kind1Content, filteredKind1Tags);
+  }
+
+  private getMediaEventKind(): number {
+    const hasVideo = this.mediaMetadata().some(m => m.mimeType?.startsWith('video/'));
+    if (!hasVideo) return 20; // Images
+
+    const verticalVideo = this.mediaMetadata().some(m => {
+      if (m.mimeType?.startsWith('video/') && m.dimensions) {
+        return m.dimensions.height > m.dimensions.width;
+      }
+      return false;
+    });
+
+    return verticalVideo ? 22 : 21;
+  }
+
+  private async publishEvent(contentToPublish: string, tags: string[][]): Promise<void> {
+    let eventToSign: UnsignedEvent;
+
+    // If PoW is enabled, ensure we have a mined event
+    if (this.powEnabled()) {
+      // If we don't have a mined event yet, or content has changed, mine it now
+      if (!this.powMinedEvent() || this.powMinedEvent()?.content !== contentToPublish) {
+        // Build the base event for mining
+        const baseEvent = this.nostrService.createEvent(1, contentToPublish, tags);
+
+        // Start mining
+        this.snackBar.open('Mining Proof-of-Work before publishing...', '', { duration: 2000 });
+
+        const result = await this.powService.mineEvent(
+          baseEvent,
+          this.powTargetDifficulty(),
+          (progress: PowProgress) => {
+            this.powProgress.set(progress);
+          }
+        );
+
+        if (result && result.event) {
+          this.powMinedEvent.set(result.event);
+          eventToSign = result.event;
+        } else if (!this.powService.isRunning()) {
+          // Mining was stopped or failed
+          this.snackBar.open('Proof-of-Work mining was stopped or failed', 'Close', {
+            duration: 5000,
+          });
+          throw new Error('PoW mining stopped');
+        } else {
+          throw new Error('Failed to mine Proof-of-Work');
+        }
+      } else {
+        // Use existing mined event
+        eventToSign = this.powMinedEvent()!;
+      }
+    } else {
+      // PoW is not enabled, create event normally
+      eventToSign = this.nostrService.createEvent(1, contentToPublish, tags);
+    }
+
+    // Use the centralized publishing service which handles relay distribution
+    // This ensures replies, quotes, and mentions are published to all relevant relays
+
+    // Set up a flag to track if dialog has been closed
+    let dialogClosed = false;
+    let publishedEventId: string | undefined;
+
+    // Subscribe to relay results to close dialog on first success
+    this.publishSubscription = this.publishEventBus.on('relay-result').subscribe((event) => {
+      if (!dialogClosed && event.type === 'relay-result') {
+        const relayEvent = event as PublishRelayResultEvent;
+
+        // Check if this is for our event (match by content since we don't have ID yet)
+        // Once we have the event ID, match by that
+        const isOurEvent = publishedEventId
+          ? relayEvent.event.id === publishedEventId
+          : relayEvent.event.content === contentToPublish;
+
+        if (isOurEvent && relayEvent.success) {
+          dialogClosed = true;
+          publishedEventId = relayEvent.event.id;
+
+          // Clear draft and close dialog immediately after first successful publish
+          this.clearAutoDraft();
+          this.snackBar.open('Note published successfully!', 'Close', {
+            duration: 3000,
+          });
+
+          // Close dialog with the signed event
+          const signedEvent = relayEvent.event;
+          this.dialogRef?.close({ published: true, event: signedEvent });
+
+          // Navigate to the published event
+          const nevent = nip19.neventEncode({
+            id: signedEvent.id,
+            author: signedEvent.pubkey,
+            kind: signedEvent.kind,
+          });
+          this.router.navigate(['/e', nevent], { state: { event: signedEvent } });
+
+          // Unsubscribe after handling
+          if (this.publishSubscription) {
+            this.publishSubscription.unsubscribe();
+            this.publishSubscription = undefined;
+          }
+        }
+      }
+    });
+
+    // Start the publish operation (will continue in background even after dialog closes)
+    const result = await this.nostrService.signAndPublish(eventToSign);
+
+    console.log('[NoteEditorDialog] Publish result:', {
+      success: result.success,
+      hasEvent: !!result.event,
+      eventId: result.event?.id
+    });
+
+    // Store the event ID for matching in the subscription
+    if (result.event) {
+      publishedEventId = result.event.id;
+    }
+
+    // If no relay succeeded at all (dialog would still be open)
+    if (!dialogClosed && (!result.success || !result.event)) {
+      throw new Error('Failed to publish event');
     }
   }
 
@@ -1519,6 +1618,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return;
     }
 
+    // Auto-enable media mode when files are uploaded
+    this.isMediaMode.set(true);
+
     this.isUploading.set(true);
 
     try {
@@ -1539,6 +1641,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             | undefined;
 
           if (file.type.startsWith('video/')) {
+            // Auto-enable media mode for videos
+            this.isMediaMode.set(true);
+
             try {
               this.snackBar.open('Extracting video thumbnail...', '', { duration: 2000 });
 

@@ -42,6 +42,30 @@
     <!-- Content editor with upload actions -->
     @if (!showPreview() && !showAdvancedOptions()) {
     <div class="content-editor-section">
+
+      <!-- Media Mode Toggle Banner -->
+      @if (isMediaModeAvailable()) {
+      <div class="media-mode-banner" [class.active]="isMediaMode()">
+        <div class="media-mode-info">
+          <mat-icon class="media-icon">perm_media</mat-icon>
+          <div class="media-text">
+            <span class="media-label">Publish as Media Story</span>
+            <span class="media-description">Create a rich media event optimized for media clients</span>
+          </div>
+        </div>
+        <mat-slide-toggle [checked]="isMediaMode()" (change)="isMediaMode.set($event.checked)" color="primary">
+        </mat-slide-toggle>
+      </div>
+      }
+
+      <!-- Title Input for Media Mode -->
+      @if (isMediaModeEnabled()) {
+      <mat-form-field appearance="outline" class="title-field">
+        <mat-label>Title</mat-label>
+        <input matInput [ngModel]="title()" (ngModelChange)="title.set($event)" placeholder="Give your story a title">
+      </mat-form-field>
+      }
+
       <div class="textarea-container">
         <mat-form-field appearance="outline" class="content-field">
           <mat-label>What's on your mind?</mat-label>
@@ -182,8 +206,8 @@
                 <span class="slider-value">{{ zapSplitOriginalPercent() }}%</span>
               </div>
               <mat-slider min="0" max="100" step="1" showTickMarks discrete>
-                <input matSliderThumb [value]="zapSplitOriginalPercent()" (valueChange)="onZapSplitOriginalChange($event)"
-                  aria-label="Original Author Percentage">
+                <input matSliderThumb [value]="zapSplitOriginalPercent()"
+                  (valueChange)="onZapSplitOriginalChange($event)" aria-label="Original Author Percentage">
               </mat-slider>
             </div>
 
