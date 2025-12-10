@@ -36,7 +36,7 @@
         [class.clickable-image]="!shouldBlurImages() || isImageRevealed(currentImage.content)"
         [class.hidden]="shouldBlurImages() && !isImageRevealed(currentImage.content)" />
       @if (shouldBlurImages() && !isImageRevealed(currentImage.content)) {
-      <div class="reveal-overlay" (click)="revealImage(currentImage.content); $event.stopPropagation()">
+      <div class="reveal-overlay" (click)="revealAllImages(item.images); $event.stopPropagation()">
         <mat-icon>visibility</mat-icon>
         <span>Click to reveal</span>
       </div>
