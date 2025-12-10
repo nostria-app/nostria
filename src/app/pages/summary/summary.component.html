@@ -76,7 +76,7 @@
           <mat-icon class="collapse-icon" [class.collapsed]="postersCollapsed()">expand_more</mat-icon>
           <mat-icon>group</mat-icon>
           Who Posted
-          <span class="section-count">{{ activePosters().length }} / {{ totalPostersCount() }}</span>
+          <span class="section-count">{{ totalPostersCount() }}</span>
         </h2>
         <div class="filter-actions">
           @if (isFilterMode()) {
@@ -210,7 +210,7 @@
           @if (isFilterMode()) {
           <span class="filter-badge">Filtered</span>
           }
-          <span class="section-count">{{ timelineEvents().length }} / {{ totalTimelineCount() }}</span>
+          <span class="section-count">{{ totalTimelineCount() }}</span>
         </h2>
         <div class="timeline-filter-actions">
           <button mat-stroked-button (click)="toggleGmFilter()" [class.active]="gmFilterEnabled()"
