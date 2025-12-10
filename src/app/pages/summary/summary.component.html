@@ -20,8 +20,12 @@
         <mat-icon>notifications</mat-icon>
         Notifications
       </a>
-      <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isLoading()">
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isLoading() || isFetching()">
+        @if (isFetching()) {
+        <mat-spinner diameter="20"></mat-spinner>
+        } @else {
         <mat-icon>refresh</mat-icon>
+        }
       </button>
     </div>
   </div>
@@ -187,14 +191,29 @@
     <mat-divider></mat-divider>
 
     <section class="timeline-section">
-      <h2 class="section-title">
-        <mat-icon>schedule</mat-icon>
-        Activity Timeline
-        @if (isFilterMode()) {
-        <span class="filter-badge">Filtered</span>
-        }
-        <span class="section-count">{{ timelineEvents().length }} / {{ totalTimelineCount() }}</span>
-      </h2>
+      <div class="section-header-with-actions">
+        <h2 class="section-title">
+          <mat-icon>schedule</mat-icon>
+          Activity Timeline
+          @if (isFilterMode()) {
+          <span class="filter-badge">Filtered</span>
+          }
+          <span class="section-count">{{ timelineEvents().length }} / {{ totalTimelineCount() }}</span>
+        </h2>
+        <div class="timeline-filter-actions">
+          <button mat-stroked-button (click)="toggleGmFilter()" [class.active]="gmFilterEnabled()"
+            matTooltip="Filter posts starting with GM, PV, or Pura Vida">
+            <mat-icon>wb_sunny</mat-icon>
+            GM / Pura Vida
+          </button>
+          @if (isFilterMode()) {
+          <button mat-stroked-button (click)="clearPosterFilter(); gmFilterEnabled.set(false)" class="clear-filter-btn">
+            <mat-icon>clear</mat-icon>
+            Clear All Filters
+          </button>
+          }
+        </div>
+      </div>
       <div class="timeline">
         @for (event of timelineEvents(); track event.id) {
         <div class="timeline-item" (click)="openEventDialog($event, event)"

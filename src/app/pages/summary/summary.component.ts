@@ -147,7 +147,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
   selectedPosters = signal<Set<string>>(new Set());
 
   // Whether filter mode is active
-  isFilterMode = computed(() => this.selectedPosters().size > 0);
+  isFilterMode = computed(() => this.selectedPosters().size > 0 || this.gmFilterEnabled());
+
+  // GM/Pura Vida filter
+  gmFilterEnabled = signal(false);
 
   // Paginated active posters
   activePosters = computed(() => {
@@ -182,15 +185,21 @@ export class SummaryComponent implements OnInit, OnDestroy {
     const notes = this.noteEvents().map(e => ({ ...e, type: 'note' as const }));
     const articles = this.articleEvents().map(e => ({ ...e, type: 'article' as const }));
     const media = this.mediaEvents().map(e => ({ ...e, type: 'media' as const }));
-    const allEvents = [...notes, ...articles, ...media]
+    let allEvents = [...notes, ...articles, ...media]
       .sort((a, b) => b.created_at - a.created_at);
 
     // Filter by selected posters if any are selected
     const selected = this.selectedPosters();
-    if (selected.size === 0) {
-      return allEvents;
+    if (selected.size > 0) {
+      allEvents = allEvents.filter(e => selected.has(e.pubkey));
     }
-    return allEvents.filter(e => selected.has(e.pubkey));
+
+    // Filter by GM/Pura Vida if enabled
+    if (this.gmFilterEnabled()) {
+      allEvents = allEvents.filter(e => this.isGmPuraVidaPost(e.content));
+    }
+
+    return allEvents;
   });
 
   // Paginated timeline events
@@ -628,6 +637,20 @@ export class SummaryComponent implements OnInit, OnDestroy {
   clearPosterFilter(): void {
     this.selectedPosters.set(new Set());
     this.timelinePage.set(1);
+  }
+
+  toggleGmFilter(): void {
+    this.gmFilterEnabled.update(v => !v);
+    this.timelinePage.set(1);
+  }
+
+  /**
+   * Check if content starts with GM, PV, or Pura Vida (case-insensitive)
+   */
+  private isGmPuraVidaPost(content: string): boolean {
+    if (!content) return false;
+    const trimmed = content.trim().toLowerCase();
+    return trimmed.startsWith('gm') || trimmed.startsWith('pv') || trimmed.startsWith('pura vida');
   }
 
   selectAllPosters(): void {

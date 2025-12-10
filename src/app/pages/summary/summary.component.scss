@@ -847,6 +847,52 @@ mat-divider {
 
 // Timeline Section
 .timeline-section {
+  .section-header-with-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+
+    .section-title {
+      margin-bottom: 0;
+    }
+  }
+
+  .timeline-filter-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+
+    button {
+      font-size: 0.8rem;
+      height: 32px;
+      padding: 0 12px;
+      border-radius: var(--mat-sys-corner-full);
+
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+        margin-right: 4px;
+      }
+
+      &.active {
+        background-color: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+        border-color: var(--mat-sys-primary);
+      }
+    }
+
+    .clear-filter-btn {
+      mat-icon {
+        color: var(--mat-sys-error);
+      }
+    }
+  }
+
   .timeline {
     display: flex;
     flex-direction: column;
