@@ -1952,11 +1952,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return;
     }
 
-    // Auto-enable media mode when files are uploaded (only for original posts, not replies)
-    if (!this.isReply()) {
-      this.isMediaMode.set(true);
-    }
-
     this.isUploading.set(true);
 
     try {
@@ -1977,11 +1972,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             | undefined;
 
           if (file.type.startsWith('video/')) {
-            // Auto-enable media mode for videos (only for original posts, not replies)
-            if (!this.isReply()) {
-              this.isMediaMode.set(true);
-            }
-
             try {
               this.snackBar.open('Extracting video thumbnail...', '', { duration: 2000 });
 
