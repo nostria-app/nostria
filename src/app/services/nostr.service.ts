@@ -405,6 +405,11 @@ export class NostrService implements NostriaService {
       // and keep us updated with any changes in real-time
       await this.subscribeToAccountMetadata(pubkey);
 
+      // Actively fetch fresh data from relays to ensure we have the latest
+      // This is important for syncing data across multiple devices
+      await this.loadAccountFollowing(pubkey);
+      await this.loadAccountMuteList(pubkey);
+
       await this.database.saveInfo(pubkey, 'user', info);
 
       if (!this.initialized()) {
@@ -611,25 +616,28 @@ export class NostrService implements NostriaService {
   private async loadAccountFollowing(pubkey: string) {
     // CRITICAL: Always fetch from relay first to get the latest following list
     // This prevents overwriting changes made in other Nostria instances
-    let followingEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+    const followingEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+    const storedEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
 
-    if (followingEvent) {
-      // Save the latest event to storage
-      await this.database.saveEvent(followingEvent);
-      // Also save to new DatabaseService for Summary queries
+    // Use the newer event (compare timestamps)
+    let newestEvent = followingEvent;
+    if (storedEvent && (!followingEvent || storedEvent.created_at > followingEvent.created_at)) {
+      newestEvent = storedEvent;
+    }
+
+    if (followingEvent && (!storedEvent || followingEvent.created_at >= storedEvent.created_at)) {
+      // Save the relay event to storage only if it's newer or equal
       await this.database.saveEvent(followingEvent);
       this.logger.info('Loaded fresh following list from relay', {
         pubkey,
         followingCount: followingEvent.tags.filter(t => t[0] === 'p').length,
       });
-    } else {
-      // Fallback to storage only if relay fetch completely fails
-      this.logger.warn('Could not fetch following list from relay, falling back to storage');
-      followingEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
+    } else if (!followingEvent && storedEvent) {
+      this.logger.warn('Could not fetch following list from relay, using stored data');
     }
 
-    if (followingEvent) {
-      const followingTags = this.getTags(followingEvent, 'p');
+    if (newestEvent) {
+      const followingTags = this.getTags(newestEvent, 'p');
       this.accountState.followingList.set(followingTags);
     }
   }
@@ -637,25 +645,28 @@ export class NostrService implements NostriaService {
   private async loadAccountMuteList(pubkey: string) {
     // CRITICAL: Always fetch from relay first to get the latest mute list
     // This prevents overwriting changes made in other Nostria instances
-    let muteListEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+    const muteListEvent = await this.accountRelay.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+    const storedEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
 
-    if (muteListEvent) {
-      // Save the latest event to storage
-      await this.database.saveEvent(muteListEvent);
-      // Also save to new DatabaseService for Summary queries
+    // Use the newer event (compare timestamps)
+    let newestEvent = muteListEvent;
+    if (storedEvent && (!muteListEvent || storedEvent.created_at > muteListEvent.created_at)) {
+      newestEvent = storedEvent;
+    }
+
+    if (muteListEvent && (!storedEvent || muteListEvent.created_at >= storedEvent.created_at)) {
+      // Save the relay event to storage only if it's newer or equal
       await this.database.saveEvent(muteListEvent);
       this.logger.info('Loaded fresh mute list from relay', {
         pubkey,
         mutedCount: muteListEvent.tags.filter(t => t[0] === 'p').length,
       });
-    } else {
-      // Fallback to storage only if relay fetch completely fails
-      this.logger.warn('Could not fetch mute list from relay, falling back to storage');
-      muteListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
+    } else if (!muteListEvent && storedEvent) {
+      this.logger.warn('Could not fetch mute list from relay, using stored data');
     }
 
-    if (muteListEvent) {
-      this.accountState.muteList.set(muteListEvent);
+    if (newestEvent) {
+      this.accountState.muteList.set(newestEvent);
     }
   }
 
