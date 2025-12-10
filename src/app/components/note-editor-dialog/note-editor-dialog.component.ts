@@ -51,6 +51,7 @@ import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.compone
 import { MatMenuModule } from '@angular/material/menu';
 import { AiService } from '../../services/ai.service';
 import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
+import { DataService } from '../../services/data.service';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -148,6 +149,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private router = inject(Router);
   private powService = inject(PowService);
   private mentionInputService = inject(MentionInputService);
+  private dataService = inject(DataService);
   private utilities = inject(UtilitiesService);
   private publishEventBus = inject(PublishEventBus);
   private publishSubscription?: Subscription;
@@ -654,6 +656,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       if (!currentMentions.includes(this.data.replyTo.pubkey)) {
         this.mentions.set([...currentMentions, this.data.replyTo.pubkey]);
       }
+      // Fetch the profile name for the reply target
+      this.loadMentionProfileName(this.data.replyTo.pubkey);
     }
 
     // Handle shared files
@@ -2677,5 +2681,28 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const name = this.pubkeyToNameMap.get(pubkey);
     if (name) return name;
     return pubkey.slice(0, 16) + '...';
+  }
+
+  /**
+   * Load profile name for a pubkey and add it to the pubkeyToNameMap
+   * Used for displaying proper names in the "Mentioning:" section
+   */
+  private async loadMentionProfileName(pubkey: string): Promise<void> {
+    // Skip if already loaded
+    if (this.pubkeyToNameMap.has(pubkey)) return;
+
+    try {
+      const profile = await this.dataService.getProfile(pubkey);
+      if (profile?.data) {
+        const name = profile.data.display_name || profile.data.name || profile.data.username;
+        if (name) {
+          this.pubkeyToNameMap.set(pubkey, name);
+          // Trigger change detection by re-setting mentions
+          this.mentions.set([...this.mentions()]);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load profile name for mention:', error);
+    }
   }
 }
