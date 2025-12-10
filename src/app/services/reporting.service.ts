@@ -290,11 +290,8 @@ export class ReportingService {
     // Create a fresh mute list event with the user
     const freshMuteList = await this.createFreshMuteListEvent('user', pubkey);
     if (freshMuteList) {
-      // Publish the updated mute list to account relays using PublishService
-      await this.publishService.signAndPublishAuto(
-        freshMuteList,
-        (event) => this.nostr.signEvent(event)
-      );
+      // Publish the already-signed mute list to account relays
+      await this.publishService.publish(freshMuteList);
       this.logger.debug('Blocked user and published mute list:', pubkey);
     }
   }
@@ -306,11 +303,8 @@ export class ReportingService {
     // Create a fresh mute list event without the user
     const freshMuteList = await this.createFreshMuteListWithoutUser(pubkey);
     if (freshMuteList) {
-      // Publish the updated mute list to account relays using PublishService
-      await this.publishService.signAndPublishAuto(
-        freshMuteList,
-        (event) => this.nostr.signEvent(event)
-      );
+      // Publish the already-signed mute list to account relays
+      await this.publishService.publish(freshMuteList);
     }
   }
 
@@ -348,13 +342,24 @@ export class ReportingService {
    * Add a word to mute list and publish to relays
    */
   async addWordToMuteListAndPublish(word: string): Promise<void> {
-    const freshMuteList = await this.createFreshMuteListWithItem('word', word.toLowerCase());
-    if (freshMuteList) {
-      await this.publishService.signAndPublishAuto(
-        freshMuteList,
-        (event) => this.nostr.signEvent(event)
-      );
-      this.logger.debug('Added word to mute list and published:', word);
+    const unsignedEvent = this.createUnsignedMuteListWithItem('word', word.toLowerCase());
+    if (!unsignedEvent) return;
+
+    try {
+      // Sign the event
+      const signedEvent = await this.nostr.signEvent(unsignedEvent);
+
+      // Update local state immediately after signing
+      this.accountState.muteList.set(signedEvent);
+
+      // Publish the already-signed event
+      const result = await this.publishService.publish(signedEvent);
+
+      if (result.success) {
+        this.logger.debug('Added word to mute list and published:', word);
+      }
+    } catch (error) {
+      this.logger.error('Failed to add word to mute list:', error);
     }
   }
 
@@ -362,20 +367,31 @@ export class ReportingService {
    * Add a tag to mute list and publish to relays
    */
   async addTagToMuteListAndPublish(tag: string): Promise<void> {
-    const freshMuteList = await this.createFreshMuteListWithItem('t', tag.toLowerCase());
-    if (freshMuteList) {
-      await this.publishService.signAndPublishAuto(
-        freshMuteList,
-        (event) => this.nostr.signEvent(event)
-      );
-      this.logger.debug('Added tag to mute list and published:', tag);
+    const unsignedEvent = this.createUnsignedMuteListWithItem('t', tag.toLowerCase());
+    if (!unsignedEvent) return;
+
+    try {
+      // Sign the event
+      const signedEvent = await this.nostr.signEvent(unsignedEvent);
+
+      // Update local state immediately after signing
+      this.accountState.muteList.set(signedEvent);
+
+      // Publish the already-signed event
+      const result = await this.publishService.publish(signedEvent);
+
+      if (result.success) {
+        this.logger.debug('Added tag to mute list and published:', tag);
+      }
+    } catch (error) {
+      this.logger.error('Failed to add tag to mute list:', error);
     }
   }
 
   /**
-   * Create a fresh mute list event with a new item
+   * Create an unsigned mute list event with a new item (does not sign or update state)
    */
-  async createFreshMuteListWithItem(type: 'word' | 't' | 'e' | 'p', value: string): Promise<Event | null> {
+  private createUnsignedMuteListWithItem(type: 'word' | 't' | 'e' | 'p', value: string): UnsignedEvent | null {
     const account = this.accountState.account();
     if (!account?.pubkey) {
       return null;
@@ -396,26 +412,13 @@ export class ReportingService {
     }
 
     // Create fresh event with current timestamp
-    const muteListEvent: UnsignedEvent = {
+    return {
       kind: 10000,
       created_at: Math.floor(Date.now() / 1000),
       content: '',
       tags: existingTags,
       pubkey: account.pubkey,
     };
-
-    try {
-      // Sign the event
-      const signedEvent = await this.nostr.signEvent(muteListEvent);
-
-      // Update the account state with the new mute list
-      this.accountState.muteList.set(signedEvent);
-
-      return signedEvent;
-    } catch (error) {
-      console.error('Error creating fresh mute list event:', error);
-      return null;
-    }
   }
 
   /**
@@ -524,6 +527,23 @@ export class ReportingService {
    * Create a fresh mute list event without a specific user
    */
   async createFreshMuteListWithoutUser(pubkeyToRemove: string): Promise<Event | null> {
+    const unsignedEvent = this.createUnsignedMuteListWithoutItem('p', pubkeyToRemove);
+    if (!unsignedEvent) return null;
+
+    try {
+      const signedEvent = await this.nostr.signEvent(unsignedEvent);
+      this.accountState.muteList.set(signedEvent);
+      return signedEvent;
+    } catch (error) {
+      console.error('Error creating fresh mute list event:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Create an unsigned mute list event without a specific item (does not sign or update state)
+   */
+  private createUnsignedMuteListWithoutItem(type: string, value: string): UnsignedEvent | null {
     const account = this.accountState.account();
     if (!account?.pubkey) {
       return null;
@@ -534,33 +554,44 @@ export class ReportingService {
     let existingTags: string[][] = [];
 
     if (currentMuteList) {
-      // Filter out the user to be removed
+      // Filter out the item to be removed
       existingTags = currentMuteList.tags.filter(
-        tag => !(tag[0] === 'p' && tag[1] === pubkeyToRemove)
+        tag => !(tag[0] === type && tag[1] === value)
       );
     }
 
     // Create fresh event with current timestamp
-    const muteListEvent: UnsignedEvent = {
+    return {
       kind: 10000,
-      created_at: Math.floor(Date.now() / 1000), // Fresh timestamp
+      created_at: Math.floor(Date.now() / 1000),
       content: '',
       tags: existingTags,
       pubkey: account.pubkey,
     };
+  }
+
+  /**
+   * Remove an item from the mute list and publish to relays
+   */
+  async removeFromMuteListAndPublish(item: MuteListItem): Promise<void> {
+    const unsignedEvent = this.createUnsignedMuteListWithoutItem(item.type, item.value);
+    if (!unsignedEvent) return;
 
     try {
       // Sign the event
-      const signedEvent = await this.nostr.signEvent(muteListEvent);
+      const signedEvent = await this.nostr.signEvent(unsignedEvent);
 
-      // Update the account state with the new mute list
-      console.log('[ReportingService] Updating mute list signal with new event:', signedEvent);
+      // Update local state immediately after signing
       this.accountState.muteList.set(signedEvent);
 
-      return signedEvent;
+      // Publish the already-signed event
+      const result = await this.publishService.publish(signedEvent);
+
+      if (result.success) {
+        this.logger.debug('Removed item from mute list and published:', item);
+      }
     } catch (error) {
-      console.error('Error creating fresh mute list event:', error);
-      return null;
+      this.logger.error('Failed to remove item from mute list:', error);
     }
   }
 

@@ -132,18 +132,18 @@ export class PrivacySettingsComponent {
           console.log(`Successfully removed user from mute list: ${value}`);
           break;
         case 'word':
-          // Remove word from mute list
-          await this.reportingService.removeFromMuteList({ type: 'word', value });
+          // Remove word from mute list and publish
+          await this.reportingService.removeFromMuteListAndPublish({ type: 'word', value });
           console.log(`Successfully removed word from mute list: ${value}`);
           break;
         case 'tag':
-          // Remove tag from mute list
-          await this.reportingService.removeFromMuteList({ type: 't', value });
+          // Remove tag from mute list and publish
+          await this.reportingService.removeFromMuteListAndPublish({ type: 't', value });
           console.log(`Successfully removed tag from mute list: ${value}`);
           break;
         case 'thread':
-          // Remove thread from mute list
-          await this.reportingService.removeFromMuteList({ type: 'e', value });
+          // Remove thread from mute list and publish
+          await this.reportingService.removeFromMuteListAndPublish({ type: 'e', value });
           console.log(`Successfully removed thread from mute list: ${value}`);
           break;
         default:

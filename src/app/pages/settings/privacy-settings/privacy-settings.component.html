@@ -80,19 +80,11 @@
           <span matListItemTitle>
             <app-user-profile [pubkey]="pubkey"> </app-user-profile>
           </span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('account', pubkey)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
+          <button mat-icon-button (click)="removeMutedItem('account', pubkey); $event.stopPropagation()"
+            matListItemMeta>
+            <mat-icon>close</mat-icon>
           </button>
         </mat-list-item>
-
-        <!-- <mat-list-item>
-          <span matListItemTitle>{{ pubkey }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('account', pubkey)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
-          </button>
-        </mat-list-item> -->
-        <!-- <mat-divider>
-        </mat-divider> -->
         }
       </mat-list>
       } @else {
@@ -119,8 +111,8 @@
         @for (word of mutedWords(); track $index) {
         <mat-list-item>
           <span matListItemTitle>{{ word }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('word', word)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
+          <button mat-icon-button (click)="removeMutedItem('word', word); $event.stopPropagation()" matListItemMeta>
+            <mat-icon>close</mat-icon>
           </button>
         </mat-list-item>
         <mat-divider></mat-divider>
@@ -151,8 +143,8 @@
         @for (tag of mutedTags(); track $index) {
         <mat-list-item>
           <span matListItemTitle>#{{ tag }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('tag', tag)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
+          <button mat-icon-button (click)="removeMutedItem('tag', tag); $event.stopPropagation()" matListItemMeta>
+            <mat-icon>close</mat-icon>
           </button>
         </mat-list-item>
         <mat-divider></mat-divider>
@@ -172,8 +164,8 @@
         @for (thread of mutedThreads(); track $index) {
         <mat-list-item>
           <span matListItemTitle>{{ thread }}</span>
-          <button mat-icon-button color="warn" (click)="removeMutedItem('thread', thread)" matListItemMeta>
-            <mat-icon>clear</mat-icon>
+          <button mat-icon-button (click)="removeMutedItem('thread', thread); $event.stopPropagation()" matListItemMeta>
+            <mat-icon>close</mat-icon>
           </button>
         </mat-list-item>
         <mat-divider></mat-divider>
