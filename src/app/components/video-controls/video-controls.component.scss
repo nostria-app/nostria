@@ -206,7 +206,7 @@
 .volume-slider-container {
   display: flex;
   align-items: center;
-  width: 80px;
+  // width: 80px;
   height: 40px;
   overflow: visible;
   animation: slideIn 0.15s ease;
@@ -248,7 +248,7 @@
       border-color: white !important;
       box-shadow: none !important;
       position: relative !important;
-      top: 15px !important;
+      top: 16px !important;
     }
 
     .mdc-slider__track--active {
@@ -279,7 +279,7 @@
 
   @media (max-width: 480px) {
     font-size: 11px;
-    margin-left: 4px;
+    margin-left: 8px;
   }
 }
 
