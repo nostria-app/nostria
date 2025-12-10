@@ -343,13 +343,13 @@
     (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
     <!-- Left side: Action buttons -->
     <div class="left-actions">
-      <button mat-icon-button type="button" (click)="clearDraft()" [disabled]="!isDirty()"
-        [class.button-disabled-visible]="!isDirty()" matTooltip="Clear draft">
-        <mat-icon>delete_sweep</mat-icon>
-      </button>
       <button mat-icon-button type="button" (click)="togglePreview()" [color]="showPreview() ? 'primary' : ''"
         matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
+      </button>
+      <button mat-icon-button type="button" (click)="clearDraft()" [disabled]="!isDirty()"
+        [class.button-disabled-visible]="!isDirty()" matTooltip="Clear draft">
+        <mat-icon>delete_sweep</mat-icon>
       </button>
       <button mat-icon-button type="button" [matMenuTriggerFor]="aiMenu"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
