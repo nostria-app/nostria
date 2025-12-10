@@ -66,8 +66,8 @@
       </mat-form-field>
       }
 
-      <!-- Media Thumbnails (Media Mode) -->
-      @if (isMediaModeEnabled() && mediaMetadata().length > 0) {
+      <!-- Media Thumbnails (shown in both regular and media modes) -->
+      @if (mediaMetadata().length > 0) {
       <div class="media-thumbnails" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)">
         @for (media of mediaMetadata(); track media.url; let i = $index) {
         <div class="media-thumbnail" cdkDrag>
