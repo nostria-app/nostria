@@ -1371,7 +1371,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (name) {
       // Build the mention text that was inserted (with @)
       const baseMention = `@${name}`;
-      
+
       // Find all possible mention formats for this user
       const possibleMentions: string[] = [baseMention];
 
