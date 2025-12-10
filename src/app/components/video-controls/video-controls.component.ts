@@ -330,6 +330,17 @@ export class VideoControlsComponent implements OnDestroy {
 
   // Play/Pause
   onPlayPause(): void {
+    const video = this.videoElement();
+    if (video) {
+      const wasPaused = video.paused;
+      if (wasPaused) {
+        video.play().catch(console.error);
+      } else {
+        video.pause();
+      }
+      // Update state directly as fallback (in case events don't fire, e.g., live streams)
+      this.paused.set(!wasPaused);
+    }
     this.playPause.emit();
   }
 
