@@ -12,9 +12,6 @@
   &.visible,
   &.is-paused {
     opacity: 1;
-  }
-
-  &.visible {
     pointer-events: auto;
   }
 }

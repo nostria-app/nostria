@@ -119,6 +119,13 @@
         </mat-menu>
         }
 
+        <!-- Cast to Device -->
+        @if (mergedConfig().showCast) {
+        <button mat-icon-button (click)="onCastToggle()" matTooltip="Cast to device" class="control-btn">
+          <mat-icon>cast</mat-icon>
+        </button>
+        }
+
         <!-- Picture in Picture -->
         @if (mergedConfig().showPiP) {
         <button mat-icon-button (click)="onPipToggle()" matTooltip="Picture-in-picture" class="control-btn">

@@ -10,6 +10,7 @@ import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
+import { ReportingService } from '../../services/reporting.service';
 import { LiveEventComponent } from '../../components/event-types/live-event.component';
 
 @Component({
@@ -22,7 +23,7 @@ import { LiveEventComponent } from '../../components/event-types/live-event.comp
     MatTabsModule,
     MatCardModule,
     LiveEventComponent
-],
+  ],
   templateUrl: './streams.component.html',
   styleUrl: './streams.component.scss',
 })
@@ -30,6 +31,7 @@ export class StreamsComponent implements OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
+  private reporting = inject(ReportingService);
 
   liveStreams = signal<Event[]>([]);
   plannedStreams = signal<Event[]>([]);
@@ -126,6 +128,16 @@ export class StreamsComponent implements OnDestroy {
     const currentTime = Math.floor(Date.now() / 1000);
 
     for (const event of this.eventMap.values()) {
+      // Skip streams from muted/blocked users
+      if (this.reporting.isUserBlocked(event.pubkey)) {
+        continue;
+      }
+
+      // Skip streams that are blocked by content
+      if (this.reporting.isContentBlocked(event)) {
+        continue;
+      }
+
       const statusTag = event.tags.find((tag: string[]) => tag[0] === 'status');
       const status = statusTag?.[1] || 'planned';
 

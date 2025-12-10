@@ -68,6 +68,9 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
 
+  @ViewChild(VideoControlsComponent)
+  videoControlsRef?: VideoControlsComponent;
+
   private eventSubscription: { close: () => void } | null = null;
   private currentStreamId: string | null = null;
 
@@ -314,5 +317,32 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   onQualityChange(levelIndex: number): void {
     this.media.setHlsQuality(levelIndex);
+  }
+
+  async castToDevice(): Promise<void> {
+    const video = this.videoElement?.nativeElement;
+    if (!video) return;
+
+    // Use the Remote Playback API if available
+    if ('remote' in video && video.remote) {
+      try {
+        await (video.remote as { prompt(): Promise<void> }).prompt();
+      } catch {
+        // Cast not supported or user cancelled
+      }
+    }
+  }
+
+  // Methods to trigger controls visibility from parent container hover
+  onVideoContainerMouseEnter(): void {
+    this.videoControlsRef?.showControls();
+  }
+
+  onVideoContainerMouseLeave(): void {
+    // Let the controls auto-hide logic handle this
+  }
+
+  onVideoContainerMouseMove(): void {
+    this.videoControlsRef?.showControls();
   }
 }

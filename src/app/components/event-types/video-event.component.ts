@@ -39,6 +39,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   mediaEventIndex = input<number | undefined>(undefined);
 
   @ViewChild('videoPlayer') videoPlayerRef?: ElementRef<HTMLVideoElement>;
+  @ViewChild(VideoControlsComponent) videoControlsRef?: VideoControlsComponent;
 
   private router = inject(Router);
   private dialog = inject(MatDialog);
@@ -417,6 +418,33 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     } catch {
       // PiP not supported or failed
     }
+  }
+
+  async castToDevice(): Promise<void> {
+    const video = this.videoPlayerRef?.nativeElement;
+    if (!video) return;
+
+    // Use the Remote Playback API if available
+    if ('remote' in video && video.remote) {
+      try {
+        await (video.remote as { prompt(): Promise<void> }).prompt();
+      } catch {
+        // Cast not supported or user cancelled
+      }
+    }
+  }
+
+  // Methods to trigger controls visibility from parent container hover
+  onVideoContainerMouseEnter(): void {
+    this.videoControlsRef?.showControls();
+  }
+
+  onVideoContainerMouseLeave(): void {
+    // Let the controls auto-hide logic handle this
+  }
+
+  onVideoContainerMouseMove(): void {
+    this.videoControlsRef?.showControls();
   }
 
   revealMedia(): void {

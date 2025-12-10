@@ -5,9 +5,6 @@
       <h2>{{ media.current()?.title || 'Video' }}</h2>
     </div>
     <div class="video-actions">
-      <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
-        <mat-icon>picture_in_picture_alt</mat-icon>
-      </button>
       <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
         <mat-icon>minimize</mat-icon>
       </button>
@@ -18,7 +15,8 @@
   </div>
 
   <!-- Video Area (Shared) -->
-  <div class="video-area">
+  <div class="video-area" (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
+    (mousemove)="onVideoContainerMouseMove()">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
       (error)="onVideoError($event)"></video>
 
@@ -29,8 +27,8 @@
       [qualityLevels]="media.hlsQualityLevels()" [currentQuality]="media.hlsCurrentQuality()"
       (playPause)="onPlayPause()" (seek)="onSeek($event)" (volumeChange)="onVolumeChange($event)"
       (muteToggle)="media.mute()" (qualityChange)="media.setHlsQuality($event)"
-      (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="toggleFullscreen()"
-      (pipToggle)="pictureInPicture()" />
+      (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="requestFullscreen()"
+      (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" />
     } @else {
     <!-- Footer Overlay (Footer Mode Only) -->
     <div class="video-controls-overlay">
