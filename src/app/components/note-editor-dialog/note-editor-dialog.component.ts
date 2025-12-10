@@ -474,6 +474,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   isReply = computed(() => !!this.data?.replyTo);
   isQuote = computed(() => !!this.data?.quote);
 
+  // Check if a mention is the reply target (cannot be removed)
+  isReplyTargetMention(pubkey: string): boolean {
+    return this.isReply() && this.data?.replyTo?.pubkey === pubkey;
+  }
+
   // Check if zap split is available (requires quote and logged in user)
   zapSplitAvailable = computed(() => this.isQuote() && !!this.currentAccountPubkey());
 

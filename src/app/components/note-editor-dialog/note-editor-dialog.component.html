@@ -294,9 +294,11 @@
       <span class="mentions-label">Mentioning:</span>
       <mat-chip-set class="mentions-chips">
         @for (mention of mentions(); track mention) {
-        <mat-chip removable (removed)="removeMention(mention)">
+        <mat-chip [removable]="!isReplyTargetMention(mention)" (removed)="removeMention(mention)">
           {{ getMentionDisplayName(mention) }}
+          @if (!isReplyTargetMention(mention)) {
           <mat-icon matChipRemove>cancel</mat-icon>
+          }
         </mat-chip>
         }
       </mat-chip-set>
