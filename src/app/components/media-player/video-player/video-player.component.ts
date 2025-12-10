@@ -133,31 +133,56 @@ export class VideoPlayerComponent implements OnDestroy {
 
   async castToDevice(): Promise<void> {
     const video = this.videoElement?.nativeElement;
-    if (!video) return;
+    if (!video) {
+      console.log('Cast: No video element available');
+      return;
+    }
 
-    // Use the Remote Playback API if available
+    // Check if video has a valid source
+    if (!video.src && !video.currentSrc) {
+      console.log('Cast: No video source available');
+      return;
+    }
+
+    // Use the Remote Playback API if available (Chrome, Edge, Safari)
     if ('remote' in video && video.remote) {
       const remote = video.remote as RemotePlayback;
+      
+      // Check current state
+      console.log('Cast: Remote playback state:', remote.state);
+      
       try {
-        // Check if casting is available before prompting
         await remote.prompt();
-      } catch (error) {
-        console.log('Cast not available or user cancelled:', error);
-        // Fallback: try opening native cast dialog if available
-        this.tryNativeCast(video);
+        console.log('Cast: Prompt successful, new state:', remote.state);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorName = error instanceof Error ? error.name : 'Unknown';
+        console.log('Cast: Prompt failed -', errorName, ':', errorMessage);
+        
+        // InvalidStateError means no devices available or video not ready
+        // NotSupportedError means the video source doesn't support remote playback
+        // NotAllowedError means user didn't grant permission
+        if (errorName === 'NotFoundError') {
+          console.log('Cast: No cast devices found on the network');
+        }
       }
     } else {
-      // Fallback for browsers without Remote Playback API
-      this.tryNativeCast(video);
+      console.log('Cast: Remote Playback API not supported in this browser');
+      // Try Presentation API as fallback (for some browsers)
+      this.tryPresentationAPI(video);
     }
   }
 
-  private tryNativeCast(video: HTMLVideoElement): void {
-    // Some browsers support casting through the video element context menu
-    // We can try to trigger it programmatically via the media session
-    if ('mediaSession' in navigator && video.src) {
-      // Open the video in a new tab as last resort - user can cast from there
-      console.log('Remote Playback API not available. Use browser cast feature.');
+  private tryPresentationAPI(video: HTMLVideoElement): void {
+    // Presentation API is another way to cast content
+    if ('presentation' in navigator && navigator.presentation) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const presentation = navigator.presentation as any;
+      if (presentation.defaultRequest) {
+        presentation.defaultRequest.start().catch((err: Error) => {
+          console.log('Presentation API failed:', err.message);
+        });
+      }
     }
   }
 
