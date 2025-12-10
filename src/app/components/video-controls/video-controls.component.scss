@@ -207,11 +207,13 @@
   display: flex;
   align-items: center;
   width: 80px;
+  height: 40px;
   overflow: hidden;
   animation: slideIn 0.15s ease;
 
   @media (max-width: 480px) {
     width: 60px;
+    height: 36px;
   }
 }
 
@@ -229,6 +231,13 @@
 
 .volume-slider {
   width: 100%;
+  height: 40px;
+
+  // Compact slider size
+  --mdc-slider-handle-width: 12px;
+  --mdc-slider-handle-height: 12px;
+  --mdc-slider-active-track-height: 4px;
+  --mdc-slider-inactive-track-height: 4px;
 
   // Style the slider for dark background
   --mdc-slider-handle-color: white;

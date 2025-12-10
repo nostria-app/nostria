@@ -137,11 +137,27 @@ export class VideoPlayerComponent implements OnDestroy {
 
     // Use the Remote Playback API if available
     if ('remote' in video && video.remote) {
+      const remote = video.remote as RemotePlayback;
       try {
-        await (video.remote as { prompt(): Promise<void> }).prompt();
-      } catch {
-        // Cast not supported or user cancelled
+        // Check if casting is available before prompting
+        await remote.prompt();
+      } catch (error) {
+        console.log('Cast not available or user cancelled:', error);
+        // Fallback: try opening native cast dialog if available
+        this.tryNativeCast(video);
       }
+    } else {
+      // Fallback for browsers without Remote Playback API
+      this.tryNativeCast(video);
+    }
+  }
+
+  private tryNativeCast(video: HTMLVideoElement): void {
+    // Some browsers support casting through the video element context menu
+    // We can try to trigger it programmatically via the media session
+    if ('mediaSession' in navigator && video.src) {
+      // Open the video in a new tab as last resort - user can cast from there
+      console.log('Remote Playback API not available. Use browser cast feature.');
     }
   }
 

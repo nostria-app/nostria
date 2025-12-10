@@ -426,10 +426,11 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
     // Use the Remote Playback API if available
     if ('remote' in video && video.remote) {
+      const remote = video.remote as RemotePlayback;
       try {
-        await (video.remote as { prompt(): Promise<void> }).prompt();
-      } catch {
-        // Cast not supported or user cancelled
+        await remote.prompt();
+      } catch (error) {
+        console.log('Cast not available or user cancelled:', error);
       }
     }
   }
