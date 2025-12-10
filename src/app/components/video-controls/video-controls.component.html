@@ -13,7 +13,8 @@
   <div class="gradient-bottom"></div>
 
   <div class="controls-bar">
-    <!-- Progress bar -->
+    <!-- Progress bar (hidden for live streams) -->
+    @if (!mergedConfig().isLiveStream) {
     <div class="progress-container" tabindex="0" role="slider" title="Video progress" aria-valuenow="0"
       aria-valuemin="0" aria-valuemax="100" aria-label="Video progress" (click)="onProgressClick($event)"
       (keydown)="$event.key === 'ArrowLeft' ? seekRelative(-5) : $event.key === 'ArrowRight' ? seekRelative(5) : null"
@@ -22,6 +23,7 @@
       <div class="progress-played" [style.width.%]="progressPercent()"></div>
       <div class="progress-thumb" [style.left.%]="progressPercent()"></div>
     </div>
+    }
 
     <!-- Controls row -->
     <div class="controls-row">
