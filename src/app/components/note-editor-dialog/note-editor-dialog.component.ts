@@ -217,7 +217,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   // Media Mode
   title = signal('');
   isMediaMode = signal(false);
-  isMediaModeAvailable = computed(() => this.mediaMetadata().length > 0);
+  // Media mode is only available for original posts (not replies) when media is attached
+  isMediaModeAvailable = computed(() => this.mediaMetadata().length > 0 && !this.isReply());
   isMediaModeEnabled = computed(() => this.isMediaModeAvailable() && this.isMediaMode());
 
   // Mention autocomplete state
@@ -1942,8 +1943,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       return;
     }
 
-    // Auto-enable media mode when files are uploaded
-    this.isMediaMode.set(true);
+    // Auto-enable media mode when files are uploaded (only for original posts, not replies)
+    if (!this.isReply()) {
+      this.isMediaMode.set(true);
+    }
 
     this.isUploading.set(true);
 
@@ -1965,8 +1968,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             | undefined;
 
           if (file.type.startsWith('video/')) {
-            // Auto-enable media mode for videos
-            this.isMediaMode.set(true);
+            // Auto-enable media mode for videos (only for original posts, not replies)
+            if (!this.isReply()) {
+              this.isMediaMode.set(true);
+            }
 
             try {
               this.snackBar.open('Extracting video thumbnail...', '', { duration: 2000 });
