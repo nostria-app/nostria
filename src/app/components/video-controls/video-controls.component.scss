@@ -233,41 +233,50 @@
   width: 100%;
   height: 32px;
 
-  // Make the slider more compact
-  ::ng-deep {
-    .mdc-slider {
-      height: 32px;
-    }
-
-    .mdc-slider__thumb {
-      width: 14px;
-      height: 14px;
-    }
-
-    .mdc-slider__thumb-knob {
-      width: 14px;
-      height: 14px;
-      border-width: 7px;
-    }
-
-    .mdc-slider__track {
-      height: 4px;
-    }
-
-    .mdc-slider__track--active,
-    .mdc-slider__track--inactive {
-      height: 4px;
-    }
-  }
-
-  // Style the slider for dark background
+  // Style the slider for dark background - smaller handle
+  --mdc-slider-handle-width: 12px;
+  --mdc-slider-handle-height: 12px;
+  --mdc-slider-handle-shape: 50%;
   --mdc-slider-handle-color: white;
   --mdc-slider-focus-handle-color: white;
   --mdc-slider-hover-handle-color: white;
   --mdc-slider-active-track-color: white;
+  --mdc-slider-active-track-height: 3px;
   --mdc-slider-inactive-track-color: rgba(255, 255, 255, 0.3);
-  --mdc-slider-with-tick-marks-active-container-color: white;
-  --mdc-slider-with-tick-marks-inactive-container-color: rgba(255, 255, 255, 0.3);
+  --mdc-slider-inactive-track-height: 3px;
+
+  // Remove the ripple/halo effect around thumb completely
+  --mdc-slider-handle-elevation: 0;
+  --mat-slider-focus-state-layer-opacity: 0;
+  --mat-slider-hover-state-layer-opacity: 0;
+  --mat-slider-pressed-state-layer-opacity: 0;
+
+  ::ng-deep {
+    .mdc-slider__thumb-knob {
+      width: 12px !important;
+      height: 12px !important;
+      border-width: 6px !important;
+      border-radius: 50% !important;
+      background-color: white !important;
+      border-color: white !important;
+      box-shadow: none !important;
+      // Move knob down relative to its container
+      position: relative !important;
+      top: 15px !important;
+    }
+
+    .mdc-slider__track--active,
+    .mdc-slider__track--inactive {
+      height: 3px !important;
+    }
+
+    // Make state layer invisible but keep it for positioning
+    .mat-ripple,
+    .mat-mdc-focus-indicator {
+      opacity: 0 !important;
+      background: transparent !important;
+    }
+  }
 }
 
 // Time display
