@@ -7,6 +7,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -29,6 +31,8 @@ import { LocalSettingsService } from '../../../services/local-settings.service';
     MatButtonModule,
     MatDividerModule,
     MatCheckboxModule,
+    MatFormFieldModule,
+    MatInputModule,
     FormsModule,
     UserProfileComponent,
     InfoTooltipComponent,
@@ -55,6 +59,10 @@ export class PrivacySettingsComponent {
     { key: 'impersonation', label: 'Impersonation', icon: 'person_off' },
     { key: 'other', label: 'Other', icon: 'flag' },
   ];
+
+  // Properties for adding new muted items
+  newMutedWord = '';
+  newMutedTag = '';
 
   // Template references for tooltip content
   @ViewChild('imageCacheInfoContent')
@@ -88,6 +96,32 @@ export class PrivacySettingsComponent {
     if (!muteList) return [];
     return this.nostrService.getTags(muteList, 'e');
   });
+
+  async addMutedWord(): Promise<void> {
+    const word = this.newMutedWord.trim().toLowerCase();
+    if (!word) return;
+
+    try {
+      await this.reportingService.addWordToMuteListAndPublish(word);
+      this.newMutedWord = '';
+      console.log(`Successfully added word to mute list: ${word}`);
+    } catch (error) {
+      console.error('Failed to add word to mute list:', error);
+    }
+  }
+
+  async addMutedTag(): Promise<void> {
+    const tag = this.newMutedTag.trim().toLowerCase().replace(/^#/, '');
+    if (!tag) return;
+
+    try {
+      await this.reportingService.addTagToMuteListAndPublish(tag);
+      this.newMutedTag = '';
+      console.log(`Successfully added tag to mute list: ${tag}`);
+    } catch (error) {
+      console.error('Failed to add tag to mute list:', error);
+    }
+  }
 
   async removeMutedItem(type: string, value: string): Promise<void> {
     try {
