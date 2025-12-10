@@ -249,6 +249,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   zapSplitOriginalPercent = signal(90); // Default 90% to original author
   zapSplitQuoterPercent = signal(10); // Default 10% to quoter
 
+  // Debug options
+  showEventJson = signal(false);
+
+  // Track initial state for dirty detection
+  private initialContent = '';
+  private initialMentions: string[] = [];
+  private initialMediaMetadata: MediaMetadata[] = [];
+  private initialTitle = '';
+
   // Computed properties
   characterCount = computed(() => this.processContentForPublishing(this.content()).length);
 
@@ -426,6 +435,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     this.mediaMetadata.set(currentMetadata);
   }
 
+  removeMedia(index: number): void {
+    const currentMetadata = [...this.mediaMetadata()];
+    currentMetadata.splice(index, 1);
+    this.mediaMetadata.set(currentMetadata);
+
+    // If no more media, disable media mode
+    if (currentMetadata.length === 0) {
+      this.isMediaMode.set(false);
+    }
+  }
+
   // Dialog mode indicators
   isReply = computed(() => !!this.data?.replyTo);
   isQuote = computed(() => !!this.data?.quote);
@@ -446,6 +466,39 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const current = this.powProgress().difficulty;
     if (target === 0) return 0;
     return Math.min((current / target) * 100, 100);
+  });
+
+  // Check if draft has any changes from initial state
+  isDirty = computed(() => {
+    const hasContentChange = this.content().trim() !== this.initialContent.trim();
+    const hasMentionsChange = JSON.stringify(this.mentions()) !== JSON.stringify(this.initialMentions);
+    const hasMediaChange = JSON.stringify(this.mediaMetadata()) !== JSON.stringify(this.initialMediaMetadata);
+    const hasTitleChange = this.title().trim() !== this.initialTitle.trim();
+    return hasContentChange || hasMentionsChange || hasMediaChange || hasTitleChange;
+  });
+
+  // Preview of the event JSON for debugging
+  previewEventJson = computed(() => {
+    const content = this.processContentForPublishing(this.content().trim());
+    const tags = this.buildTags();
+    const pubkey = this.accountState.pubkey() || '';
+    const created_at = Math.floor(Date.now() / 1000);
+
+    // Determine kind
+    let kind = 1;
+    if (this.isMediaModeEnabled()) {
+      kind = this.getMediaEventKind();
+    }
+
+    const unsignedEvent = {
+      kind,
+      content,
+      tags,
+      pubkey,
+      created_at,
+    };
+
+    return JSON.stringify(unsignedEvent, null, 2);
   });
 
   ngAfterViewInit() {
@@ -548,6 +601,12 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (this.data?.files && this.data.files.length > 0) {
       this.uploadFiles(this.data.files);
     }
+
+    // Store initial state for dirty detection (after all initializations)
+    this.initialContent = this.content();
+    this.initialMentions = [...this.mentions()];
+    this.initialMediaMetadata = [...this.mediaMetadata()];
+    this.initialTitle = this.title();
   }
 
   private getAutoDraftKey(): string {
@@ -1287,14 +1346,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   onHostKeyDown(event: KeyboardEvent): void {
-    // Alt+P shortcut to publish note
-    if (event.altKey && event.key.toLowerCase() === 'p') {
-      event.preventDefault();
-      if (this.canPublish() && !this.isPublishing()) {
-        this.publishNote();
-      }
-    }
-
     // Alt+Enter shortcut to publish note
     if (event.altKey && event.key === 'Enter') {
       event.preventDefault();
@@ -1589,6 +1640,30 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   dismissError(): void {
     this.mediaService.clearError();
+  }
+
+  // Clear draft - reset all editable fields to initial state
+  clearDraft(): void {
+    this.content.set(this.initialContent);
+    this.mentions.set([...this.initialMentions]);
+    this.mentionMap.clear();
+    this.pubkeyToNameMap.clear();
+    this.mediaMetadata.set([...this.initialMediaMetadata]);
+    this.title.set(this.initialTitle);
+    this.isMediaMode.set(false);
+    this.expirationEnabled.set(false);
+    this.expirationDate.set(null);
+    this.expirationTime.set('12:00');
+    this.showPreview.set(false);
+    this.showAdvancedOptions.set(false);
+    this.showEventJson.set(false);
+
+    // Clear auto-saved draft from storage
+    this.clearAutoDraft();
+
+    this.snackBar.open('Draft cleared', 'Dismiss', {
+      duration: 2000,
+    });
   }
 
   // Preview functionality

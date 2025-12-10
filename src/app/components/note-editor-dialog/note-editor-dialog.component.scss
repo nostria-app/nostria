@@ -83,6 +83,29 @@
         font-size: 24px;
         z-index: 1;
       }
+
+      .remove-media-btn {
+        position: absolute;
+        top: 2px;
+        right: 2px;
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        padding: 0;
+        z-index: 2;
+        background-color: rgba(0, 0, 0, 0.6);
+        color: white;
+
+        mat-icon {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+        }
+
+        &:hover {
+          background-color: var(--mat-sys-error);
+        }
+      }
     }
   }
 
@@ -655,6 +678,29 @@
         display: block;
         line-height: 1.4;
         margin-top: 8px;
+      }
+
+      // Event JSON preview styles
+      .event-json-preview {
+        margin-top: 8px;
+        background-color: var(--mat-sys-surface-container-lowest);
+        border: 1px solid var(--mat-sys-outline-variant);
+        border-radius: 8px;
+        overflow: hidden;
+
+        .json-content {
+          margin: 0;
+          padding: 12px;
+          font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+          font-size: 12px;
+          line-height: 1.4;
+          color: var(--mat-sys-on-surface);
+          white-space: pre-wrap;
+          word-break: break-all;
+          overflow-x: auto;
+          max-height: 300px;
+          overflow-y: auto;
+        }
       }
     }
   }
