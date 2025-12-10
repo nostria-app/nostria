@@ -23,6 +23,7 @@ import { VideoControlsComponent } from '../../video-controls/video-controls.comp
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { CastService } from '../../../services/cast.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { Filter, Event } from 'nostr-tools';
@@ -57,6 +58,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   readonly media = inject(MediaPlayerService);
   readonly layout = inject(LayoutService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly castService = inject(CastService);
   private readonly router = inject(Router);
   private readonly location = inject(Location);
   private readonly relayPool = inject(RelayPoolService);
@@ -326,22 +328,12 @@ export class LiveStreamPlayerComponent implements OnDestroy {
       return;
     }
 
-    // Use the Remote Playback API if available
-    if ('remote' in video && video.remote) {
-      const remote = video.remote as RemotePlayback;
-      console.log('Cast: Remote playback state:', remote.state);
-
-      try {
-        await remote.prompt();
-        console.log('Cast: Prompt successful, new state:', remote.state);
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const errorName = error instanceof Error ? error.name : 'Unknown';
-        console.log('Cast: Prompt failed -', errorName, ':', errorMessage);
-      }
-    } else {
-      console.log('Cast: Remote Playback API not supported in this browser');
-    }
+    const currentMedia = this.media.current();
+    await this.castService.castVideoElement(
+      video,
+      currentMedia?.title,
+      currentMedia?.artwork
+    );
   }
 
   // Methods to trigger controls visibility from parent container hover

@@ -14,6 +14,7 @@ import { RouterModule } from '@angular/router';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { CastService } from '../../../services/cast.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { VideoControlsComponent } from '../../video-controls/video-controls.component';
 import { nip19 } from 'nostr-tools';
@@ -39,6 +40,7 @@ export class VideoPlayerComponent implements OnDestroy {
   readonly media = inject(MediaPlayerService);
   readonly layout = inject(LayoutService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly castService = inject(CastService);
 
   footer = input<boolean>(false);
 
@@ -138,52 +140,12 @@ export class VideoPlayerComponent implements OnDestroy {
       return;
     }
 
-    // Check if video has a valid source
-    if (!video.src && !video.currentSrc) {
-      console.log('Cast: No video source available');
-      return;
-    }
-
-    // Use the Remote Playback API if available (Chrome, Edge, Safari)
-    if ('remote' in video && video.remote) {
-      const remote = video.remote as RemotePlayback;
-
-      // Check current state
-      console.log('Cast: Remote playback state:', remote.state);
-
-      try {
-        await remote.prompt();
-        console.log('Cast: Prompt successful, new state:', remote.state);
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const errorName = error instanceof Error ? error.name : 'Unknown';
-        console.log('Cast: Prompt failed -', errorName, ':', errorMessage);
-
-        // InvalidStateError means no devices available or video not ready
-        // NotSupportedError means the video source doesn't support remote playback
-        // NotAllowedError means user didn't grant permission
-        if (errorName === 'NotFoundError') {
-          console.log('Cast: No cast devices found on the network');
-        }
-      }
-    } else {
-      console.log('Cast: Remote Playback API not supported in this browser');
-      // Try Presentation API as fallback (for some browsers)
-      this.tryPresentationAPI(video);
-    }
-  }
-
-  private tryPresentationAPI(video: HTMLVideoElement): void {
-    // Presentation API is another way to cast content
-    if ('presentation' in navigator && navigator.presentation) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const presentation = navigator.presentation as any;
-      if (presentation.defaultRequest) {
-        presentation.defaultRequest.start().catch((err: Error) => {
-          console.log('Presentation API failed:', err.message);
-        });
-      }
-    }
+    const currentMedia = this.media.current();
+    await this.castService.castVideoElement(
+      video,
+      currentMedia?.title,
+      currentMedia?.artwork
+    );
   }
 
   // Methods to trigger controls visibility from parent container hover

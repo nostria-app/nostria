@@ -14,6 +14,7 @@ import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { VideoPlaybackService } from '../../services/video-playback.service';
+import { CastService } from '../../services/cast.service';
 
 interface VideoData {
   url: string;
@@ -48,6 +49,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   private utilities = inject(UtilitiesService);
   private hostElement = inject(ElementRef);
   private videoPlayback = inject(VideoPlaybackService);
+  private castService = inject(CastService);
 
   // Viewport visibility
   private intersectionObserver?: IntersectionObserver;
@@ -427,22 +429,12 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Use the Remote Playback API if available
-    if ('remote' in video && video.remote) {
-      const remote = video.remote as RemotePlayback;
-      console.log('Cast: Remote playback state:', remote.state);
-
-      try {
-        await remote.prompt();
-        console.log('Cast: Prompt successful, new state:', remote.state);
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        const errorName = error instanceof Error ? error.name : 'Unknown';
-        console.log('Cast: Prompt failed -', errorName, ':', errorMessage);
-      }
-    } else {
-      console.log('Cast: Remote Playback API not supported in this browser');
-    }
+    const videoInfo = this.videoData();
+    await this.castService.castVideoElement(
+      video,
+      videoInfo?.title,
+      videoInfo?.thumbnail
+    );
   }
 
   // Methods to trigger controls visibility from parent container hover
