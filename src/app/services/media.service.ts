@@ -486,18 +486,11 @@ export class MediaService implements NostriaService {
           console.log('HEAD request successful, proceeding with PUT...');
           console.log(`File size: ${file.size} bytes, type: ${file.type}`);
 
-          // Generate fresh auth headers for PUT request to avoid expiration issues
-          // This is especially important when signing takes time (e.g., extension/external signers)
-          const putHeaders = await this.getAuthHeaders('Upload File', action.action, hash);
-          putHeaders['X-SHA-256'] = hash;
-          putHeaders['X-Content-Type'] = file.type;
-          putHeaders['X-Content-Length'] = file.size.toString();
-
           // Send the binary file directly
           const response = await fetch(`${url}${api}`, {
             method: 'PUT', // As per BUD-02 spec
             headers: {
-              ...putHeaders,
+              ...headers,
               'Content-Type': file.type,
               'Content-Length': file.size.toString(),
             },
@@ -756,8 +749,7 @@ export class MediaService implements NostriaService {
     sha256: string,
     fileUrl: string,
     servers?: string[],
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    _headers?: Record<string, string> // Deprecated: headers are now generated fresh for each request
+    headers?: Record<string, string>
   ): Promise<void> {
     this.loading.set(true);
     this._error.set(null);
@@ -765,6 +757,10 @@ export class MediaService implements NostriaService {
     // Check if we have any media servers configured
     if (!servers || servers.length === 0) {
       servers = this.otherServers(fileUrl);
+    }
+
+    if (!headers) {
+      headers = await this.getAuthHeaders('Upload File', 'upload', sha256);
     }
 
     try {
@@ -776,13 +772,10 @@ export class MediaService implements NostriaService {
         try {
           const url = server.endsWith('/') ? server : `${server}/`;
 
-          // Generate fresh auth headers for each server to avoid expiration issues
-          const serverHeaders = await this.getAuthHeaders('Upload File', 'upload', sha256);
-
           // First check if mirroring is allowed with HEAD request to UPLOAD endpoint
           const headResponse = await fetch(`${url}upload`, {
             method: 'HEAD',
-            headers: serverHeaders,
+            headers: headers,
           });
 
           if (!headResponse.ok) {
@@ -792,13 +785,10 @@ export class MediaService implements NostriaService {
             );
           }
 
-          // Generate fresh auth headers for PUT request to avoid expiration issues
-          const putHeaders = await this.getAuthHeaders('Upload File', 'upload', sha256);
-
           const response = await fetch(`${url}mirror`, {
             method: 'PUT', // As per BUD-04 spec
             headers: {
-              ...putHeaders,
+              ...headers,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ url: fileUrl }),
