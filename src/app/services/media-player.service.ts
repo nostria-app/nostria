@@ -94,6 +94,10 @@ export class MediaPlayerService implements OnInitialized {
   // HLS instance for live streaming
   private hlsInstance?: any;
 
+  // HLS Quality levels
+  hlsQualityLevels = signal<{ index: number; label: string; height?: number; bitrate?: number }[]>([]);
+  hlsCurrentQuality = signal<number>(-1); // -1 = auto
+
   // Flag to track if video/HLS playback has been initialized for current item
   private videoPlaybackInitialized = false;
 
@@ -881,6 +885,10 @@ export class MediaPlayerService implements OnInitialized {
   private async setupHLS(url: string, videoElement: HTMLVideoElement) {
     console.log('Setting up HLS for:', url);
 
+    // Reset quality levels
+    this.hlsQualityLevels.set([]);
+    this.hlsCurrentQuality.set(-1);
+
     // Dynamically import HLS.js
     try {
       const Hls = (await import('hls.js')).default;
@@ -899,8 +907,30 @@ export class MediaPlayerService implements OnInitialized {
         this.hlsInstance.loadSource(url);
         this.hlsInstance.attachMedia(videoElement);
 
-        this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, async () => {
+        this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, async (_event: unknown, data: { levels: Array<{ height?: number; bitrate?: number }> }) => {
           console.log('HLS manifest parsed, starting playback');
+
+          // Extract quality levels
+          const levels = data.levels.map((level: { height?: number; bitrate?: number }, index: number) => {
+            let label = 'Auto';
+            if (level.height) {
+              label = `${level.height}p`;
+            } else if (level.bitrate) {
+              label = `${Math.round(level.bitrate / 1000)}kbps`;
+            }
+            return {
+              index,
+              label,
+              height: level.height,
+              bitrate: level.bitrate,
+            };
+          });
+
+          // Sort by height/quality descending
+          levels.sort((a, b) => (b.height || 0) - (a.height || 0));
+          this.hlsQualityLevels.set(levels);
+          console.log('HLS quality levels:', levels);
+
           try {
             await videoElement.play();
             this._isPaused.set(false);
@@ -908,6 +938,12 @@ export class MediaPlayerService implements OnInitialized {
           } catch (error) {
             console.error('Error playing HLS stream:', error);
           }
+        });
+
+        // Track quality level changes
+        this.hlsInstance.on(Hls.Events.LEVEL_SWITCHED, (_event: unknown, data: { level: number }) => {
+          this.hlsCurrentQuality.set(data.level);
+          console.log('HLS quality switched to level:', data.level);
         });
 
         this.hlsInstance.on(Hls.Events.ERROR, (_event: any, data: any) => {
@@ -1259,6 +1295,18 @@ export class MediaPlayerService implements OnInitialized {
     if (this.audio) {
       this.audio.playbackRate = speed;
       this.playbackRate.set(speed);
+    }
+  }
+
+  /**
+   * Set the HLS quality level
+   * @param levelIndex The quality level index, or -1 for auto
+   */
+  setHlsQuality(levelIndex: number): void {
+    if (this.hlsInstance) {
+      this.hlsInstance.currentLevel = levelIndex;
+      this.hlsCurrentQuality.set(levelIndex);
+      console.log('HLS quality set to level:', levelIndex);
     }
   }
 

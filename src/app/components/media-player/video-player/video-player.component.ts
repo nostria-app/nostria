@@ -15,6 +15,7 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
+import { VideoControlsComponent } from '../../video-controls/video-controls.component';
 import { nip19 } from 'nostr-tools';
 
 @Component({
@@ -25,6 +26,7 @@ import { nip19 } from 'nostr-tools';
     MatTooltipModule,
     RouterModule,
     UserProfileComponent,
+    VideoControlsComponent,
   ],
   templateUrl: './video-player.component.html',
   styleUrl: './video-player.component.scss',
@@ -74,6 +76,40 @@ export class VideoPlayerComponent implements OnDestroy {
 
   async pictureInPicture(): Promise<void> {
     await this.media.pictureInPicture();
+  }
+
+  // Video controls integration
+  onPlayPause(): void {
+    if (this.media.paused) {
+      this.media.resume();
+    } else {
+      this.media.pause();
+    }
+  }
+
+  onSeek(time: number): void {
+    const video = this.videoElement?.nativeElement;
+    if (video) {
+      video.currentTime = time;
+    }
+  }
+
+  onVolumeChange(volume: number): void {
+    const video = this.videoElement?.nativeElement;
+    if (video) {
+      video.volume = volume;
+      if (video.muted && volume > 0) {
+        video.muted = false;
+      }
+    }
+  }
+
+  onPlaybackRateChange(rate: number): void {
+    const video = this.videoElement?.nativeElement;
+    if (video) {
+      video.playbackRate = rate;
+    }
+    this.media.setPlaybackRate(rate);
   }
 
   isNpubArtist(artist: string | undefined): boolean {

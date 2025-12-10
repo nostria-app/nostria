@@ -55,11 +55,17 @@
   } @else {
   <!-- Video Player (Expanded State) -->
   <div class="video-player-container">
-    <video #videoPlayer controls class="video-player" [autoplay]="shouldAutoPlay()" [loop]="shouldRepeat()"
-      [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)">
+    <video #videoPlayer class="video-player" [autoplay]="shouldAutoPlay()" [loop]="shouldRepeat()"
+      [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
+      (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()">
       <source [src]="videoInfo.url" [type]="videoMimeType()" />
       Your browser does not support the video tag.
     </video>
+    <app-video-controls [videoElement]="videoPlayerRef?.nativeElement"
+      [config]="{ showQuality: false, isLiveStream: false }" (playPause)="togglePlayPause()" (seek)="onSeek($event)"
+      (volumeChange)="onVolumeChange($event)" (muteToggle)="onMuteToggle()"
+      (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="toggleFullscreen()"
+      (pipToggle)="togglePictureInPicture()" />
     <button mat-icon-button class="collapse-video-btn" (click)="collapseVideo()" matTooltip="Show thumbnail">
       <mat-icon>picture_in_picture_alt</mat-icon>
     </button>
