@@ -479,10 +479,10 @@ export class NoteContentComponent implements OnDestroy {
    * Open image dialog for carousel - supports multi-image preview
    */
   openCarouselImageDialog(images: ContentToken[], currentIndex: number): void {
-    // If image should be blurred and not revealed, reveal it instead
+    // If image should be blurred and not revealed, reveal all images in the carousel
     const currentImage = images[currentIndex];
     if (this.shouldBlurImages() && !this.isImageRevealed(currentImage.content)) {
-      this.revealImage(currentImage.content);
+      this.revealAllImages(images);
       return;
     }
 
@@ -547,6 +547,22 @@ export class NoteContentComponent implements OnDestroy {
     this.revealedImages.update(set => {
       const newSet = new Set(set);
       newSet.add(imageUrl);
+      return newSet;
+    });
+  }
+
+  /**
+   * Reveal all images in a group (for carousels)
+   * When user clicks reveal on one image, reveal all images in the post
+   */
+  revealAllImages(images: ContentToken[]): void {
+    this.revealedImages.update(set => {
+      const newSet = new Set(set);
+      for (const image of images) {
+        if (image.content) {
+          newSet.add(image.content);
+        }
+      }
       return newSet;
     });
   }
