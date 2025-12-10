@@ -464,6 +464,11 @@ app-user-profile {
                 display: flex;
                 align-items: center;
                 gap: 8px;
+
+                // Ensure spinner is centered in icon buttons
+                mat-spinner {
+                  margin: 2px;
+                }
               }
             }
           }

@@ -148,8 +148,14 @@
               }
 
               <div class="column-header-actions">
-                <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content">
+                @let isRefreshing = feedService.getColumnRefreshingState(column.id);
+                <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content"
+                  [disabled]="isRefreshing && isRefreshing()">
+                  @if (isRefreshing && isRefreshing()) {
+                  <mat-spinner diameter="20"></mat-spinner>
+                  } @else {
                   <mat-icon>refresh</mat-icon>
+                  }
                 </button>
                 <!-- <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
                     <mat-icon>filter_list</mat-icon>
