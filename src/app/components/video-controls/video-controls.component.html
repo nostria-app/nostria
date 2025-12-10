@@ -54,35 +54,45 @@
         <span class="time-display">
           {{ formattedCurrentTime() }} / {{ formattedDuration() }}
         </span>
-        } @else {
-        <span class="live-badge">
-          <span class="live-dot"></span>
-          LIVE
-        </span>
         }
       </div>
 
       <!-- Right controls -->
       <div class="controls-right">
-        <!-- Playback Speed -->
-        @if (mergedConfig().showPlaybackRate && !mergedConfig().isLiveStream) {
-        <button mat-icon-button [matMenuTriggerFor]="speedMenu" matTooltip="Playback speed" class="control-btn">
-          <span class="speed-label">{{ playbackRate() }}x</span>
+        <!-- Settings Menu (YouTube-style with Playback Speed and Quality) -->
+        @if (mergedConfig().showQuality || mergedConfig().showPlaybackRate) {
+        <button mat-icon-button matTooltip="Settings" class="control-btn" [matMenuTriggerFor]="settingsMenu">
+          <mat-icon>settings</mat-icon>
         </button>
-        <mat-menu #speedMenu="matMenu" class="video-controls-menu">
-          @for (rate of playbackRates; track rate) {
-          <button mat-menu-item (click)="onPlaybackRateChange(rate)" [class.active]="playbackRate() === rate">
-            {{ rate }}x
+        <mat-menu #settingsMenu="matMenu" class="video-controls-menu">
+          <!-- Playback Speed submenu -->
+          @if (mergedConfig().showPlaybackRate && !mergedConfig().isLiveStream) {
+          <button mat-menu-item [matMenuTriggerFor]="speedMenu">
+            <mat-icon>speed</mat-icon>
+            <span>Playback speed</span>
+            <span class="menu-value">{{ playbackRate() === 1 ? 'Normal' : playbackRate() + 'x' }}</span>
+          </button>
+          }
+          <!-- Quality submenu -->
+          @if (mergedConfig().showQuality && qualityLevels().length > 0) {
+          <button mat-menu-item [matMenuTriggerFor]="qualityMenu">
+            <mat-icon>tune</mat-icon>
+            <span>Quality</span>
+            <span class="menu-value">{{ currentQualityLabel() }}</span>
           </button>
           }
         </mat-menu>
-        }
 
-        <!-- Quality Selection -->
-        @if (mergedConfig().showQuality && qualityLevels().length > 0) {
-        <button mat-icon-button [matMenuTriggerFor]="qualityMenu" matTooltip="Quality" class="control-btn">
-          <mat-icon>settings</mat-icon>
-        </button>
+        <!-- Playback Speed submenu -->
+        <mat-menu #speedMenu="matMenu" class="video-controls-menu">
+          @for (rate of playbackRates; track rate) {
+          <button mat-menu-item (click)="onPlaybackRateChange(rate)" [class.active]="playbackRate() === rate">
+            {{ rate === 1 ? 'Normal' : rate + 'x' }}
+          </button>
+          }
+        </mat-menu>
+
+        <!-- Quality submenu -->
         <mat-menu #qualityMenu="matMenu" class="video-controls-menu">
           <button mat-menu-item (click)="onQualityChange(-1)" [class.active]="currentQuality() === -1">
             Auto
@@ -91,29 +101,6 @@
           <button mat-menu-item (click)="onQualityChange(level.index)"
             [class.active]="currentQuality() === level.index">
             {{ level.label }}
-          </button>
-          }
-        </mat-menu>
-        }
-
-        <!-- Settings (when no quality levels) -->
-        @if (mergedConfig().showQuality && qualityLevels().length === 0) {
-        <button mat-icon-button matTooltip="Settings" class="control-btn" [matMenuTriggerFor]="settingsMenu">
-          <mat-icon>settings</mat-icon>
-        </button>
-        <mat-menu #settingsMenu="matMenu" class="video-controls-menu">
-          @if (mergedConfig().showPlaybackRate && !mergedConfig().isLiveStream) {
-          <button mat-menu-item [matMenuTriggerFor]="speedMenuNested">
-            <mat-icon>speed</mat-icon>
-            <span>Playback speed</span>
-            <span class="menu-value">{{ playbackRate() }}x</span>
-          </button>
-          }
-        </mat-menu>
-        <mat-menu #speedMenuNested="matMenu" class="video-controls-menu">
-          @for (rate of playbackRates; track rate) {
-          <button mat-menu-item (click)="onPlaybackRateChange(rate)" [class.active]="playbackRate() === rate">
-            {{ rate }}x
           </button>
           }
         </mat-menu>

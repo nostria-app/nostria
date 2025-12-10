@@ -330,7 +330,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     if ('remote' in video && video.remote) {
       const remote = video.remote as RemotePlayback;
       console.log('Cast: Remote playback state:', remote.state);
-      
+
       try {
         await remote.prompt();
         console.log('Cast: Prompt successful, new state:', remote.state);
