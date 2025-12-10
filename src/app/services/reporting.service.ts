@@ -345,6 +345,80 @@ export class ReportingService {
   }
 
   /**
+   * Add a word to mute list and publish to relays
+   */
+  async addWordToMuteListAndPublish(word: string): Promise<void> {
+    const freshMuteList = await this.createFreshMuteListWithItem('word', word.toLowerCase());
+    if (freshMuteList) {
+      await this.publishService.signAndPublishAuto(
+        freshMuteList,
+        (event) => this.nostr.signEvent(event)
+      );
+      this.logger.debug('Added word to mute list and published:', word);
+    }
+  }
+
+  /**
+   * Add a tag to mute list and publish to relays
+   */
+  async addTagToMuteListAndPublish(tag: string): Promise<void> {
+    const freshMuteList = await this.createFreshMuteListWithItem('t', tag.toLowerCase());
+    if (freshMuteList) {
+      await this.publishService.signAndPublishAuto(
+        freshMuteList,
+        (event) => this.nostr.signEvent(event)
+      );
+      this.logger.debug('Added tag to mute list and published:', tag);
+    }
+  }
+
+  /**
+   * Create a fresh mute list event with a new item
+   */
+  async createFreshMuteListWithItem(type: 'word' | 't' | 'e' | 'p', value: string): Promise<Event | null> {
+    const account = this.accountState.account();
+    if (!account?.pubkey) {
+      return null;
+    }
+
+    // Get current mute list or create empty tags array
+    const currentMuteList = this.accountState.muteList();
+    let existingTags: string[][] = [];
+
+    if (currentMuteList) {
+      existingTags = [...currentMuteList.tags];
+    }
+
+    // Check if item is already muted
+    const isAlreadyMuted = existingTags.some(tag => tag[0] === type && tag[1] === value);
+    if (!isAlreadyMuted) {
+      existingTags.push([type, value]);
+    }
+
+    // Create fresh event with current timestamp
+    const muteListEvent: UnsignedEvent = {
+      kind: 10000,
+      created_at: Math.floor(Date.now() / 1000),
+      content: '',
+      tags: existingTags,
+      pubkey: account.pubkey,
+    };
+
+    try {
+      // Sign the event
+      const signedEvent = await this.nostr.signEvent(muteListEvent);
+
+      // Update the account state with the new mute list
+      this.accountState.muteList.set(signedEvent);
+
+      return signedEvent;
+    } catch (error) {
+      console.error('Error creating fresh mute list event:', error);
+      return null;
+    }
+  }
+
+  /**
    * Get report type options for the UI
    */
   getReportTypeOptions(): { value: ReportType; label: string; description: string }[] {

@@ -103,6 +103,16 @@
 
   <section class="mute-section">
     <h3 i18n="@@settings.privacy.muted-words.title">Muted Words</h3>
+    <div class="add-mute-item">
+      <mat-form-field appearance="outline">
+        <mat-label i18n="@@settings.privacy.muted-words.add-label">Add word to mute</mat-label>
+        <input matInput [(ngModel)]="newMutedWord" (keyup.enter)="addMutedWord()" placeholder="Enter word">
+      </mat-form-field>
+      <button mat-flat-button (click)="addMutedWord()" [disabled]="!newMutedWord.trim()">
+        <mat-icon>add</mat-icon>
+        <span i18n="@@settings.privacy.muted-words.add-button">Add</span>
+      </button>
+    </div>
     <div class="muted-section">
       @if (mutedWords().length > 0) {
       <mat-list>
@@ -124,6 +134,17 @@
 
   <section class="mute-section">
     <h3 i18n="@@settings.privacy.muted-tags.title">Muted Tags</h3>
+    <div class="add-mute-item">
+      <mat-form-field appearance="outline">
+        <mat-label i18n="@@settings.privacy.muted-tags.add-label">Add tag to mute</mat-label>
+        <input matInput [(ngModel)]="newMutedTag" (keyup.enter)="addMutedTag()" placeholder="Enter tag (without #)">
+        <span matTextPrefix>#</span>
+      </mat-form-field>
+      <button mat-flat-button (click)="addMutedTag()" [disabled]="!newMutedTag.trim()">
+        <mat-icon>add</mat-icon>
+        <span i18n="@@settings.privacy.muted-tags.add-button">Add</span>
+      </button>
+    </div>
     <div class="muted-section">
       @if (mutedTags().length > 0) {
       <mat-list>

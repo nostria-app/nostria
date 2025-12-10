@@ -9,6 +9,30 @@
 
 .mute-section {
   margin-bottom: 32px;
+
+  .add-mute-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+
+    mat-form-field {
+      flex: 1;
+      max-width: 400px;
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+  }
 }
 
 .sharing-section {
