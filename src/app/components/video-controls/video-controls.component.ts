@@ -30,6 +30,7 @@ export interface VideoControlsConfig {
   showPiP?: boolean;
   showFullscreen?: boolean;
   showPlaybackRate?: boolean;
+  showCast?: boolean;
   isLiveStream?: boolean;
   autoHide?: boolean;
   autoHideDelay?: number;
@@ -40,6 +41,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
   showPiP: true,
   showFullscreen: true,
   showPlaybackRate: true,
+  showCast: true,
   isLiveStream: false,
   autoHide: true,
   autoHideDelay: 3000,
@@ -84,6 +86,7 @@ export class VideoControlsComponent implements OnDestroy {
   playbackRateChange = output<number>();
   fullscreenToggle = output<void>();
   pipToggle = output<void>();
+  castToggle = output<void>();
 
   // Internal state - reactive signals for video state
   controlsVisible = signal(true);
@@ -402,6 +405,10 @@ export class VideoControlsComponent implements OnDestroy {
 
   onPipToggle(): void {
     this.pipToggle.emit();
+  }
+
+  onCastToggle(): void {
+    this.castToggle.emit();
   }
 
   // Utilities

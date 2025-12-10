@@ -45,6 +45,9 @@ export class VideoPlayerComponent implements OnDestroy {
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
 
+  @ViewChild(VideoControlsComponent)
+  videoControlsRef?: VideoControlsComponent;
+
   constructor() {
     if (!this.utilities.isBrowser()) {
       return;
@@ -110,6 +113,49 @@ export class VideoPlayerComponent implements OnDestroy {
       video.playbackRate = rate;
     }
     this.media.setPlaybackRate(rate);
+  }
+
+  async requestFullscreen(): Promise<void> {
+    const videoArea = document.querySelector('.video-area');
+    if (!videoArea) return;
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await videoArea.requestFullscreen();
+      }
+    } catch {
+      // Fullscreen not supported, fall back to expand
+      this.toggleFullscreen();
+    }
+  }
+
+  async castToDevice(): Promise<void> {
+    const video = this.videoElement?.nativeElement;
+    if (!video) return;
+
+    // Use the Remote Playback API if available
+    if ('remote' in video && video.remote) {
+      try {
+        await (video.remote as { prompt(): Promise<void> }).prompt();
+      } catch {
+        // Cast not supported or user cancelled
+      }
+    }
+  }
+
+  // Methods to trigger controls visibility from parent container hover
+  onVideoContainerMouseEnter(): void {
+    this.videoControlsRef?.showControls();
+  }
+
+  onVideoContainerMouseLeave(): void {
+    // Let the controls auto-hide logic handle this
+  }
+
+  onVideoContainerMouseMove(): void {
+    this.videoControlsRef?.showControls();
   }
 
   isNpubArtist(artist: string | undefined): boolean {

@@ -54,7 +54,8 @@
   </div>
   } @else {
   <!-- Video Player (Expanded State) -->
-  <div class="video-player-container">
+  <div class="video-player-container" (mouseenter)="onVideoContainerMouseEnter()"
+    (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()">
     <video #videoPlayer class="video-player" [autoplay]="shouldAutoPlay()" [loop]="shouldRepeat()"
       [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
       (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()">
@@ -65,7 +66,7 @@
       [config]="{ showQuality: false, isLiveStream: false }" (playPause)="togglePlayPause()" (seek)="onSeek($event)"
       (volumeChange)="onVolumeChange($event)" (muteToggle)="onMuteToggle()"
       (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="toggleFullscreen()"
-      (pipToggle)="togglePictureInPicture()" />
+      (pipToggle)="togglePictureInPicture()" (castToggle)="castToDevice()" />
     <button mat-icon-button class="collapse-video-btn" (click)="collapseVideo()" matTooltip="Show thumbnail">
       <mat-icon>picture_in_picture_alt</mat-icon>
     </button>
