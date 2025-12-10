@@ -479,19 +479,49 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   // Preview of the event JSON for debugging
   previewEventJson = computed(() => {
-    const content = this.processContentForPublishing(this.content().trim());
-    const tags = this.buildTags();
     const pubkey = this.accountState.pubkey() || '';
     const created_at = Math.floor(Date.now() / 1000);
 
-    // Determine kind
-    let kind = 1;
+    // For media mode, show both the media event and the kind 1 wrapper
     if (this.isMediaModeEnabled()) {
-      kind = this.getMediaEventKind();
+      const mediaEvent = this.previewMediaEvent();
+      if (mediaEvent) {
+        // Build the kind 1 wrapper event
+        const nevent = `nevent1... (will be generated from signed media event)`;
+        const kind1Content = `${mediaEvent.content}\n\nnostr:${nevent}`;
+        
+        // Kind 1 tags (without imeta)
+        const kind1Tags = this.buildTags();
+        const filteredKind1Tags = kind1Tags.filter(t => t[0] !== 'imeta');
+        filteredKind1Tags.push(['q', '<media_event_id>', '', pubkey]);
+
+        const kind1Event = {
+          kind: 1,
+          content: kind1Content,
+          tags: filteredKind1Tags,
+          pubkey,
+          created_at,
+        };
+
+        return JSON.stringify({
+          mediaEvent: {
+            kind: mediaEvent.kind,
+            content: mediaEvent.content,
+            tags: mediaEvent.tags,
+            pubkey: mediaEvent.pubkey,
+            created_at: mediaEvent.created_at,
+          },
+          kind1WrapperEvent: kind1Event,
+        }, null, 2);
+      }
     }
 
+    // Standard kind 1 event
+    const content = this.processContentForPublishing(this.content().trim());
+    const tags = this.buildTags();
+
     const unsignedEvent = {
-      kind,
+      kind: 1,
       content,
       tags,
       pubkey,
@@ -1660,6 +1690,11 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
     // Clear auto-saved draft from storage
     this.clearAutoDraft();
+
+    // Update the textarea value directly to ensure UI sync
+    if (this.contentTextarea) {
+      this.contentTextarea.nativeElement.value = this.initialContent;
+    }
 
     this.snackBar.open('Draft cleared', 'Dismiss', {
       duration: 2000,
