@@ -422,16 +422,26 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
   async castToDevice(): Promise<void> {
     const video = this.videoPlayerRef?.nativeElement;
-    if (!video) return;
+    if (!video) {
+      console.log('Cast: No video element available');
+      return;
+    }
 
     // Use the Remote Playback API if available
     if ('remote' in video && video.remote) {
       const remote = video.remote as RemotePlayback;
+      console.log('Cast: Remote playback state:', remote.state);
+      
       try {
         await remote.prompt();
-      } catch (error) {
-        console.log('Cast not available or user cancelled:', error);
+        console.log('Cast: Prompt successful, new state:', remote.state);
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorName = error instanceof Error ? error.name : 'Unknown';
+        console.log('Cast: Prompt failed -', errorName, ':', errorMessage);
       }
+    } else {
+      console.log('Cast: Remote Playback API not supported in this browser');
     }
   }
 
