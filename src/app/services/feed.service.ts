@@ -47,6 +47,7 @@ export interface FeedItem {
   lastTimestamp?: number;
   subscription: { unsubscribe: () => void } | { close: () => void } | null;
   isLoadingMore?: WritableSignal<boolean>;
+  isRefreshing?: WritableSignal<boolean>; // Track when column is actively refreshing/loading
   hasMore?: WritableSignal<boolean>;
   pendingEvents?: WritableSignal<Event[]>;
   lastCheckTimestamp?: number;
@@ -600,6 +601,7 @@ export class FeedService {
       subscription: null,
       lastTimestamp: Date.now(),
       isLoadingMore: signal<boolean>(false),
+      isRefreshing: signal<boolean>(true), // Start as refreshing since we're loading content
       hasMore: signal<boolean>(true),
       pendingEvents: signal<Event[]>([]),
       lastCheckTimestamp: Math.floor(Date.now() / 1000),
@@ -793,6 +795,7 @@ export class FeedService {
         setTimeout(() => {
           if (!item.initialLoadComplete) {
             item.initialLoadComplete = true;
+            item.isRefreshing?.set(false);
             this.logger.info(`✅ Initial relay load complete for column ${column.id} - new events will be queued`);
           }
         }, 2000); // 2 seconds for initial events on empty feeds
@@ -1121,6 +1124,7 @@ export class FeedService {
 
     // Mark initial load as complete
     feedData.initialLoadComplete = true;
+    feedData.isRefreshing?.set(false);
 
     // Update lastRetrieved timestamp
     this.updateColumnLastRetrieved(feedData.column.id);
@@ -1390,6 +1394,7 @@ export class FeedService {
 
     // Mark initial load as complete - any events arriving after this will be queued
     feedData.initialLoadComplete = true;
+    feedData.isRefreshing?.set(false);
     this.logger.info(`✅ Initial load complete for column ${feedData.column.id} - new events will be queued`);
   }
 
@@ -1870,6 +1875,10 @@ export class FeedService {
   // Helper methods to get loading states for columns
   getColumnLoadingState(columnId: string): Signal<boolean> | undefined {
     return this.data.get(columnId)?.isLoadingMore;
+  }
+
+  getColumnRefreshingState(columnId: string): Signal<boolean> | undefined {
+    return this.data.get(columnId)?.isRefreshing;
   }
 
   getColumnHasMore(columnId: string): Signal<boolean> | undefined {
