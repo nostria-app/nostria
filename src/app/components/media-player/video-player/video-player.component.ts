@@ -147,10 +147,10 @@ export class VideoPlayerComponent implements OnDestroy {
     // Use the Remote Playback API if available (Chrome, Edge, Safari)
     if ('remote' in video && video.remote) {
       const remote = video.remote as RemotePlayback;
-      
+
       // Check current state
       console.log('Cast: Remote playback state:', remote.state);
-      
+
       try {
         await remote.prompt();
         console.log('Cast: Prompt successful, new state:', remote.state);
@@ -158,7 +158,7 @@ export class VideoPlayerComponent implements OnDestroy {
         const errorMessage = error instanceof Error ? error.message : String(error);
         const errorName = error instanceof Error ? error.name : 'Unknown';
         console.log('Cast: Prompt failed -', errorName, ':', errorMessage);
-        
+
         // InvalidStateError means no devices available or video not ready
         // NotSupportedError means the video source doesn't support remote playback
         // NotAllowedError means user didn't grant permission
