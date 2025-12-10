@@ -137,6 +137,32 @@
   .inline-spinner {
     margin-left: 0.5rem;
   }
+
+  &.clickable {
+    cursor: pointer;
+    border-radius: var(--mat-sys-corner-small);
+    padding: 0.25rem 0.5rem;
+    margin-left: -0.5rem;
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-high);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+    }
+  }
+
+  .collapse-icon {
+    transition: transform 0.2s ease;
+    color: var(--mat-sys-on-surface-variant);
+
+    &.collapsed {
+      transform: rotate(-90deg);
+    }
+  }
 }
 
 .section-description {

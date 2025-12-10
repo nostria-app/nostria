@@ -69,7 +69,11 @@
     @if (activePosters().length > 0) {
     <section class="active-posters-section">
       <div class="section-header-with-actions">
-        <h2 class="section-title">
+        <h2 class="section-title clickable" (click)="postersCollapsed.set(!postersCollapsed())"
+          (keydown.enter)="postersCollapsed.set(!postersCollapsed())"
+          (keydown.space)="postersCollapsed.set(!postersCollapsed()); $event.preventDefault()" tabindex="0"
+          role="button" [attr.aria-expanded]="!postersCollapsed()">
+          <mat-icon class="collapse-icon" [class.collapsed]="postersCollapsed()">expand_more</mat-icon>
           <mat-icon>group</mat-icon>
           Who Posted
           <span class="section-count">{{ activePosters().length }} / {{ totalPostersCount() }}</span>
@@ -84,6 +88,7 @@
           <span class="filter-hint">Click to filter timeline</span>
         </div>
       </div>
+      @if (!postersCollapsed()) {
       <div class="poster-grid">
         @for (poster of activePosters(); track poster.pubkey) {
         <div class="poster-card" [class.selected]="isPosterSelected(poster.pubkey)"
@@ -127,6 +132,7 @@
         </button>
       </div>
       }
+      }
     </section>
     }
 
@@ -135,11 +141,16 @@
     <mat-divider></mat-divider>
 
     <section class="media-section">
-      <h2 class="section-title">
+      <h2 class="section-title clickable" (click)="mediaCollapsed.set(!mediaCollapsed())"
+        (keydown.enter)="mediaCollapsed.set(!mediaCollapsed())"
+        (keydown.space)="mediaCollapsed.set(!mediaCollapsed()); $event.preventDefault()" tabindex="0" role="button"
+        [attr.aria-expanded]="!mediaCollapsed()">
+        <mat-icon class="collapse-icon" [class.collapsed]="mediaCollapsed()">expand_more</mat-icon>
         <mat-icon>perm_media</mat-icon>
         Media
         <span class="section-count">{{ mediaEvents().length }}</span>
       </h2>
+      @if (!mediaCollapsed()) {
       <p class="section-description">Photos and videos shared recently</p>
       <div class="media-grid">
         @for (event of mediaEvents().slice(0, 12); track event.id) {
@@ -161,6 +172,7 @@
         }
         }
       </div>
+      }
     </section>
     }
 

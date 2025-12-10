@@ -143,6 +143,10 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Posters pagination
   postersPage = signal(1);
 
+  // Section collapse states
+  postersCollapsed = signal(false);
+  mediaCollapsed = signal(false);
+
   // Selected posters for filtering the timeline (empty means show all)
   selectedPosters = signal<Set<string>>(new Set());
 
