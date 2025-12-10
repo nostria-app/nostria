@@ -69,8 +69,11 @@
       <!-- Media Thumbnails (Media Mode) -->
       @if (isMediaModeEnabled() && mediaMetadata().length > 0) {
       <div class="media-thumbnails" cdkDropList cdkDropListOrientation="horizontal" (cdkDropListDropped)="drop($event)">
-        @for (media of mediaMetadata(); track media.url) {
+        @for (media of mediaMetadata(); track media.url; let i = $index) {
         <div class="media-thumbnail" cdkDrag>
+          <button mat-icon-button class="remove-media-btn" (click)="removeMedia(i)" matTooltip="Remove media">
+            <mat-icon>close</mat-icon>
+          </button>
           @if (media.mimeType?.startsWith('video/')) {
           <mat-icon class="video-icon">videocam</mat-icon>
           <!-- Use image preview if available -->
@@ -204,6 +207,26 @@
         </div>
       </div>
 
+      <!-- Event JSON Preview Option -->
+      <div class="option-row">
+        <div class="option-header">
+          <mat-slide-toggle [checked]="showEventJson()" (change)="showEventJson.set($event.checked)" color="primary">
+            Show Event JSON
+          </mat-slide-toggle>
+          <span class="option-description">
+            Display the raw JSON of the event being created (useful for debugging)
+          </span>
+        </div>
+
+        @if (showEventJson()) {
+        <div class="option-content">
+          <div class="event-json-preview">
+            <pre class="json-content">{{ previewEventJson() }}</pre>
+          </div>
+        </div>
+        }
+      </div>
+
       <!-- Zap Split Option (only shown when quoting and logged in) -->
       @if (zapSplitAvailable()) {
       <div class="option-row">
@@ -320,6 +343,10 @@
     (drop)="!showPreview() && !showAdvancedOptions() && onDrop($event)">
     <!-- Left side: Action buttons -->
     <div class="left-actions">
+      <button mat-icon-button type="button" (click)="clearDraft()" [disabled]="!isDirty()"
+        [class.button-disabled-visible]="!isDirty()" matTooltip="Clear draft">
+        <mat-icon>delete_sweep</mat-icon>
+      </button>
       <button mat-icon-button type="button" (click)="togglePreview()" [color]="showPreview() ? 'primary' : ''"
         matTooltip="Toggle preview">
         <mat-icon>{{ showPreview() ? 'visibility_off' : 'visibility' }}</mat-icon>
@@ -384,7 +411,7 @@
       <button mat-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
 
       <button mat-flat-button color="primary" (click)="publishNote()" [disabled]="!canPublish() || isPublishing()"
-        class="publish-button" matTooltip="Alt+P or Alt+Enter">
+        class="publish-button" matTooltip="Alt+Enter">
         @if (isPublishing()) {
         <ng-container>
           <mat-icon class="spinning">hourglass_empty</mat-icon>
