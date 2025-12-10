@@ -437,8 +437,26 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   removeMedia(index: number): void {
     const currentMetadata = [...this.mediaMetadata()];
+    const removedMedia = currentMetadata[index];
     currentMetadata.splice(index, 1);
     this.mediaMetadata.set(currentMetadata);
+
+    // Remove the media URL from content if present
+    if (removedMedia?.url) {
+      let currentContent = this.content();
+      const escapedUrl = removedMedia.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // Remove the URL (with optional surrounding whitespace/newlines)
+      currentContent = currentContent.replace(new RegExp('\\s*' + escapedUrl + '\\s*', 'g'), ' ');
+      // Clean up extra whitespace
+      currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/\n\s*\n/g, '\n\n').trim();
+
+      this.content.set(currentContent);
+
+      // Update textarea
+      if (this.contentTextarea) {
+        this.contentTextarea.nativeElement.value = currentContent;
+      }
+    }
 
     // If no more media, disable media mode
     if (currentMetadata.length === 0) {
