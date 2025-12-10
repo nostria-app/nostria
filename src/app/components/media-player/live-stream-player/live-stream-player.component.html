@@ -1,8 +1,17 @@
 <div class="live-stream-container" [class.fullscreen]="!footer()" [class.footer-mode]="footer()">
   <!-- Single video element - always present, positioned via CSS -->
   @if (!isLiveKit() && !isExternal()) {
-  <video #videoElement class="stream-video" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()"
-    [muted]="media.muted" autoplay playsinline (error)="onVideoError($event)"></video>
+  <div class="video-wrapper" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
+    <video #videoElement class="stream-video" [muted]="media.muted" autoplay playsinline
+      (error)="onVideoError($event)"></video>
+    @if (!footer()) {
+    <app-video-controls [videoElement]="videoElement" [config]="{ isLiveStream: true, showQuality: true }"
+      [qualityLevels]="qualityLevels()" [currentQuality]="currentQualityLevel()" (playPause)="onPlayPause()"
+      (volumeChange)="onVideoVolumeChange($event)" (muteToggle)="onMuteToggle()"
+      (qualityChange)="onQualityChange($event)" (fullscreenToggle)="toggleFullscreen()"
+      (pipToggle)="pictureInPicture()" />
+    }
+  </div>
   } @else if (isLiveKit()) {
   <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
     <div class="livekit-content">

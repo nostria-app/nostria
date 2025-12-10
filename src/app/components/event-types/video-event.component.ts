@@ -1,6 +1,7 @@
 import { Component, computed, effect, input, signal, inject, ElementRef, ViewChild, AfterViewInit, OnDestroy } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
+import { VideoControlsComponent } from '../video-controls/video-controls.component';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
@@ -25,8 +26,7 @@ interface VideoData {
 
 @Component({
   selector: 'app-video-event',
-  standalone: true,
-  imports: [MatIconModule, MatButtonModule, MatTooltipModule, CommentsListComponent],
+  imports: [MatIconModule, MatButtonModule, MatTooltipModule, CommentsListComponent, VideoControlsComponent],
   templateUrl: './video-event.component.html',
   styleUrl: './video-event.component.scss',
 })
@@ -330,6 +330,92 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     const videoElement = event.target as HTMLVideoElement;
     if (videoElement) {
       this.videoPlayback.registerPlaying(videoElement);
+    }
+  }
+
+  // Video controls integration
+  videoCurrentTime = signal(0);
+  videoDuration = signal(0);
+
+  onTimeUpdate(): void {
+    const video = this.videoPlayerRef?.nativeElement;
+    if (video) {
+      this.videoCurrentTime.set(video.currentTime);
+    }
+  }
+
+  onLoadedMetadata(): void {
+    const video = this.videoPlayerRef?.nativeElement;
+    if (video) {
+      this.videoDuration.set(video.duration);
+    }
+  }
+
+  togglePlayPause(): void {
+    const video = this.videoPlayerRef?.nativeElement;
+    if (!video) return;
+
+    if (video.paused) {
+      video.play().catch(() => { /* User interaction required */ });
+    } else {
+      video.pause();
+    }
+  }
+
+  onSeek(time: number): void {
+    const video = this.videoPlayerRef?.nativeElement;
+    if (video) {
+      video.currentTime = time;
+    }
+  }
+
+  onVolumeChange(volume: number): void {
+    const video = this.videoPlayerRef?.nativeElement;
+    if (video) {
+      video.volume = volume;
+      if (video.muted && volume > 0) {
+        video.muted = false;
+      }
+    }
+  }
+
+  onMuteToggle(): void {
+    const video = this.videoPlayerRef?.nativeElement;
+    if (video) {
+      video.muted = !video.muted;
+    }
+  }
+
+  onPlaybackRateChange(rate: number): void {
+    const video = this.videoPlayerRef?.nativeElement;
+    if (video) {
+      video.playbackRate = rate;
+    }
+  }
+
+  toggleFullscreen(): void {
+    const container = this.hostElement.nativeElement.querySelector('.video-player-container');
+    if (!container) return;
+
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    } else {
+      container.requestFullscreen().catch(() => { /* Fullscreen not supported */ });
+    }
+  }
+
+  async togglePictureInPicture(): Promise<void> {
+    const video = this.videoPlayerRef?.nativeElement;
+    if (!video) return;
+
+    try {
+      if (document.pictureInPictureElement) {
+        await document.exitPictureInPicture();
+      } else if (document.pictureInPictureEnabled) {
+        await video.requestPictureInPicture();
+      }
+    } catch {
+      // PiP not supported or failed
     }
   }
 

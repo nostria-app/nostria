@@ -20,14 +20,25 @@
   <!-- Video Area (Shared) -->
   <div class="video-area">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
-      [controls]="!footer()" (error)="onVideoError($event)"></video>
+      (error)="onVideoError($event)"></video>
 
+    @if (!footer()) {
+    <!-- Custom Controls for Expanded Mode -->
+    <app-video-controls [videoElement]="videoElement"
+      [config]="{ isLiveStream: false, showQuality: media.hlsQualityLevels().length > 0 }"
+      [qualityLevels]="media.hlsQualityLevels()" [currentQuality]="media.hlsCurrentQuality()"
+      (playPause)="onPlayPause()" (seek)="onSeek($event)" (volumeChange)="onVolumeChange($event)"
+      (muteToggle)="media.mute()" (qualityChange)="media.setHlsQuality($event)"
+      (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="toggleFullscreen()"
+      (pipToggle)="pictureInPicture()" />
+    } @else {
     <!-- Footer Overlay (Footer Mode Only) -->
-    <div class="video-controls-overlay" [class.hidden]="!footer()">
+    <div class="video-controls-overlay">
       <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
         <mat-icon>picture_in_picture_alt</mat-icon>
       </button>
     </div>
+    }
   </div>
 
   <!-- Media Info (Footer Mode Only) -->

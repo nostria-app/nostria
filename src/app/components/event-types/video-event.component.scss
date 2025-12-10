@@ -210,12 +210,23 @@
   .video-player-container {
     position: relative;
     width: 100%;
+    background: #000;
+    border-radius: 8px;
+    overflow: hidden;
 
     .video-player {
       width: 100%;
       height: auto;
-      border-radius: 8px;
       max-height: 70vh;
+      display: block;
+    }
+
+    app-video-controls {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
     }
 
     .collapse-video-btn {
@@ -226,6 +237,9 @@
       color: white;
       -webkit-backdrop-filter: blur(4px);
       backdrop-filter: blur(4px);
+      z-index: 20;
+      opacity: 0;
+      transition: opacity 0.25s ease;
 
       &:hover {
         background-color: rgba(0, 0, 0, 0.8);
@@ -236,6 +250,10 @@
         width: 20px;
         height: 20px;
       }
+    }
+
+    &:hover .collapse-video-btn {
+      opacity: 1;
     }
   }
 }

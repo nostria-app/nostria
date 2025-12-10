@@ -1,0 +1,360 @@
+:host {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  z-index: 10;
+
+  &.visible,
+  &.is-paused {
+    opacity: 1;
+  }
+
+  &.visible {
+    pointer-events: auto;
+  }
+}
+
+.controls-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+// Gradients for visibility
+.gradient-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+
+  :host.visible & {
+    opacity: 1;
+  }
+}
+
+.gradient-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+// Center play button
+.center-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 72px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: white;
+  }
+}
+
+// Controls bar
+.controls-bar {
+  position: relative;
+  padding: 0 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 2;
+}
+
+// Progress bar
+.progress-container {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: height 0.1s ease;
+
+  &:hover,
+  &:focus {
+    height: 6px;
+
+    .progress-thumb {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+}
+
+.progress-buffered {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.progress-played {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--mat-sys-error, #ff0000);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 14px;
+  height: 14px;
+  background: var(--mat-sys-error, #ff0000);
+  border-radius: 50%;
+  transform: translateX(-50%) scale(0);
+  opacity: 0;
+  transition: opacity 0.1s ease, transform 0.1s ease;
+  pointer-events: none;
+  margin-top: -7px;
+}
+
+// Controls row
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: white;
+}
+
+.controls-left,
+.controls-right {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+// Control buttons
+.control-btn {
+  color: white !important;
+  width: 40px;
+  height: 40px;
+
+  mat-icon {
+    color: white;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  @media (max-width: 480px) {
+    width: 36px;
+    height: 36px;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+}
+
+// Volume control
+.volume-control {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.volume-slider-container {
+  display: flex;
+  align-items: center;
+  width: 80px;
+  overflow: hidden;
+  animation: slideIn 0.15s ease;
+
+  @media (max-width: 480px) {
+    width: 60px;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+
+  to {
+    width: 80px;
+    opacity: 1;
+  }
+}
+
+.volume-slider {
+  width: 100%;
+
+  // Style the slider for dark background
+  --mdc-slider-handle-color: white;
+  --mdc-slider-focus-handle-color: white;
+  --mdc-slider-hover-handle-color: white;
+  --mdc-slider-active-track-color: white;
+  --mdc-slider-inactive-track-color: rgba(255, 255, 255, 0.3);
+  --mdc-slider-with-tick-marks-active-container-color: white;
+  --mdc-slider-with-tick-marks-inactive-container-color: rgba(255, 255, 255, 0.3);
+}
+
+// Time display
+.time-display {
+  font-size: 13px;
+  color: white;
+  margin-left: 8px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+
+  @media (max-width: 480px) {
+    font-size: 11px;
+    margin-left: 4px;
+  }
+}
+
+// Live badge
+.live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: var(--mat-sys-error, #cc0000);
+  color: white;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 8px;
+}
+
+.live-dot {
+  width: 8px;
+  height: 8px;
+  background: white;
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+// Speed label
+.speed-label {
+  font-size: 13px;
+  color: white;
+  min-width: 32px;
+  text-align: center;
+}
+
+// Menu styling
+::ng-deep .video-controls-menu {
+  .mat-mdc-menu-content {
+    background: rgba(28, 28, 28, 0.95);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+  }
+
+  .mat-mdc-menu-item {
+    color: white;
+    min-height: 40px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &.active {
+      background: rgba(255, 255, 255, 0.15);
+
+      &::before {
+        content: '✓';
+        margin-right: 8px;
+      }
+    }
+
+    mat-icon {
+      color: white;
+    }
+  }
+
+  .menu-value {
+    margin-left: auto;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 480px) {
+  .controls-bar {
+    padding: 0 8px 4px;
+  }
+
+  .center-play-btn {
+    width: 56px;
+    height: 56px;
+
+    mat-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+    }
+  }
+
+  .gradient-bottom {
+    height: 80px;
+  }
+}

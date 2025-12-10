@@ -19,12 +19,20 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSliderModule } from '@angular/material/slider';
 import { LiveChatComponent } from '../../live-chat/live-chat.component';
 import { StreamInfoBarComponent } from '../../stream-info-bar/stream-info-bar.component';
+import { VideoControlsComponent } from '../../video-controls/video-controls.component';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { Filter, Event } from 'nostr-tools';
+
+// Extend Window to include Hls
+declare global {
+  interface Window {
+    Hls?: typeof import('hls.js').default;
+  }
+}
 
 @Component({
   selector: 'app-live-stream-player',
@@ -36,6 +44,7 @@ import { Filter, Event } from 'nostr-tools';
     MatSliderModule,
     LiveChatComponent,
     StreamInfoBarComponent,
+    VideoControlsComponent,
   ],
   templateUrl: './live-stream-player.component.html',
   styleUrl: './live-stream-player.component.scss',
@@ -83,6 +92,17 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   isLiveKit = computed(() => this.media.current()?.type === 'LiveKit');
   isExternal = computed(() => this.media.current()?.type === 'External');
+
+  // HLS Quality levels - linked to media player service
+  qualityLevels = computed(() =>
+    this.media.hlsQualityLevels().map(level => ({
+      index: level.index,
+      label: level.label,
+      height: level.height,
+      bitrate: level.bitrate,
+    }))
+  );
+  currentQualityLevel = computed(() => this.media.hlsCurrentQuality());
 
   // Extract URL from alt tag or service tag
   joinUrl = computed(() => {
@@ -268,5 +288,31 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   get volume(): number {
     return this.videoElement?.nativeElement ? Math.round(this.videoElement.nativeElement.volume * 100) : 100;
+  }
+
+  // Video controls integration
+  onPlayPause(): void {
+    if (this.media.paused) {
+      this.media.resume();
+    } else {
+      this.media.pause();
+    }
+  }
+
+  onVideoVolumeChange(volume: number): void {
+    if (this.videoElement?.nativeElement) {
+      this.videoElement.nativeElement.volume = volume;
+      if (this.videoElement.nativeElement.muted && volume > 0) {
+        this.videoElement.nativeElement.muted = false;
+      }
+    }
+  }
+
+  onMuteToggle(): void {
+    this.media.mute();
+  }
+
+  onQualityChange(levelIndex: number): void {
+    this.media.setHlsQuality(levelIndex);
   }
 }

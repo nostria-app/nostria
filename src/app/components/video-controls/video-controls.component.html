@@ -1,0 +1,138 @@
+<div class="controls-overlay">
+  <!-- Top gradient (for visibility when hovering) -->
+  <div class="gradient-top"></div>
+
+  <!-- Center play button (large, only when paused) -->
+  @if (paused()) {
+  <button class="center-play-btn" mat-icon-button (click)="onPlayPause()" aria-label="Play">
+    <mat-icon>play_arrow</mat-icon>
+  </button>
+  }
+
+  <!-- Bottom gradient and controls -->
+  <div class="gradient-bottom"></div>
+
+  <div class="controls-bar">
+    <!-- Progress bar -->
+    <div class="progress-container" tabindex="0" role="slider" title="Video progress" aria-valuenow="0"
+      aria-valuemin="0" aria-valuemax="100" aria-label="Video progress" (click)="onProgressClick($event)"
+      (keydown)="$event.key === 'ArrowLeft' ? seekRelative(-5) : $event.key === 'ArrowRight' ? seekRelative(5) : null"
+      (mousedown)="onProgressMouseDown($event)">
+      <div class="progress-buffered" [style.width.%]="bufferedPercent()"></div>
+      <div class="progress-played" [style.width.%]="progressPercent()"></div>
+      <div class="progress-thumb" [style.left.%]="progressPercent()"></div>
+    </div>
+
+    <!-- Controls row -->
+    <div class="controls-row">
+      <!-- Left controls -->
+      <div class="controls-left">
+        <!-- Play/Pause -->
+        <button mat-icon-button (click)="onPlayPause()" [matTooltip]="paused() ? 'Play (k)' : 'Pause (k)'"
+          class="control-btn">
+          <mat-icon>{{ paused() ? 'play_arrow' : 'pause' }}</mat-icon>
+        </button>
+
+        <!-- Volume -->
+        <div class="volume-control" (mouseenter)="showVolumeSlider()" (mouseleave)="hideVolumeSlider()">
+          <button mat-icon-button (click)="onMuteToggle()" [matTooltip]="muted() ? 'Unmute (m)' : 'Mute (m)'"
+            class="control-btn">
+            <mat-icon>{{ volumeIcon() }}</mat-icon>
+          </button>
+          @if (volumeSliderVisible()) {
+          <div class="volume-slider-container">
+            <mat-slider [min]="0" [max]="100" [step]="1" class="volume-slider">
+              <input matSliderThumb [value]="volume() * 100" (valueChange)="onVolumeSliderChange($event)"
+                aria-label="Volume" />
+            </mat-slider>
+          </div>
+          }
+        </div>
+
+        <!-- Time display -->
+        @if (!mergedConfig().isLiveStream) {
+        <span class="time-display">
+          {{ formattedCurrentTime() }} / {{ formattedDuration() }}
+        </span>
+        } @else {
+        <span class="live-badge">
+          <span class="live-dot"></span>
+          LIVE
+        </span>
+        }
+      </div>
+
+      <!-- Right controls -->
+      <div class="controls-right">
+        <!-- Playback Speed -->
+        @if (mergedConfig().showPlaybackRate && !mergedConfig().isLiveStream) {
+        <button mat-icon-button [matMenuTriggerFor]="speedMenu" matTooltip="Playback speed" class="control-btn">
+          <span class="speed-label">{{ playbackRate() }}x</span>
+        </button>
+        <mat-menu #speedMenu="matMenu" class="video-controls-menu">
+          @for (rate of playbackRates; track rate) {
+          <button mat-menu-item (click)="onPlaybackRateChange(rate)" [class.active]="playbackRate() === rate">
+            {{ rate }}x
+          </button>
+          }
+        </mat-menu>
+        }
+
+        <!-- Quality Selection -->
+        @if (mergedConfig().showQuality && qualityLevels().length > 0) {
+        <button mat-icon-button [matMenuTriggerFor]="qualityMenu" matTooltip="Quality" class="control-btn">
+          <mat-icon>settings</mat-icon>
+        </button>
+        <mat-menu #qualityMenu="matMenu" class="video-controls-menu">
+          <button mat-menu-item (click)="onQualityChange(-1)" [class.active]="currentQuality() === -1">
+            Auto
+          </button>
+          @for (level of qualityLevels(); track level.index) {
+          <button mat-menu-item (click)="onQualityChange(level.index)"
+            [class.active]="currentQuality() === level.index">
+            {{ level.label }}
+          </button>
+          }
+        </mat-menu>
+        }
+
+        <!-- Settings (when no quality levels) -->
+        @if (mergedConfig().showQuality && qualityLevels().length === 0) {
+        <button mat-icon-button matTooltip="Settings" class="control-btn" [matMenuTriggerFor]="settingsMenu">
+          <mat-icon>settings</mat-icon>
+        </button>
+        <mat-menu #settingsMenu="matMenu" class="video-controls-menu">
+          @if (mergedConfig().showPlaybackRate && !mergedConfig().isLiveStream) {
+          <button mat-menu-item [matMenuTriggerFor]="speedMenuNested">
+            <mat-icon>speed</mat-icon>
+            <span>Playback speed</span>
+            <span class="menu-value">{{ playbackRate() }}x</span>
+          </button>
+          }
+        </mat-menu>
+        <mat-menu #speedMenuNested="matMenu" class="video-controls-menu">
+          @for (rate of playbackRates; track rate) {
+          <button mat-menu-item (click)="onPlaybackRateChange(rate)" [class.active]="playbackRate() === rate">
+            {{ rate }}x
+          </button>
+          }
+        </mat-menu>
+        }
+
+        <!-- Picture in Picture -->
+        @if (mergedConfig().showPiP) {
+        <button mat-icon-button (click)="onPipToggle()" matTooltip="Picture-in-picture" class="control-btn">
+          <mat-icon>picture_in_picture_alt</mat-icon>
+        </button>
+        }
+
+        <!-- Fullscreen -->
+        @if (mergedConfig().showFullscreen) {
+        <button mat-icon-button (click)="onFullscreenToggle()" matTooltip="Fullscreen (f)" class="control-btn">
+          <mat-icon>fullscreen</mat-icon>
+        </button>
+        }
+      </div>
+    </div>
+  </div>
+</div>
