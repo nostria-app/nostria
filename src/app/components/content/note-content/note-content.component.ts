@@ -142,13 +142,16 @@ export class NoteContentComponent implements OnDestroy {
       });
     }
 
-    // Add any trailing linebreaks
-    for (const lb of pendingLinebreaks) {
-      items.push({
-        type: 'single',
-        token: lb,
-        id: groupIdCounter++,
-      });
+    // Don't add trailing linebreaks - they create wasted space at the end of events
+
+    // Remove any trailing linebreaks from the items array
+    while (items.length > 0) {
+      const lastItem = items[items.length - 1];
+      if (lastItem.type === 'single' && lastItem.token?.type === 'linebreak') {
+        items.pop();
+      } else {
+        break;
+      }
     }
 
     return items;
