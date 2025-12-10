@@ -462,6 +462,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (currentMetadata.length === 0) {
       this.isMediaMode.set(false);
     }
+
+    // Save draft immediately after media removal
+    this.saveAutoDraft();
   }
 
   // Dialog mode indicators
@@ -790,8 +793,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const isSimilar =
         previousDraft.content === autoDraft.content &&
         JSON.stringify(previousDraft.mentions) === JSON.stringify(autoDraft.mentions) &&
+        JSON.stringify(previousDraft.mediaMetadata) === JSON.stringify(autoDraft.mediaMetadata) &&
         previousDraft.expirationEnabled === autoDraft.expirationEnabled &&
-        previousDraft.expirationTime === autoDraft.expirationTime;
+        previousDraft.expirationTime === autoDraft.expirationTime &&
+        previousDraft.title === autoDraft.title;
 
       // If content is very similar, don't save again (prevents spam)
       if (isSimilar) return;
@@ -1427,6 +1432,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       // Remove from pubkeyToNameMap
       this.pubkeyToNameMap.delete(pubkey);
     }
+
+    // Save draft immediately after mention removal
+    this.saveAutoDraft();
   }
 
   // Mention input handling methods
