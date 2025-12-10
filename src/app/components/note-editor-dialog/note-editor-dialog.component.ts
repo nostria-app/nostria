@@ -1363,7 +1363,52 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   removeMention(pubkey: string): void {
+    // Remove from mentions list
     this.mentions.set(this.mentions().filter(p => p !== pubkey));
+
+    // Find and remove the mention text from content
+    const name = this.pubkeyToNameMap.get(pubkey);
+    if (name) {
+      // Build the mention text that was inserted (with @)
+      const baseMention = `@${name}`;
+      
+      // Find all possible mention formats for this user
+      const possibleMentions: string[] = [baseMention];
+
+      // Also check for numbered variants (e.g., @name_1, @name_2)
+      let counter = 1;
+      while (this.mentionMap.has(`${baseMention}_${counter}`)) {
+        possibleMentions.push(`${baseMention}_${counter}`);
+        counter++;
+      }
+
+      let currentContent = this.content();
+
+      // Remove each mention occurrence from content
+      for (const mention of possibleMentions) {
+        // Check if this mention exists in the map
+        if (this.mentionMap.has(mention)) {
+          // Remove the mention text (with optional trailing space)
+          const escapedMention = mention.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          currentContent = currentContent.replace(new RegExp(escapedMention + '\\s?', 'g'), '');
+          // Remove from mentionMap
+          this.mentionMap.delete(mention);
+        }
+      }
+
+      // Clean up extra whitespace (but preserve newlines structure)
+      currentContent = currentContent.replace(/[ \t]+/g, ' ').replace(/^ +| +$/gm, '').trim();
+
+      this.content.set(currentContent);
+
+      // Update textarea
+      if (this.contentTextarea) {
+        this.contentTextarea.nativeElement.value = currentContent;
+      }
+
+      // Remove from pubkeyToNameMap
+      this.pubkeyToNameMap.delete(pubkey);
+    }
   }
 
   // Mention input handling methods
