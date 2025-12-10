@@ -77,8 +77,9 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private trustService = inject(TrustService);
   layout = inject(LayoutService);
 
-  // Detect touch device for hover card behavior
-  isTouchDevice = isPlatformBrowser(this.platformId) && ('ontouchstart' in window || navigator.maxTouchPoints > 0);
+  // Detect primary touch device (phones/tablets) - NOT touchscreen laptops
+  // Uses media query to check if the primary pointing device has limited hover capability
+  isTouchDevice = isPlatformBrowser(this.platformId) && window.matchMedia('(hover: none)').matches;
 
   publicKey = '';
   pubkey = input<string>('');
