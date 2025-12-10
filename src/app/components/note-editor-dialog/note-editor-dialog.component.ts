@@ -489,7 +489,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         // Build the kind 1 wrapper event
         const nevent = `nevent1... (will be generated from signed media event)`;
         const kind1Content = `${mediaEvent.content}\n\nnostr:${nevent}`;
-        
+
         // Kind 1 tags (without imeta)
         const kind1Tags = this.buildTags();
         const filteredKind1Tags = kind1Tags.filter(t => t[0] !== 'imeta');
@@ -585,6 +585,13 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   }
 
   ngOnInit() {
+    // Store initial state for dirty detection BEFORE loading draft
+    // This captures the truly empty/initial state so isDirty can detect restored drafts
+    this.initialContent = this.content();
+    this.initialMentions = [...this.mentions()];
+    this.initialMediaMetadata = [...this.mediaMetadata()];
+    this.initialTitle = this.title();
+
     // Load auto-saved draft if available
     this.loadAutoDraft();
 
@@ -631,12 +638,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     if (this.data?.files && this.data.files.length > 0) {
       this.uploadFiles(this.data.files);
     }
-
-    // Store initial state for dirty detection (after all initializations)
-    this.initialContent = this.content();
-    this.initialMentions = [...this.mentions()];
-    this.initialMediaMetadata = [...this.mediaMetadata()];
-    this.initialTitle = this.title();
   }
 
   private getAutoDraftKey(): string {
