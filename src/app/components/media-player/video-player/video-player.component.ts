@@ -17,6 +17,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { CastService } from '../../../services/cast.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { VideoControlsComponent } from '../../video-controls/video-controls.component';
+import { VolumeGestureDirective } from '../../../directives/volume-gesture.directive';
 import { nip19 } from 'nostr-tools';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSliderModule } from '@angular/material/slider';
@@ -30,6 +31,7 @@ import { MatSliderModule } from '@angular/material/slider';
     RouterModule,
     UserProfileComponent,
     VideoControlsComponent,
+    VolumeGestureDirective,
     MatMenuModule,
     MatSliderModule
   ],
@@ -106,8 +108,10 @@ export class VideoPlayerComponent implements OnDestroy {
   onVolumeChange(volume: number): void {
     const video = this.videoElement?.nativeElement;
     if (video) {
-      video.volume = volume;
-      if (video.muted && volume > 0) {
+      // Normalize volume to 0-1 range (input may be 0-100 from slider/gesture)
+      const normalizedVolume = volume > 1 ? volume / 100 : volume;
+      video.volume = normalizedVolume;
+      if (video.muted && normalizedVolume > 0) {
         video.muted = false;
       }
     }

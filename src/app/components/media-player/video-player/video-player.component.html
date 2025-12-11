@@ -81,11 +81,13 @@
       </button>
 
       @if (media.muted) {
-      <button matTooltip="Unmute" (click)="media.mute()" mat-icon-button>
+      <button matTooltip="Unmute (hold to adjust)" (click)="media.mute()" mat-icon-button appVolumeGesture
+        (volumeChange)="onVolumeChange($event)">
         <mat-icon>volume_off</mat-icon>
       </button>
       } @else {
-      <button matTooltip="Mute" (click)="media.mute()" mat-icon-button>
+      <button matTooltip="Mute (hold to adjust)" (click)="media.mute()" mat-icon-button appVolumeGesture
+        (volumeChange)="onVolumeChange($event)">
         <mat-icon>volume_up</mat-icon>
       </button>
       }

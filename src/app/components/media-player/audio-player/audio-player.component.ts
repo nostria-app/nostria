@@ -14,6 +14,7 @@ import { RouterModule } from '@angular/router';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
+import { VolumeGestureDirective } from '../../../directives/volume-gesture.directive';
 import { nip19 } from 'nostr-tools';
 
 @Component({
@@ -27,6 +28,7 @@ import { nip19 } from 'nostr-tools';
     FormsModule,
     RouterModule,
     UserProfileComponent,
+    VolumeGestureDirective,
   ],
   templateUrl: './audio-player.component.html',
   styleUrl: './audio-player.component.scss',
