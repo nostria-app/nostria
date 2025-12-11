@@ -27,7 +27,7 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
   private startVolume = 0;
   private holdTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly HOLD_DELAY = 300; // ms before gesture activates
-  private readonly SENSITIVITY = 100; // pixels for full volume range (lower = more sensitive)
+  private readonly SENSITIVITY = 70; // pixels for full volume range (lower = more sensitive)
 
   private overlayRef: ComponentRef<VolumeOverlayComponent> | null = null;
 
