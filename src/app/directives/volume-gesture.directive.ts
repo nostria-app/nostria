@@ -1,10 +1,24 @@
-import { Directive, ElementRef, inject, output, OnDestroy, AfterViewInit } from '@angular/core';
+import {
+  Directive,
+  ElementRef,
+  inject,
+  output,
+  OnDestroy,
+  AfterViewInit,
+  ApplicationRef,
+  ComponentRef,
+  createComponent,
+  EnvironmentInjector,
+} from '@angular/core';
+import { VolumeOverlayComponent } from './volume-overlay.component';
 
 @Directive({
   selector: '[appVolumeGesture]',
 })
 export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
   private readonly elementRef = inject(ElementRef);
+  private readonly appRef = inject(ApplicationRef);
+  private readonly environmentInjector = inject(EnvironmentInjector);
 
   volumeChange = output<number>();
 
@@ -15,8 +29,7 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
   private readonly HOLD_DELAY = 300; // ms before gesture activates
   private readonly SENSITIVITY = 200; // pixels for full volume range
 
-  private overlay: HTMLElement | null = null;
-  private volumeIndicator: HTMLElement | null = null;
+  private overlayRef: ComponentRef<VolumeOverlayComponent> | null = null;
 
   // Bound handlers for cleanup
   private boundTouchStart = this.onTouchStart.bind(this);
@@ -134,111 +147,30 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
   }
 
   private showVolumeOverlay(): void {
-    // Create overlay
-    this.overlay = document.createElement('div');
-    this.overlay.className = 'volume-gesture-overlay';
-    this.overlay.innerHTML = `
-      <div class="volume-gesture-container">
-        <div class="volume-gesture-icon">
-          <span class="material-icons">volume_up</span>
-        </div>
-        <div class="volume-gesture-bar">
-          <div class="volume-gesture-fill"></div>
-        </div>
-        <div class="volume-gesture-value">100%</div>
-      </div>
-    `;
+    // Create the overlay component dynamically
+    this.overlayRef = createComponent(VolumeOverlayComponent, {
+      environmentInjector: this.environmentInjector,
+    });
 
-    // Add styles if not already present
-    if (!document.getElementById('volume-gesture-styles')) {
-      const style = document.createElement('style');
-      style.id = 'volume-gesture-styles';
-      style.textContent = `
-        .volume-gesture-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: rgba(0, 0, 0, 0.7);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          z-index: 10000;
-          backdrop-filter: blur(4px);
-          -webkit-backdrop-filter: blur(4px);
-        }
-        .volume-gesture-container {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 16px;
-          padding: 24px 48px;
-          background: rgba(30, 30, 30, 0.95);
-          border-radius: 16px;
-          min-width: 200px;
-        }
-        .volume-gesture-icon {
-          color: white;
-        }
-        .volume-gesture-icon .material-icons {
-          font-size: 48px;
-        }
-        .volume-gesture-bar {
-          width: 150px;
-          height: 8px;
-          background: rgba(255, 255, 255, 0.3);
-          border-radius: 4px;
-          overflow: hidden;
-        }
-        .volume-gesture-fill {
-          height: 100%;
-          background: var(--mat-sys-primary, #c5c0ff);
-          border-radius: 4px;
-          transition: width 0.05s ease-out;
-        }
-        .volume-gesture-value {
-          color: white;
-          font-size: 24px;
-          font-weight: 500;
-        }
-      `;
-      document.head.appendChild(style);
-    }
+    // Attach to ApplicationRef for change detection
+    this.appRef.attachView(this.overlayRef.hostView);
 
-    document.body.appendChild(this.overlay);
-    this.volumeIndicator = this.overlay.querySelector('.volume-gesture-fill');
+    // Append to DOM
+    document.body.appendChild(this.overlayRef.location.nativeElement);
   }
 
   private updateVolumeIndicator(volume: number): void {
-    if (!this.overlay) return;
+    if (!this.overlayRef) return;
 
-    const fill = this.overlay.querySelector('.volume-gesture-fill') as HTMLElement;
-    const value = this.overlay.querySelector('.volume-gesture-value') as HTMLElement;
-    const icon = this.overlay.querySelector('.material-icons') as HTMLElement;
-
-    if (fill) {
-      fill.style.width = `${volume}%`;
-    }
-    if (value) {
-      value.textContent = `${Math.round(volume)}%`;
-    }
-    if (icon) {
-      if (volume === 0) {
-        icon.textContent = 'volume_off';
-      } else if (volume < 50) {
-        icon.textContent = 'volume_down';
-      } else {
-        icon.textContent = 'volume_up';
-      }
-    }
+    // Update the component's input using setInput
+    this.overlayRef.setInput('volume', Math.round(volume));
   }
 
   private hideVolumeOverlay(): void {
-    if (this.overlay) {
-      this.overlay.remove();
-      this.overlay = null;
-      this.volumeIndicator = null;
+    if (this.overlayRef) {
+      this.appRef.detachView(this.overlayRef.hostView);
+      this.overlayRef.destroy();
+      this.overlayRef = null;
     }
   }
 }
