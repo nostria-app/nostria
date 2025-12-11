@@ -209,6 +209,11 @@
   padding-left: 8px;
   // margin-bottom: 0.5rem;
 
+  &.no-thread-line {
+    border-left: none;
+    padding-left: 10px;
+  }
+
   &:last-child {
     margin-bottom: 0;
   }
@@ -224,6 +229,11 @@
   padding-left: 8px;
   margin-top: 0.5rem;
   opacity: 0.9;
+
+  .no-thread-line & {
+    border-left: none;
+    padding-left: 0;
+  }
 }
 
 .view-more-replies {

@@ -110,7 +110,7 @@
 }
 
 <ng-template #replyTemplate let-threadedEvent="threadedEvent">
-  <div class="threaded-reply">
+  <div class="threaded-reply" [class.no-thread-line]="!localSettings.showThreadLines()">
     <app-event [event]="threadedEvent.event" mode="thread"></app-event>
 
     @for (childReply of threadedEvent.replies; track childReply.event.id) {

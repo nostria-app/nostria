@@ -112,6 +112,10 @@ export class GeneralSettingsComponent {
     this.localSettings.setStartFeedsOnLastEvent(!this.localSettings.startFeedsOnLastEvent());
   }
 
+  toggleShowThreadLines(): void {
+    this.localSettings.setShowThreadLines(!this.localSettings.showThreadLines());
+  }
+
   setMediaPrivacy(value: 'blur-non-following' | 'blur-always' | 'show-always'): void {
     this.settings.updateSettings({ mediaPrivacy: value });
   }
