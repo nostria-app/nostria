@@ -337,6 +337,23 @@
     "app.tooltip.caching-profiles": "Caching profiles: {$PROGRESS}% ({$PROCESSED}/{$TOTAL})",
     "app.tooltip.caching-aria": "Profile caching progress",
     "app.tooltip.publishing-event": "Publishing event...",
-    "app.tooltip.processing-aria": "Processing in progress"
+    "app.tooltip.processing-aria": "Processing in progress",
+    "chronia.calendar-name": "Chronia Calendar",
+    "chronia.month.1": "Unana",
+    "chronia.month.2": "Dunana",
+    "chronia.month.3": "Trunana",
+    "chronia.month.4": "Quarnana",
+    "chronia.month.5": "Pentana",
+    "chronia.month.6": "Hexana",
+    "chronia.month.7": "Sevana",
+    "chronia.month.8": "Ovana",
+    "chronia.month.9": "Nonana",
+    "chronia.month.10": "Dekana",
+    "chronia.month.11": "Endana",
+    "chronia.month.12": "Dovana",
+    "chronia.month.13": "Triskana",
+    "chronia.special.solstice-day": "Solstice Day",
+    "chronia.special.leap-day": "Leap Day",
+    "chronia.year-label": "Year"
   }
 }

@@ -337,6 +337,23 @@
     "app.tooltip.caching-profiles": "تخزين الملفات الشخصية: {$PROGRESS}% ({$PROCESSED}/{$TOTAL})",
     "app.tooltip.caching-aria": "تقدم تخزين الملفات الشخصية",
     "app.tooltip.publishing-event": "جاري نشر الحدث...",
-    "app.tooltip.processing-aria": "المعالجة قيد التنفيذ"
+    "app.tooltip.processing-aria": "المعالجة قيد التنفيذ",
+    "chronia.calendar-name": "تقويم كرونيا",
+    "chronia.month.1": "أونانا",
+    "chronia.month.2": "دونانا",
+    "chronia.month.3": "ترونانا",
+    "chronia.month.4": "كوارنانا",
+    "chronia.month.5": "بنتانا",
+    "chronia.month.6": "هكسانا",
+    "chronia.month.7": "سيفانا",
+    "chronia.month.8": "أوفانا",
+    "chronia.month.9": "نونانا",
+    "chronia.month.10": "ديكانا",
+    "chronia.month.11": "إندانا",
+    "chronia.month.12": "دوفانا",
+    "chronia.month.13": "تريسكانا",
+    "chronia.special.solstice-day": "يوم الانقلاب الشمسي",
+    "chronia.special.leap-day": "يوم كبيس",
+    "chronia.year-label": "السنة"
   }
 }
