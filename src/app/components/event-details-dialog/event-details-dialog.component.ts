@@ -12,6 +12,8 @@ import { type Event, nip19 } from 'nostr-tools';
 import { standardizedTag } from '../../standardized-tags';
 import { LayoutService } from '../../services/layout.service';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
+import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
 
 export interface EventDetailsDialogData {
   event: Event;
@@ -38,6 +40,8 @@ export class EventDetailsDialogComponent {
   dialogData: EventDetailsDialogData = { event: {} as Event };
 
   layout = inject(LayoutService);
+  private localSettings = inject(LocalSettingsService);
+  private chroniaCalendar = inject(ChroniaCalendarService);
   showRawJson = signal(false);
 
   event = computed(() => this.dialogData.event);
@@ -181,5 +185,22 @@ export class EventDetailsDialogComponent {
     };
 
     return kindDescriptions[kind] || `Unknown Kind (${kind})`;
+  }
+
+  formatCreatedAt(): string {
+    const date = this.eventCreatedAt();
+    if (this.localSettings.calendarType() === 'chronia') {
+      const chroniaDate = this.chroniaCalendar.fromDate(date);
+      return this.chroniaCalendar.format(chroniaDate, 'full');
+    }
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+    });
   }
 }

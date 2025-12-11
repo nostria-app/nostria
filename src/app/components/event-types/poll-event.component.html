@@ -5,83 +5,82 @@
   </div>
 
   @if (isLoading()) {
-    <div class="loading-state">
-      <mat-progress-bar mode="indeterminate"></mat-progress-bar>
-    </div>
+  <div class="loading-state">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  </div>
   }
 
   <div class="poll-options">
     @for (option of poll().options; track option.id) {
-      <div class="poll-option" 
-           [class.selected]="selectedOptions().includes(option.id)"
-           [class.voted]="hasVoted()"
-           [attr.role]="!hasVoted() && !isExpired() ? 'button' : null"
-           [attr.tabindex]="!hasVoted() && !isExpired() ? 0 : null"
-           (click)="!hasVoted() && !isExpired() ? toggleOption(option.id) : null"
-           (keydown.enter)="!hasVoted() && !isExpired() ? toggleOption(option.id) : null"
-           (keydown.space)="!hasVoted() && !isExpired() ? toggleOption(option.id) : null">
-        
-        @if (hasVoted() || isExpired()) {
-          <!-- Show results -->
-          <div class="option-result">
-            <div class="option-label">
-              @if (isSingleChoice()) {
-                <mat-icon class="option-icon">radio_button_{{ selectedOptions().includes(option.id) ? 'checked' : 'unchecked' }}</mat-icon>
-              } @else {
-                <mat-icon class="option-icon">{{ selectedOptions().includes(option.id) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-              }
-              <span>{{ option.label }}</span>
-            </div>
-            <div class="option-stats">
-              <span class="vote-count">{{ getVoteCount(option.id) }} votes</span>
-              <span class="percentage">{{ getPercentage(option.id) }}%</span>
-            </div>
-            <mat-progress-bar 
-              mode="determinate" 
-              [value]="getPercentage(option.id)"
-              class="vote-bar">
-            </mat-progress-bar>
-          </div>
-        } @else {
-          <!-- Show voting interface -->
-          <div class="option-vote">
-            @if (isSingleChoice()) {
-              <mat-icon class="option-icon">radio_button_{{ selectedOptions().includes(option.id) ? 'checked' : 'unchecked' }}</mat-icon>
-            } @else {
-              <mat-icon class="option-icon">{{ selectedOptions().includes(option.id) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-            }
-            <span class="option-label">{{ option.label }}</span>
-          </div>
-        }
+    <div class="poll-option" [class.selected]="selectedOptions().includes(option.id)" [class.voted]="hasVoted()"
+      [attr.role]="!hasVoted() && !isExpired() ? 'button' : null"
+      [attr.tabindex]="!hasVoted() && !isExpired() ? 0 : null"
+      (click)="!hasVoted() && !isExpired() ? toggleOption(option.id) : null"
+      (keydown.enter)="!hasVoted() && !isExpired() ? toggleOption(option.id) : null"
+      (keydown.space)="!hasVoted() && !isExpired() ? toggleOption(option.id) : null">
+
+      @if (hasVoted() || isExpired()) {
+      <!-- Show results -->
+      <div class="option-result">
+        <div class="option-label">
+          @if (isSingleChoice()) {
+          <mat-icon class="option-icon">radio_button_{{ selectedOptions().includes(option.id) ? 'checked' : 'unchecked'
+            }}</mat-icon>
+          } @else {
+          <mat-icon class="option-icon">{{ selectedOptions().includes(option.id) ? 'check_box' :
+            'check_box_outline_blank' }}</mat-icon>
+          }
+          <span>{{ option.label }}</span>
+        </div>
+        <div class="option-stats">
+          <span class="vote-count">{{ getVoteCount(option.id) }} votes</span>
+          <span class="percentage">{{ getPercentage(option.id) }}%</span>
+        </div>
+        <mat-progress-bar mode="determinate" [value]="getPercentage(option.id)" class="vote-bar">
+        </mat-progress-bar>
       </div>
+      } @else {
+      <!-- Show voting interface -->
+      <div class="option-vote">
+        @if (isSingleChoice()) {
+        <mat-icon class="option-icon">radio_button_{{ selectedOptions().includes(option.id) ? 'checked' : 'unchecked'
+          }}</mat-icon>
+        } @else {
+        <mat-icon class="option-icon">{{ selectedOptions().includes(option.id) ? 'check_box' : 'check_box_outline_blank'
+          }}</mat-icon>
+        }
+        <span class="option-label">{{ option.label }}</span>
+      </div>
+      }
+    </div>
     }
   </div>
 
   <div class="poll-footer">
     <div class="poll-info">
       @if (results()) {
-        <span class="total-votes">
-          <mat-icon>how_to_vote</mat-icon>
-          {{ results()!.totalVotes }} vote{{ results()!.totalVotes !== 1 ? 's' : '' }}
-        </span>
+      <span class="total-votes">
+        <mat-icon>how_to_vote</mat-icon>
+        {{ results()!.totalVotes }} vote{{ results()!.totalVotes !== 1 ? 's' : '' }}
+      </span>
       }
       @if (poll().endsAt) {
-        <span class="poll-status" [class.expired]="isExpired()">
-          <mat-icon>schedule</mat-icon>
-          @if (isExpired()) {
-            Ended
-          } @else {
-            Ends {{ poll().endsAt! * 1000 | date:'short' }}
-          }
-        </span>
+      <span class="poll-status" [class.expired]="isExpired()">
+        <mat-icon>schedule</mat-icon>
+        @if (isExpired()) {
+        Ended
+        } @else {
+        Ends {{ poll().endsAt! | timestamp:'short' }}
+        }
+      </span>
       }
     </div>
 
     @if (canVote() && selectedOptions().length > 0) {
-      <button mat-flat-button color="primary" (click)="submitVote()" [disabled]="isLoading()">
-        <mat-icon>how_to_vote</mat-icon>
-        Vote
-      </button>
+    <button mat-flat-button color="primary" (click)="submitVote()" [disabled]="isLoading()">
+      <mat-icon>how_to_vote</mat-icon>
+      Vote
+    </button>
     }
   </div>
 </div>

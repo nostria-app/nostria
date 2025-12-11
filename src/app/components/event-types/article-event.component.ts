@@ -8,6 +8,8 @@ import { LayoutService } from '../../services/layout.service';
 import { FormatService } from '../../services/format/format.service';
 import { SafeHtml } from '@angular/platform-browser';
 import { MentionHoverDirective } from '../../directives/mention-hover.directive';
+import { LocalSettingsService } from '../../services/local-settings.service';
+import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
 
 @Component({
   selector: 'app-article-event',
@@ -19,6 +21,8 @@ import { MentionHoverDirective } from '../../directives/mention-hover.directive'
 export class ArticleEventComponent {
   private layout = inject(LayoutService);
   private formatService = inject(FormatService);
+  private localSettings = inject(LocalSettingsService);
+  private chroniaCalendar = inject(ChroniaCalendarService);
   private readonly MAX_LENGTH = 300;
 
   event = input.required<Event>();
@@ -273,5 +277,24 @@ export class ArticleEventComponent {
     } catch {
       return String(value);
     }
+  }
+
+  /**
+   * Format the published date based on selected calendar type
+   */
+  formatPublishedDate(): string {
+    const date = this.publishedAt();
+    if (!date) return '';
+
+    if (this.localSettings.calendarType() === 'chronia') {
+      const chroniaDate = this.chroniaCalendar.fromDate(date);
+      return this.chroniaCalendar.format(chroniaDate, 'mediumDate');
+    }
+
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+    });
   }
 }

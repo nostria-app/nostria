@@ -1,5 +1,5 @@
 import { Component, computed, input, inject, signal, effect, ElementRef, ViewChild } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -14,6 +14,7 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { MediaItem } from '../../interfaces';
 import { IgdbService, GameData } from '../../services/igdb.service';
 import { GameHoverCardService } from '../../services/game-hover-card.service';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
 
 @Component({
   selector: 'app-live-event',
@@ -24,7 +25,7 @@ import { GameHoverCardService } from '../../services/game-hover-card.service';
     MatChipsModule,
     MatTooltipModule,
     MatMenuModule,
-    DatePipe,
+    TimestampPipe,
     UserProfileComponent,
   ],
   templateUrl: './live-event.component.html',

@@ -21,12 +21,7 @@
       <!-- Date picker -->
       <mat-form-field appearance="outline" class="date-picker-field">
         <mat-label>Select date</mat-label>
-        <input
-          matInput
-          [matDatepicker]="picker"
-          [formControl]="selectedDateControl"
-          placeholder="Select a date"
-        />
+        <input matInput [matDatepicker]="picker" [formControl]="selectedDateControl" placeholder="Select a date" />
         <mat-datepicker-toggle matIconSuffix [for]="picker"></mat-datepicker-toggle>
         <mat-datepicker #picker></mat-datepicker>
       </mat-form-field>
@@ -34,12 +29,8 @@
 
     <div class="header-right">
       <!-- View mode toggles -->
-      <mat-button-toggle-group
-        class="view-toggles"
-        [value]="viewMode()"
-        (change)="onViewModeChange($event.value)"
-        appearance="standard"
-      >
+      <mat-button-toggle-group class="view-toggles" [value]="viewMode()" (change)="onViewModeChange($event.value)"
+        appearance="standard">
         <mat-button-toggle value="month" matTooltip="Month view">
           <mat-icon>view_module</mat-icon>
           Month
@@ -64,7 +55,7 @@
 
   <!-- Loading indicator -->
   @if (isLoading()) {
-    <mat-progress-bar mode="indeterminate" class="loading-bar"></mat-progress-bar>
+  <mat-progress-bar mode="indeterminate" class="loading-bar"></mat-progress-bar>
   }
 
   <!-- Main calendar content -->
@@ -81,33 +72,30 @@
 
         <mat-card-content>
           @if (isLoadingCalendars()) {
-            <div class="loading-calendars">
-              <mat-icon>refresh</mat-icon>
-              Loading calendars...
-            </div>
+          <div class="loading-calendars">
+            <mat-icon>refresh</mat-icon>
+            Loading calendars...
+          </div>
           }
           @if (calendars().length === 0 && !isLoadingCalendars()) {
-            <div class="no-calendars">
-              <mat-icon>info</mat-icon>
-              No calendars available
-            </div>
+          <div class="no-calendars">
+            <mat-icon>info</mat-icon>
+            No calendars available
+          </div>
           }
 
           <div class="calendars-list">
             @for (calendar of calendars(); track calendar.id) {
-              <div class="calendar-item">
-                <label class="calendar-checkbox">
-                  <input
-                    type="checkbox"
-                    [checked]="isCalendarEnabled(calendar.id)"
-                    (change)="toggleCalendar(calendar.id)"
-                  />
-                  <span class="calendar-name">{{ calendar.title }}</span>
-                </label>
-                <div class="calendar-info">
-                  <span class="event-count">{{ calendar.events.length }} events</span>
-                </div>
+            <div class="calendar-item">
+              <label class="calendar-checkbox">
+                <input type="checkbox" [checked]="isCalendarEnabled(calendar.id)"
+                  (change)="toggleCalendar(calendar.id)" />
+                <span class="calendar-name">{{ calendar.title }}</span>
+              </label>
+              <div class="calendar-info">
+                <span class="event-count">{{ calendar.events.length }} events</span>
               </div>
+            </div>
             }
           </div>
         </mat-card-content>
@@ -118,298 +106,264 @@
     <div class="calendar-views">
       <!-- Month view -->
       @if (viewMode() === 'month') {
-        <div class="month-view">
-          <!-- Day headers -->
-          <div class="day-headers">
-            @for (day of dayNames; track $index) {
-              <div class="day-header">{{ day }}</div>
-            }
-          </div>
+      <div class="month-view">
+        <!-- Day headers -->
+        <div class="day-headers">
+          @for (day of dayNames; track $index) {
+          <div class="day-header">{{ day }}</div>
+          }
+        </div>
 
-          <!-- Calendar grid -->
-          <div class="calendar-grid">
-            @for (week of calendarGrid(); track $index) {
-              <div class="week-row">
-                @for (date of week; track date.getTime()) {
-                  <div
-                    class="calendar-day"
-                    [class.other-month]="!isCurrentMonth(date)"
-                    [class.today]="isToday(date)"
-                    [class.selected]="isSelectedDate(date)"
-                    [class.has-events]="getEventsForDate(date).length > 0"
-                    (click)="selectDate(date)"
-                  >
-                    <div class="date-number">{{ date.getDate() }}</div>
+        <!-- Calendar grid -->
+        <div class="calendar-grid">
+          @for (week of calendarGrid(); track $index) {
+          <div class="week-row">
+            @for (date of week; track date.getTime()) {
+            <div class="calendar-day" [class.other-month]="!isCurrentMonth(date)" [class.today]="isToday(date)"
+              [class.selected]="isSelectedDate(date)" [class.has-events]="getEventsForDate(date).length > 0"
+              (click)="selectDate(date)">
+              <div class="date-number">{{ date.getDate() }}</div>
 
-                    <!-- Event indicators -->
-                    @let dayEvents = getEventsForDate(date);
-                    @if (dayEvents.length > 0) {
-                      <div class="event-indicators">
-                        @for (event of dayEvents.slice(0, 3); track event.id) {
-                          <div
-                            class="event-indicator"
-                            [class.all-day]="event.isAllDay"
-                            [matTooltip]="event.title"
-                            matTooltipPosition="above"
-                            (click)="onEventClick(event, $event)"
-                          >
-                            <div class="event-dot"></div>
-                            <span class="event-title">{{ event.title }}</span>
-                          </div>
-                        }
-                        @if (dayEvents.length > 3) {
-                          <div
-                            class="more-events"
-                            [matTooltip]="'+' + (dayEvents.length - 3) + ' more events'"
-                          >
-                            +{{ dayEvents.length - 3 }}
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
+              <!-- Event indicators -->
+              @let dayEvents = getEventsForDate(date);
+              @if (dayEvents.length > 0) {
+              <div class="event-indicators">
+                @for (event of dayEvents.slice(0, 3); track event.id) {
+                <div class="event-indicator" [class.all-day]="event.isAllDay" [matTooltip]="event.title"
+                  matTooltipPosition="above" (click)="onEventClick(event, $event)">
+                  <div class="event-dot"></div>
+                  <span class="event-title">{{ event.title }}</span>
+                </div>
+                }
+                @if (dayEvents.length > 3) {
+                <div class="more-events" [matTooltip]="'+' + (dayEvents.length - 3) + ' more events'">
+                  +{{ dayEvents.length - 3 }}
+                </div>
                 }
               </div>
+              }
+            </div>
             }
           </div>
+          }
         </div>
+      </div>
       }
 
       <!-- Week view -->
       @if (viewMode() === 'week') {
-        <div class="week-view">
-          <div class="week-header">
-            <!-- Week days header -->
-            <div class="time-column"></div>
-            @for (date of weekDates(); track date; let i = $index) {
-              <div
-                class="week-day-header"
-                [class.today]="isToday(date)"
-                [class.selected]="isSelectedDate(date)"
-              >
-                <div class="day-name">{{ dayNames[i] }}</div>
-                <div class="day-number">{{ date.getDate() }}</div>
-              </div>
-            }
+      <div class="week-view">
+        <div class="week-header">
+          <!-- Week days header -->
+          <div class="time-column"></div>
+          @for (date of weekDates(); track date; let i = $index) {
+          <div class="week-day-header" [class.today]="isToday(date)" [class.selected]="isSelectedDate(date)">
+            <div class="day-name">{{ dayNames[i] }}</div>
+            <div class="day-number">{{ date.getDate() }}</div>
           </div>
+          }
+        </div>
 
-          <div class="week-grid">
-            <!-- Time slots -->
-            @for (hour of hoursArray; track $index) {
-              <div class="time-slot">
-                <div class="time-label">{{ hour.toString().padStart(2, '0') }}:00</div>
+        <div class="week-grid">
+          <!-- Time slots -->
+          @for (hour of hoursArray; track $index) {
+          <div class="time-slot">
+            <div class="time-label">{{ hour.toString().padStart(2, '0') }}:00</div>
 
-                @for (day of weekDaysArray; track $index) {
-                  <div class="hour-cell" (click)="selectWeekCell(day, hour)">
-                    <!-- Events for this hour -->
-                    @for (event of getEventsForWeekHour(day, hour); track event.id) {
-                      <div
-                        class="week-event"
-                        [class.all-day]="event.isAllDay"
-                        [matTooltip]="event.title + (event.location ? ' @ ' + event.location : '')"
-                        matTooltipPosition="above"
-                        (click)="onEventClick(event, $event)"
-                      >
-                        <div class="event-title">{{ event.title }}</div>
-                        @if (!event.isAllDay && event.end) {
-                          <div class="event-time">
-                            {{ formatTime(event.start) }} - {{ formatTime(event.end) }}
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
+            @for (day of weekDaysArray; track $index) {
+            <div class="hour-cell" (click)="selectWeekCell(day, hour)">
+              <!-- Events for this hour -->
+              @for (event of getEventsForWeekHour(day, hour); track event.id) {
+              <div class="week-event" [class.all-day]="event.isAllDay"
+                [matTooltip]="event.title + (event.location ? ' @ ' + event.location : '')" matTooltipPosition="above"
+                (click)="onEventClick(event, $event)">
+                <div class="event-title">{{ event.title }}</div>
+                @if (!event.isAllDay && event.end) {
+                <div class="event-time">
+                  {{ formatTime(event.start) }} - {{ formatTime(event.end) }}
+                </div>
                 }
               </div>
+              }
+            </div>
             }
           </div>
+          }
         </div>
+      </div>
       }
 
       <!-- Agenda view -->
       @if (viewMode() === 'agenda') {
-        <div class="agenda-view">
-          @if (agendaEventsFiltered().length === 0) {
-            <div class="no-events">
-              <mat-icon class="no-events-icon">event_busy</mat-icon>
-              <h3>No upcoming events</h3>
-              <p>Create your first calendar event to get started!</p>
-              <button mat-raised-button color="primary" (click)="createEvent()">
-                <mat-icon>add</mat-icon>
-                Create Event
-              </button>
-            </div>
-          } @else {
-            @for (dayGroup of agendaEventsFiltered(); track dayGroup.date) {
-              <div class="agenda-day-group">
-                <div class="agenda-date-header">
-                  <h3>{{ dayGroup.date | date: 'EEEE, MMMM d, y' }}</h3>
-                  @if (isToday(dayGroup.date)) {
-                    <mat-chip color="primary">Today</mat-chip>
-                  }
-                </div>
+      <div class="agenda-view">
+        @if (agendaEventsFiltered().length === 0) {
+        <div class="no-events">
+          <mat-icon class="no-events-icon">event_busy</mat-icon>
+          <h3>No upcoming events</h3>
+          <p>Create your first calendar event to get started!</p>
+          <button mat-raised-button color="primary" (click)="createEvent()">
+            <mat-icon>add</mat-icon>
+            Create Event
+          </button>
+        </div>
+        } @else {
+        @for (dayGroup of agendaEventsFiltered(); track dayGroup.date) {
+        <div class="agenda-day-group">
+          <div class="agenda-date-header">
+            <h3>{{ formatDateFull(dayGroup.date) }}</h3>
+            @if (isToday(dayGroup.date)) {
+            <mat-chip color="primary">Today</mat-chip>
+            }
+          </div>
 
-                @for (event of dayGroup.events; track event.id) {
-                  <mat-card
-                    class="agenda-event-card"
-                    [class.all-day-event]="event.isAllDay"
-                    (click)="onEventClick(event, $event)"
-                  >
-                    <mat-card-header>
-                      <div class="event-time">
-                        @if (event.isAllDay) {
-                          <mat-icon>schedule</mat-icon>
-                          <span>All day</span>
-                        } @else {
-                          <mat-icon>access_time</mat-icon>
-                          <span>{{ formatTime(event.start) }}</span>
-                          @if (event.end) {
-                            <span> - {{ formatTime(event.end) }}</span>
-                          }
-                        }
-                      </div>
-
-                      <div class="event-actions">
-                        <button
-                          mat-icon-button
-                          [matMenuTriggerFor]="eventMenu"
-                          matTooltip="Event options"
-                        >
-                          <mat-icon>more_vert</mat-icon>
-                        </button>
-
-                        <mat-menu #eventMenu="matMenu">
-                          <button mat-menu-item (click)="respondToEvent(event, 'accepted')">
-                            <mat-icon color="primary">check_circle</mat-icon>
-                            <span>Accept</span>
-                          </button>
-                          <button mat-menu-item (click)="respondToEvent(event, 'tentative')">
-                            <mat-icon color="accent">help_outline</mat-icon>
-                            <span>Maybe</span>
-                          </button>
-                          <button mat-menu-item (click)="respondToEvent(event, 'declined')">
-                            <mat-icon color="warn">cancel</mat-icon>
-                            <span>Decline</span>
-                          </button>
-                          <mat-divider></mat-divider>
-                          @if (event.pubkey === app.accountState.pubkey()) {
-                            <button
-                              mat-menu-item
-                              (click)="deleteEvent(event)"
-                              class="delete-option"
-                            >
-                              <mat-icon color="warn">delete</mat-icon>
-                              <span>Delete Event</span>
-                            </button>
-                          }
-                        </mat-menu>
-                      </div>
-                    </mat-card-header>
-
-                    <mat-card-content>
-                      <h4 class="event-title">{{ event.title }}</h4>
-
-                      @if (event.summary) {
-                        <p class="event-summary">{{ event.summary }}</p>
-                      }
-                      @if (event.location) {
-                        <div class="event-location">
-                          <mat-icon>location_on</mat-icon>
-                          <span>{{ event.location }}</span>
-                        </div>
-                      }
-                      @if (event.content) {
-                        <div class="event-description">
-                          <p>{{ event.content }}</p>
-                        </div>
-                      }
-                      @if (event.hashtags.length > 0) {
-                        <div class="event-tags">
-                          @for (tag of event.hashtags; track tag) {
-                            <mat-chip>{{ tag }}</mat-chip>
-                          }
-                        </div>
-                      }
-                      @if (event.participants.length > 0) {
-                        <div class="event-participants">
-                          <mat-icon>people</mat-icon>
-                          <span
-                            >{{ event.participants.length }} participant{{
-                              event.participants.length !== 1 ? 's' : ''
-                            }}</span
-                          >
-                        </div>
-                      }
-
-                      <!-- RSVP Status -->
-                      @if (event.status) {
-                        <div class="rsvp-status" [class]="'status-' + event.status">
-                          <mat-icon>
-                            @switch (event.status) {
-                              @case ('accepted') {
-                                check_circle
-                              }
-                              @case ('declined') {
-                                cancel
-                              }
-                              @case ('tentative') {
-                                help_outline
-                              }
-                            }
-                          </mat-icon>
-                          <span>{{ event.status | titlecase }}</span>
-                        </div>
-                      }
-                    </mat-card-content>
-                  </mat-card>
+          @for (event of dayGroup.events; track event.id) {
+          <mat-card class="agenda-event-card" [class.all-day-event]="event.isAllDay"
+            (click)="onEventClick(event, $event)">
+            <mat-card-header>
+              <div class="event-time">
+                @if (event.isAllDay) {
+                <mat-icon>schedule</mat-icon>
+                <span>All day</span>
+                } @else {
+                <mat-icon>access_time</mat-icon>
+                <span>{{ formatTime(event.start) }}</span>
+                @if (event.end) {
+                <span> - {{ formatTime(event.end) }}</span>
+                }
                 }
               </div>
-            }
+
+              <div class="event-actions">
+                <button mat-icon-button [matMenuTriggerFor]="eventMenu" matTooltip="Event options">
+                  <mat-icon>more_vert</mat-icon>
+                </button>
+
+                <mat-menu #eventMenu="matMenu">
+                  <button mat-menu-item (click)="respondToEvent(event, 'accepted')">
+                    <mat-icon color="primary">check_circle</mat-icon>
+                    <span>Accept</span>
+                  </button>
+                  <button mat-menu-item (click)="respondToEvent(event, 'tentative')">
+                    <mat-icon color="accent">help_outline</mat-icon>
+                    <span>Maybe</span>
+                  </button>
+                  <button mat-menu-item (click)="respondToEvent(event, 'declined')">
+                    <mat-icon color="warn">cancel</mat-icon>
+                    <span>Decline</span>
+                  </button>
+                  <mat-divider></mat-divider>
+                  @if (event.pubkey === app.accountState.pubkey()) {
+                  <button mat-menu-item (click)="deleteEvent(event)" class="delete-option">
+                    <mat-icon color="warn">delete</mat-icon>
+                    <span>Delete Event</span>
+                  </button>
+                  }
+                </mat-menu>
+              </div>
+            </mat-card-header>
+
+            <mat-card-content>
+              <h4 class="event-title">{{ event.title }}</h4>
+
+              @if (event.summary) {
+              <p class="event-summary">{{ event.summary }}</p>
+              }
+              @if (event.location) {
+              <div class="event-location">
+                <mat-icon>location_on</mat-icon>
+                <span>{{ event.location }}</span>
+              </div>
+              }
+              @if (event.content) {
+              <div class="event-description">
+                <p>{{ event.content }}</p>
+              </div>
+              }
+              @if (event.hashtags.length > 0) {
+              <div class="event-tags">
+                @for (tag of event.hashtags; track tag) {
+                <mat-chip>{{ tag }}</mat-chip>
+                }
+              </div>
+              }
+              @if (event.participants.length > 0) {
+              <div class="event-participants">
+                <mat-icon>people</mat-icon>
+                <span>{{ event.participants.length }} participant{{
+                  event.participants.length !== 1 ? 's' : ''
+                  }}</span>
+              </div>
+              }
+
+              <!-- RSVP Status -->
+              @if (event.status) {
+              <div class="rsvp-status" [class]="'status-' + event.status">
+                <mat-icon>
+                  @switch (event.status) {
+                  @case ('accepted') {
+                  check_circle
+                  }
+                  @case ('declined') {
+                  cancel
+                  }
+                  @case ('tentative') {
+                  help_outline
+                  }
+                  }
+                </mat-icon>
+                <span>{{ event.status | titlecase }}</span>
+              </div>
+              }
+            </mat-card-content>
+          </mat-card>
           }
         </div>
+        }
+        }
+      </div>
       }
     </div>
 
     <!-- Selected date sidebar (right) -->
     @if (selectedDateEventsFiltered().length > 0 && viewMode() === 'month') {
-      <div class="selected-date-sidebar">
-        <mat-card class="sidebar-card">
-          <mat-card-header>
-            <mat-card-title>
-              {{ selectedDate() | date: 'EEEE, MMMM d' }}
-            </mat-card-title>
-            @if (isToday(selectedDate())) {
-              <mat-card-subtitle>
-                <mat-chip color="primary">Today</mat-chip>
-              </mat-card-subtitle>
-            }
-          </mat-card-header>
+    <div class="selected-date-sidebar">
+      <mat-card class="sidebar-card">
+        <mat-card-header>
+          <mat-card-title>
+            {{ formatDateMedium(selectedDate()) }}
+          </mat-card-title>
+          @if (isToday(selectedDate())) {
+          <mat-card-subtitle>
+            <mat-chip color="primary">Today</mat-chip>
+          </mat-card-subtitle>
+          }
+        </mat-card-header>
 
-          <mat-card-content>
-            @for (event of selectedDateEventsFiltered(); track event.id) {
-              <div class="sidebar-event" (click)="onEventClick(event, $event)">
-                <div class="event-time-badge" [class.all-day]="event.isAllDay">
-                  @if (event.isAllDay) {
-                    <span>All day</span>
-                  } @else {
-                    <span>{{ formatTime(event.start) }}</span>
-                  }
-                </div>
+        <mat-card-content>
+          @for (event of selectedDateEventsFiltered(); track event.id) {
+          <div class="sidebar-event" (click)="onEventClick(event, $event)">
+            <div class="event-time-badge" [class.all-day]="event.isAllDay">
+              @if (event.isAllDay) {
+              <span>All day</span>
+              } @else {
+              <span>{{ formatTime(event.start) }}</span>
+              }
+            </div>
 
-                <div class="event-details">
-                  <h4>{{ event.title }}</h4>
-                  @if (event.location) {
-                    <div class="event-location">
-                      <mat-icon>location_on</mat-icon>
-                      <span>{{ event.location }}</span>
-                    </div>
-                  }
-                </div>
+            <div class="event-details">
+              <h4>{{ event.title }}</h4>
+              @if (event.location) {
+              <div class="event-location">
+                <mat-icon>location_on</mat-icon>
+                <span>{{ event.location }}</span>
               </div>
-            }
-          </mat-card-content>
-        </mat-card>
-      </div>
+              }
+            </div>
+          </div>
+          }
+        </mat-card-content>
+      </mat-card>
+    </div>
     }
   </div>
 </div>

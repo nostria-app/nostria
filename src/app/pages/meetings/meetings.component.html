@@ -139,7 +139,7 @@
                   @if (startsTime) {
                   <div class="info-item">
                     <mat-icon>event</mat-icon>
-                    <span>{{ startsTime * 1000 | date: 'medium' }}</span>
+                    <span>{{ startsTime | timestamp: 'medium' }}</span>
                   </div>
                   }
 
