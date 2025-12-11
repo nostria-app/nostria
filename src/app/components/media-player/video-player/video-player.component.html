@@ -76,7 +76,7 @@
         <mat-icon>skip_next</mat-icon>
       </button>
 
-      <button matTooltip="View queue" routerLink="/queue" mat-icon-button>
+      <button class="hide-small" matTooltip="View queue" routerLink="/queue" mat-icon-button>
         <mat-icon>queue_music</mat-icon>
       </button>
 
@@ -92,12 +92,48 @@
     </div>
 
     <div class="control-actions">
-      <button mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
+      <button mat-icon-button [matMenuTriggerFor]="footerStreamMenu" matTooltip="More options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <button class="hide-small" mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
         <mat-icon>open_in_full</mat-icon>
       </button>
-      <button mat-icon-button matTooltip="Close" (click)="media.exit()">
+      <button class="hide-small" mat-icon-button matTooltip="Close" (click)="media.exit()">
         <mat-icon>close</mat-icon>
       </button>
     </div>
   </div>
 </div>
+
+<mat-menu #footerStreamMenu="matMenu">
+  <div class="volume-menu-item" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0">
+    <mat-icon>volume_up</mat-icon>
+    <mat-slider class="volume-slider" [min]="0" [max]="100" [step]="1">
+      <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
+    </mat-slider>
+  </div>
+  <button mat-menu-item matTooltip="View queue" routerLink="/queue">
+    <mat-icon>queue_music</mat-icon>
+    <span>View queue</span>
+  </button>
+  <button mat-menu-item (click)="pictureInPicture()">
+    <mat-icon>picture_in_picture</mat-icon>
+    <span>Picture-in-Picture</span>
+  </button>
+  <button mat-menu-item (click)="toggleFullscreen()">
+    <mat-icon>open_in_full</mat-icon>
+    <span>Fullscreen</span>
+  </button>
+  <!-- <button mat-menu-item (click)="copyEventUrl()">
+    <mat-icon>link</mat-icon>
+    <span>Copy Stream URL</span>
+  </button>
+  <button mat-menu-item (click)="copyEventData()">
+    <mat-icon>code</mat-icon>
+    <span>Copy Event Data</span>
+  </button> -->
+  <button mat-menu-item (click)="media.exit()">
+    <mat-icon>close</mat-icon>
+    <span>Close</span>
+  </button>
+</mat-menu>

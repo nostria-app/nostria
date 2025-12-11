@@ -86,10 +86,10 @@
         <button mat-icon-button [matMenuTriggerFor]="footerStreamMenu" matTooltip="More options">
           <mat-icon>more_vert</mat-icon>
         </button>
-        <button mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
+        <button class="hide-small" mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
           <mat-icon>open_in_full</mat-icon>
         </button>
-        <button mat-icon-button matTooltip="Close stream" (click)="exitStream()">
+        <button class="hide-small" mat-icon-button matTooltip="Close stream" (click)="exitStream()">
           <mat-icon>close</mat-icon>
         </button>
       </div>
@@ -179,6 +179,16 @@
       <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
     </mat-slider>
   </div>
+  }
+  <button mat-menu-item (click)="copyEventUrl()">
+    <mat-icon>link</mat-icon>
+    <span>Copy Stream URL</span>
+  </button>
+  <button mat-menu-item (click)="copyEventData()">
+    <mat-icon>code</mat-icon>
+    <span>Copy Event Data</span>
+  </button>
+  @if (!isLiveKit() && !isExternal()) {
   <button mat-menu-item (click)="pictureInPicture()">
     <mat-icon>picture_in_picture</mat-icon>
     <span>Picture-in-Picture</span>
@@ -187,14 +197,6 @@
   <button mat-menu-item (click)="toggleFullscreen()">
     <mat-icon>open_in_full</mat-icon>
     <span>Fullscreen</span>
-  </button>
-  <button mat-menu-item (click)="copyEventUrl()">
-    <mat-icon>link</mat-icon>
-    <span>Copy Stream URL</span>
-  </button>
-  <button mat-menu-item (click)="copyEventData()">
-    <mat-icon>code</mat-icon>
-    <span>Copy Event Data</span>
   </button>
   <button mat-menu-item (click)="exitStream()">
     <mat-icon>close</mat-icon>
