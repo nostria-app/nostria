@@ -395,22 +395,21 @@ export class SummaryComponent implements OnInit, OnDestroy {
     await this.loadActivitySummary(sinceTimestamp);
     this.isLoading.set(false); // Show cached data immediately
 
-    // STEP 2: Fetch new events from relays (incremental - only new events)
-    await this.fetchEventsFromRelays(false);
+    // STEP 2: Fetch new events from relays for the selected time range
+    await this.fetchEventsFromRelays(sinceTimestamp);
 
     // STEP 3: Reload from database to include newly fetched events
     await this.loadActivitySummary(sinceTimestamp);
   }
 
   /**
-   * Fetch events from relays.
+   * Fetch events from relays for the specified time range.
    * Events are saved to the database for future queries.
    * 
-   * @param forceFullRange If true, fetches the full time range (for manual refresh).
-   *                       If false, only fetches new events since last fetch (incremental).
-   * @param sinceTimestamp The timestamp for full range fetches (only used when forceFullRange=true)
+   * @param sinceTimestamp The unix timestamp (seconds) to fetch events from
+   * @param forceRefresh If true, forces a refresh from relays even if recently fetched
    */
-  private async fetchEventsFromRelays(forceFullRange: boolean, sinceTimestamp?: number): Promise<void> {
+  private async fetchEventsFromRelays(sinceTimestamp: number, forceRefresh = false): Promise<void> {
     if (this.isDestroyed) return;
 
     const following = this.accountState.followingList();
@@ -420,18 +419,12 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.fetchProgress.set({ fetched: 0, total: following.length });
 
     try {
-      if (forceFullRange && sinceTimestamp) {
-        this.logger.info(`[Summary] Force refreshing - fetching all events since ${new Date(sinceTimestamp * 1000).toISOString()}`);
-      } else {
-        this.logger.info(`[Summary] Incremental fetch - getting new events only`);
-      }
+      this.logger.info(`[Summary] Fetching events since ${new Date(sinceTimestamp * 1000).toISOString()}${forceRefresh ? ' (forced refresh)' : ''}`);
 
-      // Use the FollowingDataService
-      // - For incremental fetches: don't pass customSince, let service use its internal logic
-      // - For full refresh: pass the user's selected time range
+      // Use the FollowingDataService with the user's selected time range
       const events = await this.followingData.ensureFollowingData(
         [1, 20, 30023], // Notes, Media, Articles
-        forceFullRange, // Force fetch if doing full refresh
+        forceRefresh, // Force fetch if doing manual refresh
         // Progress callback for new events from relays
         (newEvents: Event[]) => {
           this.fetchProgress.update(p => ({
@@ -440,7 +433,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
           }));
         },
         undefined, // onCacheLoaded - not needed here
-        forceFullRange ? sinceTimestamp : undefined // Only pass time range for full refresh
+        sinceTimestamp // Always use the user's selected time range
       );
 
       this.logger.info(`[Summary] Total ${events.length} events available from following`);
@@ -819,7 +812,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
     this.isLoading.set(true);
 
     // Force full refresh from relays for the selected time range
-    await this.fetchEventsFromRelays(true, sinceTimestamp);
+    await this.fetchEventsFromRelays(sinceTimestamp, true);
 
     // Reload from database to show all events
     await this.loadActivitySummary(sinceTimestamp);
