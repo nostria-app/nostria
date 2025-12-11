@@ -1,7 +1,7 @@
 import { inject, Pipe, PipeTransform } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { LocalSettingsService } from '../services/local-settings.service';
 import { ChroniaCalendarService } from '../services/chronia-calendar.service';
+import { GregorianCalendarService } from '../services/gregorian-calendar.service';
 
 @Pipe({
   name: 'timestamp',
@@ -11,7 +11,7 @@ import { ChroniaCalendarService } from '../services/chronia-calendar.service';
 export class TimestampPipe implements PipeTransform {
   private localSettings = inject(LocalSettingsService);
   private chroniaService = inject(ChroniaCalendarService);
-  private datePipe = new DatePipe('en-US');
+  private gregorianService = inject(GregorianCalendarService);
 
   transform(value: number, format = 'medium'): string {
     if (value === 0) {
@@ -24,12 +24,47 @@ export class TimestampPipe implements PipeTransform {
       return this.chroniaService.formatUnixTimestamp(value, format);
     }
 
-    // Gregorian calendar - use Angular's built-in DatePipe
-    // Convert Unix timestamp (seconds) to JavaScript timestamp (milliseconds)
+    // Gregorian calendar - use localized month names
     const date = new Date(value * 1000);
+    return this.formatGregorian(date, format);
+  }
 
-    // Use Angular's built-in DatePipe for formatting
-    // Formats include: 'short', 'medium', 'long', 'full', 'shortDate', 'mediumDate', etc.
-    return this.datePipe.transform(date, format) || '';
+  /**
+   * Format Gregorian date with localized month names
+   */
+  private formatGregorian(date: Date, format: string): string {
+    const day = date.getDate();
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const monthName = this.gregorianService.getMonthName(month);
+    const shortMonthName = this.gregorianService.getShortMonthName(month);
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const seconds = date.getSeconds().toString().padStart(2, '0');
+
+    // Format time in 12-hour format
+    const hour12 = hours % 12 || 12;
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+
+    switch (format) {
+      case 'short':
+        return `${month}/${day}/${year % 100}, ${hour12}:${minutes} ${ampm}`;
+      case 'shortDate':
+        return `${month}/${day}/${year % 100}`;
+      case 'medium':
+        return `${monthName} ${day}, ${year}, ${hour12}:${minutes}:${seconds} ${ampm}`;
+      case 'mediumDate':
+        return `${monthName} ${day}, ${year}`;
+      case 'long':
+        return `${monthName} ${day}, ${year}, ${hour12}:${minutes}:${seconds} ${ampm}`;
+      case 'longDate':
+        return `${monthName} ${day}, ${year}`;
+      case 'full':
+        return `${monthName} ${day}, ${year}, ${hour12}:${minutes}:${seconds} ${ampm}`;
+      case 'fullDate':
+        return `${monthName} ${day}, ${year}`;
+      default:
+        return `${shortMonthName} ${day}, ${year}`;
+    }
   }
 }

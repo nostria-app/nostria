@@ -22,6 +22,7 @@ import { LoggerService } from '../../services/logger.service';
 import { ApplicationService } from '../../services/application.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
+import { GregorianCalendarService } from '../../services/gregorian-calendar.service';
 import {
   CreateEventDialogComponent,
   CreateEventDialogData,
@@ -111,6 +112,7 @@ export class Calendar {
   private router = inject(Router);
   public localSettings = inject(LocalSettingsService); // For calendar type
   private chroniaService = inject(ChroniaCalendarService);
+  private gregorianService = inject(GregorianCalendarService);
 
   // Current view state
   selectedDate = signal<Date>(new Date());
@@ -161,13 +163,12 @@ export class Calendar {
       };
     }
 
+    // Use localized Gregorian month name
+    const monthName = this.gregorianService.getMonthName(date.getMonth() + 1);
     return {
       year: date.getFullYear(),
       month: date.getMonth(),
-      name: date.toLocaleDateString('en-US', {
-        month: 'long',
-        year: 'numeric',
-      }),
+      name: `${monthName} ${date.getFullYear()}`,
     };
   });
 
@@ -904,10 +905,9 @@ export class Calendar {
       return `${monthName.substring(0, 3)} ${chroniaDate.day}`;
     }
 
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    });
+    // Use localized Gregorian month names
+    const shortMonthName = this.gregorianService.getShortMonthName(date.getMonth() + 1);
+    return `${shortMonthName} ${date.getDate()}`;
   }
 
   formatDateFull(date: Date): string {
@@ -918,12 +918,11 @@ export class Calendar {
       return this.chroniaService.format(chroniaDate, 'longDate');
     }
 
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'long',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    // Use localized Gregorian month names
+    const monthName = this.gregorianService.getMonthName(date.getMonth() + 1);
+    const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const weekday = weekdays[date.getDay()];
+    return `${weekday}, ${monthName} ${date.getDate()}, ${date.getFullYear()}`;
   }
 
   formatDateMedium(date: Date): string {
@@ -934,11 +933,11 @@ export class Calendar {
       return this.chroniaService.format(chroniaDate, 'mediumDate');
     }
 
-    return date.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-    });
+    // Use localized Gregorian month names
+    const shortMonthName = this.gregorianService.getShortMonthName(date.getMonth() + 1);
+    const shortWeekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const weekday = shortWeekdays[date.getDay()];
+    return `${weekday}, ${shortMonthName} ${date.getDate()}`;
   }
 
   // Get events for a specific hour and day in week view
