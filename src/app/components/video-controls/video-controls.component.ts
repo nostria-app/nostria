@@ -346,6 +346,19 @@ export class VideoControlsComponent implements OnDestroy {
     }
   }
 
+  /** Force start auto-hide timer, resetting hover state - used when entering fullscreen */
+  forceShowControlsAndStartTimer(): void {
+    console.log('[VideoControls] forceShowControlsAndStartTimer called, paused:', this.paused());
+    // Reset hover state since entering fullscreen repositions everything
+    this.isHoveringControlsBar.set(false);
+    this.controlsBarHover.emit(false);
+    this.controlsVisible.set(true);
+    this.clearAutoHideTimer();
+    // Always start timer when entering fullscreen (even if appears paused due to race condition)
+    // The hideControls will re-check paused state when timer fires
+    this.startAutoHideTimer();
+  }
+
   hideControls(): void {
     console.log('[VideoControls] hideControls called, nativeFs:', this.nativeFullscreen(), 'seeking:', this.isSeeking(), 'hoveringBar:', this.isHoveringControlsBar());
     // Don't hide if hovering controls bar
