@@ -12,7 +12,7 @@
   <!-- Bottom gradient and controls -->
   <div class="gradient-bottom"></div>
 
-  <div class="controls-bar">
+  <div class="controls-bar" (mouseenter)="onControlsBarMouseEnter()" (mouseleave)="onControlsBarMouseLeave()">
     <!-- Progress bar (hidden for live streams) -->
     @if (!mergedConfig().isLiveStream) {
     <div class="progress-container" tabindex="0" role="slider" title="Video progress" aria-valuenow="0"

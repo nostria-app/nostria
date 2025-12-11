@@ -1,5 +1,4 @@
-<div class="video-player-container" [class.footer-mode]="footer()" [class.expanded-mode]="!footer()"
-  [class.cursor-hidden]="cursorHidden()">
+<div class="video-player-container" [class.footer-mode]="footer()" [class.expanded-mode]="!footer()">
   <!-- Header (Expanded Mode Only) -->
   <div class="video-header" [class.hidden]="footer()">
     <div class="video-title">
@@ -16,8 +15,8 @@
   </div>
 
   <!-- Video Area (Shared) -->
-  <div class="video-area" (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
-    (mousemove)="onVideoContainerMouseMove()">
+  <div class="video-area" [class.cursor-hidden]="cursorHidden()" (mouseenter)="onVideoContainerMouseEnter()"
+    (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
       (error)="onVideoError($event)"></video>
 
@@ -25,12 +24,11 @@
     <!-- Custom Controls for Expanded Mode -->
     <app-video-controls [videoElement]="videoElement"
       [config]="{ isLiveStream: false, showQuality: media.hlsQualityLevels().length > 0 }"
-      [qualityLevels]="media.hlsQualityLevels()" [currentQuality]="media.hlsCurrentQuality()"
-      [nativeFullscreen]="isNativeFullscreen()"
+      [qualityLevels]="media.hlsQualityLevels()" [currentQuality]="media.hlsCurrentQuality()" [nativeFullscreen]="true"
       (playPause)="onPlayPause()" (seek)="onSeek($event)" (volumeChange)="onVolumeChange($event)"
       (muteToggle)="media.mute()" (qualityChange)="media.setHlsQuality($event)"
       (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="requestFullscreen()"
-      (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" />
+      (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" (controlsBarHover)="onControlsBarHover($event)" />
     } @else {
     <!-- Footer Overlay (Footer Mode Only) -->
     <div class="video-controls-overlay">
