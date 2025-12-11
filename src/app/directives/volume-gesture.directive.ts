@@ -38,15 +38,25 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
   private boundMouseDown = this.onMouseDown.bind(this);
   private boundMouseMove = this.onMouseMove.bind(this);
   private boundMouseUp = this.onMouseUp.bind(this);
+  private boundContextMenu = this.onContextMenu.bind(this);
 
   ngAfterViewInit(): void {
     const el = this.elementRef.nativeElement;
+
+    // Prevent text selection and context menu on the element
+    el.style.userSelect = 'none';
+    el.style.webkitUserSelect = 'none';
+    el.style.touchAction = 'manipulation';
+    el.style.webkitTouchCallout = 'none';
 
     // Touch events for mobile
     el.addEventListener('touchstart', this.boundTouchStart, { passive: false });
     document.addEventListener('touchmove', this.boundTouchMove, { passive: false });
     document.addEventListener('touchend', this.boundTouchEnd);
     document.addEventListener('touchcancel', this.boundTouchEnd);
+
+    // Prevent context menu (long-press menu on mobile)
+    el.addEventListener('contextmenu', this.boundContextMenu);
 
     // Mouse events for testing on desktop (with mouse hold)
     el.addEventListener('mousedown', this.boundMouseDown);
@@ -61,6 +71,7 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
     document.removeEventListener('touchmove', this.boundTouchMove);
     document.removeEventListener('touchend', this.boundTouchEnd);
     document.removeEventListener('touchcancel', this.boundTouchEnd);
+    el.removeEventListener('contextmenu', this.boundContextMenu);
 
     el.removeEventListener('mousedown', this.boundMouseDown);
     document.removeEventListener('mousemove', this.boundMouseMove);
@@ -71,8 +82,15 @@ export class VolumeGestureDirective implements AfterViewInit, OnDestroy {
   }
 
   private onTouchStart(event: TouchEvent): void {
+    // Prevent default to stop text selection and context menu on mobile
+    event.preventDefault();
     const touch = event.touches[0];
     this.startGesture(touch.clientX);
+  }
+
+  private onContextMenu(event: Event): void {
+    // Prevent context menu from appearing during hold gesture
+    event.preventDefault();
   }
 
   private onTouchMove(event: TouchEvent): void {
