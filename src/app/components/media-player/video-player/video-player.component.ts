@@ -18,6 +18,8 @@ import { CastService } from '../../../services/cast.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { VideoControlsComponent } from '../../video-controls/video-controls.component';
 import { nip19 } from 'nostr-tools';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSliderModule } from '@angular/material/slider';
 
 @Component({
   selector: 'app-video-player',
@@ -28,6 +30,8 @@ import { nip19 } from 'nostr-tools';
     RouterModule,
     UserProfileComponent,
     VideoControlsComponent,
+    MatMenuModule,
+    MatSliderModule
   ],
   templateUrl: './video-player.component.html',
   styleUrl: './video-player.component.scss',
@@ -175,5 +179,9 @@ export class VideoPlayerComponent implements OnDestroy {
       // Ignore decoding errors
     }
     return '';
+  }
+
+  get volume(): number {
+    return this.videoElement?.nativeElement ? Math.round(this.videoElement.nativeElement.volume * 100) : 100;
   }
 }
