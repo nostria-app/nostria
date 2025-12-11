@@ -4,6 +4,7 @@
   left: 0;
   right: 0;
   bottom: 0;
+  // Always pass through mouse events to parent - only controls-bar should capture
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.25s ease;
@@ -12,17 +13,8 @@
   &.visible,
   &.is-paused {
     opacity: 1;
-    pointer-events: auto;
-  }
-
-  // In native fullscreen, let mouse events pass through to parent container
-  // but still allow clicking on actual interactive controls
-  &.native-fullscreen {
-    pointer-events: none !important;
-
-    .controls-bar {
-      pointer-events: auto;
-    }
+    // Don't set pointer-events: auto here - let parent handle mouse events
+    // The controls-bar will have pointer-events: auto for actual buttons
   }
 }
 
@@ -35,6 +27,8 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
+  // Pass through mouse events to parent
+  pointer-events: none;
 }
 
 // Gradients for visibility
@@ -102,6 +96,8 @@
   flex-direction: column;
   gap: 4px;
   z-index: 2;
+  // Allow clicking on controls
+  pointer-events: auto;
 }
 
 // Progress bar

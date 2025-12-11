@@ -77,7 +77,7 @@ export class VideoControlsComponent implements OnDestroy {
   config = input<VideoControlsConfig>({});
   qualityLevels = input<QualityLevel[]>([]);
   currentQuality = input<number>(-1); // -1 = auto
-  nativeFullscreen = input<boolean>(false); // When true, ignore isHovering for auto-hide
+  nativeFullscreen = input<boolean>(false); // When true, parent manages auto-hide
 
   // Outputs
   seek = output<number>();
@@ -89,10 +89,12 @@ export class VideoControlsComponent implements OnDestroy {
   fullscreenToggle = output<void>();
   pipToggle = output<void>();
   castToggle = output<void>();
+  controlsBarHover = output<boolean>(); // Emits true when hovering controls-bar, false when leaving
 
   // Internal state - reactive signals for video state
   controlsVisible = signal(true);
   isHovering = signal(false);
+  isHoveringControlsBar = signal(false);
   isSeeking = signal(false);
   volumeSliderVisible = signal(false);
 
@@ -317,6 +319,18 @@ export class VideoControlsComponent implements OnDestroy {
     }
   }
 
+  /** Called when mouse enters the controls-bar (buttons area) */
+  onControlsBarMouseEnter(): void {
+    this.isHoveringControlsBar.set(true);
+    this.controlsBarHover.emit(true);
+  }
+
+  /** Called when mouse leaves the controls-bar (buttons area) */
+  onControlsBarMouseLeave(): void {
+    this.isHoveringControlsBar.set(false);
+    this.controlsBarHover.emit(false);
+  }
+
   showControls(): void {
     this.clearAutoHideTimer();
     this.controlsVisible.set(true);
@@ -333,17 +347,19 @@ export class VideoControlsComponent implements OnDestroy {
   }
 
   hideControls(): void {
-    console.log('[VideoControls] hideControls called, nativeFs:', this.nativeFullscreen(), 'seeking:', this.isSeeking());
+    console.log('[VideoControls] hideControls called, nativeFs:', this.nativeFullscreen(), 'seeking:', this.isSeeking(), 'hoveringBar:', this.isHoveringControlsBar());
+    // Don't hide if hovering controls bar
+    if (this.isHoveringControlsBar() || this.isSeeking()) {
+      return;
+    }
     // In native fullscreen, just hide - parent controls timing
     if (this.nativeFullscreen()) {
-      if (!this.isSeeking()) {
-        console.log('[VideoControls] Hiding controls in native fullscreen');
-        this.controlsVisible.set(false);
-      }
+      console.log('[VideoControls] Hiding controls in native fullscreen');
+      this.controlsVisible.set(false);
       return;
     }
     // Normal mode - respect paused and hovering state
-    if (!this.paused() && !this.isHovering() && !this.isSeeking()) {
+    if (!this.paused() && !this.isHovering()) {
       this.controlsVisible.set(false);
     }
   }

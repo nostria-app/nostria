@@ -9,11 +9,10 @@
       (error)="onVideoError($event)"></video>
     @if (!footer()) {
     <app-video-controls [videoElement]="videoElement" [config]="{ isLiveStream: true, showQuality: true }"
-      [qualityLevels]="qualityLevels()" [currentQuality]="currentQualityLevel()" 
-      [nativeFullscreen]="isNativeFullscreen()" (playPause)="onPlayPause()"
-      (volumeChange)="onVideoVolumeChange($event)" (muteToggle)="onMuteToggle()"
-      (qualityChange)="onQualityChange($event)" (fullscreenToggle)="onNativeFullscreenToggle()"
-      (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" />
+      [qualityLevels]="qualityLevels()" [currentQuality]="currentQualityLevel()"
+      [nativeFullscreen]="isNativeFullscreen()" (playPause)="onPlayPause()" (volumeChange)="onVideoVolumeChange($event)"
+      (muteToggle)="onMuteToggle()" (qualityChange)="onQualityChange($event)"
+      (fullscreenToggle)="onNativeFullscreenToggle()" (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" />
     }
   </div>
   } @else if (isLiveKit()) {
