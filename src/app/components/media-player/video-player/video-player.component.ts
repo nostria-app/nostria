@@ -51,7 +51,6 @@ export class VideoPlayerComponent implements OnDestroy {
   private readonly elementRef = inject(ElementRef);
 
   footer = input<boolean>(false);
-  isNativeFullscreen = signal(false);
   cursorHidden = signal(false);
   isHoveringControlsBar = signal(false);
 
@@ -85,7 +84,6 @@ export class VideoPlayerComponent implements OnDestroy {
 
   private fullscreenChangeHandler = () => {
     const isFullscreen = !!document.fullscreenElement;
-    this.isNativeFullscreen.set(isFullscreen);
 
     if (isFullscreen) {
       // Ignore mouse events briefly to prevent them from canceling auto-hide
