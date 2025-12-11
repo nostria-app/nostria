@@ -72,6 +72,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   footer = input<boolean>(false);
   chatVisible = signal(true);
   isNativeFullscreen = signal(false);
+  cursorHidden = signal(false);
 
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
@@ -81,6 +82,8 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   private eventSubscription: { close: () => void } | null = null;
   private currentStreamId: string | null = null;
+  private cursorHideTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly CURSOR_HIDE_DELAY = 3000;
 
   // Live stream metadata
   streamTitle = computed(() => this.media.current()?.title || 'Live Stream');
@@ -190,6 +193,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   private fullscreenChangeHandler = () => {
     const isFullscreen = !!document.fullscreenElement;
+    console.log('[LiveStream] fullscreenChangeHandler, isFullscreen:', isFullscreen, 'fullscreenElement:', document.fullscreenElement);
     this.isNativeFullscreen.set(isFullscreen);
 
     // Move CDK overlay container into/out of fullscreen element for menus to work
@@ -199,11 +203,16 @@ export class LiveStreamPlayerComponent implements OnDestroy {
       if (container && overlayContainerEl) {
         container.appendChild(overlayContainerEl);
       }
+      // Start auto-hide timer when entering fullscreen
+      this.videoControlsRef?.showControlsAndStartTimer();
+      this.startCursorHideTimer();
     } else {
       // Move it back to body
       if (overlayContainerEl && overlayContainerEl.parentElement !== document.body) {
         document.body.appendChild(overlayContainerEl);
       }
+      // Show cursor when exiting fullscreen
+      this.showCursor();
     }
   };
 
@@ -212,6 +221,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     if (this.eventSubscription) {
       this.eventSubscription.close();
     }
+    this.clearCursorHideTimeout();
     document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
   }
 
@@ -385,6 +395,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   // Methods to trigger controls visibility from parent container hover
   onVideoContainerMouseEnter(): void {
     this.videoControlsRef?.showControls();
+    this.showCursor();
   }
 
   onVideoContainerMouseLeave(): void {
@@ -392,6 +403,40 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   }
 
   onVideoContainerMouseMove(): void {
-    this.videoControlsRef?.showControls();
+    console.log('[LiveStream] onVideoContainerMouseMove, nativeFs:', this.isNativeFullscreen());
+    // In native fullscreen, use showControlsAndStartTimer to ensure auto-hide works
+    if (this.isNativeFullscreen()) {
+      this.videoControlsRef?.showControlsAndStartTimer();
+    } else {
+      this.videoControlsRef?.showControls();
+    }
+    this.showCursor();
+    this.startCursorHideTimer();
+  }
+
+  private showCursor(): void {
+    this.clearCursorHideTimeout();
+    this.cursorHidden.set(false);
+  }
+
+  private startCursorHideTimer(): void {
+    if (!this.isNativeFullscreen()) return;
+
+    this.clearCursorHideTimeout();
+    console.log('[LiveStream] Starting cursor hide timer');
+    this.cursorHideTimeout = setTimeout(() => {
+      console.log('[LiveStream] Cursor hide timer fired, nativeFs:', this.isNativeFullscreen(), 'paused:', this.media.paused);
+      if (this.isNativeFullscreen() && !this.media.paused) {
+        console.log('[LiveStream] Hiding cursor');
+        this.cursorHidden.set(true);
+      }
+    }, this.CURSOR_HIDE_DELAY);
+  }
+
+  private clearCursorHideTimeout(): void {
+    if (this.cursorHideTimeout) {
+      clearTimeout(this.cursorHideTimeout);
+      this.cursorHideTimeout = null;
+    }
   }
 }

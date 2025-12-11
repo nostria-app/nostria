@@ -6,6 +6,7 @@ import {
   afterNextRender,
   OnDestroy,
   input,
+  signal,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -47,8 +48,14 @@ export class VideoPlayerComponent implements OnDestroy {
   readonly layout = inject(LayoutService);
   private readonly utilities = inject(UtilitiesService);
   private readonly castService = inject(CastService);
+  private readonly elementRef = inject(ElementRef);
 
   footer = input<boolean>(false);
+  isNativeFullscreen = signal(false);
+  cursorHidden = signal(false);
+
+  private cursorHideTimeout: ReturnType<typeof setTimeout> | null = null;
+  private readonly CURSOR_HIDE_DELAY = 3000;
 
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
@@ -63,11 +70,33 @@ export class VideoPlayerComponent implements OnDestroy {
 
     afterNextRender(() => {
       this.registerVideoElement();
+      this.setupFullscreenListener();
     });
   }
 
   ngOnDestroy(): void {
     this.media.setVideoElement(undefined);
+    this.clearCursorHideTimeout();
+    document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+  }
+
+  private fullscreenChangeHandler = () => {
+    const isFullscreen = !!document.fullscreenElement;
+    console.log('[VideoPlayer] fullscreenChangeHandler, isFullscreen:', isFullscreen);
+    this.isNativeFullscreen.set(isFullscreen);
+
+    if (isFullscreen) {
+      // Start auto-hide timer when entering fullscreen
+      this.videoControlsRef?.showControlsAndStartTimer();
+      this.startCursorHideTimer();
+    } else {
+      // Show cursor when exiting fullscreen
+      this.showCursor();
+    }
+  };
+
+  private setupFullscreenListener(): void {
+    document.addEventListener('fullscreenchange', this.fullscreenChangeHandler);
   }
 
   registerVideoElement(): void {
@@ -159,6 +188,7 @@ export class VideoPlayerComponent implements OnDestroy {
   // Methods to trigger controls visibility from parent container hover
   onVideoContainerMouseEnter(): void {
     this.videoControlsRef?.showControls();
+    this.showCursor();
   }
 
   onVideoContainerMouseLeave(): void {
@@ -166,7 +196,40 @@ export class VideoPlayerComponent implements OnDestroy {
   }
 
   onVideoContainerMouseMove(): void {
-    this.videoControlsRef?.showControls();
+    console.log('[VideoPlayer] onVideoContainerMouseMove, nativeFs:', this.isNativeFullscreen());
+    // In native fullscreen, use showControlsAndStartTimer to ensure auto-hide works
+    if (this.isNativeFullscreen()) {
+      this.videoControlsRef?.showControlsAndStartTimer();
+    } else {
+      this.videoControlsRef?.showControls();
+    }
+    this.showCursor();
+    this.startCursorHideTimer();
+  }
+
+  private showCursor(): void {
+    this.clearCursorHideTimeout();
+    this.cursorHidden.set(false);
+  }
+
+  private startCursorHideTimer(): void {
+    if (!this.isNativeFullscreen()) return;
+
+    this.clearCursorHideTimeout();
+    console.log('[VideoPlayer] Starting cursor hide timer');
+    this.cursorHideTimeout = setTimeout(() => {
+      console.log('[VideoPlayer] Cursor hide timer fired');
+      if (this.isNativeFullscreen() && !this.media.paused) {
+        this.cursorHidden.set(true);
+      }
+    }, this.CURSOR_HIDE_DELAY);
+  }
+
+  private clearCursorHideTimeout(): void {
+    if (this.cursorHideTimeout) {
+      clearTimeout(this.cursorHideTimeout);
+      this.cursorHideTimeout = null;
+    }
   }
 
   isNpubArtist(artist: string | undefined): boolean {

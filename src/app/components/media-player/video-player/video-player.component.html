@@ -1,4 +1,5 @@
-<div class="video-player-container" [class.footer-mode]="footer()" [class.expanded-mode]="!footer()">
+<div class="video-player-container" [class.footer-mode]="footer()" [class.expanded-mode]="!footer()"
+  [class.cursor-hidden]="cursorHidden()">
   <!-- Header (Expanded Mode Only) -->
   <div class="video-header" [class.hidden]="footer()">
     <div class="video-title">
@@ -25,6 +26,7 @@
     <app-video-controls [videoElement]="videoElement"
       [config]="{ isLiveStream: false, showQuality: media.hlsQualityLevels().length > 0 }"
       [qualityLevels]="media.hlsQualityLevels()" [currentQuality]="media.hlsCurrentQuality()"
+      [nativeFullscreen]="isNativeFullscreen()"
       (playPause)="onPlayPause()" (seek)="onSeek($event)" (volumeChange)="onVolumeChange($event)"
       (muteToggle)="media.mute()" (qualityChange)="media.setHlsQuality($event)"
       (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="requestFullscreen()"

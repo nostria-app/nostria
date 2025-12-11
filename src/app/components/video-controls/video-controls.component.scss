@@ -14,6 +14,16 @@
     opacity: 1;
     pointer-events: auto;
   }
+
+  // In native fullscreen, let mouse events pass through to parent container
+  // but still allow clicking on actual interactive controls
+  &.native-fullscreen {
+    pointer-events: none !important;
+
+    .controls-bar {
+      pointer-events: auto;
+    }
+  }
 }
 
 .controls-overlay {
