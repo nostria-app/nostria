@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { Router, NavigationStart } from '@angular/router';
 import { Location } from '@angular/common';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -63,6 +64,8 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   private readonly location = inject(Location);
   private readonly relayPool = inject(RelayPoolService);
   private readonly relaysService = inject(RelaysService);
+  private readonly overlayContainer = inject(OverlayContainer);
+  private readonly elementRef = inject(ElementRef);
 
   footer = input<boolean>(false);
   chatVisible = signal(true);
@@ -184,7 +187,22 @@ export class LiveStreamPlayerComponent implements OnDestroy {
   }
 
   private fullscreenChangeHandler = () => {
-    this.isNativeFullscreen.set(!!document.fullscreenElement);
+    const isFullscreen = !!document.fullscreenElement;
+    this.isNativeFullscreen.set(isFullscreen);
+
+    // Move CDK overlay container into/out of fullscreen element for menus to work
+    const overlayContainerEl = this.overlayContainer.getContainerElement();
+    if (isFullscreen) {
+      const container = this.elementRef.nativeElement.querySelector('.live-stream-container');
+      if (container && overlayContainerEl) {
+        container.appendChild(overlayContainerEl);
+      }
+    } else {
+      // Move it back to body
+      if (overlayContainerEl && overlayContainerEl.parentElement !== document.body) {
+        document.body.appendChild(overlayContainerEl);
+      }
+    }
   };
 
   ngOnDestroy(): void {
