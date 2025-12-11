@@ -3,38 +3,38 @@
     <mat-card-content>
       <h2>Profile Info</h2>
       @if (userMetadata(); as metadata) {
-        @if (metadata.data.website) {
-          <div class="info-item">
-            <mat-icon>link</mat-icon>
-            <a [href]="metadata.data.website" target="_blank" rel="noopener noreferrer">
-              {{ metadata.data.website }}
-            </a>
-          </div>
-        }
+      @if (metadata.data.website) {
+      <div class="info-item">
+        <mat-icon>link</mat-icon>
+        <a [href]="metadata.data.website" target="_blank" rel="noopener noreferrer">
+          {{ metadata.data.website }}
+        </a>
+      </div>
+      }
 
-        @if (metadata.data.lud16) {
-          <div class="info-item">
-            <mat-icon>bolt</mat-icon>
-            <span>{{ metadata.data.lud16 }}</span>
-          </div>
-        }
+      @if (metadata.data.lud16) {
+      <div class="info-item">
+        <mat-icon>bolt</mat-icon>
+        <span>{{ metadata.data.lud16 }}</span>
+      </div>
+      }
 
-        <div class="info-item">
-          <mat-icon>fingerprint</mat-icon>
-          <div class="pubkey-container">
-            <span class="pubkey" title="{{ getFormattedNpub() }}">{{ getFormattedNpub() }}</span>
-            <button mat-icon-button matTooltip="Copy to clipboard" (click)="copyToClipboard()">
-              <mat-icon>content_copy</mat-icon>
-            </button>
-          </div>
+      <div class="info-item">
+        <mat-icon>fingerprint</mat-icon>
+        <div class="pubkey-container">
+          <span class="pubkey" title="{{ getFormattedNpub() }}">{{ getFormattedNpub() }}</span>
+          <button mat-icon-button matTooltip="Copy to clipboard" (click)="copyToClipboard()">
+            <mat-icon>content_copy</mat-icon>
+          </button>
         </div>
+      </div>
 
-        @if (metadata.event.created_at) {
-          <div class="info-item">
-            <mat-icon>update</mat-icon>
-            <span>Updated: {{ metadata.event.created_at | date: 'mediumDate' }}</span>
-          </div>
-        }
+      @if (metadata.event.created_at) {
+      <div class="info-item">
+        <mat-icon>update</mat-icon>
+        <span>Updated: {{ metadata.event.created_at | timestamp: 'mediumDate' }}</span>
+      </div>
+      }
       }
     </mat-card-content>
   </mat-card>

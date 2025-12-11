@@ -22,7 +22,7 @@
     <span>
       <app-profile-display-name [pubkey]="item.event.pubkey"></app-profile-display-name>
       reposted
-      <span [matTooltip]="item.event.created_at * 1000 | date: 'medium'" matTooltipPosition="below">
+      <span [matTooltip]="item.event.created_at | timestamp: 'medium'" matTooltipPosition="below">
         {{ item.event.created_at | ago }}
       </span>
     </span>

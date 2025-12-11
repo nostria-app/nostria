@@ -13,7 +13,7 @@ import { DataService } from '../../services/data.service';
 import { NostrRecord } from '../../interfaces';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { AgoPipe } from '../../pipes/ago.pipe';
-import { DatePipe } from '@angular/common';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { TaggedReferencesComponent } from './tagged-references/tagged-references.component';
@@ -50,7 +50,7 @@ interface SocialPreview {
     MatTooltipModule,
     SocialPreviewComponent,
     AgoPipe,
-    DatePipe,
+    TimestampPipe,
     UserProfileComponent,
     TaggedReferencesComponent,
     BadgeComponent,

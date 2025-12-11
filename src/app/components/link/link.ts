@@ -1,12 +1,12 @@
-import { DatePipe } from '@angular/common';
 import { Component, input, computed, inject } from '@angular/core';
 import { Event, nip19 } from 'nostr-tools';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-link',
-  imports: [DatePipe, AgoPipe],
+  imports: [AgoPipe, TimestampPipe],
   templateUrl: './link.html',
   styleUrl: './link.scss',
 })

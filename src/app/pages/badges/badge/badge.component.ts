@@ -17,9 +17,10 @@ import { BadgeService, ParsedBadge } from '../../../services/badge.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 
 export type BadgeLayout = 'vertical' | 'horizontal';
 
@@ -32,7 +33,7 @@ export type BadgeLayout = 'vertical' | 'horizontal';
     MatIconModule,
     MatProgressSpinnerModule,
     CommonModule,
-    DatePipe,
+    TimestampPipe,
   ],
   templateUrl: './badge.component.html',
   styleUrl: './badge.component.scss',

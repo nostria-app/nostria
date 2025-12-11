@@ -10,6 +10,7 @@ import { Router } from '@angular/router';
 import { Event, kinds, nip19 } from 'nostr-tools';
 import { NostrRecord, Playlist } from '../../interfaces';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { ApplicationService } from '../../services/application.service';
 import { BookmarkService } from '../../services/bookmark.service';
 import { DataService } from '../../services/data.service';
@@ -19,7 +20,7 @@ import { RepostService } from '../../services/repost.service';
 import { ContentComponent } from '../content/content.component';
 import { ReplyButtonComponent } from './reply-button/reply-button.component';
 import { EventHeaderComponent } from './header/header.component';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { EventService, ReactionEvents } from '../../services/event';
 import { AccountRelayService } from '../../services/relays/account-relay';
@@ -57,7 +58,7 @@ type EventCardAppearance = 'card' | 'plain';
     ProfileDisplayNameComponent,
     EventMenuComponent,
     AgoPipe,
-    DatePipe,
+    TimestampPipe,
     CommonModule,
     ReplyButtonComponent,
     RepostButtonComponent,

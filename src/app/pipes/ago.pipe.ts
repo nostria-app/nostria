@@ -1,7 +1,12 @@
-import { Pipe, PipeTransform } from '@angular/core';
+import { inject, Pipe, PipeTransform } from '@angular/core';
+import { LocalSettingsService } from '../services/local-settings.service';
+import { ChroniaCalendarService } from '../services/chronia-calendar.service';
 
 @Pipe({ name: 'ago', standalone: true })
 export class AgoPipe implements PipeTransform {
+  private localSettings = inject(LocalSettingsService);
+  private chroniaService = inject(ChroniaCalendarService);
+
   transform(value: number | any): string {
     if (value === 0) {
       return '';
