@@ -121,6 +121,31 @@
       a button. Prevents the feed from jumping to the latest events on reload.</p>
   </div>
 
+  <div>
+    <h2 i18n="@@settings.calendar.title">Calendar System</h2>
+    <p i18n="@@settings.calendar.description">Choose your preferred calendar system for displaying dates</p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@settings.calendar.label">Calendar</mat-label>
+      <mat-select [ngModel]="localSettings.calendarType()" (selectionChange)="setCalendarType($event.value)">
+        <mat-option value="gregorian" i18n="@@settings.calendar.gregorian">Gregorian Calendar</mat-option>
+        <mat-option value="chronia" i18n="@@settings.calendar.chronia">Chronia Calendar</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <p>
+      @switch (localSettings.calendarType()) {
+      @case ('gregorian') {
+      <ng-container i18n="@@settings.calendar.gregorian.description">The standard civil calendar used worldwide with 12
+        months of varying lengths.</ng-container>
+      }
+      @case ('chronia') {
+      <ng-container i18n="@@settings.calendar.chronia.description">A modern simplified calendar with 13 months of 28
+        days each, plus Solstice Day. Year 0 begins December 22, 2015.</ng-container>
+      }
+      }
+    </p>
+  </div>
+
   @if (accountState.hasActiveSubscription()) {
   <div>
     <h2 i18n="@@settings.release-channel">

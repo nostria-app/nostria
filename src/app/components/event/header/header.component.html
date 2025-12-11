@@ -1,6 +1,6 @@
 <mat-card-header [class.compact]="compact()">
   <app-user-profile [pubkey]="event().pubkey" [view]="compact() ? 'compact' : 'list'">
-    <a class="date-link" [routerLink]="eventUrl()" [title]="event().created_at * 1000 | date: 'medium'" tabindex="0"
+    <a class="date-link" [routerLink]="eventUrl()" [title]="event().created_at | timestamp: 'medium'" tabindex="0"
       (click)="openEventAndStopPropagation($event)" (keyup.enter)="layout.openEvent(event().id, event())"
       (keyup.space)="layout.openEvent(event().id, event())">
       {{ event().created_at | ago }}

@@ -8,6 +8,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { Event } from 'nostr-tools';
 import { ZapService } from '../../services/zap.service';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 
 interface ZapReceipt {
@@ -30,6 +31,7 @@ interface ZapReceipt {
     MatTooltipModule,
     MatExpansionModule,
     AgoPipe,
+    TimestampPipe,
     UserProfileComponent,
   ],
   template: `
@@ -61,7 +63,7 @@ interface ZapReceipt {
                       <mat-icon class="small-icon">bolt</mat-icon>
                       <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
                     </div>
-                    <div class="zap-time" [matTooltip]="zap.timestamp * 1000 | date: 'medium'">
+                    <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
                       {{ zap.timestamp | ago }}
                     </div>
                   </div>

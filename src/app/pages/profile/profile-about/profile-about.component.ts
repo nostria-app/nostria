@@ -9,11 +9,12 @@ import { LoggerService } from '../../../services/logger.service';
 import { NostrRecord } from '../../../interfaces';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
+import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 
 @Component({
   selector: 'app-profile-about',
   standalone: true,
-  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule],
+  imports: [CommonModule, MatCardModule, MatIconModule, MatButtonModule, TimestampPipe],
   templateUrl: './profile-about.component.html',
   styleUrl: './profile-about.component.scss',
 })

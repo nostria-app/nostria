@@ -32,7 +32,7 @@
     (keydown.space)="onEventMentionClick($event, mention.event.event)">
     <mat-card-header>
       <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
-        <span class="date-link" [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
+        <span class="date-link" [matTooltip]="mention.event.event.created_at | timestamp: 'medium'"
           matTooltipPosition="below">
           {{ mention.event.event.created_at | ago }}
         </span>
@@ -81,7 +81,7 @@
     (keydown.space)="onEventMentionClick($event, mention.event.event)">
     <mat-card-header>
       <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
-        <span class="date-link" [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
+        <span class="date-link" [matTooltip]="mention.event.event.created_at | timestamp: 'medium'"
           matTooltipPosition="below">
           {{ mention.event.event.created_at | ago }}
         </span>
@@ -112,7 +112,7 @@
     (keydown.space)="onEventMentionClick($event, mention.event.event)">
     <mat-card-header>
       <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
-        <span class="date-link" [matTooltip]="mention.event.event.created_at * 1000 | date: 'medium'"
+        <span class="date-link" [matTooltip]="mention.event.event.created_at | timestamp: 'medium'"
           matTooltipPosition="below">
           {{ mention.event.event.created_at | ago }}
         </span>

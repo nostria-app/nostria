@@ -4,6 +4,8 @@ import { LoggerService } from './logger.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
 
+export type CalendarType = 'gregorian' | 'chronia';
+
 export interface LocalSettings {
   menuOpen: boolean;
   menuExpanded: boolean;
@@ -16,6 +18,7 @@ export interface LocalSettings {
   startOnLastRoute: boolean;
   startFeedsOnLastEvent: boolean;
   removeTrackingParameters: boolean;
+  calendarType: CalendarType;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -30,6 +33,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   startOnLastRoute: true,
   startFeedsOnLastEvent: true,
   removeTrackingParameters: true,
+  calendarType: 'gregorian',
 };
 
 /**
@@ -74,6 +78,7 @@ export class LocalSettingsService {
   readonly startOnLastRoute = computed(() => this.settings().startOnLastRoute);
   readonly startFeedsOnLastEvent = computed(() => this.settings().startFeedsOnLastEvent);
   readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
+  readonly calendarType = computed(() => this.settings().calendarType);
 
   constructor() {
     this.loadSettings();
@@ -303,6 +308,13 @@ export class LocalSettingsService {
    */
   setRemoveTrackingParameters(removeTrackingParameters: boolean): void {
     this.updateSettings({ removeTrackingParameters });
+  }
+
+  /**
+   * Set calendar type preference
+   */
+  setCalendarType(calendarType: CalendarType): void {
+    this.updateSettings({ calendarType });
   }
 
   /**

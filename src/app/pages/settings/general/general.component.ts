@@ -12,7 +12,7 @@ import { FeatureLevel, LoggerService, LogLevel } from '../../../services/logger.
 import { ThemeService } from '../../../services/theme.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
-import { LocalSettingsService } from '../../../services/local-settings.service';
+import { CalendarType, LocalSettingsService } from '../../../services/local-settings.service';
 import { SettingsService } from '../../../services/settings.service';
 import { StorageStatsComponent } from '../../../components/storage-stats/storage-stats.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
@@ -114,6 +114,10 @@ export class GeneralSettingsComponent {
 
   setMediaPrivacy(value: 'blur-non-following' | 'blur-always' | 'show-always'): void {
     this.settings.updateSettings({ mediaPrivacy: value });
+  }
+
+  setCalendarType(calendarType: CalendarType): void {
+    this.localSettings.setCalendarType(calendarType);
   }
 
   toggleAutoPlayShortForm(): void {

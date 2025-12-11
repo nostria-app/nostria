@@ -1,13 +1,6 @@
 @if (link()) {
-  <a
-    (click)="navigateToEvent()"
-    (keydown.enter)="navigateToEvent()"
-    (keydown.space)="navigateToEvent()"
-    [title]="event().created_at * 1000 | date: 'medium'"
-    class="app-link"
-    tabindex="0"
-    role="link"
-  >
-    {{ event().created_at | ago }}
-  </a>
+<a (click)="navigateToEvent()" (keydown.enter)="navigateToEvent()" (keydown.space)="navigateToEvent()"
+  [title]="event().created_at | timestamp: 'medium'" class="app-link" tabindex="0" role="link">
+  {{ event().created_at | ago }}
+</a>
 }

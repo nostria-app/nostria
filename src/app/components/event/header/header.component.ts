@@ -1,4 +1,3 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -13,6 +12,7 @@ import { EventPointer } from 'nostr-tools/nip19';
 import { firstValueFrom } from 'rxjs';
 import { NostrRecord } from '../../../interfaces';
 import { AgoPipe } from '../../../pipes/ago.pipe';
+import { TimestampPipe } from '../../../pipes/timestamp.pipe';
 import { AccountStateService } from '../../../services/account-state.service';
 import { DataService } from '../../../services/data.service';
 import { LayoutService } from '../../../services/layout.service';
@@ -36,7 +36,7 @@ import { EventMenuComponent } from '../event-menu/event-menu.component';
     UserProfileComponent,
     EventMenuComponent,
     AgoPipe,
-    DatePipe,
+    TimestampPipe,
     RouterLink,
   ],
   templateUrl: './header.component.html',
