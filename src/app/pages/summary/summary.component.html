@@ -80,7 +80,8 @@
         </h2>
         <div class="filter-actions">
           @if (isFilterMode()) {
-          <button mat-stroked-button (click)="clearPosterFilter()" class="filter-action-btn">
+          <button mat-stroked-button (click)="clearPosterFilter(); gmFilterEnabled.set(false)"
+            class="filter-action-btn">
             <mat-icon>clear</mat-icon>
             Clear Filter
           </button>
