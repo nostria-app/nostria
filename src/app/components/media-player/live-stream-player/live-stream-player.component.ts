@@ -66,6 +66,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   footer = input<boolean>(false);
   chatVisible = signal(true);
+  isNativeFullscreen = signal(false);
 
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
@@ -155,6 +156,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
     afterNextRender(() => {
       this.registerVideoElement();
+      this.setupFullscreenListener();
     });
 
     // Subscribe to event updates
@@ -181,11 +183,20 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     });
   }
 
+  private fullscreenChangeHandler = () => {
+    this.isNativeFullscreen.set(!!document.fullscreenElement);
+  };
+
   ngOnDestroy(): void {
     this.media.setVideoElement(undefined);
     if (this.eventSubscription) {
       this.eventSubscription.close();
     }
+    document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+  }
+
+  private setupFullscreenListener(): void {
+    document.addEventListener('fullscreenchange', this.fullscreenChangeHandler);
   }
 
   private subscribeToEventUpdates(event: Event): void {
@@ -319,6 +330,17 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   onQualityChange(levelIndex: number): void {
     this.media.setHlsQuality(levelIndex);
+  }
+
+  async onNativeFullscreenToggle(): Promise<void> {
+    const container = document.querySelector('.live-stream-container');
+    if (!container) return;
+
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await container.requestFullscreen();
+    }
   }
 
   async castToDevice(): Promise<void> {

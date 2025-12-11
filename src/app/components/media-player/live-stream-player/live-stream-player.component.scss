@@ -49,6 +49,52 @@
       overflow-y: auto;
     }
   }
+
+  // Native browser fullscreen mode
+  &:fullscreen {
+    display: flex;
+    flex-direction: column;
+
+    .stream-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      background: transparent;
+      border-bottom: none;
+      pointer-events: none; // Allow click-through
+
+      // But buttons should still be clickable
+      .stream-actions,
+      .stream-info {
+        pointer-events: auto;
+      }
+    }
+
+    .video-wrapper {
+      flex: 1;
+      max-height: none;
+      width: 100%;
+      height: 100%;
+
+      // When chat is open, leave space on the right for chat
+      &.chat-open {
+        app-video-controls {
+          right: 370px; // Chat width + some padding
+        }
+      }
+    }
+
+    .chat-sidebar {
+      position: absolute;
+      top: 64px;
+      right: 0;
+      bottom: 0;
+      width: 360px;
+      z-index: 50;
+    }
+  }
 }
 
 // Single video element - repositioned via CSS based on mode
@@ -80,6 +126,12 @@
     @media (max-width: 968px) {
       height: auto;
       flex-shrink: 0;
+    }
+
+    // In native fullscreen, take full space
+    :fullscreen & {
+      max-height: none;
+      height: 100%;
     }
   }
 
