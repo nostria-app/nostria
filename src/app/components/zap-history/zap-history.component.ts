@@ -16,6 +16,7 @@ import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { LayoutService } from '../../services/layout.service';
 
@@ -44,6 +45,7 @@ interface ZapHistoryEntry {
     MatTooltipModule,
     MatMenuModule,
     AgoPipe,
+    TimestampPipe,
     UserProfileComponent,
   ],
   template: `
@@ -118,7 +120,7 @@ interface ZapHistoryEntry {
                             </div>
                             <div
                               class="zap-time"
-                              [matTooltip]="zap.timestamp * 1000 | date: 'medium'"
+                              [matTooltip]="zap.timestamp | timestamp: 'medium'"
                             >
                               {{ zap.timestamp | ago }}
                             </div>
@@ -200,7 +202,7 @@ interface ZapHistoryEntry {
                             </div>
                             <div
                               class="zap-time"
-                              [matTooltip]="zap.timestamp * 1000 | date: 'medium'"
+                              [matTooltip]="zap.timestamp | timestamp: 'medium'"
                             >
                               {{ zap.timestamp | ago }}
                             </div>
@@ -279,7 +281,7 @@ interface ZapHistoryEntry {
                             </div>
                             <div
                               class="zap-time"
-                              [matTooltip]="zap.timestamp * 1000 | date: 'medium'"
+                              [matTooltip]="zap.timestamp | timestamp: 'medium'"
                             >
                               {{ zap.timestamp | ago }}
                             </div>

@@ -13,6 +13,7 @@ import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 import { Router } from '@angular/router';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
 
 interface MeetingSpace {
   event: Event;
@@ -31,6 +32,7 @@ interface MeetingSpace {
     MatCardModule,
     MatExpansionModule,
     ProfileDisplayNameComponent,
+    TimestampPipe,
   ],
   templateUrl: './meetings.component.html',
   styleUrl: './meetings.component.scss',

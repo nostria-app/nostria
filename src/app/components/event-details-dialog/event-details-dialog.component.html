@@ -36,7 +36,7 @@
               <mat-list-item>
                 <mat-icon matListItemIcon>schedule</mat-icon>
                 <div matListItemTitle>Created</div>
-                <div matListItemLine>{{ eventCreatedAt() | date:'full' }}</div>
+                <div matListItemLine>{{ formatCreatedAt() }}</div>
                 <div matListItemLine class="subtitle">{{ eventCreatedAt().getTime() / 1000 }} (Unix timestamp)</div>
               </mat-list-item>
 

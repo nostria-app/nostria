@@ -20,6 +20,8 @@ import { Event } from 'nostr-tools';
 import { Router } from '@angular/router';
 import { LoggerService } from '../../services/logger.service';
 import { ApplicationService } from '../../services/application.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
+import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
 import {
   CreateEventDialogComponent,
   CreateEventDialogData,
@@ -107,6 +109,8 @@ export class Calendar {
   public app = inject(ApplicationService); // Made public for template access
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  public localSettings = inject(LocalSettingsService); // For calendar type
+  private chroniaService = inject(ChroniaCalendarService);
 
   // Current view state
   selectedDate = signal<Date>(new Date());
@@ -131,6 +135,32 @@ export class Calendar {
   // Computed values
   currentMonth = computed(() => {
     const date = this.selectedDate();
+    const calendarType = this.localSettings.calendarType();
+
+    if (calendarType === 'chronia') {
+      const chroniaDate = this.chroniaService.fromDate(date);
+      if (chroniaDate.isSolsticeDay) {
+        return {
+          year: chroniaDate.year,
+          month: 0,
+          name: `Solstice Day, Year ${chroniaDate.year}`,
+        };
+      }
+      if (chroniaDate.isLeapDay) {
+        return {
+          year: chroniaDate.year,
+          month: 0,
+          name: `Leap Day, Year ${chroniaDate.year}`,
+        };
+      }
+      const monthName = this.chroniaService.getMonthName(chroniaDate.month);
+      return {
+        year: chroniaDate.year,
+        month: chroniaDate.month,
+        name: `${monthName}, Year ${chroniaDate.year}`,
+      };
+    }
+
     return {
       year: date.getFullYear(),
       month: date.getMonth(),
@@ -860,7 +890,52 @@ export class Calendar {
   }
 
   formatDateShort(date: Date): string {
+    const calendarType = this.localSettings.calendarType();
+
+    if (calendarType === 'chronia') {
+      const chroniaDate = this.chroniaService.fromDate(date);
+      if (chroniaDate.isSolsticeDay) {
+        return 'Solstice';
+      }
+      if (chroniaDate.isLeapDay) {
+        return 'Leap Day';
+      }
+      const monthName = this.chroniaService.getMonthName(chroniaDate.month);
+      return `${monthName.substring(0, 3)} ${chroniaDate.day}`;
+    }
+
     return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  }
+
+  formatDateFull(date: Date): string {
+    const calendarType = this.localSettings.calendarType();
+
+    if (calendarType === 'chronia') {
+      const chroniaDate = this.chroniaService.fromDate(date);
+      return this.chroniaService.format(chroniaDate, 'longDate');
+    }
+
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+  }
+
+  formatDateMedium(date: Date): string {
+    const calendarType = this.localSettings.calendarType();
+
+    if (calendarType === 'chronia') {
+      const chroniaDate = this.chroniaService.fromDate(date);
+      return this.chroniaService.format(chroniaDate, 'mediumDate');
+    }
+
+    return date.toLocaleDateString('en-US', {
+      weekday: 'short',
       month: 'short',
       day: 'numeric',
     });

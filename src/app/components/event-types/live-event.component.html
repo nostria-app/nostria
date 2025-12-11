@@ -123,14 +123,14 @@
       <div class="time-item">
         <mat-icon class="time-icon">event</mat-icon>
         <span class="time-label">Starts:</span>
-        <span class="time-value">{{ startsTime * 1000 | date: 'medium' }}</span>
+        <span class="time-value">{{ startsTime | timestamp: 'medium' }}</span>
       </div>
       }
       @if (endsTime && statusValue === 'ended') {
       <div class="time-item">
         <mat-icon class="time-icon">event_available</mat-icon>
         <span class="time-label">Ended:</span>
-        <span class="time-value">{{ endsTime * 1000 | date: 'medium' }}</span>
+        <span class="time-value">{{ endsTime | timestamp: 'medium' }}</span>
       </div>
       }
       @if (totalParticipants() && statusValue === 'ended') {

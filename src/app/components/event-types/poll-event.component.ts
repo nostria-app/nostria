@@ -11,6 +11,7 @@ import { Event } from 'nostr-tools';
 import { PollService } from '../../services/poll.service';
 import { Poll, PollResults, PollResponse } from '../../interfaces';
 import { ApplicationService } from '../../services/application.service';
+import { TimestampPipe } from '../../pipes/timestamp.pipe';
 
 @Component({
   selector: 'app-poll-event',
@@ -23,6 +24,7 @@ import { ApplicationService } from '../../services/application.service';
     MatRadioModule,
     MatCheckboxModule,
     FormsModule,
+    TimestampPipe,
   ],
   templateUrl: './poll-event.component.html',
   styleUrl: './poll-event.component.scss',
@@ -58,10 +60,10 @@ export class PollEventComponent {
   hasVoted = computed(() => {
     const pubkey = this.app.accountState.pubkey();
     if (!pubkey) return false;
-    
+
     const pollResults = this.results();
     if (!pollResults) return false;
-    
+
     return pollResults.voters.includes(pubkey);
   });
 
@@ -77,14 +79,14 @@ export class PollEventComponent {
   private async loadPollResults(): Promise<void> {
     const poll = this.poll();
     this.isLoading.set(true);
-    
+
     try {
       const responses = await this.pollService.fetchPollResponses(
         poll.eventId || poll.id,
         poll.endsAt
       );
       this.responses.set(responses);
-      
+
       const results = this.pollService.calculateResults(poll, responses);
       this.results.set(results);
     } catch (error) {
@@ -106,10 +108,10 @@ export class PollEventComponent {
         poll.eventId || poll.id,
         selectedOptions
       );
-      
+
       // Reload results after voting
       await this.loadPollResults();
-      
+
       // Clear selection
       this.selectedOptions.set([]);
     } catch (error) {

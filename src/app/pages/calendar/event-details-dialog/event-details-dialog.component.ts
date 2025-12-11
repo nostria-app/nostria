@@ -9,6 +9,8 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { LocalSettingsService } from '../../../services/local-settings.service';
+import { ChroniaCalendarService } from '../../../services/chronia-calendar.service';
 
 interface CalendarEvent {
   id: string;
@@ -286,11 +288,13 @@ export interface EventDetailsResult {
 export class EventDetailsDialogComponent {
   isLoading = signal(false);
   private snackBar = inject(MatSnackBar);
+  private localSettings = inject(LocalSettingsService);
+  private chroniaCalendar = inject(ChroniaCalendarService);
 
   constructor(
     public dialogRef: MatDialogRef<EventDetailsDialogComponent>,
     @Inject(MAT_DIALOG_DATA) public data: EventDetailsDialogData
-  ) {}
+  ) { }
 
   get isCurrentUserEvent(): boolean {
     return this.data.currentUserPubkey === this.data.event.pubkey;
@@ -318,6 +322,10 @@ export class EventDetailsDialogComponent {
   }
 
   formatDate(date: Date): string {
+    if (this.localSettings.calendarType() === 'chronia') {
+      const chroniaDate = this.chroniaCalendar.fromDate(date);
+      return this.chroniaCalendar.format(chroniaDate, 'full');
+    }
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',

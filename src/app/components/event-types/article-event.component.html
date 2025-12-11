@@ -19,7 +19,7 @@
     <span class="article-author">{{ authorName() }}</span>
     }
     @if (publishedAt()) {
-    <span class="article-date">{{ publishedAt() | date: 'mediumDate' }}</span>
+    <span class="article-date">{{ formatPublishedDate() }}</span>
     }
   </div>
   }
