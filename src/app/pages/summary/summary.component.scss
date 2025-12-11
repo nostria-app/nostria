@@ -648,6 +648,31 @@
   }
 }
 
+// No filter results (smaller empty state for filtered content)
+.no-filter-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem 1rem;
+
+  mat-icon {
+    font-size: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.5;
+    margin-bottom: 0.5rem;
+  }
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.9rem;
+  }
+}
+
 mat-divider {
   margin: 0.5rem 0;
 }
