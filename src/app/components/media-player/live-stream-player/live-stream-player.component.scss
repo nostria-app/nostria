@@ -24,6 +24,15 @@
   height: 100%;
   background: transparent;
 
+  // Hide cursor when idle in fullscreen
+  &.cursor-hidden {
+    cursor: none;
+
+    * {
+      cursor: none !important;
+    }
+  }
+
   // Footer mode - simple flex layout
   &.footer-mode {
     display: flex;

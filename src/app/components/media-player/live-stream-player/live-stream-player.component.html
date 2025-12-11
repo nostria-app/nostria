@@ -1,5 +1,5 @@
 <div class="live-stream-container" [class.fullscreen]="!footer()" [class.footer-mode]="footer()"
-  [class.chat-visible]="chatVisible() && !footer()">
+  [class.chat-visible]="chatVisible() && !footer()" [class.cursor-hidden]="cursorHidden()">
   <!-- Single video element - always present, positioned via CSS -->
   @if (!isLiveKit() && !isExternal()) {
   <div class="video-wrapper" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()"
@@ -9,7 +9,8 @@
       (error)="onVideoError($event)"></video>
     @if (!footer()) {
     <app-video-controls [videoElement]="videoElement" [config]="{ isLiveStream: true, showQuality: true }"
-      [qualityLevels]="qualityLevels()" [currentQuality]="currentQualityLevel()" (playPause)="onPlayPause()"
+      [qualityLevels]="qualityLevels()" [currentQuality]="currentQualityLevel()" 
+      [nativeFullscreen]="isNativeFullscreen()" (playPause)="onPlayPause()"
       (volumeChange)="onVideoVolumeChange($event)" (muteToggle)="onMuteToggle()"
       (qualityChange)="onQualityChange($event)" (fullscreenToggle)="onNativeFullscreenToggle()"
       (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" />
