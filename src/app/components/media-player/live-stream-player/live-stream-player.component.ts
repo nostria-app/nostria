@@ -21,6 +21,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { LiveChatComponent } from '../../live-chat/live-chat.component';
 import { StreamInfoBarComponent } from '../../stream-info-bar/stream-info-bar.component';
 import { VideoControlsComponent } from '../../video-controls/video-controls.component';
+import { VolumeGestureDirective } from '../../../directives/volume-gesture.directive';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -47,6 +48,7 @@ declare global {
     LiveChatComponent,
     StreamInfoBarComponent,
     VideoControlsComponent,
+    VolumeGestureDirective,
   ],
   templateUrl: './live-stream-player.component.html',
   styleUrl: './live-stream-player.component.scss',

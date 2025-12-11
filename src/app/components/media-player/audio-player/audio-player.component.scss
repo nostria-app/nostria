@@ -531,7 +531,7 @@
   flex: 1;
 }
 
-.mobile-volume-item {
+.volume-menu-item {
   display: flex;
   align-items: center;
   padding: 0 16px;
@@ -542,7 +542,7 @@
     color: var(--mat-sys-on-surface-variant);
   }
 
-  .mobile-volume-slider {
+  .volume-slider {
     flex: 1;
     min-width: 100px;
   }
