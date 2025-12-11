@@ -85,7 +85,6 @@ export class VideoPlayerComponent implements OnDestroy {
 
   private fullscreenChangeHandler = () => {
     const isFullscreen = !!document.fullscreenElement;
-    console.log('[VideoPlayer] fullscreenChangeHandler, isFullscreen:', isFullscreen);
     this.isNativeFullscreen.set(isFullscreen);
 
     if (isFullscreen) {
@@ -200,7 +199,6 @@ export class VideoPlayerComponent implements OnDestroy {
   onVideoContainerMouseEnter(): void {
     // Only handle in expanded mode (not footer mode)
     if (this.footer() || this.ignoreMouseEvents) return;
-    console.log('[VideoPlayer] onVideoContainerMouseEnter');
     // Use showControlsAndStartTimer to ensure auto-hide continues
     this.videoControlsRef?.showControlsAndStartTimer();
     this.showCursor();
@@ -210,7 +208,6 @@ export class VideoPlayerComponent implements OnDestroy {
   onVideoContainerMouseLeave(): void {
     // Only handle in expanded mode (not footer mode)
     if (this.footer() || this.ignoreMouseEvents) return;
-    console.log('[VideoPlayer] onVideoContainerMouseLeave');
     // Start auto-hide immediately when leaving the video area
     if (!this.media.paused) {
       this.videoControlsRef?.showControlsAndStartTimer();
@@ -226,14 +223,12 @@ export class VideoPlayerComponent implements OnDestroy {
       this.showCursor();
       return;
     }
-    console.log('[VideoPlayer] onVideoContainerMouseMove');
     this.videoControlsRef?.showControlsAndStartTimer();
     this.showCursor();
     this.startAutoHideTimer();
   }
 
   onControlsBarHover(hovering: boolean): void {
-    console.log('[VideoPlayer] onControlsBarHover:', hovering);
     this.isHoveringControlsBar.set(hovering);
     if (hovering) {
       // Keep cursor visible while hovering controls
@@ -256,9 +251,7 @@ export class VideoPlayerComponent implements OnDestroy {
     if (this.media.paused || this.footer() || this.isHoveringControlsBar()) return;
 
     this.clearAutoHideTimeout();
-    console.log('[VideoPlayer] Starting auto-hide timer');
     this.autoHideTimeout = setTimeout(() => {
-      console.log('[VideoPlayer] Auto-hide timer fired');
       if (!this.media.paused && !this.isHoveringControlsBar()) {
         this.cursorHidden.set(true);
       }
@@ -270,9 +263,7 @@ export class VideoPlayerComponent implements OnDestroy {
     if (this.footer()) return;
 
     this.clearAutoHideTimeout();
-    console.log('[VideoPlayer] Force starting auto-hide timer (fullscreen)');
     this.autoHideTimeout = setTimeout(() => {
-      console.log('[VideoPlayer] Auto-hide timer fired (fullscreen)');
       // Only check hover state, not paused (video should be playing if user went fullscreen)
       if (!this.isHoveringControlsBar()) {
         this.cursorHidden.set(true);
