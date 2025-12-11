@@ -265,7 +265,11 @@ export class LiveStreamPlayerComponent implements OnDestroy {
       const encoded = this.utilities.encodeEventForUrl(this.liveEvent()!);
       this.location.replaceState(`/stream/${encoded}`);
     } else if (!isExpanding) {
-      // Minimizing - navigate to streams page to show content
+      // Minimizing - exit native fullscreen if active
+      if (document.fullscreenElement) {
+        document.exitFullscreen();
+      }
+      // Navigate to streams page to show content
       this.router.navigate(['/streams'], { replaceUrl: true });
     }
   }
