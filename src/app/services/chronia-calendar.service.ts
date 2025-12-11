@@ -45,21 +45,21 @@ export class ChroniaCalendarService {
   private readonly STRUCTURED_DAYS_PER_YEAR = 364; // 13 * 28
   private readonly MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-  // Month names for Chronia calendar
+  // Month names for Chronia calendar (neutralized naming system)
   private readonly MONTH_NAMES = [
-    'Primara', // Month 1
-    'Secunda', // Month 2
-    'Tertia', // Month 3
-    'Quarta', // Month 4
-    'Quinta', // Month 5
-    'Sexta', // Month 6
-    'Septima', // Month 7
-    'Octava', // Month 8
-    'Nona', // Month 9
-    'Decima', // Month 10
-    'Undecima', // Month 11
-    'Duodecima', // Month 12
-    'Tredecima', // Month 13
+    'Unana', // Month 1 - Root "Un" = start, unity
+    'Dunana', // Month 2 - Root "Du" = two-like hint
+    'Trunana', // Month 3 - Root "Tru" = three-like hint
+    'Quarnana', // Month 4 - Root "Quar" = four-like hint
+    'Pentana', // Month 5 - Root "Pen" = five-like hint
+    'Hexana', // Month 6 - Root "Hex" = six-like hint
+    'Sevana', // Month 7 - Root "Sev" = seven-like hint
+    'Ovana', // Month 8 - Root "Ov" = eight-like hint
+    'Nonana', // Month 9 - Root "Non" = nine-like hint
+    'Dekana', // Month 10 - Root "Dek" = ten-like hint
+    'Endana', // Month 11 - Root "End" = eleven-like hint
+    'Dovana', // Month 12 - Root "Dov" = twelve-like hint
+    'Triskana', // Month 13 - Root "Tris" = thirteen-like hint
   ];
 
   /**
