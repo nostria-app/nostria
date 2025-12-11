@@ -338,7 +338,6 @@ export class VideoControlsComponent implements OnDestroy {
 
   /** Show controls and start auto-hide timer - use this when called from parent container */
   showControlsAndStartTimer(): void {
-    console.log('[VideoControls] showControlsAndStartTimer called, paused:', this.paused(), 'nativeFs:', this.nativeFullscreen());
     this.controlsVisible.set(true);
     this.clearAutoHideTimer();
     if (!this.paused()) {
@@ -348,7 +347,6 @@ export class VideoControlsComponent implements OnDestroy {
 
   /** Force start auto-hide timer, resetting hover state - used when entering fullscreen */
   forceShowControlsAndStartTimer(): void {
-    console.log('[VideoControls] forceShowControlsAndStartTimer called, paused:', this.paused());
     // Reset hover state since entering fullscreen repositions everything
     this.isHoveringControlsBar.set(false);
     this.controlsBarHover.emit(false);
@@ -360,14 +358,12 @@ export class VideoControlsComponent implements OnDestroy {
   }
 
   hideControls(): void {
-    console.log('[VideoControls] hideControls called, nativeFs:', this.nativeFullscreen(), 'seeking:', this.isSeeking(), 'hoveringBar:', this.isHoveringControlsBar());
     // Don't hide if hovering controls bar
     if (this.isHoveringControlsBar() || this.isSeeking()) {
       return;
     }
     // In native fullscreen, just hide - parent controls timing
     if (this.nativeFullscreen()) {
-      console.log('[VideoControls] Hiding controls in native fullscreen');
       this.controlsVisible.set(false);
       return;
     }
@@ -380,9 +376,7 @@ export class VideoControlsComponent implements OnDestroy {
   private startAutoHideTimer(): void {
     this.clearAutoHideTimer();
     const delay = this.mergedConfig().autoHideDelay ?? 3000;
-    console.log('[VideoControls] Starting auto-hide timer, delay:', delay);
     this.autoHideTimeout = setTimeout(() => {
-      console.log('[VideoControls] Timer fired, calling hideControls');
       this.hideControls();
     }, delay);
   }
