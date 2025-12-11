@@ -98,13 +98,7 @@ export class GameHoverCardService implements OnDestroy {
       .position()
       .flexibleConnectedTo(element)
       .withPositions([
-        {
-          originX: 'center',
-          originY: 'bottom',
-          overlayX: 'center',
-          overlayY: 'top',
-          offsetY: 8,
-        },
+        // Prioritize positioning above to avoid clipping at bottom of screen
         {
           originX: 'center',
           originY: 'top',
@@ -112,6 +106,15 @@ export class GameHoverCardService implements OnDestroy {
           overlayY: 'bottom',
           offsetY: -8,
         },
+        // Fallback to below if not enough space above
+        {
+          originX: 'center',
+          originY: 'bottom',
+          overlayX: 'center',
+          overlayY: 'top',
+          offsetY: 8,
+        },
+        // Left side positioning
         {
           originX: 'start',
           originY: 'center',
@@ -119,6 +122,7 @@ export class GameHoverCardService implements OnDestroy {
           overlayY: 'center',
           offsetX: -8,
         },
+        // Right side positioning
         {
           originX: 'end',
           originY: 'center',
