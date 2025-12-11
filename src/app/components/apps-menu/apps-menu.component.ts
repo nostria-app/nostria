@@ -136,6 +136,12 @@ export class AppsMenuComponent {
       action: () => this.openInstallDialog(),
       showInstallCheck: true,
     },
+    {
+      icon: 'settings',
+      label: 'Settings',
+      action: () => this.router.navigate(['/settings']),
+      showInstallCheck: true,
+    },
   ];
 
   getCreateItems(): MenuItem[] {
