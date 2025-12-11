@@ -337,6 +337,23 @@
     "app.tooltip.caching-profiles": "ذخیره‌سازی پروفایل‌ها: {$PROGRESS}% ({$PROCESSED}/{$TOTAL})",
     "app.tooltip.caching-aria": "پیشرفت ذخیره‌سازی پروفایل",
     "app.tooltip.publishing-event": "در حال انتشار رویداد...",
-    "app.tooltip.processing-aria": "پردازش در حال انجام"
+    "app.tooltip.processing-aria": "پردازش در حال انجام",
+    "chronia.calendar-name": "تقویم کرونیا",
+    "chronia.month.1": "اونانا",
+    "chronia.month.2": "دونانا",
+    "chronia.month.3": "ترونانا",
+    "chronia.month.4": "کوارنانا",
+    "chronia.month.5": "پنتانا",
+    "chronia.month.6": "هگزانا",
+    "chronia.month.7": "سوانا",
+    "chronia.month.8": "اوانا",
+    "chronia.month.9": "نونانا",
+    "chronia.month.10": "دکانا",
+    "chronia.month.11": "اندانا",
+    "chronia.month.12": "دووانا",
+    "chronia.month.13": "تریسکانا",
+    "chronia.special.solstice-day": "روز انقلاب",
+    "chronia.special.leap-day": "روز کبیسه",
+    "chronia.year-label": "سال"
   }
 }

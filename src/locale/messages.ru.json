@@ -337,6 +337,23 @@
     "app.tooltip.caching-profiles": "Кэширование профилей: {$PROGRESS}% ({$PROCESSED}/{$TOTAL})",
     "app.tooltip.caching-aria": "Прогресс кэширования профилей",
     "app.tooltip.publishing-event": "Публикация события...",
-    "app.tooltip.processing-aria": "Обработка выполняется"
+    "app.tooltip.processing-aria": "Обработка выполняется",
+    "chronia.calendar-name": "Календарь Хрония",
+    "chronia.month.1": "Унана",
+    "chronia.month.2": "Дунана",
+    "chronia.month.3": "Трунана",
+    "chronia.month.4": "Куарнана",
+    "chronia.month.5": "Пентана",
+    "chronia.month.6": "Хексана",
+    "chronia.month.7": "Севана",
+    "chronia.month.8": "Ована",
+    "chronia.month.9": "Нонана",
+    "chronia.month.10": "Декана",
+    "chronia.month.11": "Эндана",
+    "chronia.month.12": "Дована",
+    "chronia.month.13": "Трискана",
+    "chronia.special.solstice-day": "День солнцестояния",
+    "chronia.special.leap-day": "Високосный день",
+    "chronia.year-label": "Год"
   }
 }

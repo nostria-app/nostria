@@ -329,6 +329,23 @@
     "app.tooltip.caching-profiles": "Igcina amaphrofayela: {$PROGRESS}% ({$PROCESSED}/{$TOTAL})",
     "app.tooltip.caching-aria": "Inqubekela phambili yokugcina amaphrofayela",
     "app.tooltip.publishing-event": "Ishicilela isigameko...",
-    "app.tooltip.processing-aria": "Ukuphrosesa kuyaqhubeka"
+    "app.tooltip.processing-aria": "Ukuphrosesa kuyaqhubeka",
+    "chronia.calendar-name": "Ikhalenda ye-Chronia",
+    "chronia.month.1": "Unana",
+    "chronia.month.2": "Dunana",
+    "chronia.month.3": "Trunana",
+    "chronia.month.4": "Quarnana",
+    "chronia.month.5": "Pentana",
+    "chronia.month.6": "Hexana",
+    "chronia.month.7": "Sevana",
+    "chronia.month.8": "Ovana",
+    "chronia.month.9": "Nonana",
+    "chronia.month.10": "Dekana",
+    "chronia.month.11": "Endana",
+    "chronia.month.12": "Dovana",
+    "chronia.month.13": "Triskana",
+    "chronia.special.solstice-day": "Usuku lwe-Solstice",
+    "chronia.special.leap-day": "Usuku lwe-Leap",
+    "chronia.year-label": "Unyaka"
   }
 }

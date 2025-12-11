@@ -45,22 +45,46 @@ export class ChroniaCalendarService {
   private readonly STRUCTURED_DAYS_PER_YEAR = 364; // 13 * 28
   private readonly MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-  // Month names for Chronia calendar (neutralized naming system)
-  private readonly MONTH_NAMES = [
-    'Unana', // Month 1 - Root "Un" = start, unity
-    'Dunana', // Month 2 - Root "Du" = two-like hint
-    'Trunana', // Month 3 - Root "Tru" = three-like hint
-    'Quarnana', // Month 4 - Root "Quar" = four-like hint
-    'Pentana', // Month 5 - Root "Pen" = five-like hint
-    'Hexana', // Month 6 - Root "Hex" = six-like hint
-    'Sevana', // Month 7 - Root "Sev" = seven-like hint
-    'Ovana', // Month 8 - Root "Ov" = eight-like hint
-    'Nonana', // Month 9 - Root "Non" = nine-like hint
-    'Dekana', // Month 10 - Root "Dek" = ten-like hint
-    'Endana', // Month 11 - Root "End" = eleven-like hint
-    'Dovana', // Month 12 - Root "Dov" = twelve-like hint
-    'Triskana', // Month 13 - Root "Tris" = thirteen-like hint
-  ];
+  /**
+   * Get localized month names for Chronia calendar
+   * Uses $localize for i18n support
+   */
+  private getMonthNames(): string[] {
+    return [
+      $localize`:@@chronia.month.1:Unana`,
+      $localize`:@@chronia.month.2:Dunana`,
+      $localize`:@@chronia.month.3:Trunana`,
+      $localize`:@@chronia.month.4:Quarnana`,
+      $localize`:@@chronia.month.5:Pentana`,
+      $localize`:@@chronia.month.6:Hexana`,
+      $localize`:@@chronia.month.7:Sevana`,
+      $localize`:@@chronia.month.8:Ovana`,
+      $localize`:@@chronia.month.9:Nonana`,
+      $localize`:@@chronia.month.10:Dekana`,
+      $localize`:@@chronia.month.11:Endana`,
+      $localize`:@@chronia.month.12:Dovana`,
+      $localize`:@@chronia.month.13:Triskana`,
+    ];
+  }
+
+  /**
+   * Get localized special day names
+   */
+  getSolsticeDayName(): string {
+    return $localize`:@@chronia.special.solstice-day:Solstice Day`;
+  }
+
+  getLeapDayName(): string {
+    return $localize`:@@chronia.special.leap-day:Leap Day`;
+  }
+
+  getYearLabel(): string {
+    return $localize`:@@chronia.year-label:Year`;
+  }
+
+  getCalendarName(): string {
+    return $localize`:@@chronia.calendar-name:Chronia Calendar`;
+  }
 
   /**
    * Check if a Chronia year is a leap year
@@ -284,7 +308,7 @@ export class ChroniaCalendarService {
     if (month < 1 || month > 13) {
       return '';
     }
-    return this.MONTH_NAMES[month - 1];
+    return this.getMonthNames()[month - 1];
   }
 
   /**
@@ -293,16 +317,17 @@ export class ChroniaCalendarService {
    */
   format(chroniaDate: ChroniaDateTime, format = 'medium'): string {
     if (chroniaDate.isSolsticeDay) {
-      return this.formatSpecialDay('Solstice Day', chroniaDate, format);
+      return this.formatSpecialDay(this.getSolsticeDayName(), chroniaDate, format);
     }
     if (chroniaDate.isLeapDay) {
-      return this.formatSpecialDay('Leap Day', chroniaDate, format);
+      return this.formatSpecialDay(this.getLeapDayName(), chroniaDate, format);
     }
 
     const year = chroniaDate.year.toString().padStart(2, '0');
     const month = chroniaDate.month.toString().padStart(2, '0');
     const day = chroniaDate.day.toString().padStart(2, '0');
     const monthName = this.getMonthName(chroniaDate.month);
+    const yearLabel = this.getYearLabel();
 
     const hour = chroniaDate.hour.toString().padStart(2, '0');
     const minute = chroniaDate.minute.toString().padStart(2, '0');
@@ -319,10 +344,10 @@ export class ChroniaCalendarService {
         return `${monthName} ${day}, ${year}`;
       case 'long':
       case 'longDate':
-        return `${monthName} ${day}, Year ${year}`;
+        return `${monthName} ${day}, ${yearLabel} ${year}`;
       case 'full':
       case 'fullDate':
-        return `Day ${day} of ${monthName}, Year ${year} of Chronia`;
+        return `${monthName} ${day}, ${yearLabel} ${year}`;
       default:
         return `${year}.${month}.${day}`;
     }
@@ -333,6 +358,7 @@ export class ChroniaCalendarService {
    */
   private formatSpecialDay(dayName: string, chroniaDate: ChroniaDateTime, format: string): string {
     const year = chroniaDate.year.toString().padStart(2, '0');
+    const yearLabel = this.getYearLabel();
     const hour = chroniaDate.hour.toString().padStart(2, '0');
     const minute = chroniaDate.minute.toString().padStart(2, '0');
     const second = chroniaDate.second.toString().padStart(2, '0');
@@ -343,14 +369,14 @@ export class ChroniaCalendarService {
       case 'shortDate':
         return `${dayName} ${year}`;
       case 'medium':
-        return `${dayName}, Year ${year} ${hour}:${minute}:${second}`;
+        return `${dayName}, ${yearLabel} ${year} ${hour}:${minute}:${second}`;
       case 'mediumDate':
-        return `${dayName}, Year ${year}`;
+        return `${dayName}, ${yearLabel} ${year}`;
       case 'long':
       case 'longDate':
       case 'full':
       case 'fullDate':
-        return `${dayName} of Year ${year}`;
+        return `${dayName}, ${yearLabel} ${year}`;
       default:
         return `${dayName} ${year}`;
     }

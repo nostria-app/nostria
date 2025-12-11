@@ -320,6 +320,23 @@
     "app.tooltip.caching-profiles": "Keširanje profila: {$PROGRESS}% ({$PROCESSED}/{$TOTAL})",
     "app.tooltip.caching-aria": "Napredak keširanja profila",
     "app.tooltip.publishing-event": "Objava događaja...",
-    "app.tooltip.processing-aria": "Obrada u toku"
+    "app.tooltip.processing-aria": "Obrada u toku",
+    "chronia.calendar-name": "Hronija kalendar",
+    "chronia.month.1": "Unana",
+    "chronia.month.2": "Dunana",
+    "chronia.month.3": "Trunana",
+    "chronia.month.4": "Kvarnana",
+    "chronia.month.5": "Pentana",
+    "chronia.month.6": "Heksana",
+    "chronia.month.7": "Sevana",
+    "chronia.month.8": "Ovana",
+    "chronia.month.9": "Nonana",
+    "chronia.month.10": "Dekana",
+    "chronia.month.11": "Endana",
+    "chronia.month.12": "Dovana",
+    "chronia.month.13": "Triskana",
+    "chronia.special.solstice-day": "Dan solsticijuma",
+    "chronia.special.leap-day": "Prestupni dan",
+    "chronia.year-label": "Godina"
   }
 }

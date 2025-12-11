@@ -337,6 +337,23 @@
     "app.tooltip.caching-profiles": "Hurtigbufrer profiler: {$PROGRESS}% ({$PROCESSED}/{$TOTAL})",
     "app.tooltip.caching-aria": "Hurtigbufring av profiler pågår",
     "app.tooltip.publishing-event": "Publiserer hendelse...",
-    "app.tooltip.processing-aria": "Behandling pågår"
+    "app.tooltip.processing-aria": "Behandling pågår",
+    "chronia.calendar-name": "Chronia-kalender",
+    "chronia.month.1": "Unana",
+    "chronia.month.2": "Dunana",
+    "chronia.month.3": "Trunana",
+    "chronia.month.4": "Quarnana",
+    "chronia.month.5": "Pentana",
+    "chronia.month.6": "Hexana",
+    "chronia.month.7": "Sevana",
+    "chronia.month.8": "Ovana",
+    "chronia.month.9": "Nonana",
+    "chronia.month.10": "Dekana",
+    "chronia.month.11": "Endana",
+    "chronia.month.12": "Dovana",
+    "chronia.month.13": "Triskana",
+    "chronia.special.solstice-day": "Solvervsdag",
+    "chronia.special.leap-day": "Skudddag",
+    "chronia.year-label": "År"
   }
 }
