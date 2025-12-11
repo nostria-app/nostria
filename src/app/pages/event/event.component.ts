@@ -26,6 +26,7 @@ import { toSignal } from '@angular/core/rxjs-interop';
 import { EVENT_STATE_KEY, EventData } from '../../data-resolver';
 import { EventService, Reaction, ThreadData, ThreadedEvent } from '../../services/event';
 import { Title } from '@angular/platform-browser';
+import { LocalSettingsService } from '../../services/local-settings.service';
 
 /** Description of the EventPageComponent
  *
@@ -82,6 +83,7 @@ export class EventPageComponent {
   parentEvents = signal<Event[]>([]);
   threadData = signal<ThreadData | null>(null);
   private titleService = inject(Title);
+  localSettings = inject(LocalSettingsService);
 
   item!: EventData;
   reactions = signal<Reaction[]>([]);

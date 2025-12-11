@@ -17,6 +17,7 @@ export interface LocalSettings {
   trustRelay: string;
   startOnLastRoute: boolean;
   startFeedsOnLastEvent: boolean;
+  showThreadLines: boolean;
   removeTrackingParameters: boolean;
   calendarType: CalendarType;
 }
@@ -32,6 +33,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   trustRelay: 'wss://nip85.brainstorm.world',
   startOnLastRoute: true,
   startFeedsOnLastEvent: true,
+  showThreadLines: true,
   removeTrackingParameters: true,
   calendarType: 'gregorian',
 };
@@ -77,6 +79,7 @@ export class LocalSettingsService {
   readonly trustRelay = computed(() => this.settings().trustRelay);
   readonly startOnLastRoute = computed(() => this.settings().startOnLastRoute);
   readonly startFeedsOnLastEvent = computed(() => this.settings().startFeedsOnLastEvent);
+  readonly showThreadLines = computed(() => this.settings().showThreadLines);
   readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
   readonly calendarType = computed(() => this.settings().calendarType);
 
@@ -301,6 +304,13 @@ export class LocalSettingsService {
    */
   setStartFeedsOnLastEvent(startFeedsOnLastEvent: boolean): void {
     this.updateSettings({ startFeedsOnLastEvent });
+  }
+
+  /**
+   * Set show thread lines preference
+   */
+  setShowThreadLines(showThreadLines: boolean): void {
+    this.updateSettings({ showThreadLines });
   }
 
   /**
