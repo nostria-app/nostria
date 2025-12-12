@@ -1093,3 +1093,36 @@ mat-sidenav-content {
     flex-direction: column;
   }
 }
+
+// App initialization loading state
+.app-initializing {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  width: 100%;
+  background-color: var(--mat-sys-background);
+  color: var(--mat-sys-on-background);
+
+  .initializing-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .initializing-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--mat-sys-surface-container);
+    border-top-color: var(--mat-sys-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  .initializing-text {
+    font-size: 16px;
+    opacity: 0.8;
+  }
+}
