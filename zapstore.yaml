@@ -1,0 +1,11 @@
+repository: https://github.com/nostria-app/nostria
+assets:
+  - .*.apk
+images:
+  - public/screenshots/2025-12-12-login.webp
+  - public/screenshots/2025-12-12-profile.webp
+  - public/screenshots/2025-12-12-feed.webp
+  - public/screenshots/2025-12-12-thread.webp
+  - public/screenshots/2025-12-12-people.webp
+  - public/screenshots/2025-12-12-streams.webp
+  - public/screenshots/2025-12-12-stream.webp
