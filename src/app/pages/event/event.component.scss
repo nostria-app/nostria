@@ -205,22 +205,97 @@
 }
 
 .threaded-reply {
-  border-left: 2px solid var(--mat-sys-outline-variant);
-  padding-left: 8px;
-  // margin-bottom: 0.5rem;
+  position: relative;
+  display: flex;
+  padding-left: 0;
+
+  // Default border for threads without clickable line
+  &:not(.has-replies) {
+    border-left: 2px solid var(--mat-sys-outline-variant);
+    padding-left: 8px;
+  }
 
   &.no-thread-line {
     border-left: none;
     padding-left: 10px;
+
+    .thread-line-clickable {
+      display: none;
+    }
   }
 
   &:last-child {
     margin-bottom: 0;
   }
 
+  .thread-content {
+    flex: 1;
+    min-width: 0;
+  }
+
   app-event {
     padding-bottom: 0.25rem;
     margin-bottom: 0.25rem;
+  }
+}
+
+.thread-line-clickable {
+  width: 12px;
+  min-width: 12px;
+  cursor: pointer;
+  position: relative;
+  margin-right: 4px;
+
+  // The actual line
+  &::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: var(--mat-sys-outline-variant);
+    border-radius: 1px;
+    transition: background-color 0.15s ease, width 0.15s ease;
+  }
+
+  // Hover state - highlight the line
+  &:hover::before {
+    background-color: var(--mat-sys-primary);
+    width: 3px;
+    left: 3.5px;
+  }
+
+  // Collapsed state indicator
+  &.collapsed::before {
+    background-color: var(--mat-sys-secondary);
+  }
+
+  &.collapsed:hover::before {
+    background-color: var(--mat-sys-primary);
+  }
+}
+
+.expand-collapsed-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 4px 0 8px 0;
+  padding: 4px 12px;
+  font-size: 0.8125rem;
+  color: var(--mat-sys-secondary);
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 16px;
+
+  mat-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+  }
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-primary);
   }
 }
 

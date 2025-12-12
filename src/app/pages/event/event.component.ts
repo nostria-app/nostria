@@ -79,6 +79,42 @@ export class EventPageComponent {
   private routeParams = toSignal<ParamMap>(this.route.paramMap);
   replies = signal<Event[]>([]);
   threadedReplies = signal<ThreadedEvent[]>([]);
+
+  // Track collapsed thread IDs
+  collapsedThreads = signal<Set<string>>(new Set());
+
+  /**
+   * Toggle the collapsed state of a thread
+   */
+  toggleThreadCollapse(eventId: string): void {
+    this.collapsedThreads.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(eventId)) {
+        newSet.delete(eventId);
+      } else {
+        newSet.add(eventId);
+      }
+      return newSet;
+    });
+  }
+
+  /**
+   * Check if a thread is collapsed
+   */
+  isThreadCollapsed(eventId: string): boolean {
+    return this.collapsedThreads().has(eventId);
+  }
+
+  /**
+   * Count total replies (including nested) for a threaded event
+   */
+  countReplies(threadedEvent: ThreadedEvent): number {
+    let count = threadedEvent.replies.length;
+    for (const reply of threadedEvent.replies) {
+      count += this.countReplies(reply);
+    }
+    return count;
+  }
   transferState = inject(TransferState);
   parentEvents = signal<Event[]>([]);
   threadData = signal<ThreadData | null>(null);
