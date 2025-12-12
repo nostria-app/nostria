@@ -274,12 +274,30 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return warningTag?.[1] || 'Content may be sensitive';
   });
 
-  // Description text (content without hashtags)
+  // Description text (from summary tag or clean content)
   description = computed(() => {
     const event = this.event();
-    if (!event || !event.content) return null;
+    if (!event) return null;
 
-    return this.removeHashtagsFromContent(event.content);
+    // First try to get description from summary tag (NIP-71 standard)
+    const summaryTag = event.tags.find(tag => tag[0] === 'summary');
+    if (summaryTag?.[1]) {
+      return summaryTag[1];
+    }
+
+    // If content exists, check if it's JSON (malformed event)
+    if (event.content) {
+      const trimmedContent = event.content.trim();
+      // Skip JSON content - it's malformed for video events
+      if ((trimmedContent.startsWith('{') && trimmedContent.endsWith('}')) ||
+        (trimmedContent.startsWith('[') && trimmedContent.endsWith(']'))) {
+        return null;
+      }
+      // Otherwise use cleaned content
+      return this.removeHashtagsFromContent(event.content);
+    }
+
+    return null;
   });
 
   expandVideo(clickEvent?: MouseEvent | KeyboardEvent): void {
@@ -484,36 +502,60 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
       console.log('Video event kind:', event.kind, 'imeta tags:', imetaTags);
 
-      if (imetaTags.length === 0) return null;
+      // If imeta tags exist, parse them
+      if (imetaTags.length > 0) {
+        // Use the first imeta tag for primary video data
+        const primaryImeta = imetaTags[0];
+        const parsed = this.parseImetaTag(primaryImeta);
 
-      // Use the first imeta tag for primary video data
-      const primaryImeta = imetaTags[0];
-      const parsed = this.parseImetaTag(primaryImeta);
+        console.log('Parsed imeta tag:', parsed);
 
-      console.log('Parsed imeta tag:', parsed);
+        if (parsed['url']) {
+          // Get duration from dedicated duration tag
+          const durationTag = event.tags.find(tag => tag[0] === 'duration');
+          const altTag = event.tags.find(tag => tag[0] === 'alt');
+          const titleTag = event.tags.find(tag => tag[0] === 'title');
 
-      if (!parsed['url']) {
-        console.warn('No URL found in imeta tag');
-        return null;
+          const videoData = {
+            url: parsed['url'],
+            thumbnail: parsed['image'],
+            blurhash: parsed['blurhash'],
+            duration: durationTag?.[1] ? parseInt(durationTag[1], 10) : undefined,
+            title: titleTag?.[1],
+            alt: altTag?.[1] || parsed['alt'],
+          };
+
+          console.log('Video data:', videoData);
+
+          return videoData;
+        }
       }
 
-      // Get duration from dedicated duration tag
-      const durationTag = event.tags.find(tag => tag[0] === 'duration');
-      const altTag = event.tags.find(tag => tag[0] === 'alt');
-      const titleTag = event.tags.find(tag => tag[0] === 'title');
+      // Fallback: Try to get video URL from 'src' or 'url' tag (some events don't use imeta)
+      const srcTag = event.tags.find(tag => tag[0] === 'src');
+      const urlTag = event.tags.find(tag => tag[0] === 'url');
+      const videoUrl = srcTag?.[1] || urlTag?.[1];
 
-      const videoData = {
-        url: parsed['url'],
-        thumbnail: parsed['image'],
-        blurhash: parsed['blurhash'],
-        duration: durationTag?.[1] ? parseInt(durationTag[1], 10) : undefined,
-        title: titleTag?.[1],
-        alt: altTag?.[1] || parsed['alt'],
-      };
+      if (videoUrl) {
+        const imageTag = event.tags.find(tag => tag[0] === 'image');
+        const thumbTag = event.tags.find(tag => tag[0] === 'thumb');
+        const blurhashTag = event.tags.find(tag => tag[0] === 'blurhash');
+        const durationTag = event.tags.find(tag => tag[0] === 'duration');
+        const titleTag = event.tags.find(tag => tag[0] === 'title');
+        const altTag = event.tags.find(tag => tag[0] === 'alt');
 
-      console.log('Video data:', videoData);
+        return {
+          url: videoUrl,
+          thumbnail: thumbTag?.[1] || imageTag?.[1],
+          blurhash: blurhashTag?.[1],
+          duration: durationTag?.[1] ? parseInt(durationTag[1], 10) : undefined,
+          title: titleTag?.[1],
+          alt: altTag?.[1],
+        };
+      }
 
-      return videoData;
+      console.warn('No video URL found in event');
+      return null;
     } else {
       // Fallback for other event types
       const urlTag = event.tags.find(tag => tag[0] === 'url');

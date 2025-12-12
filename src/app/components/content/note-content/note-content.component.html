@@ -76,7 +76,11 @@
 @let token = item.token;
 <!-- Single token rendering -->
 @if (token.type === 'text') {
-<span>{{ token.content }}</span>
+@if (isJsonContent(token.content)) {
+<pre class="json-content">{{ formatJsonContent(token.content) }}</pre>
+} @else {
+<span class="text-content">{{ token.content }}</span>
+}
 } @else if (token.type === 'linebreak') {
 <br />
 } @else if (token.type === 'emoji') {
