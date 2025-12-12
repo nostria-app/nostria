@@ -127,6 +127,14 @@
     </div>
     <p class="setting-description" i18n="@@settings.navigation.show-thread-lines.description">Display vertical lines on
       the left side of threaded replies to indicate nesting depth.</p>
+
+    <div class="setting-item">
+      <span i18n="@@settings.navigation.open-threads-expanded">Open Threads Expanded</span>
+      <mat-slide-toggle [checked]="localSettings.openThreadsExpanded()" (change)="toggleOpenThreadsExpanded()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description" i18n="@@settings.navigation.open-threads-expanded.description">When viewing a thread,
+      show all replies expanded by default. Disable for a cleaner initial view with collapsed replies.</p>
   </div>
 
   <div>

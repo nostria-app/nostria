@@ -259,6 +259,17 @@ export class EventPageComponent {
         if (partialData.threadedReplies !== undefined) {
           this.threadedReplies.set(partialData.threadedReplies);
           this.isLoadingReplies.set(false);
+
+          // If openThreadsExpanded is false, collapse top-level replies by default
+          if (!this.localSettings.openThreadsExpanded() && partialData.threadedReplies.length > 0) {
+            const collapsedIds = new Set<string>();
+            for (const reply of partialData.threadedReplies) {
+              if (reply.replies.length > 0) {
+                collapsedIds.add(reply.event.id);
+              }
+            }
+            this.collapsedThreads.set(collapsedIds);
+          }
         }
 
         if (partialData.reactions !== undefined) {

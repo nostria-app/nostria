@@ -116,6 +116,10 @@ export class GeneralSettingsComponent {
     this.localSettings.setShowThreadLines(!this.localSettings.showThreadLines());
   }
 
+  toggleOpenThreadsExpanded(): void {
+    this.localSettings.setOpenThreadsExpanded(!this.localSettings.openThreadsExpanded());
+  }
+
   setMediaPrivacy(value: 'blur-non-following' | 'blur-always' | 'show-always'): void {
     this.settings.updateSettings({ mediaPrivacy: value });
   }

@@ -18,6 +18,7 @@ export interface LocalSettings {
   startOnLastRoute: boolean;
   startFeedsOnLastEvent: boolean;
   showThreadLines: boolean;
+  openThreadsExpanded: boolean;
   removeTrackingParameters: boolean;
   calendarType: CalendarType;
 }
@@ -34,6 +35,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   startOnLastRoute: true,
   startFeedsOnLastEvent: true,
   showThreadLines: true,
+  openThreadsExpanded: true,
   removeTrackingParameters: true,
   calendarType: 'gregorian',
 };
@@ -80,6 +82,7 @@ export class LocalSettingsService {
   readonly startOnLastRoute = computed(() => this.settings().startOnLastRoute);
   readonly startFeedsOnLastEvent = computed(() => this.settings().startFeedsOnLastEvent);
   readonly showThreadLines = computed(() => this.settings().showThreadLines);
+  readonly openThreadsExpanded = computed(() => this.settings().openThreadsExpanded);
   readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
   readonly calendarType = computed(() => this.settings().calendarType);
 
@@ -311,6 +314,13 @@ export class LocalSettingsService {
    */
   setShowThreadLines(showThreadLines: boolean): void {
     this.updateSettings({ showThreadLines });
+  }
+
+  /**
+   * Set open threads expanded preference
+   */
+  setOpenThreadsExpanded(openThreadsExpanded: boolean): void {
+    this.updateSettings({ openThreadsExpanded });
   }
 
   /**
