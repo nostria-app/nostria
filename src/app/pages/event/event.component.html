@@ -110,16 +110,21 @@
 }
 
 <ng-template #replyTemplate let-threadedEvent="threadedEvent">
-  <div class="threaded-reply" [class.no-thread-line]="!localSettings.showThreadLines()"
-    [class.has-replies]="threadedEvent.replies.length > 0">
-    @if (localSettings.showThreadLines() && threadedEvent.replies.length > 0) {
-    <div class="thread-line-clickable" (click)="toggleThreadCollapse(threadedEvent.event.id)"
-      (keydown.enter)="toggleThreadCollapse(threadedEvent.event.id)"
-      (keydown.space)="toggleThreadCollapse(threadedEvent.event.id)"
-      [class.collapsed]="isThreadCollapsed(threadedEvent.event.id)" role="button" tabindex="0"
-      title="Click to collapse or expand replies" aria-label="Toggle replies visibility">
+  <div class="threaded-reply"
+    [class.has-replies]="threadedEvent.replies.length > 0"
+    [class.lines-hidden]="!localSettings.showThreadLines()">
+    <div class="thread-line-clickable" 
+      [class.no-replies]="threadedEvent.replies.length === 0"
+      [class.collapsed]="isThreadCollapsed(threadedEvent.event.id)"
+      [class.interactive]="threadedEvent.replies.length > 0"
+      (click)="threadedEvent.replies.length > 0 ? toggleThreadCollapse(threadedEvent.event.id) : null"
+      (keydown.enter)="threadedEvent.replies.length > 0 ? toggleThreadCollapse(threadedEvent.event.id) : null"
+      (keydown.space)="threadedEvent.replies.length > 0 ? toggleThreadCollapse(threadedEvent.event.id) : null"
+      [attr.role]="threadedEvent.replies.length > 0 ? 'button' : null"
+      [attr.tabindex]="threadedEvent.replies.length > 0 ? 0 : null"
+      [attr.title]="threadedEvent.replies.length > 0 ? 'Click to collapse or expand replies' : null"
+      [attr.aria-label]="threadedEvent.replies.length > 0 ? 'Toggle replies visibility' : null">
     </div>
-    }
     <div class="thread-content">
       <app-event [event]="threadedEvent.event" mode="thread"></app-event>
 

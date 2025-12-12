@@ -209,23 +209,28 @@
   display: flex;
   padding-left: 0;
 
-  // Default border for threads without clickable line
-  &:not(.has-replies) {
-    border-left: 2px solid var(--mat-sys-outline-variant);
-    padding-left: 8px;
-  }
-
-  &.no-thread-line {
-    border-left: none;
-    padding-left: 10px;
-
-    .thread-line-clickable {
-      display: none;
-    }
-  }
-
   &:last-child {
     margin-bottom: 0;
+  }
+
+  // When lines are hidden in settings, make them transparent but still functional
+  &.lines-hidden {
+    .thread-line-clickable::before {
+      background-color: transparent;
+    }
+
+    // Show line on hover when it's interactive (has replies)
+    .thread-line-clickable.interactive:hover::before {
+      background-color: var(--mat-sys-primary);
+    }
+
+    .thread-line-clickable.collapsed::before {
+      background-color: transparent;
+    }
+
+    .thread-line-clickable.collapsed:hover::before {
+      background-color: var(--mat-sys-primary);
+    }
   }
 
   .thread-content {
@@ -242,7 +247,6 @@
 .thread-line-clickable {
   width: 12px;
   min-width: 12px;
-  cursor: pointer;
   position: relative;
   margin-right: 4px;
 
@@ -259,11 +263,21 @@
     transition: background-color 0.15s ease, width 0.15s ease;
   }
 
-  // Hover state - highlight the line
-  &:hover::before {
-    background-color: var(--mat-sys-primary);
-    width: 3px;
-    left: 3.5px;
+  // Non-interactive lines (no replies) - just visual, no cursor change
+  &.no-replies {
+    cursor: default;
+  }
+
+  // Interactive lines (has replies) - clickable
+  &.interactive {
+    cursor: pointer;
+
+    // Hover state - highlight the line
+    &:hover::before {
+      background-color: var(--mat-sys-primary);
+      width: 3px;
+      left: 3.5px;
+    }
   }
 
   // Collapsed state indicator
