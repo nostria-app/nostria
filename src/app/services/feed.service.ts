@@ -2215,6 +2215,36 @@ export class FeedService {
   }
 
   /**
+   * Get feeds configuration from localStorage for a specific pubkey.
+   * Returns the stored feeds if found, otherwise returns null (not empty array).
+   * This allows the caller to distinguish between "user has no feeds yet" (null)
+   * and "user explicitly deleted all feeds" (empty array).
+   */
+  private getFeedsFromStorage(pubkey: string): FeedConfig[] | null {
+    try {
+      const feedsByAccount = this.localStorageService.getObject<Record<string, FeedConfig[]>>(
+        this.appState.FEEDS_STORAGE_KEY
+      );
+
+      // If feedsByAccount doesn't exist at all, this is a new user
+      if (!feedsByAccount) {
+        return null;
+      }
+
+      // If feedsByAccount exists but this pubkey is not in it, return null
+      if (!(pubkey in feedsByAccount)) {
+        return null;
+      }
+
+      // Return whatever is stored for this pubkey (could be empty array if user deleted all feeds)
+      return feedsByAccount[pubkey];
+    } catch (error) {
+      this.logger.error('Error getting feeds from storage:', error);
+      return null;
+    }
+  }
+
+  /**
    * Load feeds from local storage
    * 
    * Feed Initialization Behavior:
@@ -2223,51 +2253,29 @@ export class FeedService {
    * 3. Users who deleted all feeds: Empty feed list is preserved (no auto-reset)
    * 4. Manual reset: User explicitly resets via menu option
    * 
-   * The feedsInitialized flag ensures that:
-   * - Default feeds are only created for truly new users
+   * The getFeedsFromStorage() helper ensures that:
+   * - Default feeds are only created for truly new users (when it returns null)
    * - Login method changes (browser extension, nsec, etc.) don't trigger resets
-   * - Intentional feed deletions are respected
+   * - Intentional feed deletions are respected (empty array is treated as valid)
    * - Feed configurations persist across sessions
    */
   private async loadFeeds(pubkey: string): Promise<void> {
     try {
-      // if (!pubkey) {
-      //   this.logger.warn('No pubkey found, not need to load anything yet.');
-      //   // const defaultFeeds = await this.initializeDefaultFeeds();
-      //   // this._feeds.set(defaultFeeds);
-      //   // this._feedsLoaded.set(true);
-      //   // this.saveFeeds();
-      //   // return;
-      // }
+      const storedFeeds = this.getFeedsFromStorage(pubkey);
 
-      const feedsByAccount = this.localStorageService.getObject<Record<string, FeedConfig[]>>(
-        this.appState.FEEDS_STORAGE_KEY
-      );
-
-      const storedFeeds = feedsByAccount && feedsByAccount[pubkey];
-
-      if (storedFeeds && Array.isArray(storedFeeds) && storedFeeds.length > 0) {
-        this._feeds.set(storedFeeds);
-        this._feedsLoaded.set(true);
-        this.logger.debug('Loaded feeds from storage for pubkey', pubkey, storedFeeds);
-      } else if (feedsByAccount) {
-        // If there is already array of feeds, but not for logged on user, we populate 
-        // their feeds with the default feeds connected to their pubkey.
+      // If storedFeeds is null, this user has never had feeds before - initialize defaults
+      if (storedFeeds === null) {
         this.logger.info('No feeds found for pubkey, initializing default feeds for pubkey', pubkey);
         const defaultFeeds = await this.initializeDefaultFeeds();
-        feedsByAccount[pubkey] = defaultFeeds;
         this._feeds.set(defaultFeeds);
         this._feedsLoaded.set(true);
         this.saveFeeds();
       } else {
-        // No feeds found at all, first time user - initialize defaults
-        this.logger.info('No feeds found in storage, initializing default feeds for pubkey', pubkey);
-        const feedsByAccount: Record<string, FeedConfig[]> = {};
-        const defaultFeeds = await this.initializeDefaultFeeds();
-        feedsByAccount[pubkey] = defaultFeeds;
-        this._feeds.set(defaultFeeds);
+        // storedFeeds exists (could be empty array if user deleted all feeds)
+        // Use whatever is stored, even if it's an empty array
+        this._feeds.set(storedFeeds);
         this._feedsLoaded.set(true);
-        this.saveFeeds();
+        this.logger.debug('Loaded feeds from storage for pubkey', pubkey, storedFeeds);
       }
     } catch (error) {
       this.logger.error('Error loading feeds from storage:', error);
