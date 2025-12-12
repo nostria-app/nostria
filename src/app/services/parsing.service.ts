@@ -682,9 +682,9 @@ export class ParsingService {
     const parts = segment.split('##LINEBREAK##');
 
     for (let i = 0; i < parts.length; i++) {
-      // Only add text token if there's actual content (not just whitespace on empty lines)
-      // But preserve whitespace around content (e.g., "text " or " text" should keep their spaces)
-      if (parts[i].length > 0 && parts[i].trim()) {
+      // Add text token if there's any content (including whitespace between inline elements)
+      // Empty strings (from empty lines) are skipped - they're represented by consecutive linebreaks
+      if (parts[i].length > 0) {
         const tokenId = this.generateStableTokenId(basePosition + i, parts[i], 'text');
         tokens.push({
           id: tokenId,
