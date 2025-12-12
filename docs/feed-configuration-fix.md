@@ -97,8 +97,8 @@ After this fix, the following scenarios work correctly:
 ## Files Modified
 
 - `/src/app/services/feed.service.ts`:
-  - Added `getFeedsFromStorage()` helper method (lines 2218-2245)
-  - Simplified `loadFeeds()` method (lines 2262-2291)
+  - Added `getFeedsFromStorage()` helper method
+  - Simplified `loadFeeds()` method
   - Removed 29 lines of complex conditional logic
   - Added 37 lines of clearer, more maintainable code
 

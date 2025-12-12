@@ -2253,10 +2253,10 @@ export class FeedService {
    * 3. Users who deleted all feeds: Empty feed list is preserved (no auto-reset)
    * 4. Manual reset: User explicitly resets via menu option
    * 
-   * The feedsInitialized flag ensures that:
-   * - Default feeds are only created for truly new users
+   * The getFeedsFromStorage() helper ensures that:
+   * - Default feeds are only created for truly new users (when it returns null)
    * - Login method changes (browser extension, nsec, etc.) don't trigger resets
-   * - Intentional feed deletions are respected
+   * - Intentional feed deletions are respected (empty array is treated as valid)
    * - Feed configurations persist across sessions
    */
   private async loadFeeds(pubkey: string): Promise<void> {
