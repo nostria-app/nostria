@@ -1,5 +1,6 @@
 <div class="app-container" [class.dark-theme]="themeService.darkMode()"
-  [attr.data-fullscreen]="layout.fullscreenMediaPlayer()">
+  [attr.data-fullscreen]="layout.fullscreenMediaPlayer()"
+  [style.background-color]="themeService.darkMode() ? '#18111b' : '#FEF7FA'">
   <!-- Success overlay with checkmark -->
   @if (appState.showSuccess()) {
   <div class="success-overlay">
@@ -16,11 +17,14 @@
   <app-welcome></app-welcome>
   }
   @if (!app.initialized()) {
-  <!-- Loading state while services initialize -->
-  <div class="app-initializing">
+  <!-- Loading state while services initialize - inline styles ensure visibility before CSS loads -->
+  <div class="app-initializing" [style.background-color]="themeService.darkMode() ? '#18111b' : '#FEF7FA'">
     <div class="initializing-content">
-      <div class="initializing-spinner"></div>
-      <div class="initializing-text" i18n="@@app.loading">Loading Nostria...</div>
+      <div class="initializing-spinner"
+        [style.border-color]="themeService.darkMode() ? 'rgba(197, 192, 255, 0.2)' : 'rgba(89, 83, 169, 0.2)'"
+        [style.border-top-color]="themeService.darkMode() ? '#c5c0ff' : '#5953a9'"></div>
+      <div class="initializing-text" [style.color]="themeService.darkMode() ? '#ecdeed' : '#201923'"
+        i18n="@@app.loading">Loading Nostria...</div>
     </div>
   </div>
   }
