@@ -145,14 +145,14 @@ export class RelaysComponent implements OnInit {
   knownDiscoveryRelays = [
     'wss://discovery.eu.nostria.app',
     'wss://discovery.us.nostria.app',
-    'wss://discovery.af.nostria.app',
+    // 'wss://discovery.af.nostria.app',
   ];
 
   // Nostria relay regions for setup
   nostriaRelayRegions = [
     { id: 'eu', name: 'Europe', discoveryRelay: 'wss://discovery.eu.nostria.app' },
     { id: 'us', name: 'North America', discoveryRelay: 'wss://discovery.us.nostria.app' },
-    { id: 'af', name: 'Africa', discoveryRelay: 'wss://discovery.af.nostria.app' },
+    // { id: 'af', name: 'Africa', discoveryRelay: 'wss://discovery.af.nostria.app' },
   ];
 
   // Signal to track if user has zero account relays

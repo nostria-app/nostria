@@ -23,11 +23,11 @@ export class DiscoveryService {
       name: 'proxy.us.nostria.app',
       region: 'USA',
     },
-    {
-      url: 'https://proxy.af.nostria.app/api/ping',
-      name: 'proxy.af.nostria.app',
-      region: 'Africa',
-    },
+    // {
+    //   url: 'https://proxy.af.nostria.app/api/ping',
+    //   name: 'proxy.af.nostria.app',
+    //   region: 'Africa',
+    // },
     // { url: 'https://proxy.as.nostria.app/api/ping', name: 'proxy.as.nostria.app', region: 'Asia' },
     // { url: 'https://proxy.sa.nostria.app/api/ping', name: 'proxy.sa.nostria.app', region: 'South America' },
     // { url: 'https://proxy.au.nostria.app/api/ping', name: 'proxy.au.nostria.app', region: 'Australia' },
