@@ -110,12 +110,31 @@
 }
 
 <ng-template #replyTemplate let-threadedEvent="threadedEvent">
-  <div class="threaded-reply" [class.no-thread-line]="!localSettings.showThreadLines()">
-    <app-event [event]="threadedEvent.event" mode="thread"></app-event>
-
-    @for (childReply of threadedEvent.replies; track childReply.event.id) {
-    <ng-container [ngTemplateOutlet]="replyTemplate"
-      [ngTemplateOutletContext]="{ threadedEvent: childReply }"></ng-container>
+  <div class="threaded-reply" [class.no-thread-line]="!localSettings.showThreadLines()"
+    [class.has-replies]="threadedEvent.replies.length > 0">
+    @if (localSettings.showThreadLines() && threadedEvent.replies.length > 0) {
+    <div class="thread-line-clickable" (click)="toggleThreadCollapse(threadedEvent.event.id)"
+      (keydown.enter)="toggleThreadCollapse(threadedEvent.event.id)"
+      (keydown.space)="toggleThreadCollapse(threadedEvent.event.id)"
+      [class.collapsed]="isThreadCollapsed(threadedEvent.event.id)" role="button" tabindex="0"
+      title="Click to collapse or expand replies" aria-label="Toggle replies visibility">
+    </div>
     }
+    <div class="thread-content">
+      <app-event [event]="threadedEvent.event" mode="thread"></app-event>
+
+      @if (isThreadCollapsed(threadedEvent.event.id) && threadedEvent.replies.length > 0) {
+      <button class="expand-collapsed-btn" mat-button (click)="toggleThreadCollapse(threadedEvent.event.id)">
+        <mat-icon>unfold_more</mat-icon>
+        <span>Show {{ countReplies(threadedEvent) }} {{ countReplies(threadedEvent) === 1 ? 'reply' : 'replies'
+          }}</span>
+      </button>
+      } @else {
+      @for (childReply of threadedEvent.replies; track childReply.event.id) {
+      <ng-container [ngTemplateOutlet]="replyTemplate"
+        [ngTemplateOutletContext]="{ threadedEvent: childReply }"></ng-container>
+      }
+      }
+    </div>
   </div>
 </ng-template>
