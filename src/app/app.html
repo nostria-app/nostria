@@ -15,6 +15,15 @@
   @if (layout.showWelcomeScreen()) {
   <app-welcome></app-welcome>
   }
+  @if (!app.initialized()) {
+  <!-- Loading state while services initialize -->
+  <div class="app-initializing">
+    <div class="initializing-content">
+      <div class="initializing-spinner"></div>
+      <div class="initializing-text" i18n="@@app.loading">Loading Nostria...</div>
+    </div>
+  </div>
+  }
   @if (app.initialized()) {
   <!-- Top toolbar - now outside and above the sidenav container -->
   <mat-toolbar class="app-toolbar no-print no-select">
