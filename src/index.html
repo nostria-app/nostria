@@ -32,6 +32,15 @@
 </head>
 
 <body class="mat-typography">
+  <script>
+    // Apply saved theme immediately to prevent flash
+    (function () {
+      var theme = localStorage.getItem('nostria-theme');
+      var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.body.style.backgroundColor = isDark ? '#18111b' : '#FEF7FA';
+      document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    })();
+  </script>
   <app-root>
     <!-- Initial loading indicator shown before Angular bootstraps -->
     <div id="app-loading" style="
@@ -41,11 +50,28 @@
       justify-content: center;
       height: 100vh;
       width: 100%;
-      background-color: #18111b;
-      color: #ecdeed;
       font-family: Roboto, sans-serif;
     ">
       <style>
+        /* Default to light mode (matches app default) */
+        body {
+          background-color: #FEF7FA;
+        }
+
+        body[data-theme="dark"] {
+          background-color: #18111b;
+        }
+
+        #app-loading {
+          background-color: #FEF7FA;
+          color: #201923;
+        }
+
+        body[data-theme="dark"] #app-loading {
+          background-color: #18111b;
+          color: #ecdeed;
+        }
+
         @keyframes app-spinner {
           0% {
             transform: rotate(0deg);
@@ -59,29 +85,21 @@
         .app-loading-spinner {
           width: 48px;
           height: 48px;
-          border: 4px solid rgba(197, 192, 255, 0.2);
-          border-top-color: #c5c0ff;
+          border: 4px solid rgba(89, 83, 169, 0.2);
+          border-top-color: #5953a9;
           border-radius: 50%;
           animation: app-spinner 1s linear infinite;
+        }
+
+        body[data-theme="dark"] .app-loading-spinner {
+          border-color: rgba(197, 192, 255, 0.2);
+          border-top-color: #c5c0ff;
         }
 
         .app-loading-text {
           margin-top: 16px;
           font-size: 16px;
           opacity: 0.8;
-        }
-
-        /* Support light mode based on prefers-color-scheme */
-        @media (prefers-color-scheme: light) {
-          #app-loading {
-            background-color: #FEF7FA !important;
-            color: #201923 !important;
-          }
-
-          .app-loading-spinner {
-            border-color: rgba(89, 83, 169, 0.2) !important;
-            border-top-color: #5953a9 !important;
-          }
         }
       </style>
       <div class="app-loading-spinner"></div>
