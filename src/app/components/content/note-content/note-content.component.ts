@@ -779,4 +779,28 @@ export class NoteContentComponent implements OnDestroy {
     this.closeHoverCard();
     this.routerSubscription?.unsubscribe();
   }
+
+  /**
+   * Check if content looks like JSON (starts with { or [ and ends with } or ])
+   * This helps detect malformed events that have JSON in the content field
+   */
+  isJsonContent(content: string): boolean {
+    if (!content || content.length < 2) return false;
+    const trimmed = content.trim();
+    return (trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+      (trimmed.startsWith('[') && trimmed.endsWith(']'));
+  }
+
+  /**
+   * Format JSON content for display - pretty prints if possible
+   */
+  formatJsonContent(content: string): string {
+    try {
+      const parsed = JSON.parse(content);
+      return JSON.stringify(parsed, null, 2);
+    } catch {
+      // If parsing fails, just return the original content
+      return content;
+    }
+  }
 }
