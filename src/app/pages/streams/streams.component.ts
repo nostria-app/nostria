@@ -138,6 +138,13 @@ export class StreamsComponent implements OnDestroy {
         continue;
       }
 
+      // TODO: Remove when the spam is gone.
+      // Skip spam streams with known spam tags
+      const tTags = event.tags.filter((tag: string[]) => tag[0] === 't').map((tag: string[]) => tag[1]?.toLowerCase());
+      if (tTags.includes('burnerstreams')) {
+        continue;
+      }
+
       const statusTag = event.tags.find((tag: string[]) => tag[0] === 'status');
       const status = statusTag?.[1] || 'planned';
 
