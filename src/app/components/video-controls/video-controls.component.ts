@@ -156,6 +156,7 @@ export class VideoControlsComponent implements OnDestroy {
     // Watch for video element changes and attach event listeners
     effect(() => {
       const video = this.videoElement();
+      console.log('[VideoControls] videoElement changed:', !!video, video?.src);
       this.cleanupVideoListeners();
 
       if (video) {
@@ -388,19 +389,9 @@ export class VideoControlsComponent implements OnDestroy {
     }
   }
 
-  // Play/Pause
+  // Play/Pause - emit event for parent to handle
+  // Parent component is responsible for calling video.play()/pause()
   onPlayPause(): void {
-    const video = this.videoElement();
-    if (video) {
-      const wasPaused = video.paused;
-      if (wasPaused) {
-        video.play().catch(console.error);
-      } else {
-        video.pause();
-      }
-      // Update state directly as fallback (in case events don't fire, e.g., live streams)
-      this.paused.set(!wasPaused);
-    }
     this.playPause.emit();
   }
 

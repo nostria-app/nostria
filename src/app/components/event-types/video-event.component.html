@@ -62,11 +62,10 @@
       <source [src]="videoInfo.url" [type]="videoMimeType()" />
       Your browser does not support the video tag.
     </video>
-    <app-video-controls [videoElement]="videoPlayerRef?.nativeElement"
-      [config]="{ showQuality: false, isLiveStream: false }" (playPause)="togglePlayPause()" (seek)="onSeek($event)"
-      (volumeChange)="onVolumeChange($event)" (muteToggle)="onMuteToggle()"
-      (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="toggleFullscreen()"
-      (pipToggle)="togglePictureInPicture()" (castToggle)="castToDevice()" />
+    <app-video-controls [videoElement]="videoElement()" [config]="{ showQuality: false, isLiveStream: false }"
+      (playPause)="togglePlayPause()" (seek)="onSeek($event)" (volumeChange)="onVolumeChange($event)"
+      (muteToggle)="onMuteToggle()" (playbackRateChange)="onPlaybackRateChange($event)"
+      (fullscreenToggle)="toggleFullscreen()" (pipToggle)="togglePictureInPicture()" (castToggle)="castToDevice()" />
     <button mat-icon-button class="collapse-video-btn" (click)="collapseVideo()" matTooltip="Show thumbnail">
       <mat-icon>picture_in_picture_alt</mat-icon>
     </button>

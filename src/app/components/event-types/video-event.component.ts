@@ -39,7 +39,21 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   allMediaEvents = input<Event[]>([]);
   mediaEventIndex = input<number | undefined>(undefined);
 
-  @ViewChild('videoPlayer') videoPlayerRef?: ElementRef<HTMLVideoElement>;
+  // Video player element - use setter to update signal when ViewChild resolves
+  private _videoPlayerRef?: ElementRef<HTMLVideoElement>;
+  videoElement = signal<HTMLVideoElement | undefined>(undefined);
+
+  @ViewChild('videoPlayer')
+  set videoPlayerRef(ref: ElementRef<HTMLVideoElement> | undefined) {
+    this._videoPlayerRef = ref;
+    const element = ref?.nativeElement;
+    console.log('[VideoEvent] ViewChild videoPlayer resolved:', !!element, element?.src);
+    this.videoElement.set(element);
+  }
+  get videoPlayerRef(): ElementRef<HTMLVideoElement> | undefined {
+    return this._videoPlayerRef;
+  }
+
   @ViewChild(VideoControlsComponent) videoControlsRef?: VideoControlsComponent;
 
   private router = inject(Router);
@@ -374,12 +388,25 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
   togglePlayPause(): void {
     const video = this.videoPlayerRef?.nativeElement;
-    if (!video) return;
+    if (!video) {
+      console.warn('[VideoEvent] togglePlayPause: No video element');
+      return;
+    }
+
+    console.log('[VideoEvent] togglePlayPause:', {
+      paused: video.paused,
+      readyState: video.readyState,
+      networkState: video.networkState,
+      currentSrc: video.currentSrc
+    });
 
     if (video.paused) {
-      video.play().catch(() => { /* User interaction required */ });
+      video.play().catch((error) => {
+        console.error('[VideoEvent] Play failed:', error);
+      });
     } else {
       video.pause();
+      console.log('[VideoEvent] Pause called, video.paused is now:', video.paused);
     }
   }
 
