@@ -302,7 +302,7 @@ export class MediaComponent {
       const nostriaMediaRegions = [
         { id: 'eu', name: 'Europe', mediaServer: 'https://mibo.eu.nostria.app' },
         { id: 'us', name: 'North America', mediaServer: 'https://mibo.us.nostria.app' },
-        { id: 'af', name: 'Africa', mediaServer: 'https://mibo.af.nostria.app' },
+        // { id: 'af', name: 'Africa', mediaServer: 'https://mibo.af.nostria.app' },
       ];
 
       // Try to detect user's region from their relays

@@ -181,7 +181,7 @@ export class IgdbService {
 
   // API endpoints for different regions
   private readonly apiEndpoints = [
-    'https://proxy.af.nostria.app/api/IGDB',
+    // 'https://proxy.af.nostria.app/api/IGDB',
     'https://proxy.us.nostria.app/api/IGDB',
     'https://proxy.eu.nostria.app/api/IGDB',
   ];
