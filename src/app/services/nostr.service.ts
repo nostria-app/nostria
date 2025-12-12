@@ -401,20 +401,24 @@ export class NostrService implements NostriaService {
         this.accountState.muteList.set(storedMuteList);
       }
 
-      // Start live subscription - this will fetch fresh data from relays
-      // and keep us updated with any changes in real-time
-      await this.subscribeToAccountMetadata(pubkey);
-
-      // Actively fetch fresh data from relays to ensure we have the latest
-      // This is important for syncing data across multiple devices
-      await this.loadAccountFollowing(pubkey);
-      await this.loadAccountMuteList(pubkey);
+      // Mark as initialized immediately after loading cached data
+      // This allows the UI to render with cached data while relay sync happens in background
+      if (!this.initialized()) {
+        this.logger.info('[NostrService] Setting initialized=true after loading cached data');
+        this.initialized.set(true);
+      }
 
       await this.database.saveInfo(pubkey, 'user', info);
 
-      if (!this.initialized()) {
-        this.initialized.set(true);
-      }
+      // Start live subscription - this will fetch fresh data from relays
+      // and keep us updated with any changes in real-time (runs in background)
+      this.subscribeToAccountMetadata(pubkey);
+
+      // Actively fetch fresh data from relays to ensure we have the latest
+      // This is important for syncing data across multiple devices
+      // Note: These run in background - UI is already showing with cached data
+      this.loadAccountFollowing(pubkey);
+      this.loadAccountMuteList(pubkey);
 
       // The subscription will handle setting loading state in its EOSE handler
     } catch (error) {
