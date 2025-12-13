@@ -203,6 +203,59 @@ export class FormatService {
   }
 
   /**
+   * Fetch the raw event from relays without generating preview HTML.
+   * Useful when you need to render the event using a specific component (e.g., PhotoEventComponent for kind 20).
+   */
+  async fetchEvent(
+    eventId: string,
+    authorPubkey?: string,
+    relayHints?: string[]
+  ): Promise<import('nostr-tools').Event | null> {
+    try {
+      let event = null;
+      let relaysToUse: string[] = [];
+
+      // 1. If we have relay hints, use them first
+      if (relayHints && relayHints.length > 0) {
+        relaysToUse = this.utilities.normalizeRelayUrls(relayHints);
+        event = await this.relayPool.get(relaysToUse, { ids: [eventId] }, 3000);
+      }
+
+      // 2. If no event found and we have author pubkey, discover their relays
+      if (!event && authorPubkey) {
+        await this.userRelaysService.ensureRelaysForPubkey(authorPubkey);
+        relaysToUse = this.userRelaysService.getRelaysForPubkey(authorPubkey) || [];
+
+        if (relaysToUse.length > 0) {
+          const optimalRelays = this.utilities.pickOptimalRelays(relaysToUse, 5);
+          event = await this.relayPool.get(optimalRelays, { ids: [eventId] }, 3000);
+        }
+      }
+
+      // 3. Try using account relays/storage as fallback
+      if (!event && authorPubkey) {
+        try {
+          const record = await this.dataService.getEventById(eventId, { cache: true, save: true });
+          event = record?.event || null;
+        } catch {
+          // Ignore errors
+        }
+      }
+
+      // 4. Final fallback - try cache/storage
+      if (!event) {
+        const record = await this.dataService.getEventById(eventId, { cache: true, save: true });
+        event = record?.event || null;
+      }
+
+      return event;
+    } catch (error) {
+      this.logger.error('[fetchEvent] Error fetching event:', error);
+      return null;
+    }
+  }
+
+  /**
    * Calculate relative time from a Nostr timestamp (seconds since epoch)
    */
   private getRelativeTime(timestamp: number): string {

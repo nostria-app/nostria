@@ -231,6 +231,12 @@
     <span class="placeholder-text">Unable to load referenced event</span>
   </div>
 </div>
+} @else if (isPhotoEvent(token.id)) {
+<!-- Render kind 20 photo events using PhotoEventComponent for full carousel/blurhash support -->
+<div class="embedded-photo-event">
+  <app-photo-event [event]="getEventData(token.id)!" [hideComments]="true"
+    [trustedByPubkey]="trustedByPubkey()"></app-photo-event>
+</div>
 } @else if (getEventPreview(token.id); as preview) {
 <div class="nostr-event-preview" [innerHTML]="preview"></div>
 } @else {

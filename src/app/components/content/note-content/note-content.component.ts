@@ -21,6 +21,8 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
+import { PhotoEventComponent } from '../../event-types/photo-event.component';
+import { Event as NostrEvent } from 'nostr-tools';
 
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
@@ -33,7 +35,7 @@ export interface DisplayItem {
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, AudioPlayerComponent],
+  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, AudioPlayerComponent, PhotoEventComponent],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })
@@ -58,6 +60,9 @@ export class NoteContentComponent implements OnDestroy {
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
+
+  // Store raw events for special rendering (e.g., kind 20 photos with carousel/blurhash)
+  private eventDataMap = signal<Map<number, NostrEvent>>(new Map());
 
   // Track loading state for each event preview
   private eventLoadingMap = signal<Map<number, 'loading' | 'loaded' | 'failed'>>(new Map());
@@ -251,6 +256,7 @@ export class NoteContentComponent implements OnDestroy {
 
   private async loadEventPreviews(tokens: ContentToken[]): Promise<void> {
     const previewsMap = new Map<number, SafeHtml>();
+    const eventDataMap = new Map<number, NostrEvent>();
     const loadingMap = new Map<number, 'loading' | 'loaded' | 'failed'>();
 
     // Mark all event previews as loading
@@ -277,15 +283,33 @@ export class NoteContentComponent implements OnDestroy {
             const authorPubkey = type === 'nevent' ? (data.author || data.pubkey) : undefined;
             const relayHints = type === 'nevent' ? data.relays : undefined;
 
-            const previewHtml = await this.formatService.fetchEventPreview(
+            // First, fetch the raw event to check its kind
+            const event = await this.formatService.fetchEvent(
               eventId,
               authorPubkey,
               relayHints
             );
 
-            if (previewHtml) {
-              previewsMap.set(token.id, this.sanitizer.bypassSecurityTrustHtml(previewHtml));
-              loadingMap.set(token.id, 'loaded');
+            if (event) {
+              // For kind 20 (photo) events, store the raw event for PhotoEventComponent rendering
+              if (event.kind === 20) {
+                eventDataMap.set(token.id, event);
+                loadingMap.set(token.id, 'loaded');
+              } else {
+                // For other kinds, generate HTML preview
+                const previewHtml = await this.formatService.fetchEventPreview(
+                  eventId,
+                  authorPubkey,
+                  relayHints
+                );
+
+                if (previewHtml) {
+                  previewsMap.set(token.id, this.sanitizer.bypassSecurityTrustHtml(previewHtml));
+                  loadingMap.set(token.id, 'loaded');
+                } else {
+                  loadingMap.set(token.id, 'failed');
+                }
+              }
             } else {
               loadingMap.set(token.id, 'failed');
             }
@@ -296,6 +320,7 @@ export class NoteContentComponent implements OnDestroy {
 
           // Update state after each preview attempt
           this.eventPreviewsMap.set(new Map(previewsMap));
+          this.eventDataMap.set(new Map(eventDataMap));
           this.eventLoadingMap.set(new Map(loadingMap));
         }
       }
@@ -304,6 +329,15 @@ export class NoteContentComponent implements OnDestroy {
 
   getEventPreview(tokenId: number): SafeHtml | undefined {
     return this.eventPreviewsMap().get(tokenId);
+  }
+
+  getEventData(tokenId: number): NostrEvent | undefined {
+    return this.eventDataMap().get(tokenId);
+  }
+
+  isPhotoEvent(tokenId: number): boolean {
+    const event = this.eventDataMap().get(tokenId);
+    return event?.kind === 20;
   }
 
   getEventLoadingState(tokenId: number): 'loading' | 'loaded' | 'failed' | undefined {
