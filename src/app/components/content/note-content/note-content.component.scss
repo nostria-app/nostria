@@ -306,25 +306,63 @@
     justify-content: center;
     background: rgba(0, 0, 0, 0.5);
     color: white;
-    cursor: pointer;
     -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
-    transition: background-color 0.3s ease;
 
-    &:hover {
-      background: rgba(0, 0, 0, 0.7);
+    .reveal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
     }
 
-    mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      margin-bottom: 8px;
-    }
+    .reveal-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border: none;
+      outline: none;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+      font-family: inherit;
 
-    span {
-      font-size: 14px;
-      font-weight: 500;
+      &:focus {
+        outline: none;
+      }
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.02);
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      span {
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      &.trust-btn {
+        background: rgba(var(--mat-sys-primary-rgb, 99, 102, 241), 0.3);
+
+        &:hover {
+          background: rgba(var(--mat-sys-primary-rgb, 99, 102, 241), 0.5);
+        }
+      }
     }
   }
 }
@@ -434,25 +472,63 @@
     justify-content: center;
     background: rgba(0, 0, 0, 0.5);
     color: white;
-    cursor: pointer;
     -webkit-backdrop-filter: blur(2px);
     backdrop-filter: blur(2px);
-    transition: background-color 0.3s ease;
 
-    &:hover {
-      background: rgba(0, 0, 0, 0.7);
+    .reveal-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
     }
 
-    mat-icon {
-      font-size: 48px;
-      width: 48px;
-      height: 48px;
-      margin-bottom: 8px;
-    }
+    .reveal-btn {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border: none;
+      outline: none;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      cursor: pointer;
+      transition: background-color 0.2s ease, transform 0.1s ease;
+      -webkit-backdrop-filter: blur(4px);
+      backdrop-filter: blur(4px);
+      font-family: inherit;
 
-    span {
-      font-size: 14px;
-      font-weight: 500;
+      &:focus {
+        outline: none;
+      }
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.02);
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
+
+      mat-icon {
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+
+      span {
+        font-size: 14px;
+        font-weight: 500;
+      }
+
+      &.trust-btn {
+        background: rgba(var(--mat-sys-primary-rgb, 99, 102, 241), 0.3);
+
+        &:hover {
+          background: rgba(var(--mat-sys-primary-rgb, 99, 102, 241), 0.5);
+        }
+      }
     }
   }
 }

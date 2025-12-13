@@ -468,12 +468,17 @@
     }
 
     .publish-button {
-      display: flex;
+      display: inline-flex;
       align-items: center;
+      justify-content: center;
       gap: 8px;
 
       .spinning {
         animation: spin 1s linear infinite;
+        vertical-align: middle;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
       }
     }
   }

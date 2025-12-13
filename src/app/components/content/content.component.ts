@@ -82,6 +82,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Input to hide tagged references (useful for comments/replies where the parent is already visible)
   hideTaggedReferences = input<boolean>(false);
 
+  // Pubkey of someone who shared/reposted this content - if trusted, media should be revealed
+  trustedByPubkey = input<string | undefined>(undefined);
+
   // Track visibility of the component
   private _isVisible = signal<boolean>(false);
   private _hasBeenVisible = signal<boolean>(false);

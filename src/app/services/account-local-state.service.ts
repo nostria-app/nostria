@@ -1,4 +1,4 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, signal } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { DeviceNotificationPreferences } from './database.service';
 
@@ -44,6 +44,7 @@ interface AccountLocalState {
   zapSplitEnabled?: boolean; // Whether zap split is enabled when quoting
   zapSplitOriginalPercent?: number; // Percentage to original author (0-100)
   zapSplitQuoterPercent?: number; // Percentage to quoter (0-100)
+  trustedMediaAuthors?: string[]; // Pubkeys of authors whose media should always be revealed (not blurred)
 }
 
 /**
@@ -66,6 +67,9 @@ export class AccountLocalStateService {
 
   // In-memory cache of account states to avoid repeated localStorage reads
   private cachedStates: AccountStatesRoot | null = null;
+
+  // Signal to trigger reactivity when trusted media authors change
+  private trustedMediaAuthorsVersion = signal(0);
 
   /**
    * Get all account states from cache or localStorage
@@ -529,6 +533,55 @@ export class AccountLocalStateService {
    */
   setZapSplitQuoterPercent(pubkey: string, percent: number): void {
     this.updateAccountState(pubkey, { zapSplitQuoterPercent: percent });
+  }
+
+  /**
+   * Get trusted media authors for an account
+   * These are pubkeys whose media should always be revealed (not blurred)
+   * @param pubkey The user's pubkey
+   * @param trackChanges If true, reads the version signal to enable reactivity
+   */
+  getTrustedMediaAuthors(pubkey: string, trackChanges = false): string[] {
+    // Read version signal to establish dependency for computed signals
+    if (trackChanges) {
+      this.trustedMediaAuthorsVersion();
+    }
+    const state = this.getAccountState(pubkey);
+    return state.trustedMediaAuthors || [];
+  }
+
+  /**
+   * Set trusted media authors for an account
+   */
+  setTrustedMediaAuthors(pubkey: string, authors: string[]): void {
+    this.updateAccountState(pubkey, { trustedMediaAuthors: authors });
+    // Bump version to trigger reactivity in computed signals
+    this.trustedMediaAuthorsVersion.update(v => v + 1);
+  }
+
+  /**
+   * Add a trusted media author for an account
+   */
+  addTrustedMediaAuthor(pubkey: string, authorPubkey: string): void {
+    const current = this.getTrustedMediaAuthors(pubkey);
+    if (!current.includes(authorPubkey)) {
+      this.setTrustedMediaAuthors(pubkey, [...current, authorPubkey]);
+    }
+  }
+
+  /**
+   * Remove a trusted media author for an account
+   */
+  removeTrustedMediaAuthor(pubkey: string, authorPubkey: string): void {
+    const current = this.getTrustedMediaAuthors(pubkey);
+    this.setTrustedMediaAuthors(pubkey, current.filter(p => p !== authorPubkey));
+  }
+
+  /**
+   * Check if an author is trusted for media reveal
+   */
+  isMediaAuthorTrusted(pubkey: string, authorPubkey: string): boolean {
+    return this.getTrustedMediaAuthors(pubkey).includes(authorPubkey);
   }
 
   /**
