@@ -87,6 +87,31 @@
   }
 }
 
+// Embedded photo event styling (kind 20 events with full carousel/blurhash support)
+.embedded-photo-event {
+  margin: 0.5rem 0;
+  border: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-low, #ffffff);
+
+  app-photo-event {
+    display: block;
+
+    // Override photo carousel container to fit nicely in embed
+    ::ng-deep .photo-carousel-container {
+      margin: 0;
+      max-width: 100%;
+    }
+
+    // Hide title and description in embedded context (already shown in parent)
+    ::ng-deep .media-title,
+    ::ng-deep .photo-description {
+      display: none;
+    }
+  }
+}
+
 // Nostr event preview styling
 // Use ::ng-deep to apply styles to dynamically inserted HTML
 ::ng-deep .nostr-event-preview {
