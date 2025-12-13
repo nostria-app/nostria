@@ -268,13 +268,6 @@
     }
   }
 
-  // When video is ready, placeholder is already hidden via @if in template
-  &.video-ready {
-    .main-video.loaded {
-      display: block;
-    }
-  }
-
   &.blurred {
     .video-placeholder-bg {
       opacity: 1 !important;
