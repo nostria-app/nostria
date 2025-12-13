@@ -145,7 +145,8 @@
           @else if (rootRecordData.event.kind === 0) {
           <app-user-profile [view]="'details'" [event]="rootRecordData.event"></app-user-profile>
           } @else {
-          <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"></app-content>
+          <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
+            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
           }
         </mat-card-content>
         @if (!isRootEventExpanded()) {
@@ -225,7 +226,8 @@
           @else if (parentRecordData.event.kind === 0) {
           <app-user-profile [view]="'details'" [event]="parentRecordData.event"></app-user-profile>
           } @else {
-          <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"></app-content>
+          <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
+            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
           }
         </mat-card-content>
         @if (!isParentEventExpanded()) {
@@ -255,13 +257,15 @@
     } @else {
     @if (item.event.kind === 20) {
     <app-photo-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
+      [trustedByPubkey]="trustedByPubkey()"></app-photo-event>
     }
     <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
     @else if (item.event.kind === 21 || item.event.kind === 22 || item.event.kind === 34235 || item.event.kind ===
     34236) {
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
+      [trustedByPubkey]="trustedByPubkey()"></app-video-event>
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
@@ -295,7 +299,8 @@
     {{ item.data.about }}
     <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
     } @else {
-    <app-content [content]="item.data" [event]="item.event"></app-content>
+    <app-content [content]="item.data" [event]="item.event"
+      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
     }
     }
   </mat-card-content>
@@ -312,13 +317,15 @@
     } @else {
     @if (item.event.kind === 20) {
     <app-photo-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
+      [trustedByPubkey]="trustedByPubkey()"></app-photo-event>
     }
     <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
     @else if (item.event.kind === 21 || item.event.kind === 22 || item.event.kind === 34235 || item.event.kind ===
     34236) {
     <app-video-event [event]="item.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
+      [trustedByPubkey]="trustedByPubkey()"></app-video-event>
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
@@ -355,7 +362,8 @@
     {{ item.data.about }}
     <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
     } @else {
-    <app-content [content]="item.data" [event]="item.event"></app-content>
+    <app-content [content]="item.data" [event]="item.event"
+      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
     }
     }
   </mat-card-content>

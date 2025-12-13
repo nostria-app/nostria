@@ -874,7 +874,7 @@ export class LayoutService implements OnDestroy {
     this.router.navigate(['/p', pubkey]);
   }
 
-  openEvent(eventId: string, event: Event): void {
+  openEvent(eventId: string, event: Event, trustedByPubkey?: string): void {
     // Handle live event comments (kind 1311) - extract and open the referenced stream
     if (event.kind === 1311) {
       const aTag = event.tags.find((tag: string[]) => tag[0] === 'a');
@@ -931,25 +931,25 @@ export class LayoutService implements OnDestroy {
     if (event.kind === kinds.LongFormArticle) {
       this.openArticle(neventId, event);
     } else {
-      this.openGenericEvent(neventId, event);
+      this.openGenericEvent(neventId, event, trustedByPubkey);
     }
   }
 
-  openGenericEvent(naddr: string, event?: Event): void {
+  openGenericEvent(naddr: string, event?: Event, trustedByPubkey?: string): void {
     // Check if we're currently on the feeds page
     const currentUrl = this.router.url;
     const isOnFeedsPage = currentUrl === '/' || currentUrl.startsWith('/f/');
 
     if (isOnFeedsPage) {
       // Open in dialog to preserve feeds state
-      this.openEventInDialog(naddr, event);
+      this.openEventInDialog(naddr, event, trustedByPubkey);
     } else {
       // Navigate normally for direct links or other contexts
-      this.router.navigate(['/e', naddr], { state: { event } });
+      this.router.navigate(['/e', naddr], { state: { event, trustedByPubkey } });
     }
   }
 
-  private openEventInDialog(eventId: string, event?: Event): void {
+  private openEventInDialog(eventId: string, event?: Event, trustedByPubkey?: string): void {
     // Close existing dialog if any
     if (this.currentEventDialogRef) {
       this.currentEventDialogRef.close();
@@ -968,11 +968,11 @@ export class LayoutService implements OnDestroy {
       title: dialogTitle,
       width: '800px',
       maxWidth: '100%',
-      data: { eventId, event },
+      data: { eventId, event, trustedByPubkey },
     });
 
     // Set the data on the component instance
-    this.currentEventDialogRef.componentInstance.data = { eventId, event };
+    this.currentEventDialogRef.componentInstance.data = { eventId, event, trustedByPubkey };
 
     // Fetch author profile to update dialog title
     if (pubkey) {
