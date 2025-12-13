@@ -546,7 +546,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     event.stopPropagation();
 
     // Use the layout service to navigate, which properly uses Angular router
-    this.layoutService.openEvent(nostrEvent.id, nostrEvent);
+    // Pass trustedByPubkey so the dialog knows to reveal media if the sharer is trusted
+    this.layoutService.openEvent(nostrEvent.id, nostrEvent, this.trustedByPubkey());
   }
 
   nextImage(mentionIndex: number, event: MouseEvent) {

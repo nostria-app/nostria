@@ -101,6 +101,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Media navigation context (for Media tab grid)
   allMediaEvents = input<Event[]>([]);
   mediaEventIndex = input<number | undefined>(undefined);
+  // Optional: pubkey of a trusted user who shared this (for blur bypass on media)
+  trustedByPubkey = input<string | undefined>(undefined);
   isPlain = computed<boolean>(() => this.appearance() === 'plain');
 
   // IntersectionObserver for lazy loading interactions

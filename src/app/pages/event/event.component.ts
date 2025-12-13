@@ -58,6 +58,8 @@ export class EventPageComponent {
   // Input for dialog mode - when provided, uses this instead of route params
   dialogEventId = input<string | undefined>(undefined);
   dialogEvent = input<Event | undefined>(undefined);
+  // Optional: pubkey of a trusted user who shared this (for blur bypass on main event)
+  trustedByPubkey = input<string | undefined>(undefined);
 
   event = signal<Event | undefined>(undefined);
   private readonly utilities = inject(UtilitiesService);

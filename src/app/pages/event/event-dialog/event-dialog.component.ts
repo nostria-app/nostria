@@ -10,6 +10,8 @@ import { CustomDialogRef } from '../../../services/custom-dialog.service';
 export interface EventDialogData {
   eventId: string;
   event?: Event;
+  // Optional: pubkey of a trusted user who shared this (for blur bypass on main event)
+  trustedByPubkey?: string;
 }
 
 @Component({
@@ -24,7 +26,8 @@ export interface EventDialogData {
     <div dialog-content class="event-dialog-content">
       <app-event-page 
         [dialogEventId]="data.eventId" 
-        [dialogEvent]="data.event">
+        [dialogEvent]="data.event"
+        [trustedByPubkey]="data.trustedByPubkey">
       </app-event-page>
     </div>
   `,

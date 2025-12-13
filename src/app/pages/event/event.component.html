@@ -34,7 +34,8 @@
 <!-- Main event -->
 @if (event()) {
 <div id="main-event">
-  <app-event [event]="event()" appearance="plain" [navigationDisabled]="true" mode="thread"></app-event>
+  <app-event [event]="event()" appearance="plain" [navigationDisabled]="true" mode="thread"
+    [trustedByPubkey]="trustedByPubkey()"></app-event>
 </div>
 }
 
