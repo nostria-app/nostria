@@ -79,14 +79,12 @@
       top: 8px;
       right: 8px;
       z-index: 10;
-      background-color: rgba(0, 0, 0, 0.7);
+      background-color: rgba(0, 0, 0, 0.8);
       border-radius: 50%;
       padding: 4px;
       display: flex;
       align-items: center;
       justify-content: center;
-      -webkit-backdrop-filter: blur(4px);
-      backdrop-filter: blur(4px);
 
       mat-icon {
         font-size: 20px;
@@ -107,9 +105,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      background-color: rgba(0, 0, 0, 0.5);
-      -webkit-backdrop-filter: blur(2px);
-      backdrop-filter: blur(2px);
+      background-color: rgba(0, 0, 0, 0.7);
 
       .reveal-actions {
         display: flex;
@@ -126,12 +122,10 @@
         border: none;
         outline: none;
         border-radius: 24px;
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(60, 60, 60, 0.9);
         color: white;
         cursor: pointer;
         transition: background-color 0.2s ease, transform 0.1s ease;
-        -webkit-backdrop-filter: blur(4px);
-        backdrop-filter: blur(4px);
         font-family: inherit;
 
         &:focus {
@@ -269,10 +263,8 @@
       position: absolute;
       top: 8px;
       right: 8px;
-      background-color: rgba(0, 0, 0, 0.6);
+      background-color: rgba(0, 0, 0, 0.8);
       color: white;
-      -webkit-backdrop-filter: blur(4px);
-      backdrop-filter: blur(4px);
       z-index: 20;
       opacity: 0;
       transition: opacity 0.25s ease;
