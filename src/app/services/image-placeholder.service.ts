@@ -4,16 +4,18 @@ import { thumbHashToDataURL, rgbaToThumbHash } from 'thumbhash';
 import { SettingsService } from './settings.service';
 import type { PlaceholderAlgorithm } from './settings.service';
 import { LoggerService } from './logger.service';
+import { ThemeService } from './theme.service';
 
 // Re-export for convenience
 export type { PlaceholderAlgorithm };
 
-// Default placeholder for images without one - neutral dark purple/gray gradient
-export const DEFAULT_BLURHASH = 'L26RoJ.700~V9FM_4o-:9GM|%MRj';
+// Default placeholders for light mode - neutral light gray
+export const DEFAULT_BLURHASH_LIGHT = 'L6Pj0^jE.mfQ~qfQ-;fQ.mfQfQfQ';
+export const DEFAULT_THUMBHASH_LIGHT = 'IQgOHQZpiIiPh4h3d3d3d3d3d3A';
 
-// Default thumbhash - a similar neutral placeholder (generated from same concept)
-// This is a simple gray/purple gradient thumbhash
-export const DEFAULT_THUMBHASH = 'mxgOFwJ4iYePiHh6d3eIh3d5OA4G5GAC';
+// Default placeholders for dark mode - neutral dark gray
+export const DEFAULT_BLURHASH_DARK = 'L02rs+j[j[j[~qj[j[j[j[j[j[j[';
+export const DEFAULT_THUMBHASH_DARK = 'FQgGBQIIaIaIZ3d3d3d3d3d3dwA';
 
 export interface PlaceholderData {
   blurhash?: string;
@@ -34,14 +36,17 @@ export interface GeneratedPlaceholder {
 export class ImagePlaceholderService {
   private settings = inject(SettingsService);
   private logger = inject(LoggerService);
+  private themeService = inject(ThemeService);
 
   // Cache for decoded placeholder data URLs to avoid regenerating
   private placeholderCache = new Map<string, string>();
   private maxCacheSize = 500;
 
-  // Default data URLs (generated once and reused)
-  private defaultBlurhashDataUrl: string | null = null;
-  private defaultThumbhashDataUrl: string | null = null;
+  // Default data URLs (generated once per theme and reused)
+  private defaultBlurhashDataUrlLight: string | null = null;
+  private defaultBlurhashDataUrlDark: string | null = null;
+  private defaultThumbhashDataUrlLight: string | null = null;
+  private defaultThumbhashDataUrlDark: string | null = null;
 
   /**
    * Get the current preferred placeholder algorithm from settings
@@ -433,28 +438,46 @@ export class ImagePlaceholderService {
   }
 
   /**
-   * Get default placeholder data URL based on preferred algorithm
+   * Get default placeholder data URL based on preferred algorithm and theme
    */
   getDefaultPlaceholderDataUrl(width = 400, height = 400): string {
     const algorithm = this.getPreferredAlgorithm();
+    const isDark = this.themeService.darkMode();
 
     if (algorithm === 'thumbhash') {
-      if (!this.defaultThumbhashDataUrl) {
-        try {
-          this.defaultThumbhashDataUrl = this.decodeThumbhash(DEFAULT_THUMBHASH);
-        } catch {
-          // Fallback to blurhash if thumbhash decode fails
-          this.defaultThumbhashDataUrl = this.decodeBlurhash(DEFAULT_BLURHASH, width, height);
+      if (isDark) {
+        if (!this.defaultThumbhashDataUrlDark) {
+          try {
+            this.defaultThumbhashDataUrlDark = this.decodeThumbhash(DEFAULT_THUMBHASH_DARK);
+          } catch {
+            this.defaultThumbhashDataUrlDark = this.decodeBlurhash(DEFAULT_BLURHASH_DARK, width, height);
+          }
         }
+        return this.defaultThumbhashDataUrlDark || '';
+      } else {
+        if (!this.defaultThumbhashDataUrlLight) {
+          try {
+            this.defaultThumbhashDataUrlLight = this.decodeThumbhash(DEFAULT_THUMBHASH_LIGHT);
+          } catch {
+            this.defaultThumbhashDataUrlLight = this.decodeBlurhash(DEFAULT_BLURHASH_LIGHT, width, height);
+          }
+        }
+        return this.defaultThumbhashDataUrlLight || '';
       }
-      return this.defaultThumbhashDataUrl || '';
     }
 
     // Default to blurhash
-    if (!this.defaultBlurhashDataUrl) {
-      this.defaultBlurhashDataUrl = this.decodeBlurhash(DEFAULT_BLURHASH, width, height);
+    if (isDark) {
+      if (!this.defaultBlurhashDataUrlDark) {
+        this.defaultBlurhashDataUrlDark = this.decodeBlurhash(DEFAULT_BLURHASH_DARK, width, height);
+      }
+      return this.defaultBlurhashDataUrlDark || '';
+    } else {
+      if (!this.defaultBlurhashDataUrlLight) {
+        this.defaultBlurhashDataUrlLight = this.decodeBlurhash(DEFAULT_BLURHASH_LIGHT, width, height);
+      }
+      return this.defaultBlurhashDataUrlLight || '';
     }
-    return this.defaultBlurhashDataUrl || '';
   }
 
   /**
@@ -594,7 +617,9 @@ export class ImagePlaceholderService {
    */
   clearCache(): void {
     this.placeholderCache.clear();
-    this.defaultBlurhashDataUrl = null;
-    this.defaultThumbhashDataUrl = null;
+    this.defaultBlurhashDataUrlLight = null;
+    this.defaultBlurhashDataUrlDark = null;
+    this.defaultThumbhashDataUrlLight = null;
+    this.defaultThumbhashDataUrlDark = null;
   }
 }
