@@ -5,13 +5,15 @@
 <!-- Single image - render normally -->
 @let token = item.images[0];
 <div class="media-container image-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
-  [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)">
-  @if (shouldBlurImages() && getBlurhashDataUrl(); as blurhashUrl) {
-  <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" loading="lazy" />
+  [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
+  [class.image-loaded]="isImageLoaded(token.content)">
+  @if (getBlurhashDataUrl(); as blurhashUrl) {
+  <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" aria-hidden="true" />
   }
   <img [src]="token.content" alt="Content image" loading="lazy" (click)="openImageDialog(token.content)"
     [class.clickable-image]="!shouldBlurImages() || isImageRevealed(token.content)"
-    [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" />
+    [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" [class.loaded]="isImageLoaded(token.content)"
+    class="main-image" (load)="onImageLoaded(token.content)" />
   @if (shouldBlurImages() && !isImageRevealed(token.content)) {
   <div class="reveal-overlay">
     <div class="reveal-actions">
@@ -35,14 +37,17 @@
   (touchend)="onTouchEnd($event, item.id, item.images)">
   <div class="image-carousel">
     <div class="carousel-image-wrapper" [class.blurred]="shouldBlurImages() && !isImageRevealed(currentImage.content)"
-      [class.revealing]="shouldBlurImages() && isImageRevealed(currentImage.content)">
-      @if (shouldBlurImages() && getBlurhashDataUrl(); as blurhashUrl) {
-      <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" loading="lazy" />
+      [class.revealing]="shouldBlurImages() && isImageRevealed(currentImage.content)"
+      [class.image-loaded]="isImageLoaded(currentImage.content)">
+      @if (getBlurhashDataUrl(); as blurhashUrl) {
+      <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" aria-hidden="true" />
       }
       <img [src]="currentImage.content" alt="Image {{ currentIndex + 1 }} of {{ item.images.length }}" loading="lazy"
         (click)="openCarouselImageDialog(item.images, currentIndex)"
         [class.clickable-image]="!shouldBlurImages() || isImageRevealed(currentImage.content)"
-        [class.hidden]="shouldBlurImages() && !isImageRevealed(currentImage.content)" />
+        [class.hidden]="shouldBlurImages() && !isImageRevealed(currentImage.content)"
+        [class.loaded]="isImageLoaded(currentImage.content)" class="main-image"
+        (load)="onImageLoaded(currentImage.content)" />
       @if (shouldBlurImages() && !isImageRevealed(currentImage.content)) {
       <div class="reveal-overlay">
         <div class="reveal-actions">

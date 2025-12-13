@@ -77,6 +77,9 @@ export class NoteContentComponent implements OnDestroy {
   // Image blur state - use default placeholder instead of generating for performance
   private revealedImages = signal<Set<string>>(new Set());
 
+  // Track loaded images for progressive loading
+  private loadedImages = signal<Set<string>>(new Set());
+
   // Carousel state for image groups - maps group ID to current index
   private carouselIndices = signal<Map<number, number>>(new Map());
 
@@ -606,6 +609,24 @@ export class NoteContentComponent implements OnDestroy {
    */
   getBlurhashDataUrl(): string | null {
     return this.imagePlaceholder.getDefaultPlaceholderDataUrl(400, 400) || null;
+  }
+
+  /**
+   * Check if an image has finished loading (for progressive loading)
+   */
+  isImageLoaded(imageUrl: string): boolean {
+    return this.loadedImages().has(imageUrl);
+  }
+
+  /**
+   * Mark an image as loaded (for progressive loading transition)
+   */
+  onImageLoaded(imageUrl: string): void {
+    this.loadedImages.update(set => {
+      const newSet = new Set(set);
+      newSet.add(imageUrl);
+      return newSet;
+    });
   }
 
   /**

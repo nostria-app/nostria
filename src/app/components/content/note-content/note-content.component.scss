@@ -249,6 +249,16 @@
     height: auto;
   }
 
+  // Main image - starts hidden for progressive loading
+  .main-image {
+    opacity: 0;
+    transition: opacity 0.4s ease-out;
+
+    &.loaded {
+      opacity: 1;
+    }
+  }
+
   .blurhash-placeholder {
     position: absolute;
     top: 0;
@@ -256,9 +266,21 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    opacity: 1; // Show by default for progressive loading
+    transition: opacity 0.4s ease-out;
     pointer-events: none;
+    filter: blur(1px);
+  }
+
+  // Progressive loading - fade out placeholder when image loads
+  &.image-loaded {
+    .blurhash-placeholder {
+      opacity: 0;
+    }
+
+    .main-image.loaded {
+      opacity: 1;
+    }
   }
 
   &.blurred {
@@ -418,6 +440,16 @@
     &.clickable-image {
       cursor: pointer;
     }
+
+    // Main image - starts hidden for progressive loading
+    &.main-image {
+      opacity: 0;
+      transition: opacity 0.4s ease-out;
+
+      &.loaded {
+        opacity: 1;
+      }
+    }
   }
 
   .blurhash-placeholder {
@@ -427,9 +459,21 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
-    opacity: 0;
-    transition: opacity 0.3s ease;
+    opacity: 1; // Show by default
+    transition: opacity 0.4s ease-out;
     pointer-events: none;
+    filter: blur(1px);
+  }
+
+  // Progressive loading - fade out placeholder when image loads
+  &.image-loaded {
+    .blurhash-placeholder {
+      opacity: 0;
+    }
+
+    .main-image.loaded {
+      opacity: 1;
+    }
   }
 
   &.blurred {
