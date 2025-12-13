@@ -9,6 +9,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AccountStateService } from '../../../services/account-state.service';
@@ -19,6 +20,7 @@ import { ImageCacheService } from '../../../services/image-cache.service';
 import { InfoTooltipComponent } from '../../../components/info-tooltip/info-tooltip.component';
 import { ReportingService } from '../../../services/reporting.service';
 import { LocalSettingsService } from '../../../services/local-settings.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 
 @Component({
   selector: 'app-privacy-settings',
@@ -33,6 +35,7 @@ import { LocalSettingsService } from '../../../services/local-settings.service';
     MatCheckboxModule,
     MatFormFieldModule,
     MatInputModule,
+    MatTooltipModule,
     FormsModule,
     UserProfileComponent,
     InfoTooltipComponent,
@@ -47,6 +50,7 @@ export class PrivacySettingsComponent {
   imageCacheService = inject(ImageCacheService);
   reportingService = inject(ReportingService);
   localSettingsService = inject(LocalSettingsService);
+  accountLocalState = inject(AccountLocalStateService);
   router = inject(Router);
 
   // NIP-56 report types
@@ -96,6 +100,20 @@ export class PrivacySettingsComponent {
     if (!muteList) return [];
     return this.nostrService.getTags(muteList, 'e');
   });
+
+  // Trusted media authors - users whose media is always revealed
+  trustedMediaAuthors = computed(() => {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return [];
+    return this.accountLocalState.getTrustedMediaAuthors(pubkey, true);
+  });
+
+  removeTrustedMediaAuthor(authorPubkey: string): void {
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.removeTrustedMediaAuthor(pubkey, authorPubkey);
+    }
+  }
 
   async addMutedWord(): Promise<void> {
     const word = this.newMutedWord.trim().toLowerCase();

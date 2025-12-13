@@ -40,9 +40,17 @@
 
     <!-- Reveal overlay for blurred media -->
     @if (shouldBlurMedia()) {
-    <div class="reveal-overlay" (click)="revealMedia(); $event.stopPropagation()">
-      <mat-icon>visibility</mat-icon>
-      <span>Click to reveal</span>
+    <div class="reveal-overlay">
+      <div class="reveal-actions">
+        <button class="reveal-btn" (click)="revealMedia(); $event.stopPropagation()">
+          <mat-icon>visibility</mat-icon>
+          <span>Reveal once</span>
+        </button>
+        <button class="reveal-btn trust-btn" (click)="trustAuthor(); $event.stopPropagation()">
+          <mat-icon>verified_user</mat-icon>
+          <span>Always reveal this user</span>
+        </button>
+      </div>
     </div>
     }
 

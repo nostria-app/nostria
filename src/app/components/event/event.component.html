@@ -33,13 +33,15 @@
   <mat-card-content>
     @if (targetItem.event.kind === 20) {
     <app-photo-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
+      [trustedByPubkey]="item.event.pubkey"></app-photo-event>
     }
     <!-- Videos (NIP-71, kind 21/22/34235/34236) -->
     @else if (targetItem.event.kind === 21 || targetItem.event.kind === 22 || targetItem.event.kind === 34235 ||
     targetItem.event.kind === 34236) {
     <app-video-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
-      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-video-event>
+      [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"
+      [trustedByPubkey]="item.event.pubkey"></app-video-event>
     }
     <!-- Audio (kind 1222, 1244) -->
     @else if (targetItem.event.kind === 1222 || targetItem.event.kind === 1244) {
@@ -70,7 +72,7 @@
     <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
     } @else {
     <app-content [content]="repostService.decodeRepost(item.event).data"
-      [event]="repostService.decodeRepost(item.event).event"></app-content>
+      [event]="repostService.decodeRepost(item.event).event" [trustedByPubkey]="item.event.pubkey"></app-content>
     }
   </mat-card-content>
 

@@ -12,6 +12,7 @@ import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
@@ -28,11 +29,14 @@ export class PhotoEventComponent {
   // Media navigation context (for Media tab grid)
   allMediaEvents = input<Event[]>([]);
   mediaEventIndex = input<number | undefined>(undefined);
+  // Pubkey of someone who shared/reposted this content - if trusted, media should be revealed
+  trustedByPubkey = input<string | undefined>(undefined);
 
   private dialog = inject(MatDialog);
   private router = inject(Router);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private utilities = inject(UtilitiesService);
 
   // Current carousel index for inline navigation
@@ -72,9 +76,24 @@ export class PhotoEventComponent {
   shouldBlurMedia = computed(() => {
     const mediaPrivacy = this.settings.settings().mediaPrivacy || 'show-always';
     const event = this.event();
+    const authorPubkey = event.pubkey;
 
     if (mediaPrivacy === 'show-always') {
       return false;
+    }
+
+    // Check if author is trusted for media reveal
+    const currentUserPubkey = this.accountState.pubkey();
+    if (currentUserPubkey) {
+      const isTrusted = this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, authorPubkey);
+      if (isTrusted) {
+        return false;
+      }
+      // Also check if someone who shared/reposted this content is trusted
+      const sharer = this.trustedByPubkey();
+      if (sharer && this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, sharer)) {
+        return false;
+      }
     }
 
     if (mediaPrivacy === 'blur-always') {
@@ -82,7 +101,6 @@ export class PhotoEventComponent {
     }
 
     // blur-non-following
-    const authorPubkey = event.pubkey;
     const isFollowing = this.accountState.followingList().includes(authorPubkey);
     return !isFollowing && !this.isRevealed();
   });
@@ -212,6 +230,17 @@ export class PhotoEventComponent {
   // Reveal blurred media with animation
   revealMedia(): void {
     this.isRevealed.set(true);
+  }
+
+  // Trust author for media reveal (always show their media without blur)
+  trustAuthor(): void {
+    const currentUserPubkey = this.accountState.pubkey();
+    const authorPubkey = this.event().pubkey;
+    if (currentUserPubkey && authorPubkey) {
+      this.accountLocalState.addTrustedMediaAuthor(currentUserPubkey, authorPubkey);
+      // Also reveal the current media immediately
+      this.isRevealed.set(true);
+    }
   }
 
   // Touch event handlers for swipe

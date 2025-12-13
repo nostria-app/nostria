@@ -13,9 +13,17 @@
     [class.clickable-image]="!shouldBlurImages() || isImageRevealed(token.content)"
     [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" />
   @if (shouldBlurImages() && !isImageRevealed(token.content)) {
-  <div class="reveal-overlay" (click)="revealImage(token.content); $event.stopPropagation()">
-    <mat-icon>visibility</mat-icon>
-    <span>Click to reveal</span>
+  <div class="reveal-overlay">
+    <div class="reveal-actions">
+      <button class="reveal-btn" (click)="revealImage(token.content); $event.stopPropagation()">
+        <mat-icon>visibility</mat-icon>
+        <span>Reveal once</span>
+      </button>
+      <button class="reveal-btn trust-btn" (click)="trustAuthor(); $event.stopPropagation()">
+        <mat-icon>verified_user</mat-icon>
+        <span>Always reveal this user</span>
+      </button>
+    </div>
   </div>
   }
 </div>
@@ -36,9 +44,17 @@
         [class.clickable-image]="!shouldBlurImages() || isImageRevealed(currentImage.content)"
         [class.hidden]="shouldBlurImages() && !isImageRevealed(currentImage.content)" />
       @if (shouldBlurImages() && !isImageRevealed(currentImage.content)) {
-      <div class="reveal-overlay" (click)="revealAllImages(item.images); $event.stopPropagation()">
-        <mat-icon>visibility</mat-icon>
-        <span>Click to reveal</span>
+      <div class="reveal-overlay">
+        <div class="reveal-actions">
+          <button class="reveal-btn" (click)="revealAllImages(item.images); $event.stopPropagation()">
+            <mat-icon>visibility</mat-icon>
+            <span>Reveal once</span>
+          </button>
+          <button class="reveal-btn trust-btn" (click)="trustAuthor(); $event.stopPropagation()">
+            <mat-icon>verified_user</mat-icon>
+            <span>Always reveal this user</span>
+          </button>
+        </div>
       </div>
       }
     </div>
@@ -140,9 +156,17 @@
   </div>
   }
   @if (shouldBlurImages() && !isImageRevealed(token.content)) {
-  <div class="reveal-overlay" (click)="revealImage(token.content); $event.stopPropagation()">
-    <mat-icon>visibility</mat-icon>
-    <span>Click to reveal</span>
+  <div class="reveal-overlay">
+    <div class="reveal-actions">
+      <button class="reveal-btn" (click)="revealImage(token.content); $event.stopPropagation()">
+        <mat-icon>visibility</mat-icon>
+        <span>Reveal once</span>
+      </button>
+      <button class="reveal-btn trust-btn" (click)="trustAuthor(); $event.stopPropagation()">
+        <mat-icon>verified_user</mat-icon>
+        <span>Always reveal this user</span>
+      </button>
+    </div>
   </div>
   }
 </div>
@@ -154,9 +178,17 @@
     Your browser does not support the video element.
   </video>
   @if (shouldBlurImages() && !isImageRevealed(token.content)) {
-  <div class="reveal-overlay" (click)="revealImage(token.content); $event.stopPropagation()">
-    <mat-icon>visibility</mat-icon>
-    <span>Click to reveal</span>
+  <div class="reveal-overlay">
+    <div class="reveal-actions">
+      <button class="reveal-btn" (click)="revealImage(token.content); $event.stopPropagation()">
+        <mat-icon>visibility</mat-icon>
+        <span>Reveal once</span>
+      </button>
+      <button class="reveal-btn trust-btn" (click)="trustAuthor(); $event.stopPropagation()">
+        <mat-icon>verified_user</mat-icon>
+        <span>Always reveal this user</span>
+      </button>
+    </div>
   </div>
   }
 </div>

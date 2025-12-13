@@ -1,6 +1,7 @@
 <div class="content-container" #contentContainer>
   @if (shouldShowContent()) {
-  <app-note-content [contentTokens]="contentTokens()" [authorPubkey]="event()?.pubkey"></app-note-content>
+  <app-note-content [contentTokens]="contentTokens()" [authorPubkey]="event()?.pubkey"
+    [trustedByPubkey]="trustedByPubkey()"></app-note-content>
 
   @for (mention of eventMentions(); track mention.eventId; let mentionIndex = $index) {
   @if (mention.loading) {
@@ -120,8 +121,8 @@
     </mat-card-header>
     <mat-card-content>
       <div class="content-container">
-        <app-note-content [contentTokens]="mention.contentTokens"
-          [authorPubkey]="mention.event.event.pubkey"></app-note-content>
+        <app-note-content [contentTokens]="mention.contentTokens" [authorPubkey]="mention.event.event.pubkey"
+          [trustedByPubkey]="trustedByPubkey() || event()?.pubkey"></app-note-content>
       </div>
     </mat-card-content>
   </mat-card>

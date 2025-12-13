@@ -78,7 +78,7 @@
         @for (pubkey of mutedAccounts(); track pubkey) {
         <mat-list-item>
           <span matListItemTitle>
-            <app-user-profile [pubkey]="pubkey"> </app-user-profile>
+            <app-user-profile [pubkey]="pubkey" view="compact"></app-user-profile>
           </span>
           <button mat-icon-button (click)="removeMutedItem('account', pubkey); $event.stopPropagation()"
             matListItemMeta>
@@ -173,6 +173,34 @@
       </mat-list>
       } @else {
       <p class="empty-state" i18n="@@settings.privacy.muted-threads.empty">No muted threads.</p>
+      }
+    </div>
+  </section>
+
+  <section class="mute-section">
+    <h3>Trusted Media Authors</h3>
+    <p class="section-description">
+      Users whose media content (photos and videos) will always be shown without blur, even if they are not in your
+      following list.
+    </p>
+    <div class="muted-section">
+      @if (trustedMediaAuthors().length > 0) {
+      <mat-list>
+        @for (pubkey of trustedMediaAuthors(); track pubkey) {
+        <mat-list-item>
+          <span matListItemTitle>
+            <app-user-profile [pubkey]="pubkey" view="compact"></app-user-profile>
+          </span>
+          <button mat-icon-button (click)="removeTrustedMediaAuthor(pubkey); $event.stopPropagation()" matListItemMeta
+            matTooltip="Remove from trusted media authors">
+            <mat-icon>close</mat-icon>
+          </button>
+        </mat-list-item>
+        }
+      </mat-list>
+      } @else {
+      <p class="empty-state">No trusted media authors. When viewing blurred media, you can choose "Always reveal this
+        user" to add them here.</p>
       }
     </div>
   </section>

@@ -18,6 +18,7 @@ import { CashuTokenComponent } from '../../cashu-token/cashu-token.component';
 import { AudioPlayerComponent } from '../../audio-player/audio-player.component';
 import { SettingsService } from '../../../services/settings.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { decode } from 'blurhash';
 
@@ -39,6 +40,8 @@ export interface DisplayItem {
 export class NoteContentComponent implements OnDestroy {
   contentTokens = input<ContentToken[]>([]);
   authorPubkey = input<string | undefined>(undefined);
+  // Pubkey of someone who shared/reposted this content - if trusted, media should be revealed
+  trustedByPubkey = input<string | undefined>(undefined);
 
   private router = inject(Router);
   private utilities = inject(UtilitiesService);
@@ -49,6 +52,7 @@ export class NoteContentComponent implements OnDestroy {
   private viewContainerRef = inject(ViewContainerRef);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private videoPlayback = inject(VideoPlaybackService);
 
   // Store rendered HTML for nevent/note previews
@@ -165,12 +169,28 @@ export class NoteContentComponent implements OnDestroy {
       return false;
     }
 
+    // Check if author is trusted for media reveal
+    const authorPubkey = this.authorPubkey();
+    const currentUserPubkey = this.accountState.pubkey();
+    if (currentUserPubkey) {
+      if (authorPubkey) {
+        const isTrusted = this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, authorPubkey);
+        if (isTrusted) {
+          return false;
+        }
+      }
+      // Also check if someone who shared/reposted this content is trusted
+      const sharer = this.trustedByPubkey();
+      if (sharer && this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, sharer)) {
+        return false;
+      }
+    }
+
     if (mediaPrivacy === 'blur-always') {
       return true;
     }
 
     // blur-non-following
-    const authorPubkey = this.authorPubkey();
     if (!authorPubkey) return false;
 
     const isFollowing = this.accountState.followingList().includes(authorPubkey);
@@ -565,6 +585,30 @@ export class NoteContentComponent implements OnDestroy {
       }
       return newSet;
     });
+  }
+
+  /**
+   * Trust author for media reveal (always show their media without blur)
+   */
+  trustAuthor(): void {
+    const currentUserPubkey = this.accountState.pubkey();
+    const authorPubkey = this.authorPubkey();
+    if (currentUserPubkey && authorPubkey) {
+      this.accountLocalState.addTrustedMediaAuthor(currentUserPubkey, authorPubkey);
+      // Also reveal all media in the current content immediately
+      const tokens = this.contentTokens();
+      this.revealedImages.update(set => {
+        const newSet = new Set(set);
+        for (const token of tokens) {
+          if (token.type === 'image' || token.type === 'video' || token.type === 'base64-video') {
+            if (token.content) {
+              newSet.add(token.content);
+            }
+          }
+        }
+        return newSet;
+      });
+    }
   }
 
   /**

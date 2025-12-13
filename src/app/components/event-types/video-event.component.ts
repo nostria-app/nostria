@@ -12,6 +12,7 @@ import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { CastService } from '../../services/cast.service';
@@ -38,6 +39,8 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   // Media navigation context (for Media tab grid)
   allMediaEvents = input<Event[]>([]);
   mediaEventIndex = input<number | undefined>(undefined);
+  // Pubkey of someone who shared/reposted this content - if trusted, media should be revealed
+  trustedByPubkey = input<string | undefined>(undefined);
 
   // Video player element - use setter to update signal when ViewChild resolves
   private _videoPlayerRef?: ElementRef<HTMLVideoElement>;
@@ -60,6 +63,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   private dialog = inject(MatDialog);
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private utilities = inject(UtilitiesService);
   private hostElement = inject(ElementRef);
   private videoPlayback = inject(VideoPlaybackService);
@@ -210,8 +214,25 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
   shouldBlurMedia = computed(() => {
     const privacy = this.settings.settings()?.mediaPrivacy;
+    const currentEvent = this.event();
+    const authorPubkey = currentEvent.pubkey;
+
     if (!privacy || privacy === 'show-always') {
       return false;
+    }
+
+    // Check if author is trusted for media reveal
+    const currentUserPubkey = this.accountState.pubkey();
+    if (currentUserPubkey) {
+      const isTrusted = this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, authorPubkey);
+      if (isTrusted) {
+        return false;
+      }
+      // Also check if someone who shared/reposted this content is trusted
+      const sharer = this.trustedByPubkey();
+      if (sharer && this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, sharer)) {
+        return false;
+      }
     }
 
     if (privacy === 'blur-always') {
@@ -219,10 +240,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     }
 
     // blur-non-following mode
-    const currentEvent = this.event();
-    const authorPubkey = currentEvent.pubkey;
     const followingList = this.accountState.followingList();
-
     const isFollowing = followingList.includes(authorPubkey);
     return !isFollowing && !this.isRevealed();
   });
@@ -497,6 +515,17 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
   revealMedia(): void {
     this.isRevealed.set(true);
+  }
+
+  // Trust author for media reveal (always show their media without blur)
+  trustAuthor(): void {
+    const currentUserPubkey = this.accountState.pubkey();
+    const authorPubkey = this.event().pubkey;
+    if (currentUserPubkey && authorPubkey) {
+      this.accountLocalState.addTrustedMediaAuthor(currentUserPubkey, authorPubkey);
+      // Also reveal the current media immediately
+      this.isRevealed.set(true);
+    }
   }
 
   openEventPage(): void {
