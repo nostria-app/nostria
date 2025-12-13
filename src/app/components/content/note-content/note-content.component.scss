@@ -243,97 +243,39 @@
   display: inline-block;
   max-width: 100%;
   border-radius: 12px;
-  background: #000;
+  background: transparent;
 
-  img {
+  // Placeholder shown before video loads - displays then hides
+  .video-placeholder-bg {
     display: block;
-    max-width: 100%;
-    height: auto;
-  }
-
-  // Main image - starts hidden for progressive loading
-  .main-image {
-    opacity: 0;
-    transition: opacity 0.4s ease-out;
-
-    &.loaded {
-      opacity: 1;
-    }
-  }
-
-  // Main video - hidden until ready, then shown
-  .main-video {
-    position: relative;
-    z-index: 2;
-    display: none; // Hidden until ready
-    max-width: 100%;
-    max-height: 70vh;
     width: auto;
     height: auto;
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: 12px;
+    filter: blur(2px);
+  }
+
+  // Video hidden until ready, then shown
+  .main-video {
+    display: none;
+    max-width: 100%;
+    max-height: 70vh;
+    border-radius: 12px;
 
     &.loaded {
       display: block;
     }
   }
 
-  // Video placeholder background - shown before video loads
-  .video-placeholder-bg {
-    display: block;
-    max-width: 100%;
-    max-height: 70vh;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    z-index: 1;
-    filter: blur(2px);
-    border-radius: 12px;
-  }
-
-  // Hide placeholder when video is ready
+  // When video is ready, placeholder is already hidden via @if in template
   &.video-ready {
-    .video-placeholder-bg {
-      display: none;
-    }
-
     .main-video.loaded {
-      opacity: 1;
-    }
-  }
-}
-
-// Specific video container styles
-.video-container {
-  display: inline-block; // Allow container to shrink to content
-  min-height: 100px; // Smaller fallback minimum height
-  max-height: 70vh; // Prevent portrait videos from being too tall
-
-  .blurhash-placeholder {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    opacity: 1; // Show by default for progressive loading
-    transition: opacity 0.4s ease-out;
-    pointer-events: none;
-    filter: blur(1px);
-  }
-
-  // Progressive loading - fade out placeholder when image loads
-  &.image-loaded {
-    .blurhash-placeholder {
-      opacity: 0;
-    }
-
-    .main-image.loaded {
-      opacity: 1;
+      display: block;
     }
   }
 
   &.blurred {
-
-    .blurhash-placeholder,
     .video-placeholder-bg {
       opacity: 1 !important;
     }
@@ -352,14 +294,12 @@
   }
 
   &.revealing {
-
-    .blurhash-placeholder,
     .video-placeholder-bg {
       opacity: 0;
       transition: opacity 0.6s ease-out;
     }
 
-    video:not(.video-placeholder-bg) {
+    .main-video {
       opacity: 1;
       transition: opacity 0.6s ease-out;
     }
@@ -368,6 +308,28 @@
 
 // Image container specific styles
 .image-container {
+  position: relative;
+  overflow: hidden;
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 12px;
+
+  img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+
+  // Main image - starts hidden for progressive loading
+  .main-image {
+    opacity: 0;
+    transition: opacity 0.4s ease-out;
+
+    &.loaded {
+      opacity: 1;
+    }
+  }
+
   .blurhash-placeholder {
     position: absolute;
     top: 0;
