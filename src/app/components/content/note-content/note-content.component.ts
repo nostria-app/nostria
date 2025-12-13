@@ -654,14 +654,11 @@ export class NoteContentComponent implements OnDestroy {
    * Mark a video as ready to play (for progressive loading transition)
    */
   onVideoReady(videoUrl: string): void {
-    // TODO: Remove this 3-second delay - it's only for testing/screenshots
-    setTimeout(() => {
-      this.loadedVideos.update(set => {
-        const newSet = new Set(set);
-        newSet.add(videoUrl);
-        return newSet;
-      });
-    }, 3000);
+    this.loadedVideos.update(set => {
+      const newSet = new Set(set);
+      newSet.add(videoUrl);
+      return newSet;
+    });
   }
 
   /**
