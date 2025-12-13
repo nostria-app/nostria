@@ -5,7 +5,6 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { Event } from 'nostr-tools';
-import { decode } from 'blurhash';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/media-with-comments-dialog.component';
@@ -13,9 +12,7 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
-
-// Default blurhash for images without one - neutral dark purple/gray gradient
-const DEFAULT_BLURHASH = 'L26RoJ.700~V9FM_4o-:9GM|%MRj';
+import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 
 @Component({
   selector: 'app-photo-event',
@@ -39,6 +36,7 @@ export class PhotoEventComponent {
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
+  private imagePlaceholder = inject(ImagePlaceholderService);
 
   // Current carousel index for inline navigation
   currentCarouselIndex = signal(0);
@@ -99,28 +97,19 @@ export class PhotoEventComponent {
     return this.getImageUrls(event);
   });
 
-  // Computed blurhashes for all images - uses default blurhash if none available
-  blurhashes = computed(() => {
+  // Computed placeholder data URLs for performance - supports both blurhash and thumbhash
+  placeholderDataUrls = computed(() => {
     const event = this.event();
     if (!event) return [];
 
     const imageUrls = this.imageUrls();
-
-    return imageUrls.map((_, index) => {
-      // First try to get blurhash from event tags
-      const tagBlurhash = this.getBlurhash(event, index);
-      if (tagBlurhash) return tagBlurhash;
-
-      // Use default blurhash for consistent performance
-      return DEFAULT_BLURHASH;
-    });
+    return imageUrls.map((_, index) =>
+      this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, index)
+    );
   });
 
-  // Computed blurhash data URLs for performance
-  blurhashDataUrls = computed(() => {
-    const blurhashes = this.blurhashes();
-    return blurhashes.map(blurhash => (blurhash ? this.generateBlurhashDataUrl(blurhash) : null));
-  });
+  // Legacy alias for backward compatibility
+  blurhashDataUrls = this.placeholderDataUrls;
 
   // Photo title
   title = computed(() => {
@@ -351,48 +340,26 @@ export class PhotoEventComponent {
   onImageLoad(event: globalThis.Event): void {
     const target = event.target as HTMLImageElement;
     if (target && target.previousElementSibling) {
-      // Hide blurhash placeholder when main image loads
+      // Hide placeholder when main image loads
       (target.previousElementSibling as HTMLElement).style.opacity = '0';
     }
   }
 
+  /**
+   * Get placeholder hash from event - prefers thumbhash over blurhash based on settings
+   * @deprecated Use imagePlaceholder service directly instead
+   */
   getBlurhash(event: Event, imageIndex = 0): string | null {
-    // For kind 20 events (NIP-68), get blurhash from 'imeta' tags
-    if (event.kind === 20) {
-      const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
-      const targetImeta = imetaTags[imageIndex];
-
-      if (targetImeta) {
-        const parsed = this.parseImetaTag(targetImeta);
-        return parsed['blurhash'] || null;
-      }
-
-      return null;
-    } else {
-      // Fallback for other event types
-      const blurhashTags = event.tags.filter(tag => tag[0] === 'blurhash');
-      return blurhashTags[imageIndex]?.[1] || null;
-    }
+    const data = this.imagePlaceholder.getPlaceholderFromEvent(event, imageIndex);
+    return this.imagePlaceholder.getBestPlaceholder(data);
   }
 
-  generateBlurhashDataUrl(blurhash: string, width = 400, height = 400): string {
-    try {
-      const pixels = decode(blurhash, width, height);
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return '';
-
-      const imageData = ctx.createImageData(width, height);
-      imageData.data.set(pixels);
-      ctx.putImageData(imageData, 0, 0);
-
-      return canvas.toDataURL();
-    } catch (error) {
-      console.warn('Failed to decode blurhash:', error);
-      return '';
-    }
+  /**
+   * Generate a placeholder data URL - supports both blurhash and thumbhash
+   * @deprecated Use imagePlaceholder service directly instead
+   */
+  generateBlurhashDataUrl(placeholder: string, width = 400, height = 400): string {
+    return this.imagePlaceholder.generatePlaceholderDataUrl(placeholder, width, height);
   }
 
   private getImageUrls(event: Event): string[] {

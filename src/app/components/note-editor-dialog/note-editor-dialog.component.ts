@@ -52,6 +52,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { AiService } from '../../services/ai.service';
 import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 import { DataService } from '../../services/data.service';
+import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 
 export interface NoteEditorDialogData {
   replyTo?: {
@@ -75,6 +76,7 @@ interface MediaMetadata {
   url: string;
   mimeType?: string;
   blurhash?: string;
+  thumbhash?: string;
   dimensions?: { width: number; height: number };
   alt?: string;
   sha256?: string; // Optional hash as per NIP-94
@@ -151,6 +153,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private mentionInputService = inject(MentionInputService);
   private dataService = inject(DataService);
   private utilities = inject(UtilitiesService);
+  private imagePlaceholder = inject(ImagePlaceholderService);
   private publishEventBus = inject(PublishEventBus);
   private publishSubscription?: Subscription;
   private dialog = inject(MatDialog);
@@ -1967,7 +1970,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             | {
               blob: Blob;
               dimensions: { width: number; height: number };
-              blurhash: string;
+              blurhash: string | undefined;
+              thumbhash: string | undefined;
             }
             | undefined;
 
@@ -1981,16 +1985,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
               // Extract thumbnail from the local video file
               const thumbnailResult = await this.utilities.extractThumbnailFromVideo(localVideoUrl, 1);
 
-              // Generate blurhash from the thumbnail
+              // Generate placeholders (blurhash and/or thumbhash) from the thumbnail
               const thumbnailFile = new File([thumbnailResult.blob], 'thumbnail.jpg', {
                 type: 'image/jpeg',
               });
-              const blurhashResult = await this.utilities.generateBlurhash(thumbnailFile);
+              const placeholderResult = await this.imagePlaceholder.generatePlaceholders(thumbnailFile);
 
               thumbnailData = {
                 blob: thumbnailResult.blob,
                 dimensions: thumbnailResult.dimensions,
-                blurhash: blurhashResult.blurhash,
+                blurhash: placeholderResult.blurhash,
+                thumbhash: placeholderResult.thumbhash,
               };
 
               // Clean up the local object URL
@@ -2216,8 +2221,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   /**
    * Extract media metadata for NIP-92 imeta tags
-   * Generates blurhash and dimensions for images
-   * For videos: extracts thumbnail, generates blurhash from thumbnail
+   * Generates blurhash/thumbhash and dimensions for images
+   * For videos: extracts thumbnail, generates placeholders from thumbnail
    * @param file Original file object
    * @param url Uploaded media URL
    * @param sha256 SHA-256 hash of the media
@@ -2232,7 +2237,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     thumbnailData?: {
       blob: Blob;
       dimensions: { width: number; height: number };
-      blurhash: string;
+      blurhash?: string;
+      thumbhash?: string;
     }
   ): Promise<MediaMetadata | null> {
     try {
@@ -2243,14 +2249,17 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         fallbackUrls: mirrors && mirrors.length > 0 ? mirrors : undefined, // Add mirror URLs as fallbacks
       };
 
-      // Handle images
+      // Handle images - use imagePlaceholder service for both blurhash and thumbhash
       if (file.type.startsWith('image/')) {
-        const result = await this.utilities.extractMediaMetadata(file, url);
+        const placeholders = await this.imagePlaceholder.generatePlaceholders(file);
+        metadata.blurhash = placeholders.blurhash;
+        metadata.thumbhash = placeholders.thumbhash;
+        metadata.dimensions = placeholders.dimensions;
         // Add mirrors as fallback URLs
         if (mirrors && mirrors.length > 0) {
-          result.fallbackUrls = mirrors;
+          metadata.fallbackUrls = mirrors;
         }
-        return result;
+        return metadata;
       }
 
       // Handle videos - use pre-extracted thumbnail data if available
@@ -2271,6 +2280,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             // Use 'image' field for preview capture (NIP-94)
             metadata.image = uploadResult.item.url;
             metadata.blurhash = thumbnailData.blurhash;
+            metadata.thumbhash = thumbnailData.thumbhash;
             metadata.dimensions = thumbnailData.dimensions;
 
             // Add thumbnail mirrors if available

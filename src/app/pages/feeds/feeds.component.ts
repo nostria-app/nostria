@@ -44,7 +44,6 @@ import {
 } from '../../services/feeds-collection.service';
 import { MediaItem, NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
-import { decode } from 'blurhash';
 import { UrlUpdateService } from '../../services/url-update.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { MatDividerModule } from '@angular/material/divider';
@@ -55,6 +54,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { RepostService } from '../../services/repost.service';
 import { EventComponent } from '../../components/event/event.component';
 import { UtilitiesService } from '../../services/utilities.service';
+import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 
 // NavLink interface removed because it was unused.
 
@@ -105,6 +105,7 @@ export class FeedsComponent implements OnDestroy {
   protected app = inject(ApplicationService);
   protected accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
+  private imagePlaceholder = inject(ImagePlaceholderService);
 
   // Dialog State Signals
   showNewFeedDialog = signal(false);
@@ -1441,33 +1442,19 @@ export class FeedsComponent implements OnDestroy {
       .filter(Boolean);
   }
 
+  /**
+   * Get placeholder hash from event - prefers thumbhash over blurhash based on settings
+   */
   getBlurhash(event: any, imageIndex = 0): string | null {
-    const imetas = event.tags?.filter((tag: any[]) => tag[0] === 'imeta') || [];
-    if (imetas.length <= imageIndex) return null;
-
-    const imeta = imetas[imageIndex];
-    const blurhashIndex = imeta.findIndex((item: string) => item.startsWith('blurhash '));
-    return blurhashIndex > 0 ? imeta[blurhashIndex].substring(9) : null;
+    const data = this.imagePlaceholder.getPlaceholderFromEvent(event, imageIndex);
+    return this.imagePlaceholder.getBestPlaceholder(data);
   }
 
-  generateBlurhashDataUrl(blurhash: string, width = 32, height = 32): string {
-    try {
-      const pixels = decode(blurhash, width, height);
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return '';
-
-      const imageData = ctx.createImageData(width, height);
-      imageData.data.set(pixels);
-      ctx.putImageData(imageData, 0, 0);
-
-      return canvas.toDataURL();
-    } catch (error) {
-      console.warn('Failed to decode blurhash:', error);
-      return '';
-    }
+  /**
+   * Generate a placeholder data URL - supports both blurhash and thumbhash
+   */
+  generateBlurhashDataUrl(placeholder: string, width = 32, height = 32): string {
+    return this.imagePlaceholder.generatePlaceholderDataUrl(placeholder, width, height);
   }
   getVideoData(event: any): {
     url: string;

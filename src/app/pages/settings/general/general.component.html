@@ -70,7 +70,7 @@
         <mat-option value="blur-always" i18n="@@settings.media.blur-always">Always Blur Media</mat-option>
       </mat-select>
     </mat-form-field>
-    <p>
+    <!-- <p>
       @switch (settings.settings()?.mediaPrivacy || 'show-always') {
       @case ('show-always') {
       <ng-container i18n="@@settings.media.show-always.description">All media content will be displayed immediately
@@ -85,7 +85,33 @@
         reveal individual items.</ng-container>
       }
       }
-    </p>
+    </p> -->
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@settings.media.placeholder-algorithm">Placeholder Algorithm</mat-label>
+      <mat-select [ngModel]="settings.settings()?.placeholderAlgorithm || 'blurhash'"
+        (selectionChange)="setPlaceholderAlgorithm($event.value)">
+        <mat-option value="blurhash" i18n="@@settings.media.placeholder.blurhash">Blurhash (Legacy)</mat-option>
+        <mat-option value="thumbhash" i18n="@@settings.media.placeholder.thumbhash">Thumbhash</mat-option>
+        <mat-option value="both" i18n="@@settings.media.placeholder.both">Both</mat-option>
+      </mat-select>
+    </mat-form-field>
+    <!-- <p>
+      @switch (settings.settings()?.placeholderAlgorithm || 'blurhash') {
+      @case ('blurhash') {
+      <ng-container i18n="@@settings.media.placeholder.blurhash.description">Use Blurhash for image placeholders. This
+        is the most widely supported format.</ng-container>
+      }
+      @case ('thumbhash') {
+      <ng-container i18n="@@settings.media.placeholder.thumbhash.description">Use Thumbhash for image placeholders.
+        Thumbhash provides better visual quality and preserves aspect ratio.</ng-container>
+      }
+      @case ('both') {
+      <ng-container i18n="@@settings.media.placeholder.both.description">Generate both Blurhash and Thumbhash when
+        creating new content. Prefer Thumbhash when viewing content.</ng-container>
+      }
+      }
+    </p> -->
 
     <div class="setting-item">
       <span i18n="@@settings.media.auto-play">Auto-Play Short Form Videos</span>

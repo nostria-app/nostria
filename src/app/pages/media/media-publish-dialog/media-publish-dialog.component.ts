@@ -13,6 +13,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 
 export interface MediaPublishDialogData {
   mediaItem: MediaItem;
@@ -33,6 +34,7 @@ export interface MediaPublishOptions {
   thumbnailBlob?: Blob; // Thumbnail blob for videos (to be uploaded)
   thumbnailDimensions?: { width: number; height: number }; // Thumbnail dimensions
   blurhash?: string; // Blurhash of thumbnail or image
+  thumbhash?: string; // Thumbhash of thumbnail or image (newer alternative)
   imageDimensions?: { width: number; height: number }; // Image dimensions for pictures
   dTag?: string; // For addressable events (kinds 34235, 34236) - unique identifier
   origin?: { platform: string; externalId?: string; url?: string }; // For imported content (NIP-71)
@@ -63,6 +65,7 @@ export class MediaPublishDialogComponent {
   private dialogRef = inject(MatDialogRef<MediaPublishDialogComponent>);
   private mediaService = inject(MediaService);
   private utilities = inject(UtilitiesService);
+  private imagePlaceholder = inject(ImagePlaceholderService);
   data: MediaPublishDialogData = inject(MAT_DIALOG_DATA);
 
   // Form fields
@@ -89,6 +92,7 @@ export class MediaPublishDialogComponent {
   thumbnailUrlInput = signal<string | null>(null);
   thumbnailUrlInputValue = ''; // For ngModel binding
   blurhash = signal<string | undefined>(undefined);
+  thumbhash = signal<string | undefined>(undefined);
   generatingBlurhash = signal(false);
   extractingThumbnail = signal(false);
   thumbnailExtractOffset = signal(0); // Track how many times extraction was called
@@ -321,22 +325,28 @@ export class MediaPublishDialogComponent {
     this.thumbnailBlob.set(undefined);
     this.thumbnailDimensions.set(undefined);
     this.blurhash.set(undefined);
+    this.thumbhash.set(undefined);
     this.thumbnailExtractOffset.set(0); // Reset offset when removing thumbnail
   }
 
-  // Helper method to load image and generate blurhash
+  // Helper method to load image and generate placeholders (blurhash and/or thumbhash based on settings)
   private async loadImageAndGenerateBlurhash(url: string): Promise<void> {
     try {
       this.generatingBlurhash.set(true);
 
-      // Use centralized utility service for blurhash generation
-      const result = await this.utilities.generateBlurhash(url);
+      // Use the imagePlaceholder service to generate based on user preference
+      const result = await this.imagePlaceholder.generatePlaceholders(url);
 
-      // Store dimensions and blurhash
+      // Store dimensions and placeholder hashes
       this.thumbnailDimensions.set(result.dimensions);
-      this.blurhash.set(result.blurhash);
+      if (result.blurhash) {
+        this.blurhash.set(result.blurhash);
+      }
+      if (result.thumbhash) {
+        this.thumbhash.set(result.thumbhash);
+      }
     } catch (error) {
-      console.error('Failed to generate blurhash:', error);
+      console.error('Failed to generate placeholders:', error);
     } finally {
       this.generatingBlurhash.set(false);
     }
@@ -400,6 +410,11 @@ export class MediaPublishDialogComponent {
     // Include blurhash if generated
     if (this.blurhash()) {
       options.blurhash = this.blurhash();
+    }
+
+    // Include thumbhash if generated
+    if (this.thumbhash()) {
+      options.thumbhash = this.thumbhash();
     }
 
     // For images, include dimensions if we have them
