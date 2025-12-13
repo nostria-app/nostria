@@ -37,7 +37,7 @@ export class ImagePlaceholderService {
 
   // Cache for decoded placeholder data URLs to avoid regenerating
   private placeholderCache = new Map<string, string>();
-  private maxCacheSize = 100;
+  private maxCacheSize = 500;
 
   // Default data URLs (generated once and reused)
   private defaultBlurhashDataUrl: string | null = null;
@@ -203,9 +203,18 @@ export class ImagePlaceholderService {
   }
 
   /**
-   * Decode a blurhash string to a data URL
+   * Decode a blurhash string to a data URL (with caching)
    */
   decodeBlurhash(blurhash: string, width = 400, height = 400): string {
+    if (!blurhash) return '';
+
+    // Check cache first
+    const cacheKey = `blurhash-${blurhash}-${width}-${height}`;
+    const cached = this.placeholderCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     try {
       const pixels = decode(blurhash, width, height);
       const canvas = document.createElement('canvas');
@@ -218,7 +227,9 @@ export class ImagePlaceholderService {
       imageData.data.set(pixels);
       ctx.putImageData(imageData, 0, 0);
 
-      return canvas.toDataURL();
+      const dataUrl = canvas.toDataURL();
+      this.addToCache(cacheKey, dataUrl);
+      return dataUrl;
     } catch (error) {
       this.logger.warn('Failed to decode blurhash:', error);
       return '';
@@ -226,10 +237,19 @@ export class ImagePlaceholderService {
   }
 
   /**
-   * Decode a thumbhash string to a data URL
+   * Decode a thumbhash string to a data URL (with caching)
    * Thumbhash is base64 encoded
    */
   decodeThumbhash(thumbhash: string): string {
+    if (!thumbhash) return '';
+
+    // Check cache first
+    const cacheKey = `thumbhash-${thumbhash}`;
+    const cached = this.placeholderCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
     try {
       // Convert base64 to Uint8Array
       const binaryString = atob(thumbhash);
@@ -239,7 +259,9 @@ export class ImagePlaceholderService {
       }
 
       // Use thumbhash library to generate data URL
-      return thumbHashToDataURL(bytes);
+      const dataUrl = thumbHashToDataURL(bytes);
+      this.addToCache(cacheKey, dataUrl);
+      return dataUrl;
     } catch (error) {
       this.logger.warn('Failed to decode thumbhash:', error);
       return '';
