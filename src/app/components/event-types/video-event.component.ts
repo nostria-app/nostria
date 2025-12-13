@@ -344,7 +344,8 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
           data: {
             event,
             allEvents: this.allMediaEvents().length > 0 ? this.allMediaEvents() : undefined,
-            currentIndex: this.mediaEventIndex()
+            currentIndex: this.mediaEventIndex(),
+            trustedByPubkey: this.trustedByPubkey()
           },
           maxWidth: '95vw',
           maxHeight: '95vh',
@@ -524,7 +525,8 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
           data: {
             event,
             allEvents: this.allMediaEvents().length > 0 ? this.allMediaEvents() : undefined,
-            currentIndex: this.mediaEventIndex()
+            currentIndex: this.mediaEventIndex(),
+            trustedByPubkey: this.trustedByPubkey()
           },
           maxWidth: '95vw',
           maxHeight: '95vh',

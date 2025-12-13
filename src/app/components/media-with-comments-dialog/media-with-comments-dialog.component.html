@@ -44,8 +44,28 @@
       <div class="photo-carousel">
         <div class="photo-container clickable" (click)="openImagePreview()">
           <img [src]="currentImageUrl()" [alt]="title() || 'Photo'" [title]="title() || 'Photo'" class="photo-item"
-            loading="lazy" />
+            loading="lazy" [class.blurred]="shouldBlurMedia() && !isRevealed()" />
         </div>
+
+        <!-- Blur overlay for privacy protection -->
+        @if (shouldBlurMedia() && !isRevealed()) {
+        <div class="blur-overlay">
+          <div class="blur-content">
+            <mat-icon class="blur-icon">visibility_off</mat-icon>
+            <p class="blur-text">Content from unknown author</p>
+            <div class="blur-actions">
+              <button mat-stroked-button (click)="revealMedia(); $event.stopPropagation()">
+                <mat-icon>visibility</mat-icon>
+                Reveal this
+              </button>
+              <button mat-flat-button (click)="trustAuthor(); $event.stopPropagation()">
+                <mat-icon>verified_user</mat-icon>
+                Always reveal this user
+              </button>
+            </div>
+          </div>
+        </div>
+        }
 
         @if (hasMultipleImages()) {
         <!-- Navigation buttons -->
@@ -81,10 +101,31 @@
       <div class="video-container">
         <!-- Use @for with track to force re-render when event changes -->
         @for (ev of [event()]; track ev.id) {
-        <video controls class="video-player" autoplay [poster]="videoInfo.thumbnail">
+        <video controls class="video-player" autoplay [poster]="videoInfo.thumbnail"
+          [class.blurred]="shouldBlurMedia() && !isRevealed()">
           <source [src]="videoInfo.url" [type]="videoMimeType()" />
           Your browser does not support the video tag.
         </video>
+        }
+
+        <!-- Blur overlay for privacy protection -->
+        @if (shouldBlurMedia() && !isRevealed()) {
+        <div class="blur-overlay">
+          <div class="blur-content">
+            <mat-icon class="blur-icon">visibility_off</mat-icon>
+            <p class="blur-text">Content from unknown author</p>
+            <div class="blur-actions">
+              <button mat-stroked-button (click)="revealMedia(); $event.stopPropagation()">
+                <mat-icon>visibility</mat-icon>
+                Reveal this
+              </button>
+              <button mat-flat-button (click)="trustAuthor(); $event.stopPropagation()">
+                <mat-icon>verified_user</mat-icon>
+                Always reveal this user
+              </button>
+            </div>
+          </div>
+        </div>
         }
       </div>
       }

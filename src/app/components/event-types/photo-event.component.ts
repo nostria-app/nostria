@@ -277,7 +277,8 @@ export class PhotoEventComponent {
           data: {
             event: nostrEvent,
             allEvents: this.allMediaEvents().length > 0 ? this.allMediaEvents() : undefined,
-            currentIndex: this.mediaEventIndex()
+            currentIndex: this.mediaEventIndex(),
+            trustedByPubkey: this.trustedByPubkey()
           },
           maxWidth: '95vw',
           maxHeight: '95vh',
@@ -332,7 +333,8 @@ export class PhotoEventComponent {
           data: {
             event,
             allEvents: this.allMediaEvents().length > 0 ? this.allMediaEvents() : undefined,
-            currentIndex: this.mediaEventIndex()
+            currentIndex: this.mediaEventIndex(),
+            trustedByPubkey: this.trustedByPubkey()
           },
           maxWidth: '95vw',
           maxHeight: '95vh',
