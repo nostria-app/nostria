@@ -13,13 +13,14 @@ import { ThemeService } from '../../../services/theme.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
 import { CalendarType, LocalSettingsService } from '../../../services/local-settings.service';
-import { SettingsService } from '../../../services/settings.service';
+import { PlaceholderAlgorithm, SettingsService } from '../../../services/settings.service';
 import { StorageStatsComponent } from '../../../components/storage-stats/storage-stats.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { AccountStateService } from '../../../services/account-state.service';
 import { DatabaseService } from '../../../services/database.service';
 import { NotificationService } from '../../../services/notification.service';
 import { ContentNotificationService } from '../../../services/content-notification.service';
+import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 
 interface Language {
   code: string;
@@ -55,6 +56,7 @@ export class GeneralSettingsComponent {
   database = inject(DatabaseService);
   notificationService = inject(NotificationService);
   contentNotificationService = inject(ContentNotificationService);
+  imagePlaceholder = inject(ImagePlaceholderService);
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
 
@@ -136,6 +138,12 @@ export class GeneralSettingsComponent {
   toggleRepeatShortForm(): void {
     const currentValue = this.settings.settings()?.repeatShortForm ?? true;
     this.settings.updateSettings({ repeatShortForm: !currentValue });
+  }
+
+  setPlaceholderAlgorithm(value: PlaceholderAlgorithm): void {
+    this.settings.updateSettings({ placeholderAlgorithm: value });
+    // Clear the placeholder cache when algorithm changes
+    this.imagePlaceholder.clearCache();
   }
 
   resetNotificationsCache(): void {

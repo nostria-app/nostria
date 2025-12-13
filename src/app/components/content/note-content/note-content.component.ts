@@ -20,10 +20,7 @@ import { SettingsService } from '../../../services/settings.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { VideoPlaybackService } from '../../../services/video-playback.service';
-import { decode } from 'blurhash';
-
-// Default blurhash for images without one - neutral dark purple/gray gradient
-const DEFAULT_BLURHASH = 'L26RoJ.700~V9FM_4o-:9GM|%MRj';
+import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
@@ -57,6 +54,7 @@ export class NoteContentComponent implements OnDestroy {
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
   private videoPlayback = inject(VideoPlaybackService);
+  private imagePlaceholder = inject(ImagePlaceholderService);
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
@@ -76,11 +74,8 @@ export class NoteContentComponent implements OnDestroy {
   private isMouseOverCard = signal(false);
   private routerSubscription?: Subscription;
 
-  // Image blur state - use default blurhash instead of generating for performance
+  // Image blur state - use default placeholder instead of generating for performance
   private revealedImages = signal<Set<string>>(new Set());
-
-  // Cached default blurhash data URL - generated once and reused
-  private _defaultBlurhashDataUrl: string | null = null;
 
   // Carousel state for image groups - maps group ID to current index
   private carouselIndices = signal<Map<number, number>>(new Map());
@@ -607,32 +602,10 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   /**
-   * Get blurhash data URL for an image - uses cached default blurhash for performance
+   * Get placeholder data URL for an image - uses service for both blurhash and thumbhash support
    */
   getBlurhashDataUrl(): string | null {
-    // Return cached version if available
-    if (this._defaultBlurhashDataUrl) {
-      return this._defaultBlurhashDataUrl;
-    }
-
-    try {
-      const pixels = decode(DEFAULT_BLURHASH, 400, 400);
-      const canvas = document.createElement('canvas');
-      canvas.width = 400;
-      canvas.height = 400;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return null;
-
-      const imageData = ctx.createImageData(400, 400);
-      imageData.data.set(pixels);
-      ctx.putImageData(imageData, 0, 0);
-
-      this._defaultBlurhashDataUrl = canvas.toDataURL();
-      return this._defaultBlurhashDataUrl;
-    } catch (error) {
-      console.warn('Failed to decode blurhash:', error);
-      return null;
-    }
+    return this.imagePlaceholder.getDefaultPlaceholderDataUrl(400, 400) || null;
   }
 
   /**

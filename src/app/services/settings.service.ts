@@ -5,6 +5,8 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 
+export type PlaceholderAlgorithm = 'blurhash' | 'thumbhash' | 'both';
+
 export interface UserSettings {
   socialSharingPreview: boolean;
   imageCacheEnabled?: boolean; // Optional setting for image cache
@@ -18,6 +20,8 @@ export interface UserSettings {
   hideOther?: boolean;
   // Media privacy setting: 'blur-non-following' | 'blur-always' | 'show-always'
   mediaPrivacy?: 'blur-non-following' | 'blur-always' | 'show-always';
+  // Image/video placeholder algorithm: blurhash (legacy), thumbhash (new), or both
+  placeholderAlgorithm?: PlaceholderAlgorithm;
   // Short form video settings
   autoPlayShortForm?: boolean;
   repeatShortForm?: boolean;
@@ -45,6 +49,7 @@ const DEFAULT_SETTINGS: UserSettings = {
   hideImpersonation: true,
   hideOther: true,
   mediaPrivacy: 'show-always',
+  placeholderAlgorithm: 'blurhash', // Default to blurhash for wider compatibility
   autoPlayShortForm: true,
   repeatShortForm: true,
   // AI Defaults

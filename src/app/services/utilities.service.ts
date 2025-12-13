@@ -870,6 +870,8 @@ export class UtilitiesService {
 
   /**
    * Extract complete media metadata for NIP-92/NIP-94 compliance
+   * Note: This method only generates blurhash for compatibility.
+   * For thumbhash support, use the ImagePlaceholderService.generatePlaceholders() method.
    * @param file File object
    * @param url URL where the file is hosted
    * @returns Complete metadata object
@@ -881,6 +883,7 @@ export class UtilitiesService {
     url: string;
     mimeType: string;
     blurhash?: string;
+    thumbhash?: string;
     dimensions?: { width: number; height: number };
     fallbackUrls?: string[];
   }> {
@@ -888,6 +891,7 @@ export class UtilitiesService {
       url: string;
       mimeType: string;
       blurhash?: string;
+      thumbhash?: string;
       dimensions?: { width: number; height: number };
       fallbackUrls?: string[];
     } = {
@@ -912,7 +916,7 @@ export class UtilitiesService {
 
   /**
    * Build an imeta tag from media metadata (NIP-92)
-   * Format: ["imeta", "url <url>", "m <mime-type>", "blurhash <hash>", "dim <widthxheight>", ...]
+   * Format: ["imeta", "url <url>", "m <mime-type>", "blurhash <hash>", "thumbhash <hash>", "dim <widthxheight>", ...]
    * @param metadata Media metadata object
    * @returns imeta tag array or null if invalid
    */
@@ -920,6 +924,7 @@ export class UtilitiesService {
     url: string;
     mimeType?: string;
     blurhash?: string;
+    thumbhash?: string;
     dimensions?: { width: number; height: number };
     alt?: string;
     sha256?: string;
@@ -946,6 +951,11 @@ export class UtilitiesService {
     // Add blurhash if available (NIP-94)
     if (metadata.blurhash) {
       tag.push(`blurhash ${metadata.blurhash}`);
+    }
+
+    // Add thumbhash if available (newer alternative to blurhash)
+    if (metadata.thumbhash) {
+      tag.push(`thumbhash ${metadata.thumbhash}`);
     }
 
     // Add dimensions if available (NIP-94)

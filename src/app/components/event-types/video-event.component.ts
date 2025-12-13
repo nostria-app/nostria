@@ -7,7 +7,6 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { Event } from 'nostr-tools';
-import { decode } from 'blurhash';
 import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/media-with-comments-dialog.component';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { SettingsService } from '../../services/settings.service';
@@ -15,9 +14,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { CastService } from '../../services/cast.service';
-
-// Default blurhash for videos without one - neutral dark purple/gray gradient
-const DEFAULT_BLURHASH = 'L26RoJ.700~V9FM_4o-:9GM|%MRj';
+import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 
 interface VideoData {
   url: string;
@@ -69,6 +66,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   private hostElement = inject(ElementRef);
   private videoPlayback = inject(VideoPlaybackService);
   private castService = inject(CastService);
+  private imagePlaceholder = inject(ImagePlaceholderService);
 
   // Viewport visibility
   private intersectionObserver?: IntersectionObserver;
@@ -248,18 +246,16 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return this.getVideoData(event);
   });
 
-  // Computed blurhash data URL - uses default if none available
-  blurhashDataUrl = computed(() => {
-    const videoInfo = this.videoData();
+  // Computed placeholder data URL - uses default if none available (supports blurhash and thumbhash)
+  placeholderDataUrl = computed(() => {
+    const event = this.event();
+    if (!event) return this.imagePlaceholder.getDefaultPlaceholderDataUrl(400, 225);
 
-    // Use tag blurhash if available
-    if (videoInfo?.blurhash) {
-      return this.generateBlurhashDataUrl(videoInfo.blurhash, 400, 225);
-    }
-
-    // Use default blurhash for consistent performance
-    return this.generateBlurhashDataUrl(DEFAULT_BLURHASH, 400, 225);
+    return this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, 0, 400, 225);
   });
+
+  // Legacy alias for backward compatibility
+  blurhashDataUrl = this.placeholderDataUrl;
 
   // Computed MIME type based on file extension
   videoMimeType = computed(() => {
@@ -659,24 +655,12 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return parsed;
   }
 
-  generateBlurhashDataUrl(blurhash: string, width = 400, height = 225): string {
-    try {
-      const pixels = decode(blurhash, width, height);
-      const canvas = document.createElement('canvas');
-      canvas.width = width;
-      canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return '';
-
-      const imageData = ctx.createImageData(width, height);
-      imageData.data.set(pixels);
-      ctx.putImageData(imageData, 0, 0);
-
-      return canvas.toDataURL();
-    } catch (error) {
-      console.warn('Failed to decode blurhash:', error);
-      return '';
-    }
+  /**
+   * Generate a placeholder data URL - supports both blurhash and thumbhash
+   * @deprecated Use imagePlaceholder service directly instead
+   */
+  generateBlurhashDataUrl(placeholder: string, width = 400, height = 225): string {
+    return this.imagePlaceholder.generatePlaceholderDataUrl(placeholder, width, height);
   }
 
   formatDuration(seconds: number): string {
