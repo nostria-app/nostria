@@ -305,11 +305,13 @@
     }
 
     .video-player {
-      position: relative;
+      position: absolute;
+      top: 0;
+      left: 0;
       z-index: 2;
       width: 100%;
-      height: auto;
-      max-height: 70vh;
+      height: 100%;
+      object-fit: contain;
       display: block;
       opacity: 0;
       transition: opacity 0.4s ease-out;
