@@ -136,10 +136,18 @@
     [duration]="token.duration || 0"></app-audio-player>
 </div>
 } @else if (token.type === 'video') {
+@let videoPlaceholder = getVideoPlaceholderUrl(token);
 <div class="media-container video-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
-  [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)">
+  [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
+  [class.video-ready]="isVideoReady(token.content)">
+  <!-- Placeholder shown until video is ready -->
+  @if (videoPlaceholder && !isVideoReady(token.content)) {
+  <img [src]="videoPlaceholder" class="video-placeholder-bg" alt="" aria-hidden="true"
+    [style.aspect-ratio]="getVideoAspectRatio(token)" />
+  }
   @if (isVideoFormatSupported(token.content)) {
   <video controls (error)="onVideoError($event, token.content)" (play)="onVideoPlay($event)"
+    (canplay)="onVideoReady(token.content)" class="main-video" [class.loaded]="isVideoReady(token.content)"
     [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)">
     <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
     Your browser does not support the video element.

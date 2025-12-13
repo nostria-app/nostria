@@ -612,6 +612,56 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   /**
+   * Get placeholder data URL for a video token using its imeta data
+   */
+  getVideoPlaceholderUrl(token: ContentToken): string | null {
+    // First try thumbhash, then blurhash from the token
+    if (token.thumbhash) {
+      const url = this.imagePlaceholder.decodeThumbhash(token.thumbhash);
+      if (url) return url;
+    }
+    if (token.blurhash) {
+      const width = token.dimensions?.width || 400;
+      const height = token.dimensions?.height || 225;
+      const url = this.imagePlaceholder.decodeBlurhash(token.blurhash, width, height);
+      if (url) return url;
+    }
+    // Return default placeholder
+    return this.imagePlaceholder.getDefaultPlaceholderDataUrl(400, 225);
+  }
+
+  /**
+   * Get aspect ratio style for a video token
+   */
+  getVideoAspectRatio(token: ContentToken): string {
+    if (token.dimensions) {
+      return `${token.dimensions.width} / ${token.dimensions.height}`;
+    }
+    return '16 / 9'; // Default video aspect ratio
+  }
+
+  // Track loaded videos for progressive loading
+  private loadedVideos = signal<Set<string>>(new Set());
+
+  /**
+   * Check if a video is ready to play (for progressive loading)
+   */
+  isVideoReady(videoUrl: string): boolean {
+    return this.loadedVideos().has(videoUrl);
+  }
+
+  /**
+   * Mark a video as ready to play (for progressive loading transition)
+   */
+  onVideoReady(videoUrl: string): void {
+    this.loadedVideos.update(set => {
+      const newSet = new Set(set);
+      newSet.add(videoUrl);
+      return newSet;
+    });
+  }
+
+  /**
    * Check if an image has finished loading (for progressive loading)
    */
   isImageLoaded(imageUrl: string): boolean {

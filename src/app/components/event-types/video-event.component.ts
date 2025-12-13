@@ -271,10 +271,11 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return data?.dimensions;
   });
 
-  // Get aspect ratio style for video container
+  // Get aspect ratio style for video container - default to 16/9 if no dimensions
   videoAspectRatio = computed(() => {
     const dimensions = this.videoDimensions();
-    return this.imagePlaceholder.getAspectRatioStyle(dimensions);
+    const ratio = this.imagePlaceholder.getAspectRatioStyle(dimensions);
+    return ratio || '16 / 9'; // Default to 16:9 for videos
   });
 
   // Computed MIME type based on file extension

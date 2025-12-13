@@ -243,6 +243,7 @@
   display: inline-block;
   max-width: 100%;
   border-radius: 12px;
+  background: #000;
 
   img {
     display: block;
@@ -260,6 +261,113 @@
     }
   }
 
+  // Main video - hidden until ready, then shown
+  .main-video {
+    position: relative;
+    z-index: 2;
+    display: none; // Hidden until ready
+    max-width: 100%;
+    max-height: 70vh;
+    width: auto;
+    height: auto;
+
+    &.loaded {
+      display: block;
+    }
+  }
+
+  // Video placeholder background - shown before video loads
+  .video-placeholder-bg {
+    display: block;
+    max-width: 100%;
+    max-height: 70vh;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    z-index: 1;
+    filter: blur(2px);
+    border-radius: 12px;
+  }
+
+  // Hide placeholder when video is ready
+  &.video-ready {
+    .video-placeholder-bg {
+      display: none;
+    }
+
+    .main-video.loaded {
+      opacity: 1;
+    }
+  }
+}
+
+// Specific video container styles
+.video-container {
+  display: inline-block; // Allow container to shrink to content
+  min-height: 100px; // Smaller fallback minimum height
+  max-height: 70vh; // Prevent portrait videos from being too tall
+
+  .blurhash-placeholder {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 1; // Show by default for progressive loading
+    transition: opacity 0.4s ease-out;
+    pointer-events: none;
+    filter: blur(1px);
+  }
+
+  // Progressive loading - fade out placeholder when image loads
+  &.image-loaded {
+    .blurhash-placeholder {
+      opacity: 0;
+    }
+
+    .main-image.loaded {
+      opacity: 1;
+    }
+  }
+
+  &.blurred {
+
+    .blurhash-placeholder,
+    .video-placeholder-bg {
+      opacity: 1 !important;
+    }
+
+    .hidden {
+      opacity: 0;
+    }
+  }
+
+  // Video containers without blurhash need a background when blurred
+  &.blurred:not(:has(.video-placeholder-bg)) {
+    background-color: var(--mat-sys-surface-container-highest);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &.revealing {
+
+    .blurhash-placeholder,
+    .video-placeholder-bg {
+      opacity: 0;
+      transition: opacity 0.6s ease-out;
+    }
+
+    video:not(.video-placeholder-bg) {
+      opacity: 1;
+      transition: opacity 0.6s ease-out;
+    }
+  }
+}
+
+// Image container specific styles
+.image-container {
   .blurhash-placeholder {
     position: absolute;
     top: 0;
@@ -287,21 +395,11 @@
   &.blurred {
     .blurhash-placeholder {
       opacity: 1 !important;
-      // filter: blur(20px);
     }
 
     .hidden {
       opacity: 0;
     }
-  }
-
-  // Video containers without blurhash need a background when blurred
-  &.video-container.blurred {
-    background-color: var(--mat-sys-surface-container-highest);
-    min-height: 200px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
 
   &.revealing {
@@ -315,72 +413,72 @@
       transition: opacity 0.6s ease-out;
     }
   }
+}
 
-  .reveal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 100;
+.reveal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  color: white;
+
+  .reveal-actions {
     display: flex;
     flex-direction: column;
+    gap: 12px;
     align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.7);
-    color: white;
+  }
 
-    .reveal-actions {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: center;
+  .reveal-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    border: none;
+    outline: none;
+    border-radius: 24px;
+    background: rgba(60, 60, 60, 0.9);
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+    font-family: inherit;
+
+    &:focus {
+      outline: none;
     }
 
-    .reveal-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 20px;
-      border: none;
-      outline: none;
-      border-radius: 24px;
-      background: rgba(60, 60, 60, 0.9);
-      color: white;
-      cursor: pointer;
-      transition: background-color 0.2s ease, transform 0.1s ease;
-      font-family: inherit;
+    &:hover {
+      background: rgba(80, 80, 80, 0.95);
+      transform: scale(1.02);
+    }
 
-      &:focus {
-        outline: none;
-      }
+    &:active {
+      transform: scale(0.98);
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    span {
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    &.trust-btn {
+      background: rgba(var(--mat-sys-primary-rgb, 99, 102, 241), 0.3);
 
       &:hover {
-        background: rgba(80, 80, 80, 0.95);
-        transform: scale(1.02);
-      }
-
-      &:active {
-        transform: scale(0.98);
-      }
-
-      mat-icon {
-        font-size: 20px;
-        width: 20px;
-        height: 20px;
-      }
-
-      span {
-        font-size: 14px;
-        font-weight: 500;
-      }
-
-      &.trust-btn {
-        background: rgba(var(--mat-sys-primary-rgb, 99, 102, 241), 0.3);
-
-        &:hover {
-          background: rgba(var(--mat-sys-primary-rgb, 99, 102, 241), 0.5);
-        }
+        background: rgba(var(--mat-sys-primary-rgb, 99, 102, 241), 0.5);
       }
     }
   }

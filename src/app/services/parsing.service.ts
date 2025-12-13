@@ -43,6 +43,11 @@ export interface ContentToken {
   processedUrl?: SafeResourceUrl; // For YouTube embed URLs that are pre-processed
   waveform?: number[];
   duration?: number;
+  // Media metadata from imeta tags
+  blurhash?: string;
+  thumbhash?: string;
+  thumbnail?: string;
+  dimensions?: { width: number; height: number };
   cashuData?: {
     token: string;
     mint?: string;
@@ -344,6 +349,10 @@ export class ParsingService {
       processedUrl?: SafeResourceUrl;
       waveform?: number[];
       duration?: number;
+      blurhash?: string;
+      thumbhash?: string;
+      thumbnail?: string;
+      dimensions?: { width: number; height: number };
       cashuData?: {
         token: string;
         mint?: string;
@@ -499,6 +508,10 @@ export class ParsingService {
       let type: 'video' | 'audio' = 'video';
       let waveform: number[] | undefined;
       let duration: number | undefined;
+      let blurhash: string | undefined;
+      let thumbhash: string | undefined;
+      let thumbnail: string | undefined;
+      let dimensions: { width: number; height: number } | undefined;
 
       if (tags) {
         const imeta = tags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
@@ -512,6 +525,33 @@ export class ParsingService {
           if (durationTag) {
             duration = Number(durationTag.substring(9));
           }
+          // Extract blurhash
+          const blurhashTag = imeta.find(v => v.startsWith('blurhash '));
+          if (blurhashTag) {
+            blurhash = blurhashTag.substring(9);
+          }
+          // Extract thumbhash
+          const thumbhashTag = imeta.find(v => v.startsWith('thumbhash '));
+          if (thumbhashTag) {
+            thumbhash = thumbhashTag.substring(10);
+          }
+          // Extract thumbnail image URL
+          const imageTag = imeta.find(v => v.startsWith('image '));
+          if (imageTag) {
+            thumbnail = imageTag.substring(6);
+          }
+          // Extract dimensions
+          const dimTag = imeta.find(v => v.startsWith('dim '));
+          if (dimTag) {
+            const dimValue = dimTag.substring(4);
+            const dimMatch = dimValue.match(/(\d+)x(\d+)/);
+            if (dimMatch) {
+              dimensions = {
+                width: parseInt(dimMatch[1], 10),
+                height: parseInt(dimMatch[2], 10)
+              };
+            }
+          }
         }
       }
 
@@ -521,7 +561,11 @@ export class ParsingService {
         content: url,
         type: type,
         waveform,
-        duration
+        duration,
+        blurhash,
+        thumbhash,
+        thumbnail,
+        dimensions
       });
     }
 
