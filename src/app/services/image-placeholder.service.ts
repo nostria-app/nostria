@@ -170,6 +170,35 @@ export class ImagePlaceholderService {
   }
 
   /**
+   * Calculate small placeholder dimensions that preserve the aspect ratio
+   * Returns dimensions where the largest side is maxSize (default 32)
+   */
+  getPlaceholderDimensions(
+    dimensions?: { width: number; height: number },
+    maxSize = 32
+  ): { width: number; height: number } {
+    if (!dimensions || !dimensions.width || !dimensions.height) {
+      return { width: maxSize, height: maxSize };
+    }
+
+    const aspectRatio = dimensions.width / dimensions.height;
+
+    if (aspectRatio >= 1) {
+      // Landscape or square
+      return {
+        width: maxSize,
+        height: Math.max(1, Math.round(maxSize / aspectRatio)),
+      };
+    } else {
+      // Portrait
+      return {
+        width: Math.max(1, Math.round(maxSize * aspectRatio)),
+        height: maxSize,
+      };
+    }
+  }
+
+  /**
    * Generate a placeholder data URL from either blurhash or thumbhash
    * Automatically detects which format is being used
    * Note: Uses small dimensions (32x32) for performance - CSS scales it up
@@ -505,28 +534,33 @@ export class ImagePlaceholderService {
 
   /**
    * Generate placeholder data URL from event
-   * Note: Uses small dimensions (32x32) for performance - CSS scales it up
+   * Note: Uses small dimensions for performance - CSS scales it up
+   * If preserveAspectRatio is true, uses dimensions from imeta to generate correct aspect ratio
    */
   getPlaceholderDataUrlFromEvent(
     event: { kind?: number; tags: string[][] },
     imageIndex = 0,
-    width = 32,
-    height = 32
+    preserveAspectRatio = false
   ): string {
     const data = this.getPlaceholderFromEvent(event, imageIndex);
     const best = this.getBestPlaceholder(data);
 
+    // Calculate dimensions - either preserve aspect ratio or use square
+    const dims = preserveAspectRatio
+      ? this.getPlaceholderDimensions(data.dimensions)
+      : { width: 32, height: 32 };
+
     if (best) {
-      return this.generatePlaceholderDataUrl(best, width, height);
+      return this.generatePlaceholderDataUrl(best, dims.width, dims.height);
     }
 
-    return this.getDefaultPlaceholderDataUrl(width, height);
+    return this.getDefaultPlaceholderDataUrl(dims.width, dims.height);
   }
 
   /**
    * Get all media info from an event for a specific image index
    * Returns placeholder data URL and dimensions for progressive loading
-   * Note: Placeholder is decoded at small size (32x32) for performance - CSS scales it up
+   * Note: Placeholder is decoded at small size but with correct aspect ratio
    */
   getMediaInfoFromEvent(
     event: { kind?: number; tags: string[][] },
@@ -535,10 +569,11 @@ export class ImagePlaceholderService {
     const data = this.getPlaceholderFromEvent(event, imageIndex);
     const best = this.getBestPlaceholder(data);
 
-    // Always use small size for placeholder - CSS scales it up
+    // Use small size but preserve aspect ratio for correct display
+    const dims = this.getPlaceholderDimensions(data.dimensions);
     const placeholderDataUrl = best
-      ? this.generatePlaceholderDataUrl(best, 32, 32)
-      : this.getDefaultPlaceholderDataUrl(32, 32);
+      ? this.generatePlaceholderDataUrl(best, dims.width, dims.height)
+      : this.getDefaultPlaceholderDataUrl(dims.width, dims.height);
 
     return {
       placeholderDataUrl,

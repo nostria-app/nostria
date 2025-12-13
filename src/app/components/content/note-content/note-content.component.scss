@@ -342,7 +342,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     opacity: 1; // Show by default for progressive loading
     transition: opacity 0.4s ease-out;
     pointer-events: none;
@@ -525,7 +525,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    object-fit: cover;
+    object-fit: contain;
     opacity: 1; // Show by default
     transition: opacity 0.4s ease-out;
     pointer-events: none;

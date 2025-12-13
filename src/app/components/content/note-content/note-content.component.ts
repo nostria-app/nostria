@@ -614,21 +614,23 @@ export class NoteContentComponent implements OnDestroy {
 
   /**
    * Get placeholder data URL for an image token using its imeta data
-   * Note: Blurhash is decoded at small size (32x32) for performance - CSS scales it up
+   * Note: Blurhash is decoded at small size but with correct aspect ratio for proper positioning
    */
   getImagePlaceholderUrl(token: ContentToken): string | null {
+    // Calculate small dimensions that preserve aspect ratio
+    const dims = this.imagePlaceholder.getPlaceholderDimensions(token.dimensions);
     // First try thumbhash, then blurhash from the token
     if (token.thumbhash) {
       const url = this.imagePlaceholder.decodeThumbhash(token.thumbhash);
       if (url) return url;
     }
     if (token.blurhash) {
-      // Decode at small size for performance - CSS will scale it up
-      const url = this.imagePlaceholder.decodeBlurhash(token.blurhash, 32, 32);
+      // Decode at small size but with correct aspect ratio
+      const url = this.imagePlaceholder.decodeBlurhash(token.blurhash, dims.width, dims.height);
       if (url) return url;
     }
     // Return default placeholder
-    return this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
+    return this.imagePlaceholder.getDefaultPlaceholderDataUrl(dims.width, dims.height);
   }
 
   /**
