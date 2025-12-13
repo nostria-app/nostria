@@ -242,6 +242,7 @@
   overflow: hidden;
   display: inline-block;
   max-width: 100%;
+  border-radius: 12px;
 
   img {
     display: block;
@@ -415,7 +416,7 @@
   position: relative;
   width: 100%;
   background: var(--mat-sys-surface-container);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
 }
 
