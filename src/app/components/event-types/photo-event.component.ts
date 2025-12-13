@@ -12,7 +12,7 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
-import { ImagePlaceholderService } from '../../services/image-placeholder.service';
+import { ImagePlaceholderService, PlaceholderData } from '../../services/image-placeholder.service';
 
 @Component({
   selector: 'app-photo-event',
@@ -48,6 +48,9 @@ export class PhotoEventComponent {
 
   // Track if media has been revealed (for blur-to-show animation)
   isRevealed = signal(false);
+
+  // Track which images have finished loading (for progressive loading)
+  loadedImages = signal<Set<number>>(new Set());
 
   // Computed: Should media be blurred based on privacy settings?
   shouldBlurMedia = computed(() => {
@@ -97,6 +100,14 @@ export class PhotoEventComponent {
     return this.getImageUrls(event);
   });
 
+  // Computed media data with placeholders and dimensions for each image
+  mediaData = computed(() => {
+    const event = this.event();
+    if (!event) return [];
+
+    return this.imagePlaceholder.getAllMediaFromEvent(event);
+  });
+
   // Computed placeholder data URLs for performance - supports both blurhash and thumbhash
   placeholderDataUrls = computed(() => {
     const event = this.event();
@@ -110,6 +121,25 @@ export class PhotoEventComponent {
 
   // Legacy alias for backward compatibility
   blurhashDataUrls = this.placeholderDataUrls;
+
+  // Check if current image is loaded
+  isCurrentImageLoaded = computed(() => {
+    const index = this.currentCarouselIndex();
+    return this.loadedImages().has(index);
+  });
+
+  // Get dimensions for current image
+  currentImageDimensions = computed(() => {
+    const data = this.mediaData();
+    const index = this.currentCarouselIndex();
+    return data[index]?.dimensions;
+  });
+
+  // Get aspect ratio style for current image
+  currentAspectRatio = computed(() => {
+    const dimensions = this.currentImageDimensions();
+    return this.imagePlaceholder.getAspectRatioStyle(dimensions);
+  });
 
   // Photo title
   title = computed(() => {
@@ -338,11 +368,13 @@ export class PhotoEventComponent {
   }
 
   onImageLoad(event: globalThis.Event): void {
-    const target = event.target as HTMLImageElement;
-    if (target && target.previousElementSibling) {
-      // Hide placeholder when main image loads
-      (target.previousElementSibling as HTMLElement).style.opacity = '0';
-    }
+    // Mark current image as loaded for progressive loading transition
+    const currentIndex = this.currentCarouselIndex();
+    this.loadedImages.update(set => {
+      const newSet = new Set(set);
+      newSet.add(currentIndex);
+      return newSet;
+    });
   }
 
   /**

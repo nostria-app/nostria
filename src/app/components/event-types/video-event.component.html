@@ -13,11 +13,12 @@
 @let blurhashUrl = blurhashDataUrl();
 @if (videoInfo) {
 <div class="video-container" [class.clickable]="showOverlay()" [class.blurred]="shouldBlurMedia()"
-  [class.revealing]="!shouldBlurMedia() && isRevealed()">
+  [class.revealing]="!shouldBlurMedia() && isRevealed()" [style.aspect-ratio]="videoAspectRatio()">
   @if (!isExpanded()) {
   <!-- Video Thumbnail (Initial State) -->
   <div class="video-thumbnail-container" tabindex="0" role="button" (click)="expandVideo($any($event))"
-    (keyup.enter)="expandVideo($any($event))" (keyup.space)="expandVideo($any($event))">
+    (keyup.enter)="expandVideo($any($event))" (keyup.space)="expandVideo($any($event))"
+    [class.thumbnail-loaded]="thumbnailLoaded()">
     <!-- Video icon indicator (shown in grid view) -->
     @if (showOverlay()) {
     <div class="video-indicator">
@@ -25,19 +26,18 @@
     </div>
     }
 
-    @if (videoInfo.thumbnail) {
-    <!-- Use provided thumbnail image -->
-    <img [src]="videoInfo.thumbnail" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
-      [title]="videoInfo.title || 'Video thumbnail'" loading="lazy" [class.hidden]="shouldBlurMedia()" />
-    @if (shouldBlurMedia() && blurhashUrl) {
+    <!-- Placeholder background (always shown initially) -->
+    @if (blurhashUrl) {
     <img [src]="blurhashUrl" class="video-thumbnail blurhash-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
-      [title]="videoInfo.title || 'Video thumbnail'" />
+      [title]="videoInfo.title || 'Video thumbnail'" aria-hidden="true" />
     }
-    } @else if (blurhashUrl) {
-    <!-- Use blurhash as fallback -->
-    <img [src]="blurhashUrl" class="video-thumbnail blurhash-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
-      [title]="videoInfo.title || 'Video thumbnail'" />
-    } @else {
+
+    @if (videoInfo.thumbnail) {
+    <!-- Use provided thumbnail image with progressive loading -->
+    <img [src]="videoInfo.thumbnail" class="video-thumbnail main-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
+      [title]="videoInfo.title || 'Video thumbnail'" loading="lazy" [class.hidden]="shouldBlurMedia()"
+      [class.loaded]="thumbnailLoaded()" (load)="thumbnailLoaded.set(true)" />
+    } @else if (!blurhashUrl) {
     <!-- Use video element with preload="metadata" to show first frame -->
     <video [src]="videoInfo.url" preload="metadata" class="video-thumbnail" [class.hidden]="shouldBlurMedia()"></video>
     }

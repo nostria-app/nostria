@@ -14,15 +14,17 @@ import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { CastService } from '../../services/cast.service';
-import { ImagePlaceholderService } from '../../services/image-placeholder.service';
+import { ImagePlaceholderService, PlaceholderData } from '../../services/image-placeholder.service';
 
 interface VideoData {
   url: string;
   thumbnail?: string;
   blurhash?: string;
+  thumbhash?: string;
   duration?: number;
   title?: string;
   alt?: string;
+  dimensions?: { width: number; height: number };
 }
 
 @Component({
@@ -256,6 +258,21 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
   // Legacy alias for backward compatibility
   blurhashDataUrl = this.placeholderDataUrl;
+
+  // Track if thumbnail is loaded
+  thumbnailLoaded = signal(false);
+
+  // Get dimensions for video thumbnail
+  videoDimensions = computed(() => {
+    const data = this.videoData();
+    return data?.dimensions;
+  });
+
+  // Get aspect ratio style for video container
+  videoAspectRatio = computed(() => {
+    const dimensions = this.videoDimensions();
+    return this.imagePlaceholder.getAspectRatioStyle(dimensions);
+  });
 
   // Computed MIME type based on file extension
   videoMimeType = computed(() => {
@@ -549,6 +566,9 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         const primaryImeta = imetaTags[0];
         const parsed = this.parseImetaTag(primaryImeta);
 
+        // Get placeholder data with dimensions from the service
+        const placeholderData = this.imagePlaceholder.extractPlaceholderFromImeta(primaryImeta);
+
         console.log('Parsed imeta tag:', parsed);
 
         if (parsed['url']) {
@@ -557,10 +577,12 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
           const altTag = event.tags.find(tag => tag[0] === 'alt');
           const titleTag = event.tags.find(tag => tag[0] === 'title');
 
-          const videoData = {
+          const videoData: VideoData = {
             url: parsed['url'],
             thumbnail: parsed['image'],
-            blurhash: parsed['blurhash'],
+            blurhash: placeholderData.blurhash || parsed['blurhash'],
+            thumbhash: placeholderData.thumbhash,
+            dimensions: placeholderData.dimensions,
             duration: durationTag?.[1] ? parseInt(durationTag[1], 10) : undefined,
             title: titleTag?.[1],
             alt: altTag?.[1] || parsed['alt'],
@@ -581,6 +603,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
         const imageTag = event.tags.find(tag => tag[0] === 'image');
         const thumbTag = event.tags.find(tag => tag[0] === 'thumb');
         const blurhashTag = event.tags.find(tag => tag[0] === 'blurhash');
+        const thumbhashTag = event.tags.find(tag => tag[0] === 'thumbhash');
         const durationTag = event.tags.find(tag => tag[0] === 'duration');
         const titleTag = event.tags.find(tag => tag[0] === 'title');
         const altTag = event.tags.find(tag => tag[0] === 'alt');
@@ -589,6 +612,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
           url: videoUrl,
           thumbnail: thumbTag?.[1] || imageTag?.[1],
           blurhash: blurhashTag?.[1],
+          thumbhash: thumbhashTag?.[1],
           duration: durationTag?.[1] ? parseInt(durationTag[1], 10) : undefined,
           title: titleTag?.[1],
           alt: altTag?.[1],

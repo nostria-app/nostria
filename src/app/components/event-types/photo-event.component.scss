@@ -72,6 +72,18 @@
       transition: opacity 0.6s ease-out;
     }
   }
+
+  // Image loaded state - fade out placeholder
+  &.image-loaded {
+    .blurhash-placeholder {
+      opacity: 0;
+      transition: opacity 0.4s ease-out;
+    }
+
+    .main-image.loaded {
+      opacity: 1;
+    }
+  }
 }
 
 // Reveal overlay for blurred images
@@ -153,8 +165,12 @@
     cursor: pointer;
     position: relative;
     z-index: 2;
-    opacity: 1;
-    transition: opacity 0.3s ease;
+    opacity: 0; // Start hidden, show when loaded
+    transition: opacity 0.4s ease-out;
+
+    &.loaded {
+      opacity: 1;
+    }
 
     &.hidden {
       opacity: 0;
@@ -171,7 +187,8 @@
     top: 0;
     left: 0;
     z-index: 1;
-    transition: opacity 0.3s ease;
+    opacity: 1; // Show by default
+    transition: opacity 0.4s ease-out;
     filter: blur(1px);
   }
 }

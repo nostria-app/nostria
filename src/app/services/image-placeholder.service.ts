@@ -18,6 +18,8 @@ export const DEFAULT_THUMBHASH = 'mxgOFwJ4iYePiHh6d3eIh3d5OA4G5GAC';
 export interface PlaceholderData {
   blurhash?: string;
   thumbhash?: string;
+  dimensions?: { width: number; height: number };
+  url?: string;
 }
 
 export interface GeneratedPlaceholder {
@@ -50,7 +52,7 @@ export class ImagePlaceholderService {
 
   /**
    * Extract placeholder data from an imeta tag
-   * Returns both blurhash and thumbhash if available
+   * Returns blurhash, thumbhash, dimensions, and url if available
    */
   extractPlaceholderFromImeta(imetaTag: string[]): PlaceholderData {
     const result: PlaceholderData = {};
@@ -68,6 +70,18 @@ export class ImagePlaceholderService {
           result.blurhash = value;
         } else if (key === 'thumbhash') {
           result.thumbhash = value;
+        } else if (key === 'dim') {
+          // Parse dimensions in format "WIDTHxHEIGHT"
+          const dimParts = value.split('x');
+          if (dimParts.length === 2) {
+            const width = parseInt(dimParts[0], 10);
+            const height = parseInt(dimParts[1], 10);
+            if (!isNaN(width) && !isNaN(height)) {
+              result.dimensions = { width, height };
+            }
+          }
+        } else if (key === 'url') {
+          result.url = value;
         }
       }
     }
@@ -458,6 +472,68 @@ export class ImagePlaceholderService {
     }
 
     return this.getDefaultPlaceholderDataUrl(width, height);
+  }
+
+  /**
+   * Get all media info from an event for a specific image index
+   * Returns placeholder data URL and dimensions for progressive loading
+   */
+  getMediaInfoFromEvent(
+    event: { kind?: number; tags: string[][] },
+    imageIndex = 0
+  ): { placeholderDataUrl: string; dimensions?: { width: number; height: number }; url?: string } {
+    const data = this.getPlaceholderFromEvent(event, imageIndex);
+    const best = this.getBestPlaceholder(data);
+
+    // Use dimensions from imeta if available, falling back to a reasonable aspect ratio
+    let width = data.dimensions?.width || 400;
+    let height = data.dimensions?.height || 400;
+
+    // Limit the placeholder generation size for performance
+    // but preserve aspect ratio
+    const maxPlaceholderSize = 400;
+    if (width > maxPlaceholderSize || height > maxPlaceholderSize) {
+      const ratio = Math.min(maxPlaceholderSize / width, maxPlaceholderSize / height);
+      width = Math.round(width * ratio);
+      height = Math.round(height * ratio);
+    }
+
+    const placeholderDataUrl = best
+      ? this.generatePlaceholderDataUrl(best, width, height)
+      : this.getDefaultPlaceholderDataUrl(width, height);
+
+    return {
+      placeholderDataUrl,
+      dimensions: data.dimensions,
+      url: data.url,
+    };
+  }
+
+  /**
+   * Get all media items from an event with their placeholder and dimension data
+   * Used for photo events with multiple images
+   */
+  getAllMediaFromEvent(event: { kind?: number; tags: string[][] }): PlaceholderData[] {
+    const imetaTags = event.tags.filter(tag => tag[0] === 'imeta');
+
+    if (imetaTags.length > 0) {
+      return imetaTags.map(tag => this.extractPlaceholderFromImeta(tag));
+    }
+
+    // Fallback to standalone tags (single item)
+    const fallback = this.extractPlaceholderFromTags(event.tags);
+    return fallback.blurhash || fallback.thumbhash ? [fallback] : [];
+  }
+
+  /**
+   * Calculate aspect ratio CSS value from dimensions
+   * Returns a string like "16 / 9" for use in CSS aspect-ratio property
+   */
+  getAspectRatioStyle(dimensions?: { width: number; height: number }): string | null {
+    if (!dimensions || dimensions.width <= 0 || dimensions.height <= 0) {
+      return null;
+    }
+    return `${dimensions.width} / ${dimensions.height}`;
   }
 
   /**
