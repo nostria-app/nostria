@@ -66,11 +66,16 @@
   </div>
   } @else {
   <!-- Video Player (Expanded State) -->
-  <div class="video-player-container" (mouseenter)="onVideoContainerMouseEnter()"
-    (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()">
-    <video #videoPlayer class="video-player" [autoplay]="shouldAutoPlay()" [loop]="shouldRepeat()"
-      [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
-      (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()">
+  <div class="video-player-container" [style.aspect-ratio]="videoAspectRatio()" [class.video-ready]="videoReady()"
+    (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
+    (mousemove)="onVideoContainerMouseMove()">
+    <!-- Placeholder shown until video is ready -->
+    @if (blurhashUrl && !videoReady()) {
+    <img [src]="blurhashUrl" class="video-placeholder-bg" alt="" aria-hidden="true" />
+    }
+    <video #videoPlayer class="video-player" [class.loaded]="videoReady()" [autoplay]="shouldAutoPlay()"
+      [loop]="shouldRepeat()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
+      (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()" (canplay)="onVideoCanPlay()">
       <source [src]="videoInfo.url" [type]="videoMimeType()" />
       Your browser does not support the video tag.
     </video>
