@@ -14,12 +14,17 @@ import { BookmarkService } from '../../services/bookmark.service';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { EventMenuComponent } from '../event/event-menu/event-menu.component';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { SettingsService } from '../../services/settings.service';
 
 interface MediaWithCommentsDialogData {
   event: Event;
   // Optional: for navigation between media items
   allEvents?: Event[];
   currentIndex?: number;
+  // Optional: pubkey of a trusted user who shared this (for blur bypass)
+  trustedByPubkey?: string;
 }
 
 interface VideoData {
@@ -42,7 +47,7 @@ interface VideoData {
     MatChipsModule,
     CommentsListComponent,
     EventMenuComponent
-],
+  ],
   templateUrl: './media-with-comments-dialog.component.html',
   styleUrl: './media-with-comments-dialog.component.scss',
 })
@@ -50,6 +55,9 @@ export class MediaWithCommentsDialogComponent {
   private dialogRef = inject(MatDialogRef<MediaWithCommentsDialogComponent>);
   private dialog = inject(MatDialog);
   private router = inject(Router);
+  private accountLocalState = inject(AccountLocalStateService);
+  private accountState = inject(AccountStateService);
+  private settings = inject(SettingsService);
   data: MediaWithCommentsDialogData = inject(MAT_DIALOG_DATA);
   bookmark = inject(BookmarkService);
 
@@ -94,6 +102,45 @@ export class MediaWithCommentsDialogComponent {
   isVideo = computed(() => {
     const ev = this.event();
     return ev.kind === 21 || ev.kind === 22 || ev.kind === 34235 || ev.kind === 34236; // NIP-71 Video events (21, 22) and Addressable Video events (34235, 34236)
+  });
+
+  // Track if user has manually revealed the current blurred media
+  isRevealed = signal(false);
+
+  // Media privacy blur - check if the current event's author is trusted
+  shouldBlurMedia = computed(() => {
+    const ev = this.event();
+    if (!ev) return false;
+
+    const currentUserPubkey = this.accountState.pubkey();
+    if (!currentUserPubkey) return false; // No user logged in, no blur needed
+
+    // Check media privacy setting
+    const mediaPrivacy = this.settings.settings().mediaPrivacy || 'show-always';
+    if (mediaPrivacy === 'show-always') {
+      return false;
+    }
+
+    // Pass trustedByPubkey for cases where a trusted user shared this content
+    // Using trackChanges=true so UI updates when trusting this author
+    if (this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, ev.pubkey, true, this.data.trustedByPubkey)) {
+      return false;
+    }
+
+    // Check if sharer is in following list - trust what people you follow share
+    const followingList = this.accountState.followingList();
+    const sharer = this.data.trustedByPubkey;
+    if (sharer && followingList.includes(sharer)) {
+      return false;
+    }
+
+    if (mediaPrivacy === 'blur-always') {
+      return !this.isRevealed();
+    }
+
+    // blur-non-following
+    const isFollowing = followingList.includes(ev.pubkey);
+    return !isFollowing && !this.isRevealed();
   });
 
   // Photo data
@@ -408,5 +455,21 @@ export class MediaWithCommentsDialogComponent {
     const geohash = this.getGeohash();
     if (!geohash) return null;
     return `https://geohash.softeng.co/${geohash}`;
+  }
+
+  // Reveal blurred media (one-time reveal)
+  revealMedia(): void {
+    this.isRevealed.set(true);
+  }
+
+  // Trust author for media reveal (always show their media without blur)
+  trustAuthor(): void {
+    const currentUserPubkey = this.accountState.pubkey();
+    const ev = this.event();
+    if (currentUserPubkey && ev?.pubkey) {
+      this.accountLocalState.addTrustedMediaAuthor(currentUserPubkey, ev.pubkey);
+      // Also reveal the current media immediately
+      this.isRevealed.set(true);
+    }
   }
 }
