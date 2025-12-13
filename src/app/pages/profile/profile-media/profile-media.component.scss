@@ -76,35 +76,32 @@
         height: 100%;
         width: 100%;
 
-        img,
-        video {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          display: block;
-        }
-
-        // Ensure blurhash placeholders are visible
-        img.blurhash-placeholder,
-        img.blurhash-thumbnail {
-          position: absolute;
-          top: 0;
-          left: 0;
-          z-index: 1;
-        }
-
         // Remove any padding from photo/video containers
         .photo-carousel-container,
         .video-container {
           margin: 0 !important;
           padding: 0 !important;
+          max-width: none !important;
           height: 100%;
         }
 
-        .photo-carousel,
+        .photo-carousel {
+          height: 100%;
+        }
+
         .photo-container {
           margin: 0 !important;
           padding: 0 !important;
+          height: 100%;
+          // Override dynamic aspect-ratio for grid view - force square
+          aspect-ratio: 1 / 1 !important;
+        }
+
+        // Force images to fill the square grid cell
+        .photo-item {
+          width: 100%;
+          height: 100%;
+          object-fit: cover !important;
         }
 
         // Ensure video thumbnail container fills the space
