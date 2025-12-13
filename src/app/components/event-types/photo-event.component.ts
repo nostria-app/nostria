@@ -96,12 +96,19 @@ export class PhotoEventComponent {
       }
     }
 
+    // Check if sharer is in following list - trust what people you follow share
+    const followingList = this.accountState.followingList();
+    const sharer = this.trustedByPubkey();
+    if (sharer && followingList.includes(sharer)) {
+      return false;
+    }
+
     if (mediaPrivacy === 'blur-always') {
       return !this.isRevealed();
     }
 
     // blur-non-following
-    const isFollowing = this.accountState.followingList().includes(authorPubkey);
+    const isFollowing = followingList.includes(authorPubkey);
     return !isFollowing && !this.isRevealed();
   });
 
