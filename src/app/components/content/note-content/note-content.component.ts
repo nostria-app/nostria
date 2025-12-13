@@ -606,13 +606,44 @@ export class NoteContentComponent implements OnDestroy {
 
   /**
    * Get placeholder data URL for an image - uses service for both blurhash and thumbhash support
+   * @deprecated Use getImagePlaceholderUrl with token for token-specific placeholders
    */
   getBlurhashDataUrl(): string | null {
     return this.imagePlaceholder.getDefaultPlaceholderDataUrl(400, 400) || null;
   }
 
   /**
+   * Get placeholder data URL for an image token using its imeta data
+   * Note: Blurhash is decoded at small size (32x32) for performance - CSS scales it up
+   */
+  getImagePlaceholderUrl(token: ContentToken): string | null {
+    // First try thumbhash, then blurhash from the token
+    if (token.thumbhash) {
+      const url = this.imagePlaceholder.decodeThumbhash(token.thumbhash);
+      if (url) return url;
+    }
+    if (token.blurhash) {
+      // Decode at small size for performance - CSS will scale it up
+      const url = this.imagePlaceholder.decodeBlurhash(token.blurhash, 32, 32);
+      if (url) return url;
+    }
+    // Return default placeholder
+    return this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
+  }
+
+  /**
+   * Get aspect ratio style for an image token
+   */
+  getImageAspectRatio(token: ContentToken): string | null {
+    if (token.dimensions) {
+      return `${token.dimensions.width} / ${token.dimensions.height}`;
+    }
+    return null;
+  }
+
+  /**
    * Get placeholder data URL for a video token using its imeta data
+   * Note: Blurhash is decoded at small size (32x32) for performance - CSS scales it up
    */
   getVideoPlaceholderUrl(token: ContentToken): string | null {
     // First try thumbhash, then blurhash from the token
@@ -621,13 +652,12 @@ export class NoteContentComponent implements OnDestroy {
       if (url) return url;
     }
     if (token.blurhash) {
-      const width = token.dimensions?.width || 400;
-      const height = token.dimensions?.height || 225;
-      const url = this.imagePlaceholder.decodeBlurhash(token.blurhash, width, height);
+      // Decode at small size for performance - CSS will scale it up
+      const url = this.imagePlaceholder.decodeBlurhash(token.blurhash, 32, 32);
       if (url) return url;
     }
     // Return default placeholder
-    return this.imagePlaceholder.getDefaultPlaceholderDataUrl(400, 225);
+    return this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
   }
 
   /**

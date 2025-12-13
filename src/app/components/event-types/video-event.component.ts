@@ -690,8 +690,9 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   /**
    * Generate a placeholder data URL - supports both blurhash and thumbhash
    * @deprecated Use imagePlaceholder service directly instead
+   * Note: Placeholder is decoded at small size for performance - CSS scales it up
    */
-  generateBlurhashDataUrl(placeholder: string, width = 400, height = 225): string {
+  generateBlurhashDataUrl(placeholder: string, width = 32, height = 32): string {
     return this.imagePlaceholder.generatePlaceholderDataUrl(placeholder, width, height);
   }
 

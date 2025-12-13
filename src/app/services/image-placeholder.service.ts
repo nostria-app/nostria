@@ -172,11 +172,12 @@ export class ImagePlaceholderService {
   /**
    * Generate a placeholder data URL from either blurhash or thumbhash
    * Automatically detects which format is being used
+   * Note: Uses small dimensions (32x32) for performance - CSS scales it up
    */
   generatePlaceholderDataUrl(
     placeholder: string,
-    width = 400,
-    height = 400
+    width = 32,
+    height = 32
   ): string {
     if (!placeholder) {
       return this.getDefaultPlaceholderDataUrl(width, height);
@@ -209,8 +210,9 @@ export class ImagePlaceholderService {
 
   /**
    * Decode a blurhash string to a data URL (with caching)
+   * Note: Uses small default dimensions (32x32) for performance - CSS scales it up
    */
-  decodeBlurhash(blurhash: string, width = 400, height = 400): string {
+  decodeBlurhash(blurhash: string, width = 32, height = 32): string {
     if (!blurhash) return '';
 
     // Check cache first
@@ -439,8 +441,9 @@ export class ImagePlaceholderService {
 
   /**
    * Get default placeholder data URL based on preferred algorithm and theme
+   * Note: Uses small dimensions (32x32) for performance - CSS scales it up
    */
-  getDefaultPlaceholderDataUrl(width = 400, height = 400): string {
+  getDefaultPlaceholderDataUrl(width = 32, height = 32): string {
     const algorithm = this.getPreferredAlgorithm();
     const isDark = this.themeService.darkMode();
 
@@ -502,12 +505,13 @@ export class ImagePlaceholderService {
 
   /**
    * Generate placeholder data URL from event
+   * Note: Uses small dimensions (32x32) for performance - CSS scales it up
    */
   getPlaceholderDataUrlFromEvent(
     event: { kind?: number; tags: string[][] },
     imageIndex = 0,
-    width = 400,
-    height = 400
+    width = 32,
+    height = 32
   ): string {
     const data = this.getPlaceholderFromEvent(event, imageIndex);
     const best = this.getBestPlaceholder(data);
@@ -522,6 +526,7 @@ export class ImagePlaceholderService {
   /**
    * Get all media info from an event for a specific image index
    * Returns placeholder data URL and dimensions for progressive loading
+   * Note: Placeholder is decoded at small size (32x32) for performance - CSS scales it up
    */
   getMediaInfoFromEvent(
     event: { kind?: number; tags: string[][] },
@@ -530,22 +535,10 @@ export class ImagePlaceholderService {
     const data = this.getPlaceholderFromEvent(event, imageIndex);
     const best = this.getBestPlaceholder(data);
 
-    // Use dimensions from imeta if available, falling back to a reasonable aspect ratio
-    let width = data.dimensions?.width || 400;
-    let height = data.dimensions?.height || 400;
-
-    // Limit the placeholder generation size for performance
-    // but preserve aspect ratio
-    const maxPlaceholderSize = 400;
-    if (width > maxPlaceholderSize || height > maxPlaceholderSize) {
-      const ratio = Math.min(maxPlaceholderSize / width, maxPlaceholderSize / height);
-      width = Math.round(width * ratio);
-      height = Math.round(height * ratio);
-    }
-
+    // Always use small size for placeholder - CSS scales it up
     const placeholderDataUrl = best
-      ? this.generatePlaceholderDataUrl(best, width, height)
-      : this.getDefaultPlaceholderDataUrl(width, height);
+      ? this.generatePlaceholderDataUrl(best, 32, 32)
+      : this.getDefaultPlaceholderDataUrl(32, 32);
 
     return {
       placeholderDataUrl,
