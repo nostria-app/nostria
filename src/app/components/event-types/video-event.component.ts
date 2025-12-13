@@ -207,16 +207,16 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
       return false;
     }
 
-    // Check if author is trusted for media reveal
+    // Check if author is trusted for media reveal (trackChanges=true for reactivity)
     const currentUserPubkey = this.accountState.pubkey();
     if (currentUserPubkey) {
-      const isTrusted = this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, authorPubkey);
+      const isTrusted = this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, authorPubkey, true);
       if (isTrusted) {
         return false;
       }
       // Also check if someone who shared/reposted this content is trusted
       const sharer = this.trustedByPubkey();
-      if (sharer && this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, sharer)) {
+      if (sharer && this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, sharer, true)) {
         return false;
       }
     }

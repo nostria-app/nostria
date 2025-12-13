@@ -579,8 +579,13 @@ export class AccountLocalStateService {
 
   /**
    * Check if an author is trusted for media reveal
+   * @param trackChanges - If true, reads the version signal to trigger reactivity in computed signals
    */
-  isMediaAuthorTrusted(pubkey: string, authorPubkey: string): boolean {
+  isMediaAuthorTrusted(pubkey: string, authorPubkey: string, trackChanges = false): boolean {
+    // Read the version signal to establish reactive dependency if requested
+    if (trackChanges) {
+      this.trustedMediaAuthorsVersion();
+    }
     return this.getTrustedMediaAuthors(pubkey).includes(authorPubkey);
   }
 
