@@ -109,13 +109,14 @@ export class PhotoEventComponent {
   });
 
   // Computed placeholder data URLs for performance - supports both blurhash and thumbhash
+  // Uses preserveAspectRatio to ensure placeholder matches image dimensions
   placeholderDataUrls = computed(() => {
     const event = this.event();
     if (!event) return [];
 
     const imageUrls = this.imageUrls();
     return imageUrls.map((_, index) =>
-      this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, index)
+      this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, index, true)
     );
   });
 

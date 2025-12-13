@@ -249,11 +249,12 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   });
 
   // Computed placeholder data URL - uses default if none available (supports blurhash and thumbhash)
+  // Uses preserveAspectRatio to ensure placeholder matches video dimensions
   placeholderDataUrl = computed(() => {
     const event = this.event();
-    if (!event) return this.imagePlaceholder.getDefaultPlaceholderDataUrl(400, 225);
+    if (!event) return this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
 
-    return this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, 0, 400, 225);
+    return this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, 0, true);
   });
 
   // Legacy alias for backward compatibility
