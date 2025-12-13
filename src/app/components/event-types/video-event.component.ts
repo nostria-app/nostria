@@ -262,6 +262,9 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   // Track if thumbnail is loaded
   thumbnailLoaded = signal(false);
 
+  // Track if video is ready to play (has enough data)
+  videoReady = signal(false);
+
   // Get dimensions for video thumbnail
   videoDimensions = computed(() => {
     const data = this.videoData();
@@ -403,6 +406,10 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     if (video) {
       this.videoDuration.set(video.duration);
     }
+  }
+
+  onVideoCanPlay(): void {
+    this.videoReady.set(true);
   }
 
   togglePlayPause(): void {
