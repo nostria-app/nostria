@@ -4,11 +4,13 @@
 @if (item.images.length === 1) {
 <!-- Single image - render normally -->
 @let token = item.images[0];
+@let imagePlaceholder = getImagePlaceholderUrl(token);
 <div class="media-container image-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
   [class.image-loaded]="isImageLoaded(token.content)">
-  @if (getBlurhashDataUrl(); as blurhashUrl) {
-  <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" aria-hidden="true" />
+  @if (imagePlaceholder) {
+  <img [src]="imagePlaceholder" alt="Blurred preview" class="blurhash-placeholder" aria-hidden="true"
+    [style.aspect-ratio]="getImageAspectRatio(token)" />
   }
   <img [src]="token.content" alt="Content image" loading="lazy" (click)="openImageDialog(token.content)"
     [class.clickable-image]="!shouldBlurImages() || isImageRevealed(token.content)"
@@ -33,14 +35,16 @@
 <!-- Multiple images - render as carousel -->
 @let currentIndex = getCarouselIndex(item.id);
 @let currentImage = item.images[currentIndex];
+@let carouselPlaceholder = getImagePlaceholderUrl(currentImage);
 <div class="image-carousel-container" (touchstart)="onTouchStart($event)"
   (touchend)="onTouchEnd($event, item.id, item.images)">
   <div class="image-carousel">
     <div class="carousel-image-wrapper" [class.blurred]="shouldBlurImages() && !isImageRevealed(currentImage.content)"
       [class.revealing]="shouldBlurImages() && isImageRevealed(currentImage.content)"
       [class.image-loaded]="isImageLoaded(currentImage.content)">
-      @if (getBlurhashDataUrl(); as blurhashUrl) {
-      <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" aria-hidden="true" />
+      @if (carouselPlaceholder) {
+      <img [src]="carouselPlaceholder" alt="Blurred preview" class="blurhash-placeholder" aria-hidden="true"
+        [style.aspect-ratio]="getImageAspectRatio(currentImage)" />
       }
       <img [src]="currentImage.content" alt="Image {{ currentIndex + 1 }} of {{ item.images.length }}" loading="lazy"
         (click)="openCarouselImageDialog(item.images, currentIndex)"

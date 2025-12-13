@@ -482,11 +482,48 @@ export class ParsingService {
     // Find image URLs
     imageRegex.lastIndex = 0;
     while ((match = imageRegex.exec(processedContent)) !== null) {
+      const url = match[0];
+      let blurhash: string | undefined;
+      let thumbhash: string | undefined;
+      let dimensions: { width: number; height: number } | undefined;
+
+      // Check for imeta tag with matching URL
+      if (tags) {
+        const imeta = tags.find(t => t[0] === 'imeta' && t.some(v => v.startsWith('url ') && v.substring(4) === url));
+        if (imeta) {
+          // Extract blurhash
+          const blurhashTag = imeta.find(v => v.startsWith('blurhash '));
+          if (blurhashTag) {
+            blurhash = blurhashTag.substring(9);
+          }
+          // Extract thumbhash
+          const thumbhashTag = imeta.find(v => v.startsWith('thumbhash '));
+          if (thumbhashTag) {
+            thumbhash = thumbhashTag.substring(10);
+          }
+          // Extract dimensions
+          const dimTag = imeta.find(v => v.startsWith('dim '));
+          if (dimTag) {
+            const dimValue = dimTag.substring(4);
+            const dimMatch = dimValue.match(/(\d+)x(\d+)/);
+            if (dimMatch) {
+              dimensions = {
+                width: parseInt(dimMatch[1], 10),
+                height: parseInt(dimMatch[2], 10)
+              };
+            }
+          }
+        }
+      }
+
       matches.push({
         start: match.index,
         end: match.index + match[0].length,
-        content: match[0],
+        content: url,
         type: 'image',
+        blurhash,
+        thumbhash,
+        dimensions
       });
     }
 
