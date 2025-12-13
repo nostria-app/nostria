@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -13,7 +13,9 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
-import { UtilitiesService } from '../../services/utilities.service';
+
+// Default blurhash for images without one - neutral dark purple/gray gradient
+const DEFAULT_BLURHASH = 'L26RoJ.700~V9FM_4o-:9GM|%MRj';
 
 @Component({
   selector: 'app-photo-event',
@@ -37,7 +39,6 @@ export class PhotoEventComponent {
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
-  private utilities = inject(UtilitiesService);
 
   // Current carousel index for inline navigation
   currentCarouselIndex = signal(0);
@@ -49,28 +50,6 @@ export class PhotoEventComponent {
 
   // Track if media has been revealed (for blur-to-show animation)
   isRevealed = signal(false);
-
-  // Store generated blurhashes for images without imeta blurhash
-  private generatedBlurhashes = signal<Map<string, string>>(new Map());
-
-  constructor() {
-    // Generate blurhashes on-the-fly when needed
-    effect(() => {
-      const shouldBlur = this.shouldBlurMedia();
-      const imageUrls = this.imageUrls();
-      const blurhashes = this.blurhashes();
-
-      // Only generate if we should blur and there are missing blurhashes
-      if (shouldBlur) {
-        imageUrls.forEach((url, index) => {
-          if (!blurhashes[index] && !this.generatedBlurhashes().has(url)) {
-            // Generate blurhash asynchronously
-            this.generateBlurhashForImage(url);
-          }
-        });
-      }
-    });
-  }
 
   // Computed: Should media be blurred based on privacy settings?
   shouldBlurMedia = computed(() => {
@@ -120,21 +99,20 @@ export class PhotoEventComponent {
     return this.getImageUrls(event);
   });
 
-  // Computed blurhashes for all images
+  // Computed blurhashes for all images - uses default blurhash if none available
   blurhashes = computed(() => {
     const event = this.event();
     if (!event) return [];
 
     const imageUrls = this.imageUrls();
-    const generated = this.generatedBlurhashes();
 
-    return imageUrls.map((url, index) => {
+    return imageUrls.map((_, index) => {
       // First try to get blurhash from event tags
       const tagBlurhash = this.getBlurhash(event, index);
       if (tagBlurhash) return tagBlurhash;
 
-      // Otherwise, use generated blurhash if available
-      return generated.get(url) || null;
+      // Use default blurhash for consistent performance
+      return DEFAULT_BLURHASH;
     });
   });
 
@@ -487,20 +465,5 @@ export class PhotoEventComponent {
     }
 
     return parsed;
-  }
-
-  private async generateBlurhashForImage(url: string): Promise<void> {
-    try {
-      const result = await this.utilities.generateBlurhash(url, 6, 4);
-
-      // Update the map with the generated blurhash
-      this.generatedBlurhashes.update(map => {
-        const newMap = new Map(map);
-        newMap.set(url, result.blurhash);
-        return newMap;
-      });
-    } catch (error) {
-      console.warn('Failed to generate blurhash for image:', url, error);
-    }
   }
 }

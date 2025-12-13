@@ -29,7 +29,11 @@
     <!-- Use provided thumbnail image -->
     <img [src]="videoInfo.thumbnail" class="video-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
       [title]="videoInfo.title || 'Video thumbnail'" loading="lazy" [class.hidden]="shouldBlurMedia()" />
-    } @else if (videoInfo.blurhash && blurhashUrl) {
+    @if (shouldBlurMedia() && blurhashUrl) {
+    <img [src]="blurhashUrl" class="video-thumbnail blurhash-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
+      [title]="videoInfo.title || 'Video thumbnail'" />
+    }
+    } @else if (blurhashUrl) {
     <!-- Use blurhash as fallback -->
     <img [src]="blurhashUrl" class="video-thumbnail blurhash-thumbnail" [alt]="videoInfo.alt || 'Video thumbnail'"
       [title]="videoInfo.title || 'Video thumbnail'" />

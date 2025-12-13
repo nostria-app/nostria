@@ -6,7 +6,7 @@
 @let token = item.images[0];
 <div class="media-container image-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)">
-  @if (shouldBlurImages() && getBlurhashDataUrl(token.content); as blurhashUrl) {
+  @if (shouldBlurImages() && getBlurhashDataUrl(); as blurhashUrl) {
   <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" loading="lazy" />
   }
   <img [src]="token.content" alt="Content image" loading="lazy" (click)="openImageDialog(token.content)"
@@ -36,7 +36,7 @@
   <div class="image-carousel">
     <div class="carousel-image-wrapper" [class.blurred]="shouldBlurImages() && !isImageRevealed(currentImage.content)"
       [class.revealing]="shouldBlurImages() && isImageRevealed(currentImage.content)">
-      @if (shouldBlurImages() && getBlurhashDataUrl(currentImage.content); as blurhashUrl) {
+      @if (shouldBlurImages() && getBlurhashDataUrl(); as blurhashUrl) {
       <img [src]="blurhashUrl" alt="Blurred preview" class="blurhash-placeholder" loading="lazy" />
       }
       <img [src]="currentImage.content" alt="Image {{ currentIndex + 1 }} of {{ item.images.length }}" loading="lazy"

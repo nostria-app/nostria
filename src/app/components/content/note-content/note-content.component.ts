@@ -22,6 +22,9 @@ import { AccountLocalStateService } from '../../../services/account-local-state.
 import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { decode } from 'blurhash';
 
+// Default blurhash for images without one - neutral dark purple/gray gradient
+const DEFAULT_BLURHASH = 'L26RoJ.700~V9FM_4o-:9GM|%MRj';
+
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
   type: 'single' | 'image-group';
@@ -73,9 +76,11 @@ export class NoteContentComponent implements OnDestroy {
   private isMouseOverCard = signal(false);
   private routerSubscription?: Subscription;
 
-  // Image blur state
-  private generatedBlurhashes = signal<Map<string, string>>(new Map());
+  // Image blur state - use default blurhash instead of generating for performance
   private revealedImages = signal<Set<string>>(new Set());
+
+  // Cached default blurhash data URL - generated once and reused
+  private _defaultBlurhashDataUrl: string | null = null;
 
   // Carousel state for image groups - maps group ID to current index
   private carouselIndices = signal<Map<number, number>>(new Map());
@@ -213,23 +218,6 @@ export class NoteContentComponent implements OnDestroy {
       if (this.tokensHaveChanged(tokens)) {
         this.lastProcessedTokens = [...tokens];
         this.loadEventPreviews(tokens);
-      }
-    });
-
-    // Generate blurhashes for images when needed
-    effect(() => {
-      const shouldBlur = this.shouldBlurImages();
-      const tokens = this.contentTokens();
-
-      if (shouldBlur) {
-        for (const token of tokens) {
-          if ((token.type === 'image' || token.type === 'base64-image') && token.content) {
-            const imageUrl = token.content;
-            if (!this.generatedBlurhashes().has(imageUrl)) {
-              this.generateBlurhashForImage(imageUrl);
-            }
-          }
-        }
       }
     });
 
@@ -619,14 +607,16 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   /**
-   * Get blurhash data URL for an image
+   * Get blurhash data URL for an image - uses cached default blurhash for performance
    */
-  getBlurhashDataUrl(imageUrl: string): string | null {
-    const blurhash = this.generatedBlurhashes().get(imageUrl);
-    if (!blurhash) return null;
+  getBlurhashDataUrl(): string | null {
+    // Return cached version if available
+    if (this._defaultBlurhashDataUrl) {
+      return this._defaultBlurhashDataUrl;
+    }
 
     try {
-      const pixels = decode(blurhash, 400, 400);
+      const pixels = decode(DEFAULT_BLURHASH, 400, 400);
       const canvas = document.createElement('canvas');
       canvas.width = 400;
       canvas.height = 400;
@@ -637,27 +627,11 @@ export class NoteContentComponent implements OnDestroy {
       imageData.data.set(pixels);
       ctx.putImageData(imageData, 0, 0);
 
-      return canvas.toDataURL();
+      this._defaultBlurhashDataUrl = canvas.toDataURL();
+      return this._defaultBlurhashDataUrl;
     } catch (error) {
       console.warn('Failed to decode blurhash:', error);
       return null;
-    }
-  }
-
-  /**
-   * Generate blurhash for an image
-   */
-  private async generateBlurhashForImage(url: string): Promise<void> {
-    try {
-      const result = await this.utilities.generateBlurhash(url, 6, 4);
-
-      this.generatedBlurhashes.update(map => {
-        const newMap = new Map(map);
-        newMap.set(url, result.blurhash);
-        return newMap;
-      });
-    } catch (error) {
-      console.warn('Failed to generate blurhash for image:', url, error);
     }
   }
 
