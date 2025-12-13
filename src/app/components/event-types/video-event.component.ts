@@ -13,9 +13,11 @@ import { CommentsListComponent } from '../comments-list/comments-list.component'
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
-import { UtilitiesService } from '../../services/utilities.service';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { CastService } from '../../services/cast.service';
+
+// Default blurhash for videos without one - neutral dark purple/gray gradient
+const DEFAULT_BLURHASH = 'L26RoJ.700~V9FM_4o-:9GM|%MRj';
 
 interface VideoData {
   url: string;
@@ -64,7 +66,6 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   private settings = inject(SettingsService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
-  private utilities = inject(UtilitiesService);
   private hostElement = inject(ElementRef);
   private videoPlayback = inject(VideoPlaybackService);
   private castService = inject(CastService);
@@ -93,22 +94,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return this.isShortFormVideo() && repeatEnabled;
   });
 
-  // Store generated blurhashes for thumbnails without blurhash
-  private generatedBlurhash = signal<string | null>(null);
-
   constructor() {
-    // Generate blurhash on-the-fly when needed
-    effect(() => {
-      const shouldBlur = this.shouldBlurMedia();
-      const videoInfo = this.videoData();
-
-      // Only generate if we should blur, there's a thumbnail, and no existing blurhash
-      if (shouldBlur && videoInfo?.thumbnail && !videoInfo.blurhash && !this.generatedBlurhash()) {
-        this.generateBlurhashForThumbnail(videoInfo.thumbnail);
-      }
-    });
-
-    // Handle play/pause based on viewport visibility and auto-play settings
     effect(() => {
       const shouldPlay = this.shouldAutoPlay();
       const videoElement = this.videoPlayerRef?.nativeElement;
@@ -262,7 +248,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return this.getVideoData(event);
   });
 
-  // Computed blurhash data URL for performance
+  // Computed blurhash data URL - uses default if none available
   blurhashDataUrl = computed(() => {
     const videoInfo = this.videoData();
 
@@ -271,13 +257,8 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
       return this.generateBlurhashDataUrl(videoInfo.blurhash, 400, 225);
     }
 
-    // Otherwise use generated blurhash if available
-    const generated = this.generatedBlurhash();
-    if (generated) {
-      return this.generateBlurhashDataUrl(generated, 400, 225);
-    }
-
-    return null;
+    // Use default blurhash for consistent performance
+    return this.generateBlurhashDataUrl(DEFAULT_BLURHASH, 400, 225);
   });
 
   // Computed MIME type based on file extension
@@ -730,14 +711,5 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
 
     // Return the MIME type or default to mp4
     return mimeTypeMap[extension || ''] || 'video/mp4';
-  }
-
-  private async generateBlurhashForThumbnail(thumbnailUrl: string): Promise<void> {
-    try {
-      const result = await this.utilities.generateBlurhash(thumbnailUrl, 6, 4);
-      this.generatedBlurhash.set(result.blurhash);
-    } catch (error) {
-      console.warn('Failed to generate blurhash for video thumbnail:', thumbnailUrl, error);
-    }
   }
 }

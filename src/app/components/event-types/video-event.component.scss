@@ -42,7 +42,6 @@
   &.blurred {
     .blurhash-thumbnail {
       opacity: 1 !important;
-      filter: blur(20px);
     }
 
     .video-thumbnail:not(.blurhash-thumbnail) {
