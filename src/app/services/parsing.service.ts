@@ -708,6 +708,22 @@ export class ParsingService {
         token.duration = match.duration;
       }
 
+      if (match.blurhash) {
+        token.blurhash = match.blurhash;
+      }
+
+      if (match.thumbhash) {
+        token.thumbhash = match.thumbhash;
+      }
+
+      if (match.thumbnail) {
+        token.thumbnail = match.thumbnail;
+      }
+
+      if (match.dimensions) {
+        token.dimensions = match.dimensions;
+      }
+
       tokens.push(token);
 
       lastIndex = match.end;
