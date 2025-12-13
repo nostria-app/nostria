@@ -141,10 +141,10 @@
 <div class="media-container video-container" [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
   [class.video-ready]="isVideoReady(token.content)">
-  <!-- Placeholder shown until video is ready -->
-  @if (videoPlaceholder && !isVideoReady(token.content)) {
-  <img [src]="videoPlaceholder" class="video-placeholder-bg" [style.aspect-ratio]="videoAspect" alt=""
-    aria-hidden="true" />
+  <!-- Placeholder with fade transition -->
+  @if (videoPlaceholder) {
+  <img [src]="videoPlaceholder" class="video-placeholder-bg" [style.aspect-ratio]="videoAspect"
+    [class.fade-out]="isVideoReady(token.content)" alt="" aria-hidden="true" />
   }
   @if (isVideoFormatSupported(token.content)) {
   <video controls (error)="onVideoError($event, token.content)" (play)="onVideoPlay($event)"
