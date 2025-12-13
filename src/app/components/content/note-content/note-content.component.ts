@@ -186,6 +186,13 @@ export class NoteContentComponent implements OnDestroy {
       }
     }
 
+    // Check if sharer is in following list - trust what people you follow share
+    const followingList = this.accountState.followingList();
+    const sharer = this.trustedByPubkey();
+    if (sharer && followingList.includes(sharer)) {
+      return false;
+    }
+
     if (mediaPrivacy === 'blur-always') {
       return true;
     }
@@ -193,7 +200,7 @@ export class NoteContentComponent implements OnDestroy {
     // blur-non-following
     if (!authorPubkey) return false;
 
-    const isFollowing = this.accountState.followingList().includes(authorPubkey);
+    const isFollowing = followingList.includes(authorPubkey);
     return !isFollowing;
   });
 
