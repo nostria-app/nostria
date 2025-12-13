@@ -18,7 +18,7 @@
       [style.aspect-ratio]="currentAspectRatio()">
       @if (currentBlurhashDataUrl()) {
       <img [src]="currentBlurhashDataUrl()!" class="photo-item blurhash-placeholder" [alt]="currentAltText()"
-        [title]="currentAltText()" aria-hidden="true" />
+        [title]="currentAltText()" aria-hidden="true" [style.aspect-ratio]="currentAspectRatio()" />
       }
       <img [src]="currentImageUrl()" [alt]="currentAltText()" [title]="currentAltText()" title="{{ currentAltText() }}"
         class="photo-item main-image" [class.hidden]="shouldBlurMedia()" [class.loaded]="isCurrentImageLoaded()"
