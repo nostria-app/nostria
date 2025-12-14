@@ -24,6 +24,7 @@ import { ImagePlaceholderService } from '../../../services/image-placeholder.ser
 import { PhotoEventComponent } from '../../event-types/photo-event.component';
 import { EventHeaderComponent } from '../../event/header/header.component';
 import { Event as NostrEvent } from 'nostr-tools';
+import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
 
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
@@ -58,6 +59,7 @@ export class NoteContentComponent implements OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private videoPlayback = inject(VideoPlaybackService);
   private imagePlaceholder = inject(ImagePlaceholderService);
+  private externalLinkHandler = inject(ExternalLinkHandlerService);
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
@@ -705,26 +707,47 @@ export class NoteContentComponent implements OnDestroy {
 
   /**
    * Get aspect ratio style for a video token
+   * Prefers actual video dimensions (after rotation) over metadata dimensions
    */
   getVideoAspectRatio(token: ContentToken): string {
+    // First check if we have actual dimensions from the video element (accounts for rotation)
+    const actualDims = this.videoActualDimensions().get(token.content);
+    if (actualDims && actualDims.width && actualDims.height) {
+      return `${actualDims.width} / ${actualDims.height}`;
+    }
+    
+    // Fall back to metadata dimensions (may not account for rotation)
     if (token.dimensions) {
       return `${token.dimensions.width} / ${token.dimensions.height}`;
     }
+    
     return '16 / 9'; // Default video aspect ratio
   }
 
   /**
    * Check if a video is portrait orientation (height > width)
+   * Prefers actual video dimensions (after rotation) over metadata dimensions
    */
   isPortraitVideo(token: ContentToken): boolean {
+    // First check if we have actual dimensions from the video element (accounts for rotation)
+    const actualDims = this.videoActualDimensions().get(token.content);
+    if (actualDims) {
+      return actualDims.height > actualDims.width;
+    }
+    
+    // Fall back to metadata dimensions (may not account for rotation)
     if (token.dimensions) {
       return token.dimensions.height > token.dimensions.width;
     }
+    
     return false;
   }
 
   // Track loaded videos for progressive loading
   private loadedVideos = signal<Set<string>>(new Set());
+
+  // Track actual video dimensions after metadata loads (accounts for rotation)
+  private videoActualDimensions = signal<Map<string, { width: number; height: number }>>(new Map());
 
   /**
    * Check if a video is ready to play (for progressive loading)
@@ -742,6 +765,23 @@ export class NoteContentComponent implements OnDestroy {
       newSet.add(videoUrl);
       return newSet;
     });
+  }
+
+  /**
+   * Handle video metadata loaded event to get actual dimensions after rotation is applied
+   */
+  onVideoMetadataLoaded(event: Event, videoUrl: string): void {
+    const video = event.target as HTMLVideoElement;
+    if (video.videoWidth && video.videoHeight) {
+      this.videoActualDimensions.update(map => {
+        const newMap = new Map(map);
+        newMap.set(videoUrl, {
+          width: video.videoWidth,
+          height: video.videoHeight
+        });
+        return newMap;
+      });
+    }
   }
 
   /**
@@ -954,5 +994,19 @@ export class NoteContentComponent implements OnDestroy {
       // If parsing fails, just return the original content
       return content;
     }
+  }
+
+  /**
+   * Handle URL click - route internally if domain is configured
+   */
+  onUrlClick(url: string, event: MouseEvent): void {
+    const handled = this.externalLinkHandler.handleLinkClick(url, event);
+    
+    if (handled) {
+      // Prevent default navigation if we handled it internally
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    // Otherwise, let the browser handle it (open in new tab)
   }
 }

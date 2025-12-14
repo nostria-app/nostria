@@ -12,9 +12,93 @@
   "display": "standalone",
   "scope": "https://nostria.app/",
   "start_url": "https://nostria.app/",
+  "capture_links": "existing_client_event",
   "url_handlers": [
     {
       "origin": "https://nostria.app"
+    },
+     {
+      "origin": "https://primal.net"
+    },
+     {
+      "origin": "https://yakihonne.com"
+    },
+     {
+      "origin": "https://njump.me"
+    },
+     {
+      "origin": "https://snort.social"
+    },
+     {
+      "origin": "https://phoenix.social"
+    },
+     {
+      "origin": "https://jumble.social"
+    },
+     {
+      "origin": "https://iris.to"
+    },
+     {
+      "origin": "https://yakbak.app"
+    },
+     {
+      "origin": "https://coracle.social"
+    },
+     {
+      "origin": "https://nostrudel.ninja"
+    },
+     {
+      "origin": "https://nostter.app"
+    }
+  ],
+  "scope_extensions": [
+    {
+      "type": "origin",
+      "origin": "https://nostria.app"
+    },
+    {
+      "type": "origin",
+      "origin": "https://primal.net"
+    },
+    {
+      "type": "origin",
+      "origin": "https://yakihonne.com"
+    },
+    {
+      "type": "origin",
+      "origin": "https://njump.me"
+    },
+    {
+      "type": "origin",
+      "origin": "https://snort.social"
+    },
+    {
+      "type": "origin",
+      "origin": "https://phoenix.social"
+    },
+    {
+      "type": "origin",
+      "origin": "https://jumble.social"
+    },
+    {
+      "type": "origin",
+      "origin": "https://iris.to"
+    },
+    {
+      "type": "origin",
+      "origin": "https://yakbak.app"
+    },
+    {
+      "type": "origin",
+      "origin": "https://coracle.social"
+    },
+    {
+      "type": "origin",
+      "origin": "https://nostrudel.ninja"
+    },
+    {
+      "type": "origin",
+      "origin": "https://nostter.app"
     }
   ],
   "launch_handler": {
@@ -175,7 +259,7 @@
       "type": "image/png",
       "purpose": "maskable"
     },
-       {
+    {
       "src": "icons/icon-72x72.png",
       "sizes": "72x72",
       "type": "image/png",
