@@ -109,34 +109,40 @@ export class ExternalLinkHandlerService {
       this.logger.info('[ExternalLinkHandler] Handling link internally:', url);
 
       // Try to extract nostr identifiers from the path
-      // Common patterns:
-      // - /p/npub... or /profile/npub...
-      // - /e/note... or /event/note...
-      // - /e/nevent...
-      // - /a/naddr...
+      // Different clients use different URL patterns:
+      // - primal.net: /e/nevent..., /p/nprofile...
+      // - yakihonne.com: /note/nevent..., /profile/nprofile...
+      // - phoenix.social/snort.social: /nevent..., /nprofile... (direct)
+      // - jumble.social: /users/npub..., /notes/naddr...
+      // - iris.to: /note1..., /npub... (direct)
+      // - yakbak.app: /npub..., /nevent... (direct)
+      // - coracle.social: /people/nprofile..., /notes/nevent...
+      // - nostrudel.ninja: /u/npub..., /n/nevent...
 
-      // Updated regex to match all valid Nostr identifier characters (alphanumeric + underscore)
-      const pathMatch = path.match(/^\/(p|profile|e|event|a|article)\/([a-zA-Z0-9_]+)/i);
+      // Pattern 1: Path prefix patterns like /e/, /p/, /profile/, /note/, /users/, /people/, /u/, /n/
+      const prefixMatch = path.match(/^\/(p|profile|e|event|a|article|note|notes|users|people|u|n)\/([a-zA-Z0-9]+)/i);
 
-      if (pathMatch) {
-        const [, type, identifier] = pathMatch;
-
-        // Map the type to internal routes using a lookup object
-        const routeMap: Record<string, string> = {
-          p: '/p/',
-          profile: '/p/',
-          e: '/e/',
-          event: '/e/',
-          a: '/a/',
-          article: '/a/',
-        };
-
-        const route = routeMap[type.toLowerCase()];
+      if (prefixMatch) {
+        const [, type, identifier] = prefixMatch;
+        const route = this.mapTypeToRoute(type.toLowerCase(), identifier);
 
         if (route) {
-          const fullRoute = route + identifier;
-          this.logger.info('[ExternalLinkHandler] Navigating to:', fullRoute);
-          this.router.navigate([fullRoute]);
+          this.logger.info('[ExternalLinkHandler] Navigating to:', route);
+          this.router.navigate([route]);
+          return true;
+        }
+      }
+
+      // Pattern 2: Direct identifier in path like /npub..., /nprofile..., /nevent..., /note1..., /naddr...
+      const directMatch = path.match(/^\/(n(?:pub|profile|event|addr|ote)1[a-zA-Z0-9]+)/i);
+
+      if (directMatch) {
+        const [, identifier] = directMatch;
+        const route = this.mapIdentifierToRoute(identifier);
+
+        if (route) {
+          this.logger.info('[ExternalLinkHandler] Navigating to:', route);
+          this.router.navigate([route]);
           return true;
         }
       }
@@ -148,6 +154,50 @@ export class ExternalLinkHandlerService {
       this.logger.error('[ExternalLinkHandler] Error handling link:', error);
       return false;
     }
+  }
+
+  /**
+   * Map URL path type prefix to internal route
+   */
+  private mapTypeToRoute(type: string, identifier: string): string | null {
+    // Route mappings based on path prefix
+    const profileTypes = ['p', 'profile', 'users', 'people', 'u'];
+    const eventTypes = ['e', 'event', 'note', 'notes', 'n'];
+    const articleTypes = ['a', 'article'];
+
+    if (profileTypes.includes(type)) {
+      return `/p/${identifier}`;
+    } else if (eventTypes.includes(type)) {
+      return `/e/${identifier}`;
+    } else if (articleTypes.includes(type)) {
+      return `/a/${identifier}`;
+    }
+
+    return null;
+  }
+
+  /**
+   * Map a Nostr identifier to internal route based on its prefix
+   */
+  private mapIdentifierToRoute(identifier: string): string | null {
+    const lowerIdentifier = identifier.toLowerCase();
+
+    // Profile identifiers
+    if (lowerIdentifier.startsWith('npub1') || lowerIdentifier.startsWith('nprofile1')) {
+      return `/p/${identifier}`;
+    }
+
+    // Event identifiers
+    if (lowerIdentifier.startsWith('note1') || lowerIdentifier.startsWith('nevent1')) {
+      return `/e/${identifier}`;
+    }
+
+    // Article/address identifiers
+    if (lowerIdentifier.startsWith('naddr1')) {
+      return `/a/${identifier}`;
+    }
+
+    return null;
   }
 
   /**
