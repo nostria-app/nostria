@@ -97,10 +97,10 @@ markdownRenderer.link = ({ href, title, tokens }: any): string => {
     />`;
   }
 
-  // Regular link rendering
+  // Regular link rendering with external-link class for interception
   const sanitizedHref = href.replace(/[<>"']/g, '');
   const sanitizedTitle = title ? title.replace(/[<>"']/g, '') : '';
-  return `<a href="${sanitizedHref}" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''} target="_blank" rel="noopener noreferrer">${text}</a>`;
+  return `<a href="${sanitizedHref}" ${sanitizedTitle ? `title="${sanitizedTitle}"` : ''} class="external-link" target="_blank" rel="noopener noreferrer">${text}</a>`;
 };
 
 export default markdownRenderer;

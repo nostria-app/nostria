@@ -34,6 +34,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 import { NostrRecord } from '../../interfaces';
+import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
 
 @Component({
   selector: 'app-article',
@@ -63,6 +64,7 @@ export class ArticleComponent implements OnDestroy {
   private aiService = inject(AiService);
   bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
+  private externalLinkHandler = inject(ExternalLinkHandlerService);
   link = '';
 
   private routeSubscription?: Subscription;
@@ -112,9 +114,10 @@ export class ArticleComponent implements OnDestroy {
       }
     });
 
-    // Set up image click listeners after content is rendered
+    // Set up image and link click listeners after content is rendered
     afterNextRender(() => {
       this.setupImageClickListeners();
+      this.setupLinkClickListeners();
     });
   }
 
@@ -430,6 +433,29 @@ export class ArticleComponent implements OnDestroy {
 
       // Ensure cursor pointer style is applied
       imageElement.style.cursor = 'pointer';
+    });
+  }
+
+  private setupLinkClickListeners(): void {
+    // Find all external links in the article content
+    const articleContent = document.querySelector('.markdown-content');
+    if (!articleContent) return;
+
+    const links = articleContent.querySelectorAll('a.external-link');
+    links.forEach(link => {
+      const linkElement = link as HTMLAnchorElement;
+
+      // Add click event listener to potentially handle internally
+      linkElement.addEventListener('click', (event: MouseEvent) => {
+        const handled = this.externalLinkHandler.handleLinkClick(linkElement.href, event);
+        
+        if (handled) {
+          // Prevent default navigation if we handled it internally
+          event.preventDefault();
+          event.stopPropagation();
+        }
+        // Otherwise, let the browser handle it (open in new tab)
+      });
     });
   }
 
