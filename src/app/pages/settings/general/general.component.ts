@@ -21,6 +21,8 @@ import { DatabaseService } from '../../../services/database.service';
 import { NotificationService } from '../../../services/notification.service';
 import { ContentNotificationService } from '../../../services/content-notification.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
+import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
+import { MatInputModule } from '@angular/material/input';
 
 interface Language {
   code: string;
@@ -39,6 +41,7 @@ interface Language {
     MatSelectModule,
     MatSlideToggleModule,
     MatSliderModule,
+    MatInputModule,
     StorageStatsComponent,
   ],
   templateUrl: './general.component.html',
@@ -57,8 +60,13 @@ export class GeneralSettingsComponent {
   notificationService = inject(NotificationService);
   contentNotificationService = inject(ContentNotificationService);
   imagePlaceholder = inject(ImagePlaceholderService);
+  externalLinkHandler = inject(ExternalLinkHandlerService);
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
+  
+  // External domains management
+  configuredDomains = signal<string[]>(this.externalLinkHandler.getConfiguredDomains());
+  newDomain = '';
 
   // Available languages
   languages: Language[] = [
@@ -196,5 +204,26 @@ export class GeneralSettingsComponent {
         await this.app.wipe();
       }
     });
+  }
+
+  // External link domain management methods
+  addNewDomain(): void {
+    if (!this.newDomain.trim()) {
+      return;
+    }
+
+    this.externalLinkHandler.addDomain(this.newDomain.trim());
+    this.configuredDomains.set(this.externalLinkHandler.getConfiguredDomains());
+    this.newDomain = '';
+  }
+
+  removeDomain(domain: string): void {
+    this.externalLinkHandler.removeDomain(domain);
+    this.configuredDomains.set(this.externalLinkHandler.getConfiguredDomains());
+  }
+
+  resetDomainsToDefault(): void {
+    this.externalLinkHandler.resetToDefaults();
+    this.configuredDomains.set(this.externalLinkHandler.getConfiguredDomains());
   }
 }

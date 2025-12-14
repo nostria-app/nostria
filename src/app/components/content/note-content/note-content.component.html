@@ -122,7 +122,7 @@
   </app-cashu-token>
 </div>
 } @else if (token.type === 'url') {
-<a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer">{{ token.content }}</a>
+<a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer" (click)="onUrlClick(token.content, $event)">{{ token.content }}</a>
 } @else if (token.type === 'youtube') {
 <div class="media-container">
   <iframe width="560" height="315" [src]="token.processedUrl" frameborder="0"
