@@ -6,10 +6,75 @@ self.addEventListener('fetch', (event) => {
   }
 });
 
+// Handle push notifications (required for TWA/PWABuilder packaged apps)
+self.addEventListener('push', (event) => {
+  if (!event.data) {
+    console.log('Push event received but no data');
+    return;
+  }
+
+  let notificationData;
+  try {
+    notificationData = event.data.json();
+  } catch (e) {
+    // If not JSON, treat as text
+    notificationData = {
+      notification: {
+        title: 'Nostria',
+        body: event.data.text(),
+      }
+    };
+  }
+
+  const notification = notificationData.notification || notificationData;
+  const title = notification.title || 'Nostria';
+  const options = {
+    body: notification.body || '',
+    icon: notification.icon || '/icons/icon-128x128.png',
+    badge: notification.badge || '/icons/icon-72x72.png',
+    tag: notification.tag || 'nostria-notification',
+    data: notification.data || notificationData.data || {},
+    actions: notification.actions || [],
+    requireInteraction: notification.requireInteraction || false,
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+// Handle notification clicks
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const urlToOpen = event.notification.data?.url ||
+    event.notification.data?.onActionClick?.default?.url ||
+    '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      // Check if there's already a window open
+      for (const client of windowClients) {
+        if (client.url.includes(self.location.origin) && 'focus' in client) {
+          client.focus();
+          if (urlToOpen !== '/') {
+            client.navigate(urlToOpen);
+          }
+          return;
+        }
+      }
+      // Open a new window if none exists
+      if (clients.openWindow) {
+        return clients.openWindow(urlToOpen);
+      }
+    })
+  );
+});
+
 async function handleShareTarget(event) {
   // 1. Consume the request body as FormData
   const formData = await event.request.formData();
-  
+
   // 2. Generate a unique ID
   const timestamp = Date.now();
   const cacheUrl = `/shared-content/${timestamp}`;
