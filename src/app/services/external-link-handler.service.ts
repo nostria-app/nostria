@@ -19,10 +19,16 @@ export class ExternalLinkHandlerService {
   // Default domains that should be handled internally
   private readonly DEFAULT_DOMAINS = [
     'primal.net',
+    'yakihonne.com',
+    'njump.me',
     'snort.social',
+    'phoenix.social',
     'iris.to',
+    'yakbak.app',
     'coracle.social',
-    'nostur.com',
+    'jumble.social',
+    'nostrudel.ninja',
+    'nostter.app',
   ];
 
   /**
@@ -46,7 +52,7 @@ export class ExternalLinkHandlerService {
   addDomain(domain: string): void {
     const domains = this.getConfiguredDomains();
     const normalizedDomain = this.normalizeDomain(domain);
-    
+
     if (!domains.includes(normalizedDomain)) {
       domains.push(normalizedDomain);
       this.setConfiguredDomains(domains);
@@ -70,7 +76,7 @@ export class ExternalLinkHandlerService {
     try {
       const urlObj = new URL(url);
       const domains = this.getConfiguredDomains();
-      
+
       // Check if the URL's hostname matches any configured domain
       return domains.some(domain => {
         // Handle both exact match and subdomain match
@@ -99,22 +105,22 @@ export class ExternalLinkHandlerService {
     try {
       const urlObj = new URL(url);
       const path = urlObj.pathname;
-      
+
       this.logger.info('[ExternalLinkHandler] Handling link internally:', url);
-      
+
       // Try to extract nostr identifiers from the path
       // Common patterns:
       // - /p/npub... or /profile/npub...
       // - /e/note... or /event/note...
       // - /e/nevent...
       // - /a/naddr...
-      
+
       // Updated regex to match all valid Nostr identifier characters (alphanumeric + underscore)
       const pathMatch = path.match(/^\/(p|profile|e|event|a|article)\/([a-zA-Z0-9_]+)/i);
-      
+
       if (pathMatch) {
         const [, type, identifier] = pathMatch;
-        
+
         // Map the type to internal routes using a lookup object
         const routeMap: Record<string, string> = {
           p: '/p/',
@@ -124,9 +130,9 @@ export class ExternalLinkHandlerService {
           a: '/a/',
           article: '/a/',
         };
-        
+
         const route = routeMap[type.toLowerCase()];
-        
+
         if (route) {
           const fullRoute = route + identifier;
           this.logger.info('[ExternalLinkHandler] Navigating to:', fullRoute);
@@ -134,7 +140,7 @@ export class ExternalLinkHandlerService {
           return true;
         }
       }
-      
+
       // If we can't extract a valid route, log and return false
       this.logger.warn('[ExternalLinkHandler] Could not extract valid route from:', url);
       return false;
