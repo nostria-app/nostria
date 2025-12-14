@@ -74,19 +74,28 @@ export class SettingsService {
 
   settings = signal<UserSettings>({ ...DEFAULT_SETTINGS });
 
+  // Track whether settings have been loaded for the current user
+  // This prevents showing media before user's privacy preferences are known
+  settingsLoaded = signal<boolean>(false);
+
   constructor() {
     effect(async () => {
       const account = this.accountState.account();
       const initialized = this.accountState.initialized();
 
       if (account && initialized) {
+        // Mark settings as not loaded while we fetch
+        this.settingsLoaded.set(false);
         // Reset to defaults first to ensure clean state
         this.settings.set({ ...DEFAULT_SETTINGS });
         // Then load settings for this account
         await this.loadSettings(this.accountState.pubkey());
+        // Mark settings as loaded after fetch completes
+        this.settingsLoaded.set(true);
       } else if (!account) {
-        // No account, reset to defaults
+        // No account, reset to defaults and mark as loaded (defaults are safe for anonymous)
         this.settings.set({ ...DEFAULT_SETTINGS });
+        this.settingsLoaded.set(true);
       }
     });
   }

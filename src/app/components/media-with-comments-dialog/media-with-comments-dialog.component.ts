@@ -115,6 +115,11 @@ export class MediaWithCommentsDialogComponent {
     const currentUserPubkey = this.accountState.pubkey();
     if (!currentUserPubkey) return false; // No user logged in, no blur needed
 
+    // If user is logged in but settings haven't loaded yet, blur for safety
+    if (!this.settings.settingsLoaded()) {
+      return true;
+    }
+
     // Check media privacy setting
     const mediaPrivacy = this.settings.settings().mediaPrivacy || 'show-always';
     if (mediaPrivacy === 'show-always') {

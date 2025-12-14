@@ -172,6 +172,13 @@ export class NoteContentComponent implements OnDestroy {
 
   // Computed: Should blur images based on privacy settings
   shouldBlurImages = computed(() => {
+    const currentUserPubkey = this.accountState.pubkey();
+
+    // If user is logged in but settings haven't loaded yet, blur for safety
+    if (currentUserPubkey && !this.settings.settingsLoaded()) {
+      return true;
+    }
+
     const mediaPrivacy = this.settings.settings().mediaPrivacy || 'show-always';
 
     if (mediaPrivacy === 'show-always') {
@@ -180,7 +187,6 @@ export class NoteContentComponent implements OnDestroy {
 
     // Check if author is trusted for media reveal (trackChanges=true for reactivity)
     const authorPubkey = this.authorPubkey();
-    const currentUserPubkey = this.accountState.pubkey();
     if (currentUserPubkey) {
       if (authorPubkey) {
         const isTrusted = this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, authorPubkey, true);
