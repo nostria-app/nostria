@@ -109,24 +109,28 @@ export class ExternalLinkHandlerService {
       // - /e/nevent...
       // - /a/naddr...
       
-      const pathMatch = path.match(/^\/(p|profile|e|event|a|article)\/([a-z0-9]+)/i);
+      // Updated regex to match all valid Nostr identifier characters (alphanumeric + underscore)
+      const pathMatch = path.match(/^\/(p|profile|e|event|a|article)\/([a-zA-Z0-9_]+)/i);
       
       if (pathMatch) {
         const [, type, identifier] = pathMatch;
         
-        // Map the type to internal routes
-        let route = '';
-        if (type === 'p' || type === 'profile') {
-          route = `/p/${identifier}`;
-        } else if (type === 'e' || type === 'event') {
-          route = `/e/${identifier}`;
-        } else if (type === 'a' || type === 'article') {
-          route = `/a/${identifier}`;
-        }
+        // Map the type to internal routes using a lookup object
+        const routeMap: Record<string, string> = {
+          p: '/p/',
+          profile: '/p/',
+          e: '/e/',
+          event: '/e/',
+          a: '/a/',
+          article: '/a/',
+        };
+        
+        const route = routeMap[type.toLowerCase()];
         
         if (route) {
-          this.logger.info('[ExternalLinkHandler] Navigating to:', route);
-          this.router.navigate([route]);
+          const fullRoute = route + identifier;
+          this.logger.info('[ExternalLinkHandler] Navigating to:', fullRoute);
+          this.router.navigate([fullRoute]);
           return true;
         }
       }
@@ -141,13 +145,15 @@ export class ExternalLinkHandlerService {
   }
 
   /**
-   * Normalize a domain by removing protocol and trailing slashes
+   * Normalize a domain by removing protocol, www prefix, paths, and trailing slashes
    */
   private normalizeDomain(domain: string): string {
     return domain
+      .trim()
       .replace(/^https?:\/\//, '')
       .replace(/^www\./, '')
-      .replace(/\/$/, '')
+      .replace(/\/+$/, '')  // Remove multiple trailing slashes
+      .split('/')[0]        // Remove any path components
       .toLowerCase();
   }
 
