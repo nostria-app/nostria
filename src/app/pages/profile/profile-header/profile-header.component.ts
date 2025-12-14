@@ -34,6 +34,7 @@ import type { ReportTarget } from '../../../services/reporting.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { ZapButtonComponent } from '../../../components/zap-button/zap-button.component';
 import { ZapService } from '../../../services/zap.service';
+import { BioContentComponent } from '../../../components/bio-content/bio-content.component';
 import {
   ZapDialogComponent,
   ZapDialogData,
@@ -60,8 +61,9 @@ import { TrustService } from '../../../services/trust.service';
     MatDividerModule,
     MatTooltipModule,
     QrCodeComponent,
-    ZapButtonComponent
-],
+    ZapButtonComponent,
+    BioContentComponent,
+  ],
   templateUrl: './profile-header.component.html',
   styleUrl: './profile-header.component.scss',
 })
