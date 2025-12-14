@@ -22,6 +22,7 @@ import { AccountLocalStateService } from '../../../services/account-local-state.
 import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 import { PhotoEventComponent } from '../../event-types/photo-event.component';
+import { EventHeaderComponent } from '../../event/header/header.component';
 import { Event as NostrEvent } from 'nostr-tools';
 
 // Type for grouped display items - either single token or image group
@@ -35,7 +36,7 @@ export interface DisplayItem {
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, AudioPlayerComponent, PhotoEventComponent],
+  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, AudioPlayerComponent, PhotoEventComponent, EventHeaderComponent],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })

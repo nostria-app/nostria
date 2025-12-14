@@ -348,8 +348,38 @@
   }
 }
 
-// Photo and video mention card specific styling
-.photo-mention-card,
+// Embedded photo event styling (kind 20 events with full carousel/blurhash support)
+// Uses PhotoEventComponent for proper progressive loading and blur reveal
+.embedded-photo-event {
+  margin: 0.5rem 0;
+  border: 1px solid var(--mat-sys-outline-variant, rgba(0, 0, 0, 0.12));
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-low, #1e1e1e);
+
+  // Compact header styling for embedded context
+  app-event-header {
+    display: block;
+    padding: 10px 12px 0;
+  }
+
+  app-photo-event {
+    display: block;
+
+    // Override photo carousel container to fit nicely in embed
+    ::ng-deep .photo-carousel-container {
+      margin: 0.5rem 0 0 0;
+      max-width: 100%;
+    }
+
+    // Hide title in embedded context (header provides context)
+    ::ng-deep .media-title {
+      display: none;
+    }
+  }
+}
+
+// Photo and video mention card specific styling (legacy - for video mentions)
 .video-mention-card {
   .media-mention-content {
     padding: 0 !important;
@@ -357,25 +387,6 @@
     flex-wrap: wrap;
     gap: 4px;
   }
-}
-
-// Inline photo rendering for kind 20 events
-.mention-photo {
-  width: 100%;
-  max-height: 400px;
-  object-fit: contain;
-  border-radius: 0 0 8px 8px;
-  background-color: var(--mat-sys-surface-container);
-}
-
-.more-photos-indicator {
-  width: 100%;
-  padding: 8px;
-  text-align: center;
-  color: var(--mat-sys-on-surface-variant);
-  font-size: 0.875rem;
-  background-color: var(--mat-sys-surface-container);
-  border-radius: 0 0 8px 8px;
 }
 
 // Inline video rendering for kind 21/22 events
