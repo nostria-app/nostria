@@ -305,20 +305,29 @@
     border-radius: 12px;
     object-fit: contain;
     opacity: 0;
-    transition: opacity 0.4s ease-out;
+    transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
     &.loaded {
       opacity: 1;
+      visibility: visible;
+    }
+
+    &.hidden {
+      opacity: 0 !important;
+      visibility: hidden;
     }
   }
 
   &.blurred {
     .video-placeholder-bg {
       opacity: 1 !important;
+      // Cover entire container when blurred
+      object-fit: cover !important;
     }
 
-    .hidden {
-      opacity: 0;
+    .main-video {
+      opacity: 0 !important;
+      visibility: hidden;
     }
   }
 
@@ -338,6 +347,7 @@
 
     .main-video {
       opacity: 1;
+      visibility: visible;
       transition: opacity 0.6s ease-out;
     }
   }
@@ -360,10 +370,16 @@
   // Main image - starts hidden for progressive loading
   .main-image {
     opacity: 0;
-    transition: opacity 0.4s ease-out;
+    transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
     &.loaded {
       opacity: 1;
+      visibility: visible;
+    }
+
+    &.hidden {
+      opacity: 0 !important;
+      visibility: hidden;
     }
   }
 
@@ -394,10 +410,13 @@
   &.blurred {
     .blurhash-placeholder {
       opacity: 1 !important;
+      // Cover the entire container when blurred
+      object-fit: cover !important;
     }
 
-    .hidden {
-      opacity: 0;
+    .main-image {
+      opacity: 0 !important;
+      visibility: hidden;
     }
   }
 
@@ -407,8 +426,9 @@
       transition: opacity 0.6s ease-out;
     }
 
-    img:not(.blurhash-placeholder) {
+    .main-image {
       opacity: 1;
+      visibility: visible;
       transition: opacity 0.6s ease-out;
     }
   }
@@ -425,8 +445,9 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.85);
   color: white;
+  backdrop-filter: blur(10px);
 
   .reveal-actions {
     display: flex;
@@ -542,10 +563,16 @@
     // Main image - starts hidden for progressive loading
     &.main-image {
       opacity: 0;
-      transition: opacity 0.4s ease-out;
+      transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
       &.loaded {
         opacity: 1;
+        visibility: visible;
+      }
+
+      &.hidden {
+        opacity: 0 !important;
+        visibility: hidden;
       }
     }
   }
@@ -577,11 +604,13 @@
   &.blurred {
     .blurhash-placeholder {
       opacity: 1 !important;
-      // filter: blur(20px);
+      // Cover entire container when blurred
+      object-fit: cover !important;
     }
 
-    .hidden {
-      opacity: 0;
+    .main-image {
+      opacity: 0 !important;
+      visibility: hidden;
     }
   }
 
@@ -591,8 +620,9 @@
       transition: opacity 0.6s ease-out;
     }
 
-    img:not(.blurhash-placeholder) {
+    .main-image {
       opacity: 1;
+      visibility: visible;
       transition: opacity 0.6s ease-out;
     }
   }
@@ -608,8 +638,9 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.7);
+    background: rgba(0, 0, 0, 0.85);
     color: white;
+    backdrop-filter: blur(10px);
 
     .reveal-actions {
       display: flex;
