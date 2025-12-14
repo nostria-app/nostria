@@ -715,6 +715,11 @@
   }
 }
 
+// Hide the menu remove button on larger screens (shown via ::ng-deep for mat-menu)
+::ng-deep .menu-remove-btn {
+  display: none !important;
+}
+
 // Responsive
 @media (max-width: 768px) {
   .notifications-page {
@@ -729,6 +734,12 @@
 }
 
 @media (max-width: 600px) {
+
+  // Show the menu remove button on small screens
+  ::ng-deep .menu-remove-btn {
+    display: flex !important;
+  }
+
   .notifications-page {
     padding: 8px;
   }
@@ -744,8 +755,26 @@
   }
 
   .notification-item {
-    padding: 16px;
-    gap: 12px;
+    padding: 12px 8px;
+    gap: 8px;
+
+    // Shrink the notification icon wrapper on small screens
+    .notification-icon-wrapper {
+      min-width: 36px;
+      width: 36px;
+      height: 36px;
+
+      .notification-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    // Hide the standalone remove button on small screens (it's in the menu)
+    .notification-actions .remove-btn {
+      display: none;
+    }
   }
 
   .empty-state {
@@ -755,6 +784,15 @@
       font-size: 80px;
       width: 80px;
       height: 80px;
+    }
+  }
+}
+
+// Very small screens - hide notification icon completely
+@media (max-width: 400px) {
+  .notification-item {
+    .notification-icon-wrapper {
+      display: none;
     }
   }
 }

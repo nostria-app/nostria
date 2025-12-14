@@ -117,7 +117,7 @@
               </button>
               }
               <button mat-icon-button (click)="removeNotification(notification.id); $event.stopPropagation()"
-                matTooltip="Remove" class="action-icon-button">
+                matTooltip="Remove" class="action-icon-button remove-btn">
                 <mat-icon>close</mat-icon>
               </button>
               <button mat-icon-button [matMenuTriggerFor]="notificationMenu" (click)="$event.stopPropagation()"
@@ -125,6 +125,10 @@
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #notificationMenu="matMenu">
+                <button mat-menu-item class="menu-remove-btn" (click)="removeNotification(notification.id)">
+                  <mat-icon>close</mat-icon>
+                  <span>Remove</span>
+                </button>
                 <button mat-menu-item (click)="copyNotificationData(notification)">
                   <mat-icon>content_copy</mat-icon>
                   <span>Copy event data</span>
