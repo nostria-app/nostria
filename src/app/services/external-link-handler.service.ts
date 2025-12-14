@@ -1,5 +1,9 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import { nip19 } from 'nostr-tools';
+import { LoggerService } from './logger.service';
+import { LocalStorageService } from './local-storage.service';
+import { ProfilePointer } from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
 import { LocalStorageService } from './local-storage.service';
 
@@ -166,7 +170,9 @@ export class ExternalLinkHandlerService {
     const articleTypes = ['a', 'article'];
 
     if (profileTypes.includes(type)) {
-      return `/p/${identifier}`;
+      // For profile types, decode nprofile to get npub
+      const npub = this.extractNpubFromIdentifier(identifier);
+      return npub ? `/p/${npub}` : null;
     } else if (eventTypes.includes(type)) {
       return `/e/${identifier}`;
     } else if (articleTypes.includes(type)) {
@@ -182,9 +188,14 @@ export class ExternalLinkHandlerService {
   private mapIdentifierToRoute(identifier: string): string | null {
     const lowerIdentifier = identifier.toLowerCase();
 
-    // Profile identifiers
-    if (lowerIdentifier.startsWith('npub1') || lowerIdentifier.startsWith('nprofile1')) {
+    // Profile identifiers - decode nprofile to npub
+    if (lowerIdentifier.startsWith('npub1')) {
       return `/p/${identifier}`;
+    }
+
+    if (lowerIdentifier.startsWith('nprofile1')) {
+      const npub = this.extractNpubFromIdentifier(identifier);
+      return npub ? `/p/${npub}` : null;
     }
 
     // Event identifiers
@@ -198,6 +209,39 @@ export class ExternalLinkHandlerService {
     }
 
     return null;
+  }
+
+  /**
+   * Extract npub from a Nostr identifier (npub, nprofile, or hex pubkey)
+   */
+  private extractNpubFromIdentifier(identifier: string): string | null {
+    const lowerIdentifier = identifier.toLowerCase();
+
+    try {
+      // Already an npub - return as is
+      if (lowerIdentifier.startsWith('npub1')) {
+        return identifier;
+      }
+
+      // Decode nprofile to get pubkey, then encode to npub
+      if (lowerIdentifier.startsWith('nprofile1')) {
+        const decoded = nip19.decode(identifier);
+        if (decoded.type === 'nprofile') {
+          const profileData = decoded.data as ProfilePointer;
+          return nip19.npubEncode(profileData.pubkey);
+        }
+      }
+
+      // Hex pubkey - encode to npub
+      if (/^[0-9a-f]{64}$/i.test(identifier)) {
+        return nip19.npubEncode(identifier);
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.warn('[ExternalLinkHandler] Failed to extract npub from identifier:', identifier, error);
+      return null;
+    }
   }
 
   /**
