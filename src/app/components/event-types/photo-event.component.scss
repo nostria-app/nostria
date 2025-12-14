@@ -53,10 +53,17 @@
   justify-content: center;
   background-color: #000;
 
-  // Blur state
+  // Blur state - hide main image completely and show blurhash
   &.blurred {
     .blurhash-placeholder {
       opacity: 1 !important;
+      // Ensure blurhash covers the entire container when blurred
+      object-fit: cover !important;
+    }
+
+    .main-image {
+      opacity: 0 !important;
+      visibility: hidden;
     }
   }
 
@@ -69,6 +76,7 @@
 
     .main-image {
       opacity: 1;
+      visibility: visible;
       transition: opacity 0.6s ease-out;
     }
   }
@@ -98,8 +106,10 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.85);
   color: white;
+  // Ensure it covers everything including letterbox areas
+  backdrop-filter: blur(10px);
 
   .reveal-actions {
     display: flex;
@@ -168,14 +178,16 @@
     cursor: pointer;
     z-index: 2;
     opacity: 0; // Start hidden, show when loaded
-    transition: opacity 0.4s ease-out;
+    transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
     &.loaded {
       opacity: 1;
+      visibility: visible;
     }
 
     &.hidden {
-      opacity: 0;
+      opacity: 0 !important;
+      visibility: hidden;
     }
 
     &:focus {
