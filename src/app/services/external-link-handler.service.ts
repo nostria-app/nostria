@@ -4,6 +4,8 @@ import { nip19 } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { LocalStorageService } from './local-storage.service';
 import { ProfilePointer } from 'nostr-tools/nip19';
+import { LoggerService } from './logger.service';
+import { LocalStorageService } from './local-storage.service';
 
 /**
  * Service for handling external links and optionally routing them internally
