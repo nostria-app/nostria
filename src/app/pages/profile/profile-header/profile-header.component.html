@@ -193,7 +193,9 @@
 
       @if (profile()?.data.about) {
       <div class="profile-bio">
-        <div class="bio-text" [class.bio-expanded]="isBioExpanded()">{{ displayedBio() }}</div>
+        <div class="bio-text" [class.bio-expanded]="isBioExpanded()">
+          <app-bio-content [content]="displayedBio()"></app-bio-content>
+        </div>
         @if (shouldShowExpander()) {
         @if (isBioExpanded()) {
         <button mat-button class="bio-expand-btn" (click)="toggleBioExpansion()">
