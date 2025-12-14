@@ -72,20 +72,56 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 async function handleShareTarget(event) {
-  // 1. Consume the request body as FormData
-  const formData = await event.request.formData();
+  try {
+    // 1. Consume the request body as FormData
+    const formData = await event.request.formData();
 
-  // 2. Generate a unique ID
-  const timestamp = Date.now();
-  const cacheUrl = `/shared-content/${timestamp}`;
+    // 2. Generate a unique ID
+    const timestamp = Date.now();
+    const cacheUrl = `/shared-content/${timestamp}`;
 
-  // 3. Open a specific cache for shared content
-  const cache = await caches.open('nostria-share-target');
+    // 3. Extract data from FormData
+    const title = formData.get('title') || '';
+    const text = formData.get('text') || '';
+    const url = formData.get('url') || '';
+    const files = formData.getAll('files');
 
-  // 4. Store the FormData as a synthetic Response
-  // We create a new Response containing the same FormData
-  await cache.put(cacheUrl, new Response(formData));
+    // 4. Process files - convert to serializable format
+    const filesData = [];
+    for (const file of files) {
+      if (file instanceof File && file.size > 0) {
+        const arrayBuffer = await file.arrayBuffer();
+        filesData.push({
+          name: file.name,
+          type: file.type,
+          size: file.size,
+          lastModified: file.lastModified,
+          data: Array.from(new Uint8Array(arrayBuffer))
+        });
+      }
+    }
 
-  // 5. Redirect to the app with the ID
-  return Response.redirect('/share-target?id=' + timestamp, 303);
+    // 5. Create a JSON payload with all the data
+    const payload = {
+      title: title,
+      text: text,
+      url: url,
+      files: filesData
+    };
+
+    // 6. Open a specific cache for shared content
+    const cache = await caches.open('nostria-share-target');
+
+    // 7. Store the data as JSON Response
+    await cache.put(cacheUrl, new Response(JSON.stringify(payload), {
+      headers: { 'Content-Type': 'application/json' }
+    }));
+
+    // 8. Redirect to the app with the ID
+    return Response.redirect('/share-target?id=' + timestamp, 303);
+  } catch (error) {
+    console.error('Error handling share target:', error);
+    // Redirect to home on error
+    return Response.redirect('/', 303);
+  }
 }
