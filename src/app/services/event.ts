@@ -6,6 +6,7 @@ import { UtilitiesService } from './utilities.service';
 import { NostrService } from './nostr.service';
 import { EventData } from '../data-resolver';
 import { minutes, NostrRecord } from '../interfaces';
+import { NoteEditorDialogData } from '../interfaces/note-editor';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { Cache } from './cache';
@@ -13,10 +14,6 @@ import { UserDataService } from './user-data.service';
 import { RelaysService } from './relays/relays';
 import { SubscriptionCacheService } from './subscription-cache.service';
 import { RelayPoolService } from './relays/relay-pool';
-import {
-  NoteEditorDialogComponent,
-  NoteEditorDialogData,
-} from '../components/note-editor-dialog/note-editor-dialog.component';
 import {
   CommentEditorDialogComponent,
   CommentEditorDialogData,
@@ -1516,7 +1513,10 @@ export class EventService {
   }
 
   // Handler methods for different creation types
-  createNote(data: NoteEditorDialogData = {}): void {
+  async createNote(data: NoteEditorDialogData = {}): Promise<void> {
+    // Dynamically import NoteEditorDialogComponent to avoid circular dependency
+    const { NoteEditorDialogComponent } = await import('../components/note-editor-dialog/note-editor-dialog.component');
+
     // Determine dialog title based on context
     let title = 'Create Note';
     if (data.replyTo) {
@@ -1526,7 +1526,7 @@ export class EventService {
     }
 
     // Open note editor dialog using custom dialog service
-    const dialogRef = this.customDialog.open<NoteEditorDialogComponent, { published: boolean; event?: Event }>(
+    const dialogRef = this.customDialog.open<typeof NoteEditorDialogComponent.prototype, { published: boolean; event?: Event }>(
       NoteEditorDialogComponent,
       {
         title,

@@ -53,24 +53,10 @@ import { AiService } from '../../services/ai.service';
 import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 import { DataService } from '../../services/data.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
+import { NoteEditorDialogData } from '../../interfaces/note-editor';
 
-export interface NoteEditorDialogData {
-  replyTo?: {
-    id: string;
-    pubkey: string;
-    rootId?: string | null;
-    event?: NostrEvent; // Include the full event for complete tag analysis
-  };
-  quote?: {
-    id: string;
-    pubkey: string;
-    content?: string;
-    kind?: number;
-  };
-  mentions?: string[]; // Array of pubkeys to mention
-  content?: string; // Initial content
-  files?: File[]; // Initial files
-}
+// Re-export for backward compatibility
+export type { NoteEditorDialogData } from '../../interfaces/note-editor';
 
 interface MediaMetadata {
   url: string;
