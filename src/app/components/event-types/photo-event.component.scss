@@ -53,17 +53,12 @@
   justify-content: center;
   background-color: #000;
 
-  // Blur state - hide main image completely and show blurhash
+  // Blur state - show blurhash (main-image hidden via :not(.hidden) selector)
   &.blurred {
     .blurhash-placeholder {
       opacity: 1 !important;
       // Ensure blurhash covers the entire container when blurred
       object-fit: cover !important;
-    }
-
-    .main-image {
-      opacity: 0 !important;
-      visibility: hidden;
     }
   }
 
@@ -178,16 +173,13 @@
     cursor: pointer;
     z-index: 2;
     opacity: 0; // Start hidden, show when loaded
+    visibility: hidden;
     transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
-    &.loaded {
+    // Only show when loaded AND not hidden (not blurred)
+    &.loaded:not(.hidden) {
       opacity: 1;
       visibility: visible;
-    }
-
-    &.hidden {
-      opacity: 0 !important;
-      visibility: hidden;
     }
 
     &:focus {

@@ -305,16 +305,13 @@
     border-radius: 12px;
     object-fit: contain;
     opacity: 0;
+    visibility: hidden;
     transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
-    &.loaded {
+    // Only show when loaded AND not hidden (not blurred)
+    &.loaded:not(.hidden) {
       opacity: 1;
       visibility: visible;
-    }
-
-    &.hidden {
-      opacity: 0 !important;
-      visibility: hidden;
     }
   }
 
@@ -323,11 +320,6 @@
       opacity: 1 !important;
       // Cover entire container when blurred
       object-fit: cover !important;
-    }
-
-    .main-video {
-      opacity: 0 !important;
-      visibility: hidden;
     }
   }
 
@@ -370,16 +362,13 @@
   // Main image - starts hidden for progressive loading
   .main-image {
     opacity: 0;
+    visibility: hidden;
     transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
-    &.loaded {
+    // Only show when loaded AND not hidden (not blurred)
+    &.loaded:not(.hidden) {
       opacity: 1;
       visibility: visible;
-    }
-
-    &.hidden {
-      opacity: 0 !important;
-      visibility: hidden;
     }
   }
 
@@ -412,11 +401,6 @@
       opacity: 1 !important;
       // Cover the entire container when blurred
       object-fit: cover !important;
-    }
-
-    .main-image {
-      opacity: 0 !important;
-      visibility: hidden;
     }
   }
 
@@ -563,16 +547,13 @@
     // Main image - starts hidden for progressive loading
     &.main-image {
       opacity: 0;
+      visibility: hidden;
       transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
 
-      &.loaded {
+      // Only show when loaded AND not hidden (not blurred)
+      &.loaded:not(.hidden) {
         opacity: 1;
         visibility: visible;
-      }
-
-      &.hidden {
-        opacity: 0 !important;
-        visibility: hidden;
       }
     }
   }
@@ -606,11 +587,6 @@
       opacity: 1 !important;
       // Cover entire container when blurred
       object-fit: cover !important;
-    }
-
-    .main-image {
-      opacity: 0 !important;
-      visibility: hidden;
     }
   }
 

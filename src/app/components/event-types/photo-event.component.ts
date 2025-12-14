@@ -54,16 +54,22 @@ export class PhotoEventComponent {
 
   // Computed: Should media be blurred based on privacy settings?
   shouldBlurMedia = computed(() => {
-    const mediaPrivacy = this.settings.settings().mediaPrivacy || 'show-always';
     const event = this.event();
     const authorPubkey = event.pubkey;
+    const currentUserPubkey = this.accountState.pubkey();
+
+    // If user is logged in but settings haven't loaded yet, blur for safety
+    if (currentUserPubkey && !this.settings.settingsLoaded()) {
+      return true;
+    }
+
+    const mediaPrivacy = this.settings.settings().mediaPrivacy || 'show-always';
 
     if (mediaPrivacy === 'show-always') {
       return false;
     }
 
     // Check if author is trusted for media reveal (trackChanges=true for reactivity)
-    const currentUserPubkey = this.accountState.pubkey();
     if (currentUserPubkey) {
       const isTrusted = this.accountLocalState.isMediaAuthorTrusted(currentUserPubkey, authorPubkey, true);
       if (isTrusted) {
