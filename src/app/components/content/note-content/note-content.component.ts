@@ -713,6 +713,16 @@ export class NoteContentComponent implements OnDestroy {
     return '16 / 9'; // Default video aspect ratio
   }
 
+  /**
+   * Check if a video is portrait orientation (height > width)
+   */
+  isPortraitVideo(token: ContentToken): boolean {
+    if (token.dimensions) {
+      return token.dimensions.height > token.dimensions.width;
+    }
+    return false;
+  }
+
   // Track loaded videos for progressive loading
   private loadedVideos = signal<Set<string>>(new Set());
 
