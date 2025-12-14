@@ -22,6 +22,8 @@ import { BadgeComponent } from '../../pages/badges/badge/badge.component';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { ArticleComponent } from '../article/article.component';
+import { PhotoEventComponent } from '../event-types/photo-event.component';
+import { EventHeaderComponent } from '../event/header/header.component';
 
 interface ArticleMention {
   pubkey: string;
@@ -55,6 +57,8 @@ interface SocialPreview {
     TaggedReferencesComponent,
     BadgeComponent,
     ArticleComponent,
+    PhotoEventComponent,
+    EventHeaderComponent,
   ],
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss',

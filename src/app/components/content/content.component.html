@@ -26,53 +26,12 @@
   <!-- Badge Award (kind 8) -->
   <app-badge [badge]="mention.event.event"></app-badge>
   } @else if (mention.event.event.kind === 20) {
-  <!-- Photo Event (kind 20, NIP-68) - Inline rendering to avoid circular dependency -->
-  <mat-card appearance="outlined" class="event-mention-card photo-mention-card" tabindex="0" role="button"
-    (click)="onEventMentionClick($event, mention.event.event)"
-    (keydown.enter)="onEventMentionClick($event, mention.event.event)"
-    (keydown.space)="onEventMentionClick($event, mention.event.event)">
-    <mat-card-header>
-      <app-user-profile [pubkey]="mention.event.event.pubkey" view="compact">
-        <span class="date-link" [matTooltip]="mention.event.event.created_at | timestamp: 'medium'"
-          matTooltipPosition="below">
-          {{ mention.event.event.created_at | ago }}
-        </span>
-      </app-user-profile>
-    </mat-card-header>
-    <mat-card-content class="media-mention-content">
-      @let imageUrls = getPhotoUrls(mention.event.event);
-      @let currentIndex = mention.currentImageIndex;
-
-      <div class="photo-carousel">
-        <div class="photo-container">
-          <img [src]="imageUrls[currentIndex]" [alt]="getPhotoAlt(mention.event.event, currentIndex)"
-            class="mention-photo" loading="lazy" />
-        </div>
-
-        @if (imageUrls.length > 1) {
-        <!-- Navigation buttons -->
-        <button mat-icon-button class="carousel-nav-button carousel-nav-left" (click)="prevImage(mentionIndex, $event)"
-          aria-label="Previous photo">
-          <mat-icon>chevron_left</mat-icon>
-        </button>
-
-        <button mat-icon-button class="carousel-nav-button carousel-nav-right" (click)="nextImage(mentionIndex, $event)"
-          aria-label="Next photo">
-          <mat-icon>chevron_right</mat-icon>
-        </button>
-
-        <!-- Indicator dots -->
-        <div class="carousel-indicators">
-          @for (url of imageUrls; track url; let imgIndex = $index) {
-          <button class="indicator-dot" [class.active]="currentIndex === imgIndex"
-            (click)="setImage(mentionIndex, imgIndex, $event)" [attr.aria-label]="'Go to photo ' + (imgIndex + 1)">
-          </button>
-          }
-        </div>
-        }
-      </div>
-    </mat-card-content>
-  </mat-card>
+  <!-- Photo Event (kind 20, NIP-68) - Use PhotoEventComponent for full blurhash/carousel support -->
+  <div class="embedded-photo-event">
+    <app-event-header [event]="mention.event.event" [compact]="true"></app-event-header>
+    <app-photo-event [event]="mention.event.event" [hideComments]="true"
+      [trustedByPubkey]="trustedByPubkey()"></app-photo-event>
+  </div>
   } @else if (mention.event.event.kind === 21 || mention.event.event.kind === 22 || mention.event.event.kind === 34235
   || mention.event.event.kind === 34236) {
   <!-- Video Event (kind 21/22/34235/34236, NIP-71) - Inline rendering -->

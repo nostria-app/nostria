@@ -234,6 +234,7 @@
 } @else if (isPhotoEvent(token.id)) {
 <!-- Render kind 20 photo events using PhotoEventComponent for full carousel/blurhash support -->
 <div class="embedded-photo-event">
+  <app-event-header [event]="getEventData(token.id)!" [compact]="true"></app-event-header>
   <app-photo-event [event]="getEventData(token.id)!" [hideComments]="true"
     [trustedByPubkey]="trustedByPubkey()"></app-photo-event>
 </div>
