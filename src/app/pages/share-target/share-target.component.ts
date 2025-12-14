@@ -56,11 +56,25 @@ export class ShareTargetComponent {
       const response = await cache.match(cacheUrl);
 
       if (response) {
-        const formData = await response.formData();
-        const title = formData.get('title') as string;
-        const text = formData.get('text') as string;
-        const url = formData.get('url') as string;
-        const files = formData.getAll('files') as File[];
+        // Parse the JSON payload
+        const payload = await response.json();
+        const title = payload.title as string;
+        const text = payload.text as string;
+        const url = payload.url as string;
+
+        // Reconstruct File objects from serialized data
+        const files: File[] = [];
+        if (payload.files && Array.isArray(payload.files)) {
+          for (const fileData of payload.files) {
+            const uint8Array = new Uint8Array(fileData.data);
+            const blob = new Blob([uint8Array], { type: fileData.type });
+            const file = new File([blob], fileData.name, {
+              type: fileData.type,
+              lastModified: fileData.lastModified
+            });
+            files.push(file);
+          }
+        }
 
         this.openDialog(title, text, url, files);
 
