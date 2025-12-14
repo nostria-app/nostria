@@ -74,3 +74,35 @@
     color: rgba(255, 255, 255, 0.6);
   }
 }
+
+.external-domains-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.domain-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+}
+
+.domain-name {
+  flex: 1;
+  font-size: 0.875rem;
+}
+
+.add-domain-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.domain-input {
+  flex: 1;
+}

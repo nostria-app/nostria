@@ -77,6 +77,9 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   // Media privacy state
   isRevealed = signal(false);
 
+  // Track actual video dimensions after metadata loads (accounts for rotation)
+  private videoActualDimensions = signal<{ width: number; height: number } | undefined>(undefined);
+
   // Short form video detection and settings
   isShortFormVideo = computed(() => {
     const event = this.event();
@@ -273,7 +276,15 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   });
 
   // Get aspect ratio style for video container - default to 16/9 if no dimensions
+  // Prefers actual video dimensions (after rotation) over metadata dimensions
   videoAspectRatio = computed(() => {
+    // First check if we have actual dimensions from the video element (accounts for rotation)
+    const actualDims = this.videoActualDimensions();
+    if (actualDims && actualDims.width && actualDims.height) {
+      return `${actualDims.width} / ${actualDims.height}`;
+    }
+    
+    // Fall back to metadata dimensions (may not account for rotation)
     const dimensions = this.videoDimensions();
     const ratio = this.imagePlaceholder.getAspectRatioStyle(dimensions);
     return ratio || '16 / 9'; // Default to 16:9 for videos
@@ -407,6 +418,13 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     const video = this.videoPlayerRef?.nativeElement;
     if (video) {
       this.videoDuration.set(video.duration);
+      // Store actual video dimensions after rotation is applied by the browser
+      if (video.videoWidth && video.videoHeight) {
+        this.videoActualDimensions.set({
+          width: video.videoWidth,
+          height: video.videoHeight
+        });
+      }
     }
   }
 
