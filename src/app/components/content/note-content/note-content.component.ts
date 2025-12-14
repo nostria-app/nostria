@@ -24,6 +24,7 @@ import { ImagePlaceholderService } from '../../../services/image-placeholder.ser
 import { PhotoEventComponent } from '../../event-types/photo-event.component';
 import { EventHeaderComponent } from '../../event/header/header.component';
 import { Event as NostrEvent } from 'nostr-tools';
+import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
 
 // Type for grouped display items - either single token or image group
 export interface DisplayItem {
@@ -58,6 +59,7 @@ export class NoteContentComponent implements OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private videoPlayback = inject(VideoPlaybackService);
   private imagePlaceholder = inject(ImagePlaceholderService);
+  private externalLinkHandler = inject(ExternalLinkHandlerService);
 
   // Store rendered HTML for nevent/note previews
   private eventPreviewsMap = signal<Map<number, SafeHtml>>(new Map());
@@ -954,5 +956,19 @@ export class NoteContentComponent implements OnDestroy {
       // If parsing fails, just return the original content
       return content;
     }
+  }
+
+  /**
+   * Handle URL click - route internally if domain is configured
+   */
+  onUrlClick(url: string, event: MouseEvent): void {
+    const handled = this.externalLinkHandler.handleLinkClick(url, event);
+    
+    if (handled) {
+      // Prevent default navigation if we handled it internally
+      event.preventDefault();
+      event.stopPropagation();
+    }
+    // Otherwise, let the browser handle it (open in new tab)
   }
 }
