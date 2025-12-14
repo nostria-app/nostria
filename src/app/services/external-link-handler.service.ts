@@ -1,8 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { nip19 } from 'nostr-tools';
-import { LoggerService } from './logger.service';
-import { LocalStorageService } from './local-storage.service';
 import { ProfilePointer } from 'nostr-tools/nip19';
 import { LoggerService } from './logger.service';
 import { LocalStorageService } from './local-storage.service';
