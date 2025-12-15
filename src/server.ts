@@ -32,7 +32,7 @@ app.use(
 );
 
 // In-memory storage for shared files (with expiration)
-const sharedFilesCache = new Map<string, { files: Array<{ name: string; type: string; data: string }>; title?: string; text?: string; url?: string; timestamp: number }>();
+const sharedFilesCache = new Map<string, { files: { name: string; type: string; data: string }[]; title?: string; text?: string; url?: string; timestamp: number }>();
 
 // Clean up old entries every 5 minutes
 setInterval(() => {
@@ -57,7 +57,7 @@ app.post('/share-target', upload.array('media', 10), (req, res) => {
   try {
     const id = Date.now().toString();
     const files = req.files as Express.Multer.File[] | undefined;
-    
+
     // Store the data in memory cache
     const cacheEntry = {
       title: req.body?.title || '',
@@ -70,7 +70,7 @@ app.post('/share-target', upload.array('media', 10), (req, res) => {
       })) || [],
       timestamp: Date.now()
     };
-    
+
     sharedFilesCache.set(id, cacheEntry);
     console.log('[Share Target] Cached with ID:', id, 'Files count:', cacheEntry.files.length);
 
@@ -88,15 +88,15 @@ app.post('/share-target', upload.array('media', 10), (req, res) => {
 app.get('/api/share-target/:id', (req, res) => {
   const id = req.params.id;
   const data = sharedFilesCache.get(id);
-  
+
   if (!data) {
     res.status(404).json({ error: 'Not found or expired' });
     return;
   }
-  
+
   // Return the data and optionally delete it
   res.json(data);
-  
+
   // Delete after retrieval (one-time use)
   sharedFilesCache.delete(id);
 });
