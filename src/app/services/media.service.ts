@@ -564,23 +564,28 @@ export class MediaService implements NostriaService {
 
         this.logger.info('File uploaded successfully:', uploadedMedia);
 
-        // Ask other servers to mirror the file
+        // Ask other servers to mirror the file - DO NOT await, let it run in background
         const otherServers = this.otherServers(uploadedMedia.url, servers);
         console.log('Asking to mirror on: ', otherServers);
 
         if (otherServers.length > 0) {
-          // If the uploaded file is not original, we need to generate an new auth header because the action is different.
-          if (!uploadOriginal) {
-            headers = await this.getAuthHeaders('Upload File', 'upload', uploadedMedia.sha256);
-          }
-
-          await this.mirrorFile(uploadedMedia.sha256, uploadedMedia.url, otherServers, headers);
-
-          // After mirroring, get the updated item from the signal to include mirrors
-          const updatedItem = this.getFileByHash(uploadedMedia.sha256);
-          if (updatedItem) {
-            uploadedMedia = updatedItem;
-          }
+          // Fire and forget - mirroring happens in background
+          // This significantly improves upload perceived performance
+          const uploadedMediaForMirror = uploadedMedia;
+          (async () => {
+            try {
+              // If the uploaded file is not original, we need to generate a new auth header because the action is different.
+              let mirrorHeaders = headers;
+              if (!uploadOriginal) {
+                mirrorHeaders = await this.getAuthHeaders('Upload File', 'upload', uploadedMediaForMirror.sha256);
+              }
+              await this.mirrorFile(uploadedMediaForMirror.sha256, uploadedMediaForMirror.url, otherServers, mirrorHeaders);
+              console.log('Background mirroring completed for:', uploadedMediaForMirror.sha256);
+            } catch (err) {
+              // Log but don't fail - mirroring is best-effort
+              console.warn('Background mirroring failed:', err);
+            }
+          })();
         }
 
         return { item: uploadedMedia, status: 'success' };
