@@ -44,7 +44,7 @@ export class ShareTargetComponent {
 
     // Check if SW is controlling this page
     const swControlled = !!navigator.serviceWorker?.controller;
-    
+
     // Show immediate debug alert so we know the component loaded
     alert(`[DEBUG] ShareTarget component loaded!\n\nURL: ${window.location.href}\nSW Controlled: ${swControlled}\n\nCheck Settings > Logs for more details.`);
 
@@ -77,7 +77,7 @@ export class ShareTargetComponent {
     try {
       if (!navigator.serviceWorker?.controller) {
         this.shareDebug.log('share-target', 'No service worker controller!');
-        
+
         // Try to get the SW registration
         const registration = await navigator.serviceWorker.getRegistration();
         this.shareDebug.log('share-target', 'SW Registration status', {
@@ -87,37 +87,37 @@ export class ShareTargetComponent {
           installing: !!registration?.installing,
           scope: registration?.scope
         });
-        
+
         // If there's a waiting SW, try to claim
         if (registration?.waiting) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
         return;
       }
-      
+
       // Send message to SW to check status
       const messageChannel = new MessageChannel();
       messageChannel.port1.onmessage = (event) => {
         this.shareDebug.log('share-target', 'SW response received', event.data);
       };
-      
+
       navigator.serviceWorker.controller.postMessage(
         { type: 'CHECK_SW_STATUS' },
         [messageChannel.port2]
       );
-      
+
       // Also check for cached share data
       const cacheChannel = new MessageChannel();
       cacheChannel.port1.onmessage = async (event) => {
         this.shareDebug.log('share-target', 'Cache data received', event.data);
-        
+
         // If there are cache keys, try to find the most recent one
         if (event.data.keys && event.data.keys.length > 0) {
           const keys = event.data.keys as string[];
           // Sort by timestamp (assuming URL format /shared-content/timestamp)
           const sorted = keys.sort().reverse();
           const latestKey = sorted[0];
-          
+
           // Extract the ID from the URL
           const match = latestKey.match(/\/shared-content\/(\d+)/);
           if (match) {
@@ -128,19 +128,19 @@ export class ShareTargetComponent {
           }
         }
       };
-      
+
       navigator.serviceWorker.controller.postMessage(
         { type: 'GET_CACHED_SHARE_DATA' },
         [cacheChannel.port2]
       );
-      
+
       // Also directly check the cache from the client
       const cache = await caches.open('nostria-share-target');
       const cacheKeys = await cache.keys();
       this.shareDebug.log('share-target', 'Direct cache check', {
         keys: cacheKeys.map(k => k.url)
       });
-      
+
     } catch (err: any) {
       this.shareDebug.log('share-target', 'SW/Cache check failed', { error: err.message });
     }
@@ -155,7 +155,7 @@ export class ShareTargetComponent {
       // Check if there's data in the Clipboard API
       if (navigator.clipboard && 'read' in navigator.clipboard) {
         const clipboardItems = await navigator.clipboard.read();
-        this.shareDebug.log('share-target', 'Clipboard read attempted', { 
+        this.shareDebug.log('share-target', 'Clipboard read attempted', {
           itemsCount: clipboardItems.length,
           types: clipboardItems.map(item => item.types)
         });
