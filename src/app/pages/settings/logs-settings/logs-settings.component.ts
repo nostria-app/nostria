@@ -19,7 +19,6 @@ import { ApplicationService } from '../../../services/application.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
-import { ShareDebugViewerComponent } from '../../../components/share-debug-viewer/share-debug-viewer.component';
 
 export interface RelayClusterOutput {
   relay: string;
@@ -51,7 +50,6 @@ export interface RelayConnection {
     MatChipsModule,
     MatTooltipModule,
     MatExpansionModule,
-    ShareDebugViewerComponent
   ],
   templateUrl: './logs-settings.component.html',
   styleUrls: ['./logs-settings.component.scss'],
