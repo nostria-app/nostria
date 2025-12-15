@@ -49,3 +49,4 @@ Thumbs.db
 
 target/rust-analyzer/*
 ssr-debug-output.html
+src-android/*

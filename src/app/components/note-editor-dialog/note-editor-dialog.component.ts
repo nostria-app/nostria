@@ -166,6 +166,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   showAdvancedOptions = signal(false);
   isDragOver = signal(false);
   isUploading = signal(false);
+  uploadStatus = signal(''); // Detailed upload status message
   dragCounter = 0;
   isPublishing = signal(false);
   isRecording = signal(false);
@@ -1942,13 +1943,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
 
     this.isUploading.set(true);
+    this.uploadStatus.set('Preparing upload...');
 
     try {
       // Load media service if not already loaded
       await this.mediaService.load();
 
-      const uploadPromises = files.map(async file => {
+      const totalFiles = files.length;
+      let completedFiles = 0;
+
+      const uploadPromises = files.map(async (file, index) => {
         try {
+          const fileLabel = totalFiles > 1 ? ` (${index + 1}/${totalFiles})` : '';
           console.log(`Uploading file: ${file.name}, type: ${file.type}, size: ${file.size}`);
 
           // Pre-extract thumbnail for videos using the local file
@@ -1963,7 +1969,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
           if (file.type.startsWith('video/')) {
             try {
-              this.snackBar.open('Extracting video thumbnail...', '', { duration: 2000 });
+              this.uploadStatus.set(`Extracting video thumbnail${fileLabel}...`);
 
               // Create object URL from the local file for thumbnail extraction
               const localVideoUrl = URL.createObjectURL(file);
@@ -1993,6 +1999,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             }
           }
 
+          this.uploadStatus.set(`Uploading${fileLabel}...`);
           const result = await this.mediaService.uploadFile(
             file,
             this.uploadOriginal(),
@@ -2006,6 +2013,8 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
               this.insertFileUrl(result.item.url);
             }
 
+            this.uploadStatus.set(`Processing metadata${fileLabel}...`);
+
             // Extract metadata for imeta tag (NIP-92)
             const metadata = await this.extractMediaMetadata(
               file,
@@ -2018,9 +2027,15 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
               this.mediaMetadata.set([...this.mediaMetadata(), metadata]);
             }
 
+            completedFiles++;
+            if (completedFiles < totalFiles) {
+              this.uploadStatus.set(`Completed ${completedFiles}/${totalFiles} files...`);
+            }
+
             return { success: true, fileName: file.name };
           } else {
             console.error(`Upload failed for ${file.name}:`, result.message);
+            completedFiles++;
             return {
               success: false,
               fileName: file.name,
@@ -2029,6 +2044,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
           }
         } catch (error) {
           console.error(`Upload error for ${file.name}:`, error);
+          completedFiles++;
           return {
             success: false,
             fileName: file.name,
@@ -2075,6 +2091,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       );
     } finally {
       this.isUploading.set(false);
+      this.uploadStatus.set('');
     }
   }
 
