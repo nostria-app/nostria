@@ -1,4 +1,6 @@
-importScripts('./ngsw-worker.js');
+// Custom service worker that wraps Angular's ngsw-worker.js
+// IMPORTANT: We must handle share-target BEFORE importing ngsw-worker.js
+// because ngsw may intercept and handle requests before we can
 
 // Enable debug mode for share target
 const DEBUG_SHARE_TARGET = true;
@@ -27,16 +29,40 @@ function logShareDebug(message, data) {
   });
 }
 
+// Log that service worker has started
+logShareDebug('Service worker script loaded');
+
+// Register our fetch handler BEFORE importing ngsw
 self.addEventListener('fetch', (event) => {
-  if (DEBUG_SHARE_TARGET && event.request.url.includes('/share-target')) {
-    logShareDebug('Fetch intercepted', { method: event.request.method, url: event.request.url });
+  const url = event.request.url;
+  const method = event.request.method;
+
+  // Log ALL fetch requests in debug mode (for debugging)
+  if (DEBUG_SHARE_TARGET && url.includes('share-target')) {
+    logShareDebug('Fetch event received', { method, url });
   }
 
-  if (event.request.method === 'POST' && event.request.url.includes('/share-target')) {
-    logShareDebug('Handling POST share-target request');
+  // Handle share-target POST requests
+  if (method === 'POST' && url.includes('/share-target')) {
+    logShareDebug('Intercepting POST share-target request');
     event.respondWith(handleShareTarget(event));
+    return; // Don't let ngsw handle this
   }
 });
+
+// Log service worker lifecycle events
+self.addEventListener('install', (event) => {
+  logShareDebug('Service worker installing');
+  self.skipWaiting(); // Activate immediately
+});
+
+self.addEventListener('activate', (event) => {
+  logShareDebug('Service worker activated');
+  event.waitUntil(self.clients.claim()); // Take control immediately
+});
+
+// Now import ngsw-worker.js for all other requests
+importScripts('./ngsw-worker.js');
 
 // Handle push notifications (required for TWA/PWABuilder packaged apps)
 self.addEventListener('push', (event) => {
