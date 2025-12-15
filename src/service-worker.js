@@ -21,7 +21,7 @@ async function writeLogToIDB(message, data) {
         }
       };
     });
-    
+
     const tx = db.transaction('logs', 'readwrite');
     const store = tx.objectStore('logs');
     store.add({
@@ -81,7 +81,7 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(handleShareTarget(event));
     return; // Don't let ngsw handle this
   }
-  
+
   // Also try to handle GET with query params (some implementations use GET)
   if (method === 'GET' && url.includes('/share-target') && (url.includes('?') || event.request.headers.get('content-type'))) {
     logShareDebug('GET share-target with params detected', { url });
@@ -109,7 +109,7 @@ self.addEventListener('message', (event) => {
       timestamp: Date.now()
     });
   }
-  
+
   if (event.data && event.data.type === 'GET_CACHED_SHARE_DATA') {
     // Try to get any cached share data
     caches.open('nostria-share-target').then(async (cache) => {

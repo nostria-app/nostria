@@ -26,14 +26,18 @@
       "installMode": "lazy",
       "updateMode": "prefetch",
       "resources": {
-        "files": ["/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"]
+        "files": [
+          "/**/*.(svg|cur|jpg|jpeg|png|apng|webp|avif|gif|otf|ttf|woff|woff2)"
+        ]
       }
     }
   ],
   "dataGroups": [
     {
       "name": "image-cache",
-      "urls": ["https://proxy.eu.nostria.app/api/ImageOptimizeProxy**"],
+      "urls": [
+        "https://proxy.eu.nostria.app/api/ImageOptimizeProxy**"
+      ],
       "cacheConfig": {
         "strategy": "performance",
         "maxSize": 2000,

@@ -81,14 +81,14 @@ export class ShareDebugService {
 
   async getLogs(): Promise<ShareDebugLog[]> {
     this.loadLogs(); // Refresh from localStorage
-    
+
     // Also try to read from IndexedDB (service worker logs)
     try {
       const idbLogs = await this.readLogsFromIDB();
       // Merge and dedupe logs
       const allLogs = [...this.logs, ...idbLogs];
       allLogs.sort((a, b) => b.timestamp - a.timestamp);
-      
+
       // Dedupe by timestamp + message
       const seen = new Set<string>();
       const deduped = allLogs.filter(log => {
@@ -97,7 +97,7 @@ export class ShareDebugService {
         seen.add(key);
         return true;
       });
-      
+
       return deduped.slice(0, MAX_LOGS);
     } catch {
       return [...this.logs];
@@ -143,7 +143,7 @@ export class ShareDebugService {
   async clearLogs(): Promise<void> {
     this.logs = [];
     localStorage.removeItem(STORAGE_KEY);
-    
+
     // Also clear IndexedDB
     try {
       const request = indexedDB.open('share-debug-db', 1);
