@@ -207,7 +207,7 @@ export class ShareTargetComponent {
 
       // First try the server API (for server-side handling)
       let payload = await this.tryServerApi(id);
-      
+
       // If server doesn't have it, try the service worker cache
       if (!payload) {
         payload = await this.tryCacheApi(id);
@@ -263,7 +263,7 @@ export class ShareTargetComponent {
             // Array from SW cache
             blobData = new Uint8Array(fileData.data).buffer as ArrayBuffer;
           }
-          
+
           const blob = new Blob([blobData], { type: fileData.type });
           const file = new File([blob], fileData.name, {
             type: fileData.type,
@@ -291,14 +291,14 @@ export class ShareTargetComponent {
     try {
       this.shareDebug.log('share-target', 'Trying server API', { id });
       const response = await fetch(`/api/share-target/${id}`);
-      
+
       if (!response.ok) {
         this.shareDebug.log('share-target', 'Server API returned not OK', { status: response.status });
         return null;
       }
-      
+
       const data = await response.json();
-      this.shareDebug.log('share-target', 'Server API returned data', { 
+      this.shareDebug.log('share-target', 'Server API returned data', {
         hasTitle: !!data.title,
         hasText: !!data.text,
         hasUrl: !!data.url,
@@ -314,7 +314,7 @@ export class ShareTargetComponent {
   private async tryCacheApi(id: string): Promise<any | null> {
     try {
       this.shareDebug.log('share-target', 'Trying SW cache', { id });
-      
+
       const cache = await caches.open('nostria-share-target');
       const cacheUrl = `/shared-content/${id}`;
 
