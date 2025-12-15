@@ -2,6 +2,9 @@
 
 zapstore
 .env
+android.keystore
+*.keystore
+.gradle
 
 # Compiled output
 /dist
