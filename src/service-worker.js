@@ -225,7 +225,12 @@ async function handleShareTarget(event) {
     const title = formData.get('title') || '';
     const text = formData.get('text') || '';
     const url = formData.get('url') || '';
-    const files = formData.getAll('files');
+    
+    // Try both 'media' (from manifest) and 'files' (fallback)
+    let files = formData.getAll('media');
+    if (!files || files.length === 0) {
+      files = formData.getAll('files');
+    }
 
     logShareDebug('Extracted fields', { title, text, url, filesCount: files.length });
 

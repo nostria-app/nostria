@@ -205,6 +205,116 @@ export class ShareTargetComponent {
     try {
       this.shareDebug.log('share-target', 'handlePostData started', { id });
 
+      // First try the server API (for server-side handling)
+      let payload = await this.tryServerApi(id);
+      
+      // If server doesn't have it, try the service worker cache
+      if (!payload) {
+        payload = await this.tryCacheApi(id);
+      }
+
+      if (!payload) {
+        this.shareDebug.log('share-target', 'No data found in server or cache');
+        this.showDebugDialog('No Data', 'Could not find shared data in server or cache.');
+        this.openDialog();
+        return;
+      }
+
+      const debugInfo = {
+        title: payload.title || 'none',
+        text: payload.text || 'none',
+        url: payload.url || 'none',
+        filesCount: payload.files?.length || 0,
+        files: payload.files?.map((f: any) => ({
+          name: f.name,
+          type: f.type,
+          size: f.size || 0,
+          dataLength: f.data?.length || 0
+        })) || []
+      };
+
+      this.shareDebug.log('share-target', 'Payload received', debugInfo);
+      this.showDebugDialog('POST Share Data',
+        `Title: ${debugInfo.title}\n` +
+        `Text: ${debugInfo.text}\n` +
+        `URL: ${debugInfo.url}\n` +
+        `Files: ${debugInfo.filesCount}\n` +
+        `Details: ${JSON.stringify(debugInfo.files, null, 2)}`
+      );
+
+      const title = payload.title as string;
+      const text = payload.text as string;
+      const url = payload.url as string;
+
+      const files: File[] = [];
+      if (payload.files && Array.isArray(payload.files)) {
+        for (const fileData of payload.files) {
+          // Handle both base64 (server) and ArrayBuffer (SW cache) formats
+          let blobData: ArrayBuffer;
+          if (typeof fileData.data === 'string') {
+            // Base64 from server
+            const binaryString = atob(fileData.data);
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            blobData = bytes.buffer as ArrayBuffer;
+          } else {
+            // Array from SW cache
+            blobData = new Uint8Array(fileData.data).buffer as ArrayBuffer;
+          }
+          
+          const blob = new Blob([blobData], { type: fileData.type });
+          const file = new File([blob], fileData.name, {
+            type: fileData.type,
+            lastModified: fileData.lastModified || Date.now()
+          });
+          files.push(file);
+          this.shareDebug.log('share-target', 'File reconstructed', {
+            name: file.name,
+            type: file.type,
+            size: file.size
+          });
+        }
+      }
+
+      // Open the note editor dialog with the shared content
+      this.openDialog(title, text, url, files);
+    } catch (error: any) {
+      this.shareDebug.log('share-target', 'Error handling POST data', { error: error.message, stack: error.stack });
+      this.showDebugDialog('Error', `Error: ${error.message}`);
+      this.openDialog();
+    }
+  }
+
+  private async tryServerApi(id: string): Promise<any | null> {
+    try {
+      this.shareDebug.log('share-target', 'Trying server API', { id });
+      const response = await fetch(`/api/share-target/${id}`);
+      
+      if (!response.ok) {
+        this.shareDebug.log('share-target', 'Server API returned not OK', { status: response.status });
+        return null;
+      }
+      
+      const data = await response.json();
+      this.shareDebug.log('share-target', 'Server API returned data', { 
+        hasTitle: !!data.title,
+        hasText: !!data.text,
+        hasUrl: !!data.url,
+        filesCount: data.files?.length || 0
+      });
+      return data;
+    } catch (err: any) {
+      this.shareDebug.log('share-target', 'Server API error', { error: err.message });
+      return null;
+    }
+  }
+
+  private async tryCacheApi(id: string): Promise<any | null> {
+    try {
+      this.shareDebug.log('share-target', 'Trying SW cache', { id });
+      
       const cache = await caches.open('nostria-share-target');
       const cacheUrl = `/shared-content/${id}`;
 
@@ -216,65 +326,14 @@ export class ShareTargetComponent {
       const response = await cache.match(cacheUrl);
       this.shareDebug.log('share-target', 'Cache response', { found: !!response });
 
-      if (response) {
-        const payload = await response.json();
-
-        const debugInfo = {
-          title: payload.title || 'none',
-          text: payload.text || 'none',
-          url: payload.url || 'none',
-          filesCount: payload.files?.length || 0,
-          files: payload.files?.map((f: any) => ({
-            name: f.name,
-            type: f.type,
-            size: f.size,
-            dataLength: f.data?.length || 0
-          })) || []
-        };
-
-        this.shareDebug.log('share-target', 'Payload received', debugInfo);
-        this.showDebugDialog('POST Share Data',
-          `Title: ${debugInfo.title}\n` +
-          `Text: ${debugInfo.text}\n` +
-          `URL: ${debugInfo.url}\n` +
-          `Files: ${debugInfo.filesCount}\n` +
-          `Details: ${JSON.stringify(debugInfo.files, null, 2)}`
-        );
-
-        const title = payload.title as string;
-        const text = payload.text as string;
-        const url = payload.url as string;
-
-        const files: File[] = [];
-        if (payload.files && Array.isArray(payload.files)) {
-          for (const fileData of payload.files) {
-            const uint8Array = new Uint8Array(fileData.data);
-            const blob = new Blob([uint8Array], { type: fileData.type });
-            const file = new File([blob], fileData.name, {
-              type: fileData.type,
-              lastModified: fileData.lastModified
-            });
-            files.push(file);
-            this.shareDebug.log('share-target', 'File reconstructed', {
-              name: file.name,
-              type: file.type,
-              size: file.size
-            });
-          }
-        }
-
-        this.openDialog(title, text, url, files);
-        await cache.delete(cacheUrl);
-      } else {
-        this.shareDebug.log('share-target', 'Cache miss', { id, cacheUrl, availableKeys: cacheKeys });
-        this.showDebugDialog('Cache Miss', `No data found for ID: ${id}\nAvailable keys: ${cacheKeys.join(', ') || 'none'}`);
-        this.router.navigate(['/'], { replaceUrl: true });
+      if (!response) {
+        return null;
       }
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      this.shareDebug.log('share-target', 'Error', { error: errorMsg });
-      this.showDebugDialog('Error', `Error: ${errorMsg}`);
-      this.router.navigate(['/'], { replaceUrl: true });
+
+      return await response.json();
+    } catch (err: any) {
+      this.shareDebug.log('share-target', 'Cache API error', { error: err.message });
+      return null;
     }
   }
 

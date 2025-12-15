@@ -7,11 +7,18 @@ import {
 import express from 'express';
 import cors from 'cors';
 import { join } from 'node:path';
+import multer from 'multer';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
+
+// Configure multer for handling multipart/form-data (file uploads)
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 50 * 1024 * 1024 } // 50MB limit
+});
 
 /**
  * Configure CORS to allow web clients to make API requests
@@ -23,6 +30,76 @@ app.use(
     allowedHeaders: ['Content-Type'],
   })
 );
+
+// In-memory storage for shared files (with expiration)
+const sharedFilesCache = new Map<string, { files: Array<{ name: string; type: string; data: string }>; title?: string; text?: string; url?: string; timestamp: number }>();
+
+// Clean up old entries every 5 minutes
+setInterval(() => {
+  const now = Date.now();
+  const expiry = 5 * 60 * 1000; // 5 minutes
+  for (const [key, value] of sharedFilesCache.entries()) {
+    if (now - value.timestamp > expiry) {
+      sharedFilesCache.delete(key);
+    }
+  }
+}, 60 * 1000);
+
+/**
+ * Web Share Target API - Handle POST requests with shared files/data
+ * This handles the case where the service worker doesn't intercept the POST
+ */
+app.post('/share-target', upload.array('media', 10), (req, res) => {
+  console.log('[Share Target] POST received');
+  console.log('[Share Target] Body:', req.body);
+  console.log('[Share Target] Files:', req.files ? (req.files as Express.Multer.File[]).map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })) : 'none');
+
+  try {
+    const id = Date.now().toString();
+    const files = req.files as Express.Multer.File[] | undefined;
+    
+    // Store the data in memory cache
+    const cacheEntry = {
+      title: req.body?.title || '',
+      text: req.body?.text || '',
+      url: req.body?.url || '',
+      files: files?.map(f => ({
+        name: f.originalname,
+        type: f.mimetype,
+        data: f.buffer.toString('base64')
+      })) || [],
+      timestamp: Date.now()
+    };
+    
+    sharedFilesCache.set(id, cacheEntry);
+    console.log('[Share Target] Cached with ID:', id, 'Files count:', cacheEntry.files.length);
+
+    // Redirect to the share-target page with the ID
+    res.redirect(303, `/share-target?id=${id}`);
+  } catch (error) {
+    console.error('[Share Target] Error:', error);
+    res.redirect(303, '/');
+  }
+});
+
+/**
+ * Web Share Target API - Get cached shared data
+ */
+app.get('/api/share-target/:id', (req, res) => {
+  const id = req.params.id;
+  const data = sharedFilesCache.get(id);
+  
+  if (!data) {
+    res.status(404).json({ error: 'Not found or expired' });
+    return;
+  }
+  
+  // Return the data and optionally delete it
+  res.json(data);
+  
+  // Delete after retrieval (one-time use)
+  sharedFilesCache.delete(id);
+});
 
 /**
  * NIP-05 Nostr identifier endpoint
