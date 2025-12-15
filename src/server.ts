@@ -50,10 +50,6 @@ setInterval(() => {
  * This handles the case where the service worker doesn't intercept the POST
  */
 app.post('/share-target', upload.array('media', 10), (req, res) => {
-  console.log('[Share Target] POST received');
-  console.log('[Share Target] Body:', req.body);
-  console.log('[Share Target] Files:', req.files ? (req.files as Express.Multer.File[]).map(f => ({ name: f.originalname, type: f.mimetype, size: f.size })) : 'none');
-
   try {
     const id = Date.now().toString();
     const files = req.files as Express.Multer.File[] | undefined;
@@ -72,7 +68,6 @@ app.post('/share-target', upload.array('media', 10), (req, res) => {
     };
 
     sharedFilesCache.set(id, cacheEntry);
-    console.log('[Share Target] Cached with ID:', id, 'Files count:', cacheEntry.files.length);
 
     // Redirect to the share-target page with the ID
     res.redirect(303, `/share-target?id=${id}`);
