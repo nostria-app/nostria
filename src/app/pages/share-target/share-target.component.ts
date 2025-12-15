@@ -27,8 +27,16 @@ export class ShareTargetComponent {
   private shareDebug = inject(ShareDebugService);
 
   constructor() {
-    // Log that the component was created
-    this.shareDebug.log('share-target', 'ShareTargetComponent created');
+    // Log that the component was created with current URL info
+    this.shareDebug.log('share-target', 'ShareTargetComponent created', {
+      fullUrl: window.location.href,
+      pathname: window.location.pathname,
+      search: window.location.search,
+      timestamp: new Date().toISOString()
+    });
+
+    // Show immediate debug alert so we know the component loaded
+    alert(`[DEBUG] ShareTarget component loaded!\n\nURL: ${window.location.href}\n\nCheck Settings > Logs for more details.`);
 
     effect(() => {
       const initialized = this.app.initialized();
