@@ -7,6 +7,7 @@ import { ApplicationService } from '../../services/application.service';
 import { take } from 'rxjs/operators';
 import { MatDialog } from '@angular/material/dialog';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
+import { ShareDebugService } from '../../services/share-debug.service';
 
 // Enable debug mode to show share target data
 const DEBUG_SHARE_TARGET = true;
@@ -23,20 +24,22 @@ export class ShareTargetComponent {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private dialog = inject(MatDialog);
+  private shareDebug = inject(ShareDebugService);
 
   constructor() {
+    // Log that the component was created
+    this.shareDebug.log('share-target', 'ShareTargetComponent created');
+
     effect(() => {
       const initialized = this.app.initialized();
       const authenticated = this.app.authenticated();
 
-      if (DEBUG_SHARE_TARGET) {
-        console.log('[ShareTarget] Effect triggered:', { initialized, authenticated });
-      }
+      this.shareDebug.log('share-target', 'Effect triggered', { initialized, authenticated });
 
       if (initialized && authenticated) {
         this.handleShare();
       } else if (initialized && !authenticated) {
-        // If not authenticated, redirect to home which will likely show login or public feed
+        this.shareDebug.log('share-target', 'Not authenticated, redirecting to home');
         this.router.navigate(['/'], { replaceUrl: true });
       }
     });
@@ -58,24 +61,20 @@ export class ShareTargetComponent {
   private handleShare() {
     this.route.queryParams.pipe(take(1)).subscribe(async params => {
       const id = params['id'];
+      const allParams = JSON.stringify(params);
 
-      if (DEBUG_SHARE_TARGET) {
-        console.log('[ShareTarget] handleShare called with params:', params);
-        this.showDebugDialog('Query Params', `ID: ${id || 'none'}\nAll params: ${JSON.stringify(params, null, 2)}`);
-      }
+      this.shareDebug.log('share-target', 'handleShare called', { id, allParams });
+      this.showDebugDialog('Query Params', `ID: ${id || 'none'}\nAll params: ${allParams}`);
 
       if (id) {
-        // Handle POST data from cache
         await this.handlePostData(id);
       } else {
-        // Handle GET data (fallback or if browser supports mixed)
         const title = params['title'];
         const text = params['text'];
         const url = params['url'];
 
-        if (DEBUG_SHARE_TARGET) {
-          this.showDebugDialog('GET Share Data', `Title: ${title || 'none'}\nText: ${text || 'none'}\nURL: ${url || 'none'}`);
-        }
+        this.shareDebug.log('share-target', 'GET Share Data', { title, text, url });
+        this.showDebugDialog('GET Share Data', `Title: ${title || 'none'}\nText: ${text || 'none'}\nURL: ${url || 'none'}`);
 
         this.openDialog(title, text, url);
       }
@@ -84,57 +83,48 @@ export class ShareTargetComponent {
 
   private async handlePostData(id: string) {
     try {
-      if (DEBUG_SHARE_TARGET) {
-        console.log('[ShareTarget] handlePostData called with id:', id);
-      }
+      this.shareDebug.log('share-target', 'handlePostData started', { id });
 
       const cache = await caches.open('nostria-share-target');
       const cacheUrl = `/shared-content/${id}`;
 
-      if (DEBUG_SHARE_TARGET) {
-        // List all cache entries for debugging
-        const keys = await cache.keys();
-        console.log('[ShareTarget] Cache keys:', keys.map(k => k.url));
-      }
+      // List all cache entries for debugging
+      const keys = await cache.keys();
+      const cacheKeys = keys.map(k => k.url);
+      this.shareDebug.log('share-target', 'Cache keys', { cacheKeys, lookingFor: cacheUrl });
 
       const response = await cache.match(cacheUrl);
-
-      if (DEBUG_SHARE_TARGET) {
-        console.log('[ShareTarget] Cache response found:', !!response);
-      }
+      this.shareDebug.log('share-target', 'Cache response', { found: !!response });
 
       if (response) {
-        // Parse the JSON payload
         const payload = await response.json();
 
-        if (DEBUG_SHARE_TARGET) {
-          const debugInfo = {
-            title: payload.title || 'none',
-            text: payload.text || 'none',
-            url: payload.url || 'none',
-            filesCount: payload.files?.length || 0,
-            files: payload.files?.map((f: any) => ({
-              name: f.name,
-              type: f.type,
-              size: f.size,
-              dataLength: f.data?.length || 0
-            })) || []
-          };
-          console.log('[ShareTarget] Payload:', debugInfo);
-          this.showDebugDialog('POST Share Data (from cache)',
-            `Title: ${debugInfo.title}\n` +
-            `Text: ${debugInfo.text}\n` +
-            `URL: ${debugInfo.url}\n` +
-            `Files count: ${debugInfo.filesCount}\n` +
-            `Files: ${JSON.stringify(debugInfo.files, null, 2)}`
-          );
-        }
+        const debugInfo = {
+          title: payload.title || 'none',
+          text: payload.text || 'none',
+          url: payload.url || 'none',
+          filesCount: payload.files?.length || 0,
+          files: payload.files?.map((f: any) => ({
+            name: f.name,
+            type: f.type,
+            size: f.size,
+            dataLength: f.data?.length || 0
+          })) || []
+        };
+
+        this.shareDebug.log('share-target', 'Payload received', debugInfo);
+        this.showDebugDialog('POST Share Data',
+          `Title: ${debugInfo.title}\n` +
+          `Text: ${debugInfo.text}\n` +
+          `URL: ${debugInfo.url}\n` +
+          `Files: ${debugInfo.filesCount}\n` +
+          `Details: ${JSON.stringify(debugInfo.files, null, 2)}`
+        );
 
         const title = payload.title as string;
         const text = payload.text as string;
         const url = payload.url as string;
 
-        // Reconstruct File objects from serialized data
         const files: File[] = [];
         if (payload.files && Array.isArray(payload.files)) {
           for (const fileData of payload.files) {
@@ -145,28 +135,25 @@ export class ShareTargetComponent {
               lastModified: fileData.lastModified
             });
             files.push(file);
-
-            if (DEBUG_SHARE_TARGET) {
-              console.log('[ShareTarget] Reconstructed file:', file.name, file.type, file.size);
-            }
+            this.shareDebug.log('share-target', 'File reconstructed', {
+              name: file.name,
+              type: file.type,
+              size: file.size
+            });
           }
         }
 
         this.openDialog(title, text, url, files);
-
-        // Clean up
         await cache.delete(cacheUrl);
       } else {
-        if (DEBUG_SHARE_TARGET) {
-          this.showDebugDialog('Cache Miss', `No cached data found for ID: ${id}\nCache URL: ${cacheUrl}`);
-        }
+        this.shareDebug.log('share-target', 'Cache miss', { id, cacheUrl, availableKeys: cacheKeys });
+        this.showDebugDialog('Cache Miss', `No data found for ID: ${id}\nAvailable keys: ${cacheKeys.join(', ') || 'none'}`);
         this.router.navigate(['/'], { replaceUrl: true });
       }
     } catch (error) {
-      console.error('Error reading shared content:', error);
-      if (DEBUG_SHARE_TARGET) {
-        this.showDebugDialog('Error', `Error reading shared content:\n${error instanceof Error ? error.message : String(error)}`);
-      }
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      this.shareDebug.log('share-target', 'Error', { error: errorMsg });
+      this.showDebugDialog('Error', `Error: ${errorMsg}`);
       this.router.navigate(['/'], { replaceUrl: true });
     }
   }
@@ -176,12 +163,9 @@ export class ShareTargetComponent {
     if (title) content += title + '\n';
     if (text) content += text + '\n';
     if (url) content += url;
-
     content = content.trim();
 
-    if (DEBUG_SHARE_TARGET) {
-      console.log('[ShareTarget] openDialog called:', { content, filesCount: files?.length || 0 });
-    }
+    this.shareDebug.log('share-target', 'openDialog', { content, filesCount: files?.length || 0 });
 
     if (content || (files && files.length > 0)) {
       this.customDialog.open(NoteEditorDialogComponent, {
@@ -192,11 +176,11 @@ export class ShareTargetComponent {
         maxWidth: '95vw',
         disableClose: true
       });
-    } else if (DEBUG_SHARE_TARGET) {
-      this.showDebugDialog('No Content', 'No content or files to share - dialog not opened');
+    } else {
+      this.shareDebug.log('share-target', 'No content to share');
+      this.showDebugDialog('No Content', 'No content or files to share');
     }
 
-    // Navigate to home to clear the share URL and show the feed
     this.router.navigate(['/'], { replaceUrl: true });
   }
 }

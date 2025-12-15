@@ -112,7 +112,7 @@
     }
   ],
   "share_target": {
-    "action": "https://nostria.app/share-target",
+    "action": "/share-target",
     "method": "POST",
     "enctype": "multipart/form-data",
     "params": {
