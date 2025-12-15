@@ -79,13 +79,84 @@ export class ShareDebugService {
     console.log(`[ShareDebug][${source}] ${message}`, data || '');
   }
 
-  getLogs(): ShareDebugLog[] {
-    this.loadLogs(); // Refresh from storage
-    return [...this.logs];
+  async getLogs(): Promise<ShareDebugLog[]> {
+    this.loadLogs(); // Refresh from localStorage
+    
+    // Also try to read from IndexedDB (service worker logs)
+    try {
+      const idbLogs = await this.readLogsFromIDB();
+      // Merge and dedupe logs
+      const allLogs = [...this.logs, ...idbLogs];
+      allLogs.sort((a, b) => b.timestamp - a.timestamp);
+      
+      // Dedupe by timestamp + message
+      const seen = new Set<string>();
+      const deduped = allLogs.filter(log => {
+        const key = `${log.timestamp}-${log.message}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      
+      return deduped.slice(0, MAX_LOGS);
+    } catch {
+      return [...this.logs];
+    }
   }
 
-  clearLogs(): void {
+  private readLogsFromIDB(): Promise<ShareDebugLog[]> {
+    return new Promise((resolve) => {
+      try {
+        const request = indexedDB.open('share-debug-db', 1);
+        request.onerror = () => resolve([]);
+        request.onsuccess = () => {
+          const db = request.result;
+          if (!db.objectStoreNames.contains('logs')) {
+            db.close();
+            resolve([]);
+            return;
+          }
+          const tx = db.transaction('logs', 'readonly');
+          const store = tx.objectStore('logs');
+          const getAllRequest = store.getAll();
+          getAllRequest.onsuccess = () => {
+            db.close();
+            resolve(getAllRequest.result || []);
+          };
+          getAllRequest.onerror = () => {
+            db.close();
+            resolve([]);
+          };
+        };
+        request.onupgradeneeded = (e) => {
+          const db = (e.target as IDBOpenDBRequest).result;
+          if (!db.objectStoreNames.contains('logs')) {
+            db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
+          }
+        };
+      } catch {
+        resolve([]);
+      }
+    });
+  }
+
+  async clearLogs(): Promise<void> {
     this.logs = [];
     localStorage.removeItem(STORAGE_KEY);
+    
+    // Also clear IndexedDB
+    try {
+      const request = indexedDB.open('share-debug-db', 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        if (db.objectStoreNames.contains('logs')) {
+          const tx = db.transaction('logs', 'readwrite');
+          tx.objectStore('logs').clear();
+        }
+        db.close();
+      };
+    } catch {
+      // Ignore
+    }
   }
 }

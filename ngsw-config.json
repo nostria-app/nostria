@@ -1,6 +1,11 @@
 {
   "$schema": "./node_modules/@angular/service-worker/config/schema.json",
   "index": "/index.html",
+  "navigationUrls": [
+    "/**",
+    "!/**/.**",
+    "!/share-target**"
+  ],
   "assetGroups": [
     {
       "name": "app",

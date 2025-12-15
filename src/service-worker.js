@@ -7,11 +7,44 @@ const DEBUG_SHARE_TARGET = true;
 const SHARE_DEBUG_STORAGE_KEY = 'nostria-share-debug-logs';
 const MAX_DEBUG_LOGS = 50;
 
+// Helper function to write logs directly to IndexedDB (works in SW context)
+async function writeLogToIDB(message, data) {
+  try {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('share-debug-db', 1);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+      request.onupgradeneeded = (e) => {
+        const db = e.target.result;
+        if (!db.objectStoreNames.contains('logs')) {
+          db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true });
+        }
+      };
+    });
+    
+    const tx = db.transaction('logs', 'readwrite');
+    const store = tx.objectStore('logs');
+    store.add({
+      timestamp: Date.now(),
+      source: 'service-worker',
+      message: message,
+      data: data
+    });
+    await tx.complete;
+    db.close();
+  } catch (e) {
+    console.error('Failed to write to IDB:', e);
+  }
+}
+
 // Helper to log to a storage-compatible format (will be read by the app)
 function logShareDebug(message, data) {
   if (!DEBUG_SHARE_TARGET) return;
 
   console.log('[SW ShareTarget] ' + message, data || '');
+
+  // Write to IndexedDB
+  writeLogToIDB(message, data);
 
   // Try to post message to clients for real-time updates
   self.clients.matchAll().then(clients => {
@@ -37,9 +70,9 @@ self.addEventListener('fetch', (event) => {
   const url = event.request.url;
   const method = event.request.method;
 
-  // Log ALL fetch requests in debug mode (for debugging)
-  if (DEBUG_SHARE_TARGET && url.includes('share-target')) {
-    logShareDebug('Fetch event received', { method, url });
+  // Log ALL requests with share-target in URL, regardless of method
+  if (url.includes('share-target')) {
+    logShareDebug('Fetch event for share-target', { method, url, mode: event.request.mode, destination: event.request.destination });
   }
 
   // Handle share-target POST requests
@@ -47,6 +80,11 @@ self.addEventListener('fetch', (event) => {
     logShareDebug('Intercepting POST share-target request');
     event.respondWith(handleShareTarget(event));
     return; // Don't let ngsw handle this
+  }
+  
+  // Also try to handle GET with query params (some implementations use GET)
+  if (method === 'GET' && url.includes('/share-target') && (url.includes('?') || event.request.headers.get('content-type'))) {
+    logShareDebug('GET share-target with params detected', { url });
   }
 });
 
@@ -59,6 +97,31 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   logShareDebug('Service worker activated');
   event.waitUntil(self.clients.claim()); // Take control immediately
+});
+
+// Handle messages from the app (for debugging)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CHECK_SW_STATUS') {
+    logShareDebug('SW status check received');
+    event.ports[0].postMessage({
+      type: 'SW_STATUS_RESPONSE',
+      status: 'active',
+      timestamp: Date.now()
+    });
+  }
+  
+  if (event.data && event.data.type === 'GET_CACHED_SHARE_DATA') {
+    // Try to get any cached share data
+    caches.open('nostria-share-target').then(async (cache) => {
+      const keys = await cache.keys();
+      const cacheUrls = keys.map(k => k.url);
+      logShareDebug('Cache keys requested', { cacheUrls });
+      event.ports[0].postMessage({
+        type: 'CACHED_SHARE_DATA',
+        keys: cacheUrls
+      });
+    });
+  }
 });
 
 // Now import ngsw-worker.js for all other requests

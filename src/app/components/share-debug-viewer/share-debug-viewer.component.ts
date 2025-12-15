@@ -29,6 +29,7 @@ import { ShareDebugService, ShareDebugLog } from '../../services/share-debug.ser
         <mat-card class="empty-state">
           <p>No share target logs yet.</p>
           <p>Try sharing an image to this app from your gallery.</p>
+          <p class="hint">If logs appear from service-worker, the SW is intercepting requests.</p>
         </mat-card>
       } @else {
         <div class="logs-container">
@@ -75,6 +76,12 @@ import { ShareDebugService, ShareDebugLog } from '../../services/share-debug.ser
       padding: 24px;
       text-align: center;
       color: var(--mat-sys-on-surface-variant);
+    }
+
+    .hint {
+      font-size: 12px;
+      margin-top: 16px;
+      opacity: 0.7;
     }
 
     .logs-container {
@@ -145,12 +152,13 @@ export class ShareDebugViewerComponent {
     this.refresh();
   }
 
-  refresh(): void {
-    this.logs.set(this.shareDebug.getLogs());
+  async refresh(): Promise<void> {
+    const logs = await this.shareDebug.getLogs();
+    this.logs.set(logs);
   }
 
-  clear(): void {
-    this.shareDebug.clearLogs();
+  async clear(): Promise<void> {
+    await this.shareDebug.clearLogs();
     this.logs.set([]);
   }
 
