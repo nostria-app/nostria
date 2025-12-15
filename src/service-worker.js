@@ -1,7 +1,17 @@
 importScripts('./ngsw-worker.js');
 
+// Enable debug mode for share target
+const DEBUG_SHARE_TARGET = true;
+
 self.addEventListener('fetch', (event) => {
+  if (DEBUG_SHARE_TARGET && event.request.url.includes('/share-target')) {
+    console.log('[SW ShareTarget] Fetch intercepted:', event.request.method, event.request.url);
+  }
+
   if (event.request.method === 'POST' && event.request.url.includes('/share-target')) {
+    if (DEBUG_SHARE_TARGET) {
+      console.log('[SW ShareTarget] Handling POST share-target request');
+    }
     event.respondWith(handleShareTarget(event));
   }
 });
@@ -73,8 +83,24 @@ self.addEventListener('notificationclick', (event) => {
 
 async function handleShareTarget(event) {
   try {
+    if (DEBUG_SHARE_TARGET) {
+      console.log('[SW ShareTarget] handleShareTarget started');
+      console.log('[SW ShareTarget] Request URL:', event.request.url);
+      console.log('[SW ShareTarget] Request headers:', [...event.request.headers.entries()]);
+    }
+
     // 1. Consume the request body as FormData
     const formData = await event.request.formData();
+
+    if (DEBUG_SHARE_TARGET) {
+      console.log('[SW ShareTarget] FormData parsed successfully');
+      console.log('[SW ShareTarget] FormData entries:', [...formData.entries()].map(([k, v]) => {
+        if (v instanceof File) {
+          return [k, `File: ${v.name}, type: ${v.type}, size: ${v.size}`];
+        }
+        return [k, v];
+      }));
+    }
 
     // 2. Generate a unique ID
     const timestamp = Date.now();
@@ -86,10 +112,17 @@ async function handleShareTarget(event) {
     const url = formData.get('url') || '';
     const files = formData.getAll('files');
 
+    if (DEBUG_SHARE_TARGET) {
+      console.log('[SW ShareTarget] Extracted data:', { title, text, url, filesCount: files.length });
+    }
+
     // 4. Process files - convert to serializable format
     const filesData = [];
     for (const file of files) {
       if (file instanceof File && file.size > 0) {
+        if (DEBUG_SHARE_TARGET) {
+          console.log('[SW ShareTarget] Processing file:', file.name, file.type, file.size);
+        }
         const arrayBuffer = await file.arrayBuffer();
         filesData.push({
           name: file.name,
@@ -98,6 +131,9 @@ async function handleShareTarget(event) {
           lastModified: file.lastModified,
           data: Array.from(new Uint8Array(arrayBuffer))
         });
+        if (DEBUG_SHARE_TARGET) {
+          console.log('[SW ShareTarget] File processed, data length:', filesData[filesData.length - 1].data.length);
+        }
       }
     }
 
@@ -109,6 +145,10 @@ async function handleShareTarget(event) {
       files: filesData
     };
 
+    if (DEBUG_SHARE_TARGET) {
+      console.log('[SW ShareTarget] Payload created, files count:', filesData.length);
+    }
+
     // 6. Open a specific cache for shared content
     const cache = await caches.open('nostria-share-target');
 
@@ -117,10 +157,18 @@ async function handleShareTarget(event) {
       headers: { 'Content-Type': 'application/json' }
     }));
 
+    if (DEBUG_SHARE_TARGET) {
+      console.log('[SW ShareTarget] Data cached at:', cacheUrl);
+      console.log('[SW ShareTarget] Redirecting to /share-target?id=' + timestamp);
+    }
+
     // 8. Redirect to the app with the ID
     return Response.redirect('/share-target?id=' + timestamp, 303);
   } catch (error) {
-    console.error('Error handling share target:', error);
+    console.error('[SW ShareTarget] Error handling share target:', error);
+    if (DEBUG_SHARE_TARGET) {
+      console.error('[SW ShareTarget] Error details:', error.message, error.stack);
+    }
     // Redirect to home on error
     return Response.redirect('/', 303);
   }
