@@ -398,9 +398,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  async ngOnInit(): Promise<void> {
+  ngOnInit(): void {
     // Check for route parameters first to see if we need to start a specific chat
-    this.route.queryParams.subscribe(async params => {
+    this.route.queryParams.subscribe(params => {
       const pubkey = params['pubkey'];
       if (pubkey) {
         this.logger.debug('Query param pubkey detected:', pubkey);
@@ -409,10 +409,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         // Check if we need to trigger initial load
         if (!this.messaging.isLoading() && this.messaging.sortedChats().length === 0) {
           this.logger.debug('Chats not loaded yet, starting load process for DM link...');
-          // Await the load to ensure it completes before trying to start chat
-          await this.messaging.loadChats();
-          this.logger.debug('Chat loading completed, now starting chat');
-          this.startChatWithPubkey(pubkey);
+          // Start loading and wait for completion before starting chat
+          this.messaging.loadChats().then(() => {
+            this.logger.debug('Chat loading completed, now starting chat');
+            this.startChatWithPubkey(pubkey);
+          }).catch(error => {
+            this.logger.error('Failed to load chats for DM link:', error);
+            // Try to start chat anyway - it will create a temp chat
+            this.startChatWithPubkey(pubkey);
+          });
         } else if (this.messaging.isLoading()) {
           this.logger.debug('Chats are currently loading, waiting for completion...');
           
