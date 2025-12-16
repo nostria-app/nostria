@@ -20,8 +20,8 @@
       }
     </div>
 
-    <!-- Thumbnail Management (videos only) -->
-    @if (isVideo()) {
+    <!-- Thumbnail Management (videos only, not for kind 1) -->
+    @if (isVideo() && kind() !== 1) {
     <div class="thumbnail-section">
       <div class="thumbnail-header">
         <h3>Video Thumbnail</h3>
@@ -86,8 +86,7 @@
     </div>
     }
 
-    <!-- Event Kind Selection (only shown for videos) -->
-    @if (isVideo()) {
+    <!-- Event Kind Selection -->
     <mat-form-field appearance="outline">
       <mat-label>Event Type</mat-label>
       <mat-select [value]="kind()" (selectionChange)="kind.set($event.value)">
@@ -100,8 +99,10 @@
         </mat-option>
         }
       </mat-select>
-      <mat-hint>Choose the type of video event to publish</mat-hint>
+      <mat-hint>Choose the type of event to publish</mat-hint>
     </mat-form-field>
+
+    @if (isVideo()) {
 
     <!-- D-tag (for addressable events) -->
     @if (kind() === 34235 || kind() === 34236) {
@@ -143,20 +144,24 @@
     }
     }
 
-    <!-- Title (optional) -->
+    <!-- Title (optional, not for kind 1 notes) -->
+    @if (kind() !== 1) {
     <mat-form-field appearance="outline">
       <mat-label>Title</mat-label>
       <input matInput [value]="title()" (input)="title.set($any($event.target).value)"
         placeholder="Enter a title for your {{ isImage() ? 'picture' : 'video' }}" />
       <mat-hint>A short, descriptive title (optional)</mat-hint>
     </mat-form-field>
+    }
 
     <!-- Content/Description -->
     <mat-form-field appearance="outline">
-      <mat-label>Description</mat-label>
+      <mat-label>{{ kind() === 1 ? 'Note Content' : 'Description' }}</mat-label>
       <textarea matInput [value]="content()" (input)="content.set($any($event.target).value)"
-        placeholder="Describe your {{ isImage() ? 'picture' : 'video' }}..." rows="4"></textarea>
-      <mat-hint>Optional description or caption</mat-hint>
+        placeholder="{{ kind() === 1 ? 'Write your note...' : 'Describe your ' + (isImage() ? 'picture' : 'video') + '...' }}"
+        rows="4"></textarea>
+      <mat-hint>{{ kind() === 1 ? 'Your note text (media URL will be appended)' : 'Optional description or caption'
+        }}</mat-hint>
     </mat-form-field>
 
     <!-- Alt Text (accessibility) -->
@@ -167,8 +172,8 @@
       <mat-hint>Screen reader description (recommended)</mat-hint>
     </mat-form-field>
 
-    <!-- Duration (for videos only) -->
-    @if (isVideo()) {
+    <!-- Duration (for videos only, not kind 1) -->
+    @if (isVideo() && kind() !== 1) {
     <mat-form-field appearance="outline">
       <mat-label>Duration (seconds)</mat-label>
       <input matInput type="number" step="0.01" [value]="duration() ?? ''" (input)="onDurationInput($event)"
@@ -211,7 +216,8 @@
       }
     </div>
 
-    <!-- Location -->
+    <!-- Location (not for kind 1) -->
+    @if (kind() !== 1) {
     <mat-form-field appearance="outline">
       <mat-label>Location</mat-label>
       <input matInput [value]="location()" (input)="location.set($any($event.target).value)"
@@ -226,8 +232,10 @@
         placeholder="e.g., dr5regw" />
       <mat-hint>Optional geohash for precise location</mat-hint>
     </mat-form-field>
+    }
 
-    <!-- Custom Relays Section -->
+    <!-- Custom Relays Section (not for kind 1) -->
+    @if (kind() !== 1) {
     <div class="custom-relays-section">
       <h3>Additional Relays (Optional)</h3>
 
@@ -271,6 +279,7 @@
       </mat-chip-set>
       }
     </div>
+    }
   </div>
 </mat-dialog-content>
 

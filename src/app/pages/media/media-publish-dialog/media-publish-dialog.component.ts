@@ -21,7 +21,7 @@ export interface MediaPublishDialogData {
 }
 
 export interface MediaPublishOptions {
-  kind: 20 | 21 | 22 | 34235 | 34236; // 20 = picture, 21 = video, 22 = short video, 34235 = addressable video, 34236 = addressable short video
+  kind: 1 | 20 | 21 | 22 | 34235 | 34236; // 1 = regular note, 20 = picture, 21 = video, 22 = short video, 34235 = addressable video, 34236 = addressable short video
   title: string;
   content: string;
   alt?: string;
@@ -69,7 +69,7 @@ export class MediaPublishDialogComponent {
   data: MediaPublishDialogData = inject(MAT_DIALOG_DATA);
 
   // Form fields
-  kind = signal<20 | 21 | 22 | 34235 | 34236>(this.getDefaultKind());
+  kind = signal<1 | 20 | 21 | 22 | 34235 | 34236>(this.getDefaultKind());
   title = signal('');
   content = signal('');
   alt = signal('');
@@ -135,7 +135,7 @@ export class MediaPublishDialogComponent {
     return !this.publishing() && !this.publishInitiated;
   };
 
-  private getDefaultKind(): 20 | 21 | 22 | 34235 | 34236 {
+  private getDefaultKind(): 1 | 20 | 21 | 22 | 34235 | 34236 {
     const mediaType = this.data.mediaItem.type;
 
     if (mediaType?.startsWith('image')) {
@@ -153,22 +153,25 @@ export class MediaPublishDialogComponent {
     return 20;
   }
 
-  getAvailableKinds(): { value: 20 | 21 | 22 | 34235 | 34236; label: string; description: string }[] {
+  getAvailableKinds(): { value: 1 | 20 | 21 | 22 | 34235 | 34236; label: string; description: string }[] {
     if (this.isImage()) {
       return [
-        { value: 20, label: 'Picture (kind 20)', description: 'Standard image post' }
+        { value: 20, label: 'Picture (kind 20)', description: 'Standard image post' },
+        { value: 1, label: 'Regular Note (kind 1)', description: 'Standard text note with media attachment' }
       ];
     } else if (this.isVideo()) {
       return [
         { value: 21, label: 'Video (kind 21)', description: 'Normal/horizontal video' },
         { value: 22, label: 'Short Video (kind 22)', description: 'Short/vertical video (stories, reels)' },
         { value: 34235, label: 'Addressable Video (kind 34235)', description: 'Updateable normal video (NIP-71)' },
-        { value: 34236, label: 'Addressable Short Video (kind 34236)', description: 'Updateable short video (NIP-71)' }
+        { value: 34236, label: 'Addressable Short Video (kind 34236)', description: 'Updateable short video (NIP-71)' },
+        { value: 1, label: 'Regular Note (kind 1)', description: 'Standard text note with media attachment' }
       ];
     }
 
     return [
-      { value: 20, label: 'Picture (kind 20)', description: 'Standard image post' }
+      { value: 20, label: 'Picture (kind 20)', description: 'Standard image post' },
+      { value: 1, label: 'Regular Note (kind 1)', description: 'Standard text note with media attachment' }
     ];
   }
 
