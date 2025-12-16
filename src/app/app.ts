@@ -387,6 +387,12 @@ export class App implements OnInit {
       label: $localize`:@@app.nav.streams:Streams`,
       icon: 'live_tv',
     },
+    {
+      path: 'analytics',
+      label: $localize`:@@app.nav.analytics:Analytics`,
+      icon: 'insights',
+      authenticated: true,
+    },
     // {
     //   path: 'bookmarks',
     //   label: 'Bookmarks',
