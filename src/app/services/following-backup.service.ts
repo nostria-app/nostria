@@ -39,8 +39,9 @@ export class FollowingBackupService {
       const pubkey = this.accountState.pubkey();
       const followingList = this.accountState.followingList();
 
-      if (pubkey && followingList.length > 0) {
+      if (pubkey) {
         // Schedule backup asynchronously to not block the effect
+        // Backup even if following list is empty - user may have intentionally cleared it
         queueMicrotask(() => {
           this.createBackup().catch(err => {
             this.logger.error('[FollowingBackupService] Failed to create automatic backup', err);
@@ -295,6 +296,11 @@ export class FollowingBackupService {
       return crypto.randomUUID();
     }
     // Fallback for older browsers or non-secure contexts
-    return `backup-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+    // Combine timestamp with multiple random components to reduce collision risk
+    const timestamp = Date.now();
+    const random1 = Math.random().toString(36).substring(2, 15);
+    const random2 = Math.random().toString(36).substring(2, 15);
+    const random3 = Math.random().toString(36).substring(2, 15);
+    return `backup-${timestamp}-${random1}${random2}${random3}`;
   }
 }
