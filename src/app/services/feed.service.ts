@@ -2434,7 +2434,7 @@ export class FeedService {
     ];
 
     const defaultDiscoveryRelays: RelayConfig[] = [
-      { url: 'wss://discovery.eu.nostria.app', read: true, write: false },
+      { url: 'wss://discovery.eu.nostria.app/', read: true, write: false },
     ];
 
     this._userRelays.set(defaultUserRelays);
