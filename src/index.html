@@ -5,7 +5,9 @@
   <meta charset="utf-8" />
   <title>Nostria</title>
   <base href="/" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+  <!-- Android display cutout support -->
+  <meta name="mobile-web-app-capable" content="yes" />
   <link rel="icon" type="image/x-icon" href="favicon.ico" />
   <meta name="description" content="Nostria puts control back where it belongs: with you. Build your social network the way you want, keep your profile and data under your control, and share and explore a decentralized space that resists censorship while being quick to join and friendly to use.
 " />
@@ -39,6 +41,17 @@
       var isDark = theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches);
       document.body.style.backgroundColor = isDark ? '#18111b' : '#FEF7FA';
       document.body.setAttribute('data-theme', isDark ? 'dark' : 'light');
+      
+      // Detect Android and set platform attribute for CSS targeting
+      var isAndroid = /android/i.test(navigator.userAgent);
+      var isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                         window.navigator.standalone === true;
+      if (isAndroid) {
+        document.documentElement.setAttribute('data-platform', 'android');
+      }
+      if (isStandalone) {
+        document.documentElement.setAttribute('data-display-mode', 'standalone');
+      }
     })();
   </script>
   <app-root>
