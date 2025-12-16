@@ -89,6 +89,7 @@ import { CustomDialogService } from './services/custom-dialog.service';
 import { CommandPaletteDialogComponent } from './components/command-palette-dialog/command-palette-dialog.component';
 import { DatabaseService } from './services/database.service';
 import { MetricsTrackingService } from './services/metrics-tracking.service';
+import { FollowingBackupService } from './services/following-backup.service';
 
 interface NavItem {
   path: string;
@@ -215,6 +216,7 @@ export class App implements OnInit {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly webPushService = inject(WebPushService);
   private readonly overlay = inject(Overlay);
+  private readonly followingBackupService = inject(FollowingBackupService);
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
