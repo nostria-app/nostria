@@ -291,7 +291,9 @@ mat-sidenav-content {
 // Mobile navigation footer
 .mobile-nav {
   position: fixed;
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  // Use max() to ensure minimum padding for Android devices where env() returns 0
+  // Android gesture navigation typically needs ~20-24px extra space
+  bottom: max(24px, calc(24px + env(safe-area-inset-bottom, 0px)));
   left: 50%;
   transform: translateX(-50%);
   right: auto;
@@ -325,6 +327,15 @@ mat-sidenav-content {
 
   /* Smooth transition for hide/show */
   transition: opacity 0.3s ease-out, visibility 0.3s ease-out, transform 0.3s ease-out;
+}
+
+// Android standalone PWA - add extra bottom padding for navigation bar
+@media all and (display-mode: standalone) {
+  .mobile-nav {
+    // When running as installed PWA on Android, add extra padding
+    // This accounts for the system navigation bar that may overlap content
+    bottom: max(32px, calc(24px + env(safe-area-inset-bottom, 0px)));
+  }
 }
 
 // Hide mobile nav completely when fullscreen is active

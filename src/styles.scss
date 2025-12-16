@@ -13,6 +13,10 @@ html {
   --mat-success-lighter: #c8e6c9;
   --mat-success-darker: #2e7d32;
 
+  // Safe area inset with fallback for Android devices
+  // Android often returns 0 for env(safe-area-inset-bottom) even when there's a nav bar
+  --safe-area-bottom: env(safe-area-inset-bottom, 0px);
+
   // Scrollbar colors for light theme
   --scrollbar-track: transparent;
   --scrollbar-thumb: rgba(0, 0, 0, 0.2);
@@ -1472,4 +1476,10 @@ app-media-queue {
     inset 0 0 0 1px rgba(255, 255, 255, 0.08),
     0px 4px 16px rgba(0, 0, 0, 0.5),
     0 8px 32px rgba(0, 0, 0, 0.5) !important;
+}
+
+// Android-specific safe area fix for mobile navigation
+// Android often doesn't report safe-area-inset-bottom correctly for gesture navigation
+html[data-platform="android"][data-display-mode="standalone"] .mobile-nav {
+  bottom: max(40px, calc(24px + env(safe-area-inset-bottom, 0px))) !important;
 }
