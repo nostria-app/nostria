@@ -75,10 +75,6 @@ export class FollowingBackupService {
     }
 
     const followingList = this.accountState.followingList();
-    if (followingList.length === 0) {
-      this.logger.debug('[FollowingBackupService] Skipping backup - empty following list');
-      return;
-    }
 
     try {
       // Get the current kind 3 event from database
@@ -102,7 +98,7 @@ export class FollowingBackupService {
       }
 
       const newBackup: FollowingBackup = {
-        id: crypto.randomUUID(),
+        id: this.generateBackupId(),
         timestamp: Date.now(),
         pubkeys: [...followingList],
         event: event,
@@ -288,5 +284,17 @@ export class FollowingBackupService {
   clearAllBackups(): void {
     this.localStorage.removeItem(this.BACKUP_KEY);
     this.logger.info('[FollowingBackupService] All backups cleared');
+  }
+
+  /**
+   * Generate a backup ID that works in all environments
+   * Falls back to timestamp-based ID if crypto.randomUUID is not available
+   */
+  private generateBackupId(): string {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+      return crypto.randomUUID();
+    }
+    // Fallback for older browsers or non-secure contexts
+    return `backup-${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
   }
 }

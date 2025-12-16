@@ -285,12 +285,8 @@ export class BackupComponent {
       maxWidth: '90vw',
     });
 
-    dialogRef.afterClosed().subscribe((result) => {
-      if (result) {
-        // Refresh backup count after restore/merge
-        this.followingBackupsCount();
-      }
-    });
+    // Dialog closed, no need to manually refresh as computed signals update automatically
+    dialogRef.afterClosed().subscribe();
   }
 
   private showMessage(message: string, duration = 3000): void {
