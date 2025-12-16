@@ -134,6 +134,14 @@ npm run tauri dev
 For Android development, run:
 npm run tauri android dev
 
+## Mobile Build
+
+```
+bubblewrap init --manifest https://nostria.app/manifest.webmanifest --drectory=src-android
+
+bubblewrap build
+```
+
 ## Classifications
 
 - Accounts - List of accounts that the user has access to.
