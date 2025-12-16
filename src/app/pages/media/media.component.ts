@@ -827,23 +827,23 @@ export class MediaComponent {
 
   private sortMediaItems(items: MediaItem[]): MediaItem[] {
     const sortOption = this.sortOption();
-    
+
     // For name sorting, pre-compute filenames to avoid repeated URL parsing
     if (sortOption === 'name-asc' || sortOption === 'name-desc') {
       const itemsWithNames = items.map(item => ({
         item,
         name: this.getFileName(item.url)
       }));
-      
+
       itemsWithNames.sort((a, b) => {
-        return sortOption === 'name-asc' 
+        return sortOption === 'name-asc'
           ? a.name.localeCompare(b.name)
           : b.name.localeCompare(a.name);
       });
-      
+
       return itemsWithNames.map(x => x.item);
     }
-    
+
     return [...items].sort((a, b) => {
       switch (sortOption) {
         case 'newest':
@@ -1074,6 +1074,63 @@ export class MediaComponent {
 
   private async buildMediaEvent(item: MediaItem, options: MediaPublishOptions) {
     const tags: string[][] = [];
+
+    // For kind 1 (regular note), build a simpler event structure
+    if (options.kind === 1) {
+      // Build content with description and media URL
+      let content = options.content || '';
+      if (content && !content.endsWith('\n')) {
+        content += '\n';
+      }
+      content += item.url;
+
+      // Add imeta tag according to NIP-92 for media attachment
+      const imetaTag = ['imeta'];
+      imetaTag.push(`url ${item.url}`);
+      if (item.type) {
+        imetaTag.push(`m ${item.type}`);
+      }
+      imetaTag.push(`x ${item.sha256}`);
+      if (item.size) {
+        imetaTag.push(`size ${item.size}`);
+      }
+      if (options.alt) {
+        imetaTag.push(`alt ${options.alt}`);
+      }
+      // Add mirror URLs as fallback
+      if (item.mirrors && item.mirrors.length > 0) {
+        item.mirrors.forEach(mirrorUrl => {
+          imetaTag.push(`fallback ${mirrorUrl}`);
+        });
+      }
+      tags.push(imetaTag);
+
+      // Add hashtags
+      options.hashtags.forEach(tag => {
+        tags.push(['t', tag]);
+      });
+
+      // Add content warning if provided
+      if (options.contentWarning) {
+        tags.push(['content-warning', options.contentWarning]);
+      }
+
+      // Add location if provided
+      if (options.location) {
+        tags.push(['location', options.location]);
+      }
+
+      // Add geohash if provided
+      if (options.geohash) {
+        tags.push(['g', options.geohash]);
+      }
+
+      // Add client tag (Nostria)
+      tags.push(['client', 'nostria']);
+
+      // Create the event
+      return this.nostr.createEvent(1, content, tags);
+    }
 
     // Add d-tag for addressable events (kinds 34235, 34236)
     if ((options.kind === 34235 || options.kind === 34236) && options.dTag) {
