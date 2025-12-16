@@ -288,6 +288,13 @@ export const routes: Routes = [
     title: 'Upgrade to Premium',
   },
   {
+    path: 'analytics',
+    loadComponent: () =>
+      import('./pages/analytics/analytics.component').then(m => m.AnalyticsComponent),
+    title: 'Analytics',
+    data: { isRoot: true },
+  },
+  {
     path: 'ai',
     loadComponent: () => import('./pages/ai/ai').then((m) => m.AiComponent),
     title: 'AI',
