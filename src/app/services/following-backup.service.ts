@@ -289,14 +289,24 @@ export class FollowingBackupService {
 
   /**
    * Generate a backup ID that works in all environments
-   * Falls back to timestamp-based ID if crypto.randomUUID is not available
+   * Uses crypto.randomUUID when available, falls back to secure random generation
    */
   private generateBackupId(): string {
+    // Modern browsers with crypto.randomUUID
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       return crypto.randomUUID();
     }
-    // Fallback for older browsers or non-secure contexts
-    // Combine timestamp with multiple random components to reduce collision risk
+    
+    // Fallback with crypto.getRandomValues if available (more secure than Math.random)
+    if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+      const array = new Uint8Array(16);
+      crypto.getRandomValues(array);
+      // Convert to hex string
+      const hex = Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
+      return `backup-${hex}`;
+    }
+    
+    // Last resort fallback for very old browsers or non-secure contexts
     const timestamp = Date.now();
     const random1 = Math.random().toString(36).substring(2, 15);
     const random2 = Math.random().toString(36).substring(2, 15);
