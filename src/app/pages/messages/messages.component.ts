@@ -149,6 +149,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
   private accountRelay = inject(AccountRelayService);
 
+  // Timeout duration for waiting for chats to load when opening a specific chat
+  private readonly CHAT_LOAD_TIMEOUT_MS = 10000;
+
   // Data signals
   // chats = signal<Chat[]>([]);
   selectedChatId = signal<string | null>(null);
@@ -441,12 +444,10 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           timeoutHandle = setTimeout(() => {
             this.logger.warn('Chat loading timeout reached, attempting to start chat anyway');
             untracked(() => {
-              if (waitEffect) {
-                waitEffect.destroy();
-              }
+              waitEffect.destroy();
               this.startChatWithPubkey(pubkey);
             });
-          }, 10000); // 10 second timeout
+          }, this.CHAT_LOAD_TIMEOUT_MS);
         } else {
           // Chats already loaded, start immediately
           this.logger.debug('Chats already loaded, starting chat immediately');
