@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, computed } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
@@ -7,6 +7,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { DatabaseService } from '../../services/database.service';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -17,6 +18,8 @@ import { kinds } from 'nostr-tools';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
+import { FollowingBackupService } from '../../services/following-backup.service';
+import { FollowingHistoryDialogComponent } from './following-history-dialog/following-history-dialog.component';
 
 interface BackupStats {
   eventsCount: number;
@@ -50,6 +53,8 @@ export class BackupComponent {
   private accountState = inject(AccountStateService);
   private readonly utilities = inject(UtilitiesService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly followingBackupService = inject(FollowingBackupService);
+  private readonly dialog = inject(MatDialog);
 
   stats = signal<BackupStats>({
     eventsCount: 0,
@@ -64,6 +69,10 @@ export class BackupComponent {
   importing = signal<boolean>(false);
   importProgress = signal<number>(0);
   fileInputRef: HTMLInputElement | null = null;
+
+  // Following list backup signals
+  followingBackupsCount = computed(() => this.followingBackupService.getBackups().length);
+  currentFollowingCount = computed(() => this.accountState.followingList().length);
 
   constructor() {
     effect(async () => {
@@ -268,6 +277,20 @@ export class BackupComponent {
     } finally {
       this.isImporting.set(false);
     }
+  }
+
+  openFollowingHistory(): void {
+    const dialogRef = this.dialog.open(FollowingHistoryDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+    });
+
+    dialogRef.afterClosed().subscribe((result) => {
+      if (result) {
+        // Refresh backup count after restore/merge
+        this.followingBackupsCount();
+      }
+    });
   }
 
   private showMessage(message: string, duration = 3000): void {
