@@ -149,6 +149,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
   private accountRelay = inject(AccountRelayService);
 
+  // Timeout duration for waiting for chats to load when opening a specific chat
+  private readonly CHAT_LOAD_TIMEOUT_MS = 10000;
+
   // Data signals
   // chats = signal<Chat[]>([]);
   selectedChatId = signal<string | null>(null);
@@ -396,37 +399,62 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
-    // Load chats when the messages component initializes
-    // This is on-demand loading - only when user visits the messages page
-    if (!this.messaging.isLoading() && this.messaging.sortedChats().length === 0) {
-      this.logger.debug('Loading chats on messages component init');
-      this.messaging.loadChats();
-    }
-
-    // Check for route parameters to start a new chat
+    // Check for route parameters first to see if we need to start a specific chat
     this.route.queryParams.subscribe(params => {
       const pubkey = params['pubkey'];
       if (pubkey) {
         this.logger.debug('Query param pubkey detected:', pubkey);
-
-        // Wait for chats to finish loading before trying to find existing chat
-        // This ensures we don't create a duplicate chat when one already exists
-        if (this.messaging.isLoading()) {
-          this.logger.debug('Chats are still loading, waiting...');
-
-          // Use an effect to wait for loading to complete
+        
+        // Ensure chats are loaded before attempting to start the chat
+        // Check if we need to trigger initial load
+        if (!this.messaging.isLoading() && this.messaging.sortedChats().length === 0) {
+          this.logger.debug('Chats not loaded yet, starting load process for DM link...');
+          // Start loading and wait for completion before starting chat
+          this.messaging.loadChats().then(() => {
+            this.logger.debug('Chat loading completed, now starting chat');
+            this.startChatWithPubkey(pubkey);
+          }).catch(error => {
+            this.logger.error('Failed to load chats for DM link:', error);
+            // Try to start chat anyway - it will create a temp chat
+            this.startChatWithPubkey(pubkey);
+          });
+        } else if (this.messaging.isLoading()) {
+          this.logger.debug('Chats are currently loading, waiting for completion...');
+          
+          // Use an effect to wait for loading to complete with a timeout fallback
+          let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
           const waitEffect = effect(() => {
             if (!this.messaging.isLoading()) {
-              this.logger.debug('Chats finished loading, starting chat with pubkey');
+              this.logger.debug('Chats finished loading, now starting chat with pubkey');
+              if (timeoutHandle) {
+                clearTimeout(timeoutHandle);
+              }
               untracked(() => {
                 this.startChatWithPubkey(pubkey);
                 waitEffect.destroy(); // Clean up the effect
               });
             }
           });
+
+          // Add a timeout fallback in case loading never completes
+          timeoutHandle = setTimeout(() => {
+            this.logger.warn('Chat loading timeout reached, attempting to start chat anyway');
+            untracked(() => {
+              waitEffect.destroy();
+              this.startChatWithPubkey(pubkey);
+            });
+          }, this.CHAT_LOAD_TIMEOUT_MS);
         } else {
           // Chats already loaded, start immediately
+          this.logger.debug('Chats already loaded, starting chat immediately');
           this.startChatWithPubkey(pubkey);
+        }
+      } else {
+        // No pubkey query param - just do regular initialization
+        // Load chats when the messages component initializes if not already loading
+        if (!this.messaging.isLoading() && this.messaging.sortedChats().length === 0) {
+          this.logger.debug('Loading chats on messages component init (no DM link)');
+          this.messaging.loadChats();
         }
       }
     });
