@@ -411,7 +411,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Check if chats need to be loaded or are currently loading
         const needsLoading = !this.messaging.isLoading() && this.messaging.sortedChats().length === 0;
-        const isCurrentlyLoading = this.messaging.isLoading();
         
         if (needsLoading) {
           this.logger.debug('Chats not loaded yet, starting load process...');
@@ -420,19 +419,34 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
         // Wait for chats to finish loading before trying to find existing chat
         // This ensures we don't create a duplicate chat when one already exists
-        if (needsLoading || isCurrentlyLoading) {
+        if (needsLoading || this.messaging.isLoading()) {
           this.logger.debug('Waiting for chats to finish loading...');
 
-          // Use an effect to wait for loading to complete
+          // Use an effect to wait for loading to complete with a timeout fallback
+          let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
           const waitEffect = effect(() => {
             if (!this.messaging.isLoading()) {
               this.logger.debug('Chats finished loading, starting chat with pubkey');
+              if (timeoutHandle) {
+                clearTimeout(timeoutHandle);
+              }
               untracked(() => {
                 this.startChatWithPubkey(pubkey);
                 waitEffect.destroy(); // Clean up the effect
               });
             }
           });
+
+          // Add a timeout fallback in case loading never completes
+          timeoutHandle = setTimeout(() => {
+            this.logger.warn('Chat loading timeout reached, attempting to start chat anyway');
+            untracked(() => {
+              if (waitEffect) {
+                waitEffect.destroy();
+              }
+              this.startChatWithPubkey(pubkey);
+            });
+          }, 10000); // 10 second timeout
         } else {
           // Chats already loaded, start immediately
           this.logger.debug('Chats already loaded, starting chat immediately');
