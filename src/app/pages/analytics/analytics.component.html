@@ -228,10 +228,7 @@
           <div class="engager-item">
             <div class="engager-rank">{{ i + 1 }}</div>
             <div class="engager-profile">
-              <app-user-profile [pubkey]="engager.pubkey" view="icon"></app-user-profile>
-            </div>
-            <div class="engager-name">
-              <app-user-profile [pubkey]="engager.pubkey" view="name"></app-user-profile>
+              <app-user-profile [pubkey]="engager.pubkey" view="compact"></app-user-profile>
             </div>
             <div class="engager-stats">
               <span class="engager-stat" matTooltip="Reactions">
