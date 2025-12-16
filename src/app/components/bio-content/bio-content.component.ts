@@ -138,7 +138,7 @@ export class BioContentComponent implements OnDestroy {
 
     // Regex patterns
     const nostrRegex = /(nostr:(?:npub|nprofile)1[a-zA-Z0-9]+)/g;
-    const urlRegex = /(https?:\/\/[^\s)}\]>]+?)(?=\s|##LINEBREAK##|$|[),;!?]\s|[),;!?]$)/g;
+    const urlRegex = /(https?:\/\/[^\s)}\]>"]+?)(?=\s|##LINEBREAK##|$|[),;!?"']\s|[),;!?"']$|"|')/g;
 
     // Find all matches
     interface Match {
