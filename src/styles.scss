@@ -57,6 +57,21 @@ body {
   overflow: hidden;
 }
 
+// Android PWA safe area - ensure content doesn't overlap system navigation
+// Uses padding-bottom on html to push all content up
+@media all and (display-mode: standalone) {
+  html {
+    // Add bottom padding for Android gesture navigation bar (~48px typical height)
+    // This ensures the app renders above the system nav bar
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  // For Android specifically where env() returns 0
+  html[data-platform="android"] {
+    padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  }
+}
+
 // Arabic locale font styling
 html.locale-ar,
 html.locale-ar body {
@@ -1482,4 +1497,14 @@ app-media-queue {
 // Android often doesn't report safe-area-inset-bottom correctly for gesture navigation
 html[data-platform="android"][data-display-mode="standalone"] .mobile-nav {
   bottom: max(40px, calc(24px + env(safe-area-inset-bottom, 0px))) !important;
+}
+
+// Fallback: CSS-only detection for standalone PWA mode on any platform
+// This catches cases where JS detection hasn't run yet
+@media all and (display-mode: standalone) {
+  .mobile-nav {
+    // More aggressive bottom padding for standalone PWAs
+    // Android gesture nav bar is typically ~48px on most devices
+    bottom: max(48px, calc(24px + env(safe-area-inset-bottom, 0px))) !important;
+  }
 }

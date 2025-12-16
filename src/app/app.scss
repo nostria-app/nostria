@@ -332,9 +332,9 @@ mat-sidenav-content {
 // Android standalone PWA - add extra bottom padding for navigation bar
 @media all and (display-mode: standalone) {
   .mobile-nav {
-    // When running as installed PWA on Android, add extra padding
-    // This accounts for the system navigation bar that may overlap content
-    bottom: max(32px, calc(24px + env(safe-area-inset-bottom, 0px)));
+    // When running as installed PWA, add extra padding
+    // Android gesture nav bar is typically ~48px on most devices
+    bottom: max(48px, calc(24px + env(safe-area-inset-bottom, 0px)));
   }
 }
 
