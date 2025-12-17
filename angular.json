@@ -8,7 +8,8 @@
         "sourceLocale": "en-US",
         "locales": {
           "ru": "src/locale/messages.ru.json",
-          "no": "src/locale/messages.no.json"
+          "no": "src/locale/messages.no.json",
+          "fr": "src/locale/messages.fr.json"
         }
       },
       "projectType": "application",
