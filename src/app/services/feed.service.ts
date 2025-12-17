@@ -289,19 +289,39 @@ export class FeedService {
   private readonly CACHE_SIZE = 200; // Cache 200 events per column
 
   constructor() {
+    // Track if we've already started loading for the current pubkey
+    let loadingForPubkey: string | null = null;
+
     effect(() => {
       // Watch for pubkey changes to reload feeds when account switches
-
       const pubkey = this.accountState.pubkey();
       const initialized = this.accountState.initialized();
 
-      if (pubkey && initialized) {
+      // Skip if already loading for this pubkey
+      if (pubkey === loadingForPubkey) {
+        return;
+      }
+
+      if (pubkey) {
         untracked(async () => {
-          // Reset feedsLoaded before loading new feeds
-          this._feedsLoaded.set(false);
-          await this.loadFeeds(pubkey);
-          this.loadRelays();
+          // Check if this is a first-time user (no stored feeds)
+          const storedFeeds = this.getFeedsFromStorage(pubkey);
+          const isFirstTimeUser = storedFeeds === null;
+
+          console.log(`🔄 [FeedService] pubkey=${pubkey.slice(0, 8)}... initialized=${initialized} isFirstTimeUser=${isFirstTimeUser}`);
+
+          // For first-time users: Load immediately without waiting for EOSE
+          // For returning users: Wait for initialized to ensure relay data is ready
+          if (isFirstTimeUser || initialized) {
+            console.log(`🚀 [FeedService] Starting feed load for ${isFirstTimeUser ? 'FIRST-TIME' : 'RETURNING'} user`);
+            loadingForPubkey = pubkey;
+            // Reset feedsLoaded before loading new feeds
+            this._feedsLoaded.set(false);
+            await this.loadFeeds(pubkey);
+            this.loadRelays();
+          }
         });
+
       }
     });
   }
@@ -1190,6 +1210,10 @@ export class FeedService {
    * 2. Includes algorithm-recommended users based on engagement
    * 3. Includes subset of following accounts (for performance)
    * 4. Deduplicates and fetches events from combined list
+   * 
+   * OPTIMIZATION: Uses two-phase loading:
+   * - Phase 1: Fast batch query to account's connected relays (shows content quickly)
+   * - Phase 2: Background outbox model queries for additional content
    */
   private async loadForYouFeed(feedData: FeedItem) {
     try {
@@ -1212,7 +1236,9 @@ export class FeedService {
         }
       } catch (error) {
         this.logger.error('Error fetching popular starter pack:', error);
-      }      // 2. Add algorithm-recommended users
+      }
+
+      // 2. Add algorithm-recommended users
       const topEngagedUsers = isArticlesFeed
         ? await this.algorithms.getRecommendedUsersForArticles(10) // Reduced from 20 to 10
         : await this.algorithms.getRecommendedUsers(5); // Reduced from 10 to 5
@@ -1233,12 +1259,117 @@ export class FeedService {
       const pubkeysArray = Array.from(allPubkeys);
       this.logger.debug(`Loading For You feed with ${pubkeysArray.length} total unique users`);
 
-      // Fetch events from all combined users
-      await this.fetchEventsFromUsers(pubkeysArray, feedData);
+      // OPTIMIZATION: Two-phase loading for faster initial content
+      // Phase 1: Fast batch query using account's already-connected relays
+      await this.fetchEventsFromUsersFast(pubkeysArray, feedData);
+
+      // Phase 2: Background outbox model queries for additional/better content
+      // This runs in background and doesn't block UI
+      this.fetchEventsFromUsersBackground(pubkeysArray, feedData);
 
       this.logger.debug(`Loaded For You feed with ${pubkeysArray.length} unique users`);
     } catch (error) {
       this.logger.error('Error loading For You feed:', error);
+    }
+  }
+
+  /**
+   * PHASE 1: Fast batch fetch using account's already-connected relays
+   * This gets content on screen quickly without per-user relay discovery
+   */
+  private async fetchEventsFromUsersFast(pubkeys: string[], feedData: FeedItem) {
+    const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
+
+    try {
+      // Build filter for batch request - all authors at once
+      const filter: {
+        kinds?: number[];
+        authors: string[];
+        limit: number;
+        since?: number;
+      } = {
+        authors: pubkeys,
+        kinds: feedData.filter?.kinds,
+        limit: isArticlesFeed ? 50 : 30, // Get a good batch of events
+      };
+
+      // Only use 'since' if we have existing events
+      const existingEvents = feedData.events();
+      if (feedData.column.lastRetrieved && existingEvents.length > 0) {
+        filter.since = feedData.column.lastRetrieved;
+      }
+
+      this.logger.debug(`[Fast Fetch] Querying account relays for ${pubkeys.length} authors`);
+
+      // Use account relay service for fast batch query (already connected)
+      const events = await this.accountRelay.getMany<Event>(filter, { timeout: 3000 });
+
+      if (events.length > 0) {
+        this.logger.info(`[Fast Fetch] Got ${events.length} events from account relays`);
+
+        // Filter and add events to feed
+        const allowedKinds = new Set(feedData.column.kinds);
+        const validEvents = events.filter(
+          event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+        );
+
+        if (validEvents.length > 0) {
+          // Add events to the feed directly since this is initial load
+          feedData.events.update((currentEvents: Event[]) => {
+            const existingIds = new Set(currentEvents.map(e => e.id));
+            const newEvents = validEvents.filter(e => !existingIds.has(e.id));
+            const combined = [...currentEvents, ...newEvents];
+            const sorted = combined.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            return sorted;
+          });
+
+          // Save to cache
+          this.saveCachedEvents(feedData.column.id, feedData.events());
+
+          // Save events to database for queries
+          validEvents.forEach(event => this.saveEventToDatabase(event));
+        }
+      }
+
+      // Mark initial load as complete so new events get queued
+      feedData.initialLoadComplete = true;
+      feedData.isRefreshing?.set(false);
+      this.updateColumnLastRetrieved(feedData.column.id);
+      this.logger.info(`✅ Initial load complete for column ${feedData.column.id} - new events will be queued`);
+
+    } catch (error) {
+      this.logger.error('[Fast Fetch] Error in fast batch fetch:', error);
+      // Fall through - the background fetch will still run
+      feedData.initialLoadComplete = true;
+      feedData.isRefreshing?.set(false);
+    }
+  }
+
+  /**
+   * PHASE 2: Background fetch using outbox model for more complete data
+   * Runs after fast fetch completes, adds more events to pending queue
+   */
+  private fetchEventsFromUsersBackground(pubkeys: string[], feedData: FeedItem) {
+    // Use requestIdleCallback to defer this work
+    const performBackgroundFetch = async () => {
+      try {
+        this.logger.debug(`[Background Fetch] Starting outbox model fetch for ${pubkeys.length} users`);
+
+        // Fetch events using the slower but more complete outbox model
+        await this.fetchEventsFromUsers(pubkeys, feedData);
+
+        this.logger.debug(`[Background Fetch] Completed for ${pubkeys.length} users`);
+      } catch (error) {
+        this.logger.error('[Background Fetch] Error:', error);
+      }
+    };
+
+    // Schedule background fetch with low priority
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => performBackgroundFetch(), { timeout: 10000 });
+    } else {
+      // Fallback: run after a short delay
+      setTimeout(performBackgroundFetch, 1000);
     }
   }
 
@@ -2362,14 +2493,14 @@ export class FeedService {
   private async initializeDefaultFeeds(): Promise<FeedConfig[]> {
     // Clone default feeds FIRST to return immediately
     const feeds = JSON.parse(JSON.stringify(DEFAULT_FEEDS)) as FeedConfig[];
-    
+
     // Start fetching starter packs in the BACKGROUND (don't await)
     // This allows the feed to load instantly while starter packs are being fetched
     this.populateStarterPacksInBackground(feeds);
-    
+
     return feeds;
   }
-  
+
   /**
    * Populate starter packs into feeds in the background
    * Updates the feed configuration once starter packs are loaded
@@ -2378,7 +2509,7 @@ export class FeedService {
     try {
       // Small delay to let the feed UI render first
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       const starterPacks = await this.followset.fetchStarterPacks();
 
       // Find the starter feed and populate it with the first available starter pack
@@ -2388,7 +2519,7 @@ export class FeedService {
         // Use the first starter pack's dTag
         starterFeed.columns[0].customStarterPacks = [starterPacks[0].dTag];
         this.logger.info('Populated starter feed with starter pack:', starterPacks[0].dTag);
-        
+
         // Update feeds signal with the updated configuration
         this._feeds.update(currentFeeds => {
           const updatedFeeds = [...currentFeeds];
@@ -2398,7 +2529,7 @@ export class FeedService {
           }
           return updatedFeeds;
         });
-        
+
         // Save the updated feeds
         this.saveFeeds();
       }

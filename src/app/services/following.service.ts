@@ -115,7 +115,7 @@ export class FollowingService {
       // Check if profile discovery has been done to determine if this is a returning user
       const pubkey = this.accountState.pubkey();
       const isReturningUser = pubkey && this.accountState.hasProfileDiscoveryBeenDone(pubkey);
-      
+
       if (isReturningUser) {
         // Returning user - wait briefly for cache (reduced from 2s to 500ms)
         const maxWaitTime = 500;
