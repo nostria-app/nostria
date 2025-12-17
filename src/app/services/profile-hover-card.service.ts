@@ -33,6 +33,9 @@ export class ProfileHoverCardService implements OnDestroy {
   // Scroll listener bound function
   private scrollListener = this.onScroll.bind(this);
 
+  // Click outside listener for mobile
+  private clickOutsideListener = this.onClickOutside.bind(this);
+
   constructor() {
     // Close hover card on navigation
     this.router.events
@@ -48,6 +51,21 @@ export class ProfileHoverCardService implements OnDestroy {
   private onScroll(): void {
     // Close immediately on scroll
     this.closeHoverCard();
+  }
+
+  /**
+   * Handles click/touch outside the hover card - closes it on mobile
+   */
+  private onClickOutside(event: MouseEvent | TouchEvent): void {
+    if (!this.overlayRef) return;
+
+    const overlayElement = this.overlayRef.overlayElement;
+    const target = event.target as Node;
+
+    // Check if click/touch is outside the hover card
+    if (!overlayElement.contains(target)) {
+      this.closeHoverCard();
+    }
   }
 
   /**
@@ -323,6 +341,11 @@ export class ProfileHoverCardService implements OnDestroy {
     // Add scroll listener to close on any scroll (capture phase to catch all scroll events)
     this.ngZone.runOutsideAngular(() => {
       window.addEventListener('scroll', this.scrollListener, { capture: true, passive: true });
+      // Add click/touch outside listener for mobile (delayed to avoid immediate close from the triggering touch)
+      setTimeout(() => {
+        document.addEventListener('click', this.clickOutsideListener, { capture: true });
+        document.addEventListener('touchstart', this.clickOutsideListener, { capture: true, passive: true });
+      }, 100);
     });
 
     // Add mouse enter/leave listeners to overlay
@@ -377,6 +400,10 @@ export class ProfileHoverCardService implements OnDestroy {
     // Remove scroll listener
     window.removeEventListener('scroll', this.scrollListener, { capture: true });
 
+    // Remove click/touch outside listeners
+    document.removeEventListener('click', this.clickOutsideListener, { capture: true });
+    document.removeEventListener('touchstart', this.clickOutsideListener, { capture: true });
+
     if (this.overlayRef) {
       this.overlayRef.dispose();
       this.overlayRef = null;
@@ -391,6 +418,9 @@ export class ProfileHoverCardService implements OnDestroy {
   ngOnDestroy(): void {
     // Remove scroll listener on destroy
     window.removeEventListener('scroll', this.scrollListener, { capture: true });
+    // Remove click/touch outside listeners
+    document.removeEventListener('click', this.clickOutsideListener, { capture: true });
+    document.removeEventListener('touchstart', this.clickOutsideListener, { capture: true });
     this.closeHoverCard();
   }
 }
