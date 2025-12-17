@@ -679,11 +679,9 @@
 
     .mock-bar {
       width: 40px;
-      background: linear-gradient(
-        to top,
-        var(--mat-sys-primary),
-        var(--mat-sys-tertiary)
-      );
+      background: linear-gradient(to top,
+          var(--mat-sys-primary),
+          var(--mat-sys-tertiary));
       border-radius: 8px 8px 0 0;
       min-height: 20px;
     }
@@ -699,24 +697,20 @@
   justify-content: center;
   min-height: 100vh;
   padding: 2rem;
-  background: linear-gradient(
-    180deg,
-    transparent 0%,
-    var(--mat-sys-background) 20%,
-    var(--mat-sys-background) 80%,
-    transparent 100%
-  );
+  background: linear-gradient(180deg,
+      transparent 0%,
+      var(--mat-sys-background) 20%,
+      var(--mat-sys-background) 80%,
+      transparent 100%);
 }
 
 .premium-badge {
   width: 80px;
   height: 80px;
   border-radius: 24px;
-  background: linear-gradient(
-    135deg,
-    var(--mat-sys-primary),
-    var(--mat-sys-tertiary)
-  );
+  background: linear-gradient(135deg,
+      var(--mat-sys-primary),
+      var(--mat-sys-tertiary));
   display: flex;
   align-items: center;
   justify-content: center;
@@ -734,11 +728,9 @@
 .premium-title {
   font-size: 2rem;
   margin: 0 0 0.5rem 0;
-  background: linear-gradient(
-    135deg,
-    var(--mat-sys-on-surface),
-    var(--mat-sys-primary)
-  );
+  background: linear-gradient(135deg,
+      var(--mat-sys-on-surface),
+      var(--mat-sys-primary));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -810,11 +802,9 @@
     padding: 0.75rem 2rem;
     font-size: 1rem;
     border-radius: 12px;
-    background: linear-gradient(
-      135deg,
-      var(--mat-sys-primary),
-      var(--mat-sys-tertiary)
-    );
+    background: linear-gradient(135deg,
+        var(--mat-sys-primary),
+        var(--mat-sys-tertiary));
 
     mat-icon {
       margin-right: 0.5rem;
