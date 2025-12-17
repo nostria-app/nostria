@@ -1,17 +1,19 @@
 import { Component, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Clipboard, ClipboardModule } from '@angular/cdk/clipboard';
 import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatMenuModule } from '@angular/material/menu';
-import { FollowingBackupService } from '../../../services/following-backup.service';
+import { FollowingBackupService, FollowingBackup } from '../../../services/following-backup.service';
 
 @Component({
   selector: 'app-following-history-dialog',
   imports: [
     CommonModule,
+    ClipboardModule,
     MatDialogModule,
     MatButtonModule,
     MatIconModule,
@@ -39,7 +41,7 @@ import { FollowingBackupService } from '../../../services/following-backup.servi
             <mat-list-item>
               <mat-icon matListItemIcon>backup</mat-icon>
               <div matListItemTitle>
-                {{ backup.timestamp | date:'medium' }}
+                {{ backup.event.created_at * 1000 | date:'medium' }}
               </div>
               <div matListItemLine>
                 {{ backup.pubkeys.length }} accounts following
@@ -57,6 +59,10 @@ import { FollowingBackupService } from '../../../services/following-backup.servi
                   <button mat-menu-item (click)="merge(backup.id)">
                     <mat-icon>merge</mat-icon>
                     <span>Merge (Combine)</span>
+                  </button>
+                  <button mat-menu-item (click)="copyEventData(backup)">
+                    <mat-icon>content_copy</mat-icon>
+                    <span>Copy Event Data</span>
                   </button>
                   <button mat-menu-item (click)="deleteBackup(backup.id)">
                     <mat-icon>delete</mat-icon>
@@ -131,9 +137,20 @@ export class FollowingHistoryDialogComponent {
   private dialogRef = inject(MatDialogRef<FollowingHistoryDialogComponent>);
   private followingBackupService = inject(FollowingBackupService);
   private snackBar = inject(MatSnackBar);
+  private clipboard = inject(Clipboard);
 
-  backups = signal(this.followingBackupService.getBackups());
+  backups = this.followingBackupService.backups;
   processing = signal(false);
+
+  copyEventData(backup: FollowingBackup) {
+    const eventJson = JSON.stringify(backup.event, null, 2);
+    const success = this.clipboard.copy(eventJson);
+    if (success) {
+      this.showMessage('Event data copied to clipboard');
+    } else {
+      this.showMessage('Failed to copy event data', true);
+    }
+  }
 
   async restore(backupId: string) {
     if (this.processing()) return;
@@ -172,7 +189,6 @@ export class FollowingHistoryDialogComponent {
   deleteBackup(backupId: string) {
     const success = this.followingBackupService.deleteBackup(backupId);
     if (success) {
-      this.backups.set(this.followingBackupService.getBackups());
       this.showMessage('Backup deleted');
     } else {
       this.showMessage('Failed to delete backup', true);
@@ -183,7 +199,6 @@ export class FollowingHistoryDialogComponent {
     if (this.processing()) return;
 
     this.followingBackupService.clearAllBackups();
-    this.backups.set([]);
     this.showMessage('All backups cleared');
   }
 

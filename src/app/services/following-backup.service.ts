@@ -1,4 +1,4 @@
-import { Injectable, inject, effect } from '@angular/core';
+import { Injectable, inject, effect, signal } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -33,6 +33,9 @@ export class FollowingBackupService {
   private readonly BACKUP_KEY = 'nostria-following-history';
   private readonly MAX_BACKUPS = 10;
 
+  /** Reactive signal for backups list */
+  readonly backups = signal<FollowingBackup[]>(this.loadBackups());
+
   constructor() {
     // Automatically backup when following list changes
     effect(() => {
@@ -52,9 +55,9 @@ export class FollowingBackupService {
   }
 
   /**
-   * Get all backups
+   * Load backups from local storage
    */
-  getBackups(): FollowingBackup[] {
+  private loadBackups(): FollowingBackup[] {
     const backupsJson = this.localStorage.getItem(this.BACKUP_KEY);
     if (!backupsJson) return [];
     try {
@@ -63,6 +66,13 @@ export class FollowingBackupService {
       this.logger.error('[FollowingBackupService] Failed to parse backups', e);
       return [];
     }
+  }
+
+  /**
+   * Get all backups
+   */
+  getBackups(): FollowingBackup[] {
+    return this.backups();
   }
 
   /**
@@ -75,14 +85,23 @@ export class FollowingBackupService {
       return;
     }
 
-    const followingList = this.accountState.followingList();
-
     try {
       // Get the current kind 3 event from database
       const event = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Contacts);
-      
+
       if (!event) {
         this.logger.warn('[FollowingBackupService] No kind 3 event found, cannot backup');
+        return;
+      }
+
+      // Extract pubkeys from the event's "p" tags - this is the source of truth
+      const pubkeysFromEvent = event.tags
+        .filter(tag => tag[0] === 'p' && tag[1])
+        .map(tag => tag[1]);
+
+      // Skip backup if no pubkeys in the event
+      if (pubkeysFromEvent.length === 0) {
+        this.logger.debug('[FollowingBackupService] Skipping backup - no pubkeys in event');
         return;
       }
 
@@ -92,7 +111,7 @@ export class FollowingBackupService {
       if (backups.length > 0) {
         const lastBackup = backups[0];
         // Compare pubkey arrays
-        if (this.areArraysEqual(lastBackup.pubkeys, followingList)) {
+        if (this.areArraysEqual(lastBackup.pubkeys, pubkeysFromEvent)) {
           this.logger.debug('[FollowingBackupService] No changes detected, skipping backup');
           return;
         }
@@ -101,7 +120,7 @@ export class FollowingBackupService {
       const newBackup: FollowingBackup = {
         id: this.generateBackupId(),
         timestamp: Date.now(),
-        pubkeys: [...followingList],
+        pubkeys: pubkeysFromEvent,
         event: event,
       };
 
@@ -114,9 +133,10 @@ export class FollowingBackupService {
       }
 
       this.localStorage.setItem(this.BACKUP_KEY, JSON.stringify(backups));
+      this.backups.set([...backups]);
       this.logger.info('[FollowingBackupService] Backup saved', {
         id: newBackup.id,
-        count: followingList.length,
+        count: pubkeysFromEvent.length,
         totalBackups: backups.length
       });
     } catch (e) {
@@ -145,7 +165,7 @@ export class FollowingBackupService {
 
       // Publish the old event as a new event with current timestamp
       const restoredEvent = await this.publishFollowingList(backup.pubkeys, backup.event.content);
-      
+
       if (restoredEvent) {
         this.logger.info('[FollowingBackupService] Backup restored successfully');
         return true;
@@ -199,7 +219,7 @@ export class FollowingBackupService {
 
       // Publish the merged list
       const mergedEvent = await this.publishFollowingList(mergedList, content);
-      
+
       if (mergedEvent) {
         this.logger.info('[FollowingBackupService] Backup merged successfully');
         return true;
@@ -264,13 +284,14 @@ export class FollowingBackupService {
     try {
       const backups = this.getBackups();
       const filtered = backups.filter(b => b.id !== backupId);
-      
+
       if (filtered.length === backups.length) {
         this.logger.warn('[FollowingBackupService] Backup not found', backupId);
         return false;
       }
 
       this.localStorage.setItem(this.BACKUP_KEY, JSON.stringify(filtered));
+      this.backups.set([...filtered]);
       this.logger.info('[FollowingBackupService] Backup deleted', backupId);
       return true;
     } catch (e) {
@@ -284,6 +305,7 @@ export class FollowingBackupService {
    */
   clearAllBackups(): void {
     this.localStorage.removeItem(this.BACKUP_KEY);
+    this.backups.set([]);
     this.logger.info('[FollowingBackupService] All backups cleared');
   }
 
@@ -296,7 +318,7 @@ export class FollowingBackupService {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
       return crypto.randomUUID();
     }
-    
+
     // Fallback with crypto.getRandomValues if available (more secure than Math.random)
     if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
       const array = new Uint8Array(16);
@@ -305,7 +327,7 @@ export class FollowingBackupService {
       const hex = Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('');
       return `backup-${hex}`;
     }
-    
+
     // Last resort fallback for very old browsers or non-secure contexts
     const timestamp = Date.now();
     const random1 = Math.random().toString(36).substring(2, 15);
