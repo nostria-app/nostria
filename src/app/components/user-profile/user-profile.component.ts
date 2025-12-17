@@ -142,8 +142,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         this.profile.set(pref as unknown as Record<string, unknown>);
         // Mark as loaded to prevent redundant fetches
         this.isLoading.set(false);
-        // Preload image if available
-        this.preloadProfileImage(pref as unknown as Record<string, unknown>);
       }
     });
     // Set up an effect to watch for changes to npub input
@@ -172,8 +170,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
           if (cachedProfile) {
             this.profile.set(cachedProfile);
             this.isLoading.set(false);
-            // Preload image if available
-            this.preloadProfileImage(cachedProfile);
           } else {
             // Only load profile data when the component is visible and not scrolling
             if (this.isVisible() && !this.layout.isScrolling() && !this.profile()) {
@@ -325,19 +321,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
     this.layout.copyToClipboard(this.event()?.content, 'event data');
   }
 
-  /**
-   * Preload profile image for faster display
-   */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  private preloadProfileImage(profile: any): void {
-    if (profile?.data?.picture && this.settingsService.settings().imageCacheEnabled) {
-      // Preload the image in the background - don't await
-      this.imageCacheService.preloadImage(profile.data.picture).catch(error => {
-        this.logger.debug('Failed to preload profile image:', error);
-      });
-    }
-  }
-
   private async loadProfileData(npubValue: string): Promise<void> {
     // Don't reload if we already have data
     if (this.profile()) {
@@ -368,11 +351,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
         // Set profile to an empty object if no data was found
         // This will distinguish between "not loaded yet" and "loaded but empty"
         this.profile.set(data || { isEmpty: true });
-
-        // Preload image if available
-        if (data) {
-          this.preloadProfileImage(data);
-        }
       }
     } catch (error) {
       this.logger.error('Failed to load profile data:', error);

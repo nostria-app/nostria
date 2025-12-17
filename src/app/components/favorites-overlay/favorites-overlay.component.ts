@@ -156,36 +156,7 @@ export class FavoritesOverlayComponent {
 
         const profiles = await Promise.all(profilesPromises);
         this.favoritesWithProfiles.set(profiles);
-
-        // Preload images for favorites
-        const imagesToPreload: string[] = [];
-
-        profiles.forEach((p) => {
-          const url = p.profile?.data?.picture;
-          if (url) {
-            // Preload at 96x96 (standard size for all profile images)
-            imagesToPreload.push(url);
-          }
-        });
-
-        if (imagesToPreload.length > 0) {
-          this.imageCacheService.preloadImages(imagesToPreload);
-        }
       });
-    });
-
-    // Effect to preload images for all following profiles
-    effect(() => {
-      const profiles = this.followingWithProfiles();
-
-      // Preload images for following at 96x96 (standard size)
-      const imagesToPreload = profiles
-        .map((p) => p.profile?.data?.picture)
-        .filter((url): url is string => !!url);
-
-      if (imagesToPreload.length > 0) {
-        this.imageCacheService.preloadImages(imagesToPreload);
-      }
     });
 
     // Effect to fetch profiles for following users that don't have profile data yet
