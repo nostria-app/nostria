@@ -5,34 +5,99 @@
   <p>Get detailed insights into your Nostr engagement and content performance.</p>
 </div>
 } @else if (!isPremium()) {
-<div class="premium-required">
-  <div class="premium-icon">
-    <mat-icon>diamond</mat-icon>
+<div class="premium-gate">
+  <!-- Blurred preview background -->
+  <div class="preview-backdrop">
+    <div class="mock-stats-grid">
+      <div class="mock-stat-card">
+        <div class="mock-icon"></div>
+        <div class="mock-text">
+          <div class="mock-number"></div>
+          <div class="mock-label"></div>
+        </div>
+      </div>
+      <div class="mock-stat-card">
+        <div class="mock-icon"></div>
+        <div class="mock-text">
+          <div class="mock-number"></div>
+          <div class="mock-label"></div>
+        </div>
+      </div>
+      <div class="mock-stat-card">
+        <div class="mock-icon"></div>
+        <div class="mock-text">
+          <div class="mock-number"></div>
+          <div class="mock-label"></div>
+        </div>
+      </div>
+      <div class="mock-stat-card">
+        <div class="mock-icon"></div>
+        <div class="mock-text">
+          <div class="mock-number"></div>
+          <div class="mock-label"></div>
+        </div>
+      </div>
+    </div>
+    <div class="mock-chart">
+      <div class="mock-bar" style="height: 40%"></div>
+      <div class="mock-bar" style="height: 65%"></div>
+      <div class="mock-bar" style="height: 45%"></div>
+      <div class="mock-bar" style="height: 80%"></div>
+      <div class="mock-bar" style="height: 55%"></div>
+      <div class="mock-bar" style="height: 70%"></div>
+      <div class="mock-bar" style="height: 90%"></div>
+    </div>
   </div>
-  <h2>Premium Feature</h2>
-  <p>Analytics is a premium feature that provides detailed insights into your social engagement.</p>
-  <div class="feature-preview">
-    <div class="feature-item">
-      <mat-icon>trending_up</mat-icon>
-      <span>Engagement trends over time</span>
+
+  <!-- Premium CTA overlay -->
+  <div class="premium-cta-overlay">
+    <div class="premium-badge">
+      <mat-icon>diamond</mat-icon>
     </div>
-    <div class="feature-item">
-      <mat-icon>people</mat-icon>
-      <span>Top supporters and engagers</span>
+    <h1 class="premium-title">Unlock Analytics</h1>
+    <p class="premium-subtitle">
+      Get powerful insights into your Nostr presence with Premium Analytics
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>trending_up</mat-icon>
+        </div>
+        <h3>Engagement Trends</h3>
+        <p>Track reactions, reposts, and replies over time</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>group</mat-icon>
+        </div>
+        <h3>Top Supporters</h3>
+        <p>Discover who engages most with your content</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>star</mat-icon>
+        </div>
+        <h3>Best Content</h3>
+        <p>Find your top performing posts and articles</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>bolt</mat-icon>
+        </div>
+        <h3>Zap Analytics</h3>
+        <p>Detailed statistics on sats sent and received</p>
+      </div>
     </div>
-    <div class="feature-item">
-      <mat-icon>insights</mat-icon>
-      <span>Content performance metrics</span>
-    </div>
-    <div class="feature-item">
-      <mat-icon>bolt</mat-icon>
-      <span>Zap statistics and analytics</span>
+
+    <div class="cta-section">
+      <a mat-flat-button routerLink="/premium/upgrade" class="upgrade-btn">
+        <mat-icon>stars</mat-icon>
+        Upgrade to Premium
+      </a>
+      <p class="cta-hint">Includes all premium features • Cancel anytime</p>
     </div>
   </div>
-  <button mat-flat-button routerLink="/premium/upgrade">
-    <mat-icon>stars</mat-icon>
-    Upgrade to Premium
-  </button>
 </div>
 } @else {
 <div class="analytics-container">
