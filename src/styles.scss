@@ -952,9 +952,18 @@ iframe {
   text-align: center;
 }
 
+// show-small: Visible only on small screens (hidden on larger screens)
+.show-small {
+  display: none !important;
+}
+
 @media screen and (max-width: 600px) {
   .hide-small {
     display: none !important;
+  }
+
+  .show-small {
+    display: initial !important;
   }
 }
 

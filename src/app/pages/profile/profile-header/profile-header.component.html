@@ -66,6 +66,11 @@
         </button>
         } @else {
         @if (!isFollowing()) {
+
+        <button mat-icon-button class="show-small" [matTooltip]="'Follow'" (click)="followUser()">
+          <mat-icon>person_add</mat-icon>
+        </button>
+
         <button mat-flat-button class="hide-small" (click)="followUser()">
           <mat-icon>person_add</mat-icon> {{ isFollowingMe() ? 'Follow Back' : 'Follow' }}
         </button>
