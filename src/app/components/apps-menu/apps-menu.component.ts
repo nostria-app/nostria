@@ -10,6 +10,8 @@ import { AccountStateService } from '../../services/account-state.service';
 import { InstallService } from '../../services/install.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { SettingsService } from '../../services/settings.service';
+import { WhatsNewDialogComponent } from '../whats-new-dialog/whats-new-dialog.component';
+import { MatDialog } from '@angular/material/dialog';
 
 interface MenuItem {
   icon: string;
@@ -38,6 +40,7 @@ export class AppsMenuComponent {
   private installService = inject(InstallService);
   private mediaPlayerService = inject(MediaPlayerService);
   private settings = inject(SettingsService);
+  private dialog = inject(MatDialog);
 
   closed = output<void>();
 
@@ -142,8 +145,22 @@ export class AppsMenuComponent {
       label: 'Settings',
       action: () => this.router.navigate(['/settings']),
       showInstallCheck: true,
+    }, {
+      icon: 'campaign',
+      label: "What's New",
+      action: () => this.openWhatsNewDialog(),
+      showInstallCheck: true,
     },
   ];
+
+  openWhatsNewDialog(): void {
+    this.dialog.open(WhatsNewDialogComponent, {
+      width: '800px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+      panelClass: 'whats-new-dialog-container',
+    });
+  }
 
   getCreateItems(): MenuItem[] {
     return this.createItems.filter(item => {
