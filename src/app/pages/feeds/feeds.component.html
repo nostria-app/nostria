@@ -100,7 +100,8 @@
 
     <div class="columns-wrapper" #columnsWrapper cdkDropList cdkDropListOrientation="horizontal"
       [cdkDropListData]="columns()" (cdkDropListDropped)="onColumnDrop($event)">
-      <!-- Normal Feeds with connected headers and content -->
+      <!-- Normal Feeds with connected headers and content - only show when initialized -->
+      @if (app.initialized() && accountState.initialized() && feedService.feedsLoaded()) {
       @for (column of columns(); track column.id; let i = $index) {
       <div class="column-unit" [attr.data-column-id]="column.id" cdkDrag [cdkDragData]="i"
         [cdkDragDisabled]="isMobileView() || columns().length <= 1"
@@ -304,6 +305,7 @@
           </div>
         </ng-template>
       </div>
+      }
       }
 
       <!-- Loading indicator while initializing -->
