@@ -34,7 +34,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LoggerService } from '../../services/logger.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
-import { ZapMetricsService, ZapMetrics, DailyZapStats } from '../../services/zap-metrics.service';
+import { ZapService } from '../../services/zap.service';
 import { Metrics } from '../../services/metrics';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 
@@ -102,6 +102,21 @@ interface FollowerStats {
   followerGrowthRate: number;
 }
 
+interface ZapAnalyticsData {
+  zapsReceived: number;
+  satsReceived: number;
+  zapsSent: number;
+  satsSent: number;
+}
+
+interface DailyZapData {
+  date: string;
+  received: number;
+  sent: number;
+  volumeReceived: number;
+  volumeSent: number;
+}
+
 @Component({
   selector: 'app-analytics',
   imports: [
@@ -138,7 +153,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly logger = inject(LoggerService);
-  private readonly zapMetrics = inject(ZapMetricsService);
+  private readonly zapService = inject(ZapService);
   private readonly metricsService = inject(Metrics);
   protected readonly app = inject(ApplicationService);
 
@@ -181,6 +196,15 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
   dailyEngagement = signal<DailyEngagement[]>([]);
   recentEngagements = signal<Event[]>([]);
 
+  // Zap analytics data
+  zapAnalytics = signal<ZapAnalyticsData>({
+    zapsReceived: 0,
+    satsReceived: 0,
+    zapsSent: 0,
+    satsSent: 0,
+  });
+  dailyZapData = signal<DailyZapData[]>([]);
+
   // Computed signals for UI
   timeRange = computed<TimeRange>(() => {
     const period = this.selectedPeriod();
@@ -218,9 +242,6 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     const stats = this.engagementStats();
     return stats.totalReactions + stats.totalReposts + stats.totalReplies + stats.totalZaps;
   });
-
-  zapMetricsData = computed<ZapMetrics>(() => this.zapMetrics.metrics());
-  zapDailyStats = computed<DailyZapStats[]>(() => this.zapMetrics.dailyStats());
 
   // Time period options
   readonly timePeriods = [
@@ -284,8 +305,13 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
       // Load top engagers
       this.loadingStatus.set('Finding your top supporters...');
-      this.loadingProgress.set(90);
+      this.loadingProgress.set(85);
       await this.loadTopEngagers(pubkey, range);
+
+      // Load zap analytics from relays
+      this.loadingStatus.set('Loading zap history...');
+      this.loadingProgress.set(95);
+      await this.loadZapAnalytics(pubkey, range);
 
       this.loadingProgress.set(100);
       this.loadingStatus.set('Complete!');
@@ -757,6 +783,117 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
     }
   }
 
+  /**
+   * Load zap analytics from relays using ZapService
+   * This fetches actual zap receipts for both sent and received zaps
+   */
+  private async loadZapAnalytics(pubkey: string, range: TimeRange): Promise<void> {
+    try {
+      // Get zaps received by the user
+      const receivedZapReceipts = await this.zapService.getZapsForUser(pubkey);
+
+      // Get zaps sent by the user
+      const sentZapReceipts = await this.zapService.getZapsSentByUser(pubkey);
+
+      // Filter by time range and calculate totals
+      let zapsReceived = 0;
+      let satsReceived = 0;
+      let zapsSent = 0;
+      let satsSent = 0;
+
+      // Track processed receipt IDs to avoid duplicates
+      const processedIds = new Set<string>();
+
+      // Daily data map for charting
+      const dailyMap = new Map<string, DailyZapData>();
+
+      // Initialize daily data for the time range
+      const startDate = new Date(range.start * 1000);
+      const endDate = new Date(range.end * 1000);
+      const currentDate = new Date(startDate);
+
+      while (currentDate <= endDate) {
+        const dateStr = currentDate.toISOString().split('T')[0];
+        dailyMap.set(dateStr, {
+          date: dateStr,
+          received: 0,
+          sent: 0,
+          volumeReceived: 0,
+          volumeSent: 0,
+        });
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Process received zaps
+      for (const receipt of receivedZapReceipts) {
+        if (processedIds.has(receipt.id)) continue;
+
+        // Filter by time range
+        if (receipt.created_at < range.start || receipt.created_at > range.end) continue;
+
+        const parsed = this.zapService.parseZapReceipt(receipt);
+        if (parsed.zapRequest && parsed.amount) {
+          zapsReceived++;
+          satsReceived += parsed.amount;
+          processedIds.add(receipt.id);
+
+          // Add to daily stats
+          const dateStr = new Date(receipt.created_at * 1000).toISOString().split('T')[0];
+          const dayData = dailyMap.get(dateStr);
+          if (dayData) {
+            dayData.received++;
+            dayData.volumeReceived += parsed.amount;
+          }
+        }
+      }
+
+      // Process sent zaps
+      for (const receipt of sentZapReceipts) {
+        if (processedIds.has(receipt.id)) continue;
+
+        // Filter by time range
+        if (receipt.created_at < range.start || receipt.created_at > range.end) continue;
+
+        const parsed = this.zapService.parseZapReceipt(receipt);
+        if (parsed.zapRequest && parsed.amount) {
+          zapsSent++;
+          satsSent += parsed.amount;
+          processedIds.add(receipt.id);
+
+          // Add to daily stats
+          const dateStr = new Date(receipt.created_at * 1000).toISOString().split('T')[0];
+          const dayData = dailyMap.get(dateStr);
+          if (dayData) {
+            dayData.sent++;
+            dayData.volumeSent += parsed.amount;
+          }
+        }
+      }
+
+      this.zapAnalytics.set({
+        zapsReceived,
+        satsReceived,
+        zapsSent,
+        satsSent,
+      });
+
+      // Convert daily map to array and sort by date
+      this.dailyZapData.set(
+        Array.from(dailyMap.values()).sort((a, b) => a.date.localeCompare(b.date))
+      );
+
+      this.logger.debug('Zap analytics loaded', {
+        zapsReceived,
+        satsReceived,
+        zapsSent,
+        satsSent,
+        dailyDataPoints: this.dailyZapData().length,
+      });
+    } catch (error) {
+      this.logger.error('Failed to load zap analytics', error);
+    }
+  }
+
   private extractZapAmount(bolt11?: string): number {
     if (!bolt11) return 0;
 
@@ -884,7 +1021,7 @@ export class AnalyticsComponent implements OnInit, OnDestroy {
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   getZapBarHeight(value: number, _type: 'received' | 'sent'): number {
-    const stats = this.zapDailyStats();
+    const stats = this.dailyZapData();
     if (stats.length === 0) return 2;
 
     let maxValue = 0;
