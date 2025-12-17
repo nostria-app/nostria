@@ -1000,8 +1000,13 @@ export class FeedService {
 
     const existingEvents = feedData.events();
 
-    // Filter out muted events
-    const filteredEvents = newEvents.filter(event => !this.accountState.muted(event));
+    // Get allowed kinds for this column
+    const allowedKinds = new Set(feedData.column.kinds);
+
+    // Filter out muted events and events that don't match the column's kinds
+    const filteredEvents = newEvents.filter(
+      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+    );
 
     if (filteredEvents.length === 0) return;
 
@@ -1043,8 +1048,13 @@ export class FeedService {
    * Finalize following feed with all fetched events
    */
   private handleFollowingFinalUpdate(feedData: FeedItem, allEvents: Event[]) {
-    // Filter out muted events
-    const filteredEvents = allEvents.filter(event => !this.accountState.muted(event));
+    // Get allowed kinds for this column
+    const allowedKinds = new Set(feedData.column.kinds);
+
+    // Filter out muted events and events that don't match the column's kinds
+    const filteredEvents = allEvents.filter(
+      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+    );
 
     const existingEvents = feedData.events();
 
@@ -1278,7 +1288,13 @@ export class FeedService {
 
   ) {
     // Aggregate current events from the user events map
-    const newEvents = this.aggregateAndSortEvents(userEventsMap);
+    const aggregatedEvents = this.aggregateAndSortEvents(userEventsMap);
+
+    // Get allowed kinds for this column and filter events
+    const allowedKinds = new Set(feedData.column.kinds);
+    const newEvents = aggregatedEvents.filter(
+      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+    );
 
     if (newEvents.length > 0) {
       const existingEvents = feedData.events();
@@ -1328,8 +1344,14 @@ export class FeedService {
    * Finalize the incremental feed with a final sort and cleanup
    */
   private finalizeIncrementalFeed(userEventsMap: Map<string, Event[]>, feedData: FeedItem,) {
-    // Final aggregation of new events
-    const newEvents = this.aggregateAndSortEvents(userEventsMap);
+    // Final aggregation of events
+    const aggregatedEvents = this.aggregateAndSortEvents(userEventsMap);
+
+    // Get allowed kinds for this column and filter events
+    const allowedKinds = new Set(feedData.column.kinds);
+    const newEvents = aggregatedEvents.filter(
+      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+    );
 
     if (newEvents.length > 0) {
       const existingEvents = feedData.events();
