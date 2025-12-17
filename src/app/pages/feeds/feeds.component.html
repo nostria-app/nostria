@@ -281,10 +281,12 @@
                     } -->
           </div>
 
-          <!-- Loading more indicator -->
+          <!-- Loading more indicator - only show when we have content and are loading more -->
           @let columnLoadingState = feedService.getColumnLoadingState(column.id);
           @let columnHasMore = feedService.getColumnHasMore(column.id);
-          @if (columnLoadingState && columnLoadingState() && columnHasMore && columnHasMore()) {
+          @let loadMoreEventsData = columnEvents().get(column.id);
+          @if (loadMoreEventsData && loadMoreEventsData.length > 0 && columnLoadingState && columnLoadingState() &&
+          columnHasMore && columnHasMore()) {
           <div class="column-loading-more">
             <mat-spinner diameter="24"></mat-spinner>
             <span class="loading-more-text">Loading more...</span>

@@ -262,6 +262,7 @@ export class FeedService {
   private readonly _userRelays = signal<RelayConfig[]>([]);
   private readonly _discoveryRelays = signal<RelayConfig[]>([]);
   private readonly _feedsLoaded = signal<boolean>(false);
+  private readonly _hasInitialContent = signal<boolean>(false); // Track when first feed content is ready
 
   // Active feed subscription management
   private readonly _activeFeedId = signal<string | null>(null);
@@ -281,6 +282,7 @@ export class FeedService {
   readonly activeFeedId = computed(() => this._activeFeedId());
   readonly feedsLoaded = computed(() => this._feedsLoaded());
   readonly feedsPageActive = computed(() => this._feedsPageActive());
+  readonly hasInitialContent = computed(() => this._hasInitialContent()); // Public signal for feed content ready
 
   // Feed type definitions
   readonly feedTypes = COLUMN_TYPES;
@@ -315,8 +317,10 @@ export class FeedService {
           if (isFirstTimeUser || initialized) {
             console.log(`🚀 [FeedService] Starting feed load for ${isFirstTimeUser ? 'FIRST-TIME' : 'RETURNING'} user`);
             loadingForPubkey = pubkey;
-            // Reset feedsLoaded before loading new feeds
+            // Reset signals before loading new feeds
             this._feedsLoaded.set(false);
+            this._hasInitialContent.set(false);
+            this.appState.feedHasInitialContent.set(false);
             await this.loadFeeds(pubkey);
             this.loadRelays();
           }
@@ -1276,35 +1280,61 @@ export class FeedService {
   /**
    * PHASE 1: Fast batch fetch using account's already-connected relays
    * This gets content on screen quickly without per-user relay discovery
+   * 
+   * NOTE: Relays typically limit author filters to 10-50 pubkeys.
+   * We batch requests to stay within limits while maximizing parallelism.
    */
   private async fetchEventsFromUsersFast(pubkeys: string[], feedData: FeedItem) {
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
+    const BATCH_SIZE = 10; // Most relays accept 10 authors per query
+    const TIMEOUT_MS = 2000; // Short timeout for fast initial content
 
     try {
-      // Build filter for batch request - all authors at once
-      const filter: {
-        kinds?: number[];
-        authors: string[];
-        limit: number;
-        since?: number;
-      } = {
-        authors: pubkeys,
-        kinds: feedData.filter?.kinds,
-        limit: isArticlesFeed ? 50 : 30, // Get a good batch of events
-      };
+      console.log(`⚡ [Fast Fetch] Starting batched fetch for ${pubkeys.length} authors (${Math.ceil(pubkeys.length / BATCH_SIZE)} batches)`);
+
+      // Split pubkeys into batches to respect relay limits
+      const batches: string[][] = [];
+      for (let i = 0; i < pubkeys.length; i += BATCH_SIZE) {
+        batches.push(pubkeys.slice(i, i + BATCH_SIZE));
+      }
 
       // Only use 'since' if we have existing events
       const existingEvents = feedData.events();
-      if (feedData.column.lastRetrieved && existingEvents.length > 0) {
-        filter.since = feedData.column.lastRetrieved;
-      }
+      const useSince = feedData.column.lastRetrieved && existingEvents.length > 0;
 
-      this.logger.debug(`[Fast Fetch] Querying account relays for ${pubkeys.length} authors`);
+      // Query all batches in parallel for maximum speed
+      const batchPromises = batches.map(async (batchPubkeys, batchIndex) => {
+        const filter: {
+          kinds?: number[];
+          authors: string[];
+          limit: number;
+          since?: number;
+        } = {
+          authors: batchPubkeys,
+          kinds: feedData.filter?.kinds,
+          limit: isArticlesFeed ? 10 : 5, // Limit per batch
+        };
 
-      // Use account relay service for fast batch query (already connected)
-      const events = await this.accountRelay.getMany<Event>(filter, { timeout: 3000 });
+        if (useSince) {
+          filter.since = feedData.column.lastRetrieved;
+        }
+
+        try {
+          const events = await this.accountRelay.getMany<Event>(filter, { timeout: TIMEOUT_MS });
+          console.log(`⚡ [Fast Fetch] Batch ${batchIndex + 1}/${batches.length}: got ${events.length} events`);
+          return events;
+        } catch (error) {
+          console.log(`⚡ [Fast Fetch] Batch ${batchIndex + 1} failed:`, error);
+          return [];
+        }
+      });
+
+      // Wait for all batches (with a race against timeout)
+      const allResults = await Promise.all(batchPromises);
+      const events = allResults.flat();
 
       if (events.length > 0) {
+        console.log(`⚡ [Fast Fetch] Got ${events.length} total events from ${batches.length} batches`);
         this.logger.info(`[Fast Fetch] Got ${events.length} events from account relays`);
 
         // Filter and add events to feed
@@ -1323,12 +1353,19 @@ export class FeedService {
             return sorted;
           });
 
+          // Signal that initial content is ready - this unblocks profile loading
+          console.log(`✅ [Fast Fetch] Feed has ${validEvents.length} events - signaling content ready`);
+          this._hasInitialContent.set(true);
+          this.appState.feedHasInitialContent.set(true); // Signal via shared state
+
           // Save to cache
           this.saveCachedEvents(feedData.column.id, feedData.events());
 
           // Save events to database for queries
           validEvents.forEach(event => this.saveEventToDatabase(event));
         }
+      } else {
+        console.log(`⚠️ [Fast Fetch] No events received from any batch`);
       }
 
       // Mark initial load as complete so new events get queued
