@@ -30,7 +30,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   maxRelaysPerUser: 3,
   addClientTag: true,
   showClientTag: true,
-  trustEnabled: true,
+  trustEnabled: false,
   trustRelay: 'wss://nip85.brainstorm.world',
   startOnLastRoute: true,
   startFeedsOnLastEvent: true,
