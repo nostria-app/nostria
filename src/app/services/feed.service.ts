@@ -1012,14 +1012,15 @@ export class FeedService {
 
     if (filteredEvents.length === 0) return;
 
-    // Determine if we should show events immediately or queue them
-    // Show immediately if:
-    // 1. No existing events yet (user sees empty feed - bad UX)
-    // 2. Initial load is not complete yet (still streaming in initial data)
-    const shouldShowImmediately = existingEvents.length === 0 || !feedData.initialLoadComplete;
+    // Dynamic update strategy:
+    // - If NO existing events: show first batch immediately, then mark initial load complete
+    // - If HAS existing events (from cache): queue all relay events to pending for "new posts" button
+    // This allows users to see new content arriving dynamically via the button
+    const hasExistingEvents = existingEvents.length > 0;
 
-    if (!shouldShowImmediately) {
-      // Queue to pending - user has events and initial load is done
+    if (hasExistingEvents) {
+      // User has cached events - queue ALL relay events to pending
+      // This shows the "X new posts" button updating dynamically
       const existingIds = new Set(existingEvents.map(e => e.id));
       const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
 
@@ -1032,9 +1033,14 @@ export class FeedService {
           const newPending = [...pending, ...trulyNewEvents];
           return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
         });
+
+        // Save to database for Summary page queries
+        for (const event of trulyNewEvents) {
+          this.saveEventToDatabase(event);
+        }
       }
-    } else {
-      // Show events immediately - either no events yet or still loading
+    } else if (!feedData.initialLoadComplete) {
+      // No existing events - show first batch immediately
       const existingIds = new Set(existingEvents.map(e => e.id));
       const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
 
@@ -1043,6 +1049,30 @@ export class FeedService {
           .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
 
         feedData.events.set(mergedEvents);
+
+        // Mark initial load as complete after first batch is shown
+        // Subsequent batches will go to pending for dynamic "new posts" button
+        feedData.initialLoadComplete = true;
+
+        // Save to database for Summary page queries
+        for (const event of trulyNewEvents) {
+          this.saveEventToDatabase(event);
+        }
+      }
+    } else {
+      // Initial load complete and this is a subsequent batch - queue to pending
+      const existingIds = new Set(existingEvents.map(e => e.id));
+      const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
+
+      const trulyNewEvents = filteredEvents.filter(
+        e => !existingIds.has(e.id) && !pendingIds.has(e.id)
+      );
+
+      if (trulyNewEvents.length > 0) {
+        feedData.pendingEvents?.update((pending: Event[]) => {
+          const newPending = [...pending, ...trulyNewEvents];
+          return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+        });
 
         // Save to database for Summary page queries
         for (const event of trulyNewEvents) {
@@ -1053,7 +1083,11 @@ export class FeedService {
   }
 
   /**
-   * Finalize following feed with all fetched events
+   * Finalize following feed with all fetched events.
+   * This is called after all relay batches have completed.
+   * Events may have already been incrementally added to either:
+   * - feedData.events() (if user had no cache)
+   * - feedData.pendingEvents() (if user had cached events)
    */
   private handleFollowingFinalUpdate(feedData: FeedItem, allEvents: Event[]) {
     // Get allowed kinds for this column
@@ -1065,80 +1099,77 @@ export class FeedService {
     );
 
     const existingEvents = feedData.events();
+    const existingIds = new Set(existingEvents.map(e => e.id));
+    const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
 
-    if (feedData.initialLoadComplete && existingEvents.length > 0) {
-      // Find the most recent event in the existing feed
-      const mostRecentExistingTimestamp = Math.max(...existingEvents.map(e => e.created_at || 0));
+    // Find events that weren't processed during incremental updates
+    const unprocessedEvents = filteredEvents.filter(
+      e => !existingIds.has(e.id) && !pendingIds.has(e.id)
+    );
 
-      const existingIds = new Set(existingEvents.map(e => e.id));
-      const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
+    if (unprocessedEvents.length > 0) {
+      if (existingEvents.length > 0) {
+        // User has events - find the most recent to determine where to put unprocessed events
+        const mostRecentExistingTimestamp = Math.max(...existingEvents.map(e => e.created_at || 0));
 
-      // Separate events into:
-      // 1. Events that should be merged (older than or equal to most recent existing, not duplicates)
-      // 2. Events that should be queued (newer than most recent existing)
-      const eventsToMerge: Event[] = [];
-      const eventsToQueue: Event[] = [];
+        const eventsToMerge: Event[] = [];
+        const eventsToQueue: Event[] = [];
 
-      for (const event of filteredEvents) {
-        if (existingIds.has(event.id) || pendingIds.has(event.id)) {
-          // Already exists, skip
-          continue;
+        for (const event of unprocessedEvents) {
+          if (event.created_at <= mostRecentExistingTimestamp) {
+            // Older or same age as existing events - merge directly (fill gaps)
+            eventsToMerge.push(event);
+          } else {
+            // Newer than existing events - queue for "new posts" button
+            eventsToQueue.push(event);
+          }
         }
 
-        if (event.created_at <= mostRecentExistingTimestamp) {
-          // Older or same age as existing events - merge directly (fill gaps)
-          eventsToMerge.push(event);
-        } else {
-          // Newer than existing events - queue for "new posts" button
-          eventsToQueue.push(event);
-        }
-      }
+        // Merge older events directly into the feed
+        if (eventsToMerge.length > 0) {
+          const mergedEvents = [...existingEvents, ...eventsToMerge]
+            .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          feedData.events.set(mergedEvents);
 
-      // Merge older events directly into the feed
-      if (eventsToMerge.length > 0) {
-        const mergedEvents = [...existingEvents, ...eventsToMerge]
+          this.logger.debug(`✅ Final: Merged ${eventsToMerge.length} older events into feed`);
+        }
+
+        // Queue newer events
+        if (eventsToQueue.length > 0) {
+          feedData.pendingEvents?.update((pending: Event[]) => {
+            const newPending = [...pending, ...eventsToQueue];
+            return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          });
+
+          // Save new events to database for Summary page queries
+          for (const event of eventsToQueue) {
+            this.saveEventToDatabase(event);
+          }
+
+          this.logger.debug(`📥 Final: Queued ${eventsToQueue.length} additional events to pending`);
+        }
+      } else {
+        // No existing events - merge all unprocessed events
+        const mergedEvents = [...existingEvents, ...unprocessedEvents]
           .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
         feedData.events.set(mergedEvents);
 
-        this.logger.debug(`✅ Merged ${eventsToMerge.length} older events into feed`);
-      }
-
-      // Queue newer events
-      if (eventsToQueue.length > 0) {
-        feedData.pendingEvents?.update((pending: Event[]) => {
-          const newPending = [...pending, ...eventsToQueue];
-          return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-        });
-
-        // Save new events to database for Summary page queries
-        for (const event of eventsToQueue) {
+        // Save to database for Summary page queries
+        for (const event of unprocessedEvents) {
           this.saveEventToDatabase(event);
         }
-
-        this.logger.debug(`📥 Queued ${eventsToQueue.length} new events to pending`);
-      }
-
-      // Save all events for cache (existing + merged + queued)
-      const allEventsForCache = [...feedData.events(), ...eventsToQueue];
-      this.saveCachedEvents(feedData.column.id, allEventsForCache);
-    } else {
-      // Merge all events
-      const existingIds = new Set(existingEvents.map(e => e.id));
-      const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
-
-      const mergedEvents = [...existingEvents, ...trulyNewEvents]
-        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-
-      feedData.events.set(mergedEvents);
-
-      // Save to cache
-      this.saveCachedEvents(feedData.column.id, mergedEvents);
-
-      // Save to database for Summary page queries
-      for (const event of trulyNewEvents) {
-        this.saveEventToDatabase(event);
       }
     }
+
+    // Save to cache - include both displayed and pending events
+    const pendingEvents = feedData.pendingEvents?.() || [];
+    const allEventsForCache = [...feedData.events(), ...pendingEvents];
+    const uniqueEventsForCache = Array.from(
+      new Map(allEventsForCache.map(e => [e.id, e])).values()
+    ).sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+    this.saveCachedEvents(feedData.column.id, uniqueEventsForCache);
 
     // Mark initial load as complete
     feedData.initialLoadComplete = true;
@@ -1147,7 +1178,8 @@ export class FeedService {
     // Update lastRetrieved timestamp
     this.updateColumnLastRetrieved(feedData.column.id);
 
-    this.logger.info(`✅ Following feed finalized with ${feedData.events().length} total events`);
+    const totalPending = feedData.pendingEvents?.()?.length || 0;
+    this.logger.info(`✅ Following feed finalized with ${feedData.events().length} displayed events, ${totalPending} pending`);
   }
 
   /**
