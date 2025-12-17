@@ -462,6 +462,12 @@
   min-height: 0; // Allow shrinking
   padding: 1rem;
 
+  .comments-loading {
+    padding: 2rem;
+    text-align: center;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
   // Auto-expand comments in dialog
   app-comments-list {
     ::ng-deep {

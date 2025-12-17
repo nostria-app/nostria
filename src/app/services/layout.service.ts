@@ -18,10 +18,8 @@ import {
   PublishDialogComponent,
   PublishDialogData,
 } from '../components/publish-dialog/publish-dialog.component';
-import {
-  ReportDialogComponent,
-  ReportDialogData,
-} from '../components/report-dialog/report-dialog.component';
+// ReportDialogComponent is dynamically imported to break circular dependency
+import type { ReportDialogData } from '../components/report-dialog/report-dialog.component';
 import { UtilitiesService } from './utilities.service';
 import { RelayPoolService } from './relays/relay-pool';
 import { VideoRecordDialogComponent } from '../pages/media/video-record-dialog/video-record-dialog.component';
@@ -36,7 +34,7 @@ import { AccountRelayService } from './relays/account-relay';
 import { UserRelayService } from './relays/user-relay';
 import { FeedService } from './feed.service';
 import { ReportTarget } from './reporting.service';
-import { EventDialogComponent } from '../pages/event/event-dialog/event-dialog.component';
+// EventDialogComponent is dynamically imported to break circular dependency
 import { OnDemandUserDataService } from './on-demand-user-data.service';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
@@ -75,7 +73,8 @@ export class LayoutService implements OnDestroy {
   localStorage = inject(LocalStorageService);
 
   // Track currently open event dialog for back button handling
-  private currentEventDialogRef: CustomDialogRef<EventDialogComponent> | null = null;
+  // Using any type since EventDialogComponent is dynamically imported
+  private currentEventDialogRef: CustomDialogRef<any> | null = null;
 
   // Scroll position management for feeds
   private feedScrollPositions = new Map<string, number>();
@@ -612,6 +611,9 @@ export class LayoutService implements OnDestroy {
       userDisplayName,
     };
 
+    // Dynamically import to break circular dependency
+    const { ReportDialogComponent } = await import('../components/report-dialog/report-dialog.component');
+
     const dialogRef = this.dialog.open(ReportDialogComponent, {
       data: dialogData,
       width: '600px',
@@ -949,7 +951,7 @@ export class LayoutService implements OnDestroy {
     }
   }
 
-  private openEventInDialog(eventId: string, event?: Event, trustedByPubkey?: string): void {
+  private async openEventInDialog(eventId: string, event?: Event, trustedByPubkey?: string): Promise<void> {
     // Close existing dialog if any
     if (this.currentEventDialogRef) {
       this.currentEventDialogRef.close();
@@ -963,8 +965,11 @@ export class LayoutService implements OnDestroy {
     let dialogTitle = 'Thread';
     const pubkey = event?.pubkey;
 
+    // Dynamically import EventDialogComponent to break circular dependency
+    const { EventDialogComponent } = await import('../pages/event/event-dialog/event-dialog.component');
+
     // Open dialog using CustomDialogService
-    this.currentEventDialogRef = this.customDialog.open<EventDialogComponent>(EventDialogComponent, {
+    this.currentEventDialogRef = this.customDialog.open(EventDialogComponent, {
       title: dialogTitle,
       width: '800px',
       maxWidth: '100%',
