@@ -8,7 +8,7 @@
   ],
   "assetGroups": [
     {
-      "name": "app",
+      "name": "app-shell",
       "installMode": "prefetch",
       "resources": {
         "files": [
@@ -17,7 +17,18 @@
           "/index.html",
           "/manifest.webmanifest",
           "/*.css",
-          "/*.js"
+          "/main*.js",
+          "/polyfills*.js"
+        ]
+      }
+    },
+    {
+      "name": "app-chunks",
+      "installMode": "lazy",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/chunk*.js"
         ]
       }
     },

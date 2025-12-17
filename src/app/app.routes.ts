@@ -1,132 +1,155 @@
 import { Routes } from '@angular/router';
-import { SettingsComponent } from './pages/settings/settings.component';
-import { AboutComponent } from './pages/settings/about/about.component';
-import { CredentialsComponent } from './pages/credentials/credentials.component';
-import { ProfileComponent } from './pages/profile/profile.component';
-import { ProfileNotesComponent } from './pages/profile/profile-notes/profile-notes.component';
-import { ProfileReadsComponent } from './pages/profile/profile-reads/profile-reads.component';
-import { ProfileMediaComponent } from './pages/profile/profile-media/profile-media.component';
-import { ProfileAboutComponent } from './pages/profile/profile-about/profile-about.component';
-import { FollowingComponent } from './pages/profile/following/following.component';
-import { ProfileHomeComponent } from './pages/profile/profile-home/profile-home.component';
-import { PremiumComponent } from './pages/premium/premium.component';
-import { UpgradeComponent } from './pages/premium/upgrade/upgrade.component';
-import { DetailsComponent } from './pages/profile/details/details.component';
-import { NotificationsComponent } from './pages/notifications/notifications.component';
-import { MessagesComponent } from './pages/messages/messages.component';
-import { BadgesComponent } from './pages/badges/badges.component';
-import { ProfileRelaysComponent } from './pages/profile/profile-relays/profile-relays.component';
-import { AccountsComponent } from './pages/accounts/accounts.component';
-import { NotificationSettingsComponent } from './pages/notifications/settings/settings.component';
-import { LoginDialogComponent } from './components/login-dialog/login-dialog.component';
-import { ProfileEditComponent } from './pages/profile/profile-edit/profile-edit.component';
-import { FeedsComponent } from './pages/feeds/feeds.component';
-import { SummaryComponent } from './pages/summary/summary.component';
-import { ArticleComponent } from './pages/article/article.component';
-import { EditorComponent } from './pages/article/editor/editor.component';
-import { MediaQueueComponent } from './pages/media-queue/media-queue.component';
-import { PlaylistEditorComponent } from './pages/playlists/playlist-editor/playlist-editor.component';
-import { EventPageComponent } from './pages/event/event.component';
-import { NotificationManageComponent } from './pages/notifications/manage/manage.component';
-import { PollsComponent } from './pages/polls/polls.component';
-import { PollEditorComponent } from './pages/polls/poll-editor/poll-editor.component';
 import { DataResolver } from './data-resolver';
 import { ArticleResolver } from './articleResolver';
 import { UsernameResolver } from './usernameResolver';
 import { streamResolver } from './stream-resolver';
-import { MessagesMain } from './pages/messages/main/main';
-import { MessagesList } from './pages/messages/list/list';
-import { PrivacySettingsComponent } from './pages/settings/privacy-settings/privacy-settings.component';
-import { LogsSettingsComponent } from './pages/settings/logs-settings/logs-settings.component';
-import { BackupComponent } from './pages/backup/backup.component';
-import { PremiumSettings } from './pages/premium/settings/settings';
-import { GeneralSettingsComponent } from './pages/settings/general/general.component';
-import { Calendar } from './pages/calendar/calendar';
-import { AlgorithmComponent } from './pages/settings/algorithm/algorithm';
-import { RelaysComponent } from './pages/settings/relays/relays.component';
-import { TrustSettingsComponent } from './pages/settings/trust/trust.component';
-import { ArticlesListComponent } from './pages/articles-list/articles-list.component';
-import { ProfileOpenComponent } from './pages/profile/profile-open.component';
-import { DeleteEventComponent } from './pages/delete-event/delete-event.component';
-import { DeleteAccountComponent } from './pages/delete-account/delete-account.component';
-import { ShareTargetComponent } from './pages/share-target/share-target.component';
-import { InviteComponent } from './pages/invite/invite.component';
-import { StreamsComponent } from './pages/streams/streams.component';
-import { MeetingsComponent } from './pages/meetings/meetings.component';
-import { StreamViewerComponent } from './pages/stream-viewer/stream-viewer.component';
-import { MemosComponent } from './pages/memos/memos.component';
 
+// Only import the main landing component eagerly
+// Everything else should be lazy-loaded
 const profileChildren: Routes = [
   {
     path: '',
-    component: ProfileHomeComponent,
+    loadComponent: () =>
+      import('./pages/profile/profile-home/profile-home.component').then(m => m.ProfileHomeComponent),
     children: [
-      { path: '', component: ProfileNotesComponent, title: 'Timeline' },
-      { path: 'notes', component: ProfileNotesComponent, title: 'Timeline' },
-      { path: 'reads', component: ProfileReadsComponent, title: 'Reads' },
-      { path: 'media', component: ProfileMediaComponent, title: 'Media' },
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/profile/profile-notes/profile-notes.component').then(m => m.ProfileNotesComponent),
+        title: 'Timeline',
+      },
+      {
+        path: 'notes',
+        loadComponent: () =>
+          import('./pages/profile/profile-notes/profile-notes.component').then(m => m.ProfileNotesComponent),
+        title: 'Timeline',
+      },
+      {
+        path: 'reads',
+        loadComponent: () =>
+          import('./pages/profile/profile-reads/profile-reads.component').then(m => m.ProfileReadsComponent),
+        title: 'Reads',
+      },
+      {
+        path: 'media',
+        loadComponent: () =>
+          import('./pages/profile/profile-media/profile-media.component').then(m => m.ProfileMediaComponent),
+        title: 'Media',
+      },
     ],
   },
   {
     path: 'about',
-    component: ProfileAboutComponent,
+    loadComponent: () =>
+      import('./pages/profile/profile-about/profile-about.component').then(m => m.ProfileAboutComponent),
     data: { isRoot: true },
     title: 'About',
   },
-  { path: 'edit', component: ProfileEditComponent, title: 'Edit Profile' },
-  { path: 'following', component: FollowingComponent, title: 'Following' },
-  { path: 'relays', component: ProfileRelaysComponent, title: 'Relays' },
-  { path: 'details', component: DetailsComponent, title: 'Details' },
-  { path: 'badges', component: BadgesComponent, title: 'Badges' },
+  {
+    path: 'edit',
+    loadComponent: () =>
+      import('./pages/profile/profile-edit/profile-edit.component').then(m => m.ProfileEditComponent),
+    title: 'Edit Profile',
+  },
+  {
+    path: 'following',
+    loadComponent: () =>
+      import('./pages/profile/following/following.component').then(m => m.FollowingComponent),
+    title: 'Following',
+  },
+  {
+    path: 'relays',
+    loadComponent: () =>
+      import('./pages/profile/profile-relays/profile-relays.component').then(m => m.ProfileRelaysComponent),
+    title: 'Relays',
+  },
+  {
+    path: 'details',
+    loadComponent: () =>
+      import('./pages/profile/details/details.component').then(m => m.DetailsComponent),
+    title: 'Details',
+  },
+  {
+    path: 'badges',
+    loadComponent: () =>
+      import('./pages/badges/badges.component').then(m => m.BadgesComponent),
+    title: 'Badges',
+  },
 ];
 
 export const routes: Routes = [
+  // Home/Feeds - This is the main landing page, consider keeping eager for fastest FCP
   {
     path: '',
-    component: FeedsComponent,
+    loadComponent: () =>
+      import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
     data: { isRoot: true },
     pathMatch: 'full',
     title: 'Home',
   },
-  { path: 'share-target', component: ShareTargetComponent },
-  { path: 'summary', component: SummaryComponent, data: { isRoot: true }, title: 'Summary' },
-  { path: 'f', component: FeedsComponent, title: 'Feeds' },
-  { path: 'f/:path', component: FeedsComponent, title: 'Feeds' },
+  {
+    path: 'share-target',
+    loadComponent: () =>
+      import('./pages/share-target/share-target.component').then(m => m.ShareTargetComponent),
+  },
+  {
+    path: 'summary',
+    loadComponent: () =>
+      import('./pages/summary/summary.component').then(m => m.SummaryComponent),
+    data: { isRoot: true },
+    title: 'Summary',
+  },
+  {
+    path: 'f',
+    loadComponent: () =>
+      import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
+    title: 'Feeds',
+  },
+  {
+    path: 'f/:path',
+    loadComponent: () =>
+      import('./pages/feeds/feeds.component').then(m => m.FeedsComponent),
+    title: 'Feeds',
+  },
   {
     path: 'e/:id',
-    component: EventPageComponent,
+    loadComponent: () =>
+      import('./pages/event/event.component').then(m => m.EventPageComponent),
     resolve: { data: DataResolver },
     title: 'Event',
   },
-  { path: 'relays', component: RelaysComponent, title: 'Relays' },
+  {
+    path: 'relays',
+    loadComponent: () =>
+      import('./pages/settings/relays/relays.component').then(m => m.RelaysComponent),
+    title: 'Relays',
+  },
   {
     path: 'badges',
     data: { isRoot: true },
     title: 'Badges',
     children: [
-      { path: '', component: BadgesComponent },
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/badges/badges.component').then(m => m.BadgesComponent),
+      },
       {
         path: 'create',
         loadComponent: () =>
-          import('./pages/badges/badge-editor/badge-editor.component').then(
-            m => m.BadgeEditorComponent
-          ),
+          import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent),
         title: 'Create Badge',
       },
       {
         path: 'details/:id',
         loadComponent: () =>
-          import('./pages/badges/badge-details/badge-details.component').then(
-            m => m.BadgeDetailsComponent
-          ),
+          import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent),
         title: 'Badge Details',
       },
       {
         path: 'edit/:id',
         loadComponent: () =>
-          import('./pages/badges/badge-editor/badge-editor.component').then(
-            m => m.BadgeEditorComponent
-          ),
+          import('./pages/badges/badge-editor/badge-editor.component').then(m => m.BadgeEditorComponent),
         title: 'Edit Badge',
       },
     ],
@@ -134,86 +157,192 @@ export const routes: Routes = [
   {
     path: 'b/:id',
     loadComponent: () =>
-      import('./pages/badges/badge-details/badge-details.component').then(
-        m => m.BadgeDetailsComponent
-      ),
+      import('./pages/badges/badge-details/badge-details.component').then(m => m.BadgeDetailsComponent),
     title: 'Badge',
   },
   {
     path: 'messages',
-    component: MessagesComponent,
+    loadComponent: () =>
+      import('./pages/messages/messages.component').then(m => m.MessagesComponent),
     data: { isRoot: true },
     title: 'Messages',
     children: [
-      { path: '', component: MessagesMain },
-      { path: ':id', component: MessagesList, title: 'Conversation' },
+      {
+        path: '',
+        loadComponent: () =>
+          import('./pages/messages/main/main').then(m => m.MessagesMain),
+      },
+      {
+        path: ':id',
+        loadComponent: () =>
+          import('./pages/messages/list/list').then(m => m.MessagesList),
+        title: 'Conversation',
+      },
     ],
   },
-
   {
     path: 'settings',
-    component: SettingsComponent,
+    loadComponent: () =>
+      import('./pages/settings/settings.component').then(m => m.SettingsComponent),
     data: { isRoot: true },
     title: 'Settings',
     children: [
       { path: '', redirectTo: 'general', pathMatch: 'full' },
       {
         path: 'general',
-        component: GeneralSettingsComponent,
+        loadComponent: () =>
+          import('./pages/settings/general/general.component').then(m => m.GeneralSettingsComponent),
         title: 'General',
       },
-      { path: 'algorithm', component: AlgorithmComponent, title: 'Algorithm' },
-      { path: 'relays', component: RelaysComponent, title: 'Relays' },
+      {
+        path: 'algorithm',
+        loadComponent: () =>
+          import('./pages/settings/algorithm/algorithm').then(m => m.AlgorithmComponent),
+        title: 'Algorithm',
+      },
+      {
+        path: 'relays',
+        loadComponent: () =>
+          import('./pages/settings/relays/relays.component').then(m => m.RelaysComponent),
+        title: 'Relays',
+      },
       {
         path: 'privacy',
-        component: PrivacySettingsComponent,
+        loadComponent: () =>
+          import('./pages/settings/privacy-settings/privacy-settings.component').then(
+            m => m.PrivacySettingsComponent
+          ),
         title: 'Privacy & Safety',
       },
-      { path: 'trust', component: TrustSettingsComponent, title: 'Trust' },
-      { path: 'backup', component: BackupComponent, title: 'Backup' },
-      { path: 'premium', component: PremiumSettings, title: 'Premium' },
-      { path: 'logs', component: LogsSettingsComponent, title: 'Logs' },
-      { path: 'about', component: AboutComponent, title: 'About' },
+      {
+        path: 'trust',
+        loadComponent: () =>
+          import('./pages/settings/trust/trust.component').then(m => m.TrustSettingsComponent),
+        title: 'Trust',
+      },
+      {
+        path: 'backup',
+        loadComponent: () =>
+          import('./pages/backup/backup.component').then(m => m.BackupComponent),
+        title: 'Backup',
+      },
+      {
+        path: 'premium',
+        loadComponent: () =>
+          import('./pages/premium/settings/settings').then(m => m.PremiumSettings),
+        title: 'Premium',
+      },
+      {
+        path: 'logs',
+        loadComponent: () =>
+          import('./pages/settings/logs-settings/logs-settings.component').then(
+            m => m.LogsSettingsComponent
+          ),
+        title: 'Logs',
+      },
+      {
+        path: 'about',
+        loadComponent: () =>
+          import('./pages/settings/about/about.component').then(m => m.AboutComponent),
+        title: 'About',
+      },
     ],
   },
-  { path: 'queue', component: MediaQueueComponent, title: 'Media Queue' },
-  { path: 'playlists', component: MediaQueueComponent, title: 'Playlists' },
+  {
+    path: 'queue',
+    loadComponent: () =>
+      import('./pages/media-queue/media-queue.component').then(m => m.MediaQueueComponent),
+    title: 'Media Queue',
+  },
+  {
+    path: 'playlists',
+    loadComponent: () =>
+      import('./pages/media-queue/media-queue.component').then(m => m.MediaQueueComponent),
+    title: 'Playlists',
+  },
   {
     path: 'stream/:encodedEvent',
-    component: StreamViewerComponent,
+    loadComponent: () =>
+      import('./pages/stream-viewer/stream-viewer.component').then(m => m.StreamViewerComponent),
     title: 'Live Stream',
     resolve: { streamData: streamResolver },
   },
   {
     path: 'streams',
-    component: StreamsComponent,
+    loadComponent: () =>
+      import('./pages/streams/streams.component').then(m => m.StreamsComponent),
     data: { isRoot: true },
     title: 'Live Streams',
   },
   {
     path: 'meetings',
-    component: MeetingsComponent,
+    loadComponent: () =>
+      import('./pages/meetings/meetings.component').then(m => m.MeetingsComponent),
     data: { isRoot: true },
     title: 'Meeting Spaces',
   },
-  { path: 'playlists/edit/:id', component: PlaylistEditorComponent, title: 'Edit Playlist' },
-  { path: 'polls', component: PollsComponent, title: 'Polls' },
-  { path: 'polls/edit/:id', component: PollEditorComponent, title: 'Edit Poll' },
+  {
+    path: 'playlists/edit/:id',
+    loadComponent: () =>
+      import('./pages/playlists/playlist-editor/playlist-editor.component').then(
+        m => m.PlaylistEditorComponent
+      ),
+    title: 'Edit Playlist',
+  },
+  {
+    path: 'polls',
+    loadComponent: () =>
+      import('./pages/polls/polls.component').then(m => m.PollsComponent),
+    title: 'Polls',
+  },
+  {
+    path: 'polls/edit/:id',
+    loadComponent: () =>
+      import('./pages/polls/poll-editor/poll-editor.component').then(m => m.PollEditorComponent),
+    title: 'Edit Poll',
+  },
   {
     path: 'notifications',
-    component: NotificationsComponent,
+    loadComponent: () =>
+      import('./pages/notifications/notifications.component').then(m => m.NotificationsComponent),
     title: 'Notifications',
   },
-  { path: 'notifications/settings', component: NotificationSettingsComponent },
-  { path: 'notifications/manage', component: NotificationManageComponent },
+  {
+    path: 'notifications/settings',
+    loadComponent: () =>
+      import('./pages/notifications/settings/settings.component').then(
+        m => m.NotificationSettingsComponent
+      ),
+  },
+  {
+    path: 'notifications/manage',
+    loadComponent: () =>
+      import('./pages/notifications/manage/manage.component').then(m => m.NotificationManageComponent),
+  },
   {
     path: 'credentials',
-    component: CredentialsComponent,
+    loadComponent: () =>
+      import('./pages/credentials/credentials.component').then(m => m.CredentialsComponent),
     data: { isRoot: true },
   },
-  { path: 'accounts', component: AccountsComponent, data: { isRoot: true } },
-  { path: 'about', component: AboutComponent, data: { isRoot: true } },
-  { path: 'calendar', component: Calendar, data: { isRoot: true } },
+  {
+    path: 'accounts',
+    loadComponent: () =>
+      import('./pages/accounts/accounts.component').then(m => m.AccountsComponent),
+    data: { isRoot: true },
+  },
+  {
+    path: 'about',
+    loadComponent: () =>
+      import('./pages/settings/about/about.component').then(m => m.AboutComponent),
+    data: { isRoot: true },
+  },
+  {
+    path: 'calendar',
+    loadComponent: () =>
+      import('./pages/calendar/calendar').then(m => m.Calendar),
+    data: { isRoot: true },
+  },
   {
     path: 'bookmarks',
     data: { isRoot: true },
@@ -223,7 +352,8 @@ export const routes: Routes = [
   },
   {
     path: 'memos',
-    component: MemosComponent,
+    loadComponent: () =>
+      import('./pages/memos/memos.component').then(m => m.MemosComponent),
     data: { isRoot: true },
     title: 'Memos',
   },
@@ -234,57 +364,71 @@ export const routes: Routes = [
       import('./components/zap-history/zap-history.component').then(m => m.ZapHistoryComponent),
     title: 'Zap History',
   },
-  { path: 'article/create', component: EditorComponent, title: 'New Article' },
+  {
+    path: 'article/create',
+    loadComponent: () =>
+      import('./pages/article/editor/editor.component').then(m => m.EditorComponent),
+    title: 'New Article',
+  },
   {
     path: 'article/edit/:id',
-    component: EditorComponent,
+    loadComponent: () =>
+      import('./pages/article/editor/editor.component').then(m => m.EditorComponent),
     title: 'Edit Article',
   },
   {
     path: 'articles',
-    component: ArticlesListComponent,
+    loadComponent: () =>
+      import('./pages/articles-list/articles-list.component').then(m => m.ArticlesListComponent),
     data: { isRoot: true },
     title: 'Articles',
   },
   {
     path: 'a/:id',
-    component: ArticleComponent,
+    loadComponent: () =>
+      import('./pages/article/article.component').then(m => m.ArticleComponent),
     title: 'Article',
     resolve: { data: DataResolver },
   },
   {
     path: 'a/:id/:slug',
-    component: ArticleComponent,
+    loadComponent: () =>
+      import('./pages/article/article.component').then(m => m.ArticleComponent),
     title: 'Article',
     resolve: { data: DataResolver, article: ArticleResolver },
   },
   {
     path: 'p',
-    component: ProfileOpenComponent,
+    loadComponent: () =>
+      import('./pages/profile/profile-open.component').then(m => m.ProfileOpenComponent),
     resolve: { data: DataResolver },
     children: profileChildren,
   },
   {
     path: 'p/:id',
-    component: ProfileComponent,
+    loadComponent: () =>
+      import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver },
     children: profileChildren,
   },
   {
     path: 'u/:username',
-    component: ProfileComponent,
+    loadComponent: () =>
+      import('./pages/profile/profile.component').then(m => m.ProfileComponent),
     resolve: { data: DataResolver, user: UsernameResolver },
     children: profileChildren,
   },
   {
     path: 'premium',
-    component: PremiumComponent,
+    loadComponent: () =>
+      import('./pages/premium/premium.component').then(m => m.PremiumComponent),
     title: 'Nostria Premium',
     data: { isRoot: true },
   },
   {
     path: 'premium/upgrade',
-    component: UpgradeComponent,
+    loadComponent: () =>
+      import('./pages/premium/upgrade/upgrade.component').then(m => m.UpgradeComponent),
     title: 'Upgrade to Premium',
   },
   {
@@ -296,17 +440,19 @@ export const routes: Routes = [
   },
   {
     path: 'ai',
-    loadComponent: () => import('./pages/ai/ai').then((m) => m.AiComponent),
+    loadComponent: () => import('./pages/ai/ai').then(m => m.AiComponent),
     title: 'AI',
   },
   {
     path: 'ai/settings',
-    loadComponent: () => import('./pages/ai/settings/settings.component').then((m) => m.AiSettingsComponent),
+    loadComponent: () =>
+      import('./pages/ai/settings/settings.component').then(m => m.AiSettingsComponent),
     title: 'AI Settings',
   },
   {
     path: 'backup',
-    loadComponent: () => import('./pages/backup/backup.component').then(mod => mod.BackupComponent),
+    loadComponent: () =>
+      import('./pages/backup/backup.component').then(m => m.BackupComponent),
   },
   {
     path: 'media',
@@ -335,7 +481,8 @@ export const routes: Routes = [
   {
     path: 'people/discover',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/discover/discover.component').then(m => m.DiscoverComponent),
+    loadComponent: () =>
+      import('./pages/discover/discover.component').then(m => m.DiscoverComponent),
     title: 'Discover People',
   },
   {
@@ -346,13 +493,15 @@ export const routes: Routes = [
   },
   {
     path: 'delete-event',
-    component: DeleteEventComponent,
+    loadComponent: () =>
+      import('./pages/delete-event/delete-event.component').then(m => m.DeleteEventComponent),
     data: { isRoot: true },
     title: 'Delete Event',
   },
   {
     path: 'delete-account',
-    component: DeleteAccountComponent,
+    loadComponent: () =>
+      import('./pages/delete-account/delete-account.component').then(m => m.DeleteAccountComponent),
     data: { isRoot: true },
     title: 'Delete Account',
   },
@@ -364,11 +513,16 @@ export const routes: Routes = [
       ),
     title: 'Storage Debug',
   },
-  { path: 'login', component: LoginDialogComponent },
+  {
+    path: 'login',
+    loadComponent: () =>
+      import('./components/login-dialog/login-dialog.component').then(m => m.LoginDialogComponent),
+  },
   {
     path: 'invite/:nprofile',
-    component: InviteComponent,
+    loadComponent: () =>
+      import('./pages/invite/invite.component').then(m => m.InviteComponent),
     title: 'Join Nostria',
   },
-  { path: '**', redirectTo: '/' }, // Update to redirect to root instead of /home
+  { path: '**', redirectTo: '/' },
 ];
