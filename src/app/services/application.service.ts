@@ -83,7 +83,18 @@ export class ApplicationService {
           console.log(`🔍 [Profile Loading Effect] Discovery status for ${pubkey.substring(0, 8)}...: ${hasDiscoveryBeenDone ? 'DONE' : 'NOT DONE'}`);
 
           if (!hasDiscoveryBeenDone) {
-            console.log(`🆕 [Profile Loading Effect] First time load - fetching ${followingList.length} profiles from relays`);
+            // Delay first-time profile loading to not interfere with initial feed loading
+            // This improves UX by allowing feeds to load and display events first
+            console.log(`🆕 [Profile Loading Effect] First time load - delaying profile fetch for better initial UX`);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+            
+            // Re-check if we still need to process (account might have changed)
+            if (this.accountState.pubkey() !== pubkey) {
+              console.log('⏭️ [Profile Loading Effect] Account changed during delay, skipping');
+              return;
+            }
+            
+            console.log(`🆕 [Profile Loading Effect] Now fetching ${followingList.length} profiles from relays`);
             await this.accountState.startProfileProcessing(
               followingList,
               this.dataService,

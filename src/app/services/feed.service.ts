@@ -993,7 +993,9 @@ export class FeedService {
   }
 
   /**
-   * Handle incremental updates for following feed as events arrive
+   * Handle incremental updates for following feed as events arrive.
+   * During initial load (no events yet), shows events immediately for better UX.
+   * After initial load with existing events, queues new events to pending.
    */
   private handleFollowingIncrementalUpdate(feedData: FeedItem, newEvents: Event[]) {
     if (newEvents.length === 0) return;
@@ -1010,8 +1012,14 @@ export class FeedService {
 
     if (filteredEvents.length === 0) return;
 
-    // If initial load is already complete and we have existing events, queue to pending
-    if (feedData.initialLoadComplete && existingEvents.length > 0) {
+    // Determine if we should show events immediately or queue them
+    // Show immediately if:
+    // 1. No existing events yet (user sees empty feed - bad UX)
+    // 2. Initial load is not complete yet (still streaming in initial data)
+    const shouldShowImmediately = existingEvents.length === 0 || !feedData.initialLoadComplete;
+
+    if (!shouldShowImmediately) {
+      // Queue to pending - user has events and initial load is done
       const existingIds = new Set(existingEvents.map(e => e.id));
       const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
 
@@ -1026,7 +1034,7 @@ export class FeedService {
         });
       }
     } else {
-      // Initial load - merge events directly
+      // Show events immediately - either no events yet or still loading
       const existingIds = new Set(existingEvents.map(e => e.id));
       const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
 
