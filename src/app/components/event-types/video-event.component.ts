@@ -403,6 +403,16 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  /**
+   * Handle video pause event - unregister from playback service
+   */
+  onVideoPause(event: globalThis.Event): void {
+    const videoElement = event.target as HTMLVideoElement;
+    if (videoElement) {
+      this.videoPlayback.unregisterPlaying(videoElement);
+    }
+  }
+
   // Video controls integration
   videoCurrentTime = signal(0);
   videoDuration = signal(0);
