@@ -24,13 +24,10 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { NostrService } from './services/nostr.service';
 import { FeatureLevel, LoggerService } from './services/logger.service';
-import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
+import { MatMenuModule } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
 import {
   NotificationType,
-  RelayPublishingNotification,
-  Notification,
-  ContentNotification,
 } from './services/database.service';
 import { LayoutService } from './services/layout.service';
 import { ApplicationStateService } from './services/application-state.service';
@@ -164,20 +161,6 @@ export class App implements OnInit {
     return this.appState.isPublishing() || this.ai.processingState().isProcessing;
   });
 
-  // Computed tooltip for notification icon when processing
-  notificationProcessingTooltip = computed(() => {
-    if (!this.isProcessing()) {
-      return '';
-    }
-
-    const aiProcessingState = this.ai.processingState();
-    if (aiProcessingState.isProcessing) {
-      return this.ai.getTaskName(aiProcessingState.task);
-    }
-
-    return this.publishingEventLabel;
-  });
-
   themeService = inject(ThemeService);
   pwaUpdateService = inject(PwaUpdateService);
   dialog = inject(MatDialog);
@@ -189,7 +172,6 @@ export class App implements OnInit {
   router = inject(Router);
   notificationService = inject(NotificationService);
   contentNotificationService = inject(ContentNotificationService);
-  notificationType = NotificationType;
   bottomSheet = inject(MatBottomSheet);
   logger = inject(LoggerService);
   search = inject(SearchService);
@@ -222,7 +204,6 @@ export class App implements OnInit {
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
-  @ViewChild('notificationMenuTrigger') notificationMenuTrigger!: MatMenuTrigger;
   @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
 
   // Apps menu overlay
@@ -230,16 +211,6 @@ export class App implements OnInit {
 
   // Track if push notification prompt has been shown
   private pushPromptShown = signal(false);
-
-  // Content notification types (social interactions that users care about)
-  private readonly contentNotificationTypes = [
-    NotificationType.NEW_FOLLOWER,
-    NotificationType.MENTION,
-    NotificationType.REPOST,
-    NotificationType.REPLY,
-    NotificationType.REACTION,
-    NotificationType.ZAP,
-  ];
 
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
@@ -277,6 +248,17 @@ export class App implements OnInit {
   });
 
   // Computed signal to count unread content notifications only (excludes technical/system notifications)
+  // Content notification types for badge count (social interactions that users care about)
+  private readonly contentNotificationTypes = [
+    NotificationType.NEW_FOLLOWER,
+    NotificationType.MENTION,
+    NotificationType.REPOST,
+    NotificationType.REPLY,
+    NotificationType.REACTION,
+    NotificationType.ZAP,
+  ];
+
+  // Computed signal to count unread content notifications only (excludes technical/system notifications)
   unreadNotificationsCount = computed(() => {
     return this.notificationService
       .notifications()
@@ -284,31 +266,6 @@ export class App implements OnInit {
         notification =>
           !notification.read && this.contentNotificationTypes.includes(notification.type)
       ).length;
-  });
-
-  // Computed signal to check if there are any active pending notifications
-  // hasActivePendingNotifications = computed(() => {
-  //   return this.notificationService.notifications().some(notification => {
-  //     // Check if it's a RelayPublishingNotification with pending promises
-  //     if (notification.type === NotificationType.RELAY_PUBLISHING) {
-  //       const relayNotification = notification as RelayPublishingNotification;
-  //       return (
-  //         !relayNotification.complete &&
-  //         relayNotification.relayPromises?.some(relay => relay.status === 'pending')
-  //       );
-  //     }
-  //     return false;
-  //   });
-  // });
-
-  // Computed signal to get unread content notifications only (excluding technical/system notifications)
-  contentNotifications = computed(() => {
-    return this.notificationService
-      .notifications()
-      .filter(notification =>
-        !notification.read && this.contentNotificationTypes.includes(notification.type)
-      )
-      .sort((a, b) => b.timestamp - a.timestamp);
   });
 
   navigationItems = computed(() => {
@@ -389,12 +346,12 @@ export class App implements OnInit {
       label: $localize`:@@app.nav.streams:Streams`,
       icon: 'live_tv',
     },
-    {
-      path: 'analytics',
-      label: $localize`:@@app.nav.analytics:Analytics`,
-      icon: 'insights',
-      authenticated: true,
-    },
+    // {
+    //   path: 'analytics',
+    //   label: $localize`:@@app.nav.analytics:Analytics`,
+    //   icon: 'insights',
+    //   authenticated: true,
+    // },
     // {
     //   path: 'bookmarks',
     //   label: 'Bookmarks',
@@ -1458,67 +1415,6 @@ export class App implements OnInit {
   }
 
   /**
-   * Check if a notification is a content notification (has event to navigate to)
-   */
-  isContentNotification(notification: Notification): boolean {
-    return [
-      NotificationType.NEW_FOLLOWER,
-      NotificationType.MENTION,
-      NotificationType.REPOST,
-      NotificationType.REPLY,
-      NotificationType.REACTION,
-      NotificationType.ZAP,
-    ].includes(notification.type);
-  }
-
-  /**
-   * Handle notification click from toolbar menu
-   */
-  onNotificationClick(notification: Notification, event: MouseEvent): void {
-    event.preventDefault();
-    event.stopPropagation();
-
-    // Mark notification as read
-    this.notificationService.markAsRead(notification.id);
-
-    // Close the menu
-    this.notificationMenuTrigger?.closeMenu();
-
-    // Check if it's a content notification with an event ID
-    if (this.isContentNotification(notification)) {
-      const contentNotif = notification as ContentNotification;
-
-      // For new follower notifications, navigate to the follower's profile
-      if (contentNotif.type === NotificationType.NEW_FOLLOWER && contentNotif.authorPubkey) {
-        this.router.navigate(['/p', contentNotif.authorPubkey]);
-        return;
-      }
-
-      // For zaps with a specific event, navigate to that event
-      if (contentNotif.eventId && contentNotif.authorPubkey) {
-        // Navigate to the event using nevent encoding
-        const neventId = nip19.neventEncode({
-          id: contentNotif.eventId,
-          author: contentNotif.authorPubkey,
-          kind: contentNotif.kind,
-        });
-        this.router.navigate(['/e', neventId]);
-        return;
-      }
-
-      // For profile zaps (no specific event), navigate to recipient's profile
-      if (contentNotif.type === NotificationType.ZAP && contentNotif.metadata?.recipientPubkey) {
-        const npubId = nip19.npubEncode(contentNotif.metadata.recipientPubkey);
-        this.router.navigate(['/p', npubId]);
-        return;
-      }
-    }
-
-    // For system notifications or content notifications without eventId, go to notifications page
-    this.router.navigate(['/notifications']);
-  }
-
-  /**
    * Check if push notifications are enabled
    */
   isPushNotificationEnabled(): boolean {
@@ -1547,44 +1443,5 @@ export class App implements OnInit {
       disableClose: false,
       hasBackdrop: true,
     });
-  }
-
-  /**
-   * Format notification title by replacing '+' with heart emoji
-   */
-  getFormattedNotificationTitle(notification: Notification): string {
-    if (!notification.title) return '';
-    // Replace 'Reacted +' with 'Reacted ❤️'
-    return notification.title.replace(/Reacted \+/g, 'Reacted ❤️');
-  }
-
-  /**
-   * Get icon for notification type (used in template)
-   */
-  getNotificationIcon(type: NotificationType): string {
-    switch (type) {
-      case NotificationType.NEW_FOLLOWER:
-        return 'person_add';
-      case NotificationType.MENTION:
-        return 'alternate_email';
-      case NotificationType.REPOST:
-        return 'repeat';
-      case NotificationType.REPLY:
-        return 'reply';
-      case NotificationType.REACTION:
-        return 'favorite';
-      case NotificationType.ZAP:
-        return 'bolt';
-      case NotificationType.SUCCESS:
-        return 'check_circle';
-      case NotificationType.WARNING:
-        return 'warning';
-      case NotificationType.ERROR:
-        return 'error';
-      case NotificationType.RELAY_PUBLISHING:
-        return 'sync';
-      default:
-        return 'notifications';
-    }
   }
 }
