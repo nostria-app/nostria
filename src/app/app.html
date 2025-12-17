@@ -151,7 +151,7 @@
       <!-- Create FAB at top of sidenav -->
       @if (app.authenticated()) {
       <div class="sidenav-fab-container">
-        <button mat-mini-fab color="primary" class="sidenav-create-fab" (click)="openCreateOptions()"
+        <button mat-mini-fab color="primary" class="sidenav-create-fab" (click)="openCreateMenu($event)"
           i18n-aria-label="@@app.create.aria" aria-label="Create new content"
           [matTooltip]="displayLabels() ? '' : createLabel">
           <mat-icon>add</mat-icon>

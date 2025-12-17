@@ -81,6 +81,7 @@ import { StandaloneTermsDialogComponent } from './components/standalone-terms-di
 import { Overlay, OverlayRef } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { AppsMenuComponent } from './components/apps-menu/apps-menu.component';
+import { CreateMenuComponent } from './components/create-menu/create-menu.component';
 import { AiService } from './services/ai.service';
 import { CustomDialogService } from './services/custom-dialog.service';
 import { CommandPaletteDialogComponent } from './components/command-palette-dialog/command-palette-dialog.component';
@@ -208,6 +209,9 @@ export class App implements OnInit {
 
   // Apps menu overlay
   private appsMenuOverlayRef?: OverlayRef;
+
+  // Create menu overlay
+  private createMenuOverlayRef?: OverlayRef;
 
   // Track if push notification prompt has been shown
   private pushPromptShown = signal(false);
@@ -1108,6 +1112,61 @@ export class App implements OnInit {
     this.bottomSheet.open(CreateOptionsSheetComponent, {
       panelClass: 'glass-bottom-sheet',
     });
+  }
+
+  openCreateMenu(event: MouseEvent): void {
+    if (this.createMenuOverlayRef) {
+      this.closeCreateMenu();
+      return;
+    }
+
+    const target = event.currentTarget as HTMLElement;
+    const positionStrategy = this.overlay
+      .position()
+      .flexibleConnectedTo(target)
+      .withPositions([
+        {
+          originX: 'start',
+          originY: 'bottom',
+          overlayX: 'start',
+          overlayY: 'top',
+          offsetY: 8,
+        },
+        {
+          originX: 'start',
+          originY: 'top',
+          overlayX: 'start',
+          overlayY: 'bottom',
+          offsetY: -8,
+        },
+      ]);
+
+    this.createMenuOverlayRef = this.overlay.create({
+      positionStrategy,
+      scrollStrategy: this.overlay.scrollStrategies.reposition(),
+      hasBackdrop: true,
+      backdropClass: 'cdk-overlay-transparent-backdrop',
+    });
+
+    const portal = new ComponentPortal(CreateMenuComponent);
+    const componentRef = this.createMenuOverlayRef.attach(portal);
+
+    // Listen for close event from the component
+    componentRef.instance.closed.subscribe(() => {
+      this.closeCreateMenu();
+    });
+
+    // Close when clicking backdrop
+    this.createMenuOverlayRef.backdropClick().subscribe(() => {
+      this.closeCreateMenu();
+    });
+  }
+
+  closeCreateMenu(): void {
+    if (this.createMenuOverlayRef) {
+      this.createMenuOverlayRef.dispose();
+      this.createMenuOverlayRef = undefined;
+    }
   }
 
   toggleAppsMenu(event: MouseEvent): void {

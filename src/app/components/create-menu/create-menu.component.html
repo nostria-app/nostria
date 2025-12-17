@@ -1,0 +1,13 @@
+<div class="create-menu-container">
+  <div class="create-menu-content">
+    <h3 class="menu-title" i18n="@@create.menu.title">Create</h3>
+    <div class="menu-list">
+      @for (option of createOptions; track option.label) {
+      <button class="menu-item" (click)="onItemClick(option)">
+        <mat-icon>{{ option.icon }}</mat-icon>
+        <span class="menu-item-label">{{ option.label }}</span>
+      </button>
+      }
+    </div>
+  </div>
+</div>
