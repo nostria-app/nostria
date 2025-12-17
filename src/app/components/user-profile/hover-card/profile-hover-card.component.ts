@@ -58,7 +58,7 @@ interface ProfileData {
     MatMenuModule,
     MatDividerModule,
     RouterModule
-],
+  ],
   templateUrl: './profile-hover-card.component.html',
   styleUrl: './profile-hover-card.component.scss',
   encapsulation: ViewEncapsulation.None,

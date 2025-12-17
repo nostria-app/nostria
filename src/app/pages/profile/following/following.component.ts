@@ -14,6 +14,7 @@ import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 interface UserProfile {
   id: string;
@@ -67,6 +68,7 @@ export class FollowingComponent {
   private logger = inject(LoggerService);
   profileState = inject(ProfileStateService);
   private accountState = inject(AccountStateService);
+  private utilities = inject(UtilitiesService);
 
   @ViewChild('followingContainer') followingContainerRef!: ElementRef;
 
@@ -138,7 +140,16 @@ export class FollowingComponent {
         return;
       }
 
-      const followingProfiles = pubkeys.map((pubkey, index) => ({
+      // Filter out invalid pubkeys
+      const validPubkeys = pubkeys.filter(pubkey => this.utilities.isValidPubkey(pubkey));
+
+      if (validPubkeys.length !== pubkeys.length) {
+        this.logger.warn(
+          `Filtered out ${pubkeys.length - validPubkeys.length} invalid pubkeys from following list`
+        );
+      }
+
+      const followingProfiles = validPubkeys.map((pubkey, index) => ({
         id: pubkey,
         npub: pubkey,
         name: `User ${index + 1}`,

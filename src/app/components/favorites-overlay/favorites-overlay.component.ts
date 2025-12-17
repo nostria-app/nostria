@@ -22,7 +22,7 @@ import { UtilitiesService } from '../../services/utilities.service';
     MatButtonModule,
     MatIconModule,
     MatTooltipModule
-],
+  ],
   templateUrl: './favorites-overlay.component.html',
   styleUrl: './favorites-overlay.component.scss',
 })
