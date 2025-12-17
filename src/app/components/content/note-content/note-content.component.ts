@@ -21,6 +21,8 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
+// PhotoEventComponent is loaded via @defer to break circular dependency chain:
+// NoteContentComponent -> PhotoEventComponent -> CommentsListComponent -> CommentComponent -> ContentComponent -> NoteContentComponent
 import { PhotoEventComponent } from '../../event-types/photo-event.component';
 import { EventHeaderComponent } from '../../event/header/header.component';
 import { Event as NostrEvent } from 'nostr-tools';
@@ -715,12 +717,12 @@ export class NoteContentComponent implements OnDestroy {
     if (actualDims && actualDims.width && actualDims.height) {
       return `${actualDims.width} / ${actualDims.height}`;
     }
-    
+
     // Fall back to metadata dimensions (may not account for rotation)
     if (token.dimensions) {
       return `${token.dimensions.width} / ${token.dimensions.height}`;
     }
-    
+
     return '16 / 9'; // Default video aspect ratio
   }
 
@@ -734,12 +736,12 @@ export class NoteContentComponent implements OnDestroy {
     if (actualDims) {
       return actualDims.height > actualDims.width;
     }
-    
+
     // Fall back to metadata dimensions (may not account for rotation)
     if (token.dimensions) {
       return token.dimensions.height > token.dimensions.width;
     }
-    
+
     return false;
   }
 
@@ -1001,7 +1003,7 @@ export class NoteContentComponent implements OnDestroy {
    */
   onUrlClick(url: string, event: MouseEvent): void {
     const handled = this.externalLinkHandler.handleLinkClick(url, event);
-    
+
     if (handled) {
       // Prevent default navigation if we handled it internally
       event.preventDefault();

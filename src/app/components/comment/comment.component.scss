@@ -13,6 +13,12 @@
   gap: 8px;
 }
 
+.content-loading {
+  padding: 8px 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-style: italic;
+}
+
 mat-card-header {
   margin-bottom: 8px;
 

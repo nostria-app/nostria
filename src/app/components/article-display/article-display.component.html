@@ -54,7 +54,7 @@
         @if (hashtags().length > 0) {
         <div class="article-hashtags">
           <mat-chip-set>
-            @for (hashtag of hashtags(); track hashtag) {
+            @for (hashtag of uniqueHashtags(); track hashtag) {
             <mat-chip highlighted>
               {{ hashtag }}
             </mat-chip>

@@ -5,10 +5,10 @@
 </div>
 }
 
-<article class="article-container">
+<article class="article-container clickable-card" (click)="openFullArticle()" (keydown.enter)="openFullArticle()"
+  (keydown.space)="openFullArticle()" tabindex="0" role="button" [attr.aria-label]="'Read article: ' + title()">
   @if (title()) {
-  <h3 class="article-title clickable" (click)="openFullArticle()" (keydown.enter)="openFullArticle()"
-    (keydown.space)="openFullArticle()" tabindex="0" role="button" [attr.aria-label]="'Read article: ' + title()">
+  <h3 class="article-title">
     {{ title() }}
   </h3>
   }
@@ -70,18 +70,4 @@
     }
   </div>
   }
-
-  <div class="article-actions">
-    @if (isLongArticle()) {
-    <button mat-button color="primary" class="read-more" (click)="expandContent()">
-      <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
-      {{ isExpanded() ? 'Show Less' : 'Read More' }}
-    </button>
-    }
-
-    <button mat-button color="primary" (click)="openFullArticle()" class="open-article">
-      <mat-icon>article</mat-icon>
-      Read Article
-    </button>
-  </div>
 </article>

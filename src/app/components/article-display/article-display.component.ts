@@ -191,6 +191,8 @@ export class ArticleDisplayComponent {
   image = computed(() => this.article().image);
   parsedContent = computed(() => this.article().parsedContent);
   hashtags = computed(() => this.article().hashtags);
+  // Deduplicated hashtags to avoid Angular track key errors
+  uniqueHashtags = computed(() => [...new Set(this.article().hashtags)]);
   authorPubkey = computed(() => this.article().authorPubkey);
   publishedAtTimestamp = computed(() => this.article().publishedAtTimestamp);
   link = computed(() => this.article().link);

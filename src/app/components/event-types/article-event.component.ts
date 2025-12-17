@@ -28,9 +28,6 @@ export class ArticleEventComponent {
   event = input.required<Event>();
   showAuthor = input<boolean>(true);
 
-  // Signal to track if content is expanded
-  isExpanded = signal(false);
-
   // Article title
   title = computed(() => {
     const event = this.event();
@@ -164,26 +161,13 @@ export class ArticleEventComponent {
       .filter(Boolean);
   });
 
-  // Truncated content for preview
+  // Truncated content for preview (always show preview in feeds)
   contentToShow = computed<SafeHtml>(() => {
-    const content = this.articleContent();
     const previewContent = this.previewContent();
-    if (!content) return '';
-
-    // If expanded, show full content
-    if (this.isExpanded() || !previewContent) return content;
-
-    return previewContent;
+    const content = this.articleContent();
+    // In feeds, show truncated preview if available, otherwise full content
+    return previewContent || content || '';
   });
-
-  // Check if content exceeds MAX_LENGTH and thus has a preview
-  isLongArticle = computed<boolean>(() => {
-    return !!this.previewContent();
-  });
-
-  expandContent(): void {
-    this.isExpanded.set(!this.isExpanded());
-  }
 
   openFullArticle(): void {
     const event = this.event();
