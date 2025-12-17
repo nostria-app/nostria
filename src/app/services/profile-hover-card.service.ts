@@ -1,9 +1,9 @@
-import { Injectable, inject, signal, OnDestroy, NgZone } from '@angular/core';
+import { Injectable, inject, signal, OnDestroy, NgZone, Type } from '@angular/core';
 import { Overlay, OverlayRef, ConnectedPosition } from '@angular/cdk/overlay';
 import { ComponentPortal } from '@angular/cdk/portal';
 import { Router, NavigationStart } from '@angular/router';
 import { filter } from 'rxjs/operators';
-import { ProfileHoverCardComponent } from '../components/user-profile/hover-card/profile-hover-card.component';
+// ProfileHoverCardComponent is dynamically imported to break circular dependency
 
 /**
  * Service to manage profile hover cards across the application
@@ -22,6 +22,9 @@ export class ProfileHoverCardService implements OnDestroy {
   private hoverCardComponentRef: any = null; // eslint-disable-line @typescript-eslint/no-explicit-any
   private currentPubkey: string | null = null;
 
+  // Cached component type for lazy loading
+  private ProfileHoverCardComponentType: Type<any> | null = null; // eslint-disable-line @typescript-eslint/no-explicit-any
+
   // Track mouse state
   private isMouseOverTrigger = signal(false);
   private isMouseOverCard = signal(false);
@@ -32,7 +35,6 @@ export class ProfileHoverCardService implements OnDestroy {
 
   // Scroll listener bound function
   private scrollListener = this.onScroll.bind(this);
-
   constructor() {
     // Close hover card on navigation
     this.router.events
@@ -106,10 +108,16 @@ export class ProfileHoverCardService implements OnDestroy {
   /**
    * Creates and displays the hover card overlay
    */
-  private createHoverCard(element: HTMLElement, pubkey: string): void {
+  private async createHoverCard(element: HTMLElement, pubkey: string): Promise<void> {
     // Don't show if already showing
     if (this.overlayRef) {
       return;
+    }
+
+    // Dynamically import the component to break circular dependency
+    if (!this.ProfileHoverCardComponentType) {
+      const { ProfileHoverCardComponent } = await import('../components/user-profile/hover-card/profile-hover-card.component');
+      this.ProfileHoverCardComponentType = ProfileHoverCardComponent;
     }
 
     // Get element position and viewport dimensions
@@ -300,7 +308,7 @@ export class ProfileHoverCardService implements OnDestroy {
       hasBackdrop: false,
     });
 
-    const portal = new ComponentPortal(ProfileHoverCardComponent);
+    const portal = new ComponentPortal(this.ProfileHoverCardComponentType!);
     const componentRef = this.overlayRef.attach(portal);
     componentRef.setInput('pubkey', pubkey);
     this.hoverCardComponentRef = componentRef;

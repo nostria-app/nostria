@@ -16,7 +16,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { RouterModule } from '@angular/router';
 import { ProfileHoverCardService } from '../../../services/profile-hover-card.service';
-import { LayoutService } from '../../../services/layout.service';
+import { ScrollStateService } from '../../../services/scroll-state.service';
 import { SettingsService } from '../../../services/settings.service';
 
 @Component({
@@ -32,7 +32,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   private elementRef = inject(ElementRef);
   private hoverCardService = inject(ProfileHoverCardService);
   readonly utilities = inject(UtilitiesService);
-  private layout = inject(LayoutService);
+  private scrollState = inject(ScrollStateService);
   private settingsService = inject(SettingsService);
 
   private linkElement: HTMLElement | null = null;
@@ -55,7 +55,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
   constructor() {
     // Effect to trigger load when scrolling stops if the component is visible but not loaded
     effect(() => {
-      const isScrolling = this.layout.isScrolling();
+      const isScrolling = this.scrollState.isScrolling();
       const isVisible = this.isVisible();
       const profile = this.profile();
       const isLoading = this.isLoading();
@@ -92,7 +92,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
             this.isLoading.set(false);
           } else {
             // Only load profile data when the component is visible and not scrolling
-            if (this.isVisible() && !this.layout.isScrolling() && !this.profile()) {
+            if (this.isVisible() && !this.scrollState.isScrolling() && !this.profile()) {
               this.debouncedLoadProfileData(pubkey);
             }
           }
@@ -140,7 +140,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
         const isVisible = entries.some(entry => entry.isIntersecting);
         this.isVisible.set(isVisible);
 
-        if (isVisible && !this.layout.isScrolling()) {
+        if (isVisible && !this.scrollState.isScrolling()) {
           // Using the debounced load function to prevent rapid loading during scroll
           if (!this.profile() && !this.isLoading()) {
             this.debouncedLoadProfileData(this.pubkey());
@@ -197,7 +197,7 @@ export class ProfileDisplayNameComponent implements AfterViewInit, OnDestroy {
     // Set a new timer
     this.debouncedLoadTimer = window.setTimeout(() => {
       // Only proceed if we're visible and not currently scrolling
-      if (this.isVisible() && !this.layout.isScrolling()) {
+      if (this.isVisible() && !this.scrollState.isScrolling()) {
         this.loadProfileData(pubkeyValue);
       }
     }, this.DEBOUNCE_TIME);
