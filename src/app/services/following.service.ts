@@ -269,41 +269,46 @@ export class FollowingService {
   }
 
   /**
-   * Preload images for all following profiles in the background
+   * Preload images for all following profiles in the background.
+   * Delays preloading to avoid interfering with initial feed loading.
    */
   private preloadProfileImages(profilesMap: Map<string, FollowingProfile>): void {
-    // Use requestIdleCallback if available, otherwise fall back to queueMicrotask
-    const schedulePreload = (callback: () => void) => {
-      if (typeof requestIdleCallback !== 'undefined') {
-        requestIdleCallback(callback, { timeout: 5000 });
-      } else {
-        queueMicrotask(callback);
-      }
-    };
+    // Delay image preloading by 10 seconds to prioritize feed content loading
+    // This prevents bandwidth competition during the critical initial load phase
+    setTimeout(() => {
+      // Use requestIdleCallback for additional deferral when browser is idle
+      const schedulePreload = (callback: () => void) => {
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(callback, { timeout: 10000 });
+        } else {
+          queueMicrotask(callback);
+        }
+      };
 
-    schedulePreload(async () => {
-      try {
-        const imagesToPreload: string[] = [];
+      schedulePreload(async () => {
+        try {
+          const imagesToPreload: string[] = [];
 
-        // Collect all profile image URLs
-        for (const profile of profilesMap.values()) {
-          if (profile.profile?.data?.picture) {
-            // Preload images at 96x96 (standard size for all profile images)
-            imagesToPreload.push(profile.profile.data.picture);
+          // Collect all profile image URLs
+          for (const profile of profilesMap.values()) {
+            if (profile.profile?.data?.picture) {
+              // Preload images at 96x96 (standard size for all profile images)
+              imagesToPreload.push(profile.profile.data.picture);
+            }
           }
-        }
 
-        if (imagesToPreload.length > 0) {
-          this.logger.info(
-            `[FollowingService] Preloading ${imagesToPreload.length} profile images for ${profilesMap.size} users`
-          );
-          await this.imageCacheService.preloadImages(imagesToPreload);
-          this.logger.info('[FollowingService] Profile images preloaded successfully');
+          if (imagesToPreload.length > 0) {
+            this.logger.info(
+              `[FollowingService] Preloading ${imagesToPreload.length} profile images for ${profilesMap.size} users`
+            );
+            await this.imageCacheService.preloadImages(imagesToPreload);
+            this.logger.info('[FollowingService] Profile images preloaded successfully');
+          }
+        } catch (error) {
+          this.logger.warn('[FollowingService] Failed to preload profile images:', error);
         }
-      } catch (error) {
-        this.logger.warn('[FollowingService] Failed to preload profile images:', error);
-      }
-    });
+      });
+    }, 10000); // 10 second delay
   }
 
   /**
