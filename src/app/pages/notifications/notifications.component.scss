@@ -190,6 +190,44 @@
       }
     }
   }
+
+  // Load more indicator at bottom of virtual scroll
+  .load-more-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 24px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 14px;
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    &.clickable {
+      cursor: pointer;
+      transition: background-color 0.2s, color 0.2s;
+      border-radius: 8px;
+      margin: 8px 16px;
+      background: var(--mat-sys-surface-container);
+
+      &:hover {
+        background: var(--mat-sys-surface-container-high);
+        color: var(--mat-sys-primary);
+      }
+    }
+
+    &.end {
+      opacity: 0.6;
+      
+      mat-icon {
+        color: var(--mat-success-color);
+      }
+    }
+  }
 }
 
 .notification-list {

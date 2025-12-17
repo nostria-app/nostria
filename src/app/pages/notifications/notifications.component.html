@@ -66,7 +66,8 @@
           <p>You'll see mentions, follows, reposts, and other interactions here.</p>
         </div>
         } @else {
-        <cdk-virtual-scroll-viewport [itemSize]="110" class="notification-viewport">
+        <cdk-virtual-scroll-viewport [itemSize]="110" class="notification-viewport"
+          (scrolledIndexChange)="onScrolledIndexChange($event)">
           <div *cdkVirtualFor="let notification of contentNotifications(); trackBy: trackByNotificationId"
             class="notification-item" [class.unread]="!notification.read" [class.clickable]="getEventId(notification)"
             [attr.data-notification-type]="notification.type">
@@ -136,6 +137,24 @@
               </mat-menu>
             </div>
           </div>
+
+          <!-- Load More Indicator -->
+          @if (isLoadingMore()) {
+          <div class="load-more-indicator">
+            <mat-spinner diameter="24"></mat-spinner>
+            <span>Loading older notifications...</span>
+          </div>
+          } @else if (hasMoreNotifications() && contentNotifications().length >= 10) {
+          <div class="load-more-indicator clickable" (click)="loadMoreNotifications()">
+            <mat-icon>expand_more</mat-icon>
+            <span>Load more notifications</span>
+          </div>
+          } @else if (!hasMoreNotifications()) {
+          <div class="load-more-indicator end">
+            <mat-icon>check_circle</mat-icon>
+            <span>You've reached the end</span>
+          </div>
+          }
         </cdk-virtual-scroll-viewport>
         }
       </mat-tab>

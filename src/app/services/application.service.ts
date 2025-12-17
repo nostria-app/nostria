@@ -87,13 +87,13 @@ export class ApplicationService {
             // This improves UX by allowing feeds to load and display events first
             console.log(`🆕 [Profile Loading Effect] First time load - delaying profile fetch for better initial UX`);
             await new Promise(resolve => setTimeout(resolve, 5000));
-            
+
             // Re-check if we still need to process (account might have changed)
             if (this.accountState.pubkey() !== pubkey) {
               console.log('⏭️ [Profile Loading Effect] Account changed during delay, skipping');
               return;
             }
-            
+
             console.log(`🆕 [Profile Loading Effect] Now fetching ${followingList.length} profiles from relays`);
             await this.accountState.startProfileProcessing(
               followingList,
@@ -254,9 +254,9 @@ export class ApplicationService {
     // Only trigger for first-time users (lastCheck === 0)
     if (lastCheck === 0) {
       this.logger.info(
-        '[ApplicationService] Profile processing complete - triggering first-time notification check (30 days)'
+        '[ApplicationService] Profile processing complete - triggering first-time notification check (7 days)'
       );
-      this.contentNotificationService.checkForNewNotifications(30).catch(error => {
+      this.contentNotificationService.checkForNewNotifications(7).catch(error => {
         this.logger.error('[ApplicationService] Failed to check notifications after profile processing', error);
       });
     } else {
