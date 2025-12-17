@@ -1288,6 +1288,8 @@ export class FeedService {
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
     const BATCH_SIZE = 10; // Most relays accept 10 authors per query
     const TIMEOUT_MS = 2000; // Short timeout for fast initial content
+    const MAX_CONCURRENT_BATCHES = 2; // Limit concurrent requests to avoid relay rate limits
+    const DELAY_BETWEEN_BATCHES_MS = 100; // Small delay to prevent "too fast" errors
 
     try {
       console.log(`⚡ [Fast Fetch] Starting batched fetch for ${pubkeys.length} authors (${Math.ceil(pubkeys.length / BATCH_SIZE)} batches)`);
@@ -1302,36 +1304,49 @@ export class FeedService {
       const existingEvents = feedData.events();
       const useSince = feedData.column.lastRetrieved && existingEvents.length > 0;
 
-      // Query all batches in parallel for maximum speed
-      const batchPromises = batches.map(async (batchPubkeys, batchIndex) => {
-        const filter: {
-          kinds?: number[];
-          authors: string[];
-          limit: number;
-          since?: number;
-        } = {
-          authors: batchPubkeys,
-          kinds: feedData.filter?.kinds,
-          limit: isArticlesFeed ? 10 : 5, // Limit per batch
-        };
+      // Process batches with limited concurrency to avoid overwhelming relays
+      const allEvents: Event[] = [];
+      
+      for (let i = 0; i < batches.length; i += MAX_CONCURRENT_BATCHES) {
+        const currentBatches = batches.slice(i, i + MAX_CONCURRENT_BATCHES);
+        
+        const batchPromises = currentBatches.map(async (batchPubkeys, localIndex) => {
+          const batchIndex = i + localIndex;
+          const filter: {
+            kinds?: number[];
+            authors: string[];
+            limit: number;
+            since?: number;
+          } = {
+            authors: batchPubkeys,
+            kinds: feedData.filter?.kinds,
+            limit: isArticlesFeed ? 10 : 5, // Limit per batch
+          };
 
-        if (useSince) {
-          filter.since = feedData.column.lastRetrieved;
+          if (useSince) {
+            filter.since = feedData.column.lastRetrieved;
+          }
+
+          try {
+            const events = await this.accountRelay.getMany<Event>(filter, { timeout: TIMEOUT_MS });
+            console.log(`⚡ [Fast Fetch] Batch ${batchIndex + 1}/${batches.length}: got ${events.length} events`);
+            return events;
+          } catch (error) {
+            console.log(`⚡ [Fast Fetch] Batch ${batchIndex + 1} failed:`, error);
+            return [];
+          }
+        });
+
+        const results = await Promise.all(batchPromises);
+        allEvents.push(...results.flat());
+        
+        // Add delay between batch groups to avoid rate limiting
+        if (i + MAX_CONCURRENT_BATCHES < batches.length) {
+          await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
         }
+      }
 
-        try {
-          const events = await this.accountRelay.getMany<Event>(filter, { timeout: TIMEOUT_MS });
-          console.log(`⚡ [Fast Fetch] Batch ${batchIndex + 1}/${batches.length}: got ${events.length} events`);
-          return events;
-        } catch (error) {
-          console.log(`⚡ [Fast Fetch] Batch ${batchIndex + 1} failed:`, error);
-          return [];
-        }
-      });
-
-      // Wait for all batches (with a race against timeout)
-      const allResults = await Promise.all(batchPromises);
-      const events = allResults.flat();
+      const events = allEvents;
 
       if (events.length > 0) {
         console.log(`⚡ [Fast Fetch] Got ${events.length} total events from ${batches.length} batches`);
