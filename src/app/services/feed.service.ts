@@ -1306,10 +1306,10 @@ export class FeedService {
 
       // Process batches with limited concurrency to avoid overwhelming relays
       const allEvents: Event[] = [];
-      
+
       for (let i = 0; i < batches.length; i += MAX_CONCURRENT_BATCHES) {
         const currentBatches = batches.slice(i, i + MAX_CONCURRENT_BATCHES);
-        
+
         const batchPromises = currentBatches.map(async (batchPubkeys, localIndex) => {
           const batchIndex = i + localIndex;
           const filter: {
@@ -1339,7 +1339,7 @@ export class FeedService {
 
         const results = await Promise.all(batchPromises);
         allEvents.push(...results.flat());
-        
+
         // Add delay between batch groups to avoid rate limiting
         if (i + MAX_CONCURRENT_BATCHES < batches.length) {
           await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES_MS));
