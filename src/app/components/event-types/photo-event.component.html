@@ -79,6 +79,10 @@
 }
 
 @if (!hideComments()) {
-<!-- NIP-22 Comments Section -->
+<!-- NIP-22 Comments Section - Deferred to break circular dependency -->
+@defer (on viewport) {
 <app-comments-list [event]="event()"></app-comments-list>
+} @placeholder {
+<div class="comments-placeholder">Loading comments...</div>
+}
 }

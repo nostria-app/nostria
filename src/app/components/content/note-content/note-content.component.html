@@ -122,7 +122,8 @@
   </app-cashu-token>
 </div>
 } @else if (token.type === 'url') {
-<a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer" (click)="onUrlClick(token.content, $event)">{{ token.content }}</a>
+<a class="url-link" [href]="token.content" target="_blank" rel="noopener noreferrer"
+  (click)="onUrlClick(token.content, $event)">{{ token.content }}</a>
 } @else if (token.type === 'youtube') {
 <div class="media-container">
   <iframe width="560" height="315" [src]="token.processedUrl" frameborder="0"
@@ -153,8 +154,8 @@
   }
   @if (isVideoFormatSupported(token.content)) {
   <video controls (error)="onVideoError($event, token.content)" (play)="onVideoPlay($event)"
-    (loadedmetadata)="onVideoMetadataLoaded($event, token.content)"
-    (canplay)="onVideoReady(token.content)" class="main-video" [class.loaded]="isVideoReady(token.content)"
+    (loadedmetadata)="onVideoMetadataLoaded($event, token.content)" (canplay)="onVideoReady(token.content)"
+    class="main-video" [class.loaded]="isVideoReady(token.content)"
     [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)">
     <source [src]="token.content" type="video/{{ getVideoType(token.content) }}" />
     Your browser does not support the video element.
@@ -236,10 +237,15 @@
 </div>
 } @else if (isPhotoEvent(token.id)) {
 <!-- Render kind 20 photo events using PhotoEventComponent for full carousel/blurhash support -->
+<!-- Using @defer to break circular dependency: NoteContent -> PhotoEvent -> CommentsList -> Comment -> Content -> NoteContent -->
 <div class="embedded-photo-event">
   <app-event-header [event]="getEventData(token.id)!" [compact]="true"></app-event-header>
+  @defer {
   <app-photo-event [event]="getEventData(token.id)!" [hideComments]="true"
     [trustedByPubkey]="trustedByPubkey()"></app-photo-event>
+  } @placeholder {
+  <div class="photo-loading-placeholder"></div>
+  }
 </div>
 } @else if (getEventPreview(token.id); as preview) {
 <div class="nostr-event-preview" [innerHTML]="preview"></div>

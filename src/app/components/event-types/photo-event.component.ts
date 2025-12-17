@@ -8,11 +8,12 @@ import { Event } from 'nostr-tools';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/media-with-comments-dialog.component';
-import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ImagePlaceholderService, PlaceholderData } from '../../services/image-placeholder.service';
+// CommentsListComponent import for deferred loading - breaks circular dependency at runtime
+import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 @Component({
   selector: 'app-photo-event',
