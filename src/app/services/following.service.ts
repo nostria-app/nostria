@@ -110,20 +110,28 @@ export class FollowingService {
     this.logger.info(`[FollowingService] Loading ${pubkeys.length} following profiles...`);
 
     try {
-      // Wait for profile cache to be loaded from storage by ApplicationService
-      // This ensures we don't make duplicate requests for profiles already in cache
-      // Both services are triggered by the same followingList signal change
-      const maxWaitTime = 2000; // 2 seconds max
-      const pollInterval = 50; // Check every 50ms
-      let waited = 0;
+      // For RETURNING users: Wait briefly for profile cache to be loaded from storage
+      // For NEW users: Skip wait since there's no cache to wait for
+      // Check if profile discovery has been done to determine if this is a returning user
+      const pubkey = this.accountState.pubkey();
+      const isReturningUser = pubkey && this.accountState.hasProfileDiscoveryBeenDone(pubkey);
+      
+      if (isReturningUser) {
+        // Returning user - wait briefly for cache (reduced from 2s to 500ms)
+        const maxWaitTime = 500;
+        const pollInterval = 50;
+        let waited = 0;
 
-      while (!this.accountState.profileCacheLoaded() && waited < maxWaitTime) {
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
-        waited += pollInterval;
-      }
+        while (!this.accountState.profileCacheLoaded() && waited < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          waited += pollInterval;
+        }
 
-      if (waited > 0) {
-        this.logger.debug(`[FollowingService] Waited ${waited}ms for profile cache to load`);
+        if (waited > 0) {
+          this.logger.debug(`[FollowingService] Waited ${waited}ms for profile cache to load`);
+        }
+      } else {
+        this.logger.debug('[FollowingService] New user - skipping cache wait');
       }
 
       // Create a new map to store all profiles

@@ -73,22 +73,31 @@ export class NotificationService {
         pubkey => !previousMutedAccounts.includes(pubkey)
       );
 
-      // Clean up notifications from newly muted accounts
-      if (newlyMutedAccounts.length > 0) {
-        this.logger.info(`Cleaning up notifications from ${newlyMutedAccounts.length} newly muted accounts`);
-
-        // Use untracked to prevent this write from triggering the effect again
-        untracked(() => {
-          newlyMutedAccounts.forEach(pubkey => {
-            this.removeNotificationsFromAuthor(pubkey);
-          });
-        });
-      }
-
-      // Update the previous muted accounts (use untracked to prevent re-triggering)
+      // Update the previous muted accounts immediately (use untracked to prevent re-triggering)
       untracked(() => {
         this._previousMutedAccounts.set([...currentMutedAccounts]);
       });
+
+      // Clean up notifications from newly muted accounts in the BACKGROUND
+      // This prevents blocking initial feed loading for new users
+      if (newlyMutedAccounts.length > 0) {
+        this.logger.info(`Scheduling cleanup of notifications from ${newlyMutedAccounts.length} newly muted accounts`);
+
+        // Use requestIdleCallback or setTimeout to defer this work
+        // This allows the feed to load first before processing notification cleanup
+        const performCleanup = () => {
+          untracked(() => {
+            this.cleanupNotificationsFromMutedAccounts(newlyMutedAccounts);
+          });
+        };
+
+        // Use requestIdleCallback if available, otherwise setTimeout
+        if (typeof requestIdleCallback !== 'undefined') {
+          requestIdleCallback(performCleanup, { timeout: 5000 });
+        } else {
+          setTimeout(performCleanup, 100);
+        }
+      }
     });
   }
 
@@ -676,9 +685,13 @@ export class NotificationService {
   /**
    * Remove all notifications from a specific author (used when muting an account)
    * CRITICAL: This removes notifications from both memory and storage
+   * @param authorPubkey The pubkey of the author to remove notifications from
+   * @param silent If true, skip logging individual removals (used in batch operations)
    */
-  async removeNotificationsFromAuthor(authorPubkey: string): Promise<void> {
-    this.logger.info(`Removing all notifications from author: ${authorPubkey}`);
+  async removeNotificationsFromAuthor(authorPubkey: string, silent = false): Promise<number> {
+    if (!silent) {
+      this.logger.info(`Removing all notifications from author: ${authorPubkey}`);
+    }
 
     // Get current notifications
     const currentNotifications = this._notifications();
@@ -703,11 +716,12 @@ export class NotificationService {
     });
 
     if (notificationIdsToRemove.length === 0) {
-      this.logger.debug('No notifications found from this author');
-      return;
+      return 0;
     }
 
-    this.logger.info(`Found ${notificationIdsToRemove.length} notifications to remove from author ${authorPubkey}`);
+    if (!silent) {
+      this.logger.info(`Found ${notificationIdsToRemove.length} notifications to remove from author ${authorPubkey}`);
+    }
 
     // Remove from memory
     this._notifications.update(notifications =>
@@ -719,9 +733,42 @@ export class NotificationService {
       await Promise.all(
         notificationIdsToRemove.map(id => this.database.deleteNotification(id))
       );
-      this.logger.info(`Successfully removed ${notificationIdsToRemove.length} notifications from storage`);
     } catch (error) {
       this.logger.error(`Failed to remove notifications from storage`, error);
     }
+
+    return notificationIdsToRemove.length;
+  }
+
+  /**
+   * Clean up notifications from multiple muted accounts in a batched, efficient manner
+   * This method reduces logging overhead by processing all accounts silently and logging a summary
+   */
+  private async cleanupNotificationsFromMutedAccounts(mutedPubkeys: string[]): Promise<void> {
+    this.logger.info(`[Notification Cleanup] Starting batched cleanup for ${mutedPubkeys.length} muted accounts`);
+    const startTime = Date.now();
+    let totalRemoved = 0;
+    let accountsWithNotifications = 0;
+
+    // Process all accounts in parallel for efficiency
+    const results = await Promise.all(
+      mutedPubkeys.map(async (pubkey) => {
+        const removed = await this.removeNotificationsFromAuthor(pubkey, true);
+        return { pubkey, removed };
+      })
+    );
+
+    // Calculate totals
+    for (const result of results) {
+      totalRemoved += result.removed;
+      if (result.removed > 0) {
+        accountsWithNotifications++;
+      }
+    }
+
+    const elapsed = Date.now() - startTime;
+    this.logger.info(
+      `[Notification Cleanup] Completed in ${elapsed}ms: removed ${totalRemoved} notifications from ${accountsWithNotifications}/${mutedPubkeys.length} accounts`
+    );
   }
 }
