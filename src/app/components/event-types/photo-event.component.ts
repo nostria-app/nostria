@@ -7,18 +7,20 @@ import { Router } from '@angular/router';
 import { Event } from 'nostr-tools';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
-import { MediaWithCommentsDialogComponent } from '../media-with-comments-dialog/media-with-comments-dialog.component';
+// MediaWithCommentsDialogComponent is dynamically imported to break circular dependency:
+// PhotoEvent -> MediaWithCommentsDialog -> CommentsList -> Comment -> Content -> NoteContent -> PhotoEvent
 import { SettingsService } from '../../services/settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { ImagePlaceholderService, PlaceholderData } from '../../services/image-placeholder.service';
-// CommentsListComponent import for deferred loading - breaks circular dependency at runtime
-import { CommentsListComponent } from '../comments-list/comments-list.component';
 
 @Component({
   selector: 'app-photo-event',
   standalone: true,
-  imports: [MatIconModule, MatButtonModule, CommentsListComponent],
+  // CommentsListComponent removed to break circular dependency:
+  // PhotoEvent -> CommentsList -> Comment -> Content -> NoteContent -> PhotoEvent
+  // Comments for photo events are handled by the parent EventComponent instead
+  imports: [MatIconModule, MatButtonModule],
   templateUrl: './photo-event.component.html',
   styleUrl: './photo-event.component.scss',
 })
@@ -279,7 +281,7 @@ export class PhotoEventComponent {
     }
   }
 
-  openImageDialog(imageUrl: string, alt: string, event?: MouseEvent | KeyboardEvent): void {
+  async openImageDialog(imageUrl: string, alt: string, event?: MouseEvent | KeyboardEvent): Promise<void> {
     // If media is blurred, reveal it instead of opening dialog
     if (this.shouldBlurMedia()) {
       this.revealMedia();
@@ -300,6 +302,8 @@ export class PhotoEventComponent {
     if (this.showOverlay()) {
       const nostrEvent = this.event();
       if (nostrEvent) {
+        // Dynamic import to break circular dependency
+        const { MediaWithCommentsDialogComponent } = await import('../media-with-comments-dialog/media-with-comments-dialog.component');
         this.dialog.open(MediaWithCommentsDialogComponent, {
           data: {
             event: nostrEvent,
@@ -351,11 +355,13 @@ export class PhotoEventComponent {
     }
   }
 
-  openEventPage(): void {
+  async openEventPage(): Promise<void> {
     const event = this.event();
     if (event) {
       // If showOverlay is true, open the split-view dialog
       if (this.showOverlay()) {
+        // Dynamic import to break circular dependency
+        const { MediaWithCommentsDialogComponent } = await import('../media-with-comments-dialog/media-with-comments-dialog.component');
         this.dialog.open(MediaWithCommentsDialogComponent, {
           data: {
             event,
