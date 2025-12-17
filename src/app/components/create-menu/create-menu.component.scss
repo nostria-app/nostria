@@ -1,0 +1,94 @@
+:host {
+  display: block;
+}
+
+.create-menu-container {
+  min-width: 180px;
+  max-width: 90vw;
+  overflow-y: auto;
+  overflow-x: hidden;
+
+  // Glass effect
+  border-radius: 12px;
+  background-color: rgba(255, 255, 255, 0.85);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  backdrop-filter: blur(20px) saturate(1.8);
+
+  box-shadow:
+    // Inner white highlight
+    inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    // Inner glow
+    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+    // Drop shadows
+    0px 4px 20px rgba(17, 17, 26, 0.1),
+    0px 8px 32px rgba(17, 17, 26, 0.1);
+}
+
+// Dark mode glass effect
+:host-context(.dark) .create-menu-container {
+  background-color: rgba(30, 30, 30, 0.75);
+
+  box-shadow:
+    // Inner highlight (subtler in dark mode)
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    // Inner glow
+    inset 0 0 10px 4px rgba(255, 255, 255, 0.03),
+    // Drop shadows (darker)
+    0px 4px 20px rgba(0, 0, 0, 0.4),
+    0px 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.create-menu-content {
+  padding: 12px;
+}
+
+.menu-title {
+  font-size: 12px;
+  margin: 0 0 8px 4px;
+  padding: 0;
+  opacity: 0.7;
+}
+
+.menu-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  width: 100%;
+  text-align: left;
+  color: var(--mat-sys-on-surface);
+
+  &:hover {
+    background-color: rgba(var(--mat-sys-primary-rgb, 0, 0, 0), 0.08);
+  }
+
+  &:active {
+    background-color: rgba(var(--mat-sys-primary-rgb, 0, 0, 0), 0.12);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+  }
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+    flex-shrink: 0;
+  }
+}
+
+.menu-item-label {
+  font-size: 14px;
+  white-space: nowrap;
+}
