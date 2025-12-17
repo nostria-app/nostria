@@ -142,6 +142,17 @@ bubblewrap init --manifest https://nostria.app/manifest.webmanifest --drectory=s
 bubblewrap build
 ```
 
+## ZapStore
+
+```
+# Make sure the signing method is added to the .env file
+
+./zapstore publish
+
+# Preview using a local web browser.
+# Verify the events before publishing.
+```
+
 ## Classifications
 
 - Accounts - List of accounts that the user has access to.
