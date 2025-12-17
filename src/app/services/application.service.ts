@@ -83,11 +83,10 @@ export class ApplicationService {
           console.log(`🔍 [Profile Loading Effect] Discovery status for ${pubkey.substring(0, 8)}...: ${hasDiscoveryBeenDone ? 'DONE' : 'NOT DONE'}`);
 
           if (!hasDiscoveryBeenDone) {
-            // Delay first-time profile loading briefly to let feeds start loading
-            // Reduced from 5s to 2s - this gives feeds a head start while not delaying profiles too much
-            // Profile names will appear progressively as they load, which is acceptable UX
-            console.log(`🆕 [Profile Loading Effect] First time load - brief delay for feed priority`);
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Wait for feed content to actually render before starting heavy profile loading
+            // This ensures users see content first, not a blank screen while profiles load
+            console.log(`🆕 [Profile Loading Effect] First time load - waiting for feed content`);
+            await this.waitForFeedContent(30000); // Wait up to 30 seconds for feed content
 
             // Re-check if we still need to process (account might have changed)
             if (this.accountState.pubkey() !== pubkey) {
@@ -238,6 +237,38 @@ export class ApplicationService {
       // Reload the application
       window.location.reload();
     }
+  }
+
+  /**
+   * Wait for feed content to be ready before continuing
+   * Returns immediately if content is already available, otherwise waits up to maxWaitMs
+   * @param maxWaitMs Maximum time to wait for content (default 5000ms)
+   */
+  private async waitForFeedContent(maxWaitMs: number = 5000): Promise<void> {
+    // Check if content is already ready
+    if (this.appState.feedHasInitialContent()) {
+      console.log('📋 [Profile Loading] Feed content already ready, proceeding immediately');
+      return;
+    }
+
+    console.log(`📋 [Profile Loading] Waiting up to ${maxWaitMs}ms for feed content...`);
+
+    return new Promise<void>((resolve) => {
+      const startTime = Date.now();
+      const checkInterval = 100; // Check every 100ms
+
+      const intervalId = setInterval(() => {
+        if (this.appState.feedHasInitialContent()) {
+          clearInterval(intervalId);
+          console.log(`📋 [Profile Loading] Feed content ready after ${Date.now() - startTime}ms`);
+          resolve();
+        } else if (Date.now() - startTime >= maxWaitMs) {
+          clearInterval(intervalId);
+          console.log(`📋 [Profile Loading] Timeout waiting for feed content, proceeding anyway`);
+          resolve();
+        }
+      }, checkInterval);
+    });
   }
 
   /**

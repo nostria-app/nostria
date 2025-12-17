@@ -58,7 +58,7 @@ interface TimelineEvent {
 }
 
 // Constants for configurable limits
-const DEFAULT_DAYS_LOOKBACK = 2;
+const DEFAULT_DAYS_LOOKBACK = 1; // 1 day lookback for first-time users
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const MAX_POSTERS_DISPLAY = 100;
 const MAX_PROFILE_UPDATES = 10;
