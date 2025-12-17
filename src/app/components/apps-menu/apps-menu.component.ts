@@ -44,38 +44,38 @@ export class AppsMenuComponent {
 
   closed = output<void>();
 
-  createItems: MenuItem[] = [
-    {
-      icon: 'create',
-      label: 'Note',
-      action: () => this.eventService.createNote(),
-      hideWhenNotAuthenticated: true,
-    },
-    {
-      icon: 'cinematic_blur',
-      label: 'Video Clip',
-      action: () => this.layout.openRecordVideoDialog(),
-      hideWhenNotAuthenticated: true,
-    },
-    {
-      icon: 'mic',
-      label: 'Audio Clip',
-      action: () => this.layout.openRecordAudioDialog(),
-      hideWhenNotAuthenticated: true,
-    },
-    {
-      icon: 'article',
-      label: 'Article',
-      action: () => this.layout.createArticle(),
-      hideWhenNotAuthenticated: true,
-    },
-    {
-      icon: 'upload',
-      label: 'Upload',
-      action: () => this.layout.uploadMedia(),
-      hideWhenNotAuthenticated: true,
-    },
-  ];
+  // createItems: MenuItem[] = [
+  //   {
+  //     icon: 'create',
+  //     label: 'Note',
+  //     action: () => this.eventService.createNote(),
+  //     hideWhenNotAuthenticated: true,
+  //   },
+  //   {
+  //     icon: 'cinematic_blur',
+  //     label: 'Video Clip',
+  //     action: () => this.layout.openRecordVideoDialog(),
+  //     hideWhenNotAuthenticated: true,
+  //   },
+  //   {
+  //     icon: 'mic',
+  //     label: 'Audio Clip',
+  //     action: () => this.layout.openRecordAudioDialog(),
+  //     hideWhenNotAuthenticated: true,
+  //   },
+  //   {
+  //     icon: 'article',
+  //     label: 'Article',
+  //     action: () => this.layout.createArticle(),
+  //     hideWhenNotAuthenticated: true,
+  //   },
+  //   {
+  //     icon: 'upload',
+  //     label: 'Upload',
+  //     action: () => this.layout.uploadMedia(),
+  //     hideWhenNotAuthenticated: true,
+  //   },
+  // ];
 
   contentItems: MenuItem[] = [
     { icon: 'photo_library', label: 'Media', route: ['/media'] },
@@ -162,12 +162,12 @@ export class AppsMenuComponent {
     });
   }
 
-  getCreateItems(): MenuItem[] {
-    return this.createItems.filter(item => {
-      if (item.hideWhenNotAuthenticated && !this.app.authenticated()) return false;
-      return true;
-    });
-  }
+  // getCreateItems(): MenuItem[] {
+  //   return this.createItems.filter(item => {
+  //     if (item.hideWhenNotAuthenticated && !this.app.authenticated()) return false;
+  //     return true;
+  //   });
+  // }
 
   getMoreItems(): MenuItem[] {
     return this.moreItems.filter(item => {
