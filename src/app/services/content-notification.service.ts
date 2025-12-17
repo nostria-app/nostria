@@ -591,4 +591,300 @@ export class ContentNotificationService {
   get checking(): boolean {
     return this.isChecking();
   }
+
+  /**
+   * Check for older notifications within a specific time range
+   * Used for "load more" functionality when scrolling
+   * @param since Unix timestamp (seconds) - start of range
+   * @param until Unix timestamp (seconds) - end of range
+   */
+  async checkForOlderNotifications(since: number, until: number): Promise<void> {
+    if (this.isChecking()) {
+      this.logger.debug('Already checking for notifications, skipping');
+      return;
+    }
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.warn('No active account, skipping older notification check');
+      return;
+    }
+
+    this.isChecking.set(true);
+
+    try {
+      this.logger.info(`Loading older notifications from ${new Date(since * 1000).toISOString()} to ${new Date(until * 1000).toISOString()}`);
+
+      // Check for all notification types in parallel with the specific time range
+      await Promise.all([
+        this.checkForNewFollowersInRange(pubkey, since, until),
+        this.checkForMentionsInRange(pubkey, since, until),
+        this.checkForRepostsInRange(pubkey, since, until),
+        this.checkForRepliesInRange(pubkey, since, until),
+        this.checkForReactionsInRange(pubkey, since, until),
+        this.checkForZapsInRange(pubkey, since, until),
+      ]);
+
+      this.logger.info('Completed loading older notifications');
+    } catch (error) {
+      this.logger.error('Failed to check for older notifications', error);
+    } finally {
+      this.isChecking.set(false);
+    }
+  }
+
+  /**
+   * Check for new followers within a specific time range
+   */
+  private async checkForNewFollowersInRange(pubkey: string, since: number, until: number): Promise<void> {
+    try {
+      const events = await this.accountRelay.getMany({
+        kinds: [kinds.Contacts],
+        '#p': [pubkey],
+        since,
+        until,
+        limit: NOTIFICATION_QUERY_LIMITS.FOLLOWERS,
+      });
+
+      for (const event of events) {
+        if (event.pubkey === pubkey) continue;
+        
+        const pTags = event.tags.filter(tag => tag[0] === 'p');
+        if (pTags.length > 0) {
+          const lastPTag = pTags[pTags.length - 1];
+          if (lastPTag[1] === pubkey) {
+            await this.createContentNotification({
+              type: NotificationType.NEW_FOLLOWER,
+              title: 'New follower',
+              message: 'Someone started following you',
+              authorPubkey: event.pubkey,
+              recipientPubkey: pubkey,
+              eventId: event.id,
+              kind: 3,
+              timestamp: event.created_at * 1000,
+            });
+          }
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to check for new followers in range', error);
+    }
+  }
+
+  /**
+   * Check for mentions within a specific time range
+   */
+  private async checkForMentionsInRange(pubkey: string, since: number, until: number): Promise<void> {
+    try {
+      const events = await this.accountRelay.getMany({
+        kinds: [kinds.ShortTextNote],
+        '#p': [pubkey],
+        since,
+        until,
+        limit: NOTIFICATION_QUERY_LIMITS.MENTIONS,
+      });
+
+      for (const event of events) {
+        if (event.pubkey === pubkey) continue;
+        
+        const isReply = event.tags.some(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
+        if (isReply) continue;
+
+        await this.createContentNotification({
+          type: NotificationType.MENTION,
+          title: 'Mentioned you',
+          message: event.content.substring(0, 100) + (event.content.length > 100 ? '...' : ''),
+          authorPubkey: event.pubkey,
+          recipientPubkey: pubkey,
+          eventId: event.id,
+          kind: 1,
+          timestamp: event.created_at * 1000,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Failed to check for mentions in range', error);
+    }
+  }
+
+  /**
+   * Check for reposts within a specific time range
+   */
+  private async checkForRepostsInRange(pubkey: string, since: number, until: number): Promise<void> {
+    try {
+      const events = await this.accountRelay.getMany({
+        kinds: [kinds.Repost, 16],
+        '#p': [pubkey],
+        since,
+        until,
+        limit: NOTIFICATION_QUERY_LIMITS.REPOSTS,
+      });
+
+      for (const event of events) {
+        if (event.pubkey === pubkey) continue;
+
+        const eTag = event.tags.find(tag => tag[0] === 'e');
+        await this.createContentNotification({
+          type: NotificationType.REPOST,
+          title: 'Reposted your note',
+          message: '',
+          authorPubkey: event.pubkey,
+          recipientPubkey: pubkey,
+          eventId: eTag?.[1] || event.id,
+          kind: event.kind,
+          timestamp: event.created_at * 1000,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Failed to check for reposts in range', error);
+    }
+  }
+
+  /**
+   * Check for replies within a specific time range
+   */
+  private async checkForRepliesInRange(pubkey: string, since: number, until: number): Promise<void> {
+    try {
+      const events = await this.accountRelay.getMany({
+        kinds: [kinds.ShortTextNote],
+        '#p': [pubkey],
+        since,
+        until,
+        limit: NOTIFICATION_QUERY_LIMITS.REPLIES,
+      });
+
+      for (const event of events) {
+        if (event.pubkey === pubkey) continue;
+
+        const isReply = event.tags.some(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
+        if (!isReply) continue;
+
+        const replyToTag = event.tags.find(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
+        await this.createContentNotification({
+          type: NotificationType.REPLY,
+          title: 'Replied to your note',
+          message: event.content.substring(0, 100) + (event.content.length > 100 ? '...' : ''),
+          authorPubkey: event.pubkey,
+          recipientPubkey: pubkey,
+          eventId: replyToTag?.[1] || event.id,
+          kind: 1,
+          timestamp: event.created_at * 1000,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Failed to check for replies in range', error);
+    }
+  }
+
+  /**
+   * Check for reactions within a specific time range
+   */
+  private async checkForReactionsInRange(pubkey: string, since: number, until: number): Promise<void> {
+    try {
+      const events = await this.accountRelay.getMany({
+        kinds: [kinds.Reaction],
+        '#p': [pubkey],
+        since,
+        until,
+        limit: NOTIFICATION_QUERY_LIMITS.REACTIONS,
+      });
+
+      for (const event of events) {
+        if (event.pubkey === pubkey) continue;
+
+        const eTag = event.tags.find(tag => tag[0] === 'e');
+        const reactionContent = event.content || '+';
+        await this.createContentNotification({
+          type: NotificationType.REACTION,
+          title: `Reacted ${reactionContent}`,
+          message: '',
+          authorPubkey: event.pubkey,
+          recipientPubkey: pubkey,
+          eventId: eTag?.[1] || event.id,
+          kind: 7,
+          timestamp: event.created_at * 1000,
+        });
+      }
+    } catch (error) {
+      this.logger.error('Failed to check for reactions in range', error);
+    }
+  }
+
+  /**
+   * Check for zaps within a specific time range
+   */
+  private async checkForZapsInRange(pubkey: string, since: number, until: number): Promise<void> {
+    try {
+      const events = await this.accountRelay.getMany({
+        kinds: [9735],
+        '#p': [pubkey],
+        since,
+        until,
+        limit: NOTIFICATION_QUERY_LIMITS.ZAPS,
+      });
+
+      for (const event of events) {
+        // Parse the zap request from the description tag
+        const descriptionTag = event.tags.find(tag => tag[0] === 'description');
+        let zapperPubkey = event.pubkey;
+        let zapContent = '';
+        let zapRequestEventId: string | undefined;
+
+        if (descriptionTag && descriptionTag[1]) {
+          try {
+            const zapRequest = JSON.parse(descriptionTag[1]);
+            if (zapRequest && zapRequest.pubkey) {
+              zapperPubkey = zapRequest.pubkey;
+              if (zapRequest.content && typeof zapRequest.content === 'string') {
+                zapContent = zapRequest.content.trim();
+              }
+              const eTag = zapRequest.tags?.find((t: string[]) => t[0] === 'e');
+              if (eTag && eTag[1]) {
+                zapRequestEventId = eTag[1];
+              }
+            }
+          } catch (err) {
+            this.logger.warn('Failed to parse zap request description', err);
+          }
+        }
+
+        // Skip if the zapper is the current user
+        if (zapperPubkey === pubkey) continue;
+
+        // Extract zap amount from bolt11 tag
+        const bolt11Tag = event.tags.find(tag => tag[0] === 'bolt11');
+        let zapAmount = 0;
+
+        if (bolt11Tag && bolt11Tag[1]) {
+          try {
+            const amountSats = nip57.getSatoshisAmountFromBolt11(bolt11Tag[1]);
+            if (amountSats) {
+              zapAmount = amountSats;
+            }
+          } catch (error) {
+            this.logger.warn('Failed to parse bolt11 amount from zap receipt', error);
+          }
+        }
+
+        await this.createContentNotification({
+          type: NotificationType.ZAP,
+          title: 'Zapped you',
+          message: zapAmount > 0 ? `${zapAmount} sats` : undefined,
+          authorPubkey: zapperPubkey,
+          recipientPubkey: pubkey,
+          eventId: zapRequestEventId,
+          kind: 9735,
+          timestamp: event.created_at * 1000,
+          metadata: {
+            zapAmount,
+            zappedEventId: zapRequestEventId,
+            zapReceiptId: event.id,
+            recipientPubkey: pubkey,
+            content: zapContent,
+          },
+        });
+      }
+    } catch (error) {
+      this.logger.error('Failed to check for zaps in range', error);
+    }
+  }
 }

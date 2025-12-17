@@ -10,6 +10,7 @@ import { RelayPublishStatusComponent } from '../../components/relay-publish-stat
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { NotificationService } from '../../services/notification.service';
 import {
   NotificationType,
@@ -48,7 +49,8 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     RouterModule,
     AgoPipe,
     UserProfileComponent,
-    MatSnackBarModule
+    MatSnackBarModule,
+    MatProgressSpinnerModule
   ],
   templateUrl: './notifications.component.html',
   styleUrls: ['./notifications.component.scss'],
@@ -66,6 +68,15 @@ export class NotificationsComponent implements OnInit {
 
   notifications = this.notificationService.notifications;
   notificationType = NotificationType;
+
+  // State for loading older notifications
+  isLoadingMore = signal(false);
+  oldestTimestamp = signal<number | null>(null);
+  hasMoreNotifications = signal(true);
+  // Default lookback period in days
+  private readonly DEFAULT_LOOKBACK_DAYS = 7;
+  // How many more days to load when scrolling
+  private readonly LOAD_MORE_DAYS = 7;
 
   // Notification type filter preferences
   notificationFilters = signal<Record<NotificationType, boolean>>({
@@ -489,5 +500,58 @@ export class NotificationsComponent implements OnInit {
       horizontalPosition: 'center',
       verticalPosition: 'bottom'
     });
+  }
+
+  /**
+   * Handle virtual scroll viewport reaching end - load more notifications
+   */
+  onScrolledIndexChange(index: number): void {
+    const notifications = this.contentNotifications();
+    // Load more when user scrolls near the end (within last 5 items)
+    if (notifications.length > 0 && index >= notifications.length - 5) {
+      this.loadMoreNotifications();
+    }
+  }
+
+  /**
+   * Load older notifications by extending the lookback period
+   */
+  async loadMoreNotifications(): Promise<void> {
+    if (this.isLoadingMore() || !this.hasMoreNotifications()) {
+      return;
+    }
+
+    this.isLoadingMore.set(true);
+
+    try {
+      // Get the oldest notification timestamp
+      const notifications = this.contentNotifications();
+      const currentOldest = notifications.length > 0 
+        ? Math.min(...notifications.map(n => n.timestamp)) 
+        : Date.now();
+
+      // Calculate the new lookback period (go back LOAD_MORE_DAYS from the oldest notification)
+      const oldestSeconds = Math.floor(currentOldest / 1000);
+      const newSince = oldestSeconds - (this.LOAD_MORE_DAYS * 24 * 60 * 60);
+
+      // Track how many notifications we had before
+      const countBefore = notifications.length;
+
+      // Fetch notifications for the extended period
+      await this.contentNotificationService.checkForOlderNotifications(newSince, oldestSeconds);
+
+      // Check if we got any new notifications
+      const countAfter = this.contentNotifications().length;
+      if (countAfter === countBefore) {
+        // No new notifications found, we've reached the end
+        this.hasMoreNotifications.set(false);
+      }
+
+      this.oldestTimestamp.set(newSince * 1000);
+    } catch (error) {
+      console.error('Failed to load more notifications:', error);
+    } finally {
+      this.isLoadingMore.set(false);
+    }
   }
 }

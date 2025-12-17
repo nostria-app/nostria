@@ -357,7 +357,8 @@ export class Metrics {
     // Mark event as processed
     await this.markEventProcessed(eventId, currentAccount);
 
-    console.debug(`Added ${points} engagement points to ${validHexPubkey} for ${actionType} (event: ${eventId})`);
+    // Debug logging disabled for production - uncomment for debugging engagement tracking
+    // console.debug(`Added ${points} engagement points to ${validHexPubkey} for ${actionType} (event: ${eventId})`);
     return true;
   }
 
