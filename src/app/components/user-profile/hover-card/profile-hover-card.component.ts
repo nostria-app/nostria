@@ -16,6 +16,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { RouterModule } from '@angular/router';
 import { DataService } from '../../../services/data.service';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -78,6 +79,7 @@ export class ProfileHoverCardComponent {
   private favoritesService = inject(FavoritesService);
   private publishService = inject(PublishService);
   private nostrService = inject(NostrService);
+  private snackBar = inject(MatSnackBar);
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);
@@ -232,12 +234,16 @@ export class ProfileHoverCardComponent {
       if (this.isFollowing()) {
         await this.accountState.unfollow(pubkey);
         this.isFollowing.set(false);
+        this.snackBar.open('Unfollowed successfully', 'Dismiss', { duration: 3000 });
       } else {
         await this.accountState.follow(pubkey);
         this.isFollowing.set(true);
+        const displayName = this.profile()?.data?.display_name || this.profile()?.data?.name || 'User';
+        this.snackBar.open(`Now following ${displayName}`, 'Dismiss', { duration: 3000 });
       }
     } catch (error) {
       console.error('Failed to toggle follow:', error);
+      this.snackBar.open('Failed to update follow status', 'Dismiss', { duration: 3000 });
     } finally {
       this.isLoadingFollowing.set(false);
     }

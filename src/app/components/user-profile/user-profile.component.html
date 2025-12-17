@@ -27,8 +27,7 @@
         [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
         [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)" #avatarElement
         (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()"
-        (click)="disableLink() && $event.preventDefault()" appLongPress
-        (longPress)="onLongPress($event, avatarElement)">
+        (click)="disableLink() && $event.preventDefault()">
         @if (isLoading()) {
         <mat-spinner [diameter]="getSpinnerSize()" color="primary"></mat-spinner>
         } @else if (profile()?.data?.picture && !imageLoadError()) {
@@ -73,16 +72,14 @@
     <div class="user-profile-content">
       <!-- Name section -->
       <a [routerLink]="['/p', npubValue()]" class="user-profile-name-link" #nameElement
-        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()" appLongPress
-        (longPress)="onLongPress($event, nameElement)">
+        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()">
         <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
       </a>
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details') {
       <a [routerLink]="['/p', npubValue()]" class="user-profile-npub-link" #npubElement
-        (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()" appLongPress
-        (longPress)="onLongPress($event, npubElement)">
+        (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()">
         <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       </a>
       }

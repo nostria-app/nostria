@@ -36,7 +36,6 @@ import { ProfileDisplayNameComponent } from './display-name/profile-display-name
 import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
 import { TrustService } from '../../services/trust.service';
 import { MatBadgeModule } from '@angular/material/badge';
-import { LongPressDirective } from '../../directives/long-press.directive';
 
 @Component({
   selector: 'app-user-profile',
@@ -53,7 +52,6 @@ import { LongPressDirective } from '../../directives/long-press.directive';
     MatButtonModule,
     MatBadgeModule,
     RouterModule,
-    LongPressDirective,
   ],
   templateUrl: './user-profile.component.html',
   styleUrl: './user-profile.component.scss',
@@ -76,10 +74,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   private hoverCardService = inject(ProfileHoverCardService);
   private trustService = inject(TrustService);
   layout = inject(LayoutService);
-
-  // Detect primary touch device (phones/tablets) - NOT touchscreen laptops
-  // Uses media query to check if the primary pointing device has limited hover capability
-  isTouchDevice = isPlatformBrowser(this.platformId) && window.matchMedia('(hover: none)').matches;
 
   publicKey = '';
   pubkey = input<string>('');
@@ -547,11 +541,6 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Skip hover on touch devices - they use long press instead
-    if (this.isTouchDevice) {
-      return;
-    }
-
     this.hoverCardService.showHoverCard(triggerElement, this.pubkey());
   }
 
@@ -560,17 +549,5 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   onMouseLeave(): void {
     this.hoverCardService.hideHoverCard();
-  }
-
-  /**
-   * Shows the profile hover card immediately on long press (for touch devices)
-   */
-  onLongPress(event: TouchEvent | MouseEvent, triggerElement: HTMLElement): void {
-    // Don't show hover card for tiny/name-only views
-    if (this.view() === 'tiny' || this.view() === 'name') {
-      return;
-    }
-
-    this.hoverCardService.showHoverCardImmediately(triggerElement, this.pubkey());
   }
 }
