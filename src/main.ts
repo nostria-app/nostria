@@ -62,6 +62,8 @@ async function initLanguage(locale: string): Promise<void> {
 
 async function getLocaleModule(locale: string) {
   switch (locale) {
+    case 'es':
+      return await import('@angular/common/locales/es');
     case 'ru':
       return await import('@angular/common/locales/ru');
     case 'no':
