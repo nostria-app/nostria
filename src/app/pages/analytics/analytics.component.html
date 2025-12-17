@@ -436,34 +436,34 @@
           <div class="zap-stats-grid">
             <mat-card class="zap-stat-card">
               <mat-card-content>
-                <div class="zap-stat-value">{{ zapMetricsData().totalReceived | number }}</div>
+                <div class="zap-stat-value">{{ zapAnalytics().zapsReceived | number }}</div>
                 <div class="zap-stat-label">Zaps Received</div>
               </mat-card-content>
             </mat-card>
             <mat-card class="zap-stat-card">
               <mat-card-content>
-                <div class="zap-stat-value">{{ formatSats(zapMetricsData().totalVolumeReceived) }}</div>
+                <div class="zap-stat-value">{{ formatSats(zapAnalytics().satsReceived) }}</div>
                 <div class="zap-stat-label">Sats Received</div>
               </mat-card-content>
             </mat-card>
             <mat-card class="zap-stat-card">
               <mat-card-content>
-                <div class="zap-stat-value">{{ zapMetricsData().totalSent | number }}</div>
+                <div class="zap-stat-value">{{ zapAnalytics().zapsSent | number }}</div>
                 <div class="zap-stat-label">Zaps Sent</div>
               </mat-card-content>
             </mat-card>
             <mat-card class="zap-stat-card">
               <mat-card-content>
-                <div class="zap-stat-value">{{ formatSats(zapMetricsData().totalVolumeSent) }}</div>
+                <div class="zap-stat-value">{{ formatSats(zapAnalytics().satsSent) }}</div>
                 <div class="zap-stat-label">Sats Sent</div>
               </mat-card-content>
             </mat-card>
           </div>
 
-          @if (zapDailyStats().length > 0) {
+          @if (dailyZapData().length > 0) {
           <h3>Daily Zap Activity (Last 30 Days)</h3>
           <div class="zap-daily-chart">
-            @for (day of zapDailyStats(); track day.date) {
+            @for (day of dailyZapData(); track day.date) {
             <div class="zap-day" [matTooltip]="day.date + ': ' + day.received + ' received, ' + day.sent + ' sent'">
               <div class="zap-day-bar received" [style.height.px]="getZapBarHeight(day.volumeReceived, 'received')">
               </div>
