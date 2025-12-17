@@ -74,6 +74,7 @@ export class GeneralSettingsComponent {
     { code: 'ar', name: 'العربية' },
     { code: 'cnr', name: 'Crnogorski' },
     { code: 'fa', name: 'فارسی' },
+    { code: 'fr', name: 'Français' },
     { code: 'no', name: 'Norsk' },
     { code: 'ru', name: 'Русский' },
     { code: 'sw', name: 'Kiswahili' },
