@@ -21,8 +21,6 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { VideoPlaybackService } from '../../../services/video-playback.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
-// PhotoEventComponent is loaded via @defer to break circular dependency chain:
-// NoteContentComponent -> PhotoEventComponent -> CommentsListComponent -> CommentComponent -> ContentComponent -> NoteContentComponent
 import { PhotoEventComponent } from '../../event-types/photo-event.component';
 import { EventHeaderComponent } from '../../event/header/header.component';
 import { Event as NostrEvent } from 'nostr-tools';
