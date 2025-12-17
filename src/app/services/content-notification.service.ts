@@ -648,7 +648,7 @@ export class ContentNotificationService {
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
-        
+
         const pTags = event.tags.filter(tag => tag[0] === 'p');
         if (pTags.length > 0) {
           const lastPTag = pTags[pTags.length - 1];
@@ -686,7 +686,7 @@ export class ContentNotificationService {
 
       for (const event of events) {
         if (event.pubkey === pubkey) continue;
-        
+
         const isReply = event.tags.some(tag => tag[0] === 'e' && (tag[3] === 'reply' || tag[3] === 'root'));
         if (isReply) continue;
 

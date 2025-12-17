@@ -256,7 +256,7 @@ export class ApplicationService {
       this.logger.info(
         '[ApplicationService] Profile processing complete - triggering first-time notification check (7 days)'
       );
-      this.contentNotificationService.checkForNewNotifications(7).catch(error => {
+      this.contentNotificationService.checkForNewNotifications(2).catch(error => {
         this.logger.error('[ApplicationService] Failed to check notifications after profile processing', error);
       });
     } else {

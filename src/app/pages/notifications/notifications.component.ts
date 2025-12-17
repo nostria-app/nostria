@@ -74,9 +74,9 @@ export class NotificationsComponent implements OnInit {
   oldestTimestamp = signal<number | null>(null);
   hasMoreNotifications = signal(true);
   // Default lookback period in days
-  private readonly DEFAULT_LOOKBACK_DAYS = 7;
+  private readonly DEFAULT_LOOKBACK_DAYS = 2;
   // How many more days to load when scrolling
-  private readonly LOAD_MORE_DAYS = 7;
+  private readonly LOAD_MORE_DAYS = 2;
 
   // Notification type filter preferences
   notificationFilters = signal<Record<NotificationType, boolean>>({
@@ -526,8 +526,8 @@ export class NotificationsComponent implements OnInit {
     try {
       // Get the oldest notification timestamp
       const notifications = this.contentNotifications();
-      const currentOldest = notifications.length > 0 
-        ? Math.min(...notifications.map(n => n.timestamp)) 
+      const currentOldest = notifications.length > 0
+        ? Math.min(...notifications.map(n => n.timestamp))
         : Date.now();
 
       // Calculate the new lookback period (go back LOAD_MORE_DAYS from the oldest notification)
