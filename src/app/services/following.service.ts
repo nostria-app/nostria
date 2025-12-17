@@ -7,7 +7,6 @@ import { Metrics } from './metrics';
 import { LoggerService } from './logger.service';
 import { NostrRecord } from '../interfaces';
 import { UserMetric } from '../interfaces/metrics';
-import { ImageCacheService } from './image-cache.service';
 
 // Define InfoRecord locally for type compatibility
 interface InfoRecord {
@@ -43,7 +42,6 @@ export class FollowingService {
   private readonly userData = inject(UserDataService);
   private readonly metrics = inject(Metrics);
   private readonly logger = inject(LoggerService);
-  private readonly imageCacheService = inject(ImageCacheService);
 
   // In-memory cache of all following profiles
   private readonly profilesMap = signal<Map<string, FollowingProfile>>(new Map());
@@ -190,9 +188,6 @@ export class FollowingService {
       this.profilesMap.set(newMap);
       this.isInitialized.set(true);
       this.logger.info(`[FollowingService] Successfully loaded ${newMap.size} following profiles (${cachedCount} from cache, ${loadedCount} from storage)`);
-
-      // Preload profile images in the background
-      this.preloadProfileImages(newMap);
     } catch (error) {
       this.logger.error('[FollowingService] Error loading profiles:', error);
     } finally {
@@ -274,49 +269,6 @@ export class FollowingService {
     } catch (error) {
       this.logger.error('[FollowingService] Error adding profiles:', error);
     }
-  }
-
-  /**
-   * Preload images for all following profiles in the background.
-   * Delays preloading to avoid interfering with initial feed loading.
-   */
-  private preloadProfileImages(profilesMap: Map<string, FollowingProfile>): void {
-    // Delay image preloading by 10 seconds to prioritize feed content loading
-    // This prevents bandwidth competition during the critical initial load phase
-    setTimeout(() => {
-      // Use requestIdleCallback for additional deferral when browser is idle
-      const schedulePreload = (callback: () => void) => {
-        if (typeof requestIdleCallback !== 'undefined') {
-          requestIdleCallback(callback, { timeout: 10000 });
-        } else {
-          queueMicrotask(callback);
-        }
-      };
-
-      schedulePreload(async () => {
-        try {
-          const imagesToPreload: string[] = [];
-
-          // Collect all profile image URLs
-          for (const profile of profilesMap.values()) {
-            if (profile.profile?.data?.picture) {
-              // Preload images at 96x96 (standard size for all profile images)
-              imagesToPreload.push(profile.profile.data.picture);
-            }
-          }
-
-          if (imagesToPreload.length > 0) {
-            this.logger.info(
-              `[FollowingService] Preloading ${imagesToPreload.length} profile images for ${profilesMap.size} users`
-            );
-            await this.imageCacheService.preloadImages(imagesToPreload);
-            this.logger.info('[FollowingService] Profile images preloaded successfully');
-          }
-        } catch (error) {
-          this.logger.warn('[FollowingService] Failed to preload profile images:', error);
-        }
-      });
-    }, 10000); // 10 second delay
   }
 
   /**
