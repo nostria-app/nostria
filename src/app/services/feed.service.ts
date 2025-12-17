@@ -2354,14 +2354,32 @@ export class FeedService {
 
   /**
    * Initialize default feeds with starter pack data
+   * 
+   * OPTIMIZATION: For first-time users, return default feeds IMMEDIATELY
+   * and fetch starter packs in the background to populate them later.
+   * This ensures feeds load instantly while starter packs are fetched async.
    */
   private async initializeDefaultFeeds(): Promise<FeedConfig[]> {
+    // Clone default feeds FIRST to return immediately
+    const feeds = JSON.parse(JSON.stringify(DEFAULT_FEEDS)) as FeedConfig[];
+    
+    // Start fetching starter packs in the BACKGROUND (don't await)
+    // This allows the feed to load instantly while starter packs are being fetched
+    this.populateStarterPacksInBackground(feeds);
+    
+    return feeds;
+  }
+  
+  /**
+   * Populate starter packs into feeds in the background
+   * Updates the feed configuration once starter packs are loaded
+   */
+  private async populateStarterPacksInBackground(feeds: FeedConfig[]): Promise<void> {
     try {
-      // Fetch available starter packs
+      // Small delay to let the feed UI render first
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const starterPacks = await this.followset.fetchStarterPacks();
-
-      // Clone default feeds
-      const feeds = JSON.parse(JSON.stringify(DEFAULT_FEEDS)) as FeedConfig[];
 
       // Find the starter feed and populate it with the first available starter pack
       const starterFeed = feeds.find(f => f.id === 'default-feed-starter');
@@ -2369,14 +2387,24 @@ export class FeedService {
       if (starterFeed && starterFeed.columns.length > 0 && starterPacks.length > 0) {
         // Use the first starter pack's dTag
         starterFeed.columns[0].customStarterPacks = [starterPacks[0].dTag];
-        this.logger.info('Initialized starter feed with starter pack:', starterPacks[0].dTag);
+        this.logger.info('Populated starter feed with starter pack:', starterPacks[0].dTag);
+        
+        // Update feeds signal with the updated configuration
+        this._feeds.update(currentFeeds => {
+          const updatedFeeds = [...currentFeeds];
+          const index = updatedFeeds.findIndex(f => f.id === 'default-feed-starter');
+          if (index !== -1) {
+            updatedFeeds[index] = { ...starterFeed };
+          }
+          return updatedFeeds;
+        });
+        
+        // Save the updated feeds
+        this.saveFeeds();
       }
-
-      return feeds;
     } catch (error) {
-      this.logger.error('Error initializing default feeds with starter packs:', error);
-      // Return default feeds without starter packs if there's an error
-      return JSON.parse(JSON.stringify(DEFAULT_FEEDS)) as FeedConfig[];
+      this.logger.warn('Background starter pack population failed:', error);
+      // Non-critical - feeds will work without starter packs
     }
   }
 

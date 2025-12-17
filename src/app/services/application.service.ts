@@ -83,10 +83,11 @@ export class ApplicationService {
           console.log(`🔍 [Profile Loading Effect] Discovery status for ${pubkey.substring(0, 8)}...: ${hasDiscoveryBeenDone ? 'DONE' : 'NOT DONE'}`);
 
           if (!hasDiscoveryBeenDone) {
-            // Delay first-time profile loading to not interfere with initial feed loading
-            // This improves UX by allowing feeds to load and display events first
-            console.log(`🆕 [Profile Loading Effect] First time load - delaying profile fetch for better initial UX`);
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            // Delay first-time profile loading briefly to let feeds start loading
+            // Reduced from 5s to 2s - this gives feeds a head start while not delaying profiles too much
+            // Profile names will appear progressively as they load, which is acceptable UX
+            console.log(`🆕 [Profile Loading Effect] First time load - brief delay for feed priority`);
+            await new Promise(resolve => setTimeout(resolve, 2000));
 
             // Re-check if we still need to process (account might have changed)
             if (this.accountState.pubkey() !== pubkey) {
