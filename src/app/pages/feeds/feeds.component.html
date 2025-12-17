@@ -12,10 +12,10 @@
           @if (isMobileView()) {
           <!-- Mobile: Dropdown menu for feeds -->
           <!-- Summary link - always visible -->
-          <a mat-button routerLink="/summary" class="summary-tab hide-tiny">
+          <!-- <a mat-button routerLink="/summary" class="summary-tab hide-tiny">
             <mat-icon>dashboard</mat-icon>
             Summary
-          </a>
+          </a> -->
           <button mat-button [matMenuTriggerFor]="feedMenu">
             <mat-icon>{{ feedIcon() }}</mat-icon>
             {{ feedLabel() }}
@@ -31,10 +31,10 @@
           </mat-menu>
           } @else {
           <!-- Desktop: Summary tab followed by feed tabs -->
-          <a class="feed-tab summary-tab" mat-button routerLink="/summary" matTooltip="View your activity summary">
+          <!-- <a class="feed-tab summary-tab" mat-button routerLink="/summary" matTooltip="View your activity summary">
             <mat-icon>dashboard</mat-icon>
             <span>Summary</span>
-          </a>
+          </a> -->
           @for (feed of feeds(); track feed.id) {
           <button class="feed-tab" mat-button [class.active]="feed.id === feedsCollectionService.activeFeedId()"
             (click)="selectFeed(feed.id)" [matTooltip]="feed.description || feed.label">
