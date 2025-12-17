@@ -46,7 +46,7 @@
       @for (profile of filteredProfiles(); track profile.id) {
       <div class="profile-card" [class.following]="followingProfiles().includes(profile.id)">
         <div class="profile-avatar">
-          <img [src]="profile.avatar" [alt]="profile.name + ' avatar'" [title]="profile.name" />
+          <img [src]="getOptimizedImageUrl(profile.avatar)" [alt]="profile.name + ' avatar'" [title]="profile.name" />
         </div>
         <div class="profile-info">
           <h4>{{ profile.name }}</h4>

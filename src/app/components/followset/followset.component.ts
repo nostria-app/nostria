@@ -1,9 +1,10 @@
-import { Component, input, output, computed } from '@angular/core';
+import { Component, input, output, computed, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
+import { ImageCacheService } from '../../services/image-cache.service';
 
 export interface Interest {
   id: string;
@@ -33,6 +34,8 @@ export interface SuggestedProfile {
   styleUrl: './followset.component.scss',
 })
 export class FollowsetComponent {
+  private readonly imageCacheService = inject(ImageCacheService);
+
   // Inputs
   title = input<string>('What interests you?');
   description = input<string>(
@@ -96,5 +99,12 @@ export class FollowsetComponent {
   getInterestName(interestId: string): string {
     const interest = this.availableInterests().find(i => i.id === interestId);
     return interest?.name || interestId;
+  }
+
+  getOptimizedImageUrl(originalUrl: string): string {
+    if (!originalUrl) {
+      return '';
+    }
+    return this.imageCacheService.getOptimizedImageUrl(originalUrl);
   }
 }
