@@ -801,115 +801,107 @@ export class ZapService {
     const startTime = Date.now();
 
     try {
-      await this.withRetry(
-        async () => {
-          this.logger.info('Starting zap process', { recipientPubkey, amount, eventId });
+      // No automatic retry for the entire zap process to prevent duplicate payments
+      // Users should be presented with a retry option if the payment fails
+      this.logger.info('Starting zap process', { recipientPubkey, amount, eventId });
 
-          // Convert sats to millisats
-          const amountMsats = amount * 1000;
+      // Convert sats to millisats
+      const amountMsats = amount * 1000;
 
-          // Get lightning address from metadata
-          if (!recipientMetadata) {
-            throw new Error(
-              'Recipient metadata required for zapping. Please ensure the recipient has a valid profile with Lightning address.'
-            );
-          }
+      // Get lightning address from metadata
+      if (!recipientMetadata) {
+        throw new Error(
+          'Recipient metadata required for zapping. Please ensure the recipient has a valid profile with Lightning address.'
+        );
+      }
 
-          const lightningAddress = this.getLightningAddress(recipientMetadata);
-          if (!lightningAddress) {
-            throw new Error(
-              'Recipient has no lightning address (lud16 or lud06) configured in their profile. They cannot receive zaps.'
-            );
-          }
+      const lightningAddress = this.getLightningAddress(recipientMetadata);
+      if (!lightningAddress) {
+        throw new Error(
+          'Recipient has no lightning address (lud16 or lud06) configured in their profile. They cannot receive zaps.'
+        );
+      }
 
-          // Fetch LNURL pay info with retry
-          const lnurlPayInfo = await this.withRetry(
-            () => this.fetchLnurlPayInfo(lightningAddress),
-            { maxRetries: 2 },
-            'fetch LNURL pay info'
-          );
+      // Fetch LNURL pay info with retry (safe to retry - no payment involved)
+      const lnurlPayInfo = await this.withRetry(
+        () => this.fetchLnurlPayInfo(lightningAddress),
+        { maxRetries: 2 },
+        'fetch LNURL pay info'
+      );
 
-          // Check if recipient supports Nostr zaps
-          if (!lnurlPayInfo.allowsNostr || !lnurlPayInfo.nostrPubkey) {
-            throw new Error('Recipient does not support Nostr zaps');
-          }
+      // Check if recipient supports Nostr zaps
+      if (!lnurlPayInfo.allowsNostr || !lnurlPayInfo.nostrPubkey) {
+        throw new Error('Recipient does not support Nostr zaps');
+      }
 
-          // Validate amount is within bounds
-          if (amountMsats < lnurlPayInfo.minSendable || amountMsats > lnurlPayInfo.maxSendable) {
-            throw new Error(
-              `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000} sats`
-            );
-          }
+      // Validate amount is within bounds
+      if (amountMsats < lnurlPayInfo.minSendable || amountMsats > lnurlPayInfo.maxSendable) {
+        throw new Error(
+          `Amount must be between ${lnurlPayInfo.minSendable / 1000} and ${lnurlPayInfo.maxSendable / 1000} sats`
+        );
+      }
 
-          // Validate comment length if provided
-          if (message && message.trim()) {
-            const commentAllowed = lnurlPayInfo.commentAllowed || 0;
-            // If commentAllowed is 0, it usually means not allowed.
-            // However, some providers might not return this field correctly.
-            // We will only warn in logs but allow the zap to proceed if the user forced it (which they can do in the UI).
-            // The LNURL service will reject it if it's truly not allowed.
+      // Validate comment length if provided
+      if (message && message.trim()) {
+        const commentAllowed = lnurlPayInfo.commentAllowed || 0;
+        // If commentAllowed is 0, it usually means not allowed.
+        // However, some providers might not return this field correctly.
+        // We will only warn in logs but allow the zap to proceed if the user forced it (which they can do in the UI).
+        // The LNURL service will reject it if it's truly not allowed.
 
-            if (commentAllowed > 0 && message.trim().length > commentAllowed) {
-              // Only enforce length limit if it's explicitly set and greater than 0
-              throw new Error(`Comment too long. Maximum ${commentAllowed} characters allowed.`);
-            }
-          }
+        if (commentAllowed > 0 && message.trim().length > commentAllowed) {
+          // Only enforce length limit if it's explicitly set and greater than 0
+          throw new Error(`Comment too long. Maximum ${commentAllowed} characters allowed.`);
+        }
+      }
 
-          // Convert lightning address to LNURL for the request
-          const lnurl = this.lightningAddressToLnurl(lightningAddress);
+      // Convert lightning address to LNURL for the request
+      const lnurl = this.lightningAddressToLnurl(lightningAddress);
 
-          // Fetch recipient's relays so the Lightning service knows where to publish the zap receipt
-          // Use custom relays if provided (for gift subscriptions), otherwise fetch recipient's relays
-          const recipientRelays = customRelays || await this.getRecipientRelays(recipientPubkey);
-          this.logger.debug('Recipient relays for zap request:', recipientRelays);
+      // Fetch recipient's relays so the Lightning service knows where to publish the zap receipt
+      // Use custom relays if provided (for gift subscriptions), otherwise fetch recipient's relays
+      const recipientRelays = customRelays || await this.getRecipientRelays(recipientPubkey);
+      this.logger.debug('Recipient relays for zap request:', recipientRelays);
 
-          // Create zap request (usually succeeds, so no retry needed)
-          const zapRequest = await this.createZapRequest(
-            recipientPubkey,
-            amountMsats,
-            message,
-            eventId,
-            lnurl,
-            recipientRelays,
-            goalEventId,
-            eventKind,
-            eventAddress
-          );
+      // Create zap request (usually succeeds, so no retry needed)
+      const zapRequest = await this.createZapRequest(
+        recipientPubkey,
+        amountMsats,
+        message,
+        eventId,
+        lnurl,
+        recipientRelays,
+        goalEventId,
+        eventKind,
+        eventAddress
+      );
 
-          // Sign the zap request
-          const signedZapRequest = await this.nostr.signEvent(zapRequest);
+      // Sign the zap request
+      const signedZapRequest = await this.nostr.signEvent(zapRequest);
 
-          // Publish the zap request to relays so it can be queried later
-          // This allows the user to see their sent zaps in history
-          try {
-            await this.accountRelay.publish(signedZapRequest);
-            this.logger.debug('Published zap request to relays:', signedZapRequest.id);
-          } catch (publishError) {
-            // Don't fail the zap if publishing fails - the payment can still proceed
-            this.logger.warn('Failed to publish zap request to relays:', publishError);
-          }
+      // Publish the zap request to relays so it can be queried later
+      // This allows the user to see their sent zaps in history
+      try {
+        await this.accountRelay.publish(signedZapRequest);
+        this.logger.debug('Published zap request to relays:', signedZapRequest.id);
+      } catch (publishError) {
+        // Don't fail the zap if publishing fails - the payment can still proceed
+        this.logger.warn('Failed to publish zap request to relays:', publishError);
+      }
 
-          // Request invoice from LNURL service with retry
-          const zapPayment = await this.withRetry(
-            () =>
-              this.requestZapInvoice(signedZapRequest, lnurlPayInfo.callback, amountMsats, message),
-            { maxRetries: 2 },
-            'request zap invoice'
-          );
+      // Request invoice from LNURL service with retry (safe to retry - no payment involved)
+      const zapPayment = await this.withRetry(
+        () =>
+          this.requestZapInvoice(signedZapRequest, lnurlPayInfo.callback, amountMsats, message),
+        { maxRetries: 2 },
+        'request zap invoice'
+      );
 
-          // Pay the invoice with retry (most critical part)
-          await this.withRetry(
-            () => this.payInvoice(zapPayment.pr),
-            { maxRetries: 1, initialDelay: 2000 }, // Longer delay for payment retries
-            'pay invoice'
-          );
+      // Pay the invoice - NO automatic retry to prevent duplicate payments
+      // If payment fails, the error will be surfaced to the user who can manually retry
+      await this.payInvoice(zapPayment.pr);
 
-          this.logger.info('Zap completed successfully');
-          return true;
-        },
-        { maxRetries: 1 },
-        'send zap'
-      ); // Overall retry for the entire process
+      this.logger.info('Zap completed successfully');
 
       // Record successful zap metrics
       const paymentTime = Date.now() - startTime;
