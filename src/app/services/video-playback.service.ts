@@ -1,16 +1,37 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject, effect } from '@angular/core';
+import { WakeLockService } from './wake-lock.service';
 
 /**
  * Service to manage inline video playback across the application.
  * Ensures only one video plays at a time - when a new video starts,
  * the previously playing video is paused.
+ * 
+ * Also manages screen wake lock to prevent screen from dimming/locking
+ * while videos are playing.
  */
 @Injectable({
   providedIn: 'root',
 })
 export class VideoPlaybackService {
+  private wakeLockService = inject(WakeLockService);
+
   // The currently playing video element
   private currentlyPlayingVideo = signal<HTMLVideoElement | null>(null);
+
+  constructor() {
+    // Watch for changes in playing video and manage wake lock accordingly
+    effect(() => {
+      const video = this.currentlyPlayingVideo();
+      
+      if (video && !video.paused) {
+        // Video is playing, enable wake lock
+        this.wakeLockService.enable();
+      } else {
+        // No video playing or video is paused, disable wake lock
+        this.wakeLockService.disable();
+      }
+    });
+  }
 
   /**
    * Register a video element as currently playing.

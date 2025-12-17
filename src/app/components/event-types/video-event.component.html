@@ -75,7 +75,7 @@
     }
     <video #videoPlayer class="video-player" [class.loaded]="videoReady()" [autoplay]="shouldAutoPlay()"
       [loop]="shouldRepeat()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
-      (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()" (canplay)="onVideoCanPlay()">
+      (pause)="onVideoPause($event)" (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()" (canplay)="onVideoCanPlay()">
       <source [src]="videoInfo.url" [type]="videoMimeType()" />
       Your browser does not support the video tag.
     </video>

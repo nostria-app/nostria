@@ -135,4 +135,48 @@
       </mat-card-actions>
     </mat-card>
   </div>
+
+  <mat-divider style="margin: 32px 0;"></mat-divider>
+
+  <h3>Following List History</h3>
+  <p class="subtitle">Automatic backups of your following list (kind 3 events)</p>
+
+  <mat-card>
+    <mat-card-header>
+      <mat-icon mat-card-avatar class="card-icon">people</mat-icon>
+      <mat-card-title>Following List Backups</mat-card-title>
+      <mat-card-subtitle>Last 10 versions are kept automatically</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      <p>
+        Your following list is automatically backed up every time you follow or unfollow someone. 
+        You can restore a previous version or merge it with your current list.
+      </p>
+      
+      <div class="backup-stats">
+        <div class="stat">
+          <mat-icon>backup</mat-icon>
+          <span class="stat-value">{{ followingBackupsCount() }}</span>
+          <span class="stat-label">Backups Available</span>
+        </div>
+        <div class="stat">
+          <mat-icon>person_add</mat-icon>
+          <span class="stat-value">{{ currentFollowingCount() }}</span>
+          <span class="stat-label">Currently Following</span>
+        </div>
+      </div>
+    </mat-card-content>
+
+    <mat-card-actions>
+      <button 
+        mat-flat-button 
+        (click)="openFollowingHistory()"
+        [disabled]="followingBackupsCount() === 0"
+      >
+        <mat-icon>history</mat-icon>
+        VIEW HISTORY
+      </button>
+    </mat-card-actions>
+  </mat-card>
 </div>

@@ -6,6 +6,7 @@ import { UtilitiesService } from './utilities.service';
 import { ApplicationService } from './application.service';
 import { LocalStorageService } from './local-storage.service';
 import { LayoutService } from './layout.service';
+import { WakeLockService } from './wake-lock.service';
 
 // YouTube Player API types
 interface YouTubePlayer {
@@ -38,6 +39,7 @@ export class MediaPlayerService implements OnInitialized {
   localStorage = inject(LocalStorageService);
   layout = inject(LayoutService);
   app = inject(ApplicationService);
+  private wakeLockService = inject(WakeLockService);
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current = signal<MediaItem | undefined>(undefined);
@@ -635,6 +637,8 @@ export class MediaPlayerService implements OnInitialized {
     // Remove event listeners from previous video element
     if (this.videoElement) {
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
+      this.videoElement.removeEventListener('play', this.handleVideoPlay);
+      this.videoElement.removeEventListener('pause', this.handleVideoPause);
     }
 
     this.videoElement = videoElement;
@@ -642,6 +646,8 @@ export class MediaPlayerService implements OnInitialized {
     // Add event listeners to new video element
     if (videoElement) {
       videoElement.addEventListener('ended', this.handleMediaEnded);
+      videoElement.addEventListener('play', this.handleVideoPlay);
+      videoElement.addEventListener('pause', this.handleVideoPause);
       console.log('Video element registered for current video');
 
       // If we have a current video/HLS item that's waiting for the video element, set it up now
@@ -652,6 +658,16 @@ export class MediaPlayerService implements OnInitialized {
       }
     }
   }
+
+  private handleVideoPlay = () => {
+    console.log('[MediaPlayer] Video playing, enabling wake lock');
+    this.wakeLockService.enable();
+  };
+
+  private handleVideoPause = () => {
+    console.log('[MediaPlayer] Video paused, disabling wake lock');
+    this.wakeLockService.disable();
+  };
 
   private handleMediaEnded = () => {
     console.log('Media ended, checking for next item');
