@@ -1443,8 +1443,80 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     const newContent = target.value;
     this.content.set(newContent);
 
+    // Check for removed mentions and sync with mentions list
+    this.syncMentionsWithContent(newContent);
+
     // Check for mention trigger
     this.handleMentionInput(newContent, target.selectionStart || 0);
+  }
+
+  /**
+   * Sync mentions list with the current content.
+   * Removes mentions from the list if their @name text has been deleted from the content.
+   */
+  private syncMentionsWithContent(currentContent: string): void {
+    const mentionsToRemove: string[] = [];
+
+    // Check each pubkey in the mentions list
+    for (const pubkey of this.mentions()) {
+      // Skip reply target mentions - they should always remain
+      if (this.isReplyTargetMention(pubkey)) {
+        continue;
+      }
+
+      const name = this.pubkeyToNameMap.get(pubkey);
+      if (!name) continue;
+
+      // Build the base mention text
+      const baseMention = `@${name}`;
+
+      // Check if any variant of this mention exists in the content
+      let mentionFound = false;
+
+      // Check base mention
+      if (currentContent.includes(baseMention)) {
+        mentionFound = true;
+      } else {
+        // Check for numbered variants (e.g., @name_1, @name_2)
+        let counter = 1;
+        while (this.mentionMap.has(`${baseMention}_${counter}`)) {
+          if (currentContent.includes(`${baseMention}_${counter}`)) {
+            mentionFound = true;
+            break;
+          }
+          counter++;
+        }
+      }
+
+      if (!mentionFound) {
+        mentionsToRemove.push(pubkey);
+      }
+    }
+
+    // Remove mentions that are no longer in the content
+    if (mentionsToRemove.length > 0) {
+      for (const pubkey of mentionsToRemove) {
+        // Remove from mentions list only (don't modify content as user already did that)
+        this.mentions.set(this.mentions().filter(p => p !== pubkey));
+
+        // Clean up the maps
+        const name = this.pubkeyToNameMap.get(pubkey);
+        if (name) {
+          const baseMention = `@${name}`;
+          this.mentionMap.delete(baseMention);
+          // Also clean up numbered variants
+          let counter = 1;
+          while (this.mentionMap.has(`${baseMention}_${counter}`)) {
+            this.mentionMap.delete(`${baseMention}_${counter}`);
+            counter++;
+          }
+          this.pubkeyToNameMap.delete(pubkey);
+        }
+      }
+
+      // Save draft after mention removal
+      this.saveAutoDraft();
+    }
   }
 
   onHostKeyDown(event: KeyboardEvent): void {
