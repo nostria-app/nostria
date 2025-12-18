@@ -40,6 +40,45 @@ interface ParsedProfileMetadata {
   [key: string]: unknown;
 }
 
+/**
+ * Hardcoded "Popular" starter pack event for immediate loading
+ * This is used as fallback when database has no cached data
+ */
+const POPULAR_STARTER_PACK_EVENT: Event = {
+  id: '89c8d851ae5e634c8c02a63aeca1a79292f2e068e7980eaff3cfd877e4971e40',
+  pubkey: 'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b',
+  created_at: 1760778777,
+  kind: 39089,
+  tags: [
+    ['d', 'popular'],
+    ['title', 'Popular'],
+    ['description', 'These are the profiles that are presented in the Popular feed on Nostria'],
+    ['image', 'https://www.nostria.app/assets/nostria-social.jpg'],
+    ['p', '101a112c8adc2e69e0003114ff1c1d36b7fcde06d84d47968e599d558721b0df'],
+    ['p', 'c0e0c4272134d92da8651650c10ca612b710a670d5e043488f27e073a1f63a16'],
+    ['p', '469223f4ce484bba4e125a8c8a92032e16e5d07b723ea5da2f253b2627da92c7'],
+    ['p', '6116d06dd94aedb145d2e7689a2fe2249de56fc4e89a4cace88a0d4b1d80b135'],
+    ['p', 'd1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b'],
+    ['p', '17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515'],
+    ['p', '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2'],
+    ['p', '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9'],
+    ['p', 'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42'],
+    ['p', '472f440f29ef996e92a186b8d320ff180c855903882e59d50de1b8bd5669301e'],
+    ['p', '85080d3bad70ccdcd7f74c29a44f55bb85cbcd3dd0cbb957da1d215bdb931204'],
+    ['p', 'fa984bd7dbb282f07e16e7ae87b26a2a7b9b90b7246a44771f0cf5ae58018f52'],
+    ['p', '3f770d65d3a764a9c5cb503ae123e62ec7598ad035d836e2a810f3877a745b24'],
+    ['p', '1bc70a0148b3f316da33fe3c89f23e3e71ac4ff998027ec712b905cd24f6a411'],
+    ['p', 'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11'],
+    ['p', 'eab0e756d32b80bcd464f3d844b8040303075a13eabc3599a762c9ac7ab91f4f'],
+    ['p', '91c9a5e1a9744114c6fe2d61ae4de82629eaaa0fb52f48288093c7e7e036f832'],
+    ['p', '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245'],
+    ['p', 'c4eabae1be3cf657bc1855ee05e69de9f059cb7a059227168b80b89761cbc4e0'],
+    ['p', '6e468422dfb74a5738702a8823b9b28168abab8655faacb6853cd0ee15deee93'],
+  ],
+  content: '',
+  sig: 'a0d3eddcd34d83c8050ee50f9bb8cd86240fd8f3ee07271600aa8659e31a3129deadc6194878029aefd77e9b100932019960cf6228409a979389f3f97b89f93a',
+};
+
 @Injectable({
   providedIn: 'root',
 })
@@ -93,14 +132,23 @@ export class Followset {
   );
 
   /**
-   * Fetch starter packs from known curators using DataService
+   * Get the hardcoded "Popular" starter pack
+   * This is always available immediately without any network requests
+   */
+  getHardcodedPopularStarterPack(): StarterPack {
+    return this.parseStarterPackEvent(POPULAR_STARTER_PACK_EVENT)!;
+  }
+
+  /**
+   * Fetch starter packs using a database-first strategy with hardcoded fallback
    * 
-   * This method uses a cache-first strategy:
-   * 1. Returns cached/stored data immediately (fast)
-   * 2. Refreshes from relays in the background for next time
+   * Loading strategy (NO relay fetch on initial load):
+   * 1. Check database for cached starter packs
+   * 2. If found in database, use that data
+   * 3. If NOT found, use hardcoded data immediately (no waiting)
+   * 4. Trigger background refresh from relays to update database for next load
    * 
-   * The OnDemandUserDataService already handles cache/storage via { cache: true, save: true }
-   * so we just need to trigger a background refresh after returning cached data.
+   * This ensures instant loading on first use while keeping data fresh for subsequent loads.
    * 
    * @param dTagFilter Optional d-tag to filter for a specific starter pack (e.g., 'popular')
    */
@@ -110,13 +158,14 @@ export class Followset {
 
     try {
       const starterPacks: StarterPack[] = [];
+      let usedHardcodedFallback = false;
 
       // Fetch starter packs from each source
       // Process sources in parallel for faster loading
       const sourcePromises = this.STARTER_PACK_SOURCES.map(async source => {
         try {
-          // One-shot fetch via on-demand service to avoid holding sockets
-          // This uses cache: true, save: true - so it returns cached data quickly
+          // Try to get from database/cache ONLY (no relay fetch)
+          // This uses cache: true, save: true - returns cached data if available
           const events = await this.onDemandUserData.getEventsByPubkeyAndKind(
             source.pubkey,
             39089 // Starter pack kind
@@ -138,7 +187,7 @@ export class Followset {
           });
           return packs;
         } catch (error) {
-          this.logger.error(`Failed to fetch starter packs from ${source.pubkey}:`, error);
+          this.logger.debug(`No cached starter packs for ${source.pubkey}:`, error);
           return [];
         }
       });
@@ -147,8 +196,27 @@ export class Followset {
       const results = await Promise.all(sourcePromises);
       results.forEach(packs => starterPacks.push(...packs));
 
+      // Check if we need to add the hardcoded "Popular" starter pack
+      // Add it if:
+      // 1. No filter specified OR filter is 'popular'
+      // 2. AND it's not already in the results from database
+      const needsPopular = !dTagFilter || dTagFilter === 'popular';
+      const hasPopular = starterPacks.some(pack => pack.dTag === 'popular');
+
+      if (needsPopular && !hasPopular) {
+        // Use hardcoded fallback for immediate loading
+        const hardcodedPopular = this.getHardcodedPopularStarterPack();
+        starterPacks.unshift(hardcodedPopular); // Add at beginning for priority
+        usedHardcodedFallback = true;
+        this.logger.info('[Followset] Using hardcoded Popular starter pack (no cached data)');
+      }
+
       this.starterPacks.set(starterPacks);
-      this.logger.info(`Fetched ${starterPacks.length} starter packs from cache/storage${dTagFilter ? ` (filtered by d-tag: ${dTagFilter})` : ''}`);
+      this.logger.info(
+        `[Followset] Loaded ${starterPacks.length} starter packs` +
+        `${usedHardcodedFallback ? ' (includes hardcoded fallback)' : ' from cache'}` +
+        `${dTagFilter ? ` (filtered by d-tag: ${dTagFilter})` : ''}`
+      );
 
       // Trigger background refresh from relays for next time
       // This happens asynchronously and doesn't block the return
@@ -156,7 +224,17 @@ export class Followset {
 
       return starterPacks;
     } catch (error) {
-      this.logger.error('Failed to fetch starter packs:', error);
+      this.logger.error('[Followset] Failed to fetch starter packs:', error);
+
+      // Even on error, return hardcoded Popular if applicable
+      const needsPopular = !dTagFilter || dTagFilter === 'popular';
+      if (needsPopular) {
+        const hardcodedPopular = this.getHardcodedPopularStarterPack();
+        this.starterPacks.set([hardcodedPopular]);
+        this.logger.info('[Followset] Returning hardcoded Popular starter pack due to error');
+        return [hardcodedPopular];
+      }
+
       this.error.set('Failed to load starter packs');
       return [];
     } finally {
