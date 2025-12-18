@@ -86,7 +86,7 @@ export class ApplicationService {
             // Wait for feed content to actually render before starting heavy profile loading
             // This ensures users see content first, not a blank screen while profiles load
             console.log(`🆕 [Profile Loading Effect] First time load - waiting for feed content`);
-            await this.waitForFeedContent(30000); // Wait up to 30 seconds for feed content
+            await this.waitForFeedContent(5000); // Wait up to 5 seconds for feed content
 
             // Re-check if we still need to process (account might have changed)
             if (this.accountState.pubkey() !== pubkey) {
