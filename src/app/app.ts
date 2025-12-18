@@ -1358,6 +1358,7 @@ export class App implements OnInit {
    */
   private extractNostriaEntity(url: string): string | null {
     // Match nostria.app URLs with various paths, stopping at the first / after the entity
+    // Uses [^/]+ instead of .+$ to prevent capturing trailing path segments like /notes, /replies
     const nostriaPattern = /^https?:\/\/(?:www\.)?nostria\.app\/(e|p|u|a)\/([^/]+)/i;
     const match = url.match(nostriaPattern);
 
