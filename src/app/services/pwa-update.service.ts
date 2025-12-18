@@ -137,7 +137,7 @@ export class PwaUpdateService {
       this.notificationService.notify(
         'App Refresh Required',
         'The app needs to refresh to load the latest version.',
-        NotificationType.INFO
+        NotificationType.GENERAL
       );
 
       // Short delay to allow notification to show
