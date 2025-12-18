@@ -1238,12 +1238,12 @@ export class FeedService {
         // Race between starter pack fetch and timeout
         const starterPackPromise = this.followset.fetchStarterPacks('popular');
         const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
-        
+
         const result = await Promise.race([starterPackPromise, timeoutPromise]);
-        
+
         if (result && Array.isArray(result)) {
           const popularPack = result.find(pack => pack.dTag === 'popular');
-          
+
           if (popularPack) {
             // Limit starter pack users to first 5 for faster initial load
             const limitedStarterPackUsers = popularPack.pubkeys.slice(0, 5);
@@ -1257,7 +1257,7 @@ export class FeedService {
           // Timeout - use fallback pubkeys for instant content
           this.logger.info('Starter pack fetch timeout, using fallback popular pubkeys');
           FALLBACK_POPULAR_PUBKEYS.forEach(pubkey => allPubkeys.add(pubkey));
-          
+
           // Continue fetching starter packs in background
           starterPackPromise.catch(err => this.logger.error('Background starter pack fetch failed:', err));
         }
