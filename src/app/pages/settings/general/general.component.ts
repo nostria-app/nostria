@@ -17,9 +17,6 @@ import { PlaceholderAlgorithm, SettingsService } from '../../../services/setting
 import { StorageStatsComponent } from '../../../components/storage-stats/storage-stats.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { AccountStateService } from '../../../services/account-state.service';
-import { DatabaseService } from '../../../services/database.service';
-import { NotificationService } from '../../../services/notification.service';
-import { ContentNotificationService } from '../../../services/content-notification.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
 import { MatInputModule } from '@angular/material/input';
@@ -56,14 +53,11 @@ export class GeneralSettingsComponent {
   localSettings = inject(LocalSettingsService);
   settings = inject(SettingsService);
   accountState = inject(AccountStateService);
-  database = inject(DatabaseService);
-  notificationService = inject(NotificationService);
-  contentNotificationService = inject(ContentNotificationService);
   imagePlaceholder = inject(ImagePlaceholderService);
   externalLinkHandler = inject(ExternalLinkHandlerService);
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
-  
+
   // External domains management
   configuredDomains = signal<string[]>(this.externalLinkHandler.getConfiguredDomains());
   newDomain = '';
@@ -154,41 +148,6 @@ export class GeneralSettingsComponent {
     this.settings.updateSettings({ placeholderAlgorithm: value });
     // Clear the placeholder cache when algorithm changes
     this.imagePlaceholder.clearCache();
-  }
-
-  resetNotificationsCache(): void {
-    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
-      width: '400px',
-      data: {
-        title: 'Reset Notifications Cache',
-        message: 'Are you sure you want to delete all cached notifications? They will be refetched from relays on next check.',
-        confirmButtonText: 'Reset Cache',
-      },
-    });
-
-    dialogRef.afterClosed().subscribe(async confirmed => {
-      if (confirmed) {
-        // Clear notifications from IndexedDB
-        await this.database.clearAllNotifications();
-
-        // Clear in-memory notification cache
-        this.notificationService.clearNotifications();
-
-        // Reset notification filters and last check timestamp
-        this.contentNotificationService.resetLastCheckTimestamp();
-        localStorage.removeItem('nostria-notification-filters');
-        this.logger.info('Notifications cache cleared');
-
-        // Start a fresh notification check to repopulate from relays
-        // Note: No day limit - this fetches full history when manually resetting
-        try {
-          await this.contentNotificationService.checkForNewNotifications();
-          this.logger.info('Fresh notifications fetched from relays');
-        } catch (error) {
-          this.logger.error('Failed to fetch fresh notifications', error);
-        }
-      }
-    });
   }
 
   wipeData(): void {
