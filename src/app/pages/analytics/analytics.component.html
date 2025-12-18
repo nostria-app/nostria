@@ -111,13 +111,16 @@
       <p class="subtitle">Track your engagement and content performance</p>
     </div>
     <div class="header-actions">
+      @if (isLoading()) {
+      <div class="spinner-container">
+        <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
+      </div>
+      }
+      @else {
       <button mat-icon-button (click)="refresh()" matTooltip="Refresh data" [disabled]="isLoading()">
-        @if (isLoading()) {
-        <mat-spinner diameter="20"></mat-spinner>
-        } @else {
         <mat-icon>refresh</mat-icon>
-        }
       </button>
+      }
     </div>
   </div>
 

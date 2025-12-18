@@ -952,6 +952,12 @@ iframe {
   text-align: center;
 }
 
+.spinner-container {
+  width: 24px;
+  height: 24px;
+  margin: 8px;
+}
+
 // show-small: Visible only on small screens (hidden on larger screens)
 .show-small {
   display: none !important;
