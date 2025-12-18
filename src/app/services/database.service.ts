@@ -2391,6 +2391,23 @@ export class DatabaseService {
   }
 
   /**
+   * Count observed relays
+   */
+  async countObservedRelays(): Promise<number> {
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.OBSERVED_RELAYS, 'readonly');
+      const store = transaction.objectStore(STORES.OBSERVED_RELAYS);
+
+      const request = store.count();
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  /**
    * Get observed relays sorted by a specific criterion
    */
   async getObservedRelaysSorted(

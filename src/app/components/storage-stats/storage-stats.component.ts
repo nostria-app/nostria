@@ -13,6 +13,8 @@ import { ImageCacheService } from '../../services/image-cache.service';
 import { AiService } from '../../services/ai.service';
 import { NotificationService } from '../../services/notification.service';
 import { ContentNotificationService } from '../../services/content-notification.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 export type CacheType = 'all' | 'events' | 'notifications' | 'messages' | 'relays' | 'images' | 'ai-models';
 
@@ -40,6 +42,8 @@ export class StorageStatsComponent implements OnInit {
   private aiService = inject(AiService);
   private notificationService = inject(NotificationService);
   private contentNotificationService = inject(ContentNotificationService);
+  private accountLocalState = inject(AccountLocalStateService);
+  private accountState = inject(AccountStateService);
 
   isClearing = signal(false);
   stats = signal({
@@ -71,9 +75,10 @@ export class StorageStatsComponent implements OnInit {
   async refreshStats(): Promise<void> {
     try {
       const eventsCount = await this.database.countEvents();
+      const relaysCount = await this.database.countObservedRelays();
       const storageEstimate = await this.database.getStorageEstimate();
       this.stats.set({
-        relaysCount: 0, // Relays are managed separately
+        relaysCount,
         eventsCount,
         estimatedSize: storageEstimate.usage || 0,
       });
@@ -93,15 +98,21 @@ export class StorageStatsComponent implements OnInit {
       let successMessage = 'Cache cleared successfully';
 
       switch (cacheType) {
-        case 'all':
+        case 'all': {
           await this.database.clearAllData();
           await this.imageCacheService.clearAllCache();
           await this.aiService.clearAllCache();
           this.notificationService.clearNotifications();
           this.contentNotificationService.resetLastCheckTimestamp();
+          // Reset messages last check timestamp
+          const allPubkey = this.accountState.pubkey();
+          if (allPubkey) {
+            this.accountLocalState.setMessagesLastCheck(allPubkey, 0);
+          }
           localStorage.removeItem('nostria-notification-filters');
           successMessage = 'All cache cleared successfully';
           break;
+        }
         case 'events':
           await this.database.clearEvents();
           successMessage = 'Events cache cleared successfully';
@@ -117,10 +128,16 @@ export class StorageStatsComponent implements OnInit {
           });
           successMessage = 'Notifications cache cleared successfully';
           break;
-        case 'messages':
+        case 'messages': {
           await this.database.clearAllMessages();
+          // Reset the messages last check timestamp so messages reload from the beginning
+          const pubkey = this.accountState.pubkey();
+          if (pubkey) {
+            this.accountLocalState.setMessagesLastCheck(pubkey, 0);
+          }
           successMessage = 'Messages cache cleared successfully';
           break;
+        }
         case 'relays':
           await this.database.clearRelaysData();
           successMessage = 'Relays cache cleared successfully';
