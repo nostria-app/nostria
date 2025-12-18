@@ -1224,22 +1224,46 @@ export class FeedService {
       const allPubkeys = new Set<string>();
       const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
-      // 1. Add popular starter pack pubkeys (fetch from 'popular' starter pack)
-      try {
-        // Fetch only the 'popular' starter pack - cache-first with background refresh
-        const starterPacks = await this.followset.fetchStarterPacks('popular');
-        const popularPack = starterPacks.find(pack => pack.dTag === 'popular');
+      // Hardcoded fallback popular pubkeys for instant first load
+      const FALLBACK_POPULAR_PUBKEYS = [
+        '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // jack
+        '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d', // fiatjaf
+        '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245', // jb55
+        '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Vitor Pamplona
+        'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42', // miljan
+      ];
 
-        if (popularPack) {
-          // Limit starter pack users to first 5 for faster initial load
-          const limitedStarterPackUsers = popularPack.pubkeys.slice(0, 5);
-          limitedStarterPackUsers.forEach(pubkey => allPubkeys.add(pubkey));
-          this.logger.debug(`Added ${limitedStarterPackUsers.length} popular starter pack users from popular pack (out of ${popularPack.pubkeys.length} total)`);
+      // 1. Add popular starter pack pubkeys with timeout fallback
+      try {
+        // Race between starter pack fetch and timeout
+        const starterPackPromise = this.followset.fetchStarterPacks('popular');
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+
+        const result = await Promise.race([starterPackPromise, timeoutPromise]);
+
+        if (result && Array.isArray(result)) {
+          const popularPack = result.find(pack => pack.dTag === 'popular');
+
+          if (popularPack) {
+            // Limit starter pack users to first 5 for faster initial load
+            const limitedStarterPackUsers = popularPack.pubkeys.slice(0, 5);
+            limitedStarterPackUsers.forEach(pubkey => allPubkeys.add(pubkey));
+            this.logger.debug(`Added ${limitedStarterPackUsers.length} popular starter pack users from popular pack (out of ${popularPack.pubkeys.length} total)`);
+          } else {
+            this.logger.warn('Popular starter pack not found, using fallback');
+            FALLBACK_POPULAR_PUBKEYS.forEach(pubkey => allPubkeys.add(pubkey));
+          }
         } else {
-          this.logger.warn('Popular starter pack not found');
+          // Timeout - use fallback pubkeys for instant content
+          this.logger.info('Starter pack fetch timeout, using fallback popular pubkeys');
+          FALLBACK_POPULAR_PUBKEYS.forEach(pubkey => allPubkeys.add(pubkey));
+
+          // Continue fetching starter packs in background
+          starterPackPromise.catch(err => this.logger.error('Background starter pack fetch failed:', err));
         }
       } catch (error) {
-        this.logger.error('Error fetching popular starter pack:', error);
+        this.logger.error('Error fetching popular starter pack, using fallback:', error);
+        FALLBACK_POPULAR_PUBKEYS.forEach(pubkey => allPubkeys.add(pubkey));
       }
 
       // 2. Add algorithm-recommended users

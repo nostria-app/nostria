@@ -112,8 +112,8 @@ export class Followset {
       const starterPacks: StarterPack[] = [];
 
       // Fetch starter packs from each source
-      // This will return cached data if available, or fetch from relays if not
-      for (const source of this.STARTER_PACK_SOURCES) {
+      // Process sources in parallel for faster loading
+      const sourcePromises = this.STARTER_PACK_SOURCES.map(async source => {
         try {
           // One-shot fetch via on-demand service to avoid holding sockets
           // This uses cache: true, save: true - so it returns cached data quickly
@@ -123,6 +123,7 @@ export class Followset {
           );
 
           // Parse each event and add to starter packs if it matches allowed d-tags
+          const packs: StarterPack[] = [];
           events.forEach(record => {
             const starterPack = this.parseStarterPackEvent(record.event);
             if (starterPack) {
@@ -131,14 +132,20 @@ export class Followset {
               const matchesFilter = !dTagFilter || starterPack.dTag === dTagFilter;
 
               if (isAllowedDTag && matchesFilter) {
-                starterPacks.push(starterPack);
+                packs.push(starterPack);
               }
             }
           });
+          return packs;
         } catch (error) {
           this.logger.error(`Failed to fetch starter packs from ${source.pubkey}:`, error);
+          return [];
         }
-      }
+      });
+
+      // Wait for all sources to complete (in parallel)
+      const results = await Promise.all(sourcePromises);
+      results.forEach(packs => starterPacks.push(...packs));
 
       this.starterPacks.set(starterPacks);
       this.logger.info(`Fetched ${starterPacks.length} starter packs from cache/storage${dTagFilter ? ` (filtered by d-tag: ${dTagFilter})` : ''}`);
