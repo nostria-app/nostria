@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect } from '@angular/core';
+import { Component, inject, signal, effect, computed } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -6,9 +6,11 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { RouterModule } from '@angular/router';
 import { MemosService } from '../../services/memos.service';
 import { Memo } from '../../models/memo.model';
 import { AccountStateService } from '../../services/account-state.service';
+import { ApplicationService } from '../../services/application.service';
 import { InfoTooltipComponent } from '../../components/info-tooltip/info-tooltip.component';
 import { MemoCardComponent } from './memos-card/memo-card.component';
 import { MemosDownloadDialogComponent } from './memos-download-dialog/memos-download-dialog.component';
@@ -23,13 +25,107 @@ import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-histor
     MatSnackBarModule,
     MatDialogModule,
     MatTooltipModule,
+    RouterModule,
     MemoCardComponent,
     InfoTooltipComponent
-],
+  ],
   template: `
+    @if (!app.authenticated()) {
+      <div class="unauthenticated-state">
+        <mat-icon>account_circle</mat-icon>
+        <h2>Sign in to use Memos</h2>
+        <p>Create encrypted private notes that sync across all your devices.</p>
+      </div>
+    } @else if (!isPremium()) {
+      <div class="premium-gate">
+        <!-- Blurred preview background -->
+        <div class="preview-backdrop">
+          <div class="mock-memos-grid">
+            <div class="mock-memo-card yellow">
+              <div class="mock-memo-title"></div>
+              <div class="mock-memo-line"></div>
+              <div class="mock-memo-line short"></div>
+            </div>
+            <div class="mock-memo-card blue">
+              <div class="mock-memo-title"></div>
+              <div class="mock-memo-line"></div>
+              <div class="mock-memo-line"></div>
+              <div class="mock-memo-line short"></div>
+            </div>
+            <div class="mock-memo-card green">
+              <div class="mock-memo-title"></div>
+              <div class="mock-memo-line short"></div>
+            </div>
+            <div class="mock-memo-card pink">
+              <div class="mock-memo-title"></div>
+              <div class="mock-memo-line"></div>
+              <div class="mock-memo-line"></div>
+            </div>
+            <div class="mock-memo-card purple">
+              <div class="mock-memo-title"></div>
+              <div class="mock-memo-line"></div>
+              <div class="mock-memo-line short"></div>
+              <div class="mock-memo-line"></div>
+            </div>
+            <div class="mock-memo-card orange">
+              <div class="mock-memo-title"></div>
+              <div class="mock-memo-line"></div>
+            </div>
+          </div>
+        </div>
 
+        <!-- Premium CTA overlay -->
+        <div class="premium-cta-overlay">
+          <div class="premium-badge">
+            <mat-icon>note_stack</mat-icon>
+          </div>
+          <h1 class="premium-title">Unlock Memos</h1>
+          <p class="premium-subtitle">
+            Create encrypted private notes that sync across all your devices
+          </p>
 
-    <div class="notes-container">
+          <div class="features-grid">
+            <div class="feature-card">
+              <div class="feature-icon">
+                <mat-icon>lock</mat-icon>
+              </div>
+              <h3>End-to-End Encrypted</h3>
+              <p>Only you can read your memos with your private key</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <mat-icon>sync</mat-icon>
+              </div>
+              <h3>Cross-Device Sync</h3>
+              <p>Access your memos from any device, anywhere</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <mat-icon>palette</mat-icon>
+              </div>
+              <h3>Color Coding</h3>
+              <p>Organize your notes with beautiful color themes</p>
+            </div>
+            <div class="feature-card">
+              <div class="feature-icon">
+                <mat-icon>history</mat-icon>
+              </div>
+              <h3>Version History</h3>
+              <p>Local backups keep your memos safe</p>
+            </div>
+          </div>
+
+          <div class="cta-section">
+            <a mat-flat-button routerLink="/premium/upgrade" class="upgrade-btn">
+              <mat-icon>stars</mat-icon>
+              Upgrade to Premium
+            </a>
+            <p class="cta-hint">Includes all premium features • Cancel anytime</p>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div class="notes-container">
 
       <header class="notes-header">
         <h1>
@@ -101,8 +197,217 @@ import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-histor
         </div>
       }
     </div>
+    }
   `,
   styles: [`
+    .unauthenticated-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 3rem;
+      min-height: 60vh;
+    }
+
+    .unauthenticated-state mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: var(--mat-sys-primary);
+      opacity: 0.7;
+      margin-bottom: 1rem;
+    }
+
+    .unauthenticated-state h2 {
+      margin: 0 0 0.5rem 0;
+    }
+
+    .unauthenticated-state p {
+      color: var(--mat-sys-on-surface-variant);
+      max-width: 400px;
+    }
+
+    /* Premium Gate Styles */
+    .premium-gate {
+      position: relative;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    .preview-backdrop {
+      position: absolute;
+      inset: 0;
+      padding: 2rem;
+      filter: blur(8px);
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .mock-memos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1rem;
+      max-width: 800px;
+      margin: 80px auto;
+    }
+
+    .mock-memo-card {
+      padding: 1.5rem;
+      border-radius: 12px;
+      min-height: 120px;
+    }
+
+    .mock-memo-card.yellow { background: #fff9c4; }
+    .mock-memo-card.blue { background: #bbdefb; }
+    .mock-memo-card.green { background: #c8e6c9; }
+    .mock-memo-card.pink { background: #f8bbd9; }
+    .mock-memo-card.purple { background: #e1bee7; }
+    .mock-memo-card.orange { background: #ffe0b2; }
+
+    .mock-memo-title {
+      height: 16px;
+      width: 60%;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+
+    .mock-memo-line {
+      height: 10px;
+      width: 100%;
+      background: rgba(0, 0, 0, 0.1);
+      border-radius: 4px;
+      margin-bottom: 8px;
+    }
+
+    .mock-memo-line.short {
+      width: 70%;
+    }
+
+    .premium-cta-overlay {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+      background: linear-gradient(180deg, 
+        transparent 0%, 
+        var(--mat-sys-surface) 15%, 
+        var(--mat-sys-surface) 85%, 
+        transparent 100%);
+    }
+
+    .premium-badge {
+      width: 80px;
+      height: 80px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, 
+        var(--mat-sys-secondary), 
+        var(--mat-sys-tertiary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    }
+
+    .premium-badge mat-icon {
+      font-size: 40px;
+      width: 40px;
+      height: 40px;
+      color: white;
+    }
+
+    .premium-title {
+      font-size: 2rem;
+      margin: 0 0 0.5rem 0;
+      background: linear-gradient(135deg, 
+        var(--mat-sys-secondary), 
+        var(--mat-sys-primary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .premium-subtitle {
+      font-size: 1.1rem;
+      color: var(--mat-sys-on-surface-variant);
+      margin: 0 0 2.5rem 0;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      max-width: 600px;
+      margin-bottom: 2.5rem;
+    }
+
+    .feature-card {
+      background: var(--mat-sys-surface-container);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--mat-sys-level2);
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, 
+        var(--mat-sys-primary-container), 
+        var(--mat-sys-secondary-container));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 0.75rem auto;
+    }
+
+    .feature-icon mat-icon {
+      color: var(--mat-sys-on-primary-container);
+    }
+
+    .feature-card h3 {
+      font-size: 0.95rem;
+      margin: 0 0 0.25rem 0;
+    }
+
+    .feature-card p {
+      font-size: 0.85rem;
+      color: var(--mat-sys-on-surface-variant);
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    .cta-section {
+      text-align: center;
+    }
+
+    .upgrade-btn {
+      padding: 0 2rem;
+      height: 48px;
+      font-size: 1rem;
+      gap: 0.5rem;
+    }
+
+    .cta-hint {
+      font-size: 0.85rem;
+      color: var(--mat-sys-on-surface-variant);
+      margin: 1rem 0 0 0;
+    }
+
     .notes-container {
       max-width: 1200px;
       margin: 0 auto;
@@ -208,6 +513,33 @@ import { MemosHistoryDialogComponent } from './memos-history-dialog/memos-histor
       .notes-grid {
         grid-template-columns: 1fr;
       }
+
+      .mock-memos-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .features-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .premium-title {
+        font-size: 1.5rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .mock-memos-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .feature-card {
+        padding: 1rem;
+      }
+
+      .feature-icon {
+        width: 40px;
+        height: 40px;
+      }
     }
   `],
 })
@@ -216,10 +548,16 @@ export class MemosComponent {
   private readonly snackBar = inject(MatSnackBar);
   private readonly accountState = inject(AccountStateService);
   private readonly dialog = inject(MatDialog);
+  protected readonly app = inject(ApplicationService);
 
   readonly loading = signal(true);
   readonly memos = this.memosService.memos;
   private isLoadingMemos = false;
+
+  readonly isPremium = computed(() => {
+    const subscription = this.accountState.subscription();
+    return subscription?.expires && subscription.expires > Date.now();
+  });
 
   constructor() {
     // Reload memos when account changes
