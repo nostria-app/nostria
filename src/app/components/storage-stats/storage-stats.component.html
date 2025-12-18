@@ -23,7 +23,7 @@
 
   <p class="mb-2">
     The local database stores relay information, user metadata, and user relay lists to improve
-    performance and reduce network requests.
+    performance and reduce network requests. The storage estimate includes both IndexedDB and Cache API data.
   </p>
 
   <p class="mb-3">
@@ -31,18 +31,34 @@
     you're experiencing issues or want to free up space.
   </p>
 
-  @if (isClearing()) {
-    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+  @if (isClearing() || isClearingImageCache() || isClearingAiModels()) {
+  <mat-progress-bar mode="indeterminate"></mat-progress-bar>
   }
   <div class="storage-actions">
-    <button mat-button [disabled]="isClearing()" (click)="refreshStats()">
+    <button mat-button [disabled]="isClearing() || isClearingImageCache() || isClearingAiModels()"
+      (click)="refreshStats()">
       <mat-icon>refresh</mat-icon>
       REFRESH
     </button>
     &nbsp;
-    <button mat-flat-button [disabled]="isClearing()" (click)="clearCache()">
+    <button mat-flat-button [disabled]="isClearing() || isClearingImageCache() || isClearingAiModels()"
+      (click)="clearCache()">
       <mat-icon>delete_sweep</mat-icon>
       CLEAR CACHE
+    </button>
+  </div>
+
+  <div class="storage-actions">
+    <button mat-stroked-button [disabled]="isClearing() || isClearingImageCache() || isClearingAiModels()"
+      (click)="clearImageCache()">
+      <mat-icon>image</mat-icon>
+      CLEAR IMAGE CACHE
+    </button>
+    &nbsp;
+    <button mat-stroked-button [disabled]="isClearing() || isClearingImageCache() || isClearingAiModels()"
+      (click)="clearAiModels()">
+      <mat-icon>psychology</mat-icon>
+      DELETE AI MODELS
     </button>
   </div>
 </div>
