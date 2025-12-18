@@ -389,7 +389,8 @@
   color: var(--mat-sys-on-surface-variant);
   background-color: var(--mat-sys-surface-container);
   border-radius: var(--mat-sys-corner-small);
-  margin-top: 8px;
+  margin-top: 0;
+  margin-bottom: -24px; // Pull badges up closer
   position: relative;
   top: -50px; // Align with avatar positioning
 
@@ -397,6 +398,7 @@
   .mobile & {
     top: 0;
     margin-top: 0;
+    margin-bottom: 0;
     margin-right: 8px;
     align-self: center;
   }
