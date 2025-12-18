@@ -75,6 +75,7 @@ import { NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { WebPushService } from './services/webpush.service';
 import { PushNotificationPromptComponent } from './components/push-notification-prompt/push-notification-prompt.component';
+import { CredentialsBackupPromptComponent } from './components/credentials-backup-prompt/credentials-backup-prompt.component';
 import { isPlatformBrowser } from '@angular/common';
 import { StandaloneLoginDialogComponent } from './components/standalone-login-dialog/standalone-login-dialog.component';
 import { StandaloneTermsDialogComponent } from './components/standalone-terms-dialog/standalone-terms-dialog.component';
@@ -215,6 +216,9 @@ export class App implements OnInit {
 
   // Track if push notification prompt has been shown
   private pushPromptShown = signal(false);
+
+  // Track if credentials backup prompt has been shown
+  private credentialsBackupPromptShown = signal(false);
 
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
@@ -612,25 +616,35 @@ export class App implements OnInit {
       }
     }, { allowSignalWrites: true });
 
-    // Handle launch counter and push notification prompt for authenticated users
+    // Handle launch counter and prompts for authenticated users
     effect(() => {
       const authenticated = this.app.authenticated();
       const initialized = this.app.initialized();
       const pubkey = this.accountState.pubkey();
+      const account = this.accountState.account();
 
-      if (authenticated && initialized && pubkey && !this.pushPromptShown()) {
-        const launchCount = this.accountLocalState.incrementLaunchCount(pubkey);
-        this.logger.info(`[App] Launch count for user: ${launchCount}`);
+      if (authenticated && initialized && pubkey) {
+        // Only increment launch count once per session
+        if (!this.pushPromptShown() && !this.credentialsBackupPromptShown()) {
+          const launchCount = this.accountLocalState.incrementLaunchCount(pubkey);
+          this.logger.info(`[App] Launch count for user: ${launchCount}`);
 
-        // Check if user has already dismissed the dialog
-        const hasBeenDismissed = this.accountLocalState.getDismissedPushNotificationDialog(pubkey);
+          // Show push notification prompt after 5 launches (only once per session and if not previously dismissed)
+          const pushDismissed = this.accountLocalState.getDismissedPushNotificationDialog(pubkey);
+          if (launchCount >= 5 && !this.isPushNotificationEnabled() && !pushDismissed) {
+            setTimeout(() => {
+              this.showPushNotificationPrompt();
+            }, 3000);
+          }
 
-        // Show push notification prompt after 5 launches (only once per session and if not previously dismissed)
-        if (launchCount > 3 && !this.isPushNotificationEnabled() && !hasBeenDismissed) {
-          // Delay showing the prompt to avoid overwhelming the user on startup
-          setTimeout(() => {
-            this.showPushNotificationPrompt();
-          }, 3000); // 3 second delay
+          // Show credentials backup prompt after 10 launches (only for accounts with private keys)
+          const backupDismissed = this.accountLocalState.getDismissedCredentialsBackupDialog(pubkey);
+          const hasPrivateKey = account?.privkey && account.source === 'nsec';
+          if (launchCount >= 10 && hasPrivateKey && !backupDismissed) {
+            setTimeout(() => {
+              this.showCredentialsBackupPrompt();
+            }, 5000); // 5 second delay (after push notification prompt if shown)
+          }
         }
       }
     });
@@ -1502,6 +1516,18 @@ export class App implements OnInit {
     this.pushPromptShown.set(true);
 
     this.bottomSheet.open(PushNotificationPromptComponent, {
+      disableClose: false,
+      hasBackdrop: true,
+    });
+  }
+
+  /**
+   * Show credentials backup prompt bottom sheet
+   */
+  private showCredentialsBackupPrompt(): void {
+    this.credentialsBackupPromptShown.set(true);
+
+    this.bottomSheet.open(CredentialsBackupPromptComponent, {
       disableClose: false,
       hasBackdrop: true,
     });
