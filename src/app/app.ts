@@ -1353,10 +1353,13 @@ export class App implements OnInit {
    * - https://nostria.app/p/nprofile1...
    * - https://nostria.app/u/username
    * - https://nostria.app/a/naddr1...
+   * Also handles URLs with trailing paths like:
+   * - https://nostria.app/p/npub1.../notes
    */
   private extractNostriaEntity(url: string): string | null {
-    // Match nostria.app URLs with various paths
-    const nostriaPattern = /^https?:\/\/(?:www\.)?nostria\.app\/(e|p|u|a)\/(.+)$/i;
+    // Match nostria.app URLs with various paths, stopping at the first / after the entity
+    // Uses [^/]+ instead of .+$ to prevent capturing trailing path segments like /notes, /replies
+    const nostriaPattern = /^https?:\/\/(?:www\.)?nostria\.app\/(e|p|u|a)\/([^/]+)/i;
     const match = url.match(nostriaPattern);
 
     if (!match) {
