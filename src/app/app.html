@@ -351,7 +351,8 @@
     <mat-sidenav-content [class.following-sidebar-docked]="favoritesOverlay?.isDocked() ?? false"
       [class.media-player-shown]="layout.showMediaPlayer()">
       <!-- Page content -->
-      <div class="content-wrapper">
+      <div class="content-wrapper" [class.sidenav-open-expanded]="opened() && displayLabels() && !layout.isHandset()"
+        [class.sidenav-open-collapsed]="opened() && !displayLabels() && !layout.isHandset()">
         <router-outlet></router-outlet>
       </div>
     </mat-sidenav-content>
