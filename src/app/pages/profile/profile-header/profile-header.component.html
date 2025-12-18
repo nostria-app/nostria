@@ -8,6 +8,11 @@
     [attr.aria-label]="profile()?.data.banner ? 'View full size banner image' : null"></div>
   <div class="profile-info-container" [class.mobile]="layoutService.isHandset()">
     <div class="profile-avatar-wrapper">
+      <!-- Muted you label - shown to left of avatar on mobile -->
+      @if (hasMutedMe() && layoutService.isHandset()) {
+      <span class="muted-you-label">muted you</span>
+      }
+
       <div class="profile-avatar" [class.clickable]="profile()?.data.picture" [class.mobile]="layoutService.isHandset()"
         (click)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
         (keydown.enter)="profile()?.data.picture && layout.openProfilePicture(profile()!)"
@@ -20,6 +25,11 @@
         <mat-icon class="default-avatar">account_circle</mat-icon>
         }
       </div>
+
+      <!-- Muted you label - shown below avatar on desktop -->
+      @if (hasMutedMe() && !layoutService.isHandset()) {
+      <span class="muted-you-label">muted you</span>
+      }
 
       <!-- Badges Section positioned relative to avatar -->
       @if (hasAcceptedBadges()) {

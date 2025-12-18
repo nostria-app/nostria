@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, signal, untracked, computed } from '@angular/core';
+import { Component, effect, inject, input, signal, untracked, computed, OnDestroy } from '@angular/core';
 
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
@@ -15,7 +15,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { NostrRecord } from '../../../interfaces';
 import { isNip05, queryProfile } from 'nostr-tools/nip05';
-import { nip19 } from 'nostr-tools';
+import { nip19, kinds } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { QrCodeComponent } from '../../../components/qr-code/qr-code.component';
@@ -28,7 +28,6 @@ import {
   PublishDialogComponent,
   PublishDialogData,
 } from '../../../components/publish-dialog/publish-dialog.component';
-import { kinds } from 'nostr-tools';
 import { DatabaseService } from '../../../services/database.service';
 import type { ReportTarget } from '../../../services/reporting.service';
 import { ReportingService } from '../../../services/reporting.service';
@@ -67,7 +66,7 @@ import { TrustService } from '../../../services/trust.service';
   templateUrl: './profile-header.component.html',
   styleUrl: './profile-header.component.scss',
 })
-export class ProfileHeaderComponent {
+export class ProfileHeaderComponent implements OnDestroy {
   profile = input<NostrRecord | undefined>(undefined);
   pubkey = input<string>(''); // Add pubkey input for cases where no profile exists
   layout = inject(LayoutService);
@@ -301,6 +300,12 @@ export class ProfileHeaderComponent {
     return this.reportingService.isUserBlocked(pubkey);
   });
 
+  // Signal to track if the profile being viewed has muted the current user
+  hasMutedMe = signal<boolean>(false);
+
+  // Signal to track if we're loading the mute list
+  isLoadingMuteStatus = signal<boolean>(false);
+
   // Signal to track the premium status
   premiumTier = signal<string | null>(null);
 
@@ -346,6 +351,49 @@ export class ProfileHeaderComponent {
       const currentPubkey = this.pubkey();
       if (currentPubkey) {
         await this.fetchPremiumStatus(currentPubkey);
+      }
+    });
+
+    // Add effect to check if the profile being viewed has muted the current user
+    effect(async () => {
+      const profilePubkey = this.pubkey();
+      const myPubkey = this.accountState.pubkey();
+
+      // Reset state when profile changes
+      untracked(() => {
+        this.hasMutedMe.set(false);
+        this.isLoadingMuteStatus.set(false);
+      });
+
+      // Don't check for own profile or if no pubkeys available
+      if (!profilePubkey || !myPubkey || profilePubkey === myPubkey) {
+        return;
+      }
+
+      untracked(() => {
+        this.isLoadingMuteStatus.set(true);
+      });
+
+      try {
+        // Fetch the mute list (kind 10000) for the profile being viewed
+        const muteListEvent = await this.userRelayService.getEventByPubkeyAndKind(profilePubkey, kinds.Mutelist);
+
+        if (muteListEvent && muteListEvent.tags) {
+          // Check if my pubkey is in their mute list (p tags)
+          const mutedPubkeys = muteListEvent.tags
+            .filter(tag => tag[0] === 'p')
+            .map(tag => tag[1]);
+
+          untracked(() => {
+            this.hasMutedMe.set(mutedPubkeys.includes(myPubkey));
+          });
+        }
+      } catch (error) {
+        this.logger.debug('Error fetching mute list for profile:', error);
+      } finally {
+        untracked(() => {
+          this.isLoadingMuteStatus.set(false);
+        });
       }
     });
 
@@ -1036,5 +1084,9 @@ export class ProfileHeaderComponent {
   onBadgeMouseLeave(): void {
     this.badgeHoverElement = undefined;
     this.badgeHoverCardService.hideHoverCard();
+  }
+
+  ngOnDestroy(): void {
+    this.clearBadgeTimeouts();
   }
 }
