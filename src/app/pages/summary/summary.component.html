@@ -20,13 +20,15 @@
         <mat-icon>notifications</mat-icon>
         Notifications
       </a>
+      @if (isFetching()) {
+      <div class="spinner-container">
+        <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
+      </div>
+      } @else {
       <button mat-icon-button (click)="refresh()" matTooltip="Refresh" [disabled]="isLoading() || isFetching()">
-        @if (isFetching()) {
-        <mat-spinner diameter="20"></mat-spinner>
-        } @else {
         <mat-icon>refresh</mat-icon>
-        }
       </button>
+      }
     </div>
   </div>
 
