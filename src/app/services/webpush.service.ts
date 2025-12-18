@@ -166,16 +166,19 @@ export class WebPushService {
         { kind: kinds.HTTPAuth }
       );
 
+      // Always update the cache timestamp to avoid repeated fetches
+      this.accountLocalState.setSubscriptionSettingsLastFetch(pubkey, now);
+
       if (result && result.settings) {
         const settings = JSON.parse(result.settings);
         this.devicePreferences.set(settings);
 
-        // Update cache timestamp and settings
-        this.accountLocalState.setSubscriptionSettingsLastFetch(pubkey, now);
+        // Update settings in cache
         this.accountLocalState.setSubscriptionSettings(pubkey, settings);
 
         this.logger.info('Device notification preferences loaded from server');
-        return;
+      } else {
+        this.logger.debug('No subscription settings found on server');
       }
     } catch (error) {
       this.logger.error('Failed to load preferences from server:', error);
