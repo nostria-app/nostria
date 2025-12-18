@@ -82,7 +82,6 @@ export class AppsMenuComponent {
     { icon: 'edit_document', label: 'Articles', route: ['/articles'] },
     { icon: 'lists', label: 'Lists', route: ['/lists'] },
     { icon: 'poll', label: 'Polls', route: ['/polls'] },
-    { icon: 'insights', label: 'Analytics', route: ['/analytics'] },
   ];
 
   mediaItems: MenuItem[] = [
@@ -98,6 +97,34 @@ export class AppsMenuComponent {
     { icon: 'settings_suggest', label: 'AI Settings', route: ['/ai/settings'] },
   ];
 
+  premiumItems: MenuItem[] = [
+    {
+      icon: 'note_stack',
+      label: 'Memos',
+      route: ['/memos'],
+    },
+    {
+      icon: 'insights',
+      label: 'Analytics',
+      route: ['/analytics'],
+    },
+    {
+      icon: 'calendar_month',
+      label: 'Calendar',
+      route: ['/calendar'],
+    },
+    {
+      icon: 'cloud_sync',
+      label: 'Cloud Backup',
+      route: ['/settings/backup'],
+    },
+    {
+      icon: 'workspace_premium',
+      label: 'Subscription',
+      route: ['/premium'],
+    },
+  ];
+
   getAiItems() {
     if (!this.settings.settings().aiEnabled) {
       // Only show settings if AI is disabled, so user can re-enable it
@@ -108,21 +135,9 @@ export class AppsMenuComponent {
 
   moreItems: MenuItem[] = [
     {
-      icon: 'calendar_month',
-      label: 'Calendar',
-      route: ['/calendar'],
-      requiresFeature: 'preview',
-    },
-    {
       icon: 'bookmarks',
       label: 'Bookmarks',
       route: ['/bookmarks'],
-    },
-    {
-      icon: 'note_stack',
-      label: 'Memos',
-      route: ['/memos'],
-      requiresSubscription: true,
     },
     {
       icon: 'badge',

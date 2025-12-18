@@ -58,6 +58,20 @@
       </div>
     </div>
 
+    <div class="menu-section premium-section">
+      <h3 class="section-title">Premium</h3>
+      <div class="menu-grid">
+        @for (item of premiumItems; track item.label) {
+        <button class="menu-item" (click)="onItemClick(item)">
+          <div class="menu-item-icon premium-icon">
+            <mat-icon>{{ item.icon }}</mat-icon>
+          </div>
+          <span class="menu-item-label">{{ item.label }}</span>
+        </button>
+        }
+      </div>
+    </div>
+
     @if (getMoreItems().length > 0) {
     <div class="menu-section">
       <h3 class="section-title">More</h3>
