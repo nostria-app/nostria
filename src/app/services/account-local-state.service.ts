@@ -33,6 +33,7 @@ interface AccountLocalState {
   lastRoute?: string;
   launchCount?: number;
   dismissedPushNotificationDialog?: boolean;
+  dismissedCredentialsBackupDialog?: boolean;
   articlesActiveTab?: number;
   subscriptionSettingsLastFetch?: number;
   subscriptionSettings?: DeviceNotificationPreferences[];
@@ -368,6 +369,21 @@ export class AccountLocalStateService {
    */
   setDismissedPushNotificationDialog(pubkey: string, dismissed: boolean): void {
     this.updateAccountState(pubkey, { dismissedPushNotificationDialog: dismissed });
+  }
+
+  /**
+   * Get dismissed credentials backup dialog status for an account
+   */
+  getDismissedCredentialsBackupDialog(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.dismissedCredentialsBackupDialog || false;
+  }
+
+  /**
+   * Set dismissed credentials backup dialog status for an account
+   */
+  setDismissedCredentialsBackupDialog(pubkey: string, dismissed: boolean): void {
+    this.updateAccountState(pubkey, { dismissedCredentialsBackupDialog: dismissed });
   }
 
   /**
