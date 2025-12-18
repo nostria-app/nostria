@@ -108,8 +108,8 @@
       </div>
 
       <!-- Hidden file input -->
-      <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*" multiple
-        class="hidden-file-input" aria-label="Upload image files" />
+      <input type="file" #fileInput (change)="onFileSelected($event)" accept="image/*,video/*" multiple
+        class="hidden-file-input" aria-label="Upload media files" />
     </div>
     }
 
@@ -392,8 +392,8 @@
       }
       <button mat-icon-button type="button" (click)="openFileDialog()"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Upload image">
-        <mat-icon>image</mat-icon>
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Upload media">
+        <mat-icon>perm_media</mat-icon>
       </button>
       <button mat-icon-button type="button" (click)="toggleAdvancedOptions()"
         [color]="showAdvancedOptions() ? 'primary' : ''" matTooltip="Advanced options">
