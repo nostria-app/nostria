@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { RouterModule } from '@angular/router';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,6 +22,7 @@ import { Router } from '@angular/router';
 import { LoggerService } from '../../services/logger.service';
 import { ApplicationService } from '../../services/application.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
+import { AccountStateService } from '../../services/account-state.service';
 import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
 import { GregorianCalendarService } from '../../services/gregorian-calendar.service';
 import {
@@ -84,6 +86,7 @@ interface CalendarCollection {
   selector: 'app-calendar',
   imports: [
     CommonModule,
+    RouterModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
@@ -113,6 +116,13 @@ export class Calendar {
   public localSettings = inject(LocalSettingsService); // For calendar type
   private chroniaService = inject(ChroniaCalendarService);
   private gregorianService = inject(GregorianCalendarService);
+  public accountState = inject(AccountStateService);
+
+  // Premium check
+  isPremium = computed(() => {
+    const subscription = this.accountState.subscription();
+    return subscription?.expires && subscription.expires > Date.now();
+  });
 
   // Current view state
   selectedDate = signal<Date>(new Date());

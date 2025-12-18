@@ -1,3 +1,86 @@
+@if (!app.authenticated()) {
+<div class="unauthenticated-state">
+  <mat-icon>account_circle</mat-icon>
+  <h2>Sign in to use Calendar</h2>
+  <p>Keep track of Nostr events and meetups with your personal calendar.</p>
+</div>
+} @else if (!isPremium()) {
+<div class="premium-gate">
+  <!-- Blurred preview background -->
+  <div class="preview-backdrop">
+    <div class="mock-calendar-grid">
+      <div class="mock-calendar-header">
+        <div class="mock-nav"></div>
+        <div class="mock-month-title"></div>
+        <div class="mock-nav"></div>
+      </div>
+      <div class="mock-day-headers">
+        @for (day of ['S', 'M', 'T', 'W', 'T', 'F', 'S']; track $index) {
+        <div class="mock-day-header">{{ day }}</div>
+        }
+      </div>
+      <div class="mock-days-grid">
+        @for (i of [1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35];
+        track i) {
+        <div class="mock-day" [class.has-event]="i === 8 || i === 15 || i === 22 || i === 27">
+          <span class="mock-day-num"></span>
+        </div>
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Premium CTA overlay -->
+  <div class="premium-cta-overlay">
+    <div class="premium-badge">
+      <mat-icon>calendar_month</mat-icon>
+    </div>
+    <h1 class="premium-title">Unlock Calendar</h1>
+    <p class="premium-subtitle">
+      Stay organized with Nostr events, meetups, and personal scheduling
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>event</mat-icon>
+        </div>
+        <h3>Nostr Events</h3>
+        <p>Discover and track community events from your network</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>groups</mat-icon>
+        </div>
+        <h3>RSVP & Attend</h3>
+        <p>Respond to invitations and manage your attendance</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>view_agenda</mat-icon>
+        </div>
+        <h3>Multiple Views</h3>
+        <p>Month, week, and agenda views for your schedule</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <mat-icon>add_circle</mat-icon>
+        </div>
+        <h3>Create Events</h3>
+        <p>Publish your own events to the Nostr network</p>
+      </div>
+    </div>
+
+    <div class="cta-section">
+      <a mat-flat-button routerLink="/premium/upgrade" class="upgrade-btn">
+        <mat-icon>stars</mat-icon>
+        Upgrade to Premium
+      </a>
+      <p class="cta-hint">Includes all premium features • Cancel anytime</p>
+    </div>
+  </div>
+</div>
+} @else {
 <div class="calendar-container">
   <!-- Header with navigation and view controls -->
   <div class="calendar-header">
@@ -367,3 +450,4 @@
     }
   </div>
 </div>
+}
