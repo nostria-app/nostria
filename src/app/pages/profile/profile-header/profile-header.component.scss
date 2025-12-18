@@ -381,6 +381,27 @@
   align-items: center;
 }
 
+// "Muted you" label styling
+.muted-you-label {
+  display: inline-block;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-small);
+  margin-top: 8px;
+  position: relative;
+  top: -50px; // Align with avatar positioning
+
+  // Mobile positioning: shown to left of avatar
+  .mobile & {
+    top: 0;
+    margin-top: 0;
+    margin-right: 8px;
+    align-self: center;
+  }
+}
+
 .profile-badges {
   display: flex;
   align-items: center;
