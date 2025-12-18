@@ -117,6 +117,21 @@
   color: var(--mat-sys-on-surface);
 }
 
+// Premium section styling
+.premium-section {
+  .section-title {
+    color: var(--mat-sys-secondary);
+  }
+}
+
+.premium-icon {
+  background: linear-gradient(135deg, var(--mat-sys-secondary-container), var(--mat-sys-tertiary-container));
+
+  mat-icon {
+    color: var(--mat-sys-on-secondary-container);
+  }
+}
+
 // Responsive adjustments
 @media (max-width: 599px) {
   .apps-menu-container {
