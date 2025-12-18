@@ -8,6 +8,8 @@ import { DatabaseService } from '../../services/database.service';
 import { NostrService } from '../../services/nostr.service';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoggerService } from '../../services/logger.service';
+import { ImageCacheService } from '../../services/image-cache.service';
+import { AiService } from '../../services/ai.service';
 
 @Component({
   selector: 'app-storage-stats',
@@ -28,8 +30,12 @@ export class StorageStatsComponent {
   nostr = inject(NostrService);
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);
+  private imageCacheService = inject(ImageCacheService);
+  private aiService = inject(AiService);
 
   isClearing = signal(false);
+  isClearingImageCache = signal(false);
+  isClearingAiModels = signal(false);
   stats = signal({
     relaysCount: 0,
     eventsCount: 0,
@@ -92,6 +98,64 @@ export class StorageStatsComponent {
       });
     } finally {
       this.isClearing.set(false);
+    }
+  }
+
+  async clearImageCache(): Promise<void> {
+    if (this.isClearingImageCache()) {
+      return;
+    }
+
+    this.isClearingImageCache.set(true);
+
+    try {
+      await this.imageCacheService.clearAllCache();
+      await this.refreshStats();
+
+      this.snackBar.open('Image cache cleared successfully', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } catch (error) {
+      this.logger.error('Error clearing image cache', error);
+
+      this.snackBar.open('Failed to clear image cache', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } finally {
+      this.isClearingImageCache.set(false);
+    }
+  }
+
+  async clearAiModels(): Promise<void> {
+    if (this.isClearingAiModels()) {
+      return;
+    }
+
+    this.isClearingAiModels.set(true);
+
+    try {
+      await this.aiService.clearAllCache();
+      await this.refreshStats();
+
+      this.snackBar.open('AI models cleared successfully', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } catch (error) {
+      this.logger.error('Error clearing AI models', error);
+
+      this.snackBar.open('Failed to clear AI models', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    } finally {
+      this.isClearingAiModels.set(false);
     }
   }
 }

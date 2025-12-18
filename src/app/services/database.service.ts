@@ -873,20 +873,35 @@ export class DatabaseService {
   }
 
   /**
-   * Clear all events from the database
+   * Clear all events and cached data from the database
+   * This clears: events, eventsCache, badgeDefinitions, and info tables
    */
   async clearEvents(): Promise<void> {
     const db = this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
-      const transaction = db.transaction(STORES.EVENTS, 'readwrite');
-      const store = transaction.objectStore(STORES.EVENTS);
+    const storesToClear = [
+      STORES.EVENTS,
+      STORES.EVENTS_CACHE,
+      STORES.BADGE_DEFINITIONS,
+      STORES.INFO,
+    ];
 
-      const request = store.clear();
+    for (const storeName of storesToClear) {
+      await new Promise<void>((resolve, reject) => {
+        const transaction = db.transaction(storeName, 'readwrite');
+        const store = transaction.objectStore(storeName);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(request.error);
-    });
+        const request = store.clear();
+
+        request.onsuccess = () => {
+          this.logger.debug(`Cleared store: ${storeName}`);
+          resolve();
+        };
+        request.onerror = () => reject(request.error);
+      });
+    }
+
+    this.logger.info('Cleared all cached events from database');
   }
 
   // ============================================================================
