@@ -1,15 +1,20 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { Component, effect, inject, OnInit, signal } from '@angular/core';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatMenuModule } from '@angular/material/menu';
 import { DatabaseService } from '../../services/database.service';
 import { NostrService } from '../../services/nostr.service';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { LoggerService } from '../../services/logger.service';
 import { ImageCacheService } from '../../services/image-cache.service';
 import { AiService } from '../../services/ai.service';
+import { NotificationService } from '../../services/notification.service';
+import { ContentNotificationService } from '../../services/content-notification.service';
+
+export type CacheType = 'all' | 'events' | 'notifications' | 'messages' | 'relays' | 'images' | 'ai-models';
 
 @Component({
   selector: 'app-storage-stats',
@@ -21,21 +26,22 @@ import { AiService } from '../../services/ai.service';
     MatDividerModule,
     MatProgressBarModule,
     MatSnackBarModule,
+    MatMenuModule,
   ],
   templateUrl: './storage-stats.component.html',
   styleUrl: './storage-stats.component..scss',
 })
-export class StorageStatsComponent {
+export class StorageStatsComponent implements OnInit {
   private database = inject(DatabaseService);
   nostr = inject(NostrService);
   private snackBar = inject(MatSnackBar);
   private logger = inject(LoggerService);
   private imageCacheService = inject(ImageCacheService);
   private aiService = inject(AiService);
+  private notificationService = inject(NotificationService);
+  private contentNotificationService = inject(ContentNotificationService);
 
   isClearing = signal(false);
-  isClearingImageCache = signal(false);
-  isClearingAiModels = signal(false);
   stats = signal({
     relaysCount: 0,
     eventsCount: 0,
@@ -49,6 +55,10 @@ export class StorageStatsComponent {
       const currentStats = this.stats();
       this.formattedSize.set(this.formatSize(currentStats.estimatedSize));
     });
+  }
+
+  ngOnInit(): void {
+    this.refreshStats();
   }
 
   private formatSize(bytes: number): string {
@@ -72,7 +82,7 @@ export class StorageStatsComponent {
     }
   }
 
-  async clearCache(): Promise<void> {
+  async clearCache(cacheType: CacheType): Promise<void> {
     if (this.isClearing()) {
       return;
     }
@@ -80,10 +90,54 @@ export class StorageStatsComponent {
     this.isClearing.set(true);
 
     try {
-      await this.database.clearEvents();
+      let successMessage = 'Cache cleared successfully';
+
+      switch (cacheType) {
+        case 'all':
+          await this.database.clearAllData();
+          await this.imageCacheService.clearAllCache();
+          await this.aiService.clearAllCache();
+          this.notificationService.clearNotifications();
+          this.contentNotificationService.resetLastCheckTimestamp();
+          localStorage.removeItem('nostria-notification-filters');
+          successMessage = 'All cache cleared successfully';
+          break;
+        case 'events':
+          await this.database.clearEvents();
+          successMessage = 'Events cache cleared successfully';
+          break;
+        case 'notifications':
+          await this.database.clearAllNotifications();
+          this.notificationService.clearNotifications();
+          this.contentNotificationService.resetLastCheckTimestamp();
+          localStorage.removeItem('nostria-notification-filters');
+          // Fetch fresh notifications from relays
+          this.contentNotificationService.checkForNewNotifications().catch(error => {
+            this.logger.error('Failed to fetch fresh notifications', error);
+          });
+          successMessage = 'Notifications cache cleared successfully';
+          break;
+        case 'messages':
+          await this.database.clearAllMessages();
+          successMessage = 'Messages cache cleared successfully';
+          break;
+        case 'relays':
+          await this.database.clearRelaysData();
+          successMessage = 'Relays cache cleared successfully';
+          break;
+        case 'images':
+          await this.imageCacheService.clearAllCache();
+          successMessage = 'Image cache cleared successfully';
+          break;
+        case 'ai-models':
+          await this.aiService.clearAllCache();
+          successMessage = 'AI models cleared successfully';
+          break;
+      }
+
       await this.refreshStats();
 
-      this.snackBar.open('Cache cleared successfully', 'Close', {
+      this.snackBar.open(successMessage, 'Close', {
         duration: 3000,
         horizontalPosition: 'center',
         verticalPosition: 'bottom',
@@ -98,64 +152,6 @@ export class StorageStatsComponent {
       });
     } finally {
       this.isClearing.set(false);
-    }
-  }
-
-  async clearImageCache(): Promise<void> {
-    if (this.isClearingImageCache()) {
-      return;
-    }
-
-    this.isClearingImageCache.set(true);
-
-    try {
-      await this.imageCacheService.clearAllCache();
-      await this.refreshStats();
-
-      this.snackBar.open('Image cache cleared successfully', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
-    } catch (error) {
-      this.logger.error('Error clearing image cache', error);
-
-      this.snackBar.open('Failed to clear image cache', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
-    } finally {
-      this.isClearingImageCache.set(false);
-    }
-  }
-
-  async clearAiModels(): Promise<void> {
-    if (this.isClearingAiModels()) {
-      return;
-    }
-
-    this.isClearingAiModels.set(true);
-
-    try {
-      await this.aiService.clearAllCache();
-      await this.refreshStats();
-
-      this.snackBar.open('AI models cleared successfully', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
-    } catch (error) {
-      this.logger.error('Error clearing AI models', error);
-
-      this.snackBar.open('Failed to clear AI models', 'Close', {
-        duration: 3000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
-    } finally {
-      this.isClearingAiModels.set(false);
     }
   }
 }

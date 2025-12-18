@@ -873,10 +873,11 @@ export class DatabaseService {
   }
 
   /**
-   * Clear all events and cached data from the database
-   * This clears: events, eventsCache, badgeDefinitions, and info tables
+   * Clear all cached data from all database stores
+   * This clears: events, eventsCache, badgeDefinitions, info, relays, 
+   * notifications, observedRelays, pubkeyRelayMappings, and messages
    */
-  async clearEvents(): Promise<void> {
+  async clearAllData(): Promise<void> {
     const db = this.ensureInitialized();
 
     const storesToClear = [
@@ -884,6 +885,11 @@ export class DatabaseService {
       STORES.EVENTS_CACHE,
       STORES.BADGE_DEFINITIONS,
       STORES.INFO,
+      STORES.RELAYS,
+      STORES.NOTIFICATIONS,
+      STORES.OBSERVED_RELAYS,
+      STORES.PUBKEY_RELAY_MAPPINGS,
+      STORES.MESSAGES,
     ];
 
     for (const storeName of storesToClear) {
@@ -901,7 +907,26 @@ export class DatabaseService {
       });
     }
 
-    this.logger.info('Cleared all cached events from database');
+    this.logger.info('Cleared all data from database');
+  }
+
+  /**
+   * Clear events store only
+   */
+  async clearEvents(): Promise<void> {
+    await this.clear(STORES.EVENTS);
+    await this.clear(STORES.EVENTS_CACHE);
+    this.logger.info('Cleared events from database');
+  }
+
+  /**
+   * Clear relays-related stores
+   */
+  async clearRelaysData(): Promise<void> {
+    await this.clear(STORES.RELAYS);
+    await this.clear(STORES.OBSERVED_RELAYS);
+    await this.clear(STORES.PUBKEY_RELAY_MAPPINGS);
+    this.logger.info('Cleared relays data from database');
   }
 
   // ============================================================================

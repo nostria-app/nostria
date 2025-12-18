@@ -247,26 +247,28 @@
 
   <div>
     <h2 i18n="@@settings.external-links.title">External Links</h2>
-    <p i18n="@@settings.external-links.description">Configure which external domains should open within the app instead of a new browser tab</p>
+    <p i18n="@@settings.external-links.description">Configure which external domains should open within the app instead
+      of a new browser tab</p>
 
     <div class="external-domains-list">
       @for (domain of configuredDomains(); track domain) {
-        <div class="domain-item">
-          <span class="domain-name">{{ domain }}</span>
-          <button mat-icon-button (click)="removeDomain(domain)" [attr.aria-label]="'Remove ' + domain">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
+      <div class="domain-item">
+        <span class="domain-name">{{ domain }}</span>
+        <button mat-icon-button (click)="removeDomain(domain)" [attr.aria-label]="'Remove ' + domain">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
       }
     </div>
 
     <div class="add-domain-container">
       <mat-form-field appearance="outline" class="domain-input">
         <mat-label i18n="@@settings.external-links.add-domain">Add Domain</mat-label>
-        <input matInput [(ngModel)]="newDomain" placeholder="example.com" 
-               (keyup.enter)="addNewDomain()" i18n-placeholder="@@settings.external-links.domain-placeholder">
+        <input matInput [(ngModel)]="newDomain" placeholder="example.com" (keyup.enter)="addNewDomain()"
+          i18n-placeholder="@@settings.external-links.domain-placeholder">
       </mat-form-field>
-      <button mat-flat-button (click)="addNewDomain()" [disabled]="!newDomain" i18n="@@settings.external-links.add-button">
+      <button mat-flat-button (click)="addNewDomain()" [disabled]="!newDomain"
+        i18n="@@settings.external-links.add-button">
         Add
       </button>
     </div>
@@ -284,17 +286,6 @@
   <div class="setting-item danger-zone">
     <div>
       <h2 i18n="@@settings.danger-zone.title">Danger Zone</h2>
-
-      <div class="danger-action">
-        <div>
-          <h3 i18n="@@settings.danger-zone.reset-notifications">Reset Notifications Cache</h3>
-          <p i18n="@@settings.danger-zone.reset-notifications.description">This will delete all cached notifications
-            from local storage. Your notifications will be refetched from
-            relays.</p>
-        </div>
-        <button mat-flat-button class="danger-button" (click)="resetNotificationsCache()"
-          i18n="@@settings.danger-zone.reset-notifications.button">Reset Notifications</button>
-      </div>
 
       <div class="danger-action">
         <div>
