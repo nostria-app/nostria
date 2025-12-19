@@ -20,6 +20,7 @@ export class ApplicationStateService {
   // pubkey = signal<string | null>(null);
 
   readonly DISCOVERY_RELAYS_STORAGE_KEY = 'nostria-discovery-relays';
+  readonly SEARCH_RELAYS_STORAGE_KEY = 'nostria-search-relays';
   readonly ACCOUNT_STORAGE_KEY = 'nostria-account';
   readonly FEATURE_LEVEL = 'nostria-feature-level';
   readonly ACCOUNTS_STORAGE_KEY = 'nostria-accounts';
