@@ -40,6 +40,15 @@
       </mat-list-item>
       }
     </mat-list>
+    } @else if (isListening()) {
+    <div class="no-results listening-hint">
+      <mat-icon>mic</mat-icon>
+      <p>Speak a command...</p>
+    </div>
+    } @else if (isTranscribing()) {
+    <div class="no-results">
+      <p>Processing...</p>
+    </div>
     } @else {
     <div class="no-results">
       <p>No commands found.</p>
