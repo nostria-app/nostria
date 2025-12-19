@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -14,6 +14,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDividerModule } from '@angular/material/divider';
+import { Subscription } from 'rxjs';
 import { Event, kinds } from 'nostr-tools';
 import { DatabaseService } from '../../services/database.service';
 import { SearchRelayService } from '../../services/relays/search-relay';
@@ -58,7 +59,7 @@ interface SearchResultItem {
   templateUrl: './search.component.html',
   styleUrl: './search.component.scss',
 })
-export class SearchComponent implements OnInit {
+export class SearchComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private database = inject(DatabaseService);
@@ -67,6 +68,8 @@ export class SearchComponent implements OnInit {
   private layout = inject(LayoutService);
   private logger = inject(LoggerService);
   protected utilities = inject(UtilitiesService);
+
+  private queryParamsSubscription?: Subscription;
 
   // Search state
   searchQuery = signal('');
@@ -99,21 +102,36 @@ export class SearchComponent implements OnInit {
   };
 
   ngOnInit() {
-    // Check for initial query params
-    const params = this.route.snapshot.queryParams;
-    if (params['q']) {
-      this.searchQuery.set(params['q']);
-    }
-    if (params['type']) {
-      this.searchType.set(params['type'] as SearchType);
-    }
-    if (params['source']) {
-      this.searchSource.set(params['source'] as SearchSource);
-    }
-    // Perform initial search if query is provided
-    if (params['q']) {
-      this.performSearch();
-    }
+    // Subscribe to query param changes to react when URL changes
+    this.queryParamsSubscription = this.route.queryParams.subscribe(params => {
+      const newQuery = params['q'] || '';
+      const newType = params['type'] as SearchType || 'all';
+      const newSource = params['source'] as SearchSource || 'all';
+
+      // Only update and search if the query changed
+      const queryChanged = newQuery !== this.searchQuery();
+      const typeChanged = newType !== this.searchType();
+      const sourceChanged = newSource !== this.searchSource();
+
+      if (newQuery) {
+        this.searchQuery.set(newQuery);
+      }
+      if (params['type']) {
+        this.searchType.set(newType);
+      }
+      if (params['source']) {
+        this.searchSource.set(newSource);
+      }
+
+      // Perform search if query is provided and something changed
+      if (newQuery && (queryChanged || typeChanged || sourceChanged)) {
+        this.performSearch();
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    this.queryParamsSubscription?.unsubscribe();
   }
 
   onSearchKeydown(event: KeyboardEvent) {
