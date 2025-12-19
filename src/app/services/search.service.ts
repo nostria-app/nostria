@@ -408,25 +408,9 @@ export class SearchService {
   async searchByHashtag(hashtag: string): Promise<void> {
     this.logger.debug(`Searching for hashtag: #${hashtag}`);
 
-    try {
-      const events = await this.searchRelay.searchByHashtag(hashtag, 50);
-
-      if (events.length > 0) {
-        // Navigate to a search results view or open the first event
-        // For now, show a toast with the count
-        this.layout.toast(`Found ${events.length} notes with #${hashtag}`);
-
-        // TODO: Navigate to a search results page
-        // For now, open the feed with this hashtag filter
-        this.layout.router.navigate(['/f'], {
-          queryParams: { search: `#${hashtag}` },
-        });
-      } else {
-        this.layout.toast(`No notes found with #${hashtag}`);
-      }
-    } catch (error) {
-      this.logger.error(`Failed to search for hashtag #${hashtag}`, error);
-      this.layout.toast('Search failed');
-    }
+    // Navigate to the search page with the hashtag query
+    this.layout.router.navigate(['/search'], {
+      queryParams: { q: `#${hashtag}` },
+    });
   }
 }

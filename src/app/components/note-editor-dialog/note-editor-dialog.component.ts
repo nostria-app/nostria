@@ -54,6 +54,7 @@ import { cleanTrackingParametersFromText } from '../../utils/url-cleaner';
 import { DataService } from '../../services/data.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 import { NoteEditorDialogData } from '../../interfaces/note-editor';
+import { SpeechService } from '../../services/speech.service';
 
 // Re-export for backward compatibility
 export type { NoteEditorDialogData } from '../../interfaces/note-editor';
@@ -144,6 +145,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private publishSubscription?: Subscription;
   private dialog = inject(MatDialog);
   private aiService = inject(AiService);
+  private speechService = inject(SpeechService);
 
   @ViewChild('contentTextarea')
   contentTextarea!: ElementRef<HTMLTextAreaElement>;
@@ -171,17 +173,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   isPublishing = signal(false);
   isRecording = signal(false);
   isTranscribing = signal(false);
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
-
-  // Silence detection
-  private audioContext: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private microphone: MediaStreamAudioSourceNode | null = null;
-  private silenceStart: number | null = null;
-  private animationFrameId: number | null = null;
-  private readonly SILENCE_THRESHOLD = 0.02; // Adjust as needed
-  private readonly SILENCE_DURATION = 3000; // 3 seconds
 
   // Recording history for undo
   recordingHistory: string[] = [];
@@ -2598,102 +2589,35 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
 
   async toggleRecording() {
     if (this.isRecording()) {
-      this.stopRecording();
+      this.speechService.stopRecording();
     } else {
       await this.startRecording();
     }
   }
 
   async startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.mediaRecorder = new MediaRecorder(stream);
-      this.audioChunks = [];
+    // Save current content for undo
+    this.recordingHistory.push(this.content());
 
-      this.mediaRecorder.ondataavailable = (event) => {
-        this.audioChunks.push(event.data);
-      };
-
-      this.mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-        await this.transcribeAudio(audioBlob);
-
-        // Stop all tracks
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      this.mediaRecorder.start();
-      this.isRecording.set(true);
-
-      // Start silence detection
-      this.startSilenceDetection(stream);
-    } catch (err) {
-      console.error('Error accessing microphone:', err);
-      this.snackBar.open('Error accessing microphone', 'Close', { duration: 3000 });
-    }
-  }
-
-  startSilenceDetection(stream: MediaStream) {
-    this.audioContext = new AudioContext();
-    this.analyser = this.audioContext.createAnalyser();
-    this.microphone = this.audioContext.createMediaStreamSource(stream);
-    this.microphone.connect(this.analyser);
-
-    this.analyser.fftSize = 2048;
-    const bufferLength = this.analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    this.silenceStart = Date.now();
-
-    const checkSilence = () => {
-      if (!this.isRecording()) return;
-
-      this.analyser!.getByteTimeDomainData(dataArray);
-
-      let sum = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const x = (dataArray[i] - 128) / 128.0;
-        sum += x * x;
+    await this.speechService.startRecording({
+      silenceDuration: 3000,
+      onRecordingStateChange: (isRecording) => {
+        this.isRecording.set(isRecording);
+      },
+      onTranscribingStateChange: (isTranscribing) => {
+        this.isTranscribing.set(isTranscribing);
+      },
+      onTranscription: (text) => {
+        const currentContent = this.content();
+        const newContent = currentContent ? currentContent + ' ' + text : text;
+        this.content.set(newContent);
+        this.adjustTextareaHeight();
       }
-      const rms = Math.sqrt(sum / bufferLength);
-
-      if (rms < this.SILENCE_THRESHOLD) {
-        if (this.silenceStart === null) {
-          this.silenceStart = Date.now();
-        } else if (Date.now() - this.silenceStart > this.SILENCE_DURATION) {
-          this.stopRecording();
-          return;
-        }
-      } else {
-        this.silenceStart = null;
-      }
-
-      this.animationFrameId = requestAnimationFrame(checkSilence);
-    };
-
-    checkSilence();
+    });
   }
 
   stopRecording() {
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
-      this.isRecording.set(false);
-    }
-
-    // Clean up silence detection
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
-    }
-
-    this.analyser = null;
-    this.microphone = null;
-    this.silenceStart = null;
+    this.speechService.stopRecording();
   }
 
   undoLastRecording() {
@@ -2709,39 +2633,6 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       const textarea = this.contentTextarea.nativeElement;
       textarea.style.height = 'auto';
       textarea.style.height = textarea.scrollHeight + 'px';
-    }
-  }
-
-  async transcribeAudio(blob: Blob) {
-    this.isTranscribing.set(true);
-    try {
-      // Check if model is loaded
-      const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
-      if (!status.loaded) {
-        this.snackBar.open('Loading Whisper model...', 'Close', { duration: 2000 });
-        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
-      }
-
-      // Convert Blob to Float32Array
-      const arrayBuffer = await blob.arrayBuffer();
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const audioData = audioBuffer.getChannelData(0);
-
-      const result = await this.aiService.transcribeAudio(audioData) as { text: string };
-
-      if (result && result.text) {
-        const currentContent = this.content();
-        this.recordingHistory.push(currentContent);
-        const newContent = currentContent ? currentContent + ' ' + result.text.trim() : result.text.trim();
-        this.content.set(newContent);
-        this.adjustTextareaHeight();
-      }
-    } catch (err) {
-      console.error('Transcription error:', err);
-      this.snackBar.open('Transcription failed', 'Close', { duration: 3000 });
-    } finally {
-      this.isTranscribing.set(false);
     }
   }
 
