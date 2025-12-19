@@ -876,8 +876,9 @@ export class FeedsComponent implements OnDestroy {
       const hasMoreSignal = this.feedService.getColumnHasMore(columnId);
 
       // Guard: Ensure signals exist and check their values
+      // If signals don't exist yet, the column hasn't been subscribed - this is normal during initial load
       if (!isLoadingSignal || !hasMoreSignal) {
-        this.logger.warn(`Cannot load more for column ${columnId}: loading state signals not found`);
+        // Don't log warning - this is expected during initial feed setup
         return;
       }
 
