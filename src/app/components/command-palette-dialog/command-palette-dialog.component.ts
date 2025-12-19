@@ -144,6 +144,76 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'article',
       action: () => this.layoutService.createArticle(),
       keywords: ['create article', 'write article', 'new article', 'blog']
+    },
+    {
+      id: 'nav-analytics',
+      label: 'Open Analytics',
+      icon: 'analytics',
+      action: () => this.router.navigate(['/analytics']),
+      keywords: ['analytics', 'stats', 'statistics', 'insights']
+    },
+    {
+      id: 'nav-summary',
+      label: 'Open Summary',
+      icon: 'summarize',
+      action: () => this.router.navigate(['/summary']),
+      keywords: ['summary', 'overview', 'dashboard']
+    },
+    {
+      id: 'nav-memos',
+      label: 'Open Memos',
+      icon: 'sticky_note_2',
+      action: () => this.router.navigate(['/memos']),
+      keywords: ['memos', 'notes', 'reminders', 'private notes']
+    },
+    {
+      id: 'nav-calendar',
+      label: 'Open Calendar',
+      icon: 'calendar_month',
+      action: () => this.router.navigate(['/calendar']),
+      keywords: ['calendar', 'events', 'schedule', 'dates']
+    },
+    {
+      id: 'nav-backup',
+      label: 'Open Backup',
+      icon: 'backup',
+      action: () => this.router.navigate(['/backup']),
+      keywords: ['backup', 'export', 'save', 'restore']
+    },
+    {
+      id: 'nav-playlists',
+      label: 'Open Playlists',
+      icon: 'playlist_play',
+      action: () => this.router.navigate(['/playlists']),
+      keywords: ['playlists', 'music', 'queue', 'videos']
+    },
+    {
+      id: 'nav-media-queue',
+      label: 'Open Media Queue',
+      icon: 'queue_music',
+      action: () => this.router.navigate(['/queue']),
+      keywords: ['queue', 'media queue', 'playlist', 'watch later']
+    },
+    {
+      id: 'nav-lists',
+      label: 'Open Lists',
+      icon: 'list',
+      action: () => this.router.navigate(['/lists']),
+      keywords: ['lists', 'people lists', 'groups']
+    },
+    {
+      id: 'nav-polls',
+      label: 'Open Polls',
+      icon: 'poll',
+      action: () => this.router.navigate(['/polls']),
+      keywords: ['polls', 'voting', 'survey']
+    },
+    {
+      id: 'nav-notifications',
+      label: 'Open Notifications',
+      icon: 'notifications',
+      action: () => this.router.navigate(['/notifications']),
+      keywords: ['notifications', 'alerts', 'mentions', 'replies']
     }
   ];
 
