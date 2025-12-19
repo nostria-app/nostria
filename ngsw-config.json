@@ -4,7 +4,12 @@
   "navigationUrls": [
     "/**",
     "!/**/.**",
-    "!/share-target**"
+    "!/share-target**",
+    "!/**/*.js",
+    "!/**/*.mjs",
+    "!/**/*.wasm",
+    "!/**/*.json",
+    "!/**/*.map"
   ],
   "assetGroups": [
     {
@@ -28,7 +33,8 @@
       "updateMode": "prefetch",
       "resources": {
         "files": [
-          "/chunk*.js"
+          "/chunk*.js",
+          "/**/*.wasm"
         ]
       }
     },
