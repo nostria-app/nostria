@@ -1,5 +1,5 @@
 import { Component, Input, signal, inject, ViewChild, ElementRef } from '@angular/core';
-
+import { NgTemplateOutlet } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -102,10 +102,10 @@ export class InfoTooltipComponent {
 @Component({
   selector: 'app-tooltip-content',
   standalone: true,
-  imports: [MatCardModule],
+  imports: [MatCardModule, NgTemplateOutlet],
   template: `
     <mat-card class="tooltip-content-card">
-      <ng-container *ngTemplateOutlet="content"></ng-container>
+      <ng-container [ngTemplateOutlet]="content"></ng-container>
     </mat-card>
   `,
   styles: [
