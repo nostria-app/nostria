@@ -99,16 +99,34 @@ export class SearchService {
                     const startIndex = this.mediaPlayer.media().length;
 
                     if (feed && feed.items.length > 0) {
+                      // Determine media type based on feed medium
+                      let mediaType: 'Music' | 'Podcast' | 'Video';
+                      let toastMessage: string;
+                      switch (feed.medium) {
+                        case 'music':
+                          mediaType = 'Music';
+                          toastMessage = 'Added music to queue';
+                          break;
+                        case 'video':
+                        case 'film':
+                          mediaType = 'Video';
+                          toastMessage = 'Added video to queue';
+                          break;
+                        default:
+                          mediaType = 'Podcast';
+                          toastMessage = 'Added podcast to queue';
+                      }
+
                       for (const item of feed.items) {
                         this.mediaPlayer.enque({
-                          artist: feed.title,
+                          artist: feed.author || feed.title,
                           artwork: item.image || feed.image,
                           title: item.title,
                           source: item.mediaUrl,
-                          type: 'Podcast',
+                          type: mediaType,
                         });
                       }
-                      this.layout.toast('Added podcast to queue');
+                      this.layout.toast(toastMessage);
                     } else {
                       this.mediaPlayer.enque({
                         artist: 'Unknown',

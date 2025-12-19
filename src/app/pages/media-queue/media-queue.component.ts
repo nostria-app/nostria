@@ -208,13 +208,28 @@ export class MediaQueueComponent implements OnInit {
       try {
         const feed = await this.rssParser.parse(result.url);
         if (feed && feed.items.length > 0) {
+          // Determine media type based on feed medium
+          let mediaType: 'Music' | 'Podcast' | 'Video';
+          switch (feed.medium) {
+            case 'music':
+              mediaType = 'Music';
+              break;
+            case 'video':
+            case 'film':
+              mediaType = 'Video';
+              break;
+            default:
+              mediaType = 'Podcast';
+          }
+
           for (const item of feed.items) {
+            console.log('Adding to queue - source URL:', item.mediaUrl);
             this.media.enque({
-              artist: feed.title,
+              artist: feed.author || feed.title,
               artwork: item.image || feed.image,
               title: item.title,
               source: item.mediaUrl,
-              type: 'Podcast'
+              type: mediaType
             });
           }
 

@@ -9,12 +9,18 @@ export interface RssFeedItem {
   duration: string;
   image: string;
   pubDate: string;
+  episode?: number;
+  season?: number;
 }
+
+export type RssMedium = 'podcast' | 'music' | 'video' | 'film' | 'audiobook' | 'newsletter' | 'blog';
 
 export interface RssFeed {
   title: string;
   description: string;
   image: string;
+  author: string;
+  medium: RssMedium;
   items: RssFeedItem[];
 }
 
@@ -24,11 +30,25 @@ export interface RssFeed {
 export class RssParserService {
 
   async parse(url: string): Promise<RssFeed> {
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to fetch RSS feed: ${response.statusText}`);
+    let text: string;
+
+    // Try direct fetch first (works for CORS-enabled feeds)
+    try {
+      const directResponse = await fetch(url);
+      if (directResponse.ok) {
+        text = await directResponse.text();
+      } else {
+        throw new Error('Direct fetch failed');
+      }
+    } catch {
+      // Use allorigins CORS proxy as fallback
+      const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`;
+      const proxyResponse = await fetch(proxyUrl);
+      if (!proxyResponse.ok) {
+        throw new Error(`Failed to fetch RSS feed: ${proxyResponse.statusText}`);
+      }
+      text = await proxyResponse.text();
     }
-    const text = await response.text();
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(text, "text/xml");
 
@@ -39,6 +59,25 @@ export class RssParserService {
 
     const title = this.getElementText(channel, 'title');
     const description = this.getElementText(channel, 'description');
+
+    // Get author from itunes:author or author element
+    let author = '';
+    const itunesAuthor = channel.getElementsByTagName('itunes:author');
+    if (itunesAuthor.length > 0) {
+      author = itunesAuthor[0].textContent || '';
+    } else {
+      author = this.getElementText(channel, 'author');
+    }
+
+    // Detect medium type from podcast:medium element (podcast, music, video, etc.)
+    let medium: RssMedium = 'podcast'; // Default to podcast for backwards compatibility
+    const podcastMedium = channel.getElementsByTagName('podcast:medium');
+    if (podcastMedium.length > 0) {
+      const mediumValue = podcastMedium[0].textContent?.toLowerCase() || '';
+      if (['podcast', 'music', 'video', 'film', 'audiobook', 'newsletter', 'blog'].includes(mediumValue)) {
+        medium = mediumValue as RssMedium;
+      }
+    }
 
     // Try to find image in various standard locations
     let image = '';
@@ -68,10 +107,25 @@ export class RssParserService {
       const mediaUrl = enclosure?.getAttribute('url') || '';
       const type = enclosure?.getAttribute('type') || '';
 
+      console.log('RSS Parser - enclosure URL:', mediaUrl);
+      console.log('RSS Parser - enclosure type:', type);
+
       let itemDuration = '';
       const durationElems = item.getElementsByTagName('itunes:duration');
       if (durationElems.length > 0) {
         itemDuration = durationElems[0].textContent || '';
+      }
+
+      // Get episode and season numbers from podcast namespace
+      let episode: number | undefined;
+      let season: number | undefined;
+      const episodeElems = item.getElementsByTagName('podcast:episode');
+      if (episodeElems.length > 0) {
+        episode = parseInt(episodeElems[0].textContent || '', 10) || undefined;
+      }
+      const seasonElems = item.getElementsByTagName('podcast:season');
+      if (seasonElems.length > 0) {
+        season = parseInt(seasonElems[0].textContent || '', 10) || undefined;
       }
 
       let itemImage = '';
@@ -87,7 +141,9 @@ export class RssParserService {
           type,
           duration: itemDuration,
           image: itemImage || image, // Fallback to channel image
-          pubDate: itemPubDate
+          pubDate: itemPubDate,
+          episode,
+          season
         });
       }
     });
@@ -96,6 +152,8 @@ export class RssParserService {
       title,
       description,
       image,
+      author,
+      medium,
       items
     };
   }

@@ -834,7 +834,14 @@ export class MediaPlayerService implements OnInitialized {
       this.audio.addEventListener('ended', this.handleMediaEnded);
       this.audio.addEventListener('timeupdate', this.handleTimeUpdate);
       this.audio.addEventListener('loadedmetadata', this.handleLoadedMetadata);
+      this.audio.addEventListener('error', (e) => {
+        console.error('Audio playback error:', e);
+        console.error('Audio error code:', this.audio?.error?.code);
+        console.error('Audio error message:', this.audio?.error?.message);
+        console.error('Audio source:', this.audio?.src);
+      });
 
+      console.log('Starting audio playback for:', file.source);
       await this.audio.play();
       this._isPaused.set(false);
     }
