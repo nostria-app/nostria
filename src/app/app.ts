@@ -1086,6 +1086,12 @@ export class App implements OnInit {
       return;
     }
 
+    // ALT+S shortcut to toggle search (global shortcut)
+    if (event.altKey && event.key.toLowerCase() === 's') {
+      event.preventDefault();
+      this.layout.toggleSearch();
+    }
+
     // ALT+N shortcut to open create options (global shortcut)
     if (event.altKey && event.key.toLowerCase() === 'n') {
       event.preventDefault();
