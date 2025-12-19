@@ -255,7 +255,29 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   private handleTranscription(text: string) {
-    const cleanText = text.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+    // Filter out common Whisper hallucinations/noise
+    const hallucinations = [
+      /^\[.*\]$/i,  // [music playing], [Music], etc.
+      /^music$/i,
+      /^music playing$/i,
+      /^\(.*\)$/i,  // (music), etc.
+      /^\.+$/,      // Just periods
+      /^,+$/,       // Just commas
+      /^\s*$/,      // Empty or whitespace only
+    ];
+
+    const trimmedText = text.trim();
+    if (hallucinations.some(pattern => pattern.test(trimmedText))) {
+      // Ignore hallucination, don't update the search query
+      return;
+    }
+
+    const cleanText = trimmedText.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()[\]]/g, "").trim();
+
+    // Ignore if cleaned text is empty
+    if (!cleanText) {
+      return;
+    }
 
     // Check for "search <term>" command
     const searchMatch = cleanText.match(/^search\s+(.+)$/i);
@@ -286,8 +308,20 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
 
     if (match) {
       this.executeCommand(match);
+      return;
     }
-    // If no exact match, leave the text in search box so user can see it filtered
+
+    // Also try partial matching for common voice command patterns
+    const partialMatch = commands.find(cmd =>
+      cleanText.includes(cmd.label.toLowerCase()) ||
+      cmd.keywords?.some(k => cleanText.includes(k.toLowerCase()))
+    );
+
+    if (partialMatch) {
+      this.executeCommand(partialMatch);
+      return;
+    }
+    // If no match, leave the text in search box so user can see it filtered
     // The computed filteredCommands will update automatically
   }
 }

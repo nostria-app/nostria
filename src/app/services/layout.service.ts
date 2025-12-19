@@ -1209,13 +1209,26 @@ export class LayoutService implements OnDestroy {
     });
   }
 
+  private commandPaletteOpen = false;
+
   openCommandPalette(listening = false): void {
+    // Prevent opening multiple command palettes
+    if (this.commandPaletteOpen) {
+      return;
+    }
+
+    this.commandPaletteOpen = true;
     const dialogRef = this.customDialog.open(CommandPaletteDialogComponent, {
       width: '600px',
       maxWidth: '90vw',
       panelClass: 'command-palette-dialog',
       showCloseButton: false,
       disableEnterSubmit: true
+    });
+
+    // Reset flag when dialog closes
+    dialogRef.afterClosed$.subscribe(() => {
+      this.commandPaletteOpen = false;
     });
 
     if (listening) {
