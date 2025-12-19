@@ -78,7 +78,7 @@ export class CreatePlaylistDialogComponent {
       } this.importedTracks = feed.items.map(item => ({
         url: item.mediaUrl,
         title: item.title,
-        artist: feed.title,
+        artist: feed.author || feed.title,
         duration: item.duration,
         image: item.image
       }));
