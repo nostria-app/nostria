@@ -135,6 +135,11 @@ export class AppsMenuComponent {
 
   moreItems: MenuItem[] = [
     {
+      icon: 'terminal',
+      label: 'Commands',
+      action: () => this.layout.openCommandPalette(),
+    },
+    {
       icon: 'bookmarks',
       label: 'Bookmarks',
       route: ['/bookmarks'],

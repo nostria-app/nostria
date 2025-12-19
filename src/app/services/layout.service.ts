@@ -36,6 +36,7 @@ import { FeedService } from './feed.service';
 import { ReportTarget } from './reporting.service';
 // EventDialogComponent is dynamically imported to break circular dependency
 import { OnDemandUserDataService } from './on-demand-user-data.service';
+import { CommandPaletteDialogComponent } from '../components/command-palette-dialog/command-palette-dialog.component';
 // import { ArticleEditorDialogComponent } from '../components/article-editor-dialog/article-editor-dialog.component';
 
 @Injectable({
@@ -1181,6 +1182,23 @@ export class LayoutService implements OnDestroy {
         }
       }
     });
+  }
+
+  openCommandPalette(listening = false): void {
+    const dialogRef = this.customDialog.open(CommandPaletteDialogComponent, {
+      width: '600px',
+      maxWidth: '90vw',
+      panelClass: 'command-palette-dialog',
+      showCloseButton: false,
+      disableEnterSubmit: true
+    });
+
+    if (listening) {
+      // Start recording immediately if opened in listening mode
+      if (dialogRef.componentInstance) {
+        dialogRef.componentInstance.startRecording();
+      }
+    }
   }
 
   /**

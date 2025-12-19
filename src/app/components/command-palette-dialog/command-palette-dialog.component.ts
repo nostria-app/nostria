@@ -12,6 +12,7 @@ import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from '../../services/event';
 import { LayoutService } from '../../services/layout.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { SettingsService } from '../../services/settings.service';
 
 export interface Command {
   id: string;
@@ -31,7 +32,7 @@ export interface Command {
     MatButtonModule,
     MatListModule,
     MatInputModule
-],
+  ],
   templateUrl: './command-palette-dialog.component.html',
   styleUrls: ['./command-palette-dialog.component.scss']
 })
@@ -41,6 +42,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private eventService = inject(EventService);
   private layoutService = inject(LayoutService);
   private aiService = inject(AiService);
+  private settings = inject(SettingsService);
   private snackBar = inject(MatSnackBar);
   private accountState = inject(AccountStateService);
 
@@ -55,6 +57,15 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private mediaRecorder: MediaRecorder | null = null;
   private audioChunks: Blob[] = [];
   private stream: MediaStream | null = null;
+
+  // Silence detection
+  private audioContext: AudioContext | null = null;
+  private analyser: AnalyserNode | null = null;
+  private microphone: MediaStreamAudioSourceNode | null = null;
+  private silenceStart: number | null = null;
+  private animationFrameId: number | null = null;
+  private readonly SILENCE_THRESHOLD = 0.02; // Adjust as needed
+  private readonly SILENCE_DURATION = 2000; // 2 seconds of silence to stop
 
   commands: Command[] = [
     {
@@ -246,10 +257,54 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       this.mediaRecorder.start();
       this.isListening.set(true);
       this.searchQuery.set('Listening...');
+
+      // Start silence detection
+      this.startSilenceDetection(this.stream);
     } catch (err) {
       console.error('Error accessing microphone:', err);
       this.snackBar.open('Error accessing microphone', 'Close', { duration: 3000 });
     }
+  }
+
+  startSilenceDetection(stream: MediaStream) {
+    this.audioContext = new AudioContext();
+    this.analyser = this.audioContext.createAnalyser();
+    this.microphone = this.audioContext.createMediaStreamSource(stream);
+    this.microphone.connect(this.analyser);
+
+    this.analyser.fftSize = 2048;
+    const bufferLength = this.analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    this.silenceStart = Date.now();
+
+    const checkSilence = () => {
+      if (!this.isListening()) return;
+
+      this.analyser!.getByteTimeDomainData(dataArray);
+
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const x = (dataArray[i] - 128) / 128.0;
+        sum += x * x;
+      }
+      const rms = Math.sqrt(sum / bufferLength);
+
+      if (rms < this.SILENCE_THRESHOLD) {
+        if (this.silenceStart === null) {
+          this.silenceStart = Date.now();
+        } else if (Date.now() - this.silenceStart > this.SILENCE_DURATION) {
+          this.stopRecording();
+          return;
+        }
+      } else {
+        this.silenceStart = null;
+      }
+
+      this.animationFrameId = requestAnimationFrame(checkSilence);
+    };
+
+    checkSilence();
   }
 
   stopRecording() {
@@ -257,6 +312,21 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       this.mediaRecorder.stop();
       this.isListening.set(false);
     }
+
+    // Clean up silence detection
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+
+    if (this.audioContext) {
+      this.audioContext.close();
+      this.audioContext = null;
+    }
+
+    this.analyser = null;
+    this.microphone = null;
+    this.silenceStart = null;
   }
 
   async processVoiceCommand(blob: Blob) {
@@ -264,9 +334,21 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
     this.searchQuery.set('Processing...');
 
     try {
+      // Check if AI transcription is enabled
+      if (!this.settings.settings().aiEnabled || !this.settings.settings().aiTranscriptionEnabled) {
+        this.snackBar.open('AI transcription is disabled in settings', 'Open Settings', { duration: 5000 })
+          .onAction().subscribe(() => {
+            this.dialogRef.close();
+            this.router.navigate(['/ai/settings']);
+          });
+        this.searchQuery.set('');
+        return;
+      }
+
       // Check/Load Whisper model
       const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
       if (!status.loaded) {
+        this.snackBar.open('Loading Whisper model...', 'Close', { duration: 2000 });
         await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
       }
 
