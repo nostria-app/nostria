@@ -1,5 +1,6 @@
 import {
   ApplicationConfig,
+  ErrorHandler,
   inject,
   isDevMode,
   LOCALE_ID,
@@ -7,7 +8,8 @@ import {
   provideBrowserGlobalErrorListeners,
   provideZonelessChangeDetection,
 } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withNavigationErrorHandler } from '@angular/router';
+import { GlobalErrorHandler } from './services/global-error-handler.service';
 import { provideAnimations } from '@angular/platform-browser/animations';
 import { provideServiceWorker } from '@angular/service-worker';
 import { importProvidersFrom } from '@angular/core';
@@ -53,6 +55,7 @@ bootstrapLogger.log('Configuring application');
 export const appConfig: ApplicationConfig = {
   providers: [
     { provide: LOCALE_ID, useValue: appLang },
+    { provide: ErrorHandler, useClass: GlobalErrorHandler },
     {
       provide: MAT_TOOLTIP_DEFAULT_OPTIONS,
       useValue: { touchGestures: 'off' },
@@ -87,7 +90,42 @@ export const appConfig: ApplicationConfig = {
     },
     provideNativeDateAdapter(),
     provideZonelessChangeDetection(),
-    provideRouter(routes),
+    provideRouter(
+      routes,
+      withNavigationErrorHandler((error: any) => {
+        const errorMessage = error?.message || error?.toString() || '';
+        // Check for chunk loading errors during navigation
+        const chunkErrorPatterns = [
+          'Failed to fetch dynamically imported module',
+          'Loading chunk',
+          'ChunkLoadError',
+          'MIME type',
+        ];
+        const isChunkError = chunkErrorPatterns.some(pattern =>
+          errorMessage.toLowerCase().includes(pattern.toLowerCase())
+        );
+
+        if (isChunkError) {
+          console.error('[Router] Chunk loading error during navigation, reloading app:', errorMessage);
+          // Clear caches and reload
+          (async () => {
+            try {
+              if ('caches' in window) {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+              }
+              if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                await Promise.all(registrations.map(reg => reg.unregister()));
+              }
+            } catch (e) {
+              console.error('Error clearing caches:', e);
+            }
+            window.location.reload();
+          })();
+        }
+      })
+    ),
     provideAnimations(),
     provideHttpClient(withFetch(), withInterceptors([nip98AuthInterceptor])),
     provideClientHydration(withEventReplay()),
