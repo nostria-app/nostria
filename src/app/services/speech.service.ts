@@ -59,6 +59,14 @@ export class SpeechService {
    * IMPORTANT: Order matters! More specific patterns should come before general ones.
    */
   private readonly transcriptionRules: TranscriptionRule[] = [
+    // === FORMATTING (must be FIRST to prevent "hashtag new paragraph" → "#new #paragraph") ===
+    { pattern: /\bnew\s*paragraph\b/gi, replacement: '\n\n' },
+    { pattern: /\bNewParagraph\b/g, replacement: '\n\n' },
+    { pattern: /\bnew\s*line\b/gi, replacement: '\n' },
+    { pattern: /\bNewLine\b/g, replacement: '\n' },
+    { pattern: /\bnewline\b/gi, replacement: '\n' },
+    { pattern: /\bparagraph\b/gi, replacement: '\n\n' },
+
     // === PHRASE CORRECTIONS (most specific, applied first) ===
 
     // "hashtag ask nostr" variations → #asknostr
@@ -119,12 +127,6 @@ export class SpeechService {
     { pattern: /\bquestion mark\b/gi, replacement: '?' },
     { pattern: /\bexclamation mark\b/gi, replacement: '!' },
     { pattern: /\bexclamation point\b/gi, replacement: '!' },
-
-    // === FORMATTING ===
-    { pattern: /\bnew line\b/gi, replacement: '\n' },
-    { pattern: /\bnewline\b/gi, replacement: '\n' },
-    { pattern: /\bparagraph\b/gi, replacement: '\n\n' },
-    { pattern: /\bnew paragraph\b/gi, replacement: '\n\n' },
   ];
 
   /**
