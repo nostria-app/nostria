@@ -1,16 +1,18 @@
 import { Component, inject, signal, effect } from '@angular/core';
-
+import { Router } from '@angular/router';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { SearchService, SearchResultProfile } from '../../services/search.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { LayoutService } from '../../services/layout.service';
 
 @Component({
   selector: 'app-search-results',
   standalone: true,
-  imports: [MatListModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule],
+  imports: [MatListModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule],
   template: `
     @if (searchService.searchResults().length > 0 || searchService.searchActions().length > 0 || searchService.isSearchingRemote()) {
       <div
@@ -23,9 +25,14 @@ import { UtilitiesService } from '../../services/utilities.service';
         @if (searchService.searchActions().length > 0) {
           <div class="search-results-header">
             <span>Actions</span>
-            <button mat-icon-button (click)="searchService.clearResults()">
-              <mat-icon>close</mat-icon>
-            </button>
+            <div class="header-actions">
+              <button mat-icon-button (click)="openAdvancedSearch()" matTooltip="Advanced Search">
+                <mat-icon>manage_search</mat-icon>
+              </button>
+              <button mat-icon-button (click)="searchService.clearResults()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
           </div>
           <div class="search-results-list">
             @for (action of searchService.searchActions(); track action.label) {
@@ -43,14 +50,19 @@ import { UtilitiesService } from '../../services/utilities.service';
         @if (searchService.searchResults().length > 0) {
           <div class="search-results-header">
             <span>Found Profiles ({{ searchService.searchResults().length }})</span>
-            @if (searchService.isSearchingRemote()) {
-              <mat-spinner diameter="16"></mat-spinner>
-            }
-            @if (searchService.searchActions().length === 0) {
-              <button mat-icon-button (click)="searchService.clearResults()">
-                <mat-icon>close</mat-icon>
+            <div class="header-actions">
+              @if (searchService.isSearchingRemote()) {
+                <mat-spinner diameter="16"></mat-spinner>
+              }
+              <button mat-icon-button (click)="openAdvancedSearch()" matTooltip="Advanced Search">
+                <mat-icon>manage_search</mat-icon>
               </button>
-            }
+              @if (searchService.searchActions().length === 0) {
+                <button mat-icon-button (click)="searchService.clearResults()">
+                  <mat-icon>close</mat-icon>
+                </button>
+              }
+            </div>
           </div>
           <div class="search-results-list">
             @for (
@@ -158,6 +170,17 @@ import { UtilitiesService } from '../../services/utilities.service';
         font-size: 14px;
       }
 
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-left: auto;
+      }
+
+      .header-actions mat-spinner {
+        margin-right: 8px;
+      }
+
       .search-results-list {
         padding: 0;
       }
@@ -261,17 +284,14 @@ import { UtilitiesService } from '../../services/utilities.service';
         opacity: 0.9;
         border: 2px solid var(--mat-sys-secondary);
       }
-
-      .search-results-header mat-spinner {
-        margin-left: auto;
-        margin-right: 8px;
-      }
     `,
   ],
 })
 export class SearchResultsComponent {
   searchService = inject(SearchService);
   utilities = inject(UtilitiesService);
+  private layout = inject(LayoutService);
+  private router = inject(Router);
 
   focusedIndex = signal(-1);
 
@@ -283,6 +303,15 @@ export class SearchResultsComponent {
       if (results.length === 0 && actions.length === 0) {
         this.focusedIndex.set(-1);
       }
+    });
+  }
+
+  openAdvancedSearch() {
+    const searchValue = this.layout.searchInput;
+    this.searchService.clearResults();
+    this.layout.toggleSearch();
+    this.router.navigate(['/search'], {
+      queryParams: searchValue ? { q: searchValue } : {},
     });
   }
 
