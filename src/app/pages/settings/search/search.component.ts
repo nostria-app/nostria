@@ -88,18 +88,18 @@ export class SearchSettingsComponent {
     try {
       // Try to fetch from relay first
       const event = await this.data.getEventByPubkeyAndKind(pubkey, SearchRelayListKind);
-      
+
       if (event) {
         const relayUrls = event.event.tags
           .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
           .map((tag: string[]) => tag[1]);
-        
+
         if (relayUrls.length > 0) {
           this.searchRelay.setSearchRelays(relayUrls);
           return;
         }
       }
-      
+
       // Fall back to local storage (which is handled by the service)
       await this.searchRelay.load();
     } catch (error) {
@@ -165,13 +165,13 @@ export class SearchSettingsComponent {
       if (result && result.action === 'add') {
         const currentRelays = this.searchRelay.getRelayUrls();
         const newRelays = [...currentRelays, url];
-        
+
         // Save locally
         this.searchRelay.setSearchRelays(newRelays);
-        
+
         // Publish to relays
         await this.publishSearchRelayList(newRelays);
-        
+
         this.newSearchRelayUrl.set('');
         this.showMessage('Search relay added');
       }
@@ -181,13 +181,13 @@ export class SearchSettingsComponent {
   async removeSearchRelay(relayUrl: string) {
     const currentRelays = this.searchRelay.getRelayUrls();
     const newRelays = currentRelays.filter(r => r !== relayUrl);
-    
+
     // Save locally
     this.searchRelay.setSearchRelays(newRelays);
-    
+
     // Publish to relays
     await this.publishSearchRelayList(newRelays);
-    
+
     this.showMessage('Search relay removed');
   }
 
@@ -203,13 +203,13 @@ export class SearchSettingsComponent {
     try {
       const unsignedEvent = this.searchRelay.createSearchRelayListEvent(pubkey, relayUrls);
       const signedEvent = await this.nostr.signEvent(unsignedEvent);
-      
+
       // Publish to account relays
       await this.accountRelay.publish(signedEvent);
-      
+
       // Save to database
       await this.searchRelay.saveEvent(signedEvent);
-      
+
       this.logger.debug('Published search relay list event');
     } catch (error) {
       this.logger.error('Failed to publish search relay list', error);
