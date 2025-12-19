@@ -47,10 +47,20 @@
     <span class="toolbar-spacer">
       @if (layout.search()) {
       <div class="search-container toolbar-section">
-        <input type="search" class="search-input" [(ngModel)]="layout.searchInput"
+        <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
           (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
           (paste)="onSearchInputPaste($event)" i18n-placeholder="@@app.search.placeholder"
           placeholder="Search for cached profiles or paste identifiers..." />
+        <button mat-icon-button class="search-action-button voice-search-button" (click)="startSearchVoiceInput()"
+          [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search">
+          @if (isSearchListening()) {
+          <mat-icon class="pulse-icon">mic</mat-icon>
+          } @else if (isSearchTranscribing()) {
+          <mat-icon class="spinning-icon">sync</mat-icon>
+          } @else {
+          <mat-icon>mic</mat-icon>
+          }
+        </button>
         <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
           <mat-icon>qr_code_scanner</mat-icon>
         </button>

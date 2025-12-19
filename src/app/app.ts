@@ -48,6 +48,7 @@ import { SearchService } from './services/search.service';
 import { MediaPlayerComponent } from './components/media-player/media-player.component';
 import { MediaPlayerService } from './services/media-player.service';
 import { LocalSettingsService } from './services/local-settings.service';
+import { SettingsService } from './services/settings.service';
 import { AccountStateService } from './services/account-state.service';
 import { RelaysService } from './services/relays/relays';
 import { SearchResultsComponent } from './components/search-results/search-results.component';
@@ -179,6 +180,7 @@ export class App implements OnInit {
   search = inject(SearchService);
   media = inject(MediaPlayerService);
   localSettings = inject(LocalSettingsService);
+  settings = inject(SettingsService);
   accountState = inject(AccountStateService);
   state = inject(StateService);
   nostrProtocol = inject(NostrProtocolService);
@@ -219,6 +221,20 @@ export class App implements OnInit {
 
   // Track if credentials backup prompt has been shown
   private credentialsBackupPromptShown = signal(false);
+
+  // Voice search signals and state
+  isSearchListening = signal(false);
+  isSearchTranscribing = signal(false);
+  private searchMediaRecorder: MediaRecorder | null = null;
+  private searchAudioChunks: Blob[] = [];
+  private searchStream: MediaStream | null = null;
+  private searchAudioContext: AudioContext | null = null;
+  private searchAnalyser: AnalyserNode | null = null;
+  private searchMicrophone: MediaStreamAudioSourceNode | null = null;
+  private searchSilenceStart: number | null = null;
+  private searchAnimationFrameId: number | null = null;
+  private readonly SEARCH_SILENCE_THRESHOLD = 0.02;
+  private readonly SEARCH_SILENCE_DURATION = 2000; // 2 seconds
 
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
@@ -1125,6 +1141,153 @@ export class App implements OnInit {
       if (dialogRef.componentInstance) {
         dialogRef.componentInstance.startRecording();
       }
+    }
+  }
+
+  // Voice search methods
+  async startSearchVoiceInput(): Promise<void> {
+    try {
+      this.searchStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.searchMediaRecorder = new MediaRecorder(this.searchStream);
+      this.searchAudioChunks = [];
+
+      this.searchMediaRecorder.ondataavailable = (event) => {
+        this.searchAudioChunks.push(event.data);
+      };
+
+      this.searchMediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(this.searchAudioChunks, { type: 'audio/wav' });
+        await this.processSearchVoiceInput(audioBlob);
+
+        if (this.searchStream) {
+          this.searchStream.getTracks().forEach(track => track.stop());
+          this.searchStream = null;
+        }
+      };
+
+      this.searchMediaRecorder.start();
+      this.isSearchListening.set(true);
+
+      // Start silence detection
+      this.startSearchSilenceDetection(this.searchStream);
+    } catch (err) {
+      console.error('Error accessing microphone:', err);
+      this.snackBar.open('Error accessing microphone', 'Close', { duration: 3000 });
+    }
+  }
+
+  private startSearchSilenceDetection(stream: MediaStream): void {
+    this.searchAudioContext = new AudioContext();
+    this.searchAnalyser = this.searchAudioContext.createAnalyser();
+    this.searchMicrophone = this.searchAudioContext.createMediaStreamSource(stream);
+    this.searchMicrophone.connect(this.searchAnalyser);
+
+    this.searchAnalyser.fftSize = 2048;
+    const bufferLength = this.searchAnalyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+
+    this.searchSilenceStart = Date.now();
+
+    const checkSilence = () => {
+      if (!this.isSearchListening()) return;
+
+      this.searchAnalyser!.getByteTimeDomainData(dataArray);
+
+      let sum = 0;
+      for (let i = 0; i < bufferLength; i++) {
+        const x = (dataArray[i] - 128) / 128.0;
+        sum += x * x;
+      }
+      const rms = Math.sqrt(sum / bufferLength);
+
+      if (rms < this.SEARCH_SILENCE_THRESHOLD) {
+        if (this.searchSilenceStart === null) {
+          this.searchSilenceStart = Date.now();
+        } else if (Date.now() - this.searchSilenceStart > this.SEARCH_SILENCE_DURATION) {
+          this.stopSearchRecording();
+          return;
+        }
+      } else {
+        this.searchSilenceStart = null;
+      }
+
+      this.searchAnimationFrameId = requestAnimationFrame(checkSilence);
+    };
+
+    checkSilence();
+  }
+
+  private stopSearchRecording(): void {
+    if (this.searchMediaRecorder && this.searchMediaRecorder.state !== 'inactive') {
+      this.searchMediaRecorder.stop();
+      this.isSearchListening.set(false);
+    }
+
+    // Clean up silence detection
+    if (this.searchAnimationFrameId) {
+      cancelAnimationFrame(this.searchAnimationFrameId);
+      this.searchAnimationFrameId = null;
+    }
+
+    if (this.searchAudioContext) {
+      this.searchAudioContext.close();
+      this.searchAudioContext = null;
+    }
+
+    this.searchAnalyser = null;
+    this.searchMicrophone = null;
+    this.searchSilenceStart = null;
+  }
+
+  private async processSearchVoiceInput(blob: Blob): Promise<void> {
+    this.isSearchTranscribing.set(true);
+
+    try {
+      // Check if AI transcription is enabled
+      if (!this.settings.settings().aiEnabled || !this.settings.settings().aiTranscriptionEnabled) {
+        this.snackBar.open('AI transcription is disabled in settings', 'Open Settings', { duration: 5000 })
+          .onAction().subscribe(() => {
+            this.router.navigate(['/ai/settings']);
+          });
+        return;
+      }
+
+      // Check/Load Whisper model
+      const status = await this.ai.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+      if (!status.loaded) {
+        this.snackBar.open('Loading Whisper model...', 'Close', { duration: 2000 });
+        await this.ai.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+      }
+
+      // Transcribe
+      const arrayBuffer = await blob.arrayBuffer();
+      const audioContext = new AudioContext({ sampleRate: 16000 });
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      const audioData = audioBuffer.getChannelData(0);
+
+      const result = await this.ai.transcribeAudio(audioData) as { text: string };
+
+      if (result && result.text) {
+        const text = result.text.trim();
+        // Remove punctuation
+        const cleanText = text.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+
+        // Set the search input value
+        this.layout.searchInput = cleanText;
+
+        // Trigger search
+        setTimeout(() => {
+          const searchInput = this.document.querySelector('.search-input') as HTMLInputElement;
+          if (searchInput) {
+            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        }, 100);
+      }
+    } catch (err) {
+      console.error('Transcription error:', err);
+      this.snackBar.open('Voice search failed', 'Close', { duration: 3000 });
+    } finally {
+      this.isSearchTranscribing.set(false);
     }
   }
 

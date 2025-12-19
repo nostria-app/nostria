@@ -364,6 +364,25 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
         const text = result.text.trim().toLowerCase();
         // Remove punctuation
         const cleanText = text.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+
+        // Check for "search <term>" command
+        const searchMatch = cleanText.match(/^search\s+(.+)$/i);
+        if (searchMatch) {
+          const searchTerm = searchMatch[1].trim();
+          this.dialogRef.close();
+          this.layoutService.openSearchWithValue(searchTerm);
+          return;
+        }
+
+        // Check for "find <term>" command (alternative)
+        const findMatch = cleanText.match(/^find\s+(.+)$/i);
+        if (findMatch) {
+          const searchTerm = findMatch[1].trim();
+          this.dialogRef.close();
+          this.layoutService.openSearchWithValue(searchTerm);
+          return;
+        }
+
         this.searchQuery.set(cleanText);
 
         // Try to find a match
