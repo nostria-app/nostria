@@ -7,8 +7,8 @@
   <div class="search-controls">
     <div class="search-input-container">
       <mat-icon class="search-icon">search</mat-icon>
-      <input type="text" class="search-input" [value]="searchQuery()" (input)="onSearchInput($event)"
-        (keydown)="onSearchKeydown($event)" placeholder="Search profiles, notes, hashtags..." />
+      <input type="text" class="search-input" [(ngModel)]="searchQuery" (keydown)="onSearchKeydown($event)"
+        placeholder="Search profiles, notes, hashtags..." />
       @if (searchQuery()) {
       <button mat-icon-button class="clear-button" (click)="clearSearch()" aria-label="Clear search">
         <mat-icon>close</mat-icon>

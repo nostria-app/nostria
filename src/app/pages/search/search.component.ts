@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, signal, ChangeDetectionStrategy } from '@angular/core';
+import { Component, OnInit, computed, inject, signal, ChangeDetectionStrategy } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
@@ -98,35 +98,22 @@ export class SearchComponent implements OnInit {
     maxResults: 100,
   };
 
-  constructor() {
-    // React to route query params
-    effect(() => {
-      const params = this.route.snapshot.queryParams;
-      if (params['q']) {
-        this.searchQuery.set(params['q']);
-        this.performSearch();
-      }
-      if (params['type']) {
-        this.searchType.set(params['type'] as SearchType);
-      }
-      if (params['source']) {
-        this.searchSource.set(params['source'] as SearchSource);
-      }
-    });
-  }
-
   ngOnInit() {
     // Check for initial query params
     const params = this.route.snapshot.queryParams;
     if (params['q']) {
       this.searchQuery.set(params['q']);
+    }
+    if (params['type']) {
+      this.searchType.set(params['type'] as SearchType);
+    }
+    if (params['source']) {
+      this.searchSource.set(params['source'] as SearchSource);
+    }
+    // Perform initial search if query is provided
+    if (params['q']) {
       this.performSearch();
     }
-  }
-
-  onSearchInput(event: globalThis.Event) {
-    const target = event.target as HTMLInputElement;
-    this.searchQuery.set(target.value);
   }
 
   onSearchKeydown(event: KeyboardEvent) {
@@ -411,7 +398,7 @@ export class SearchComponent implements OnInit {
     return imageTag?.[1] || null;
   }
 
-  trackByEventId(_index: number, item: SearchResultItem): string {
-    return item.event.id;
+  trackByEventId(index: number, item: SearchResultItem): string {
+    return `${item.source}-${item.event.id}-${index}`;
   }
 }
