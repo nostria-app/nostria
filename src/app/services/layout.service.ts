@@ -7,7 +7,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { MediaPreviewDialogComponent } from '../components/media-preview-dialog/media-preview.component';
-import { Event, kinds, nip19 } from 'nostr-tools';
+import { type Event, kinds, nip19 } from 'nostr-tools';
 import { AddressPointer, EventPointer, ProfilePointer } from 'nostr-tools/nip19';
 import { ProfileStateService } from './profile-state.service';
 import { NostrRecord } from '../interfaces';
@@ -513,6 +513,31 @@ export class LayoutService implements OnDestroy {
   }
 
   searchInput = '';
+
+  /**
+   * Opens the search input and populates it with a value
+   * Used by voice commands to search for something
+   */
+  openSearchWithValue(value: string): void {
+    // Open search if not already open
+    if (!this.search()) {
+      this.search.set(true);
+      this.setupEscKeyListener();
+    }
+
+    // Set the search input value
+    this.searchInput = value;
+
+    // Trigger the search after DOM update
+    setTimeout(() => {
+      const searchInput = document.querySelector('.search-input') as HTMLInputElement;
+      if (searchInput) {
+        searchInput.focus();
+        // Trigger the input event to start search
+        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+    }, 100);
+  }
 
   private debounceTimer: any;
 

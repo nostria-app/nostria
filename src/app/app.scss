@@ -931,7 +931,7 @@ mat-sidenav-content {
 
 .search-input {
   width: 100%;
-  padding: 9px 98px 9px 13px; // Slightly increased padding
+  padding: 9px 138px 9px 13px; // Increased padding for 3 action buttons
   border: 1px solid var(--mat-sys-outline-variant);
   border-radius: 24px;
   background: var(--mat-sys-surface-container);
@@ -963,6 +963,10 @@ mat-sidenav-content {
     font-size: 20px;
     width: 20px;
     height: 20px;
+  }
+
+  &.voice-search-button {
+    right: 88px;
   }
 
   &.qr-button {
@@ -1150,5 +1154,18 @@ mat-sidenav-content {
   .initializing-text {
     font-size: 16px;
     opacity: 0.8;
+  }
+}
+
+// Voice search button styles
+.voice-search-button {
+  .pulse-icon {
+    animation: pulse 1s ease-in-out infinite;
+    color: var(--mat-sys-error);
+  }
+
+  .spinning-icon {
+    animation: spin 2s linear infinite;
+    color: var(--mat-sys-primary);
   }
 }
