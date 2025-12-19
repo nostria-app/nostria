@@ -82,7 +82,7 @@
     <div class="spinner-container">
       <mat-spinner diameter="16"></mat-spinner>
     </div>
-    <span>Uploading...</span>
+    <span>{{ isVideo() && !uploadForm.value.uploadOriginal ? 'Uploading and optimizing...' : 'Uploading...' }}</span>
     } @else {
     <span>Upload</span>
     }

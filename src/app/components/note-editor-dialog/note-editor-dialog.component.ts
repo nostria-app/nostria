@@ -2071,7 +2071,9 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             }
           }
 
-          this.uploadStatus.set(`Uploading${fileLabel}...`);
+          const isVideoUpload = file.type.startsWith('video/');
+          const uploadText = isVideoUpload && !this.uploadOriginal() ? 'Uploading and optimizing' : 'Uploading';
+          this.uploadStatus.set(`${uploadText}${fileLabel}...`);
           const result = await this.mediaService.uploadFile(
             file,
             this.uploadOriginal(),
