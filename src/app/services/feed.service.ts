@@ -1000,11 +1000,11 @@ export class FeedService {
       }
 
       const kinds = feedData.filter?.kinds || [1]; // Default to text notes
-      
+
       // Get the since timestamp (from last retrieved or 24 hours ago)
       const oneDayAgo = Math.floor(Date.now() / 1000) - (24 * 60 * 60);
       const since = column.lastRetrieved ? column.lastRetrieved : oneDayAgo;
-      
+
       this.logger.info(`🔍 Loading SEARCH feed for query "${searchQuery}" with kinds: ${kinds.join(', ')}`);
 
       // Use SearchRelayService to perform the search
@@ -1025,7 +1025,7 @@ export class FeedService {
       // Add events to the feed
       const currentEvents = feedData.events();
       const existingIds = new Set(currentEvents.map(e => e.id));
-      
+
       // Filter out duplicates and muted events
       const newEvents = events.filter(event => {
         if (existingIds.has(event.id)) return false;
@@ -1053,7 +1053,7 @@ export class FeedService {
       }
 
       // Update lastRetrieved timestamp
-      this.updateLastRetrieved(column.id, Math.floor(Date.now() / 1000));
+      this.updateColumnLastRetrieved(column.id);
 
     } catch (error) {
       this.logger.error('Error loading search feed:', error);
