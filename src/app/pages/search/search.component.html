@@ -1,0 +1,238 @@
+<div class="search-page">
+  <div class="search-header">
+    <h1>Search</h1>
+    <p class="subtitle">Search your local database and search relays</p>
+  </div>
+
+  <div class="search-controls">
+    <div class="search-input-container">
+      <mat-icon class="search-icon">search</mat-icon>
+      <input type="text" class="search-input" [value]="searchQuery()" (input)="onSearchInput($event)"
+        (keydown)="onSearchKeydown($event)" placeholder="Search profiles, notes, hashtags..." />
+      @if (searchQuery()) {
+      <button mat-icon-button class="clear-button" (click)="clearSearch()" aria-label="Clear search">
+        <mat-icon>close</mat-icon>
+      </button>
+      }
+      <button mat-flat-button class="search-button" (click)="performSearch()"
+        [disabled]="isSearching() || !searchQuery()">
+        @if (isSearching()) {
+        <mat-spinner diameter="20"></mat-spinner>
+        } @else {
+        Search
+        }
+      </button>
+    </div>
+
+    <div class="search-filters">
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Search In</mat-label>
+        <mat-select [value]="searchSource()" (selectionChange)="searchSource.set($event.value)">
+          <mat-option value="all">All Sources</mat-option>
+          <mat-option value="local">Local Database Only</mat-option>
+          <mat-option value="relays">Search Relays Only</mat-option>
+        </mat-select>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline" class="filter-field">
+        <mat-label>Content Type</mat-label>
+        <mat-select [value]="searchType()" (selectionChange)="searchType.set($event.value)">
+          <mat-option value="all">All Types</mat-option>
+          <mat-option value="profiles">Profiles</mat-option>
+          <mat-option value="notes">Notes</mat-option>
+          <mat-option value="articles">Articles</mat-option>
+          <mat-option value="hashtags">Hashtags</mat-option>
+        </mat-select>
+      </mat-form-field>
+    </div>
+
+    <div class="search-tips">
+      <mat-icon>lightbulb</mat-icon>
+      <span>Tip: Use <code>#hashtag</code> to search for specific hashtags, or enter a NIP-05 address like
+        <code>user&#64;domain.com</code></span>
+    </div>
+  </div>
+
+  @if (hasSearched()) {
+  <div class="search-results">
+    @if (isSearching()) {
+    <div class="loading-state">
+      <mat-spinner diameter="40"></mat-spinner>
+      <p>Searching...</p>
+    </div>
+    } @else if (totalResults() === 0) {
+    <div class="empty-state">
+      <mat-icon>search_off</mat-icon>
+      <h3>No results found</h3>
+      <p>Try different keywords or adjust your search filters</p>
+    </div>
+    } @else {
+    <div class="results-summary">
+      <span>Found {{ totalResults() }} results</span>
+      @if (profileCount() > 0) {
+      <mat-chip>{{ profileCount() }} profiles</mat-chip>
+      }
+      @if (noteCount() > 0) {
+      <mat-chip>{{ noteCount() }} notes</mat-chip>
+      }
+      @if (articleCount() > 0) {
+      <mat-chip>{{ articleCount() }} articles</mat-chip>
+      }
+    </div>
+
+    <mat-tab-group [(selectedIndex)]="selectedTabIndex" animationDuration="200ms">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>apps</mat-icon>
+          <span>All ({{ totalResults() }})</span>
+        </ng-template>
+        <div class="tab-content">
+          @if (profileResults().length > 0) {
+          <h3 class="section-title">
+            <mat-icon>person</mat-icon>
+            Profiles ({{ profileCount() }})
+          </h3>
+          <div class="profiles-grid">
+            @for (item of profileResults().slice(0, 6); track trackByEventId($index, item)) {
+            <app-user-profile [pubkey]="item.event.pubkey" viewMode="card" class="profile-result"></app-user-profile>
+            }
+          </div>
+          @if (profileResults().length > 6) {
+          <button mat-button class="view-all-button" (click)="selectedTabIndex.set(1)">
+            View all {{ profileCount() }} profiles
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+          }
+          }
+
+          @if (noteResults().length > 0) {
+          <mat-divider></mat-divider>
+          <h3 class="section-title">
+            <mat-icon>chat_bubble</mat-icon>
+            Notes ({{ noteCount() }})
+          </h3>
+          <div class="notes-list">
+            @for (item of noteResults().slice(0, 5); track trackByEventId($index, item)) {
+            <app-event [id]="item.event.id" [event]="item.event" appearance="card"></app-event>
+            }
+          </div>
+          @if (noteResults().length > 5) {
+          <button mat-button class="view-all-button" (click)="selectedTabIndex.set(2)">
+            View all {{ noteCount() }} notes
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+          }
+          }
+
+          @if (articleResults().length > 0) {
+          <mat-divider></mat-divider>
+          <h3 class="section-title">
+            <mat-icon>article</mat-icon>
+            Articles ({{ articleCount() }})
+          </h3>
+          <div class="articles-list">
+            @for (item of articleResults().slice(0, 3); track trackByEventId($index, item)) {
+            <app-event [id]="item.event.id" [event]="item.event" appearance="card"></app-event>
+            }
+          </div>
+          @if (articleResults().length > 3) {
+          <button mat-button class="view-all-button" (click)="selectedTabIndex.set(3)">
+            View all {{ articleCount() }} articles
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+          }
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>person</mat-icon>
+          <span>Profiles ({{ profileCount() }})</span>
+        </ng-template>
+        <div class="tab-content">
+          @if (profileResults().length === 0) {
+          <div class="empty-tab">
+            <mat-icon>person_off</mat-icon>
+            <p>No profiles found</p>
+          </div>
+          } @else {
+          <div class="profiles-grid full">
+            @for (item of profileResults(); track trackByEventId($index, item)) {
+            <app-user-profile [pubkey]="item.event.pubkey" viewMode="card" class="profile-result"></app-user-profile>
+            }
+          </div>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>chat_bubble</mat-icon>
+          <span>Notes ({{ noteCount() }})</span>
+        </ng-template>
+        <div class="tab-content">
+          @if (noteResults().length === 0) {
+          <div class="empty-tab">
+            <mat-icon>speaker_notes_off</mat-icon>
+            <p>No notes found</p>
+          </div>
+          } @else {
+          <div class="notes-list">
+            @for (item of noteResults(); track trackByEventId($index, item)) {
+            <app-event [id]="item.event.id" [event]="item.event" appearance="card"></app-event>
+            }
+          </div>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon>article</mat-icon>
+          <span>Articles ({{ articleCount() }})</span>
+        </ng-template>
+        <div class="tab-content">
+          @if (articleResults().length === 0) {
+          <div class="empty-tab">
+            <mat-icon>article</mat-icon>
+            <p>No articles found</p>
+          </div>
+          } @else {
+          <div class="articles-grid">
+            @for (item of articleResults(); track trackByEventId($index, item)) {
+            <app-event [id]="item.event.id" [event]="item.event" appearance="card"></app-event>
+            }
+          </div>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+    }
+  </div>
+  } @else {
+  <div class="initial-state">
+    <mat-icon>manage_search</mat-icon>
+    <h3>Advanced Search</h3>
+    <p>Search across your local database and connected search relays</p>
+    <div class="features">
+      <div class="feature">
+        <mat-icon>storage</mat-icon>
+        <span>Search cached profiles and events</span>
+      </div>
+      <div class="feature">
+        <mat-icon>cloud</mat-icon>
+        <span>Query search relays for more results</span>
+      </div>
+      <div class="feature">
+        <mat-icon>tag</mat-icon>
+        <span>Find notes by hashtags</span>
+      </div>
+      <div class="feature">
+        <mat-icon>filter_list</mat-icon>
+        <span>Filter by content type</span>
+      </div>
+    </div>
+  </div>
+  }
+</div>

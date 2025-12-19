@@ -326,6 +326,13 @@ export const routes: Routes = [
       import('./pages/notifications/manage/manage.component').then(m => m.NotificationManageComponent),
   },
   {
+    path: 'search',
+    loadComponent: () =>
+      import('./pages/search/search.component').then(m => m.SearchComponent),
+    data: { isRoot: true },
+    title: 'Search',
+  },
+  {
     path: 'credentials',
     loadComponent: () =>
       import('./pages/credentials/credentials.component').then(m => m.CredentialsComponent),
