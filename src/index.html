@@ -57,7 +57,7 @@
       // Early error handler for module loading failures during bootstrap
       // This catches MIME type errors before Angular's error handlers are initialized
       var hasTriedRecovery = sessionStorage.getItem('nostria-recovery-attempted');
-      
+
       function handleModuleLoadError(message) {
         if (hasTriedRecovery) {
           // Already tried recovery once this session, show error to user
@@ -75,20 +75,20 @@
 
         console.warn('[BOOTSTRAP] Module load error detected, attempting recovery:', message);
         sessionStorage.setItem('nostria-recovery-attempted', 'true');
-        
+
         // Clear caches and reload
         if ('caches' in window) {
-          caches.keys().then(function(names) {
-            return Promise.all(names.map(function(name) { return caches.delete(name); }));
-          }).then(function() {
+          caches.keys().then(function (names) {
+            return Promise.all(names.map(function (name) { return caches.delete(name); }));
+          }).then(function () {
             if ('serviceWorker' in navigator) {
-              return navigator.serviceWorker.getRegistrations().then(function(regs) {
-                return Promise.all(regs.map(function(r) { return r.unregister(); }));
+              return navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister(); }));
               });
             }
-          }).then(function() {
+          }).then(function () {
             window.location.reload();
-          }).catch(function() {
+          }).catch(function () {
             window.location.reload();
           });
         } else {
@@ -97,18 +97,18 @@
       }
 
       // Make clearCachesAndReload available globally for the button
-      window.clearCachesAndReload = function() {
+      window.clearCachesAndReload = function () {
         sessionStorage.removeItem('nostria-recovery-attempted');
         if ('caches' in window) {
-          caches.keys().then(function(names) {
-            return Promise.all(names.map(function(name) { return caches.delete(name); }));
-          }).then(function() {
+          caches.keys().then(function (names) {
+            return Promise.all(names.map(function (name) { return caches.delete(name); }));
+          }).then(function () {
             if ('serviceWorker' in navigator) {
-              return navigator.serviceWorker.getRegistrations().then(function(regs) {
-                return Promise.all(regs.map(function(r) { return r.unregister(); }));
+              return navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister(); }));
               });
             }
-          }).finally(function() {
+          }).finally(function () {
             window.location.reload();
           });
         } else {
@@ -116,7 +116,7 @@
         }
       };
 
-      window.addEventListener('error', function(event) {
+      window.addEventListener('error', function (event) {
         if (event.message && (
           event.message.indexOf('MIME type') !== -1 ||
           event.message.indexOf('Failed to fetch dynamically imported module') !== -1 ||
@@ -127,7 +127,7 @@
         }
       });
 
-      window.addEventListener('unhandledrejection', function(event) {
+      window.addEventListener('unhandledrejection', function (event) {
         var reason = event.reason ? event.reason.toString() : '';
         if (
           reason.indexOf('MIME type') !== -1 ||
@@ -140,7 +140,7 @@
       });
 
       // Clear recovery flag on successful load (after a delay to ensure app is bootstrapped)
-      setTimeout(function() {
+      setTimeout(function () {
         if (document.querySelector('app-root')?.children.length > 1) {
           sessionStorage.removeItem('nostria-recovery-attempted');
         }
@@ -160,7 +160,8 @@
     ">
       <style>
         /* Background is set on body via JS before this loads - inherit it */
-        html, body {
+        html,
+        body {
           margin: 0;
           padding: 0;
         }
