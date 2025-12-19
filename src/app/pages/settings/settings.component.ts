@@ -56,6 +56,7 @@ export class SettingsComponent implements OnInit {
     { id: 'general', title: $localize`:@@settings.sections.general:General`, icon: 'settings' },
     { id: 'algorithm', title: $localize`:@@settings.sections.algorithm:Algorithm`, icon: 'model_training' },
     { id: 'relays', title: $localize`:@@settings.sections.relays:Relays`, icon: 'dns', authenticated: true },
+    { id: 'search', title: $localize`:@@settings.sections.search:Search`, icon: 'search', authenticated: true },
     {
       id: 'privacy',
       title: $localize`:@@settings.sections.privacy:Privacy & Safety`,

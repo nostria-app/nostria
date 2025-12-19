@@ -1,0 +1,107 @@
+.relay-item-container {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  grid-gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 4px 0;
+}
+
+.relay-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .status-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .status-ok {
+    color: var(--mat-success-color);
+  }
+
+  .status-error {
+    color: var(--mat-sys-error);
+  }
+}
+
+app-info-tooltip {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 2;
+}
+
+.add-relay-container {
+  margin-bottom: 2em;
+}
+
+.flex-container {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.relay-input {
+  flex: 1;
+  width: 100%;
+}
+
+.add-button {
+  height: 56px;
+  align-self: flex-start;
+  margin-top: 0px;
+}
+
+.search-relays-card {
+  position: relative;
+  margin-bottom: 1.5em;
+
+  mat-card-header {
+    margin-bottom: 1em;
+  }
+}
+
+.relay-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  word-break: break-all;
+
+  @media (max-width: 768px) {
+    max-width: 200px;
+  }
+}
+
+.action-buttons {
+  display: flex;
+  gap: 4px;
+}
+
+.large-icon {
+  font-size: 48px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+}
+
+.text-center {
+  text-align: center;
+}
+
+.py-8 {
+  padding-top: 2rem;
+  padding-bottom: 2rem;
+}
+
+.text-gray-500 {
+  color: var(--mat-sys-on-surface-variant);
+}
+
+:host-context(.dark) {
+  .text-gray-500 {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}

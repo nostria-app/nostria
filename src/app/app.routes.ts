@@ -207,6 +207,12 @@ export const routes: Routes = [
         title: 'Relays',
       },
       {
+        path: 'search',
+        loadComponent: () =>
+          import('./pages/settings/search/search.component').then(m => m.SearchSettingsComponent),
+        title: 'Search',
+      },
+      {
         path: 'privacy',
         loadComponent: () =>
           import('./pages/settings/privacy-settings/privacy-settings.component').then(
