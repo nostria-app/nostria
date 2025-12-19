@@ -63,6 +63,14 @@ export abstract class RelayServiceBase {
   }
 
   /**
+   * Check if the relay service has been initialized with relay URLs.
+   * @returns true if relay URLs have been set, false otherwise
+   */
+  isInitialized(): boolean {
+    return this.relayUrls.length > 0 && !this._destroyed;
+  }
+
+  /**
    * Initialize (or re-initialize) relay URLs. Avoid leaking websockets by ensuring
    * the previous SimplePool is explicitly destroyed before creating a new one.
    * If only the URL list changes we just update internal state without recreating the pool.

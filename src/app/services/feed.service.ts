@@ -24,6 +24,7 @@ import { OnDemandUserDataService } from './on-demand-user-data.service';
 import { UserRelayService } from './relays/user-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
+import { DiscoveryRelayService } from './relays/discovery-relay';
 import { RelayPoolService } from './relays/relay-pool';
 import { SearchRelayService } from './relays/search-relay';
 import { Followset } from './followset';
@@ -239,6 +240,7 @@ export class FeedService {
   private readonly logger = inject(LoggerService);
   private readonly database = inject(DatabaseService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly searchRelay = inject(SearchRelayService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
@@ -1308,83 +1310,163 @@ export class FeedService {
    */
   private async loadForYouFeed(feedData: FeedItem) {
     try {
-      const allPubkeys = new Set<string>();
+      console.log('🚀 [For You] loadForYouFeed STARTED');
       const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
 
-      // Hardcoded fallback popular pubkeys for instant first load
+      // Hardcoded popular pubkeys for INSTANT first load - no waiting for anything
       const FALLBACK_POPULAR_PUBKEYS = [
         '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2', // jack
         '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d', // fiatjaf
         '32e1827635450ebb3c5a7d12c1f8e7b2b514439ac10a67eef3d9fd9c5c68e245', // jb55
         '04c915daefee38317fa734444acee390a8269fe5810b2241e5e6dd343dfbecc9', // Vitor Pamplona
         'e33fe65f1fde44c6dc17eeb38fdad0fceaf1cae8722084332ed1e32496291d42', // miljan
+        '460c25e682fda7832b52d1f22d3d22b3176d972f60dcdc3212ed8c92ef85065c', // Vitor
+        '1577e4599dd10c863498fe3c20bd82aafaf829a595ce83c5cf8ac3463531b09b', // yegorpetrov
+        'c48e29f04b482cc01ca1f9ef8c86ef8318c059e0e9353235162f080f26e14c11', // Walker
+        '7fa56f5d6962ab1e3cd424e758c3002b8665f7b0d8dcee9fe9e288d7751ac194', // verbiricha
       ];
 
-      // 1. Add popular starter pack pubkeys with timeout fallback
-      try {
-        // Race between starter pack fetch and timeout
-        const starterPackPromise = this.followset.fetchStarterPacks('popular');
-        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+      // PHASE 0: IMMEDIATE content - use fallback pubkeys + following list RIGHT NOW
+      // Don't wait for relay initialization, starter packs, or anything else
+      const immediatePubkeys = new Set<string>(FALLBACK_POPULAR_PUBKEYS);
 
+      // Add following list immediately (limit to 20 most recent)
+      const followingList = this.accountState.followingList();
+      const limitedFollowing = followingList.slice(-20);
+      limitedFollowing.forEach(pubkey => immediatePubkeys.add(pubkey));
+
+      console.log(`⚡ [For You] IMMEDIATE fetch with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
+      this.logger.info(`⚡ [For You] IMMEDIATE fetch with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
+
+      // Start immediate fetch - don't wait for account relay, use discovery relay as fallback
+      const immediatePubkeysArray = Array.from(immediatePubkeys);
+
+      // Try to fetch immediately, even if account relay isn't ready
+      const accountRelayInitialized = this.accountRelay.isInitialized();
+      console.log(`⚡ [For You] Account relay initialized: ${accountRelayInitialized}`);
+
+      if (accountRelayInitialized) {
+        console.log('⚡ [For You] Using account relay for fetch');
+        await this.fetchEventsFromUsersFast(immediatePubkeysArray, feedData);
+      } else {
+        console.log('⚡ [For You] Account relay NOT initialized, using discovery relay');
+        this.logger.warn('Account relay not initialized, using discovery relay for immediate fetch');
+        // Use discovery relay as fallback for immediate content
+        await this.fetchEventsFromDiscoveryRelay(immediatePubkeysArray, feedData);
+      }
+
+      console.log(`⚡ [For You] Events after fetch: ${feedData.events().length}`);
+
+      // PHASE 1: Background enhancement - add starter pack users and algorithm recommendations
+      // This runs in background and doesn't block the UI
+      this.enhanceForYouFeedInBackground(feedData, isArticlesFeed ?? false);
+
+      this.logger.debug(`Loaded For You feed with initial ${immediatePubkeysArray.length} users`);
+      console.log('🏁 [For You] loadForYouFeed COMPLETED');
+    } catch (error) {
+      console.error('❌ [For You] loadForYouFeed ERROR:', error);
+      this.logger.error('Error loading For You feed:', error);
+    }
+  }
+
+  /**
+   * Fetch events using discovery relay as fallback when account relay isn't ready
+   */
+  private async fetchEventsFromDiscoveryRelay(pubkeys: string[], feedData: FeedItem) {
+    const BATCH_SIZE = 10;
+    const TIMEOUT_MS = 3000;
+
+    try {
+      const filter = {
+        authors: pubkeys.slice(0, BATCH_SIZE * 3), // Limit to 30 pubkeys for speed
+        kinds: feedData.filter?.kinds || [1],
+        limit: 50,
+      };
+
+      this.logger.debug(`⚡ [Discovery Relay] Fetching from ${pubkeys.length} pubkeys`);
+      const events = await this.discoveryRelay.getMany(filter, { timeout: TIMEOUT_MS });
+
+      if (events.length > 0) {
+        this.logger.info(`⚡ [Discovery Relay] Got ${events.length} events`);
+
+        // Filter and add events to feed
+        const allowedKinds = new Set(feedData.column.kinds);
+        const validEvents = events.filter(
+          (event: Event) => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+        );
+
+        if (validEvents.length > 0) {
+          feedData.events.update((currentEvents: Event[]) => {
+            const existingIds = new Set(currentEvents.map(e => e.id));
+            const newEvents = validEvents.filter((e: Event) => !existingIds.has(e.id));
+            const combined = [...currentEvents, ...newEvents];
+            return combined.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+          });
+
+          this._hasInitialContent.set(true);
+          this.appState.feedHasInitialContent.set(true);
+          this.saveCachedEvents(feedData.column.id, feedData.events());
+        }
+      }
+    } catch (error) {
+      this.logger.error('Error fetching from discovery relay:', error);
+    }
+  }
+
+  /**
+   * Background enhancement of For You feed - adds starter pack users and algorithm recommendations
+   * Runs after initial content is shown to add more diverse content
+   */
+  private async enhanceForYouFeedInBackground(feedData: FeedItem, isArticlesFeed: boolean) {
+    // Wait for account relay to be ready (but don't block UI)
+    const MAX_WAIT_MS = 5000;
+    const POLL_INTERVAL_MS = 200;
+    let waitedMs = 0;
+
+    while (!this.accountRelay.isInitialized() && waitedMs < MAX_WAIT_MS) {
+      await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+      waitedMs += POLL_INTERVAL_MS;
+    }
+
+    if (!this.accountRelay.isInitialized()) {
+      this.logger.warn('Account relay not ready for background enhancement, skipping');
+      return;
+    }
+
+    try {
+      const additionalPubkeys = new Set<string>();
+
+      // Add algorithm-recommended users
+      const topEngagedUsers = isArticlesFeed
+        ? await this.algorithms.getRecommendedUsersForArticles(10)
+        : await this.algorithms.getRecommendedUsers(5);
+
+      topEngagedUsers.forEach(user => additionalPubkeys.add(user.pubkey));
+      this.logger.debug(`[Background] Added ${topEngagedUsers.length} algorithm-recommended users`);
+
+      // Fetch starter packs in background (with very short timeout)
+      try {
+        const starterPackPromise = this.followset.fetchStarterPacks('popular');
+        const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
         const result = await Promise.race([starterPackPromise, timeoutPromise]);
 
         if (result && Array.isArray(result)) {
           const popularPack = result.find(pack => pack.dTag === 'popular');
-
           if (popularPack) {
-            // Limit starter pack users to first 5 for faster initial load
-            const limitedStarterPackUsers = popularPack.pubkeys.slice(0, 5);
-            limitedStarterPackUsers.forEach(pubkey => allPubkeys.add(pubkey));
-            this.logger.debug(`Added ${limitedStarterPackUsers.length} popular starter pack users from popular pack (out of ${popularPack.pubkeys.length} total)`);
-          } else {
-            this.logger.warn('Popular starter pack not found, using fallback');
-            FALLBACK_POPULAR_PUBKEYS.forEach(pubkey => allPubkeys.add(pubkey));
+            popularPack.pubkeys.slice(0, 10).forEach(pubkey => additionalPubkeys.add(pubkey));
+            this.logger.debug(`[Background] Added ${Math.min(10, popularPack.pubkeys.length)} starter pack users`);
           }
-        } else {
-          // Timeout - use fallback pubkeys for instant content
-          this.logger.info('Starter pack fetch timeout, using fallback popular pubkeys');
-          FALLBACK_POPULAR_PUBKEYS.forEach(pubkey => allPubkeys.add(pubkey));
-
-          // Continue fetching starter packs in background
-          starterPackPromise.catch(err => this.logger.error('Background starter pack fetch failed:', err));
         }
       } catch (error) {
-        this.logger.error('Error fetching popular starter pack, using fallback:', error);
-        FALLBACK_POPULAR_PUBKEYS.forEach(pubkey => allPubkeys.add(pubkey));
+        this.logger.debug('[Background] Starter pack fetch failed, continuing without');
       }
 
-      // 2. Add algorithm-recommended users
-      const topEngagedUsers = isArticlesFeed
-        ? await this.algorithms.getRecommendedUsersForArticles(10) // Reduced from 20 to 10
-        : await this.algorithms.getRecommendedUsers(5); // Reduced from 10 to 5
-
-      topEngagedUsers.forEach(user => allPubkeys.add(user.pubkey));
-      this.logger.debug(`Added ${topEngagedUsers.length} algorithm-recommended users`);
-
-      // 3. Add subset of following accounts (limit for performance)
-      const followingList = this.accountState.followingList();
-      const maxFollowingToAdd = 10; // Reduced from 30 to 10 for faster initial load
-      const limitedFollowing = followingList.length > maxFollowingToAdd
-        ? followingList.slice(-maxFollowingToAdd)
-        : followingList;
-
-      limitedFollowing.forEach(pubkey => allPubkeys.add(pubkey));
-      this.logger.debug(`Added ${limitedFollowing.length} following users (out of ${followingList.length} total)`);
-
-      const pubkeysArray = Array.from(allPubkeys);
-      this.logger.debug(`Loading For You feed with ${pubkeysArray.length} total unique users`);
-
-      // OPTIMIZATION: Two-phase loading for faster initial content
-      // Phase 1: Fast batch query using account's already-connected relays
-      await this.fetchEventsFromUsersFast(pubkeysArray, feedData);
-
-      // Phase 2: Background outbox model queries for additional/better content
-      // This runs in background and doesn't block UI
-      this.fetchEventsFromUsersBackground(pubkeysArray, feedData);
-
-      this.logger.debug(`Loaded For You feed with ${pubkeysArray.length} unique users`);
+      if (additionalPubkeys.size > 0) {
+        const pubkeysArray = Array.from(additionalPubkeys);
+        this.fetchEventsFromUsersBackground(pubkeysArray, feedData);
+      }
     } catch (error) {
-      this.logger.error('Error loading For You feed:', error);
+      this.logger.error('Error in background enhancement:', error);
     }
   }
 
@@ -3031,6 +3113,17 @@ export class FeedService {
     const defaultFeeds = await this.initializeDefaultFeeds();
     this._feeds.set(defaultFeeds);
     this.saveFeeds();
+
+    // Set the first feed as active and subscribe to it
+    if (defaultFeeds.length > 0) {
+      this._activeFeedId.set(defaultFeeds[0].id);
+      this.logger.debug(`Set active feed to: ${defaultFeeds[0].id}`);
+
+      // Re-subscribe to the new active feed if feeds page is active
+      if (this._feedsPageActive()) {
+        await this.subscribe();
+      }
+    }
 
     this.logger.debug('Reset all feeds to defaults');
   }
