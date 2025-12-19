@@ -48,6 +48,15 @@
       font-family: monospace;
     }
   }
+
+  .close-button {
+    margin-left: 8px;
+    color: var(--mat-sys-on-surface-variant);
+
+    &:hover {
+      color: var(--mat-sys-on-surface);
+    }
+  }
 }
 
 .results-list {
@@ -113,6 +122,18 @@
   color: var(--mat-sys-on-surface-variant);
   display: flex;
   justify-content: flex-end;
+
+  .voice-button {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
 
   .footer-item {
     display: flex;

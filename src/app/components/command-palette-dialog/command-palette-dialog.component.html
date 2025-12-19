@@ -20,6 +20,10 @@
       <span class="shortcut">↵</span> to select
     </div>
     }
+
+    <button mat-icon-button class="close-button" (click)="dialogRef.close()" aria-label="Close">
+      <mat-icon>close</mat-icon>
+    </button>
   </div>
 
   <div class="results-list">
@@ -44,9 +48,9 @@
   </div>
 
   <div class="footer">
-    <div class="footer-item">
-      <mat-icon>keyboard_voice</mat-icon>
-      <span>Hold <b>Alt+C</b> to speak</span>
-    </div>
+    <button mat-button class="voice-button" (click)="toggleRecording()" [disabled]="isTranscribing()">
+      <mat-icon>{{ isListening() ? 'mic_off' : 'keyboard_voice' }}</mat-icon>
+      <span>{{ isListening() ? 'Stop' : 'Voice command' }}</span>
+    </button>
   </div>
 </div>
