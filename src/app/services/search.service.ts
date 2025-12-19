@@ -13,12 +13,18 @@ import { AddMediaDialog } from '../pages/media-queue/add-media-dialog/add-media-
 import { EventService } from './event';
 import { MediaPlayerService } from './media-player.service';
 import { RssParserService } from './rss-parser.service';
+import { SearchRelayService } from './relays/search-relay';
+import { LoggerService } from './logger.service';
 
 export interface SearchAction {
   icon: string;
   label: string;
   description: string;
   callback: () => void;
+}
+
+export interface SearchResultProfile extends NostrRecord {
+  source: 'local' | 'remote';
 }
 
 @Injectable({
@@ -36,10 +42,15 @@ export class SearchService {
   eventService = inject(EventService);
   mediaPlayer = inject(MediaPlayerService);
   rssParser = inject(RssParserService);
+  searchRelay = inject(SearchRelayService);
+  logger = inject(LoggerService);
 
   // Search results from cached profiles
-  searchResults = signal<NostrRecord[]>([]);
+  searchResults = signal<SearchResultProfile[]>([]);
   searchActions = signal<SearchAction[]>([]);
+
+  // Track if we're currently searching remote relays
+  isSearchingRemote = signal(false);
 
   // Track last processed query to prevent redundant searches
   #lastQuery = '';
@@ -142,27 +153,56 @@ export class SearchService {
       }
 
       if (searchValue) {
+        // Check if this is a hashtag search
+        const isHashtagSearch = searchValue.startsWith('#');
+
+        if (isHashtagSearch) {
+          // Handle hashtag search - navigate to search results page
+          this.searchActions.set([
+            {
+              icon: 'tag',
+              label: `Search for ${searchValue}`,
+              description: 'Search notes with this hashtag on search relays',
+              callback: () => {
+                this.searchByHashtag(searchValue.slice(1));
+                this.layout.toggleSearch();
+              },
+            },
+          ]);
+          this.searchResults.set([]);
+          return;
+        }
+
         // First, search in cached profiles using FollowingService
         const followingResults = untracked(() => this.followingService.searchProfiles(searchValue));
         const cachedResults = this.followingService.toNostrRecords(followingResults);
 
+        // Mark local results with source
+        const localResults: SearchResultProfile[] = cachedResults.map(profile => ({
+          ...profile,
+          source: 'local' as const,
+        }));
+
         console.log(
-          'Cached search results:',
-          cachedResults.length,
+          'Local search results:',
+          localResults.length,
           'results for query:',
           searchValue
         );
 
         // Use untracked to prevent creating reactive dependencies
         untracked(() => {
-          this.searchResults.set(cachedResults);
+          this.searchResults.set(localResults);
         });
+
+        // Also search for profiles on search relays (in background)
+        this.searchProfilesOnSearchRelays(searchValue, localResults);
 
         // Check if the query is a valid hex string (64 characters) - potential event ID
         const isHexEventId = /^[0-9a-f]{64}$/i.test(searchValue);
 
         // If no cached results and query looks like an event ID, search for the event
-        if (cachedResults.length === 0 && isHexEventId) {
+        if (localResults.length === 0 && isHexEventId) {
           await this.searchForEventById(searchValue);
         }
 
@@ -301,6 +341,92 @@ export class SearchService {
   clearResults(): void {
     untracked(() => {
       this.searchResults.set([]);
+      this.searchActions.set([]);
     });
+  }
+
+  /**
+   * Search for profiles on search relays and merge with local results
+   */
+  private async searchProfilesOnSearchRelays(
+    searchValue: string,
+    localResults: SearchResultProfile[]
+  ): Promise<void> {
+    // Don't search for very short queries
+    if (searchValue.length < 2) {
+      return;
+    }
+
+    this.isSearchingRemote.set(true);
+
+    try {
+      const remoteProfiles = await this.searchRelay.searchProfiles(searchValue, 20);
+
+      if (remoteProfiles.length > 0) {
+        // Convert remote events to NostrRecords with source marker
+        const localPubkeys = new Set(localResults.map(r => r.event.pubkey));
+
+        const remoteResults: SearchResultProfile[] = remoteProfiles
+          .filter(event => !localPubkeys.has(event.pubkey)) // Exclude duplicates
+          .map(event => {
+            let data = {};
+            try {
+              data = JSON.parse(event.content);
+            } catch {
+              // Invalid JSON in content
+            }
+            return {
+              event,
+              data,
+              source: 'remote' as const,
+            };
+          });
+
+        if (remoteResults.length > 0) {
+          this.logger.debug(`Found ${remoteResults.length} remote profiles for "${searchValue}"`);
+
+          // Merge local and remote results
+          untracked(() => {
+            const currentResults = this.searchResults();
+            // Only update if we still have the same search query
+            if (this.#lastQuery === searchValue) {
+              this.searchResults.set([...currentResults, ...remoteResults]);
+            }
+          });
+        }
+      }
+    } catch (error) {
+      this.logger.error('Failed to search profiles on search relays', error);
+    } finally {
+      this.isSearchingRemote.set(false);
+    }
+  }
+
+  /**
+   * Search for events by hashtag using search relays
+   */
+  async searchByHashtag(hashtag: string): Promise<void> {
+    this.logger.debug(`Searching for hashtag: #${hashtag}`);
+
+    try {
+      const events = await this.searchRelay.searchByHashtag(hashtag, 50);
+
+      if (events.length > 0) {
+        // Navigate to a search results view or open the first event
+        // For now, show a toast with the count
+        this.layout.toast(`Found ${events.length} notes with #${hashtag}`);
+
+        // TODO: Navigate to a search results page
+        // For now, open the feed with this hashtag filter
+        this.layout.router.navigate(['/f'], {
+          queryParams: { search: `#${hashtag}` },
+        });
+      } else {
+        this.layout.toast(`No notes found with #${hashtag}`);
+      }
+    } catch (error) {
+      this.logger.error(`Failed to search for hashtag #${hashtag}`, error);
+      this.layout.toast('Search failed');
+    }
   }
 }

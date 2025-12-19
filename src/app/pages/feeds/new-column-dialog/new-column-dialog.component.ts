@@ -115,6 +115,7 @@ export class NewColumnDialogComponent {
     relayConfig: ['account'],
     customRelays: [[] as string[]],
     type: ['custom'],
+    searchQuery: [''],
   });
 
   // Signals and state
@@ -124,6 +125,8 @@ export class NewColumnDialogComponent {
   customRelays = signal<string[]>([]);
   selectedRelayConfig = signal<string>('account');
   showCustomRelays = computed(() => this.selectedRelayConfig() === 'custom');
+  searchQuery = signal<string>('');
+  showSearchConfig = computed(() => this.columnForm.get('source')?.value === 'search');
 
   // Custom source signals
   selectedUsers = signal<NostrRecord[]>([]);
@@ -238,12 +241,14 @@ export class NewColumnDialogComponent {
           relayConfig: columnData.relayConfig || 'account',
           customRelays: columnData.customRelays || [],
           type: columnData.type || 'custom',
+          searchQuery: columnData.searchQuery || '',
         });
         this.isEditMode.set(true);
         this.selectedColumnType.set(columnData.type || 'custom');
         this.selectedKinds.set(columnData.kinds || []);
         this.customRelays.set(columnData.customRelays || []);
         this.selectedRelayConfig.set(columnData.relayConfig || 'account');
+        this.searchQuery.set(columnData.searchQuery || '');
       }
     });
 
@@ -407,19 +412,26 @@ export class NewColumnDialogComponent {
       // Build filters object (empty for now, PoW filtering removed)
       const filters: Record<string, unknown> = {};
 
+      // Determine relay config based on source
+      let relayConfig = formValue.relayConfig as 'account' | 'custom' | 'search';
+      if (formValue.source === 'search') {
+        relayConfig = 'search';
+      }
+
       // Create column config
       const columnConfig: ColumnConfig = {
         id: existingColumn?.id || crypto.randomUUID(),
         label: '',
         icon: existingColumn?.icon || 'chat', // Default icon (not displayed in UI)
         type: formValue.type as 'photos' | 'videos' | 'notes' | 'articles' | 'music' | 'custom',
-        source: (formValue.source || 'public') as 'following' | 'public' | 'custom' | 'for-you',
+        source: (formValue.source || 'public') as 'following' | 'public' | 'custom' | 'for-you' | 'search',
         kinds: this.selectedKinds(),
-        relayConfig: formValue.relayConfig as 'account' | 'custom',
+        relayConfig: relayConfig,
         customRelays: formValue.relayConfig === 'custom' ? this.customRelays() : undefined,
         customUsers: formValue.source === 'custom' ? this.selectedUsers().map(u => u.event.pubkey) : undefined,
         customStarterPacks: formValue.source === 'custom' ? this.selectedStarterPacks().map(p => p.dTag) : undefined,
         customFollowSets: formValue.source === 'custom' ? this.selectedFollowSets().map(s => s.dTag) : undefined,
+        searchQuery: formValue.source === 'search' ? (formValue.searchQuery || '').trim() : undefined,
         filters: Object.keys(filters).length > 0 ? filters : {},
         createdAt: existingColumn?.createdAt || Date.now(),
         updatedAt: Date.now(),

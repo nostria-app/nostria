@@ -25,6 +25,7 @@ import { UserRelayService } from './relays/user-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
 import { RelayPoolService } from './relays/relay-pool';
+import { SearchRelayService } from './relays/search-relay';
 import { Followset } from './followset';
 import { RegionService } from './region.service';
 import { EncryptionService } from './encryption.service';
@@ -61,11 +62,12 @@ export interface ColumnConfig {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
-  source?: 'following' | 'public' | 'custom' | 'for-you';
+  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search';
   customUsers?: string[]; // Array of pubkeys for custom user selection
   customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
-  relayConfig: 'account' | 'custom';
+  searchQuery?: string; // Search query for search-based columns (NIP-50)
+  relayConfig: 'account' | 'custom' | 'search';
   customRelays?: string[];
   filters?: Record<string, unknown>;
   showReplies?: boolean; // Whether to show replies in the feed (default: false)
@@ -237,6 +239,7 @@ export class FeedService {
   private readonly logger = inject(LoggerService);
   private readonly database = inject(DatabaseService);
   private readonly accountRelay = inject(AccountRelayService);
+  private readonly searchRelay = inject(SearchRelayService);
   private readonly appState = inject(ApplicationStateService);
   private readonly accountState = inject(AccountStateService);
   private readonly accountLocalState = inject(AccountLocalStateService);
@@ -698,6 +701,11 @@ export class FeedService {
       this.loadCustomFeed(item).catch(err =>
         this.logger.error(`Error loading custom feed for ${column.id}:`, err)
       );
+    } else if (column.source === 'search') {
+      console.log(`📍 Loading SEARCH feed for column ${column.id} with query: ${column.searchQuery}`);
+      this.loadSearchFeed(item).catch(err =>
+        this.logger.error(`Error loading search feed for ${column.id}:`, err)
+      );
     } else {
       console.log(`📍 Loading GLOBAL/OTHER feed for column ${column.id}, source:`, column.source);
 
@@ -970,6 +978,85 @@ export class FeedService {
       this.logger.debug(`Loaded custom feed with ${pubkeysArray.length} users`);
     } catch (error) {
       this.logger.error('Error loading custom feed:', error);
+    }
+  }
+
+  /**
+   * Load search-based feed - fetches events from search relays using NIP-50.
+   * 
+   * This method uses the SearchRelayService for search queries:
+   * 1. Uses NIP-50 search extension on configured search relays
+   * 2. Supports hashtag searches and keyword searches
+   * 3. Returns events matching the search query
+   */
+  private async loadSearchFeed(feedData: FeedItem) {
+    try {
+      const column = feedData.column;
+      const searchQuery = column.searchQuery;
+
+      if (!searchQuery || searchQuery.trim() === '') {
+        this.logger.warn('No search query specified for search feed');
+        return;
+      }
+
+      const kinds = feedData.filter?.kinds || [1]; // Default to text notes
+      
+      // Get the since timestamp (from last retrieved or 24 hours ago)
+      const oneDayAgo = Math.floor(Date.now() / 1000) - (24 * 60 * 60);
+      const since = column.lastRetrieved ? column.lastRetrieved : oneDayAgo;
+      
+      this.logger.info(`🔍 Loading SEARCH feed for query "${searchQuery}" with kinds: ${kinds.join(', ')}`);
+
+      // Use SearchRelayService to perform the search
+      const events = await this.searchRelay.searchForFeed(
+        searchQuery.trim(),
+        kinds,
+        100, // limit
+        since
+      );
+
+      if (events.length === 0) {
+        this.logger.info(`🔍 No events found for search query: "${searchQuery}"`);
+        return;
+      }
+
+      this.logger.info(`🔍 Found ${events.length} events for search query: "${searchQuery}"`);
+
+      // Add events to the feed
+      const currentEvents = feedData.events();
+      const existingIds = new Set(currentEvents.map(e => e.id));
+      
+      // Filter out duplicates and muted events
+      const newEvents = events.filter(event => {
+        if (existingIds.has(event.id)) return false;
+        if (this.accountState.muted(event)) return false;
+        return true;
+      });
+
+      if (newEvents.length > 0) {
+        // Sort by created_at descending
+        const allEvents = [...currentEvents, ...newEvents].sort(
+          (a, b) => (b.created_at || 0) - (a.created_at || 0)
+        );
+
+        feedData.events.set(allEvents);
+
+        // Save to cache
+        this.saveCachedEvents(column.id, allEvents);
+
+        // Save events to database for offline access
+        for (const event of newEvents) {
+          this.saveEventToDatabase(event);
+        }
+
+        this.logger.debug(`Added ${newEvents.length} new events from search, total: ${allEvents.length}`);
+      }
+
+      // Update lastRetrieved timestamp
+      this.updateLastRetrieved(column.id, Math.floor(Date.now() / 1000));
+
+    } catch (error) {
+      this.logger.error('Error loading search feed:', error);
     }
   }
 

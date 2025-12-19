@@ -4,10 +4,14 @@ import { NostriaService } from '../../interfaces';
 import { LocalStorageService } from '../local-storage.service';
 import { ApplicationStateService } from '../application-state.service';
 import { DatabaseService } from '../database.service';
-import { SimplePool, UnsignedEvent, Event } from 'nostr-tools';
+import { SimplePool, UnsignedEvent, Event, Filter } from 'nostr-tools';
 
 // Kind 10007 is not exported from nostr-tools, so we define it here
 export const SearchRelayListKind = 10007;
+
+export interface SearchFilter extends Filter {
+  search?: string;
+}
 
 @Injectable({
   providedIn: 'root',
@@ -29,6 +33,15 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
     const searchRelays = this.loadSearchRelaysFromStorage();
     this.init(searchRelays);
     this.initialized = true;
+  }
+
+  /**
+   * Ensures the service is initialized before performing operations
+   */
+  async ensureInitialized(): Promise<void> {
+    if (!this.initialized) {
+      await this.load();
+    }
   }
 
   clear() {
@@ -143,5 +156,90 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
     } catch (error) {
       this.logger.error('Error saving search relay list event', error);
     }
+  }
+
+  /**
+   * Search for events using NIP-50 search capability
+   * @param searchQuery The search query string (supports hashtags like #bitcoin)
+   * @param kinds Optional array of event kinds to filter (default: [1] for notes)
+   * @param limit Maximum number of results (default: 50)
+   * @param options Additional filter options
+   */
+  async search(
+    searchQuery: string,
+    kinds: number[] = [1],
+    limit: number = 50,
+    options: { since?: number; until?: number; authors?: string[] } = {}
+  ): Promise<Event[]> {
+    await this.ensureInitialized();
+
+    const urls = this.getRelayUrls();
+    if (urls.length === 0) {
+      this.logger.warn('No search relays configured');
+      return [];
+    }
+
+    const filter: SearchFilter = {
+      kinds,
+      limit,
+      search: searchQuery,
+      ...options,
+    };
+
+    this.logger.debug(`Searching for "${searchQuery}" on ${urls.length} search relays`);
+
+    try {
+      const pool = this.getPool();
+      const events = await pool.querySync(urls, filter);
+
+      // Filter out expired events
+      const validEvents = events.filter(event => !this.utilities.isEventExpired(event));
+
+      this.logger.debug(`Search returned ${validEvents.length} results`);
+      return validEvents;
+    } catch (error) {
+      this.logger.error('Search query failed', error);
+      return [];
+    }
+  }
+
+  /**
+   * Search for profiles using NIP-50 search capability
+   * @param searchQuery The search query string
+   * @param limit Maximum number of results (default: 20)
+   */
+  async searchProfiles(searchQuery: string, limit: number = 20): Promise<Event[]> {
+    return this.search(searchQuery, [0], limit);
+  }
+
+  /**
+   * Search for notes by hashtag
+   * @param hashtag The hashtag to search for (without the # prefix)
+   * @param limit Maximum number of results (default: 50)
+   */
+  async searchByHashtag(hashtag: string, limit: number = 50): Promise<Event[]> {
+    // Remove # if present
+    const tag = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
+    return this.search(`#${tag}`, [1], limit);
+  }
+
+  /**
+   * Search for events with multiple kinds (useful for feed columns)
+   * @param searchQuery The search query string
+   * @param kinds Array of event kinds to search
+   * @param limit Maximum number of results
+   * @param since Only return events after this timestamp
+   */
+  async searchForFeed(
+    searchQuery: string,
+    kinds: number[] = [1, 6, 7],
+    limit: number = 100,
+    since?: number
+  ): Promise<Event[]> {
+    const options: { since?: number } = {};
+    if (since) {
+      options.since = since;
+    }
+    return this.search(searchQuery, kinds, limit, options);
   }
 }

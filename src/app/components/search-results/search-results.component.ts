@@ -3,15 +3,16 @@ import { Component, inject, signal, effect } from '@angular/core';
 import { MatListModule } from '@angular/material/list';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
-import { SearchService } from '../../services/search.service';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { SearchService, SearchResultProfile } from '../../services/search.service';
 import { UtilitiesService } from '../../services/utilities.service';
 
 @Component({
   selector: 'app-search-results',
   standalone: true,
-  imports: [MatListModule, MatIconModule, MatButtonModule],
+  imports: [MatListModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule],
   template: `
-    @if (searchService.searchResults().length > 0 || searchService.searchActions().length > 0) {
+    @if (searchService.searchResults().length > 0 || searchService.searchActions().length > 0 || searchService.isSearchingRemote()) {
       <div
         class="search-results"
         tabindex="0"
@@ -42,6 +43,9 @@ import { UtilitiesService } from '../../services/utilities.service';
         @if (searchService.searchResults().length > 0) {
           <div class="search-results-header">
             <span>Found Profiles ({{ searchService.searchResults().length }})</span>
+            @if (searchService.isSearchingRemote()) {
+              <mat-spinner diameter="16"></mat-spinner>
+            }
             @if (searchService.searchActions().length === 0) {
               <button mat-icon-button (click)="searchService.clearResults()">
                 <mat-icon>close</mat-icon>
@@ -57,14 +61,18 @@ import { UtilitiesService } from '../../services/utilities.service';
               <div
                 class="search-result-item"
                 [class.focused]="focusedIndex() === i"
+                [class.remote-result]="profile.source === 'remote'"
                 (click)="selectItem(profile, i)"
+                (keydown.enter)="selectItem(profile, i)"
                 (mouseenter)="setFocusedIndex(i)"
+                tabindex="0"
               >
                 @if (profile.data.picture) {
                   <img
                     [src]="profile.data.picture"
                     alt="Profile picture"
                     class="search-result-avatar"
+                    [class.remote-avatar]="profile.source === 'remote'"
                   />
                 } @else {
                   <mat-icon class="search-result-avatar-icon">account_circle</mat-icon>
@@ -76,6 +84,11 @@ import { UtilitiesService } from '../../services/utilities.service';
                         profile.data.name ||
                         utilities.getNpubFromPubkey(profile.event.pubkey)
                     }}
+                    @if (profile.source === 'remote') {
+                      <span class="source-badge remote-badge">Remote</span>
+                    } @else {
+                      <span class="source-badge local-badge">Following</span>
+                    }
                   </div>
                   @if (profile.data.nip05) {
                     <div class="search-result-nip05">
@@ -85,6 +98,11 @@ import { UtilitiesService } from '../../services/utilities.service';
                 </div>
               </div>
             }
+          </div>
+        } @else if (searchService.isSearchingRemote()) {
+          <div class="search-results-header">
+            <span>Searching...</span>
+            <mat-spinner diameter="16"></mat-spinner>
           </div>
         }
       </div>
@@ -216,6 +234,38 @@ import { UtilitiesService } from '../../services/utilities.service';
         line-height: 1.3;
         margin-top: 2px;
       }
+
+      .source-badge {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        margin-left: 8px;
+        vertical-align: middle;
+      }
+
+      .local-badge {
+        background: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+      }
+
+      .remote-badge {
+        background: var(--mat-sys-secondary-container);
+        color: var(--mat-sys-on-secondary-container);
+      }
+
+      .remote-result {
+        background: var(--mat-sys-surface-container-lowest);
+      }
+
+      .remote-avatar {
+        opacity: 0.9;
+        border: 2px solid var(--mat-sys-secondary);
+      }
+
+      .search-results-header mat-spinner {
+        margin-left: auto;
+        margin-right: 8px;
+      }
     `,
   ],
 })
@@ -241,18 +291,20 @@ export class SearchResultsComponent {
     if (results.length === 0) return;
 
     switch (event.key) {
-      case 'ArrowDown':
+      case 'ArrowDown': {
         event.preventDefault();
         const nextIndex = Math.min(this.focusedIndex() + 1, results.length - 1);
         this.setFocusedIndex(nextIndex);
         this.scrollToFocusedItem();
         break;
-      case 'ArrowUp':
+      }
+      case 'ArrowUp': {
         event.preventDefault();
         const prevIndex = Math.max(this.focusedIndex() - 1, 0);
         this.setFocusedIndex(prevIndex);
         this.scrollToFocusedItem();
         break;
+      }
       case 'Enter':
         event.preventDefault();
         if (this.focusedIndex() >= 0 && this.focusedIndex() < results.length) {
@@ -289,7 +341,7 @@ export class SearchResultsComponent {
     this.focusedIndex.set(index);
   }
 
-  selectItem(profile: any, index: number) {
+  selectItem(profile: SearchResultProfile, index: number) {
     this.setFocusedIndex(index);
     this.searchService.selectSearchResult(profile);
   }
@@ -307,9 +359,6 @@ export class SearchResultsComponent {
       const focusedItem = document.querySelector('.search-result-item.focused') as HTMLElement;
 
       if (searchResultsContainer && focusedItem) {
-        const containerRect = searchResultsContainer.getBoundingClientRect();
-        const itemRect = focusedItem.getBoundingClientRect();
-
         // Calculate positions relative to the container
         const containerTop = searchResultsContainer.scrollTop;
         const containerBottom = containerTop + searchResultsContainer.clientHeight;

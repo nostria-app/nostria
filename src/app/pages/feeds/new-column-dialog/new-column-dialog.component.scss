@@ -136,6 +136,20 @@
   }
 }
 
+// Search source configuration
+.search-source-panel {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  border-left: 3px solid var(--mat-sys-secondary);
+
+  h4 {
+    margin-top: 0;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
 .source-toggle,
 .relay-toggle {
   width: 100%;
