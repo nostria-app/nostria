@@ -1374,7 +1374,24 @@ export class App implements OnInit {
   }
 
   onSearchInputKeyDown(event: KeyboardEvent): void {
-    if (event.key === 'Tab' && !event.shiftKey) {
+    if (event.key === 'Enter') {
+      // Execute the first search action if available
+      const actions = this.search.searchActions();
+      if (actions.length > 0) {
+        event.preventDefault();
+        actions[0].callback();
+        return;
+      }
+      // If no actions but there are results, select the first result
+      const results = this.search.searchResults();
+      if (results.length > 0) {
+        event.preventDefault();
+        this.layout.openProfile(results[0].event.pubkey);
+        this.search.clearResults();
+        this.layout.toggleSearch();
+        return;
+      }
+    } else if (event.key === 'Tab' && !event.shiftKey) {
       // Check if search results are visible
       if (this.search.searchResults().length > 0) {
         event.preventDefault();
