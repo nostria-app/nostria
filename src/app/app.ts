@@ -1120,20 +1120,7 @@ export class App implements OnInit {
   }
 
   openCommandPalette(listening = false): void {
-    const dialogRef = this.customDialog.open(CommandPaletteDialogComponent, {
-      width: '600px',
-      maxWidth: '90vw',
-      panelClass: 'command-palette-dialog',
-      showCloseButton: false,
-      disableEnterSubmit: true
-    });
-
-    if (listening) {
-      // Start recording immediately if opened in listening mode
-      if (dialogRef.componentInstance) {
-        dialogRef.componentInstance.startRecording();
-      }
-    }
+    this.layout.openCommandPalette(listening);
   }
 
   // Voice search methods - using SpeechService
