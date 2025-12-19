@@ -77,6 +77,10 @@
                 <mat-icon>public</mat-icon>
                 <span class="hide-tiny">Public</span>
               </mat-button-toggle>
+              <mat-button-toggle value="search">
+                <mat-icon>search</mat-icon>
+                <span class="hide-tiny">Search</span>
+              </mat-button-toggle>
               <mat-button-toggle value="custom">
                 <mat-icon>tune</mat-icon>
                 <span class="hide-tiny">Custom</span>
@@ -92,8 +96,30 @@
                 Only loads events from the last 6 hours or since you last checked.</span>
             </div>
             }
+            @if (columnForm.get('source')?.value === 'search') {
+            <div class="source-description">
+              <mat-icon>info</mat-icon>
+              <span>Search for events using NIP-50 search on your configured search relays.
+                Enter hashtags or keywords to find relevant content.</span>
+            </div>
+            }
             <br>
           </div>
+
+          <!-- Search Source Configuration -->
+          @if (columnForm.get('source')?.value === 'search') {
+          <div class="form-group search-source-panel">
+            <h4>Search Configuration</h4>
+            <p class="section-description">Enter your search query (hashtags or keywords)</p>
+
+            <mat-form-field class="full-width" appearance="outline">
+              <mat-label>Search Query</mat-label>
+              <input matInput formControlName="searchQuery" placeholder="e.g., #bitcoin or bitcoin news" />
+              <mat-icon matSuffix>search</mat-icon>
+              <mat-hint>Enter hashtags (e.g., #nostr) or keywords to search for</mat-hint>
+            </mat-form-field>
+          </div>
+          }
 
           <!-- Custom Source Configuration -->
           @if (columnForm.get('source')?.value === 'custom') {
