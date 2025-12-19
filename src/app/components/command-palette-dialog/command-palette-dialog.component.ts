@@ -7,12 +7,12 @@ import { MatListModule } from '@angular/material/list';
 import { MatInputModule } from '@angular/material/input';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { Router } from '@angular/router';
-import { AiService } from '../../services/ai.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { EventService } from '../../services/event';
 import { LayoutService } from '../../services/layout.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { SettingsService } from '../../services/settings.service';
+import { SpeechService } from '../../services/speech.service';
 
 export interface Command {
   id: string;
@@ -25,7 +25,6 @@ export interface Command {
 
 @Component({
   selector: 'app-command-palette-dialog',
-  standalone: true,
   imports: [
     FormsModule,
     MatIconModule,
@@ -41,7 +40,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   private router = inject(Router);
   private eventService = inject(EventService);
   private layoutService = inject(LayoutService);
-  private aiService = inject(AiService);
+  private speechService = inject(SpeechService);
   private settings = inject(SettingsService);
   private snackBar = inject(MatSnackBar);
   private accountState = inject(AccountStateService);
@@ -53,19 +52,6 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   selectedIndex = signal(0);
   isListening = signal(false);
   isTranscribing = signal(false);
-
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
-  private stream: MediaStream | null = null;
-
-  // Silence detection
-  private audioContext: AudioContext | null = null;
-  private analyser: AnalyserNode | null = null;
-  private microphone: MediaStreamAudioSourceNode | null = null;
-  private silenceStart: number | null = null;
-  private animationFrameId: number | null = null;
-  private readonly SILENCE_THRESHOLD = 0.02; // Adjust as needed
-  private readonly SILENCE_DURATION = 2000; // 2 seconds of silence to stop
 
   commands: Command[] = [
     {
@@ -181,7 +167,7 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    this.stopRecording();
+    this.speechService.cleanup();
   }
 
   onKeyDown(event: KeyboardEvent) {
@@ -228,185 +214,80 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
   // Voice Command Implementation
   async toggleRecording() {
     if (this.isListening()) {
-      this.stopRecording();
+      this.speechService.stopRecording();
     } else {
       await this.startRecording();
     }
   }
 
   async startRecording() {
-    try {
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.mediaRecorder = new MediaRecorder(this.stream);
-      this.audioChunks = [];
-
-      this.mediaRecorder.ondataavailable = (event) => {
-        this.audioChunks.push(event.data);
-      };
-
-      this.mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-        await this.processVoiceCommand(audioBlob);
-
-        if (this.stream) {
-          this.stream.getTracks().forEach(track => track.stop());
-          this.stream = null;
-        }
-      };
-
-      this.mediaRecorder.start();
-      this.isListening.set(true);
-      this.searchQuery.set('Listening...');
-
-      // Start silence detection
-      this.startSilenceDetection(this.stream);
-    } catch (err) {
-      console.error('Error accessing microphone:', err);
-      this.snackBar.open('Error accessing microphone', 'Close', { duration: 3000 });
-    }
-  }
-
-  startSilenceDetection(stream: MediaStream) {
-    this.audioContext = new AudioContext();
-    this.analyser = this.audioContext.createAnalyser();
-    this.microphone = this.audioContext.createMediaStreamSource(stream);
-    this.microphone.connect(this.analyser);
-
-    this.analyser.fftSize = 2048;
-    const bufferLength = this.analyser.frequencyBinCount;
-    const dataArray = new Uint8Array(bufferLength);
-
-    this.silenceStart = Date.now();
-
-    const checkSilence = () => {
-      if (!this.isListening()) return;
-
-      this.analyser!.getByteTimeDomainData(dataArray);
-
-      let sum = 0;
-      for (let i = 0; i < bufferLength; i++) {
-        const x = (dataArray[i] - 128) / 128.0;
-        sum += x * x;
-      }
-      const rms = Math.sqrt(sum / bufferLength);
-
-      if (rms < this.SILENCE_THRESHOLD) {
-        if (this.silenceStart === null) {
-          this.silenceStart = Date.now();
-        } else if (Date.now() - this.silenceStart > this.SILENCE_DURATION) {
-          this.stopRecording();
-          return;
-        }
-      } else {
-        this.silenceStart = null;
-      }
-
-      this.animationFrameId = requestAnimationFrame(checkSilence);
-    };
-
-    checkSilence();
-  }
-
-  stopRecording() {
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
-      this.isListening.set(false);
-    }
-
-    // Clean up silence detection
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
-
-    if (this.audioContext) {
-      this.audioContext.close();
-      this.audioContext = null;
-    }
-
-    this.analyser = null;
-    this.microphone = null;
-    this.silenceStart = null;
-  }
-
-  async processVoiceCommand(blob: Blob) {
-    this.isTranscribing.set(true);
-    this.searchQuery.set('Processing...');
-
-    try {
-      // Check if AI transcription is enabled
-      if (!this.settings.settings().aiEnabled || !this.settings.settings().aiTranscriptionEnabled) {
-        this.snackBar.open('AI transcription is disabled in settings', 'Open Settings', { duration: 5000 })
-          .onAction().subscribe(() => {
-            this.dialogRef.close();
-            this.router.navigate(['/ai/settings']);
-          });
-        this.searchQuery.set('');
-        return;
-      }
-
-      // Check/Load Whisper model
-      const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
-      if (!status.loaded) {
-        this.snackBar.open('Loading Whisper model...', 'Close', { duration: 2000 });
-        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
-      }
-
-      // Transcribe
-      const arrayBuffer = await blob.arrayBuffer();
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const audioData = audioBuffer.getChannelData(0);
-
-      const result = await this.aiService.transcribeAudio(audioData) as { text: string };
-
-      if (result && result.text) {
-        const text = result.text.trim().toLowerCase();
-        // Remove punctuation
-        const cleanText = text.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
-
-        // Check for "search <term>" command
-        const searchMatch = cleanText.match(/^search\s+(.+)$/i);
-        if (searchMatch) {
-          const searchTerm = searchMatch[1].trim();
+    // Check if AI transcription is enabled
+    if (!this.settings.settings().aiEnabled || !this.settings.settings().aiTranscriptionEnabled) {
+      this.snackBar.open('AI transcription is disabled in settings', 'Open Settings', { duration: 5000 })
+        .onAction().subscribe(() => {
           this.dialogRef.close();
-          this.layoutService.openSearchWithValue(searchTerm);
-          return;
-        }
-
-        // Check for "find <term>" command (alternative)
-        const findMatch = cleanText.match(/^find\s+(.+)$/i);
-        if (findMatch) {
-          const searchTerm = findMatch[1].trim();
-          this.dialogRef.close();
-          this.layoutService.openSearchWithValue(searchTerm);
-          return;
-        }
-
-        this.searchQuery.set(cleanText);
-
-        // Try to find a match
-        const commands = this.commands;
-        const match = commands.find(cmd =>
-          cmd.label.toLowerCase() === cleanText ||
-          cmd.keywords?.some(k => k.toLowerCase() === cleanText)
-        );
-
-        if (match) {
-          this.executeCommand(match);
-        } else {
-          // If no exact match, leave the text in search box so user can see it filtered
-          // The computed filteredCommands will update automatically
-        }
-      } else {
-        this.searchQuery.set('');
-      }
-    } catch (err) {
-      console.error('Transcription error:', err);
-      this.searchQuery.set('');
-      this.snackBar.open('Voice command failed', 'Close', { duration: 3000 });
-    } finally {
-      this.isTranscribing.set(false);
+          this.router.navigate(['/ai/settings']);
+        });
+      return;
     }
+
+    this.isListening.set(true);
+    this.searchQuery.set('Listening...');
+
+    await this.speechService.startRecording({
+      silenceDuration: 2000,
+      onRecordingStateChange: (isRecording) => {
+        this.isListening.set(isRecording);
+        if (!isRecording && !this.isTranscribing()) {
+          this.searchQuery.set('Processing...');
+        }
+      },
+      onTranscribingStateChange: (isTranscribing) => {
+        this.isTranscribing.set(isTranscribing);
+        if (isTranscribing) {
+          this.searchQuery.set('Processing...');
+        }
+      },
+      onTranscription: (text) => {
+        this.handleTranscription(text);
+      }
+    });
+  }
+
+  private handleTranscription(text: string) {
+    const cleanText = text.toLowerCase().replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+
+    // Check for "search <term>" command
+    const searchMatch = cleanText.match(/^search\s+(.+)$/i);
+    if (searchMatch) {
+      const searchTerm = searchMatch[1].trim();
+      this.dialogRef.close();
+      this.layoutService.openSearchWithValue(searchTerm);
+      return;
+    }
+
+    // Check for "find <term>" command (alternative)
+    const findMatch = cleanText.match(/^find\s+(.+)$/i);
+    if (findMatch) {
+      const searchTerm = findMatch[1].trim();
+      this.dialogRef.close();
+      this.layoutService.openSearchWithValue(searchTerm);
+      return;
+    }
+
+    this.searchQuery.set(cleanText);
+
+    // Try to find a match
+    const commands = this.commands;
+    const match = commands.find(cmd =>
+      cmd.label.toLowerCase() === cleanText ||
+      cmd.keywords?.some(k => k.toLowerCase() === cleanText)
+    );
+
+    if (match) {
+      this.executeCommand(match);
+    }
+    // If no exact match, leave the text in search box so user can see it filtered
+    // The computed filteredCommands will update automatically
   }
 }
