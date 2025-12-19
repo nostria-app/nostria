@@ -102,12 +102,12 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
     try {
       // Try to get from database first
       const event = await this.database.getEventByPubkeyAndKind(pubkey, SearchRelayListKind);
-      
+
       if (event) {
         const relayUrls = event.tags
           .filter(tag => tag[0] === 'relay' && tag[1])
           .map(tag => tag[1]);
-        
+
         if (relayUrls.length > 0) {
           this.logger.debug(`Loaded ${relayUrls.length} search relays from kind 10007 event`);
           return relayUrls;
@@ -116,7 +116,7 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
     } catch (error) {
       this.logger.error('Error loading search relays from event', error);
     }
-    
+
     return this.DEFAULT_SEARCH_RELAYS;
   }
 

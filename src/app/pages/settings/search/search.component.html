@@ -9,26 +9,26 @@
       <input matInput placeholder="wss://relay.nostr.band" [value]="newSearchRelayUrl()"
         (input)="newSearchRelayUrl.set($any($event.target).value)" (keyup.enter)="addSearchRelay()" />
     </mat-form-field>
-    <button mat-flat-button class="add-button" (click)="addSearchRelay()"
-      [disabled]="isPublishing()"
+    <button mat-flat-button class="add-button" (click)="addSearchRelay()" [disabled]="isPublishing()"
       i18n="@@settings.search.add-button">
       Add Search Relay
     </button>
   </div>
 
   <mat-card class="search-relays-card">
-    <app-info-tooltip [content]="searchRelaysInfoContent"
-      ariaLabel="Learn how search relays work"></app-info-tooltip>
+    <app-info-tooltip [content]="searchRelaysInfoContent" ariaLabel="Learn how search relays work"></app-info-tooltip>
     <mat-card-header>
       <mat-card-title i18n="@@settings.search.relays-title">Search Relays</mat-card-title>
-      <mat-card-subtitle i18n="@@settings.search.subtitle">These relays are used when performing search queries (NIP-50)</mat-card-subtitle>
+      <mat-card-subtitle i18n="@@settings.search.subtitle">These relays are used when performing search queries
+        (NIP-50)</mat-card-subtitle>
     </mat-card-header>
     <mat-card-content>
       @if (searchRelays().length === 0) {
       <div class="text-center py-8 text-gray-500">
         <mat-icon class="large-icon">search_off</mat-icon>
         <p i18n="@@settings.search.empty.title">You don't have any search relays configured.</p>
-        <p i18n="@@settings.search.empty.description">Add a search relay using the input above to enable search functionality.</p>
+        <p i18n="@@settings.search.empty.description">Add a search relay using the input above to enable search
+          functionality.</p>
       </div>
       } @else {
       <mat-list>
@@ -42,12 +42,10 @@
               {{ formatRelayUrl(relay.url) }}
             </div>
             <div class="action-buttons">
-              <button mat-icon-button (click)="viewRelayInfo(relay.url)"
-                aria-label="View relay info">
+              <button mat-icon-button (click)="viewRelayInfo(relay.url)" aria-label="View relay info">
                 <mat-icon>info</mat-icon>
               </button>
-              <button mat-icon-button color="warn" (click)="removeSearchRelay(relay.url)"
-                [disabled]="isPublishing()"
+              <button mat-icon-button color="warn" (click)="removeSearchRelay(relay.url)" [disabled]="isPublishing()"
                 aria-label="Remove search relay">
                 <mat-icon>delete</mat-icon>
               </button>
