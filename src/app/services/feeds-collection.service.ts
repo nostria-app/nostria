@@ -52,6 +52,12 @@ export class FeedsCollectionService {
   // Signal for active feed ID
   private readonly _activeFeedId = signal<string | null>(null);
 
+  // Flag to track if user has manually changed the feed (prevents auto-restore from overriding)
+  private userChangedFeed = false;
+
+  // Track the last account pubkey to detect account switches
+  private lastAccountPubkey: string | null = null;
+
   // Public computed signals that use FeedService as source of truth
   readonly feeds = computed(() => this.convertFeedConfigsToDefinitions(this.feedService.feeds()));
   readonly activeFeedId = computed(() => this._activeFeedId());
@@ -69,13 +75,25 @@ export class FeedsCollectionService {
 
       untracked(() => {
         if (pubkey && feedsLoaded) {
-          // Load the active feed for this account
-          const activeFeedId = this.accountLocalState.getActiveFeed(pubkey);
-          if (activeFeedId) {
-            this._activeFeedId.set(activeFeedId);
-            // Sync with FeedService
-            this.feedService.setActiveFeed(activeFeedId);
+          // Only restore saved feed if:
+          // 1. Account has changed (user switched accounts)
+          // 2. User hasn't manually changed the feed in this session
+          const accountChanged = this.lastAccountPubkey !== pubkey;
+
+          if (accountChanged) {
+            // Account switched - reset the user change flag and restore saved feed
+            this.lastAccountPubkey = pubkey;
+            this.userChangedFeed = false;
+
+            const activeFeedId = this.accountLocalState.getActiveFeed(pubkey);
+            if (activeFeedId) {
+              this._activeFeedId.set(activeFeedId);
+              // Sync with FeedService
+              this.feedService.setActiveFeed(activeFeedId);
+            }
           }
+          // If account hasn't changed and user has manually selected a feed,
+          // don't override their selection
         }
       });
     });
@@ -277,6 +295,10 @@ export class FeedsCollectionService {
   setActiveFeed(feedId: string, skipValidation = false): boolean {
     const feed = skipValidation ? { id: feedId } : this.getFeedById(feedId);
     if (feed) {
+      // Mark that user has manually changed the feed - this prevents
+      // the auto-restore effect from overriding their selection
+      this.userChangedFeed = true;
+
       // Set the active feed ID IMMEDIATELY for instant UI updates
       this._activeFeedId.set(feedId);
       this.saveActiveFeed();
