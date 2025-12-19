@@ -53,6 +53,98 @@
       if (isStandalone) {
         document.documentElement.setAttribute('data-display-mode', 'standalone');
       }
+
+      // Early error handler for module loading failures during bootstrap
+      // This catches MIME type errors before Angular's error handlers are initialized
+      var hasTriedRecovery = sessionStorage.getItem('nostria-recovery-attempted');
+
+      function handleModuleLoadError(message) {
+        if (hasTriedRecovery) {
+          // Already tried recovery once this session, show error to user
+          console.error('[BOOTSTRAP] Module load failed after recovery attempt:', message);
+          var loadingEl = document.getElementById('app-loading');
+          if (loadingEl) {
+            loadingEl.innerHTML = '<div style="text-align:center;padding:20px;">' +
+              '<h2>Failed to Load</h2>' +
+              '<p style="opacity:0.8;margin:16px 0;">Please try clearing your browser cache and refreshing.</p>' +
+              '<button onclick="clearCachesAndReload()" style="padding:12px 24px;font-size:16px;cursor:pointer;border:none;border-radius:8px;background:#5953a9;color:white;">Clear Cache & Reload</button>' +
+              '</div>';
+          }
+          return;
+        }
+
+        console.warn('[BOOTSTRAP] Module load error detected, attempting recovery:', message);
+        sessionStorage.setItem('nostria-recovery-attempted', 'true');
+
+        // Clear caches and reload
+        if ('caches' in window) {
+          caches.keys().then(function (names) {
+            return Promise.all(names.map(function (name) { return caches.delete(name); }));
+          }).then(function () {
+            if ('serviceWorker' in navigator) {
+              return navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister(); }));
+              });
+            }
+          }).then(function () {
+            window.location.reload();
+          }).catch(function () {
+            window.location.reload();
+          });
+        } else {
+          window.location.reload();
+        }
+      }
+
+      // Make clearCachesAndReload available globally for the button
+      window.clearCachesAndReload = function () {
+        sessionStorage.removeItem('nostria-recovery-attempted');
+        if ('caches' in window) {
+          caches.keys().then(function (names) {
+            return Promise.all(names.map(function (name) { return caches.delete(name); }));
+          }).then(function () {
+            if ('serviceWorker' in navigator) {
+              return navigator.serviceWorker.getRegistrations().then(function (regs) {
+                return Promise.all(regs.map(function (r) { return r.unregister(); }));
+              });
+            }
+          }).finally(function () {
+            window.location.reload();
+          });
+        } else {
+          window.location.reload();
+        }
+      };
+
+      window.addEventListener('error', function (event) {
+        if (event.message && (
+          event.message.indexOf('MIME type') !== -1 ||
+          event.message.indexOf('Failed to fetch dynamically imported module') !== -1 ||
+          event.message.indexOf('Loading chunk') !== -1
+        )) {
+          event.preventDefault();
+          handleModuleLoadError(event.message);
+        }
+      });
+
+      window.addEventListener('unhandledrejection', function (event) {
+        var reason = event.reason ? event.reason.toString() : '';
+        if (
+          reason.indexOf('MIME type') !== -1 ||
+          reason.indexOf('Failed to fetch dynamically imported module') !== -1 ||
+          reason.indexOf('Loading chunk') !== -1
+        ) {
+          event.preventDefault();
+          handleModuleLoadError(reason);
+        }
+      });
+
+      // Clear recovery flag on successful load (after a delay to ensure app is bootstrapped)
+      setTimeout(function () {
+        if (document.querySelector('app-root')?.children.length > 1) {
+          sessionStorage.removeItem('nostria-recovery-attempted');
+        }
+      }, 10000);
     })();
   </script>
   <app-root>
@@ -67,22 +159,18 @@
       font-family: Roboto, sans-serif;
     ">
       <style>
-        /* Default to light mode (matches app default) */
+        /* Background is set on body via JS before this loads - inherit it */
+        html,
         body {
-          background-color: #FEF7FA;
-        }
-
-        body[data-theme="dark"] {
-          background-color: #18111b;
+          margin: 0;
+          padding: 0;
         }
 
         #app-loading {
-          background-color: #FEF7FA;
           color: #201923;
         }
 
         body[data-theme="dark"] #app-loading {
-          background-color: #18111b;
           color: #ecdeed;
         }
 
