@@ -271,9 +271,11 @@ export class FeedsCollectionService {
   }
   /**
    * Set the active feed
+   * @param feedId The ID of the feed to set as active
+   * @param skipValidation If true, skip checking if the feed exists (useful when feed was just added)
    */
-  setActiveFeed(feedId: string): boolean {
-    const feed = this.getFeedById(feedId);
+  setActiveFeed(feedId: string, skipValidation = false): boolean {
+    const feed = skipValidation ? { id: feedId } : this.getFeedById(feedId);
     if (feed) {
       // Set the active feed ID IMMEDIATELY for instant UI updates
       this._activeFeedId.set(feedId);

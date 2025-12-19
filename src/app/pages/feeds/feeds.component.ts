@@ -1609,8 +1609,8 @@ export class FeedsComponent implements OnDestroy {
           this.url.updatePathSilently(['/f', newBoard.path]);
         }
 
-        // Set as active board
-        this.feedsCollectionService.setActiveFeed(newBoard.id);
+        // Set as active board (skip validation since feed was just added)
+        this.feedsCollectionService.setActiveFeed(newBoard.id, true);
       }
     }
 
