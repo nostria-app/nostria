@@ -55,9 +55,42 @@ export class SpeechService {
    * Transcription normalization rules.
    * These are applied after the Whisper model transcribes the audio
    * to correct common misinterpretations and convert spoken symbols.
+   * 
+   * IMPORTANT: Order matters! More specific patterns should come before general ones.
    */
   private readonly transcriptionRules: TranscriptionRule[] = [
-    // Nostr-specific corrections
+    // === PHRASE CORRECTIONS (most specific, applied first) ===
+
+    // "hashtag ask nostr" variations → #asknostr
+    { pattern: /\bhashtag\s+ask\s*nostr\b/gi, replacement: '#asknostr' },
+    { pattern: /\bhashtag\s+ask\s*nuster\b/gi, replacement: '#asknostr' },
+    { pattern: /\bhashtag\s+ask\s*noster\b/gi, replacement: '#asknostr' },
+    { pattern: /\bhashtag\s+ask\s*nostre\b/gi, replacement: '#asknostr' },
+    { pattern: /\bhashtag\s+ask\s*nostro\b/gi, replacement: '#asknostr' },
+    { pattern: /\bhashtag\s+ask\s*nostra\b/gi, replacement: '#asknostr' },
+    { pattern: /\bhash\s+tag\s+ask\s*nostr\b/gi, replacement: '#asknostr' },
+
+    // "hashtag nostr" → #nostr
+    { pattern: /\bhashtag\s+nostr\b/gi, replacement: '#nostr' },
+    { pattern: /\bhashtag\s+nuster\b/gi, replacement: '#nostr' },
+    { pattern: /\bhashtag\s+noster\b/gi, replacement: '#nostr' },
+    { pattern: /\bhash\s+tag\s+nostr\b/gi, replacement: '#nostr' },
+
+    // "ask nostr" phrase corrections → asknostr (no space, for hashtag search)
+    { pattern: /\basknuster\b/gi, replacement: 'asknostr' },
+    { pattern: /\bask\s+nuster\b/gi, replacement: 'asknostr' },
+    { pattern: /\bask\s+noster\b/gi, replacement: 'asknostr' },
+    { pattern: /\bask\s+nostre\b/gi, replacement: 'asknostr' },
+    { pattern: /\bAskNoster\b/gi, replacement: 'asknostr' },
+    { pattern: /\bAskNuster\b/gi, replacement: 'asknostr' },
+    { pattern: /\bask\s+nostro\b/gi, replacement: 'asknostr' },
+    { pattern: /\bask\s+nostra\b/gi, replacement: 'asknostr' },
+    { pattern: /\bAskNostered\b/gi, replacement: 'asknostr' },
+    { pattern: /\bask\s+nostr\b/gi, replacement: 'asknostr' },
+
+    // === SINGLE WORD CORRECTIONS ===
+
+    // Nostr-specific corrections (standalone word)
     { pattern: /\bnuster\b/gi, replacement: 'nostr' },
     { pattern: /\bnostre\b/gi, replacement: 'nostr' },
     { pattern: /\bnostro\b/gi, replacement: 'nostr' },
@@ -65,22 +98,17 @@ export class SpeechService {
     { pattern: /\bknoster\b/gi, replacement: 'nostr' },
     { pattern: /\bnostra\b/gi, replacement: 'nostr' },
     { pattern: /\bnosta\b/gi, replacement: 'nostr' },
-    // "ask nostr" phrase corrections (applied before single-word corrections)
-    { pattern: /\basknuster\b/gi, replacement: 'ask nostr' },
-    { pattern: /\bask nuster\b/gi, replacement: 'ask nostr' },
-    { pattern: /\bask noster\b/gi, replacement: 'ask nostr' },
-    { pattern: /\bask nostre\b/gi, replacement: 'ask nostr' },
-    { pattern: /\bAskNoster\b/gi, replacement: 'ask nostr' },
-    { pattern: /\bAskNuster\b/gi, replacement: 'ask nostr' },
-    { pattern: /\bask nostro\b/gi, replacement: 'ask nostr' },
-    { pattern: /\bask nostra\b/gi, replacement: 'ask nostr' },
-    { pattern: /\bAskNostered\b/gi, replacement: 'ask nostr' },
 
-    // Symbol conversions
-    { pattern: /\bhashtag\s+/gi, replacement: '#' },
-    { pattern: /\bhash tag\s+/gi, replacement: '#' },
+    // === SYMBOL CONVERSIONS ===
+
+    // Hashtag with following word (captures the word after)
+    { pattern: /\bhashtag\s+(\w+)/gi, replacement: '#$1' },
+    { pattern: /\bhash\s+tag\s+(\w+)/gi, replacement: '#$1' },
+    // Standalone hashtag (rare, but handle it)
     { pattern: /\bhashtag\b/gi, replacement: '#' },
-    { pattern: /\bhash tag\b/gi, replacement: '#' },
+    { pattern: /\bhash\s+tag\b/gi, replacement: '#' },
+
+    // Other symbols
     { pattern: /\bat sign\b/gi, replacement: '@' },
     { pattern: /\bat symbol\b/gi, replacement: '@' },
     { pattern: /\bampersand\b/gi, replacement: '&' },
@@ -91,7 +119,8 @@ export class SpeechService {
     { pattern: /\bquestion mark\b/gi, replacement: '?' },
     { pattern: /\bexclamation mark\b/gi, replacement: '!' },
     { pattern: /\bexclamation point\b/gi, replacement: '!' },
-    // Common phrases
+
+    // === FORMATTING ===
     { pattern: /\bnew line\b/gi, replacement: '\n' },
     { pattern: /\bnewline\b/gi, replacement: '\n' },
     { pattern: /\bparagraph\b/gi, replacement: '\n\n' },
