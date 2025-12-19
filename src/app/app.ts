@@ -1158,8 +1158,8 @@ export class App implements OnInit {
         this.isSearchTranscribing.set(isTranscribing);
       },
       onTranscription: (text) => {
-        // Remove punctuation
-        const cleanText = text.replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "");
+        // Remove punctuation but keep # for hashtags and @ for mentions
+        const cleanText = text.replace(/[.,/!$%^&*;:{}=\-_`~()]/g, "");
 
         // Set the search input value
         this.layout.searchInput = cleanText;
