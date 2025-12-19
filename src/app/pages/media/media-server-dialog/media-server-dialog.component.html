@@ -6,13 +6,10 @@
   <mat-dialog-content>
     <mat-form-field appearance="outline" class="full-width">
       <mat-label>Server URL</mat-label>
-      <input matInput formControlName="url" placeholder="https://example.com/" />
-      <mat-hint>HTTPS is recommended for security</mat-hint>
+      <input matInput formControlName="url" placeholder="example.com" (blur)="onUrlBlur()" />
+      <mat-hint>Enter domain name (https:// will be added automatically)</mat-hint>
       @if (serverForm.get('url')?.hasError('required') && serverForm.get('url')?.touched) {
       <mat-error>Server URL is required</mat-error>
-      }
-      @if (serverForm.get('url')?.hasError('pattern') && serverForm.get('url')?.touched) {
-      <mat-error>Server URL must start with http:// or https://</mat-error>
       }
     </mat-form-field>
 

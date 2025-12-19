@@ -61,35 +61,75 @@ export class MediaServerDialogComponent implements OnInit {
     this.serverForm = this.fb.group({
       url: [
         this.dialogData || '',
-        [
-          Validators.required,
-          // Updated pattern to allow both http:// and https:// protocols
-          Validators.pattern('^https?://.+'),
-        ],
+        [Validators.required],
       ],
       name: [this.dialogData || ''],
       description: [this.dialogData || ''],
     });
   }
 
+  /**
+   * Normalizes a media server URL:
+   * - Auto-prefixes with https:// if no protocol is provided
+   * - Ensures trailing slash for root URLs
+   */
+  normalizeUrl(url: string): string {
+    if (!url) return url;
+
+    let normalized = url.trim();
+
+    // Auto-prefix with https:// if no protocol
+    if (!normalized.match(/^https?:\/\//i)) {
+      normalized = `https://${normalized}`;
+    }
+
+    // Ensure trailing slash if it's a root URL (no path after domain)
+    try {
+      const urlObj = new URL(normalized);
+      if (urlObj.pathname === '' || urlObj.pathname === '/') {
+        urlObj.pathname = '/';
+        normalized = urlObj.toString();
+      }
+    } catch {
+      // If URL parsing fails, just ensure trailing slash
+      if (!normalized.endsWith('/')) {
+        normalized = `${normalized}/`;
+      }
+    }
+
+    return normalized;
+  }
+
+  /**
+   * Called on blur to normalize the URL input
+   */
+  onUrlBlur(): void {
+    const urlControl = this.serverForm.get('url');
+    if (urlControl?.value) {
+      const normalized = this.normalizeUrl(urlControl.value);
+      urlControl.setValue(normalized, { emitEvent: false });
+    }
+  }
+
   selectSuggestedServer(url: string): void {
-    this.serverForm.get('url')?.setValue(url);
+    this.serverForm.get('url')?.setValue(this.normalizeUrl(url));
     this.serverForm.get('url')?.markAsDirty();
   }
 
   async testConnection(): Promise<void> {
-    const url = this.serverForm.get('url')?.value;
+    let url = this.serverForm.get('url')?.value;
     if (!url) return;
+
+    // Normalize the URL before testing
+    url = this.normalizeUrl(url);
+    this.serverForm.get('url')?.setValue(url, { emitEvent: false });
 
     this.testing.set(true);
     this.testResult = null;
 
     try {
-      // Add trailing slash if not present
-      const normalizedUrl = url.endsWith('/') ? url : `${url}/`;
-
       // First try to fetch info endpoint
-      const infoResponse = await fetch(`${normalizedUrl}`);
+      const infoResponse = await fetch(url);
 
       if (infoResponse.ok) {
         this.testResult = {
@@ -98,7 +138,7 @@ export class MediaServerDialogComponent implements OnInit {
         };
       } else {
         // Try a HEAD request to see if the server exists at all
-        const headResponse = await fetch(normalizedUrl, { method: 'HEAD' });
+        const headResponse = await fetch(url, { method: 'HEAD' });
 
         if (headResponse.ok) {
           this.testResult = {
@@ -124,14 +164,8 @@ export class MediaServerDialogComponent implements OnInit {
 
   onSubmit(): void {
     if (this.serverForm.valid) {
-      // const serverData: string = {
-      //   url: this.serverForm.value.url,
-      //   name: this.serverForm.value.name,
-      //   description: this.serverForm.value.description,
-      //   status: 'unknown'
-      // };
-
-      this.dialogRef.close(this.serverForm.value.url);
+      const normalizedUrl = this.normalizeUrl(this.serverForm.value.url);
+      this.dialogRef.close(normalizedUrl);
     }
   }
 }
