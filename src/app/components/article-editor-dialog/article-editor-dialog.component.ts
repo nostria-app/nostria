@@ -48,6 +48,7 @@ import { ArticleDisplayComponent } from '../article-display/article-display.comp
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { AiToolsDialogComponent } from '../ai-tools-dialog/ai-tools-dialog.component';
 import { AiService } from '../../services/ai.service';
+import { SpeechService } from '../../services/speech.service';
 
 export interface ArticleEditorDialogData {
   articleId?: string;
@@ -136,8 +137,7 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
   isPublishing = signal(false);
   isRecording = signal(false);
   isTranscribing = signal(false);
-  private mediaRecorder: MediaRecorder | null = null;
-  private audioChunks: Blob[] = [];
+  private speechService = inject(SpeechService);
 
   // Article data
   article = signal<ArticleDraft>({
@@ -1275,73 +1275,30 @@ export class ArticleEditorDialogComponent implements OnDestroy, AfterViewInit {
 
   async toggleRecording() {
     if (this.isRecording()) {
-      this.stopRecording();
+      this.speechService.stopRecording();
     } else {
       await this.startRecording();
     }
   }
 
   async startRecording() {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.mediaRecorder = new MediaRecorder(stream);
-      this.audioChunks = [];
-
-      this.mediaRecorder.ondataavailable = (event) => {
-        this.audioChunks.push(event.data);
-      };
-
-      this.mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(this.audioChunks, { type: 'audio/wav' });
-        await this.transcribeAudio(audioBlob);
-        
-        // Stop all tracks
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      this.mediaRecorder.start();
-      this.isRecording.set(true);
-    } catch (err) {
-      console.error('Error accessing microphone:', err);
-      this.snackBar.open('Error accessing microphone', 'Close', { duration: 3000 });
-    }
+    await this.speechService.startRecording({
+      silenceDuration: 3000,
+      onRecordingStateChange: (isRecording) => {
+        this.isRecording.set(isRecording);
+      },
+      onTranscribingStateChange: (isTranscribing) => {
+        this.isTranscribing.set(isTranscribing);
+      },
+      onTranscription: (text) => {
+        const currentContent = this.article().content;
+        const newContent = currentContent ? currentContent + ' ' + text : text;
+        this.updateContent(newContent);
+      }
+    });
   }
 
   stopRecording() {
-    if (this.mediaRecorder && this.mediaRecorder.state !== 'inactive') {
-      this.mediaRecorder.stop();
-      this.isRecording.set(false);
-    }
-  }
-
-  async transcribeAudio(blob: Blob) {
-    this.isTranscribing.set(true);
-    try {
-      // Check if model is loaded
-      const status = await this.aiService.checkModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
-      if (!status.loaded) {
-        this.snackBar.open('Loading Whisper model...', 'Close', { duration: 2000 });
-        await this.aiService.loadModel('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
-      }
-
-      // Convert Blob to Float32Array
-      const arrayBuffer = await blob.arrayBuffer();
-      const audioContext = new AudioContext({ sampleRate: 16000 });
-      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      const audioData = audioBuffer.getChannelData(0);
-
-      const result = await this.aiService.transcribeAudio(audioData) as { text: string };
-      
-      if (result && result.text) {
-        const currentContent = this.article().content;
-        const newContent = currentContent ? currentContent + ' ' + result.text.trim() : result.text.trim();
-        this.updateContent(newContent);
-      }
-    } catch (err) {
-      console.error('Transcription error:', err);
-      this.snackBar.open('Transcription failed', 'Close', { duration: 3000 });
-    } finally {
-      this.isTranscribing.set(false);
-    }
+    this.speechService.stopRecording();
   }
 }
