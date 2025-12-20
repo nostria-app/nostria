@@ -195,6 +195,7 @@ export class DiscoveryService {
    * @returns Promise resolving to pubkeys of curated creators
    */
   async getCuratedCreators(category: DiscoveryCategory): Promise<string[]> {
+    debugger;
     const cacheKey = `creators-${category}`;
     const cached = this.curatedListsCache.get(cacheKey);
     if (cached) {
@@ -210,6 +211,9 @@ export class DiscoveryService {
       };
 
       const event = await pool.get([this.CURATOR_RELAY], filter);
+      
+      debugger;
+      
       if (event) {
         const list = this.parseFollowSet(event, category);
         this.curatedListsCache.set(cacheKey, list);
@@ -308,7 +312,7 @@ export class DiscoveryService {
       const filter = {
         kinds: [CURATION_KINDS.ARTICLE_CURATION],
         authors: [this.CURATOR_PUBKEY],
-        '#d': [`events-${category}`],
+        '#d': [`${category}`],
       };
 
       const event = await pool.get([this.CURATOR_RELAY], filter);
@@ -494,6 +498,45 @@ export class DiscoveryService {
         createdAt: list.createdAt,
       };
     });
+  }
+
+  /**
+   * Load curated events for a category, returning items with metadata.
+   * @param category The discovery category
+   * @returns Promise resolving to curated event items
+   */
+  async loadCuratedEvents(category: DiscoveryCategory): Promise<{ id: string; pubkey: string; title?: string; image?: string; kind: number; createdAt: number }[]> {
+    
+    debugger;
+    const list = await this.getCuratedEvents(category);
+    if (!list) return [];
+
+    // Return both addressable IDs and event IDs
+    const items: { id: string; pubkey: string; title?: string; image?: string; kind: number; createdAt: number }[] = [];
+
+    // Add addressable events
+    for (const aId of list.addressableIds) {
+      const parts = aId.split(':');
+      const pubkey = parts[1] || '';
+      items.push({
+        id: aId,
+        pubkey,
+        kind: CURATION_KINDS.ARTICLE_CURATION,
+        createdAt: list.createdAt,
+      });
+    }
+
+    // Add regular event IDs
+    for (const eventId of list.eventIds) {
+      items.push({
+        id: eventId,
+        pubkey: '', // Will need to be fetched
+        kind: 1, // Assume kind 1 for regular events
+        createdAt: list.createdAt,
+      });
+    }
+
+    return items;
   }
 
   /**
