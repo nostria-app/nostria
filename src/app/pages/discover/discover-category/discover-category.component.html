@@ -93,26 +93,9 @@
       </h2>
       <div class="videos-grid">
         @for (video of videos(); track video.id) {
-        <button class="video-card" (click)="viewVideo(video)">
-          <div class="video-thumbnail">
-            @if (video.image) {
-            <img [src]="video.image" [alt]="video.title || 'Video'" title="Video thumbnail" />
-            } @else {
-            <div class="video-placeholder">
-              <mat-icon>play_circle</mat-icon>
-            </div>
-            }
-            <div class="play-overlay">
-              <mat-icon>play_arrow</mat-icon>
-            </div>
-          </div>
-          <div class="video-info">
-            <h3 class="video-title">{{ video.title || 'Untitled' }}</h3>
-            <div class="video-meta">
-              <app-user-profile [pubkey]="video.pubkey" [view]="'compact'"></app-user-profile>
-            </div>
-          </div>
-        </button>
+        <app-event [id]="video.id" type="e" [compact]="true" [hideComments]="true" [hideFooter]="true"
+          appearance="card">
+        </app-event>
         }
       </div>
     </section>
