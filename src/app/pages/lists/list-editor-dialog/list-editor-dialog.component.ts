@@ -1,5 +1,5 @@
 import { Component, OnInit, signal, computed, inject } from '@angular/core';
-
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatChipsModule } from '@angular/material/chips';
@@ -24,6 +24,7 @@ interface EditorData {
   selector: 'app-list-editor-dialog',
   imports: [
     FormsModule,
+    DragDropModule,
     MatButtonModule,
     MatChipsModule,
     MatDialogModule,
@@ -35,7 +36,7 @@ interface EditorData {
     MatSlideToggleModule,
     MatTabsModule,
     MatTooltipModule
-],
+  ],
   templateUrl: './list-editor-dialog.component.html',
   styleUrl: './list-editor-dialog.component.scss',
 })
@@ -56,11 +57,16 @@ export class ListEditorDialogComponent implements OnInit {
   publicItems = signal<ListItem[]>([]);
   privateItems = signal<ListItem[]>([]);
 
-  // New item inputs
+  // New/Edit item inputs
   newItemTag = signal('');
   newItemValue = signal('');
   newItemRelay = signal('');
+  newItemPubkey = signal(''); // For 'e' tags
   newItemIsPrivate = signal(false);
+
+  // Edit mode
+  editingIndex = signal<number | null>(null);
+  editingIsPrivate = signal(false);
 
   // Computed
   isValid = computed(() => {
@@ -77,6 +83,12 @@ export class ListEditorDialogComponent implements OnInit {
 
   // In edit mode, identifier cannot be changed (would create duplicate)
   identifierDisabled = computed(() => this.mode === 'edit' && !this.listType.isReplaceable);
+
+  // Check if current tag supports pubkey field (only 'e' tags)
+  showPubkeyField = computed(() => this.newItemTag() === 'e');
+
+  // Check if we're in edit mode for an item
+  isEditingItem = computed(() => this.editingIndex() !== null);
 
   constructor() {
     this.listType = this.data.listType;
@@ -117,7 +129,7 @@ export class ListEditorDialogComponent implements OnInit {
   }
 
   /**
-   * Add new item to the list
+   * Add new item or update existing item
    */
   addItem() {
     const tag = this.newItemTag().trim();
@@ -136,15 +148,96 @@ export class ListEditorDialogComponent implements OnInit {
       relay: this.newItemRelay().trim() || undefined,
     };
 
-    if (this.newItemIsPrivate()) {
-      this.privateItems.update(items => [...items, item]);
-    } else {
-      this.publicItems.update(items => [...items, item]);
+    // Add pubkey for 'e' tags
+    if (tag === 'e' && this.newItemPubkey().trim()) {
+      item.pubkey = this.newItemPubkey().trim();
     }
 
-    // Reset new item inputs
+    // Check if we're editing an existing item
+    if (this.editingIndex() !== null) {
+      const index = this.editingIndex()!;
+      if (this.editingIsPrivate()) {
+        this.privateItems.update(items => {
+          const updated = [...items];
+          updated[index] = item;
+          return updated;
+        });
+      } else {
+        this.publicItems.update(items => {
+          const updated = [...items];
+          updated[index] = item;
+          return updated;
+        });
+      }
+      // Reset edit mode
+      this.cancelEdit();
+    } else {
+      // Adding new item
+      if (this.newItemIsPrivate()) {
+        this.privateItems.update(items => [...items, item]);
+      } else {
+        this.publicItems.update(items => [...items, item]);
+      }
+    }
+
+    // Reset inputs
+    this.resetItemInputs();
+  }
+
+  /**
+   * Start editing an item
+   */
+  editItem(index: number, isPrivate: boolean) {
+    const items = isPrivate ? this.privateItems() : this.publicItems();
+    const item = items[index];
+
+    this.newItemTag.set(item.tag);
+    this.newItemValue.set(item.value);
+    this.newItemRelay.set(item.relay || '');
+    this.newItemPubkey.set(item.pubkey || '');
+    this.newItemIsPrivate.set(isPrivate);
+    this.editingIndex.set(index);
+    this.editingIsPrivate.set(isPrivate);
+  }
+
+  /**
+   * Cancel editing
+   */
+  cancelEdit() {
+    this.editingIndex.set(null);
+    this.editingIsPrivate.set(false);
+    this.resetItemInputs();
+  }
+
+  /**
+   * Reset item input fields
+   */
+  private resetItemInputs() {
     this.newItemValue.set('');
     this.newItemRelay.set('');
+    this.newItemPubkey.set('');
+  }
+
+  /**
+   * Handle drag and drop for public items
+   */
+  dropPublicItem(event: CdkDragDrop<ListItem[]>) {
+    this.publicItems.update(items => {
+      const updated = [...items];
+      moveItemInArray(updated, event.previousIndex, event.currentIndex);
+      return updated;
+    });
+  }
+
+  /**
+   * Handle drag and drop for private items
+   */
+  dropPrivateItem(event: CdkDragDrop<ListItem[]>) {
+    this.privateItems.update(items => {
+      const updated = [...items];
+      moveItemInArray(updated, event.previousIndex, event.currentIndex);
+      return updated;
+    });
   }
 
   /**
@@ -152,6 +245,10 @@ export class ListEditorDialogComponent implements OnInit {
    */
   removePublicItem(index: number) {
     this.publicItems.update(items => items.filter((_, i) => i !== index));
+    // If we were editing this item, cancel edit
+    if (this.editingIndex() === index && !this.editingIsPrivate()) {
+      this.cancelEdit();
+    }
   }
 
   /**
@@ -159,6 +256,10 @@ export class ListEditorDialogComponent implements OnInit {
    */
   removePrivateItem(index: number) {
     this.privateItems.update(items => items.filter((_, i) => i !== index));
+    // If we were editing this item, cancel edit
+    if (this.editingIndex() === index && this.editingIsPrivate()) {
+      this.cancelEdit();
+    }
   }
 
   /**
@@ -185,9 +286,20 @@ export class ListEditorDialogComponent implements OnInit {
   getItemDisplay(item: ListItem): string {
     let display = `[${item.tag}] ${item.value}`;
     if (item.relay) {
-      display += ` (${item.relay})`;
+      display += ` @ ${item.relay}`;
+    }
+    if (item.tag === 'e' && item.pubkey) {
+      display += ` (by ${item.pubkey.slice(0, 8)}...)`;
     }
     return display;
+  }
+
+  /**
+   * Get short display for item value (truncated)
+   */
+  getShortValue(value: string, maxLength = 32): string {
+    if (value.length <= maxLength) return value;
+    return value.slice(0, maxLength) + '...';
   }
 
   /**
@@ -306,8 +418,13 @@ export class ListEditorDialogComponent implements OnInit {
     for (const item of this.publicItems()) {
       const tag: string[] = [item.tag, item.value];
       if (item.relay) tag.push(item.relay);
-      if (item.marker) tag.push(item.marker);
-      if (item.metadata) tag.push(item.metadata);
+      // For 'e' tags, 4th element is pubkey
+      if (item.tag === 'e') {
+        if (item.pubkey) tag.push(item.pubkey);
+      } else {
+        if (item.marker) tag.push(item.marker);
+        if (item.metadata) tag.push(item.metadata);
+      }
       tags.push(tag);
     }
 
@@ -378,14 +495,18 @@ export class ListEditorDialogComponent implements OnInit {
         } else if (tagName === 'image') {
           this.image.set(tagValue);
         } else {
-          // Handle item tags
+          // Handle item tags - for 'e' tags, 4th element is pubkey
           const item: ListItem = {
             tag: tagName,
             value: tagValue,
             relay: tag[2],
-            marker: tag[3],
-            metadata: tag[4],
           };
+          if (tagName === 'e') {
+            item.pubkey = tag[3];
+          } else {
+            item.marker = tag[3];
+            item.metadata = tag[4];
+          }
           this.publicItems.update((items) => [...items, item]);
         }
       }

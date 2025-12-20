@@ -42,9 +42,9 @@
 
     <mat-divider></mat-divider>
 
-    <!-- Add Items Section -->
+    <!-- Add/Edit Items Section -->
     <div class="add-item-section">
-      <h3>Add Items</h3>
+      <h3>{{ isEditingItem() ? 'Edit Item' : 'Add Items' }}</h3>
 
       <div class="add-item-form">
         <mat-form-field appearance="outline" class="tag-field">
@@ -92,14 +92,36 @@
           <input matInput [(ngModel)]="newItemRelay" type="url" placeholder="wss://..." (keyup.enter)="addItem()" />
         </mat-form-field>
 
+        @if (showPubkeyField()) {
+        <mat-form-field appearance="outline" class="pubkey-field">
+          <mat-label>Author Pubkey (optional)</mat-label>
+          <input matInput [(ngModel)]="newItemPubkey" placeholder="hex pubkey" (keyup.enter)="addItem()" />
+          <mat-hint>32-byte hex pubkey of the event author</mat-hint>
+        </mat-form-field>
+        }
+
+        @if (!isEditingItem()) {
         <mat-slide-toggle [(ngModel)]="newItemIsPrivate" color="primary">
           Private
         </mat-slide-toggle>
+        }
 
-        <button mat-raised-button color="primary" (click)="addItem()" [disabled]="!newItemTag() || !newItemValue()">
-          <mat-icon>add</mat-icon>
-          Add
-        </button>
+        <div class="action-buttons">
+          @if (isEditingItem()) {
+          <button mat-button (click)="cancelEdit()">
+            Cancel
+          </button>
+          <button mat-flat-button (click)="addItem()" [disabled]="!newItemTag() || !newItemValue()">
+            <mat-icon>check</mat-icon>
+            Update
+          </button>
+          } @else {
+          <button mat-flat-button (click)="addItem()" [disabled]="!newItemTag() || !newItemValue()">
+            <mat-icon>add</mat-icon>
+            Add
+          </button>
+          }
+        </div>
       </div>
 
       <p class="item-count">Total items: {{ totalItems() }}</p>
@@ -118,18 +140,39 @@
 
         <div class="items-list">
           @if (publicItems().length > 0) {
-          @for (item of publicItems(); track $index) {
-          <mat-chip-row class="item-chip">
-            <mat-icon matChipAvatar>{{ getTagIcon(item.tag) }}</mat-icon>
-            <span class="item-text">{{ getItemDisplay(item) }}</span>
-            <button matChipRemove matTooltip="Move to private" (click)="moveToPrivate($index)">
-              <mat-icon>lock</mat-icon>
-            </button>
-            <button matChipRemove matTooltip="Remove" (click)="removePublicItem($index)">
-              <mat-icon>close</mat-icon>
-            </button>
-          </mat-chip-row>
-          }
+          <p class="drag-hint">
+            <mat-icon>drag_indicator</mat-icon>
+            Drag items to reorder
+          </p>
+          <div cdkDropList (cdkDropListDropped)="dropPublicItem($event)" class="items-drop-list">
+            @for (item of publicItems(); track $index) {
+            <div cdkDrag class="item-row" [class.editing]="editingIndex() === $index && !editingIsPrivate()">
+              <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
+              <mat-icon class="item-icon">{{ getTagIcon(item.tag) }}</mat-icon>
+              <div class="item-content">
+                <span class="item-tag">[{{ item.tag }}]</span>
+                <span class="item-value" [matTooltip]="item.value">{{ getShortValue(item.value) }}</span>
+                @if (item.relay) {
+                <span class="item-relay">@ {{ getShortValue(item.relay, 24) }}</span>
+                }
+                @if (item.tag === 'e' && item.pubkey) {
+                <span class="item-pubkey">(by {{ item.pubkey.slice(0, 8) }}...)</span>
+                }
+              </div>
+              <div class="item-actions">
+                <button mat-icon-button matTooltip="Edit" (click)="editItem($index, false)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Move to private" (click)="moveToPrivate($index)">
+                  <mat-icon>lock</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Remove" (click)="removePublicItem($index)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </div>
+            }
+          </div>
           } @else {
           <p class="no-items">No public items yet. Add items above.</p>
           }
@@ -153,18 +196,39 @@
           </div>
 
           @if (privateItems().length > 0) {
-          @for (item of privateItems(); track $index) {
-          <mat-chip-row class="item-chip private">
-            <mat-icon matChipAvatar>{{ getTagIcon(item.tag) }}</mat-icon>
-            <span class="item-text">{{ getItemDisplay(item) }}</span>
-            <button matChipRemove matTooltip="Move to public" (click)="moveToPublic($index)">
-              <mat-icon>public</mat-icon>
-            </button>
-            <button matChipRemove matTooltip="Remove" (click)="removePrivateItem($index)">
-              <mat-icon>close</mat-icon>
-            </button>
-          </mat-chip-row>
-          }
+          <p class="drag-hint">
+            <mat-icon>drag_indicator</mat-icon>
+            Drag items to reorder
+          </p>
+          <div cdkDropList (cdkDropListDropped)="dropPrivateItem($event)" class="items-drop-list">
+            @for (item of privateItems(); track $index) {
+            <div cdkDrag class="item-row private" [class.editing]="editingIndex() === $index && editingIsPrivate()">
+              <mat-icon cdkDragHandle class="drag-handle">drag_indicator</mat-icon>
+              <mat-icon class="item-icon">{{ getTagIcon(item.tag) }}</mat-icon>
+              <div class="item-content">
+                <span class="item-tag">[{{ item.tag }}]</span>
+                <span class="item-value" [matTooltip]="item.value">{{ getShortValue(item.value) }}</span>
+                @if (item.relay) {
+                <span class="item-relay">@ {{ getShortValue(item.relay, 24) }}</span>
+                }
+                @if (item.tag === 'e' && item.pubkey) {
+                <span class="item-pubkey">(by {{ item.pubkey.slice(0, 8) }}...)</span>
+                }
+              </div>
+              <div class="item-actions">
+                <button mat-icon-button matTooltip="Edit" (click)="editItem($index, true)">
+                  <mat-icon>edit</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Move to public" (click)="moveToPublic($index)">
+                  <mat-icon>public</mat-icon>
+                </button>
+                <button mat-icon-button matTooltip="Remove" (click)="removePrivateItem($index)">
+                  <mat-icon>close</mat-icon>
+                </button>
+              </div>
+            </div>
+            }
+          </div>
           } @else {
           <p class="no-items">No private items yet. Toggle "Private" when adding items.</p>
           }

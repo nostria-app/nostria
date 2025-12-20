@@ -42,7 +42,8 @@ export interface ListItem {
   tag: string; // 'p', 'e', 'a', 't', 'r', etc.
   value: string;
   relay?: string;
-  marker?: string;
+  pubkey?: string; // For 'e' tags: author's pubkey (4th element)
+  marker?: string; // For other tags that use markers
   metadata?: string; // petname for 'p' tags, etc.
 }
 
@@ -317,7 +318,7 @@ const LIST_SETS: ListType[] = [
     MatSnackBarModule,
     MatTabsModule,
     MatTooltipModule
-],
+  ],
   templateUrl: './lists.component.html',
   styleUrl: './lists.component.scss',
 })
@@ -515,17 +516,25 @@ export class ListsComponent implements OnInit {
 
         if (records && records.length > 0) {
           this.logger.debug(`[ListsComponent] Found ${records.length} records for kind ${listType.kind}`);
-          const sets: ListData[] = [];
+          const setsMap = new Map<string, ListData>(); // Use map to deduplicate by identifier
+
           for (const record of records) {
             if (record.event) {
               this.logger.debug(`[ListsComponent] Parsing set event for kind ${listType.kind}`);
               const listData = await this.parseListEvent(record.event, listType);
               if (listData) {
-                sets.push(listData);
+                const identifier = listData.identifier || '';
+                const existing = setsMap.get(identifier);
+
+                // For parameterized replaceable events, keep only the newest
+                if (!existing || listData.created > existing.created) {
+                  setsMap.set(identifier, listData);
+                }
               }
             }
           }
 
+          const sets = Array.from(setsMap.values());
           if (sets.length > 0) {
             // Update signal incrementally
             this.setsData.update(map => {
@@ -533,7 +542,7 @@ export class ListsComponent implements OnInit {
               newMap.set(listType.kind, sets);
               return newMap;
             });
-            this.logger.debug(`[ListsComponent] Added ${sets.length} sets for kind ${listType.kind}`);
+            this.logger.debug(`[ListsComponent] Added ${sets.length} sets for kind ${listType.kind} (deduplicated from ${records.length} records)`);
           }
         } else {
           this.logger.debug(`[ListsComponent] No records found for kind ${listType.kind}`);
@@ -613,13 +622,25 @@ export class ListsComponent implements OnInit {
         continue;
       }
 
-      items.push({
-        tag: tagName,
-        value,
-        relay,
-        marker,
-        metadata,
-      });
+      // Parse item based on tag type
+      // For 'e' tags: ["e", <event-id>, <relay-url>, <pubkey>]
+      // For other tags: ["tag", <value>, <relay>, <marker>, <metadata>]
+      if (tagName === 'e') {
+        items.push({
+          tag: tagName,
+          value,
+          relay,
+          pubkey: marker, // 4th element is pubkey for 'e' tags
+        });
+      } else {
+        items.push({
+          tag: tagName,
+          value,
+          relay,
+          marker,
+          metadata,
+        });
+      }
     }
 
     return items;
@@ -789,8 +810,13 @@ export class ListsComponent implements OnInit {
       for (const item of publicItems) {
         const tag = [item.tag, item.value];
         if (item.relay) tag.push(item.relay);
-        if (item.marker) tag.push(item.marker);
-        if (item.metadata) tag.push(item.metadata);
+        // For 'e' tags, the 4th element is pubkey
+        if (item.tag === 'e') {
+          if (item.pubkey) tag.push(item.pubkey);
+        } else {
+          if (item.marker) tag.push(item.marker);
+          if (item.metadata) tag.push(item.metadata);
+        }
         tags.push(tag);
       }
 
@@ -801,8 +827,13 @@ export class ListsComponent implements OnInit {
         for (const item of privateItems) {
           const tag = [item.tag, item.value];
           if (item.relay) tag.push(item.relay);
-          if (item.marker) tag.push(item.marker);
-          if (item.metadata) tag.push(item.metadata);
+          // For 'e' tags, the 4th element is pubkey
+          if (item.tag === 'e') {
+            if (item.pubkey) tag.push(item.pubkey);
+          } else {
+            if (item.marker) tag.push(item.marker);
+            if (item.metadata) tag.push(item.metadata);
+          }
           privateTags.push(tag);
         }
 
@@ -826,18 +857,23 @@ export class ListsComponent implements OnInit {
           currentLists.set(listType.kind, newListData);
           this.standardListsData.set(currentLists);
         } else {
-          // Update or add to sets
+          // Update or add to sets (parameterized replaceable events)
           const currentSets = new Map(this.setsData());
           const existingSets = currentSets.get(listType.kind) || [];
 
-          // Find and replace existing set with same identifier, or add new
-          const updatedSets = identifier
-            ? existingSets.map(s => s.identifier === identifier ? newListData : s)
-            : [...existingSets, newListData];
+          // Find existing set with same identifier and replace it, or add new
+          const existingIndex = identifier
+            ? existingSets.findIndex(s => s.identifier === identifier)
+            : -1;
 
-          // If no existing set was found with this identifier, add it
-          if (identifier && !existingSets.some(s => s.identifier === identifier)) {
-            updatedSets.push(newListData);
+          let updatedSets: ListData[];
+          if (existingIndex >= 0) {
+            // Replace existing set with same identifier
+            updatedSets = [...existingSets];
+            updatedSets[existingIndex] = newListData;
+          } else {
+            // Add new set
+            updatedSets = [...existingSets, newListData];
           }
 
           currentSets.set(listType.kind, updatedSets);
@@ -855,9 +891,35 @@ export class ListsComponent implements OnInit {
       }
 
       // Publish to ALL account relays (not optimized) - important for list persistence
-      await this.publish.publish(signedEvent, { useOptimizedRelays: false });
+      const publishResult = await this.publish.publish(signedEvent, { useOptimizedRelays: false });
 
-      this.snackBar.open('List saved successfully', 'Close', { duration: 3000 });
+      // Log publish results for debugging
+      const successCount = Array.from(publishResult.relayResults.values()).filter(r => r.success).length;
+      const failureCount = Array.from(publishResult.relayResults.values()).filter(r => !r.success).length;
+
+      this.logger.info('[ListsComponent] List publish results:', {
+        kind: listType.kind,
+        identifier,
+        eventId: signedEvent.id,
+        success: publishResult.success,
+        successCount,
+        failureCount,
+        relayResults: Array.from(publishResult.relayResults.entries()).map(([url, r]) => ({
+          url,
+          success: r.success,
+          error: r.error
+        }))
+      });
+
+      if (publishResult.success) {
+        if (failureCount > 0) {
+          this.snackBar.open(`List saved (${successCount}/${successCount + failureCount} relays)`, 'Close', { duration: 3000 });
+        } else {
+          this.snackBar.open('List saved successfully', 'Close', { duration: 3000 });
+        }
+      } else {
+        this.snackBar.open('List saved locally but failed to publish to relays', 'Close', { duration: 5000 });
+      }
 
       // No need to reload - optimistic update already updated the UI
       // and we saved to storage. Reloading with cache would just get stale data.

@@ -142,6 +142,25 @@ export class ArticleComponent implements OnDestroy {
     return this.utilities.getTagValues('d', ev.tags)[0] || '';
   });
 
+  /**
+   * Check if the string is in the addressable event format: kind:pubkey:d-tag
+   * e.g., 30023:b7ed68b062de6b4a12e51fd5285c1e1e0ed0e5128cda93ab11b4150b55ed32fc:my-article
+   */
+  private isAddressableFormat(value: string): boolean {
+    const parts = value.split(':');
+    if (parts.length < 3) return false;
+
+    // First part should be a valid kind number (e.g., 30023 for articles)
+    const kind = parseInt(parts[0], 10);
+    if (isNaN(kind) || kind <= 0) return false;
+
+    // Second part should be a 64-character hex pubkey
+    const pubkey = parts[1];
+    if (!/^[0-9a-fA-F]{64}$/.test(pubkey)) return false;
+
+    return true;
+  }
+
   async loadArticle(naddr: string, params?: ParamMap): Promise<void> {
     const receivedData = history.state.event as Event | undefined;
 
@@ -181,6 +200,26 @@ export class ArticleComponent implements OnDestroy {
 
       pubkey = addrData.pubkey;
       slug = decoded.data.identifier;
+    } else if (this.isAddressableFormat(naddr)) {
+      // Handle raw addressable event format: kind:pubkey:d-tag (e.g., 30023:pubkey:slug)
+      const parts = naddr.split(':');
+      const kind = parseInt(parts[0], 10);
+      pubkey = parts[1];
+      slug = parts.slice(2).join(':'); // d-tag may contain colons
+
+      this.logger.debug('Parsed addressable format:', { kind, pubkey, slug });
+
+      // Generate naddr for sharing
+      const encoded = nip19.naddrEncode({
+        identifier: slug,
+        kind: kind,
+        pubkey: pubkey,
+      });
+      this.link = encoded;
+
+      // Update URL to use the naddr format for cleaner sharing
+      const npub = this.utilities.getNpubFromPubkey(pubkey);
+      this.url.updatePathSilently(['/a', npub, slug]);
     } else {
       const slugParam = params?.get('slug') || this.route.snapshot.paramMap.get('slug');
 
@@ -448,7 +487,7 @@ export class ArticleComponent implements OnDestroy {
       // Add click event listener to potentially handle internally
       linkElement.addEventListener('click', (event: MouseEvent) => {
         const handled = this.externalLinkHandler.handleLinkClick(linkElement.href, event);
-        
+
         if (handled) {
           // Prevent default navigation if we handled it internally
           event.preventDefault();
