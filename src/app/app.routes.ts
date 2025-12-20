@@ -279,6 +279,18 @@ export const routes: Routes = [
     title: 'Discover Media',
   },
   {
+    path: 'discover/content/:category',
+    loadComponent: () =>
+      import('./pages/discover/discover-category/discover-category.component').then(m => m.DiscoverCategoryComponent),
+    title: 'Discover Content',
+  },
+  {
+    path: 'discover/media/:category',
+    loadComponent: () =>
+      import('./pages/discover/discover-category/discover-category.component').then(m => m.DiscoverCategoryComponent),
+    title: 'Discover Media',
+  },
+  {
     path: 'stream/:encodedEvent',
     loadComponent: () =>
       import('./pages/stream-viewer/stream-viewer.component').then(m => m.StreamViewerComponent),

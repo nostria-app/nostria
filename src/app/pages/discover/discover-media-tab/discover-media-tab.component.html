@@ -3,19 +3,7 @@
   <section class="hero-section">
     <div class="hero-content">
       <h2>Discover Media</h2>
-      <p>Explore podcasts, music, videos, and more from the decentralized web</p>
-    </div>
-  </section>
-
-  <!-- Quick Actions -->
-  <section class="quick-actions-section">
-    <div class="quick-actions-grid">
-      @for (action of quickActions; track action.id) {
-      <button class="quick-action-btn" mat-stroked-button (click)="selectQuickAction(action.id)">
-        <mat-icon>{{ action.icon }}</mat-icon>
-        {{ action.label }}
-      </button>
-      }
+      <p>Explore podcasts, music, videos, photography and more from the decentralized web</p>
     </div>
   </section>
 
@@ -35,87 +23,6 @@
         <mat-icon class="category-arrow">arrow_forward</mat-icon>
       </button>
       }
-    </div>
-  </section>
-
-  <!-- Genre Tags -->
-  <section class="genres-section">
-    <h3 class="section-title">Popular Genres</h3>
-    <div class="genres-container">
-      @for (genre of genres; track genre) {
-      <button class="genre-chip" (click)="selectGenre(genre)">
-        {{ genre }}
-      </button>
-      }
-    </div>
-  </section>
-
-  <!-- Featured Sections -->
-  @for (section of featuredSections; track section.id) {
-  <section class="featured-section">
-    <div class="section-header">
-      <div class="section-title-container">
-        <mat-icon class="section-icon">{{ section.icon }}</mat-icon>
-        <div>
-          <h3 class="section-title">{{ section.title }}</h3>
-          <p class="section-subtitle">{{ section.subtitle }}</p>
-        </div>
-      </div>
-      <button mat-button class="see-all-btn">
-        See All
-        <mat-icon iconPositionEnd>chevron_right</mat-icon>
-      </button>
-    </div>
-
-    <div class="featured-items-grid">
-      @for (item of section.items; track item.id) {
-      <div class="featured-item" tabindex="0" (click)="playItem(item)" (keydown.enter)="playItem(item)"
-        (keydown.space)="playItem(item)">
-        <div class="item-thumbnail">
-          @if (item.image) {
-          <img [src]="item.image" [alt]="item.title" [title]="item.title" />
-          } @else {
-          <div class="placeholder-thumbnail">
-            <mat-icon>{{ getTypeIcon(item.type) }}</mat-icon>
-          </div>
-          }
-          <div class="item-overlay">
-            <button mat-mini-fab class="play-fab">
-              <mat-icon>play_arrow</mat-icon>
-            </button>
-          </div>
-          @if (item.duration) {
-          <span class="item-duration">{{ item.duration }}</span>
-          }
-        </div>
-
-        <div class="item-info">
-          <h4 class="item-title">{{ item.title }}</h4>
-          <p class="item-description">{{ item.description }}</p>
-          @if (item.creator) {
-          <span class="item-creator">{{ item.creator }}</span>
-          }
-          @if (item.tags && item.tags.length > 0) {
-          <div class="item-tags">
-            @for (tag of item.tags; track tag) {
-            <span class="item-tag">{{ tag }}</span>
-            }
-          </div>
-          }
-        </div>
-      </div>
-      }
-    </div>
-  </section>
-  }
-
-  <!-- Coming Soon Section -->
-  <section class="coming-soon-section">
-    <div class="coming-soon-content">
-      <mat-icon class="coming-soon-icon">rocket_launch</mat-icon>
-      <h3>More Coming Soon</h3>
-      <p>We're working on adding more discovery features including personalized recommendations, curated playlists, and
-        community-driven content.</p>
     </div>
   </section>
 </div>
