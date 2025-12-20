@@ -50,8 +50,8 @@
     </section>
     }
 
-    <!-- Articles Section (for content categories) -->
-    @if (categoryType() === 'content' && articles().length > 0) {
+    <!-- Articles Section -->
+    @if (articles().length > 0) {
     <section class="content-section">
       <h2 class="section-title">
         <mat-icon>article</mat-icon>
@@ -80,12 +80,41 @@
     </section>
     }
 
-    <!-- Videos Section (for media categories) -->
-    @if (categoryType() === 'media' && videos().length > 0) {
+    <!-- Events Section -->
+    @if (events().length > 0) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>event</mat-icon>
+        Curated Events
+      </h2>
+      <div class="events-grid">
+        @for (event of events(); track event.id) {
+        <button class="event-card" (click)="viewEvent(event)">
+          @if (event.image) {
+          <div class="event-image">
+            <img [src]="event.image" [alt]="event.title || 'Event'" title="Event image" />
+          </div>
+          }
+          <div class="event-content">
+            <h3 class="event-title">{{ event.title || 'View Event' }}</h3>
+            <div class="event-meta">
+              @if (event.pubkey) {
+              <app-user-profile [pubkey]="event.pubkey" [view]="'compact'"></app-user-profile>
+              }
+            </div>
+          </div>
+        </button>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Videos/Media Section -->
+    @if (videos().length > 0) {
     <section class="content-section">
       <h2 class="section-title">
         <mat-icon>video_library</mat-icon>
-        Curated Videos
+        Curated Media
       </h2>
       <div class="videos-grid">
         @for (video of videos(); track video.id) {
@@ -115,7 +144,7 @@
     }
 
     <!-- Empty State -->
-    @if (creators().length === 0 && articles().length === 0 && videos().length === 0) {
+    @if (creators().length === 0 && articles().length === 0 && events().length === 0 && videos().length === 0) {
     <div class="empty-state">
       <mat-icon>explore_off</mat-icon>
       <h3>No curated content yet</h3>
