@@ -35,42 +35,6 @@
   <!-- Content -->
   @if (!loading() && !error()) {
   <div class="category-content">
-    <!-- Live Streams Section (only for live category) -->
-    @if (isLiveCategory()) {
-    <section class="content-section live-streams-section">
-      <div class="section-header-with-action">
-        <h2 class="section-title">
-          <mat-icon>stream</mat-icon>
-          Currently Live
-        </h2>
-        <button mat-button (click)="viewAllStreams()">
-          View All Streams
-          <mat-icon>arrow_forward</mat-icon>
-        </button>
-      </div>
-      @if (streamsLoading()) {
-      <div class="streams-loading">
-        <mat-spinner diameter="32"></mat-spinner>
-        <span>Loading live streams...</span>
-      </div>
-      } @else if (liveStreams().length > 0) {
-      <div class="live-streams-grid">
-        @for (stream of liveStreams(); track stream.id) {
-        <app-live-event [event]="stream"></app-live-event>
-        }
-      </div>
-      } @else {
-      <div class="no-streams">
-        <mat-icon>videocam_off</mat-icon>
-        <p>No live streams at the moment</p>
-        <button mat-stroked-button (click)="viewAllStreams()">
-          Browse All Streams
-        </button>
-      </div>
-      }
-    </section>
-    }
-
     <!-- Creators Section -->
     @if (creators().length > 0) {
     <section class="content-section">
@@ -168,6 +132,42 @@
         </app-event>
         }
       </div>
+    </section>
+    }
+
+    <!-- Live Streams Section (only for live category) -->
+    @if (isLiveCategory()) {
+    <section class="content-section live-streams-section">
+      <div class="section-header-with-action">
+        <h2 class="section-title">
+          <mat-icon>stream</mat-icon>
+          Currently Live
+        </h2>
+        <button mat-button (click)="viewAllStreams()">
+          View All Streams
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+      </div>
+      @if (streamsLoading()) {
+      <div class="streams-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Loading live streams...</span>
+      </div>
+      } @else if (liveStreams().length > 0) {
+      <div class="live-streams-grid">
+        @for (stream of liveStreams(); track stream.id) {
+        <app-live-event [event]="stream"></app-live-event>
+        }
+      </div>
+      } @else {
+      <div class="no-streams">
+        <mat-icon>videocam_off</mat-icon>
+        <p>No live streams at the moment</p>
+        <button mat-stroked-button (click)="viewAllStreams()">
+          Browse All Streams
+        </button>
+      </div>
+      }
     </section>
     }
 

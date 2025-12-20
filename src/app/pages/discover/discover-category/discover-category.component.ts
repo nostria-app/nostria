@@ -253,9 +253,9 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Sort by created_at descending and limit to 4
+    // Sort by created_at descending and limit to 3
     live.sort((a, b) => b.created_at - a.created_at);
-    this.liveStreams.set(live.slice(0, 4));
+    this.liveStreams.set(live.slice(0, 3));
   }
 
   viewAllStreams(): void {
