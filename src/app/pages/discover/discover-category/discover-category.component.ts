@@ -5,6 +5,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Subject, takeUntil } from 'rxjs';
+import { Event, Filter } from 'nostr-tools';
 import {
   DiscoveryService,
   CategoryConfig,
@@ -15,6 +16,10 @@ import {
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { ArticleComponent } from '../../../components/article/article.component';
 import { EventComponent } from '../../../components/event/event.component';
+import { LiveEventComponent } from '../../../components/event-types/live-event.component';
+import { RelayPoolService } from '../../../services/relays/relay-pool';
+import { RelaysService } from '../../../services/relays/relays';
+import { UtilitiesService } from '../../../services/utilities.service';
 
 /** Curated article item with parsed addressable ID and relay hints */
 interface CuratedArticle {
@@ -48,6 +53,7 @@ interface CuratedItem {
     UserProfileComponent,
     ArticleComponent,
     EventComponent,
+    LiveEventComponent,
   ],
   templateUrl: './discover-category.component.html',
   styleUrl: './discover-category.component.scss',
@@ -56,7 +62,11 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private discoveryService = inject(DiscoveryService);
+  private pool = inject(RelayPoolService);
+  private relaysService = inject(RelaysService);
+  private utilities = inject(UtilitiesService);
   private destroy$ = new Subject<void>();
+  private streamsSubscription: { close: () => void } | null = null;
 
   // Route params
   readonly categoryType = signal<'content' | 'media'>('content');
@@ -82,6 +92,11 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   readonly events = signal<CuratedItem[]>([]);
   readonly videos = signal<CuratedItem[]>([]);
   readonly pictures = signal<CuratedItem[]>([]);
+  readonly liveStreams = signal<Event[]>([]);
+  readonly streamsLoading = signal(false);
+
+  // Check if this is the live streams category
+  readonly isLiveCategory = computed(() => this.categoryId() === 'live');
 
   // Special section titles based on category
   readonly specialSectionTitle = computed(() => {
@@ -124,6 +139,9 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.streamsSubscription) {
+      this.streamsSubscription.close();
+    }
   }
 
   private async loadCategoryContent(): Promise<void> {
@@ -153,12 +171,95 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       this.events.set(eventsData);
       this.videos.set(videosData);
       this.pictures.set(picturesData);
+
+      // Load live streams for the 'live' category
+      if (cat.id === 'live') {
+        this.loadLiveStreams();
+      }
     } catch (err) {
       console.error('Error loading category content:', err);
       this.error.set('Failed to load content. Please try again.');
     } finally {
       this.loading.set(false);
     }
+  }
+
+  /**
+   * Load current live streams (limited to 4 for preview)
+   */
+  private loadLiveStreams(): void {
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+
+    if (relayUrls.length === 0) {
+      console.warn('No relays available for loading streams');
+      return;
+    }
+
+    this.streamsLoading.set(true);
+    const eventMap = new Map<string, Event>();
+
+    const filter: Filter = {
+      kinds: [30311],
+      limit: 50,
+    };
+
+    // Set a timeout to stop loading
+    const loadingTimeout = setTimeout(() => {
+      if (this.streamsLoading()) {
+        this.streamsLoading.set(false);
+        this.updateLiveStreams(eventMap);
+      }
+    }, 5000);
+
+    this.streamsSubscription = this.pool.subscribe(
+      relayUrls,
+      filter,
+      (event: Event) => {
+        // Use d-tag + pubkey as unique identifier for replaceable events
+        const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+        const uniqueId = `${event.pubkey}:${dTag}`;
+
+        // Check if we already have this event and if the new one is newer
+        const existing = eventMap.get(uniqueId);
+        if (existing && existing.created_at >= event.created_at) {
+          return;
+        }
+
+        eventMap.set(uniqueId, event);
+
+        // Update streams list
+        this.updateLiveStreams(eventMap);
+
+        if (this.streamsLoading()) {
+          clearTimeout(loadingTimeout);
+          this.streamsLoading.set(false);
+        }
+      }
+    );
+  }
+
+  /**
+   * Filter and update live streams (only currently live, limited to 4)
+   */
+  private updateLiveStreams(eventMap: Map<string, Event>): void {
+    const live: Event[] = [];
+
+    for (const event of eventMap.values()) {
+      const statusTag = event.tags.find((tag: string[]) => tag[0] === 'status');
+      const status = statusTag?.[1] || 'planned';
+
+      if (status === 'live') {
+        live.push(event);
+      }
+    }
+
+    // Sort by created_at descending and limit to 4
+    live.sort((a, b) => b.created_at - a.created_at);
+    this.liveStreams.set(live.slice(0, 4));
+  }
+
+  viewAllStreams(): void {
+    this.router.navigate(['/streams']);
   }
 
   goBack(): void {
