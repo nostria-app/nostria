@@ -214,6 +214,13 @@ export class CommandPaletteDialogComponent implements AfterViewInit, OnDestroy {
       icon: 'notifications',
       action: () => this.router.navigate(['/notifications']),
       keywords: ['notifications', 'alerts', 'mentions', 'replies']
+    },
+    {
+      id: 'nav-discover',
+      label: 'Open Discover',
+      icon: 'explore',
+      action: () => this.router.navigate(['/discover']),
+      keywords: ['discovery', 'discovery', 'explore', 'browse']
     }
   ];
 
