@@ -120,8 +120,20 @@
 // Articles Grid
 .articles-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+  gap: 16px;
+
+  // Make app-article cards fill the grid cell
+  app-article {
+    display: block;
+    width: 100%;
+
+    ::ng-deep .article-container.mode-card .article-card {
+      max-width: 100%;
+      width: 100%;
+      height: 100%;
+    }
+  }
 }
 
 .article-card {
@@ -193,8 +205,14 @@
 // Events Grid
 .events-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+
+  // Style the app-event component within the grid
+  app-event {
+    display: block;
+    width: 100%;
+  }
 }
 
 .event-card {

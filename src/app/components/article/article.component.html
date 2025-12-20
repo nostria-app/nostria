@@ -1,111 +1,86 @@
 @let item = record();
 
 @if (loading()) {
-  <div class="article-loading">
-    <p>Loading...</p>
-  </div>
+<div class="article-loading">
+  <p>Loading...</p>
+</div>
 } @else if (item) {
-  <div class="article-container" [class]="'mode-' + mode()">
-    @if (mode() === 'compact') {
-      <!-- Compact mode for list views -->
-      <div
-        class="article-compact"
-        [class.clickable]="clickable()"
-        [attr.tabindex]="clickable() ? '0' : null"
-        [attr.role]="clickable() ? 'button' : null"
-        (click)="openArticle()"
-        (keydown.enter)="openArticle()"
-        (keydown.space)="openArticle()"
-      >
-        @if (showAuthor()) {
-          <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
+<div class="article-container" [class]="'mode-' + mode()">
+  @if (mode() === 'compact') {
+  <!-- Compact mode for list views -->
+  <div class="article-compact" [class.clickable]="clickable()" [attr.tabindex]="clickable() ? '0' : null"
+    [attr.role]="clickable() ? 'button' : null" (click)="openArticle()" (keydown.enter)="openArticle()"
+    (keydown.space)="openArticle()">
+    @if (showAuthor()) {
+    <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
+    }
+    <div class="article-content">
+      <h3 class="article-title">{{ title() || 'Untitled Article' }}</h3>
+      @if (summary()) {
+      <p class="article-summary">{{ summary() }}</p>
+      }
+      @if (showMetadata()) {
+      <div class="article-meta">
+        <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
+        @if (hashtags().length > 0) {
+        <mat-chip-set>
+          @for (hashtag of hashtags().slice(0, 3); track hashtag) {
+          <mat-chip>{{ hashtag }}</mat-chip>
+          }
+        </mat-chip-set>
         }
-        <div class="article-content">
-          <h3 class="article-title">{{ title() || 'Untitled Article' }}</h3>
-          @if (summary()) {
-            <p class="article-summary">{{ summary() }}</p>
+      </div>
+      }
+    </div>
+  </div>
+  } @else if (mode() === 'card') {
+  <!-- Card mode - horizontal layout with image on left -->
+  <mat-card class="article-card" [class.clickable]="clickable()" (click)="openArticle()">
+    <div class="card-layout">
+      @if (image()) {
+      <div class="card-image">
+        <img [src]="image()" [alt]="title() || 'Article image'" [title]="title() || 'Article image'" loading="lazy" />
+      </div>
+      }
+      <div class="card-content">
+        <h3 class="card-title">{{ title() || 'Untitled Article' }}</h3>
+        @if (summary()) {
+        <p class="card-summary">{{ summary() }}</p>
+        }
+        <div class="card-footer">
+          @if (showAuthor()) {
+          <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
           }
           @if (showMetadata()) {
-            <div class="article-meta">
-              <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
-              @if (hashtags().length > 0) {
-                <mat-chip-set>
-                  @for (hashtag of hashtags().slice(0, 3); track hashtag) {
-                    <mat-chip>{{ hashtag }}</mat-chip>
-                  }
-                </mat-chip-set>
-              }
-            </div>
+          <div class="card-meta">
+            <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
+          </div>
           }
         </div>
-      </div>
-    } @else if (mode() === 'card') {
-      <!-- Card mode -->
-      <mat-card class="article-card" [class.clickable]="clickable()" (click)="openArticle()">
-        @if (image()) {
-          <img
-            mat-card-image
-            [src]="image()"
-            [alt]="title() || 'Article image'"
-            [title]="title() || 'Article image'"
-            loading="lazy"
-          />
-        }
-        <mat-card-header>
-          @if (showAuthor()) {
-            <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
+        @if (showMetadata() && hashtags().length > 0) {
+        <mat-chip-set class="card-tags">
+          @for (hashtag of hashtags().slice(0, 4); track hashtag) {
+          <mat-chip>{{ hashtag }}</mat-chip>
           }
-          <mat-card-title>{{ title() || 'Untitled Article' }}</mat-card-title>
-          @if (summary()) {
-            <mat-card-subtitle>{{ summary() }}</mat-card-subtitle>
-          }
-        </mat-card-header>
-        @if (showMetadata()) {
-          <mat-card-content>
-            <div class="article-meta">
-              <app-date-toggle [date]="publishedAtTimestamp()"></app-date-toggle>
-              @if (hashtags().length > 0) {
-                <mat-chip-set>
-                  @for (hashtag of hashtags().slice(0, 5); track hashtag) {
-                    <mat-chip>{{ hashtag }}</mat-chip>
-                  }
-                </mat-chip-set>
-              }
-            </div>
-          </mat-card-content>
+        </mat-chip-set>
         }
-        @if (showActions()) {
-          <mat-card-actions>
-            <button mat-button>Read More</button>
-            <button mat-icon-button>
-              <mat-icon>bookmark_add</mat-icon>
-            </button>
-            <button mat-icon-button>
-              <mat-icon>share</mat-icon>
-            </button>
-          </mat-card-actions>
-        }
-      </mat-card>
-    } @else {
-      <!-- Default/legacy mode -->
-      <div
-        class="article-content"
-        [class.clickable]="clickable()"
-        [attr.tabindex]="clickable() ? '0' : null"
-        [attr.role]="clickable() ? 'button' : null"
-        (click)="openArticle()"
-        (keydown.enter)="openArticle()"
-        (keydown.space)="openArticle()"
-      >
-        @if (showAuthor()) {
-          <app-user-profile [pubkey]="authorPubkey()"></app-user-profile>
-        }
-        {{ item.data }}
       </div>
+    </div>
+  </mat-card>
+  } @else {
+  <!-- Default/legacy mode -->
+  <div class="article-content" [class.clickable]="clickable()" [attr.tabindex]="clickable() ? '0' : null"
+    [attr.role]="clickable() ? 'button' : null" (click)="openArticle()" (keydown.enter)="openArticle()"
+    (keydown.space)="openArticle()">
+    @if (showAuthor()) {
+    <app-user-profile [pubkey]="authorPubkey()"></app-user-profile>
     }
+    {{ item.data }}
   </div>
+  }
+</div>
 } @else {
-  <div class="article-error">
-    <p>Article not found</p>
-  </div>
+<div class="article-error">
+  <p>Article not found</p>
+</div>
 }

@@ -16,6 +16,12 @@ export type DiscoveryCategory =
   | 'audiobooks'
   | 'photography';
 
+/** Addressable event reference with optional relay hint */
+export interface AddressableRef {
+  id: string;  // kind:pubkey:d-tag
+  relay?: string;  // optional relay hint
+}
+
 /** Curated list types based on NIP-51 */
 export interface CuratedList {
   category: DiscoveryCategory;
@@ -25,7 +31,8 @@ export interface CuratedList {
   image?: string;
   pubkeys: string[]; // For follow sets (kind 30000)
   eventIds: string[]; // For article/video curation (kind 30004/30005)
-  addressableIds: string[]; // For addressable events (a tags)
+  addressableIds: string[]; // For addressable events (a tags) - legacy
+  addressableRefs: AddressableRef[]; // For addressable events with relay hints
   createdAt: number;
   raw?: Event;
 }
@@ -210,7 +217,7 @@ export class DiscoveryService {
       };
 
       const event = await pool.get([this.CURATOR_RELAY], filter);
-      
+
       if (event) {
         const list = this.parseFollowSet(event, category);
         this.curatedListsCache.set(cacheKey, list);
@@ -293,7 +300,7 @@ export class DiscoveryService {
 
   /**
    * Get curated events for a specific category.
-   * Uses kind 30004 with 'events-{category}' d-tag.
+   * Uses kind 30004 with the category's d-tag and extracts 'e' tags (regular events).
    * @param category The discovery category
    * @returns Promise resolving to event identifiers
    */
@@ -309,7 +316,7 @@ export class DiscoveryService {
       const filter = {
         kinds: [CURATION_KINDS.ARTICLE_CURATION],
         authors: [this.CURATOR_PUBKEY],
-        '#d': [`${category}`],
+        '#d': [category],
       };
 
       const event = await pool.get([this.CURATOR_RELAY], filter);
@@ -387,6 +394,7 @@ export class DiscoveryService {
       pubkeys,
       eventIds: [],
       addressableIds: [],
+      addressableRefs: [],
       createdAt: event.created_at,
       raw: event,
     };
@@ -399,6 +407,7 @@ export class DiscoveryService {
     const pubkeys: string[] = [];
     const eventIds: string[] = [];
     const addressableIds: string[] = [];
+    const addressableRefs: AddressableRef[] = [];
     let title: string | undefined;
     let description: string | undefined;
     let image: string | undefined;
@@ -411,6 +420,11 @@ export class DiscoveryService {
         eventIds.push(tag[1]);
       } else if (tag[0] === 'a' && tag[1]) {
         addressableIds.push(tag[1]);
+        // Store with relay hint if available (tag[2])
+        addressableRefs.push({
+          id: tag[1],
+          relay: tag[2] || undefined,
+        });
       } else if (tag[0] === 'd' && tag[1]) {
         dTag = tag[1] as DiscoveryCategory;
       } else if (tag[0] === 'title' && tag[1]) {
@@ -431,6 +445,7 @@ export class DiscoveryService {
       pubkeys,
       eventIds,
       addressableIds,
+      addressableRefs,
       createdAt: event.created_at,
       raw: event,
     };
@@ -452,23 +467,23 @@ export class DiscoveryService {
   }
 
   /**
-   * Load curated articles for a category, returning items with metadata.
+   * Load curated articles for a category, returning items with metadata and relay hints.
    * @param category The discovery category
    * @returns Promise resolving to curated article items
    */
-  async loadCuratedArticles(category: DiscoveryCategory): Promise<{ id: string; pubkey: string; title?: string; content?: string; image?: string; kind: number; createdAt: number }[]> {
+  async loadCuratedArticles(category: DiscoveryCategory): Promise<{ id: string; pubkey: string; relay?: string; kind: number; createdAt: number }[]> {
     const list = await this.getCuratedArticles(category);
     if (!list) return [];
 
-    // For now, return the addressable IDs as items
-    // The actual article loading would be done by the component
-    return list.addressableIds.map((aId) => {
+    // Use addressableRefs to get relay hints
+    return list.addressableRefs.map((ref) => {
       // Parse addressable ID: kind:pubkey:d-tag
-      const parts = aId.split(':');
+      const parts = ref.id.split(':');
       const pubkey = parts[1] || '';
       return {
-        id: aId,
+        id: ref.id,
         pubkey,
+        relay: ref.relay,
         kind: CURATION_KINDS.ARTICLE_CURATION,
         createdAt: list.createdAt,
       };
@@ -499,6 +514,7 @@ export class DiscoveryService {
 
   /**
    * Load curated events for a category, returning items with metadata.
+   * Events are stored as 'e' tags (regular event IDs) in curation sets.
    * @param category The discovery category
    * @returns Promise resolving to curated event items
    */
@@ -506,27 +522,15 @@ export class DiscoveryService {
     const list = await this.getCuratedEvents(category);
     if (!list) return [];
 
-    // Return both addressable IDs and event IDs
+    // Return only regular event IDs ('e' tags) - articles use 'a' tags
     const items: { id: string; pubkey: string; title?: string; image?: string; kind: number; createdAt: number }[] = [];
-
-    // Add addressable events
-    for (const aId of list.addressableIds) {
-      const parts = aId.split(':');
-      const pubkey = parts[1] || '';
-      items.push({
-        id: aId,
-        pubkey,
-        kind: CURATION_KINDS.ARTICLE_CURATION,
-        createdAt: list.createdAt,
-      });
-    }
 
     // Add regular event IDs
     for (const eventId of list.eventIds) {
       items.push({
         id: eventId,
-        pubkey: '', // Will need to be fetched
-        kind: 1, // Assume kind 1 for regular events
+        pubkey: '', // Will need to be fetched when displaying
+        kind: 1, // Kind 1 for regular text notes
         createdAt: list.createdAt,
       });
     }

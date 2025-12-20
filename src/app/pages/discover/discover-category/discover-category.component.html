@@ -59,22 +59,9 @@
       </h2>
       <div class="articles-grid">
         @for (article of articles(); track article.id) {
-        <button class="article-card" (click)="viewArticle(article)">
-          @if (article.image) {
-          <div class="article-image">
-            <img [src]="article.image" [alt]="article.title || 'Article'" title="Article image" />
-          </div>
-          }
-          <div class="article-content">
-            <h3 class="article-title">{{ article.title || 'Untitled' }}</h3>
-            @if (article.content) {
-            <p class="article-excerpt">{{ article.content | slice:0:120 }}...</p>
-            }
-            <div class="article-meta">
-              <app-user-profile [pubkey]="article.pubkey" [view]="'compact'"></app-user-profile>
-            </div>
-          </div>
-        </button>
+        <app-article [pubkey]="article.pubkey" [kind]="article.kind" [slug]="article.slug"
+          [relayHints]="article.relayHints" mode="card" [showAuthor]="true" [showMetadata]="true">
+        </app-article>
         }
       </div>
     </section>
@@ -89,21 +76,9 @@
       </h2>
       <div class="events-grid">
         @for (event of events(); track event.id) {
-        <button class="event-card" (click)="viewEvent(event)">
-          @if (event.image) {
-          <div class="event-image">
-            <img [src]="event.image" [alt]="event.title || 'Event'" title="Event image" />
-          </div>
-          }
-          <div class="event-content">
-            <h3 class="event-title">{{ event.title || 'View Event' }}</h3>
-            <div class="event-meta">
-              @if (event.pubkey) {
-              <app-user-profile [pubkey]="event.pubkey" [view]="'compact'"></app-user-profile>
-              }
-            </div>
-          </div>
-        </button>
+        <app-event [id]="event.id" type="e" [compact]="true" [hideComments]="true" [hideFooter]="true"
+          appearance="card">
+        </app-event>
         }
       </div>
     </section>
