@@ -102,6 +102,10 @@ export class GeneralSettingsComponent {
     this.localSettings.setMaxRelaysPerUser(value);
   }
 
+  toggleAutoRelayAuth(): void {
+    this.localSettings.setAutoRelayAuth(!this.localSettings.autoRelayAuth());
+  }
+
   toggleAddClientTag(): void {
     this.localSettings.setAddClientTag(!this.localSettings.addClientTag());
   }

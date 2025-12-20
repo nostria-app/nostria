@@ -4,6 +4,7 @@ import { LoggerService } from '../logger.service';
 import { DatabaseService } from '../database.service';
 import { UtilitiesService } from '../utilities.service';
 import { ObservedRelayStats } from '../database.service';
+import { LocalSettingsService } from '../local-settings.service';
 
 /** Type for the onauth callback used by nostr-tools SimplePool operations */
 export type AuthCallback = (evt: EventTemplate) => Promise<VerifiedEvent>;
@@ -24,6 +25,7 @@ export class RelayAuthService {
   private readonly logger = inject(LoggerService);
   private readonly database = inject(DatabaseService);
   private readonly utilities = inject(UtilitiesService);
+  private readonly localSettings = inject(LocalSettingsService);
 
   // Track relays that have failed authentication - we won't retry these automatically
   private readonly failedAuthRelays = signal<Set<string>>(new Set());
@@ -54,9 +56,16 @@ export class RelayAuthService {
 
   /**
    * Get the `onauth` callback to use with nostr-tools SimplePool operations.
-   * Returns undefined if signing is not available (e.g., preview account).
+   * Returns undefined if signing is not available (e.g., preview account) or if
+   * automatic relay authentication is disabled.
    */
   getAuthCallback(): AuthCallback | undefined {
+    // Check if automatic relay authentication is disabled
+    if (!this.localSettings.autoRelayAuth()) {
+      this.logger.debug('[RelayAuthService] Automatic relay authentication is disabled');
+      return undefined;
+    }
+
     if (!this.signAuthEventFn) {
       this.logger.debug('[RelayAuthService] No sign function available, auth callback will be undefined');
       return undefined;
@@ -199,12 +208,27 @@ export class RelayAuthService {
   }
 
   /**
-   * Filter out relays that have failed authentication from a list
+   * Filter out relays that have failed authentication from a list.
+   * When auto-authentication is disabled, also filter out relays that require authentication.
    */
   filterAuthFailedRelays(relayUrls: string[]): string[] {
+    const autoAuthEnabled = this.localSettings.autoRelayAuth();
+    
     return relayUrls.filter(url => {
       const normalizedUrl = this.utilities.normalizeRelayUrl(url);
-      return !this.failedAuthRelays().has(normalizedUrl);
+      
+      // Always filter out relays that have failed auth
+      if (this.failedAuthRelays().has(normalizedUrl)) {
+        return false;
+      }
+      
+      // If auto-auth is disabled, also filter out relays that require authentication
+      if (!autoAuthEnabled && this.authRequiredRelays().has(normalizedUrl)) {
+        this.logger.debug(`[RelayAuthService] Filtering out relay requiring auth (auto-auth disabled): ${normalizedUrl}`);
+        return false;
+      }
+      
+      return true;
     });
   }
 
