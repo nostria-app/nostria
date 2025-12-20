@@ -158,6 +158,8 @@ export const CURATION_KINDS = {
   ARTICLE_CURATION: 30004,
   /** Curation sets - for videos */
   VIDEO_CURATION: 30005,
+  /** Curation sets - for pictures/images */
+  PICTURE_CURATION: 30006,
 } as const;
 
 @Injectable({
@@ -293,6 +295,40 @@ export class DiscoveryService {
       }
     } catch (error) {
       this.logger.error(`Failed to fetch curated videos for ${category}:`, error);
+    }
+
+    return null;
+  }
+
+  /**
+   * Get the curated pictures for a specific category.
+   * Uses kind 30006 with the category's d-tag.
+   * @param category The discovery category
+   * @returns Promise resolving to picture identifiers
+   */
+  async getCuratedPictures(category: DiscoveryCategory): Promise<CuratedList | null> {
+    const cacheKey = `pictures-${category}`;
+    const cached = this.curatedListsCache.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const pool = this.getDiscoveryPool();
+      const filter = {
+        kinds: [CURATION_KINDS.PICTURE_CURATION],
+        authors: [this.CURATOR_PUBKEY],
+        '#d': [category],
+      };
+
+      const event = await pool.get([this.CURATOR_RELAY], filter);
+      if (event) {
+        const list = this.parseCurationSet(event, category);
+        this.curatedListsCache.set(cacheKey, list);
+        return list;
+      }
+    } catch (error) {
+      this.logger.error(`Failed to fetch curated pictures for ${category}:`, error);
     }
 
     return null;
@@ -510,6 +546,30 @@ export class DiscoveryService {
         createdAt: list.createdAt,
       };
     });
+  }
+
+  /**
+   * Load curated pictures for a category, returning items with metadata.
+   * @param category The discovery category
+   * @returns Promise resolving to curated picture items
+   */
+  async loadCuratedPictures(category: DiscoveryCategory): Promise<{ id: string; pubkey: string; title?: string; image?: string; kind: number; createdAt: number }[]> {
+    const list = await this.getCuratedPictures(category);
+    if (!list) return [];
+
+    // Return event IDs for pictures (stored as 'e' tags)
+    const items: { id: string; pubkey: string; title?: string; image?: string; kind: number; createdAt: number }[] = [];
+
+    for (const eventId of list.eventIds) {
+      items.push({
+        id: eventId,
+        pubkey: '', // Will need to be fetched when displaying
+        kind: CURATION_KINDS.PICTURE_CURATION,
+        createdAt: list.createdAt,
+      });
+    }
+
+    return items;
   }
 
   /**

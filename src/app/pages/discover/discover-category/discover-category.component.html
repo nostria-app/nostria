@@ -89,7 +89,7 @@
     <section class="content-section">
       <h2 class="section-title">
         <mat-icon>video_library</mat-icon>
-        Curated Media
+        Curated Videos
       </h2>
       <div class="videos-grid">
         @for (video of videos(); track video.id) {
@@ -118,8 +118,26 @@
     </section>
     }
 
+    <!-- Pictures Section -->
+    @if (pictures().length > 0) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>photo_library</mat-icon>
+        Curated Pictures
+      </h2>
+      <div class="pictures-grid">
+        @for (picture of pictures(); track picture.id) {
+        <app-event [id]="picture.id" type="e" [compact]="true" [hideComments]="true" [hideFooter]="true"
+          appearance="card">
+        </app-event>
+        }
+      </div>
+    </section>
+    }
+
     <!-- Empty State -->
-    @if (creators().length === 0 && articles().length === 0 && events().length === 0 && videos().length === 0) {
+    @if (creators().length === 0 && articles().length === 0 && events().length === 0 && videos().length === 0 &&
+    pictures().length === 0) {
     <div class="empty-state">
       <mat-icon>explore_off</mat-icon>
       <h3>No curated content yet</h3>

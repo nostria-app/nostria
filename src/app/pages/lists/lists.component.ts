@@ -234,6 +234,14 @@ const LIST_SETS: ListType[] = [
     expectedTags: ['e'],
   },
   {
+    kind: 30006,
+    name: 'Curation Sets (Pictures)',
+    description: 'Curated image and photo collections',
+    icon: 'photo_library',
+    isReplaceable: false,
+    expectedTags: ['e'],
+  },
+  {
     kind: 30007,
     name: 'Kind Mute Sets',
     description: 'Mute pubkeys by event kinds',
