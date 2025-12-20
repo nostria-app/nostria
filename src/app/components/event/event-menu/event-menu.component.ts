@@ -90,6 +90,22 @@ export class EventMenuComponent {
     return event?.kind === kinds.ShortTextNote;
   });
 
+  // Check if this is an article (kind 30023)
+  isArticle = computed<boolean>(() => {
+    const event = this.event();
+    return event?.kind === kinds.LongFormArticle;
+  });
+
+  // Generate article ID in format: kind:pubkey:d-tag
+  articleId = computed<string>(() => {
+    const event = this.event();
+    if (!event || event.kind !== kinds.LongFormArticle) {
+      return '';
+    }
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+    return `${event.kind}:${event.pubkey}:${dTag}`;
+  });
+
   // Check if pin/unpin options should be shown
   showPinOptions = computed<boolean>(() => {
     return this.isOnOwnProfile() && this.isTextNote() && this.isOurEvent();

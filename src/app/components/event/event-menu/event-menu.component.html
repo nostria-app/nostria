@@ -98,6 +98,12 @@
     <mat-icon>content_copy</mat-icon>
     Copy Event ID
   </button>
+  @if (isArticle()) {
+  <button mat-menu-item (click)="layout.copyToClipboard(articleId(), 'text')">
+    <mat-icon>article</mat-icon>
+    Copy Article ID
+  </button>
+  }
   <button mat-menu-item (click)="layout.copyToClipboard(event().id, 'hex')">
     <mat-icon>content_copy</mat-icon>
     Copy Note ID (hex)
