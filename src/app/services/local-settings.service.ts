@@ -11,6 +11,7 @@ export interface LocalSettings {
   menuExpanded: boolean;
   locale: string;
   maxRelaysPerUser: number;
+  autoRelayAuth: boolean;
   addClientTag: boolean;
   showClientTag: boolean;
   trustEnabled: boolean;
@@ -28,6 +29,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuExpanded: true,
   locale: 'en',
   maxRelaysPerUser: 3,
+  autoRelayAuth: true,
   addClientTag: true,
   showClientTag: true,
   trustEnabled: false,
@@ -75,6 +77,7 @@ export class LocalSettingsService {
   readonly menuExpanded = computed(() => this.settings().menuExpanded);
   readonly locale = computed(() => this.settings().locale);
   readonly maxRelaysPerUser = computed(() => this.settings().maxRelaysPerUser);
+  readonly autoRelayAuth = computed(() => this.settings().autoRelayAuth);
   readonly addClientTag = computed(() => this.settings().addClientTag);
   readonly showClientTag = computed(() => this.settings().showClientTag);
   readonly trustEnabled = computed(() => this.settings().trustEnabled);
@@ -265,6 +268,13 @@ export class LocalSettingsService {
    */
   setMaxRelaysPerUser(maxRelaysPerUser: number): void {
     this.updateSettings({ maxRelaysPerUser });
+  }
+
+  /**
+   * Set automatic relay authentication preference
+   */
+  setAutoRelayAuth(autoRelayAuth: boolean): void {
+    this.updateSettings({ autoRelayAuth });
   }
 
   /**
