@@ -92,7 +92,7 @@ export const CONTENT_CATEGORIES: CategoryConfig[] = [
     title: 'Freedom',
     description: 'Privacy, sovereignty, and liberty',
     icon: 'flag',
-    gradient: 'linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%)',
+    gradient: 'linear-gradient(135deg, #1a1a1a 0%, #ffd700 100%)',
     dTag: 'freedom',
   },
 ];
