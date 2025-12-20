@@ -62,8 +62,9 @@
 
   &.mode-card {
     .article-card {
-      max-width: 400px;
       transition: all 0.2s ease;
+      padding: 0;
+      overflow: hidden;
 
       &.clickable {
         cursor: pointer;
@@ -74,12 +75,91 @@
         }
       }
 
-      .article-meta {
+      .card-layout {
+        display: flex;
+        flex-direction: row;
+        gap: 0;
+        min-height: 140px;
+      }
+
+      .card-image {
+        flex-shrink: 0;
+        width: 140px;
+        min-height: 140px;
+        overflow: hidden;
+        background: var(--mat-sys-surface-container-high);
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+
+      .card-content {
+        flex: 1;
+        padding: 12px 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        min-width: 0; // Allow text truncation
+      }
+
+      .card-title {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.3;
+        color: var(--mat-sys-on-surface);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .card-summary {
+        margin: 0;
+        font-size: 0.875rem;
+        line-height: 1.4;
+        color: var(--mat-sys-on-surface-variant);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .card-footer {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
+        margin-top: auto;
         flex-wrap: wrap;
-        margin-top: 8px;
+        min-width: 0;
+
+        // Allow user profile to shrink but not date
+        app-user-profile {
+          flex: 1 1 auto;
+          min-width: 0;
+          overflow: hidden;
+        }
+      }
+
+      .card-meta {
+        flex-shrink: 0;
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+        white-space: nowrap;
+      }
+
+      .card-tags {
+        margin-top: 4px;
+
+        mat-chip {
+          font-size: 0.7rem;
+          height: 22px;
+          padding: 0 8px;
+        }
       }
     }
   }

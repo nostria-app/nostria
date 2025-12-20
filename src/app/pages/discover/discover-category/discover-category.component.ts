@@ -13,15 +13,26 @@ import {
   DiscoveryCategory,
 } from '../../../services/discovery.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
+import { ArticleComponent } from '../../../components/article/article.component';
+import { EventComponent } from '../../../components/event/event.component';
 
+/** Curated article item with parsed addressable ID and relay hints */
+interface CuratedArticle {
+  id: string;
+  pubkey: string;
+  slug: string;
+  kind: number;
+  relayHints?: string[];
+  createdAt: number;
+}
+
+/** Generic curated item for creators, events, videos */
 interface CuratedItem {
   id: string;
   pubkey: string;
   title?: string;
-  content?: string;
-  kind: number;
   image?: string;
-  tags?: string[];
+  kind: number;
   createdAt: number;
 }
 
@@ -35,6 +46,8 @@ interface CuratedItem {
     MatIconModule,
     MatProgressSpinnerModule,
     UserProfileComponent,
+    ArticleComponent,
+    EventComponent,
   ],
   templateUrl: './discover-category.component.html',
   styleUrl: './discover-category.component.scss',
@@ -65,7 +78,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
 
   // Curated content - all categories can have any content type
   readonly creators = signal<CuratedItem[]>([]);
-  readonly articles = signal<CuratedItem[]>([]);
+  readonly articles = signal<CuratedArticle[]>([]);
   readonly events = signal<CuratedItem[]>([]);
   readonly videos = signal<CuratedItem[]>([]);
 
@@ -133,7 +146,8 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       ]);
 
       this.creators.set(creatorsData);
-      this.articles.set(articlesData);
+      // Parse and deduplicate articles
+      this.articles.set(this.parseAndDeduplicateArticles(articlesData));
       this.events.set(eventsData);
       this.videos.set(videosData);
     } catch (err) {
@@ -155,11 +169,6 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
     this.router.navigate(['/p', pubkey]);
   }
 
-  viewArticle(item: CuratedItem): void {
-    // Navigate to article view
-    this.router.navigate(['/a', item.id]);
-  }
-
   viewEvent(item: CuratedItem): void {
     // Navigate to event view
     this.router.navigate(['/e', item.id]);
@@ -168,5 +177,38 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   viewVideo(item: CuratedItem): void {
     // Navigate to video view
     this.router.navigate(['/v', item.id]);
+  }
+
+  /**
+   * Parse addressable IDs (kind:pubkey:slug) into CuratedArticle items and deduplicate.
+   */
+  private parseAndDeduplicateArticles(items: { id: string; pubkey: string; relay?: string; kind: number; createdAt: number }[]): CuratedArticle[] {
+    const seen = new Set<string>();
+    const result: CuratedArticle[] = [];
+
+    for (const item of items) {
+      // Skip duplicates
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+
+      // Parse addressable ID: kind:pubkey:slug
+      const parts = item.id.split(':');
+      if (parts.length >= 3) {
+        const kind = parseInt(parts[0], 10);
+        const pubkey = parts[1];
+        const slug = parts.slice(2).join(':'); // d-tag may contain colons
+
+        result.push({
+          id: item.id,
+          pubkey,
+          slug,
+          kind: isNaN(kind) ? item.kind : kind,
+          relayHints: item.relay ? [item.relay] : undefined,
+          createdAt: item.createdAt,
+        });
+      }
+    }
+
+    return result;
   }
 }
