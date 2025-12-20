@@ -190,6 +190,9 @@ export class LocalSettingsService {
           // Explicitly ensure startFeedsOnLastEvent defaults to true for existing users
           // who don't have this property yet
           startFeedsOnLastEvent: stored.startFeedsOnLastEvent !== undefined ? stored.startFeedsOnLastEvent : true,
+          // Explicitly ensure autoRelayAuth defaults to true for existing users
+          // who don't have this property yet
+          autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : true,
         };
 
         this.settings.set(mergedSettings);
