@@ -267,6 +267,18 @@ export const routes: Routes = [
     title: 'Playlists',
   },
   {
+    path: 'discover',
+    loadComponent: () =>
+      import('./pages/discover/discover.component').then(m => m.DiscoverComponent),
+    title: 'Discover',
+  },
+  {
+    path: 'discover/media',
+    loadComponent: () =>
+      import('./pages/discover/discover.component').then(m => m.DiscoverComponent),
+    title: 'Discover Media',
+  },
+  {
     path: 'stream/:encodedEvent',
     loadComponent: () =>
       import('./pages/stream-viewer/stream-viewer.component').then(m => m.StreamViewerComponent),
@@ -495,7 +507,7 @@ export const routes: Routes = [
     path: 'people/discover',
     data: { isRoot: true },
     loadComponent: () =>
-      import('./pages/discover/discover.component').then(m => m.DiscoverComponent),
+      import('./pages/people/discover/discover-people.component').then(m => m.DiscoverPeopleComponent),
     title: 'Discover People',
   },
   {

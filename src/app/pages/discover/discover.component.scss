@@ -1,26 +1,49 @@
-.discover-container {
+.page {
   display: flex;
   flex-direction: column;
+  margin-top: calc(var(--toolbar-height) * -1);
+  padding-top: var(--toolbar-height);
+  min-height: calc(100vh - var(--toolbar-height));
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 1rem;
-}
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 
-.discover-header {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  @media (max-width: 599px) {
+    min-height: calc(100vh - var(--toolbar-height) - 88px);
+  }
 
-  h1 {
-    margin: 0;
-    font-size: 1.5rem;
+  ::ng-deep .mat-mdc-tab-group {
+    width: 100%;
+    max-width: 100%;
+
+    .mat-mdc-tab-body {
+      overflow: visible !important;
+    }
+
+    .mat-mdc-tab-body-content {
+      height: auto !important;
+      overflow: visible !important;
+      overflow-x: hidden !important;
+    }
+  }
+
+  ::ng-deep .mat-mdc-tab {
+    .mdc-tab__content {
+      gap: 8px;
+    }
+
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
   }
 }
 
-.discover-content {
-  flex: 1;
+.tab-content {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
