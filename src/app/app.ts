@@ -21,7 +21,7 @@ import { ThemeService } from './services/theme.service';
 import { PwaUpdateService } from './services/pwa-update.service';
 import { CommonModule } from '@angular/common';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatDialog, MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { NostrService } from './services/nostr.service';
 import { FeatureLevel, LoggerService } from './services/logger.service';
 import { MatMenuModule } from '@angular/material/menu';
@@ -91,6 +91,7 @@ import { CommandPaletteDialogComponent } from './components/command-palette-dial
 import { DatabaseService } from './services/database.service';
 import { MetricsTrackingService } from './services/metrics-tracking.service';
 import { FollowingBackupService } from './services/following-backup.service';
+import { ShortcutsDialogComponent } from './components/shortcuts-dialog/shortcuts-dialog.component';
 
 interface NavItem {
   path: string;
@@ -227,6 +228,9 @@ export class App implements OnInit {
   private readonly speechService = inject(SpeechService);
   isSearchListening = signal(false);
   isSearchTranscribing = signal(false);
+
+  // Track shortcuts dialog reference for toggle behavior
+  private shortcutsDialogRef: MatDialogRef<ShortcutsDialogComponent> | null = null;
 
   // Use local settings for sidenav state
   opened = computed(() => this.localSettings.menuOpen());
@@ -1108,21 +1112,40 @@ export class App implements OnInit {
       this.openCreateOptions();
     }
 
-    // Alt+P to open command palette
-    if (event.altKey && event.key.toLowerCase() === 'p') {
+    // Alt+C to open command palette
+    if (event.altKey && event.key.toLowerCase() === 'c') {
       event.preventDefault();
       this.openCommandPalette();
     }
 
-    // Alt+C to open command palette in listening mode
-    if (event.altKey && event.key.toLowerCase() === 'c') {
+    // Alt+V to open command palette in listening mode (voice command)
+    if (event.altKey && event.key.toLowerCase() === 'v') {
       event.preventDefault();
       this.openCommandPalette(true);
+    }
+
+    // Alt+P to show keyboard shortcuts dialog
+    if (event.altKey && event.key.toLowerCase() === 'p') {
+      event.preventDefault();
+      this.openShortcutsDialog();
     }
   }
 
   openCommandPalette(listening = false): void {
     this.layout.openCommandPalette(listening);
+  }
+
+  openShortcutsDialog(): void {
+    // If dialog is already open, close it (toggle behavior)
+    if (this.shortcutsDialogRef) {
+      this.shortcutsDialogRef.close();
+      return;
+    }
+
+    this.shortcutsDialogRef = this.dialog.open(ShortcutsDialogComponent);
+    this.shortcutsDialogRef.afterClosed().subscribe(() => {
+      this.shortcutsDialogRef = null;
+    });
   }
 
   // Voice search methods - using SpeechService
