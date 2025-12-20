@@ -77,15 +77,15 @@
       </a>
 
       <!-- NPUB section - only shown in appropriate views -->
-      @if (view() === 'list' || view() === 'details') {
+      @if (view() === 'list' || view() === 'details' || view() === 'grid') {
       <a [routerLink]="['/p', npubValue()]" class="user-profile-npub-link" #npubElement
         (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()">
         <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       </a>
       }
 
-      <!-- About section - only shown in details view -->
-      @if (view() === 'details' && profile() && profile().data && profile().data.about) {
+      <!-- About section - shown in details and grid views -->
+      @if ((view() === 'details' || view() === 'grid') && profile() && profile().data && profile().data.about) {
       <div class="user-profile-about">{{ profile().data.about }}</div>
       }
 

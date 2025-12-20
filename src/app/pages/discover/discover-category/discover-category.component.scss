@@ -113,8 +113,15 @@
 // Creators Grid
 .creators-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 20px;
+
+  // Ensure grid cards have consistent height
+  app-user-profile {
+    display: block;
+    height: 100%;
+    min-height: 160px;
+  }
 }
 
 // Articles Grid
