@@ -543,6 +543,13 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    background: var(--mat-sys-surface-container);
+    transition: all 0.2s ease;
+
+    &:hover {
+      box-shadow: var(--mat-sys-level2);
+      transform: translateY(-2px);
+    }
 
     .user-profile-container {
       flex-direction: column;
@@ -606,6 +613,30 @@
     .user-profile-content {
       margin: 0; // Removed all margins
       text-align: center;
+      padding: 8px 12px 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    .user-profile-npub {
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      margin-bottom: 6px;
+    }
+
+    .user-profile-about {
+      font-size: 13px;
+      color: var(--mat-sys-on-surface-variant);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-top: 4px;
     }
   }
 

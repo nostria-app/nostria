@@ -44,7 +44,7 @@
       </h2>
       <div class="creators-grid">
         @for (creator of creators(); track creator.pubkey) {
-        <app-user-profile [pubkey]="creator.pubkey"></app-user-profile>
+        <app-user-profile [pubkey]="creator.pubkey" [view]="'grid'"></app-user-profile>
         }
       </div>
     </section>
