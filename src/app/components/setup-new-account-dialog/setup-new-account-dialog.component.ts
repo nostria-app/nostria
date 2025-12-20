@@ -3,7 +3,7 @@ import { MatDialogModule, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { DiscoveryService, ServerInfo } from '../../services/discovery.service';
+import { DiscoveryRelayService, ServerInfo } from '../../services/discovery-relay.service';
 import { LoggerService } from '../../services/logger.service';
 
 @Component({
@@ -15,7 +15,7 @@ import { LoggerService } from '../../services/logger.service';
 })
 export class SetupNewAccountDialogComponent {
   private dialogRef = inject(MatDialogRef<SetupNewAccountDialogComponent>);
-  private discoveryService = inject(DiscoveryService);
+  private discoveryService = inject(DiscoveryRelayService);
   private logger = inject(LoggerService);
 
   // Region detection signals

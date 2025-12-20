@@ -94,7 +94,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.route.params.pipe(takeUntil(this.destroy$)).subscribe((params) => {
       const category = params['category'] as DiscoveryCategory;
-      
+
       // Determine type from URL path
       const url = this.router.url;
       const type = url.includes('/discover/media/') ? 'media' : 'content';

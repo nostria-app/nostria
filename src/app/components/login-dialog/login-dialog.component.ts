@@ -18,7 +18,7 @@ import { QrcodeScanDialogComponent } from '../qrcode-scan-dialog/qrcode-scan-dia
 import { StandaloneTermsDialogComponent } from '../standalone-terms-dialog/standalone-terms-dialog.component';
 import { SetupNewAccountDialogComponent } from '../setup-new-account-dialog/setup-new-account-dialog.component';
 import { Region, RegionService } from '../../services/region.service';
-import { DiscoveryService, ServerInfo } from '../../services/discovery.service';
+import { DiscoveryRelayService, ServerInfo } from '../../services/discovery-relay.service';
 import { MatButtonModule } from '@angular/material/button';
 import { Profile } from '../../services/profile';
 import { AccountStateService } from '../../services/account-state.service';
@@ -65,7 +65,7 @@ export class LoginDialogComponent {
   private logger = inject(LoggerService);
   private mnemonicService = inject(MnemonicService);
   region = inject(RegionService);
-  private discoveryService = inject(DiscoveryService);
+  private discoveryService = inject(DiscoveryRelayService);
   private profileService = inject(Profile);
   private accountState = inject(AccountStateService);
   private data = inject(DataService);
