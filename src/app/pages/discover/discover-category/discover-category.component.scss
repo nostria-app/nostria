@@ -284,6 +284,19 @@
   gap: 20px;
 }
 
+// Pictures Grid
+.pictures-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+
+  // Style the app-event component within the grid
+  app-event {
+    display: block;
+    width: 100%;
+  }
+}
+
 .video-card {
   display: flex;
   flex-direction: column;

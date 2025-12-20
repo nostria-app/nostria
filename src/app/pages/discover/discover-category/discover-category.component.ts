@@ -81,6 +81,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   readonly articles = signal<CuratedArticle[]>([]);
   readonly events = signal<CuratedItem[]>([]);
   readonly videos = signal<CuratedItem[]>([]);
+  readonly pictures = signal<CuratedItem[]>([]);
 
   // Special section titles based on category
   readonly specialSectionTitle = computed(() => {
@@ -138,11 +139,12 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
 
     try {
       // Load all curated content types - any category can have any content type
-      const [creatorsData, articlesData, eventsData, videosData] = await Promise.all([
+      const [creatorsData, articlesData, eventsData, videosData, picturesData] = await Promise.all([
         this.discoveryService.loadCuratedCreators(cat.id),
         this.discoveryService.loadCuratedArticles(cat.id),
         this.discoveryService.loadCuratedEvents(cat.id),
         this.discoveryService.loadCuratedVideos(cat.id),
+        this.discoveryService.loadCuratedPictures(cat.id),
       ]);
 
       this.creators.set(creatorsData);
@@ -150,6 +152,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       this.articles.set(this.parseAndDeduplicateArticles(articlesData));
       this.events.set(eventsData);
       this.videos.set(videosData);
+      this.pictures.set(picturesData);
     } catch (err) {
       console.error('Error loading category content:', err);
       this.error.set('Failed to load content. Please try again.');
@@ -177,6 +180,11 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   viewVideo(item: CuratedItem): void {
     // Navigate to video view
     this.router.navigate(['/v', item.id]);
+  }
+
+  viewPicture(item: CuratedItem): void {
+    // Navigate to picture/event view
+    this.router.navigate(['/e', item.id]);
   }
 
   /**
