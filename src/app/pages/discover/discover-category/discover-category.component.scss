@@ -108,6 +108,68 @@
       color: var(--mat-sys-primary);
     }
   }
+
+  .section-header-with-action {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+
+    .section-title {
+      margin: 0;
+    }
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+  }
+}
+
+// Live Streams Section
+.live-streams-section {
+  .streams-loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 24px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .no-streams {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 40px 24px;
+    background: var(--mat-sys-surface-container);
+    border-radius: var(--mat-sys-corner-large);
+    text-align: center;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    p {
+      margin: 0;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
+.live-streams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 20px;
+
+  app-live-event {
+    display: block;
+    width: 100%;
+  }
 }
 
 // Creators Grid
