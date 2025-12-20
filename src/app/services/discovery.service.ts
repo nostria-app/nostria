@@ -165,6 +165,9 @@ export class DiscoveryService {
   /** The relay for curated discovery content */
   readonly CURATOR_RELAY = 'wss://ribo.eu.nostria.app/';
 
+  /** Dedicated SimplePool instance for discovery relay connections */
+  private discoveryPool: SimplePool | null = null;
+
   /** Cache for curated lists */
   private curatedListsCache = new Map<string, CuratedList>();
 
@@ -173,6 +176,17 @@ export class DiscoveryService {
 
   /** Error state for curated content */
   curatedError = signal<string | null>(null);
+
+  /**
+   * Get or create the dedicated SimplePool for discovery relay connections.
+   * This is separate from the app's main relay pool.
+   */
+  private getDiscoveryPool(): SimplePool {
+    if (!this.discoveryPool) {
+      this.discoveryPool = new SimplePool();
+    }
+    return this.discoveryPool;
+  }
 
   /**
    * Get the curated creators (follow set) for a specific category.

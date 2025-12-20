@@ -1,5 +1,5 @@
 import { Component, inject, signal, OnInit, ChangeDetectionStrategy } from '@angular/core';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
@@ -21,10 +21,21 @@ import { DiscoverMediaTabComponent } from './discover-media-tab/discover-media-t
 })
 export class DiscoverComponent implements OnInit {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
 
   selectedTabIndex = signal(0);
 
   ngOnInit(): void {
+    // Check query params first (for back navigation from category pages)
+    const tab = this.route.snapshot.queryParamMap.get('tab');
+    if (tab === 'media') {
+      this.selectedTabIndex.set(1);
+      // Clean up the URL by removing the query param
+      this.router.navigate(['/discover/media'], { replaceUrl: true });
+      return;
+    }
+
+    // Then check URL path
     const url = this.router.url;
     if (url.includes('/discover/media')) {
       this.selectedTabIndex.set(1);
