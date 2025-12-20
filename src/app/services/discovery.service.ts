@@ -195,7 +195,6 @@ export class DiscoveryService {
    * @returns Promise resolving to pubkeys of curated creators
    */
   async getCuratedCreators(category: DiscoveryCategory): Promise<string[]> {
-    debugger;
     const cacheKey = `creators-${category}`;
     const cached = this.curatedListsCache.get(cacheKey);
     if (cached) {
@@ -211,8 +210,6 @@ export class DiscoveryService {
       };
 
       const event = await pool.get([this.CURATOR_RELAY], filter);
-      
-      debugger;
       
       if (event) {
         const list = this.parseFollowSet(event, category);
@@ -506,8 +503,6 @@ export class DiscoveryService {
    * @returns Promise resolving to curated event items
    */
   async loadCuratedEvents(category: DiscoveryCategory): Promise<{ id: string; pubkey: string; title?: string; image?: string; kind: number; createdAt: number }[]> {
-    
-    debugger;
     const list = await this.getCuratedEvents(category);
     if (!list) return [];
 

@@ -411,8 +411,18 @@ export class PublishService {
       }
     }
 
-    // For other events, use account relays with optional optimization (already normalized above)
-    return this.applyRelayOptimization(accountRelayUrls, options.useOptimizedRelays);
+    // For other events (including lists/sets), use account relays with optional optimization (already normalized above)
+    const finalRelays = this.applyRelayOptimization(accountRelayUrls, options.useOptimizedRelays);
+
+    console.log('[PublishService] DEBUG: Default relay selection for event:', {
+      kind: event.kind,
+      useOptimizedRelays: options.useOptimizedRelays,
+      accountRelayCount: accountRelayUrls.length,
+      finalRelayCount: finalRelays.length,
+      finalRelays: finalRelays,
+    });
+
+    return finalRelays;
   }
 
   /**
