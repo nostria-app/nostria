@@ -36,6 +36,17 @@
   </div>
 
   <div>
+    <h2 i18n="@@settings.auto-relay-auth.title">Relay Authentication</h2>
+
+    <div class="setting-item">
+      <span i18n="@@settings.auto-relay-auth.toggle">Automatic Relay Authentication</span>
+      <mat-slide-toggle [checked]="localSettings.autoRelayAuth()" (change)="toggleAutoRelayAuth()">
+      </mat-slide-toggle>
+    </div>
+    <p class="setting-description" i18n="@@settings.auto-relay-auth.description">Automatically authenticate with relays that require authentication. When disabled, relays that require authentication will not be used.</p>
+  </div>
+
+  <div>
     <h2 i18n="@@settings.client-tags.title">Client Tags</h2>
 
     <div class="setting-item">
