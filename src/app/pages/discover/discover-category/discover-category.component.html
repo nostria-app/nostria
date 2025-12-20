@@ -1,10 +1,10 @@
 <div class="category-container">
   <!-- Header -->
   <header class="category-header" [style.background]="category()?.gradient">
-    <button mat-icon-button class="back-button" (click)="goBack()">
-      <mat-icon>arrow_back</mat-icon>
-    </button>
     <div class="header-content">
+      <button mat-icon-button class="back-button" (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+      </button>
       <div class="header-icon">
         <mat-icon>{{ category()?.icon }}</mat-icon>
       </div>
