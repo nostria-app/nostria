@@ -6,19 +6,15 @@
 // Header
 .category-header {
   position: relative;
-  padding: 24px;
-  padding-top: 16px;
+  padding: 16px 24px;
   color: white;
-  min-height: 140px;
   display: flex;
   flex-direction: column;
 
   .back-button {
-    position: absolute;
-    top: 16px;
-    left: 16px;
     color: white;
     background: rgba(0, 0, 0, 0.2);
+    flex-shrink: 0;
 
     &:hover {
       background: rgba(0, 0, 0, 0.3);
@@ -28,15 +24,13 @@
   .header-content {
     display: flex;
     align-items: center;
-    gap: 20px;
-    margin-top: 48px;
-    padding: 0 16px;
+    gap: 16px;
   }
 
   .header-icon {
-    width: 72px;
-    height: 72px;
-    border-radius: 16px;
+    width: 56px;
+    height: 56px;
+    border-radius: 12px;
     background: rgba(255, 255, 255, 0.2);
     display: flex;
     align-items: center;
@@ -44,23 +38,23 @@
     flex-shrink: 0;
 
     mat-icon {
-      font-size: 36px;
-      width: 36px;
-      height: 36px;
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
     }
   }
 
   .header-text {
     h1 {
       margin: 0;
-      font-size: 28px;
+      font-size: 22px;
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     p {
-      margin: 8px 0 0;
+      margin: 4px 0 0;
       opacity: 0.9;
-      font-size: 14px;
+      font-size: 13px;
       max-width: 400px;
     }
   }
