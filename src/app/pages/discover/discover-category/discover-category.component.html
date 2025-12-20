@@ -1,0 +1,128 @@
+<div class="category-container">
+  <!-- Header -->
+  <header class="category-header" [style.background]="category()?.gradient">
+    <button mat-icon-button class="back-button" (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <div class="header-content">
+      <div class="header-icon">
+        <mat-icon>{{ category()?.icon }}</mat-icon>
+      </div>
+      <div class="header-text">
+        <h1>{{ category()?.title }}</h1>
+        <p>{{ category()?.description }}</p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Loading State -->
+  @if (loading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading curated content...</p>
+  </div>
+  }
+
+  <!-- Error State -->
+  @if (error()) {
+  <div class="error-container">
+    <mat-icon>error_outline</mat-icon>
+    <p>{{ error() }}</p>
+    <button mat-flat-button (click)="goBack()">Go Back</button>
+  </div>
+  }
+
+  <!-- Content -->
+  @if (!loading() && !error()) {
+  <div class="category-content">
+    <!-- Creators Section -->
+    @if (creators().length > 0) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>person</mat-icon>
+        {{ specialSectionTitle() }}
+      </h2>
+      <div class="creators-grid">
+        @for (creator of creators(); track creator.pubkey) {
+        <app-user-profile [pubkey]="creator.pubkey"></app-user-profile>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Articles Section (for content categories) -->
+    @if (categoryType() === 'content' && articles().length > 0) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>article</mat-icon>
+        Curated Articles
+      </h2>
+      <div class="articles-grid">
+        @for (article of articles(); track article.id) {
+        <button class="article-card" (click)="viewArticle(article)">
+          @if (article.image) {
+          <div class="article-image">
+            <img [src]="article.image" [alt]="article.title || 'Article'" title="Article image" />
+          </div>
+          }
+          <div class="article-content">
+            <h3 class="article-title">{{ article.title || 'Untitled' }}</h3>
+            @if (article.content) {
+            <p class="article-excerpt">{{ article.content | slice:0:120 }}...</p>
+            }
+            <div class="article-meta">
+              <app-user-profile [pubkey]="article.pubkey" [view]="'compact'"></app-user-profile>
+            </div>
+          </div>
+        </button>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Videos Section (for media categories) -->
+    @if (categoryType() === 'media' && videos().length > 0) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>video_library</mat-icon>
+        Curated Videos
+      </h2>
+      <div class="videos-grid">
+        @for (video of videos(); track video.id) {
+        <button class="video-card" (click)="viewVideo(video)">
+          <div class="video-thumbnail">
+            @if (video.image) {
+            <img [src]="video.image" [alt]="video.title || 'Video'" title="Video thumbnail" />
+            } @else {
+            <div class="video-placeholder">
+              <mat-icon>play_circle</mat-icon>
+            </div>
+            }
+            <div class="play-overlay">
+              <mat-icon>play_arrow</mat-icon>
+            </div>
+          </div>
+          <div class="video-info">
+            <h3 class="video-title">{{ video.title || 'Untitled' }}</h3>
+            <div class="video-meta">
+              <app-user-profile [pubkey]="video.pubkey" [view]="'compact'"></app-user-profile>
+            </div>
+          </div>
+        </button>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Empty State -->
+    @if (creators().length === 0 && articles().length === 0 && videos().length === 0) {
+    <div class="empty-state">
+      <mat-icon>explore_off</mat-icon>
+      <h3>No curated content yet</h3>
+      <p>We're working on curating amazing content for this category. Check back soon!</p>
+      <button mat-flat-button (click)="goBack()">Browse Other Categories</button>
+    </div>
+    }
+  </div>
+  }
+</div>
