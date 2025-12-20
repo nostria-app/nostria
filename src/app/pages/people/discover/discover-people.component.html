@@ -1,0 +1,16 @@
+<div class="discover-container">
+  <div class="discover-header">
+    <button mat-icon-button (click)="goBack()" aria-label="Back to people">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>Discover People</h1>
+  </div>
+
+  <div class="discover-content">
+    <app-followset [title]="'Welcome! Let\'s get you started'" [availableInterests]="availableInterests()"
+      [suggestedProfiles]="suggestedProfiles()" [selectedInterests]="selectedInterests()"
+      [detectedRegion]="detectedRegion()" [followingProfiles]="followingProfiles()"
+      [isLoadingInterests]="isLoadingInterests()" [isLoadingProfiles]="isLoadingProfiles()"
+      (interestToggled)="toggleInterest($event)" (followProfile)="onFollowProfile($event)" />
+  </div>
+</div>

@@ -344,6 +344,8 @@ export class App implements OnInit {
     //   authenticated: true,
     // },
     // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
+    { path: 'discover', label: $localize`:@@app.nav.discover:Discover`, icon: 'explore', authenticated: true },
+
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
     {
       path: 'messages',
