@@ -528,6 +528,7 @@ export class DiscoveryService {
 
   /**
    * Load curated videos for a category, returning items with metadata.
+   * Videos are stored as 'e' tags (event IDs) in curation sets.
    * @param category The discovery category
    * @returns Promise resolving to curated video items
    */
@@ -535,17 +536,19 @@ export class DiscoveryService {
     const list = await this.getCuratedVideos(category);
     if (!list) return [];
 
-    // For now, return the addressable IDs as items
-    return list.addressableIds.map((aId) => {
-      const parts = aId.split(':');
-      const pubkey = parts[1] || '';
-      return {
-        id: aId,
-        pubkey,
+    // Return event IDs for videos (stored as 'e' tags)
+    const items: { id: string; pubkey: string; title?: string; image?: string; kind: number; createdAt: number }[] = [];
+
+    for (const eventId of list.eventIds) {
+      items.push({
+        id: eventId,
+        pubkey: '', // Will need to be fetched when displaying
         kind: CURATION_KINDS.VIDEO_CURATION,
         createdAt: list.createdAt,
-      };
-    });
+      });
+    }
+
+    return items;
   }
 
   /**
