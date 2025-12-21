@@ -71,16 +71,28 @@
     </section>
     }
 
-    <!-- Events Section -->
+    <!-- News Events Section (with full event objects) -->
+    @if (newsEvents().length > 0) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>feed</mat-icon>
+        Latest Posts
+      </h2>
+      <div class="events-grid">
+        @for (event of newsEvents(); track event.id) {
+        <app-event [event]="event" [compact]="true" [hideComments]="true" [hideFooter]="true" appearance="card">
+        </app-event>
+        }
+      </div>
+    </section>
+    }
+
+    <!-- Curated Events Section (for non-news categories) -->
     @if (events().length > 0) {
     <section class="content-section">
       <h2 class="section-title">
         <mat-icon>event</mat-icon>
-        @if (isNewsCategory()) {
-        Latest Posts
-        } @else {
         Curated Events
-        }
       </h2>
       <div class="events-grid">
         @for (event of events(); track event.id) {

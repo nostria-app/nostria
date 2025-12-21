@@ -92,6 +92,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   readonly creators = signal<CuratedItem[]>([]);
   readonly articles = signal<CuratedArticle[]>([]);
   readonly events = signal<CuratedItem[]>([]);
+  readonly newsEvents = signal<Event[]>([]); // Full events for news category
   readonly videos = signal<CuratedItem[]>([]);
   readonly pictures = signal<CuratedItem[]>([]);
   readonly liveStreams = signal<Event[]>([]);
@@ -225,12 +226,9 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
     }));
 
     this.articles.set(articles);
-    this.events.set(eventsData.map(item => ({
-      id: item.id,
-      pubkey: item.pubkey,
-      kind: item.kind,
-      createdAt: item.createdAt,
-    })));
+    // Store full events for news category so they can be passed directly to components
+    this.newsEvents.set(eventsData);
+    this.events.set([]); // Clear the regular events signal for news
 
     // Clear other content types for news
     this.videos.set([]);
