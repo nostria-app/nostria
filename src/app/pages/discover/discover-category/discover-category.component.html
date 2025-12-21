@@ -138,6 +138,90 @@
     </section>
     }
 
+    <!-- Vine Videos Section (only for videos category) -->
+    @if (isVideosCategory()) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>local_florist</mat-icon>
+        Vine
+      </h2>
+      @if (vineLoading()) {
+      <div class="streams-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Loading videos from Divine relay...</span>
+      </div>
+      } @else if (vineVideos().length > 0) {
+      <div class="videos-grid">
+        @for (video of vineVideos(); track video.id) {
+        <app-event [event]="video" [compact]="true" [hideComments]="true" [hideFooter]="true" appearance="card">
+        </app-event>
+        }
+      </div>
+      } @else {
+      <div class="no-content">
+        <mat-icon>videocam_off</mat-icon>
+        <p>No videos available at the moment</p>
+      </div>
+      }
+    </section>
+    }
+
+    <!-- Shorts Section from Featured Creators (only for videos category) -->
+    @if (isVideosCategory()) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>video_call</mat-icon>
+        Shorts from Featured Creators
+      </h2>
+      @if (shortsLoading()) {
+      <div class="streams-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Loading short videos...</span>
+      </div>
+      } @else if (publicShorts().length > 0) {
+      <div class="videos-grid">
+        @for (short of publicShorts(); track short.id) {
+        <app-event [event]="short" [compact]="true" [hideComments]="true" [hideFooter]="true" appearance="card">
+        </app-event>
+        }
+      </div>
+      } @else {
+      <div class="no-content">
+        <mat-icon>videocam_off</mat-icon>
+        <p>No short videos available at the moment</p>
+      </div>
+      }
+    </section>
+    }
+
+    <!-- Videos Section from Featured Creators (only for videos category) -->
+    @if (isVideosCategory()) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>movie</mat-icon>
+        Videos from Featured Creators
+      </h2>
+      @if (videosLoading()) {
+      <div class="streams-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Loading videos...</span>
+      </div>
+      } @else if (publicVideos().length > 0) {
+      <div class="videos-grid">
+        @for (video of publicVideos(); track video.id) {
+        <app-event [event]="video" [compact]="true" [hideComments]="true" [hideFooter]="true" appearance="card">
+        </app-event>
+        }
+      </div>
+      } @else {
+      <div class="no-content">
+        <mat-icon>videocam_off</mat-icon>
+        <p>No videos available at the moment</p>
+      </div>
+      }
+    </section>
+    }
+
     <!-- Playlists Section (only for music category) -->
     @if (playlists().length > 0) {
     <section class="content-section">
