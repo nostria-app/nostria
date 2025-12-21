@@ -780,6 +780,30 @@ export class DiscoveryService {
   }
 
   /**
+   * Load playlists published by the curator.
+   * Playlists use kind 32100.
+   * @returns Promise resolving to playlist events
+   */
+  async loadCuratorPlaylists(): Promise<Event[]> {
+    try {
+      const pool = this.getDiscoveryPool();
+      const filter = {
+        kinds: [32100], // Playlist kind
+        authors: [this.CURATOR_PUBKEY],
+      };
+
+      const events = await pool.querySync([this.CURATOR_RELAY], filter);
+
+      // Sort by created_at descending
+      events.sort((a, b) => b.created_at - a.created_at);
+      return events;
+    } catch (error) {
+      this.logger.error('Failed to fetch curator playlists:', error);
+      return [];
+    }
+  }
+
+  /**
    * Clear the curated lists cache.
    */
   clearCache(): void {

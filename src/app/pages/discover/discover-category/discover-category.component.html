@@ -138,6 +138,49 @@
     </section>
     }
 
+    <!-- Playlists Section (only for music category) -->
+    @if (playlists().length > 0) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>queue_music</mat-icon>
+        Curated Playlists
+      </h2>
+      <div class="playlists-grid">
+        @for (playlist of playlists(); track playlist.id) {
+        <div class="playlist-card">
+          <div class="playlist-info">
+            <div class="playlist-title">{{ playlist.title }}</div>
+            <div class="playlist-meta">
+              {{ playlist.tracks.length }} tracks
+              @if (playlist.totalDuration) {
+              <span class="separator">•</span>
+              {{ playlist.totalDuration }}
+              }
+            </div>
+            @if (playlist.tags && playlist.tags.length > 0) {
+            <div class="playlist-tags">
+              @for (tag of playlist.tags.slice(0, 3); track tag) {
+              <span class="tag">#{{ tag }}</span>
+              }
+            </div>
+            }
+          </div>
+          <div class="playlist-actions">
+            <button mat-flat-button (click)="playPlaylist(playlist)">
+              <mat-icon>play_arrow</mat-icon>
+              Play
+            </button>
+            <button mat-stroked-button (click)="addPlaylistToQueue(playlist)">
+              <mat-icon>playlist_add</mat-icon>
+              Add to Queue
+            </button>
+          </div>
+        </div>
+        }
+      </div>
+    </section>
+    }
+
     <!-- Live Streams Section (only for live category) -->
     @if (isLiveCategory()) {
     <section class="content-section live-streams-section">
