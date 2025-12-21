@@ -113,6 +113,17 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   // Check if this is the music category
   readonly isMusicCategory = computed(() => this.categoryId() === 'music');
 
+  // Check if this is the videos category
+  readonly isVideosCategory = computed(() => this.categoryId() === 'videos');
+
+  // Video content signals for videos category
+  readonly vineVideos = signal<Event[]>([]);
+  readonly publicShorts = signal<Event[]>([]);
+  readonly publicVideos = signal<Event[]>([]);
+  readonly vineLoading = signal(false);
+  readonly shortsLoading = signal(false);
+  readonly videosLoading = signal(false);
+
   // Special section titles based on category
   readonly specialSectionTitle = computed(() => {
     const cat = this.category();
@@ -209,6 +220,14 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       // Load playlists for the 'music' category
       if (cat.id === 'music') {
         await this.loadCuratorPlaylists();
+      }
+
+      // Load video content for the 'videos' category from featured creators
+      if (cat.id === 'videos') {
+        const creatorPubkeys = creatorsData.map(c => c.pubkey);
+        this.loadVineVideos();
+        this.loadCreatorShorts(creatorPubkeys);
+        this.loadCreatorVideos(creatorPubkeys);
       }
     } catch (err) {
       console.error('Error loading category content:', err);
@@ -383,6 +402,185 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
    */
   addPlaylistToQueue(playlist: Playlist): void {
     this.mediaPlayer.addPlaylistToQueue(playlist);
+  }
+
+  /**
+   * Divine Video relay for curated video content
+   */
+  private readonly VINE_RELAY = 'wss://relay.divine.video/';
+
+  /**
+   * Load videos from the Vine relay (divine.video).
+   * Fetches kinds 21, 22, 34235, 34236 limited to 12 videos.
+   */
+  private loadVineVideos(): void {
+    this.vineLoading.set(true);
+    const eventMap = new Map<string, Event>();
+
+    const filter: Filter = {
+      kinds: [21, 22, 34235, 34236],
+      limit: 12,
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      if (this.vineLoading()) {
+        this.vineLoading.set(false);
+        this.updateVineVideos(eventMap);
+      }
+    }, 5000);
+
+    this.pool.subscribe(
+      [this.VINE_RELAY],
+      filter,
+      (event: Event) => {
+        // Use d-tag + pubkey for addressable events, or id for regular events
+        const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1];
+        const uniqueId = dTag ? `${event.pubkey}:${dTag}` : event.id;
+
+        const existing = eventMap.get(uniqueId);
+        if (existing && existing.created_at >= event.created_at) {
+          return;
+        }
+
+        eventMap.set(uniqueId, event);
+        this.updateVineVideos(eventMap);
+
+        if (eventMap.size >= 12 && this.vineLoading()) {
+          clearTimeout(loadingTimeout);
+          this.vineLoading.set(false);
+        }
+      }
+    );
+  }
+
+  private updateVineVideos(eventMap: Map<string, Event>): void {
+    const videos = Array.from(eventMap.values());
+    videos.sort((a, b) => b.created_at - a.created_at);
+    this.vineVideos.set(videos.slice(0, 12));
+  }
+
+  /**
+   * Load short videos from featured creators.
+   * Fetches kinds 22, 34236 (short form videos) limited to 12.
+   */
+  private loadCreatorShorts(creatorPubkeys: string[]): void {
+    if (creatorPubkeys.length === 0) {
+      console.warn('No creators available for loading shorts');
+      return;
+    }
+
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+
+    if (relayUrls.length === 0) {
+      console.warn('No relays available for loading shorts');
+      return;
+    }
+
+    this.shortsLoading.set(true);
+    const eventMap = new Map<string, Event>();
+
+    const filter: Filter = {
+      kinds: [22, 34236],
+      authors: creatorPubkeys,
+      limit: 12,
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      if (this.shortsLoading()) {
+        this.shortsLoading.set(false);
+        this.updateCreatorShorts(eventMap);
+      }
+    }, 5000);
+
+    this.pool.subscribe(
+      relayUrls,
+      filter,
+      (event: Event) => {
+        const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1];
+        const uniqueId = dTag ? `${event.pubkey}:${dTag}` : event.id;
+
+        const existing = eventMap.get(uniqueId);
+        if (existing && existing.created_at >= event.created_at) {
+          return;
+        }
+
+        eventMap.set(uniqueId, event);
+        this.updateCreatorShorts(eventMap);
+
+        if (eventMap.size >= 12 && this.shortsLoading()) {
+          clearTimeout(loadingTimeout);
+          this.shortsLoading.set(false);
+        }
+      }
+    );
+  }
+
+  private updateCreatorShorts(eventMap: Map<string, Event>): void {
+    const shorts = Array.from(eventMap.values());
+    shorts.sort((a, b) => b.created_at - a.created_at);
+    this.publicShorts.set(shorts.slice(0, 12));
+  }
+
+  /**
+   * Load videos from featured creators.
+   * Fetches kinds 21, 34235 (long form videos) limited to 6.
+   */
+  private loadCreatorVideos(creatorPubkeys: string[]): void {
+    if (creatorPubkeys.length === 0) {
+      console.warn('No creators available for loading videos');
+      return;
+    }
+
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+
+    if (relayUrls.length === 0) {
+      console.warn('No relays available for loading videos');
+      return;
+    }
+
+    this.videosLoading.set(true);
+    const eventMap = new Map<string, Event>();
+
+    const filter: Filter = {
+      kinds: [21, 34235],
+      authors: creatorPubkeys,
+      limit: 6,
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      if (this.videosLoading()) {
+        this.videosLoading.set(false);
+        this.updateCreatorVideos(eventMap);
+      }
+    }, 5000);
+
+    this.pool.subscribe(
+      relayUrls,
+      filter,
+      (event: Event) => {
+        const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1];
+        const uniqueId = dTag ? `${event.pubkey}:${dTag}` : event.id;
+
+        const existing = eventMap.get(uniqueId);
+        if (existing && existing.created_at >= event.created_at) {
+          return;
+        }
+
+        eventMap.set(uniqueId, event);
+        this.updateCreatorVideos(eventMap);
+
+        if (eventMap.size >= 6 && this.videosLoading()) {
+          clearTimeout(loadingTimeout);
+          this.videosLoading.set(false);
+        }
+      }
+    );
+  }
+
+  private updateCreatorVideos(eventMap: Map<string, Event>): void {
+    const videos = Array.from(eventMap.values());
+    videos.sort((a, b) => b.created_at - a.created_at);
+    this.publicVideos.set(videos.slice(0, 6));
   }
 
   /**

@@ -127,16 +127,17 @@
   }
 }
 
+// General Loading State
+.streams-loading {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
 // Live Streams Section
 .live-streams-section {
-  .streams-loading {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 24px;
-    color: var(--mat-sys-on-surface-variant);
-  }
-
   .no-streams {
     display: flex;
     flex-direction: column;
@@ -450,6 +451,51 @@
       font-size: 13px;
       color: var(--mat-sys-on-surface-variant);
     }
+  }
+}
+
+// Public Content Warning
+.public-content-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: var(--mat-sys-error-container);
+  color: var(--mat-sys-on-error-container);
+  border-radius: var(--mat-sys-corner-small);
+  font-size: 14px;
+
+  mat-icon {
+    color: var(--mat-sys-error);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+}
+
+// No Content State
+.no-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 40px 24px;
+  background: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-large);
+  text-align: center;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
   }
 }
 
