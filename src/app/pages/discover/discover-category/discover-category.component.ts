@@ -14,6 +14,9 @@ import {
   DiscoveryCategory,
   PubkeyRef,
 } from '../../../services/discovery.service';
+import { PlaylistService } from '../../../services/playlist.service';
+import { MediaPlayerService } from '../../../services/media-player.service';
+import { Playlist } from '../../../interfaces';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { ArticleComponent } from '../../../components/article/article.component';
 import { EventComponent } from '../../../components/event/event.component';
@@ -64,6 +67,8 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private discoveryService = inject(DiscoveryService);
+  private playlistService = inject(PlaylistService);
+  private mediaPlayer = inject(MediaPlayerService);
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
@@ -95,6 +100,7 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   readonly newsEvents = signal<Event[]>([]); // Full events for news category
   readonly videos = signal<CuratedItem[]>([]);
   readonly pictures = signal<CuratedItem[]>([]);
+  readonly playlists = signal<Playlist[]>([]); // Playlists for music category
   readonly liveStreams = signal<Event[]>([]);
   readonly streamsLoading = signal(false);
 
@@ -103,6 +109,9 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
 
   // Check if this is the news category
   readonly isNewsCategory = computed(() => this.categoryId() === 'news');
+
+  // Check if this is the music category
+  readonly isMusicCategory = computed(() => this.categoryId() === 'music');
 
   // Special section titles based on category
   readonly specialSectionTitle = computed(() => {
@@ -195,6 +204,11 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
       // Load live streams for the 'live' category
       if (cat.id === 'live') {
         this.loadLiveStreams();
+      }
+
+      // Load playlists for the 'music' category
+      if (cat.id === 'music') {
+        await this.loadCuratorPlaylists();
       }
     } catch (err) {
       console.error('Error loading category content:', err);
@@ -337,6 +351,38 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   viewPicture(item: CuratedItem): void {
     // Navigate to picture/event view
     this.router.navigate(['/e', item.id]);
+  }
+
+  /**
+   * Load playlists from the Nostria Curator for the music category.
+   */
+  private async loadCuratorPlaylists(): Promise<void> {
+    const playlistEvents = await this.discoveryService.loadCuratorPlaylists();
+
+    // Convert events to Playlist objects
+    const playlists: Playlist[] = [];
+    for (const event of playlistEvents) {
+      const playlist = this.playlistService.importPlaylistFromNostrEvent(event);
+      if (playlist) {
+        playlists.push(playlist);
+      }
+    }
+
+    this.playlists.set(playlists);
+  }
+
+  /**
+   * Play a playlist immediately.
+   */
+  playPlaylist(playlist: Playlist): void {
+    this.mediaPlayer.playPlaylist(playlist);
+  }
+
+  /**
+   * Add playlist tracks to the queue.
+   */
+  addPlaylistToQueue(playlist: Playlist): void {
+    this.mediaPlayer.addPlaylistToQueue(playlist);
   }
 
   /**
