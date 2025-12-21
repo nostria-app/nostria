@@ -12,6 +12,7 @@ import {
   CONTENT_CATEGORIES,
   MEDIA_CATEGORIES,
   DiscoveryCategory,
+  PubkeyRef,
 } from '../../../services/discovery.service';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { ArticleComponent } from '../../../components/article/article.component';
@@ -35,6 +36,7 @@ interface CuratedArticle {
 interface CuratedItem {
   id: string;
   pubkey: string;
+  relay?: string;
   title?: string;
   image?: string;
   kind: number;
@@ -107,6 +109,8 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
     if (!cat) return 'Featured';
 
     switch (cat.id) {
+      case 'news':
+        return 'News Sources';
       case 'finance':
         return 'Angor Hubs';
       case 'live':
@@ -165,7 +169,12 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
 
       // Special handling for "news" category - fetch recent content from creators
       if (cat.id === 'news') {
-        await this.loadNewsContent(creatorsData.map(c => c.pubkey));
+        // Pass pubkey refs with relay hints for news content
+        const pubkeyRefs: PubkeyRef[] = creatorsData.map(c => ({
+          pubkey: c.pubkey,
+          relay: c.relay,
+        }));
+        await this.loadNewsContent(pubkeyRefs);
       } else {
         // Load all curated content types for other categories
         const [articlesData, eventsData, videosData, picturesData] = await Promise.all([
@@ -198,12 +207,12 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
    * Load news content by fetching recent articles and events from curated creators.
    * Gets 2 articles and 2 events from each featured creator.
    */
-  private async loadNewsContent(pubkeys: string[]): Promise<void> {
-    if (pubkeys.length === 0) return;
+  private async loadNewsContent(pubkeyRefs: PubkeyRef[]): Promise<void> {
+    if (pubkeyRefs.length === 0) return;
 
     const [articlesData, eventsData] = await Promise.all([
-      this.discoveryService.loadRecentArticlesFromAuthors(pubkeys, 2),
-      this.discoveryService.loadRecentEventsFromAuthors(pubkeys, 2),
+      this.discoveryService.loadRecentArticlesFromAuthors(pubkeyRefs, 2),
+      this.discoveryService.loadRecentEventsFromAuthors(pubkeyRefs, 2),
     ]);
 
     // Convert to CuratedArticle format

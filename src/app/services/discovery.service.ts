@@ -1,8 +1,6 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
-import { RelaysService } from './relays/relays';
-import { UtilitiesService } from './utilities.service';
 
 /** Categories available in the Discovery section */
 export type DiscoveryCategory =
@@ -24,6 +22,12 @@ export interface AddressableRef {
   relay?: string;  // optional relay hint
 }
 
+/** Pubkey reference with optional relay hint */
+export interface PubkeyRef {
+  pubkey: string;
+  relay?: string;  // optional relay hint
+}
+
 /** Curated list types based on NIP-51 */
 export interface CuratedList {
   category: DiscoveryCategory;
@@ -32,6 +36,7 @@ export interface CuratedList {
   description?: string;
   image?: string;
   pubkeys: string[]; // For follow sets (kind 30000)
+  pubkeyRefs: PubkeyRef[]; // For follow sets with relay hints
   eventIds: string[]; // For article/video curation (kind 30004/30005)
   addressableIds: string[]; // For addressable events (a tags) - legacy
   addressableRefs: AddressableRef[]; // For addressable events with relay hints
@@ -169,8 +174,6 @@ export const CURATION_KINDS = {
 })
 export class DiscoveryService {
   private logger = inject(LoggerService);
-  private relaysService = inject(RelaysService);
-  private utilities = inject(UtilitiesService);
 
   /** The curator's public key (Nostria Curator) */
   readonly CURATOR_PUBKEY = '929dd94e6cc8a6665665a1e1fc043952c014c16c1735578e3436cd4510b1e829';
@@ -409,6 +412,7 @@ export class DiscoveryService {
    */
   private parseFollowSet(event: Event, category: DiscoveryCategory): CuratedList {
     const pubkeys: string[] = [];
+    const pubkeyRefs: PubkeyRef[] = [];
     let title: string | undefined;
     let description: string | undefined;
     let image: string | undefined;
@@ -416,6 +420,11 @@ export class DiscoveryService {
     for (const tag of event.tags) {
       if (tag[0] === 'p' && tag[1]) {
         pubkeys.push(tag[1]);
+        // Capture relay hint if present (third element of p tag)
+        pubkeyRefs.push({
+          pubkey: tag[1],
+          relay: tag[2] || undefined,
+        });
       } else if (tag[0] === 'title' && tag[1]) {
         title = tag[1];
       } else if (tag[0] === 'description' && tag[1]) {
@@ -432,6 +441,7 @@ export class DiscoveryService {
       description,
       image,
       pubkeys,
+      pubkeyRefs,
       eventIds: [],
       addressableIds: [],
       addressableRefs: [],
@@ -445,6 +455,7 @@ export class DiscoveryService {
    */
   private parseCurationSet(event: Event, category: DiscoveryCategory): CuratedList {
     const pubkeys: string[] = [];
+    const pubkeyRefs: PubkeyRef[] = [];
     const eventIds: string[] = [];
     const addressableIds: string[] = [];
     const addressableRefs: AddressableRef[] = [];
@@ -456,6 +467,10 @@ export class DiscoveryService {
     for (const tag of event.tags) {
       if (tag[0] === 'p' && tag[1]) {
         pubkeys.push(tag[1]);
+        pubkeyRefs.push({
+          pubkey: tag[1],
+          relay: tag[2] || undefined,
+        });
       } else if (tag[0] === 'e' && tag[1]) {
         eventIds.push(tag[1]);
       } else if (tag[0] === 'a' && tag[1]) {
@@ -483,6 +498,7 @@ export class DiscoveryService {
       description,
       image,
       pubkeys,
+      pubkeyRefs,
       eventIds,
       addressableIds,
       addressableRefs,
@@ -496,14 +512,49 @@ export class DiscoveryService {
    * @param category The discovery category
    * @returns Promise resolving to curated creator items
    */
-  async loadCuratedCreators(category: DiscoveryCategory): Promise<{ id: string; pubkey: string; kind: number; createdAt: number }[]> {
-    const pubkeys = await this.getCuratedCreators(category);
-    return pubkeys.map((pubkey) => ({
-      id: pubkey,
-      pubkey,
+  async loadCuratedCreators(category: DiscoveryCategory): Promise<{ id: string; pubkey: string; relay?: string; kind: number; createdAt: number }[]> {
+    const pubkeyRefs = await this.getCuratedCreatorsWithRelays(category);
+    return pubkeyRefs.map((ref) => ({
+      id: ref.pubkey,
+      pubkey: ref.pubkey,
+      relay: ref.relay,
       kind: CURATION_KINDS.FOLLOW_SET,
       createdAt: Date.now() / 1000,
     }));
+  }
+
+  /**
+   * Get curated creators with relay hints for a category.
+   * @param category The discovery category
+   * @returns Promise resolving to pubkey references with relay hints
+   */
+  async getCuratedCreatorsWithRelays(category: DiscoveryCategory): Promise<PubkeyRef[]> {
+    const cacheKey = `creators-${category}`;
+    const cached = this.curatedListsCache.get(cacheKey);
+    if (cached) {
+      return cached.pubkeyRefs;
+    }
+
+    try {
+      const pool = this.getDiscoveryPool();
+      const filter = {
+        kinds: [CURATION_KINDS.FOLLOW_SET],
+        authors: [this.CURATOR_PUBKEY],
+        '#d': [category],
+      };
+
+      const event = await pool.get([this.CURATOR_RELAY], filter);
+
+      if (event) {
+        const list = this.parseFollowSet(event, category);
+        this.curatedListsCache.set(cacheKey, list);
+        return list.pubkeyRefs;
+      }
+    } catch (error) {
+      this.logger.error(`Failed to fetch curated creators for ${category}:`, error);
+    }
+
+    return [];
   }
 
   /**
@@ -606,28 +657,31 @@ export class DiscoveryService {
   }
 
   /**
-   * Load recent articles from specific pubkeys.
+   * Load recent articles from specific pubkeys with relay hints.
    * Used for categories like "News" where we fetch from curated creators.
-   * @param pubkeys Array of pubkeys to fetch articles from
+   * @param pubkeyRefs Array of pubkey references with relay hints
    * @param articlesPerAuthor Number of articles to fetch per author (default 2)
    * @returns Promise resolving to article items
    */
   async loadRecentArticlesFromAuthors(
-    pubkeys: string[],
-    articlesPerAuthor: number = 2
+    pubkeyRefs: PubkeyRef[],
+    articlesPerAuthor = 2
   ): Promise<{ id: string; pubkey: string; slug: string; kind: number; createdAt: number }[]> {
-    if (pubkeys.length === 0) return [];
+    if (pubkeyRefs.length === 0) return [];
 
     try {
       const pool = this.getDiscoveryPool();
+      const pubkeys = pubkeyRefs.map(r => r.pubkey);
       const filter = {
         kinds: [30023], // Long-form articles
         authors: pubkeys,
         limit: pubkeys.length * articlesPerAuthor * 2, // Fetch extra to ensure we have enough per author
       };
 
-      // Use general relays for fetching creator content (not just curator relay)
-      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      // Collect unique relay hints from pubkeyRefs
+      const relayHints = [...new Set(pubkeyRefs.map(r => r.relay).filter((r): r is string => !!r))];
+      // If no relay hints, fall back to curator relay
+      const relayUrls = relayHints.length > 0 ? relayHints : [this.CURATOR_RELAY];
       const events = await pool.querySync(relayUrls, filter);
 
       // Group by author and take top N per author
@@ -667,28 +721,31 @@ export class DiscoveryService {
   }
 
   /**
-   * Load recent events (notes) from specific pubkeys.
+   * Load recent events (notes) from specific pubkeys with relay hints.
    * Used for categories like "News" where we fetch from curated creators.
-   * @param pubkeys Array of pubkeys to fetch events from
+   * @param pubkeyRefs Array of pubkey references with relay hints
    * @param eventsPerAuthor Number of events to fetch per author (default 2)
    * @returns Promise resolving to event items
    */
   async loadRecentEventsFromAuthors(
-    pubkeys: string[],
-    eventsPerAuthor: number = 2
+    pubkeyRefs: PubkeyRef[],
+    eventsPerAuthor = 2
   ): Promise<{ id: string; pubkey: string; kind: number; createdAt: number }[]> {
-    if (pubkeys.length === 0) return [];
+    if (pubkeyRefs.length === 0) return [];
 
     try {
       const pool = this.getDiscoveryPool();
+      const pubkeys = pubkeyRefs.map(r => r.pubkey);
       const filter = {
         kinds: [1], // Short text notes
         authors: pubkeys,
         limit: pubkeys.length * eventsPerAuthor * 2, // Fetch extra to ensure we have enough per author
       };
 
-      // Use general relays for fetching creator content (not just curator relay)
-      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      // Collect unique relay hints from pubkeyRefs
+      const relayHints = [...new Set(pubkeyRefs.map(r => r.relay).filter((r): r is string => !!r))];
+      // If no relay hints, fall back to curator relay
+      const relayUrls = relayHints.length > 0 ? relayHints : [this.CURATOR_RELAY];
       const events = await pool.querySync(relayUrls, filter);
 
       // Group by author and take top N per author
