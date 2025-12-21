@@ -156,21 +156,28 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
     this.error.set(null);
 
     try {
-      // Load all curated content types - any category can have any content type
-      const [creatorsData, articlesData, eventsData, videosData, picturesData] = await Promise.all([
-        this.discoveryService.loadCuratedCreators(cat.id),
-        this.discoveryService.loadCuratedArticles(cat.id),
-        this.discoveryService.loadCuratedEvents(cat.id),
-        this.discoveryService.loadCuratedVideos(cat.id),
-        this.discoveryService.loadCuratedPictures(cat.id),
-      ]);
-
+      // Load curated creators first (needed for all categories)
+      const creatorsData = await this.discoveryService.loadCuratedCreators(cat.id);
       this.creators.set(creatorsData);
-      // Parse and deduplicate articles
-      this.articles.set(this.parseAndDeduplicateArticles(articlesData));
-      this.events.set(eventsData);
-      this.videos.set(videosData);
-      this.pictures.set(picturesData);
+
+      // Special handling for "news" category - fetch recent content from creators
+      if (cat.id === 'news') {
+        await this.loadNewsContent(creatorsData.map(c => c.pubkey));
+      } else {
+        // Load all curated content types for other categories
+        const [articlesData, eventsData, videosData, picturesData] = await Promise.all([
+          this.discoveryService.loadCuratedArticles(cat.id),
+          this.discoveryService.loadCuratedEvents(cat.id),
+          this.discoveryService.loadCuratedVideos(cat.id),
+          this.discoveryService.loadCuratedPictures(cat.id),
+        ]);
+
+        // Parse and deduplicate articles
+        this.articles.set(this.parseAndDeduplicateArticles(articlesData));
+        this.events.set(eventsData);
+        this.videos.set(videosData);
+        this.pictures.set(picturesData);
+      }
 
       // Load live streams for the 'live' category
       if (cat.id === 'live') {
@@ -185,7 +192,41 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Load current live streams (limited to 4 for preview)
+   * Load news content by fetching recent articles and events from curated creators.
+   * Gets 2 articles and 2 events from each featured creator.
+   */
+  private async loadNewsContent(pubkeys: string[]): Promise<void> {
+    if (pubkeys.length === 0) return;
+
+    const [articlesData, eventsData] = await Promise.all([
+      this.discoveryService.loadRecentArticlesFromAuthors(pubkeys, 2),
+      this.discoveryService.loadRecentEventsFromAuthors(pubkeys, 2),
+    ]);
+
+    // Convert to CuratedArticle format
+    const articles: CuratedArticle[] = articlesData.map(item => ({
+      id: item.id,
+      pubkey: item.pubkey,
+      slug: item.slug,
+      kind: item.kind,
+      createdAt: item.createdAt,
+    }));
+
+    this.articles.set(articles);
+    this.events.set(eventsData.map(item => ({
+      id: item.id,
+      pubkey: item.pubkey,
+      kind: item.kind,
+      createdAt: item.createdAt,
+    })));
+
+    // Clear other content types for news
+    this.videos.set([]);
+    this.pictures.set([]);
+  }
+
+  /**
+   * Load current live streams (limited to 3 for preview)
    */
   private loadLiveStreams(): void {
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
