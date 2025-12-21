@@ -602,6 +602,122 @@ export class DiscoveryService {
   }
 
   /**
+   * Load recent articles from specific pubkeys.
+   * Used for categories like "News" where we fetch from curated creators.
+   * @param pubkeys Array of pubkeys to fetch articles from
+   * @param articlesPerAuthor Number of articles to fetch per author (default 2)
+   * @returns Promise resolving to article items
+   */
+  async loadRecentArticlesFromAuthors(
+    pubkeys: string[],
+    articlesPerAuthor: number = 2
+  ): Promise<{ id: string; pubkey: string; slug: string; kind: number; createdAt: number }[]> {
+    if (pubkeys.length === 0) return [];
+
+    try {
+      const pool = this.getDiscoveryPool();
+      const filter = {
+        kinds: [30023], // Long-form articles
+        authors: pubkeys,
+        limit: pubkeys.length * articlesPerAuthor * 2, // Fetch extra to ensure we have enough per author
+      };
+
+      const events = await pool.querySync([this.CURATOR_RELAY], filter);
+      
+      // Group by author and take top N per author
+      const byAuthor = new Map<string, Event[]>();
+      for (const event of events) {
+        const authorEvents = byAuthor.get(event.pubkey) || [];
+        authorEvents.push(event);
+        byAuthor.set(event.pubkey, authorEvents);
+      }
+
+      const items: { id: string; pubkey: string; slug: string; kind: number; createdAt: number }[] = [];
+
+      for (const [pubkey, authorEvents] of byAuthor) {
+        // Sort by created_at descending and take top N
+        authorEvents.sort((a, b) => b.created_at - a.created_at);
+        const topEvents = authorEvents.slice(0, articlesPerAuthor);
+
+        for (const event of topEvents) {
+          const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+          items.push({
+            id: `${event.kind}:${event.pubkey}:${dTag}`,
+            pubkey: event.pubkey,
+            slug: dTag,
+            kind: event.kind,
+            createdAt: event.created_at,
+          });
+        }
+      }
+
+      // Sort all items by created_at descending
+      items.sort((a, b) => b.createdAt - a.createdAt);
+      return items;
+    } catch (error) {
+      this.logger.error('Failed to fetch recent articles from authors:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Load recent events (notes) from specific pubkeys.
+   * Used for categories like "News" where we fetch from curated creators.
+   * @param pubkeys Array of pubkeys to fetch events from
+   * @param eventsPerAuthor Number of events to fetch per author (default 2)
+   * @returns Promise resolving to event items
+   */
+  async loadRecentEventsFromAuthors(
+    pubkeys: string[],
+    eventsPerAuthor: number = 2
+  ): Promise<{ id: string; pubkey: string; kind: number; createdAt: number }[]> {
+    if (pubkeys.length === 0) return [];
+
+    try {
+      const pool = this.getDiscoveryPool();
+      const filter = {
+        kinds: [1], // Short text notes
+        authors: pubkeys,
+        limit: pubkeys.length * eventsPerAuthor * 2, // Fetch extra to ensure we have enough per author
+      };
+
+      const events = await pool.querySync([this.CURATOR_RELAY], filter);
+      
+      // Group by author and take top N per author
+      const byAuthor = new Map<string, Event[]>();
+      for (const event of events) {
+        const authorEvents = byAuthor.get(event.pubkey) || [];
+        authorEvents.push(event);
+        byAuthor.set(event.pubkey, authorEvents);
+      }
+
+      const items: { id: string; pubkey: string; kind: number; createdAt: number }[] = [];
+
+      for (const [pubkey, authorEvents] of byAuthor) {
+        // Sort by created_at descending and take top N
+        authorEvents.sort((a, b) => b.created_at - a.created_at);
+        const topEvents = authorEvents.slice(0, eventsPerAuthor);
+
+        for (const event of topEvents) {
+          items.push({
+            id: event.id,
+            pubkey: event.pubkey,
+            kind: event.kind,
+            createdAt: event.created_at,
+          });
+        }
+      }
+
+      // Sort all items by created_at descending
+      items.sort((a, b) => b.createdAt - a.createdAt);
+      return items;
+    } catch (error) {
+      this.logger.error('Failed to fetch recent events from authors:', error);
+      return [];
+    }
+  }
+
+  /**
    * Clear the curated lists cache.
    */
   clearCache(): void {
