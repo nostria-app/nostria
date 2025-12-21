@@ -98,6 +98,9 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   // Check if this is the live streams category
   readonly isLiveCategory = computed(() => this.categoryId() === 'live');
 
+  // Check if this is the news category
+  readonly isNewsCategory = computed(() => this.categoryId() === 'news');
+
   // Special section titles based on category
   readonly specialSectionTitle = computed(() => {
     const cat = this.category();

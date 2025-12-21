@@ -1,6 +1,8 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
+import { RelaysService } from './relays/relays';
+import { UtilitiesService } from './utilities.service';
 
 /** Categories available in the Discovery section */
 export type DiscoveryCategory =
@@ -167,6 +169,8 @@ export const CURATION_KINDS = {
 })
 export class DiscoveryService {
   private logger = inject(LoggerService);
+  private relaysService = inject(RelaysService);
+  private utilities = inject(UtilitiesService);
 
   /** The curator's public key (Nostria Curator) */
   readonly CURATOR_PUBKEY = '929dd94e6cc8a6665665a1e1fc043952c014c16c1735578e3436cd4510b1e829';
@@ -622,8 +626,10 @@ export class DiscoveryService {
         limit: pubkeys.length * articlesPerAuthor * 2, // Fetch extra to ensure we have enough per author
       };
 
-      const events = await pool.querySync([this.CURATOR_RELAY], filter);
-      
+      // Use general relays for fetching creator content (not just curator relay)
+      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      const events = await pool.querySync(relayUrls, filter);
+
       // Group by author and take top N per author
       const byAuthor = new Map<string, Event[]>();
       for (const event of events) {
@@ -681,8 +687,10 @@ export class DiscoveryService {
         limit: pubkeys.length * eventsPerAuthor * 2, // Fetch extra to ensure we have enough per author
       };
 
-      const events = await pool.querySync([this.CURATOR_RELAY], filter);
-      
+      // Use general relays for fetching creator content (not just curator relay)
+      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      const events = await pool.querySync(relayUrls, filter);
+
       // Group by author and take top N per author
       const byAuthor = new Map<string, Event[]>();
       for (const event of events) {
