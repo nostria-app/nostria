@@ -55,7 +55,11 @@
     <section class="content-section">
       <h2 class="section-title">
         <mat-icon>article</mat-icon>
+        @if (isNewsCategory()) {
+        Latest News
+        } @else {
         Curated Articles
+        }
       </h2>
       <div class="articles-grid">
         @for (article of articles(); track article.id) {
@@ -72,7 +76,11 @@
     <section class="content-section">
       <h2 class="section-title">
         <mat-icon>event</mat-icon>
+        @if (isNewsCategory()) {
+        Latest Posts
+        } @else {
         Curated Events
+        }
       </h2>
       <div class="events-grid">
         @for (event of events(); track event.id) {
