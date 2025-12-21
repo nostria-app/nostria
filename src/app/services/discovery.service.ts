@@ -1,6 +1,8 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { SimplePool, Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
+import { RelaysService } from './relays/relays';
+import { UtilitiesService } from './utilities.service';
 
 /** Categories available in the Discovery section */
 export type DiscoveryCategory =
@@ -174,6 +176,8 @@ export const CURATION_KINDS = {
 })
 export class DiscoveryService {
   private logger = inject(LoggerService);
+  private relaysService = inject(RelaysService);
+  private utilities = inject(UtilitiesService);
 
   /** The curator's public key (Nostria Curator) */
   readonly CURATOR_PUBKEY = '929dd94e6cc8a6665665a1e1fc043952c014c16c1735578e3436cd4510b1e829';
@@ -678,10 +682,10 @@ export class DiscoveryService {
         limit: pubkeys.length * articlesPerAuthor * 2, // Fetch extra to ensure we have enough per author
       };
 
-      // Collect unique relay hints from pubkeyRefs
+      // Collect unique relay hints from pubkeyRefs and combine with general relays for reliability
       const relayHints = [...new Set(pubkeyRefs.map(r => r.relay).filter((r): r is string => !!r))];
-      // If no relay hints, fall back to curator relay
-      const relayUrls = relayHints.length > 0 ? relayHints : [this.CURATOR_RELAY];
+      const generalRelays = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      const relayUrls = [...new Set([...relayHints, ...generalRelays])];
       const events = await pool.querySync(relayUrls, filter);
 
       // Group by author and take top N per author
@@ -723,14 +727,15 @@ export class DiscoveryService {
   /**
    * Load recent events (notes) from specific pubkeys with relay hints.
    * Used for categories like "News" where we fetch from curated creators.
+   * Returns full Event objects so they can be passed directly to components.
    * @param pubkeyRefs Array of pubkey references with relay hints
    * @param eventsPerAuthor Number of events to fetch per author (default 2)
-   * @returns Promise resolving to event items
+   * @returns Promise resolving to full Event objects
    */
   async loadRecentEventsFromAuthors(
     pubkeyRefs: PubkeyRef[],
     eventsPerAuthor = 2
-  ): Promise<{ id: string; pubkey: string; kind: number; createdAt: number }[]> {
+  ): Promise<Event[]> {
     if (pubkeyRefs.length === 0) return [];
 
     try {
@@ -742,10 +747,10 @@ export class DiscoveryService {
         limit: pubkeys.length * eventsPerAuthor * 2, // Fetch extra to ensure we have enough per author
       };
 
-      // Collect unique relay hints from pubkeyRefs
+      // Collect unique relay hints from pubkeyRefs and combine with general relays for reliability
       const relayHints = [...new Set(pubkeyRefs.map(r => r.relay).filter((r): r is string => !!r))];
-      // If no relay hints, fall back to curator relay
-      const relayUrls = relayHints.length > 0 ? relayHints : [this.CURATOR_RELAY];
+      const generalRelays = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      const relayUrls = [...new Set([...relayHints, ...generalRelays])];
       const events = await pool.querySync(relayUrls, filter);
 
       // Group by author and take top N per author
@@ -756,26 +761,18 @@ export class DiscoveryService {
         byAuthor.set(event.pubkey, authorEvents);
       }
 
-      const items: { id: string; pubkey: string; kind: number; createdAt: number }[] = [];
+      const resultEvents: Event[] = [];
 
-      for (const [pubkey, authorEvents] of byAuthor) {
+      for (const [, authorEvents] of byAuthor) {
         // Sort by created_at descending and take top N
         authorEvents.sort((a, b) => b.created_at - a.created_at);
         const topEvents = authorEvents.slice(0, eventsPerAuthor);
-
-        for (const event of topEvents) {
-          items.push({
-            id: event.id,
-            pubkey: event.pubkey,
-            kind: event.kind,
-            createdAt: event.created_at,
-          });
-        }
+        resultEvents.push(...topEvents);
       }
 
-      // Sort all items by created_at descending
-      items.sort((a, b) => b.createdAt - a.createdAt);
-      return items;
+      // Sort all events by created_at descending
+      resultEvents.sort((a, b) => b.created_at - a.created_at);
+      return resultEvents;
     } catch (error) {
       this.logger.error('Failed to fetch recent events from authors:', error);
       return [];
