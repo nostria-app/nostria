@@ -430,6 +430,12 @@
   padding: 16px 0;
 }
 
+.collapsed-info {
+  padding: 12px 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.9rem;
+}
+
 /* Videos Grid */
 .videos-grid {
   display: grid;

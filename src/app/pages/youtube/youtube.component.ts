@@ -240,6 +240,9 @@ interface YouTubeVideo {
                   <button mat-icon-button (click)="refreshChannel(channel)" [disabled]="channel.loading" matTooltip="Refresh">
                     <mat-icon>refresh</mat-icon>
                   </button>
+                  <button mat-icon-button (click)="toggleChannel(channel.id)" [matTooltip]="isChannelCollapsed(channel.id) ? 'Expand' : 'Collapse'">
+                    <mat-icon>{{ isChannelCollapsed(channel.id) ? 'expand_more' : 'expand_less' }}</mat-icon>
+                  </button>
                 </div>
               </div>
 
@@ -250,29 +253,35 @@ interface YouTubeVideo {
                 </div>
               }
 
-              @if (channel.videos.length > 0) {
-                <div class="videos-grid">
-                  @for (video of channel.videos; track video.videoId) {
-                    <div class="video-card" tabindex="0" role="button" (click)="playVideo(video)" (keydown.enter)="playVideo(video)" (keydown.space)="playVideo(video)">
-                      <div class="video-thumbnail">
-                        <img [src]="video.thumbnail" [alt]="video.title" loading="lazy" />
-                        <div class="play-overlay">
-                          <mat-icon>play_circle</mat-icon>
+              @if (!isChannelCollapsed(channel.id)) {
+                @if (channel.videos.length > 0) {
+                  <div class="videos-grid">
+                    @for (video of channel.videos; track video.videoId) {
+                      <div class="video-card" tabindex="0" role="button" (click)="playVideo(video)" (keydown.enter)="playVideo(video)" (keydown.space)="playVideo(video)">
+                        <div class="video-thumbnail">
+                          <img [src]="video.thumbnail" [alt]="video.title" loading="lazy" />
+                          <div class="play-overlay">
+                            <mat-icon>play_circle</mat-icon>
+                          </div>
+                        </div>
+                        <div class="video-details">
+                          <h3 class="video-title">{{ video.title }}</h3>
+                          <div class="video-meta">
+                            <span class="views">{{ formatViews(video.views) }} views</span>
+                            <span class="separator">•</span>
+                            <span class="date">{{ video.published | date:'mediumDate' }}</span>
+                          </div>
                         </div>
                       </div>
-                      <div class="video-details">
-                        <h3 class="video-title">{{ video.title }}</h3>
-                        <div class="video-meta">
-                          <span class="views">{{ formatViews(video.views) }} views</span>
-                          <span class="separator">•</span>
-                          <span class="date">{{ video.published | date:'mediumDate' }}</span>
-                        </div>
-                      </div>
-                    </div>
-                  }
+                    }
+                  </div>
+                } @else if (!channel.loading) {
+                  <p class="no-videos">No videos found</p>
+                }
+              } @else {
+                <div class="collapsed-info">
+                  <span>{{ channel.videos.length }} videos</span>
                 </div>
-              } @else if (!channel.loading) {
-                <p class="no-videos">No videos found</p>
               }
             </section>
           }
@@ -295,6 +304,7 @@ export class YouTubeComponent {
   readonly loading = signal(true);
   readonly channels = signal<YouTubeChannel[]>([]);
   readonly currentVideo = signal<YouTubeVideo | null>(null);
+  readonly collapsedChannels = signal<Set<string>>(new Set());
 
   readonly isPremium = computed(() => {
     const subscription = this.accountState.subscription();
@@ -308,6 +318,22 @@ export class YouTubeComponent {
         setTimeout(() => this.loadYouTubeBookmarks(), 0);
       }
     });
+  }
+
+  toggleChannel(channelId: string): void {
+    this.collapsedChannels.update(set => {
+      const newSet = new Set(set);
+      if (newSet.has(channelId)) {
+        newSet.delete(channelId);
+      } else {
+        newSet.add(channelId);
+      }
+      return newSet;
+    });
+  }
+
+  isChannelCollapsed(channelId: string): boolean {
+    return this.collapsedChannels().has(channelId);
   }
 
   async openAddChannelDialog(): Promise<void> {
