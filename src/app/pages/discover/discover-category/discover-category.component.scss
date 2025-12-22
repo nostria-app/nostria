@@ -347,6 +347,81 @@
   gap: 20px;
 }
 
+// Photography Grid - styled like profile media tab
+.photography-grid {
+  mat-grid-list {
+    ::ng-deep .mat-grid-list {
+      gap: 8px;
+    }
+  }
+
+  .media-item {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    border-radius: 8px;
+    position: relative;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+
+    &:hover {
+      filter: brightness(0.7);
+    }
+
+    // Override event component styles for grid display
+    ::ng-deep app-event {
+      display: block;
+      height: 100%;
+      width: 100%;
+
+      .note-card {
+        height: 100%;
+        margin: 0 !important;
+        padding: 0 !important;
+        border-radius: 8px;
+
+        &.plain {
+          border: none;
+          box-shadow: none;
+        }
+      }
+
+      // Ensure media components fill the grid space
+      app-photo-event,
+      app-video-event {
+        display: block;
+        height: 100%;
+        width: 100%;
+
+        .photo-carousel-container,
+        .video-container {
+          margin: 0 !important;
+          padding: 0 !important;
+          max-width: none !important;
+          height: 100%;
+        }
+
+        .photo-carousel {
+          height: 100%;
+        }
+
+        .photo-container {
+          margin: 0 !important;
+          padding: 0 !important;
+          height: 100%;
+          aspect-ratio: 1 / 1 !important;
+        }
+
+        img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+      }
+    }
+  }
+}
+
 // Pictures Grid
 .pictures-grid {
   display: grid;

@@ -222,6 +222,64 @@
     </section>
     }
 
+    <!-- Latest Images Section (only for photography category) -->
+    @if (isPhotographyCategory()) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>photo_library</mat-icon>
+        Latest Images
+      </h2>
+      @if (imagesLoading()) {
+      <div class="streams-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Loading images from photographers...</span>
+      </div>
+      } @else if (photographyImages().length > 0) {
+      <div class="photography-grid">
+        <mat-grid-list cols="3" rowHeight="1:1" gutterSize="8px">
+          @for (image of photographyImages(); track image.id; let i = $index) {
+          <mat-grid-tile>
+            <div class="media-item">
+              <app-event [event]="image" appearance="plain" [navigationDisabled]="false" [hideComments]="true"
+                [showOverlay]="true" [hideFooter]="true" [allMediaEvents]="photographyImages()" [mediaEventIndex]="i">
+              </app-event>
+            </div>
+          </mat-grid-tile>
+          }
+        </mat-grid-list>
+      </div>
+      } @else {
+      <div class="no-content">
+        <mat-icon>image_not_supported</mat-icon>
+        <p>No images available at the moment</p>
+      </div>
+      }
+    </section>
+    }
+
+    <!-- Photographer Posts Section (only for photography category) -->
+    @if (isPhotographyCategory() && photographyPosts().length > 0) {
+    <section class="content-section">
+      <h2 class="section-title">
+        <mat-icon>feed</mat-icon>
+        Latest Posts from Photographers
+      </h2>
+      @if (postsLoading()) {
+      <div class="streams-loading">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Loading posts...</span>
+      </div>
+      } @else {
+      <div class="events-grid">
+        @for (post of photographyPosts(); track post.id) {
+        <app-event [event]="post" [compact]="true" [hideComments]="true" [hideFooter]="true" appearance="card">
+        </app-event>
+        }
+      </div>
+      }
+    </section>
+    }
+
     <!-- Playlists Section (only for music category) -->
     @if (playlists().length > 0) {
     <section class="content-section">
