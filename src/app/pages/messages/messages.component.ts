@@ -826,6 +826,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
       this.logger.debug(`Loaded ${olderMessages.length} older messages`);
 
+      // If no messages were loaded, there are no more messages to load
+      if (olderMessages.length === 0) {
+        this.hasMoreMessages.set(false);
+        this.logger.debug('No more messages to load, setting hasMoreMessages to false');
+      }
+
       // Messages are automatically updated via the computed signal
       // Just need to restore scroll position after DOM update
       setTimeout(() => {
@@ -864,6 +870,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.selectedChatId.set(chat.id);
     this.logger.debug('After set - selectedChatId:', this.selectedChatId());
     this.logger.debug('selectedChat computed:', this.selectedChat());
+
+    // Reset hasMoreMessages for the new chat
+    this.hasMoreMessages.set(true);
 
     // Only hide the chat list on mobile devices
     if (this.layout.isHandset()) {

@@ -1049,15 +1049,14 @@ export class MessagingService implements NostriaService {
           },
           () => {
             // EOSE callback - end of stored events
+            (sub as { close: () => void })?.close?.();
             resolve();
           }
         );
 
         // Set a timeout to prevent hanging
         setTimeout(() => {
-          // if (sub) {
-          //   sub.close();
-          // }
+          (sub as { close: () => void })?.close?.();
           resolve();
         }, 10000);
       });
@@ -1121,15 +1120,14 @@ export class MessagingService implements NostriaService {
           },
           () => {
             // EOSE callback - end of stored events
+            (sub as { close: () => void })?.close?.();
             resolve();
           }
         );
 
         // Set a timeout to prevent hanging
         setTimeout(() => {
-          // if (sub) {
-          //   sub.close();
-          // }
+          (sub as { close: () => void })?.close?.();
           resolve();
         }, 10000);
       });
