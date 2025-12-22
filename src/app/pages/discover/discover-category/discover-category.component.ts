@@ -4,6 +4,7 @@ import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatGridListModule } from '@angular/material/grid-list';
 import { Subject, takeUntil } from 'rxjs';
 import { Event, Filter } from 'nostr-tools';
 import {
@@ -55,6 +56,7 @@ interface CuratedItem {
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
+    MatGridListModule,
     UserProfileComponent,
     ArticleComponent,
     EventComponent,
@@ -116,6 +118,9 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   // Check if this is the videos category
   readonly isVideosCategory = computed(() => this.categoryId() === 'videos');
 
+  // Check if this is the photography category
+  readonly isPhotographyCategory = computed(() => this.categoryId() === 'photography');
+
   // Video content signals for videos category
   readonly vineVideos = signal<Event[]>([]);
   readonly publicShorts = signal<Event[]>([]);
@@ -123,6 +128,12 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
   readonly vineLoading = signal(false);
   readonly shortsLoading = signal(false);
   readonly videosLoading = signal(false);
+
+  // Photography content signals
+  readonly photographyImages = signal<Event[]>([]);
+  readonly photographyPosts = signal<Event[]>([]);
+  readonly imagesLoading = signal(false);
+  readonly postsLoading = signal(false);
 
   // Special section titles based on category
   readonly specialSectionTitle = computed(() => {
@@ -228,6 +239,13 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
         this.loadVineVideos();
         this.loadCreatorShorts(creatorPubkeys);
         this.loadCreatorVideos(creatorPubkeys);
+      }
+
+      // Load photography content for the 'photography' category
+      if (cat.id === 'photography') {
+        const creatorPubkeys = creatorsData.map(c => c.pubkey);
+        this.loadPhotographerImages(creatorPubkeys);
+        this.loadPhotographerPosts(creatorPubkeys);
       }
     } catch (err) {
       console.error('Error loading category content:', err);
@@ -581,6 +599,150 @@ export class DiscoverCategoryComponent implements OnInit, OnDestroy {
     const videos = Array.from(eventMap.values());
     videos.sort((a, b) => b.created_at - a.created_at);
     this.publicVideos.set(videos.slice(0, 6));
+  }
+
+  /**
+   * Load images (kind 20) from featured photographers.
+   * Fetches 3 images per photographer.
+   */
+  private loadPhotographerImages(creatorPubkeys: string[]): void {
+    if (creatorPubkeys.length === 0) {
+      console.warn('No photographers available for loading images');
+      return;
+    }
+
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+
+    if (relayUrls.length === 0) {
+      console.warn('No relays available for loading images');
+      return;
+    }
+
+    this.imagesLoading.set(true);
+    const eventsByAuthor = new Map<string, Event[]>();
+
+    const filter: Filter = {
+      kinds: [20], // Picture kind
+      authors: creatorPubkeys,
+      limit: creatorPubkeys.length * 5, // Fetch extra to ensure we have enough per author
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      if (this.imagesLoading()) {
+        this.imagesLoading.set(false);
+        this.updatePhotographerImages(eventsByAuthor, creatorPubkeys.length);
+      }
+    }, 5000);
+
+    this.pool.subscribe(
+      relayUrls,
+      filter,
+      (event: Event) => {
+        const authorEvents = eventsByAuthor.get(event.pubkey) || [];
+
+        // Check for duplicates
+        if (authorEvents.some(e => e.id === event.id)) {
+          return;
+        }
+
+        authorEvents.push(event);
+        eventsByAuthor.set(event.pubkey, authorEvents);
+        this.updatePhotographerImages(eventsByAuthor, creatorPubkeys.length);
+
+        // Check if we have enough images
+        const totalImages = Array.from(eventsByAuthor.values()).reduce((sum, events) => sum + Math.min(events.length, 3), 0);
+        if (totalImages >= creatorPubkeys.length * 3 && this.imagesLoading()) {
+          clearTimeout(loadingTimeout);
+          this.imagesLoading.set(false);
+        }
+      }
+    );
+  }
+
+  private updatePhotographerImages(eventsByAuthor: Map<string, Event[]>, maxAuthors: number): void {
+    const allImages: Event[] = [];
+
+    for (const [, authorEvents] of eventsByAuthor) {
+      // Sort by created_at descending and take top 3 per author
+      authorEvents.sort((a, b) => b.created_at - a.created_at);
+      allImages.push(...authorEvents.slice(0, 3));
+    }
+
+    // Sort all images by created_at descending
+    allImages.sort((a, b) => b.created_at - a.created_at);
+    this.photographyImages.set(allImages);
+  }
+
+  /**
+   * Load regular posts (kind 1) from featured photographers.
+   * Fetches 2 posts per photographer.
+   */
+  private loadPhotographerPosts(creatorPubkeys: string[]): void {
+    if (creatorPubkeys.length === 0) {
+      console.warn('No photographers available for loading posts');
+      return;
+    }
+
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+
+    if (relayUrls.length === 0) {
+      console.warn('No relays available for loading posts');
+      return;
+    }
+
+    this.postsLoading.set(true);
+    const eventsByAuthor = new Map<string, Event[]>();
+
+    const filter: Filter = {
+      kinds: [1], // Regular text notes
+      authors: creatorPubkeys,
+      limit: creatorPubkeys.length * 4, // Fetch extra to ensure we have enough per author
+    };
+
+    const loadingTimeout = setTimeout(() => {
+      if (this.postsLoading()) {
+        this.postsLoading.set(false);
+        this.updatePhotographerPosts(eventsByAuthor);
+      }
+    }, 5000);
+
+    this.pool.subscribe(
+      relayUrls,
+      filter,
+      (event: Event) => {
+        const authorEvents = eventsByAuthor.get(event.pubkey) || [];
+
+        // Check for duplicates
+        if (authorEvents.some(e => e.id === event.id)) {
+          return;
+        }
+
+        authorEvents.push(event);
+        eventsByAuthor.set(event.pubkey, authorEvents);
+        this.updatePhotographerPosts(eventsByAuthor);
+
+        // Check if we have enough posts
+        const totalPosts = Array.from(eventsByAuthor.values()).reduce((sum, events) => sum + Math.min(events.length, 2), 0);
+        if (totalPosts >= creatorPubkeys.length * 2 && this.postsLoading()) {
+          clearTimeout(loadingTimeout);
+          this.postsLoading.set(false);
+        }
+      }
+    );
+  }
+
+  private updatePhotographerPosts(eventsByAuthor: Map<string, Event[]>): void {
+    const allPosts: Event[] = [];
+
+    for (const [, authorEvents] of eventsByAuthor) {
+      // Sort by created_at descending and take top 2 per author
+      authorEvents.sort((a, b) => b.created_at - a.created_at);
+      allPosts.push(...authorEvents.slice(0, 2));
+    }
+
+    // Sort all posts by created_at descending
+    allPosts.sort((a, b) => b.created_at - a.created_at);
+    this.photographyPosts.set(allPosts);
   }
 
   /**
