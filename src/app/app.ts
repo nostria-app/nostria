@@ -1430,10 +1430,10 @@ export class App implements OnInit {
     let pastedText = event.clipboardData?.getData('text')?.trim();
 
     if (pastedText) {
-      // Check if it's a Nostria URL and extract the entity
-      const nostriaEntity = this.extractNostriaEntity(pastedText);
-      if (nostriaEntity) {
-        pastedText = nostriaEntity;
+      // Check if it's a Nostr client URL and extract the entity
+      const nostrEntity = this.extractNostrEntityFromUrl(pastedText);
+      if (nostrEntity) {
+        pastedText = nostrEntity;
       }
 
       // Set the input value
@@ -1445,43 +1445,43 @@ export class App implements OnInit {
   }
 
   /**
-   * Extract nostr entity from Nostria URLs
-   * Supports formats like:
-   * - https://nostria.app/e/nevent1...
-   * - https://nostria.app/e/note1...
-   * - https://nostria.app/p/npub1...
-   * - https://nostria.app/p/nprofile1...
-   * - https://nostria.app/u/username
-   * - https://nostria.app/a/naddr1...
+   * Extract nostr entity from Nostr client URLs
+   * Supports formats from various clients:
+   * - Nostria: https://nostria.app/e/nevent1..., /p/npub1..., /u/username, /a/naddr1...
+   * - Primal: https://primal.net/e/nevent1..., /p/npub1...
+   * - Snort: https://snort.social/e/nevent1..., /p/npub1...
+   * - Iris: https://iris.to/npub1..., /nevent1...
+   * - Coracle: https://coracle.social/npub1..., /nevent1...
+   * - Satellite: https://satellite.earth/n/nevent1..., /p/npub1...
    * Also handles URLs with trailing paths like:
    * - https://nostria.app/p/npub1.../notes
+   * - https://primal.net/p/npub1.../notes
    */
-  private extractNostriaEntity(url: string): string | null {
-    // Match nostria.app URLs with various paths, stopping at the first / after the entity
-    // Uses [^/]+ instead of .+$ to prevent capturing trailing path segments like /notes, /replies
-    const nostriaPattern = /^https?:\/\/(?:www\.)?nostria\.app\/(e|p|u|a)\/([^/]+)/i;
-    const match = url.match(nostriaPattern);
+  private extractNostrEntityFromUrl(url: string): string | null {
+    // First, try to extract a nostr entity directly from the URL path
+    // This handles most Nostr clients that include the entity in the URL
+    const entityPattern = /(npub1[a-z0-9]+|nprofile1[a-z0-9]+|nevent1[a-z0-9]+|note1[a-z0-9]+|naddr1[a-z0-9]+)/i;
+    const entityMatch = url.match(entityPattern);
 
-    if (!match) {
-      return null;
+    if (entityMatch) {
+      return entityMatch[1];
     }
 
-    const [, pathType, entity] = match;
+    // Handle Nostria-specific /u/ username routes
+    const nostriaUsernamePattern = /^https?:\/\/(?:www\.)?nostria\.app\/u\/([^/]+)/i;
+    const usernameMatch = url.match(nostriaUsernamePattern);
 
-    // For /u/ (username) routes, we need to handle NIP-05 lookup
-    // Return the username as-is and let the search handler deal with it
-    if (pathType === 'u') {
+    if (usernameMatch) {
+      const username = usernameMatch[1];
       // If it looks like a NIP-05 identifier (contains @), return as-is
-      if (entity.includes('@')) {
-        return entity;
+      if (username.includes('@')) {
+        return username;
       }
       // For simple usernames, append @nostria.app for NIP-05 lookup
-      return `${entity}@nostria.app`;
+      return `${username}@nostria.app`;
     }
 
-    // For /e/, /p/, /a/ routes, return the nostr entity directly
-    // These should be nevent, note, npub, nprofile, naddr, etc.
-    return entity;
+    return null;
   }
 
   /**
