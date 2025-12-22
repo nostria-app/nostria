@@ -343,11 +343,75 @@
     0px 4px 16px rgba(0, 0, 0, 0.25);
 }
 
+.message-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  padding: 8px 12px;
+  color: inherit;
+  min-width: 0;
+
+  &::placeholder {
+    color: var(--mat-sys-on-surface);
+    opacity: 0.5;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+
+.voice-button,
 .send-button {
   flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s ease;
+
+  &:hover:not(:disabled) {
+    opacity: 1;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+  }
 
   mat-spinner {
     margin: 8px;
+  }
+}
+
+// Pulse animation for recording state
+.pulse-icon {
+  animation: pulse 1s ease-in-out infinite;
+  color: var(--mat-sys-error);
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.4;
+  }
+}
+
+// Spinning animation for transcribing state
+.spinning-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
   }
 }
 
