@@ -1,5 +1,5 @@
 import { Component, input, inject, effect, signal, ViewContainerRef, OnDestroy, computed } from '@angular/core';
-import { Router, NavigationStart } from '@angular/router';
+import { Router, NavigationStart, RouterLink } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { MatDialog } from '@angular/material/dialog';
@@ -37,7 +37,7 @@ export interface DisplayItem {
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, AudioPlayerComponent, PhotoEventComponent, EventHeaderComponent],
+  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, AudioPlayerComponent, PhotoEventComponent, EventHeaderComponent, RouterLink],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })

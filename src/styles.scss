@@ -1326,6 +1326,20 @@ app-media-queue {
   }
 }
 
+.hashtag-link {
+  color: var(--mat-sys-primary);
+  cursor: pointer !important;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+
+  &:active {
+    color: var(--mat-sys-primary-container);
+  }
+}
+
 .nostr-loading {
   color: var(--mat-sys-on-surface-variant);
   font-style: italic;
