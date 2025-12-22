@@ -35,7 +35,8 @@ export interface ContentToken {
   | 'base64-image'
   | 'base64-audio'
   | 'base64-video'
-  | 'cashu';
+  | 'cashu'
+  | 'hashtag';
   content: string;
   nostrData?: NostrData;
   emoji?: string;
@@ -315,6 +316,9 @@ export class ParsingService {
     // Cashu regex: matches cashuA or cashuB tokens, which can span multiple lines
     // Must handle tokens that may be split across linebreaks or continue on same line
     const cashuRegex = /(cashu[AB][a-zA-Z0-9+/=_-]+)/g;
+    // Hashtag regex: matches hashtags starting with # followed by word characters
+    // Must handle hashtags at start of string, after whitespace, or after linebreak markers
+    const hashtagRegex = /(?:^|[\s]|##LINEBREAK##)#([\w\u0080-\uFFFF]+)/g;
 
     // Base64 data URL regex - matches data URLs for images, audio, and video
     const base64ImageRegex = /(data:image\/[a-zA-Z]+;base64,[A-Za-z0-9+/=]+)(?=\s|##LINEBREAK##|$)/g;
@@ -462,6 +466,23 @@ export class ParsingService {
         console.warn('Error parsing cashu token:', match[0], error);
         // If parsing fails, treat it as regular text
       }
+    }
+
+    // Find hashtags
+    hashtagRegex.lastIndex = 0;
+    while ((match = hashtagRegex.exec(processedContent)) !== null) {
+      const fullMatch = match[0];
+      const hashtag = match[1]; // The captured group without the #
+      // Calculate the actual start position of the hashtag (excluding leading whitespace/linebreak marker)
+      // fullMatch could be "#tag", " #tag", or "##LINEBREAK###tag"
+      const hashtagWithHash = '#' + hashtag;
+      const hashtagStart = match.index + fullMatch.indexOf(hashtagWithHash);
+      matches.push({
+        start: hashtagStart,
+        end: hashtagStart + hashtagWithHash.length,
+        content: hashtag, // Store just the tag text without #
+        type: 'hashtag',
+      });
     }
 
     // Find YouTube URLs

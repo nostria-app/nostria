@@ -247,6 +247,8 @@
 } @else {
 <a class="nostr-reference">{{ token.nostrData?.displayName }}</a>
 }
+} @else if (token.type === 'hashtag') {
+<a class="hashtag-link" [routerLink]="['/search']" [queryParams]="{q: '#' + token.content}">#{{ token.content }}</a>
 }
 }
 }
