@@ -9,7 +9,7 @@
   "background_color": "#303030",
   "description": "Your Social Network",
   "orientation": "any",
-  "display": "fullscreen",
+  "display": "standalone",
   "scope": "https://nostria.app/",
   "start_url": "https://nostria.app/",
   "capture_links": "existing_client_event",
