@@ -290,7 +290,7 @@
             } @else if (message.isOutgoing && message.received) {
             <mat-icon class="received-icon">done</mat-icon>
             }
-            <span class="message-time">{{ message.created_at | timestamp }}</span>
+            <span class="message-time">{{ message.created_at | timestamp:'short' }}</span>
 
             @if (message.failed) {
             <button mat-icon-button class="retry-button" (click)="retryMessage(message)">
