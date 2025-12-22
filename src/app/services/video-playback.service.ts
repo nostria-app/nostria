@@ -1,4 +1,4 @@
-import { Injectable, signal, inject, effect } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
 import { WakeLockService } from './wake-lock.service';
 
 /**
@@ -18,24 +18,9 @@ export class VideoPlaybackService {
   // The currently playing video element
   private currentlyPlayingVideo = signal<HTMLVideoElement | null>(null);
 
-  constructor() {
-    // Watch for changes in playing video and manage wake lock accordingly
-    effect(() => {
-      const video = this.currentlyPlayingVideo();
-      
-      if (video && !video.paused) {
-        // Video is playing, enable wake lock
-        this.wakeLockService.enable();
-      } else {
-        // No video playing or video is paused, disable wake lock
-        this.wakeLockService.disable();
-      }
-    });
-  }
-
   /**
    * Register a video element as currently playing.
-   * This will pause any previously playing video.
+   * This will pause any previously playing video and enable wake lock.
    * @param videoElement The video element that is starting to play
    */
   registerPlaying(videoElement: HTMLVideoElement): void {
@@ -47,15 +32,22 @@ export class VideoPlaybackService {
     }
 
     this.currentlyPlayingVideo.set(videoElement);
+
+    // Enable wake lock when video starts playing
+    this.wakeLockService.enable();
   }
 
   /**
    * Unregister a video element when it stops playing or is destroyed.
+   * This will disable wake lock if no other video is playing.
    * @param videoElement The video element to unregister
    */
   unregisterPlaying(videoElement: HTMLVideoElement): void {
     if (this.currentlyPlayingVideo() === videoElement) {
       this.currentlyPlayingVideo.set(null);
+
+      // Disable wake lock when video stops playing
+      this.wakeLockService.disable();
     }
   }
 
@@ -67,6 +59,9 @@ export class VideoPlaybackService {
     if (current) {
       current.pause();
       this.currentlyPlayingVideo.set(null);
+
+      // Disable wake lock when video is paused
+      this.wakeLockService.disable();
     }
   }
 }
