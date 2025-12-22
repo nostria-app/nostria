@@ -3,6 +3,13 @@
   height: 100%;
   overflow: hidden;
   position: relative;
+
+  // On mobile, extend past the parent's padding-bottom to fill the screen
+  @media (max-width: 599px) {
+    margin-bottom: calc(-100px - env(safe-area-inset-bottom, 0px));
+    padding-bottom: 0;
+    height: calc(100% + 100px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .messages {
