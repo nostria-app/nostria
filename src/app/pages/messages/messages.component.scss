@@ -69,10 +69,37 @@
     0px 4px 16px rgba(0, 0, 0, 0.25);
 }
 
+.chat-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 1rem;
+  padding: 8px 12px;
+  color: inherit;
+  min-width: 0;
+
+  &::placeholder {
+    color: var(--mat-sys-on-surface);
+    opacity: 0.5;
+  }
+}
+
+.clear-search-button {
+  flex-shrink: 0;
+  opacity: 0.5;
+  transition: opacity 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+  }
+}
+
 .header-actions {
   display: flex;
   align-items: center;
   gap: 4px;
+  flex-shrink: 0;
 }
 
 .spacer {
@@ -185,20 +212,20 @@
     max-width: 300px;
   }
 
-  button {
-    border-radius: 9999px;
-    padding: 8px 24px;
+  // button {
+  //   border-radius: 9999px;
+  //   padding: 8px 24px;
 
-    // Glass effect - light mode
-    background-color: rgba(255, 255, 255, 0.7) !important;
-    -webkit-backdrop-filter: blur(20px) saturate(1.8);
-    backdrop-filter: blur(20px) saturate(1.8);
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-      inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-      0px 2px 8px rgba(17, 17, 26, 0.08),
-      0px 4px 16px rgba(17, 17, 26, 0.06);
-  }
+  //   // Glass effect - light mode
+  //   background-color: rgba(255, 255, 255, 0.7) !important;
+  //   -webkit-backdrop-filter: blur(20px) saturate(1.8);
+  //   backdrop-filter: blur(20px) saturate(1.8);
+  //   box-shadow:
+  //     inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+  //     inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+  //     0px 2px 8px rgba(17, 17, 26, 0.08),
+  //     0px 4px 16px rgba(17, 17, 26, 0.06);
+  // }
 }
 
 // Dark mode for no-chat-selected button
@@ -582,8 +609,7 @@
 .chat-item {
   height: auto;
   padding: 12px 16px;
-  margin: 4px 8px;
-  border-radius: 12px;
+  border-radius: 0;
   transition: background-color 0.2s ease;
 
   &.active {

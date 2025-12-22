@@ -175,7 +175,8 @@
         <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
           [routerLinkActiveOptions]="{ exact: true }" (click)="onNavItemClick($event, item)" class="nav-item"
           [class.expandable-nav-item]="item.expandable">
-          <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+          <mat-icon matListItemIcon [matBadge]="item.badge ? item.badge() : null" matBadgeSize="small">{{ item.icon
+            }}</mat-icon>
           @if (displayLabels()) {
           <span class="nav-label">{{ item.label }}</span>
           @if (item.expandable) {
@@ -398,7 +399,7 @@
 
     <a mat-button class="mobile-nav-button" [routerLink]="['/messages']" routerLinkActive="active-link"
       [routerLinkActiveOptions]="{ exact: true }">
-      <mat-icon>mail</mat-icon>
+      <mat-icon [matBadge]="getUnreadMessagesCount()" matBadgeSize="small">mail</mat-icon>
       <div class="mobile-nav-label" i18n="@@app.mobile.messages">Messages</div>
     </a>
 

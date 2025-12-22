@@ -84,6 +84,27 @@ export class MessagingService implements NostriaService {
       });
   });
 
+  /**
+   * Total unread messages count across all chats
+   */
+  totalUnreadCount = computed(() => {
+    let count = 0;
+    for (const [, chat] of this.chatsMap().entries()) {
+      count += chat.unreadCount;
+    }
+
+    // Save to local state for persistence (only if count changed)
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      const cachedCount = this.accountLocalState.getUnreadMessagesCount(pubkey);
+      if (cachedCount !== count) {
+        this.accountLocalState.setUnreadMessagesCount(pubkey, count);
+      }
+    }
+
+    return count;
+  });
+
   hasMessage(chatId: string, messageId: string): boolean {
     const chat = this.chatsMap().get(chatId);
     if (!chat) return false;
@@ -1533,6 +1554,56 @@ export class MessagingService implements NostriaService {
       this.logger.debug(`Marked chat ${chatId} as read`);
     } catch (error) {
       this.logger.error('Error marking chat as read:', error);
+    }
+  }
+
+  /**
+   * Mark all chats as read
+   */
+  async markAllChatsAsRead(): Promise<void> {
+    const myPubkey = this.accountState.pubkey();
+    if (!myPubkey) {
+      this.logger.warn('Cannot mark all chats as read: no account pubkey');
+      return;
+    }
+
+    try {
+      await this.database.init();
+
+      const currentMap = this.chatsMap();
+      const newMap = new Map(currentMap);
+
+      for (const [chatId, chat] of currentMap.entries()) {
+        if (chat.unreadCount > 0) {
+          // Mark in database
+          await this.database.markChatAsRead(myPubkey, chatId);
+
+          // Update in-memory
+          const updatedMessagesMap = new Map(chat.messages);
+          for (const [msgId, message] of updatedMessagesMap.entries()) {
+            if (!message.isOutgoing && !message.read) {
+              updatedMessagesMap.set(msgId, { ...message, read: true });
+            }
+          }
+
+          const updatedChat: Chat = {
+            ...chat,
+            unreadCount: 0,
+            messages: updatedMessagesMap,
+          };
+
+          newMap.set(chatId, updatedChat);
+        }
+      }
+
+      this.chatsMap.set(newMap);
+
+      // Update the cached unread count in local state
+      this.accountLocalState.setUnreadMessagesCount(myPubkey, 0);
+
+      this.logger.debug('Marked all chats as read');
+    } catch (error) {
+      this.logger.error('Error marking all chats as read:', error);
     }
   }
 }
