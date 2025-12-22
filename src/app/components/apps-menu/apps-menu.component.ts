@@ -104,6 +104,11 @@ export class AppsMenuComponent {
       route: ['/memos'],
     },
     {
+      icon: 'smart_display',
+      label: 'YouTube',
+      route: ['/youtube'],
+    },
+    {
       icon: 'insights',
       label: 'Analytics',
       route: ['/analytics'],
