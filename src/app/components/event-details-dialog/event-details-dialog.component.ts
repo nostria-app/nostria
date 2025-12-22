@@ -14,6 +14,7 @@ import { LayoutService } from '../../services/layout.service';
 import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
+import { EthiopianCalendarService } from '../../services/ethiopian-calendar.service';
 
 export interface EventDetailsDialogData {
   event: Event;
@@ -42,6 +43,7 @@ export class EventDetailsDialogComponent {
   layout = inject(LayoutService);
   private localSettings = inject(LocalSettingsService);
   private chroniaCalendar = inject(ChroniaCalendarService);
+  private ethiopianCalendar = inject(EthiopianCalendarService);
   showRawJson = signal(false);
 
   event = computed(() => this.dialogData.event);
@@ -189,10 +191,18 @@ export class EventDetailsDialogComponent {
 
   formatCreatedAt(): string {
     const date = this.eventCreatedAt();
-    if (this.localSettings.calendarType() === 'chronia') {
+    const calendarType = this.localSettings.calendarType();
+
+    if (calendarType === 'chronia') {
       const chroniaDate = this.chroniaCalendar.fromDate(date);
       return this.chroniaCalendar.format(chroniaDate, 'full');
     }
+
+    if (calendarType === 'ethiopian') {
+      const ethiopianDate = this.ethiopianCalendar.fromDate(date);
+      return this.ethiopianCalendar.format(ethiopianDate, 'full');
+    }
+
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',

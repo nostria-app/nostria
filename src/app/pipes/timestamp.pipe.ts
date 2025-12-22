@@ -2,6 +2,7 @@ import { inject, Pipe, PipeTransform } from '@angular/core';
 import { LocalSettingsService } from '../services/local-settings.service';
 import { ChroniaCalendarService } from '../services/chronia-calendar.service';
 import { GregorianCalendarService } from '../services/gregorian-calendar.service';
+import { EthiopianCalendarService } from '../services/ethiopian-calendar.service';
 
 @Pipe({
   name: 'timestamp',
@@ -12,6 +13,7 @@ export class TimestampPipe implements PipeTransform {
   private localSettings = inject(LocalSettingsService);
   private chroniaService = inject(ChroniaCalendarService);
   private gregorianService = inject(GregorianCalendarService);
+  private ethiopianService = inject(EthiopianCalendarService);
 
   transform(value: number, format = 'medium'): string {
     if (value === 0) {
@@ -22,6 +24,10 @@ export class TimestampPipe implements PipeTransform {
 
     if (calendarType === 'chronia') {
       return this.chroniaService.formatUnixTimestamp(value, format);
+    }
+
+    if (calendarType === 'ethiopian') {
+      return this.ethiopianService.formatUnixTimestamp(value, format);
     }
 
     // Gregorian calendar - use localized month names

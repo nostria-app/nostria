@@ -10,6 +10,7 @@ import { SafeHtml } from '@angular/platform-browser';
 import { MentionHoverDirective } from '../../directives/mention-hover.directive';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
+import { EthiopianCalendarService } from '../../services/ethiopian-calendar.service';
 
 @Component({
   selector: 'app-article-event',
@@ -23,6 +24,7 @@ export class ArticleEventComponent {
   private formatService = inject(FormatService);
   private localSettings = inject(LocalSettingsService);
   private chroniaCalendar = inject(ChroniaCalendarService);
+  private ethiopianCalendar = inject(EthiopianCalendarService);
   private readonly MAX_LENGTH = 300;
 
   event = input.required<Event>();
@@ -270,9 +272,16 @@ export class ArticleEventComponent {
     const date = this.publishedAt();
     if (!date) return '';
 
-    if (this.localSettings.calendarType() === 'chronia') {
+    const calendarType = this.localSettings.calendarType();
+
+    if (calendarType === 'chronia') {
       const chroniaDate = this.chroniaCalendar.fromDate(date);
       return this.chroniaCalendar.format(chroniaDate, 'mediumDate');
+    }
+
+    if (calendarType === 'ethiopian') {
+      const ethiopianDate = this.ethiopianCalendar.fromDate(date);
+      return this.ethiopianCalendar.format(ethiopianDate, 'mediumDate');
     }
 
     return date.toLocaleDateString('en-US', {

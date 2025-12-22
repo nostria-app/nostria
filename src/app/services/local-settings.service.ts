@@ -4,7 +4,7 @@ import { LoggerService } from './logger.service';
 import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
 
-export type CalendarType = 'gregorian' | 'chronia';
+export type CalendarType = 'gregorian' | 'chronia' | 'ethiopian';
 
 export interface LocalSettings {
   menuOpen: boolean;

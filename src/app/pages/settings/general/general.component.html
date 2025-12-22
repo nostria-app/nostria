@@ -43,7 +43,8 @@
       <mat-slide-toggle [checked]="localSettings.autoRelayAuth()" (change)="toggleAutoRelayAuth()">
       </mat-slide-toggle>
     </div>
-    <p class="setting-description" i18n="@@settings.auto-relay-auth.description">Automatically authenticate with relays that require authentication. When disabled, relays that require authentication will not be used.</p>
+    <p class="setting-description" i18n="@@settings.auto-relay-auth.description">Automatically authenticate with relays
+      that require authentication. When disabled, relays that require authentication will not be used.</p>
   </div>
 
   <div>
@@ -183,6 +184,7 @@
       <mat-select [ngModel]="localSettings.calendarType()" (selectionChange)="setCalendarType($event.value)">
         <mat-option value="gregorian" i18n="@@settings.calendar.gregorian">Gregorian Calendar</mat-option>
         <mat-option value="chronia" i18n="@@settings.calendar.chronia">Chronia Calendar</mat-option>
+        <mat-option value="ethiopian" i18n="@@settings.calendar.ethiopian">Ethiopian Calendar</mat-option>
       </mat-select>
     </mat-form-field>
     <p>
@@ -194,6 +196,10 @@
       @case ('chronia') {
       <ng-container i18n="@@settings.calendar.chronia.description">A modern simplified calendar with 13 months of 28
         days each, plus Solstice Day. Year 0 begins December 22, 2015.</ng-container>
+      }
+      @case ('ethiopian') {
+      <ng-container i18n="@@settings.calendar.ethiopian.description">The traditional Ethiopian calendar with 13 months:
+        12 months of 30 days and Pagume (5-6 days). Approximately 7-8 years behind Gregorian.</ng-container>
       }
       }
     </p>
