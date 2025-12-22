@@ -1,7 +1,8 @@
-import { Injectable, inject } from '@angular/core';
+import { Injectable, inject, computed } from '@angular/core';
 import { SettingsService } from './settings.service';
 import { SwUpdate } from '@angular/service-worker';
 import { ImagePreloaderService } from './image-preloader.service';
+import { DiscoveryRelayService } from './discovery-relay.service';
 
 @Injectable({
   providedIn: 'root',
@@ -10,11 +11,24 @@ export class ImageCacheService {
   private readonly settingsService = inject(SettingsService);
   private readonly swUpdate = inject(SwUpdate);
   private readonly imagePreloader = inject(ImagePreloaderService);
-  private readonly PROXY_BASE_URL = 'https://proxy.eu.nostria.app/api/ImageOptimizeProxy';
+  private readonly discoveryRelay = inject(DiscoveryRelayService);
+
+  /**
+   * Gets the proxy base URL based on the user's selected region.
+   * Derives the region code from the selected server (e.g., 'proxy.eu.nostria.app' -> 'eu')
+   */
+  private readonly proxyBaseUrl = computed(() => {
+    const serverName = this.discoveryRelay.selectedServer().name;
+    // Extract region code from server name (e.g., 'proxy.eu.nostria.app' -> 'eu')
+    const regionMatch = serverName.match(/proxy\.([a-z]+)\.nostria\.app/);
+    const regionCode = regionMatch ? regionMatch[1] : 'eu';
+    return `https://proxy.${regionCode}.nostria.app/api/ImageOptimizeProxy`;
+  });
 
   /**
    * Gets the optimized image URL with proper cache headers
    * Uses standard size 96x96 for all profile images
+   * Dynamically uses the user's selected proxy region
    */
   getOptimizedImageUrl(originalUrl: string): string {
     if (!this.settingsService.settings().imageCacheEnabled) {
@@ -22,7 +36,7 @@ export class ImageCacheService {
     }
 
     const encodedUrl = encodeURIComponent(originalUrl);
-    return `${this.PROXY_BASE_URL}?w=96&h=96&url=${encodedUrl}`;
+    return `${this.proxyBaseUrl()}?w=96&h=96&url=${encodedUrl}`;
   }
 
   /**
@@ -70,9 +84,9 @@ export class ImageCacheService {
           const cache = await caches.open(cacheName);
           const keys = await cache.keys();
 
-          // Filter and delete only image proxy requests
+          // Filter and delete only image proxy requests from any region
           const imageKeys = keys.filter(request =>
-            request.url.includes('proxy.eu.nostria.app/api/ImageOptimizeProxy')
+            request.url.includes('nostria.app/api/ImageOptimizeProxy')
           );
 
           for (const request of imageKeys) {
