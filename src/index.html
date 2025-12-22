@@ -218,8 +218,13 @@
         }
 
         @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
+          from {
+            opacity: 0;
+          }
+
+          to {
+            opacity: 1;
+          }
         }
 
         .app-loading-reload-text {
@@ -261,7 +266,7 @@
       </div>
       <script>
         // Show reload button after 5 seconds if still loading
-        setTimeout(function() {
+        setTimeout(function () {
           var reloadEl = document.getElementById('app-loading-reload');
           var loadingEl = document.getElementById('app-loading');
           // Only show if app-loading is still visible (Angular hasn't bootstrapped)
