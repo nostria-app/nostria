@@ -73,8 +73,8 @@ export class StreamsComponent implements OnDestroy {
 
   openStreamingAppsDialog(): void {
     this.dialog.open(StreamingAppsDialogComponent, {
-      width: '600px',
-      maxWidth: '95vw'
+      // width: '600px',
+      // maxWidth: '95vw'
     });
   }
 
