@@ -351,10 +351,32 @@ export class ContentNotificationService {
         const eTag = event.tags.find(tag => tag[0] === 'e');
         const reactedEventId = eTag?.[1];
 
+        // Try to fetch the original event content to show in the notification
+        let reactedEventContent = '';
+        if (reactedEventId) {
+          try {
+            // First try to get from local database
+            let reactedEvent = await this.database.getEventById(reactedEventId);
+
+            // If not found locally, try from relay
+            if (!reactedEvent) {
+              reactedEvent = await this.accountRelay.get({
+                ids: [reactedEventId],
+              });
+            }
+
+            if (reactedEvent?.content) {
+              reactedEventContent = reactedEvent.content.substring(0, 100);
+            }
+          } catch (error) {
+            this.logger.debug('Failed to fetch reacted event content', error);
+          }
+        }
+
         await this.createContentNotification({
           type: NotificationType.REACTION,
           title: `Reacted ${reactionContent}`,
-          message: 'Someone reacted to your note',
+          message: reactedEventContent || 'Reacted to your note',
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
           eventId: reactedEventId, // Use the event being reacted to, not the reaction event
@@ -792,16 +814,45 @@ export class ContentNotificationService {
         if (event.pubkey === pubkey) continue;
 
         const eTag = event.tags.find(tag => tag[0] === 'e');
-        const reactionContent = event.content || '+';
+        const reactedEventId = eTag?.[1];
+        const rawContent = event.content || '+';
+        const reactionContent = (!rawContent || rawContent === '+') ? '❤️' : rawContent;
+
+        // Try to fetch the original event content to show in the notification
+        let reactedEventContent = '';
+        if (reactedEventId) {
+          try {
+            // First try to get from local database
+            let reactedEvent = await this.database.getEventById(reactedEventId);
+
+            // If not found locally, try from relay
+            if (!reactedEvent) {
+              reactedEvent = await this.accountRelay.get({
+                ids: [reactedEventId],
+              });
+            }
+
+            if (reactedEvent?.content) {
+              reactedEventContent = reactedEvent.content.substring(0, 100);
+            }
+          } catch (error) {
+            this.logger.debug('Failed to fetch reacted event content', error);
+          }
+        }
+
         await this.createContentNotification({
           type: NotificationType.REACTION,
           title: `Reacted ${reactionContent}`,
-          message: '',
+          message: reactedEventContent || 'Reacted to your note',
           authorPubkey: event.pubkey,
           recipientPubkey: pubkey,
-          eventId: eTag?.[1] || event.id,
+          eventId: reactedEventId || event.id,
           kind: 7,
           timestamp: event.created_at * 1000,
+          metadata: {
+            reactionContent,
+            reactionEventId: event.id,
+          },
         });
       }
     } catch (error) {
