@@ -28,6 +28,7 @@ import { ContentNotificationService } from '../../services/content-notification.
 import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
 
 /**
  * Local storage key for notification filter preferences
@@ -49,6 +50,7 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     RouterModule,
     AgoPipe,
     UserProfileComponent,
+    ProfileDisplayNameComponent,
     MatSnackBarModule,
     MatProgressSpinnerModule
   ],
@@ -362,6 +364,17 @@ export class NotificationsComponent implements OnInit {
   }
 
   /**
+   * Get the author npub from a content notification for linking
+   */
+  getAuthorNpub(notification: Notification): string | undefined {
+    const pubkey = this.getAuthorPubkey(notification);
+    if (pubkey) {
+      return nip19.npubEncode(pubkey);
+    }
+    return undefined;
+  }
+
+  /**
    * Get the event ID from a content notification
    * For profile zaps and new followers without an event, returns a placeholder to indicate it's clickable
    */
@@ -461,12 +474,19 @@ export class NotificationsComponent implements OnInit {
   }
 
   /**
-   * Format notification title by replacing '+' with heart emoji
+   * Format notification title for display after username
+   * - Lowercase first character since it follows the username in a sentence
+   * - Replace '+' reaction with heart emoji
    */
   getFormattedNotificationTitle(notification: Notification): string {
     if (!notification.title) return '';
-    // Replace 'Reacted +' with 'Reacted ❤️'
-    return notification.title.replace(/Reacted \+/g, 'Reacted ❤️');
+    // Replace 'Reacted +' with 'reacted ❤️' and lowercase first character
+    let title = notification.title.replace(/Reacted \+/g, 'reacted ❤️');
+    // Lowercase the first character since it comes after the username
+    if (title.length > 0) {
+      title = title.charAt(0).toLowerCase() + title.slice(1);
+    }
+    return title;
   }
 
   /**

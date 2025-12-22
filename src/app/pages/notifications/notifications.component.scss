@@ -473,87 +473,116 @@
     border-bottom: none;
   }
 
-  .notification-icon-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 48px;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
+  // Avatar wrapper with notification type badge overlay
+  .notification-avatar-wrapper {
+    position: relative;
     flex-shrink: 0;
-    transition: all 0.3s ease;
+    width: 56px;
+    height: 56px;
 
-    .notification-icon {
-      font-size: 24px;
+    // Style the user-profile component to show larger avatar
+    ::ng-deep app-user-profile {
+      .user-profile.small {
+        .user-profile-container {
+          padding: 0;
+        }
+
+        .user-profile-avatar-container {
+          .user-profile-avatar {
+            width: 56px;
+            height: 56px;
+            border-width: 2px;
+
+            .user-avatar {
+              width: 56px;
+              height: 56px;
+            }
+
+            .default-user-avatar {
+              font-size: 56px;
+              width: 56px;
+              height: 56px;
+            }
+          }
+        }
+      }
+    }
+
+    // Default avatar when no author pubkey
+    .notification-default-avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: var(--mat-sys-surface-container);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--mat-sys-outline-variant);
+
+      mat-icon {
+        font-size: 40px;
+        width: 40px;
+        height: 40px;
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+
+    // Notification type badge positioned at bottom-right of avatar
+    .notification-type-badge {
+      position: absolute;
+      bottom: -4px;
+      right: -4px;
       width: 24px;
       height: 24px;
-    }
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 2px solid var(--mat-sys-surface);
+      z-index: 1;
 
-    // Zap notifications - Bitcoin orange/gold
-    &[data-icon-type="zap"] {
-      background: linear-gradient(135deg, #f7931a 0%, #ffb347 100%);
-      box-shadow: 0 2px 8px rgba(247, 147, 26, 0.3);
-
-      .notification-icon {
-        color: #ffffff;
-        filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.2));
-      }
-    }
-
-    // New follower - Cheerful green/teal
-    &[data-icon-type="newfollower"] {
-      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.3);
-
-      .notification-icon {
+      mat-icon {
+        font-size: 14px;
+        width: 14px;
+        height: 14px;
         color: #ffffff;
       }
-    }
 
-    // Mentions - Purple/violet
-    &[data-icon-type="mention"] {
-      background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
-      box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-
-      .notification-icon {
-        color: #ffffff;
+      // Zap notifications - Bitcoin orange/gold
+      &[data-badge-type="zap"] {
+        background: linear-gradient(135deg, #f7931a 0%, #ffb347 100%);
+        box-shadow: 0 2px 4px rgba(247, 147, 26, 0.4);
       }
-    }
 
-    // Reposts - Blue
-    &[data-icon-type="repost"] {
-      background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
-      box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
-
-      .notification-icon {
-        color: #ffffff;
+      // New follower - Cheerful green/teal
+      &[data-badge-type="newfollower"] {
+        background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+        box-shadow: 0 2px 4px rgba(16, 185, 129, 0.4);
       }
-    }
 
-    // Replies - Sky blue
-    &[data-icon-type="reply"] {
-      background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
-      box-shadow: 0 2px 8px rgba(14, 165, 233, 0.3);
-
-      .notification-icon {
-        color: #ffffff;
+      // Mentions - Purple/violet
+      &[data-badge-type="mention"] {
+        background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+        box-shadow: 0 2px 4px rgba(139, 92, 246, 0.4);
       }
-    }
 
-    // Reactions (likes) - Pink/rose
-    &[data-icon-type="reaction"] {
-      background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
-      box-shadow: 0 2px 8px rgba(236, 72, 153, 0.3);
-
-      .notification-icon {
-        color: #ffffff;
+      // Reposts - Blue
+      &[data-badge-type="repost"] {
+        background: linear-gradient(135deg, #3b82f6 0%, #60a5fa 100%);
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.4);
       }
-    }
 
-    // Hover effect - slightly enlarge
-    &:hover {
-      transform: scale(1.1);
+      // Replies - Sky blue
+      &[data-badge-type="reply"] {
+        background: linear-gradient(135deg, #0ea5e9 0%, #38bdf8 100%);
+        box-shadow: 0 2px 4px rgba(14, 165, 233, 0.4);
+      }
+
+      // Reactions (likes) - Pink/rose
+      &[data-badge-type="reaction"] {
+        background: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+        box-shadow: 0 2px 4px rgba(236, 72, 153, 0.4);
+      }
     }
   }
 
@@ -570,14 +599,35 @@
       align-items: center;
       gap: 8px;
       min-width: 0; // Allow flex items to shrink
+      flex-wrap: wrap;
+
+      .notification-author-name {
+        color: var(--mat-sys-primary);
+        text-decoration: none;
+        font-size: 15px;
+        flex-shrink: 0;
+        max-width: 200px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+
+        &:hover {
+          text-decoration: underline;
+        }
+
+        ::ng-deep app-profile-display-name {
+          display: inline;
+        }
+      }
 
       .notification-title {
-        font-size: 16px;
+        font-size: 15px;
         flex: 1;
         min-width: 0; // Allow text to shrink
         white-space: nowrap; // Prevent wrapping
         overflow: hidden; // Hide overflow
         text-overflow: ellipsis; // Show ellipsis for overflow
+        opacity: 0.8;
       }
 
       .new-indicator {
@@ -609,6 +659,7 @@
       }
     }
 
+    // Keep old notification-author styles for backward compatibility if needed
     .notification-author {
       margin-top: 4px;
       margin-bottom: 4px;
@@ -796,16 +847,55 @@
     padding: 12px 8px;
     gap: 8px;
 
-    // Shrink the notification icon wrapper on small screens
-    .notification-icon-wrapper {
-      min-width: 36px;
-      width: 36px;
-      height: 36px;
+    // Shrink the avatar wrapper on small screens
+    .notification-avatar-wrapper {
+      width: 48px;
+      height: 48px;
 
-      .notification-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+      ::ng-deep app-user-profile {
+        .user-profile.small {
+          .user-profile-avatar-container {
+            .user-profile-avatar {
+              width: 48px;
+              height: 48px;
+
+              .user-avatar {
+                width: 48px;
+                height: 48px;
+              }
+
+              .default-user-avatar {
+                font-size: 48px;
+                width: 48px;
+                height: 48px;
+              }
+            }
+          }
+        }
+      }
+
+      .notification-default-avatar {
+        width: 48px;
+        height: 48px;
+
+        mat-icon {
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
+        }
+      }
+
+      .notification-type-badge {
+        width: 20px;
+        height: 20px;
+        bottom: -2px;
+        right: -2px;
+
+        mat-icon {
+          font-size: 12px;
+          width: 12px;
+          height: 12px;
+        }
       }
     }
 
@@ -826,11 +916,56 @@
   }
 }
 
-// Very small screens - hide notification icon completely
+// Very small screens - shrink avatar further
 @media (max-width: 400px) {
   .notification-item {
-    .notification-icon-wrapper {
-      display: none;
+    .notification-avatar-wrapper {
+      width: 40px;
+      height: 40px;
+
+      ::ng-deep app-user-profile {
+        .user-profile.small {
+          .user-profile-avatar-container {
+            .user-profile-avatar {
+              width: 40px;
+              height: 40px;
+
+              .user-avatar {
+                width: 40px;
+                height: 40px;
+              }
+
+              .default-user-avatar {
+                font-size: 40px;
+                width: 40px;
+                height: 40px;
+              }
+            }
+          }
+        }
+      }
+
+      .notification-default-avatar {
+        width: 40px;
+        height: 40px;
+
+        mat-icon {
+          font-size: 28px;
+          width: 28px;
+          height: 28px;
+        }
+      }
+
+      .notification-type-badge {
+        width: 18px;
+        height: 18px;
+
+        mat-icon {
+          font-size: 10px;
+          width: 10px;
+          height: 10px;
+        }
+      }
     }
   }
 }
@@ -906,37 +1041,37 @@
 
 // Dark mode adjustments
 :host-context(.dark) {
-  .notification-icon-wrapper {
+  .notification-type-badge {
 
     // Adjust gradients for better contrast in dark mode
-    &[data-icon-type="zap"] {
+    &[data-badge-type="zap"] {
       background: linear-gradient(135deg, #f7931a 0%, #d97706 100%);
-      box-shadow: 0 2px 12px rgba(247, 147, 26, 0.4);
+      box-shadow: 0 2px 8px rgba(247, 147, 26, 0.5);
     }
 
-    &[data-icon-type="newfollower"] {
+    &[data-badge-type="newfollower"] {
       background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-      box-shadow: 0 2px 12px rgba(16, 185, 129, 0.4);
+      box-shadow: 0 2px 8px rgba(16, 185, 129, 0.5);
     }
 
-    &[data-icon-type="mention"] {
+    &[data-badge-type="mention"] {
       background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%);
-      box-shadow: 0 2px 12px rgba(124, 58, 237, 0.4);
+      box-shadow: 0 2px 8px rgba(124, 58, 237, 0.5);
     }
 
-    &[data-icon-type="repost"] {
+    &[data-badge-type="repost"] {
       background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
-      box-shadow: 0 2px 12px rgba(37, 99, 235, 0.4);
+      box-shadow: 0 2px 8px rgba(37, 99, 235, 0.5);
     }
 
-    &[data-icon-type="reply"] {
+    &[data-badge-type="reply"] {
       background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
-      box-shadow: 0 2px 12px rgba(2, 132, 199, 0.4);
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.5);
     }
 
-    &[data-icon-type="reaction"] {
+    &[data-badge-type="reaction"] {
       background: linear-gradient(135deg, #db2777 0%, #ec4899 100%);
-      box-shadow: 0 2px 12px rgba(219, 39, 119, 0.4);
+      box-shadow: 0 2px 8px rgba(219, 39, 119, 0.5);
     }
   }
 }
