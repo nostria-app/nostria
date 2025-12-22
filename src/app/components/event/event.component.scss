@@ -66,7 +66,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 0px 16px 8px 16px;
 
   // When there are no reactions (photo/video events), push footer-right to the end
   &:has(.footer-right-group:first-child) {
@@ -446,7 +446,7 @@
 // Responsive styles for smaller screens
 @media screen and (max-width: 600px) {
   .note-footer {
-    padding: 6px 12px; // Reduced from 8px 16px
+    padding: 0px 12px 6px 12px; // Reduced from 8px 16px
   }
 
   .reactions-row {
@@ -475,7 +475,7 @@
 
 @media screen and (max-width: 420px) {
   .note-footer {
-    padding: 4px 8px; // Further reduced for very small screens
+    padding: 0px 8px 4px 8px; // Further reduced for very small screens
   }
 
   .reactions-row {
