@@ -14,7 +14,7 @@ import { LayoutService } from '../../services/layout.service';
   standalone: true,
   imports: [MatListModule, MatIconModule, MatButtonModule, MatProgressSpinnerModule, MatTooltipModule],
   template: `
-    @if (searchService.searchResults().length > 0 || searchService.searchActions().length > 0 || searchService.isSearchingRemote()) {
+    @if (searchService.searchResults().length > 0 || searchService.searchActions().length > 0 || searchService.isSearchingRemote() || hasSearchInput()) {
       <div
         class="search-results"
         tabindex="0"
@@ -115,6 +115,21 @@ import { LayoutService } from '../../services/layout.service';
           <div class="search-results-header">
             <span>Searching...</span>
             <mat-spinner diameter="16"></mat-spinner>
+          </div>
+        } @else if (hasSearchInput()) {
+          <div class="search-results-header">
+            <span>Found Profiles (0)</span>
+            <div class="header-actions">
+              <button mat-icon-button (click)="openAdvancedSearch()" matTooltip="Advanced Search">
+                <mat-icon>manage_search</mat-icon>
+              </button>
+              <button mat-icon-button (click)="searchService.clearResults()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </div>
+          <div class="no-results-message">
+            No profiles found. Try Advanced Search for more options.
           </div>
         }
       </div>
@@ -284,16 +299,26 @@ import { LayoutService } from '../../services/layout.service';
         opacity: 0.9;
         border: 2px solid var(--mat-sys-secondary);
       }
+
+      .no-results-message {
+        padding: 16px;
+        text-align: center;
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 14px;
+      }
     `,
   ],
 })
 export class SearchResultsComponent {
   searchService = inject(SearchService);
   utilities = inject(UtilitiesService);
-  private layout = inject(LayoutService);
+  layout = inject(LayoutService);
   private router = inject(Router);
 
   focusedIndex = signal(-1);
+
+  // Check if there's active search input
+  hasSearchInput = () => this.layout.searchInput && this.layout.searchInput.trim().length > 0;
 
   constructor() {
     // Reset focused index when search results change
