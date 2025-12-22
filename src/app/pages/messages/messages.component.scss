@@ -382,6 +382,11 @@
   }
 }
 
+.voice-button.recording {
+  opacity: 1;
+  color: var(--mat-sys-error);
+}
+
 // Pulse animation for recording state
 .pulse-icon {
   animation: pulse 1s ease-in-out infinite;
