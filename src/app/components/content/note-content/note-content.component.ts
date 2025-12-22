@@ -433,6 +433,17 @@ export class NoteContentComponent implements OnDestroy {
     }
   }
 
+  /**
+   * Handle video pause event - unregister this video so wake lock
+   * can be released.
+   */
+  onVideoPause(event: Event): void {
+    const videoElement = event.target as HTMLVideoElement;
+    if (videoElement) {
+      this.videoPlayback.unregisterPlaying(videoElement);
+    }
+  }
+
   // ============ Image Carousel Methods ============
 
   /**
