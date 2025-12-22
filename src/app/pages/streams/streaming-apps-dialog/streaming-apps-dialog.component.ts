@@ -66,8 +66,8 @@ interface StreamingApp {
   `,
   styles: [`
     .streaming-apps-dialog {
-      min-width: 400px;
-      max-width: 600px;
+      // min-width: 400px;
+      // max-width: 600px;
     }
 
     h2[mat-dialog-title] {
@@ -109,9 +109,9 @@ interface StreamingApp {
       margin-bottom: 0.5rem;
     }
 
-    mat-card-content {
-      padding-top: 0.5rem;
-    }
+    // mat-card-content {
+    //   padding-top: 0.5rem;
+    // }
 
     .app-links {
       display: flex;
