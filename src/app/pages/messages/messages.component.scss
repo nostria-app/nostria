@@ -30,8 +30,14 @@
     min-width: 420px;
   }
 
-  // On mobile, hide when showing messages
+  // On mobile, take full width and extend to bottom
   @media (max-width: 599px) {
+    flex: 1;
+    width: 100%;
+    min-width: 100%;
+    height: 100vh;
+    height: 100dvh; // Dynamic viewport height for mobile browsers
+
     &.mobile-hidden {
       display: none;
     }
@@ -46,7 +52,7 @@
   justify-content: center;
   align-items: center;
   margin: 12px 12px 0 12px;
-  border-radius: 16px;
+  border-radius: 28px;
 
   // Glass effect - light mode
   background-color: rgba(255, 255, 255, 0.7);
@@ -114,13 +120,13 @@
   flex: 1;
   /* takes remaining space */
   overflow-y: auto;
-}
 
-.tab-content {
   @media (max-width: 599px) {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 }
+
+// tab-content allows scrolling behind mobile menu
 
 .empty-chats {
   display: flex;
@@ -163,10 +169,6 @@
   gap: 16px;
   padding: 48px 24px;
   text-align: center;
-
-  @media (max-width: 599px) {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-  }
 
   mat-icon {
     font-size: 64px;
@@ -308,7 +310,7 @@
   flex-shrink: 0;
   padding: 0.4rem 0.8rem;
   margin: 12px;
-  border-radius: 16px;
+  border-radius: 28px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -360,7 +362,7 @@
   min-height: 0;
 
   @media (max-width: 599px) {
-    padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -388,7 +390,9 @@
     0px 4px 16px rgba(17, 17, 26, 0.06);
 
   @media (max-width: 599px) {
-    bottom: calc(12px + 100px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    left: 8px;
+    right: 8px;
   }
 }
 
