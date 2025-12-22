@@ -29,7 +29,7 @@
     },
     {
       "name": "app-chunks",
-      "installMode": "lazy",
+      "installMode": "prefetch",
       "updateMode": "prefetch",
       "resources": {
         "files": [
