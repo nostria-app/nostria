@@ -4,10 +4,16 @@
       <mat-icon>sensors</mat-icon>
       <span i18n="@@streams.title">Live Streams</span>
     </h1>
-    <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@streams.refresh.aria"
-      aria-label="Refresh streams">
-      <mat-icon>refresh</mat-icon>
-    </button>
+    <div class="header-actions">
+      <button mat-stroked-button (click)="openStreamingAppsDialog()" class="stream-button">
+        <mat-icon>videocam</mat-icon>
+        <span i18n="@@streams.wantToStream">Want to stream?</span>
+      </button>
+      <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@streams.refresh.aria"
+        aria-label="Refresh streams">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
   </div>
 
   <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">
