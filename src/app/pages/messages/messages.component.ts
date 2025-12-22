@@ -310,7 +310,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private isChatHidden(chatId: string): boolean {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return false;
-    return this.accountLocalState.isChatHidden(pubkey, chatId);
+    return this.accountLocalState.isChatHidden(pubkey, chatId, true);
   }
 
   // Filtered chats based on selected tab and search query
