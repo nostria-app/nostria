@@ -397,7 +397,7 @@
     0px 4px 16px rgba(17, 17, 26, 0.06);
 
   @media (max-width: 599px) {
-    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
     left: 8px;
     right: 8px;
   }
