@@ -27,6 +27,11 @@
           <mat-icon>settings</mat-icon>
         </button>
         <mat-menu #chatSettingsMenu="matMenu">
+          <button mat-menu-item (click)="toggleShowHiddenChats()">
+            <mat-icon>{{ showHiddenChats() ? 'visibility_off' : 'visibility' }}</mat-icon>
+            <span>{{ showHiddenChats() ? 'Hide Hidden Chats' : 'Show Hidden Chats' }}</span>
+          </button>
+          <mat-divider></mat-divider>
           <button mat-menu-item (click)="markAllChatsAsRead()">
             <mat-icon>done_all</mat-icon>
             <span>Mark All as Read</span>
@@ -234,10 +239,17 @@
               <mat-icon>person</mat-icon>
               <span>View Profile</span>
             </button>
+            @if (isSelectedChatHidden()) {
+            <button mat-menu-item (click)="unhideChat()">
+              <mat-icon>visibility</mat-icon>
+              <span>Unhide Chat</span>
+            </button>
+            } @else {
             <button mat-menu-item (click)="hideChat()">
               <mat-icon>visibility_off</mat-icon>
               <span>Hide Chat</span>
             </button>
+            }
           </mat-menu>
         </div>
       </div>

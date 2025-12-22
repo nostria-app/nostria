@@ -47,6 +47,7 @@ interface AccountLocalState {
   zapSplitQuoterPercent?: number; // Percentage to quoter (0-100)
   trustedMediaAuthors?: string[]; // Pubkeys of authors whose media should always be revealed (not blurred)
   unreadMessagesCount?: number; // Cached count of unread direct messages
+  hiddenChatIds?: string[]; // Chat IDs that user has hidden
 }
 
 /**
@@ -606,6 +607,45 @@ export class AccountLocalStateService {
    */
   setUnreadMessagesCount(pubkey: string, count: number): void {
     this.updateAccountState(pubkey, { unreadMessagesCount: count });
+  }
+
+  /**
+   * Get hidden chat IDs for an account
+   */
+  getHiddenChatIds(pubkey: string): string[] {
+    return this.getAccountState(pubkey).hiddenChatIds || [];
+  }
+
+  /**
+   * Set hidden chat IDs for an account
+   */
+  setHiddenChatIds(pubkey: string, chatIds: string[]): void {
+    this.updateAccountState(pubkey, { hiddenChatIds: chatIds });
+  }
+
+  /**
+   * Hide a chat for an account
+   */
+  hideChat(pubkey: string, chatId: string): void {
+    const current = this.getHiddenChatIds(pubkey);
+    if (!current.includes(chatId)) {
+      this.setHiddenChatIds(pubkey, [...current, chatId]);
+    }
+  }
+
+  /**
+   * Unhide a chat for an account
+   */
+  unhideChat(pubkey: string, chatId: string): void {
+    const current = this.getHiddenChatIds(pubkey);
+    this.setHiddenChatIds(pubkey, current.filter(id => id !== chatId));
+  }
+
+  /**
+   * Check if a chat is hidden for an account
+   */
+  isChatHidden(pubkey: string, chatId: string): boolean {
+    return this.getHiddenChatIds(pubkey).includes(chatId);
   }
 
   /**
