@@ -6,11 +6,14 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { RouterModule } from '@angular/router';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { CorsProxyService } from '../../services/cors-proxy.service';
+import { NostrService } from '../../services/nostr.service';
 import { Event, Filter } from 'nostr-tools';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { DatePipe, SlicePipe } from '@angular/common';
@@ -47,6 +50,8 @@ interface YouTubeVideo {
     MatCardModule,
     MatTooltipModule,
     MatMenuModule,
+    MatDialogModule,
+    MatSnackBarModule,
     RouterModule,
     DatePipe,
     SlicePipe,
@@ -154,6 +159,10 @@ interface YouTubeVideo {
             <mat-icon class="premium-icon">diamond</mat-icon>
           </h1>
           <div class="header-actions">
+            <button mat-flat-button (click)="openAddChannelDialog()" matTooltip="Add YouTube channel">
+              <mat-icon>add</mat-icon>
+              Add Channel
+            </button>
             <button mat-icon-button (click)="refreshAll()" [disabled]="loading()" matTooltip="Refresh all channels">
               <mat-icon>refresh</mat-icon>
             </button>
@@ -169,15 +178,11 @@ interface YouTubeVideo {
           <div class="empty-state">
             <mat-icon>smart_display</mat-icon>
             <h2>No YouTube subscriptions</h2>
-            <p>Add YouTube channels to your bookmark sets with the "youtube" tag to see them here.</p>
-            <div class="help-section">
-              <h3>How to add a YouTube channel:</h3>
-              <ol>
-                <li>Create a bookmark set (kind 30003) with a "t" tag set to "youtube"</li>
-                <li>Add an "r" tag with the YouTube RSS feed URL</li>
-                <li>Optionally add "title", "description", and "image" tags</li>
-              </ol>
-            </div>
+            <p>Add YouTube channels to watch your favorite content directly in Nostria.</p>
+            <button mat-flat-button (click)="openAddChannelDialog()">
+              <mat-icon>add</mat-icon>
+              Add Your First Channel
+            </button>
           </div>
         } @else {
           <!-- Currently playing video -->
@@ -281,6 +286,9 @@ export class YouTubeComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly corsProxy = inject(CorsProxyService);
+  private readonly nostrService = inject(NostrService);
+  private readonly dialog = inject(MatDialog);
+  private readonly snackBar = inject(MatSnackBar);
   private readonly sanitizer = inject(DomSanitizer);
   protected readonly app = inject(ApplicationService);
 
@@ -300,6 +308,64 @@ export class YouTubeComponent {
         setTimeout(() => this.loadYouTubeBookmarks(), 0);
       }
     });
+  }
+
+  async openAddChannelDialog(): Promise<void> {
+    const { AddYouTubeChannelDialogComponent } = await import(
+      './add-youtube-channel-dialog/add-youtube-channel-dialog.component'
+    );
+
+    const dialogRef = this.dialog.open(AddYouTubeChannelDialogComponent, {
+      width: '500px',
+      maxWidth: '95vw',
+    });
+
+    const result = await dialogRef.afterClosed().toPromise();
+    if (result) {
+      await this.createYouTubeBookmarkSet(result);
+    }
+  }
+
+  private async createYouTubeBookmarkSet(data: {
+    channelId: string;
+    feedUrl: string;
+    title: string;
+    description: string;
+    image: string;
+  }): Promise<void> {
+    try {
+      const tags: string[][] = [
+        ['d', data.channelId],
+        ['t', 'youtube'],
+        ['title', data.title],
+        ['r', data.feedUrl],
+      ];
+
+      if (data.description) {
+        tags.push(['description', data.description]);
+      }
+
+      if (data.image) {
+        tags.push(['image', data.image]);
+      }
+
+      const event = this.nostrService.createEvent(30003, '', tags);
+      const signedEvent = await this.nostrService.signEvent(event);
+
+      if (!signedEvent) {
+        throw new Error('Failed to sign event');
+      }
+
+      await this.accountRelay.publish(signedEvent);
+
+      this.snackBar.open('YouTube channel added!', 'Close', { duration: 3000 });
+
+      // Reload channels to include the new one
+      await this.loadYouTubeBookmarks();
+    } catch (error) {
+      console.error('Error creating YouTube bookmark set:', error);
+      this.snackBar.open('Failed to add channel. Please try again.', 'Close', { duration: 3000 });
+    }
   }
 
   async loadYouTubeBookmarks(): Promise<void> {
