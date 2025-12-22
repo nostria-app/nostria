@@ -12,16 +12,25 @@
   } @else {
   <div class="messages-left" [class.mobile-hidden]="layout.isHandset() && !showMobileList()">
     <div class="message-threads-header">
-      <h2>Chats</h2>
-      <div class="spacer"></div>
+      <input class="chat-search-input" type="text" placeholder="Search chats..." [ngModel]="chatSearchQuery()"
+        (ngModelChange)="chatSearchQuery.set($event)" />
+      @if (chatSearchQuery()) {
+      <button mat-icon-button class="clear-search-button" (click)="chatSearchQuery.set('')" aria-label="Clear search">
+        <mat-icon>close</mat-icon>
+      </button>
+      }
       <div class="header-actions">
-        <button mat-icon-button aria-label="New chat" (click)="startNewChat()">
+        <button mat-icon-button aria-label="New chat" (click)="startNewChat()" matTooltip="New chat">
           <mat-icon>edit</mat-icon>
         </button>
         <button mat-icon-button [matMenuTriggerFor]="chatSettingsMenu" aria-label="Chat settings">
           <mat-icon>settings</mat-icon>
         </button>
         <mat-menu #chatSettingsMenu="matMenu">
+          <button mat-menu-item (click)="markAllChatsAsRead()">
+            <mat-icon>done_all</mat-icon>
+            <span>Mark All as Read</span>
+          </button>
           <button mat-menu-item (click)="resetLocalMessagesCache()">
             <mat-icon>delete_sweep</mat-icon>
             <span>Reset Local Messages Cache</span>

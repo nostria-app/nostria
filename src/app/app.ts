@@ -92,6 +92,7 @@ import { DatabaseService } from './services/database.service';
 import { MetricsTrackingService } from './services/metrics-tracking.service';
 import { FollowingBackupService } from './services/following-backup.service';
 import { ShortcutsDialogComponent } from './components/shortcuts-dialog/shortcuts-dialog.component';
+import { MessagingService } from './services/messaging.service';
 
 interface NavItem {
   path: string;
@@ -105,6 +106,7 @@ interface NavItem {
   children?: NavItem[];
   expanded?: boolean;
   feedId?: string;
+  badge?: () => number | null; // Function that returns badge count or null
 }
 
 @Component({
@@ -205,6 +207,7 @@ export class App implements OnInit {
   private readonly webPushService = inject(WebPushService);
   private readonly overlay = inject(Overlay);
   private readonly followingBackupService = inject(FollowingBackupService);
+  private readonly messagingService = inject(MessagingService);
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
@@ -288,6 +291,26 @@ export class App implements OnInit {
       ).length;
   });
 
+  /**
+   * Get unread messages count - tries messaging service first, falls back to cached value
+   */
+  getUnreadMessagesCount(): number | null {
+    // First try to get live count from messaging service (if loaded)
+    const liveCount = this.messagingService.totalUnreadCount();
+    if (liveCount > 0) {
+      return liveCount;
+    }
+
+    // Fall back to cached count from local state
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      const cachedCount = this.accountLocalState.getUnreadMessagesCount(pubkey);
+      return cachedCount > 0 ? cachedCount : null;
+    }
+
+    return null;
+  }
+
   navigationItems = computed(() => {
     const subscription = this.accountState.subscription();
     const feeds = this.feedsCollectionService.feeds();
@@ -356,6 +379,7 @@ export class App implements OnInit {
       label: $localize`:@@app.nav.messages:Messages`,
       icon: 'mail',
       authenticated: true,
+      badge: () => this.getUnreadMessagesCount(),
     },
     {
       path: 'media',

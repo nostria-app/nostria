@@ -46,6 +46,7 @@ interface AccountLocalState {
   zapSplitOriginalPercent?: number; // Percentage to original author (0-100)
   zapSplitQuoterPercent?: number; // Percentage to quoter (0-100)
   trustedMediaAuthors?: string[]; // Pubkeys of authors whose media should always be revealed (not blurred)
+  unreadMessagesCount?: number; // Cached count of unread direct messages
 }
 
 /**
@@ -591,6 +592,20 @@ export class AccountLocalStateService {
   removeTrustedMediaAuthor(pubkey: string, authorPubkey: string): void {
     const current = this.getTrustedMediaAuthors(pubkey);
     this.setTrustedMediaAuthors(pubkey, current.filter(p => p !== authorPubkey));
+  }
+
+  /**
+   * Get unread messages count for an account
+   */
+  getUnreadMessagesCount(pubkey: string): number {
+    return this.getAccountState(pubkey).unreadMessagesCount || 0;
+  }
+
+  /**
+   * Set unread messages count for an account
+   */
+  setUnreadMessagesCount(pubkey: string, count: number): void {
+    this.updateAccountState(pubkey, { unreadMessagesCount: count });
   }
 
   /**

@@ -153,6 +153,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   error = signal<string | null>(null);
   showMobileList = signal<boolean>(true);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
+  chatSearchQuery = signal<string>(''); // Search query for filtering chats
   private accountRelay = inject(AccountRelayService);
 
   // Timeout duration for waiting for chats to load when opening a specific chat
@@ -219,15 +220,58 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   // Computed helpers
   hasChats = computed(() => this.messaging.sortedChats().length > 0);
 
-  // Filtered chats based on selected tab
+  // Helper to check if a chat matches the search query
+  private chatMatchesSearch(chat: Chat, query: string): boolean {
+    if (!query) return true;
+
+    const lowerQuery = query.toLowerCase();
+
+    // Check if pubkey starts with the query (for npub search)
+    if (chat.pubkey.toLowerCase().includes(lowerQuery)) {
+      return true;
+    }
+
+    // Check profile name/display_name
+    const profile = this.data.getCachedProfile(chat.pubkey);
+    if (profile?.data) {
+      const name = profile.data.name?.toLowerCase() || '';
+      const displayName = profile.data.display_name?.toLowerCase() || '';
+      const nip05 = profile.data.nip05?.toLowerCase() || '';
+      if (name.includes(lowerQuery) || displayName.includes(lowerQuery) || nip05.includes(lowerQuery)) {
+        return true;
+      }
+    }
+
+    // Check message content
+    if (chat.lastMessage?.content?.toLowerCase().includes(lowerQuery)) {
+      return true;
+    }
+
+    // Check all messages in the chat
+    for (const message of chat.messages.values()) {
+      if (message.content?.toLowerCase().includes(lowerQuery)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Filtered chats based on selected tab and search query
   followingChats = computed(() => {
     const followingList = this.accountState.followingList();
-    return this.messaging.sortedChats().filter(item => followingList.includes(item.chat.pubkey));
+    const query = this.chatSearchQuery();
+    return this.messaging.sortedChats()
+      .filter(item => followingList.includes(item.chat.pubkey))
+      .filter(item => this.chatMatchesSearch(item.chat, query));
   });
 
   otherChats = computed(() => {
     const followingList = this.accountState.followingList();
-    return this.messaging.sortedChats().filter(item => !followingList.includes(item.chat.pubkey));
+    const query = this.chatSearchQuery();
+    return this.messaging.sortedChats()
+      .filter(item => !followingList.includes(item.chat.pubkey))
+      .filter(item => this.chatMatchesSearch(item.chat, query));
   });
 
   filteredChats = computed(() => {
@@ -987,6 +1031,19 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     } catch (error) {
       this.logger.error('Failed to reset local messages cache:', error);
       this.snackBar.open('Failed to clear messages cache', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Mark all chats as read
+   */
+  async markAllChatsAsRead(): Promise<void> {
+    try {
+      await this.messaging.markAllChatsAsRead();
+      this.snackBar.open('All messages marked as read', 'Close', { duration: 3000 });
+    } catch (error) {
+      this.logger.error('Failed to mark all chats as read:', error);
+      this.snackBar.open('Failed to mark messages as read', 'Close', { duration: 3000 });
     }
   }
 
