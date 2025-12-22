@@ -25,6 +25,7 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ChroniaCalendarService } from '../../services/chronia-calendar.service';
 import { GregorianCalendarService } from '../../services/gregorian-calendar.service';
+import { EthiopianCalendarService } from '../../services/ethiopian-calendar.service';
 import {
   CreateEventDialogComponent,
   CreateEventDialogData,
@@ -116,6 +117,7 @@ export class Calendar {
   public localSettings = inject(LocalSettingsService); // For calendar type
   private chroniaService = inject(ChroniaCalendarService);
   private gregorianService = inject(GregorianCalendarService);
+  private ethiopianService = inject(EthiopianCalendarService);
   public accountState = inject(AccountStateService);
 
   // Premium check
@@ -170,6 +172,16 @@ export class Calendar {
         year: chroniaDate.year,
         month: chroniaDate.month,
         name: `${monthName}, Year ${chroniaDate.year}`,
+      };
+    }
+
+    if (calendarType === 'ethiopian') {
+      const ethiopianDate = this.ethiopianService.fromDate(date);
+      const monthName = this.ethiopianService.getMonthName(ethiopianDate.month);
+      return {
+        year: ethiopianDate.year,
+        month: ethiopianDate.month,
+        name: `${monthName}, ${ethiopianDate.year}`,
       };
     }
 
@@ -915,6 +927,12 @@ export class Calendar {
       return `${monthName.substring(0, 3)} ${chroniaDate.day}`;
     }
 
+    if (calendarType === 'ethiopian') {
+      const ethiopianDate = this.ethiopianService.fromDate(date);
+      const shortMonthName = this.ethiopianService.getShortMonthName(ethiopianDate.month);
+      return `${shortMonthName} ${ethiopianDate.day}`;
+    }
+
     // Use localized Gregorian month names
     const shortMonthName = this.gregorianService.getShortMonthName(date.getMonth() + 1);
     return `${shortMonthName} ${date.getDate()}`;
@@ -926,6 +944,11 @@ export class Calendar {
     if (calendarType === 'chronia') {
       const chroniaDate = this.chroniaService.fromDate(date);
       return this.chroniaService.format(chroniaDate, 'longDate');
+    }
+
+    if (calendarType === 'ethiopian') {
+      const ethiopianDate = this.ethiopianService.fromDate(date);
+      return this.ethiopianService.format(ethiopianDate, 'longDate');
     }
 
     // Use localized Gregorian month names
@@ -941,6 +964,11 @@ export class Calendar {
     if (calendarType === 'chronia') {
       const chroniaDate = this.chroniaService.fromDate(date);
       return this.chroniaService.format(chroniaDate, 'mediumDate');
+    }
+
+    if (calendarType === 'ethiopian') {
+      const ethiopianDate = this.ethiopianService.fromDate(date);
+      return this.ethiopianService.format(ethiopianDate, 'mediumDate');
     }
 
     // Use localized Gregorian month names

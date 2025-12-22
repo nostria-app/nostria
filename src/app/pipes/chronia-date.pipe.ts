@@ -2,10 +2,11 @@ import { inject, Pipe, PipeTransform } from '@angular/core';
 import { DatePipe } from '@angular/common';
 import { LocalSettingsService } from '../services/local-settings.service';
 import { ChroniaCalendarService } from '../services/chronia-calendar.service';
+import { EthiopianCalendarService } from '../services/ethiopian-calendar.service';
 
 /**
  * A pipe that formats Unix timestamps as dates, respecting the user's calendar preference.
- * Works with both Gregorian and Chronia calendar systems.
+ * Works with Gregorian, Chronia, and Ethiopian calendar systems.
  */
 @Pipe({
   name: 'chroniaDate',
@@ -15,15 +16,16 @@ import { ChroniaCalendarService } from '../services/chronia-calendar.service';
 export class ChroniaDatePipe implements PipeTransform {
   private localSettings = inject(LocalSettingsService);
   private chroniaService = inject(ChroniaCalendarService);
+  private ethiopianService = inject(EthiopianCalendarService);
   private datePipe = new DatePipe('en-US');
 
   /**
    * Transform a Unix timestamp (seconds) to a formatted date string.
-   * Uses Gregorian or Chronia calendar based on user settings.
+   * Uses Gregorian, Chronia, or Ethiopian calendar based on user settings.
    *
    * @param value Unix timestamp in seconds
    * @param format Date format string. For Gregorian: Angular DatePipe formats.
-   *               For Chronia: 'short', 'medium', 'long', 'full', 'shortDate', 'mediumDate', etc.
+   *               For Chronia/Ethiopian: 'short', 'medium', 'long', 'full', 'shortDate', 'mediumDate', etc.
    * @returns Formatted date string
    */
   transform(value: number, format = 'medium'): string {
@@ -35,6 +37,10 @@ export class ChroniaDatePipe implements PipeTransform {
 
     if (calendarType === 'chronia') {
       return this.chroniaService.formatUnixTimestamp(value, format);
+    }
+
+    if (calendarType === 'ethiopian') {
+      return this.ethiopianService.formatUnixTimestamp(value, format);
     }
 
     // Gregorian calendar - use Angular's DatePipe

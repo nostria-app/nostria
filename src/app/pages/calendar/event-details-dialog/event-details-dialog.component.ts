@@ -11,6 +11,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { LocalSettingsService } from '../../../services/local-settings.service';
 import { ChroniaCalendarService } from '../../../services/chronia-calendar.service';
+import { EthiopianCalendarService } from '../../../services/ethiopian-calendar.service';
 
 interface CalendarEvent {
   id: string;
@@ -290,6 +291,7 @@ export class EventDetailsDialogComponent {
   private snackBar = inject(MatSnackBar);
   private localSettings = inject(LocalSettingsService);
   private chroniaCalendar = inject(ChroniaCalendarService);
+  private ethiopianCalendar = inject(EthiopianCalendarService);
 
   constructor(
     public dialogRef: MatDialogRef<EventDetailsDialogComponent>,
@@ -322,10 +324,18 @@ export class EventDetailsDialogComponent {
   }
 
   formatDate(date: Date): string {
-    if (this.localSettings.calendarType() === 'chronia') {
+    const calendarType = this.localSettings.calendarType();
+
+    if (calendarType === 'chronia') {
       const chroniaDate = this.chroniaCalendar.fromDate(date);
       return this.chroniaCalendar.format(chroniaDate, 'full');
     }
+
+    if (calendarType === 'ethiopian') {
+      const ethiopianDate = this.ethiopianCalendar.fromDate(date);
+      return this.ethiopianCalendar.format(ethiopianDate, 'full');
+    }
+
     return date.toLocaleDateString('en-US', {
       weekday: 'long',
       year: 'numeric',
