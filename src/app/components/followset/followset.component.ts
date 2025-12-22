@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { ImageCacheService } from '../../services/image-cache.service';
 
 export interface Interest {
@@ -29,7 +30,7 @@ export interface SuggestedProfile {
  */
 @Component({
   selector: 'app-followset',
-  imports: [MatIconModule, MatButtonModule, MatCheckboxModule, MatProgressSpinnerModule, FormsModule],
+  imports: [MatIconModule, MatButtonModule, MatCheckboxModule, MatProgressSpinnerModule, FormsModule, RouterLink],
   templateUrl: './followset.component.html',
   styleUrl: './followset.component.scss',
 })

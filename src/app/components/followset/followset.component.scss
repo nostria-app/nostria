@@ -149,6 +149,7 @@
   align-items: center;
   justify-content: center;
   margin-bottom: 1rem;
+  text-decoration: none;
 
   img {
     width: 60px;
@@ -156,6 +157,11 @@
     border-radius: 50%;
     object-fit: cover;
     border: 2px solid var(--mat-sys-outline-variant);
+    transition: border-color 0.2s ease;
+  }
+
+  &:hover img {
+    border-color: var(--mat-sys-primary);
   }
 }
 
@@ -170,6 +176,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    a {
+      color: inherit;
+      text-decoration: none;
+
+      &:hover {
+        color: var(--mat-sys-primary);
+        text-decoration: underline;
+      }
+    }
   }
 
   .profile-bio {

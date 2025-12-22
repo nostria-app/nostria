@@ -86,7 +86,7 @@ Added conditional display of build information after the version heading:
 }
 @if (commitShort() && commitSha()) {
   <p class="build-info">
-    Commit: <a 
+    Commit:&nbsp;<a 
       [href]="'https://github.com/nostria-app/nostria/commit/' + commitSha()" 
       target="_blank" 
       rel="noopener noreferrer"

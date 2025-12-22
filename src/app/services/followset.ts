@@ -194,7 +194,17 @@ export class Followset {
 
       // Wait for all sources to complete (in parallel)
       const results = await Promise.all(sourcePromises);
-      results.forEach(packs => starterPacks.push(...packs));
+      
+      // Deduplicate by dTag - keep only the first occurrence of each unique dTag
+      const seenDTags = new Set<string>();
+      results.forEach(packs => {
+        packs.forEach(pack => {
+          if (!seenDTags.has(pack.dTag)) {
+            seenDTags.add(pack.dTag);
+            starterPacks.push(pack);
+          }
+        });
+      });
 
       // Check if we need to add the hardcoded "Popular" starter pack
       // Add it if:
@@ -275,14 +285,16 @@ export class Followset {
             );
 
             // Parse and collect the refreshed starter packs if they match allowed d-tags
+            // Deduplicate by dTag - keep only the first occurrence of each unique dTag
             events.forEach(record => {
               const starterPack = this.parseStarterPackEvent(record.event);
               if (starterPack) {
                 // Only include if the d-tag is in the allowed list for this source
                 const isAllowedDTag = source.dTags.includes(starterPack.dTag);
                 const matchesFilter = !dTagFilter || starterPack.dTag === dTagFilter;
+                const alreadyExists = refreshedPacks.some(p => p.dTag === starterPack.dTag);
 
-                if (isAllowedDTag && matchesFilter) {
+                if (isAllowedDTag && matchesFilter && !alreadyExists) {
                   refreshedPacks.push(starterPack);
                 }
               }

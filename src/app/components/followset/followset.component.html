@@ -45,11 +45,11 @@
     <div class="profiles-grid">
       @for (profile of filteredProfiles(); track profile.id) {
       <div class="profile-card" [class.following]="followingProfiles().includes(profile.id)">
-        <div class="profile-avatar">
+        <a class="profile-avatar" [routerLink]="['/p', profile.id]">
           <img [src]="getOptimizedImageUrl(profile.avatar)" [alt]="profile.name + ' avatar'" [title]="profile.name" />
-        </div>
+        </a>
         <div class="profile-info">
-          <h4>{{ profile.name }}</h4>
+          <h4><a [routerLink]="['/p', profile.id]">{{ profile.name }}</a></h4>
           <p class="profile-bio">{{ profile.bio }}</p>
           @if (profile.region && profile.interests.includes('regional')) {
           <p class="profile-region">📍 {{ profile.region }}</p>
