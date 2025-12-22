@@ -75,8 +75,18 @@
           <div *cdkVirtualFor="let notification of contentNotifications(); trackBy: trackByNotificationId"
             class="notification-item" [class.unread]="!notification.read" [class.clickable]="getEventId(notification)"
             [attr.data-notification-type]="notification.type">
-            <div class="notification-icon-wrapper" [attr.data-icon-type]="notification.type">
-              <mat-icon class="notification-icon">{{ getNotificationTypeIcon(notification.type) }}</mat-icon>
+            <div class="notification-avatar-wrapper">
+              @if (getAuthorPubkey(notification)) {
+              <app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'small'"
+                [disableLink]="true"></app-user-profile>
+              } @else {
+              <div class="notification-default-avatar">
+                <mat-icon>account_circle</mat-icon>
+              </div>
+              }
+              <div class="notification-type-badge" [attr.data-badge-type]="notification.type">
+                <mat-icon>{{ getNotificationTypeIcon(notification.type) }}</mat-icon>
+              </div>
             </div>
 
             <div class="notification-content" (click)="getEventId(notification) ? viewEvent(notification) : null"
@@ -85,9 +95,9 @@
               [attr.role]="getEventId(notification) ? 'button' : null">
               <div class="notification-header">
                 @if (getAuthorPubkey(notification)) {
-                <div class="notification-author">
-                  <app-user-profile [pubkey]="getAuthorPubkey(notification)!" [view]="'compact'"></app-user-profile>
-                </div>
+                <a class="notification-author-name" [routerLink]="['/p', getAuthorNpub(notification)]">
+                  <app-profile-display-name [pubkey]="getAuthorPubkey(notification)!"></app-profile-display-name>
+                </a>
                 }
                 <span class="notification-title">{{ getFormattedNotificationTitle(notification) }}</span>
                 @if (!notification.read) {
