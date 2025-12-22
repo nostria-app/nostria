@@ -262,12 +262,21 @@
       }
     </div>
     <div class="message-input-container">
-      <mat-form-field appearance="outline" class="message-input" subscriptSizing="dynamic">
-        <input #messageInput matInput [ngModel]="newMessageText()" (ngModelChange)="newMessageText.set($event)"
-          placeholder="Type a message..." [disabled]="isSending()" (keyup.enter)="sendMessage()" />
-      </mat-form-field>
-      <button mat-icon-button type="button" [disabled]="!newMessageText().trim() || isSending()"
-        (click)="sendMessage()">
+      <input #messageInput class="message-input" [ngModel]="newMessageText()"
+        (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
+        (keyup.enter)="sendMessage()" />
+      <button mat-icon-button type="button" class="voice-button" (click)="startVoiceInput()"
+        [disabled]="isVoiceListening() || isVoiceTranscribing() || isSending()" matTooltip="Voice input">
+        @if (isVoiceListening()) {
+        <mat-icon class="pulse-icon">mic</mat-icon>
+        } @else if (isVoiceTranscribing()) {
+        <mat-icon class="spinning-icon">sync</mat-icon>
+        } @else {
+        <mat-icon>mic</mat-icon>
+        }
+      </button>
+      <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending()"
+        (click)="sendMessage()" matTooltip="Send message">
         @if (isSending()) {
         <mat-spinner diameter="24"></mat-spinner>
         } @else {

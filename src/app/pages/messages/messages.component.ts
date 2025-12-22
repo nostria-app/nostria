@@ -64,6 +64,8 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
 import { DatabaseService } from '../../services/database.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
+import { SpeechService } from '../../services/speech.service';
+import { SettingsService } from '../../services/settings.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -141,9 +143,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   layout = inject(LayoutService); // UI state signals
   private readonly database = inject(DatabaseService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly speechService = inject(SpeechService);
+  private readonly settings = inject(SettingsService);
   isLoading = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
   isSending = signal<boolean>(false);
+  isVoiceListening = signal<boolean>(false);
+  isVoiceTranscribing = signal<boolean>(false);
   error = signal<string | null>(null);
   showMobileList = signal<boolean>(true);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
@@ -404,7 +410,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       const pubkey = params['pubkey'];
       if (pubkey) {
         this.logger.debug('Query param pubkey detected:', pubkey);
-        
+
         // Ensure chats are loaded before attempting to start the chat
         // Check if we need to trigger initial load
         if (!this.messaging.isLoading() && this.messaging.sortedChats().length === 0) {
@@ -420,7 +426,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
           });
         } else if (this.messaging.isLoading()) {
           this.logger.debug('Chats are currently loading, waiting for completion...');
-          
+
           // Use an effect to wait for loading to complete with a timeout fallback
           let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
           const waitEffect = effect(() => {
@@ -777,6 +783,48 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Call the messaging service to mark the chat as read
     // Messages are automatically updated via the computed signal
     await this.messaging.markChatAsRead(chatId);
+  }
+
+  /**
+   * Start voice input for message dictation
+   */
+  async startVoiceInput(): Promise<void> {
+    // Check if AI transcription is enabled first
+    if (!this.settings.settings().aiEnabled || !this.settings.settings().aiTranscriptionEnabled) {
+      this.snackBar.open('AI transcription is disabled in settings', 'Open Settings', { duration: 5000 })
+        .onAction().subscribe(() => {
+          this.router.navigate(['/ai/settings']);
+        });
+      return;
+    }
+
+    this.isVoiceListening.set(true);
+
+    await this.speechService.startRecording({
+      silenceDuration: 2000,
+      onRecordingStateChange: (isRecording) => {
+        this.isVoiceListening.set(isRecording);
+      },
+      onTranscribingStateChange: (isTranscribing) => {
+        this.isVoiceTranscribing.set(isTranscribing);
+      },
+      onTranscription: (text) => {
+        // Append transcribed text to existing message
+        const currentText = this.newMessageText();
+        const separator = currentText && !currentText.endsWith(' ') ? ' ' : '';
+        this.newMessageText.set(currentText + separator + text);
+
+        // Focus the input
+        this.messageInput?.nativeElement?.focus();
+      }
+    });
+  }
+
+  /**
+   * Stop voice recording
+   */
+  stopVoiceRecording(): void {
+    this.speechService.stopRecording();
   }
 
   /**
