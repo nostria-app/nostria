@@ -15,6 +15,7 @@ import { AccountRelayService } from '../../services/relays/account-relay';
 import { CorsProxyService } from '../../services/cors-proxy.service';
 import { NostrService } from '../../services/nostr.service';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { LayoutService } from '../../services/layout.service';
 import { MediaItem } from '../../interfaces';
 import { Event, Filter } from 'nostr-tools';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
@@ -320,6 +321,7 @@ export class YouTubeComponent {
   private readonly corsProxy = inject(CorsProxyService);
   private readonly nostrService = inject(NostrService);
   private readonly mediaPlayer = inject(MediaPlayerService);
+  private readonly layout = inject(LayoutService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly sanitizer = inject(DomSanitizer);
@@ -568,7 +570,7 @@ export class YouTubeComponent {
   playVideo(video: YouTubeVideo): void {
     this.currentVideo.set(video);
     // Scroll to top to see the video player
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    this.layout.scrollToTop();
   }
 
   closeVideo(): void {
