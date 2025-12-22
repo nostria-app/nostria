@@ -395,6 +395,13 @@ export const routes: Routes = [
     title: 'Memos',
   },
   {
+    path: 'youtube',
+    loadComponent: () =>
+      import('./pages/youtube/youtube.component').then(m => m.YouTubeComponent),
+    data: { isRoot: true },
+    title: 'YouTube',
+  },
+  {
     path: 'zaps',
     data: { isRoot: true },
     loadComponent: () =>

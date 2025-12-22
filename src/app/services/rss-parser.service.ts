@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { DiscoveryRelayService } from './discovery-relay.service';
+import { CorsProxyService } from './cors-proxy.service';
 
 export interface RssFeedItem {
   title: string;
@@ -29,39 +29,10 @@ export interface RssFeed {
   providedIn: 'root'
 })
 export class RssParserService {
-  private readonly discoveryRelay = inject(DiscoveryRelayService);
-
-  /**
-   * Gets the CORS proxy URL based on the user's selected region.
-   */
-  private getCorsProxyUrl(targetUrl: string): string {
-    const serverName = this.discoveryRelay.selectedServer().name;
-    // Extract region code from server name (e.g., 'proxy.eu.nostria.app' -> 'eu')
-    const regionMatch = serverName.match(/proxy\.([a-z]+)\.nostria\.app/);
-    const regionCode = regionMatch ? regionMatch[1] : 'eu';
-    return `https://proxy.${regionCode}.nostria.app/api/cors-proxy?url=${encodeURIComponent(targetUrl)}`;
-  }
+  private readonly corsProxy = inject(CorsProxyService);
 
   async parse(url: string): Promise<RssFeed> {
-    let text: string;
-
-    // Try direct fetch first (works for CORS-enabled feeds)
-    try {
-      const directResponse = await fetch(url);
-      if (directResponse.ok) {
-        text = await directResponse.text();
-      } else {
-        throw new Error('Direct fetch failed');
-      }
-    } catch {
-      // Use CORS proxy as fallback (uses user's selected region)
-      const proxyUrl = this.getCorsProxyUrl(url);
-      const proxyResponse = await fetch(proxyUrl);
-      if (!proxyResponse.ok) {
-        throw new Error(`Failed to fetch RSS feed: ${proxyResponse.statusText}`);
-      }
-      text = await proxyResponse.text();
-    }
+    const text = await this.corsProxy.fetchText(url);
     const parser = new DOMParser();
     const xmlDoc = parser.parseFromString(text, "text/xml");
 
