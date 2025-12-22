@@ -53,7 +53,7 @@
     {
       "name": "image-cache",
       "urls": [
-        "https://proxy.eu.nostria.app/api/ImageOptimizeProxy**"
+        "https://proxy.*.nostria.app/api/ImageOptimizeProxy**"
       ],
       "cacheConfig": {
         "strategy": "performance",
