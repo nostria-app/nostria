@@ -369,7 +369,7 @@
   min-height: 0;
 
   @media (max-width: 599px) {
-    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
   }
 }
 
