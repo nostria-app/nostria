@@ -122,8 +122,8 @@ export class StorageStatsComponent implements OnInit {
           this.notificationService.clearNotifications();
           this.contentNotificationService.resetLastCheckTimestamp();
           localStorage.removeItem('nostria-notification-filters');
-          // Fetch fresh notifications from relays
-          this.contentNotificationService.checkForNewNotifications().catch(error => {
+          // Fetch fresh notifications from relays (limit to last 7 days)
+          this.contentNotificationService.checkForNewNotifications(7).catch(error => {
             this.logger.error('Failed to fetch fresh notifications', error);
           });
           successMessage = 'Notifications cache cleared successfully';
