@@ -159,6 +159,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
   chatSearchQuery = signal<string>(''); // Search query for filtering chats
   showChatDetails = signal<boolean>(false); // Chat details sidepanel
+  showHiddenChats = signal<boolean>(false); // Toggle to show hidden chats
   private accountRelay = inject(AccountRelayService);
 
   // Timeout duration for waiting for chats to load when opening a specific chat
@@ -305,21 +306,32 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     return false;
   }
 
+  // Helper to check if a chat is hidden
+  private isChatHidden(chatId: string): boolean {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return false;
+    return this.accountLocalState.isChatHidden(pubkey, chatId);
+  }
+
   // Filtered chats based on selected tab and search query
   followingChats = computed(() => {
     const followingList = this.accountState.followingList();
     const query = this.chatSearchQuery();
+    const showHidden = this.showHiddenChats();
     return this.messaging.sortedChats()
       .filter(item => followingList.includes(item.chat.pubkey))
-      .filter(item => this.chatMatchesSearch(item.chat, query));
+      .filter(item => this.chatMatchesSearch(item.chat, query))
+      .filter(item => showHidden || !this.isChatHidden(item.chat.id));
   });
 
   otherChats = computed(() => {
     const followingList = this.accountState.followingList();
     const query = this.chatSearchQuery();
+    const showHidden = this.showHiddenChats();
     return this.messaging.sortedChats()
       .filter(item => !followingList.includes(item.chat.pubkey))
-      .filter(item => this.chatMatchesSearch(item.chat, query));
+      .filter(item => this.chatMatchesSearch(item.chat, query))
+      .filter(item => showHidden || !this.isChatHidden(item.chat.id));
   });
 
   filteredChats = computed(() => {
@@ -1156,14 +1168,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Hide a chat (remove from local view without deleting messages)
+   * Hide a chat (persist to local state so it stays hidden across sessions)
    */
   async hideChat(): Promise<void> {
     const chat = this.selectedChat();
     if (!chat) return;
 
-    // Remove the chat from the messaging service
-    this.messaging.removeChat(chat.id);
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    // Add to hidden chats in local state
+    this.accountLocalState.hideChat(pubkey, chat.id);
 
     // Clear selection and go back to list
     this.selectedChatId.set(null);
@@ -1171,6 +1186,38 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     this.showChatDetails.set(false);
 
     this.snackBar.open('Chat hidden', 'Close', { duration: 3000 });
+  }
+
+  /**
+   * Unhide a chat (remove from hidden list)
+   */
+  async unhideChat(): Promise<void> {
+    const chat = this.selectedChat();
+    if (!chat) return;
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    // Remove from hidden chats in local state
+    this.accountLocalState.unhideChat(pubkey, chat.id);
+
+    this.snackBar.open('Chat unhidden', 'Close', { duration: 3000 });
+  }
+
+  /**
+   * Check if the currently selected chat is hidden
+   */
+  isSelectedChatHidden(): boolean {
+    const chat = this.selectedChat();
+    if (!chat) return false;
+    return this.isChatHidden(chat.id);
+  }
+
+  /**
+   * Toggle show hidden chats
+   */
+  toggleShowHiddenChats(): void {
+    this.showHiddenChats.update(v => !v);
   }
 
   /**
