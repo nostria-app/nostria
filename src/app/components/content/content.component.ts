@@ -133,6 +133,16 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Article mentions (naddr) - these use the ArticleComponent which handles its own loading
   articleMentions = signal<ArticleMention[]>([]);
 
+  // Proxy URL from the event's proxy tag (e.g., ActivityPub bridged content)
+  proxyUrl = computed<string | null>(() => {
+    const currentEvent = this.event();
+    if (!currentEvent?.tags) return null;
+
+    // Find the proxy tag: ["proxy", "url", "protocol"]
+    const proxyTag = currentEvent.tags.find(tag => tag[0] === 'proxy' && tag[1]);
+    return proxyTag ? proxyTag[1] : null;
+  });
+
   @Input() set content(value: string) {
     const newContent = value || '';
     const currentContent = this._content();
@@ -176,8 +186,17 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       const tokens = this.contentTokens();
       const urlTokens = tokens.filter(token => token.type === 'url');
 
-      if (urlTokens.length) {
-        this.loadSocialPreviews(urlTokens.map(token => token.content));
+      // Collect URLs from content tokens
+      const urls = urlTokens.map(token => token.content);
+
+      // Also include proxy URL from event tags (e.g., ActivityPub bridged content)
+      const proxyUrlValue = this.proxyUrl();
+      if (proxyUrlValue && !urls.includes(proxyUrlValue)) {
+        urls.push(proxyUrlValue);
+      }
+
+      if (urls.length) {
+        this.loadSocialPreviews(urls);
       } else {
         this.socialPreviews.set([]);
       }
