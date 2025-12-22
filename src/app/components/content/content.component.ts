@@ -186,17 +186,19 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       const tokens = this.contentTokens();
       const urlTokens = tokens.filter(token => token.type === 'url');
 
-      // Collect URLs from content tokens
-      const urls = urlTokens.map(token => token.content);
+      // Collect URLs from content tokens using a Set to ensure uniqueness
+      const urlSet = new Set<string>(urlTokens.map(token => token.content));
 
       // Also include proxy URL from event tags (e.g., ActivityPub bridged content)
       const proxyUrlValue = this.proxyUrl();
-      if (proxyUrlValue && !urls.includes(proxyUrlValue)) {
-        urls.push(proxyUrlValue);
+      if (proxyUrlValue) {
+        urlSet.add(proxyUrlValue);
       }
 
-      if (urls.length) {
-        this.loadSocialPreviews(urls);
+      const uniqueUrls = [...urlSet];
+
+      if (uniqueUrls.length) {
+        this.loadSocialPreviews(uniqueUrls);
       } else {
         this.socialPreviews.set([]);
       }
