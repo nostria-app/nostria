@@ -74,6 +74,9 @@ export class AccountLocalStateService {
   // Signal to trigger reactivity when trusted media authors change
   private trustedMediaAuthorsVersion = signal(0);
 
+  // Signal to trigger reactivity when hidden chat IDs change
+  private hiddenChatIdsVersion = signal(0);
+
   /**
    * Get all account states from cache or localStorage
    */
@@ -630,6 +633,7 @@ export class AccountLocalStateService {
     const current = this.getHiddenChatIds(pubkey);
     if (!current.includes(chatId)) {
       this.setHiddenChatIds(pubkey, [...current, chatId]);
+      this.hiddenChatIdsVersion.update(v => v + 1);
     }
   }
 
@@ -639,12 +643,19 @@ export class AccountLocalStateService {
   unhideChat(pubkey: string, chatId: string): void {
     const current = this.getHiddenChatIds(pubkey);
     this.setHiddenChatIds(pubkey, current.filter(id => id !== chatId));
+    this.hiddenChatIdsVersion.update(v => v + 1);
   }
 
   /**
    * Check if a chat is hidden for an account
+   * @param pubkey - Current user's pubkey
+   * @param chatId - The chat ID to check
+   * @param trackChanges - If true, reads the version signal to trigger reactivity in computed signals
    */
-  isChatHidden(pubkey: string, chatId: string): boolean {
+  isChatHidden(pubkey: string, chatId: string, trackChanges = false): boolean {
+    if (trackChanges) {
+      this.hiddenChatIdsVersion();
+    }
     return this.getHiddenChatIds(pubkey).includes(chatId);
   }
 

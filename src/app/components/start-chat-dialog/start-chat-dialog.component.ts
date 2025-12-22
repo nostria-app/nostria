@@ -1,12 +1,10 @@
-import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatListModule } from '@angular/material/list';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTooltipModule } from '@angular/material/tooltip';
 
@@ -32,9 +30,7 @@ export interface StartChatDialogResult {
     MatIconModule,
     MatInputModule,
     MatFormFieldModule,
-    MatListModule,
     MatSlideToggleModule,
-    MatProgressSpinnerModule,
     MatDividerModule,
     MatTooltipModule,
     UserProfileComponent,
@@ -48,21 +44,27 @@ export class StartChatDialogComponent {
   private readonly accountState = inject(AccountStateService);
   private readonly followingService = inject(FollowingService);
 
-  // Form state
-  searchQuery = signal<string>('');
-  npubInput = signal<string>('');
+  // Form state - single unified input
+  searchInput = signal<string>('');
   isLegacy = signal<boolean>(false);
 
   // UI state
   isDiscoveringRelays = signal<boolean>(false);
-  searchResults = signal<NostrRecord[]>([]);
   selectedProfile = signal<NostrRecord | null>(null);
-  npubError = signal<string>('');
 
-  // Computed properties
+  // Initial following list (cached on component init)
+  private initialFollowingList: NostrRecord[] = [];
+
+  // Computed: Check if input looks like an npub
+  isNpubInput = computed(() => {
+    const input = this.searchInput().trim();
+    return input.startsWith('npub1');
+  });
+
+  // Computed: Validate npub format
   hasValidNpub = computed(() => {
-    const input = this.npubInput().trim();
-    if (!input) return false;
+    const input = this.searchInput().trim();
+    if (!input || !this.isNpubInput()) return false;
 
     try {
       const decoded = nip19.decode(input);
@@ -72,75 +74,56 @@ export class StartChatDialogComponent {
     }
   });
 
+  // Computed: Error message for invalid npub
+  npubError = computed(() => {
+    const input = this.searchInput().trim();
+    if (this.isNpubInput() && input.length > 10 && !this.hasValidNpub()) {
+      return 'Invalid npub format';
+    }
+    return '';
+  });
+
+  // Computed: Search results based on input
+  searchResults = computed(() => {
+    const input = this.searchInput().trim().toLowerCase();
+
+    // If input is an npub, don't show search results
+    if (this.isNpubInput()) {
+      return [];
+    }
+
+    // If no input, show initial following list
+    if (!input) {
+      return this.initialFollowingList;
+    }
+
+    // Filter following list by search query
+    const followingResults = this.followingService.searchProfiles(input);
+    return this.followingService.toNostrRecords(followingResults);
+  });
+
   canStartChat = computed(() => {
     return this.selectedProfile() !== null || this.hasValidNpub();
   });
 
   constructor() {
-    // Effect to handle search query changes using FollowingService
-    effect(() => {
-      const query = this.searchQuery().trim();
-      if (query.length >= 2) {
-        const results = untracked(() => {
-          const followingResults = this.followingService.searchProfiles(query);
-          return this.followingService.toNostrRecords(followingResults);
-        });
-        this.searchResults.set(results);
-      } else {
-        this.searchResults.set([]);
-      }
-    });
+    // Load initial following list
+    this.loadInitialFollowingList();
+  }
 
-    // Effect to validate npub input
-    effect(() => {
-      const input = this.npubInput().trim();
-      if (input && !this.hasValidNpub()) {
-        this.npubError.set('Invalid npub format');
-      } else {
-        this.npubError.set('');
-      }
-    });
+  private loadInitialFollowingList(): void {
+    // Get all profiles from following list (limited for performance)
+    const allProfiles = this.followingService.searchProfiles('');
+    this.initialFollowingList = this.followingService.toNostrRecords(allProfiles).slice(0, 50);
   }
 
   selectProfile(profile: NostrRecord): void {
     this.selectedProfile.set(profile);
-    this.npubInput.set('');
-    this.searchQuery.set('');
-    this.searchResults.set([]);
+    this.searchInput.set('');
   }
 
   clearSelection(): void {
     this.selectedProfile.set(null);
-  }
-
-  async discoverRelays(): Promise<void> {
-    if (!this.hasValidNpub()) return;
-
-    this.isDiscoveringRelays.set(true);
-
-    try {
-      const decoded = nip19.decode(this.npubInput().trim());
-      if (decoded.type === 'npub') {
-        const pubkey = decoded.data;
-
-        // TODO: Implement relay discovery using NIP-65 or NIP-05
-        // For now, we'll just validate the pubkey
-
-        // Clear search results and selection when using npub input
-        this.selectedProfile.set(null);
-        this.searchResults.set([]);
-
-        console.log('Discovering relays for pubkey:', pubkey);
-
-        // Simulate relay discovery delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-      }
-    } catch (error) {
-      console.error('Error discovering relays:', error);
-      this.npubError.set('Error discovering relays');
-    } finally {
-      this.isDiscoveringRelays.set(false);
-    }
   }
 
   startChat(): void {
@@ -149,7 +132,7 @@ export class StartChatDialogComponent {
     if (this.selectedProfile()) {
       pubkey = this.selectedProfile()!.event.pubkey;
     } else if (this.hasValidNpub()) {
-      const decoded = nip19.decode(this.npubInput().trim());
+      const decoded = nip19.decode(this.searchInput().trim());
       pubkey = decoded.data as string;
     } else {
       return;
