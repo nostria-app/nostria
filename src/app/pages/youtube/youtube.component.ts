@@ -14,6 +14,8 @@ import { ApplicationService } from '../../services/application.service';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { CorsProxyService } from '../../services/cors-proxy.service';
 import { NostrService } from '../../services/nostr.service';
+import { MediaPlayerService } from '../../services/media-player.service';
+import { MediaItem } from '../../interfaces';
 import { Event, Filter } from 'nostr-tools';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { DatePipe, SlicePipe } from '@angular/common';
@@ -206,10 +208,20 @@ interface YouTubeVideo {
                   <span class="separator">•</span>
                   <span class="date">{{ currentVideo()!.published | date:'mediumDate' }}</span>
                 </div>
-                <button mat-button (click)="closeVideo()">
-                  <mat-icon>close</mat-icon>
-                  Close
-                </button>
+                <div class="video-actions">
+                  <button mat-button (click)="closeVideo()">
+                    <mat-icon>close</mat-icon>
+                    Close
+                  </button>
+                  <button mat-button (click)="playNow(currentVideo()!)">
+                    <mat-icon>play_arrow</mat-icon>
+                    Play now
+                  </button>
+                  <button mat-button (click)="addToQueue(currentVideo()!)">
+                    <mat-icon>queue</mat-icon>
+                    Add to queue
+                  </button>
+                </div>
               </div>
             </div>
           }
@@ -257,15 +269,30 @@ interface YouTubeVideo {
                 @if (channel.videos.length > 0) {
                   <div class="videos-grid">
                     @for (video of channel.videos; track video.videoId) {
-                      <div class="video-card" tabindex="0" role="button" (click)="playVideo(video)" (keydown.enter)="playVideo(video)" (keydown.space)="playVideo(video)">
-                        <div class="video-thumbnail">
+                      <div class="video-card">
+                        <div class="video-thumbnail" tabindex="0" role="button" (click)="playVideo(video)" (keydown.enter)="playVideo(video)" (keydown.space)="playVideo(video)">
                           <img [src]="video.thumbnail" [alt]="video.title" loading="lazy" />
                           <div class="play-overlay">
                             <mat-icon>play_circle</mat-icon>
                           </div>
                         </div>
                         <div class="video-details">
-                          <h3 class="video-title">{{ video.title }}</h3>
+                          <div class="video-title-row">
+                            <h3 class="video-title">{{ video.title }}</h3>
+                            <button mat-icon-button [matMenuTriggerFor]="videoMenu" class="video-menu-btn" (click)="$event.stopPropagation()">
+                              <mat-icon>more_vert</mat-icon>
+                            </button>
+                            <mat-menu #videoMenu="matMenu">
+                              <button mat-menu-item (click)="playNow(video)">
+                                <mat-icon>play_arrow</mat-icon>
+                                <span>Play now</span>
+                              </button>
+                              <button mat-menu-item (click)="addToQueue(video)">
+                                <mat-icon>queue</mat-icon>
+                                <span>Add to queue</span>
+                              </button>
+                            </mat-menu>
+                          </div>
                           <div class="video-meta">
                             <span class="views">{{ formatViews(video.views) }} views</span>
                             <span class="separator">•</span>
@@ -278,10 +305,6 @@ interface YouTubeVideo {
                 } @else if (!channel.loading) {
                   <p class="no-videos">No videos found</p>
                 }
-              } @else {
-                <div class="collapsed-info">
-                  <span>{{ channel.videos.length }} videos</span>
-                </div>
               }
             </section>
           }
@@ -296,6 +319,7 @@ export class YouTubeComponent {
   private readonly accountRelay = inject(AccountRelayService);
   private readonly corsProxy = inject(CorsProxyService);
   private readonly nostrService = inject(NostrService);
+  private readonly mediaPlayer = inject(MediaPlayerService);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
   private readonly sanitizer = inject(DomSanitizer);
@@ -517,6 +541,28 @@ export class YouTubeComponent {
     });
 
     return videos;
+  }
+
+  private createMediaItem(video: YouTubeVideo): MediaItem {
+    return {
+      artwork: video.thumbnail,
+      title: video.title,
+      artist: video.channelTitle,
+      source: `https://www.youtube.com/watch?v=${video.videoId}`,
+      type: 'YouTube',
+    };
+  }
+
+  playNow(video: YouTubeVideo): void {
+    const mediaItem = this.createMediaItem(video);
+    this.mediaPlayer.play(mediaItem);
+    this.snackBar.open('Playing in media player', 'Close', { duration: 2000 });
+  }
+
+  addToQueue(video: YouTubeVideo): void {
+    const mediaItem = this.createMediaItem(video);
+    this.mediaPlayer.enque(mediaItem);
+    this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
   }
 
   playVideo(video: YouTubeVideo): void {
