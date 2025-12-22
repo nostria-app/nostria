@@ -26,6 +26,7 @@ import { MatBadgeModule } from '@angular/material/badge';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatSidenavModule } from '@angular/material/sidenav';
 import { Router, RouterModule, ActivatedRoute } from '@angular/router';
 import { NostrService } from '../../services/nostr.service';
 import { LoggerService } from '../../services/logger.service';
@@ -38,6 +39,7 @@ import { CustomDialogService } from '../../services/custom-dialog.service';
 import { NPubPipe } from '../../pipes/npub.pipe';
 import { TimestampPipe } from '../../pipes/timestamp.pipe';
 import { AgoPipe } from '../../pipes/ago.pipe';
+import { LinkifyPipe } from '../../pipes/linkify.pipe';
 import {
   StartChatDialogComponent,
   StartChatDialogResult,
@@ -111,12 +113,14 @@ interface DirectMessage {
     MatProgressSpinnerModule,
     MatSnackBarModule,
     MatTabsModule,
+    MatSidenavModule,
     RouterModule,
     LoadingOverlayComponent,
     UserProfileComponent,
     NPubPipe,
     TimestampPipe,
     AgoPipe,
+    LinkifyPipe,
     NamePipe,
   ],
   templateUrl: './messages.component.html',
@@ -154,6 +158,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   showMobileList = signal<boolean>(true);
   selectedTabIndex = signal<number>(0); // 0 = Following, 1 = Others
   chatSearchQuery = signal<string>(''); // Search query for filtering chats
+  showChatDetails = signal<boolean>(false); // Chat details sidepanel
   private accountRelay = inject(AccountRelayService);
 
   // Timeout duration for waiting for chats to load when opening a specific chat
@@ -219,6 +224,49 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   // Computed helpers
   hasChats = computed(() => this.messaging.sortedChats().length > 0);
+
+  // Chat details computed signals
+  chatMessageCount = computed(() => this.messages().length);
+
+  chatStartDate = computed(() => {
+    const msgs = this.messages();
+    if (msgs.length === 0) return null;
+    const earliest = Math.min(...msgs.map(m => m.created_at));
+    return earliest;
+  });
+
+  sharedLinks = computed(() => {
+    const msgs = this.messages();
+    const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+)/g;
+    const links: { url: string; timestamp: number; isOutgoing: boolean }[] = [];
+
+    for (const msg of msgs) {
+      const matches = msg.content.match(urlRegex);
+      if (matches) {
+        for (const url of matches) {
+          links.push({
+            url,
+            timestamp: msg.created_at,
+            isOutgoing: msg.isOutgoing
+          });
+        }
+      }
+    }
+
+    return links;
+  });
+
+  sharedFiles = computed(() => {
+    const links = this.sharedLinks();
+    const fileExtensions = /\.(pdf|doc|docx|xls|xlsx|ppt|pptx|zip|rar|7z|txt|csv|json|xml)$/i;
+    return links.filter(link => fileExtensions.test(link.url));
+  });
+
+  sharedMedia = computed(() => {
+    const links = this.sharedLinks();
+    const mediaExtensions = /\.(jpg|jpeg|png|gif|webp|mp4|webm|mov|mp3|wav|ogg)$/i;
+    return links.filter(link => mediaExtensions.test(link.url));
+  });
 
   // Helper to check if a chat matches the search query
   private chatMatchesSearch(chat: Chat, query: string): boolean {
@@ -1091,6 +1139,57 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   backToList(): void {
     this.showMobileList.set(true);
+  }
+
+  /**
+   * Toggle chat details sidepanel
+   */
+  toggleChatDetails(): void {
+    this.showChatDetails.update(v => !v);
+  }
+
+  /**
+   * Close chat details sidepanel
+   */
+  closeChatDetails(): void {
+    this.showChatDetails.set(false);
+  }
+
+  /**
+   * Hide a chat (remove from local view without deleting messages)
+   */
+  async hideChat(): Promise<void> {
+    const chat = this.selectedChat();
+    if (!chat) return;
+
+    // Remove the chat from the messaging service
+    this.messaging.removeChat(chat.id);
+
+    // Clear selection and go back to list
+    this.selectedChatId.set(null);
+    this.showMobileList.set(true);
+    this.showChatDetails.set(false);
+
+    this.snackBar.open('Chat hidden', 'Close', { duration: 3000 });
+  }
+
+  /**
+   * Get display URL (truncated for UI)
+   */
+  getDisplayUrl(url: string): string {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname + (urlObj.pathname !== '/' ? urlObj.pathname.slice(0, 20) : '');
+    } catch {
+      return url.slice(0, 30);
+    }
+  }
+
+  /**
+   * Open URL in new tab
+   */
+  openUrl(url: string): void {
+    window.open(url, '_blank', 'noopener,noreferrer');
   }
 
   /**

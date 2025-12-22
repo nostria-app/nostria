@@ -1506,6 +1506,18 @@ export class MessagingService implements NostriaService {
   }
 
   /**
+   * Remove a chat from the local view (hide it)
+   * Note: This doesn't delete messages from storage, just hides the chat
+   */
+  removeChat(chatId: string): void {
+    const currentMap = this.chatsMap();
+    const newMap = new Map(currentMap);
+    newMap.delete(chatId);
+    this.chatsMap.set(newMap);
+    this.logger.info(`Chat ${chatId} hidden from view`);
+  }
+
+  /**
    * Mark all unread messages in a chat as read
    */
   async markChatAsRead(chatId: string): Promise<void> {

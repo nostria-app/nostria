@@ -201,7 +201,8 @@
       }
     </div>
   </div>
-  <div class="messages-right" [class.mobile-hidden]="layout.isHandset() && showMobileList()">
+  <div class="messages-right" [class.mobile-hidden]="layout.isHandset() && showMobileList()"
+    [class.sidepanel-open]="showChatDetails()">
     @if (!selectedChat()) {
     <div class="no-chat-selected">
       <h2>Select a message</h2>
@@ -211,44 +212,63 @@
       </button>
     </div>
     } @else {
-    <div class="message-list-header">
-      <div class="chat-header-user">
-        @if (layout.isHandset() && !showMobileList()) {
-        <button mat-icon-button class="back-button" (click)="backToList()">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
+    <div class="chat-content-wrapper">
+      <div class="message-list-header">
+        <div class="chat-header-user">
+          @if (layout.isHandset() && !showMobileList()) {
+          <button mat-icon-button class="back-button" (click)="backToList()">
+            <mat-icon>arrow_back</mat-icon>
+          </button>
+          }
+          <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
+        </div>
+        <div class="chat-header-actions">
+          <button mat-icon-button (click)="toggleChatDetails()" matTooltip="Chat details">
+            <mat-icon>info</mat-icon>
+          </button>
+          <button mat-icon-button [matMenuTriggerFor]="chatOptionsMenu" matTooltip="More options">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #chatOptionsMenu="matMenu">
+            <button mat-menu-item (click)="viewProfile()">
+              <mat-icon>person</mat-icon>
+              <span>View Profile</span>
+            </button>
+            <button mat-menu-item (click)="hideChat()">
+              <mat-icon>visibility_off</mat-icon>
+              <span>Hide Chat</span>
+            </button>
+          </mat-menu>
+        </div>
+      </div>
+
+      <div class="message-list" #messagesWrapper>
+        <router-outlet></router-outlet>
+
+        @if (hasMoreMessages() && !isLoadingMore()) {
+        <div class="load-more-indicator">
+          <p class="load-more-hint">Scroll up to load older messages</p>
+          <button mat-button (click)="loadMoreMessages()">
+            <mat-icon>expand_less</mat-icon>
+            Load older messages
+          </button>
+        </div>
         }
-        <app-user-profile [pubkey]="selectedChat()!.pubkey" view="thread"></app-user-profile>
-      </div>
-    </div>
 
-    <div class="message-list" #messagesWrapper>
-      <router-outlet></router-outlet>
+        @if (isLoadingMore()) {
+        <div class="loading-more-indicator">
+          <mat-spinner diameter="24"></mat-spinner>
+          <p>Loading older messages...</p>
+        </div>
+        }
 
-      @if (hasMoreMessages() && !isLoadingMore()) {
-      <div class="load-more-indicator">
-        <p class="load-more-hint">Scroll up to load older messages</p>
-        <button mat-button color="primary" (click)="loadMoreMessages()">
-          <mat-icon>expand_less</mat-icon>
-          Load older messages
-        </button>
-      </div>
-      }
+        @for (message of messages(); track message.id) {
+        <div class="message-bubble-container" [class.outgoing]="message.isOutgoing">
+          <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
+            [class.failed]="message.failed" [innerHTML]="message.content | linkify">
+          </div>
 
-      @if (isLoadingMore()) {
-      <div class="loading-more-indicator">
-        <mat-spinner diameter="24"></mat-spinner>
-        <p>Loading older messages...</p>
-      </div>
-      }
-
-      @for (message of messages(); track message.id) {
-      <div class="message-bubble-container" [class.outgoing]="message.isOutgoing">
-        <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
-          [class.failed]="message.failed">
-          {{ message.content }}
-
-          <div class="message-status">
+          <div class="message-meta" [class.outgoing]="message.isOutgoing">
             @if (message.pending) {
             <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
             } @else if (message.failed) {
@@ -259,45 +279,152 @@
             <mat-icon class="received-icon">done</mat-icon>
             }
             <span class="message-time">{{ message.created_at | timestamp }}</span>
+
+            @if (message.failed) {
+            <button mat-icon-button class="retry-button" (click)="retryMessage(message)">
+              <mat-icon>refresh</mat-icon>
+            </button>
+            }
           </div>
         </div>
-
-        @if (message.failed) {
-        <button mat-icon-button class="retry-button" (click)="retryMessage(message)">
-          <mat-icon>refresh</mat-icon>
-        </button>
         }
       </div>
-      }
-    </div>
-    <div class="message-input-container">
-      <input #messageInput class="message-input" [ngModel]="newMessageText()"
-        (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
-        (keyup.enter)="sendMessage()" />
-      @if (isVoiceListening()) {
-      <button mat-icon-button type="button" class="voice-button recording" (click)="stopVoiceRecording()"
-        [disabled]="isSending()" matTooltip="Stop recording">
-        <mat-icon class="pulse-icon">stop</mat-icon>
-      </button>
-      } @else {
-      <button mat-icon-button type="button" class="voice-button" (click)="startVoiceInput()"
-        [disabled]="isVoiceTranscribing() || isSending()" matTooltip="Voice input">
-        @if (isVoiceTranscribing()) {
-        <mat-icon class="spinning-icon">sync</mat-icon>
+      <div class="message-input-container">
+        <input #messageInput class="message-input" [ngModel]="newMessageText()"
+          (ngModelChange)="newMessageText.set($event)" placeholder="Your message" [disabled]="isSending()"
+          (keyup.enter)="sendMessage()" />
+        @if (isVoiceListening()) {
+        <button mat-icon-button type="button" class="voice-button recording" (click)="stopVoiceRecording()"
+          [disabled]="isSending()" matTooltip="Stop recording">
+          <mat-icon class="pulse-icon">stop</mat-icon>
+        </button>
         } @else {
-        <mat-icon>mic</mat-icon>
+        <button mat-icon-button type="button" class="voice-button" (click)="startVoiceInput()"
+          [disabled]="isVoiceTranscribing() || isSending()" matTooltip="Voice input">
+          @if (isVoiceTranscribing()) {
+          <mat-icon class="spinning-icon">sync</mat-icon>
+          } @else {
+          <mat-icon>mic</mat-icon>
+          }
+        </button>
         }
-      </button>
-      }
-      <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending()"
-        (click)="sendMessage()" matTooltip="Send message">
-        @if (isSending()) {
-        <mat-spinner diameter="24"></mat-spinner>
-        } @else {
-        <mat-icon>send</mat-icon>
-        }
-      </button>
+        <button mat-icon-button type="button" class="send-button" [disabled]="!newMessageText().trim() || isSending()"
+          (click)="sendMessage()" matTooltip="Send message">
+          @if (isSending()) {
+          <mat-spinner diameter="24"></mat-spinner>
+          } @else {
+          <mat-icon>send</mat-icon>
+          }
+        </button>
+      </div>
     </div>
+
+    <!-- Chat Details Sidepanel -->
+    @if (showChatDetails()) {
+    <div class="chat-details-panel">
+      <div class="chat-details-header">
+        <h3>Chat Details</h3>
+        <button mat-icon-button (click)="closeChatDetails()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="chat-details-content">
+        <!-- Chat Stats -->
+        <div class="chat-stats-section">
+          <div class="stat-item">
+            <mat-icon>chat</mat-icon>
+            <div class="stat-info">
+              <span class="stat-value">{{ chatMessageCount() }}</span>
+              <span class="stat-label">Messages</span>
+            </div>
+          </div>
+          @if (chatStartDate(); as startDate) {
+          <div class="stat-item">
+            <mat-icon>event</mat-icon>
+            <div class="stat-info">
+              <span class="stat-value">{{ startDate | timestamp }}</span>
+              <span class="stat-label">Chat Started</span>
+            </div>
+          </div>
+          }
+        </div>
+
+        <!-- Shared Links -->
+        @if (sharedLinks().length > 0) {
+        <div class="chat-section">
+          <div class="section-header">
+            <mat-icon>link</mat-icon>
+            <span>Shared Links</span>
+            <span class="section-count">{{ sharedLinks().length }}</span>
+          </div>
+          <div class="shared-links-list">
+            @for (link of sharedLinks().slice(0, 10); track link.url + link.timestamp) {
+            <a class="shared-link-item" [href]="link.url" target="_blank" rel="noopener noreferrer">
+              <mat-icon class="link-icon">open_in_new</mat-icon>
+              <span class="link-text">{{ getDisplayUrl(link.url) }}</span>
+            </a>
+            }
+            @if (sharedLinks().length > 10) {
+            <div class="see-all-hint">+ {{ sharedLinks().length - 10 }} more links</div>
+            }
+          </div>
+        </div>
+        }
+
+        <!-- Shared Files -->
+        @if (sharedFiles().length > 0) {
+        <div class="chat-section">
+          <div class="section-header">
+            <mat-icon>attach_file</mat-icon>
+            <span>Shared Files</span>
+            <span class="section-count">{{ sharedFiles().length }}</span>
+          </div>
+          <div class="shared-links-list">
+            @for (file of sharedFiles().slice(0, 10); track file.url + file.timestamp) {
+            <a class="shared-link-item" [href]="file.url" target="_blank" rel="noopener noreferrer">
+              <mat-icon class="link-icon">description</mat-icon>
+              <span class="link-text">{{ getDisplayUrl(file.url) }}</span>
+            </a>
+            }
+            @if (sharedFiles().length > 10) {
+            <div class="see-all-hint">+ {{ sharedFiles().length - 10 }} more files</div>
+            }
+          </div>
+        </div>
+        }
+
+        <!-- Shared Media -->
+        @if (sharedMedia().length > 0) {
+        <div class="chat-section">
+          <div class="section-header">
+            <mat-icon>photo_library</mat-icon>
+            <span>Shared Media</span>
+            <span class="section-count">{{ sharedMedia().length }}</span>
+          </div>
+          <div class="shared-links-list">
+            @for (media of sharedMedia().slice(0, 10); track media.url + media.timestamp) {
+            <a class="shared-link-item" [href]="media.url" target="_blank" rel="noopener noreferrer">
+              <mat-icon class="link-icon">image</mat-icon>
+              <span class="link-text">{{ getDisplayUrl(media.url) }}</span>
+            </a>
+            }
+            @if (sharedMedia().length > 10) {
+            <div class="see-all-hint">+ {{ sharedMedia().length - 10 }} more media</div>
+            }
+          </div>
+        </div>
+        }
+
+        @if (sharedLinks().length === 0 && sharedFiles().length === 0 && sharedMedia().length === 0) {
+        <div class="empty-details">
+          <mat-icon>folder_open</mat-icon>
+          <p>No shared content yet</p>
+        </div>
+        }
+      </div>
+    </div>
+    }
     }
   </div>
   }
