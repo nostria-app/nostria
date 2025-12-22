@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 
+import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -12,6 +13,7 @@ import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ReportingService } from '../../services/reporting.service';
 import { LiveEventComponent } from '../../components/event-types/live-event.component';
+import { StreamingAppsDialogComponent } from './streaming-apps-dialog/streaming-apps-dialog.component';
 
 @Component({
   selector: 'app-streams',
@@ -32,6 +34,7 @@ export class StreamsComponent implements OnDestroy {
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
   private reporting = inject(ReportingService);
+  private dialog = inject(MatDialog);
 
   liveStreams = signal<Event[]>([]);
   plannedStreams = signal<Event[]>([]);
@@ -66,6 +69,13 @@ export class StreamsComponent implements OnDestroy {
     if (this.subscription) {
       this.subscription.close();
     }
+  }
+
+  openStreamingAppsDialog(): void {
+    this.dialog.open(StreamingAppsDialogComponent, {
+      width: '600px',
+      maxWidth: '95vw'
+    });
   }
 
   private startLiveSubscription(): void {

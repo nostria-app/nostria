@@ -26,6 +26,20 @@
     }
   }
 
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .stream-button {
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+  }
+
   button mat-icon {
     font-size: 20px;
     width: 20px;
