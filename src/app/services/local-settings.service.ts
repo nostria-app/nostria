@@ -29,7 +29,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   menuExpanded: true,
   locale: 'en',
   maxRelaysPerUser: 3,
-  autoRelayAuth: true,
+  autoRelayAuth: false,
   addClientTag: true,
   showClientTag: true,
   trustEnabled: false,
@@ -190,9 +190,9 @@ export class LocalSettingsService {
           // Explicitly ensure startFeedsOnLastEvent defaults to true for existing users
           // who don't have this property yet
           startFeedsOnLastEvent: stored.startFeedsOnLastEvent !== undefined ? stored.startFeedsOnLastEvent : true,
-          // Explicitly ensure autoRelayAuth defaults to true for existing users
-          // who don't have this property yet
-          autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : true,
+          // Explicitly ensure autoRelayAuth defaults to false for existing users
+          // who don't have this property yet (most users don't use authentication)
+          autoRelayAuth: stored.autoRelayAuth !== undefined ? stored.autoRelayAuth : false,
         };
 
         this.settings.set(mergedSettings);
