@@ -203,9 +203,73 @@
           font-size: 16px;
           opacity: 0.8;
         }
+
+        .app-loading-reload {
+          display: none;
+          margin-top: 24px;
+          flex-direction: column;
+          align-items: center;
+          gap: 12px;
+          animation: fadeIn 0.3s ease-in;
+        }
+
+        .app-loading-reload.visible {
+          display: flex;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .app-loading-reload-text {
+          font-size: 14px;
+          opacity: 0.6;
+          text-align: center;
+          max-width: 280px;
+        }
+
+        .app-loading-reload-btn {
+          padding: 12px 24px;
+          font-size: 14px;
+          cursor: pointer;
+          border: none;
+          border-radius: 8px;
+          background: #5953a9;
+          color: white;
+          transition: background 0.2s ease;
+        }
+
+        .app-loading-reload-btn:hover {
+          background: #413b8f;
+        }
+
+        body[data-theme="dark"] .app-loading-reload-btn {
+          background: #c5c0ff;
+          color: #2a2278;
+        }
+
+        body[data-theme="dark"] .app-loading-reload-btn:hover {
+          background: #e3dfff;
+        }
       </style>
       <div class="app-loading-spinner"></div>
       <div class="app-loading-text">Loading Nostria...</div>
+      <div id="app-loading-reload" class="app-loading-reload">
+        <div class="app-loading-reload-text">Taking longer than expected?</div>
+        <button class="app-loading-reload-btn" onclick="clearCachesAndReload()">Clear Cache & Reload</button>
+      </div>
+      <script>
+        // Show reload button after 5 seconds if still loading
+        setTimeout(function() {
+          var reloadEl = document.getElementById('app-loading-reload');
+          var loadingEl = document.getElementById('app-loading');
+          // Only show if app-loading is still visible (Angular hasn't bootstrapped)
+          if (reloadEl && loadingEl && loadingEl.offsetParent !== null) {
+            reloadEl.classList.add('visible');
+          }
+        }, 5000);
+      </script>
     </div>
   </app-root>
   <noscript>Please enable JavaScript to continue using this application.</noscript>
