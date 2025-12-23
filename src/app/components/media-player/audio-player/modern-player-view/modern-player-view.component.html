@@ -7,7 +7,8 @@
   }
 
   <!-- Pull down indicator -->
-  <button class="pull-indicator" (click)="openQueue.emit()" matTooltip="Open queue" aria-label="Open queue">
+  <button class="pull-indicator" (click)="openQueue.emit(); $event.stopPropagation()"
+    (mousedown)="$event.stopPropagation()" aria-label="Open queue">
     <div class="pull-bar"></div>
     <span class="pull-hint">Pull down for queue</span>
   </button>
