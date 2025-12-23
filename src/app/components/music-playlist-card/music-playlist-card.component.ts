@@ -41,11 +41,11 @@ const MUSIC_KIND = 36787;
           </div>
         }
         @if (trackCount() > 0) {
-        <button mat-mini-fab class="play-btn" (click)="playPlaylist($event)" 
+        <button mat-icon-button class="play-btn" (click)="playPlaylist($event)" 
           [disabled]="isLoadingTracks()"
           aria-label="Play playlist">
           @if (isLoadingTracks()) {
-            <mat-spinner diameter="20"></mat-spinner>
+            <mat-spinner diameter="24"></mat-spinner>
           } @else {
             <mat-icon>play_arrow</mat-icon>
           }
@@ -149,14 +149,39 @@ const MUSIC_KIND = 36787;
         position: absolute;
         bottom: 8px;
         right: 8px;
+        width: 40px;
+        height: 40px;
         opacity: 0;
         transform: translateY(8px);
         transition: opacity 0.2s ease, transform 0.2s ease;
         background: var(--mat-sys-primary);
         color: var(--mat-sys-on-primary);
+        border-radius: 50%;
+        box-shadow: var(--mat-sys-level3);
+
+        &:hover:not(:disabled) {
+          background-color: var(--mat-sys-primary-container);
+          color: var(--mat-sys-on-primary-container);
+          transform: scale(1.1);
+        }
 
         &:disabled {
-          opacity: 0.5;
+          opacity: 1;
+          transform: translateY(0);
+        }
+
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
+        }
+
+        mat-spinner {
+          margin: auto;
+
+          ::ng-deep circle {
+            stroke: var(--mat-sys-on-primary) !important;
+          }
         }
       }
     }
