@@ -60,6 +60,18 @@
           }
         </div>
 
+        <div class="action-buttons">
+          <button mat-flat-button (click)="likeTrack()" [disabled]="isLiked() || isLiking()" [class.liked]="isLiked()"
+            aria-label="Like track">
+            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+            {{ isLiked() ? 'Liked' : 'Like' }}
+          </button>
+          <button mat-stroked-button (click)="zapArtist()" aria-label="Zap artist">
+            <mat-icon>bolt</mat-icon>
+            Zap
+          </button>
+        </div>
+
         @if (genres().length > 0) {
         <div class="genres">
           @for (genre of genres(); track genre) {

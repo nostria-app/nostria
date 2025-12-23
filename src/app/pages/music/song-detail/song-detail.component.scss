@@ -205,6 +205,27 @@
   }
 }
 
+.action-buttons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+
+  button {
+    mat-icon {
+      margin-right: 0.25rem;
+    }
+
+    &.liked {
+      background-color: var(--mat-sys-error-container);
+      color: var(--mat-sys-on-error-container);
+    }
+  }
+
+  @media (max-width: 600px) {
+    justify-content: center;
+  }
+}
+
 .genres {
   display: flex;
   flex-wrap: wrap;

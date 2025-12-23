@@ -176,16 +176,21 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
 
     .menu-btn {
       flex-shrink: 0;
-      width: 28px;
-      height: 28px;
-      line-height: 28px;
+      width: 24px;
+      height: 24px;
+      padding: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       opacity: 0.6;
       transition: opacity 0.2s ease;
+      --mdc-icon-button-state-layer-size: 24px;
+      --mdc-icon-button-icon-size: 18px;
 
       mat-icon {
-        font-size: 1.125rem;
-        width: 1.125rem;
-        height: 1.125rem;
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
       }
 
       &:hover {
