@@ -421,7 +421,7 @@ export const routes: Routes = [
     title: 'Edit Article',
   },
   {
-    path: 'articles',
+    path: 'articles/edit',
     loadComponent: () =>
       import('./pages/articles-list/articles-list.component').then(m => m.ArticlesListComponent),
     data: { isRoot: true },
