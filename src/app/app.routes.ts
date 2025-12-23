@@ -347,6 +347,12 @@ export const routes: Routes = [
     title: 'Playlist',
   },
   {
+    path: 'music/terms',
+    loadComponent: () =>
+      import('./pages/music/music-terms/music-terms.component').then(m => m.MusicTermsComponent),
+    title: 'Music Terms of Service',
+  },
+  {
     path: 'articles',
     loadComponent: () =>
       import('./pages/articles/articles.component').then(m => m.ArticlesDiscoverComponent),

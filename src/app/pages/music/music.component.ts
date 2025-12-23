@@ -15,6 +15,7 @@ import { ApplicationService } from '../../services/application.service';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from './create-music-playlist-dialog/create-music-playlist-dialog.component';
+import { UploadMusicTrackDialogComponent } from './upload-music-track-dialog/upload-music-track-dialog.component';
 
 const MUSIC_KIND = 36787;
 const PLAYLIST_KIND = 34139;
@@ -260,8 +261,18 @@ export class MusicComponent implements OnDestroy {
 
   // Menu actions
   openUploadTrack(): void {
-    // TODO: Implement upload track dialog
-    console.log('Upload track - coming soon');
+    const dialogRef = this.dialog.open(UploadMusicTrackDialogComponent, {
+      width: '600px',
+      maxWidth: '95vw',
+      maxHeight: '90vh',
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.published) {
+        // Refresh to show the new track
+        this.refresh();
+      }
+    });
   }
 
   openCreatePlaylist(): void {
