@@ -471,7 +471,12 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   }
 
   goBack(): void {
-    this.router.navigate(['/music']);
+    // Use browser history to go back to where user came from
+    if (window.history.length > 1) {
+      window.history.back();
+    } else {
+      this.router.navigate(['/music']);
+    }
   }
 
   likeTrack(): void {
