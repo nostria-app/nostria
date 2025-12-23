@@ -145,6 +145,15 @@
             <mat-icon>bolt</mat-icon>
             Zap
           </button>
+          <button mat-stroked-button (click)="downloadTrack()" [disabled]="!audioUrl() || isDownloading()"
+            aria-label="Download track">
+            @if (isDownloading()) {
+            <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+            <mat-icon>download</mat-icon>
+            }
+            Download
+          </button>
         </div>
 
         @if (genres().length > 0) {

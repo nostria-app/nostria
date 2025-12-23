@@ -42,11 +42,11 @@
   </div>
   } @else {
   <div class="playlist-content">
-    <!-- Playlist Header -->
+    <!-- Playlist Header (Spotify-style) -->
     <div class="playlist-header">
       <div class="cover-section">
         @if (coverImage()) {
-        <img [src]="coverImage()" [alt]="title()" class="cover-image" />
+        <img [src]="coverImage()" [alt]="title()" title="Playlist cover" class="cover-image" />
         } @else if (gradient()) {
         <div class="cover-gradient" [style.background]="gradient()">
           <mat-icon>queue_music</mat-icon>
@@ -59,61 +59,60 @@
       </div>
 
       <div class="info-section">
-        <span class="playlist-label">Playlist</span>
+        <span class="playlist-label">PLAYLIST</span>
         <h1 class="playlist-title">{{ title() }}</h1>
 
-        <div class="artist-row" (click)="goToArtist()" (keydown.enter)="goToArtist()" tabindex="0" role="button"
-          aria-label="View artist">
-          @if (artistAvatar()) {
-          <img [src]="artistAvatar()" alt="" class="artist-avatar" />
-          } @else {
-          <mat-icon class="artist-avatar-placeholder">person</mat-icon>
-          }
-          <span class="artist-name">{{ artistName() }}</span>
-        </div>
+        @if (description()) {
+        <p class="description">{{ description() }}</p>
+        }
 
-        <div class="meta-row">
+        <div class="meta-info">
+          <div class="artist-row" (click)="goToArtist()" (keydown.enter)="goToArtist()" tabindex="0" role="button"
+            aria-label="View artist">
+            @if (artistAvatar()) {
+            <img [src]="artistAvatar()" alt="" class="artist-avatar" />
+            } @else {
+            <mat-icon class="artist-avatar-placeholder">person</mat-icon>
+            }
+            <span class="artist-name">{{ artistName() }}</span>
+          </div>
+          <span class="separator">•</span>
           <span class="date">{{ publishedDate() }}</span>
           <span class="separator">•</span>
           <span class="track-count">{{ trackCount() }} tracks</span>
           @if (isPublic()) {
+          <span class="separator">•</span>
           <mat-chip>
             <mat-icon>public</mat-icon>
             Public
           </mat-chip>
           }
         </div>
-
-        @if (description()) {
-        <p class="description">{{ description() }}</p>
-        }
-
-        <div class="actions">
-          <button mat-fab extended (click)="playAll()" [disabled]="tracks().length === 0">
-            <mat-icon>play_arrow</mat-icon>
-            Play All
-          </button>
-          <button mat-icon-button (click)="likePlaylist()" [disabled]="isLiked() || isLiking()"
-            [class.liked]="isLiked()" aria-label="Like playlist">
-            @if (isLiking()) {
-            <mat-icon>hourglass_empty</mat-icon>
-            } @else {
-            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
-            }
-          </button>
-          @if (isOwnPlaylist()) {
-          <button mat-stroked-button (click)="editPlaylist()">
-            <mat-icon>edit</mat-icon>
-            Edit
-          </button>
-          }
-        </div>
       </div>
     </div>
 
-    <!-- Tracks -->
+    <!-- Action Row -->
+    <div class="action-row">
+      <button mat-fab class="play-fab" (click)="playAll()" [disabled]="tracks().length === 0" aria-label="Play all">
+        <mat-icon>play_arrow</mat-icon>
+      </button>
+      <button mat-icon-button class="like-btn" (click)="likePlaylist()" [disabled]="isLiked() || isLiking()"
+        [class.liked]="isLiked()" aria-label="Like playlist">
+        @if (isLiking()) {
+        <mat-icon>hourglass_empty</mat-icon>
+        } @else {
+        <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+        }
+      </button>
+      @if (isOwnPlaylist()) {
+      <button mat-icon-button (click)="editPlaylist()" aria-label="Edit playlist">
+        <mat-icon>edit</mat-icon>
+      </button>
+      }
+    </div>
+
+    <!-- Tracks Table -->
     <div class="tracks-section">
-      <h2>Tracks</h2>
       @if (loadingTracks()) {
       <div class="loading-tracks">
         <mat-spinner diameter="32"></mat-spinner>
@@ -125,9 +124,61 @@
         <p>No tracks in this playlist yet</p>
       </div>
       } @else {
-      <div class="tracks-grid">
-        @for (track of tracks(); track track.id) {
-        <app-music-event [event]="track"></app-music-event>
+      <!-- Table Header -->
+      <div class="track-header">
+        <span class="track-number">#</span>
+        <span class="track-title-header">Title</span>
+        <span class="track-date-header">Date added</span>
+        <span class="track-duration-header">
+          <mat-icon>schedule</mat-icon>
+        </span>
+      </div>
+
+      <!-- Track List -->
+      <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+      <div class="track-list" role="list">
+        @for (track of tracks(); track track.id; let i = $index) {
+        <div class="track-row" role="listitem" tabindex="0" (click)="playTrack(i)" (keydown.enter)="playTrack(i)">
+          <span class="track-number">
+            <span class="number-text">{{ i + 1 }}</span>
+            <mat-icon class="play-icon">play_arrow</mat-icon>
+          </span>
+          <div class="track-info">
+            <div class="track-image">
+              @if (getTrackImage(track); as img) {
+              <img [src]="img" [alt]="getTrackTitle(track)" title="Track cover" />
+              } @else {
+              <div class="track-placeholder">
+                <mat-icon>music_note</mat-icon>
+              </div>
+              }
+            </div>
+            <div class="track-text">
+              <span class="track-title">{{ getTrackTitle(track) }}</span>
+              <a class="track-artist" (click)="goToTrackArtist(track, $any($event))">{{ getTrackArtist(track) }}</a>
+            </div>
+          </div>
+          <span class="track-date">{{ getTrackDate(track) }}</span>
+          <span class="track-duration">{{ getTrackDuration(track) }}</span>
+          <button mat-icon-button class="track-menu-btn" [matMenuTriggerFor]="trackMenu" type="button"
+            aria-label="Track options" (click)="$event.stopPropagation()">
+            <mat-icon>more_horiz</mat-icon>
+          </button>
+          <mat-menu #trackMenu="matMenu">
+            <button mat-menu-item (click)="addTrackToQueue(track)">
+              <mat-icon>queue_music</mat-icon>
+              <span>Add to Queue</span>
+            </button>
+            <button mat-menu-item (click)="goToTrackDetails(track)">
+              <mat-icon>info</mat-icon>
+              <span>Track Details</span>
+            </button>
+            <button mat-menu-item (click)="copyTrackLink(track)">
+              <mat-icon>link</mat-icon>
+              <span>Copy Link</span>
+            </button>
+          </mat-menu>
+        </div>
         }
       </div>
       }
