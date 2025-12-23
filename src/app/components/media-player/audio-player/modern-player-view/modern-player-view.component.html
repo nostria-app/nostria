@@ -1,0 +1,98 @@
+<div class="modern-player" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" (swipe)="onSwipe($event)">
+  <!-- Blurred background glow -->
+  @if (media.current()?.artwork) {
+  <div class="background-glow">
+    <img [src]="media.current()?.artwork" alt="" class="glow-image" />
+  </div>
+  }
+
+  <!-- Pull down indicator -->
+  <div class="pull-indicator">
+    <div class="pull-bar"></div>
+    <span class="pull-hint">Pull down for queue</span>
+  </div>
+
+  <!-- Main content -->
+  <div class="player-content">
+    <!-- Album art with glow ring -->
+    <div class="album-container">
+      <div class="album-glow-ring"></div>
+      @if (media.current()?.artwork) {
+      <img class="album-art" [src]="media.current()?.artwork" alt="{{ media.current()?.title || 'Album artwork' }}" />
+      } @else {
+      <div class="album-placeholder">
+        <mat-icon>music_note</mat-icon>
+      </div>
+      }
+    </div>
+
+    <!-- Track info -->
+    <div class="track-info">
+      <h2 class="track-title">{{ media.current()?.title || 'Unknown Track' }}</h2>
+      <p class="track-artist">{{ media.current()?.artist || 'Unknown Artist' }}</p>
+    </div>
+
+    <!-- Timeline -->
+    <div class="timeline-container">
+      <div class="custom-slider">
+        <input type="range" [min]="0" [max]="duration() || 0" [value]="currentTime()" (input)="onTimeChange($event)"
+          class="slider-input" [style.background-size]="progress() * 100 + '% 100%'" aria-label="Seek slider" />
+      </div>
+      <div class="time-labels">
+        <span class="time-current">{{ formatTime(currentTime()) }}</span>
+        <span class="time-total">{{ formatTime(duration()) }}</span>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <button mat-icon-button class="control-btn shuffle-btn" matTooltip="Shuffle">
+        <mat-icon>shuffle</mat-icon>
+      </button>
+
+      <button mat-icon-button class="control-btn" [disabled]="!media.canPrevious()" (click)="media.previous()"
+        matTooltip="Previous">
+        <mat-icon>skip_previous</mat-icon>
+      </button>
+
+      @if (media.paused) {
+      <button mat-fab class="play-btn" (click)="media.resume()" matTooltip="Play">
+        <mat-icon>play_arrow</mat-icon>
+      </button>
+      } @else {
+      <button mat-fab class="play-btn" (click)="media.pause()" matTooltip="Pause">
+        <mat-icon>pause</mat-icon>
+      </button>
+      }
+
+      <button mat-icon-button class="control-btn" [disabled]="!media.canNext()" (click)="media.next()"
+        matTooltip="Next">
+        <mat-icon>skip_next</mat-icon>
+      </button>
+
+      <button mat-icon-button class="control-btn repeat-btn" matTooltip="Repeat">
+        <mat-icon>repeat</mat-icon>
+      </button>
+    </div>
+
+    <!-- Volume -->
+    <div class="volume-container">
+      <mat-icon class="volume-icon">
+        {{ volume > 50 ? 'volume_up' : volume > 0 ? 'volume_down' : 'volume_off' }}
+      </mat-icon>
+      <mat-slider class="volume-slider" [min]="0" [max]="100" [step]="1">
+        <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
+      </mat-slider>
+    </div>
+  </div>
+
+  <!-- Swipe hints -->
+  <div class="swipe-hints">
+    @if (media.canPrevious()) {
+    <span class="hint-left">← Previous</span>
+    }
+    @if (media.canNext()) {
+    <span class="hint-right">Next →</span>
+    }
+  </div>
+</div>

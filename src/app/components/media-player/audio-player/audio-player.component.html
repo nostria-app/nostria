@@ -1,7 +1,8 @@
 <div class="audio-player-container">
   @if (footer()) {
   <!-- Footer mode - full player with album art -->
-  <div class="audio-player-footer">
+  <div class="audio-player-footer" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" [threshold]="40"
+    (swipe)="onFooterSwipe($event)">
     <div class="media-info" [class.no-artwork]="!media.current()?.artwork">
       @if (media.current()?.artwork) {
       <img class="album-art" [src]="media.current()?.artwork" alt="{{ media.current()?.title || 'Album artwork' }}" />
@@ -183,91 +184,45 @@
     </div>
   </div>
   } @else {
-  <!-- Expanded mode - large audio player with artwork -->
+  <!-- Expanded mode - Multiple player views -->
   <div class="audio-player-expanded">
-    <div class="audio-header">
-      <div class="audio-title-container">
-        <h2>{{ media.current()?.title || 'Audio' }}</h2>
-        <p>{{ media.current()?.artist }}</p>
-      </div>
-      <div class="audio-actions">
-        <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
-          <mat-icon>minimize</mat-icon>
+    <!-- Header with view switcher -->
+    <div class="player-header">
+      <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
+        <mat-icon>keyboard_arrow_down</mat-icon>
+      </button>
+
+      <div class="view-switcher">
+        @for (option of viewOptions; track option.type) {
+        <button mat-icon-button [class.active]="currentView() === option.type" [matTooltip]="option.label + ' View'"
+          (click)="setView(option.type)">
+          <mat-icon>{{ option.icon }}</mat-icon>
         </button>
-        <button mat-icon-button matTooltip="Close" (click)="media.exit()">
-          <mat-icon>close</mat-icon>
-        </button>
+        }
       </div>
+
+      <button mat-icon-button matTooltip="Close" (click)="media.exit()">
+        <mat-icon>close</mat-icon>
+      </button>
     </div>
 
-    <div class="audio-content">
-      @if (media.current()?.artwork) {
-      <img class="album-art-large" [src]="media.current()?.artwork"
-        alt="{{ media.current()?.title || 'Album artwork' }}" />
+    <!-- Player views -->
+    <div class="player-views-container">
+      @switch (currentView()) {
+      @case ('modern') {
+      <app-modern-player-view (openQueue)="openQueue()" class="player-view" />
       }
-
-      <div class="audio-controls-expanded">
-        <div class="control-buttons-expanded">
-          @if (isPodcast()) {
-          <button matTooltip="Skip back 10 seconds" (click)="media.rewind(10)" mat-icon-button>
-            <mat-icon>replay_10</mat-icon>
-          </button>
-          }
-
-          <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
-            <mat-icon>skip_previous</mat-icon>
-          </button>
-
-          @if (media.paused) {
-          <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button-large">
-            <mat-icon>play_arrow</mat-icon>
-          </button>
-          } @else {
-          <button matTooltip="Pause" (click)="media.pause()" mat-icon-button class="play-button-large">
-            <mat-icon>pause</mat-icon>
-          </button>
-          }
-
-          <button matTooltip="Next" [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
-            <mat-icon>skip_next</mat-icon>
-          </button>
-
-          @if (isPodcast()) {
-          <button matTooltip="Skip forward 10 seconds" (click)="media.forward(10)" mat-icon-button>
-            <mat-icon>forward_10</mat-icon>
-          </button>
-          }
-        </div>
-
-        <div class="timeline-expanded">
-          <span class="time-label">{{ formatLabel(currentTime()) }}</span>
-          <div class="custom-slider expanded-slider">
-            <input type="range" [min]="0" [max]="duration() || 0" [value]="currentTime()" (input)="onTimeChange($event)"
-              class="slider-input" [style.background-size]="(currentTime() / (duration() || 1)) * 100 + '% 100%'"
-              aria-label="Seek slider" />
-          </div>
-          <span class="time-label">{{ formatLabel(duration()) }}</span>
-        </div>
-
-        <div class="volume-controls-expanded">
-          @if (media.muted) {
-          <button matTooltip="Unmute (hold to adjust)" (click)="media.mute()" mat-icon-button appVolumeGesture
-            (volumeChange)="onVolumeChange($event)">
-            <mat-icon>volume_off</mat-icon>
-          </button>
-          } @else {
-          <button matTooltip="Mute (hold to adjust)" (click)="media.mute()" mat-icon-button appVolumeGesture
-            (volumeChange)="onVolumeChange($event)">
-            <mat-icon>volume_up</mat-icon>
-          </button>
-          }
-
-          <mat-slider class="volume-slider-expanded" [min]="0" [max]="100" [step]="1">
-            <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
-          </mat-slider>
-        </div>
-      </div>
+      @case ('cards') {
+      <app-cards-player-view (openQueue)="openQueue()" class="player-view" />
+      }
+      @case ('winamp') {
+      <app-winamp-player-view (openQueue)="openQueue()" class="player-view" />
+      }
+      }
     </div>
+
+    <!-- Playlist drawer overlay -->
+    <app-playlist-drawer [isOpen]="showQueue()" (closeDrawer)="closeQueue()" />
   </div>
   }
 </div>

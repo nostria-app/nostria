@@ -407,10 +407,70 @@
   flex-direction: column;
   height: 100%;
   width: 100%;
-  padding: 24px;
   box-sizing: border-box;
   overflow: hidden;
-  /* Prevent scrollbars */
+  position: relative;
+  background: var(--mat-sys-surface);
+}
+
+// Player header with view switcher
+.player-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px;
+  flex-shrink: 0;
+  z-index: 10;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+
+  .view-switcher {
+    display: flex;
+    gap: 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 24px;
+    padding: 4px;
+
+    button {
+      opacity: 0.6;
+      transition: opacity 0.2s, transform 0.2s;
+
+      &:hover {
+        opacity: 0.8;
+      }
+
+      &.active {
+        opacity: 1;
+        background: var(--mat-sys-primary-container);
+        color: var(--mat-sys-on-primary-container);
+      }
+    }
+  }
+}
+
+// Player views container
+.player-views-container {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+
+  .player-view {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+// Queue open state
+:host.queue-open {
+  .player-views-container {
+    filter: brightness(0.5);
+    pointer-events: none;
+  }
 }
 
 .audio-header {

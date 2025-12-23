@@ -2,7 +2,9 @@ import {
   Component,
   inject,
   computed,
+  signal,
   input,
+  ChangeDetectionStrategy,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,12 +15,22 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
+import { LocalStorageService } from '../../../services/local-storage.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
-import { VolumeGestureDirective } from '../../../directives/volume-gesture.directive';
+import { SwipeGestureDirective, SwipeEvent } from '../../../directives/swipe-gesture.directive';
+import { ModernPlayerViewComponent } from './modern-player-view/modern-player-view.component';
+import { CardsPlayerViewComponent } from './cards-player-view/cards-player-view.component';
+import { WinampPlayerViewComponent } from './winamp-player-view/winamp-player-view.component';
+import { PlaylistDrawerComponent } from './playlist-drawer/playlist-drawer.component';
 import { nip19 } from 'nostr-tools';
+
+export type PlayerViewType = 'modern' | 'cards' | 'winamp';
+
+const PLAYER_VIEW_STORAGE_KEY = 'nostria-audio-player-view';
 
 @Component({
   selector: 'app-audio-player',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     MatButtonModule,
     MatIconModule,
@@ -28,21 +40,59 @@ import { nip19 } from 'nostr-tools';
     FormsModule,
     RouterModule,
     UserProfileComponent,
-    VolumeGestureDirective,
+    SwipeGestureDirective,
+    ModernPlayerViewComponent,
+    CardsPlayerViewComponent,
+    WinampPlayerViewComponent,
+    PlaylistDrawerComponent,
   ],
   templateUrl: './audio-player.component.html',
   styleUrl: './audio-player.component.scss',
   host: {
     '[class.footer-mode]': 'footer()',
     '[class.compact-mode]': '!footer()',
+    '[class.queue-open]': 'showQueue()',
   },
 })
 export class AudioPlayerComponent {
   readonly media = inject(MediaPlayerService);
   readonly layout = inject(LayoutService);
   private router = inject(Router);
+  private localStorage = inject(LocalStorageService);
 
   footer = input<boolean>(false);
+
+  // Player view state
+  currentView = signal<PlayerViewType>(this.loadSavedView());
+  showQueue = signal(false);
+
+  // View options for the menu
+  viewOptions: { type: PlayerViewType; icon: string; label: string }[] = [
+    { type: 'modern', icon: 'auto_awesome', label: 'Modern' },
+    { type: 'cards', icon: 'view_carousel', label: 'Cards' },
+    { type: 'winamp', icon: 'graphic_eq', label: 'WinAmp' },
+  ];
+
+  private loadSavedView(): PlayerViewType {
+    const saved = this.localStorage.getItem(PLAYER_VIEW_STORAGE_KEY);
+    if (saved && ['modern', 'cards', 'winamp'].includes(saved)) {
+      return saved as PlayerViewType;
+    }
+    return 'modern';
+  }
+
+  setView(view: PlayerViewType): void {
+    this.currentView.set(view);
+    this.localStorage.setItem(PLAYER_VIEW_STORAGE_KEY, view);
+  }
+
+  openQueue(): void {
+    this.showQueue.set(true);
+  }
+
+  closeQueue(): void {
+    this.showQueue.set(false);
+  }
 
   // Computed values for display
   currentTime = computed(() => this.media.currentTimeSig());
@@ -137,6 +187,17 @@ export class AudioPlayerComponent {
     const current = this.media.current();
     if (current?.eventPubkey) {
       this.router.navigate(['/music/artist', current.eventPubkey]);
+    }
+  }
+
+  // Footer mode swipe handler
+  onFooterSwipe(event: SwipeEvent): void {
+    if (event.direction === 'up') {
+      this.toggleFullscreen();
+    } else if (event.direction === 'left' && this.media.canNext()) {
+      this.media.next();
+    } else if (event.direction === 'right' && this.media.canPrevious()) {
+      this.media.previous();
     }
   }
 }

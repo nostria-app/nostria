@@ -1,0 +1,124 @@
+<div class="cards-player" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" [trackProgress]="true"
+  (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)" (swipeStart)="onSwipeStart()"
+  (swipeEnd)="onSwipeEnd()">
+  <!-- Pull down indicator -->
+  <div class="pull-indicator">
+    <div class="pull-bar"></div>
+  </div>
+
+  <!-- Cards container -->
+  <div class="cards-container">
+    <!-- Previous track card -->
+    @if (previousTrack()) {
+    <div class="track-card prev-card" [class.animating]="isAnimating()"
+      [style.transform]="'translateX(' + (swipeOffset() * 0.5 - 180) + 'px) scale(0.7) rotateY(30deg)'">
+      @if (previousTrack()?.artwork) {
+      <img [src]="previousTrack()?.artwork" alt="" class="card-artwork" />
+      } @else {
+      <div class="card-placeholder">
+        <mat-icon>music_note</mat-icon>
+      </div>
+      }
+      <div class="card-overlay">
+        <span class="card-title">{{ previousTrack()?.title }}</span>
+      </div>
+    </div>
+    }
+
+    <!-- Current track card with circular progress -->
+    <div class="track-card current-card" [class.animating]="isAnimating()"
+      [style.transform]="'translateX(' + swipeOffset() + 'px)'">
+      <!-- Circular progress background -->
+      <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
+      <div class="circular-container" (click)="seekByCircle($event)" role="progressbar"
+        [attr.aria-valuenow]="currentTime()" [attr.aria-valuemin]="0" [attr.aria-valuemax]="duration()"
+        aria-label="Track progress">
+        <app-circular-progress [progress]="progress()" [size]="280" [strokeWidth]="6"
+          trackColor="rgba(255, 255, 255, 0.15)" progressColor="var(--mat-sys-primary)" [showThumb]="true"
+          [thumbRadius]="8" />
+
+        <!-- Album art inside circle -->
+        <div class="artwork-container">
+          @if (media.current()?.artwork) {
+          <img [src]="media.current()?.artwork" alt="{{ media.current()?.title }}" class="card-artwork" />
+          } @else {
+          <div class="card-placeholder">
+            <mat-icon>music_note</mat-icon>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Time display on the card -->
+      <div class="card-time">{{ formatTime(currentTime()) }}</div>
+    </div>
+
+    <!-- Next track card -->
+    @if (nextTrack()) {
+    <div class="track-card next-card" [class.animating]="isAnimating()"
+      [style.transform]="'translateX(' + (swipeOffset() * 0.5 + 180) + 'px) scale(0.7) rotateY(-30deg)'">
+      @if (nextTrack()?.artwork) {
+      <img [src]="nextTrack()?.artwork" alt="" class="card-artwork" />
+      } @else {
+      <div class="card-placeholder">
+        <mat-icon>music_note</mat-icon>
+      </div>
+      }
+      <div class="card-overlay">
+        <span class="card-title">{{ nextTrack()?.title }}</span>
+      </div>
+    </div>
+    }
+  </div>
+
+  <!-- Track info -->
+  <div class="track-info">
+    <h2 class="track-title">{{ media.current()?.title || 'Unknown Track' }}</h2>
+    <p class="track-artist">{{ media.current()?.artist || 'Unknown Artist' }}</p>
+    <p class="track-duration">{{ formatTime(currentTime()) }} / {{ formatTime(duration()) }}</p>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button mat-icon-button class="control-btn" matTooltip="Shuffle">
+      <mat-icon>shuffle</mat-icon>
+    </button>
+
+    <button mat-icon-button class="control-btn" [disabled]="!media.canPrevious()" (click)="media.previous()"
+      matTooltip="Previous">
+      <mat-icon>skip_previous</mat-icon>
+    </button>
+
+    @if (media.paused) {
+    <button mat-fab class="play-btn" (click)="media.resume()" matTooltip="Play">
+      <mat-icon>play_arrow</mat-icon>
+    </button>
+    } @else {
+    <button mat-fab class="play-btn" (click)="media.pause()" matTooltip="Pause">
+      <mat-icon>pause</mat-icon>
+    </button>
+    }
+
+    <button mat-icon-button class="control-btn" [disabled]="!media.canNext()" (click)="media.next()" matTooltip="Next">
+      <mat-icon>skip_next</mat-icon>
+    </button>
+
+    <button mat-icon-button class="control-btn" matTooltip="Repeat">
+      <mat-icon>repeat</mat-icon>
+    </button>
+  </div>
+
+  <!-- Swipe arrows -->
+  <div class="swipe-arrows">
+    @if (media.canPrevious()) {
+    <div class="arrow arrow-left" [style.opacity]="swipeOffset() > 0 ? 0.8 : 0.3">
+      <mat-icon>chevron_left</mat-icon>
+    </div>
+    }
+    @if (media.canNext()) {
+    <div class="arrow arrow-right" [style.opacity]="swipeOffset() < 0 ? 0.8 : 0.3">
+      <mat-icon>chevron_right</mat-icon>
+    </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,460 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+// WinAmp color palette
+$winamp-bg: #232323;
+$winamp-dark: #1a1a1a;
+$winamp-border: #4a4a4a;
+$winamp-text: #00ff00;
+$winamp-text-dim: #008800;
+$winamp-highlight: #ffcc00;
+$winamp-button: #3a3a3a;
+$winamp-button-pressed: #2a2a2a;
+
+.winamp-player {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #2a2a3a 0%, #1a1a2a 100%);
+  padding: 16px;
+  gap: 4px;
+  font-family: 'Courier New', monospace;
+  overflow: auto;
+}
+
+// Main player window
+.winamp-main {
+  width: 275px;
+  background: linear-gradient(180deg, $winamp-bg 0%, $winamp-dark 100%);
+  border: 2px solid $winamp-border;
+  border-radius: 4px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+// Title bar
+.title-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 4px;
+  background: linear-gradient(90deg, #4a4a6a, #2a2a4a);
+  border-bottom: 1px solid $winamp-border;
+
+  .winamp-logo {
+    font-size: 10px;
+    color: white;
+    text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+    letter-spacing: 1px;
+  }
+
+  .title-bar-buttons {
+    display: flex;
+    gap: 2px;
+
+    .title-btn {
+      width: 14px;
+      height: 12px;
+      font-size: 10px;
+      line-height: 1;
+      border: 1px solid #666;
+      background: linear-gradient(180deg, #5a5a5a, #3a3a3a);
+      color: white;
+      cursor: pointer;
+      padding: 0;
+
+      &:active {
+        background: linear-gradient(180deg, #3a3a3a, #5a5a5a);
+      }
+
+      &.close {
+        background: linear-gradient(180deg, #8a4a4a, #6a2a2a);
+      }
+    }
+  }
+}
+
+// Display section
+.display-section {
+  display: flex;
+  margin: 4px;
+  background: #000;
+  border: 2px inset #333;
+  padding: 4px;
+}
+
+.display-left {
+  width: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .time-display {
+    background: #000;
+    padding: 4px 8px;
+    text-align: right;
+
+    .time-value {
+      font-size: 24px;
+      color: $winamp-text;
+      font-family: 'Digital-7', 'Courier New', monospace;
+      text-shadow: 0 0 8px rgba($winamp-text, 0.5);
+    }
+  }
+}
+
+// Visualizer
+.visualizer {
+  display: flex;
+  gap: 1px;
+  height: 40px;
+  background: #000;
+  padding: 2px;
+  align-items: flex-end;
+
+  .visualizer-bar {
+    flex: 1;
+    min-width: 3px;
+    transition: height 0.05s ease-out;
+
+    .bar-segments {
+      height: 100%;
+      display: flex;
+      flex-direction: column-reverse;
+      gap: 1px;
+
+      .segment {
+        flex: 1;
+        background: #002200;
+        min-height: 2px;
+
+        &.active {
+          background: $winamp-text;
+          box-shadow: 0 0 2px $winamp-text;
+        }
+
+        &.active.high {
+          background: $winamp-highlight;
+          box-shadow: 0 0 2px $winamp-highlight;
+        }
+
+        &.active.peak {
+          background: #ff4444;
+          box-shadow: 0 0 2px #ff4444;
+        }
+      }
+    }
+  }
+}
+
+.display-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-left: 4px;
+
+  .scrolling-text {
+    background: #000;
+    padding: 2px 4px;
+    overflow: hidden;
+
+    .marquee-text {
+      font-size: 10px;
+      color: $winamp-text;
+      white-space: nowrap;
+      text-shadow: 0 0 4px rgba($winamp-text, 0.5);
+    }
+  }
+
+  .info-row {
+    display: flex;
+    gap: 8px;
+    font-size: 8px;
+    color: $winamp-text-dim;
+
+    .bitrate,
+    .sample-rate {
+      .label {
+        color: $winamp-text;
+      }
+
+      .unit {
+        color: $winamp-text-dim;
+      }
+    }
+
+    .channels {
+      .stereo {
+        color: $winamp-text-dim;
+
+        &.active {
+          color: $winamp-text;
+        }
+      }
+    }
+  }
+
+  .position-bar {
+    margin-top: auto;
+  }
+}
+
+// WinAmp style sliders
+.winamp-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+
+  &::-webkit-slider-track {
+    height: 6px;
+    background: linear-gradient(180deg, #1a1a1a, #333);
+    border: 1px solid #444;
+    border-radius: 0;
+  }
+
+  &::-moz-range-track {
+    height: 6px;
+    background: linear-gradient(180deg, #1a1a1a, #333);
+    border: 1px solid #444;
+    border-radius: 0;
+  }
+
+  &::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 14px;
+    height: 10px;
+    background: linear-gradient(180deg, #888, #444);
+    border: 1px solid #666;
+    border-radius: 2px;
+    cursor: grab;
+
+    &:active {
+      cursor: grabbing;
+      background: linear-gradient(180deg, #666, #333);
+    }
+  }
+
+  &::-moz-range-thumb {
+    width: 14px;
+    height: 10px;
+    background: linear-gradient(180deg, #888, #444);
+    border: 1px solid #666;
+    border-radius: 2px;
+    cursor: grab;
+  }
+}
+
+.position-slider {
+  width: 100%;
+}
+
+// Volume section
+.volume-section {
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+
+  .volume-control,
+  .balance-control {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    span {
+      font-size: 7px;
+      color: $winamp-text-dim;
+      text-transform: uppercase;
+    }
+  }
+
+  .volume-slider,
+  .balance-slider {
+    width: 100%;
+  }
+}
+
+// Transport controls
+.transport-controls {
+  display: flex;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px 8px;
+
+  .transport-btn {
+    width: 36px;
+    height: 24px;
+    background: linear-gradient(180deg, #5a5a5a, #3a3a3a);
+    border: 1px solid #666;
+    border-radius: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #ccc;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+
+    &:active {
+      background: linear-gradient(180deg, #3a3a3a, #5a5a5a);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    &.play mat-icon {
+      color: $winamp-text;
+    }
+
+    &.pause mat-icon {
+      color: $winamp-highlight;
+    }
+  }
+}
+
+// Toggle buttons
+.toggle-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 8px 8px;
+
+  .toggle-btn {
+    padding: 2px 8px;
+    font-size: 8px;
+    background: linear-gradient(180deg, #4a4a4a, #2a2a2a);
+    border: 1px solid #555;
+    color: #888;
+    cursor: pointer;
+    text-transform: uppercase;
+
+    &.active {
+      color: $winamp-text;
+      background: linear-gradient(180deg, #2a2a2a, #4a4a4a);
+      box-shadow: inset 0 0 4px rgba($winamp-text, 0.3);
+    }
+
+    &.small {
+      padding: 1px 4px;
+      font-size: 7px;
+    }
+  }
+}
+
+// Equalizer window
+.winamp-eq {
+  width: 275px;
+  background: linear-gradient(180deg, $winamp-bg 0%, $winamp-dark 100%);
+  border: 2px solid $winamp-border;
+  border-radius: 4px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+
+  .eq-title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 4px;
+    background: linear-gradient(90deg, #4a4a6a, #2a2a4a);
+    border-bottom: 1px solid $winamp-border;
+    font-size: 9px;
+    color: white;
+
+    .eq-toggle {
+      display: flex;
+      gap: 2px;
+    }
+  }
+
+  .eq-sliders {
+    display: flex;
+    padding: 8px;
+    gap: 4px;
+    background: #000;
+    margin: 4px;
+    border: 2px inset #333;
+
+    .preamp {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .eq-divider {
+      width: 2px;
+      background: linear-gradient(180deg, #444, #222, #444);
+      margin: 0 4px;
+    }
+
+    .frequency-bands {
+      display: flex;
+      flex: 1;
+      justify-content: space-between;
+    }
+
+    .eq-band {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .eq-slider {
+      -webkit-appearance: slider-vertical;
+      appearance: slider-vertical;
+      writing-mode: vertical-lr;
+      direction: rtl;
+      width: 12px;
+      height: 50px;
+
+      &::-webkit-slider-track {
+        width: 6px;
+        height: 100%;
+      }
+
+      &::-webkit-slider-thumb {
+        width: 12px;
+        height: 6px;
+      }
+    }
+
+    .eq-label {
+      font-size: 6px;
+      color: $winamp-text-dim;
+    }
+  }
+
+  .eq-presets {
+    padding: 4px 8px 8px;
+    display: flex;
+    justify-content: flex-end;
+
+    .preset-btn {
+      padding: 2px 8px;
+      font-size: 8px;
+      background: linear-gradient(180deg, #4a4a4a, #2a2a2a);
+      border: 1px solid #555;
+      color: #888;
+      cursor: pointer;
+    }
+  }
+}
