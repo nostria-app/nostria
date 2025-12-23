@@ -213,3 +213,7 @@
 @if (showCreatePlaylistDialog()) {
 <app-create-music-playlist-dialog (closed)="onCreatePlaylistDialogClosed($event)" />
 }
+
+@if (showImportRssDialog()) {
+<app-import-rss-dialog (closed)="onImportRssDialogClosed($event)" />
+}

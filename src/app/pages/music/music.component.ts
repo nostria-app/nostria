@@ -18,6 +18,7 @@ import { MusicEventComponent } from '../../components/event-types/music-event.co
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
 import { CreateMusicPlaylistDialogComponent } from './create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { UploadMusicTrackDialogComponent } from './upload-music-track-dialog/upload-music-track-dialog.component';
+import { ImportRssDialogComponent } from './import-rss-dialog/import-rss-dialog.component';
 import { MusicPlaylist } from '../../services/music-playlist.service';
 
 const MUSIC_KIND = 36787;
@@ -35,6 +36,7 @@ const SECTION_LIMIT = 12;
     MusicPlaylistCardComponent,
     CreateMusicPlaylistDialogComponent,
     UploadMusicTrackDialogComponent,
+    ImportRssDialogComponent,
   ],
   templateUrl: './music.component.html',
   styleUrls: ['./music.component.scss'],
@@ -58,6 +60,7 @@ export class MusicComponent implements OnDestroy {
   // Dialog visibility
   showUploadDialog = signal(false);
   showCreatePlaylistDialog = signal(false);
+  showImportRssDialog = signal(false);
 
   private trackSubscription: { close: () => void } | null = null;
   private playlistSubscription: { close: () => void } | null = null;
@@ -294,8 +297,14 @@ export class MusicComponent implements OnDestroy {
   }
 
   openImportFromRss(): void {
-    // TODO: Implement RSS import dialog
-    console.log('Import from RSS - coming soon');
+    this.showImportRssDialog.set(true);
+  }
+
+  onImportRssDialogClosed(result: { published: boolean; events?: Event[] } | null): void {
+    this.showImportRssDialog.set(false);
+    if (result?.published) {
+      this.refresh();
+    }
   }
 
   async playLikedSongs(event: MouseEvent): Promise<void> {
