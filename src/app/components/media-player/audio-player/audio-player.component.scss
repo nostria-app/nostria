@@ -100,10 +100,10 @@
   margin-bottom: 4px;
   color: var(--mat-sys-on-surface);
   padding-right: 8px;
-  
+
   &.clickable.has-link {
     cursor: pointer;
-    
+
     &:hover {
       color: var(--mat-sys-primary);
       text-decoration: underline;
@@ -121,7 +121,7 @@
 
   &.clickable.has-link {
     cursor: pointer;
-    
+
     &:hover {
       color: var(--mat-sys-primary);
       text-decoration: underline;
