@@ -5,17 +5,21 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { ReactionService } from '../../services/reaction.service';
+import { MusicPlaylistService } from '../../services/music-playlist.service';
+import { ApplicationService } from '../../services/application.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
+import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
 
 @Component({
   selector: 'app-music-event',
-  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule],
+  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule],
   template: `
     <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
       [attr.aria-label]="'View ' + title()">
@@ -45,6 +49,12 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
           tabindex="0" role="button">{{ artistName() }}</span>
       </div>
       <mat-menu #menu="matMenu">
+        @if (isAuthenticated()) {
+          <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
+            <mat-icon>playlist_add</mat-icon>
+            <span>Add to Playlist</span>
+          </button>
+        }
         <button mat-menu-item (click)="addToQueue()">
           <mat-icon>queue_music</mat-icon>
           <span>Add to Queue</span>
@@ -57,6 +67,30 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
           <mat-icon>data_object</mat-icon>
           <span>Copy Event Data</span>
         </button>
+      </mat-menu>
+      <mat-menu #playlistMenu="matMenu">
+        <button mat-menu-item (click)="createNewPlaylist()">
+          <mat-icon>add</mat-icon>
+          <span>New Playlist</span>
+        </button>
+        @if (playlistsLoading()) {
+          <div class="playlist-loading">
+            <mat-spinner diameter="20"></mat-spinner>
+            <span>Loading playlists...</span>
+          </div>
+        } @else {
+          @for (playlist of userPlaylists(); track playlist.id) {
+            <button mat-menu-item (click)="addToPlaylist(playlist.id)">
+              <mat-icon>queue_music</mat-icon>
+              <span>{{ playlist.title }}</span>
+            </button>
+          }
+          @if (userPlaylists().length === 0) {
+            <div class="no-playlists">
+              <span>No playlists yet</span>
+            </div>
+          }
+        }
       </mat-menu>
     </div>
   `,
@@ -211,6 +245,15 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
         color: var(--mat-sys-primary);
       }
     }
+
+    .playlist-loading, .no-playlists {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.875rem;
+    }
   `],
 })
 export class MusicEventComponent {
@@ -218,6 +261,8 @@ export class MusicEventComponent {
   private data = inject(DataService);
   private mediaPlayer = inject(MediaPlayerService);
   private reactionService = inject(ReactionService);
+  private musicPlaylistService = inject(MusicPlaylistService);
+  private app = inject(ApplicationService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -225,6 +270,9 @@ export class MusicEventComponent {
   event = input.required<Event>();
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
+  userPlaylists = this.musicPlaylistService.userPlaylists;
+  playlistsLoading = this.musicPlaylistService.loading;
+  isAuthenticated = computed(() => this.app.authenticated());
 
   private profileLoaded = false;
 
@@ -456,5 +504,55 @@ export class MusicEventComponent {
     const ev = this.event();
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  // Load playlists when submenu is opened
+  loadPlaylists(): void {
+    this.musicPlaylistService.fetchUserPlaylists();
+  }
+
+  // Create a new playlist and add this track to it
+  createNewPlaylist(): void {
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    const dialogRef = this.dialog.open(CreateMusicPlaylistDialogComponent, {
+      width: '500px',
+      maxWidth: '95vw',
+      data: {
+        trackPubkey: ev.pubkey,
+        trackDTag: dTag,
+      } as CreateMusicPlaylistDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.playlist) {
+        this.snackBar.open(`Added to "${result.playlist.title}"`, 'Close', { duration: 2000 });
+      }
+    });
+  }
+
+  // Add track to an existing playlist
+  async addToPlaylist(playlistId: string): Promise<void> {
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    try {
+      const success = await this.musicPlaylistService.addTrackToPlaylist(
+        playlistId,
+        ev.pubkey,
+        dTag
+      );
+
+      if (success) {
+        const playlist = this.userPlaylists().find(p => p.id === playlistId);
+        this.snackBar.open(`Added to "${playlist?.title || 'playlist'}"`, 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      console.error('Error adding to playlist:', error);
+      this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
+    }
   }
 }

@@ -1,0 +1,159 @@
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-right: 8px;
+
+  h2 {
+    margin: 0;
+  }
+
+  .close-button {
+    margin-left: auto;
+  }
+}
+
+.dialog-subtitle {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+  margin: 0 0 16px 0;
+}
+
+.playlist-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: min(450px, 90vw);
+  min-width: 0;
+  padding: 8px 0;
+  box-sizing: border-box;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.cover-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+
+  .cover-label {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .cover-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .cover-preview {
+    width: 100px;
+    height: 100px;
+    border-radius: var(--mat-sys-corner-medium);
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    .cover-icon {
+      font-size: 2.5rem;
+      width: 2.5rem;
+      height: 2.5rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
+
+  .cover-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+
+    button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: flex-start;
+
+      mat-icon {
+        margin-right: 0;
+      }
+
+      mat-spinner {
+        margin-right: 0;
+      }
+    }
+  }
+
+  .url-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    .or-divider {
+      font-size: 0.75rem;
+      color: var(--mat-sys-on-surface-variant);
+      text-transform: uppercase;
+      flex-shrink: 0;
+    }
+
+    .url-field {
+      flex: 1;
+      
+      ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+        display: none;
+      }
+    }
+  }
+}
+
+.toggle-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 8px;
+
+  .toggle-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .toggle-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .toggle-label {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .toggle-description {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+mat-dialog-content {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+mat-dialog-actions {
+  gap: 8px;
+  margin-top: 16px;
+
+  button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+}

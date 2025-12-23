@@ -1,0 +1,88 @@
+<div class="dialog-header">
+  <h2 mat-dialog-title>Create Playlist</h2>
+  <button mat-icon-button (click)="onCancel()" class="close-button" aria-label="Close">
+    <mat-icon>close</mat-icon>
+  </button>
+</div>
+
+<p class="dialog-subtitle">Create a new playlist to organize your favorite tracks.</p>
+
+<mat-dialog-content>
+  <form [formGroup]="playlistForm" class="playlist-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Title</mat-label>
+      <input matInput formControlName="title" placeholder="My awesome playlist" autocomplete="off" required>
+      @if (playlistForm.get('title')?.hasError('required')) {
+        <mat-error>Title is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Description</mat-label>
+      <textarea matInput formControlName="description" placeholder="What's this playlist about?" rows="2"
+        autocomplete="off"></textarea>
+    </mat-form-field>
+
+    <div class="cover-section">
+      <span class="cover-label">Cover Image</span>
+      <div class="cover-row">
+        <div class="cover-preview" [style.background]="coverImage() ? 'url(' + coverImage() + ')' : currentGradient()">
+          @if (!coverImage()) {
+            <mat-icon class="cover-icon">music_note</mat-icon>
+          }
+        </div>
+        <div class="cover-actions">
+          <button mat-stroked-button type="button" (click)="uploadImage()" [disabled]="isUploading()">
+            @if (isUploading()) {
+              <mat-spinner diameter="18"></mat-spinner>
+            } @else {
+              <mat-icon>image</mat-icon>
+            }
+            <span>Upload Image</span>
+          </button>
+          <button mat-stroked-button type="button" (click)="randomizeGradient()">
+            <mat-icon>auto_awesome</mat-icon>
+            <span>Random</span>
+          </button>
+        </div>
+      </div>
+      <div class="url-row">
+        <span class="or-divider">OR</span>
+        <mat-form-field appearance="outline" class="full-width url-field">
+          <input matInput formControlName="imageUrl" placeholder="Paste image URL" autocomplete="off"
+            (blur)="onImageUrlChange()" (keyup.enter)="onImageUrlChange()">
+        </mat-form-field>
+      </div>
+    </div>
+
+    <div class="toggle-section">
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <span class="toggle-label">Public Playlist</span>
+          <span class="toggle-description">Allow others to discover this playlist</span>
+        </div>
+        <mat-slide-toggle formControlName="isPublic"></mat-slide-toggle>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-info">
+          <span class="toggle-label">Collaborative</span>
+          <span class="toggle-description">Allow others to add tracks</span>
+        </div>
+        <mat-slide-toggle formControlName="isCollaborative"></mat-slide-toggle>
+      </div>
+    </div>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button type="button" (click)="onCancel()">Cancel</button>
+  <button mat-flat-button type="submit" (click)="onSubmit()" 
+    [disabled]="!playlistForm.valid || isCreating()">
+    @if (isCreating()) {
+      <mat-spinner diameter="18"></mat-spinner>
+    } @else {
+      Create Playlist
+    }
+  </button>
+</mat-dialog-actions>
