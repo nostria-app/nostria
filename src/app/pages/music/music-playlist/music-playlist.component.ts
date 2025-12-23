@@ -253,6 +253,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Set a shorter timeout since we're using a single subscription
     const timeout = setTimeout(() => {
       if (this.loadingTracks()) {
+        this.logger.warn('Playlist tracks load timeout - no events received');
         this.loadingTracks.set(false);
       }
     }, 5000);
@@ -262,13 +263,19 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
       const uniqueId = `${event.pubkey}:${dTag}`;
 
+      this.logger.debug('Received track event', { uniqueId, dTag, pubkey: event.pubkey });
+
       // Check if this track is in our refs list
       const isInPlaylist = trackKeys.some(k => k.author === event.pubkey && k.dTag === dTag);
-      if (!isInPlaylist) return;
+      if (!isInPlaylist) {
+        this.logger.debug('Track not in playlist refs, skipping', { uniqueId });
+        return;
+      }
 
       const existing = this.trackMap.get(uniqueId);
       if (!existing || existing.created_at < event.created_at) {
         this.trackMap.set(uniqueId, event);
+        this.logger.debug('Added track to map', { uniqueId, mapSize: this.trackMap.size });
         this.updateTracks(refs);
       }
 
@@ -284,6 +291,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Also set a shorter timeout for the "found some" case
     setTimeout(() => {
       if (this.loadingTracks() && receivedAny) {
+        this.logger.debug('Shorter timeout - found some tracks', { mapSize: this.trackMap.size });
         this.loadingTracks.set(false);
       }
     }, 3000);

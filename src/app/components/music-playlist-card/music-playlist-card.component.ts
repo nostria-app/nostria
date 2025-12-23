@@ -133,16 +133,17 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
 
     .menu-btn {
       flex-shrink: 0;
-      width: 28px;
-      height: 28px;
-      line-height: 28px;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      margin: -4px -8px -4px 0;
       opacity: 0.6;
       transition: opacity 0.2s ease;
 
       mat-icon {
-        font-size: 1.125rem;
-        width: 1.125rem;
-        height: 1.125rem;
+        font-size: 1.25rem;
+        width: 1.25rem;
+        height: 1.25rem;
       }
 
       &:hover {
