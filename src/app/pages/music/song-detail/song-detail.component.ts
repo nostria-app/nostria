@@ -261,7 +261,20 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
   private async loadZaps(event: Event): Promise<{ total: number; topZappers: TopZapper[] }> {
     try {
-      const zapReceipts = await this.zapService.getZapsForEvent(event.id);
+      // For addressable events (like music tracks), zaps are stored with the 'a' tag
+      // Format: kind:pubkey:d-tag
+      const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+
+      // Query zap receipts by both #e and #a tags to catch all zaps
+      const filter = {
+        kinds: [9735],
+        '#a': [aTagValue],
+        limit: 100,
+      };
+
+      const zapReceipts = await this.sharedRelay.getMany(event.pubkey, filter);
+
       let total = 0;
       const zapperAmounts = new Map<string, number>();
 
