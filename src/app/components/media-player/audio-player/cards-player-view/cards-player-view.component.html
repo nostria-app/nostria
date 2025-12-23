@@ -2,9 +2,9 @@
   (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)" (swipeStart)="onSwipeStart()"
   (swipeEnd)="onSwipeEnd()">
   <!-- Pull down indicator -->
-  <div class="pull-indicator">
+  <button class="pull-indicator" (click)="openQueue.emit()" matTooltip="Open queue" aria-label="Open queue">
     <div class="pull-bar"></div>
-  </div>
+  </button>
 
   <!-- Cards container -->
   <div class="cards-container">
@@ -80,7 +80,8 @@
 
   <!-- Controls -->
   <div class="controls">
-    <button mat-icon-button class="control-btn" matTooltip="Shuffle">
+    <button mat-icon-button class="control-btn shuffle-btn" [class.active]="media.shuffle()"
+      (click)="media.toggleShuffle()" matTooltip="Shuffle">
       <mat-icon>shuffle</mat-icon>
     </button>
 
@@ -103,22 +104,26 @@
       <mat-icon>skip_next</mat-icon>
     </button>
 
-    <button mat-icon-button class="control-btn" matTooltip="Repeat">
-      <mat-icon>repeat</mat-icon>
+    <button mat-icon-button class="control-btn repeat-btn" [class.active]="media.repeat() !== 'off'"
+      (click)="media.toggleRepeat()" [matTooltip]="getRepeatTooltip()">
+      <mat-icon>{{ media.repeat() === 'one' ? 'repeat_one' : 'repeat' }}</mat-icon>
     </button>
   </div>
 
-  <!-- Swipe arrows -->
+  <!-- Navigation arrows -->
   <div class="swipe-arrows">
     @if (media.canPrevious()) {
-    <div class="arrow arrow-left" [style.opacity]="swipeOffset() > 0 ? 0.8 : 0.3">
+    <button class="arrow arrow-left" [style.opacity]="swipeOffset() > 0 ? 0.8 : 0.3" (click)="media.previous()"
+      (keydown.enter)="media.previous()" (keydown.space)="media.previous()" matTooltip="Previous track"
+      aria-label="Previous track">
       <mat-icon>chevron_left</mat-icon>
-    </div>
+    </button>
     }
     @if (media.canNext()) {
-    <div class="arrow arrow-right" [style.opacity]="swipeOffset() < 0 ? 0.8 : 0.3">
+    <button class="arrow arrow-right" [style.opacity]="swipeOffset() < 0 ? 0.8 : 0.3" (click)="media.next()"
+      (keydown.enter)="media.next()" (keydown.space)="media.next()" matTooltip="Next track" aria-label="Next track">
       <mat-icon>chevron_right</mat-icon>
-    </div>
+    </button>
     }
   </div>
 </div>

@@ -7,10 +7,10 @@
   }
 
   <!-- Pull down indicator -->
-  <div class="pull-indicator">
+  <button class="pull-indicator" (click)="openQueue.emit()" matTooltip="Open queue" aria-label="Open queue">
     <div class="pull-bar"></div>
     <span class="pull-hint">Pull down for queue</span>
-  </div>
+  </button>
 
   <!-- Main content -->
   <div class="player-content">

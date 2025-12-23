@@ -52,6 +52,8 @@ const PLAYER_VIEW_STORAGE_KEY = 'nostria-audio-player-view';
     '[class.footer-mode]': 'footer()',
     '[class.compact-mode]': '!footer()',
     '[class.queue-open]': 'showQueue()',
+    '(window:keydown)': 'onKeydown($event)',
+    'tabindex': '0',
   },
 })
 export class AudioPlayerComponent {
@@ -198,6 +200,37 @@ export class AudioPlayerComponent {
       this.media.next();
     } else if (event.direction === 'right' && this.media.canPrevious()) {
       this.media.previous();
+    }
+  }
+
+  // Keyboard navigation handler
+  onKeydown(event: KeyboardEvent): void {
+    // Only handle when fullscreen player is active and not typing in an input
+    if (!this.layout.fullscreenMediaPlayer()) return;
+    const target = event.target as HTMLElement;
+    if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return;
+
+    switch (event.key) {
+      case 'ArrowLeft':
+        if (this.media.canPrevious()) {
+          event.preventDefault();
+          this.media.previous();
+        }
+        break;
+      case 'ArrowRight':
+        if (this.media.canNext()) {
+          event.preventDefault();
+          this.media.next();
+        }
+        break;
+      case ' ':
+        event.preventDefault();
+        if (this.media.paused) {
+          this.media.resume();
+        } else {
+          this.media.pause();
+        }
+        break;
     }
   }
 }
