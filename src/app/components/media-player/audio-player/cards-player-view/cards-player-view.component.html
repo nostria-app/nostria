@@ -2,7 +2,8 @@
   (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)" (swipeStart)="onSwipeStart()"
   (swipeEnd)="onSwipeEnd()">
   <!-- Pull down indicator -->
-  <button class="pull-indicator" (click)="openQueue.emit()" matTooltip="Open queue" aria-label="Open queue">
+  <button class="pull-indicator" (click)="openQueue.emit(); $event.stopPropagation()"
+    (mousedown)="$event.stopPropagation()" aria-label="Open queue">
     <div class="pull-bar"></div>
   </button>
 
