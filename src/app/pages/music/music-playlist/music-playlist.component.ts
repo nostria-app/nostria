@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -14,8 +15,14 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LoggerService } from '../../../services/logger.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
+import {
+  EditMusicPlaylistDialogComponent,
+  EditMusicPlaylistDialogData,
+} from '../edit-music-playlist-dialog/edit-music-playlist-dialog.component';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -45,6 +52,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
+  private dialog = inject(MatDialog);
+  private accountState = inject(AccountStateService);
+  private musicPlaylistService = inject(MusicPlaylistService);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
@@ -94,6 +104,13 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   });
 
   trackCount = computed(() => this.trackRefs().length);
+
+  // Check if the current user owns this playlist
+  isOwnPlaylist = computed(() => {
+    const event = this.playlist();
+    const currentPubkey = this.accountState.pubkey();
+    return event && currentPubkey === event.pubkey;
+  });
 
   artistName = computed(() => {
     const profile = this.authorProfile();
@@ -380,5 +397,56 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  editPlaylist(): void {
+    const ev = this.playlist();
+    if (!ev) return;
+
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const titleTag = ev.tags.find(t => t[0] === 'title');
+    const descTag = ev.tags.find(t => t[0] === 'description');
+    const imageTag = ev.tags.find(t => t[0] === 'image');
+    const publicTag = ev.tags.find(t => t[0] === 'public');
+    const collaborativeTag = ev.tags.find(t => t[0] === 'collaborative');
+    const trackRefs = ev.tags
+      .filter(t => t[0] === 'a' && t[1]?.startsWith('36787:'))
+      .map(t => t[1]);
+
+    const playlist: MusicPlaylist = {
+      id: dTag,
+      title: titleTag?.[1] || 'Untitled Playlist',
+      description: descTag?.[1] || ev.content || undefined,
+      image: imageTag?.[1] || undefined,
+      pubkey: ev.pubkey,
+      isPublic: publicTag?.[1] === 'true',
+      isCollaborative: collaborativeTag?.[1] === 'true',
+      trackRefs,
+      created_at: ev.created_at,
+      event: ev,
+    };
+
+    const dialogData: EditMusicPlaylistDialogData = { playlist };
+
+    const dialogRef = this.dialog.open(EditMusicPlaylistDialogComponent, {
+      data: dialogData,
+      width: '500px',
+      maxWidth: '95vw',
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.updated && result?.playlist) {
+        // Reload the page to show updated data
+        const pubkey = this.route.snapshot.paramMap.get('pubkey');
+        const identifier = this.route.snapshot.paramMap.get('identifier');
+        if (pubkey && identifier) {
+          // Reset state and reload
+          this.tracksLoaded = false;
+          this.trackMap.clear();
+          this.tracks.set([]);
+          this.loadPlaylist(pubkey, identifier);
+        }
+      }
+    });
   }
 }

@@ -10,8 +10,14 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { ReactionService } from '../../services/reaction.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { MusicPlaylistService } from '../../services/music-playlist.service';
 import { NostrRecord } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
+import {
+  EditMusicPlaylistDialogComponent,
+  EditMusicPlaylistDialogData,
+} from '../../pages/music/edit-music-playlist-dialog/edit-music-playlist-dialog.component';
 
 @Component({
   selector: 'app-music-playlist-card',
@@ -50,6 +56,12 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
           }
         </div>
         <mat-menu #menu="matMenu">
+          @if (isOwnPlaylist()) {
+            <button mat-menu-item (click)="editPlaylist()">
+              <mat-icon>edit</mat-icon>
+              <span>Edit Playlist</span>
+            </button>
+          }
           <button mat-menu-item (click)="copyEventLink()">
             <mat-icon>link</mat-icon>
             <span>Copy Event Link</span>
@@ -186,6 +198,8 @@ export class MusicPlaylistCardComponent {
   private router = inject(Router);
   private data = inject(DataService);
   private reactionService = inject(ReactionService);
+  private accountState = inject(AccountStateService);
+  private musicPlaylistService = inject(MusicPlaylistService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -195,6 +209,12 @@ export class MusicPlaylistCardComponent {
   authorProfile = signal<NostrRecord | undefined>(undefined);
 
   private profileLoaded = false;
+
+  // Check if the current user owns this playlist
+  isOwnPlaylist = computed(() => {
+    const currentPubkey = this.accountState.pubkey();
+    return currentPubkey === this.event().pubkey;
+  });
 
   constructor() {
     // Load author profile - use untracked to prevent re-triggers from cache updates
@@ -339,5 +359,48 @@ export class MusicPlaylistCardComponent {
     const ev = this.event();
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  // Edit playlist
+  editPlaylist(): void {
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    // Get the playlist from the service or create from event
+    const playlists = this.musicPlaylistService.userPlaylists();
+    let playlist = playlists.find(p => p.id === dTag);
+
+    if (!playlist) {
+      // Create playlist object from event
+      const titleTag = ev.tags.find(t => t[0] === 'title');
+      const descTag = ev.tags.find(t => t[0] === 'description');
+      const imageTag = ev.tags.find(t => t[0] === 'image');
+      const publicTag = ev.tags.find(t => t[0] === 'public');
+      const collaborativeTag = ev.tags.find(t => t[0] === 'collaborative');
+      const trackRefs = ev.tags
+        .filter(t => t[0] === 'a' && t[1]?.startsWith('36787:'))
+        .map(t => t[1]);
+
+      playlist = {
+        id: dTag,
+        title: titleTag?.[1] || 'Untitled Playlist',
+        description: descTag?.[1] || ev.content || undefined,
+        image: imageTag?.[1] || undefined,
+        pubkey: ev.pubkey,
+        isPublic: publicTag?.[1] === 'true',
+        isCollaborative: collaborativeTag?.[1] === 'true',
+        trackRefs,
+        created_at: ev.created_at,
+        event: ev,
+      };
+    }
+
+    const dialogData: EditMusicPlaylistDialogData = { playlist };
+
+    this.dialog.open(EditMusicPlaylistDialogComponent, {
+      data: dialogData,
+      width: '500px',
+      maxWidth: '95vw',
+    });
   }
 }

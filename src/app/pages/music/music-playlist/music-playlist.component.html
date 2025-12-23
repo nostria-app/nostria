@@ -8,6 +8,12 @@
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
+      @if (isOwnPlaylist()) {
+      <button mat-menu-item (click)="editPlaylist()">
+        <mat-icon>edit</mat-icon>
+        <span>Edit Playlist</span>
+      </button>
+      }
       <button mat-menu-item (click)="copyEventLink()">
         <mat-icon>link</mat-icon>
         <span>Copy Event Link</span>
@@ -83,6 +89,12 @@
             <mat-icon>play_arrow</mat-icon>
             Play All
           </button>
+          @if (isOwnPlaylist()) {
+          <button mat-stroked-button (click)="editPlaylist()">
+            <mat-icon>edit</mat-icon>
+            Edit
+          </button>
+          }
         </div>
       </div>
     </div>

@@ -82,7 +82,7 @@ export class MusicPlaylistService {
 
     try {
       const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
-      
+
       if (relayUrls.length === 0) {
         this.logger.warn('No relays available to fetch music playlists');
         this._loading.set(false);
@@ -283,6 +283,138 @@ export class MusicPlaylistService {
   }
 
   /**
+   * Update an existing music playlist
+   */
+  async updatePlaylist(
+    playlistId: string,
+    updates: Partial<CreateMusicPlaylistData> & { trackRefs?: string[] }
+  ): Promise<MusicPlaylist | null> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.error('Cannot update playlist: no user logged in');
+      return null;
+    }
+
+    // Find the playlist
+    const key = `${pubkey}:${playlistId}`;
+    const playlist = this.playlistMap.get(key);
+    if (!playlist || !playlist.event) {
+      this.logger.error('Playlist not found:', playlistId);
+      return null;
+    }
+
+    // Build new tags
+    const newTags: string[][] = [['d', playlist.id]];
+
+    // Title
+    const title = updates.title ?? playlist.title;
+    newTags.push(['title', title]);
+    newTags.push(['t', 'playlist']);
+    newTags.push(['alt', `Playlist: ${title}`]);
+
+    // Description
+    const description = updates.description ?? playlist.description;
+    if (description) {
+      newTags.push(['description', description]);
+    }
+
+    // Image
+    const image = updates.image ?? playlist.image;
+    if (image) {
+      newTags.push(['image', image]);
+    }
+
+    // Keep gradient if it exists
+    const gradientTag = playlist.event.tags.find(t => t[0] === 'gradient');
+    if (gradientTag) {
+      newTags.push(gradientTag);
+    }
+
+    // Public/Collaborative
+    const isPublic = updates.isPublic ?? playlist.isPublic;
+    const isCollaborative = updates.isCollaborative ?? playlist.isCollaborative;
+    newTags.push(['public', isPublic ? 'true' : 'false']);
+    newTags.push(['collaborative', isCollaborative ? 'true' : 'false']);
+    newTags.push(['client', 'nostria.app']);
+
+    // Track refs (use new order if provided, otherwise keep existing)
+    const trackRefs = updates.trackRefs ?? playlist.trackRefs;
+    for (const ref of trackRefs) {
+      newTags.push(['a', ref]);
+    }
+
+    const content = description || '';
+
+    const event = this.nostrService.createEvent(MUSIC_PLAYLIST_KIND, content, newTags);
+    if (!event) {
+      this.logger.error('Failed to create updated playlist event');
+      return null;
+    }
+
+    const signedEvent = await this.nostrService.signEvent(event);
+    if (!signedEvent) {
+      this.logger.error('Failed to sign updated playlist event');
+      return null;
+    }
+
+    // Publish to relays
+    await this.accountRelay.publish(signedEvent);
+
+    // Update local state
+    const updatedPlaylist = this.parsePlaylistEvent(signedEvent);
+    if (updatedPlaylist) {
+      this.playlistMap.set(key, updatedPlaylist);
+      this._userPlaylists.set(Array.from(this.playlistMap.values()));
+    }
+
+    return updatedPlaylist;
+  }
+
+  /**
+   * Remove a track from a playlist
+   */
+  async removeTrackFromPlaylist(
+    playlistId: string,
+    trackRef: string
+  ): Promise<boolean> {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.error('Cannot remove track: no user logged in');
+      return false;
+    }
+
+    // Find the playlist
+    const key = `${pubkey}:${playlistId}`;
+    const playlist = this.playlistMap.get(key);
+    if (!playlist || !playlist.event) {
+      this.logger.error('Playlist not found:', playlistId);
+      return false;
+    }
+
+    // Remove the track from refs
+    const newTrackRefs = playlist.trackRefs.filter(ref => ref !== trackRef);
+    if (newTrackRefs.length === playlist.trackRefs.length) {
+      this.logger.info('Track not found in playlist');
+      return true;
+    }
+
+    // Update the playlist with new track refs
+    const result = await this.updatePlaylist(playlistId, { trackRefs: newTrackRefs });
+    return result !== null;
+  }
+
+  /**
+   * Reorder tracks in a playlist
+   */
+  async reorderPlaylistTracks(
+    playlistId: string,
+    newOrder: string[]
+  ): Promise<boolean> {
+    const result = await this.updatePlaylist(playlistId, { trackRefs: newOrder });
+    return result !== null;
+  }
+
+  /**
    * Generate a unique playlist ID based on title
    */
   private generatePlaylistId(title: string): string {
@@ -291,7 +423,7 @@ export class MusicPlaylistService {
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/(^-|-$)+/g, '')
       .substring(0, 30);
-    
+
     const timestamp = Date.now();
     return `${slug}-${timestamp}`;
   }

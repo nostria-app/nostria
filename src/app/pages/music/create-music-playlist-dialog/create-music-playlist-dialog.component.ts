@@ -81,7 +81,7 @@ export class CreateMusicPlaylistDialogComponent {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    
+
     input.onchange = async () => {
       const file = input.files?.[0];
       if (!file) return;
@@ -136,7 +136,7 @@ export class CreateMusicPlaylistDialogComponent {
 
     try {
       const formValue = this.playlistForm.value;
-      
+
       const data: CreateMusicPlaylistData = {
         title: formValue.title,
         description: formValue.description || undefined,
