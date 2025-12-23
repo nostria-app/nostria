@@ -5,36 +5,30 @@
       <span i18n="@@articles.title">Articles</span>
     </h1>
     <div class="header-actions">
+      @if (isAuthenticated()) {
+      <mat-button-toggle-group [value]="feedSource()" (change)="onSourceChange($event.value)" class="source-toggle">
+        <mat-button-toggle value="following">
+          <mat-icon>people</mat-icon>
+          <span i18n="@@articles.toggle.following">Following</span>
+          @if (followingCount() > 0) {
+          <span class="toggle-count">{{ followingCount() }}</span>
+          }
+        </mat-button-toggle>
+        <mat-button-toggle value="public">
+          <mat-icon>public</mat-icon>
+          <span i18n="@@articles.toggle.public">Public</span>
+          @if (publicCount() > 0) {
+          <span class="toggle-count">{{ publicCount() }}</span>
+          }
+        </mat-button-toggle>
+      </mat-button-toggle-group>
+      }
       <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@articles.refresh.aria"
         aria-label="Refresh articles">
         <mat-icon>refresh</mat-icon>
       </button>
     </div>
   </div>
-
-  @if (isAuthenticated()) {
-  <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">people</mat-icon>
-        <span i18n="@@articles.tabs.following">Following</span>
-        @if (followingArticles().length > 0) {
-        <span class="tab-count">{{ followingArticles().length }}</span>
-        }
-      </ng-template>
-    </mat-tab>
-
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon class="tab-icon">public</mat-icon>
-        <span i18n="@@articles.tabs.public">Public</span>
-        @if (publicArticles().length > 0) {
-        <span class="tab-count">{{ publicArticles().length }}</span>
-        }
-      </ng-template>
-    </mat-tab>
-  </mat-tab-group>
-  }
 
   <div class="articles-content">
     @if (loading()) {
@@ -47,9 +41,9 @@
       <mat-icon>menu_book</mat-icon>
       <h2 i18n="@@articles.empty.title">No articles found</h2>
       <p>
-        @if (selectedTabIndex() === 0 && isAuthenticated()) {
-        <span i18n="@@articles.empty.following">People you follow haven't published any articles yet. Check the Public
-          tab to discover articles from the wider Nostr network.</span>
+        @if (feedSource() === 'following' && isAuthenticated()) {
+        <span i18n="@@articles.empty.following">People you follow haven't published any articles yet. Switch to Public
+          to discover articles from the wider Nostr network.</span>
         } @else {
         <span i18n="@@articles.empty.public">No articles have been published yet. Articles will appear here when authors
           publish them.</span>
@@ -70,6 +64,19 @@
       </mat-card>
       }
     </div>
+
+    @if (hasMore()) {
+    <div class="load-more-container">
+      @if (loadingMore()) {
+      <mat-spinner diameter="24"></mat-spinner>
+      } @else {
+      <button mat-button (click)="loadMore()">
+        <mat-icon>expand_more</mat-icon>
+        <span i18n="@@articles.loadMore">Load More</span>
+      </button>
+      }
+    </div>
+    }
     }
   </div>
 </div>

@@ -1,0 +1,245 @@
+.song-detail-container {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.header-actions {
+  margin-bottom: 1rem;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+
+  p {
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  gap: 1rem;
+  text-align: center;
+
+  mat-icon {
+    font-size: 4rem;
+    width: 4rem;
+    height: 4rem;
+    color: var(--mat-sys-on-surface-variant);
+    opacity: 0.5;
+  }
+
+  h2 {
+    margin: 0;
+    color: var(--mat-sys-on-surface);
+  }
+
+  p {
+    margin: 0;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.song-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.song-header {
+  display: flex;
+  gap: 2rem;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    align-items: center;
+  }
+}
+
+.cover-section {
+  position: relative;
+  flex-shrink: 0;
+
+  .cover-image {
+    width: 280px;
+    height: 280px;
+    object-fit: cover;
+    border-radius: var(--mat-sys-corner-large);
+    box-shadow: var(--mat-sys-level3);
+
+    @media (max-width: 600px) {
+      width: 200px;
+      height: 200px;
+    }
+  }
+
+  .cover-placeholder {
+    width: 280px;
+    height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mat-sys-corner-large);
+    background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
+
+    @media (max-width: 600px) {
+      width: 200px;
+      height: 200px;
+    }
+
+    mat-icon {
+      font-size: 5rem;
+      width: 5rem;
+      height: 5rem;
+      color: var(--mat-sys-on-primary-container);
+      opacity: 0.5;
+    }
+  }
+
+  .play-button {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+  }
+}
+
+.info-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  flex: 1;
+  min-width: 0;
+
+  @media (max-width: 600px) {
+    align-items: center;
+    text-align: center;
+  }
+}
+
+.song-title {
+  margin: 0;
+  font-size: 2rem;
+  color: var(--mat-sys-on-surface);
+  line-height: 1.2;
+
+  @media (max-width: 600px) {
+    font-size: 1.5rem;
+  }
+}
+
+.artist-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  margin: -0.5rem;
+  border-radius: var(--mat-sys-corner-medium);
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  .artist-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .artist-avatar-placeholder {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .artist-name {
+    font-size: 1.125rem;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .navigate-icon {
+    color: var(--mat-sys-on-surface-variant);
+    margin-left: auto;
+  }
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  .date {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+  }
+
+  .ai-chip {
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+      margin-right: 0.25rem;
+    }
+  }
+}
+
+.genres {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.description {
+  margin: 0;
+  color: var(--mat-sys-on-surface-variant);
+  line-height: 1.5;
+}
+
+.lyrics-card {
+  mat-card-header {
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+      }
+    }
+  }
+
+  mat-card-content {
+    padding-top: 1rem;
+  }
+}
+
+.lyrics-text {
+  margin: 0;
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  line-height: 1.8;
+  color: var(--mat-sys-on-surface);
+}

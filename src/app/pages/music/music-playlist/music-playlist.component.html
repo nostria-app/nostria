@@ -1,0 +1,99 @@
+<div class="playlist-container">
+  <div class="header-actions">
+    <button mat-icon-button (click)="goBack()" aria-label="Go back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+  </div>
+
+  @if (loading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading playlist...</p>
+  </div>
+  } @else if (!playlist()) {
+  <div class="empty-state">
+    <mat-icon>playlist_remove</mat-icon>
+    <h2>Playlist not found</h2>
+    <p>This playlist may have been removed or is unavailable.</p>
+    <button mat-flat-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Music
+    </button>
+  </div>
+  } @else {
+  <div class="playlist-content">
+    <!-- Playlist Header -->
+    <div class="playlist-header">
+      <div class="cover-section">
+        @if (coverImage()) {
+        <img [src]="coverImage()" [alt]="title()" class="cover-image" />
+        } @else {
+        <div class="cover-placeholder">
+          <mat-icon>queue_music</mat-icon>
+        </div>
+        }
+      </div>
+
+      <div class="info-section">
+        <span class="playlist-label">Playlist</span>
+        <h1 class="playlist-title">{{ title() }}</h1>
+
+        <div class="artist-row" (click)="goToArtist()" (keydown.enter)="goToArtist()" tabindex="0" role="button"
+          aria-label="View artist">
+          @if (artistAvatar()) {
+          <img [src]="artistAvatar()" alt="" class="artist-avatar" />
+          } @else {
+          <mat-icon class="artist-avatar-placeholder">person</mat-icon>
+          }
+          <span class="artist-name">{{ artistName() }}</span>
+        </div>
+
+        <div class="meta-row">
+          <span class="date">{{ publishedDate() }}</span>
+          <span class="separator">•</span>
+          <span class="track-count">{{ trackCount() }} tracks</span>
+          @if (isPublic()) {
+          <mat-chip>
+            <mat-icon>public</mat-icon>
+            Public
+          </mat-chip>
+          }
+        </div>
+
+        @if (description()) {
+        <p class="description">{{ description() }}</p>
+        }
+
+        <div class="actions">
+          <button mat-fab extended (click)="playAll()" [disabled]="tracks().length === 0">
+            <mat-icon>play_arrow</mat-icon>
+            Play All
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tracks -->
+    <div class="tracks-section">
+      <h2>Tracks</h2>
+      @if (loadingTracks()) {
+      <div class="loading-tracks">
+        <mat-spinner diameter="32"></mat-spinner>
+        <span>Loading tracks...</span>
+      </div>
+      } @else if (tracks().length === 0) {
+      <div class="empty-tracks">
+        <mat-icon>music_off</mat-icon>
+        <p>No tracks in this playlist yet</p>
+      </div>
+      } @else {
+      <div class="tracks-grid">
+        @for (track of tracks(); track track.id) {
+        <app-music-event [event]="track"></app-music-event>
+        }
+      </div>
+      }
+    </div>
+  </div>
+  }
+</div>

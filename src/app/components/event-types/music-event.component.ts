@@ -1,102 +1,65 @@
 import { Component, computed, input, inject, signal, effect } from '@angular/core';
+import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatChipsModule } from '@angular/material/chips';
-import { Event } from 'nostr-tools';
-import { AudioPlayerComponent } from '../audio-player/audio-player.component';
-import { RouterLink } from '@angular/router';
-import { NPubPipe } from '../../pipes/npub.pipe';
+import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
-import { NostrRecord } from '../../interfaces';
+import { MediaPlayerService } from '../../services/media-player.service';
+import { NostrRecord, MediaItem } from '../../interfaces';
 
 @Component({
   selector: 'app-music-event',
-  imports: [
-    MatIconModule,
-    MatButtonModule,
-    MatChipsModule,
-    AudioPlayerComponent,
-    RouterLink,
-    NPubPipe,
-  ],
+  imports: [MatIconModule],
   template: `
-    <div class="music-event">
-      @if (image()) {
-        <div class="music-cover">
-          <img [src]="image()" [alt]="title()" class="cover-image" />
-          @if (aiGenerated()) {
-            <span class="ai-badge" i18n="@@music.aiGenerated">AI Generated</span>
-          }
-        </div>
-      }
-      
-      <div class="music-info">
-        <h3 class="music-title">{{ title() || 'Untitled Track' }}</h3>
-        
-        @if (showAuthor()) {
-          <div class="music-author">
-            @if (authorProfile()?.data?.picture) {
-              <img [src]="authorProfile()?.data?.picture" class="author-avatar" alt="" />
-            } @else {
-              <mat-icon class="author-avatar-icon">account_circle</mat-icon>
-            }
-            <a [routerLink]="['/p', event().pubkey]" class="author-link">
-              {{ authorProfile()?.data?.name || authorProfile()?.data?.display_name || (event().pubkey | npub) }}
-            </a>
+    <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
+      [attr.aria-label]="'View ' + title()">
+      <div class="music-cover">
+        @if (image()) {
+          <img [src]="image()" [alt]="title()" class="cover-image" loading="lazy" />
+        } @else {
+          <div class="cover-placeholder">
+            <mat-icon>music_note</mat-icon>
           </div>
         }
-        
-        @if (tags().length > 0) {
-          <mat-chip-set class="music-tags">
-            @for (tag of tags(); track tag) {
-              <mat-chip class="tag-chip">{{ tag }}</mat-chip>
-            }
-          </mat-chip-set>
-        }
+        <button class="play-overlay" (click)="playTrack($any($event))" aria-label="Play track">
+          <mat-icon class="play-icon">play_arrow</mat-icon>
+        </button>
       </div>
-      
-      <div class="music-player">
-        <app-audio-player 
-          [src]="audioUrl()"
-          [waveform]="[]"
-          [duration]="0"
-        />
+      <div class="music-info">
+        <span class="music-title">{{ title() || 'Untitled Track' }}</span>
+        <span class="music-artist" (click)="openArtist($any($event))" (keydown.enter)="openArtist($any($event))" 
+          tabindex="0" role="button">{{ artistName() }}</span>
       </div>
-      
-      @if (hasLyrics() && showLyrics()) {
-        <div class="music-lyrics">
-          <button mat-button class="lyrics-toggle" (click)="toggleLyrics()">
-            <mat-icon>{{ lyricsExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
-            <span i18n="@@music.lyrics">Lyrics</span>
-          </button>
-          @if (lyricsExpanded()) {
-            <pre class="lyrics-content">{{ lyrics() }}</pre>
-          }
-        </div>
-      }
-      
-      @if (client()) {
-        <div class="music-client">
-          <span class="client-label" i18n="@@music.createdWith">Created with</span>
-          <span class="client-name">{{ client() }}</span>
-        </div>
-      }
     </div>
   `,
   styles: [`
-    .music-event {
+    .music-card {
       display: flex;
       flex-direction: column;
-      gap: 1rem;
+      cursor: pointer;
+      border-radius: var(--mat-sys-corner-large);
+      overflow: hidden;
+      background-color: var(--mat-sys-surface-container);
+      transition: transform 0.2s ease, background-color 0.2s ease;
+      
+      &:hover {
+        transform: scale(1.02);
+        background-color: var(--mat-sys-surface-container-high);
+        
+        .play-overlay {
+          opacity: 1;
+        }
+      }
+      
+      &:focus {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: 2px;
+      }
     }
     
     .music-cover {
       position: relative;
       width: 100%;
       aspect-ratio: 1;
-      max-width: 300px;
-      margin: 0 auto;
-      border-radius: var(--mat-sys-corner-medium);
       overflow: hidden;
       
       .cover-image {
@@ -105,116 +68,85 @@ import { NostrRecord } from '../../interfaces';
         object-fit: cover;
       }
       
-      .ai-badge {
+      .cover-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
+        
+        mat-icon {
+          font-size: 4rem;
+          width: 4rem;
+          height: 4rem;
+          color: var(--mat-sys-on-primary-container);
+          opacity: 0.5;
+        }
+      }
+      
+      .play-overlay {
         position: absolute;
-        top: 0.5rem;
-        right: 0.5rem;
-        padding: 0.25rem 0.5rem;
-        background-color: var(--mat-sys-secondary-container);
-        color: var(--mat-sys-on-secondary-container);
-        border-radius: var(--mat-sys-corner-small);
-        font-size: 0.75rem;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: rgba(0, 0, 0, 0.4);
+        opacity: 0;
+        transition: opacity 0.2s ease;
+        border: none;
+        cursor: pointer;
+        
+        &:hover {
+          background-color: rgba(0, 0, 0, 0.6);
+        }
+        
+        .play-icon {
+          font-size: 3rem;
+          width: 3rem;
+          height: 3rem;
+          color: white;
+        }
       }
     }
     
     .music-info {
       display: flex;
       flex-direction: column;
-      gap: 0.5rem;
+      padding: 0.75rem;
+      gap: 0.25rem;
     }
     
     .music-title {
-      margin: 0;
-      font-size: 1.25rem;
+      font-size: 0.875rem;
       color: var(--mat-sys-on-surface);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     
-    .music-author {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      
-      .author-avatar {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        object-fit: cover;
-      }
-      
-      .author-avatar-icon {
-        width: 24px;
-        height: 24px;
-        font-size: 24px;
-        color: var(--mat-sys-on-surface-variant);
-      }
-      
-      .author-link {
-        color: var(--mat-sys-on-surface-variant);
-        text-decoration: none;
-        
-        &:hover {
-          color: var(--mat-sys-primary);
-          text-decoration: underline;
-        }
-      }
-    }
-    
-    .music-tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.25rem;
-      
-      .tag-chip {
-        font-size: 0.75rem;
-      }
-    }
-    
-    .music-player {
-      width: 100%;
-    }
-    
-    .music-lyrics {
-      display: flex;
-      flex-direction: column;
-      
-      .lyrics-toggle {
-        align-self: flex-start;
-      }
-      
-      .lyrics-content {
-        margin: 0.5rem 0 0 0;
-        padding: 1rem;
-        background-color: var(--mat-sys-surface-container);
-        border-radius: var(--mat-sys-corner-small);
-        white-space: pre-wrap;
-        font-family: inherit;
-        font-size: 0.875rem;
-        color: var(--mat-sys-on-surface-variant);
-        max-height: 300px;
-        overflow-y: auto;
-      }
-    }
-    
-    .music-client {
-      display: flex;
-      gap: 0.25rem;
+    .music-artist {
       font-size: 0.75rem;
       color: var(--mat-sys-on-surface-variant);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      cursor: pointer;
       
-      .client-name {
+      &:hover {
+        text-decoration: underline;
         color: var(--mat-sys-primary);
       }
     }
   `],
 })
 export class MusicEventComponent {
+  private router = inject(Router);
   private data = inject(DataService);
+  private mediaPlayer = inject(MediaPlayerService);
 
   event = input.required<Event>();
-  showAuthor = input<boolean>(true);
-  showLyrics = input<boolean>(true);
 
-  lyricsExpanded = signal(false);
   authorProfile = signal<NostrRecord | undefined>(undefined);
 
   constructor() {
@@ -228,6 +160,23 @@ export class MusicEventComponent {
       }
     });
   }
+
+  // Extract d-tag identifier
+  identifier = computed(() => {
+    const event = this.event();
+    const dTag = event.tags.find(t => t[0] === 'd');
+    return dTag?.[1] || '';
+  });
+
+  // Get npub for artist
+  artistNpub = computed(() => {
+    const event = this.event();
+    try {
+      return nip19.npubEncode(event.pubkey);
+    } catch {
+      return event.pubkey;
+    }
+  });
 
   // Extract title from tags
   title = computed(() => {
@@ -257,43 +206,49 @@ export class MusicEventComponent {
     return imageTag?.[1] || null;
   });
 
-  // Extract tags (genres, categories)
-  tags = computed(() => {
-    const event = this.event();
-    return event.tags
-      .filter(t => t[0] === 't')
-      .map(t => t[1])
-      .filter(Boolean);
+  // Get artist name from profile or fallback
+  artistName = computed(() => {
+    const profile = this.authorProfile();
+    return profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
   });
 
-  // Check if AI generated
-  aiGenerated = computed(() => {
-    const event = this.event();
-    const aiTag = event.tags.find(t => t[0] === 'ai-generated');
-    return aiTag?.[1] === 'true';
-  });
+  // Open song details page
+  openDetails(event: MouseEvent | KeyboardEvent): void {
+    event.stopPropagation();
+    const npub = this.artistNpub();
+    const id = this.identifier();
+    if (npub && id) {
+      this.router.navigate(['/music/song', npub, id]);
+    }
+  }
 
-  // Extract client
-  client = computed(() => {
-    const event = this.event();
-    const clientTag = event.tags.find(t => t[0] === 'client');
-    return clientTag?.[1] || null;
-  });
+  // Open artist page
+  openArtist(event: MouseEvent | KeyboardEvent): void {
+    event.stopPropagation();
+    const npub = this.artistNpub();
+    if (npub) {
+      this.router.navigate(['/music/artist', npub]);
+    }
+  }
 
-  // Check if has lyrics
-  hasLyrics = computed(() => {
-    const event = this.event();
-    return event.content && event.content.trim().length > 0 && !event.content.match(/^https?:\/\//);
-  });
+  // Play track in media player
+  playTrack(event: MouseEvent | KeyboardEvent): void {
+    event.stopPropagation();
 
-  // Get lyrics from content
-  lyrics = computed(() => {
-    const event = this.event();
-    // Remove "Lyrics:" prefix if present
-    return event.content.replace(/^Lyrics:\s*/i, '').trim();
-  });
+    const url = this.audioUrl();
+    if (!url) {
+      console.warn('No audio URL found for track');
+      return;
+    }
 
-  toggleLyrics(): void {
-    this.lyricsExpanded.update(v => !v);
+    const mediaItem: MediaItem = {
+      source: url,
+      title: this.title() || 'Untitled Track',
+      artist: this.artistName(),
+      artwork: this.image() || '/icons/icon-192x192.png',
+      type: 'Music',
+    };
+
+    this.mediaPlayer.play(mediaItem);
   }
 }

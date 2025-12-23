@@ -1,8 +1,8 @@
-import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, HostListener } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatTabsModule } from '@angular/material/tabs';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
 import { Event, Filter, kinds } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
@@ -13,18 +13,20 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { ArticleEventComponent } from '../../components/event-types/article-event.component';
 
+const PAGE_SIZE = 30;
+
 @Component({
   selector: 'app-articles-discover',
   imports: [
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
-    MatTabsModule,
+    MatButtonToggleModule,
     MatCardModule,
     ArticleEventComponent,
   ],
   templateUrl: './articles.component.html',
-  styleUrl: './articles.component.scss',
+  styleUrls: ['./articles.component.scss'],
 })
 export class ArticlesDiscoverComponent implements OnDestroy {
   private pool = inject(RelayPoolService);
@@ -36,7 +38,12 @@ export class ArticlesDiscoverComponent implements OnDestroy {
 
   allArticles = signal<Event[]>([]);
   loading = signal(true);
-  selectedTabIndex = signal(0);
+  loadingMore = signal(false);
+  feedSource = signal<'following' | 'public'>('public');
+
+  // Pagination state
+  followingDisplayCount = signal(PAGE_SIZE);
+  publicDisplayCount = signal(PAGE_SIZE);
 
   private subscription: { close: () => void } | null = null;
   private eventMap = new Map<string, Event>();
@@ -46,8 +53,8 @@ export class ArticlesDiscoverComponent implements OnDestroy {
     return this.accountState.followingList() || [];
   });
 
-  // Filtered articles for current tab
-  followingArticles = computed(() => {
+  // All filtered articles sorted by date
+  private allFollowingArticles = computed(() => {
     const following = this.followingPubkeys();
     if (following.length === 0) return [];
 
@@ -56,16 +63,43 @@ export class ArticlesDiscoverComponent implements OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
   });
 
+  private allPublicArticles = computed(() => {
+    return this.allArticles().sort((a, b) => b.created_at - a.created_at);
+  });
+
+  // Paginated articles for display
+  followingArticles = computed(() => {
+    return this.allFollowingArticles().slice(0, this.followingDisplayCount());
+  });
+
   publicArticles = computed(() => {
-    return this.allArticles()
-      .sort((a, b) => b.created_at - a.created_at);
+    return this.allPublicArticles().slice(0, this.publicDisplayCount());
   });
 
   currentArticles = computed(() => {
-    const index = this.selectedTabIndex();
-    if (index === 0) return this.followingArticles();
+    const source = this.feedSource();
+    if (source === 'following') return this.followingArticles();
     return this.publicArticles();
   });
+
+  // Check if there are more articles to load
+  hasMoreFollowing = computed(() => {
+    return this.allFollowingArticles().length > this.followingDisplayCount();
+  });
+
+  hasMorePublic = computed(() => {
+    return this.allPublicArticles().length > this.publicDisplayCount();
+  });
+
+  hasMore = computed(() => {
+    const source = this.feedSource();
+    if (source === 'following') return this.hasMoreFollowing();
+    return this.hasMorePublic();
+  });
+
+  // Total counts
+  followingCount = computed(() => this.allFollowingArticles().length);
+  publicCount = computed(() => this.allPublicArticles().length);
 
   hasArticles = computed(() => {
     return this.allArticles().length > 0;
@@ -81,6 +115,39 @@ export class ArticlesDiscoverComponent implements OnDestroy {
     if (this.subscription) {
       this.subscription.close();
     }
+  }
+
+  @HostListener('window:scroll')
+  onScroll(): void {
+    if (this.loadingMore() || !this.hasMore()) return;
+
+    const scrollPosition = window.innerHeight + window.scrollY;
+    const documentHeight = document.documentElement.scrollHeight;
+    const threshold = 200;
+
+    if (scrollPosition >= documentHeight - threshold) {
+      this.loadMore();
+    }
+  }
+
+  loadMore(): void {
+    if (this.loadingMore() || !this.hasMore()) return;
+
+    this.loadingMore.set(true);
+
+    setTimeout(() => {
+      const source = this.feedSource();
+      if (source === 'following') {
+        this.followingDisplayCount.update(count => count + PAGE_SIZE);
+      } else {
+        this.publicDisplayCount.update(count => count + PAGE_SIZE);
+      }
+      this.loadingMore.set(false);
+    }, 100);
+  }
+
+  onSourceChange(source: 'following' | 'public'): void {
+    this.feedSource.set(source);
   }
 
   private startSubscription(): void {
@@ -151,13 +218,11 @@ export class ArticlesDiscoverComponent implements OnDestroy {
     this.allArticles.set(articles);
   }
 
-  onTabChange(index: number): void {
-    this.selectedTabIndex.set(index);
-  }
-
   refresh(): void {
     this.eventMap.clear();
     this.loading.set(true);
+    this.followingDisplayCount.set(PAGE_SIZE);
+    this.publicDisplayCount.set(PAGE_SIZE);
 
     if (this.subscription) {
       this.subscription.close();

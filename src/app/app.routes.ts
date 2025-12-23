@@ -305,6 +305,24 @@ export const routes: Routes = [
     title: 'Music',
   },
   {
+    path: 'music/song/:pubkey/:identifier',
+    loadComponent: () =>
+      import('./pages/music/song-detail/song-detail.component').then(m => m.SongDetailComponent),
+    title: 'Song',
+  },
+  {
+    path: 'music/artist/:pubkey',
+    loadComponent: () =>
+      import('./pages/music/music-artist/music-artist.component').then(m => m.MusicArtistComponent),
+    title: 'Artist',
+  },
+  {
+    path: 'music/playlist/:pubkey/:identifier',
+    loadComponent: () =>
+      import('./pages/music/music-playlist/music-playlist.component').then(m => m.MusicPlaylistComponent),
+    title: 'Playlist',
+  },
+  {
     path: 'articles',
     loadComponent: () =>
       import('./pages/articles/articles.component').then(m => m.ArticlesDiscoverComponent),
