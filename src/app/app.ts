@@ -392,11 +392,11 @@ export class App implements OnInit {
       label: $localize`:@@app.nav.music:Music`,
       icon: 'music_note',
     },
-    {
-      path: 'articles',
-      label: $localize`:@@app.nav.articles:Articles`,
-      icon: 'article',
-    },
+    // {
+    //   path: 'articles',
+    //   label: $localize`:@@app.nav.articles:Articles`,
+    //   icon: 'article',
+    // },
     {
       path: 'streams',
       label: $localize`:@@app.nav.streams:Streams`,
