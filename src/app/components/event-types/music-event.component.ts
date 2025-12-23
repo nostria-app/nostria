@@ -398,7 +398,7 @@ export class MusicEventComponent {
   likeTrack(event: MouseEvent | KeyboardEvent): void {
     event.stopPropagation();
     if (this._isLiked()) return;
-    
+
     const ev = this.event();
     this.reactionService.addLike(ev).then(success => {
       if (success) {
