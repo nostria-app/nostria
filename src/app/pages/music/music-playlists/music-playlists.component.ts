@@ -321,6 +321,10 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     setTimeout(() => this.observeSentinel(), 100);
   }
 
+  private tryObserveSentinel(): void {
+    setTimeout(() => this.observeSentinel(), 100);
+  }
+
   private observeSentinel(): void {
     const sentinel = this.loadMoreSentinel();
     if (sentinel && this.intersectionObserver) {
@@ -341,6 +345,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     const timeout = setTimeout(() => {
       loaded = true;
       this.loading.set(false);
+      this.tryObserveSentinel();
     }, 5000);
 
     const filter: Filter = {
@@ -366,6 +371,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
         clearTimeout(timeout);
         loaded = true;
         this.loading.set(false);
+        this.tryObserveSentinel();
       }
     });
   }
