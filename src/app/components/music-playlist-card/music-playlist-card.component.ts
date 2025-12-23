@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -200,13 +200,18 @@ export class MusicPlaylistCardComponent {
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
 
+  private profileLoaded = false;
+
   constructor() {
-    // Load author profile
+    // Load author profile - use untracked to prevent re-triggers from cache updates
     effect(() => {
       const pubkey = this.event().pubkey;
-      if (pubkey) {
-        this.data.getProfile(pubkey).then(profile => {
-          this.authorProfile.set(profile);
+      if (pubkey && !this.profileLoaded) {
+        this.profileLoaded = true;
+        untracked(() => {
+          this.data.getProfile(pubkey).then(profile => {
+            this.authorProfile.set(profile);
+          });
         });
       }
     });
