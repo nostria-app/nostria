@@ -1,0 +1,211 @@
+<app-custom-dialog [title]="'Import from RSS Feed'" [showCloseButton]="true" [disableClose]="isPublishing()"
+  [width]="'700px'" [maxWidth]="'95vw'" (closed)="cancel()">
+
+  <div dialog-content>
+    <p class="dialog-subtitle">Paste your music RSS feed URL to import tracks and publish them to Nostr</p>
+
+    @if (!hasFetched()) {
+    <!-- RSS URL Input Step -->
+    <div class="rss-input-section">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>RSS Feed URL</mat-label>
+        <input matInput [(ngModel)]="rssUrl" placeholder="https://example.com/podcast.rss" [disabled]="isFetching()" />
+      </mat-form-field>
+      <button mat-stroked-button (click)="fetchRss()" [disabled]="isFetching() || !rssUrl()">
+        @if (isFetching()) {
+        <mat-spinner diameter="18"></mat-spinner>
+        } @else {
+        <mat-icon>download</mat-icon>
+        }
+        Fetch
+      </button>
+    </div>
+    <p class="hint-text">Supports podcast RSS feeds with audio enclosures (iTunes/podcast format)</p>
+    } @else {
+    <!-- Fetched Content Step -->
+    <div class="fetched-content">
+      <!-- Album Information Section -->
+      <div class="album-section">
+        <div class="album-header">
+          <span class="section-title">Album Information</span>
+          <mat-slide-toggle [checked]="albumInfo().enabled"
+            (change)="updateAlbumInfo({ enabled: $event.checked })"></mat-slide-toggle>
+        </div>
+
+        <div class="album-content" [class.disabled]="!albumInfo().enabled">
+          <div class="album-row">
+            <div class="album-cover"
+              [style.background]="albumInfo().imageUrl ? 'url(' + albumInfo().imageUrl + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')'">
+              @if (!albumInfo().imageUrl) {
+              <mat-icon>music_note</mat-icon>
+              }
+            </div>
+            <button mat-stroked-button class="random-btn" (click)="randomizeGradient()">
+              <mat-icon>auto_awesome</mat-icon>
+              Random
+            </button>
+          </div>
+
+          <div class="album-fields">
+            <div class="field-row">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Album Title</mat-label>
+                <input matInput [value]="albumInfo().title" (input)="updateAlbumInfo({ title: $any($event.target).value })"
+                  [disabled]="!albumInfo().enabled" placeholder="Album title" />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Artist</mat-label>
+                <input matInput [value]="albumInfo().artist"
+                  (input)="updateAlbumInfo({ artist: $any($event.target).value })"
+                  [disabled]="!albumInfo().enabled" placeholder="Artist name" />
+              </mat-form-field>
+            </div>
+            <div class="field-row">
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Image URL</mat-label>
+                <input matInput [value]="albumInfo().imageUrl"
+                  (input)="updateAlbumInfo({ imageUrl: $any($event.target).value })"
+                  [disabled]="!albumInfo().enabled" placeholder="https://..." />
+              </mat-form-field>
+              <mat-form-field appearance="outline" class="half-width">
+                <mat-label>Release Date</mat-label>
+                <input matInput [value]="albumInfo().releaseDate"
+                  (input)="updateAlbumInfo({ releaseDate: $any($event.target).value })"
+                  [disabled]="!albumInfo().enabled" placeholder="MM/DD/YYYY" />
+              </mat-form-field>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tracks Section -->
+      <div class="tracks-section">
+        <div class="tracks-header">
+          <span class="section-title">Tracks ({{ trackCount() }})</span>
+          <button mat-stroked-button (click)="expandAll()">Expand All</button>
+        </div>
+
+        <div class="tracks-list">
+          @for (track of tracks(); track track.audioUrl; let i = $index) {
+          <div class="track-item" [class.expanded]="track.expanded">
+            <div class="track-collapsed" tabindex="0" role="button" (click)="toggleTrackExpanded(i)" (keydown.enter)="toggleTrackExpanded(i)">
+              <span class="track-number">{{ i + 1 }}</span>
+              <div class="track-info">
+                <span class="track-title">{{ track.title }}</span>
+                <span class="track-artist">{{ track.artist }}</span>
+              </div>
+              <mat-icon class="expand-icon">{{ track.expanded ? 'expand_less' : 'expand_more' }}</mat-icon>
+            </div>
+
+            @if (track.expanded) {
+            <div class="track-expanded">
+              <div class="track-cover-row">
+                <div class="track-cover"
+                  [style.background]="track.imageUrl ? 'url(' + track.imageUrl + ')' : (albumInfo().imageUrl ? 'url(' + albumInfo().imageUrl + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')')">
+                  @if (!track.imageUrl && !albumInfo().imageUrl) {
+                  <mat-icon>music_note</mat-icon>
+                  }
+                </div>
+                <button mat-stroked-button class="random-btn" (click)="randomizeGradient(); $event.stopPropagation()">
+                  <mat-icon>auto_awesome</mat-icon>
+                  Random
+                </button>
+              </div>
+
+              <div class="track-fields">
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Title</mat-label>
+                  <input matInput [value]="track.title" placeholder="Track title"
+                    (input)="updateTrack(i, { title: $any($event.target).value })" />
+                </mat-form-field>
+
+                <div class="field-row">
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Artist</mat-label>
+                    <input matInput [value]="track.artist" placeholder="Artist name"
+                      (input)="updateTrack(i, { artist: $any($event.target).value })" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline" class="half-width">
+                    <mat-label>Album</mat-label>
+                    <input matInput [value]="track.album" placeholder="Album name"
+                      (input)="updateTrack(i, { album: $any($event.target).value })" />
+                  </mat-form-field>
+                </div>
+
+                <div class="field-row three-col">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Track #</mat-label>
+                    <input matInput type="number" [value]="track.trackNumber" placeholder="1"
+                      (input)="updateTrack(i, { trackNumber: +$any($event.target).value })" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Duration</mat-label>
+                    <input matInput [value]="track.duration" placeholder="0:00"
+                      (input)="updateTrack(i, { duration: $any($event.target).value })" />
+                  </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Release Date</mat-label>
+                    <input matInput [value]="track.releaseDate" placeholder="MM/DD/YYYY"
+                      (input)="updateTrack(i, { releaseDate: $any($event.target).value })" />
+                  </mat-form-field>
+                </div>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Image URL</mat-label>
+                  <input matInput [value]="track.imageUrl"
+                    (input)="updateTrack(i, { imageUrl: $any($event.target).value })"
+                    placeholder="Will use album artwork" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Genres</mat-label>
+                  <mat-select [value]="track.genres" multiple
+                    (selectionChange)="updateTrack(i, { genres: $event.value })">
+                    @for (genre of availableGenres; track genre) {
+                    <mat-option [value]="genre">{{ genre }}</mat-option>
+                    }
+                  </mat-select>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="full-width">
+                  <mat-label>Description</mat-label>
+                  <textarea matInput [value]="track.description" rows="4" placeholder="Track description"
+                    (input)="updateTrack(i, { description: $any($event.target).value })"></textarea>
+                </mat-form-field>
+
+                <div class="toggle-row">
+                  <mat-slide-toggle [checked]="track.aiGenerated"
+                    (change)="updateTrack(i, { aiGenerated: $event.checked })">
+                    AI-Generated
+                  </mat-slide-toggle>
+                </div>
+              </div>
+            </div>
+            }
+          </div>
+          }
+        </div>
+      </div>
+    </div>
+    }
+  </div>
+
+  <div dialog-actions>
+    @if (hasFetched()) {
+    <button mat-stroked-button (click)="goBack()" [disabled]="isPublishing()">Back</button>
+    <button mat-flat-button (click)="publishTracks()" [disabled]="isPublishing() || trackCount() === 0">
+      @if (isPublishing()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      <span>Publishing...</span>
+      } @else {
+      <ng-container>
+        <mat-icon>upload</mat-icon>
+        <span>Publish to Nostr</span>
+      </ng-container>
+      }
+    </button>
+    } @else {
+    <button mat-stroked-button (click)="cancel()">Cancel</button>
+    }
+  </div>
+</app-custom-dialog>

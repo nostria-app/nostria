@@ -1,0 +1,264 @@
+.dialog-subtitle {
+  margin: 0 0 1.5rem;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.half-width {
+  flex: 1;
+  min-width: 0;
+}
+
+// RSS Input Section
+.rss-input-section {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+
+  mat-form-field {
+    flex: 1;
+  }
+
+  button {
+    margin-top: 4px;
+    min-width: 100px;
+  }
+}
+
+.hint-text {
+  margin: 0.5rem 0 0;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.75rem;
+}
+
+// Fetched Content
+.fetched-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+// Album Section
+.album-section {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 1rem;
+  background: var(--mat-sys-surface-container-low);
+}
+
+.album-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.section-title {
+  font-size: 1rem;
+  color: var(--mat-sys-on-surface);
+}
+
+.album-content {
+  display: flex;
+  gap: 1.5rem;
+  transition: opacity 0.2s ease;
+
+  &.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+  }
+}
+
+.album-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.album-cover {
+  width: 100px;
+  height: 100px;
+  border-radius: var(--mat-sys-corner-medium);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 2.5rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+.random-btn {
+  font-size: 0.75rem;
+  padding: 0 0.75rem;
+}
+
+.album-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.field-row {
+  display: flex;
+  gap: 1rem;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    gap: 0;
+  }
+
+  &.three-col {
+    mat-form-field {
+      flex: 1;
+    }
+  }
+}
+
+// Tracks Section
+.tracks-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tracks-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tracks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.track-item {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-medium);
+  overflow: hidden;
+  background: var(--mat-sys-surface-container-low);
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+  }
+
+  &.expanded {
+    background: var(--mat-sys-surface-container);
+  }
+}
+
+.track-collapsed {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  gap: 1rem;
+}
+
+.track-number {
+  width: 24px;
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+.track-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.track-title {
+  color: var(--mat-sys-on-surface);
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.track-artist {
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.expand-icon {
+  color: var(--mat-sys-on-surface-variant);
+  flex-shrink: 0;
+}
+
+// Expanded Track
+.track-expanded {
+  padding: 0 1rem 1rem 1rem;
+  border-top: 1px solid var(--mat-sys-outline-variant);
+}
+
+.track-cover-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  padding-top: 1rem;
+}
+
+.track-cover {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--mat-sys-corner-small);
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  mat-icon {
+    font-size: 2rem;
+    width: 2rem;
+    height: 2rem;
+    color: rgba(255, 255, 255, 0.7);
+  }
+}
+
+.track-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.toggle-row {
+  margin-top: 0.5rem;
+}
+
+// Dialog Actions
+[dialog-actions] {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}

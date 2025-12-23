@@ -125,6 +125,32 @@ export class UploadMusicTrackDialogComponent {
 
     // Initialize with current user as uploader
     this.loadCurrentUserProfile();
+
+    // Auto-fill artist name when npub is entered
+    this.trackForm.get('artistNpub')?.valueChanges.subscribe(async (npub: string) => {
+      if (npub && npub.startsWith('npub')) {
+        await this.autoFillArtistName(npub);
+      }
+    });
+  }
+
+  private async autoFillArtistName(npub: string): Promise<void> {
+    try {
+      const { nip19 } = await import('nostr-tools');
+      const decoded = nip19.decode(npub);
+      if (decoded.type !== 'npub') return;
+
+      const pubkey = decoded.data;
+      const profile = await this.dataService.getProfile(pubkey);
+      if (profile?.data) {
+        const name = profile.data.name || profile.data.display_name;
+        if (name && !this.trackForm.get('artistName')?.value) {
+          this.trackForm.patchValue({ artistName: name });
+        }
+      }
+    } catch {
+      // Invalid npub, ignore
+    }
   }
 
   private async loadCurrentUserProfile(): Promise<void> {
