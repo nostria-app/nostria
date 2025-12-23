@@ -6,7 +6,7 @@
     </h1>
     <div class="header-actions">
       @if (isAuthenticated()) {
-      <!-- <button mat-icon-button [matMenuTriggerFor]="addMenu" aria-label="Add content">
+      <button mat-icon-button [matMenuTriggerFor]="addMenu" aria-label="Add content">
         <mat-icon>add</mat-icon>
       </button>
       <mat-menu #addMenu="matMenu">
@@ -22,7 +22,7 @@
           <mat-icon>rss_feed</mat-icon>
           <span i18n="@@music.menu.importRss">Import from RSS</span>
         </button>
-      </mat-menu> -->
+      </mat-menu>
       }
       <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@music.refresh.aria"
         aria-label="Refresh music">

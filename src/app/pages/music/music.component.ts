@@ -14,7 +14,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
-import { CreatePlaylistDialogComponent, CreatePlaylistDialogData } from '../playlists/create-playlist-dialog/create-playlist-dialog.component';
+import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from './create-music-playlist-dialog/create-music-playlist-dialog.component';
 
 const MUSIC_KIND = 36787;
 const PLAYLIST_KIND = 34139;
@@ -261,16 +261,16 @@ export class MusicComponent implements OnDestroy {
   }
 
   openCreatePlaylist(): void {
-    const dialogRef = this.dialog.open(CreatePlaylistDialogComponent, {
+    const dialogRef = this.dialog.open(CreateMusicPlaylistDialogComponent, {
       width: '500px',
       maxWidth: '95vw',
-      data: {} as CreatePlaylistDialogData,
+      data: {} as CreateMusicPlaylistDialogData,
     });
 
     dialogRef.afterClosed().subscribe(result => {
-      if (result) {
-        // Navigate to playlist editor or handle creation
-        console.log('Create playlist result:', result);
+      if (result?.playlist) {
+        // Refresh to show the new playlist
+        this.refresh();
       }
     });
   }

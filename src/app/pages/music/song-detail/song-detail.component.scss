@@ -304,3 +304,14 @@
 .comments-section {
   margin-top: 1rem;
 }
+
+// Playlist menu styles
+.playlist-loading,
+.no-playlists {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  color: var(--mat-sys-on-surface-variant);
+  font-size: 0.875rem;
+}

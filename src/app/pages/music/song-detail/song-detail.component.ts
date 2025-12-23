@@ -17,14 +17,17 @@ import { DataService } from '../../../services/data.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { ReactionService } from '../../../services/reaction.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { ApplicationService } from '../../../services/application.service';
 import { EventService } from '../../../services/event';
 import { ZapService } from '../../../services/zap.service';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { LoggerService } from '../../../services/logger.service';
+import { MusicPlaylistService } from '../../../services/music-playlist.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
+import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../create-music-playlist-dialog/create-music-playlist-dialog.component';
 
 interface TopZapper {
   pubkey: string;
@@ -59,10 +62,12 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private mediaPlayer = inject(MediaPlayerService);
   private reactionService = inject(ReactionService);
   private accountState = inject(AccountStateService);
+  private app = inject(ApplicationService);
   private eventService = inject(EventService);
   private zapService = inject(ZapService);
   private sharedRelay = inject(SharedRelayService);
   private logger = inject(LoggerService);
+  private musicPlaylistService = inject(MusicPlaylistService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -73,12 +78,18 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   isLiked = signal(false);
   isLiking = signal(false);
 
+  // Playlist signals
+  userPlaylists = this.musicPlaylistService.userPlaylists;
+  playlistsLoading = this.musicPlaylistService.loading;
+  isAuthenticated = computed(() => this.app.authenticated());
+
   // Engagement metrics
   reactionCount = signal<number>(0);
   commentCount = signal<number>(0);
   zapTotal = signal<number>(0);
   topZappers = signal<TopZapper[]>([]);
   engagementLoading = signal<boolean>(false);
+
 
   private subscription: { close: () => void } | null = null;
   private likeSubscription: { close: () => void } | null = null;
@@ -164,6 +175,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     } catch {
       return event.pubkey;
     }
+  });
+
+  identifier = computed(() => {
+    const event = this.song();
+    if (!event) return '';
+    const dTag = event.tags.find(t => t[0] === 'd');
+    return dTag?.[1] || '';
   });
 
   publishedDate = computed(() => {
@@ -425,6 +443,8 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       artist: this.artistName(),
       artwork: this.image() || '/icons/icon-192x192.png',
       type: 'Music',
+      eventPubkey: this.artistNpub(),
+      eventIdentifier: this.identifier(),
     };
 
     this.mediaPlayer.play(mediaItem);
@@ -506,6 +526,8 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       artist: this.artistName(),
       artwork: this.image() || '/icons/icon-192x192.png',
       type: 'Music',
+      eventPubkey: this.artistNpub(),
+      eventIdentifier: this.identifier(),
     };
 
     this.mediaPlayer.enque(mediaItem);
@@ -536,5 +558,59 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  // Load playlists when submenu is opened
+  loadPlaylists(): void {
+    this.musicPlaylistService.fetchUserPlaylists();
+  }
+
+  // Create a new playlist and add this track to it
+  createNewPlaylist(): void {
+    const ev = this.song();
+    if (!ev) return;
+
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    const dialogRef = this.dialog.open(CreateMusicPlaylistDialogComponent, {
+      width: '500px',
+      maxWidth: '95vw',
+      data: {
+        trackPubkey: ev.pubkey,
+        trackDTag: dTag,
+      } as CreateMusicPlaylistDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.playlist) {
+        this.snackBar.open(`Added to "${result.playlist.title}"`, 'Close', { duration: 2000 });
+      }
+    });
+  }
+
+  // Add track to an existing playlist
+  async addToPlaylist(playlistId: string): Promise<void> {
+    const ev = this.song();
+    if (!ev) return;
+
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    try {
+      const success = await this.musicPlaylistService.addTrackToPlaylist(
+        playlistId,
+        ev.pubkey,
+        dTag
+      );
+
+      if (success) {
+        const playlist = this.userPlaylists().find(p => p.id === playlistId);
+        this.snackBar.open(`Added to "${playlist?.title || 'playlist'}"`, 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      this.logger.error('Error adding to playlist:', error);
+      this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
+    }
   }
 }
