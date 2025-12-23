@@ -29,10 +29,18 @@
         </div>
         <div class="name-section">
           <h1 class="artist-name">{{ artistName() }}</h1>
-          <button mat-stroked-button (click)="goToProfile()">
-            <mat-icon>person</mat-icon>
-            View Profile
-          </button>
+          <div class="artist-actions">
+            @if (trackCount() > 0) {
+            <button mat-flat-button (click)="playArtist()">
+              <mat-icon>play_arrow</mat-icon>
+              Play Artist
+            </button>
+            }
+            <button mat-stroked-button (click)="goToProfile()">
+              <mat-icon>person</mat-icon>
+              View Profile
+            </button>
+          </div>
         </div>
       </div>
       @if (artistBio()) {

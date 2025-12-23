@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal } from '@angular/core';
+import { Component, computed, input, inject, signal, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -10,6 +10,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { ReactionService } from '../../services/reaction.service';
+import { NostrRecord } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 
 @Component({
@@ -197,6 +198,20 @@ export class MusicPlaylistCardComponent {
 
   event = input.required<Event>();
 
+  authorProfile = signal<NostrRecord | undefined>(undefined);
+
+  constructor() {
+    // Load author profile
+    effect(() => {
+      const pubkey = this.event().pubkey;
+      if (pubkey) {
+        this.data.getProfile(pubkey).then(profile => {
+          this.authorProfile.set(profile);
+        });
+      }
+    });
+  }
+
   // Extract title from tags
   title = computed(() => {
     const event = this.event();
@@ -290,9 +305,11 @@ export class MusicPlaylistCardComponent {
     event.stopPropagation();
     const ev = this.event();
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const profile = this.authorProfile();
 
     const data: ZapDialogData = {
       recipientPubkey: ev.pubkey,
+      recipientMetadata: profile?.data,
       eventId: ev.id,
       eventKind: ev.kind,
       eventAddress: `${ev.kind}:${ev.pubkey}:${dTag}`,

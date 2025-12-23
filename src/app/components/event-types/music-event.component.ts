@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
@@ -6,10 +6,14 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
-import { Event, nip19 } from 'nostr-tools';
+import { Event, nip19, kinds, Filter } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { ReactionService } from '../../services/reaction.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { RelayPoolService } from '../../services/relays/relay-pool';
+import { RelaysService } from '../../services/relays/relays';
+import { UtilitiesService } from '../../services/utilities.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 
@@ -216,11 +220,15 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
     }
   `],
 })
-export class MusicEventComponent {
+export class MusicEventComponent implements OnDestroy {
   private router = inject(Router);
   private data = inject(DataService);
   private mediaPlayer = inject(MediaPlayerService);
   private reactionService = inject(ReactionService);
+  private accountState = inject(AccountStateService);
+  private pool = inject(RelayPoolService);
+  private relaysService = inject(RelaysService);
+  private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -228,6 +236,9 @@ export class MusicEventComponent {
   event = input.required<Event>();
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
+
+  private reactionSubscription?: { close: () => void };
+  private likeChecked = false;
 
   constructor() {
     // Load author profile
@@ -237,6 +248,55 @@ export class MusicEventComponent {
         this.data.getProfile(pubkey).then(profile => {
           this.authorProfile.set(profile);
         });
+      }
+    });
+
+    // Check if user has already liked this track
+    effect(() => {
+      const ev = this.event();
+      const userPubkey = this.accountState.pubkey();
+
+      // Only check once per event and only if user is logged in
+      if (!userPubkey || this.likeChecked) return;
+      this.likeChecked = true;
+
+      this.checkExistingLike(ev, userPubkey);
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.reactionSubscription?.close();
+  }
+
+  private checkExistingLike(ev: Event, userPubkey: string): void {
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    if (relayUrls.length === 0) return;
+
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const aTagValue = `${ev.kind}:${ev.pubkey}:${dTag}`;
+
+    // Query for user's reaction to this specific track
+    const filter: Filter = {
+      kinds: [kinds.Reaction],
+      authors: [userPubkey],
+      '#a': [aTagValue],
+      limit: 1,
+    };
+
+    let found = false;
+    const timeout = setTimeout(() => {
+      if (!found) {
+        this.reactionSubscription?.close();
+      }
+    }, 3000);
+
+    this.reactionSubscription = this.pool.subscribe(relayUrls, filter, (reaction: Event) => {
+      // Check if it's a like ('+' content)
+      if (reaction.content === '+') {
+        found = true;
+        this._isLiked.set(true);
+        clearTimeout(timeout);
+        this.reactionSubscription?.close();
       }
     });
   }
@@ -415,10 +475,12 @@ export class MusicEventComponent {
     event.stopPropagation();
     const ev = this.event();
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const profile = this.authorProfile();
 
     const data: ZapDialogData = {
       recipientPubkey: ev.pubkey,
       recipientName: this.artistName(),
+      recipientMetadata: profile?.data,
       eventId: ev.id,
       eventKind: ev.kind,
       eventAddress: `${ev.kind}:${ev.pubkey}:${dTag}`,

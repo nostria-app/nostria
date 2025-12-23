@@ -4,13 +4,15 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Event, Filter, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
 import { ReportingService } from '../../../services/reporting.service';
-import { NostrRecord } from '../../../interfaces';
+import { MediaPlayerService } from '../../../services/media-player.service';
+import { NostrRecord, MediaItem } from '../../../interfaces';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 
@@ -24,6 +26,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
+    MatSnackBarModule,
     MusicEventComponent,
     MusicPlaylistCardComponent,
   ],
@@ -38,6 +41,8 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private utilities = inject(UtilitiesService);
   private data = inject(DataService);
   private reporting = inject(ReportingService);
+  private mediaPlayer = inject(MediaPlayerService);
+  private snackBar = inject(MatSnackBar);
 
   pubkey = signal<string>('');
   loading = signal(true);
@@ -222,5 +227,49 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     if (npub) {
       this.router.navigate(['/p', npub]);
     }
+  }
+
+  playArtist(): void {
+    const artistTracks = this.tracks();
+    if (artistTracks.length === 0) {
+      this.snackBar.open('No tracks available to play', 'OK', { duration: 3000 });
+      return;
+    }
+
+    const profile = this.authorProfile();
+    const artistName = this.artistName();
+
+    // Convert tracks to MediaItems
+    const mediaItems: MediaItem[] = artistTracks.map(track => {
+      const titleTag = track.tags.find(t => t[0] === 'title' || t[0] === 'subject');
+      const title = titleTag?.[1] || track.content?.substring(0, 50) || 'Unknown Track';
+      const streamUrl = track.tags.find(t => t[0] === 'url')?.[1] || '';
+      const coverTag = track.tags.find(t => t[0] === 'image' || t[0] === 'cover' || t[0] === 'thumb');
+      const cover = coverTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png';
+      const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+
+      return {
+        title,
+        artist: artistName,
+        source: streamUrl,
+        artwork: cover,
+        type: 'Music' as const,
+        eventPubkey: this.artistNpub(),
+        eventIdentifier: dTag,
+      };
+    }).filter(item => item.source); // Only include tracks with valid stream URLs
+
+    if (mediaItems.length === 0) {
+      this.snackBar.open('No playable tracks found', 'OK', { duration: 3000 });
+      return;
+    }
+
+    // Play first track immediately, enqueue the rest
+    this.mediaPlayer.play(mediaItems[0]);
+    for (let i = 1; i < mediaItems.length; i++) {
+      this.mediaPlayer.enque(mediaItems[i]);
+    }
+
+    this.snackBar.open(`Playing ${mediaItems.length} track${mediaItems.length > 1 ? 's' : ''} from ${artistName}`, 'OK', { duration: 3000 });
   }
 }
