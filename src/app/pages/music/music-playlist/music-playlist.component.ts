@@ -19,7 +19,6 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { ReactionService } from '../../../services/reaction.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
-import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
@@ -37,7 +36,6 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatChipsModule,
     MatMenuModule,
     MatSnackBarModule,
-    MusicEventComponent,
   ],
   templateUrl: './music-playlist.component.html',
   styleUrls: ['./music-playlist.component.scss'],
@@ -528,5 +526,124 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         this.snackBar.open('Failed to like playlist', 'Close', { duration: 3000 });
       }
     });
+  }
+
+  // Helper methods for track display
+  getTrackTitle(track: Event): string {
+    const titleTag = track.tags.find(t => t[0] === 'title');
+    return titleTag?.[1] || 'Untitled Track';
+  }
+
+  getTrackImage(track: Event): string | null {
+    const imageTag = track.tags.find(t => t[0] === 'image');
+    return imageTag?.[1] || null;
+  }
+
+  getTrackArtist(track: Event): string {
+    // For now, return Unknown Artist - could be enhanced to fetch profile
+    return 'Unknown Artist';
+  }
+
+  getTrackDate(track: Event): string {
+    const date = new Date(track.created_at * 1000);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  getTrackDuration(track: Event): string {
+    const durationTag = track.tags.find(t => t[0] === 'duration');
+    if (durationTag?.[1]) {
+      const seconds = parseInt(durationTag[1], 10);
+      if (!isNaN(seconds)) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+      }
+    }
+    return '--:--';
+  }
+
+  playTrack(index: number): void {
+    const allTracks = this.tracks();
+    if (index < 0 || index >= allTracks.length) return;
+
+    // Play from this track and queue the rest
+    for (let i = index; i < allTracks.length; i++) {
+      const track = allTracks[i];
+      const urlTag = track.tags.find(t => t[0] === 'url');
+      const url = urlTag?.[1];
+      if (!url) continue;
+
+      const titleTag = track.tags.find(t => t[0] === 'title');
+      const imageTag = track.tags.find(t => t[0] === 'image');
+
+      const mediaItem: MediaItem = {
+        source: url,
+        title: titleTag?.[1] || 'Untitled Track',
+        artist: this.artistName(),
+        artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        type: 'Music',
+      };
+
+      if (i === index) {
+        this.mediaPlayer.play(mediaItem);
+      } else {
+        this.mediaPlayer.enque(mediaItem);
+      }
+    }
+  }
+
+  addTrackToQueue(track: Event): void {
+    const urlTag = track.tags.find(t => t[0] === 'url');
+    const url = urlTag?.[1];
+    if (!url) return;
+
+    const titleTag = track.tags.find(t => t[0] === 'title');
+    const imageTag = track.tags.find(t => t[0] === 'image');
+
+    const mediaItem: MediaItem = {
+      source: url,
+      title: titleTag?.[1] || 'Untitled Track',
+      artist: this.artistName(),
+      artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+      type: 'Music',
+    };
+
+    this.mediaPlayer.enque(mediaItem);
+    this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
+  }
+
+  goToTrackArtist(track: Event, event: MouseEvent | KeyboardEvent): void {
+    event.stopPropagation();
+    try {
+      const npub = nip19.npubEncode(track.pubkey);
+      this.router.navigate(['/music/artist', npub]);
+    } catch {
+      // Ignore
+    }
+  }
+
+  goToTrackDetails(track: Event): void {
+    const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+    try {
+      const npub = nip19.npubEncode(track.pubkey);
+      this.router.navigate(['/music/song', npub, dTag]);
+    } catch {
+      // Ignore
+    }
+  }
+
+  copyTrackLink(track: Event): void {
+    try {
+      const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+      const naddr = nip19.naddrEncode({
+        kind: track.kind,
+        pubkey: track.pubkey,
+        identifier: dTag,
+      });
+      this.clipboard.copy(`nostr:${naddr}`);
+      this.snackBar.open('Track link copied!', 'Close', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
+    }
   }
 }

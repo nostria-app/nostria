@@ -77,6 +77,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   authorProfile = signal<NostrRecord | undefined>(undefined);
   isLiked = signal(false);
   isLiking = signal(false);
+  isDownloading = signal(false);
 
   // Playlist signals
   userPlaylists = this.musicPlaylistService.userPlaylists;
@@ -623,6 +624,58 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.logger.error('Error adding to playlist:', error);
       this.snackBar.open('Failed to add to playlist', 'Close', { duration: 3000 });
+    }
+  }
+
+  /**
+   * Download the track with a generated filename based on event metadata
+   */
+  async downloadTrack(): Promise<void> {
+    const url = this.audioUrl();
+    if (!url || this.isDownloading()) return;
+
+    this.isDownloading.set(true);
+
+    try {
+      // Generate filename from metadata
+      const sanitize = (str: string) => str.replace(/[<>:"/\\|?*]/g, '_').trim();
+      const artist = sanitize(this.artistName()) || 'Unknown Artist';
+      const title = sanitize(this.title()) || 'Untitled Track';
+
+      // Detect file extension from URL or default to mp3
+      const urlLower = url.toLowerCase();
+      let extension = 'mp3';
+      const extMatch = urlLower.match(/\.(mp3|wav|ogg|flac|m4a|aac|opus)(\?|$)/);
+      if (extMatch) {
+        extension = extMatch[1];
+      }
+
+      const filename = `${artist} - ${title}.${extension}`;
+
+      // Fetch the file
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to download file');
+      }
+
+      const blob = await response.blob();
+
+      // Create download link
+      const downloadUrl = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(downloadUrl);
+
+      this.snackBar.open('Download started!', 'Close', { duration: 2000 });
+    } catch (error) {
+      this.logger.error('Error downloading track:', error);
+      this.snackBar.open('Failed to download track', 'Close', { duration: 3000 });
+    } finally {
+      this.isDownloading.set(false);
     }
   }
 }

@@ -40,8 +40,9 @@ const MUSIC_KIND = 36787;
             <mat-icon>queue_music</mat-icon>
           </div>
         }
+        @if (trackCount() > 0) {
         <button mat-mini-fab class="play-btn" (click)="playPlaylist($event)" 
-          [disabled]="isLoadingTracks() || trackCount() === 0"
+          [disabled]="isLoadingTracks()"
           aria-label="Play playlist">
           @if (isLoadingTracks()) {
             <mat-spinner diameter="20"></mat-spinner>
@@ -49,6 +50,7 @@ const MUSIC_KIND = 36787;
             <mat-icon>play_arrow</mat-icon>
           }
         </button>
+        }
       </div>
       <mat-card-content>
         <div class="playlist-info">
