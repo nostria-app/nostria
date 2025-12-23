@@ -311,6 +311,12 @@ export const routes: Routes = [
     title: 'Liked Songs',
   },
   {
+    path: 'music/liked-playlists',
+    loadComponent: () =>
+      import('./pages/music/music-liked-playlists/music-liked-playlists.component').then(m => m.MusicLikedPlaylistsComponent),
+    title: 'Liked Playlists',
+  },
+  {
     path: 'music/tracks',
     loadComponent: () =>
       import('./pages/music/music-tracks/music-tracks.component').then(m => m.MusicTracksComponent),
