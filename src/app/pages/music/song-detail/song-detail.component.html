@@ -1,0 +1,92 @@
+<div class="song-detail-container">
+  <div class="header-actions">
+    <button mat-icon-button (click)="goBack()" aria-label="Go back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+  </div>
+
+  @if (loading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading track...</p>
+  </div>
+  } @else if (!song()) {
+  <div class="empty-state">
+    <mat-icon>music_off</mat-icon>
+    <h2>Track not found</h2>
+    <p>This track may have been removed or is unavailable.</p>
+    <button mat-flat-button (click)="goBack()">
+      <mat-icon>arrow_back</mat-icon>
+      Back to Music
+    </button>
+  </div>
+  } @else {
+  <div class="song-content">
+    <div class="song-header">
+      <div class="cover-section">
+        @if (image()) {
+        <img [src]="image()" [alt]="title()" class="cover-image" />
+        } @else {
+        <div class="cover-placeholder">
+          <mat-icon>music_note</mat-icon>
+        </div>
+        }
+        <button mat-fab class="play-button" (click)="playTrack()" [disabled]="!audioUrl()" aria-label="Play track">
+          <mat-icon>play_arrow</mat-icon>
+        </button>
+      </div>
+
+      <div class="info-section">
+        <h1 class="song-title">{{ title() }}</h1>
+
+        <div class="artist-row" (click)="goToArtist()" (keydown.enter)="goToArtist()" tabindex="0" role="button"
+          aria-label="View artist">
+          @if (artistAvatar()) {
+          <img [src]="artistAvatar()" alt="" class="artist-avatar" />
+          } @else {
+          <mat-icon class="artist-avatar-placeholder">person</mat-icon>
+          }
+          <span class="artist-name">{{ artistName() }}</span>
+          <mat-icon class="navigate-icon">chevron_right</mat-icon>
+        </div>
+
+        <div class="meta-row">
+          <span class="date">{{ publishedDate() }}</span>
+          @if (isAiGenerated()) {
+          <mat-chip class="ai-chip">
+            <mat-icon>smart_toy</mat-icon>
+            AI Generated
+          </mat-chip>
+          }
+        </div>
+
+        @if (genres().length > 0) {
+        <div class="genres">
+          @for (genre of genres(); track genre) {
+          <mat-chip>{{ genre }}</mat-chip>
+          }
+        </div>
+        }
+
+        @if (description()) {
+        <p class="description">{{ description() }}</p>
+        }
+      </div>
+    </div>
+
+    @if (lyrics()) {
+    <mat-card class="lyrics-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>lyrics</mat-icon>
+          Lyrics
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        <pre class="lyrics-text">{{ lyrics() }}</pre>
+      </mat-card-content>
+    </mat-card>
+    }
+  </div>
+  }
+</div>

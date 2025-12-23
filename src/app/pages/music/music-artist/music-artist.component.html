@@ -1,0 +1,105 @@
+<div class="artist-container">
+  <div class="header-actions">
+    <button mat-icon-button (click)="goBack()" aria-label="Go back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+  </div>
+
+  @if (loading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="50"></mat-spinner>
+    <p>Loading artist...</p>
+  </div>
+  } @else {
+  <div class="artist-content">
+    <!-- Artist Header -->
+    <div class="artist-header" [class.has-banner]="artistBanner()">
+      @if (artistBanner()) {
+      <div class="banner" [style.background-image]="'url(' + artistBanner() + ')'"></div>
+      }
+      <div class="artist-info">
+        <div class="avatar-container">
+          @if (artistAvatar()) {
+          <img [src]="artistAvatar()" [alt]="artistName()" class="artist-avatar" />
+          } @else {
+          <div class="avatar-placeholder">
+            <mat-icon>person</mat-icon>
+          </div>
+          }
+        </div>
+        <div class="name-section">
+          <h1 class="artist-name">{{ artistName() }}</h1>
+          <button mat-stroked-button (click)="goToProfile()">
+            <mat-icon>person</mat-icon>
+            View Profile
+          </button>
+        </div>
+      </div>
+      @if (artistBio()) {
+      <p class="artist-bio">{{ artistBio() }}</p>
+      }
+      <div class="stats">
+        <span class="stat">
+          <span class="stat-value">{{ trackCount() }}</span>
+          <span class="stat-label">Tracks</span>
+        </span>
+        <span class="stat">
+          <span class="stat-value">{{ playlistCount() }}</span>
+          <span class="stat-label">Playlists</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Content Tabs -->
+    <mat-tab-group [selectedIndex]="selectedTabIndex()" (selectedIndexChange)="onTabChange($event)">
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">music_note</mat-icon>
+          Tracks
+          @if (trackCount() > 0) {
+          <span class="tab-count">{{ trackCount() }}</span>
+          }
+        </ng-template>
+        <div class="tab-content">
+          @if (tracks().length === 0) {
+          <div class="empty-state">
+            <mat-icon>music_off</mat-icon>
+            <p>No tracks found from this artist</p>
+          </div>
+          } @else {
+          <div class="tracks-grid">
+            @for (track of tracks(); track track.id) {
+            <app-music-event [event]="track"></app-music-event>
+            }
+          </div>
+          }
+        </div>
+      </mat-tab>
+
+      <mat-tab>
+        <ng-template mat-tab-label>
+          <mat-icon class="tab-icon">queue_music</mat-icon>
+          Playlists
+          @if (playlistCount() > 0) {
+          <span class="tab-count">{{ playlistCount() }}</span>
+          }
+        </ng-template>
+        <div class="tab-content">
+          @if (playlists().length === 0) {
+          <div class="empty-state">
+            <mat-icon>playlist_remove</mat-icon>
+            <p>No playlists found from this artist</p>
+          </div>
+          } @else {
+          <div class="playlists-grid">
+            @for (playlist of playlists(); track playlist.id) {
+            <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
+            }
+          </div>
+          }
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+  }
+</div>
