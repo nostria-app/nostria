@@ -9,6 +9,8 @@ Always use "fetch" for http request instead of HttpClient.
 
 Never set the font-weight in CSS. The current font for headlines does not support different font weights.
 
+For dialogs, don't use Angular Material dialogs, but the custom "CustomDialogComponent" component instead.
+
 URL for this app is: https://nostria.app
 
 ## TypeScript Best Practices

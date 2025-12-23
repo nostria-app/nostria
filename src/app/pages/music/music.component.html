@@ -46,15 +46,26 @@
       </div>
       <div class="playlists-grid">
         <!-- Liked Songs Card -->
-        <div class="liked-songs-card" (click)="goToLikedSongs()" (keydown.enter)="goToLikedSongs()" tabindex="0"
-          role="button">
-          <div class="liked-songs-cover">
-            <mat-icon>favorite</mat-icon>
+        <div class="liked-songs-card">
+          <div class="liked-songs-clickable" (click)="goToLikedSongs()" (keydown.enter)="goToLikedSongs()" tabindex="0"
+            role="button">
+            <div class="liked-songs-cover">
+              <mat-icon>favorite</mat-icon>
+            </div>
+            <div class="liked-songs-info">
+              <span class="liked-songs-title" i18n="@@music.likedSongs">Liked Songs</span>
+              <span class="liked-songs-meta" i18n="@@music.likedSongs.subtitle">Your favorite tracks</span>
+            </div>
           </div>
-          <div class="liked-songs-info">
-            <span class="liked-songs-title" i18n="@@music.likedSongs">Liked Songs</span>
-            <span class="liked-songs-meta" i18n="@@music.likedSongs.subtitle">Your favorite tracks</span>
-          </div>
+          <button mat-icon-button class="liked-songs-play-btn" (click)="playLikedSongs($event)"
+            [disabled]="isLoadingLikedSongs()" i18n-aria-label="@@music.playLikedSongs.aria"
+            aria-label="Play liked songs">
+            @if (isLoadingLikedSongs()) {
+            <mat-spinner diameter="24"></mat-spinner>
+            } @else {
+            <mat-icon>play_arrow</mat-icon>
+            }
+          </button>
         </div>
 
         <!-- Liked Playlists Card -->
@@ -193,3 +204,12 @@
     }
   </div>
 </div>
+
+<!-- Dialogs -->
+@if (showUploadDialog()) {
+<app-upload-music-track-dialog (closed)="onUploadDialogClosed($event)" />
+}
+
+@if (showCreatePlaylistDialog()) {
+<app-create-music-playlist-dialog (closed)="onCreatePlaylistDialogClosed($event)" />
+}

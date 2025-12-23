@@ -4,18 +4,21 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { MatDialog } from '@angular/material/dialog';
-import { Event, Filter } from 'nostr-tools';
+import { Event, Filter, kinds } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ReportingService } from '../../services/reporting.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
+import { MediaPlayerService } from '../../services/media-player.service';
+import { DataService } from '../../services/data.service';
+import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
-import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from './create-music-playlist-dialog/create-music-playlist-dialog.component';
+import { CreateMusicPlaylistDialogComponent } from './create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { UploadMusicTrackDialogComponent } from './upload-music-track-dialog/upload-music-track-dialog.component';
+import { MusicPlaylist } from '../../services/music-playlist.service';
 
 const MUSIC_KIND = 36787;
 const PLAYLIST_KIND = 34139;
@@ -30,6 +33,8 @@ const SECTION_LIMIT = 12;
     MatMenuModule,
     MusicEventComponent,
     MusicPlaylistCardComponent,
+    CreateMusicPlaylistDialogComponent,
+    UploadMusicTrackDialogComponent,
   ],
   templateUrl: './music.component.html',
   styleUrls: ['./music.component.scss'],
@@ -42,11 +47,17 @@ export class MusicComponent implements OnDestroy {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private router = inject(Router);
-  private dialog = inject(MatDialog);
+  private mediaPlayer = inject(MediaPlayerService);
+  private dataService = inject(DataService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
   loading = signal(true);
+  isLoadingLikedSongs = signal(false);
+
+  // Dialog visibility
+  showUploadDialog = signal(false);
+  showCreatePlaylistDialog = signal(false);
 
   private trackSubscription: { close: () => void } | null = null;
   private playlistSubscription: { close: () => void } | null = null;
@@ -261,37 +272,175 @@ export class MusicComponent implements OnDestroy {
 
   // Menu actions
   openUploadTrack(): void {
-    const dialogRef = this.dialog.open(UploadMusicTrackDialogComponent, {
-      width: '600px',
-      maxWidth: '95vw',
-      maxHeight: '90vh',
-    });
+    this.showUploadDialog.set(true);
+  }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.published) {
-        // Refresh to show the new track
-        this.refresh();
-      }
-    });
+  onUploadDialogClosed(result: { published: boolean; event?: Event } | null): void {
+    this.showUploadDialog.set(false);
+    if (result?.published) {
+      this.refresh();
+    }
   }
 
   openCreatePlaylist(): void {
-    const dialogRef = this.dialog.open(CreateMusicPlaylistDialogComponent, {
-      width: '500px',
-      maxWidth: '95vw',
-      data: {} as CreateMusicPlaylistDialogData,
-    });
+    this.showCreatePlaylistDialog.set(true);
+  }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.playlist) {
-        // Refresh to show the new playlist
-        this.refresh();
-      }
-    });
+  onCreatePlaylistDialogClosed(result: { playlist: MusicPlaylist; trackAdded: boolean } | null): void {
+    this.showCreatePlaylistDialog.set(false);
+    if (result?.playlist) {
+      this.refresh();
+    }
   }
 
   openImportFromRss(): void {
     // TODO: Implement RSS import dialog
     console.log('Import from RSS - coming soon');
+  }
+
+  async playLikedSongs(event: MouseEvent): Promise<void> {
+    event.stopPropagation(); // Prevent navigation to liked songs page
+
+    const pubkey = this.currentPubkey();
+    if (!pubkey) return;
+
+    this.isLoadingLikedSongs.set(true);
+
+    try {
+      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+
+      // First, fetch reactions (kind 7) from the user for music tracks
+      const reactionsFilter: Filter = {
+        kinds: [kinds.Reaction],
+        authors: [pubkey],
+        '#k': [String(MUSIC_KIND)],
+        limit: 500,
+      };
+
+      const reactions: Event[] = [];
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 5000);
+        const sub = this.pool.subscribe(relayUrls, reactionsFilter, (event: Event) => {
+          if (event.content === '+' || event.content === '❤️' || event.content === '🤙' || event.content === '👍') {
+            reactions.push(event);
+          }
+        });
+        setTimeout(() => {
+          sub.close();
+          clearTimeout(timeout);
+          resolve();
+        }, 3000);
+      });
+
+      if (reactions.length === 0) {
+        this.isLoadingLikedSongs.set(false);
+        return;
+      }
+
+      // Extract unique track addresses from reactions
+      const trackAddresses = new Set<string>();
+      for (const reaction of reactions) {
+        const aTag = reaction.tags.find(t => t[0] === 'a');
+        if (aTag && aTag[1]) {
+          trackAddresses.add(aTag[1]);
+        }
+      }
+
+      if (trackAddresses.size === 0) {
+        this.isLoadingLikedSongs.set(false);
+        return;
+      }
+
+      // Build individual filters for each address
+      const addressFilters: Filter[] = [];
+      for (const addr of Array.from(trackAddresses).slice(0, 100)) {
+        const parts = addr.split(':');
+        if (parts.length >= 3) {
+          addressFilters.push({
+            kinds: [MUSIC_KIND],
+            authors: [parts[1]],
+            '#d': [parts[2]],
+          });
+        }
+      }
+
+      const trackMap = new Map<string, Event>();
+
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 5000);
+        let subsFinished = 0;
+        const totalSubs = addressFilters.length;
+
+        for (const filter of addressFilters) {
+          const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
+            const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+            const uniqueId = `${event.pubkey}:${dTag}`;
+
+            const existing = trackMap.get(uniqueId);
+            if (!existing || event.created_at > existing.created_at) {
+              trackMap.set(uniqueId, event);
+            }
+          });
+
+          setTimeout(() => {
+            sub.close();
+            subsFinished++;
+            if (subsFinished >= totalSubs) {
+              clearTimeout(timeout);
+              resolve();
+            }
+          }, 2500);
+        }
+      });
+
+      const allTracks = Array.from(trackMap.values());
+
+      if (allTracks.length === 0) {
+        this.isLoadingLikedSongs.set(false);
+        return;
+      }
+
+      // Play the tracks
+      for (let i = 0; i < allTracks.length; i++) {
+        const track = allTracks[i];
+        const urlTag = track.tags.find(t => t[0] === 'url');
+        if (!urlTag?.[1]) continue;
+
+        const titleTag = track.tags.find(t => t[0] === 'title');
+        const imageTag = track.tags.find(t => t[0] === 'image');
+        const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+
+        // Get artist name from profile
+        let artistName = 'Unknown Artist';
+        try {
+          const profile = await this.dataService.getProfile(track.pubkey);
+          if (profile?.data) {
+            artistName = profile.data.display_name || profile.data.name || artistName;
+          }
+        } catch {
+          // Keep default artist name
+        }
+
+        const mediaItem: MediaItem = {
+          source: urlTag[1],
+          title: titleTag?.[1] || 'Untitled Track',
+          artist: artistName,
+          artwork: imageTag?.[1] || '',
+          type: 'Music',
+          eventPubkey: track.pubkey,
+          eventIdentifier: dTag,
+        };
+
+        if (i === 0) {
+          this.mediaPlayer.play(mediaItem);
+        } else {
+          this.mediaPlayer.enque(mediaItem);
+        }
+      }
+    } catch (error) {
+      console.error('Error playing liked songs:', error);
+    } finally {
+      this.isLoadingLikedSongs.set(false);
+    }
   }
 }

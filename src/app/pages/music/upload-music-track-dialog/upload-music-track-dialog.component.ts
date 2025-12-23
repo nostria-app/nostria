@@ -1,5 +1,4 @@
-import { Component, inject, signal, computed } from '@angular/core';
-import { MatDialogRef, MatDialogModule } from '@angular/material/dialog';
+import { Component, inject, signal, computed, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -11,6 +10,7 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
+import { Event } from 'nostr-tools';
 import { MediaService } from '../../../services/media.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
@@ -18,6 +18,8 @@ import { RelaysService } from '../../../services/relays/relays';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
+import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
+import { MusicTermsDialogComponent } from '../music-terms-dialog/music-terms-dialog.component';
 
 const MUSIC_KIND = 36787;
 
@@ -32,7 +34,7 @@ interface ZapSplit {
 @Component({
   selector: 'app-upload-music-track-dialog',
   imports: [
-    MatDialogModule,
+    CustomDialogComponent,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -44,12 +46,14 @@ interface ZapSplit {
     MatExpansionModule,
     MatSnackBarModule,
     ReactiveFormsModule,
+    MusicTermsDialogComponent,
   ],
   templateUrl: './upload-music-track-dialog.component.html',
   styleUrl: './upload-music-track-dialog.component.scss',
 })
 export class UploadMusicTrackDialogComponent {
-  private dialogRef = inject(MatDialogRef<UploadMusicTrackDialogComponent>);
+  closed = output<{ published: boolean; event?: Event } | null>();
+
   private fb = inject(FormBuilder);
   private mediaService = inject(MediaService);
   private accountState = inject(AccountStateService);
@@ -68,6 +72,7 @@ export class UploadMusicTrackDialogComponent {
   audioUrl = signal<string | null>(null);
   coverImage = signal<string | null>(null);
   agreedToTerms = signal(false);
+  showTermsDialog = signal(false);
 
   // Zap splits
   zapSplits = signal<ZapSplit[]>([]);
@@ -441,7 +446,7 @@ export class UploadMusicTrackDialogComponent {
 
       if (published) {
         this.snackBar.open('Track published successfully!', 'Close', { duration: 3000 });
-        this.dialogRef.close({ published: true, event: signedEvent });
+        this.closed.emit({ published: true, event: signedEvent });
       } else {
         this.snackBar.open('Failed to publish track', 'Close', { duration: 3000 });
       }
@@ -454,6 +459,6 @@ export class UploadMusicTrackDialogComponent {
   }
 
   cancel(): void {
-    this.dialogRef.close();
+    this.closed.emit(null);
   }
 }
