@@ -123,15 +123,29 @@
   flex-direction: column;
   border-radius: var(--mat-sys-corner-medium);
   background: linear-gradient(135deg, var(--mat-sys-primary-container), var(--mat-sys-secondary-container));
-  cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   overflow: hidden;
+  position: relative;
 
   &:hover,
-  &:focus {
+  &:focus-within {
     transform: translateY(-2px);
     box-shadow: var(--mat-sys-level2);
-    outline: none;
+
+    .liked-songs-play-btn {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .liked-songs-clickable {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+
+    &:focus {
+      outline: none;
+    }
   }
 
   .liked-songs-cover {
@@ -163,6 +177,42 @@
     .liked-songs-meta {
       font-size: 0.75rem;
       color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .liked-songs-play-btn {
+    position: absolute;
+    bottom: 3.5rem;
+    right: 0.5rem;
+    width: 40px;
+    height: 40px;
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    border-radius: 50%;
+    box-shadow: var(--mat-sys-level3);
+    opacity: 0;
+    transform: translateY(8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    z-index: 1;
+
+    &:hover:not(:disabled) {
+      background-color: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+      transform: scale(1.1);
+    }
+
+    &:disabled {
+      opacity: 0.7;
+    }
+
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+
+    mat-spinner {
+      margin: auto;
     }
   }
 }

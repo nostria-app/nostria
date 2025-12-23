@@ -2,12 +2,12 @@ import { Component, ChangeDetectionStrategy, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MusicTermsContentComponent } from '../music-terms-content/music-terms-content.component';
+import { TermsOfUseDialogContentComponent } from '../../components/terms-of-use-dialog/terms-of-use-dialog.component';
 
 @Component({
-  selector: 'app-music-terms',
+  selector: 'app-terms',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, MusicTermsContentComponent],
+  imports: [MatButtonModule, MatIconModule, TermsOfUseDialogContentComponent],
   template: `
     <div class="terms-container">
       <button mat-icon-button class="back-button" (click)="goBack()" aria-label="Go back">
@@ -15,7 +15,7 @@ import { MusicTermsContentComponent } from '../music-terms-content/music-terms-c
       </button>
       
       <div class="terms-wrapper">
-        <app-music-terms-content />
+        <app-terms-of-use-dialog-content />
       </div>
     </div>
   `,
@@ -42,10 +42,10 @@ import { MusicTermsContentComponent } from '../music-terms-content/music-terms-c
     }
   `],
 })
-export class MusicTermsComponent {
+export class TermsComponent {
   private router = inject(Router);
 
   goBack(): void {
-    this.router.navigate(['/music']);
+    this.router.navigate(['/']);
   }
 }

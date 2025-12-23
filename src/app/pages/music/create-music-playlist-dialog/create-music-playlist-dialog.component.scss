@@ -1,18 +1,3 @@
-.dialog-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-right: 8px;
-
-  h2 {
-    margin: 0;
-  }
-
-  .close-button {
-    margin-left: auto;
-  }
-}
-
 .dialog-subtitle {
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.875rem;
@@ -24,9 +9,7 @@
   flex-direction: column;
   gap: 16px;
   width: 100%;
-  max-width: min(450px, 90vw);
   min-width: 0;
-  padding: 8px 0;
   box-sizing: border-box;
 }
 

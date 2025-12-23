@@ -353,6 +353,12 @@ export const routes: Routes = [
     title: 'Music Terms of Service',
   },
   {
+    path: 'terms',
+    loadComponent: () =>
+      import('./pages/terms/terms.component').then(m => m.TermsComponent),
+    title: 'Terms of Use',
+  },
+  {
     path: 'articles',
     loadComponent: () =>
       import('./pages/articles/articles.component').then(m => m.ArticlesDiscoverComponent),

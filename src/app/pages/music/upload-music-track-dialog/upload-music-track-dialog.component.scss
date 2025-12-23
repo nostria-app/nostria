@@ -1,5 +1,5 @@
 .dialog-subtitle {
-  margin: -0.5rem 0 1rem 0;
+  margin: 0 0 1rem 0;
   color: var(--mat-sys-on-surface-variant);
   font-size: 0.875rem;
 }
@@ -223,7 +223,7 @@ mat-dialog-content {
       gap: 0.25rem;
 
       input {
-        width: 50px;
+        width: 60px;
         padding: 0.25rem 0.5rem;
         border: 1px solid var(--mat-sys-outline);
         border-radius: var(--mat-sys-corner-extra-small);

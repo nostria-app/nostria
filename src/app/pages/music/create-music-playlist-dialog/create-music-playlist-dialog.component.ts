@@ -1,5 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { Component, inject, signal, input, output } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -7,8 +6,9 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { MusicPlaylistService, CreateMusicPlaylistData } from '../../../services/music-playlist.service';
+import { MusicPlaylistService, CreateMusicPlaylistData, MusicPlaylist } from '../../../services/music-playlist.service';
 import { MediaService } from '../../../services/media.service';
+import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 
 export interface CreateMusicPlaylistDialogData {
   // Optional track to add immediately after creation
@@ -19,7 +19,7 @@ export interface CreateMusicPlaylistDialogData {
 @Component({
   selector: 'app-create-music-playlist-dialog',
   imports: [
-    MatDialogModule,
+    CustomDialogComponent,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -32,8 +32,9 @@ export interface CreateMusicPlaylistDialogData {
   styleUrl: './create-music-playlist-dialog.component.scss',
 })
 export class CreateMusicPlaylistDialogComponent {
-  private dialogRef = inject(MatDialogRef<CreateMusicPlaylistDialogComponent>);
-  private data = inject<CreateMusicPlaylistDialogData>(MAT_DIALOG_DATA);
+  data = input<CreateMusicPlaylistDialogData>({});
+  closed = output<{ playlist: MusicPlaylist; trackAdded: boolean } | null>();
+
   private fb = inject(FormBuilder);
   private musicPlaylistService = inject(MusicPlaylistService);
   private mediaService = inject(MediaService);
@@ -149,27 +150,28 @@ export class CreateMusicPlaylistDialogComponent {
 
       if (playlist) {
         // If we have a track to add, add it to the new playlist
-        if (this.data?.trackPubkey && this.data?.trackDTag) {
+        const dialogData = this.data();
+        if (dialogData?.trackPubkey && dialogData?.trackDTag) {
           await this.musicPlaylistService.addTrackToPlaylist(
             playlist.id,
-            this.data.trackPubkey,
-            this.data.trackDTag
+            dialogData.trackPubkey,
+            dialogData.trackDTag
           );
         }
 
-        this.dialogRef.close({ playlist, trackAdded: !!this.data?.trackPubkey });
+        this.closed.emit({ playlist, trackAdded: !!dialogData?.trackPubkey });
       } else {
-        this.dialogRef.close(null);
+        this.closed.emit(null);
       }
     } catch (error) {
       console.error('Failed to create playlist:', error);
-      this.dialogRef.close(null);
+      this.closed.emit(null);
     } finally {
       this.isCreating.set(false);
     }
   }
 
   onCancel(): void {
-    this.dialogRef.close(null);
+    this.closed.emit(null);
   }
 }
