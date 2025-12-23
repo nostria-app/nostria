@@ -83,7 +83,10 @@
       <div class="tracks-section">
         <div class="tracks-header">
           <span class="section-title">Tracks ({{ trackCount() }})</span>
-          <button mat-stroked-button (click)="expandAll()">Expand All</button>
+          <div class="tracks-header-actions">
+            <button mat-stroked-button (click)="collapseAll()">Collapse All</button>
+            <button mat-stroked-button (click)="expandAll()">Expand All</button>
+          </div>
         </div>
 
         <div class="tracks-list">
