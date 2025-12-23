@@ -28,6 +28,7 @@ import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialo
 import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../create-music-playlist-dialog/create-music-playlist-dialog.component';
+import { EditMusicTrackDialogComponent, EditMusicTrackDialogData } from '../edit-music-track-dialog/edit-music-track-dialog.component';
 
 interface TopZapper {
   pubkey: string;
@@ -48,6 +49,7 @@ const MUSIC_KIND = 36787;
     MatSnackBarModule,
     ZapChipsComponent,
     CommentsListComponent,
+    EditMusicTrackDialogComponent,
   ],
   templateUrl: './song-detail.component.html',
   styleUrls: ['./song-detail.component.scss'],
@@ -83,6 +85,10 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   userPlaylists = this.musicPlaylistService.userPlaylists;
   playlistsLoading = this.musicPlaylistService.loading;
   isAuthenticated = computed(() => this.app.authenticated());
+
+  // Edit dialog signals
+  showEditDialog = signal(false);
+  editDialogData = signal<EditMusicTrackDialogData | null>(null);
 
   // Engagement metrics
   reactionCount = signal<number>(0);
@@ -133,18 +139,62 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     return null;
   });
 
-  lyrics = computed(() => {
+  // Parse content into sections (Lyrics, Credits, etc.)
+  contentSections = computed(() => {
     const event = this.song();
-    if (!event) return null;
+    if (!event) return [];
+
     // Check for lyrics tag first
     const lyricsTag = event.tags.find(t => t[0] === 'lyrics');
-    if (lyricsTag?.[1]) return lyricsTag[1];
-    // Check content if it's not a URL
+    const sections: { title: string; icon: string; content: string }[] = [];
+
+    if (lyricsTag?.[1]) {
+      sections.push({ title: 'Lyrics', icon: 'lyrics', content: lyricsTag[1] });
+    }
+
+    // Parse content for sections
     const content = event.content;
     if (content && !content.match(/^https?:\/\//)) {
-      return content;
+      // Try to parse sections like "Lyrics:\n..." or "Credits:\n..."
+      const sectionRegex = /^(Lyrics|Credits|Description|Notes|About|Info):\s*\n?/gim;
+      const parts = content.split(sectionRegex).filter(p => p.trim());
+
+      if (parts.length >= 2) {
+        // We have section headers
+        for (let i = 0; i < parts.length; i += 2) {
+          const header = parts[i]?.trim();
+          const body = parts[i + 1]?.trim();
+          if (header && body) {
+            const lowerHeader = header.toLowerCase();
+            // Skip if we already have lyrics from tag
+            if (lowerHeader === 'lyrics' && lyricsTag?.[1]) continue;
+
+            let icon = 'description';
+            if (lowerHeader === 'lyrics') icon = 'lyrics';
+            else if (lowerHeader === 'credits') icon = 'people';
+            else if (lowerHeader === 'notes' || lowerHeader === 'about' || lowerHeader === 'info') icon = 'info';
+
+            sections.push({
+              title: header.charAt(0).toUpperCase() + header.slice(1).toLowerCase(),
+              icon,
+              content: body
+            });
+          }
+        }
+      } else if (content.trim() && !lyricsTag?.[1]) {
+        // No section headers, treat as general content/lyrics
+        sections.push({ title: 'Lyrics', icon: 'lyrics', content: content.trim() });
+      }
     }
-    return null;
+
+    return sections;
+  });
+
+  // Keep legacy lyrics computed for backwards compatibility
+  lyrics = computed(() => {
+    const sections = this.contentSections();
+    const lyricsSection = sections.find(s => s.title === 'Lyrics');
+    return lyricsSection?.content || null;
   });
 
   description = computed(() => {
@@ -202,6 +252,12 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     if (!event) return '';
     const date = new Date(event.created_at * 1000);
     return date.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  });
+
+  isOwnTrack = computed(() => {
+    const event = this.song();
+    const userPubkey = this.accountState.pubkey();
+    return event && userPubkey && event.pubkey === userPubkey;
   });
 
   constructor() {
@@ -576,6 +632,25 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  editTrack(): void {
+    const ev = this.song();
+    if (!ev || !this.isOwnTrack()) return;
+
+    this.editDialogData.set({ track: ev });
+    this.showEditDialog.set(true);
+  }
+
+  onEditDialogClosed(result: { updated: boolean; event?: Event } | null): void {
+    this.showEditDialog.set(false);
+    this.editDialogData.set(null);
+
+    if (result?.updated && result?.event) {
+      // Reload the track data
+      this.song.set(result.event);
+      this.snackBar.open('Track updated', 'Close', { duration: 2000 });
+    }
   }
 
   // Load playlists when submenu is opened

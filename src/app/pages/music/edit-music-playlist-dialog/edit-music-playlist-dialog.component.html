@@ -1,135 +1,132 @@
-<div class="dialog-header">
-  <h2 mat-dialog-title>Edit Playlist</h2>
-  <button mat-icon-button (click)="onCancel()" class="close-button" aria-label="Close">
-    <mat-icon>close</mat-icon>
-  </button>
-</div>
+<app-custom-dialog [title]="'Edit Playlist'" [showCloseButton]="true" [disableClose]="isSaving()" [width]="'500px'"
+  (closed)="onClose()">
+  <div dialog-content>
+    <form [formGroup]="playlistForm" class="playlist-form">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Title</mat-label>
+        <input matInput formControlName="title" placeholder="My awesome playlist" autocomplete="off" required>
+        @if (playlistForm.get('title')?.hasError('required')) {
+        <mat-error>Title is required</mat-error>
+        }
+      </mat-form-field>
 
-<mat-dialog-content>
-  <form [formGroup]="playlistForm" class="playlist-form">
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Title</mat-label>
-      <input matInput formControlName="title" placeholder="My awesome playlist" autocomplete="off" required>
-      @if (playlistForm.get('title')?.hasError('required')) {
-      <mat-error>Title is required</mat-error>
-      }
-    </mat-form-field>
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Description</mat-label>
+        <textarea matInput formControlName="description" placeholder="What's this playlist about?" rows="2"
+          autocomplete="off"></textarea>
+      </mat-form-field>
 
-    <mat-form-field appearance="outline" class="full-width">
-      <mat-label>Description</mat-label>
-      <textarea matInput formControlName="description" placeholder="What's this playlist about?" rows="2"
-        autocomplete="off"></textarea>
-    </mat-form-field>
+      <div class="cover-section">
+        <span class="cover-label">Cover Image</span>
+        <div class="cover-row">
+          <div class="cover-preview"
+            [style.background]="coverImage() ? 'url(' + coverImage() + ')' : currentGradient()">
+            @if (!coverImage()) {
+            <mat-icon class="cover-icon">music_note</mat-icon>
+            }
+          </div>
+          <div class="cover-actions">
+            <button mat-stroked-button type="button" (click)="uploadImage()" [disabled]="isUploading()">
+              @if (isUploading()) {
+              <mat-spinner diameter="18"></mat-spinner>
+              } @else {
+              <mat-icon>image</mat-icon>
+              }
+              <span>Upload Image</span>
+            </button>
+            <button mat-stroked-button type="button" (click)="randomizeGradient()">
+              <mat-icon>auto_awesome</mat-icon>
+              <span>Random</span>
+            </button>
+          </div>
+        </div>
+        <div class="url-row">
+          <span class="or-divider">OR</span>
+          <mat-form-field appearance="outline" class="full-width url-field">
+            <input matInput formControlName="imageUrl" placeholder="Paste image URL" autocomplete="off"
+              (blur)="onImageUrlChange()" (keyup.enter)="onImageUrlChange()">
+          </mat-form-field>
+        </div>
+      </div>
 
-    <div class="cover-section">
-      <span class="cover-label">Cover Image</span>
-      <div class="cover-row">
-        <div class="cover-preview" [style.background]="coverImage() ? 'url(' + coverImage() + ')' : currentGradient()">
-          @if (!coverImage()) {
-          <mat-icon class="cover-icon">music_note</mat-icon>
+      <div class="toggle-section">
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Public Playlist</span>
+            <span class="toggle-description">Allow others to discover this playlist</span>
+          </div>
+          <mat-slide-toggle formControlName="isPublic"></mat-slide-toggle>
+        </div>
+
+        <div class="toggle-row">
+          <div class="toggle-info">
+            <span class="toggle-label">Collaborative</span>
+            <span class="toggle-description">Allow others to add tracks</span>
+          </div>
+          <mat-slide-toggle formControlName="isCollaborative"></mat-slide-toggle>
+        </div>
+      </div>
+
+      <!-- Tracks Section -->
+      <div class="tracks-section">
+        <div class="tracks-header">
+          <span class="tracks-label">Tracks</span>
+          <span class="tracks-count">{{ tracks().length }} tracks</span>
+        </div>
+
+        @if (loadingTracks()) {
+        <div class="tracks-loading">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Loading tracks...</span>
+        </div>
+        } @else if (tracks().length === 0) {
+        <div class="tracks-empty">
+          <mat-icon>music_off</mat-icon>
+          <span>No tracks in this playlist</span>
+        </div>
+        } @else {
+        <div class="tracks-list" cdkDropList (cdkDropListDropped)="onTrackDrop($event)">
+          @for (track of tracks(); track track.ref; let i = $index) {
+          <div class="track-item" cdkDrag [cdkDragDisabled]="track.loading">
+            <div class="track-drag-handle" cdkDragHandle>
+              <mat-icon>drag_indicator</mat-icon>
+            </div>
+            <div class="track-image">
+              @if (track.image) {
+              <img [src]="track.image" [alt]="track.title" />
+              } @else {
+              <mat-icon>music_note</mat-icon>
+              }
+            </div>
+            <div class="track-info">
+              <span class="track-title">{{ track.title }}</span>
+              <span class="track-artist">{{ track.artist }}</span>
+            </div>
+            <button mat-icon-button (click)="removeTrack(i)" class="track-remove" aria-label="Remove track"
+              [disabled]="track.loading">
+              <mat-icon>close</mat-icon>
+            </button>
+            <div class="track-drag-placeholder" *cdkDragPlaceholder></div>
+          </div>
           }
         </div>
-        <div class="cover-actions">
-          <button mat-stroked-button type="button" (click)="uploadImage()" [disabled]="isUploading()">
-            @if (isUploading()) {
-            <mat-spinner diameter="18"></mat-spinner>
-            } @else {
-            <mat-icon>image</mat-icon>
-            }
-            <span>Upload Image</span>
-          </button>
-          <button mat-stroked-button type="button" (click)="randomizeGradient()">
-            <mat-icon>auto_awesome</mat-icon>
-            <span>Random</span>
-          </button>
-        </div>
-      </div>
-      <div class="url-row">
-        <span class="or-divider">OR</span>
-        <mat-form-field appearance="outline" class="full-width url-field">
-          <input matInput formControlName="imageUrl" placeholder="Paste image URL" autocomplete="off"
-            (blur)="onImageUrlChange()" (keyup.enter)="onImageUrlChange()">
-        </mat-form-field>
-      </div>
-    </div>
-
-    <div class="toggle-section">
-      <div class="toggle-row">
-        <div class="toggle-info">
-          <span class="toggle-label">Public Playlist</span>
-          <span class="toggle-description">Allow others to discover this playlist</span>
-        </div>
-        <mat-slide-toggle formControlName="isPublic"></mat-slide-toggle>
-      </div>
-
-      <div class="toggle-row">
-        <div class="toggle-info">
-          <span class="toggle-label">Collaborative</span>
-          <span class="toggle-description">Allow others to add tracks</span>
-        </div>
-        <mat-slide-toggle formControlName="isCollaborative"></mat-slide-toggle>
-      </div>
-    </div>
-
-    <!-- Tracks Section -->
-    <div class="tracks-section">
-      <div class="tracks-header">
-        <span class="tracks-label">Tracks</span>
-        <span class="tracks-count">{{ tracks().length }} tracks</span>
-      </div>
-
-      @if (loadingTracks()) {
-      <div class="tracks-loading">
-        <mat-spinner diameter="24"></mat-spinner>
-        <span>Loading tracks...</span>
-      </div>
-      } @else if (tracks().length === 0) {
-      <div class="tracks-empty">
-        <mat-icon>music_off</mat-icon>
-        <span>No tracks in this playlist</span>
-      </div>
-      } @else {
-      <div class="tracks-list" cdkDropList (cdkDropListDropped)="onTrackDrop($event)">
-        @for (track of tracks(); track track.ref; let i = $index) {
-        <div class="track-item" cdkDrag [cdkDragDisabled]="track.loading">
-          <div class="track-drag-handle" cdkDragHandle>
-            <mat-icon>drag_indicator</mat-icon>
-          </div>
-          <div class="track-image">
-            @if (track.image) {
-            <img [src]="track.image" [alt]="track.title" />
-            } @else {
-            <mat-icon>music_note</mat-icon>
-            }
-          </div>
-          <div class="track-info">
-            <span class="track-title">{{ track.title }}</span>
-            <span class="track-artist">{{ track.artist }}</span>
-          </div>
-          <button mat-icon-button (click)="removeTrack(i)" class="track-remove" aria-label="Remove track"
-            [disabled]="track.loading">
-            <mat-icon>close</mat-icon>
-          </button>
-          <div class="track-drag-placeholder" *cdkDragPlaceholder></div>
-        </div>
+        <p class="tracks-hint">
+          <mat-icon>info</mat-icon>
+          Drag tracks to reorder
+        </p>
         }
       </div>
-      <p class="tracks-hint">
-        <mat-icon>info</mat-icon>
-        Drag tracks to reorder
-      </p>
-      }
-    </div>
-  </form>
-</mat-dialog-content>
+    </form>
+  </div>
 
-<mat-dialog-actions align="end">
-  <button mat-button type="button" (click)="onCancel()">Cancel</button>
-  <button mat-flat-button type="submit" (click)="onSubmit()" [disabled]="!playlistForm.valid || isSaving()">
-    @if (isSaving()) {
-    <mat-spinner diameter="18"></mat-spinner>
-    } @else {
-    Save Changes
-    }
-  </button>
-</mat-dialog-actions>
+  <div dialog-actions>
+    <button mat-button type="button" (click)="onCancel()">Cancel</button>
+    <button mat-flat-button type="submit" (click)="onSubmit()" [disabled]="!playlistForm.valid || isSaving()">
+      @if (isSaving()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+      Save Changes
+      }
+    </button>
+  </div>
+</app-custom-dialog>
