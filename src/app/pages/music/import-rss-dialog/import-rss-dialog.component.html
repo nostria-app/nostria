@@ -35,7 +35,7 @@
         <div class="album-content" [class.disabled]="!albumInfo().enabled">
           <div class="album-row">
             <div class="album-cover"
-              [style.background]="albumInfo().imageUrl ? 'url(' + albumInfo().imageUrl + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')'">
+              [style.background-image]="albumInfo().imageUrl ? 'url(' + albumInfo().imageUrl + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')'">
               @if (!albumInfo().imageUrl) {
               <mat-icon>music_note</mat-icon>
               }
@@ -50,22 +50,23 @@
             <div class="field-row">
               <mat-form-field appearance="outline" class="half-width">
                 <mat-label>Album Title</mat-label>
-                <input matInput [value]="albumInfo().title" (input)="updateAlbumInfo({ title: $any($event.target).value })"
-                  [disabled]="!albumInfo().enabled" placeholder="Album title" />
+                <input matInput [value]="albumInfo().title"
+                  (input)="updateAlbumInfo({ title: $any($event.target).value })" [disabled]="!albumInfo().enabled"
+                  placeholder="Album title" />
               </mat-form-field>
               <mat-form-field appearance="outline" class="half-width">
                 <mat-label>Artist</mat-label>
                 <input matInput [value]="albumInfo().artist"
-                  (input)="updateAlbumInfo({ artist: $any($event.target).value })"
-                  [disabled]="!albumInfo().enabled" placeholder="Artist name" />
+                  (input)="updateAlbumInfo({ artist: $any($event.target).value })" [disabled]="!albumInfo().enabled"
+                  placeholder="Artist name" />
               </mat-form-field>
             </div>
             <div class="field-row">
               <mat-form-field appearance="outline" class="half-width">
                 <mat-label>Image URL</mat-label>
                 <input matInput [value]="albumInfo().imageUrl"
-                  (input)="updateAlbumInfo({ imageUrl: $any($event.target).value })"
-                  [disabled]="!albumInfo().enabled" placeholder="https://..." />
+                  (input)="updateAlbumInfo({ imageUrl: $any($event.target).value })" [disabled]="!albumInfo().enabled"
+                  placeholder="https://..." />
               </mat-form-field>
               <mat-form-field appearance="outline" class="half-width">
                 <mat-label>Release Date</mat-label>
@@ -88,7 +89,8 @@
         <div class="tracks-list">
           @for (track of tracks(); track track.audioUrl; let i = $index) {
           <div class="track-item" [class.expanded]="track.expanded">
-            <div class="track-collapsed" tabindex="0" role="button" (click)="toggleTrackExpanded(i)" (keydown.enter)="toggleTrackExpanded(i)">
+            <div class="track-collapsed" tabindex="0" role="button" (click)="toggleTrackExpanded(i)"
+              (keydown.enter)="toggleTrackExpanded(i)">
               <span class="track-number">{{ i + 1 }}</span>
               <div class="track-info">
                 <span class="track-title">{{ track.title }}</span>
@@ -101,7 +103,7 @@
             <div class="track-expanded">
               <div class="track-cover-row">
                 <div class="track-cover"
-                  [style.background]="track.imageUrl ? 'url(' + track.imageUrl + ')' : (albumInfo().imageUrl ? 'url(' + albumInfo().imageUrl + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')')">
+                  [style.background-image]="track.imageUrl ? 'url(' + track.imageUrl + ')' : (albumInfo().imageUrl ? 'url(' + albumInfo().imageUrl + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')')">
                   @if (!track.imageUrl && !albumInfo().imageUrl) {
                   <mat-icon>music_note</mat-icon>
                   }
@@ -199,7 +201,6 @@
       <span>Publishing...</span>
       } @else {
       <ng-container>
-        <mat-icon>upload</mat-icon>
         <span>Publish to Nostr</span>
       </ng-container>
       }
