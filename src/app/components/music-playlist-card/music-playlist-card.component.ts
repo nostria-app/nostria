@@ -5,23 +5,30 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
-import { Event, nip19 } from 'nostr-tools';
+import { Event, Filter, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { ReactionService } from '../../services/reaction.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { MusicPlaylistService } from '../../services/music-playlist.service';
-import { NostrRecord } from '../../interfaces';
+import { MediaPlayerService } from '../../services/media-player.service';
+import { RelayPoolService } from '../../services/relays/relay-pool';
+import { RelaysService } from '../../services/relays/relays';
+import { UtilitiesService } from '../../services/utilities.service';
+import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
 } from '../../pages/music/edit-music-playlist-dialog/edit-music-playlist-dialog.component';
 
+const MUSIC_KIND = 36787;
+
 @Component({
   selector: 'app-music-playlist-card',
-  imports: [MatIconModule, MatCardModule, MatButtonModule, MatMenuModule, MatSnackBarModule],
+  imports: [MatIconModule, MatCardModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule],
   template: `
     <mat-card class="playlist-card" (click)="openPlaylist()" (keydown.enter)="openPlaylist()" 
       tabindex="0" role="button" [attr.aria-label]="'Open playlist ' + title()">
@@ -33,6 +40,15 @@ import {
             <mat-icon>queue_music</mat-icon>
           </div>
         }
+        <button mat-mini-fab class="play-btn" (click)="playPlaylist($event)" 
+          [disabled]="isLoadingTracks() || trackCount() === 0"
+          aria-label="Play playlist">
+          @if (isLoadingTracks()) {
+            <mat-spinner diameter="20"></mat-spinner>
+          } @else {
+            <mat-icon>play_arrow</mat-icon>
+          }
+        </button>
       </div>
       <mat-card-content>
         <div class="playlist-info">
@@ -56,6 +72,10 @@ import {
           }
         </div>
         <mat-menu #menu="matMenu">
+          <button mat-menu-item (click)="playPlaylist($event)">
+            <mat-icon>play_arrow</mat-icon>
+            <span>Play All</span>
+          </button>
           @if (isOwnPlaylist()) {
             <button mat-menu-item (click)="editPlaylist()">
               <mat-icon>edit</mat-icon>
@@ -82,6 +102,11 @@ import {
 
       &:hover {
         transform: translateY(-2px);
+
+        .play-btn {
+          opacity: 1;
+          transform: translateY(0);
+        }
       }
 
       &:focus {
@@ -93,6 +118,7 @@ import {
     .playlist-cover {
       height: 160px;
       overflow: hidden;
+      position: relative;
 
       .cover-image {
         width: 100%;
@@ -113,6 +139,21 @@ import {
           width: 4rem;
           height: 4rem;
           color: var(--mat-sys-on-tertiary-container);
+          opacity: 0.5;
+        }
+      }
+
+      .play-btn {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        opacity: 0;
+        transform: translateY(8px);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        background: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+
+        &:disabled {
           opacity: 0.5;
         }
       }
@@ -200,6 +241,10 @@ export class MusicPlaylistCardComponent {
   private reactionService = inject(ReactionService);
   private accountState = inject(AccountStateService);
   private musicPlaylistService = inject(MusicPlaylistService);
+  private mediaPlayer = inject(MediaPlayerService);
+  private pool = inject(RelayPoolService);
+  private relaysService = inject(RelaysService);
+  private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -207,6 +252,7 @@ export class MusicPlaylistCardComponent {
   event = input.required<Event>();
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
+  isLoadingTracks = signal(false);
 
   private profileLoaded = false;
 
@@ -402,5 +448,144 @@ export class MusicPlaylistCardComponent {
       width: '500px',
       maxWidth: '95vw',
     });
+  }
+
+  // Play all tracks in the playlist
+  async playPlaylist(clickEvent: MouseEvent | KeyboardEvent): Promise<void> {
+    clickEvent.stopPropagation();
+
+    if (this.isLoadingTracks()) return;
+
+    const ev = this.event();
+    const trackRefs = ev.tags
+      .filter(t => t[0] === 'a' && t[1]?.startsWith(`${MUSIC_KIND}:`))
+      .map(t => t[1]);
+
+    if (trackRefs.length === 0) {
+      this.snackBar.open('Playlist is empty', 'Close', { duration: 2000 });
+      return;
+    }
+
+    this.isLoadingTracks.set(true);
+
+    try {
+      // Parse track references
+      const trackKeys: { author: string; dTag: string }[] = [];
+      for (const ref of trackRefs) {
+        const parts = ref.split(':');
+        if (parts.length >= 3) {
+          trackKeys.push({ author: parts[1], dTag: parts.slice(2).join(':') });
+        }
+      }
+
+      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      if (relayUrls.length === 0) {
+        this.snackBar.open('No relays available', 'Close', { duration: 3000 });
+        return;
+      }
+
+      // Fetch tracks
+      const trackMap = new Map<string, Event>();
+      const uniqueAuthors = [...new Set(trackKeys.map(k => k.author))];
+      const uniqueDTags = [...new Set(trackKeys.map(k => k.dTag))];
+
+      const filter: Filter = {
+        kinds: [MUSIC_KIND],
+        authors: uniqueAuthors,
+        '#d': uniqueDTags,
+        limit: trackKeys.length * 2,
+      };
+
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(() => resolve(), 5000);
+
+        const sub = this.pool.subscribe(relayUrls, filter, (trackEvent: Event) => {
+          const dTag = trackEvent.tags.find(t => t[0] === 'd')?.[1] || '';
+          const uniqueId = `${trackEvent.pubkey}:${dTag}`;
+
+          const isInPlaylist = trackKeys.some(k => k.author === trackEvent.pubkey && k.dTag === dTag);
+          if (!isInPlaylist) return;
+
+          const existing = trackMap.get(uniqueId);
+          if (!existing || existing.created_at < trackEvent.created_at) {
+            trackMap.set(uniqueId, trackEvent);
+          }
+
+          if (trackMap.size >= trackKeys.length) {
+            clearTimeout(timeout);
+            sub.close();
+            resolve();
+          }
+        });
+
+        // Also resolve after shorter timeout if we got some tracks
+        setTimeout(() => {
+          if (trackMap.size > 0) {
+            clearTimeout(timeout);
+            sub.close();
+            resolve();
+          }
+        }, 3000);
+      });
+
+      if (trackMap.size === 0) {
+        this.snackBar.open('Could not load tracks', 'Close', { duration: 3000 });
+        return;
+      }
+
+      // Sort tracks according to playlist order
+      const orderedTracks: Event[] = [];
+      for (const ref of trackRefs) {
+        const parts = ref.split(':');
+        if (parts.length >= 3) {
+          const author = parts[1];
+          const dTag = parts.slice(2).join(':');
+          const uniqueId = `${author}:${dTag}`;
+          const track = trackMap.get(uniqueId);
+          if (track && !orderedTracks.includes(track)) {
+            orderedTracks.push(track);
+          }
+        }
+      }
+
+      // Get artist name from playlist author
+      const profile = this.authorProfile();
+      const artistName = profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
+
+      // Play tracks
+      for (let i = 0; i < orderedTracks.length; i++) {
+        const track = orderedTracks[i];
+        const urlTag = track.tags.find(t => t[0] === 'url');
+        const url = urlTag?.[1];
+        if (!url) continue;
+
+        const titleTag = track.tags.find(t => t[0] === 'title');
+        const imageTag = track.tags.find(t => t[0] === 'image');
+        const trackDTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+
+        const mediaItem: MediaItem = {
+          source: url,
+          title: titleTag?.[1] || 'Untitled Track',
+          artist: artistName,
+          artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+          type: 'Music',
+          eventPubkey: track.pubkey,
+          eventIdentifier: trackDTag,
+        };
+
+        if (i === 0) {
+          this.mediaPlayer.play(mediaItem);
+        } else {
+          this.mediaPlayer.enque(mediaItem);
+        }
+      }
+
+      this.snackBar.open(`Playing ${orderedTracks.length} tracks`, 'Close', { duration: 2000 });
+    } catch (error) {
+      console.error('Error playing playlist:', error);
+      this.snackBar.open('Error playing playlist', 'Close', { duration: 3000 });
+    } finally {
+      this.isLoadingTracks.set(false);
+    }
   }
 }
