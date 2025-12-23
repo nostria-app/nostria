@@ -25,7 +25,7 @@
     <div class="song-header">
       <div class="cover-section">
         @if (image()) {
-        <img [src]="image()" [alt]="title()" class="cover-image" />
+        <img [src]="image()" [alt]="title()" title="Track cover" class="cover-image" />
         } @else {
         <div class="cover-placeholder">
           <mat-icon>music_note</mat-icon>
@@ -59,6 +59,29 @@
           </mat-chip>
           }
         </div>
+
+        <!-- Engagement Metrics Row -->
+        <div class="engagement-row">
+          <span class="engagement-item">
+            <mat-icon>thumb_up</mat-icon>
+            <span class="count">{{ reactionCount() }}</span>
+          </span>
+          <span class="engagement-item">
+            <mat-icon>chat_bubble</mat-icon>
+            <span class="count">{{ commentCount() }}</span>
+          </span>
+          <span class="engagement-item">
+            <mat-icon>bolt</mat-icon>
+            <span class="count">{{ formatZapAmount(zapTotal()) }}</span>
+          </span>
+        </div>
+
+        <!-- Top Zappers -->
+        @if (topZappers().length > 0) {
+        <div class="top-zappers">
+          <app-zap-chips [zappers]="topZappers()" [maxDisplay]="4"></app-zap-chips>
+        </div>
+        }
 
         <div class="action-buttons">
           <button mat-flat-button (click)="likeTrack()" [disabled]="isLiked() || isLiking()" [class.liked]="isLiked()"
@@ -98,6 +121,15 @@
         <pre class="lyrics-text">{{ lyrics() }}</pre>
       </mat-card-content>
     </mat-card>
+    }
+
+    <!-- Comments Section -->
+    @if (song(); as songEvent) {
+    <div class="comments-section">
+      <app-comments-list [event]="songEvent" [autoExpand]="false" label="Comments" singularLabel="Comment"
+        [allowedKinds]="[1111]">
+      </app-comments-list>
+    </div>
     }
   </div>
   }

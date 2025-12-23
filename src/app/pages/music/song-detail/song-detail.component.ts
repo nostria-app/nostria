@@ -15,8 +15,19 @@ import { DataService } from '../../../services/data.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { ReactionService } from '../../../services/reaction.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { EventService } from '../../../services/event';
+import { ZapService } from '../../../services/zap.service';
+import { SharedRelayService } from '../../../services/relays/shared-relay';
+import { LoggerService } from '../../../services/logger.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
+import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
+import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
+
+interface TopZapper {
+  pubkey: string;
+  amount: number;
+}
 
 const MUSIC_KIND = 36787;
 
@@ -29,6 +40,8 @@ const MUSIC_KIND = 36787;
     MatChipsModule,
     MatCardModule,
     MatSnackBarModule,
+    ZapChipsComponent,
+    CommentsListComponent,
   ],
   templateUrl: './song-detail.component.html',
   styleUrls: ['./song-detail.component.scss'],
@@ -43,6 +56,10 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private mediaPlayer = inject(MediaPlayerService);
   private reactionService = inject(ReactionService);
   private accountState = inject(AccountStateService);
+  private eventService = inject(EventService);
+  private zapService = inject(ZapService);
+  private sharedRelay = inject(SharedRelayService);
+  private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
 
@@ -52,9 +69,17 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   isLiked = signal(false);
   isLiking = signal(false);
 
+  // Engagement metrics
+  reactionCount = signal<number>(0);
+  commentCount = signal<number>(0);
+  zapTotal = signal<number>(0);
+  topZappers = signal<TopZapper[]>([]);
+  engagementLoading = signal<boolean>(false);
+
   private subscription: { close: () => void } | null = null;
   private likeSubscription: { close: () => void } | null = null;
   private likeChecked = false;
+  private engagementLoaded = false;
 
   // Extracted song data
   title = computed(() => {
@@ -169,6 +194,115 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         this.checkExistingLike(ev, userPubkey);
       });
     });
+
+    // Load engagement metrics when song loads
+    effect(() => {
+      const ev = this.song();
+      if (ev && !this.engagementLoaded) {
+        this.engagementLoaded = true;
+        untracked(() => {
+          this.loadEngagementMetrics(ev);
+        });
+      }
+    });
+  }
+
+  private async loadEngagementMetrics(event: Event): Promise<void> {
+    this.engagementLoading.set(true);
+
+    try {
+      // Load reactions, comments, and zaps in parallel
+      const [reactionCount, commentCount, zapData] = await Promise.all([
+        this.loadReactionCount(event),
+        this.loadCommentCount(event),
+        this.loadZaps(event),
+      ]);
+
+      this.reactionCount.set(reactionCount);
+      this.commentCount.set(commentCount);
+      this.zapTotal.set(zapData.total);
+      this.topZappers.set(zapData.topZappers);
+    } catch (err) {
+      this.logger.error('Failed to load engagement metrics:', err);
+    } finally {
+      this.engagementLoading.set(false);
+    }
+  }
+
+  private async loadReactionCount(event: Event): Promise<number> {
+    try {
+      const reactions = await this.eventService.loadReactions(event.id, event.pubkey);
+      return reactions.events.length;
+    } catch (err) {
+      this.logger.error('Failed to load reactions for track:', err);
+      return 0;
+    }
+  }
+
+  private async loadCommentCount(event: Event): Promise<number> {
+    try {
+      const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+      const aTagValue = `${event.kind}:${event.pubkey}:${dTag}`;
+
+      // Query for kind 1111 comments using the 'A' tag for addressable events
+      const filter = {
+        kinds: [1111],
+        '#A': [aTagValue],
+        limit: 100,
+      };
+
+      const comments = await this.sharedRelay.getMany(event.pubkey, filter);
+      return comments?.length || 0;
+    } catch (err) {
+      this.logger.error('Failed to load comments for track:', err);
+      return 0;
+    }
+  }
+
+  private async loadZaps(event: Event): Promise<{ total: number; topZappers: TopZapper[] }> {
+    try {
+      const zapReceipts = await this.zapService.getZapsForEvent(event.id);
+      let total = 0;
+      const zapperAmounts = new Map<string, number>();
+
+      for (const receipt of zapReceipts) {
+        const { zapRequest, amount } = this.zapService.parseZapReceipt(receipt);
+        if (amount) {
+          total += amount;
+
+          // Track zapper amounts
+          if (zapRequest) {
+            const zapperPubkey = zapRequest.pubkey;
+            const current = zapperAmounts.get(zapperPubkey) || 0;
+            zapperAmounts.set(zapperPubkey, current + amount);
+          }
+        }
+      }
+
+      // Get top 3 zappers
+      const topZappers = Array.from(zapperAmounts.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([pubkey, amount]) => ({ pubkey, amount }));
+
+      return { total, topZappers };
+    } catch (err) {
+      this.logger.error('Failed to load zaps for track:', err);
+      return { total: 0, topZappers: [] };
+    }
+  }
+
+  /**
+   * Format zap amount for display (e.g., 1000 -> "1k", 1500000 -> "1.5M")
+   */
+  formatZapAmount(sats: number): string {
+    if (sats >= 1000000) {
+      return (sats / 1000000).toFixed(1).replace(/\.0$/, '') + 'M';
+    }
+    if (sats >= 1000) {
+      return (sats / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+    }
+    return sats.toString();
   }
 
   private checkExistingLike(ev: Event, userPubkey: string): void {
