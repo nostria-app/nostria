@@ -1415,6 +1415,9 @@ export class MediaPlayerService implements OnInitialized {
     this.pausedYouTubeUrl.set(undefined);
     this._isFullscreen.set(false);
 
+    // Also turn off fullscreen media player mode so it doesn't auto-open next time
+    this.layout.fullscreenMediaPlayer.set(false);
+
     // Clear media queue
     this.media.set([]);
 
