@@ -41,7 +41,14 @@
   flex-direction: column;
   gap: 1.5rem;
   max-height: 60vh;
+  min-height: 40vh;
   overflow-y: auto;
+  flex: 1;
+
+  @media (max-width: 600px) {
+    max-height: none;
+    min-height: 50vh;
+  }
 }
 
 // Album Section
@@ -144,6 +151,11 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+.tracks-header-actions {
+  display: flex;
+  gap: 0.5rem;
 }
 
 .tracks-list {
