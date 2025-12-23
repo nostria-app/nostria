@@ -1,0 +1,157 @@
+<div class="winamp-player" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" (swipe)="onSwipe($event)">
+  <!-- Main player window -->
+  <div class="winamp-main">
+    <!-- Title bar -->
+    <div class="title-bar">
+      <div class="title-bar-left">
+        <span class="winamp-logo">WINAMP</span>
+      </div>
+      <div class="title-bar-buttons">
+        <button class="title-btn minimize" matTooltip="Minimize">_</button>
+        <button class="title-btn maximize" matTooltip="Shade mode">□</button>
+        <button class="title-btn close" matTooltip="Close">×</button>
+      </div>
+    </div>
+
+    <!-- Display section -->
+    <div class="display-section">
+      <!-- Left side - time display and visualizer -->
+      <div class="display-left">
+        <div class="time-display">
+          <span class="time-value">{{ formatTimeDisplay(currentTime()) }}</span>
+        </div>
+
+        <!-- Spectrum visualizer -->
+        <div class="visualizer">
+          @for (bar of visualizerBars(); track $index) {
+          <div class="visualizer-bar" [style.height.%]="bar * 100">
+            <div class="bar-segments">
+              @for (seg of [1,2,3,4,5,6,7,8,9,10,11,12]; track seg) {
+              <div class="segment" [class.active]="bar * 12 >= seg" [class.peak]="seg >= 10"
+                [class.high]="seg >= 7 && seg < 10"></div>
+              }
+            </div>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Right side - track info -->
+      <div class="display-right">
+        <div class="scrolling-text">
+          <span class="marquee-text">{{ scrollingTitle() }}</span>
+        </div>
+
+        <div class="info-row">
+          <div class="bitrate">
+            <span class="label">256</span>
+            <span class="unit">kbps</span>
+          </div>
+          <div class="sample-rate">
+            <span class="label">44</span>
+            <span class="unit">kHz</span>
+          </div>
+          <div class="channels">
+            <span class="stereo active">stereo</span>
+          </div>
+        </div>
+
+        <!-- Position indicator -->
+        <div class="position-bar">
+          <input type="range" class="winamp-slider position-slider" [min]="0" [max]="duration() || 0"
+            [value]="currentTime()" (input)="onTimeChange($event)" aria-label="Seek" />
+        </div>
+      </div>
+    </div>
+
+    <!-- Volume and balance -->
+    <div class="volume-section">
+      <div class="volume-control">
+        <span class="volume-label">Volume</span>
+        <input type="range" class="winamp-slider volume-slider" [min]="0" [max]="100" [value]="volume"
+          (input)="onVolumeChange($event)" aria-label="Volume" />
+      </div>
+      <div class="balance-control">
+        <span class="balance-label">Balance</span>
+        <input type="range" class="winamp-slider balance-slider" [min]="-100" [max]="100" [value]="0"
+          aria-label="Balance" />
+      </div>
+    </div>
+
+    <!-- Transport controls -->
+    <div class="transport-controls">
+      <button class="transport-btn prev" [disabled]="!media.canPrevious()" (click)="media.previous()"
+        matTooltip="Previous">
+        <mat-icon>skip_previous</mat-icon>
+      </button>
+
+      @if (media.paused) {
+      <button class="transport-btn play" (click)="media.resume()" matTooltip="Play">
+        <mat-icon>play_arrow</mat-icon>
+      </button>
+      } @else {
+      <button class="transport-btn pause" (click)="media.pause()" matTooltip="Pause">
+        <mat-icon>pause</mat-icon>
+      </button>
+      }
+
+      <button class="transport-btn stop" (click)="media.pause()" matTooltip="Stop">
+        <mat-icon>stop</mat-icon>
+      </button>
+
+      <button class="transport-btn next" [disabled]="!media.canNext()" (click)="media.next()" matTooltip="Next">
+        <mat-icon>skip_next</mat-icon>
+      </button>
+
+      <button class="transport-btn eject" (click)="openQueue.emit()" matTooltip="Open Playlist">
+        <mat-icon>eject</mat-icon>
+      </button>
+    </div>
+
+    <!-- Toggle buttons -->
+    <div class="toggle-buttons">
+      <button class="toggle-btn" [class.active]="false" matTooltip="Shuffle">
+        <span>SHUFFLE</span>
+      </button>
+      <button class="toggle-btn" [class.active]="false" matTooltip="Repeat">
+        <span>REPEAT</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Equalizer window -->
+  <div class="winamp-eq">
+    <div class="eq-title-bar">
+      <span>WINAMP EQUALIZER</span>
+      <div class="eq-toggle">
+        <button class="toggle-btn small active">ON</button>
+        <button class="toggle-btn small">AUTO</button>
+      </div>
+    </div>
+
+    <div class="eq-sliders">
+      <div class="preamp">
+        <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="50" orient="vertical"
+          aria-label="Preamp" title="Preamp" />
+        <span class="eq-label">PREAMP</span>
+      </div>
+
+      <div class="eq-divider"></div>
+
+      <div class="frequency-bands">
+        @for (freq of ['60', '170', '310', '600', '1K', '3K', '6K', '12K', '14K', '16K']; track freq; let i = $index) {
+        <div class="eq-band">
+          <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="eqBands()[i]"
+            (input)="updateEqBand(i, $event)" orient="vertical" [attr.aria-label]="freq + ' Hz'"
+            [title]="freq + ' Hz'" />
+          <span class="eq-label">{{ freq }}</span>
+        </div>
+        }
+      </div>
+    </div>
+
+    <div class="eq-presets">
+      <button class="preset-btn">PRESETS</button>
+    </div>
+  </div>
+</div>

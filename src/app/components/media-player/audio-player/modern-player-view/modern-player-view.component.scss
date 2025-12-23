@@ -1,0 +1,350 @@
+:host {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.modern-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--mat-sys-surface);
+}
+
+// Blurred background glow effect
+.background-glow {
+  position: absolute;
+  inset: -50%;
+  width: 200%;
+  height: 200%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+
+  .glow-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(100px) saturate(1.5) brightness(0.4);
+    opacity: 0.8;
+    transform: scale(1.2);
+  }
+}
+
+// Pull down indicator
+.pull-indicator {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0 8px;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  .pull-bar {
+    width: 40px;
+    height: 4px;
+    background: var(--mat-sys-outline);
+    border-radius: 2px;
+  }
+
+  .pull-hint {
+    font-size: 0.65rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}
+
+// Main content
+.player-content {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 24px;
+}
+
+// Album art container with glow ring
+.album-container {
+  position: relative;
+  width: min(300px, 60vw);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  .album-glow-ring {
+    position: absolute;
+    inset: -8px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg,
+        var(--mat-sys-primary),
+        var(--mat-sys-secondary),
+        var(--mat-sys-tertiary),
+        var(--mat-sys-primary));
+    opacity: 0.6;
+    filter: blur(20px);
+    animation: rotate-glow 10s linear infinite;
+  }
+
+  .album-art {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 0 2px rgba(255, 255, 255, 0.1);
+    position: relative;
+    z-index: 1;
+    animation: pulse-shadow 2s ease-in-out infinite;
+  }
+
+  .album-placeholder {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: var(--mat-sys-surface-container);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+
+    mat-icon {
+      font-size: 64px;
+      width: 64px;
+      height: 64px;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
+@keyframes rotate-glow {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes pulse-shadow {
+
+  0%,
+  100% {
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 0 2px rgba(255, 255, 255, 0.1);
+  }
+
+  50% {
+    box-shadow:
+      0 12px 48px rgba(0, 0, 0, 0.5),
+      0 0 0 3px rgba(255, 255, 255, 0.15);
+  }
+}
+
+// Track info
+.track-info {
+  text-align: center;
+  max-width: 100%;
+  padding: 0 16px;
+
+  .track-title {
+    font-size: 1.5rem;
+    color: var(--mat-sys-on-surface);
+    margin: 0 0 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
+  }
+
+  .track-artist {
+    font-size: 1rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
+  }
+}
+
+// Timeline
+.timeline-container {
+  width: 100%;
+  max-width: 400px;
+
+  .custom-slider {
+    width: 100%;
+    height: 32px;
+    display: flex;
+    align-items: center;
+
+    .slider-input {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.2);
+      outline: none;
+      cursor: pointer;
+      background-image: linear-gradient(var(--mat-sys-primary), var(--mat-sys-primary));
+      background-repeat: no-repeat;
+
+      &::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--mat-sys-primary);
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        transition: transform 0.15s;
+      }
+
+      &::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: var(--mat-sys-primary);
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+      }
+
+      &:hover::-webkit-slider-thumb {
+        transform: scale(1.2);
+      }
+    }
+  }
+
+  .time-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin-top: 4px;
+  }
+}
+
+// Controls
+.controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+
+  .control-btn {
+    color: var(--mat-sys-on-surface);
+    opacity: 0.8;
+    transition: opacity 0.2s, transform 0.2s;
+
+    &:hover:not(:disabled) {
+      opacity: 1;
+      transform: scale(1.1);
+    }
+
+    &:disabled {
+      opacity: 0.3;
+    }
+
+    mat-icon {
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
+    }
+  }
+
+  .shuffle-btn,
+  .repeat-btn {
+    mat-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+    }
+  }
+
+  .play-btn {
+    width: 64px;
+    height: 64px;
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    transition: transform 0.2s, box-shadow 0.2s;
+
+    mat-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+    }
+
+    &:hover {
+      transform: scale(1.05);
+      box-shadow: 0 8px 24px rgba(var(--mat-sys-primary), 0.4);
+    }
+  }
+}
+
+// Volume
+.volume-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  max-width: 200px;
+
+  .volume-icon {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .volume-slider {
+    flex: 1;
+  }
+}
+
+// Swipe hints
+.swipe-hints {
+  position: absolute;
+  bottom: 24px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 24px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+
+  .modern-player:active & {
+    opacity: 0.5;
+  }
+
+  span {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+}

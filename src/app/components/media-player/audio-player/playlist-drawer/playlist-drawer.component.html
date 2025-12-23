@@ -1,0 +1,92 @@
+<div class="drawer-container" #container>
+  <!-- Handle bar -->
+  <div class="drawer-handle" (click)="closeDrawer.emit()" (keydown.enter)="closeDrawer.emit()"
+    (keydown.space)="closeDrawer.emit()" tabindex="0" role="button" aria-label="Close queue">
+    <div class="handle-bar"></div>
+  </div>
+
+  <!-- Header -->
+  <div class="drawer-header">
+    <div class="header-left">
+      <mat-icon>queue_music</mat-icon>
+      <h3>Queue</h3>
+      <span class="track-count">{{ queue().length }} tracks</span>
+    </div>
+    <div class="header-right">
+      <button mat-icon-button (click)="clearQueue()" matTooltip="Clear queue">
+        <mat-icon>delete_sweep</mat-icon>
+      </button>
+      <button mat-icon-button (click)="closeDrawer.emit()" matTooltip="Close">
+        <mat-icon>expand_less</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Queue list -->
+  <div class="queue-list" cdkDropList (cdkDropListDropped)="onDrop($event)">
+    @for (track of queue(); track track.source; let i = $index) {
+    <div class="queue-item" [class.current]="i === currentIndex()" [class.played]="i < currentIndex()" cdkDrag
+      (click)="playTrack(i)" matRipple>
+      <!-- Drag handle -->
+      <div class="drag-handle" cdkDragHandle>
+        <mat-icon>drag_indicator</mat-icon>
+      </div>
+
+      <!-- Track number or playing indicator -->
+      <div class="track-indicator">
+        @if (i === currentIndex()) {
+        <div class="playing-indicator">
+          <span class="bar"></span>
+          <span class="bar"></span>
+          <span class="bar"></span>
+        </div>
+        } @else {
+        <span class="track-number">{{ i + 1 }}</span>
+        }
+      </div>
+
+      <!-- Artwork -->
+      <div class="track-artwork">
+        @if (track.artwork) {
+        <img [src]="track.artwork" alt="Album artwork" title="Album artwork" />
+        } @else {
+        <div class="artwork-placeholder">
+          <mat-icon>music_note</mat-icon>
+        </div>
+        }
+      </div>
+
+      <!-- Track info -->
+      <div class="track-info">
+        <span class="track-title">{{ track.title || 'Unknown Track' }}</span>
+        <span class="track-artist">{{ track.artist || 'Unknown Artist' }}</span>
+      </div>
+
+      <!-- Actions -->
+      <div class="track-actions">
+        <button mat-icon-button class="remove-btn" (click)="removeTrack(i, $event)" matTooltip="Remove from queue">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <!-- Drag preview -->
+      <div class="drag-preview" *cdkDragPreview>
+        <div class="preview-content">
+          @if (track.artwork) {
+          <img [src]="track.artwork" alt="Album artwork" title="Album artwork" />
+          }
+          <span>{{ track.title }}</span>
+        </div>
+      </div>
+    </div>
+    }
+
+    @if (queue().length === 0) {
+    <div class="empty-queue">
+      <mat-icon>queue_music</mat-icon>
+      <p>Your queue is empty</p>
+      <span>Add some tracks to get started</span>
+    </div>
+    }
+  </div>
+</div>
