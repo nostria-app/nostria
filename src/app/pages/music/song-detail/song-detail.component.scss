@@ -140,8 +140,24 @@
     position: absolute;
     bottom: 1rem;
     right: 1rem;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
     background-color: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
+    box-shadow: var(--mat-sys-level3);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+    &:hover:not(:disabled) {
+      transform: scale(1.05);
+      box-shadow: var(--mat-sys-level4);
+    }
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
   }
 }
 
@@ -295,7 +311,9 @@
   line-height: 1.5;
 }
 
-.lyrics-card {
+.content-section-card {
+  margin-bottom: 1rem;
+
   mat-card-header {
     mat-card-title {
       display: flex;
@@ -314,7 +332,7 @@
   }
 }
 
-.lyrics-text {
+.section-text {
   margin: 0;
   font-family: inherit;
   white-space: pre-wrap;

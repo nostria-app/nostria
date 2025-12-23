@@ -8,6 +8,12 @@
       <mat-icon>more_vert</mat-icon>
     </button>
     <mat-menu #menu="matMenu">
+      @if (isOwnTrack()) {
+      <button mat-menu-item (click)="editTrack()">
+        <mat-icon>edit</mat-icon>
+        <span>Edit Track</span>
+      </button>
+      }
       @if (isAuthenticated()) {
       <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
         <mat-icon>playlist_add</mat-icon>
@@ -170,16 +176,16 @@
       </div>
     </div>
 
-    @if (lyrics()) {
-    <mat-card class="lyrics-card">
+    @for (section of contentSections(); track section.title) {
+    <mat-card class="content-section-card">
       <mat-card-header>
         <mat-card-title>
-          <mat-icon>lyrics</mat-icon>
-          Lyrics
+          <mat-icon>{{ section.icon }}</mat-icon>
+          {{ section.title }}
         </mat-card-title>
       </mat-card-header>
       <mat-card-content>
-        <pre class="lyrics-text">{{ lyrics() }}</pre>
+        <pre class="section-text">{{ section.content }}</pre>
       </mat-card-content>
     </mat-card>
     }
@@ -195,3 +201,7 @@
   </div>
   }
 </div>
+
+@if (showEditDialog() && editDialogData()) {
+<app-edit-music-track-dialog [data]="editDialogData()!" (closed)="onEditDialogClosed($event)" />
+}

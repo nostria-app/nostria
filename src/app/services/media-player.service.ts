@@ -76,6 +76,10 @@ export class MediaPlayerService implements OnInitialized {
   // Signal that indicates whether there are any items in the media queue
   hasQueue = computed(() => this.media().length > 0);
 
+  // Shuffle and Repeat state
+  shuffle = signal(false);
+  repeat = signal<'off' | 'all' | 'one'>('off');
+
   // Convert to signals
   youtubeUrl = signal<SafeResourceUrl | undefined>(undefined);
   videoUrl = signal<SafeResourceUrl | undefined>(undefined);
@@ -678,9 +682,22 @@ export class MediaPlayerService implements OnInitialized {
       this.setPodcastCompleted(currentItem.source, true);
     }
 
+    // Handle repeat modes
+    if (this.repeat() === 'one') {
+      // Repeat current track
+      console.log('Repeat one mode - replaying current track');
+      this.start();
+      return;
+    }
+
     if (this.canNext()) {
       console.log('Auto-advancing to next media item');
       this.next();
+    } else if (this.repeat() === 'all' && this.media().length > 0) {
+      // Wrap to beginning of queue
+      console.log('Repeat all mode - wrapping to beginning');
+      this.index = 0;
+      this.start();
     } else {
       console.log('No next media item available, stopping playback');
       navigator.mediaSession.playbackState = 'none';
@@ -1220,13 +1237,37 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   next() {
-    this.index++;
+    if (this.shuffle()) {
+      // Pick a random index different from current
+      const mediaLength = this.media().length;
+      if (mediaLength > 1) {
+        let newIndex = this.index;
+        while (newIndex === this.index) {
+          newIndex = Math.floor(Math.random() * mediaLength);
+        }
+        this.index = newIndex;
+      }
+    } else {
+      this.index++;
+    }
     this.start();
   }
 
   previous() {
     this.index--;
     this.start();
+  }
+
+  toggleShuffle(): void {
+    this.shuffle.update(v => !v);
+  }
+
+  toggleRepeat(): void {
+    this.repeat.update(v => {
+      if (v === 'off') return 'all';
+      if (v === 'all') return 'one';
+      return 'off';
+    });
   }
 
   get error() {

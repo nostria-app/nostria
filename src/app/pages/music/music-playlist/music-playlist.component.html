@@ -186,3 +186,7 @@
   </div>
   }
 </div>
+
+@if (showEditDialog() && editDialogData()) {
+<app-edit-music-playlist-dialog [data]="editDialogData()!" (closed)="onEditDialogClosed($event)" />
+}

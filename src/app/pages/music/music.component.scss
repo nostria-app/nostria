@@ -272,6 +272,56 @@
   }
 }
 
+// Your Records special card
+.your-records-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--mat-sys-corner-medium);
+  background: linear-gradient(135deg, var(--mat-sys-tertiary-container), var(--mat-sys-primary-container));
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  overflow: hidden;
+
+  &:hover,
+  &:focus {
+    transform: translateY(-2px);
+    box-shadow: var(--mat-sys-level2);
+    outline: none;
+  }
+
+  .your-records-cover {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 1 / 1;
+    background: linear-gradient(135deg, #ff7043, #ff5722);
+
+    mat-icon {
+      font-size: 3rem;
+      width: 3rem;
+      height: 3rem;
+      color: white;
+    }
+  }
+
+  .your-records-info {
+    display: flex;
+    flex-direction: column;
+    padding: 0.75rem;
+    gap: 0.25rem;
+
+    .your-records-title {
+      font-size: 0.875rem;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .your-records-meta {
+      font-size: 0.75rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
 .empty-state {
   display: flex;
   flex-direction: column;

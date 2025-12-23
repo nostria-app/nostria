@@ -80,4 +80,12 @@ export class ModernPlayerViewComponent {
   get volume(): number {
     return this.media.audio ? Math.round(this.media.audio.volume * 100) : 100;
   }
+
+  getRepeatTooltip(): string {
+    switch (this.media.repeat()) {
+      case 'off': return 'Repeat: Off';
+      case 'all': return 'Repeat: All';
+      case 'one': return 'Repeat: One';
+    }
+  }
 }

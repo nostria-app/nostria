@@ -1,5 +1,4 @@
-import { Component, inject, signal, computed, effect, untracked } from '@angular/core';
-import { MatDialogRef, MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
+import { Component, inject, signal, computed, input, output, effect, untracked, OnInit } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -16,6 +15,7 @@ import { DataService } from '../../../services/data.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { NostrRecord } from '../../../interfaces';
 
 const MUSIC_KIND = 36787;
@@ -38,7 +38,7 @@ export interface TrackItem {
 @Component({
   selector: 'app-edit-music-playlist-dialog',
   imports: [
-    MatDialogModule,
+    CustomDialogComponent,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
@@ -53,8 +53,8 @@ export interface TrackItem {
   styleUrl: './edit-music-playlist-dialog.component.scss',
 })
 export class EditMusicPlaylistDialogComponent {
-  private dialogRef = inject(MatDialogRef<EditMusicPlaylistDialogComponent>);
-  private data = inject<EditMusicPlaylistDialogData>(MAT_DIALOG_DATA);
+  data = input.required<EditMusicPlaylistDialogData>();
+  closed = output<{ updated: boolean; playlist?: MusicPlaylist } | null>();
   private fb = inject(FormBuilder);
   private musicPlaylistService = inject(MusicPlaylistService);
   private mediaService = inject(MediaService);
@@ -86,24 +86,41 @@ export class EditMusicPlaylistDialogComponent {
   ];
 
   currentGradient = signal(this.getRandomGradient());
+  private initialized = false;
 
   constructor() {
-    const playlist = this.data.playlist;
-
     this.playlistForm = this.fb.group({
-      title: [playlist.title, [Validators.required, Validators.minLength(1)]],
-      description: [playlist.description || ''],
-      imageUrl: [playlist.image || ''],
-      isPublic: [playlist.isPublic],
-      isCollaborative: [playlist.isCollaborative],
+      title: ['', [Validators.required, Validators.minLength(1)]],
+      description: [''],
+      imageUrl: [''],
+      isPublic: [true],
+      isCollaborative: [false],
     });
 
-    if (playlist.image) {
-      this.coverImage.set(playlist.image);
-    }
+    // Initialize form when data is available
+    effect(() => {
+      const dialogData = this.data();
+      if (dialogData && !this.initialized) {
+        this.initialized = true;
+        untracked(() => {
+          const playlist = dialogData.playlist;
+          this.playlistForm.patchValue({
+            title: playlist.title,
+            description: playlist.description || '',
+            imageUrl: playlist.image || '',
+            isPublic: playlist.isPublic,
+            isCollaborative: playlist.isCollaborative,
+          });
 
-    // Load track details
-    this.loadTrackDetails();
+          if (playlist.image) {
+            this.coverImage.set(playlist.image);
+          }
+
+          // Load track details
+          this.loadTrackDetails();
+        });
+      }
+    });
   }
 
   private getRandomGradient(): string {
@@ -111,7 +128,7 @@ export class EditMusicPlaylistDialogComponent {
   }
 
   private async loadTrackDetails(): Promise<void> {
-    const playlist = this.data.playlist;
+    const playlist = this.data().playlist;
     if (!playlist.trackRefs || playlist.trackRefs.length === 0) {
       this.loadingTracks.set(false);
       return;
@@ -303,7 +320,7 @@ export class EditMusicPlaylistDialogComponent {
       const formValue = this.playlistForm.value;
       const newTrackRefs = this.tracks().map(t => t.ref);
 
-      const result = await this.musicPlaylistService.updatePlaylist(this.data.playlist.id, {
+      const result = await this.musicPlaylistService.updatePlaylist(this.data().playlist.id, {
         title: formValue.title,
         description: formValue.description || undefined,
         image: formValue.imageUrl || undefined,
@@ -314,7 +331,7 @@ export class EditMusicPlaylistDialogComponent {
 
       if (result) {
         this.snackBar.open('Playlist updated!', 'Close', { duration: 2000 });
-        this.dialogRef.close({ updated: true, playlist: result });
+        this.closed.emit({ updated: true, playlist: result });
       } else {
         this.snackBar.open('Failed to update playlist', 'Close', { duration: 3000 });
       }
@@ -327,6 +344,10 @@ export class EditMusicPlaylistDialogComponent {
   }
 
   onCancel(): void {
-    this.dialogRef.close(null);
+    this.closed.emit(null);
+  }
+
+  onClose(): void {
+    this.closed.emit(null);
   }
 }

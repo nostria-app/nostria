@@ -257,6 +257,13 @@ export class MusicComponent implements OnDestroy {
     this.router.navigate(['/music/liked-playlists']);
   }
 
+  goToYourRecords(): void {
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.router.navigate(['/music/artist', pubkey]);
+    }
+  }
+
   goToAllFollowingPlaylists(): void {
     this.router.navigate(['/music/playlists'], { queryParams: { source: 'following' } });
   }

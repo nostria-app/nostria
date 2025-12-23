@@ -6,7 +6,6 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -36,6 +35,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatChipsModule,
     MatMenuModule,
     MatSnackBarModule,
+    EditMusicPlaylistDialogComponent,
   ],
   templateUrl: './music-playlist.component.html',
   styleUrls: ['./music-playlist.component.scss'],
@@ -51,7 +51,6 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
-  private dialog = inject(MatDialog);
   private accountState = inject(AccountStateService);
   private musicPlaylistService = inject(MusicPlaylistService);
   private reactionService = inject(ReactionService);
@@ -64,11 +63,18 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   isLiked = signal(false);
   isLiking = signal(false);
 
+  // Edit dialog state
+  showEditDialog = signal(false);
+  editDialogData = signal<EditMusicPlaylistDialogData | null>(null);
+
   private subscriptions: { close: () => void }[] = [];
   private likeSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
   private tracksLoaded = false; // Prevent multiple loadPlaylistTracks calls
   private likeChecked = false;
+
+  // Cache for artist profiles
+  private artistProfiles = signal<Map<string, NostrRecord>>(new Map());
 
   // Playlist data
   title = computed(() => {
@@ -374,13 +380,16 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
       const titleTag = track.tags.find(t => t[0] === 'title');
       const imageTag = track.tags.find(t => t[0] === 'image');
+      const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
       const mediaItem: MediaItem = {
         source: url,
         title: titleTag?.[1] || 'Untitled Track',
-        artist: this.artistName(),
+        artist: this.getTrackArtist(track),
         artwork: imageTag?.[1] || '/icons/icon-192x192.png',
         type: 'Music',
+        eventPubkey: track.pubkey,
+        eventIdentifier: dTag,
       };
 
       if (i === 0) {
@@ -455,28 +464,26 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       event: ev,
     };
 
-    const dialogData: EditMusicPlaylistDialogData = { playlist };
+    this.editDialogData.set({ playlist });
+    this.showEditDialog.set(true);
+  }
 
-    const dialogRef = this.dialog.open(EditMusicPlaylistDialogComponent, {
-      data: dialogData,
-      width: '500px',
-      maxWidth: '95vw',
-    });
+  onEditDialogClosed(result: { updated: boolean; playlist?: MusicPlaylist } | null): void {
+    this.showEditDialog.set(false);
+    this.editDialogData.set(null);
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result?.updated && result?.playlist) {
-        // Reload the page to show updated data
-        const pubkey = this.route.snapshot.paramMap.get('pubkey');
-        const identifier = this.route.snapshot.paramMap.get('identifier');
-        if (pubkey && identifier) {
-          // Reset state and reload
-          this.tracksLoaded = false;
-          this.trackMap.clear();
-          this.tracks.set([]);
-          this.loadPlaylist(pubkey, identifier);
-        }
+    if (result?.updated && result?.playlist) {
+      // Reload the page to show updated data
+      const pubkey = this.route.snapshot.paramMap.get('pubkey');
+      const identifier = this.route.snapshot.paramMap.get('identifier');
+      if (pubkey && identifier) {
+        // Reset state and reload
+        this.tracksLoaded = false;
+        this.trackMap.clear();
+        this.tracks.set([]);
+        this.loadPlaylist(pubkey, identifier);
       }
-    });
+    }
   }
 
   private checkExistingLike(ev: Event, userPubkey: string): void {
@@ -540,8 +547,27 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   }
 
   getTrackArtist(track: Event): string {
-    // For now, return Unknown Artist - could be enhanced to fetch profile
+    const profile = this.artistProfiles().get(track.pubkey);
+    if (profile) {
+      return profile.data?.name || profile.data?.display_name || 'Unknown Artist';
+    }
+    // Trigger async fetch if not cached
+    this.fetchArtistProfile(track.pubkey);
     return 'Unknown Artist';
+  }
+
+  private async fetchArtistProfile(pubkey: string): Promise<void> {
+    const profiles = this.artistProfiles();
+    if (profiles.has(pubkey)) return;
+
+    const profile = await this.data.getProfile(pubkey);
+    if (profile) {
+      this.artistProfiles.update(map => {
+        const newMap = new Map(map);
+        newMap.set(pubkey, profile);
+        return newMap;
+      });
+    }
   }
 
   getTrackDate(track: Event): string {
@@ -575,13 +601,16 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
       const titleTag = track.tags.find(t => t[0] === 'title');
       const imageTag = track.tags.find(t => t[0] === 'image');
+      const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
       const mediaItem: MediaItem = {
         source: url,
         title: titleTag?.[1] || 'Untitled Track',
-        artist: this.artistName(),
+        artist: this.getTrackArtist(track),
         artwork: imageTag?.[1] || '/icons/icon-192x192.png',
         type: 'Music',
+        eventPubkey: track.pubkey,
+        eventIdentifier: dTag,
       };
 
       if (i === index) {
@@ -599,13 +628,16 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     const titleTag = track.tags.find(t => t[0] === 'title');
     const imageTag = track.tags.find(t => t[0] === 'image');
+    const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
 
     const mediaItem: MediaItem = {
       source: url,
       title: titleTag?.[1] || 'Untitled Track',
-      artist: this.artistName(),
+      artist: this.getTrackArtist(track),
       artwork: imageTag?.[1] || '/icons/icon-192x192.png',
       type: 'Music',
+      eventPubkey: track.pubkey,
+      eventIdentifier: dTag,
     };
 
     this.mediaPlayer.enque(mediaItem);

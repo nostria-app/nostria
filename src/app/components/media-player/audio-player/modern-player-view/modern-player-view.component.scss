@@ -282,6 +282,11 @@
       width: 24px;
       height: 24px;
     }
+
+    &.active {
+      color: var(--mat-sys-primary);
+      opacity: 1;
+    }
   }
 
   .play-btn {

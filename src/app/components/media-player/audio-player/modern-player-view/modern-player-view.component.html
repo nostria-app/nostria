@@ -46,7 +46,8 @@
 
     <!-- Controls -->
     <div class="controls">
-      <button mat-icon-button class="control-btn shuffle-btn" matTooltip="Shuffle">
+      <button mat-icon-button class="control-btn shuffle-btn" [class.active]="media.shuffle()"
+        (click)="media.toggleShuffle()" matTooltip="Shuffle">
         <mat-icon>shuffle</mat-icon>
       </button>
 
@@ -70,8 +71,9 @@
         <mat-icon>skip_next</mat-icon>
       </button>
 
-      <button mat-icon-button class="control-btn repeat-btn" matTooltip="Repeat">
-        <mat-icon>repeat</mat-icon>
+      <button mat-icon-button class="control-btn repeat-btn" [class.active]="media.repeat() !== 'off'"
+        (click)="media.toggleRepeat()" [matTooltip]="getRepeatTooltip()">
+        <mat-icon>{{ media.repeat() === 'one' ? 'repeat_one' : 'repeat' }}</mat-icon>
       </button>
     </div>
 
