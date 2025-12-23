@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -82,7 +82,7 @@ const PAGE_SIZE = 24;
           </div>
 
           @if (hasMore()) {
-            <div class="load-more-container">
+            <div #loadMoreSentinel class="load-more-container">
               @if (loadingMore()) {
                 <mat-spinner diameter="24"></mat-spinner>
               } @else {
@@ -231,7 +231,7 @@ const PAGE_SIZE = 24;
     }
   `],
 })
-export class MusicPlaylistsComponent implements OnInit, OnDestroy {
+export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
@@ -283,6 +283,9 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy {
     return this.filteredPlaylists().length > this.displayLimit();
   });
 
+  loadMoreSentinel = viewChild<ElementRef>('loadMoreSentinel');
+  private intersectionObserver: IntersectionObserver | null = null;
+
   ngOnInit(): void {
     // Get source from query params
     this.route.queryParams.subscribe(params => {
@@ -294,8 +297,35 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy {
     this.startSubscription();
   }
 
+  ngAfterViewInit(): void {
+    this.setupIntersectionObserver();
+  }
+
   ngOnDestroy(): void {
     this.playlistSubscription?.close();
+    this.intersectionObserver?.disconnect();
+  }
+
+  private setupIntersectionObserver(): void {
+    this.intersectionObserver = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && this.hasMore() && !this.loadingMore() && !this.loading()) {
+            this.loadMore();
+          }
+        });
+      },
+      { rootMargin: '200px' }
+    );
+
+    setTimeout(() => this.observeSentinel(), 100);
+  }
+
+  private observeSentinel(): void {
+    const sentinel = this.loadMoreSentinel();
+    if (sentinel && this.intersectionObserver) {
+      this.intersectionObserver.observe(sentinel.nativeElement);
+    }
   }
 
   private startSubscription(): void {
@@ -354,7 +384,10 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy {
   loadMore(): void {
     this.loadingMore.set(true);
     this.displayLimit.update(limit => limit + PAGE_SIZE);
-    setTimeout(() => this.loadingMore.set(false), 100);
+    setTimeout(() => {
+      this.loadingMore.set(false);
+      setTimeout(() => this.observeSentinel(), 50);
+    }, 100);
   }
 
   refresh(): void {

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetectionStrategy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, OnInit, ChangeDetectionStrategy, AfterViewInit, ElementRef, viewChild } from '@angular/core';
 import { Router, ActivatedRoute } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -82,7 +82,7 @@ const PAGE_SIZE = 24;
           </div>
 
           @if (hasMore()) {
-            <div class="load-more-container">
+            <div #loadMoreSentinel class="load-more-container">
               @if (loadingMore()) {
                 <mat-spinner diameter="24"></mat-spinner>
               } @else {
@@ -231,7 +231,7 @@ const PAGE_SIZE = 24;
     }
   `],
 })
-export class MusicTracksComponent implements OnInit, OnDestroy {
+export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
@@ -241,6 +241,8 @@ export class MusicTracksComponent implements OnInit, OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
+  loadMoreSentinel = viewChild<ElementRef>('loadMoreSentinel');
+
   allTracks = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
@@ -249,6 +251,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy {
 
   private trackSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
+  private intersectionObserver: IntersectionObserver | null = null;
 
   private followingPubkeys = computed(() => {
     return this.accountState.followingList() || [];
@@ -289,8 +292,36 @@ export class MusicTracksComponent implements OnInit, OnDestroy {
     this.startSubscription();
   }
 
+  ngAfterViewInit(): void {
+    this.setupIntersectionObserver();
+  }
+
   ngOnDestroy(): void {
     this.trackSubscription?.close();
+    this.intersectionObserver?.disconnect();
+  }
+
+  private setupIntersectionObserver(): void {
+    this.intersectionObserver = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && this.hasMore() && !this.loadingMore() && !this.loading()) {
+            this.loadMore();
+          }
+        });
+      },
+      { rootMargin: '200px' }
+    );
+
+    // Watch for sentinel element changes
+    setTimeout(() => this.observeSentinel(), 100);
+  }
+
+  private observeSentinel(): void {
+    const sentinel = this.loadMoreSentinel();
+    if (sentinel && this.intersectionObserver) {
+      this.intersectionObserver.observe(sentinel.nativeElement);
+    }
   }
 
   private startSubscription(): void {
@@ -349,7 +380,11 @@ export class MusicTracksComponent implements OnInit, OnDestroy {
   loadMore(): void {
     this.loadingMore.set(true);
     this.displayLimit.update(limit => limit + PAGE_SIZE);
-    setTimeout(() => this.loadingMore.set(false), 100);
+    setTimeout(() => {
+      this.loadingMore.set(false);
+      // Re-observe sentinel after DOM updates
+      setTimeout(() => this.observeSentinel(), 50);
+    }, 100);
   }
 
   refresh(): void {
