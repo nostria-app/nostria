@@ -1,17 +1,22 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCardModule } from '@angular/material/card';
-import { Event, Filter, nip19 } from 'nostr-tools';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import { Event, Filter, nip19, kinds } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
+import { ReactionService } from '../../../services/reaction.service';
+import { AccountStateService } from '../../../services/account-state.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
+import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 
 const MUSIC_KIND = 36787;
 
@@ -23,6 +28,7 @@ const MUSIC_KIND = 36787;
     MatIconModule,
     MatChipsModule,
     MatCardModule,
+    MatSnackBarModule,
   ],
   templateUrl: './song-detail.component.html',
   styleUrls: ['./song-detail.component.scss'],
@@ -35,12 +41,20 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private utilities = inject(UtilitiesService);
   private data = inject(DataService);
   private mediaPlayer = inject(MediaPlayerService);
+  private reactionService = inject(ReactionService);
+  private accountState = inject(AccountStateService);
+  private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
 
   song = signal<Event | null>(null);
   loading = signal(true);
   authorProfile = signal<NostrRecord | undefined>(undefined);
+  isLiked = signal(false);
+  isLiking = signal(false);
 
   private subscription: { close: () => void } | null = null;
+  private likeSubscription: { close: () => void } | null = null;
+  private likeChecked = false;
 
   // Extracted song data
   title = computed(() => {
@@ -135,9 +149,55 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     effect(() => {
       const event = this.song();
       if (event?.pubkey) {
-        this.data.getProfile(event.pubkey).then(profile => {
-          this.authorProfile.set(profile);
+        untracked(() => {
+          this.data.getProfile(event.pubkey).then(profile => {
+            this.authorProfile.set(profile);
+          });
         });
+      }
+    });
+
+    // Check if user has already liked this track
+    effect(() => {
+      const ev = this.song();
+      const userPubkey = this.accountState.pubkey();
+
+      if (!ev || !userPubkey || this.likeChecked) return;
+      this.likeChecked = true;
+
+      untracked(() => {
+        this.checkExistingLike(ev, userPubkey);
+      });
+    });
+  }
+
+  private checkExistingLike(ev: Event, userPubkey: string): void {
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    if (relayUrls.length === 0) return;
+
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const aTagValue = `${ev.kind}:${ev.pubkey}:${dTag}`;
+
+    const filter: Filter = {
+      kinds: [kinds.Reaction],
+      authors: [userPubkey],
+      '#a': [aTagValue],
+      limit: 1,
+    };
+
+    let found = false;
+    const timeout = setTimeout(() => {
+      if (!found) {
+        this.likeSubscription?.close();
+      }
+    }, 3000);
+
+    this.likeSubscription = this.pool.subscribe(relayUrls, filter, (reaction: Event) => {
+      if (reaction.content === '+') {
+        found = true;
+        this.isLiked.set(true);
+        clearTimeout(timeout);
+        this.likeSubscription?.close();
       }
     });
   }
@@ -156,6 +216,9 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   ngOnDestroy(): void {
     if (this.subscription) {
       this.subscription.close();
+    }
+    if (this.likeSubscription) {
+      this.likeSubscription.close();
     }
   }
 
@@ -225,5 +288,47 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
   goBack(): void {
     this.router.navigate(['/music']);
+  }
+
+  likeTrack(): void {
+    if (this.isLiked() || this.isLiking()) return;
+
+    const ev = this.song();
+    if (!ev) return;
+
+    this.isLiking.set(true);
+    this.reactionService.addLike(ev).then(success => {
+      this.isLiking.set(false);
+      if (success) {
+        this.isLiked.set(true);
+        this.snackBar.open('Liked!', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  zapArtist(): void {
+    const ev = this.song();
+    if (!ev) return;
+
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const profile = this.authorProfile();
+
+    const data: ZapDialogData = {
+      recipientPubkey: ev.pubkey,
+      recipientName: this.artistName(),
+      recipientMetadata: profile?.data,
+      eventId: ev.id,
+      eventKind: ev.kind,
+      eventAddress: `${ev.kind}:${ev.pubkey}:${dTag}`,
+      event: ev,
+    };
+
+    this.dialog.open(ZapDialogComponent, {
+      data,
+      width: '400px',
+      maxWidth: '95vw',
+    });
   }
 }
