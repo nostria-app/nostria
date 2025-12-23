@@ -1,8 +1,10 @@
-import { Component, inject, signal, computed, OnDestroy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
+import { Router } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog } from '@angular/material/dialog';
 import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
@@ -10,11 +12,13 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { ReportingService } from '../../services/reporting.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
-import { LayoutService } from '../../services/layout.service';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
+import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
+import { CreatePlaylistDialogComponent, CreatePlaylistDialogData } from '../playlists/create-playlist-dialog/create-playlist-dialog.component';
 
 const MUSIC_KIND = 36787;
-const PAGE_SIZE = 30;
+const PLAYLIST_KIND = 34139;
+const SECTION_LIMIT = 12;
 
 @Component({
   selector: 'app-music',
@@ -22,8 +26,9 @@ const PAGE_SIZE = 30;
     MatProgressSpinnerModule,
     MatButtonModule,
     MatIconModule,
-    MatButtonToggleModule,
+    MatMenuModule,
     MusicEventComponent,
+    MusicPlaylistCardComponent,
   ],
   templateUrl: './music.component.html',
   styleUrls: ['./music.component.scss'],
@@ -35,136 +40,107 @@ export class MusicComponent implements OnDestroy {
   private reporting = inject(ReportingService);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
-  private layout = inject(LayoutService);
+  private router = inject(Router);
+  private dialog = inject(MatDialog);
 
   allTracks = signal<Event[]>([]);
+  allPlaylists = signal<Event[]>([]);
   loading = signal(true);
-  loadingMore = signal(false);
-  feedSource = signal<'following' | 'public'>('following');
 
-  // Pagination state
-  followingDisplayCount = signal(PAGE_SIZE);
-  publicDisplayCount = signal(PAGE_SIZE);
-
-  private subscription: { close: () => void } | null = null;
-  private eventMap = new Map<string, Event>();
-  private wasScrolledToBottom = false;
+  private trackSubscription: { close: () => void } | null = null;
+  private playlistSubscription: { close: () => void } | null = null;
+  private trackMap = new Map<string, Event>();
+  private playlistMap = new Map<string, Event>();
 
   // Following pubkeys for filtering
   private followingPubkeys = computed(() => {
     return this.accountState.followingList() || [];
   });
 
-  // All filtered tracks sorted by date
-  private allFollowingTracks = computed(() => {
+  // Current user pubkey
+  private currentPubkey = computed(() => {
+    return this.accountState.pubkey();
+  });
+
+  isAuthenticated = computed(() => this.app.authenticated());
+
+  // === YOUR SECTION ===
+  // User's own playlists
+  myPlaylists = computed(() => {
+    const pubkey = this.currentPubkey();
+    if (!pubkey) return [];
+    return this.allPlaylists()
+      .filter(p => p.pubkey === pubkey)
+      .sort((a, b) => b.created_at - a.created_at);
+  });
+
+  myPlaylistsPreview = computed(() => this.myPlaylists().slice(0, SECTION_LIMIT));
+  hasMoreMyPlaylists = computed(() => this.myPlaylists().length > SECTION_LIMIT);
+
+  // === PLAYLISTS (FOLLOWING) ===
+  followingPlaylists = computed(() => {
+    const following = this.followingPubkeys();
+    const myPubkey = this.currentPubkey();
+    if (following.length === 0) return [];
+    return this.allPlaylists()
+      .filter(p => following.includes(p.pubkey) && p.pubkey !== myPubkey)
+      .sort((a, b) => b.created_at - a.created_at);
+  });
+
+  followingPlaylistsPreview = computed(() => this.followingPlaylists().slice(0, SECTION_LIMIT));
+  hasMoreFollowingPlaylists = computed(() => this.followingPlaylists().length > SECTION_LIMIT);
+
+  // === SONGS (FOLLOWING) ===
+  followingTracks = computed(() => {
     const following = this.followingPubkeys();
     if (following.length === 0) return [];
-
     return this.allTracks()
       .filter(track => following.includes(track.pubkey))
       .sort((a, b) => b.created_at - a.created_at);
   });
 
-  private allPublicTracks = computed(() => {
-    return this.allTracks().sort((a, b) => b.created_at - a.created_at);
+  followingTracksPreview = computed(() => this.followingTracks().slice(0, SECTION_LIMIT));
+  hasMoreFollowingTracks = computed(() => this.followingTracks().length > SECTION_LIMIT);
+
+  // === PLAYLISTS (PUBLIC) ===
+  publicPlaylists = computed(() => {
+    const following = this.followingPubkeys();
+    const myPubkey = this.currentPubkey();
+    return this.allPlaylists()
+      .filter(p => !following.includes(p.pubkey) && p.pubkey !== myPubkey)
+      .sort((a, b) => b.created_at - a.created_at);
   });
 
-  // Paginated tracks for display
-  followingTracks = computed(() => {
-    return this.allFollowingTracks().slice(0, this.followingDisplayCount());
-  });
+  publicPlaylistsPreview = computed(() => this.publicPlaylists().slice(0, SECTION_LIMIT));
+  hasMorePublicPlaylists = computed(() => this.publicPlaylists().length > SECTION_LIMIT);
 
+  // === SONGS (PUBLIC) ===
   publicTracks = computed(() => {
-    return this.allPublicTracks().slice(0, this.publicDisplayCount());
+    const following = this.followingPubkeys();
+    return this.allTracks()
+      .filter(track => !following.includes(track.pubkey))
+      .sort((a, b) => b.created_at - a.created_at);
   });
 
-  currentTracks = computed(() => {
-    const source = this.feedSource();
-    if (source === 'following') return this.followingTracks();
-    return this.publicTracks();
-  });
+  publicTracksPreview = computed(() => this.publicTracks().slice(0, SECTION_LIMIT));
+  hasMorePublicTracks = computed(() => this.publicTracks().length > SECTION_LIMIT);
 
-  // Check if there are more tracks to load
-  hasMoreFollowing = computed(() => {
-    return this.allFollowingTracks().length > this.followingDisplayCount();
-  });
-
-  hasMorePublic = computed(() => {
-    return this.allPublicTracks().length > this.publicDisplayCount();
-  });
-
-  hasMore = computed(() => {
-    const source = this.feedSource();
-    if (source === 'following') return this.hasMoreFollowing();
-    return this.hasMorePublic();
-  });
-
-  // Total counts
-  followingCount = computed(() => this.allFollowingTracks().length);
-  publicCount = computed(() => this.allPublicTracks().length);
-
-  hasTracks = computed(() => {
-    return this.allTracks().length > 0;
-  });
-
-  isAuthenticated = computed(() => this.app.authenticated());
+  // Counts for display
+  followingPlaylistsCount = computed(() => this.followingPlaylists().length);
+  followingTracksCount = computed(() => this.followingTracks().length);
+  publicPlaylistsCount = computed(() => this.publicPlaylists().length);
+  publicTracksCount = computed(() => this.publicTracks().length);
 
   constructor() {
-    this.startSubscription();
-
-    // Effect to handle scroll events from layout service when user scrolls to bottom
-    effect(() => {
-      const isAtBottom = this.layout.scrolledToBottom();
-      const isReady = this.layout.scrollMonitoringReady();
-
-      // Detect transition from not-at-bottom to at-bottom
-      const justScrolledToBottom = isReady && isAtBottom && !this.wasScrolledToBottom;
-
-      // Update the previous state
-      this.wasScrolledToBottom = isAtBottom;
-
-      // Only proceed if we just scrolled to bottom
-      if (!justScrolledToBottom) {
-        return;
-      }
-
-      // Check other conditions
-      if (this.loadingMore() || !this.hasMore()) {
-        return;
-      }
-
-      this.loadMore();
-    });
+    this.startSubscriptions();
   }
 
   ngOnDestroy(): void {
-    if (this.subscription) {
-      this.subscription.close();
-    }
+    this.trackSubscription?.close();
+    this.playlistSubscription?.close();
   }
 
-  loadMore(): void {
-    if (this.loadingMore() || !this.hasMore()) return;
-
-    this.loadingMore.set(true);
-
-    // Simulate a small delay for UX
-    setTimeout(() => {
-      const source = this.feedSource();
-      if (source === 'following') {
-        this.followingDisplayCount.update(count => count + PAGE_SIZE);
-      } else {
-        this.publicDisplayCount.update(count => count + PAGE_SIZE);
-      }
-      this.loadingMore.set(false);
-    }, 100);
-  }
-
-  onSourceChange(source: 'following' | 'public'): void {
-    this.feedSource.set(source);
-  }
-
-  private startSubscription(): void {
+  private startSubscriptions(): void {
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
     if (relayUrls.length === 0) {
@@ -173,69 +149,134 @@ export class MusicComponent implements OnDestroy {
       return;
     }
 
-    const filter: Filter = {
+    let tracksLoaded = false;
+    let playlistsLoaded = false;
+
+    const checkLoaded = () => {
+      if (tracksLoaded && playlistsLoaded && this.loading()) {
+        this.loading.set(false);
+      }
+    };
+
+    // Set timeouts
+    const trackTimeout = setTimeout(() => {
+      tracksLoaded = true;
+      checkLoaded();
+    }, 5000);
+
+    const playlistTimeout = setTimeout(() => {
+      playlistsLoaded = true;
+      checkLoaded();
+    }, 5000);
+
+    // Subscribe to tracks
+    const trackFilter: Filter = {
       kinds: [MUSIC_KIND],
       limit: 500,
     };
 
-    // Set a timeout to stop loading even if no events arrive
-    const loadingTimeout = setTimeout(() => {
-      if (this.loading()) {
-        console.log('[Music] No events received within timeout, stopping loading state');
-        this.loading.set(false);
-      }
-    }, 5000);
-
-    this.subscription = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-      // Use d-tag + pubkey as unique identifier for replaceable events
+    this.trackSubscription = this.pool.subscribe(relayUrls, trackFilter, (event: Event) => {
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
       const uniqueId = `${event.pubkey}:${dTag}`;
 
-      // Check if we already have this event and if the new one is newer
-      const existing = this.eventMap.get(uniqueId);
-      if (existing && existing.created_at >= event.created_at) {
-        return;
+      const existing = this.trackMap.get(uniqueId);
+      if (existing && existing.created_at >= event.created_at) return;
+      if (this.reporting.isUserBlocked(event.pubkey)) return;
+      if (this.reporting.isContentBlocked(event)) return;
+
+      this.trackMap.set(uniqueId, event);
+      this.allTracks.set(Array.from(this.trackMap.values()));
+
+      if (!tracksLoaded) {
+        clearTimeout(trackTimeout);
+        tracksLoaded = true;
+        checkLoaded();
       }
+    });
 
-      // Skip tracks from muted/blocked users
-      if (this.reporting.isUserBlocked(event.pubkey)) {
-        return;
-      }
+    // Subscribe to playlists
+    const playlistFilter: Filter = {
+      kinds: [PLAYLIST_KIND],
+      limit: 200,
+    };
 
-      // Skip tracks that are blocked by content
-      if (this.reporting.isContentBlocked(event)) {
-        return;
-      }
+    this.playlistSubscription = this.pool.subscribe(relayUrls, playlistFilter, (event: Event) => {
+      const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+      const uniqueId = `${event.pubkey}:${dTag}`;
 
-      // Store the latest version
-      this.eventMap.set(uniqueId, event);
+      const existing = this.playlistMap.get(uniqueId);
+      if (existing && existing.created_at >= event.created_at) return;
+      if (this.reporting.isUserBlocked(event.pubkey)) return;
+      if (this.reporting.isContentBlocked(event)) return;
 
-      // Update tracks list
-      this.updateTracksList();
+      this.playlistMap.set(uniqueId, event);
+      this.allPlaylists.set(Array.from(this.playlistMap.values()));
 
-      // Mark as loaded once we start receiving events
-      if (this.loading()) {
-        clearTimeout(loadingTimeout);
-        this.loading.set(false);
+      if (!playlistsLoaded) {
+        clearTimeout(playlistTimeout);
+        playlistsLoaded = true;
+        checkLoaded();
       }
     });
   }
 
-  private updateTracksList(): void {
-    const tracks = Array.from(this.eventMap.values());
-    this.allTracks.set(tracks);
+  refresh(): void {
+    this.trackMap.clear();
+    this.playlistMap.clear();
+    this.allTracks.set([]);
+    this.allPlaylists.set([]);
+    this.loading.set(true);
+
+    this.trackSubscription?.close();
+    this.playlistSubscription?.close();
+
+    this.startSubscriptions();
   }
 
-  refresh(): void {
-    this.eventMap.clear();
-    this.loading.set(true);
-    this.followingDisplayCount.set(PAGE_SIZE);
-    this.publicDisplayCount.set(PAGE_SIZE);
+  // Navigation methods
+  goToLikedSongs(): void {
+    this.router.navigate(['/music/liked']);
+  }
 
-    if (this.subscription) {
-      this.subscription.close();
-    }
+  goToAllFollowingPlaylists(): void {
+    this.router.navigate(['/music/playlists'], { queryParams: { source: 'following' } });
+  }
 
-    this.startSubscription();
+  goToAllFollowingTracks(): void {
+    this.router.navigate(['/music/tracks'], { queryParams: { source: 'following' } });
+  }
+
+  goToAllPublicPlaylists(): void {
+    this.router.navigate(['/music/playlists'], { queryParams: { source: 'public' } });
+  }
+
+  goToAllPublicTracks(): void {
+    this.router.navigate(['/music/tracks'], { queryParams: { source: 'public' } });
+  }
+
+  // Menu actions
+  openUploadTrack(): void {
+    // TODO: Implement upload track dialog
+    console.log('Upload track - coming soon');
+  }
+
+  openCreatePlaylist(): void {
+    const dialogRef = this.dialog.open(CreatePlaylistDialogComponent, {
+      width: '500px',
+      maxWidth: '95vw',
+      data: {} as CreatePlaylistDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe(result => {
+      if (result) {
+        // Navigate to playlist editor or handle creation
+        console.log('Create playlist result:', result);
+      }
+    });
+  }
+
+  openImportFromRss(): void {
+    // TODO: Implement RSS import dialog
+    console.log('Import from RSS - coming soon');
   }
 }

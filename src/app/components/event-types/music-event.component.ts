@@ -13,18 +13,16 @@ import { ReactionService } from '../../services/reaction.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 
-const MUSIC_KIND = 36787;
-
 @Component({
   selector: 'app-music-event',
   imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule],
   template: `
     <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
       [attr.aria-label]="'View ' + title()">
-      <div class="music-cover">
-        @if (image()) {
+      <div class="music-cover" [style.background]="gradient() || ''">
+        @if (image() && !gradient()) {
           <img [src]="image()" [alt]="title()" class="cover-image" loading="lazy" />
-        } @else {
+        } @else if (!gradient()) {
           <div class="cover-placeholder">
             <mat-icon>music_note</mat-icon>
           </div>
@@ -32,6 +30,9 @@ const MUSIC_KIND = 36787;
         <button class="play-overlay" (click)="playTrack($any($event))" aria-label="Play track">
           <mat-icon class="play-icon">play_arrow</mat-icon>
         </button>
+        @if (isAiGenerated()) {
+          <span class="ai-badge">AI</span>
+        }
       </div>
       <div class="music-info">
         <span class="music-title">{{ title() || 'Untitled Track' }}</span>
@@ -39,8 +40,9 @@ const MUSIC_KIND = 36787;
           tabindex="0" role="button">{{ artistName() }}</span>
       </div>
       <div class="music-actions">
-        <button mat-icon-button (click)="likeTrack($any($event))" [attr.aria-label]="'Like track'">
-          <mat-icon>favorite_border</mat-icon>
+        <button mat-icon-button (click)="likeTrack($any($event))" [attr.aria-label]="'Like track'"
+          [class.liked]="isLiked()" [disabled]="isLiked()">
+          <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
         </button>
         <button mat-icon-button (click)="zapArtist($any($event))" aria-label="Zap artist">
           <mat-icon>bolt</mat-icon>
@@ -146,6 +148,19 @@ const MUSIC_KIND = 36787;
           color: white;
         }
       }
+      
+      .ai-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-size: 0.625rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
     }
     
     .music-info {
@@ -190,6 +205,12 @@ const MUSIC_KIND = 36787;
           font-size: 1.25rem;
           width: 1.25rem;
           height: 1.25rem;
+        }
+        
+        &.liked {
+          mat-icon {
+            color: var(--mat-sys-error);
+          }
         }
       }
     }
@@ -264,6 +285,29 @@ export class MusicEventComponent {
     const imageTag = event.tags.find(t => t[0] === 'image');
     return imageTag?.[1] || null;
   });
+
+  // Check if AI generated
+  isAiGenerated = computed(() => {
+    const event = this.event();
+    const aiTag = event.tags.find(t => t[0] === 'ai-generated');
+    const hasAiTopic = event.tags.some(t => t[0] === 't' && t[1]?.toLowerCase() === 'ai-generated');
+    return aiTag?.[1] === 'true' || hasAiTopic;
+  });
+
+  // Get gradient background (alternative to image)
+  gradient = computed(() => {
+    const event = this.event();
+    const gradientTag = event.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
+    if (gradientTag?.[2]) {
+      const colors = gradientTag[2];
+      return `linear-gradient(135deg, ${colors})`;
+    }
+    return null;
+  });
+
+  // Track liked state - set after liking
+  private _isLiked = signal(false);
+  isLiked = this._isLiked.asReadonly();
 
   // Get artist name from profile or fallback
   artistName = computed(() => {
@@ -353,9 +397,12 @@ export class MusicEventComponent {
   // Like the track
   likeTrack(event: MouseEvent | KeyboardEvent): void {
     event.stopPropagation();
+    if (this._isLiked()) return;
+    
     const ev = this.event();
     this.reactionService.addLike(ev).then(success => {
       if (success) {
+        this._isLiked.set(true);
         this.snackBar.open('Liked!', 'Close', { duration: 2000 });
       } else {
         this.snackBar.open('Failed to like', 'Close', { duration: 3000 });

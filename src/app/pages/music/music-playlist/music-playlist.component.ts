@@ -228,7 +228,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     };
 
     let receivedAny = false;
-    
+
     // Set a shorter timeout since we're using a single subscription
     const timeout = setTimeout(() => {
       if (this.loadingTracks()) {
@@ -259,7 +259,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     });
 
     this.subscriptions.push(sub);
-    
+
     // Also set a shorter timeout for the "found some" case
     setTimeout(() => {
       if (this.loadingTracks() && receivedAny) {

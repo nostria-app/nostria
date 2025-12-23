@@ -1,4 +1,4 @@
-import { Component, computed, input, inject, signal, effect } from '@angular/core';
+import { Component, computed, input, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
@@ -10,10 +10,7 @@ import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { ReactionService } from '../../services/reaction.service';
-import { NostrRecord } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
-
-const MUSIC_PLAYLIST_KIND = 34139;
 
 @Component({
   selector: 'app-music-playlist-card',
@@ -21,10 +18,10 @@ const MUSIC_PLAYLIST_KIND = 34139;
   template: `
     <mat-card class="playlist-card" (click)="openPlaylist()" (keydown.enter)="openPlaylist()" 
       tabindex="0" role="button" [attr.aria-label]="'Open playlist ' + title()">
-      <div class="playlist-cover">
-        @if (coverImage()) {
+      <div class="playlist-cover" [style.background]="gradient() || ''">
+        @if (coverImage() && !gradient()) {
           <img [src]="coverImage()" [alt]="title()" class="cover-image" loading="lazy" />
-        } @else {
+        } @else if (!gradient()) {
           <div class="cover-placeholder">
             <mat-icon>queue_music</mat-icon>
           </div>
@@ -47,8 +44,9 @@ const MUSIC_PLAYLIST_KIND = 34139;
           }
         </div>
         <div class="playlist-actions">
-          <button mat-icon-button (click)="likePlaylist($any($event))" aria-label="Like playlist">
-            <mat-icon>favorite_border</mat-icon>
+          <button mat-icon-button (click)="likePlaylist($any($event))" aria-label="Like playlist"
+            [class.liked]="isLiked()" [disabled]="isLiked()">
+            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
           </button>
           <button mat-icon-button (click)="zapCreator($any($event))" aria-label="Zap creator">
             <mat-icon>bolt</mat-icon>
@@ -118,6 +116,10 @@ const MUSIC_PLAYLIST_KIND = 34139;
       }
     }
 
+    mat-card-content {
+      padding-top: 0.75rem;
+    }
+
     .playlist-info {
       display: flex;
       flex-direction: column;
@@ -175,6 +177,12 @@ const MUSIC_PLAYLIST_KIND = 34139;
           width: 1.25rem;
           height: 1.25rem;
         }
+        
+        &.liked {
+          mat-icon {
+            color: var(--mat-sys-error);
+          }
+        }
       }
     }
   `],
@@ -223,6 +231,21 @@ export class MusicPlaylistCardComponent {
     return imageTag?.[1] || null;
   });
 
+  // Get gradient background (alternative to image)
+  gradient = computed(() => {
+    const event = this.event();
+    const gradientTag = event.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
+    if (gradientTag?.[2]) {
+      const colors = gradientTag[2];
+      return `linear-gradient(135deg, ${colors})`;
+    }
+    return null;
+  });
+
+  // Track liked state - set after liking
+  private _isLiked = signal(false);
+  isLiked = this._isLiked.asReadonly();
+
   // Get naddr for addressable event
   naddr = computed(() => {
     const ev = this.event();
@@ -249,9 +272,12 @@ export class MusicPlaylistCardComponent {
   // Like the playlist
   likePlaylist(event: MouseEvent | KeyboardEvent): void {
     event.stopPropagation();
+    if (this._isLiked()) return;
+    
     const ev = this.event();
     this.reactionService.addLike(ev).then(success => {
       if (success) {
+        this._isLiked.set(true);
         this.snackBar.open('Liked!', 'Close', { duration: 2000 });
       } else {
         this.snackBar.open('Failed to like', 'Close', { duration: 3000 });

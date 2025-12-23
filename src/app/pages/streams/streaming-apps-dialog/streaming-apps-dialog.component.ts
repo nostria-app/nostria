@@ -162,8 +162,8 @@ export class StreamingAppsDialogComponent {
           icon: 'android'
         },
         {
-          label: 'TestFlight',
-          url: 'https://testflight.apple.com/join/Cg4Ng6dq',
+          label: 'App Store',
+          url: 'https://apps.apple.com/us/app/shosho-live-stream-on-nostr/id6747323179',
           icon: 'apple'
         },
         {
