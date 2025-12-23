@@ -298,6 +298,20 @@ export const routes: Routes = [
     resolve: { streamData: streamResolver },
   },
   {
+    path: 'music',
+    loadComponent: () =>
+      import('./pages/music/music.component').then(m => m.MusicComponent),
+    data: { isRoot: true },
+    title: 'Music',
+  },
+  {
+    path: 'articles',
+    loadComponent: () =>
+      import('./pages/articles/articles.component').then(m => m.ArticlesDiscoverComponent),
+    data: { isRoot: true },
+    title: 'Articles',
+  },
+  {
     path: 'streams',
     loadComponent: () =>
       import('./pages/streams/streams.component').then(m => m.StreamsComponent),
