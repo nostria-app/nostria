@@ -1,0 +1,75 @@
+<div class="articles-container">
+  <div class="articles-header">
+    <h1>
+      <mat-icon>article</mat-icon>
+      <span i18n="@@articles.title">Articles</span>
+    </h1>
+    <div class="header-actions">
+      <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@articles.refresh.aria"
+        aria-label="Refresh articles">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  @if (isAuthenticated()) {
+  <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">people</mat-icon>
+        <span i18n="@@articles.tabs.following">Following</span>
+        @if (followingArticles().length > 0) {
+        <span class="tab-count">{{ followingArticles().length }}</span>
+        }
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">public</mat-icon>
+        <span i18n="@@articles.tabs.public">Public</span>
+        @if (publicArticles().length > 0) {
+        <span class="tab-count">{{ publicArticles().length }}</span>
+        }
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
+  }
+
+  <div class="articles-content">
+    @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p i18n="@@articles.loading">Loading articles...</p>
+    </div>
+    } @else if (currentArticles().length === 0) {
+    <div class="empty-state">
+      <mat-icon>menu_book</mat-icon>
+      <h2 i18n="@@articles.empty.title">No articles found</h2>
+      <p>
+        @if (selectedTabIndex() === 0 && isAuthenticated()) {
+        <span i18n="@@articles.empty.following">People you follow haven't published any articles yet. Check the Public
+          tab to discover articles from the wider Nostr network.</span>
+        } @else {
+        <span i18n="@@articles.empty.public">No articles have been published yet. Articles will appear here when authors
+          publish them.</span>
+        }
+      </p>
+      <button mat-flat-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        <span i18n="@@articles.refresh">Refresh</span>
+      </button>
+    </div>
+    } @else {
+    <div class="articles-grid">
+      @for (article of currentArticles(); track article.id) {
+      <mat-card class="article-card">
+        <mat-card-content>
+          <app-article-event [event]="article"></app-article-event>
+        </mat-card-content>
+      </mat-card>
+      }
+    </div>
+    }
+  </div>
+</div>

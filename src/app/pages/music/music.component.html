@@ -1,0 +1,75 @@
+<div class="music-container">
+  <div class="music-header">
+    <h1>
+      <mat-icon>music_note</mat-icon>
+      <span i18n="@@music.title">Music</span>
+    </h1>
+    <div class="header-actions">
+      <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@music.refresh.aria"
+        aria-label="Refresh music">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  @if (isAuthenticated()) {
+  <mat-tab-group (selectedIndexChange)="onTabChange($event)" [selectedIndex]="selectedTabIndex()">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">people</mat-icon>
+        <span i18n="@@music.tabs.following">Following</span>
+        @if (followingTracks().length > 0) {
+        <span class="tab-count">{{ followingTracks().length }}</span>
+        }
+      </ng-template>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">public</mat-icon>
+        <span i18n="@@music.tabs.public">Public</span>
+        @if (publicTracks().length > 0) {
+        <span class="tab-count">{{ publicTracks().length }}</span>
+        }
+      </ng-template>
+    </mat-tab>
+  </mat-tab-group>
+  }
+
+  <div class="music-content">
+    @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p i18n="@@music.loading">Loading music...</p>
+    </div>
+    } @else if (currentTracks().length === 0) {
+    <div class="empty-state">
+      <mat-icon>library_music</mat-icon>
+      <h2 i18n="@@music.empty.title">No music found</h2>
+      <p>
+        @if (selectedTabIndex() === 0 && isAuthenticated()) {
+        <span i18n="@@music.empty.following">People you follow haven't shared any music yet. Check the Public tab to
+          discover music from the wider Nostr network.</span>
+        } @else {
+        <span i18n="@@music.empty.public">No music tracks have been shared yet. Music tracks will appear here when
+          creators publish them.</span>
+        }
+      </p>
+      <button mat-flat-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        <span i18n="@@music.refresh">Refresh</span>
+      </button>
+    </div>
+    } @else {
+    <div class="music-grid">
+      @for (track of currentTracks(); track track.id) {
+      <mat-card class="music-card">
+        <mat-card-content>
+          <app-music-event [event]="track"></app-music-event>
+        </mat-card-content>
+      </mat-card>
+      }
+    </div>
+    }
+  </div>
+</div>
