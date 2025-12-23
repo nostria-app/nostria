@@ -281,6 +281,10 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     setTimeout(() => this.observeSentinel(), 100);
   }
 
+  private tryObserveSentinel(): void {
+    setTimeout(() => this.observeSentinel(), 100);
+  }
+
   private observeSentinel(): void {
     const sentinel = this.loadMoreSentinel();
     if (sentinel && this.intersectionObserver) {
@@ -344,6 +348,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   private fetchLikedTracks(relayUrls: string[]): void {
     if (this.likedEventIds.size === 0) {
       this.loading.set(false);
+      this.tryObserveSentinel();
       return;
     }
 
@@ -363,6 +368,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     const trackTimeout = setTimeout(() => {
       tracksLoaded = true;
       this.loading.set(false);
+      this.tryObserveSentinel();
     }, 5000);
 
     // Subscribe to tracks by coordinate (for addressable events)
@@ -404,6 +410,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
                 clearTimeout(trackTimeout);
                 tracksLoaded = true;
                 this.loading.set(false);
+                this.tryObserveSentinel();
               }
             });
           });
@@ -437,6 +444,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
           clearTimeout(trackTimeout);
           tracksLoaded = true;
           this.loading.set(false);
+          this.tryObserveSentinel();
         }
       });
     }
@@ -444,6 +452,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
     // Fallback if no tracks found
     if (aTagCoordinates.length === 0 && eventIds.length === 0) {
       this.loading.set(false);
+      this.tryObserveSentinel();
     }
   }
 

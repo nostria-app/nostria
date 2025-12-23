@@ -313,7 +313,12 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
       { rootMargin: '200px' }
     );
 
-    // Watch for sentinel element changes
+    // Initial observation attempt - also re-observed when loading completes
+    setTimeout(() => this.observeSentinel(), 100);
+  }
+
+  private tryObserveSentinel(): void {
+    // Re-attempt observation when data loads - sentinel may not exist initially
     setTimeout(() => this.observeSentinel(), 100);
   }
 
@@ -337,6 +342,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
     const timeout = setTimeout(() => {
       loaded = true;
       this.loading.set(false);
+      this.tryObserveSentinel();
     }, 5000);
 
     const filter: Filter = {
@@ -362,6 +368,7 @@ export class MusicTracksComponent implements OnInit, OnDestroy, AfterViewInit {
         clearTimeout(timeout);
         loaded = true;
         this.loading.set(false);
+        this.tryObserveSentinel();
       }
     });
   }

@@ -494,11 +494,12 @@ export class MusicEventComponent implements OnDestroy {
     });
   }
 
-  // Copy event link (naddr)
+  // Copy event link (music song URL)
   copyEventLink(): void {
-    const addr = this.naddr();
-    if (addr) {
-      const link = `https://nostria.app/a/${addr}`;
+    const npub = this.artistNpub();
+    const id = this.identifier();
+    if (npub && id) {
+      const link = `https://nostria.app/music/song/${npub}/${id}`;
       this.clipboard.copy(link);
       this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
     } else {
