@@ -166,11 +166,9 @@ export class ImportRssDialogComponent {
 
       const channelTitle = channel.querySelector('title')?.textContent || '';
       const channelAuthor = channel.querySelector('author')?.textContent ||
-        channel.querySelector('itunes\\:author')?.textContent ||
-        channel.querySelector('[nodeName="itunes:author"]')?.textContent || '';
+        this.getItunesText(channel, 'author') || '';
       const channelImage = channel.querySelector('image > url')?.textContent ||
-        channel.querySelector('itunes\\:image')?.getAttribute('href') ||
-        channel.querySelector('[nodeName="itunes:image"]')?.getAttribute('href') || '';
+        this.getItunesImageHref(channel) || '';
 
       this.albumInfo.set({
         title: channelTitle,
@@ -187,19 +185,15 @@ export class ImportRssDialogComponent {
       items.forEach((item, index) => {
         const title = item.querySelector('title')?.textContent || `Track ${index + 1}`;
         const author = item.querySelector('author')?.textContent ||
-          item.querySelector('itunes\\:author')?.textContent ||
-          item.querySelector('[nodeName="itunes:author"]')?.textContent ||
+          this.getItunesText(item, 'author') ||
           channelAuthor;
         const enclosure = item.querySelector('enclosure');
         const audioUrl = enclosure?.getAttribute('url') || '';
-        const itemImage = item.querySelector('itunes\\:image')?.getAttribute('href') ||
-          item.querySelector('[nodeName="itunes:image"]')?.getAttribute('href') || '';
-        const duration = item.querySelector('itunes\\:duration')?.textContent ||
-          item.querySelector('[nodeName="itunes:duration"]')?.textContent || '';
+        const itemImage = this.getItunesImageHref(item) || '';
+        const duration = this.getItunesText(item, 'duration') || '';
         const pubDate = item.querySelector('pubDate')?.textContent || '';
         const description = item.querySelector('description')?.textContent ||
-          item.querySelector('itunes\\:summary')?.textContent ||
-          item.querySelector('[nodeName="itunes:summary"]')?.textContent || '';
+          this.getItunesText(item, 'summary') || '';
 
         // Only include items with audio URLs
         if (audioUrl) {
@@ -235,6 +229,56 @@ export class ImportRssDialogComponent {
     } finally {
       this.isFetching.set(false);
     }
+  }
+
+  /**
+   * Gets the href attribute from an itunes:image element.
+   * Handles XML namespace parsing across different browsers.
+   */
+  private getItunesImageHref(parent: Element): string {
+    // Try multiple methods to find the itunes:image element
+    const ITUNES_NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
+
+    // Method 1: getElementsByTagNameNS (most reliable for namespaced elements)
+    const nsElements = parent.getElementsByTagNameNS(ITUNES_NS, 'image');
+    if (nsElements.length > 0) {
+      return nsElements[0].getAttribute('href') || '';
+    }
+
+    // Method 2: Look for elements with itunes:image local name
+    for (const child of Array.from(parent.children)) {
+      const localName = child.localName || child.nodeName;
+      if (localName === 'image' && (child.namespaceURI === ITUNES_NS || child.nodeName.includes('itunes'))) {
+        return child.getAttribute('href') || '';
+      }
+      if (child.nodeName === 'itunes:image') {
+        return child.getAttribute('href') || '';
+      }
+    }
+
+    return '';
+  }
+
+  /**
+   * Gets text content from an iTunes namespace element.
+   */
+  private getItunesText(parent: Element, tagName: string): string {
+    const ITUNES_NS = 'http://www.itunes.com/dtds/podcast-1.0.dtd';
+
+    // Method 1: getElementsByTagNameNS
+    const nsElements = parent.getElementsByTagNameNS(ITUNES_NS, tagName);
+    if (nsElements.length > 0) {
+      return nsElements[0].textContent || '';
+    }
+
+    // Method 2: Look for elements with itunes: prefix
+    for (const child of Array.from(parent.children)) {
+      if (child.nodeName === `itunes:${tagName}`) {
+        return child.textContent || '';
+      }
+    }
+
+    return '';
   }
 
   private stripHtml(html: string): string {
