@@ -35,36 +35,29 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
         }
       </div>
       <div class="music-info">
-        <span class="music-title">{{ title() || 'Untitled Track' }}</span>
+        <div class="music-title-row">
+          <span class="music-title">{{ title() || 'Untitled Track' }}</span>
+          <button mat-icon-button class="menu-btn" [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+        </div>
         <span class="music-artist" (click)="openArtist($any($event))" (keydown.enter)="openArtist($any($event))" 
           tabindex="0" role="button">{{ artistName() }}</span>
       </div>
-      <div class="music-actions">
-        <button mat-icon-button (click)="likeTrack($any($event))" [attr.aria-label]="'Like track'"
-          [class.liked]="isLiked()" [disabled]="isLiked()">
-          <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+      <mat-menu #menu="matMenu">
+        <button mat-menu-item (click)="addToQueue()">
+          <mat-icon>queue_music</mat-icon>
+          <span>Add to Queue</span>
         </button>
-        <button mat-icon-button (click)="zapArtist($any($event))" aria-label="Zap artist">
-          <mat-icon>bolt</mat-icon>
+        <button mat-menu-item (click)="copyEventLink()">
+          <mat-icon>link</mat-icon>
+          <span>Copy Event Link</span>
         </button>
-        <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
-          <mat-icon>more_vert</mat-icon>
+        <button mat-menu-item (click)="copyEventData()">
+          <mat-icon>data_object</mat-icon>
+          <span>Copy Event Data</span>
         </button>
-        <mat-menu #menu="matMenu">
-          <button mat-menu-item (click)="addToQueue()">
-            <mat-icon>queue_music</mat-icon>
-            <span>Add to Queue</span>
-          </button>
-          <button mat-menu-item (click)="copyEventLink()">
-            <mat-icon>link</mat-icon>
-            <span>Copy Event Link</span>
-          </button>
-          <button mat-menu-item (click)="copyEventData()">
-            <mat-icon>data_object</mat-icon>
-            <span>Copy Event Data</span>
-          </button>
-        </mat-menu>
-      </div>
+      </mat-menu>
     </div>
   `,
   styles: [`
@@ -82,10 +75,6 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
         background-color: var(--mat-sys-surface-container-high);
         
         .play-overlay {
-          opacity: 1;
-        }
-        
-        .music-actions {
           opacity: 1;
         }
       }
@@ -166,17 +155,42 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
     .music-info {
       display: flex;
       flex-direction: column;
-      padding: 0.75rem;
-      padding-bottom: 0.25rem;
+      padding: 0.5rem 0.75rem;
+      gap: 0.125rem;
+    }
+
+    .music-title-row {
+      display: flex;
+      align-items: center;
       gap: 0.25rem;
     }
     
     .music-title {
+      flex: 1;
       font-size: 0.875rem;
       color: var(--mat-sys-on-surface);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
+    }
+
+    .menu-btn {
+      flex-shrink: 0;
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+      opacity: 0.6;
+      transition: opacity 0.2s ease;
+
+      mat-icon {
+        font-size: 1.125rem;
+        width: 1.125rem;
+        height: 1.125rem;
+      }
+
+      &:hover {
+        opacity: 1;
+      }
     }
     
     .music-artist {
@@ -190,28 +204,6 @@ import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.comp
       &:hover {
         text-decoration: underline;
         color: var(--mat-sys-primary);
-      }
-    }
-    
-    .music-actions {
-      display: flex;
-      justify-content: space-around;
-      padding: 0.25rem;
-      opacity: 0.7;
-      transition: opacity 0.2s ease;
-      
-      button {
-        mat-icon {
-          font-size: 1.25rem;
-          width: 1.25rem;
-          height: 1.25rem;
-        }
-        
-        &.liked {
-          mat-icon {
-            color: var(--mat-sys-error);
-          }
-        }
       }
     }
   `],
