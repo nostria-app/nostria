@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, HostListener } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, effect } from '@angular/core';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +11,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { ReportingService } from '../../services/reporting.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
+import { LayoutService } from '../../services/layout.service';
 import { ArticleEventComponent } from '../../components/event-types/article-event.component';
 
 const PAGE_SIZE = 30;
@@ -35,11 +36,12 @@ export class ArticlesDiscoverComponent implements OnDestroy {
   private reporting = inject(ReportingService);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
+  private layout = inject(LayoutService);
 
   allArticles = signal<Event[]>([]);
   loading = signal(true);
   loadingMore = signal(false);
-  feedSource = signal<'following' | 'public'>('public');
+  feedSource = signal<'following' | 'public'>('following');
 
   // Pagination state
   followingDisplayCount = signal(PAGE_SIZE);
@@ -47,6 +49,7 @@ export class ArticlesDiscoverComponent implements OnDestroy {
 
   private subscription: { close: () => void } | null = null;
   private eventMap = new Map<string, Event>();
+  private wasScrolledToBottom = false;
 
   // Following pubkeys for filtering
   private followingPubkeys = computed(() => {
@@ -109,24 +112,35 @@ export class ArticlesDiscoverComponent implements OnDestroy {
 
   constructor() {
     this.startSubscription();
+
+    // Effect to handle scroll events from layout service when user scrolls to bottom
+    effect(() => {
+      const isAtBottom = this.layout.scrolledToBottom();
+      const isReady = this.layout.scrollMonitoringReady();
+
+      // Detect transition from not-at-bottom to at-bottom
+      const justScrolledToBottom = isReady && isAtBottom && !this.wasScrolledToBottom;
+
+      // Update the previous state
+      this.wasScrolledToBottom = isAtBottom;
+
+      // Only proceed if we just scrolled to bottom
+      if (!justScrolledToBottom) {
+        return;
+      }
+
+      // Check other conditions
+      if (this.loadingMore() || !this.hasMore()) {
+        return;
+      }
+
+      this.loadMore();
+    });
   }
 
   ngOnDestroy(): void {
     if (this.subscription) {
       this.subscription.close();
-    }
-  }
-
-  @HostListener('window:scroll')
-  onScroll(): void {
-    if (this.loadingMore() || !this.hasMore()) return;
-
-    const scrollPosition = window.innerHeight + window.scrollY;
-    const documentHeight = document.documentElement.scrollHeight;
-    const threshold = 200;
-
-    if (scrollPosition >= documentHeight - threshold) {
-      this.loadMore();
     }
   }
 

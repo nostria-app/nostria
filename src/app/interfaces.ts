@@ -17,6 +17,9 @@ export interface MediaItem {
   isLiveStream?: boolean; // Flag for live streaming content
   participants?: { pubkey: string; role?: string }[]; // Live stream participants
   liveEventData?: Event; // Full Nostr event for live streams
+  // For linking to song/artist pages from media player
+  eventPubkey?: string; // npub of the event author
+  eventIdentifier?: string; // d-tag identifier for the event
 }
 
 // Podcast progress tracking interface
