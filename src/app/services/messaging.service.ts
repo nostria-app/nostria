@@ -259,6 +259,9 @@ export class MessagingService implements NostriaService {
 
       this.logger.info(`Found ${storedChats.length} stored chats`);
 
+      // Track the oldest message timestamp from stored messages
+      let oldestStoredTimestamp: number | null = null;
+
       // Build chat map from stored messages
       for (const chatSummary of storedChats) {
         const messages = await this.database.getMessagesForChat(myPubkey, chatSummary.chatId);
@@ -300,6 +303,11 @@ export class MessagingService implements NostriaService {
           if (!lastMessage || dm.created_at > lastMessage.created_at) {
             lastMessage = dm;
           }
+
+          // Track the oldest message timestamp across all chats
+          if (oldestStoredTimestamp === null || dm.created_at < oldestStoredTimestamp) {
+            oldestStoredTimestamp = dm.created_at;
+          }
         }
 
         // Create the chat object
@@ -318,6 +326,12 @@ export class MessagingService implements NostriaService {
           newMap.set(chatSummary.chatId, chat);
           return newMap;
         });
+      }
+
+      // Set the oldest chat timestamp from stored messages so loadMoreChats uses correct starting point
+      if (oldestStoredTimestamp !== null) {
+        this.oldestChatTimestamp.set(oldestStoredTimestamp);
+        this.logger.info(`Set oldest chat timestamp from storage: ${oldestStoredTimestamp} (${new Date(oldestStoredTimestamp * 1000).toISOString()})`);
       }
 
       this.logger.info(`Loaded ${storedChats.length} chats from storage`);
@@ -1165,7 +1179,8 @@ export class MessagingService implements NostriaService {
         return;
       }
 
-      this.logger.debug(`Loading more chats before timestamp: ${oldestTimestamp}`);
+      this.logger.debug(`Loading more chats before timestamp: ${oldestTimestamp} (${new Date(oldestTimestamp * 1000).toISOString()})`);
+
 
       const filterReceived: Filter = {
         kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
