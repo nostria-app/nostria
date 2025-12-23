@@ -476,10 +476,23 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       event: ev,
     };
 
-    this.dialog.open(ZapDialogComponent, {
+    const dialogRef = this.dialog.open(ZapDialogComponent, {
       data,
       width: '400px',
       maxWidth: '95vw',
+    });
+
+    // Reload zaps after dialog closes if a zap was sent
+    dialogRef.afterClosed().subscribe(result => {
+      if (result?.amount) {
+        // Small delay to allow relay to process the zap receipt
+        setTimeout(() => {
+          this.loadZaps(ev).then(({ total, topZappers }) => {
+            this.zapTotal.set(total);
+            this.topZappers.set(topZappers);
+          });
+        }, 2000);
+      }
     });
   }
 
