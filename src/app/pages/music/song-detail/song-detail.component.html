@@ -9,10 +9,10 @@
     </button>
     <mat-menu #menu="matMenu">
       @if (isAuthenticated()) {
-        <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
-          <mat-icon>playlist_add</mat-icon>
-          <span>Add to Playlist</span>
-        </button>
+      <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
+        <mat-icon>playlist_add</mat-icon>
+        <span>Add to Playlist</span>
+      </button>
       }
       <button mat-menu-item (click)="addToQueue()">
         <mat-icon>queue_music</mat-icon>
@@ -33,22 +33,22 @@
         <span>New Playlist</span>
       </button>
       @if (playlistsLoading()) {
-        <div class="playlist-loading">
-          <mat-spinner diameter="20"></mat-spinner>
-          <span>Loading playlists...</span>
-        </div>
+      <div class="playlist-loading">
+        <mat-spinner diameter="20"></mat-spinner>
+        <span>Loading playlists...</span>
+      </div>
       } @else {
-        @for (playlist of userPlaylists(); track playlist.id) {
-          <button mat-menu-item (click)="addToPlaylist(playlist.id)">
-            <mat-icon>queue_music</mat-icon>
-            <span>{{ playlist.title }}</span>
-          </button>
-        }
-        @if (userPlaylists().length === 0) {
-          <div class="no-playlists">
-            <span>No playlists yet</span>
-          </div>
-        }
+      @for (playlist of userPlaylists(); track playlist.id) {
+      <button mat-menu-item (click)="addToPlaylist(playlist.id)">
+        <mat-icon>queue_music</mat-icon>
+        <span>{{ playlist.title }}</span>
+      </button>
+      }
+      @if (userPlaylists().length === 0) {
+      <div class="no-playlists">
+        <span>No playlists yet</span>
+      </div>
+      }
       }
     </mat-menu>
   </div>
