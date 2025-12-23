@@ -87,6 +87,9 @@ export class SwipeGestureDirective implements OnInit, OnDestroy {
   private onTouchStart(event: TouchEvent): void {
     if (event.touches.length !== 1) return;
 
+    // Ignore if started on an interactive element
+    if (this.isInteractiveElement(event.target as HTMLElement)) return;
+
     const touch = event.touches[0];
     this.startSwipe(touch.clientX, touch.clientY);
   }
@@ -111,6 +114,9 @@ export class SwipeGestureDirective implements OnInit, OnDestroy {
 
   private onMouseDown(event: MouseEvent): void {
     if (event.button !== 0) return; // Only left click
+
+    // Ignore if started on an interactive element
+    if (this.isInteractiveElement(event.target as HTMLElement)) return;
 
     this.startSwipe(event.clientX, event.clientY);
   }
@@ -200,5 +206,28 @@ export class SwipeGestureDirective implements OnInit, OnDestroy {
     }
 
     this.lockedDirection = null;
+  }
+
+  /** Check if an element or its parent is an interactive element that should handle its own events */
+  private isInteractiveElement(element: HTMLElement | null): boolean {
+    while (element) {
+      const tagName = element.tagName.toLowerCase();
+      if (
+        tagName === 'button' ||
+        tagName === 'a' ||
+        tagName === 'input' ||
+        tagName === 'select' ||
+        tagName === 'textarea' ||
+        element.getAttribute('role') === 'button' ||
+        element.hasAttribute('mat-button') ||
+        element.hasAttribute('mat-icon-button') ||
+        element.hasAttribute('mat-fab') ||
+        element.classList.contains('pull-indicator')
+      ) {
+        return true;
+      }
+      element = element.parentElement;
+    }
+    return false;
   }
 }

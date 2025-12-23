@@ -39,16 +39,13 @@
 .pull-indicator {
   position: relative;
   z-index: 100;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
   padding: 12px 16px 8px;
-  opacity: 0.6;
-  transition: opacity 0.2s;
   background: transparent;
   border: none;
   cursor: pointer;
-  width: auto;
+  transition: opacity 0.2s;
+  opacity: 0.6;
+  align-self: center;
 
   &:hover {
     opacity: 1;
@@ -65,14 +62,17 @@
     height: 4px;
     background: var(--mat-sys-outline);
     border-radius: 2px;
+    margin: 0 auto;
   }
 
   .pull-hint {
+    display: block;
     font-size: 0.65rem;
     color: var(--mat-sys-on-surface-variant);
     margin-top: 4px;
     text-transform: uppercase;
     letter-spacing: 1px;
+    text-align: center;
   }
 }
 
