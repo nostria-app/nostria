@@ -74,6 +74,10 @@
       <div class="cover-section">
         @if (image()) {
         <img [src]="image()" [alt]="title()" title="Track cover" class="cover-image" />
+        } @else if (gradient()) {
+        <div class="cover-gradient" [style.background]="gradient()">
+          <mat-icon>music_note</mat-icon>
+        </div>
         } @else {
         <div class="cover-placeholder">
           <mat-icon>music_note</mat-icon>

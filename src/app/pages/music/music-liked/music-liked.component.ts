@@ -10,6 +10,9 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ApplicationService } from '../../../services/application.service';
+import { MediaPlayerService } from '../../../services/media-player.service';
+import { DataService } from '../../../services/data.service';
+import { MediaItem } from '../../../interfaces';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 
 const MUSIC_KIND = 36787;
@@ -39,6 +42,12 @@ const PAGE_SIZE = 24;
             <p class="subtitle">{{ tracksCount() }} <span i18n="@@music.liked.trackCount">tracks</span></p>
           </div>
         </div>
+        @if (allTracks().length > 0) {
+          <button mat-fab extended class="play-all-button" (click)="playAll()" aria-label="Play all">
+            <mat-icon>play_arrow</mat-icon>
+            <span i18n="@@music.playAll">Play All</span>
+          </button>
+        }
       </div>
 
       <div class="page-content">
@@ -94,6 +103,17 @@ const PAGE_SIZE = 24;
       align-items: center;
       gap: 1rem;
       padding: 0.5rem 0;
+      flex-wrap: wrap;
+
+      .play-all-button {
+        margin-left: auto;
+
+        @media (max-width: 600px) {
+          margin-left: 0;
+          width: 100%;
+          margin-top: 0.5rem;
+        }
+      }
     }
 
     .header-info {
@@ -226,6 +246,8 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
   private router = inject(Router);
+  private mediaPlayer = inject(MediaPlayerService);
+  private dataService = inject(DataService);
 
   allTracks = signal<Event[]>([]);
   loading = signal(true);
@@ -463,6 +485,46 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
       this.loadingMore.set(false);
       setTimeout(() => this.observeSentinel(), 50);
     }, 100);
+  }
+
+  async playAll(): Promise<void> {
+    const tracks = this.allTracks();
+    if (tracks.length === 0) return;
+
+    // Create media items for all tracks and play the first one
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i];
+      const urlTag = track.tags.find(t => t[0] === 'url');
+      const url = urlTag?.[1];
+      if (!url) continue;
+
+      const titleTag = track.tags.find(t => t[0] === 'title');
+      const imageTag = track.tags.find(t => t[0] === 'image');
+      const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+
+      // Get artist name
+      let artistName = 'Unknown Artist';
+      const profile = await this.dataService.getProfile(track.pubkey);
+      if (profile) {
+        artistName = profile.data?.name || profile.data?.display_name || 'Unknown Artist';
+      }
+
+      const mediaItem: MediaItem = {
+        source: url,
+        title: titleTag?.[1] || 'Untitled Track',
+        artist: artistName,
+        artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        type: 'Music',
+        eventPubkey: track.pubkey,
+        eventIdentifier: dTag,
+      };
+
+      if (i === 0) {
+        this.mediaPlayer.play(mediaItem);
+      } else {
+        this.mediaPlayer.enque(mediaItem);
+      }
+    }
   }
 
   goBack(): void {

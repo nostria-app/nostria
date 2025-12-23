@@ -120,6 +120,18 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     return imageTag?.[1] || null;
   });
 
+  // Get gradient background (alternative to image)
+  gradient = computed(() => {
+    const event = this.song();
+    if (!event) return null;
+    const gradientTag = event.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
+    if (gradientTag?.[2]) {
+      const colors = gradientTag[2];
+      return `linear-gradient(135deg, ${colors})`;
+    }
+    return null;
+  });
+
   lyrics = computed(() => {
     const event = this.song();
     if (!event) return null;
