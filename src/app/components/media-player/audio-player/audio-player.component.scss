@@ -423,9 +423,20 @@
   z-index: 10;
   background: transparent;
   position: absolute;
-  top: 48px; // Move down to not overlap the pull-down indicator
+  top: 0;
   left: 0;
   right: 0;
+}
+
+// View switcher positioned below the header
+.view-switcher-container {
+  position: absolute;
+  top: 56px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  z-index: 10;
 
   .view-switcher {
     display: flex;

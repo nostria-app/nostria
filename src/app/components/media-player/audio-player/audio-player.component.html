@@ -186,12 +186,21 @@
   } @else {
   <!-- Expanded mode - Multiple player views -->
   <div class="audio-player-expanded">
-    <!-- Header with view switcher -->
+    <!-- Header with minimize and close buttons -->
     <div class="player-header">
       <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
         <mat-icon>keyboard_arrow_down</mat-icon>
       </button>
 
+      <span class="spacer"></span>
+
+      <button mat-icon-button matTooltip="Close" (click)="media.exit()">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <!-- View switcher positioned below -->
+    <div class="view-switcher-container">
       <div class="view-switcher">
         @for (option of viewOptions; track option.type) {
         <button mat-icon-button [class.active]="currentView() === option.type" [matTooltip]="option.label + ' View'"
@@ -200,10 +209,6 @@
         </button>
         }
       </div>
-
-      <button mat-icon-button matTooltip="Close" (click)="media.exit()">
-        <mat-icon>close</mat-icon>
-      </button>
     </div>
 
     <!-- Player views -->
