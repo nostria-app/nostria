@@ -8,7 +8,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
-import { Event, Filter, nip19 } from 'nostr-tools';
+import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
@@ -16,6 +16,7 @@ import { DataService } from '../../../services/data.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LoggerService } from '../../../services/logger.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { ReactionService } from '../../../services/reaction.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
@@ -55,16 +56,21 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private dialog = inject(MatDialog);
   private accountState = inject(AccountStateService);
   private musicPlaylistService = inject(MusicPlaylistService);
+  private reactionService = inject(ReactionService);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
   loading = signal(true);
   loadingTracks = signal(false);
   authorProfile = signal<NostrRecord | undefined>(undefined);
+  isLiked = signal(false);
+  isLiking = signal(false);
 
   private subscriptions: { close: () => void }[] = [];
+  private likeSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
   private tracksLoaded = false; // Prevent multiple loadPlaylistTracks calls
+  private likeChecked = false;
 
   // Playlist data
   title = computed(() => {
@@ -93,6 +99,18 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (!event) return null;
     const imageTag = event.tags.find(t => t[0] === 'image');
     return imageTag?.[1] || null;
+  });
+
+  // Get gradient background (alternative to image)
+  gradient = computed(() => {
+    const event = this.playlist();
+    if (!event) return null;
+    const gradientTag = event.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
+    if (gradientTag?.[2]) {
+      const colors = gradientTag[2];
+      return `linear-gradient(135deg, ${colors})`;
+    }
+    return null;
   });
 
   trackRefs = computed(() => {
@@ -163,6 +181,18 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         });
       }
     });
+
+    // Check if user has already liked this playlist
+    effect(() => {
+      const event = this.playlist();
+      const userPubkey = this.accountState.pubkey();
+      if (event && userPubkey && !this.likeChecked) {
+        this.likeChecked = true;
+        untracked(() => {
+          this.checkExistingLike(event, userPubkey);
+        });
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -178,6 +208,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.close());
+    this.likeSubscription?.close();
   }
 
   private loadPlaylist(pubkey: string, identifier: string): void {
@@ -446,6 +477,55 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
           this.tracks.set([]);
           this.loadPlaylist(pubkey, identifier);
         }
+      }
+    });
+  }
+
+  private checkExistingLike(ev: Event, userPubkey: string): void {
+    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    if (relayUrls.length === 0) return;
+
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    const aTagValue = `${ev.kind}:${ev.pubkey}:${dTag}`;
+
+    const filter: Filter = {
+      kinds: [kinds.Reaction],
+      authors: [userPubkey],
+      '#a': [aTagValue],
+      limit: 1,
+    };
+
+    let found = false;
+    const timeout = setTimeout(() => {
+      if (!found) {
+        this.likeSubscription?.close();
+      }
+    }, 3000);
+
+    this.likeSubscription = this.pool.subscribe(relayUrls, filter, (reaction: Event) => {
+      if (reaction.content === '+') {
+        found = true;
+        this.isLiked.set(true);
+        clearTimeout(timeout);
+        this.likeSubscription?.close();
+      }
+    });
+  }
+
+  likePlaylist(): void {
+    if (this.isLiked() || this.isLiking()) return;
+
+    const ev = this.playlist();
+    if (!ev) return;
+
+    this.isLiking.set(true);
+    this.reactionService.addLike(ev).then(success => {
+      this.isLiking.set(false);
+      if (success) {
+        this.isLiked.set(true);
+        this.snackBar.open('Playlist liked!', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to like playlist', 'Close', { duration: 3000 });
       }
     });
   }

@@ -57,6 +57,18 @@
           </div>
         </div>
 
+        <!-- Liked Playlists Card -->
+        <div class="liked-playlists-card" (click)="goToLikedPlaylists()" (keydown.enter)="goToLikedPlaylists()"
+          tabindex="0" role="button">
+          <div class="liked-playlists-cover">
+            <mat-icon>playlist_play</mat-icon>
+          </div>
+          <div class="liked-playlists-info">
+            <span class="liked-playlists-title">Liked Playlists</span>
+            <span class="liked-playlists-meta">Your favorite collections</span>
+          </div>
+        </div>
+
         <!-- User's playlists -->
         @for (playlist of myPlaylistsPreview(); track playlist.id) {
         <app-music-playlist-card [event]="playlist"></app-music-playlist-card>

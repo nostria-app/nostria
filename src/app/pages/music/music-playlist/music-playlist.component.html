@@ -47,6 +47,10 @@
       <div class="cover-section">
         @if (coverImage()) {
         <img [src]="coverImage()" [alt]="title()" class="cover-image" />
+        } @else if (gradient()) {
+        <div class="cover-gradient" [style.background]="gradient()">
+          <mat-icon>queue_music</mat-icon>
+        </div>
         } @else {
         <div class="cover-placeholder">
           <mat-icon>queue_music</mat-icon>
@@ -88,6 +92,14 @@
           <button mat-fab extended (click)="playAll()" [disabled]="tracks().length === 0">
             <mat-icon>play_arrow</mat-icon>
             Play All
+          </button>
+          <button mat-icon-button (click)="likePlaylist()" [disabled]="isLiked() || isLiking()"
+            [class.liked]="isLiked()" aria-label="Like playlist">
+            @if (isLiking()) {
+            <mat-icon>hourglass_empty</mat-icon>
+            } @else {
+            <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
+            }
           </button>
           @if (isOwnPlaylist()) {
           <button mat-stroked-button (click)="editPlaylist()">

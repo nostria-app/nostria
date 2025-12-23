@@ -114,6 +114,28 @@
       opacity: 0.5;
     }
   }
+
+  .cover-gradient {
+    width: 220px;
+    height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--mat-sys-corner-large);
+    box-shadow: var(--mat-sys-level3);
+
+    @media (max-width: 700px) {
+      width: 180px;
+      height: 180px;
+    }
+
+    mat-icon {
+      font-size: 5rem;
+      width: 5rem;
+      height: 5rem;
+      color: rgba(255, 255, 255, 0.7);
+    }
+  }
 }
 
 .info-section {
@@ -210,7 +232,18 @@
 }
 
 .actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
   margin-top: 0.5rem;
+
+  .liked {
+    color: #ff6b6b;
+
+    mat-icon {
+      color: #ff6b6b;
+    }
+  }
 }
 
 .tracks-section {
