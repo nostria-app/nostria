@@ -160,4 +160,12 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
       return newBands;
     });
   }
+
+  getRepeatTooltip(): string {
+    switch (this.media.repeat()) {
+      case 'off': return 'Repeat: Off';
+      case 'all': return 'Repeat: All';
+      case 'one': return 'Repeat: One';
+    }
+  }
 }

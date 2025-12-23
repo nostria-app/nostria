@@ -22,14 +22,28 @@
 
 // Pull indicator
 .pull-indicator {
-  padding: 12px 0 8px;
+  padding: 12px 16px 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  opacity: 0.6;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
+    opacity: 1;
+  }
 
   .pull-bar {
     width: 40px;
     height: 4px;
     background: var(--mat-sys-outline);
     border-radius: 2px;
-    opacity: 0.5;
   }
 }
 
@@ -219,7 +233,7 @@
   .control-btn {
     color: var(--mat-sys-on-surface);
     opacity: 0.7;
-    transition: opacity 0.2s, transform 0.2s;
+    transition: opacity 0.2s, transform 0.2s, color 0.2s;
 
     &:hover:not(:disabled) {
       opacity: 1;
@@ -234,6 +248,14 @@
       font-size: 24px;
       width: 24px;
       height: 24px;
+    }
+  }
+
+  .shuffle-btn,
+  .repeat-btn {
+    &.active {
+      color: var(--mat-sys-primary);
+      opacity: 1;
     }
   }
 
@@ -256,7 +278,7 @@
   }
 }
 
-// Swipe arrows
+// Navigation arrows
 .swipe-arrows {
   position: absolute;
   top: 50%;
@@ -266,11 +288,30 @@
   display: flex;
   justify-content: space-between;
   padding: 0 16px;
-  pointer-events: none;
 
   .arrow {
     color: var(--mat-sys-on-surface);
-    transition: opacity 0.2s;
+    transition: opacity 0.2s, transform 0.2s, background-color 0.2s;
+    background: transparent;
+    border: none;
+    border-radius: 50%;
+    padding: 8px;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 1 !important;
+      background: rgba(255, 255, 255, 0.1);
+      transform: scale(1.1);
+    }
+
+    &:focus {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
 
     mat-icon {
       font-size: 48px;

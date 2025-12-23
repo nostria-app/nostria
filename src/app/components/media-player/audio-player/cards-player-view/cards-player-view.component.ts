@@ -157,4 +157,12 @@ export class CardsPlayerViewComponent {
       this.media.audio.currentTime = progress * duration;
     }
   }
+
+  getRepeatTooltip(): string {
+    switch (this.media.repeat()) {
+      case 'off': return 'Repeat: Off';
+      case 'all': return 'Repeat: All';
+      case 'one': return 'Repeat: One';
+    }
+  }
 }

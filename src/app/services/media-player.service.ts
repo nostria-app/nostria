@@ -70,9 +70,21 @@ export class MediaPlayerService implements OnInitialized {
     isMaximized: false,
   });
 
-  // Convert to computed signals
-  canPrevious = computed(() => this._index() > 0);
-  canNext = computed(() => this._index() < this.media().length - 1);
+  // Convert to computed signals - consider shuffle and repeat states
+  canPrevious = computed(() => {
+    // If shuffle or repeat is enabled, always allow navigation
+    if (this.shuffle() || this.repeat() !== 'off') {
+      return this.media().length > 0;
+    }
+    return this._index() > 0;
+  });
+  canNext = computed(() => {
+    // If shuffle or repeat is enabled, always allow navigation
+    if (this.shuffle() || this.repeat() !== 'off') {
+      return this.media().length > 0;
+    }
+    return this._index() < this.media().length - 1;
+  });
   // Signal that indicates whether there are any items in the media queue
   hasQueue = computed(() => this.media().length > 0);
 

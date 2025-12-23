@@ -110,11 +110,12 @@
 
     <!-- Toggle buttons -->
     <div class="toggle-buttons">
-      <button class="toggle-btn" [class.active]="false" matTooltip="Shuffle">
+      <button class="toggle-btn" [class.active]="media.shuffle()" (click)="media.toggleShuffle()" matTooltip="Shuffle">
         <span>SHUFFLE</span>
       </button>
-      <button class="toggle-btn" [class.active]="false" matTooltip="Repeat">
-        <span>REPEAT</span>
+      <button class="toggle-btn" [class.active]="media.repeat() !== 'off'" (click)="media.toggleRepeat()"
+        [matTooltip]="getRepeatTooltip()">
+        <span>{{ media.repeat() === 'one' ? 'REPEAT 1' : 'REPEAT' }}</span>
       </button>
     </div>
   </div>

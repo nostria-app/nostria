@@ -41,11 +41,21 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 12px 0 8px;
+  padding: 12px 16px 8px;
   opacity: 0.6;
   transition: opacity 0.2s;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  width: auto;
 
   &:hover {
+    opacity: 1;
+  }
+
+  &:focus {
+    outline: 2px solid var(--mat-sys-primary);
+    outline-offset: 2px;
     opacity: 1;
   }
 
