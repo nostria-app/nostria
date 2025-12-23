@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnInit, OnDestroy, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnInit, OnDestroy, effect, untracked } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -45,6 +45,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   private subscriptions: { close: () => void }[] = [];
   private trackMap = new Map<string, Event>();
+  private tracksLoaded = false; // Prevent multiple loadPlaylistTracks calls
 
   // Playlist data
   title = computed(() => {
@@ -117,8 +118,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     effect(() => {
       const event = this.playlist();
       if (event?.pubkey) {
-        this.data.getProfile(event.pubkey).then(profile => {
-          this.authorProfile.set(profile);
+        untracked(() => {
+          this.data.getProfile(event.pubkey).then(profile => {
+            this.authorProfile.set(profile);
+          });
         });
       }
     });
@@ -126,10 +129,12 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Load tracks when playlist loads
     effect(() => {
       const refs = this.trackRefs();
-      const currentTracks = this.tracks();
-      // Only load if we have refs and haven't loaded any tracks yet
-      if (refs.length > 0 && currentTracks.length === 0 && !this.loadingTracks()) {
-        this.loadPlaylistTracks(refs);
+      // Only load if we have refs and haven't started loading yet
+      if (refs.length > 0 && !this.tracksLoaded) {
+        this.tracksLoaded = true;
+        untracked(() => {
+          this.loadPlaylistTracks(refs);
+        });
       }
     });
   }
