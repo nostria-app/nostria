@@ -13,13 +13,15 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { ReactionService } from '../../services/reaction.service';
 import { MusicPlaylistService } from '../../services/music-playlist.service';
 import { ApplicationService } from '../../services/application.service';
+import { AccountStateService } from '../../services/account-state.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
+import { EditMusicTrackDialogComponent, EditMusicTrackDialogData } from '../../pages/music/edit-music-track-dialog/edit-music-track-dialog.component';
 
 @Component({
   selector: 'app-music-event',
-  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule],
+  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, EditMusicTrackDialogComponent],
   template: `
     <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
       [attr.aria-label]="'View ' + title()">
@@ -49,6 +51,12 @@ import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } fro
           tabindex="0" role="button">{{ artistName() }}</span>
       </div>
       <mat-menu #menu="matMenu">
+        @if (isOwnTrack()) {
+          <button mat-menu-item (click)="editTrack()">
+            <mat-icon>edit</mat-icon>
+            <span>Edit Track</span>
+          </button>
+        }
         @if (isAuthenticated()) {
           <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
             <mat-icon>playlist_add</mat-icon>
@@ -93,6 +101,13 @@ import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } fro
         }
       </mat-menu>
     </div>
+    
+    @if (showEditDialog() && editDialogData()) {
+      <app-edit-music-track-dialog
+        [data]="editDialogData()!"
+        (closed)="onEditDialogClosed($event)"
+      />
+    }
   `,
   styles: [`
     .music-card {
@@ -263,6 +278,7 @@ export class MusicEventComponent {
   private reactionService = inject(ReactionService);
   private musicPlaylistService = inject(MusicPlaylistService);
   private app = inject(ApplicationService);
+  private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -273,6 +289,17 @@ export class MusicEventComponent {
   userPlaylists = this.musicPlaylistService.userPlaylists;
   playlistsLoading = this.musicPlaylistService.loading;
   isAuthenticated = computed(() => this.app.authenticated());
+
+  // Edit dialog state
+  showEditDialog = signal(false);
+  editDialogData = signal<EditMusicTrackDialogData | null>(null);
+
+  // Check if this is the current user's track
+  isOwnTrack = computed(() => {
+    const ev = this.event();
+    const userPubkey = this.accountState.pubkey();
+    return ev && userPubkey && ev.pubkey === userPubkey;
+  });
 
   private profileLoaded = false;
 
@@ -504,6 +531,25 @@ export class MusicEventComponent {
     const ev = this.event();
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  // Edit track (for user's own tracks)
+  editTrack(): void {
+    const ev = this.event();
+    if (!ev || !this.isOwnTrack()) return;
+
+    this.editDialogData.set({ track: ev });
+    this.showEditDialog.set(true);
+  }
+
+  onEditDialogClosed(result: { updated: boolean; event?: Event } | null): void {
+    this.showEditDialog.set(false);
+    this.editDialogData.set(null);
+
+    if (result?.updated) {
+      this.snackBar.open('Track updated', 'Close', { duration: 2000 });
+      // Note: The parent component should refresh if needed
+    }
   }
 
   // Load playlists when submenu is opened
