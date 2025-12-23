@@ -1,8 +1,8 @@
 <div class="modern-player" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" (swipe)="onSwipe($event)">
   <!-- Blurred background glow -->
-  @if (media.current()?.artwork) {
-  <div class="background-glow">
-    <img [src]="media.current()?.artwork" alt="" class="glow-image" />
+  @if (displayedArtwork()) {
+  <div class="background-glow" [@fadeBackground]="backgroundState()">
+    <img [src]="displayedArtwork()" alt="" class="glow-image" />
   </div>
   }
 
@@ -16,10 +16,10 @@
   <!-- Main content -->
   <div class="player-content">
     <!-- Album art with glow ring -->
-    <div class="album-container">
+    <div class="album-container" [@fadeContent]="contentState()">
       <div class="album-glow-ring"></div>
-      @if (media.current()?.artwork) {
-      <img class="album-art" [src]="media.current()?.artwork" alt="{{ media.current()?.title || 'Album artwork' }}" />
+      @if (displayedArtwork()) {
+      <img class="album-art" [src]="displayedArtwork()" alt="{{ displayedTitle() }}" />
       } @else {
       <div class="album-placeholder">
         <mat-icon>music_note</mat-icon>
@@ -28,9 +28,9 @@
     </div>
 
     <!-- Track info -->
-    <div class="track-info">
-      <h2 class="track-title">{{ media.current()?.title || 'Unknown Track' }}</h2>
-      <p class="track-artist">{{ media.current()?.artist || 'Unknown Artist' }}</p>
+    <div class="track-info" [@fadeContent]="contentState()">
+      <h2 class="track-title">{{ displayedTitle() }}</h2>
+      <p class="track-artist">{{ displayedArtist() }}</p>
     </div>
 
     <!-- Timeline -->

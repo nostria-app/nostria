@@ -4,6 +4,8 @@ import {
   computed,
   ChangeDetectionStrategy,
   output,
+  signal,
+  effect,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +13,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { SwipeGestureDirective, SwipeEvent } from '../../../../directives/swipe-gesture.directive';
+import { trigger, transition, style, animate, state } from '@angular/animations';
 
 @Component({
   selector: 'app-modern-player-view',
@@ -24,11 +27,71 @@ import { SwipeGestureDirective, SwipeEvent } from '../../../../directives/swipe-
   ],
   templateUrl: './modern-player-view.component.html',
   styleUrl: './modern-player-view.component.scss',
+  animations: [
+    trigger('fadeContent', [
+      state('visible', style({ opacity: 1, transform: 'scale(1)' })),
+      state('hidden', style({ opacity: 0, transform: 'scale(0.95)' })),
+      transition('visible => hidden', animate('200ms ease-out')),
+      transition('hidden => visible', animate('400ms ease-out')),
+    ]),
+    trigger('fadeBackground', [
+      state('visible', style({ opacity: 0.8 })),
+      state('hidden', style({ opacity: 0 })),
+      transition('visible => hidden', animate('300ms ease-out')),
+      transition('hidden => visible', animate('600ms ease-in')),
+    ]),
+  ],
 })
 export class ModernPlayerViewComponent {
   readonly media = inject(MediaPlayerService);
 
   openQueue = output<void>();
+
+  // Track change animation state
+  contentState = signal<'visible' | 'hidden'>('visible');
+  backgroundState = signal<'visible' | 'hidden'>('visible');
+  private lastTrackId = signal<string | null>(null);
+
+  // Displayed track info - only updates after fade-out completes
+  displayedArtwork = signal<string | undefined>(undefined);
+  displayedTitle = signal<string>('Unknown Track');
+  displayedArtist = signal<string>('Unknown Artist');
+
+  constructor() {
+    // Watch for track changes and trigger animations
+    effect(() => {
+      const current = this.media.current();
+      const currentId = current?.source || current?.title || null;
+      const lastId = this.lastTrackId();
+
+      if (lastId !== null && currentId !== lastId) {
+        // Track changed - trigger fade animation
+        this.contentState.set('hidden');
+        this.backgroundState.set('hidden');
+
+        // After fade out, update displayed info and fade back in
+        setTimeout(() => {
+          this.lastTrackId.set(currentId);
+          // Update displayed content after fade-out
+          this.displayedArtwork.set(current?.artwork);
+          this.displayedTitle.set(current?.title || 'Unknown Track');
+          this.displayedArtist.set(current?.artist || 'Unknown Artist');
+
+          this.backgroundState.set('visible');
+          // Stagger the content fade-in slightly
+          setTimeout(() => {
+            this.contentState.set('visible');
+          }, 100);
+        }, 250);
+      } else if (lastId === null && currentId !== null) {
+        // First track loaded - set immediately without animation
+        this.lastTrackId.set(currentId);
+        this.displayedArtwork.set(current?.artwork);
+        this.displayedTitle.set(current?.title || 'Unknown Track');
+        this.displayedArtist.set(current?.artist || 'Unknown Artist');
+      }
+    });
+  }
 
   currentTime = computed(() => this.media.currentTimeSig());
   duration = computed(() => this.media.durationSig());
