@@ -79,7 +79,7 @@ export class AppsMenuComponent {
 
   contentItems: MenuItem[] = [
     { icon: 'photo_library', label: 'Media', route: ['/media'] },
-    { icon: 'edit_document', label: 'Articles', route: ['/articles'] },
+    { icon: 'edit_document', label: 'Articles', route: ['/articles/edit'] },
     { icon: 'lists', label: 'Lists', route: ['/lists'] },
     { icon: 'poll', label: 'Polls', route: ['/polls'] },
   ];
