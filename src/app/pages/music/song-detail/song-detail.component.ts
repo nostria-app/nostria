@@ -5,8 +5,10 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatCardModule } from '@angular/material/card';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, nip19, kinds } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
@@ -39,6 +41,7 @@ const MUSIC_KIND = 36787;
     MatIconModule,
     MatChipsModule,
     MatCardModule,
+    MatMenuModule,
     MatSnackBarModule,
     ZapChipsComponent,
     CommentsListComponent,
@@ -62,6 +65,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private clipboard = inject(Clipboard);
 
   song = signal<Event | null>(null);
   loading = signal(true);
@@ -477,5 +481,47 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       width: '400px',
       maxWidth: '95vw',
     });
+  }
+
+  addToQueue(): void {
+    const url = this.audioUrl();
+    if (!url) return;
+
+    const mediaItem: MediaItem = {
+      source: url,
+      title: this.title(),
+      artist: this.artistName(),
+      artwork: this.image() || '/icons/icon-192x192.png',
+      type: 'Music',
+    };
+
+    this.mediaPlayer.enque(mediaItem);
+    this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
+  }
+
+  copyEventLink(): void {
+    const ev = this.song();
+    if (!ev) return;
+
+    try {
+      const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+      const naddr = nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+      });
+      this.clipboard.copy(`nostr:${naddr}`);
+      this.snackBar.open('Event link copied!', 'Close', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
+    }
+  }
+
+  copyEventData(): void {
+    const ev = this.song();
+    if (!ev) return;
+
+    this.clipboard.copy(JSON.stringify(ev, null, 2));
+    this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
   }
 }

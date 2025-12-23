@@ -8,7 +8,13 @@
 }
 
 .header-actions {
+  display: flex;
+  align-items: center;
   margin-bottom: 1rem;
+
+  .spacer {
+    flex: 1;
+  }
 }
 
 .loading-container {

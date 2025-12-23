@@ -3,6 +3,24 @@
     <button mat-icon-button (click)="goBack()" aria-label="Go back">
       <mat-icon>arrow_back</mat-icon>
     </button>
+    <span class="spacer"></span>
+    <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #menu="matMenu">
+      <button mat-menu-item (click)="addToQueue()">
+        <mat-icon>queue_music</mat-icon>
+        <span>Add to Queue</span>
+      </button>
+      <button mat-menu-item (click)="copyEventLink()">
+        <mat-icon>link</mat-icon>
+        <span>Copy Event Link</span>
+      </button>
+      <button mat-menu-item (click)="copyEventData()">
+        <mat-icon>data_object</mat-icon>
+        <span>Copy Event Data</span>
+      </button>
+    </mat-menu>
   </div>
 
   @if (loading()) {

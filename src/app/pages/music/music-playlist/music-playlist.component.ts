@@ -4,12 +4,16 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
+import { LoggerService } from '../../../services/logger.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 
@@ -23,6 +27,8 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatButtonModule,
     MatIconModule,
     MatChipsModule,
+    MatMenuModule,
+    MatSnackBarModule,
     MusicEventComponent,
   ],
   templateUrl: './music-playlist.component.html',
@@ -36,6 +42,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private utilities = inject(UtilitiesService);
   private data = inject(DataService);
   private mediaPlayer = inject(MediaPlayerService);
+  private logger = inject(LoggerService);
+  private snackBar = inject(MatSnackBar);
+  private clipboard = inject(Clipboard);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
@@ -204,6 +213,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
     if (relayUrls.length === 0) {
+      this.logger.warn('No relays available to load playlist tracks');
       this.loadingTracks.set(false);
       return;
     }
@@ -219,18 +229,24 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       }
     }
 
+    this.logger.debug('Loading playlist tracks', { refs, trackKeys });
+
     if (trackKeys.length === 0) {
       this.loadingTracks.set(false);
       return;
     }
 
-    // Create a single filter with all authors (deduplicated)
+    // Create a single filter with all authors and d-tags (deduplicated)
     const uniqueAuthors = [...new Set(trackKeys.map(k => k.author))];
+    const uniqueDTags = [...new Set(trackKeys.map(k => k.dTag))];
     const filter: Filter = {
       kinds: [MUSIC_KIND],
       authors: uniqueAuthors,
+      '#d': uniqueDTags,
       limit: trackKeys.length * 2, // Allow for duplicates
     };
+
+    this.logger.debug('Playlist tracks filter', { filter, relayUrls });
 
     let receivedAny = false;
 
@@ -330,5 +346,31 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   goBack(): void {
     this.router.navigate(['/music']);
+  }
+
+  copyEventLink(): void {
+    const ev = this.playlist();
+    if (!ev) return;
+
+    try {
+      const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+      const naddr = nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+      });
+      this.clipboard.copy(`nostr:${naddr}`);
+      this.snackBar.open('Event link copied!', 'Close', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
+    }
+  }
+
+  copyEventData(): void {
+    const ev = this.playlist();
+    if (!ev) return;
+
+    this.clipboard.copy(JSON.stringify(ev, null, 2));
+    this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
   }
 }
