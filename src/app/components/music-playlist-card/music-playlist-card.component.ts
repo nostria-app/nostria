@@ -2,13 +2,22 @@ import { Component, computed, input, inject, signal, effect } from '@angular/cor
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCardModule } from '@angular/material/card';
-import { Event } from 'nostr-tools';
+import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import { Clipboard } from '@angular/cdk/clipboard';
+import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
+import { ReactionService } from '../../services/reaction.service';
 import { NostrRecord } from '../../interfaces';
+import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
+
+const MUSIC_PLAYLIST_KIND = 34139;
 
 @Component({
   selector: 'app-music-playlist-card',
-  imports: [MatIconModule, MatCardModule],
+  imports: [MatIconModule, MatCardModule, MatButtonModule, MatMenuModule, MatSnackBarModule],
   template: `
     <mat-card class="playlist-card" (click)="openPlaylist()" (keydown.enter)="openPlaylist()" 
       tabindex="0" role="button" [attr.aria-label]="'Open playlist ' + title()">
@@ -37,6 +46,27 @@ import { NostrRecord } from '../../interfaces';
             <span class="playlist-description">{{ description() }}</span>
           }
         </div>
+        <div class="playlist-actions">
+          <button mat-icon-button (click)="likePlaylist($any($event))" aria-label="Like playlist">
+            <mat-icon>favorite_border</mat-icon>
+          </button>
+          <button mat-icon-button (click)="zapCreator($any($event))" aria-label="Zap creator">
+            <mat-icon>bolt</mat-icon>
+          </button>
+          <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #menu="matMenu">
+            <button mat-menu-item (click)="copyEventLink()">
+              <mat-icon>link</mat-icon>
+              <span>Copy Event Link</span>
+            </button>
+            <button mat-menu-item (click)="copyEventData()">
+              <mat-icon>data_object</mat-icon>
+              <span>Copy Event Data</span>
+            </button>
+          </mat-menu>
+        </div>
       </mat-card-content>
     </mat-card>
   `,
@@ -48,6 +78,10 @@ import { NostrRecord } from '../../interfaces';
 
       &:hover {
         transform: translateY(-2px);
+        
+        .playlist-actions {
+          opacity: 1;
+        }
       }
 
       &:focus {
@@ -127,11 +161,31 @@ import { NostrRecord } from '../../interfaces';
       text-overflow: ellipsis;
       margin-top: 0.25rem;
     }
+    
+    .playlist-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 0.5rem;
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+      
+      button {
+        mat-icon {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+      }
+    }
   `],
 })
 export class MusicPlaylistCardComponent {
   private router = inject(Router);
   private data = inject(DataService);
+  private reactionService = inject(ReactionService);
+  private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private clipboard = inject(Clipboard);
 
   event = input.required<Event>();
 
@@ -169,11 +223,79 @@ export class MusicPlaylistCardComponent {
     return imageTag?.[1] || null;
   });
 
+  // Get naddr for addressable event
+  naddr = computed(() => {
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    try {
+      return nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+      });
+    } catch {
+      return '';
+    }
+  });
+
   openPlaylist(): void {
     const event = this.event();
     const dTag = event.tags.find(t => t[0] === 'd')?.[1];
     if (dTag) {
       this.router.navigate(['/music/playlist', event.pubkey, dTag]);
     }
+  }
+
+  // Like the playlist
+  likePlaylist(event: MouseEvent | KeyboardEvent): void {
+    event.stopPropagation();
+    const ev = this.event();
+    this.reactionService.addLike(ev).then(success => {
+      if (success) {
+        this.snackBar.open('Liked!', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  // Zap the creator
+  zapCreator(event: MouseEvent | KeyboardEvent): void {
+    event.stopPropagation();
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    const data: ZapDialogData = {
+      recipientPubkey: ev.pubkey,
+      eventId: ev.id,
+      eventKind: ev.kind,
+      eventAddress: `${ev.kind}:${ev.pubkey}:${dTag}`,
+      event: ev,
+    };
+
+    this.dialog.open(ZapDialogComponent, {
+      data,
+      width: '400px',
+      maxWidth: '95vw',
+    });
+  }
+
+  // Copy event link (naddr)
+  copyEventLink(): void {
+    const addr = this.naddr();
+    if (addr) {
+      const link = `https://nostria.app/a/${addr}`;
+      this.clipboard.copy(link);
+      this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
+    } else {
+      this.snackBar.open('Failed to generate link', 'Close', { duration: 3000 });
+    }
+  }
+
+  // Copy event JSON data
+  copyEventData(): void {
+    const ev = this.event();
+    this.clipboard.copy(JSON.stringify(ev, null, 2));
+    this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
   }
 }

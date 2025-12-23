@@ -1,14 +1,23 @@
 import { Component, computed, input, inject, signal, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
 import { MediaPlayerService } from '../../services/media-player.service';
+import { ReactionService } from '../../services/reaction.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
+import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
+
+const MUSIC_KIND = 36787;
 
 @Component({
   selector: 'app-music-event',
-  imports: [MatIconModule],
+  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule],
   template: `
     <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
       [attr.aria-label]="'View ' + title()">
@@ -29,6 +38,31 @@ import { NostrRecord, MediaItem } from '../../interfaces';
         <span class="music-artist" (click)="openArtist($any($event))" (keydown.enter)="openArtist($any($event))" 
           tabindex="0" role="button">{{ artistName() }}</span>
       </div>
+      <div class="music-actions">
+        <button mat-icon-button (click)="likeTrack($any($event))" [attr.aria-label]="'Like track'">
+          <mat-icon>favorite_border</mat-icon>
+        </button>
+        <button mat-icon-button (click)="zapArtist($any($event))" aria-label="Zap artist">
+          <mat-icon>bolt</mat-icon>
+        </button>
+        <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #menu="matMenu">
+          <button mat-menu-item (click)="addToQueue()">
+            <mat-icon>queue_music</mat-icon>
+            <span>Add to Queue</span>
+          </button>
+          <button mat-menu-item (click)="copyEventLink()">
+            <mat-icon>link</mat-icon>
+            <span>Copy Event Link</span>
+          </button>
+          <button mat-menu-item (click)="copyEventData()">
+            <mat-icon>data_object</mat-icon>
+            <span>Copy Event Data</span>
+          </button>
+        </mat-menu>
+      </div>
     </div>
   `,
   styles: [`
@@ -46,6 +80,10 @@ import { NostrRecord, MediaItem } from '../../interfaces';
         background-color: var(--mat-sys-surface-container-high);
         
         .play-overlay {
+          opacity: 1;
+        }
+        
+        .music-actions {
           opacity: 1;
         }
       }
@@ -114,6 +152,7 @@ import { NostrRecord, MediaItem } from '../../interfaces';
       display: flex;
       flex-direction: column;
       padding: 0.75rem;
+      padding-bottom: 0.25rem;
       gap: 0.25rem;
     }
     
@@ -138,12 +177,32 @@ import { NostrRecord, MediaItem } from '../../interfaces';
         color: var(--mat-sys-primary);
       }
     }
+    
+    .music-actions {
+      display: flex;
+      justify-content: space-around;
+      padding: 0.25rem;
+      opacity: 0.7;
+      transition: opacity 0.2s ease;
+      
+      button {
+        mat-icon {
+          font-size: 1.25rem;
+          width: 1.25rem;
+          height: 1.25rem;
+        }
+      }
+    }
   `],
 })
 export class MusicEventComponent {
   private router = inject(Router);
   private data = inject(DataService);
   private mediaPlayer = inject(MediaPlayerService);
+  private reactionService = inject(ReactionService);
+  private snackBar = inject(MatSnackBar);
+  private dialog = inject(MatDialog);
+  private clipboard = inject(Clipboard);
 
   event = input.required<Event>();
 
@@ -212,6 +271,21 @@ export class MusicEventComponent {
     return profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
   });
 
+  // Get naddr for addressable event
+  naddr = computed(() => {
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    try {
+      return nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+      });
+    } catch {
+      return '';
+    }
+  });
+
   // Open song details page
   openDetails(event: MouseEvent | KeyboardEvent): void {
     event.stopPropagation();
@@ -247,8 +321,86 @@ export class MusicEventComponent {
       artist: this.artistName(),
       artwork: this.image() || '/icons/icon-192x192.png',
       type: 'Music',
+      eventPubkey: this.artistNpub(),
+      eventIdentifier: this.identifier(),
     };
 
     this.mediaPlayer.play(mediaItem);
+  }
+
+  // Add track to queue
+  addToQueue(): void {
+    const url = this.audioUrl();
+    if (!url) {
+      this.snackBar.open('No audio URL found', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const mediaItem: MediaItem = {
+      source: url,
+      title: this.title() || 'Untitled Track',
+      artist: this.artistName(),
+      artwork: this.image() || '/icons/icon-192x192.png',
+      type: 'Music',
+      eventPubkey: this.artistNpub(),
+      eventIdentifier: this.identifier(),
+    };
+
+    this.mediaPlayer.enque(mediaItem);
+    this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
+  }
+
+  // Like the track
+  likeTrack(event: MouseEvent | KeyboardEvent): void {
+    event.stopPropagation();
+    const ev = this.event();
+    this.reactionService.addLike(ev).then(success => {
+      if (success) {
+        this.snackBar.open('Liked!', 'Close', { duration: 2000 });
+      } else {
+        this.snackBar.open('Failed to like', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
+  // Zap the artist
+  zapArtist(event: MouseEvent | KeyboardEvent): void {
+    event.stopPropagation();
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    const data: ZapDialogData = {
+      recipientPubkey: ev.pubkey,
+      recipientName: this.artistName(),
+      eventId: ev.id,
+      eventKind: ev.kind,
+      eventAddress: `${ev.kind}:${ev.pubkey}:${dTag}`,
+      event: ev,
+    };
+
+    this.dialog.open(ZapDialogComponent, {
+      data,
+      width: '400px',
+      maxWidth: '95vw',
+    });
+  }
+
+  // Copy event link (naddr)
+  copyEventLink(): void {
+    const addr = this.naddr();
+    if (addr) {
+      const link = `https://nostria.app/a/${addr}`;
+      this.clipboard.copy(link);
+      this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
+    } else {
+      this.snackBar.open('Failed to generate link', 'Close', { duration: 3000 });
+    }
+  }
+
+  // Copy event JSON data
+  copyEventData(): void {
+    const ev = this.event();
+    this.clipboard.copy(JSON.stringify(ev, null, 2));
+    this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
   }
 }

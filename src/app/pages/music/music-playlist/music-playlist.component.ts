@@ -126,7 +126,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     // Load tracks when playlist loads
     effect(() => {
       const refs = this.trackRefs();
-      if (refs.length > 0 && !this.loadingTracks()) {
+      const currentTracks = this.tracks();
+      // Only load if we have refs and haven't loaded any tracks yet
+      if (refs.length > 0 && currentTracks.length === 0 && !this.loadingTracks()) {
         this.loadPlaylistTracks(refs);
       }
     });
@@ -193,6 +195,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   private loadPlaylistTracks(refs: string[]): void {
     this.loadingTracks.set(true);
+    this.trackMap.clear();
 
     const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
     if (relayUrls.length === 0) {
@@ -201,52 +204,68 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     }
 
     // Parse the a-tag references to get authors and d-tags
-    const filters: Filter[] = [];
+    const trackKeys: { author: string; dTag: string }[] = [];
     for (const ref of refs) {
       const parts = ref.split(':');
       if (parts.length >= 3) {
         const author = parts[1];
         const dTag = parts.slice(2).join(':');
-        filters.push({
-          kinds: [MUSIC_KIND],
-          authors: [author],
-          '#d': [dTag],
-          limit: 1,
-        });
+        trackKeys.push({ author, dTag });
       }
     }
 
-    if (filters.length === 0) {
+    if (trackKeys.length === 0) {
       this.loadingTracks.set(false);
       return;
     }
 
-    let pendingFilters = filters.length;
+    // Create a single filter with all authors (deduplicated)
+    const uniqueAuthors = [...new Set(trackKeys.map(k => k.author))];
+    const filter: Filter = {
+      kinds: [MUSIC_KIND],
+      authors: uniqueAuthors,
+      limit: trackKeys.length * 2, // Allow for duplicates
+    };
 
+    let receivedAny = false;
+    
+    // Set a shorter timeout since we're using a single subscription
     const timeout = setTimeout(() => {
-      this.loadingTracks.set(false);
-    }, 10000);
+      if (this.loadingTracks()) {
+        this.loadingTracks.set(false);
+      }
+    }, 5000);
 
-    for (const filter of filters) {
-      const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
-        const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-        const uniqueId = `${event.pubkey}:${dTag}`;
+    const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
+      receivedAny = true;
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+      const uniqueId = `${event.pubkey}:${dTag}`;
 
-        const existing = this.trackMap.get(uniqueId);
-        if (!existing || existing.created_at < event.created_at) {
-          this.trackMap.set(uniqueId, event);
-          this.updateTracks(refs);
-        }
+      // Check if this track is in our refs list
+      const isInPlaylist = trackKeys.some(k => k.author === event.pubkey && k.dTag === dTag);
+      if (!isInPlaylist) return;
 
-        pendingFilters--;
-        if (pendingFilters <= 0) {
-          clearTimeout(timeout);
-          this.loadingTracks.set(false);
-        }
-      });
+      const existing = this.trackMap.get(uniqueId);
+      if (!existing || existing.created_at < event.created_at) {
+        this.trackMap.set(uniqueId, event);
+        this.updateTracks(refs);
+      }
 
-      this.subscriptions.push(sub);
-    }
+      // Check if we have all tracks
+      if (this.trackMap.size >= trackKeys.length) {
+        clearTimeout(timeout);
+        this.loadingTracks.set(false);
+      }
+    });
+
+    this.subscriptions.push(sub);
+    
+    // Also set a shorter timeout for the "found some" case
+    setTimeout(() => {
+      if (this.loadingTracks() && receivedAny) {
+        this.loadingTracks.set(false);
+      }
+    }, 3000);
   }
 
   private updateTracks(refs: string[]): void {

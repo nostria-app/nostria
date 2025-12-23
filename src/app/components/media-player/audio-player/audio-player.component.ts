@@ -10,7 +10,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatMenuModule } from '@angular/material/menu';
 import { FormsModule } from '@angular/forms';
-import { RouterModule } from '@angular/router';
+import { Router, RouterModule } from '@angular/router';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
@@ -40,6 +40,7 @@ import { nip19 } from 'nostr-tools';
 export class AudioPlayerComponent {
   readonly media = inject(MediaPlayerService);
   readonly layout = inject(LayoutService);
+  private router = inject(Router);
 
   footer = input<boolean>(false);
 
@@ -109,5 +110,33 @@ export class AudioPlayerComponent {
       // Ignore decoding errors
     }
     return '';
+  }
+
+  // Check if we have a link to the song page
+  hasSongLink(): boolean {
+    const current = this.media.current();
+    return !!(current?.eventPubkey && current?.eventIdentifier);
+  }
+
+  // Check if we have a link to the artist page  
+  hasArtistLink(): boolean {
+    const current = this.media.current();
+    return !!current?.eventPubkey;
+  }
+
+  // Navigate to song detail page
+  goToSong(): void {
+    const current = this.media.current();
+    if (current?.eventPubkey && current?.eventIdentifier) {
+      this.router.navigate(['/music/song', current.eventPubkey, current.eventIdentifier]);
+    }
+  }
+
+  // Navigate to artist page
+  goToArtist(): void {
+    const current = this.media.current();
+    if (current?.eventPubkey) {
+      this.router.navigate(['/music/artist', current.eventPubkey]);
+    }
   }
 }
