@@ -23,7 +23,7 @@
   </div>
 
   <!-- Queue list -->
-  <div class="queue-list" cdkDropList (cdkDropListDropped)="onDrop($event)">
+  <div class="queue-list" #queueList cdkDropList (cdkDropListDropped)="onDrop($event)">
     @for (track of queue(); track track.source; let i = $index) {
     <div class="queue-item" [class.current]="i === currentIndex()" [class.played]="i < currentIndex()" cdkDrag
       (click)="playTrack(i)" matRipple>
@@ -88,5 +88,11 @@
       <span>Add some tracks to get started</span>
     </div>
     }
+  </div>
+
+  <!-- Bottom close handle -->
+  <div class="drawer-close-handle" #closeHandle>
+    <div class="close-handle-bar"></div>
+    <span class="close-hint">Drag up to close</span>
   </div>
 </div>

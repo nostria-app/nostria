@@ -201,6 +201,7 @@
   max-width: 100%;
   padding: 0 16px;
   flex-shrink: 0;
+  margin-bottom: 12px;
 
   .track-title {
     font-size: 1.1rem;
@@ -234,6 +235,7 @@
   width: 100%;
   max-width: 400px;
   flex-shrink: 0;
+  margin-bottom: 8px;
 
   .custom-slider {
     width: 100%;
@@ -364,19 +366,23 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  max-width: 140px;
+  max-width: 160px;
   flex-shrink: 0;
-  height: 24px;
+  height: 28px;
+  padding-left: 8px;
+  margin-top: 16px;
 
   .volume-icon {
     color: var(--mat-sys-on-surface-variant);
-    font-size: 16px;
-    width: 16px;
-    height: 16px;
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
   }
 
   .volume-slider {
     flex: 1;
+    min-width: 0;
   }
 }
 

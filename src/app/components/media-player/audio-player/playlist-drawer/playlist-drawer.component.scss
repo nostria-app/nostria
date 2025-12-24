@@ -333,6 +333,42 @@
   }
 }
 
+// Bottom close handle
+.drawer-close-handle {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0 32px;
+  gap: 8px;
+  cursor: grab;
+  background: var(--mat-sys-surface-container-high);
+  border-top: 1px solid var(--mat-sys-outline-variant);
+  touch-action: pan-y;
+  flex-shrink: 0;
+  min-height: 72px;
+
+  &:active {
+    cursor: grabbing;
+    background: var(--mat-sys-surface-container-highest);
+  }
+
+  .close-handle-bar {
+    width: 56px;
+    height: 6px;
+    background: var(--mat-sys-outline);
+    border-radius: 3px;
+  }
+
+  .close-hint {
+    font-size: 0.7rem;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.7;
+  }
+}
+
 // Scrollbar styling
 .queue-list {
   &::-webkit-scrollbar {

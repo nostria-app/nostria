@@ -1,7 +1,7 @@
 <div class="audio-player-container">
   @if (footer()) {
   <!-- Footer mode - full player with album art -->
-  <div class="audio-player-footer" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" [threshold]="40"
+  <div class="audio-player-footer" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" [threshold]="30"
     (swipe)="onFooterSwipe($event)">
     <div class="media-info" [class.no-artwork]="!media.current()?.artwork">
       @if (media.current()?.artwork) {
@@ -57,9 +57,9 @@
 
         <!-- Mobile Controls -->
         <div class="mobile-controls">
-          <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
+          <!-- <button matTooltip="Previous" [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button>
             <mat-icon>skip_previous</mat-icon>
-          </button>
+          </button> -->
 
           @if (media.paused) {
           <button matTooltip="Play" (click)="media.resume()" mat-icon-button class="play-button">
@@ -73,6 +73,10 @@
 
           <button matTooltip="Next" [disabled]="!media.canNext()" (click)="media.next()" mat-icon-button>
             <mat-icon>skip_next</mat-icon>
+          </button>
+
+          <button mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
+            <mat-icon>open_in_full</mat-icon>
           </button>
 
           <button mat-icon-button [matMenuTriggerFor]="moreMenu" matTooltip="More options">

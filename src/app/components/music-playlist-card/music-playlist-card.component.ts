@@ -606,8 +606,6 @@ export class MusicPlaylistCardComponent {
           this.mediaPlayer.enque(mediaItem);
         }
       }
-
-      this.snackBar.open(`Playing ${orderedTracks.length} tracks`, 'Close', { duration: 2000 });
     } catch (error) {
       console.error('Error playing playlist:', error);
       this.snackBar.open('Error playing playlist', 'Close', { duration: 3000 });
