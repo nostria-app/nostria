@@ -1,4 +1,5 @@
-<div class="modern-player" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" (swipe)="onSwipe($event)">
+<div class="modern-player" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" [trackProgress]="true"
+  (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)" (swipeEnd)="onSwipeEnd()">
   <!-- Blurred background glow -->
   @if (displayedArtwork()) {
   <div class="background-glow" [@fadeBackground]="backgroundState()">

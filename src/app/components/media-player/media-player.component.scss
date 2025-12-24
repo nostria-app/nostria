@@ -72,6 +72,8 @@
     bottom: 0;
     width: 100%;
     height: 100vh;
+    height: 100dvh;
+    /* Dynamic viewport height - accounts for browser UI */
     z-index: 2000;
     background: #000;
     max-width: 100%;
