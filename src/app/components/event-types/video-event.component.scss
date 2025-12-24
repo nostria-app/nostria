@@ -64,7 +64,7 @@
   .video-thumbnail-container {
     position: relative;
     width: 100%;
-    aspect-ratio: 16/9;
+    height: 100%;
     cursor: pointer;
     overflow: hidden;
 
@@ -111,7 +111,7 @@
       left: 0;
       width: 100%;
       height: 100%;
-      object-fit: cover;
+      object-fit: contain;
 
       &.main-thumbnail {
         z-index: 2;
@@ -203,25 +203,7 @@
       }
     }
 
-    .video-thumbnail {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      border-radius: 8px;
-      opacity: 1;
-      transition: opacity 0.3s;
 
-      &.hidden {
-        opacity: 0;
-      }
-
-      &.blurhash-thumbnail {
-        position: absolute;
-        top: 0;
-        left: 0;
-        z-index: 1;
-      }
-    }
 
     .video-thumbnail-placeholder {
       width: 100%;
