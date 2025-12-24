@@ -37,6 +37,10 @@ export class TimelineHoverCardService implements OnDestroy {
       });
   }
 
+  // Track the current target element and pubkey to prevent flickering
+  private currentTargetElement: HTMLElement | null = null;
+  private currentPubkey: string | null = null;
+
   /**
    * Shows a timeline hover card for a user
    * @param element The HTML element to attach the hover card to
@@ -44,7 +48,20 @@ export class TimelineHoverCardService implements OnDestroy {
    * @param delay Optional delay before showing (default 500ms)
    */
   showHoverCard(element: HTMLElement, pubkey: string, delay = 500): void {
+    // If hovering over the same element, don't restart the process
+    if (this.currentTargetElement === element && this.currentPubkey === pubkey) {
+      // Just ensure we're marked as hovering and cancel any pending close
+      this.isMouseOverTrigger.set(true);
+      if (this.closeTimeout) {
+        window.clearTimeout(this.closeTimeout);
+        this.closeTimeout = undefined;
+      }
+      return;
+    }
+
     this.isMouseOverTrigger.set(true);
+    this.currentTargetElement = element;
+    this.currentPubkey = pubkey;
 
     // Clear any existing close timeout
     if (this.closeTimeout) {
@@ -58,14 +75,21 @@ export class TimelineHoverCardService implements OnDestroy {
       this.hoverTimeout = undefined;
     }
 
-    // If already showing a hover card, close it immediately
+    // If already showing a hover card for a different user, close it first
     if (this.overlayRef) {
-      this.closeHoverCard();
+      // Dispose the overlay but don't reset state flags
+      this.overlayRef.dispose();
+      this.overlayRef = null;
+      this.hoverCardComponentRef = null;
+      this.isMouseOverCard.set(false);
     }
 
     // Show hover card after delay
     this.hoverTimeout = window.setTimeout(() => {
-      this.createHoverCard(element, pubkey);
+      // Double-check the element and pubkey are still the same
+      if (this.currentTargetElement === element && this.currentPubkey === pubkey && this.isMouseOverTrigger()) {
+        this.createHoverCard(element, pubkey);
+      }
     }, delay);
   }
 
@@ -74,6 +98,8 @@ export class TimelineHoverCardService implements OnDestroy {
    */
   hideHoverCard(): void {
     this.isMouseOverTrigger.set(false);
+    this.currentTargetElement = null;
+    this.currentPubkey = null;
 
     // Clear hover timeout
     if (this.hoverTimeout) {
@@ -231,6 +257,8 @@ export class TimelineHoverCardService implements OnDestroy {
 
     this.isMouseOverTrigger.set(false);
     this.isMouseOverCard.set(false);
+    this.currentTargetElement = null;
+    this.currentPubkey = null;
 
     if (this.hoverTimeout) {
       window.clearTimeout(this.hoverTimeout);
