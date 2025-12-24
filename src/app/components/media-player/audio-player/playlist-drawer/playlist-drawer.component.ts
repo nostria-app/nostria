@@ -8,7 +8,7 @@ import {
   computed,
   ElementRef,
   viewChild,
-  AfterViewInit,
+  effect,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -35,7 +35,7 @@ import { MediaItem } from '../../../../interfaces';
     '[style.transform]': 'transformStyle()',
   },
 })
-export class PlaylistDrawerComponent implements AfterViewInit {
+export class PlaylistDrawerComponent {
   readonly media = inject(MediaPlayerService);
 
   isOpen = input<boolean>(false);
@@ -47,9 +47,46 @@ export class PlaylistDrawerComponent implements AfterViewInit {
   dragOffsetInternal = signal(0);
   private startY = 0;
   private containerEl = viewChild<ElementRef<HTMLDivElement>>('container');
+  private closeHandleEl = viewChild<ElementRef<HTMLDivElement>>('closeHandle');
+  private gestureSetup = false;
 
   queue = computed(() => this.media.media());
   currentIndex = computed(() => this.media.index);
+
+  private queueListEl = viewChild<ElementRef<HTMLDivElement>>('queueList');
+
+  constructor() {
+    // Use effect to setup gesture when element becomes available
+    effect(() => {
+      const closeHandle = this.closeHandleEl()?.nativeElement;
+      const container = this.containerEl()?.nativeElement;
+      if (closeHandle && container && !this.gestureSetup) {
+        this.gestureSetup = true;
+        // Use setTimeout to ensure DOM is fully ready
+        setTimeout(() => this.setupDragGesture(closeHandle, container), 0);
+      }
+    });
+
+    // Scroll to current track when drawer opens
+    effect(() => {
+      if (this.isOpen()) {
+        // Use setTimeout to ensure DOM is updated after drawer animation starts
+        setTimeout(() => this.scrollToCurrentTrack(), 100);
+      }
+    });
+  }
+
+  private scrollToCurrentTrack(): void {
+    const queueList = this.queueListEl()?.nativeElement;
+    if (!queueList) return;
+
+    const currentIndex = this.currentIndex();
+    const currentItem = queueList.querySelector('.queue-item.current') as HTMLElement;
+
+    if (currentItem) {
+      currentItem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
 
   transformStyle = computed(() => {
     // When drawer is being dragged closed (internal drag on open drawer)
@@ -75,21 +112,15 @@ export class PlaylistDrawerComponent implements AfterViewInit {
     return 'translateY(-100%)';
   });
 
-  ngAfterViewInit(): void {
-    this.setupDragGesture();
-  }
-
-  private setupDragGesture(): void {
-    const container = this.containerEl()?.nativeElement;
-    if (!container) return;
-
-    container.addEventListener('touchstart', (e: TouchEvent) => {
+  private setupDragGesture(closeHandle: HTMLDivElement, container: HTMLDivElement): void {
+    // Only listen on the bottom close handle, not the entire container
+    closeHandle.addEventListener('touchstart', (e: TouchEvent) => {
       if (e.touches.length !== 1) return;
       this.startY = e.touches[0].clientY;
       this.isDragging.set(true);
     }, { passive: true });
 
-    container.addEventListener('touchmove', (e: TouchEvent) => {
+    closeHandle.addEventListener('touchmove', (e: TouchEvent) => {
       if (!this.isDragging()) return;
       const deltaY = e.touches[0].clientY - this.startY;
       const containerHeight = container.offsetHeight;
@@ -98,21 +129,16 @@ export class PlaylistDrawerComponent implements AfterViewInit {
       if (this.isOpen()) {
         // When open, allow dragging up (negative) to close
         this.dragOffsetInternal.set(Math.min(0, percent));
-      } else {
-        // When closed, allow dragging down (positive) to open
-        this.dragOffsetInternal.set(Math.max(-100, percent - 100));
       }
     }, { passive: true });
 
-    container.addEventListener('touchend', () => {
+    closeHandle.addEventListener('touchend', () => {
       const offset = this.dragOffsetInternal();
       this.isDragging.set(false);
 
-      // Threshold to trigger open/close
-      if (this.isOpen() && offset < -30) {
+      // Threshold to trigger close
+      if (this.isOpen() && offset < -20) {
         this.closeDrawer.emit();
-      } else if (!this.isOpen() && offset > -70) {
-        // Would need an open event
       }
 
       this.dragOffsetInternal.set(0);

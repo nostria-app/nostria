@@ -269,7 +269,5 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     for (let i = 1; i < mediaItems.length; i++) {
       this.mediaPlayer.enque(mediaItems[i]);
     }
-
-    this.snackBar.open(`Playing ${mediaItems.length} track${mediaItems.length > 1 ? 's' : ''} from ${artistName}`, 'OK', { duration: 3000 });
   }
 }
