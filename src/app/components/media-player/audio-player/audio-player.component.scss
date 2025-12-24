@@ -18,6 +18,15 @@
   height: 100%;
   background: transparent;
   overflow: hidden;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+
+  img {
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
+  }
 }
 
 .audio-player-footer {

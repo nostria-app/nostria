@@ -218,7 +218,8 @@
       <app-modern-player-view (openQueue)="openQueue()" class="player-view" />
       }
       @case ('cards') {
-      <app-cards-player-view (openQueue)="openQueue()" class="player-view" />
+      <app-cards-player-view (openQueue)="openQueue()" (queueDragProgress)="onQueueDragProgress($event)"
+        (queueDragEnd)="onQueueDragEnd()" class="player-view" />
       }
       @case ('winamp') {
       <app-winamp-player-view (openQueue)="openQueue()" class="player-view" />
@@ -227,7 +228,7 @@
     </div>
 
     <!-- Playlist drawer overlay -->
-    <app-playlist-drawer [isOpen]="showQueue()" (closeDrawer)="closeQueue()" />
+    <app-playlist-drawer [isOpen]="showQueue()" [dragOffset]="queueDragOffset()" (closeDrawer)="closeQueue()" />
   </div>
   }
 </div>

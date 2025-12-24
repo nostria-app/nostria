@@ -30,6 +30,8 @@ export class CardsPlayerViewComponent {
   readonly media = inject(MediaPlayerService);
 
   openQueue = output<void>();
+  queueDragProgress = output<number>();
+  queueDragEnd = output<void>();
 
   // Swipe animation state
   swipeOffset = signal(0);
@@ -79,6 +81,9 @@ export class CardsPlayerViewComponent {
       // Limit the offset to prevent over-swiping
       const maxOffset = 150;
       this.swipeOffset.set(Math.max(-maxOffset, Math.min(maxOffset, event.deltaX)));
+    } else if (event.direction === 'vertical' && event.deltaY > 0) {
+      // Dragging down - emit progress for playlist drawer
+      this.queueDragProgress.emit(event.deltaY);
     }
   }
 
@@ -90,6 +95,8 @@ export class CardsPlayerViewComponent {
     // Animate back to center
     this.isAnimating.set(true);
     this.swipeOffset.set(0);
+    // Notify parent that drag ended
+    this.queueDragEnd.emit();
   }
 
   onSwipe(event: SwipeEvent): void {

@@ -110,21 +110,4 @@
       <mat-icon>{{ media.repeat() === 'one' ? 'repeat_one' : 'repeat' }}</mat-icon>
     </button>
   </div>
-
-  <!-- Navigation arrows -->
-  <div class="swipe-arrows">
-    @if (media.canPrevious()) {
-    <button class="arrow arrow-left" [style.opacity]="swipeOffset() > 0 ? 0.8 : 0.3" (click)="media.previous()"
-      (keydown.enter)="media.previous()" (keydown.space)="media.previous()" matTooltip="Previous track"
-      aria-label="Previous track">
-      <mat-icon>chevron_left</mat-icon>
-    </button>
-    }
-    @if (media.canNext()) {
-    <button class="arrow arrow-right" [style.opacity]="swipeOffset() < 0 ? 0.8 : 0.3" (click)="media.next()"
-      (keydown.enter)="media.next()" (keydown.space)="media.next()" matTooltip="Next track" aria-label="Next track">
-      <mat-icon>chevron_right</mat-icon>
-    </button>
-    }
-  </div>
 </div>

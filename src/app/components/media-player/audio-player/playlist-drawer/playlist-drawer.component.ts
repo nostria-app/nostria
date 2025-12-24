@@ -31,6 +31,7 @@ import { MediaItem } from '../../../../interfaces';
   host: {
     '[class.open]': 'isOpen()',
     '[class.dragging]': 'isDragging()',
+    '[class.previewing]': 'dragOffset() > 0',
     '[style.transform]': 'transformStyle()',
   },
 })
@@ -38,11 +39,12 @@ export class PlaylistDrawerComponent implements AfterViewInit {
   readonly media = inject(MediaPlayerService);
 
   isOpen = input<boolean>(false);
+  dragOffset = input<number>(0);
   closeDrawer = output<void>();
 
   // Drag to open/close
   isDragging = signal(false);
-  dragOffset = signal(0);
+  dragOffsetInternal = signal(0);
   private startY = 0;
   private containerEl = viewChild<ElementRef<HTMLDivElement>>('container');
 
@@ -50,11 +52,27 @@ export class PlaylistDrawerComponent implements AfterViewInit {
   currentIndex = computed(() => this.media.index);
 
   transformStyle = computed(() => {
+    // When drawer is being dragged closed (internal drag on open drawer)
     if (this.isDragging()) {
-      const offset = this.dragOffset();
+      const offset = this.dragOffsetInternal();
       return `translateY(${Math.max(-100, offset)}%)`;
     }
-    return this.isOpen() ? 'translateY(0)' : 'translateY(-100%)';
+
+    // When open, show fully
+    if (this.isOpen()) {
+      return 'translateY(0)';
+    }
+
+    // When closed but external drag is happening (dragging down from player view)
+    const externalDrag = this.dragOffset();
+    if (externalDrag > 0) {
+      // Convert pixel drag to percentage (assuming ~600px container height)
+      const percent = Math.min(100, (externalDrag / 600) * 100);
+      return `translateY(${-100 + percent}%)`;
+    }
+
+    // Default closed state
+    return 'translateY(-100%)';
   });
 
   ngAfterViewInit(): void {
@@ -79,15 +97,15 @@ export class PlaylistDrawerComponent implements AfterViewInit {
 
       if (this.isOpen()) {
         // When open, allow dragging up (negative) to close
-        this.dragOffset.set(Math.min(0, percent));
+        this.dragOffsetInternal.set(Math.min(0, percent));
       } else {
         // When closed, allow dragging down (positive) to open
-        this.dragOffset.set(Math.max(-100, percent - 100));
+        this.dragOffsetInternal.set(Math.max(-100, percent - 100));
       }
     }, { passive: true });
 
     container.addEventListener('touchend', () => {
-      const offset = this.dragOffset();
+      const offset = this.dragOffsetInternal();
       this.isDragging.set(false);
 
       // Threshold to trigger open/close
@@ -97,7 +115,7 @@ export class PlaylistDrawerComponent implements AfterViewInit {
         // Would need an open event
       }
 
-      this.dragOffset.set(0);
+      this.dragOffsetInternal.set(0);
     }, { passive: true });
   }
 
