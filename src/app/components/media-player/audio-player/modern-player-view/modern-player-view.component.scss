@@ -48,13 +48,14 @@
 .pull-indicator {
   position: relative;
   z-index: 100;
-  padding: 12px 16px 8px;
+  padding: 8px 16px 4px;
   background: transparent;
   border: none;
   cursor: pointer;
   transition: opacity 0.2s;
   opacity: 0.6;
   align-self: center;
+  flex-shrink: 0;
 
   &:hover {
     opacity: 1;
@@ -76,9 +77,9 @@
 
   .pull-hint {
     display: block;
-    font-size: 0.65rem;
+    font-size: 0.6rem;
     color: var(--mat-sys-on-surface-variant);
-    margin-top: 4px;
+    margin-top: 2px;
     text-transform: uppercase;
     letter-spacing: 1px;
     text-align: center;
@@ -94,18 +95,29 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
-  gap: 24px;
+  padding: 8px 24px 4px;
+  gap: 4px;
+  min-height: 0;
+
+  @media (max-height: 700px) {
+    padding: 4px 16px 4px;
+    gap: 2px;
+  }
 }
 
 // Album art container with glow ring
 .album-container {
   position: relative;
-  width: min(300px, 60vw);
+  width: min(240px, 45vw, 32vh);
   aspect-ratio: 1;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
+
+  @media (max-height: 700px) {
+    width: min(200px, 40vw, 28vh);
+  }
 
   .album-glow-ring {
     position: absolute;
@@ -188,11 +200,12 @@
   text-align: center;
   max-width: 100%;
   padding: 0 16px;
+  flex-shrink: 0;
 
   .track-title {
-    font-size: 1.5rem;
+    font-size: 1.1rem;
     color: var(--mat-sys-on-surface);
-    margin: 0 0 8px;
+    margin: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -201,7 +214,7 @@
   }
 
   .track-artist {
-    font-size: 1rem;
+    font-size: 0.85rem;
     color: var(--mat-sys-on-surface-variant);
     margin: 0;
     overflow: hidden;
@@ -209,6 +222,10 @@
     white-space: nowrap;
     max-width: 300px;
     transition: opacity 0.3s ease-out, transform 0.3s ease-out;
+
+    @media (max-height: 700px) {
+      font-size: 0.85rem;
+    }
   }
 }
 
@@ -216,10 +233,11 @@
 .timeline-container {
   width: 100%;
   max-width: 400px;
+  flex-shrink: 0;
 
   .custom-slider {
     width: 100%;
-    height: 32px;
+    height: 20px;
     display: flex;
     align-items: center;
 
@@ -227,8 +245,8 @@
       -webkit-appearance: none;
       appearance: none;
       width: 100%;
-      height: 6px;
-      border-radius: 3px;
+      height: 4px;
+      border-radius: 2px;
       background: rgba(255, 255, 255, 0.2);
       outline: none;
       cursor: pointer;
@@ -238,8 +256,8 @@
       &::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         background: var(--mat-sys-primary);
         cursor: pointer;
@@ -248,8 +266,8 @@
       }
 
       &::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         background: var(--mat-sys-primary);
         cursor: pointer;
@@ -266,9 +284,9 @@
   .time-labels {
     display: flex;
     justify-content: space-between;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--mat-sys-on-surface-variant);
-    margin-top: 4px;
+    margin-top: 2px;
   }
 }
 
@@ -277,12 +295,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
+  gap: 4px;
+  flex-shrink: 0;
 
   .control-btn {
     color: var(--mat-sys-on-surface);
     opacity: 0.8;
     transition: opacity 0.2s, transform 0.2s;
+    width: 36px;
+    height: 36px;
 
     &:hover:not(:disabled) {
       opacity: 1;
@@ -294,18 +315,21 @@
     }
 
     mat-icon {
-      font-size: 28px;
-      width: 28px;
-      height: 28px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
     }
   }
 
   .shuffle-btn,
   .repeat-btn {
+    width: 32px;
+    height: 32px;
+
     mat-icon {
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
 
     &.active {
@@ -315,16 +339,16 @@
   }
 
   .play-btn {
-    width: 64px;
-    height: 64px;
+    width: 44px;
+    height: 44px;
     background: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
     transition: transform 0.2s, box-shadow 0.2s;
 
     mat-icon {
-      font-size: 36px;
-      width: 36px;
-      height: 36px;
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
     }
 
     &:hover {
@@ -338,15 +362,17 @@
 .volume-container {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 6px;
   width: 100%;
-  max-width: 200px;
+  max-width: 140px;
+  flex-shrink: 0;
+  height: 24px;
 
   .volume-icon {
     color: var(--mat-sys-on-surface-variant);
-    font-size: 20px;
-    width: 20px;
-    height: 20px;
+    font-size: 16px;
+    width: 16px;
+    height: 16px;
   }
 
   .volume-slider {

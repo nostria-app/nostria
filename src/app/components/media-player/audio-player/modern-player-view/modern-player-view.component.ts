@@ -12,7 +12,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSliderModule } from '@angular/material/slider';
 import { MediaPlayerService } from '../../../../services/media-player.service';
-import { SwipeGestureDirective, SwipeEvent } from '../../../../directives/swipe-gesture.directive';
+import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 import { trigger, transition, style, animate, state } from '@angular/animations';
 
 @Component({
@@ -46,6 +46,8 @@ export class ModernPlayerViewComponent {
   readonly media = inject(MediaPlayerService);
 
   openQueue = output<void>();
+  queueDragProgress = output<number>();
+  queueDragEnd = output<void>();
 
   // Track change animation state
   contentState = signal<'visible' | 'hidden'>('visible');
@@ -132,6 +134,16 @@ export class ModernPlayerViewComponent {
         this.openQueue.emit();
         break;
     }
+  }
+
+  onSwipeProgress(event: SwipeProgressEvent): void {
+    if (event.direction === 'vertical' && event.deltaY > 0) {
+      this.queueDragProgress.emit(event.deltaY);
+    }
+  }
+
+  onSwipeEnd(): void {
+    this.queueDragEnd.emit();
   }
 
   onVolumeChange(value: number): void {

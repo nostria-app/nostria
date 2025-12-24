@@ -31,7 +31,7 @@
       [style.transform]="'translateX(' + swipeOffset() + 'px)'">
       <!-- Circular progress background -->
       <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
-      <div class="circular-container" (click)="seekByCircle($event)" role="progressbar"
+      <div class="circular-container" #circularContainer (click)="seekByCircle($event)" role="progressbar"
         [attr.aria-valuenow]="currentTime()" [attr.aria-valuemin]="0" [attr.aria-valuemax]="duration()"
         aria-label="Track progress">
         <app-circular-progress [progress]="progress()" [size]="280" [strokeWidth]="6"

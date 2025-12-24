@@ -5,6 +5,10 @@ import {
   signal,
   ChangeDetectionStrategy,
   output,
+  ElementRef,
+  viewChild,
+  AfterViewInit,
+  OnDestroy,
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,7 +30,7 @@ import { CircularProgressComponent } from '../circular-progress/circular-progres
   templateUrl: './cards-player-view.component.html',
   styleUrl: './cards-player-view.component.scss',
 })
-export class CardsPlayerViewComponent {
+export class CardsPlayerViewComponent implements AfterViewInit, OnDestroy {
   readonly media = inject(MediaPlayerService);
 
   openQueue = output<void>();
@@ -36,6 +40,18 @@ export class CardsPlayerViewComponent {
   // Swipe animation state
   swipeOffset = signal(0);
   isAnimating = signal(false);
+
+  // Circular seek gesture state
+  private circularContainer = viewChild<ElementRef<HTMLDivElement>>('circularContainer');
+  private isCircularSeeking = signal(false);
+  private lastAngle = 0;
+  private seekStartTime = 0;
+  private touchStartX = 0;
+  private touchStartY = 0;
+  private circularGestureDecided = false;
+  private boundTouchStart = this.onCircularTouchStart.bind(this);
+  private boundTouchMove = this.onCircularTouchMove.bind(this);
+  private boundTouchEnd = this.onCircularTouchEnd.bind(this);
 
   currentTime = computed(() => this.media.currentTimeSig());
   duration = computed(() => this.media.durationSig());
@@ -146,7 +162,145 @@ export class CardsPlayerViewComponent {
     }, 300);
   }
 
+  ngAfterViewInit(): void {
+    this.setupCircularGesture();
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupCircularGesture();
+  }
+
+  private setupCircularGesture(): void {
+    const container = this.circularContainer()?.nativeElement;
+    if (!container) return;
+
+    container.addEventListener('touchstart', this.boundTouchStart, { passive: false });
+    container.addEventListener('touchmove', this.boundTouchMove, { passive: false });
+    container.addEventListener('touchend', this.boundTouchEnd, { passive: true });
+  }
+
+  private cleanupCircularGesture(): void {
+    const container = this.circularContainer()?.nativeElement;
+    if (!container) return;
+
+    container.removeEventListener('touchstart', this.boundTouchStart);
+    container.removeEventListener('touchmove', this.boundTouchMove);
+    container.removeEventListener('touchend', this.boundTouchEnd);
+  }
+
+  private onCircularTouchStart(event: TouchEvent): void {
+    if (event.touches.length !== 1) return;
+
+    const container = this.circularContainer()?.nativeElement;
+    if (!container) return;
+
+    const touch = event.touches[0];
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    // Check if touch is within the circular area (artwork region)
+    const dx = touch.clientX - centerX;
+    const dy = touch.clientY - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const radius = rect.width / 2;
+
+    // Only track if touch is within 80% of the radius (inside artwork area)
+    if (distance < radius * 0.8) {
+      // Don't block yet - just record the start position
+      this.touchStartX = touch.clientX;
+      this.touchStartY = touch.clientY;
+      this.lastAngle = Math.atan2(dy, dx);
+      this.seekStartTime = this.media.audio?.currentTime ?? 0;
+      this.circularGestureDecided = false;
+    }
+  }
+
+  private onCircularTouchMove(event: TouchEvent): void {
+    if (event.touches.length !== 1) return;
+
+    // If we already decided this is a circular gesture, handle seeking
+    if (this.isCircularSeeking()) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.handleCircularSeek(event.touches[0]);
+      return;
+    }
+
+    // If we haven't recorded a start position, ignore
+    if (this.touchStartX === 0 && this.touchStartY === 0) return;
+
+    // If gesture already decided (and it's not circular), let it pass through
+    if (this.circularGestureDecided) return;
+
+    const touch = event.touches[0];
+    const deltaX = touch.clientX - this.touchStartX;
+    const deltaY = touch.clientY - this.touchStartY;
+    const absDeltaX = Math.abs(deltaX);
+    const absDeltaY = Math.abs(deltaY);
+
+    // Need at least 10px of movement to decide
+    if (absDeltaX < 10 && absDeltaY < 10) return;
+
+    this.circularGestureDecided = true;
+
+    // If primarily vertical movement (especially downward), let swipe gesture handle it
+    if (absDeltaY > absDeltaX && deltaY > 0) {
+      // Vertical swipe down - don't block, let parent handle playlist drawer
+      this.touchStartX = 0;
+      this.touchStartY = 0;
+      return;
+    }
+
+    // Horizontal or upward movement - treat as circular seeking
+    this.isCircularSeeking.set(true);
+    event.preventDefault();
+    event.stopPropagation();
+    this.handleCircularSeek(touch);
+  }
+
+  private handleCircularSeek(touch: Touch): void {
+    const container = this.circularContainer()?.nativeElement;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+
+    const dx = touch.clientX - centerX;
+    const dy = touch.clientY - centerY;
+    const currentAngle = Math.atan2(dy, dx);
+
+    // Calculate angle delta
+    let angleDelta = currentAngle - this.lastAngle;
+
+    // Handle wrap-around at -PI/PI boundary
+    if (angleDelta > Math.PI) angleDelta -= 2 * Math.PI;
+    if (angleDelta < -Math.PI) angleDelta += 2 * Math.PI;
+
+    // Convert angle delta to time delta
+    // Full circle = full duration, so angle/(2*PI) * duration
+    const duration = this.duration();
+    if (duration && this.media.audio) {
+      const timeDelta = (angleDelta / (2 * Math.PI)) * duration;
+      const newTime = Math.max(0, Math.min(duration, this.media.audio.currentTime + timeDelta));
+      this.media.audio.currentTime = newTime;
+    }
+
+    this.lastAngle = currentAngle;
+  }
+
+  private onCircularTouchEnd(): void {
+    this.isCircularSeeking.set(false);
+    this.touchStartX = 0;
+    this.touchStartY = 0;
+    this.circularGestureDecided = false;
+  }
+
   seekByCircle(event: MouseEvent): void {
+    // Only handle click if not from a drag gesture
+    if (this.isCircularSeeking()) return;
+
     const target = event.currentTarget as HTMLElement;
     const rect = target.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
