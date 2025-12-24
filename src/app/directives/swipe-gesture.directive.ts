@@ -222,7 +222,8 @@ export class SwipeGestureDirective implements OnInit, OnDestroy {
         element.hasAttribute('mat-button') ||
         element.hasAttribute('mat-icon-button') ||
         element.hasAttribute('mat-fab') ||
-        element.classList.contains('pull-indicator')
+        element.classList.contains('pull-indicator') ||
+        element.classList.contains('circular-container')
       ) {
         return true;
       }

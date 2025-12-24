@@ -26,6 +26,15 @@ $winamp-button-pressed: #2a2a2a;
   gap: 4px;
   font-family: 'Courier New', monospace;
   overflow: auto;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+
+  img {
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
+  }
 }
 
 // Main player window

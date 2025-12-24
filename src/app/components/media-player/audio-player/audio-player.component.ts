@@ -67,6 +67,7 @@ export class AudioPlayerComponent {
   // Player view state
   currentView = signal<PlayerViewType>(this.loadSavedView());
   showQueue = signal(false);
+  queueDragOffset = signal(0);
 
   // View options for the menu
   viewOptions: { type: PlayerViewType; icon: string; label: string }[] = [
@@ -90,10 +91,28 @@ export class AudioPlayerComponent {
 
   openQueue(): void {
     this.showQueue.set(true);
+    this.queueDragOffset.set(0);
   }
 
   closeQueue(): void {
     this.showQueue.set(false);
+    this.queueDragOffset.set(0);
+  }
+
+  onQueueDragProgress(deltaY: number): void {
+    // Only allow drag when queue is not already open
+    if (!this.showQueue()) {
+      this.queueDragOffset.set(deltaY);
+    }
+  }
+
+  onQueueDragEnd(): void {
+    // If dragged far enough, open the queue
+    const threshold = 100;
+    if (this.queueDragOffset() > threshold) {
+      this.showQueue.set(true);
+    }
+    this.queueDragOffset.set(0);
   }
 
   // Computed values for display

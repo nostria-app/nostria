@@ -12,6 +12,15 @@
   flex-direction: column;
   overflow: hidden;
   background: var(--mat-sys-surface);
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+
+  img {
+    -webkit-user-drag: none;
+    user-drag: none;
+    pointer-events: none;
+  }
 }
 
 // Blurred background glow effect
