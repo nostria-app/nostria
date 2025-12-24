@@ -59,7 +59,24 @@ export class MediaService implements NostriaService {
   readonly mediaServers = this._mediaServers.asReadonly();
 
   async load(pubkey: string = this.accountState.pubkey()) {
-    const userServerList = await this.nostrService.getMediaServers(pubkey);
+    // First try to get from storage (fast path)
+    let userServerList = await this.nostrService.getMediaServers(pubkey);
+
+    // If not in storage, try fetching from relay as fallback
+    // This handles race conditions where the subscription hasn't received the event yet
+    if (!userServerList) {
+      this.logger.debug('Media servers not in storage, attempting relay fetch');
+      userServerList = await this.accountRelay.getEventByPubkeyAndKind(
+        pubkey,
+        MEDIA_SERVERS_EVENT_KIND
+      );
+
+      // If found on relay, save to database for future use
+      if (userServerList) {
+        this.logger.debug('Found media servers on relay, saving to database');
+        await this.database.saveEvent(userServerList);
+      }
+    }
 
     if (userServerList) {
       const servers = this.nostrService.getTags(userServerList, standardizedTag.server);
