@@ -295,15 +295,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 8px;
   flex-shrink: 0;
 
   .control-btn {
     color: var(--mat-sys-on-surface);
     opacity: 0.8;
     transition: opacity 0.2s, transform 0.2s;
-    width: 36px;
-    height: 36px;
+    width: 44px;
+    height: 44px;
 
     &:hover:not(:disabled) {
       opacity: 1;
@@ -315,21 +315,21 @@
     }
 
     mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
+      font-size: 28px;
+      width: 28px;
+      height: 28px;
     }
   }
 
   .shuffle-btn,
   .repeat-btn {
-    width: 32px;
-    height: 32px;
+    width: 40px;
+    height: 40px;
 
     mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
+      font-size: 22px;
+      width: 22px;
+      height: 22px;
     }
 
     &.active {
@@ -339,16 +339,16 @@
   }
 
   .play-btn {
-    width: 44px;
-    height: 44px;
+    width: 56px;
+    height: 56px;
     background: var(--mat-sys-primary);
     color: var(--mat-sys-on-primary);
     transition: transform 0.2s, box-shadow 0.2s;
 
     mat-icon {
-      font-size: 24px;
-      width: 24px;
-      height: 24px;
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
     }
 
     &:hover {
