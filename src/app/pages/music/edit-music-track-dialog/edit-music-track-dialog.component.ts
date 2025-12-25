@@ -187,7 +187,9 @@ export class EditMusicTrackDialogComponent {
     const trackNumber = track.tags.find(t => t[0] === 'track_number')?.[1] || '';
     const releaseDate = track.tags.find(t => t[0] === 'released')?.[1] || '';
     const language = track.tags.find(t => t[0] === 'language')?.[1] || 'en';
-    const explicitContent = track.tags.some(t => t[0] === 'content-warning' && t[1] === 'explicit');
+    // Support both new spec format ['explicit', 'true'] and old format ['content-warning', 'explicit']
+    const explicitContent = track.tags.some(t => t[0] === 'explicit' && t[1] === 'true') ||
+      track.tags.some(t => t[0] === 'content-warning' && t[1] === 'explicit');
     const lyrics = track.tags.find(t => t[0] === 'lyrics')?.[1] || '';
 
     // Extract credits from content
@@ -427,6 +429,7 @@ export class EditMusicTrackDialogComponent {
         ['d', dTag],
         ['title', formValue.title],
         ['url', this.audioUrl()!],
+        ['t', 'music'], // Required per spec
         ['client', 'nostria'],
       ];
 
@@ -483,7 +486,7 @@ export class EditMusicTrackDialogComponent {
       }
 
       if (formValue.explicitContent) {
-        tags.push(['content-warning', 'explicit']);
+        tags.push(['explicit', 'true']);
       }
 
       if (formValue.lyrics) {
