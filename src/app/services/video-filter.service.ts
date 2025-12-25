@@ -50,6 +50,11 @@ export class VideoFilterService {
     { id: 'cartoon', name: 'Cartoon', icon: 'brush', description: 'Posterized cartoon style' },
     { id: 'blur', name: 'Blur/Beautify', icon: 'blur_on', description: 'Soft focus effect' },
     { id: 'sharpen', name: 'Sharpen', icon: 'tune', description: 'Enhanced details' },
+    { id: 'brightness', name: 'Brighten', icon: 'brightness_6', description: 'Increased brightness' },
+    { id: 'contrast', name: 'High Contrast', icon: 'contrast', description: 'Enhanced contrast' },
+    { id: 'vignette', name: 'Vignette', icon: 'vignette', description: 'Dark edges' },
+    { id: 'warm', name: 'Warm', icon: 'whatshot', description: 'Warm tone' },
+    { id: 'cool', name: 'Cool', icon: 'ac_unit', description: 'Cool tone' },
     { id: 'pixelate', name: 'Pixelate', icon: 'grid_on', description: 'Pixel art effect' },
   ];
 
