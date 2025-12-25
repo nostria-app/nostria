@@ -2,6 +2,19 @@
   [maxWidth]="'95vw'" (closed)="onClose()">
 
   <div dialog-content>
+    <!-- No media servers warning -->
+    @if (!hasMediaServers()) {
+    <div class="media-server-warning">
+      <div class="warning-content">
+        <mat-icon color="warn">warning</mat-icon>
+        <span>You need to configure a media server to upload cover images</span>
+      </div>
+      <button mat-flat-button type="button" (click)="navigateToMediaSettings()">
+        Configure Media Server
+      </button>
+    </div>
+    }
+
     <form [formGroup]="trackForm">
       <!-- Track Title -->
       <mat-form-field appearance="outline" class="full-width">

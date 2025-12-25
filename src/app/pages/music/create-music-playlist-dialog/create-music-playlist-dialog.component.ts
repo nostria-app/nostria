@@ -1,4 +1,5 @@
-import { Component, inject, signal, input, output } from '@angular/core';
+import { Component, inject, signal, input, output, computed } from '@angular/core';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -38,6 +39,10 @@ export class CreateMusicPlaylistDialogComponent {
   private fb = inject(FormBuilder);
   private musicPlaylistService = inject(MusicPlaylistService);
   private mediaService = inject(MediaService);
+  private router = inject(Router);
+
+  // Media server availability
+  hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
 
   playlistForm: FormGroup;
   isCreating = signal(false);
@@ -173,5 +178,11 @@ export class CreateMusicPlaylistDialogComponent {
 
   onCancel(): void {
     this.closed.emit(null);
+  }
+
+  // Navigate to media settings - specifically to the Media Servers tab
+  navigateToMediaSettings(): void {
+    this.onCancel();
+    this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
   }
 }

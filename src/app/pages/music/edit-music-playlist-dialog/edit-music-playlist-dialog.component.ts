@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, input, output, effect, untracked, OnInit } from '@angular/core';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -63,6 +64,10 @@ export class EditMusicPlaylistDialogComponent {
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
+
+  // Media server availability
+  hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
 
   playlistForm: FormGroup;
   isSaving = signal(false);
@@ -349,5 +354,11 @@ export class EditMusicPlaylistDialogComponent {
 
   onClose(): void {
     this.closed.emit(null);
+  }
+
+  // Navigate to media settings - specifically to the Media Servers tab
+  navigateToMediaSettings(): void {
+    this.onCancel();
+    this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
   }
 }

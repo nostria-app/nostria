@@ -1,6 +1,19 @@
 <app-custom-dialog [title]="'Edit Playlist'" [showCloseButton]="true" [disableClose]="isSaving()" [width]="'500px'"
   (closed)="onClose()">
   <div dialog-content>
+    <!-- No media servers warning -->
+    @if (!hasMediaServers()) {
+    <div class="media-server-warning">
+      <div class="warning-content">
+        <mat-icon color="warn">warning</mat-icon>
+        <span>You need to configure a media server to upload cover images</span>
+      </div>
+      <button mat-flat-button type="button" (click)="navigateToMediaSettings()">
+        Configure Media Server
+      </button>
+    </div>
+    }
+
     <form [formGroup]="playlistForm" class="playlist-form">
       <mat-form-field appearance="outline" class="full-width">
         <mat-label>Title</mat-label>

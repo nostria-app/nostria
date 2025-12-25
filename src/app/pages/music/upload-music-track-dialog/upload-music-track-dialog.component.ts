@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, output } from '@angular/core';
+import { Router } from '@angular/router';
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -63,6 +64,10 @@ export class UploadMusicTrackDialogComponent {
   private utilities = inject(UtilitiesService);
   private dataService = inject(DataService);
   private snackBar = inject(MatSnackBar);
+  private router = inject(Router);
+
+  // Media server availability
+  hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
 
   trackForm: FormGroup;
   isPublishing = signal(false);
@@ -487,5 +492,11 @@ export class UploadMusicTrackDialogComponent {
 
   cancel(): void {
     this.closed.emit(null);
+  }
+
+  // Navigate to media settings - specifically to the Media Servers tab
+  navigateToMediaSettings(): void {
+    this.cancel();
+    this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
   }
 }
