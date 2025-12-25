@@ -27,41 +27,43 @@
   @if (currentStep() === 1) {
   <div class="step-content step-select">
     @if (isCameraMode()) {
-    <!-- Camera capture mode -->
-    <div class="camera-capture">
-      <div class="camera-preview" [class.mirror]="facingMode() === 'user'">
-        <video #cameraVideo autoplay playsinline muted></video>
-        <canvas #cameraCanvas hidden></canvas>
+    <!-- Camera capture mode - fullscreen -->
+    <div class="camera-capture-fullscreen">
+      <video #cameraVideo autoplay playsinline muted [class.mirror]="facingMode() === 'user'"></video>
+      <canvas #cameraCanvas hidden></canvas>
 
-        @if (!isCameraReady() && !cameraError()) {
-        <div class="camera-loading">
-          <mat-spinner diameter="40"></mat-spinner>
-          <span i18n="@@media.creator.camera.loading">Starting camera...</span>
-        </div>
-        }
-
-        @if (cameraError()) {
-        <div class="camera-error">
-          <mat-icon>error_outline</mat-icon>
-          <span>{{ cameraError() }}</span>
-        </div>
-        }
+      @if (!isCameraReady() && !cameraError()) {
+      <div class="camera-loading">
+        <mat-spinner diameter="40"></mat-spinner>
+        <span i18n="@@media.creator.camera.loading">Starting camera...</span>
       </div>
+      }
 
-      <div class="camera-controls">
-        <button mat-icon-button (click)="stopCamera()" class="camera-close-btn" matTooltip="Close camera"
+      @if (cameraError()) {
+      <div class="camera-error">
+        <mat-icon>error_outline</mat-icon>
+        <span>{{ cameraError() }}</span>
+      </div>
+      }
+
+      <!-- Glass effect controls overlay -->
+      <div class="camera-controls-overlay">
+        <button class="glass-btn close-btn" (click)="stopCamera()" matTooltip="Close camera"
           i18n-matTooltip="@@media.creator.camera.close">
           <mat-icon>close</mat-icon>
         </button>
 
-        <button mat-fab (click)="capturePhoto()" [disabled]="!isCameraReady()" class="capture-btn"
-          matTooltip="Take photo" i18n-matTooltip="@@media.creator.camera.capture">
-          <mat-icon>photo_camera</mat-icon>
-        </button>
-
-        <button mat-icon-button (click)="switchCamera()" class="switch-camera-btn" matTooltip="Switch camera"
+        <button class="glass-btn switch-btn" (click)="switchCamera()" matTooltip="Switch camera"
           i18n-matTooltip="@@media.creator.camera.switch">
           <mat-icon>flip_camera_ios</mat-icon>
+        </button>
+      </div>
+
+      <!-- Capture button at bottom -->
+      <div class="camera-capture-controls">
+        <button class="capture-btn-glass" (click)="capturePhoto()" [disabled]="!isCameraReady()"
+          matTooltip="Take photo" i18n-matTooltip="@@media.creator.camera.capture" aria-label="Take photo">
+          <div class="capture-btn-inner"></div>
         </button>
       </div>
     </div>
@@ -122,14 +124,6 @@
           }
         </div>
 
-        <!-- Current filter badge -->
-        @if (isImage() && selectedFilter() !== 'none') {
-        <div class="current-filter-badge">
-          <mat-icon>{{ getCurrentFilterIcon() }}</mat-icon>
-          <span>{{ getCurrentFilterName() }}</span>
-        </div>
-        }
-
         <!-- Video thumbnail indicator -->
         @if (isVideo() && currentMedia()?.thumbnailUrl) {
         <div class="thumbnail-badge">
@@ -143,143 +137,104 @@
           matTooltip="Remove this item" i18n-matTooltip="@@media.creator.remove.tooltip">
           <mat-icon>close</mat-icon>
         </button>
-      </div>
 
-      <!-- Right panel -->
-      <div class="right-panel">
-        <!-- Filter panel for images -->
+        <!-- Inline Filter/Adjustment Panel for images -->
         @if (isImage()) {
-        <div class="filter-panel">
-          <!-- Tabs for Filters / Adjustments -->
-          <div class="edit-tabs">
-            <button class="tab-btn" [class.active]="editPanelTab() === 'filters'" (click)="editPanelTab.set('filters')">
-              <mat-icon>photo_filter</mat-icon>
-              <span i18n="@@media.creator.tab.filters">Filters</span>
-            </button>
-            <button class="tab-btn" [class.active]="editPanelTab() === 'adjustments'"
-              (click)="editPanelTab.set('adjustments')">
-              <mat-icon>tune</mat-icon>
-              <span i18n="@@media.creator.tab.adjustments">Adjustments</span>
-            </button>
-          </div>
+        <div class="inline-edit-panel" [class.expanded]="showEditPanel()">
+          <!-- Toggle button -->
+          <button class="edit-panel-toggle" (click)="toggleEditPanel()">
+            <mat-icon>{{ showEditPanel() ? 'expand_more' : 'tune' }}</mat-icon>
+            <span>{{ showEditPanel() ? '' : (selectedFilter() !== 'none' ? getCurrentFilterName() : 'Edit') }}</span>
+          </button>
 
-          <!-- Filters Tab -->
-          @if (editPanelTab() === 'filters') {
-          <div class="filter-grid">
-            @for (filter of filterService.availableFilters; track filter.id) {
-            <button class="filter-option" [class.selected]="selectedFilter() === filter.id"
-              (click)="selectFilter(filter.id)" [matTooltip]="filter.description">
-              <mat-icon>{{ filter.icon }}</mat-icon>
-              <span>{{ filter.name }}</span>
-            </button>
-            }
-          </div>
+          @if (showEditPanel()) {
+          <div class="edit-panel-content">
+            <!-- Tabs for Filters / Adjustments -->
+            <div class="edit-tabs">
+              <button class="tab-btn" [class.active]="editPanelTab() === 'filters'" (click)="editPanelTab.set('filters')">
+                <mat-icon>photo_filter</mat-icon>
+                <span i18n="@@media.creator.tab.filters">Filters</span>
+              </button>
+              <button class="tab-btn" [class.active]="editPanelTab() === 'adjustments'"
+                (click)="editPanelTab.set('adjustments')">
+                <mat-icon>tune</mat-icon>
+                <span i18n="@@media.creator.tab.adjustments">Adjust</span>
+              </button>
+            </div>
 
-          <!-- Filter Intensity Slider (only if a filter is selected) -->
-          @if (selectedFilter() !== 'none') {
-          <div class="intensity-slider">
-            <div class="slider-header">
-              <span i18n="@@media.creator.filter.intensity">Filter Intensity</span>
+            <!-- Filters Tab -->
+            @if (editPanelTab() === 'filters') {
+            <div class="filter-chips">
+              @for (filter of filterService.availableFilters; track filter.id) {
+              <button class="filter-chip" [class.selected]="selectedFilter() === filter.id"
+                (click)="selectFilter(filter.id)">
+                <mat-icon>{{ filter.icon }}</mat-icon>
+                <span>{{ filter.name }}</span>
+              </button>
+              }
+            </div>
+
+            <!-- Filter Intensity Slider -->
+            @if (selectedFilter() !== 'none') {
+            <div class="inline-slider">
+              <span class="slider-label" i18n="@@media.creator.filter.intensity">Intensity</span>
+              <mat-slider min="0" max="100" step="1" class="inline-mat-slider">
+                <input matSliderThumb [value]="filterIntensity()" (valueChange)="updateFilterIntensity($any($event))" aria-label="Filter intensity" />
+              </mat-slider>
               <span class="slider-value">{{ filterIntensity() }}%</span>
             </div>
-            <mat-slider min="0" max="100" step="1" discrete class="full-width-slider">
-              <input matSliderThumb [value]="filterIntensity()" (valueChange)="updateFilterIntensity($any($event))"
-                aria-label="Filter intensity" />
-            </mat-slider>
-          </div>
-          }
-          }
+            }
+            }
 
-          <!-- Adjustments Tab -->
-          @if (editPanelTab() === 'adjustments') {
-          <div class="adjustments-panel">
-            <!-- Brightness -->
-            <div class="adjustment-slider">
-              <div class="slider-header">
+            <!-- Adjustments Tab -->
+            @if (editPanelTab() === 'adjustments') {
+            <div class="adjustments-inline">
+              <div class="inline-slider">
                 <mat-icon>brightness_6</mat-icon>
-                <span i18n="@@media.creator.adjust.brightness">Brightness</span>
+                <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
+                  <input matSliderThumb [value]="adjustments().brightness"
+                    (valueChange)="updateAdjustment('brightness', $any($event))" aria-label="Brightness" />
+                </mat-slider>
                 <span class="slider-value">{{ adjustments().brightness }}</span>
               </div>
-              <mat-slider min="-100" max="100" step="1" discrete class="full-width-slider">
-                <input matSliderThumb [value]="adjustments().brightness"
-                  (valueChange)="updateAdjustment('brightness', $any($event))" aria-label="Brightness" />
-              </mat-slider>
-            </div>
-
-            <!-- Contrast -->
-            <div class="adjustment-slider">
-              <div class="slider-header">
+              <div class="inline-slider">
                 <mat-icon>contrast</mat-icon>
-                <span i18n="@@media.creator.adjust.contrast">Contrast</span>
+                <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
+                  <input matSliderThumb [value]="adjustments().contrast"
+                    (valueChange)="updateAdjustment('contrast', $any($event))" aria-label="Contrast" />
+                </mat-slider>
                 <span class="slider-value">{{ adjustments().contrast }}</span>
               </div>
-              <mat-slider min="-100" max="100" step="1" discrete class="full-width-slider">
-                <input matSliderThumb [value]="adjustments().contrast"
-                  (valueChange)="updateAdjustment('contrast', $any($event))" aria-label="Contrast" />
-              </mat-slider>
-            </div>
-
-            <!-- Fade -->
-            <div class="adjustment-slider">
-              <div class="slider-header">
-                <mat-icon>gradient</mat-icon>
-                <span i18n="@@media.creator.adjust.fade">Fade</span>
-                <span class="slider-value">{{ adjustments().fade }}</span>
-              </div>
-              <mat-slider min="0" max="100" step="1" discrete class="full-width-slider">
-                <input matSliderThumb [value]="adjustments().fade"
-                  (valueChange)="updateAdjustment('fade', $any($event))" aria-label="Fade" />
-              </mat-slider>
-            </div>
-
-            <!-- Saturation -->
-            <div class="adjustment-slider">
-              <div class="slider-header">
+              <div class="inline-slider">
                 <mat-icon>palette</mat-icon>
-                <span i18n="@@media.creator.adjust.saturation">Saturation</span>
+                <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
+                  <input matSliderThumb [value]="adjustments().saturation"
+                    (valueChange)="updateAdjustment('saturation', $any($event))" aria-label="Saturation" />
+                </mat-slider>
                 <span class="slider-value">{{ adjustments().saturation }}</span>
               </div>
-              <mat-slider min="-100" max="100" step="1" discrete class="full-width-slider">
-                <input matSliderThumb [value]="adjustments().saturation"
-                  (valueChange)="updateAdjustment('saturation', $any($event))" aria-label="Saturation" />
-              </mat-slider>
-            </div>
-
-            <!-- Temperature -->
-            <div class="adjustment-slider">
-              <div class="slider-header">
+              <div class="inline-slider">
                 <mat-icon>thermostat</mat-icon>
-                <span i18n="@@media.creator.adjust.temperature">Temperature</span>
+                <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
+                  <input matSliderThumb [value]="adjustments().temperature"
+                    (valueChange)="updateAdjustment('temperature', $any($event))" aria-label="Temperature" />
+                </mat-slider>
                 <span class="slider-value">{{ adjustments().temperature }}</span>
               </div>
-              <mat-slider min="-100" max="100" step="1" discrete class="full-width-slider">
-                <input matSliderThumb [value]="adjustments().temperature"
-                  (valueChange)="updateAdjustment('temperature', $any($event))" aria-label="Temperature" />
-              </mat-slider>
+              <button class="reset-btn" (click)="resetAdjustments()" [disabled]="!hasAdjustments()">
+                <mat-icon>refresh</mat-icon>
+                <span i18n="@@media.creator.adjust.reset">Reset</span>
+              </button>
             </div>
-
-            <!-- Vignette -->
-            <div class="adjustment-slider">
-              <div class="slider-header">
-                <mat-icon>vignette</mat-icon>
-                <span i18n="@@media.creator.adjust.vignette">Vignette</span>
-                <span class="slider-value">{{ adjustments().vignette }}</span>
-              </div>
-              <mat-slider min="0" max="100" step="1" discrete class="full-width-slider">
-                <input matSliderThumb [value]="adjustments().vignette"
-                  (valueChange)="updateAdjustment('vignette', $any($event))" aria-label="Vignette" />
-              </mat-slider>
-            </div>
-
-            <!-- Reset button -->
-            <button mat-button class="reset-adjustments-btn" (click)="resetAdjustments()">
-              <mat-icon>refresh</mat-icon>
-              <span i18n="@@media.creator.adjust.reset">Reset All</span>
-            </button>
+            }
           </div>
           }
         </div>
         }
+      </div>
+
+      <!-- Right panel (media thumbnails only) -->
+      <div class="right-panel">
 
         <!-- Media thumbnails for multi-select -->
         @if (mediaFiles().length > 0) {
@@ -462,15 +417,9 @@
 <div dialog-actions class="action-container">
   <div class="left-actions">
     @if (currentStep() > 1) {
-    <button mat-button (click)="goToPreviousStep()">
-      <mat-icon>arrow_back</mat-icon>
-      <span i18n="@@media.creator.back">Back</span>
-    </button>
-    }
-    @if (currentStep() === 2 && hasMedia()) {
-    <button mat-button (click)="clearMedia()">
-      <mat-icon>delete_sweep</mat-icon>
-      <span i18n="@@media.creator.clear">Clear All</span>
+    <button mat-button (click)="startOver()">
+      <mat-icon>restart_alt</mat-icon>
+      <span i18n="@@media.creator.startover">Start Over</span>
     </button>
     }
     <input #fileInput type="file" [accept]="acceptedFileTypes()" (change)="onFileSelected($event)" multiple hidden />

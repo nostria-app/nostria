@@ -109,7 +109,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   // Filter state
   selectedFilter = signal<string>('none');
   filterIntensity = signal(100); // 0-100%
-  showFilters = signal(true);
+  showEditPanel = signal(false);
   editPanelTab = signal<'filters' | 'adjustments'>('filters');
   private filterAnimationFrame: number | null = null;
   private imageElement: HTMLImageElement | null = null;
@@ -592,8 +592,28 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     this.applyCurrentEffects();
   }
 
-  toggleFilters(): void {
-    this.showFilters.set(!this.showFilters());
+  toggleEditPanel(): void {
+    this.showEditPanel.set(!this.showEditPanel());
+  }
+
+  hasAdjustments(): boolean {
+    const adj = this.adjustments();
+    return adj.brightness !== 0 || adj.contrast !== 0 || adj.fade !== 0 ||
+           adj.saturation !== 0 || adj.temperature !== 0 || adj.vignette !== 0;
+  }
+
+  // Start over - clear all and go back to step 1
+  startOver(): void {
+    this.cleanupAllMedia();
+    this.stopFilterRendering();
+    this.selectedFilter.set('none');
+    this.filterIntensity.set(100);
+    this.resetAdjustments();
+    this.showEditPanel.set(false);
+    this.title.set('');
+    this.content.set('');
+    this.hashtags.set([]);
+    this.currentStep.set(1);
   }
 
   getCurrentFilterIcon(): string {
