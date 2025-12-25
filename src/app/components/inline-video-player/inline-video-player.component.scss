@@ -215,30 +215,44 @@
 
 .volume-slider {
   width: 70px;
-  height: 28px;
+  height: 36px;
 
   --mat-slider-focus-state-layer-opacity: 0;
   --mat-slider-hover-state-layer-opacity: 0;
   --mat-slider-pressed-state-layer-opacity: 0;
 
   ::ng-deep {
+    .mdc-slider {
+      height: 36px;
+    }
+
+    .mdc-slider__thumb {
+      height: 36px;
+    }
+
     .mdc-slider__thumb-knob {
-      width: 10px !important;
-      height: 10px !important;
-      border-width: 5px !important;
+      width: 12px !important;
+      height: 12px !important;
+      border-width: 6px !important;
       border-radius: 50% !important;
       background-color: white !important;
       border-color: white !important;
       box-shadow: none !important;
     }
 
+    .mdc-slider__track {
+      height: 4px !important;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
     .mdc-slider__track--active {
-      height: 3px !important;
+      height: 4px !important;
       background-color: white !important;
     }
 
     .mdc-slider__track--inactive {
-      height: 3px !important;
+      height: 4px !important;
       background-color: rgba(255, 255, 255, 0.3) !important;
     }
   }

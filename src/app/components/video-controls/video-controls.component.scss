@@ -141,7 +141,7 @@
   top: 0;
   left: 0;
   height: 100%;
-  background: var(--mat-sys-error, #ff0000);
+  background: var(--mat-sys-primary, #c5c0ff);
   border-radius: 2px;
   pointer-events: none;
 }
@@ -151,7 +151,7 @@
   top: 50%;
   width: 14px;
   height: 14px;
-  background: var(--mat-sys-error, #ff0000);
+  background: var(--mat-sys-primary, #c5c0ff);
   border-radius: 50%;
   transform: translateX(-50%) scale(0);
   opacity: 0;
@@ -212,8 +212,7 @@
 .volume-slider-container {
   display: flex;
   align-items: center;
-  // width: 80px;
-  height: 40px;
+  height: 36px;
   overflow: visible;
   animation: slideIn 0.15s ease;
 
@@ -236,8 +235,8 @@
 }
 
 .volume-slider {
-  width: 100%;
-  height: 32px;
+  width: 80px;
+  height: 36px;
 
   // Remove the ripple/halo effect around thumb
   --mat-slider-focus-state-layer-opacity: 0;
@@ -245,6 +244,14 @@
   --mat-slider-pressed-state-layer-opacity: 0;
 
   ::ng-deep {
+    .mdc-slider {
+      height: 36px;
+    }
+
+    .mdc-slider__thumb {
+      height: 36px;
+    }
+
     .mdc-slider__thumb-knob {
       width: 12px !important;
       height: 12px !important;
@@ -253,17 +260,21 @@
       background-color: white !important;
       border-color: white !important;
       box-shadow: none !important;
-      position: relative !important;
-      top: 16px !important;
+    }
+
+    .mdc-slider__track {
+      height: 4px !important;
+      top: 50%;
+      transform: translateY(-50%);
     }
 
     .mdc-slider__track--active {
-      height: 3px !important;
+      height: 4px !important;
       background-color: white !important;
     }
 
     .mdc-slider__track--inactive {
-      height: 3px !important;
+      height: 4px !important;
       background-color: rgba(255, 255, 255, 0.3) !important;
     }
 
