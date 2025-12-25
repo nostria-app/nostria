@@ -70,6 +70,7 @@ import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
 import { RouteDataService } from './services/route-data.service';
 import { InstallService } from './services/install.service';
+import { ImageCacheService } from './services/image-cache.service';
 import { CacheCleanupService } from './services/cache-cleanup.service';
 import { AccountLocalStateService } from './services/account-local-state.service';
 import { NavigationEnd } from '@angular/router';
@@ -93,7 +94,6 @@ import { MetricsTrackingService } from './services/metrics-tracking.service';
 import { FollowingBackupService } from './services/following-backup.service';
 import { ShortcutsDialogComponent } from './components/shortcuts-dialog/shortcuts-dialog.component';
 import { MessagingService } from './services/messaging.service';
-import { ImageCacheService } from './services/image-cache.service';
 
 interface NavItem {
   path: string;
