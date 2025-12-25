@@ -1,0 +1,333 @@
+:host {
+  display: block;
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.inline-video-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+.video-element {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+
+  &.blurred {
+    filter: blur(20px);
+  }
+}
+
+// Controls overlay
+.controls-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+
+  &.visible {
+    opacity: 1;
+  }
+}
+
+// Gradient for visibility
+.gradient-bottom {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 100px;
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+// Center play button
+.center-play-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 64px;
+  height: 64px;
+  background: rgba(0, 0, 0, 0.6);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    color: white;
+  }
+}
+
+// Controls bar
+.controls-bar {
+  position: relative;
+  padding: 0 12px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 2;
+  pointer-events: auto;
+}
+
+// Progress bar
+.progress-container {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 2px;
+  cursor: pointer;
+  transition: height 0.1s ease;
+
+  &:hover {
+    height: 6px;
+
+    .progress-thumb {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+  }
+}
+
+.progress-buffered {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.progress-played {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: var(--mat-sys-primary, #c5c0ff);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.progress-thumb {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: var(--mat-sys-primary, #c5c0ff);
+  border-radius: 50%;
+  transform: translateX(-50%) scale(0);
+  opacity: 0;
+  transition: opacity 0.1s ease, transform 0.1s ease;
+  pointer-events: none;
+  margin-top: -6px;
+}
+
+// Controls row
+.controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: white;
+}
+
+.controls-left,
+.controls-right {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+// Control buttons
+.control-btn {
+  color: white !important;
+  width: 36px;
+  height: 36px;
+
+  mat-icon {
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+    color: white;
+  }
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.1);
+  }
+}
+
+// Volume control
+.volume-control {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.volume-slider-container {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  overflow: visible;
+  animation: slideIn 0.15s ease;
+}
+
+@keyframes slideIn {
+  from {
+    width: 0;
+    opacity: 0;
+  }
+
+  to {
+    width: 70px;
+    opacity: 1;
+  }
+}
+
+.volume-slider {
+  width: 70px;
+  height: 28px;
+
+  --mat-slider-focus-state-layer-opacity: 0;
+  --mat-slider-hover-state-layer-opacity: 0;
+  --mat-slider-pressed-state-layer-opacity: 0;
+
+  ::ng-deep {
+    .mdc-slider__thumb-knob {
+      width: 10px !important;
+      height: 10px !important;
+      border-width: 5px !important;
+      border-radius: 50% !important;
+      background-color: white !important;
+      border-color: white !important;
+      box-shadow: none !important;
+    }
+
+    .mdc-slider__track--active {
+      height: 3px !important;
+      background-color: white !important;
+    }
+
+    .mdc-slider__track--inactive {
+      height: 3px !important;
+      background-color: rgba(255, 255, 255, 0.3) !important;
+    }
+  }
+}
+
+// Time display
+.time-display {
+  font-size: 12px;
+  color: white;
+  margin-left: 8px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+// Menu styling
+::ng-deep .inline-video-menu {
+  .mat-mdc-menu-content {
+    background: rgba(28, 28, 28, 0.95);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    min-width: 160px;
+  }
+
+  .mat-mdc-menu-item {
+    color: white;
+    min-height: 40px;
+    display: flex;
+    align-items: center;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    &.active {
+      background: rgba(255, 255, 255, 0.15);
+
+      &::before {
+        content: '✓';
+        margin-right: 8px;
+      }
+    }
+
+    mat-icon {
+      color: white;
+      margin-right: 12px;
+    }
+
+    span {
+      flex: 1;
+    }
+  }
+
+  .menu-value {
+    margin-left: auto;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 12px;
+    padding-left: 12px;
+  }
+}
+
+// Responsive
+@media (max-width: 480px) {
+  .controls-bar {
+    padding: 0 8px 4px;
+  }
+
+  .center-play-btn {
+    width: 48px;
+    height: 48px;
+
+    mat-icon {
+      font-size: 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  .time-display {
+    font-size: 11px;
+  }
+
+  .control-btn {
+    width: 32px;
+    height: 32px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}

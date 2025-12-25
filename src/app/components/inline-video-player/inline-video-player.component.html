@@ -1,0 +1,93 @@
+<div class="inline-video-container" (mouseenter)="onMouseEnter()" (mouseleave)="onMouseLeave()"
+  (mousemove)="onMouseMove()">
+  <video #videoElement class="video-element" [src]="src()" [poster]="poster()" [autoplay]="autoplay()" [muted]="muted()"
+    [loop]="loop()" playsinline (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"></video>
+
+  <!-- Controls overlay -->
+  <div class="controls-overlay" [class.visible]="controlsVisible() || paused()">
+    <!-- Gradient background -->
+    <div class="gradient-bottom"></div>
+
+    <!-- Center play button when paused -->
+    @if (paused()) {
+    <button class="center-play-btn" (click)="togglePlay()" aria-label="Play">
+      <mat-icon>play_arrow</mat-icon>
+    </button>
+    }
+
+    <!-- Bottom controls bar -->
+    <div class="controls-bar">
+      <!-- Progress bar -->
+      <div class="progress-container" (click)="onProgressClick($event)" (keydown)="onProgressKeyDown($event)"
+        role="slider" aria-label="Video progress" [attr.aria-valuenow]="progressPercent()" aria-valuemin="0"
+        aria-valuemax="100" tabindex="0">
+        <div class="progress-buffered" [style.width.%]="bufferedPercent()"></div>
+        <div class="progress-played" [style.width.%]="progressPercent()"></div>
+        <div class="progress-thumb" [style.left.%]="progressPercent()"></div>
+      </div>
+
+      <!-- Controls row -->
+      <div class="controls-row">
+        <!-- Left controls -->
+        <div class="controls-left">
+          <button mat-icon-button (click)="togglePlay()" [matTooltip]="paused() ? 'Play' : 'Pause'" class="control-btn">
+            <mat-icon>{{ paused() ? 'play_arrow' : 'pause' }}</mat-icon>
+          </button>
+
+          <!-- Volume -->
+          <div class="volume-control" (mouseenter)="showVolumeSlider()" (mouseleave)="hideVolumeSlider()">
+            <button mat-icon-button (click)="toggleMute()" [matTooltip]="isMuted() ? 'Unmute' : 'Mute'"
+              class="control-btn">
+              <mat-icon>{{ volumeIcon() }}</mat-icon>
+            </button>
+            @if (volumeSliderVisible()) {
+            <div class="volume-slider-container">
+              <mat-slider [min]="0" [max]="100" [step]="1" class="volume-slider">
+                <input matSliderThumb [value]="volume() * 100" (valueChange)="onVolumeSliderChange($event)"
+                  aria-label="Volume" />
+              </mat-slider>
+            </div>
+            }
+          </div>
+
+          <!-- Time display -->
+          <span class="time-display">
+            {{ formattedCurrentTime() }} / {{ formattedDuration() }}
+          </span>
+        </div>
+
+        <!-- Right controls -->
+        <div class="controls-right">
+          <!-- Settings menu -->
+          <button mat-icon-button matTooltip="Settings" class="control-btn" [matMenuTriggerFor]="settingsMenu">
+            <mat-icon>settings</mat-icon>
+          </button>
+          <mat-menu #settingsMenu="matMenu" class="inline-video-menu">
+            <button mat-menu-item [matMenuTriggerFor]="speedMenu">
+              <mat-icon>speed</mat-icon>
+              <span>Speed</span>
+              <span class="menu-value">{{ playbackRate() === 1 ? 'Normal' : playbackRate() + 'x' }}</span>
+            </button>
+          </mat-menu>
+          <mat-menu #speedMenu="matMenu" class="inline-video-menu">
+            @for (rate of playbackRates; track rate) {
+            <button mat-menu-item (click)="setPlaybackRate(rate)" [class.active]="playbackRate() === rate">
+              {{ rate === 1 ? 'Normal' : rate + 'x' }}
+            </button>
+            }
+          </mat-menu>
+
+          <!-- Picture in Picture -->
+          <button mat-icon-button (click)="pictureInPicture()" matTooltip="Picture-in-picture" class="control-btn">
+            <mat-icon>picture_in_picture_alt</mat-icon>
+          </button>
+
+          <!-- Fullscreen -->
+          <button mat-icon-button (click)="toggleFullscreen()" matTooltip="Fullscreen" class="control-btn">
+            <mat-icon>{{ isFullscreen() ? 'fullscreen_exit' : 'fullscreen' }}</mat-icon>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
