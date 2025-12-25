@@ -93,6 +93,7 @@ import { MetricsTrackingService } from './services/metrics-tracking.service';
 import { FollowingBackupService } from './services/following-backup.service';
 import { ShortcutsDialogComponent } from './components/shortcuts-dialog/shortcuts-dialog.component';
 import { MessagingService } from './services/messaging.service';
+import { ImageCacheService } from './services/image-cache.service';
 
 interface NavItem {
   path: string;
@@ -186,6 +187,7 @@ export class App implements OnInit {
   localSettings = inject(LocalSettingsService);
   settings = inject(SettingsService);
   accountState = inject(AccountStateService);
+  imageCacheService = inject(ImageCacheService);
   state = inject(StateService);
   nostrProtocol = inject(NostrProtocolService);
   publishQueue = inject(PublishQueueService);
@@ -1608,6 +1610,15 @@ export class App implements OnInit {
    */
   getAccountProfile(pubkey: string): NostrRecord | undefined {
     return this.accountState.getAccountProfileSync(pubkey);
+  }
+
+  /**
+   * Gets the optimized image URL using the image cache service
+   */
+  getOptimizedImageUrl(originalUrl: string): string {
+    if (!originalUrl) return '';
+
+    return this.imageCacheService.getOptimizedImageUrl(originalUrl);
   }
 
   /**
