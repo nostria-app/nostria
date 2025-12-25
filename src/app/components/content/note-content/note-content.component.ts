@@ -718,39 +718,37 @@ export class NoteContentComponent implements OnDestroy {
 
   /**
    * Get aspect ratio style for a video token
-   * Prefers actual video dimensions (after rotation) over metadata dimensions
+   * IMPORTANT: Only uses actual video dimensions (after rotation is applied by browser)
+   * Metadata dimensions from imeta 'dim' tag don't account for rotation metadata
+   * which causes wrong aspect ratio display on mobile devices (especially Android)
    */
   getVideoAspectRatio(token: ContentToken): string {
-    // First check if we have actual dimensions from the video element (accounts for rotation)
+    // Only use actual dimensions from the video element (accounts for rotation)
     const actualDims = this.videoActualDimensions().get(token.content);
     if (actualDims && actualDims.width && actualDims.height) {
       return `${actualDims.width} / ${actualDims.height}`;
     }
 
-    // Fall back to metadata dimensions (may not account for rotation)
-    if (token.dimensions) {
-      return `${token.dimensions.width} / ${token.dimensions.height}`;
-    }
-
-    return '16 / 9'; // Default video aspect ratio
+    // Don't use metadata dimensions - they may not account for video rotation
+    // Return 'auto' to let the video element determine its natural size
+    return 'auto';
   }
 
   /**
    * Check if a video is portrait orientation (height > width)
-   * Prefers actual video dimensions (after rotation) over metadata dimensions
+   * IMPORTANT: Only uses actual video dimensions (after rotation is applied by browser)
+   * Metadata dimensions don't account for rotation, so we can't determine portrait
+   * orientation reliably from metadata alone on mobile devices
    */
   isPortraitVideo(token: ContentToken): boolean {
-    // First check if we have actual dimensions from the video element (accounts for rotation)
+    // Only use actual dimensions from the video element (accounts for rotation)
     const actualDims = this.videoActualDimensions().get(token.content);
     if (actualDims) {
       return actualDims.height > actualDims.width;
     }
 
-    // Fall back to metadata dimensions (may not account for rotation)
-    if (token.dimensions) {
-      return token.dimensions.height > token.dimensions.width;
-    }
-
+    // Don't use metadata dimensions - they may not account for video rotation
+    // Return false (assume landscape) until we have actual dimensions
     return false;
   }
 
