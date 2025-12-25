@@ -8,30 +8,38 @@
   position: relative;
 }
 
-.toolbar {
+.controls-left,
+.controls-right {
+  position: absolute;
+  top: 16px;
+  z-index: 10;
   display: flex;
   align-items: center;
-  padding: 8px 16px;
-  background-color: rgba(0, 0, 0, 0.7);
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  z-index: 10;
-
-  .zoom-level {
-    margin: 0 10px;
-    font-size: 14px;
-    color: rgba(255, 255, 255, 0.8);
-  }
-
-  .close-button {
-    margin-left: auto;
-  }
+  gap: 4px;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 
   button {
     color: white;
   }
+
+  .zoom-level {
+    font-size: 14px;
+    color: rgba(255, 255, 255, 0.8);
+    padding: 0 8px;
+  }
+}
+
+.controls-left {
+  left: 16px;
+}
+
+.controls-right {
+  right: 16px;
 }
 
 .image-container {
