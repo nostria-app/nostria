@@ -67,6 +67,7 @@
   } @else {
   <!-- Video Player (Expanded State) -->
   <div class="video-player-container" [style.aspect-ratio]="videoAspectRatio()" [class.video-ready]="videoReady()"
+    [class.needs-rotation]="needsRotationCorrection()"
     (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
     (mousemove)="onVideoContainerMouseMove()">
     <!-- Placeholder shown until video is ready -->
