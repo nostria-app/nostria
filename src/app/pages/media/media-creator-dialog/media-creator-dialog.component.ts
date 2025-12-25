@@ -10,11 +10,13 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatSliderModule } from '@angular/material/slider';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { CustomDialogRef } from '../../../services/custom-dialog.service';
 import { MediaService, MediaItem } from '../../../services/media.service';
 import { NostrService } from '../../../services/nostr.service';
-import { VideoFilterService } from '../../../services/video-filter.service';
+import { VideoFilterService, PhotoAdjustments } from '../../../services/video-filter.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { nip19, NostrEvent } from 'nostr-tools';
@@ -35,6 +37,7 @@ interface MediaFile {
   thumbnailBlob?: Blob;
   thumbnailUrl?: string;
   thumbnailDimensions?: { width: number; height: number };
+  alt?: string; // Per-image alt text
 }
 
 @Component({
@@ -51,6 +54,8 @@ interface MediaFile {
     MatTooltipModule,
     MatSlideToggleModule,
     MatTabsModule,
+    MatSliderModule,
+    DragDropModule,
   ],
   templateUrl: './media-creator-dialog.component.html',
   styleUrl: './media-creator-dialog.component.scss',
@@ -94,10 +99,22 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
 
   // Filter state
   selectedFilter = signal<string>('none');
+  filterIntensity = signal(100); // 0-100%
   showFilters = signal(true);
+  editPanelTab = signal<'filters' | 'adjustments'>('filters');
   private filterAnimationFrame: number | null = null;
   private imageElement: HTMLImageElement | null = null;
   private canvasInitialized = false;
+
+  // Photo adjustments
+  adjustments = signal<PhotoAdjustments>({
+    brightness: 0,
+    contrast: 0,
+    fade: 0,
+    saturation: 0,
+    temperature: 0,
+    vignette: 0,
+  });
 
   // Swipe gesture state for filters
   private touchStartX = 0;
@@ -108,10 +125,12 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   // Form fields
   title = signal('');
   content = signal('');
-  alt = signal('');
   contentWarning = signal('');
   hashtags = signal<string[]>([]);
   hashtagInput = signal('');
+
+  // Computed for current media's alt text
+  currentAlt = computed(() => this.currentMedia()?.alt ?? '');
 
   // Options
   alsoPostAsNote = signal(true);
@@ -176,16 +195,19 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
       const media = this.currentMedia();
 
       if (step === 2 && media?.type === 'image') {
-        // Small delay to ensure canvas is in DOM
-        setTimeout(() => this.reinitializeCanvas(), 50);
+        // Use longer delay and force canvas reinitialization
+        this.canvasInitialized = false;
+        setTimeout(() => this.reinitializeCanvas(), 100);
       }
     });
 
     // Watch for media selection changes
     effect(() => {
       const media = this.currentMedia();
-      if (media?.type === 'image' && this.currentStep() === 2) {
-        setTimeout(() => this.reinitializeCanvas(), 50);
+      const step = this.currentStep();
+      if (media?.type === 'image' && step === 2) {
+        this.canvasInitialized = false;
+        setTimeout(() => this.reinitializeCanvas(), 100);
       }
     });
   }
@@ -203,6 +225,11 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   private reinitializeCanvas(): void {
     const media = this.currentMedia();
     if (!media || media.type !== 'image') return;
+    if (!this.filterCanvas?.nativeElement) {
+      // Canvas not in DOM yet, retry
+      setTimeout(() => this.reinitializeCanvas(), 50);
+      return;
+    }
 
     this.stopFilterRendering();
 
@@ -212,13 +239,26 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
 
     this.imageElement.onload = () => {
       if (this.filterCanvas?.nativeElement && this.imageElement) {
+        // Force WebGL reinitialization
+        this.filterService.cleanup();
         this.filterService.initWebGL(this.filterCanvas.nativeElement);
         this.canvasInitialized = true;
-        this.startFilterRendering();
+        this.applyCurrentEffects();
       }
     };
 
     this.imageElement.src = media.preview;
+  }
+
+  // Apply current filter and adjustments
+  private applyCurrentEffects(): void {
+    if (!this.imageElement || !this.filterCanvas?.nativeElement || !this.canvasInitialized) return;
+
+    // Set filter with intensity
+    this.filterService.setFilter(this.selectedFilter());
+    this.filterService.setFilterIntensity(this.filterIntensity() / 100);
+    this.filterService.setAdjustments(this.adjustments());
+    this.filterService.applyFilterToImage(this.imageElement);
   }
 
   // File selection methods
@@ -404,9 +444,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     if (!this.imageElement || !this.filterCanvas?.nativeElement) return;
 
     // For images, just render once - no need for continuous animation loop
-    if (this.imageElement && this.currentMedia()?.type === 'image') {
-      this.filterService.applyFilterToImage(this.imageElement);
-    }
+    this.applyCurrentEffects();
   }
 
   private stopFilterRendering(): void {
@@ -421,7 +459,32 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     this.selectedFilter.set(filterId);
     this.filterService.setFilter(filterId);
     // Re-render with the new filter
-    this.startFilterRendering();
+    this.applyCurrentEffects();
+  }
+
+  // Update filter intensity
+  updateFilterIntensity(value: number): void {
+    this.filterIntensity.set(value);
+    this.applyCurrentEffects();
+  }
+
+  // Update individual adjustment
+  updateAdjustment(key: keyof PhotoAdjustments, value: number): void {
+    this.adjustments.update(adj => ({ ...adj, [key]: value }));
+    this.applyCurrentEffects();
+  }
+
+  // Reset all adjustments
+  resetAdjustments(): void {
+    this.adjustments.set({
+      brightness: 0,
+      contrast: 0,
+      fade: 0,
+      saturation: 0,
+      temperature: 0,
+      vignette: 0,
+    });
+    this.applyCurrentEffects();
   }
 
   toggleFilters(): void {
@@ -505,11 +568,41 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     this.cleanupAllMedia();
     this.stopFilterRendering();
     this.selectedFilter.set('none');
+    this.filterIntensity.set(100);
+    this.resetAdjustments();
     this.title.set('');
     this.content.set('');
-    this.alt.set('');
     this.hashtags.set([]);
     this.currentStep.set(1);
+  }
+
+  // Update alt text for current media
+  updateCurrentAlt(altText: string): void {
+    const index = this.selectedMediaIndex();
+    this.mediaFiles.update(files =>
+      files.map((f, i) => i === index ? { ...f, alt: altText } : f)
+    );
+  }
+
+  // Drag and drop reorder for media thumbnails
+  onThumbnailDrop(event: CdkDragDrop<MediaFile[]>): void {
+    const files = [...this.mediaFiles()];
+    moveItemInArray(files, event.previousIndex, event.currentIndex);
+    this.mediaFiles.set(files);
+
+    // Update selected index if the currently selected item moved
+    const currentSelected = this.selectedMediaIndex();
+    if (currentSelected === event.previousIndex) {
+      this.selectedMediaIndex.set(event.currentIndex);
+    } else if (
+      currentSelected > event.previousIndex && currentSelected <= event.currentIndex
+    ) {
+      this.selectedMediaIndex.set(currentSelected - 1);
+    } else if (
+      currentSelected < event.previousIndex && currentSelected >= event.currentIndex
+    ) {
+      this.selectedMediaIndex.set(currentSelected + 1);
+    }
   }
 
   // Remove a specific media file
@@ -676,8 +769,9 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
         imetaTag.push(`size ${mediaItem.size}`);
       }
 
-      if (this.alt().trim()) {
-        imetaTag.push(`alt ${this.alt().trim()}`);
+      // Add per-image alt text
+      if (media.alt?.trim()) {
+        imetaTag.push(`alt ${media.alt.trim()}`);
       }
 
       // Add dimensions
@@ -725,11 +819,6 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     // Add title if provided
     if (this.title().trim()) {
       tags.push(['title', this.title().trim()]);
-    }
-
-    // Add alt tag for accessibility
-    if (this.alt().trim()) {
-      tags.push(['alt', this.alt().trim()]);
     }
 
     // Add content warning

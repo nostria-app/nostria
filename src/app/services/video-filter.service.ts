@@ -7,6 +7,15 @@ export interface VideoFilter {
   description: string;
 }
 
+export interface PhotoAdjustments {
+  brightness: number;   // -100 to 100
+  contrast: number;     // -100 to 100
+  fade: number;         // 0 to 100
+  saturation: number;   // -100 to 100
+  temperature: number;  // -100 to 100
+  vignette: number;     // 0 to 100
+}
+
 @Injectable({
   providedIn: 'root'
 })
@@ -17,6 +26,15 @@ export class VideoFilterService {
   private positionBuffer: WebGLBuffer | null = null;
   private texture: WebGLTexture | null = null;
   private currentFilter = 'none';
+  private filterIntensity = 1.0; // 0-1
+  private adjustments: PhotoAdjustments = {
+    brightness: 0,
+    contrast: 0,
+    fade: 0,
+    saturation: 0,
+    temperature: 0,
+    vignette: 0,
+  };
   private canvas: HTMLCanvasElement | null = null;
   private currentWidth = 0;
   private currentHeight = 0;
@@ -40,6 +58,14 @@ export class VideoFilterService {
     { id: 'pixelate', name: 'Pixelate', icon: 'grid_on', description: 'Pixel art effect' },
     { id: 'cyberpunk', name: 'Cyberpunk', icon: 'nightlife', description: 'Neon pink and cyan style' },
   ];
+
+  setFilterIntensity(intensity: number): void {
+    this.filterIntensity = Math.max(0, Math.min(1, intensity));
+  }
+
+  setAdjustments(adj: PhotoAdjustments): void {
+    this.adjustments = { ...adj };
+  }
 
   initWebGL(canvas: HTMLCanvasElement): boolean {
     try {
@@ -109,6 +135,13 @@ export class VideoFilterService {
       uniform int u_filter;
       uniform vec2 u_resolution;
       uniform float u_time;
+      uniform float u_filterIntensity;
+      uniform float u_brightness;
+      uniform float u_contrast;
+      uniform float u_fade;
+      uniform float u_saturation;
+      uniform float u_temperature;
+      uniform float u_vignette;
       
       vec3 grayscale(vec3 color) {
         float gray = dot(color, vec3(0.299, 0.587, 0.114));
@@ -436,8 +469,10 @@ export class VideoFilterService {
       
       void main() {
         vec4 color = texture2D(u_image, v_texCoord);
+        vec3 original = color.rgb;
         vec3 result = color.rgb;
         
+        // Apply filter
         if (u_filter == 1) {
           result = grayscale(result);
         } else if (u_filter == 2) {
@@ -467,6 +502,37 @@ export class VideoFilterService {
         } else if (u_filter == 14) {
           result = cyberpunk(u_image, result, v_texCoord, u_resolution, u_time);
         }
+        
+        // Apply filter intensity (blend between original and filtered)
+        result = mix(original, result, u_filterIntensity);
+        
+        // Apply photo adjustments
+        // Brightness: -1 to 1, add to color
+        result = result + vec3(u_brightness);
+        
+        // Contrast: -1 to 1, scale around 0.5
+        result = (result - 0.5) * (1.0 + u_contrast) + 0.5;
+        
+        // Fade: 0 to 1, blend toward gray
+        vec3 fadeColor = vec3(0.5);
+        result = mix(result, fadeColor, u_fade);
+        
+        // Saturation: -1 to 1
+        vec3 gray = vec3(dot(result, vec3(0.299, 0.587, 0.114)));
+        result = mix(gray, result, 1.0 + u_saturation);
+        
+        // Temperature: -1 to 1, shift red/blue balance
+        result.r = result.r + u_temperature * 0.1;
+        result.b = result.b - u_temperature * 0.1;
+        
+        // Vignette: 0 to 1
+        vec2 pos = v_texCoord - vec2(0.5);
+        float dist = length(pos);
+        float vignetteEffect = smoothstep(0.7, 0.3, dist);
+        result = mix(result * (1.0 - u_vignette * 0.8), result, vignetteEffect);
+        
+        // Clamp final result
+        result = clamp(result, 0.0, 1.0);
         
         gl_FragColor = vec4(result, color.a);
       }
@@ -661,6 +727,14 @@ export class VideoFilterService {
     const filterLocation = this.gl.getUniformLocation(this.program, 'u_filter');
     const resolutionLocation = this.gl.getUniformLocation(this.program, 'u_resolution');
     const timeLocation = this.gl.getUniformLocation(this.program, 'u_time');
+    const filterIntensityLocation = this.gl.getUniformLocation(this.program, 'u_filterIntensity');
+    const brightnessLocation = this.gl.getUniformLocation(this.program, 'u_brightness');
+    const contrastLocation = this.gl.getUniformLocation(this.program, 'u_contrast');
+    const fadeLocation = this.gl.getUniformLocation(this.program, 'u_fade');
+    const saturationLocation = this.gl.getUniformLocation(this.program, 'u_saturation');
+    const temperatureLocation = this.gl.getUniformLocation(this.program, 'u_temperature');
+    const vignetteLocation = this.gl.getUniformLocation(this.program, 'u_vignette');
+
     this.gl.uniform1i(imageLocation, 0);
     this.gl.uniform1i(filterLocation, filterIndex);
     this.gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
@@ -668,6 +742,15 @@ export class VideoFilterService {
     // Pass time for animated effects (in seconds)
     const currentTime = (performance.now() - this.startTime) / 1000.0;
     this.gl.uniform1f(timeLocation, currentTime);
+
+    // Pass filter intensity and adjustments
+    this.gl.uniform1f(filterIntensityLocation, this.filterIntensity);
+    this.gl.uniform1f(brightnessLocation, this.adjustments.brightness / 100);
+    this.gl.uniform1f(contrastLocation, this.adjustments.contrast / 100);
+    this.gl.uniform1f(fadeLocation, this.adjustments.fade / 100);
+    this.gl.uniform1f(saturationLocation, this.adjustments.saturation / 100);
+    this.gl.uniform1f(temperatureLocation, this.adjustments.temperature / 100);
+    this.gl.uniform1f(vignetteLocation, this.adjustments.vignette / 100);
 
     // Draw
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
@@ -776,6 +859,14 @@ export class VideoFilterService {
     const filterLocation = this.gl.getUniformLocation(this.program, 'u_filter');
     const resolutionLocation = this.gl.getUniformLocation(this.program, 'u_resolution');
     const timeLocation = this.gl.getUniformLocation(this.program, 'u_time');
+    const filterIntensityLocation = this.gl.getUniformLocation(this.program, 'u_filterIntensity');
+    const brightnessLocation = this.gl.getUniformLocation(this.program, 'u_brightness');
+    const contrastLocation = this.gl.getUniformLocation(this.program, 'u_contrast');
+    const fadeLocation = this.gl.getUniformLocation(this.program, 'u_fade');
+    const saturationLocation = this.gl.getUniformLocation(this.program, 'u_saturation');
+    const temperatureLocation = this.gl.getUniformLocation(this.program, 'u_temperature');
+    const vignetteLocation = this.gl.getUniformLocation(this.program, 'u_vignette');
+
     this.gl.uniform1i(imageLocation, 0);
     this.gl.uniform1i(filterLocation, filterIndex);
     this.gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
@@ -783,6 +874,15 @@ export class VideoFilterService {
     // Pass time for animated effects (in seconds)
     const currentTime = (performance.now() - this.startTime) / 1000.0;
     this.gl.uniform1f(timeLocation, currentTime);
+
+    // Pass filter intensity and adjustments
+    this.gl.uniform1f(filterIntensityLocation, this.filterIntensity);
+    this.gl.uniform1f(brightnessLocation, this.adjustments.brightness / 100);
+    this.gl.uniform1f(contrastLocation, this.adjustments.contrast / 100);
+    this.gl.uniform1f(fadeLocation, this.adjustments.fade / 100);
+    this.gl.uniform1f(saturationLocation, this.adjustments.saturation / 100);
+    this.gl.uniform1f(temperatureLocation, this.adjustments.temperature / 100);
+    this.gl.uniform1f(vignetteLocation, this.adjustments.vignette / 100);
 
     // Draw
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
