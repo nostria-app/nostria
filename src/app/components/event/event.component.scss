@@ -518,3 +518,12 @@
     }
   }
 }
+
+// Event not found message styling
+.event-not-found {
+  color: var(--mat-sys-outline);
+  font-style: italic;
+  text-align: center;
+  padding: 16px;
+  margin: 0;
+}

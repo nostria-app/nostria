@@ -24,6 +24,7 @@ import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
 import { EventService, ReactionEvents } from '../../services/event';
 import { AccountRelayService } from '../../services/relays/account-relay';
+import { RelayPoolService } from '../../services/relays/relay-pool';
 import { ReactionService } from '../../services/reaction.service';
 import {
   ArticleEventComponent,
@@ -129,6 +130,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   localSettings = inject(LocalSettingsService);
   powService = inject(PowService);
   playlistService = inject(PlaylistService);
+  relayPool = inject(RelayPoolService);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
   reports = signal<ReactionEvents>({ events: [], data: new Map() });
 
@@ -154,7 +156,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isLoadingReactions = signal<boolean>(false);
   isLoadingParent = signal<boolean>(false);
   isLoadingZaps = signal<boolean>(false);
+  isLoadingRepostedEvent = signal<boolean>(false);
   loadingError = signal<string | null>(null);
+
+  // Signal for async-loaded reposted event (when repost has empty content)
+  asyncRepostedEvent = signal<Event | null>(null);
 
   // Parent and root events for replies
   parentEvent = signal<Event | null>(null);
@@ -321,21 +327,40 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     return this.quotes().length;
   });
 
+  // Check if this is a repost event (kind 6 or 16)
+  isRepostEvent = computed<boolean>(() => {
+    const event = this.event();
+    return !!event && this.repostService.isRepostEvent(event);
+  });
+
   repostedRecord = computed<NostrRecord | null>(() => {
     const event = this.event();
-    if (!event || (event.kind !== kinds.Repost && event.kind !== kinds.GenericRepost)) return null;
+    if (!event || !this.repostService.isRepostEvent(event)) return null;
 
+    // First try to decode from embedded content
     const repostedContent = this.repostService.decodeRepost(event);
 
-    // CRITICAL: Filter out reposted content from muted accounts
     if (repostedContent?.event) {
+      // CRITICAL: Filter out reposted content from muted accounts
       const mutedAccounts = this.accountState.mutedAccounts();
       if (mutedAccounts.includes(repostedContent.event.pubkey)) {
         return null;
       }
+      return repostedContent;
     }
 
-    return repostedContent;
+    // If no embedded content, check for async-loaded event
+    const asyncEvent = this.asyncRepostedEvent();
+    if (asyncEvent) {
+      // CRITICAL: Filter out reposted content from muted accounts
+      const mutedAccounts = this.accountState.mutedAccounts();
+      if (mutedAccounts.includes(asyncEvent.pubkey)) {
+        return null;
+      }
+      return this.data.toRecord(asyncEvent);
+    }
+
+    return null;
   });
 
   // Target record: for reposts, use the reposted content; otherwise use the regular record
@@ -541,6 +566,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         this.reports.set({ events: [], data: new Map() });
         this.zaps.set([]);
         this.quotes.set([]);
+        this.asyncRepostedEvent.set(null); // Clear async-loaded repost event
 
         // Reset the loaded interactions flag when event changes
         // This ensures each new event loads its own interactions
@@ -626,6 +652,77 @@ export class EventComponent implements AfterViewInit, OnDestroy {
           await this.loadReports(true);
         });
       }
+    });
+
+    // Effect to load reposted event when repost has empty content
+    // NIP-18: Reposts can have empty content with event reference in e tag + relay hint
+    effect(() => {
+      const event = this.event();
+
+      // Only process repost events
+      if (!event || !this.repostService.isRepostEvent(event)) {
+        return;
+      }
+
+      // Check if this repost has embedded content
+      if (this.repostService.hasEmbeddedContent(event)) {
+        // Content is embedded, no need to fetch
+        return;
+      }
+
+      // Get the reference info from the e tag
+      const reference = this.repostService.getRepostReference(event);
+      if (!reference) {
+        console.warn('⚠️ [Repost] No event reference found in repost:', event.id.substring(0, 8));
+        return;
+      }
+
+      untracked(async () => {
+        console.log('🔄 [Repost] Loading referenced event from relay hint:',
+          reference.eventId.substring(0, 8),
+          'relay:', reference.relayHint);
+
+        this.isLoadingRepostedEvent.set(true);
+
+        try {
+          let repostedEvent: Event | null = null;
+
+          // Try to fetch from relay hint first
+          if (reference.relayHint) {
+            try {
+              repostedEvent = await this.relayPool.getEventById(
+                [reference.relayHint],
+                reference.eventId,
+                15000 // 15 second timeout for relay hint
+              );
+              if (repostedEvent) {
+                console.log('✅ [Repost] Found event from relay hint:', reference.eventId.substring(0, 8));
+              }
+            } catch (error) {
+              console.debug('Relay hint fetch failed for repost:', reference.eventId, error);
+            }
+          }
+
+          // If relay hint didn't work, try fetching from data service (local DB + user relays)
+          if (!repostedEvent) {
+            const record = await this.data.getEventById(reference.eventId);
+            if (record?.event) {
+              repostedEvent = record.event;
+              console.log('✅ [Repost] Found event from data service:', reference.eventId.substring(0, 8));
+            }
+          }
+
+          if (repostedEvent) {
+            this.asyncRepostedEvent.set(repostedEvent);
+          } else {
+            console.warn('⚠️ [Repost] Could not find referenced event:', reference.eventId.substring(0, 8));
+          }
+        } catch (error) {
+          console.error('Error loading reposted event:', error);
+        } finally {
+          this.isLoadingRepostedEvent.set(false);
+        }
+      });
     });
   }
 
