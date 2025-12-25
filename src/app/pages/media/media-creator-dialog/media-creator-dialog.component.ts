@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, ViewChild, ElementRef, AfterViewInit, OnDestroy, effect } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,10 +26,15 @@ export interface MediaCreatorResult {
 }
 
 interface MediaFile {
+  id: string;
   file: File;
   preview: string;
   type: 'image' | 'video';
   dimensions?: { width: number; height: number };
+  blurhash?: string;
+  thumbnailBlob?: Blob;
+  thumbnailUrl?: string;
+  thumbnailDimensions?: { width: number; height: number };
 }
 
 @Component({
@@ -63,16 +68,36 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   @ViewChild('filterCanvas') filterCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('filterChips') filterChipsContainer?: ElementRef<HTMLDivElement>;
 
-  // Media state
-  mediaFile = signal<MediaFile | null>(null);
+  // Step navigation (1: select, 2: edit, 3: details)
+  currentStep = signal<1 | 2 | 3>(1);
+  stepTitle = computed(() => {
+    switch (this.currentStep()) {
+      case 1: return 'Select Media';
+      case 2: return 'Edit';
+      case 3: return 'Details';
+      default: return 'Create Media';
+    }
+  });
+
+  // Media state - support multiple files
+  mediaFiles = signal<MediaFile[]>([]);
+  selectedMediaIndex = signal(0);
   isDragOver = signal(false);
   dragCounter = 0;
 
+  // Computed for current selected media
+  currentMedia = computed(() => {
+    const files = this.mediaFiles();
+    const index = this.selectedMediaIndex();
+    return files[index] ?? null;
+  });
+
   // Filter state
   selectedFilter = signal<string>('none');
-  showFilters = signal(false);
+  showFilters = signal(true);
   private filterAnimationFrame: number | null = null;
   private imageElement: HTMLImageElement | null = null;
+  private canvasInitialized = false;
 
   // Swipe gesture state for filters
   private touchStartX = 0;
@@ -92,12 +117,6 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   alsoPostAsNote = signal(true);
   uploadOriginal = signal(false);
 
-  // Thumbnail (for videos)
-  thumbnailBlob = signal<Blob | undefined>(undefined);
-  thumbnailUrl = signal<string | undefined>(undefined);
-  thumbnailDimensions = signal<{ width: number; height: number } | undefined>(undefined);
-  blurhash = signal<string | undefined>(undefined);
-
   // Processing state
   isUploading = signal(false);
   isPublishing = signal(false);
@@ -106,10 +125,12 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   private publishGuard = false;
 
   // Computed
-  isImage = computed(() => this.mediaFile()?.type === 'image');
-  isVideo = computed(() => this.mediaFile()?.type === 'video');
+  hasMedia = computed(() => this.mediaFiles().length > 0);
+  isImage = computed(() => this.currentMedia()?.type === 'image');
+  isVideo = computed(() => this.currentMedia()?.type === 'video');
+  mediaType = computed(() => this.mediaFiles()[0]?.type ?? 'image');
   canPublish = computed(() =>
-    this.mediaFile() !== null &&
+    this.hasMedia() &&
     !this.isUploading() &&
     !this.isPublishing() &&
     !this.publishGuard
@@ -117,7 +138,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
 
   // Determine the event kind based on media type and dimensions
   mediaKind = computed((): 20 | 21 | 22 => {
-    const media = this.mediaFile();
+    const media = this.mediaFiles()[0];
     if (!media) return 20;
 
     if (media.type === 'image') return 20;
@@ -142,17 +163,62 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     }
   });
 
+  // Accepted file types based on first media
+  acceptedFileTypes = computed(() => {
+    const type = this.mediaType();
+    return type === 'video' ? 'video/*' : 'image/*';
+  });
+
+  constructor() {
+    // Watch for step changes to re-initialize canvas
+    effect(() => {
+      const step = this.currentStep();
+      const media = this.currentMedia();
+
+      if (step === 2 && media?.type === 'image') {
+        // Small delay to ensure canvas is in DOM
+        setTimeout(() => this.reinitializeCanvas(), 50);
+      }
+    });
+
+    // Watch for media selection changes
+    effect(() => {
+      const media = this.currentMedia();
+      if (media?.type === 'image' && this.currentStep() === 2) {
+        setTimeout(() => this.reinitializeCanvas(), 50);
+      }
+    });
+  }
+
   ngAfterViewInit(): void {
-    // Initialize filters when canvas is available
-    if (this.filterCanvas?.nativeElement) {
-      this.filterService.initWebGL(this.filterCanvas.nativeElement);
-    }
+    // Canvas will be initialized by effect when step changes
   }
 
   ngOnDestroy(): void {
     this.stopFilterRendering();
-    this.cleanupMedia();
+    this.cleanupAllMedia();
     this.filterService.cleanup();
+  }
+
+  private reinitializeCanvas(): void {
+    const media = this.currentMedia();
+    if (!media || media.type !== 'image') return;
+
+    this.stopFilterRendering();
+
+    // Load image for filter rendering
+    this.imageElement = new Image();
+    this.imageElement.crossOrigin = 'anonymous';
+
+    this.imageElement.onload = () => {
+      if (this.filterCanvas?.nativeElement && this.imageElement) {
+        this.filterService.initWebGL(this.filterCanvas.nativeElement);
+        this.canvasInitialized = true;
+        this.startFilterRendering();
+      }
+    };
+
+    this.imageElement.src = media.preview;
   }
 
   // File selection methods
@@ -162,9 +228,11 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
 
   onFileSelected(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (input.files && input.files[0]) {
-      this.processFile(input.files[0]);
+    if (input.files && input.files.length > 0) {
+      this.processFiles(Array.from(input.files));
     }
+    // Reset input so same file can be selected again
+    input.value = '';
   }
 
   // Drag and drop handlers
@@ -196,12 +264,21 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     this.dragCounter = 0;
 
     const files = event.dataTransfer?.files;
-    if (files && files[0]) {
-      this.processFile(files[0]);
+    if (files && files.length > 0) {
+      this.processFiles(Array.from(files));
     }
   }
 
-  private async processFile(file: File): Promise<void> {
+  private async processFiles(files: File[]): Promise<void> {
+    const existingType = this.mediaType();
+    const hasExisting = this.hasMedia();
+
+    for (const file of files) {
+      await this.processFile(file, hasExisting ? existingType : undefined);
+    }
+  }
+
+  private async processFile(file: File, requiredType?: 'image' | 'video'): Promise<void> {
     // Validate file type
     const isImage = file.type.startsWith('image/');
     const isVideo = file.type.startsWith('video/');
@@ -211,35 +288,49 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Cleanup previous media
-    this.cleanupMedia();
+    const fileType = isImage ? 'image' : 'video';
+
+    // If we have existing media, ensure type matches
+    if (requiredType && fileType !== requiredType) {
+      this.snackBar.open(
+        `Cannot mix images and videos. Please select ${requiredType === 'image' ? 'images' : 'videos'} only.`,
+        'Close',
+        { duration: 3000 }
+      );
+      return;
+    }
 
     // Create preview URL
     const preview = URL.createObjectURL(file);
 
     // Get dimensions
-    const dimensions = await this.getMediaDimensions(file, isImage ? 'image' : 'video', preview);
+    const dimensions = await this.getMediaDimensions(file, fileType, preview);
 
     const mediaFile: MediaFile = {
+      id: crypto.randomUUID(),
       file,
       preview,
-      type: isImage ? 'image' : 'video',
+      type: fileType,
       dimensions,
     };
 
-    this.mediaFile.set(mediaFile);
+    // Add to array
+    this.mediaFiles.update(files => [...files, mediaFile]);
+    this.selectedMediaIndex.set(this.mediaFiles().length - 1);
     this.selectedFilter.set('none');
 
     // Initialize filter preview for images
     if (isImage) {
-      await this.initializeImageFilter(preview);
-      await this.generateBlurhash(preview);
+      await this.generateBlurhashForMedia(mediaFile);
     }
 
     // Extract thumbnail for videos
     if (isVideo) {
-      await this.extractVideoThumbnail(preview);
+      await this.extractVideoThumbnailForMedia(mediaFile);
     }
+
+    // Auto-advance to edit step
+    this.currentStep.set(2);
   }
 
   private async getMediaDimensions(
@@ -262,35 +353,60 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private async initializeImageFilter(imageUrl: string): Promise<void> {
-    // Load image for filter rendering
-    this.imageElement = new Image();
-    this.imageElement.crossOrigin = 'anonymous';
-
-    await new Promise<void>((resolve) => {
-      this.imageElement!.onload = () => resolve();
-      this.imageElement!.onerror = () => resolve();
-      this.imageElement!.src = imageUrl;
-    });
-
-    // Start filter rendering if canvas is ready
-    if (this.filterCanvas?.nativeElement && this.imageElement) {
-      this.filterService.initWebGL(this.filterCanvas.nativeElement);
-      this.startFilterRendering();
+  private async generateBlurhashForMedia(mediaFile: MediaFile): Promise<void> {
+    try {
+      const result = await this.imagePlaceholder.generatePlaceholders(mediaFile.preview);
+      this.mediaFiles.update(files =>
+        files.map(f => f.id === mediaFile.id ? { ...f, blurhash: result.blurhash } : f)
+      );
+    } catch (error) {
+      console.error('Failed to generate blurhash:', error);
     }
+  }
+
+  private async extractVideoThumbnailForMedia(mediaFile: MediaFile): Promise<void> {
+    try {
+      const result = await this.utilities.extractThumbnailFromVideo(mediaFile.preview, 1);
+      this.mediaFiles.update(files =>
+        files.map(f => f.id === mediaFile.id ? {
+          ...f,
+          thumbnailBlob: result.blob,
+          thumbnailUrl: result.objectUrl,
+          thumbnailDimensions: result.dimensions
+        } : f)
+      );
+
+      // Generate blurhash from thumbnail
+      const placeholders = await this.imagePlaceholder.generatePlaceholders(result.objectUrl);
+      this.mediaFiles.update(files =>
+        files.map(f => f.id === mediaFile.id ? { ...f, blurhash: placeholders.blurhash } : f)
+      );
+    } catch (error) {
+      console.error('Failed to extract video thumbnail:', error);
+    }
+  }
+
+  private cleanupAllMedia(): void {
+    const files = this.mediaFiles();
+    files.forEach(media => {
+      URL.revokeObjectURL(media.preview);
+      if (media.thumbnailUrl) {
+        URL.revokeObjectURL(media.thumbnailUrl);
+      }
+    });
+    this.mediaFiles.set([]);
+    this.selectedMediaIndex.set(0);
+    this.imageElement = null;
+    this.canvasInitialized = false;
   }
 
   private startFilterRendering(): void {
     if (!this.imageElement || !this.filterCanvas?.nativeElement) return;
 
-    const render = () => {
-      if (this.imageElement && this.mediaFile()?.type === 'image') {
-        this.filterService.applyFilterToImage(this.imageElement);
-      }
-      this.filterAnimationFrame = requestAnimationFrame(render);
-    };
-
-    render();
+    // For images, just render once - no need for continuous animation loop
+    if (this.imageElement && this.currentMedia()?.type === 'image') {
+      this.filterService.applyFilterToImage(this.imageElement);
+    }
   }
 
   private stopFilterRendering(): void {
@@ -300,49 +416,12 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  private async generateBlurhash(imageUrl: string): Promise<void> {
-    try {
-      const result = await this.imagePlaceholder.generatePlaceholders(imageUrl);
-      this.blurhash.set(result.blurhash);
-    } catch (error) {
-      console.error('Failed to generate blurhash:', error);
-    }
-  }
-
-  private async extractVideoThumbnail(videoUrl: string): Promise<void> {
-    try {
-      const result = await this.utilities.extractThumbnailFromVideo(videoUrl, 1);
-      this.thumbnailBlob.set(result.blob);
-      this.thumbnailUrl.set(result.objectUrl);
-      this.thumbnailDimensions.set(result.dimensions);
-
-      // Generate blurhash from thumbnail
-      await this.generateBlurhash(result.objectUrl);
-    } catch (error) {
-      console.error('Failed to extract video thumbnail:', error);
-    }
-  }
-
-  private cleanupMedia(): void {
-    const media = this.mediaFile();
-    if (media?.preview) {
-      URL.revokeObjectURL(media.preview);
-    }
-    if (this.thumbnailUrl()) {
-      URL.revokeObjectURL(this.thumbnailUrl()!);
-    }
-    this.mediaFile.set(null);
-    this.thumbnailBlob.set(undefined);
-    this.thumbnailUrl.set(undefined);
-    this.thumbnailDimensions.set(undefined);
-    this.blurhash.set(undefined);
-    this.imageElement = null;
-  }
-
   // Filter methods
   selectFilter(filterId: string): void {
     this.selectedFilter.set(filterId);
     this.filterService.setFilter(filterId);
+    // Re-render with the new filter
+    this.startFilterRendering();
   }
 
   toggleFilters(): void {
@@ -421,59 +500,122 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     }
   }
 
-  // Clear media to select new one
+  // Clear all media to select new ones
   clearMedia(): void {
-    this.cleanupMedia();
+    this.cleanupAllMedia();
     this.stopFilterRendering();
     this.selectedFilter.set('none');
     this.title.set('');
     this.content.set('');
     this.alt.set('');
     this.hashtags.set([]);
+    this.currentStep.set(1);
+  }
+
+  // Remove a specific media file
+  removeMedia(index: number): void {
+    const files = this.mediaFiles();
+    if (index >= 0 && index < files.length) {
+      const media = files[index];
+      URL.revokeObjectURL(media.preview);
+      if (media.thumbnailUrl) {
+        URL.revokeObjectURL(media.thumbnailUrl);
+      }
+
+      this.mediaFiles.update(f => f.filter((_, i) => i !== index));
+
+      // Adjust selected index if needed
+      if (this.selectedMediaIndex() >= this.mediaFiles().length) {
+        this.selectedMediaIndex.set(Math.max(0, this.mediaFiles().length - 1));
+      }
+
+      // Go back to step 1 if no media left
+      if (this.mediaFiles().length === 0) {
+        this.currentStep.set(1);
+      }
+    }
+  }
+
+  // Select a media file for editing
+  selectMedia(index: number): void {
+    if (index >= 0 && index < this.mediaFiles().length) {
+      this.selectedMediaIndex.set(index);
+    }
+  }
+
+  // Step navigation methods
+  goToNextStep(): void {
+    const current = this.currentStep();
+    if (current < 3) {
+      this.currentStep.set((current + 1) as 1 | 2 | 3);
+    }
+  }
+
+  goToPreviousStep(): void {
+    const current = this.currentStep();
+    if (current > 1) {
+      this.currentStep.set((current - 1) as 1 | 2 | 3);
+    }
+  }
+
+  goToStep(step: 1 | 2 | 3): void {
+    // Only allow going to step 2+ if media is selected
+    if (step > 1 && !this.hasMedia()) {
+      return;
+    }
+    this.currentStep.set(step);
   }
 
   // Cancel and close dialog
   cancel(): void {
-    this.cleanupMedia();
+    this.cleanupAllMedia();
     this.dialogRef.close({ published: false });
   }
 
   // Publish the media
   async publish(): Promise<void> {
-    const media = this.mediaFile();
-    if (!media || !this.canPublish()) return;
+    const mediaFiles = this.mediaFiles();
+    if (mediaFiles.length === 0 || !this.canPublish()) return;
 
     this.publishGuard = true;
     this.isUploading.set(true);
     this.uploadStatus.set('Preparing media...');
 
     try {
-      // For images with filters, render the filtered version
-      let fileToUpload = media.file;
-      if (media.type === 'image' && this.selectedFilter() !== 'none' && this.filterCanvas?.nativeElement) {
-        this.uploadStatus.set('Applying filter...');
-        fileToUpload = await this.renderFilteredImage(media.file);
+      // Upload all media files
+      const uploadedItems: { item: MediaItem; media: MediaFile }[] = [];
+
+      for (let i = 0; i < mediaFiles.length; i++) {
+        const media = mediaFiles[i];
+        this.uploadStatus.set(`Uploading ${i + 1} of ${mediaFiles.length}...`);
+
+        // For images with filters, render the filtered version
+        let fileToUpload = media.file;
+        if (media.type === 'image' && this.selectedFilter() !== 'none' && this.filterCanvas?.nativeElement) {
+          this.uploadStatus.set(`Applying filter to ${i + 1}...`);
+          fileToUpload = await this.renderFilteredImage(media.file);
+        }
+
+        // Upload the media file
+        const uploadResult = await this.mediaService.uploadFile(
+          fileToUpload,
+          this.uploadOriginal(),
+          this.mediaService.mediaServers()
+        );
+
+        if (uploadResult.status !== 'success' || !uploadResult.item) {
+          throw new Error(`Failed to upload media ${i + 1}`);
+        }
+
+        uploadedItems.push({ item: uploadResult.item, media });
       }
 
-      // Upload the media file
-      this.uploadStatus.set('Uploading media...');
-      const uploadResult = await this.mediaService.uploadFile(
-        fileToUpload,
-        this.uploadOriginal(),
-        this.mediaService.mediaServers()
-      );
-
-      if (uploadResult.status !== 'success' || !uploadResult.item) {
-        throw new Error('Failed to upload media');
-      }
-
-      const mediaItem = uploadResult.item;
       this.uploadStatus.set('Publishing to Nostr...');
       this.isUploading.set(false);
       this.isPublishing.set(true);
 
       // Build and publish the media event
-      const mediaEvent = await this.publishMediaEvent(mediaItem, media);
+      const mediaEvent = await this.publishMediaEvent(uploadedItems);
 
       // Optionally publish as a note too
       let noteEvent: NostrEvent | undefined;
@@ -515,68 +657,70 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
     });
   }
 
-  private async publishMediaEvent(mediaItem: MediaItem, media: MediaFile): Promise<NostrEvent> {
+  private async publishMediaEvent(uploadedItems: { item: MediaItem; media: MediaFile }[]): Promise<NostrEvent> {
     const kind = this.mediaKind();
     const tags: string[][] = [];
 
-    // Build imeta tag
-    const imetaTag = ['imeta'];
-    imetaTag.push(`url ${mediaItem.url}`);
+    // Build imeta tags for each media item
+    for (const { item: mediaItem, media } of uploadedItems) {
+      const imetaTag = ['imeta'];
+      imetaTag.push(`url ${mediaItem.url}`);
 
-    if (mediaItem.type) {
-      imetaTag.push(`m ${mediaItem.type}`);
-    }
+      if (mediaItem.type) {
+        imetaTag.push(`m ${mediaItem.type}`);
+      }
 
-    imetaTag.push(`x ${mediaItem.sha256}`);
+      imetaTag.push(`x ${mediaItem.sha256}`);
 
-    if (mediaItem.size) {
-      imetaTag.push(`size ${mediaItem.size}`);
-    }
+      if (mediaItem.size) {
+        imetaTag.push(`size ${mediaItem.size}`);
+      }
 
-    if (this.alt().trim()) {
-      imetaTag.push(`alt ${this.alt().trim()}`);
-    }
+      if (this.alt().trim()) {
+        imetaTag.push(`alt ${this.alt().trim()}`);
+      }
 
-    // Add dimensions
-    if (media.dimensions && kind === 20) {
-      imetaTag.push(`dim ${media.dimensions.width}x${media.dimensions.height}`);
-    }
+      // Add dimensions
+      if (media.dimensions && kind === 20) {
+        imetaTag.push(`dim ${media.dimensions.width}x${media.dimensions.height}`);
+      }
 
-    // Add blurhash
-    if (this.blurhash()) {
-      imetaTag.push(`blurhash ${this.blurhash()}`);
-    }
+      // Add blurhash
+      if (media.blurhash) {
+        imetaTag.push(`blurhash ${media.blurhash}`);
+      }
 
-    // For videos, add thumbnail info
-    if (kind === 21 || kind === 22) {
-      // Upload thumbnail if we have one
-      if (this.thumbnailBlob()) {
-        try {
-          const thumbFile = new File([this.thumbnailBlob()!], 'thumbnail.jpg', { type: 'image/jpeg' });
-          const thumbResult = await this.mediaService.uploadFile(thumbFile, false, this.mediaService.mediaServers());
+      // For videos, add thumbnail info
+      if (kind === 21 || kind === 22) {
+        // Upload thumbnail if we have one
+        if (media.thumbnailBlob) {
+          try {
+            const thumbFile = new File([media.thumbnailBlob], 'thumbnail.jpg', { type: 'image/jpeg' });
+            const thumbResult = await this.mediaService.uploadFile(thumbFile, false, this.mediaService.mediaServers());
 
-          if (thumbResult.status === 'success' && thumbResult.item) {
-            imetaTag.push(`image ${thumbResult.item.url}`);
-            if (thumbResult.item.mirrors?.length) {
-              thumbResult.item.mirrors.forEach(url => imetaTag.push(`image ${url}`));
+            if (thumbResult.status === 'success' && thumbResult.item) {
+              imetaTag.push(`image ${thumbResult.item.url}`);
+              if (thumbResult.item.mirrors?.length) {
+                thumbResult.item.mirrors.forEach(url => imetaTag.push(`image ${url}`));
+              }
             }
+          } catch (error) {
+            console.error('Failed to upload thumbnail:', error);
           }
-        } catch (error) {
-          console.error('Failed to upload thumbnail:', error);
+        }
+
+        if (media.thumbnailDimensions) {
+          imetaTag.push(`dim ${media.thumbnailDimensions.width}x${media.thumbnailDimensions.height}`);
         }
       }
 
-      if (this.thumbnailDimensions()) {
-        imetaTag.push(`dim ${this.thumbnailDimensions()!.width}x${this.thumbnailDimensions()!.height}`);
+      // Add mirror URLs as fallback
+      if (mediaItem.mirrors?.length) {
+        mediaItem.mirrors.forEach(url => imetaTag.push(`fallback ${url}`));
       }
-    }
 
-    // Add mirror URLs as fallback
-    if (mediaItem.mirrors?.length) {
-      mediaItem.mirrors.forEach(url => imetaTag.push(`fallback ${url}`));
+      tags.push(imetaTag);
     }
-
-    tags.push(imetaTag);
 
     // Add title if provided
     if (this.title().trim()) {
@@ -598,16 +742,24 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
 
     // Add metadata tags
     tags.push(['published_at', Math.floor(Date.now() / 1000).toString()]);
-    tags.push(['x', mediaItem.sha256]);
     tags.push(['client', 'nostria']);
 
-    // For images, add MIME type tag
-    if (kind === 20 && mediaItem.type) {
-      tags.push(['m', mediaItem.type]);
+    // Add x tags for all media hashes
+    uploadedItems.forEach(({ item }) => {
+      tags.push(['x', item.sha256]);
+    });
+
+    // For images, add MIME type tag for first item
+    if (kind === 20 && uploadedItems[0]?.item.type) {
+      tags.push(['m', uploadedItems[0].item.type]);
     }
 
-    // Create and publish the event
-    const content = this.content().trim() || mediaItem.url;
+    // Create content - use description or list all URLs
+    let content = this.content().trim();
+    if (!content) {
+      content = uploadedItems.map(({ item }) => item.url).join('\n');
+    }
+
     const event = this.nostrService.createEvent(kind, content, tags);
 
     const result = await this.nostrService.signAndPublish(event);
