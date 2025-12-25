@@ -187,9 +187,7 @@ export class EditMusicTrackDialogComponent {
     const trackNumber = track.tags.find(t => t[0] === 'track_number')?.[1] || '';
     const releaseDate = track.tags.find(t => t[0] === 'released')?.[1] || '';
     const language = track.tags.find(t => t[0] === 'language')?.[1] || 'en';
-    // Support both new spec format ['explicit', 'true'] and old format ['content-warning', 'explicit']
-    const explicitContent = track.tags.some(t => t[0] === 'explicit' && t[1] === 'true') ||
-      track.tags.some(t => t[0] === 'content-warning' && t[1] === 'explicit');
+    const explicitContent = track.tags.some(t => t[0] === 'explicit' && t[1] === 'true');
     const lyrics = track.tags.find(t => t[0] === 'lyrics')?.[1] || '';
 
     // Extract credits from content
