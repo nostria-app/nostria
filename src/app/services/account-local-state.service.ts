@@ -48,6 +48,7 @@ interface AccountLocalState {
   trustedMediaAuthors?: string[]; // Pubkeys of authors whose media should always be revealed (not blurred)
   unreadMessagesCount?: number; // Cached count of unread direct messages
   hiddenChatIds?: string[]; // Chat IDs that user has hidden
+  globalEventExpiration?: number | null; // Global expiration time in hours for all events created (null = disabled)
 }
 
 /**
@@ -684,6 +685,24 @@ export class AccountLocalStateService {
     }
 
     return false;
+  }
+
+  /**
+   * Get global event expiration setting for an account
+   * @returns Expiration time in hours, or null if disabled
+   */
+  getGlobalEventExpiration(pubkey: string): number | null {
+    const state = this.getAccountState(pubkey);
+    return state.globalEventExpiration ?? null;
+  }
+
+  /**
+   * Set global event expiration for an account
+   * @param pubkey - User's pubkey
+   * @param hours - Expiration time in hours, or null to disable
+   */
+  setGlobalEventExpiration(pubkey: string, hours: number | null): void {
+    this.updateAccountState(pubkey, { globalEventExpiration: hours });
   }
 
   /**

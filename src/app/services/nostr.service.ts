@@ -36,6 +36,7 @@ import { CryptoEncryptionService, EncryptedData } from './crypto-encryption.serv
 import { PinPromptService } from './pin-prompt.service';
 import { MnemonicService } from './mnemonic.service';
 import { RelayAuthService } from './relays/relay-auth.service';
+import { AccountLocalStateService } from './account-local-state.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -107,6 +108,7 @@ export class NostrService implements NostriaService {
   private readonly pinPrompt = inject(PinPromptService);
   private readonly mnemonicService = inject(MnemonicService);
   private readonly relayAuth = inject(RelayAuthService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
 
   initialized = signal(false);
   private accountsInitialized = false;
@@ -708,6 +710,17 @@ export class NostrService implements NostriaService {
 
     if (!currentUser) {
       throw new Error('No user account found. Please log in or create an account first.');
+    }
+
+    // Apply global event expiration if enabled and no expiration tag already exists
+    const globalExpiration = this.accountLocalState.getGlobalEventExpiration(currentUser.pubkey);
+    if (globalExpiration !== null && !event.tags.some(tag => tag[0] === 'expiration')) {
+      // Calculate expiration timestamp: current time + hours in seconds
+      const expirationTimestamp = Math.floor(Date.now() / 1000) + (globalExpiration * 3600);
+      event = {
+        ...event,
+        tags: [...event.tags, ['expiration', expirationTimestamp.toString()]],
+      };
     }
 
     let signedEvent: Event | EventTemplate | null = null;
