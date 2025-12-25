@@ -311,6 +311,56 @@ export class DatabaseService {
   private readonly logger = inject(LoggerService);
 
   private db: IDBDatabase | null = null;
+
+  /**
+   * Check if an event has expired according to NIP-40
+   * @param event The event to check
+   * @returns true if the event has expired, false otherwise
+   */
+  private isEventExpired(event: Event): boolean {
+    const expirationTag = event.tags.find(tag => tag[0] === 'expiration');
+
+    if (!expirationTag || expirationTag.length < 2) {
+      return false; // No expiration tag means the event doesn't expire
+    }
+
+    const expirationTimestamp = parseInt(expirationTag[1], 10);
+
+    if (isNaN(expirationTimestamp)) {
+      return false; // Invalid expiration timestamp
+    }
+
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+    return currentTimestamp >= expirationTimestamp;
+  }
+
+  /**
+   * Filter out expired events from an array and delete them from the database
+   * @param events Array of events to filter
+   * @returns Array of non-expired events
+   */
+  private async filterAndDeleteExpiredEvents(events: Event[]): Promise<Event[]> {
+    const validEvents: Event[] = [];
+    const expiredEventIds: string[] = [];
+
+    for (const event of events) {
+      if (this.isEventExpired(event)) {
+        expiredEventIds.push(event.id);
+      } else {
+        validEvents.push(event);
+      }
+    }
+
+    // Delete expired events from database in background
+    if (expiredEventIds.length > 0) {
+      this.logger.info(`Cleaning up ${expiredEventIds.length} expired events from database`);
+      this.deleteEvents(expiredEventIds).catch(err => {
+        this.logger.error('Failed to delete expired events:', err);
+      });
+    }
+
+    return validEvents;
+  }
   private initPromise: Promise<void> | null = null;
 
   // Signal to track initialization status
@@ -575,8 +625,15 @@ export class DatabaseService {
 
   /**
    * Save a single event to the database
+   * Skips saving if the event has already expired (NIP-40)
    */
   async saveEvent(event: Event & { dTag?: string }): Promise<void> {
+    // Don't save expired events
+    if (this.isEventExpired(event)) {
+      this.logger.debug(`Skipping save for expired event: ${event.id}`);
+      return;
+    }
+
     const db = this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
@@ -595,9 +652,17 @@ export class DatabaseService {
 
   /**
    * Save multiple events in a single transaction
+   * Filters out expired events (NIP-40) before saving
    */
   async saveEvents(events: (Event & { dTag?: string })[]): Promise<void> {
-    if (events.length === 0) return;
+    // Filter out expired events
+    const validEvents = events.filter(event => !this.isEventExpired(event));
+
+    if (validEvents.length === 0) return;
+
+    if (validEvents.length !== events.length) {
+      this.logger.debug(`Filtered out ${events.length - validEvents.length} expired events before saving`);
+    }
 
     const db = this.ensureInitialized();
 
@@ -605,7 +670,7 @@ export class DatabaseService {
       const transaction = db.transaction(STORES.EVENTS, 'readwrite');
       const store = transaction.objectStore(STORES.EVENTS);
 
-      for (const event of events) {
+      for (const event of validEvents) {
         store.put(event);
       }
 
@@ -616,11 +681,12 @@ export class DatabaseService {
 
   /**
    * Get an event by ID
+   * Checks for expiration (NIP-40) and deletes if expired
    */
   async getEvent(id: string): Promise<Event | undefined> {
     const db = this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
+    const event = await new Promise<Event | undefined>((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS, 'readonly');
       const store = transaction.objectStore(STORES.EVENTS);
 
@@ -629,10 +695,21 @@ export class DatabaseService {
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
+
+    if (event && this.isEventExpired(event)) {
+      this.logger.info(`Event ${id} has expired, deleting from database`);
+      this.deleteEvent(id).catch(err => {
+        this.logger.error('Failed to delete expired event:', err);
+      });
+      return undefined;
+    }
+
+    return event;
   }
 
   /**
    * Get an event by ID (alias for getEvent for compatibility with StorageService)
+   * Checks for expiration (NIP-40) and deletes if expired
    */
   async getEventById(id: string): Promise<Event | null> {
     const event = await this.getEvent(id);
@@ -642,6 +719,7 @@ export class DatabaseService {
   /**
    * Get a single event by pubkey and kind (returns the most recent one)
    * For compatibility with StorageService which returned a single event
+   * Expiration filtering is handled by getEventsByPubkeyAndKind
    */
   async getEventByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event | null> {
     const events = await this.getEventsByPubkeyAndKind(pubkey, kind);
@@ -655,6 +733,7 @@ export class DatabaseService {
   /**
    * Get a parameterized replaceable event by pubkey, kind, and d-tag
    * Returns the most recent matching event
+   * Expiration filtering is handled by getEventsByPubkeyKindAndDTag
    */
   async getParameterizedReplaceableEvent(
     pubkey: string,
@@ -687,12 +766,34 @@ export class DatabaseService {
   }
 
   /**
+   * Delete multiple events by ID in a single transaction
+   */
+  async deleteEvents(ids: string[]): Promise<void> {
+    if (ids.length === 0) return;
+
+    const db = this.ensureInitialized();
+
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORES.EVENTS, 'readwrite');
+      const store = transaction.objectStore(STORES.EVENTS);
+
+      for (const id of ids) {
+        store.delete(id);
+      }
+
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+  }
+
+  /**
    * Get events by kind
+   * Filters out expired events (NIP-40) and deletes them from the database
    */
   async getEventsByKind(kind: number): Promise<Event[]> {
     const db = this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
+    const events = await new Promise<Event[]>((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS, 'readonly');
       const store = transaction.objectStore(STORES.EVENTS);
       const index = store.index(EVENT_INDEXES.BY_KIND);
@@ -702,15 +803,18 @@ export class DatabaseService {
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
+
+    return this.filterAndDeleteExpiredEvents(events);
   }
 
   /**
    * Get events by pubkey
+   * Filters out expired events (NIP-40) and deletes them from the database
    */
   async getEventsByPubkey(pubkey: string): Promise<Event[]> {
     const db = this.ensureInitialized();
 
-    return new Promise((resolve, reject) => {
+    const events = await new Promise<Event[]>((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS, 'readonly');
       const store = transaction.objectStore(STORES.EVENTS);
       const index = store.index(EVENT_INDEXES.BY_PUBKEY);
@@ -720,11 +824,14 @@ export class DatabaseService {
       request.onsuccess = () => resolve(request.result || []);
       request.onerror = () => reject(request.error);
     });
+
+    return this.filterAndDeleteExpiredEvents(events);
   }
 
   /**
    * Get events by pubkey and kind - optimized for single transaction
    * Handles both single pubkey and array of pubkeys efficiently
+   * Filters out expired events (NIP-40) and deletes them from the database
    */
   async getEventsByPubkeyAndKind(pubkey: string | string[], kind: number): Promise<Event[]> {
     const db = this.ensureInitialized();
@@ -736,7 +843,7 @@ export class DatabaseService {
       return [];
     }
 
-    return new Promise((resolve, reject) => {
+    const events = await new Promise<Event[]>((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS, 'readonly');
       const store = transaction.objectStore(STORES.EVENTS);
       const index = store.index(EVENT_INDEXES.BY_PUBKEY_KIND);
@@ -771,6 +878,8 @@ export class DatabaseService {
 
       transaction.onerror = () => reject(transaction.error);
     });
+
+    return this.filterAndDeleteExpiredEvents(events);
   }
 
   /**
@@ -791,6 +900,7 @@ export class DatabaseService {
 
   /**
    * Get events by pubkey, kind, and d-tag (for parameterized replaceable events)
+   * Filters out expired events (NIP-40) and deletes them from the database
    */
   async getEventsByPubkeyKindAndDTag(
     pubkey: string | string[],
@@ -805,7 +915,7 @@ export class DatabaseService {
       return [];
     }
 
-    return new Promise((resolve, reject) => {
+    const events = await new Promise<Event[]>((resolve, reject) => {
       const transaction = db.transaction(STORES.EVENTS, 'readonly');
       const store = transaction.objectStore(STORES.EVENTS);
       const index = store.index(EVENT_INDEXES.BY_PUBKEY_KIND_DTAG);
@@ -836,6 +946,8 @@ export class DatabaseService {
 
       transaction.onerror = () => reject(transaction.error);
     });
+
+    return this.filterAndDeleteExpiredEvents(events);
   }
 
   /**
