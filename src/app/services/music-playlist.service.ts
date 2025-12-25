@@ -147,11 +147,8 @@ export class MusicPlaylistService {
       .filter(t => t[0] === 'a' && t[1]?.startsWith(`${MUSIC_KIND}:`))
       .map(t => t[1]);
 
-    // Determine public/private: check both formats for compatibility
-    // If 'private' tag exists and is 'true', it's private
-    // If 'public' tag exists, use its value
-    // Default to public
-    const isPublic = privateTag?.[1] === 'true' ? false : publicTag?.[1] !== 'false';
+    // Per spec: 'public' tag means public, 'private' tag means private, default to public
+    const isPublic = publicTag?.[1] === 'true' || privateTag?.[1] !== 'true';
 
     return {
       id: dTag,
