@@ -16,6 +16,7 @@ import { ComponentPortal } from '@angular/cdk/portal';
 import { ProfileHoverCardComponent } from '../../user-profile/hover-card/profile-hover-card.component';
 import { CashuTokenComponent } from '../../cashu-token/cashu-token.component';
 import { AudioPlayerComponent } from '../../audio-player/audio-player.component';
+import { InlineVideoPlayerComponent } from '../../inline-video-player/inline-video-player.component';
 import { SettingsService } from '../../../services/settings.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
@@ -37,7 +38,7 @@ export interface DisplayItem {
 @Component({
   selector: 'app-note-content',
   standalone: true,
-  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, AudioPlayerComponent, PhotoEventComponent, EventHeaderComponent, RouterLink],
+  imports: [MatIconModule, MatProgressSpinnerModule, MatButtonModule, CashuTokenComponent, AudioPlayerComponent, InlineVideoPlayerComponent, PhotoEventComponent, EventHeaderComponent, RouterLink],
   templateUrl: './note-content.component.html',
   styleUrl: './note-content.component.scss',
 })

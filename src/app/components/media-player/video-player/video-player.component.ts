@@ -8,6 +8,7 @@ import {
   input,
   signal,
 } from '@angular/core';
+import { OverlayContainer } from '@angular/cdk/overlay';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
@@ -40,7 +41,6 @@ import { MatSliderModule } from '@angular/material/slider';
   styleUrl: './video-player.component.scss',
   host: {
     '[class.footer-mode]': 'footer()',
-    '[class.compact-mode]': '!footer()',
   },
 })
 export class VideoPlayerComponent implements OnDestroy {
@@ -49,10 +49,12 @@ export class VideoPlayerComponent implements OnDestroy {
   private readonly utilities = inject(UtilitiesService);
   private readonly castService = inject(CastService);
   private readonly elementRef = inject(ElementRef);
+  private readonly overlayContainer = inject(OverlayContainer);
 
   footer = input<boolean>(false);
   cursorHidden = signal(false);
   isHoveringControlsBar = signal(false);
+  isNativeFullscreen = signal(false);
 
   private autoHideTimeout: ReturnType<typeof setTimeout> | null = null;
   private readonly AUTO_HIDE_DELAY = 3000;
@@ -84,7 +86,10 @@ export class VideoPlayerComponent implements OnDestroy {
 
   private fullscreenChangeHandler = () => {
     const isFullscreen = !!document.fullscreenElement;
+    this.isNativeFullscreen.set(isFullscreen);
 
+    // Move CDK overlay container into/out of fullscreen element for menus to work
+    const overlayContainerEl = this.overlayContainer.getContainerElement();
     if (isFullscreen) {
       // Ignore mouse events briefly to prevent them from canceling auto-hide
       this.ignoreMouseEvents = true;
@@ -92,11 +97,21 @@ export class VideoPlayerComponent implements OnDestroy {
         this.ignoreMouseEvents = false;
       }, 100);
 
+      // Move overlay container into fullscreen element
+      const videoWrapper = document.querySelector('.video-wrapper');
+      if (videoWrapper && overlayContainerEl) {
+        videoWrapper.appendChild(overlayContainerEl);
+      }
+
       // Reset hover state and start auto-hide timer when entering fullscreen
       this.isHoveringControlsBar.set(false);
       this.videoControlsRef?.forceShowControlsAndStartTimer();
       this.forceStartAutoHideTimer();
     } else {
+      // Move overlay container back to body
+      if (overlayContainerEl && overlayContainerEl.parentElement !== document.body) {
+        document.body.appendChild(overlayContainerEl);
+      }
       // Show cursor when exiting fullscreen
       this.ignoreMouseEvents = false;
       this.showCursor();
@@ -162,19 +177,26 @@ export class VideoPlayerComponent implements OnDestroy {
     this.media.setPlaybackRate(rate);
   }
 
-  async requestFullscreen(): Promise<void> {
-    const videoArea = document.querySelector('.video-area');
-    if (!videoArea) return;
+  async requestNativeFullscreen(): Promise<void> {
+    const videoWrapper = document.querySelector('.video-wrapper');
+    if (!videoWrapper) return;
 
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
       } else {
-        await videoArea.requestFullscreen();
+        await videoWrapper.requestFullscreen();
       }
     } catch {
       // Fullscreen not supported, fall back to expand
       this.toggleFullscreen();
+    }
+  }
+
+  copyVideoUrl(): void {
+    const currentMedia = this.media.current();
+    if (currentMedia?.source) {
+      navigator.clipboard.writeText(currentMedia.source);
     }
   }
 

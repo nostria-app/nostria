@@ -14,6 +14,7 @@ import { BookmarkService } from '../../services/bookmark.service';
 import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { EventMenuComponent } from '../event/event-menu/event-menu.component';
+import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { SettingsService } from '../../services/settings.service';
@@ -46,7 +47,8 @@ interface VideoData {
     MatTooltipModule,
     MatChipsModule,
     CommentsListComponent,
-    EventMenuComponent
+    EventMenuComponent,
+    InlineVideoPlayerComponent
   ],
   templateUrl: './media-with-comments-dialog.component.html',
   styleUrl: './media-with-comments-dialog.component.scss',

@@ -101,11 +101,8 @@
       <div class="video-container">
         <!-- Use @for with track to force re-render when event changes -->
         @for (ev of [event()]; track ev.id) {
-        <video controls class="video-player" autoplay [poster]="videoInfo.thumbnail"
-          [class.blurred]="shouldBlurMedia() && !isRevealed()">
-          <source [src]="videoInfo.url" [type]="videoMimeType()" />
-          Your browser does not support the video tag.
-        </video>
+        <app-inline-video-player [src]="videoInfo.url" [poster]="videoInfo.thumbnail" [autoplay]="true"
+          [blurred]="shouldBlurMedia() && !isRevealed()" class="video-player" />
         }
 
         <!-- Blur overlay for privacy protection -->

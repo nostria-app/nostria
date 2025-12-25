@@ -57,7 +57,8 @@
         <p>Loading video...</p>
       </div>
       }
-      <video [src]="currentMedia().url" controls autoplay class="preview-video" (loadeddata)="onVideoLoad()"></video>
+      <app-inline-video-player [src]="currentMedia().url" [autoplay]="true" (videoCanPlay)="onVideoLoad()"
+        class="preview-video" />
     </div>
     } @else {
     <div class="unsupported-media">

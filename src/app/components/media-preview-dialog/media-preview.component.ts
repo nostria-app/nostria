@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
 
 interface MediaItem {
   url: string;
@@ -21,7 +22,7 @@ interface MediaPreviewData {
 @Component({
   selector: 'app-media-preview-dialog',
   standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule],
+  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, InlineVideoPlayerComponent],
   templateUrl: './media-preview.component.html',
   styleUrls: ['./media-preview.component.scss'],
   host: {

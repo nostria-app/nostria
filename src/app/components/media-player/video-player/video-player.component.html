@@ -1,10 +1,40 @@
-<div class="video-player-container" [class.footer-mode]="footer()" [class.expanded-mode]="!footer()">
-  <!-- Header (Expanded Mode Only) -->
-  <div class="video-header" [class.hidden]="footer()">
-    <div class="video-title">
-      <h2>{{ media.current()?.title || 'Video' }}</h2>
+<div class="video-player-container" [class.footer-mode]="footer()" [class.fullscreen-mode]="!footer()"
+  [class.cursor-hidden]="cursorHidden()">
+
+  @if (!footer()) {
+  <!-- Fullscreen Mode - Full video interface -->
+  <div class="video-wrapper" (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
+    (mousemove)="onVideoContainerMouseMove()">
+    <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
+      (error)="onVideoError($event)"></video>
+
+    <app-video-controls [videoElement]="videoElement"
+      [config]="{ isLiveStream: false, showQuality: media.hlsQualityLevels().length > 0 }"
+      [qualityLevels]="media.hlsQualityLevels()" [currentQuality]="media.hlsCurrentQuality()"
+      [nativeFullscreen]="isNativeFullscreen()" (playPause)="onPlayPause()" (seek)="onSeek($event)"
+      (volumeChange)="onVolumeChange($event)" (muteToggle)="media.mute()" (qualityChange)="media.setHlsQuality($event)"
+      (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="requestNativeFullscreen()"
+      (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" (controlsBarHover)="onControlsBarHover($event)" />
+  </div>
+
+  <!-- Header overlay -->
+  <div class="video-header">
+    <div class="video-info">
+      <h2 class="video-title">{{ media.current()?.title || 'Video' }}</h2>
+      @if (media.current()?.artist) {
+      <div class="video-artist">
+        @if (isNpubArtist(media.current()?.artist)) {
+        <app-user-profile [pubkey]="getNpubPubkey(media.current()!.artist!)" view="compact" />
+        } @else {
+        {{ media.current()?.artist }}
+        }
+      </div>
+      }
     </div>
     <div class="video-actions">
+      <button mat-icon-button [matMenuTriggerFor]="expandedMenu" matTooltip="More options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
       <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
         <mat-icon>minimize</mat-icon>
       </button>
@@ -13,35 +43,20 @@
       </button>
     </div>
   </div>
-
-  <!-- Video Area (Shared) -->
-  <div class="video-area" [class.cursor-hidden]="cursorHidden()" (mouseenter)="onVideoContainerMouseEnter()"
-    (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()">
+  } @else {
+  <!-- Footer Mode - Compact video bar -->
+  <div class="video-preview" (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()">
     <video #videoElement class="video-element" [src]="media.videoUrl()" [muted]="media.muted" autoplay playsinline
       (error)="onVideoError($event)"></video>
-
-    @if (!footer()) {
-    <!-- Custom Controls for Expanded Mode -->
-    <app-video-controls [videoElement]="videoElement"
-      [config]="{ isLiveStream: false, showQuality: media.hlsQualityLevels().length > 0 }"
-      [qualityLevels]="media.hlsQualityLevels()" [currentQuality]="media.hlsCurrentQuality()" [nativeFullscreen]="true"
-      (playPause)="onPlayPause()" (seek)="onSeek($event)" (volumeChange)="onVolumeChange($event)"
-      (muteToggle)="media.mute()" (qualityChange)="media.setHlsQuality($event)"
-      (playbackRateChange)="onPlaybackRateChange($event)" (fullscreenToggle)="requestFullscreen()"
-      (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" (controlsBarHover)="onControlsBarHover($event)" />
-    } @else {
-    <!-- Footer Overlay (Footer Mode Only) -->
-    <div class="video-controls-overlay">
+    <div class="video-preview-overlay">
       <button mat-icon-button matTooltip="Picture in Picture" (click)="pictureInPicture()">
         <mat-icon>picture_in_picture_alt</mat-icon>
       </button>
     </div>
-    }
   </div>
 
-  <!-- Media Info (Footer Mode Only) -->
-  <div class="media-info" [class.hidden]="!footer()">
-    <div class="media-info-text">
+  <div class="footer-content">
+    <div class="media-info">
       <div class="media-title">{{ media.current()?.title || 'Video' }}</div>
       @if (media.current()?.artist) {
       <div class="media-artist">
@@ -53,11 +68,8 @@
       </div>
       }
     </div>
-  </div>
 
-  <!-- Footer Controls (Footer Mode Only) -->
-  <div class="video-controls" [class.hidden]="!footer()">
-    <div class="control-buttons">
+    <div class="playback-controls">
       <button [disabled]="!media.canPrevious()" (click)="media.previous()" mat-icon-button matTooltip="Previous">
         <mat-icon>skip_previous</mat-icon>
       </button>
@@ -76,10 +88,6 @@
         <mat-icon>skip_next</mat-icon>
       </button>
 
-      <button class="hide-small" matTooltip="View queue" routerLink="/queue" mat-icon-button>
-        <mat-icon>queue_music</mat-icon>
-      </button>
-
       @if (media.muted) {
       <button matTooltip="Unmute (hold to adjust)" (click)="media.mute()" mat-icon-button appVolumeGesture
         (volumeChange)="onVolumeChange($event)">
@@ -94,7 +102,7 @@
     </div>
 
     <div class="control-actions">
-      <button mat-icon-button [matMenuTriggerFor]="footerStreamMenu" matTooltip="More options">
+      <button mat-icon-button [matMenuTriggerFor]="footerMenu" matTooltip="More options">
         <mat-icon>more_vert</mat-icon>
       </button>
       <button class="hide-small" mat-icon-button matTooltip="Expand" (click)="toggleFullscreen()">
@@ -105,16 +113,18 @@
       </button>
     </div>
   </div>
+  }
 </div>
 
-<mat-menu #footerStreamMenu="matMenu">
+<!-- Context menu for footer mode -->
+<mat-menu #footerMenu="matMenu">
   <div class="volume-menu-item" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0">
     <mat-icon>volume_up</mat-icon>
     <mat-slider class="volume-slider" [min]="0" [max]="100" [step]="1">
       <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
     </mat-slider>
   </div>
-  <button mat-menu-item matTooltip="View queue" routerLink="/queue">
+  <button mat-menu-item routerLink="/queue">
     <mat-icon>queue_music</mat-icon>
     <span>View queue</span>
   </button>
@@ -124,18 +134,30 @@
   </button>
   <button mat-menu-item (click)="toggleFullscreen()">
     <mat-icon>open_in_full</mat-icon>
-    <span>Maximize</span>
+    <span>Expand</span>
   </button>
-  <!-- <button mat-menu-item (click)="copyEventUrl()">
-    <mat-icon>link</mat-icon>
-    <span>Copy Stream URL</span>
-  </button>
-  <button mat-menu-item (click)="copyEventData()">
-    <mat-icon>code</mat-icon>
-    <span>Copy Event Data</span>
-  </button> -->
   <button mat-menu-item (click)="media.exit()">
     <mat-icon>close</mat-icon>
     <span>Close</span>
+  </button>
+</mat-menu>
+
+<!-- Context menu for expanded mode -->
+<mat-menu #expandedMenu="matMenu">
+  <button mat-menu-item routerLink="/queue">
+    <mat-icon>queue_music</mat-icon>
+    <span>View queue</span>
+  </button>
+  <button mat-menu-item (click)="pictureInPicture()">
+    <mat-icon>picture_in_picture</mat-icon>
+    <span>Picture-in-Picture</span>
+  </button>
+  <button mat-menu-item (click)="requestNativeFullscreen()">
+    <mat-icon>fullscreen</mat-icon>
+    <span>Fullscreen</span>
+  </button>
+  <button mat-menu-item (click)="copyVideoUrl()">
+    <mat-icon>link</mat-icon>
+    <span>Copy video URL</span>
   </button>
 </mat-menu>
