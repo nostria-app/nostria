@@ -594,6 +594,85 @@ export class VideoFilterService {
     return this.availableFilters.findIndex(f => f.id === filterId);
   }
 
+  /**
+   * Apply filter to an image and render to the canvas
+   * @param image - The image element to apply the filter to
+   */
+  applyFilterToImage(image: HTMLImageElement): void {
+    if (!this.gl || !this.program || !this.canvas) {
+      return;
+    }
+
+    // Skip if image doesn't have valid dimensions yet
+    if (image.naturalWidth === 0 || image.naturalHeight === 0) return;
+
+    const filterIndex = this.getFilterIndex(this.currentFilter);
+    const canvas = this.canvas;
+
+    // Match image dimensions
+    const targetWidth = image.naturalWidth;
+    const targetHeight = image.naturalHeight;
+
+    // Update canvas size if needed
+    if (this.currentWidth !== targetWidth || this.currentHeight !== targetHeight) {
+      this.currentWidth = targetWidth;
+      this.currentHeight = targetHeight;
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
+      // Update viewport after resize
+      this.gl.viewport(0, 0, canvas.width, canvas.height);
+    }
+
+    // Reset texture coordinates for full image
+    this.updateTextureCoords(0, 1, 0, 1);
+
+    // Check if context was lost
+    if (this.gl.isContextLost()) {
+      console.error('[VideoFilter] WebGL context lost');
+      return;
+    }
+
+    // Clear the canvas
+    this.gl.clearColor(0, 0, 0, 1);
+    this.gl.clear(this.gl.COLOR_BUFFER_BIT);
+
+    // Activate texture unit 0 and upload image to texture
+    this.gl.activeTexture(this.gl.TEXTURE0);
+    this.gl.bindTexture(this.gl.TEXTURE_2D, this.texture);
+    this.gl.texImage2D(this.gl.TEXTURE_2D, 0, this.gl.RGBA, this.gl.RGBA, this.gl.UNSIGNED_BYTE, image);
+
+    // Use program
+    this.gl.useProgram(this.program);
+
+    // Set position attribute
+    const positionLocation = this.gl.getAttribLocation(this.program, 'a_position');
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.positionBuffer);
+    this.gl.enableVertexAttribArray(positionLocation);
+    this.gl.vertexAttribPointer(positionLocation, 2, this.gl.FLOAT, false, 0, 0);
+
+    // Set texture coordinate attribute
+    const texCoordLocation = this.gl.getAttribLocation(this.program, 'a_texCoord');
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.textureCoordBuffer);
+    this.gl.enableVertexAttribArray(texCoordLocation);
+    this.gl.vertexAttribPointer(texCoordLocation, 2, this.gl.FLOAT, false, 0, 0);
+
+    // Set uniforms
+    const imageLocation = this.gl.getUniformLocation(this.program, 'u_image');
+    const filterLocation = this.gl.getUniformLocation(this.program, 'u_filter');
+    const resolutionLocation = this.gl.getUniformLocation(this.program, 'u_resolution');
+    const timeLocation = this.gl.getUniformLocation(this.program, 'u_time');
+    this.gl.uniform1i(imageLocation, 0);
+    this.gl.uniform1i(filterLocation, filterIndex);
+    this.gl.uniform2f(resolutionLocation, canvas.width, canvas.height);
+
+    // Pass time for animated effects (in seconds)
+    const currentTime = (performance.now() - this.startTime) / 1000.0;
+    this.gl.uniform1f(timeLocation, currentTime);
+
+    // Draw
+    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+  }
+
   applyFilter(video: HTMLVideoElement, canvas: HTMLCanvasElement, targetAspectRatio?: number): void {
     if (!this.gl || !this.program) {
       return;

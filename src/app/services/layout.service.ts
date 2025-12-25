@@ -27,6 +27,7 @@ import { AudioRecordDialogComponent } from '../pages/media/audio-record-dialog/a
 import { ConfirmDialogComponent } from '../components/confirm-dialog/confirm-dialog.component';
 import { MediaService, MediaItem } from './media.service';
 import { MediaPublishDialogComponent, MediaPublishOptions } from '../pages/media/media-publish-dialog/media-publish-dialog.component';
+import { MediaCreatorDialogComponent, MediaCreatorResult } from '../pages/media/media-creator-dialog/media-creator-dialog.component';
 import { NostrService } from './nostr.service';
 import { PublishService } from './publish.service';
 import { CustomDialogService, CustomDialogRef } from './custom-dialog.service';
@@ -1204,6 +1205,41 @@ export class LayoutService implements OnDestroy {
           console.error('Failed to upload/publish audio:', error);
           this.mediaService.uploading.set(false);
           this.snackBar.open('Failed to publish audio clip.', 'Close', { duration: 3000 });
+        }
+      }
+    });
+  }
+
+  /**
+   * Open the media creator dialog for publishing photos/videos
+   * Supports kind 20 (photo), kind 21 (video), kind 22 (short video)
+   * with optional kind 1 note creation
+   */
+  openMediaCreatorDialog(): void {
+    const dialogRef = this.customDialog.open<MediaCreatorDialogComponent, MediaCreatorResult>(
+      MediaCreatorDialogComponent,
+      {
+        title: $localize`:@@media.creator.dialog.title:Create Media`,
+        width: '600px',
+        maxWidth: '95vw',
+        disableClose: true,
+        showCloseButton: true,
+        panelClass: 'media-creator-dialog-panel',
+      }
+    );
+
+    dialogRef.afterClosed$.subscribe(result => {
+      if (result?.published) {
+        // Navigate to the published media event
+        if (result.mediaEvent) {
+          const nevent = nip19.neventEncode({
+            id: result.mediaEvent.id,
+            author: result.mediaEvent.pubkey,
+            kind: result.mediaEvent.kind,
+          });
+          this.ngZone.run(() => {
+            this.router.navigate(['/e', nevent], { state: { event: result.mediaEvent } });
+          });
         }
       }
     });
