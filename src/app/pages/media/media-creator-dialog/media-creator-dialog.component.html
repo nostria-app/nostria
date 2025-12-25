@@ -26,6 +26,47 @@
   <!-- STEP 1: Select Media -->
   @if (currentStep() === 1) {
   <div class="step-content step-select">
+    @if (isCameraMode()) {
+    <!-- Camera capture mode -->
+    <div class="camera-capture">
+      <div class="camera-preview" [class.mirror]="facingMode() === 'user'">
+        <video #cameraVideo autoplay playsinline muted></video>
+        <canvas #cameraCanvas hidden></canvas>
+
+        @if (!isCameraReady() && !cameraError()) {
+        <div class="camera-loading">
+          <mat-spinner diameter="40"></mat-spinner>
+          <span i18n="@@media.creator.camera.loading">Starting camera...</span>
+        </div>
+        }
+
+        @if (cameraError()) {
+        <div class="camera-error">
+          <mat-icon>error_outline</mat-icon>
+          <span>{{ cameraError() }}</span>
+        </div>
+        }
+      </div>
+
+      <div class="camera-controls">
+        <button mat-icon-button (click)="stopCamera()" class="camera-close-btn" matTooltip="Close camera"
+          i18n-matTooltip="@@media.creator.camera.close">
+          <mat-icon>close</mat-icon>
+        </button>
+
+        <button mat-fab (click)="capturePhoto()" [disabled]="!isCameraReady()" class="capture-btn"
+          matTooltip="Take photo" i18n-matTooltip="@@media.creator.camera.capture">
+          <mat-icon>photo_camera</mat-icon>
+        </button>
+
+        <button mat-icon-button (click)="switchCamera()" class="switch-camera-btn" matTooltip="Switch camera"
+          i18n-matTooltip="@@media.creator.camera.switch">
+          <mat-icon>flip_camera_ios</mat-icon>
+        </button>
+      </div>
+    </div>
+    } @else {
+    <!-- File picker mode -->
     <div class="empty-state">
       <div class="drop-zone" (click)="openFilePicker()" (keydown.enter)="openFilePicker()"
         (keydown.space)="openFilePicker(); $event.preventDefault()" tabindex="0" role="button"
@@ -34,8 +75,18 @@
         <h3 i18n="@@media.creator.drop.title">Drop media here or click to browse</h3>
         <p i18n="@@media.creator.drop.hint">Supports images and videos (select multiple)</p>
       </div>
+
+      <!-- Camera button -->
+      @if (mediaType() !== 'video') {
+      <button mat-stroked-button class="camera-btn" (click)="openCamera()">
+        <mat-icon>photo_camera</mat-icon>
+        <span i18n="@@media.creator.camera.open">Take a Photo</span>
+      </button>
+      }
+
       <input #fileInput type="file" [accept]="acceptedFileTypes()" (change)="onFileSelected($event)" multiple hidden />
     </div>
+    }
   </div>
   }
 
