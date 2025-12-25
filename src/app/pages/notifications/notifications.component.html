@@ -63,11 +63,37 @@
           }
         </mat-menu>
 
-        @if (contentNotifications().length === 0) {
+        <!-- Search Input -->
+        <div class="search-container">
+          <mat-form-field appearance="outline" class="search-field">
+            <mat-icon matPrefix>search</mat-icon>
+            <input matInput
+                   placeholder="Search by name or content..."
+                   [ngModel]="searchQuery()"
+                   (ngModelChange)="searchQuery.set($event)">
+            @if (searchQuery()) {
+            <button matSuffix mat-icon-button (click)="clearSearch()" matTooltip="Clear search">
+              <mat-icon>close</mat-icon>
+            </button>
+            }
+          </mat-form-field>
+        </div>
+
+        @if (contentNotifications().length === 0 && !searchQuery()) {
         <div class="empty-state">
           <mat-icon class="empty-icon">people</mat-icon>
           <h2>No activity yet</h2>
           <p>You'll see mentions, follows, reposts, and other interactions here.</p>
+        </div>
+        } @else if (contentNotifications().length === 0 && searchQuery()) {
+        <div class="empty-state">
+          <mat-icon class="empty-icon">search_off</mat-icon>
+          <h2>No matching notifications</h2>
+          <p>No notifications found matching "{{ searchQuery() }}"</p>
+          <button mat-flat-button (click)="clearSearch()">
+            <mat-icon>close</mat-icon>
+            Clear search
+          </button>
         </div>
         } @else {
         <cdk-virtual-scroll-viewport [itemSize]="110" class="notification-viewport"

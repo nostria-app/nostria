@@ -1,10 +1,13 @@
 import { Component, inject, signal, OnInit, computed, effect } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { RelayPublishStatusComponent } from '../../components/relay-publish-status/relay-publish-status.component';
 import { MatMenuModule } from '@angular/material/menu';
@@ -29,6 +32,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ProfileDisplayNameComponent } from '../../components/user-profile/display-name/profile-display-name.component';
+import { DataService } from '../../services/data.service';
 
 /**
  * Local storage key for notification filter preferences
@@ -38,11 +42,14 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
 @Component({
   selector: 'app-notifications',
   imports: [
+    FormsModule,
     MatCardModule,
     MatButtonModule,
     MatIconModule,
     MatDividerModule,
     MatTabsModule,
+    MatFormFieldModule,
+    MatInputModule,
     ScrollingModule,
     RelayPublishStatusComponent,
     MatMenuModule,
@@ -67,8 +74,12 @@ export class NotificationsComponent implements OnInit {
   private accountLocalState = inject(AccountLocalStateService);
   private clipboard = inject(Clipboard);
   private snackBar = inject(MatSnackBar);
+  private dataService = inject(DataService);
 
   notifications = this.notificationService.notifications;
+  
+  // Search query for filtering notifications
+  searchQuery = signal('');
   notificationType = NotificationType;
 
   // State for loading older notifications
@@ -137,6 +148,7 @@ export class NotificationsComponent implements OnInit {
   contentNotifications = computed(() => {
     const filters = this.notificationFilters();
     const mutedAccounts = this.accountState.mutedAccounts();
+    const query = this.searchQuery().toLowerCase().trim();
 
     return this.notifications()
       .filter(n => {
@@ -149,6 +161,13 @@ export class NotificationsComponent implements OnInit {
         const contentNotif = n as ContentNotification;
         if (contentNotif.authorPubkey && mutedAccounts.includes(contentNotif.authorPubkey)) {
           return false;
+        }
+
+        // Apply search filter if query exists
+        if (query) {
+          if (!this.matchesSearchQuery(contentNotif, query)) {
+            return false;
+          }
         }
 
         return true;
@@ -180,6 +199,53 @@ export class NotificationsComponent implements OnInit {
     } catch (error) {
       console.error('Failed to load notification filters from localStorage', error);
     }
+  }
+
+  /**
+   * Check if a notification matches the search query
+   * Searches in: author name, display name, message content, notification title
+   */
+  private matchesSearchQuery(notification: ContentNotification, query: string): boolean {
+    // Check message content
+    if (notification.message?.toLowerCase().includes(query)) {
+      return true;
+    }
+
+    // Check notification title
+    if (notification.title?.toLowerCase().includes(query)) {
+      return true;
+    }
+
+    // Check zap content from metadata
+    if (notification.metadata?.content?.toLowerCase().includes(query)) {
+      return true;
+    }
+
+    // Check author profile name (synchronously from cache)
+    if (notification.authorPubkey) {
+      const cachedProfile = this.dataService.getCachedProfile(notification.authorPubkey);
+      if (cachedProfile?.data) {
+        const profileData = cachedProfile.data as { name?: string; display_name?: string; nip05?: string };
+        if (profileData.name?.toLowerCase().includes(query)) {
+          return true;
+        }
+        if (profileData.display_name?.toLowerCase().includes(query)) {
+          return true;
+        }
+        if (profileData.nip05?.toLowerCase().includes(query)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Clear the search query
+   */
+  clearSearch(): void {
+    this.searchQuery.set('');
   }
 
   async onRetryPublish(notificationId: string): Promise<void> {
