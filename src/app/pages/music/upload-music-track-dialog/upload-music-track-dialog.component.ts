@@ -358,6 +358,7 @@ export class UploadMusicTrackDialogComponent {
         ['d', dTag],
         ['title', formValue.title],
         ['url', this.audioUrl()!],
+        ['t', 'music'], // Required per spec
         ['client', 'nostria'],
       ];
 
@@ -414,7 +415,7 @@ export class UploadMusicTrackDialogComponent {
       }
 
       if (formValue.explicitContent) {
-        tags.push(['content-warning', 'explicit']);
+        tags.push(['explicit', 'true']);
       }
 
       if (formValue.lyrics) {

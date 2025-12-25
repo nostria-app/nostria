@@ -140,11 +140,18 @@ export class MusicPlaylistService {
     const descTag = event.tags.find(t => t[0] === 'description');
     const imageTag = event.tags.find(t => t[0] === 'image');
     const publicTag = event.tags.find(t => t[0] === 'public');
+    const privateTag = event.tags.find(t => t[0] === 'private');
     const collaborativeTag = event.tags.find(t => t[0] === 'collaborative');
 
     const trackRefs = event.tags
       .filter(t => t[0] === 'a' && t[1]?.startsWith(`${MUSIC_KIND}:`))
       .map(t => t[1]);
+
+    // Determine public/private: check both formats for compatibility
+    // If 'private' tag exists and is 'true', it's private
+    // If 'public' tag exists, use its value
+    // Default to public
+    const isPublic = privateTag?.[1] === 'true' ? false : publicTag?.[1] !== 'false';
 
     return {
       id: dTag,
@@ -152,7 +159,7 @@ export class MusicPlaylistService {
       description: descTag?.[1] || event.content || undefined,
       image: imageTag?.[1] || undefined,
       pubkey: event.pubkey,
-      isPublic: publicTag?.[1] === 'true',
+      isPublic,
       isCollaborative: collaborativeTag?.[1] === 'true',
       trackRefs,
       created_at: event.created_at,
@@ -188,7 +195,12 @@ export class MusicPlaylistService {
       tags.push(['image', data.image]);
     }
 
-    tags.push(['public', data.isPublic ? 'true' : 'false']);
+    // Per spec: use 'public' tag for public playlists, 'private' tag for private ones
+    if (data.isPublic) {
+      tags.push(['public', 'true']);
+    } else {
+      tags.push(['private', 'true']);
+    }
     tags.push(['collaborative', data.isCollaborative ? 'true' : 'false']);
     tags.push(['client', 'nostria']);
 
@@ -330,10 +342,14 @@ export class MusicPlaylistService {
       newTags.push(gradientTag);
     }
 
-    // Public/Collaborative
+    // Public/Collaborative - use spec format
     const isPublic = updates.isPublic ?? playlist.isPublic;
     const isCollaborative = updates.isCollaborative ?? playlist.isCollaborative;
-    newTags.push(['public', isPublic ? 'true' : 'false']);
+    if (isPublic) {
+      newTags.push(['public', 'true']);
+    } else {
+      newTags.push(['private', 'true']);
+    }
     newTags.push(['collaborative', isCollaborative ? 'true' : 'false']);
     newTags.push(['client', 'nostria']);
 
