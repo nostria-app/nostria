@@ -1544,9 +1544,11 @@ export class FeedsComponent implements OnDestroy {
   openImageDialog(imageUrl: string, altText: string): void {
     this.dialog.open(ImageDialogComponent, {
       data: { imageUrl },
-      maxWidth: '95vw',
-      maxHeight: '95vh',
-      panelClass: 'image-dialog',
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
     });
   }
   onImageLoad(event: globalThis.Event): void {

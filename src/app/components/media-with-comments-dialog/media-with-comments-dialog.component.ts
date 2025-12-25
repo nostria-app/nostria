@@ -265,8 +265,10 @@ export class MediaWithCommentsDialogComponent {
           imageUrl: imageUrls[0],
           alt: this.title() || 'Photo'
         },
-        maxWidth: '95vw',
-        maxHeight: '95vh',
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        width: '100vw',
+        height: '100vh',
         panelClass: 'image-dialog-panel',
       });
     }

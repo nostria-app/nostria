@@ -2,43 +2,55 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   overflow: hidden;
+  background-color: black;
+  position: relative;
 }
 
 .toolbar {
   display: flex;
   align-items: center;
-  padding: 8px;
-  background-color: var(--mat-sys-color-surface-container-highest);
-  border-bottom: 1px solid var(--mat-sys-color-outline-variant);
+  padding: 8px 16px;
+  background-color: rgba(0, 0, 0, 0.7);
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
 
   .zoom-level {
     margin: 0 10px;
     font-size: 14px;
-    color: var(--mat-sys-color-on-surface-variant);
+    color: rgba(255, 255, 255, 0.8);
   }
 
   .close-button {
     margin-left: auto;
   }
+
+  button {
+    color: white;
+  }
 }
 
 .image-container {
-  flex-grow: 1;
+  flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
   overflow: hidden;
   position: relative;
-  background-color: var(--mat-sys-color-surface-container-lowest);
+  background-color: black;
   -webkit-user-select: none;
-  /* Prevent text selection during drag */
   user-select: none;
-  /* Prevent text selection during drag */
+  width: 100%;
+  height: 100%;
 
   img {
-    max-width: 100%;
-    max-height: 100%;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
     transition: transform 0.1s ease-out;
 
     &.draggable {

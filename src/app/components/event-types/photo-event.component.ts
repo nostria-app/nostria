@@ -348,8 +348,10 @@ export class PhotoEventComponent {
       // Single image - use existing ImageDialogComponent
       this.dialog.open(ImageDialogComponent, {
         data: { imageUrl, alt },
-        maxWidth: '95vw',
-        maxHeight: '95vh',
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        width: '100vw',
+        height: '100vh',
         panelClass: 'image-dialog-panel',
       });
     }
