@@ -3,6 +3,49 @@
   (dragover)="onDragOver($event)" (dragleave)="onDragLeave($event)" (drop)="onDrop($event)"
   [class.drag-over]="isDragOver()">
 
+  <!-- Camera capture mode - fullscreen overlay (available from any step) -->
+  @if (isCameraMode()) {
+  <div class="camera-capture-fullscreen">
+    <video #cameraVideo autoplay playsinline muted [class.mirror]="facingMode() === 'user'"></video>
+    <canvas #cameraCanvas hidden></canvas>
+
+    @if (!isCameraReady() && !cameraError()) {
+    <div class="camera-loading">
+      <mat-spinner diameter="40"></mat-spinner>
+      <span i18n="@@media.creator.camera.loading">Starting camera...</span>
+    </div>
+    }
+
+    @if (cameraError()) {
+    <div class="camera-error">
+      <mat-icon>error_outline</mat-icon>
+      <span>{{ cameraError() }}</span>
+    </div>
+    }
+
+    <!-- Glass effect controls overlay -->
+    <div class="camera-controls-overlay">
+      <button class="glass-btn close-btn" (click)="stopCamera()" matTooltip="Close camera"
+        i18n-matTooltip="@@media.creator.camera.close">
+        <mat-icon>close</mat-icon>
+      </button>
+
+      <button class="glass-btn switch-btn" (click)="switchCamera()" matTooltip="Switch camera"
+        i18n-matTooltip="@@media.creator.camera.switch">
+        <mat-icon>flip_camera_ios</mat-icon>
+      </button>
+    </div>
+
+    <!-- Capture button at bottom -->
+    <div class="camera-capture-controls">
+      <button class="capture-btn-glass" (click)="capturePhoto()" [disabled]="!isCameraReady()" matTooltip="Take photo"
+        i18n-matTooltip="@@media.creator.camera.capture" aria-label="Take photo">
+        <div class="capture-btn-inner"></div>
+      </button>
+    </div>
+  </div>
+  }
+
   <!-- Step indicators -->
   <div class="step-indicators">
     <button class="step-indicator" [class.active]="currentStep() === 1" [class.completed]="currentStep() > 1"
@@ -26,48 +69,6 @@
   <!-- STEP 1: Select Media -->
   @if (currentStep() === 1) {
   <div class="step-content step-select">
-    @if (isCameraMode()) {
-    <!-- Camera capture mode - fullscreen -->
-    <div class="camera-capture-fullscreen">
-      <video #cameraVideo autoplay playsinline muted [class.mirror]="facingMode() === 'user'"></video>
-      <canvas #cameraCanvas hidden></canvas>
-
-      @if (!isCameraReady() && !cameraError()) {
-      <div class="camera-loading">
-        <mat-spinner diameter="40"></mat-spinner>
-        <span i18n="@@media.creator.camera.loading">Starting camera...</span>
-      </div>
-      }
-
-      @if (cameraError()) {
-      <div class="camera-error">
-        <mat-icon>error_outline</mat-icon>
-        <span>{{ cameraError() }}</span>
-      </div>
-      }
-
-      <!-- Glass effect controls overlay -->
-      <div class="camera-controls-overlay">
-        <button class="glass-btn close-btn" (click)="stopCamera()" matTooltip="Close camera"
-          i18n-matTooltip="@@media.creator.camera.close">
-          <mat-icon>close</mat-icon>
-        </button>
-
-        <button class="glass-btn switch-btn" (click)="switchCamera()" matTooltip="Switch camera"
-          i18n-matTooltip="@@media.creator.camera.switch">
-          <mat-icon>flip_camera_ios</mat-icon>
-        </button>
-      </div>
-
-      <!-- Capture button at bottom -->
-      <div class="camera-capture-controls">
-        <button class="capture-btn-glass" (click)="capturePhoto()" [disabled]="!isCameraReady()"
-          matTooltip="Take photo" i18n-matTooltip="@@media.creator.camera.capture" aria-label="Take photo">
-          <div class="capture-btn-inner"></div>
-        </button>
-      </div>
-    </div>
-    } @else {
     <!-- File picker mode -->
     <div class="empty-state">
       <div class="drop-zone" (click)="openFilePicker()" (keydown.enter)="openFilePicker()"
@@ -88,7 +89,6 @@
 
       <input #fileInput type="file" [accept]="acceptedFileTypes()" (change)="onFileSelected($event)" multiple hidden />
     </div>
-    }
   </div>
   }
 
@@ -151,7 +151,8 @@
           <div class="edit-panel-content">
             <!-- Tabs for Filters / Adjustments -->
             <div class="edit-tabs">
-              <button class="tab-btn" [class.active]="editPanelTab() === 'filters'" (click)="editPanelTab.set('filters')">
+              <button class="tab-btn" [class.active]="editPanelTab() === 'filters'"
+                (click)="editPanelTab.set('filters')">
                 <mat-icon>photo_filter</mat-icon>
                 <span i18n="@@media.creator.tab.filters">Filters</span>
               </button>
@@ -179,7 +180,8 @@
             <div class="inline-slider">
               <span class="slider-label" i18n="@@media.creator.filter.intensity">Intensity</span>
               <mat-slider min="0" max="100" step="1" class="inline-mat-slider">
-                <input matSliderThumb [value]="filterIntensity()" (valueChange)="updateFilterIntensity($any($event))" aria-label="Filter intensity" />
+                <input matSliderThumb [value]="filterIntensity()" (valueChange)="updateFilterIntensity($any($event))"
+                  aria-label="Filter intensity" />
               </mat-slider>
               <span class="slider-value">{{ filterIntensity() }}%</span>
             </div>
@@ -188,43 +190,75 @@
 
             <!-- Adjustments Tab -->
             @if (editPanelTab() === 'adjustments') {
-            <div class="adjustments-inline">
-              <div class="inline-slider">
-                <mat-icon>brightness_6</mat-icon>
-                <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
-                  <input matSliderThumb [value]="adjustments().brightness"
-                    (valueChange)="updateAdjustment('brightness', $any($event))" aria-label="Brightness" />
-                </mat-slider>
-                <span class="slider-value">{{ adjustments().brightness }}</span>
+            <div class="adjustments-carousel">
+              <!-- Adjustment selector chips -->
+              <div class="adjustment-chips">
+                <button class="adj-chip" [class.selected]="selectedAdjustment() === 'brightness'"
+                  (click)="selectedAdjustment.set('brightness')">
+                  <mat-icon>brightness_6</mat-icon>
+                </button>
+                <button class="adj-chip" [class.selected]="selectedAdjustment() === 'contrast'"
+                  (click)="selectedAdjustment.set('contrast')">
+                  <mat-icon>contrast</mat-icon>
+                </button>
+                <button class="adj-chip" [class.selected]="selectedAdjustment() === 'saturation'"
+                  (click)="selectedAdjustment.set('saturation')">
+                  <mat-icon>palette</mat-icon>
+                </button>
+                <button class="adj-chip" [class.selected]="selectedAdjustment() === 'temperature'"
+                  (click)="selectedAdjustment.set('temperature')">
+                  <mat-icon>thermostat</mat-icon>
+                </button>
+                <button class="adj-chip reset-chip" (click)="resetAdjustments()" [disabled]="!hasAdjustments()">
+                  <mat-icon>refresh</mat-icon>
+                </button>
               </div>
-              <div class="inline-slider">
-                <mat-icon>contrast</mat-icon>
-                <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
-                  <input matSliderThumb [value]="adjustments().contrast"
-                    (valueChange)="updateAdjustment('contrast', $any($event))" aria-label="Contrast" />
-                </mat-slider>
-                <span class="slider-value">{{ adjustments().contrast }}</span>
+
+              <!-- Current adjustment slider -->
+              <div class="current-adjustment">
+                @switch (selectedAdjustment()) {
+                @case ('brightness') {
+                <div class="inline-slider">
+                  <span class="slider-label">Brightness</span>
+                  <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
+                    <input matSliderThumb [value]="adjustments().brightness"
+                      (valueChange)="updateAdjustment('brightness', $any($event))" aria-label="Brightness" />
+                  </mat-slider>
+                  <span class="slider-value">{{ adjustments().brightness }}</span>
+                </div>
+                }
+                @case ('contrast') {
+                <div class="inline-slider">
+                  <span class="slider-label">Contrast</span>
+                  <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
+                    <input matSliderThumb [value]="adjustments().contrast"
+                      (valueChange)="updateAdjustment('contrast', $any($event))" aria-label="Contrast" />
+                  </mat-slider>
+                  <span class="slider-value">{{ adjustments().contrast }}</span>
+                </div>
+                }
+                @case ('saturation') {
+                <div class="inline-slider">
+                  <span class="slider-label">Saturation</span>
+                  <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
+                    <input matSliderThumb [value]="adjustments().saturation"
+                      (valueChange)="updateAdjustment('saturation', $any($event))" aria-label="Saturation" />
+                  </mat-slider>
+                  <span class="slider-value">{{ adjustments().saturation }}</span>
+                </div>
+                }
+                @case ('temperature') {
+                <div class="inline-slider">
+                  <span class="slider-label">Temperature</span>
+                  <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
+                    <input matSliderThumb [value]="adjustments().temperature"
+                      (valueChange)="updateAdjustment('temperature', $any($event))" aria-label="Temperature" />
+                  </mat-slider>
+                  <span class="slider-value">{{ adjustments().temperature }}</span>
+                </div>
+                }
+                }
               </div>
-              <div class="inline-slider">
-                <mat-icon>palette</mat-icon>
-                <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
-                  <input matSliderThumb [value]="adjustments().saturation"
-                    (valueChange)="updateAdjustment('saturation', $any($event))" aria-label="Saturation" />
-                </mat-slider>
-                <span class="slider-value">{{ adjustments().saturation }}</span>
-              </div>
-              <div class="inline-slider">
-                <mat-icon>thermostat</mat-icon>
-                <mat-slider min="-100" max="100" step="1" class="inline-mat-slider">
-                  <input matSliderThumb [value]="adjustments().temperature"
-                    (valueChange)="updateAdjustment('temperature', $any($event))" aria-label="Temperature" />
-                </mat-slider>
-                <span class="slider-value">{{ adjustments().temperature }}</span>
-              </div>
-              <button class="reset-btn" (click)="resetAdjustments()" [disabled]="!hasAdjustments()">
-                <mat-icon>refresh</mat-icon>
-                <span i18n="@@media.creator.adjust.reset">Reset</span>
-              </button>
             </div>
             }
           </div>
@@ -259,12 +293,19 @@
               }
             </button>
             }
-            <!-- Add more button -->
+            <!-- Add more button (file picker) -->
             <button class="thumbnail-item add-more" (click)="openFilePicker()"
               matTooltip="Add more {{ mediaType() === 'image' ? 'images' : 'videos' }}"
               i18n-matTooltip="@@media.creator.add.more.tooltip">
-              <mat-icon>add</mat-icon>
+              <mat-icon>add_photo_alternate</mat-icon>
             </button>
+            <!-- Add more button (camera) -->
+            @if (mediaType() === 'image') {
+            <button class="thumbnail-item add-more camera" (click)="openCamera()" matTooltip="Take a photo"
+              i18n-matTooltip="@@media.creator.camera.tooltip">
+              <mat-icon>photo_camera</mat-icon>
+            </button>
+            }
           </div>
         </div>
         }

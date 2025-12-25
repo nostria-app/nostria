@@ -111,6 +111,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   filterIntensity = signal(100); // 0-100%
   showEditPanel = signal(false);
   editPanelTab = signal<'filters' | 'adjustments'>('filters');
+  selectedAdjustment = signal<'brightness' | 'contrast' | 'saturation' | 'temperature'>('brightness');
   private filterAnimationFrame: number | null = null;
   private imageElement: HTMLImageElement | null = null;
   private canvasInitialized = false;
@@ -599,7 +600,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   hasAdjustments(): boolean {
     const adj = this.adjustments();
     return adj.brightness !== 0 || adj.contrast !== 0 || adj.fade !== 0 ||
-           adj.saturation !== 0 || adj.temperature !== 0 || adj.vignette !== 0;
+      adj.saturation !== 0 || adj.temperature !== 0 || adj.vignette !== 0;
   }
 
   // Start over - clear all and go back to step 1
