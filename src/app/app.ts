@@ -70,6 +70,7 @@ import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
 import { RouteDataService } from './services/route-data.service';
 import { InstallService } from './services/install.service';
+import { ImageCacheService } from './services/image-cache.service';
 import { CacheCleanupService } from './services/cache-cleanup.service';
 import { AccountLocalStateService } from './services/account-local-state.service';
 import { NavigationEnd } from '@angular/router';
@@ -186,6 +187,7 @@ export class App implements OnInit {
   localSettings = inject(LocalSettingsService);
   settings = inject(SettingsService);
   accountState = inject(AccountStateService);
+  imageCacheService = inject(ImageCacheService);
   state = inject(StateService);
   nostrProtocol = inject(NostrProtocolService);
   publishQueue = inject(PublishQueueService);
@@ -1608,6 +1610,15 @@ export class App implements OnInit {
    */
   getAccountProfile(pubkey: string): NostrRecord | undefined {
     return this.accountState.getAccountProfileSync(pubkey);
+  }
+
+  /**
+   * Gets the optimized image URL using the image cache service
+   */
+  getOptimizedImageUrl(originalUrl: string | undefined): string {
+    if (!originalUrl) return '';
+
+    return this.imageCacheService.getOptimizedImageUrl(originalUrl);
   }
 
   /**
