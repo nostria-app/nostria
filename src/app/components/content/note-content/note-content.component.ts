@@ -726,7 +726,7 @@ export class NoteContentComponent implements OnDestroy {
    * Uses metadata dimensions (dim tag) for initial sizing since they represent
    * the intended display dimensions (usually calculated from rotated thumbnail)
    */
-  getVideoAspectRatio(token: ContentToken): string {
+  getVideoAspectRatio(token: ContentToken): string | null {
     // Use metadata dimensions from imeta dim tag
     // These represent the intended display aspect ratio
     if (token.dimensions) {
@@ -739,7 +739,8 @@ export class NoteContentComponent implements OnDestroy {
       return `${actualDims.width} / ${actualDims.height}`;
     }
 
-    return '16 / 9'; // Default video aspect ratio
+    // Don't set a default aspect ratio - let video's natural dimensions determine size
+    return null;
   }
 
   /**

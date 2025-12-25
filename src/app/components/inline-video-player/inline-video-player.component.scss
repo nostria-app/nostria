@@ -2,20 +2,27 @@
   display: block;
   position: relative;
   width: 100%;
-  height: 100%;
+  // Allow component to size based on video content
+  // When parent has aspect-ratio set, this will fill it
+  // When parent has no aspect-ratio, video determines the height
 }
 
 .inline-video-container {
   position: relative;
   width: 100%;
-  height: 100%;
   background: #000;
   overflow: hidden;
+  // Container sizes to video content
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .video-element {
   width: 100%;
-  height: 100%;
+  // Let video use natural aspect ratio and size
+  // max-height ensures videos don't get too tall
+  max-height: 70vh;
   object-fit: contain;
   display: block;
 
