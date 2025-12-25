@@ -142,14 +142,13 @@
 </div>
 } @else if (token.type === 'video') {
 @let videoPlaceholder = getVideoPlaceholderUrl(token);
-@let videoAspect = getVideoAspectRatio(token);
 <div class="media-container video-container" [class.portrait-video]="isPortraitVideo(token)"
   [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
   [class.video-ready]="isVideoReady(token.content)">
   <!-- Placeholder with fade transition -->
   @if (videoPlaceholder) {
-  <img [src]="videoPlaceholder" class="video-placeholder-bg" [style.aspect-ratio]="videoAspect"
+  <img [src]="videoPlaceholder" class="video-placeholder-bg"
     [class.fade-out]="isVideoReady(token.content)" alt="" aria-hidden="true" />
   }
   @if (isVideoFormatSupported(token.content)) {

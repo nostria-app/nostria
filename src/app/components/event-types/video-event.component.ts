@@ -275,19 +275,20 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     return data?.dimensions;
   });
 
-  // Get aspect ratio style for video container - default to 16/9 if no dimensions
-  // Prefers actual video dimensions (after rotation) over metadata dimensions
+  // Get aspect ratio style for video container
+  // IMPORTANT: Only use actual video dimensions (after rotation is applied by browser)
+  // Metadata dimensions from imeta 'dim' tag don't account for rotation metadata
+  // which causes wrong aspect ratio display on mobile devices (especially Android)
   videoAspectRatio = computed(() => {
-    // First check if we have actual dimensions from the video element (accounts for rotation)
+    // Only use actual dimensions from the video element (accounts for rotation)
     const actualDims = this.videoActualDimensions();
     if (actualDims && actualDims.width && actualDims.height) {
       return `${actualDims.width} / ${actualDims.height}`;
     }
     
-    // Fall back to metadata dimensions (may not account for rotation)
-    const dimensions = this.videoDimensions();
-    const ratio = this.imagePlaceholder.getAspectRatioStyle(dimensions);
-    return ratio || '16 / 9'; // Default to 16:9 for videos
+    // Don't use metadata dimensions - they may not account for video rotation
+    // Return 'auto' to let the video element determine its natural size
+    return 'auto';
   });
 
   // Computed MIME type based on file extension
