@@ -106,3 +106,12 @@
 .domain-input {
   flex: 1;
 }
+
+.setting-warning {
+  font-size: 0.875rem;
+  color: var(--mat-sys-error);
+  margin: 0 0 16px 0;
+  padding: 8px 12px;
+  background-color: var(--mat-sys-error-container);
+  border-radius: 8px;
+}

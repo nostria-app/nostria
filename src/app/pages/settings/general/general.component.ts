@@ -20,6 +20,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { ImagePlaceholderService } from '../../../services/image-placeholder.service';
 import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
 import { MatInputModule } from '@angular/material/input';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 
 interface Language {
   code: string;
@@ -55,8 +56,12 @@ export class GeneralSettingsComponent {
   accountState = inject(AccountStateService);
   imagePlaceholder = inject(ImagePlaceholderService);
   externalLinkHandler = inject(ExternalLinkHandlerService);
+  accountLocalState = inject(AccountLocalStateService);
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
+
+  // Global event expiration (in hours, null = disabled)
+  globalEventExpiration = signal<number | null>(this.getInitialGlobalExpiration());
 
   // External domains management
   configuredDomains = signal<string[]>(this.externalLinkHandler.getConfiguredDomains());
@@ -190,5 +195,36 @@ export class GeneralSettingsComponent {
   resetDomainsToDefault(): void {
     this.externalLinkHandler.resetToDefaults();
     this.configuredDomains.set(this.externalLinkHandler.getConfiguredDomains());
+  }
+
+  // Global event expiration methods
+  private getInitialGlobalExpiration(): number | null {
+    const pubkey = this.accountState.account()?.pubkey;
+    if (!pubkey) return null;
+    return this.accountLocalState.getGlobalEventExpiration(pubkey);
+  }
+
+  toggleGlobalEventExpiration(): void {
+    const pubkey = this.accountState.account()?.pubkey;
+    if (!pubkey) return;
+
+    const currentValue = this.globalEventExpiration();
+    if (currentValue === null) {
+      // Enable with default 24 hours
+      this.globalEventExpiration.set(24);
+      this.accountLocalState.setGlobalEventExpiration(pubkey, 24);
+    } else {
+      // Disable
+      this.globalEventExpiration.set(null);
+      this.accountLocalState.setGlobalEventExpiration(pubkey, null);
+    }
+  }
+
+  setGlobalEventExpiration(hours: number | null): void {
+    const pubkey = this.accountState.account()?.pubkey;
+    if (!pubkey) return;
+
+    this.globalEventExpiration.set(hours);
+    this.accountLocalState.setGlobalEventExpiration(pubkey, hours);
   }
 }
