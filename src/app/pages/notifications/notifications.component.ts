@@ -77,9 +77,11 @@ export class NotificationsComponent implements OnInit {
   private dataService = inject(DataService);
 
   notifications = this.notificationService.notifications;
-  
+
   // Search query for filtering notifications
   searchQuery = signal('');
+  // Whether to show the search input
+  showSearch = signal(false);
   notificationType = NotificationType;
 
   // State for loading older notifications
@@ -239,6 +241,18 @@ export class NotificationsComponent implements OnInit {
     }
 
     return false;
+  }
+
+  /**
+   * Toggle the search input visibility
+   */
+  toggleSearch(): void {
+    const isCurrentlyShown = this.showSearch();
+    this.showSearch.set(!isCurrentlyShown);
+    // Clear search query when hiding
+    if (isCurrentlyShown) {
+      this.searchQuery.set('');
+    }
   }
 
   /**

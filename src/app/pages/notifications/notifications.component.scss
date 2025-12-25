@@ -132,20 +132,20 @@
 // Search container
 .search-container {
   padding: 16px 16px 0 16px;
-  
+
   .search-field {
     width: 100%;
-    
+
     ::ng-deep {
       .mat-mdc-form-field-subscript-wrapper {
         display: none;
       }
-      
+
       .mat-mdc-text-field-wrapper {
         background: var(--mat-sys-surface-container);
       }
     }
-    
+
     mat-icon[matPrefix] {
       margin-right: 8px;
       color: var(--mat-sys-on-surface-variant);
@@ -1018,6 +1018,11 @@
 
     &:hover {
       opacity: 1;
+    }
+
+    &.active {
+      opacity: 1;
+      color: var(--mat-sys-primary);
     }
 
     mat-icon {
