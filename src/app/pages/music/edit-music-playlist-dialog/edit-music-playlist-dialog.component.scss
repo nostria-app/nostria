@@ -1,3 +1,29 @@
+.media-server-warning {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border-radius: var(--mat-sys-corner-small);
+  background-color: var(--mat-sys-error-container);
+  border-left: 4px solid var(--mat-sys-error);
+
+  .warning-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    mat-icon {
+      color: var(--mat-sys-error);
+    }
+
+    span {
+      color: var(--mat-sys-on-error-container);
+    }
+  }
+}
+
 .playlist-form {
   display: flex;
   flex-direction: column;

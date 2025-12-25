@@ -2,6 +2,19 @@
   [width]="'600px'" [maxWidth]="'95vw'" (closed)="cancel()">
 
   <div dialog-content>
+    <!-- No media servers warning -->
+    @if (!hasMediaServers()) {
+    <div class="media-server-warning">
+      <div class="warning-content">
+        <mat-icon color="warn">warning</mat-icon>
+        <span>You need to configure a media server to upload music files</span>
+      </div>
+      <button mat-flat-button type="button" (click)="navigateToMediaSettings()">
+        Configure Media Server
+      </button>
+    </div>
+    }
+
     <p class="dialog-subtitle">Share your music with the Nostr community and earn zaps</p>
 
     <form [formGroup]="trackForm">
