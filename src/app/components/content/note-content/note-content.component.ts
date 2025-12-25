@@ -718,38 +718,61 @@ export class NoteContentComponent implements OnDestroy {
 
   /**
    * Get aspect ratio style for a video token
-   * IMPORTANT: Only uses actual video dimensions (after rotation is applied by browser)
-   * Metadata dimensions from imeta 'dim' tag don't account for rotation metadata
-   * which causes wrong aspect ratio display on mobile devices (especially Android)
+   * Uses metadata dimensions (dim tag) for initial sizing since they represent
+   * the intended display dimensions (usually calculated from rotated thumbnail)
    */
   getVideoAspectRatio(token: ContentToken): string {
-    // Only use actual dimensions from the video element (accounts for rotation)
+    // Use metadata dimensions from imeta dim tag
+    // These represent the intended display aspect ratio
+    if (token.dimensions) {
+      return `${token.dimensions.width} / ${token.dimensions.height}`;
+    }
+
+    // Fallback to actual video dimensions if metadata not available
     const actualDims = this.videoActualDimensions().get(token.content);
     if (actualDims && actualDims.width && actualDims.height) {
       return `${actualDims.width} / ${actualDims.height}`;
     }
 
-    // Don't use metadata dimensions - they may not account for video rotation
-    // Return 'auto' to let the video element determine its natural size
-    return 'auto';
+    return '16 / 9'; // Default video aspect ratio
   }
 
   /**
    * Check if a video is portrait orientation (height > width)
-   * IMPORTANT: Only uses actual video dimensions (after rotation is applied by browser)
-   * Metadata dimensions don't account for rotation, so we can't determine portrait
-   * orientation reliably from metadata alone on mobile devices
+   * Uses metadata dimensions as the source of truth for intended orientation
    */
   isPortraitVideo(token: ContentToken): boolean {
-    // Only use actual dimensions from the video element (accounts for rotation)
+    // Use metadata dimensions - they represent intended display
+    if (token.dimensions) {
+      return token.dimensions.height > token.dimensions.width;
+    }
+
+    // Fallback to actual video dimensions
     const actualDims = this.videoActualDimensions().get(token.content);
     if (actualDims) {
       return actualDims.height > actualDims.width;
     }
 
-    // Don't use metadata dimensions - they may not account for video rotation
-    // Return false (assume landscape) until we have actual dimensions
     return false;
+  }
+
+  /**
+   * Check if the video needs rotation correction
+   * This happens when Blossom server strips EXIF rotation without rotating the video pixels,
+   * but the thumbnail (used for dim tag) was rotated correctly.
+   * Returns true if video file is landscape but dim says portrait (or vice versa)
+   */
+  needsRotationCorrection(token: ContentToken): boolean {
+    const actualDims = this.videoActualDimensions().get(token.content);
+    if (!actualDims || !token.dimensions) {
+      return false;
+    }
+
+    const metadataIsPortrait = token.dimensions.height > token.dimensions.width;
+    const videoIsPortrait = actualDims.height > actualDims.width;
+
+    // If metadata says portrait but video is landscape (or vice versa), needs rotation
+    return metadataIsPortrait !== videoIsPortrait;
   }
 
   // Track loaded videos for progressive loading

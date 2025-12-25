@@ -317,6 +317,19 @@
       }
     }
 
+    // Rotation correction for videos where Blossom stripped EXIF without rotating pixels
+    &.needs-rotation {
+      .video-player {
+        // Rotate 90 degrees clockwise and swap dimensions to fit container
+        transform: rotate(90deg);
+        width: auto;
+        height: 100%;
+        max-width: none;
+        max-height: none;
+        object-fit: contain;
+      }
+    }
+
     app-video-controls {
       position: absolute;
       top: 0;

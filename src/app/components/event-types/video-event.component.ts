@@ -14,7 +14,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { VideoPlaybackService } from '../../services/video-playback.service';
 import { CastService } from '../../services/cast.service';
-import { ImagePlaceholderService, PlaceholderData } from '../../services/image-placeholder.service';
+import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 
 interface VideoData {
   url: string;
@@ -276,19 +276,44 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   });
 
   // Get aspect ratio style for video container
-  // IMPORTANT: Only use actual video dimensions (after rotation is applied by browser)
-  // Metadata dimensions from imeta 'dim' tag don't account for rotation metadata
-  // which causes wrong aspect ratio display on mobile devices (especially Android)
+  // Uses metadata dimensions (dim tag) since they represent intended display dimensions
+  // (usually calculated from the correctly-rotated thumbnail)
   videoAspectRatio = computed(() => {
-    // Only use actual dimensions from the video element (accounts for rotation)
+    // Use metadata dimensions - they represent intended display aspect ratio
+    const dimensions = this.videoDimensions();
+    if (dimensions && dimensions.width && dimensions.height) {
+      return `${dimensions.width} / ${dimensions.height}`;
+    }
+
+    // Fallback to actual video dimensions
     const actualDims = this.videoActualDimensions();
     if (actualDims && actualDims.width && actualDims.height) {
       return `${actualDims.width} / ${actualDims.height}`;
     }
+
+    // Default to 16:9 for videos
+    return '16 / 9';
+  });
+
+  /**
+   * Check if the video needs rotation correction
+   * This happens when Blossom server strips EXIF rotation without rotating the video pixels,
+   * but the thumbnail (used for dim tag) was rotated correctly.
+   * Returns true if video file is landscape but dim says portrait (or vice versa)
+   */
+  needsRotationCorrection = computed(() => {
+    const actualDims = this.videoActualDimensions();
+    const dimensions = this.videoDimensions();
     
-    // Don't use metadata dimensions - they may not account for video rotation
-    // Return 'auto' to let the video element determine its natural size
-    return 'auto';
+    if (!actualDims || !dimensions) {
+      return false;
+    }
+
+    const metadataIsPortrait = dimensions.height > dimensions.width;
+    const videoIsPortrait = actualDims.height > actualDims.width;
+
+    // If metadata says portrait but video is landscape (or vice versa), needs rotation
+    return metadataIsPortrait !== videoIsPortrait;
   });
 
   // Computed MIME type based on file extension

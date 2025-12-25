@@ -355,6 +355,23 @@
       transition: opacity 0.6s ease-out;
     }
   }
+
+  // Rotation correction for videos where Blossom stripped EXIF without rotating pixels
+  // The video file dimensions don't match the intended display dimensions (from dim tag)
+  &.needs-rotation {
+    .main-video {
+      // Rotate 90 degrees clockwise and swap width/height to fit container
+      transform: rotate(90deg);
+      // After rotation, width becomes height and vice versa
+      // Scale to fit within the container's aspect ratio
+      width: auto;
+      height: 100%;
+      max-width: none;
+      max-height: none;
+      // Use object-fit to contain the rotated video
+      object-fit: contain;
+    }
+  }
 }
 
 // Image container specific styles
