@@ -25,14 +25,14 @@ export class CreateOptionsSheetComponent {
       action: () => this.eventService.createNote(),
     },
     {
-      label: $localize`:@@create.option.article:Article`,
-      icon: 'article',
-      action: () => this.layout.createArticle(),
-    },
-    {
       label: $localize`:@@create.option.media:Media`,
       icon: 'add_photo_alternate',
       action: () => this.layout.openMediaCreatorDialog(),
+    },
+    {
+      label: $localize`:@@create.option.article:Article`,
+      icon: 'article',
+      action: () => this.layout.createArticle(),
     },
     {
       label: $localize`:@@create.option.video:Video Clip`,
