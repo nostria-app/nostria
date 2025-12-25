@@ -575,9 +575,11 @@ export class NoteContentComponent implements OnDestroy {
       // Single image - use ImageDialogComponent
       this.dialog.open(ImageDialogComponent, {
         data: { imageUrl: images[0].content },
-        maxWidth: '95vw',
-        maxHeight: '95vh',
-        panelClass: ['image-dialog', 'responsive-dialog'],
+        maxWidth: '100vw',
+        maxHeight: '100vh',
+        width: '100vw',
+        height: '100vh',
+        panelClass: 'image-dialog-panel',
       });
     }
   }
@@ -595,9 +597,11 @@ export class NoteContentComponent implements OnDestroy {
     console.log('Opening image dialog for URL:', imageUrl);
     this.dialog.open(ImageDialogComponent, {
       data: { imageUrl },
-      maxWidth: '95vw',
-      maxHeight: '95vh',
-      panelClass: ['image-dialog', 'responsive-dialog'],
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
     });
   }
 

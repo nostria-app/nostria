@@ -501,9 +501,11 @@ export class ArticleComponent implements OnDestroy {
   private openImageDialog(imageUrl: string): void {
     this.dialog.open(ImageDialogComponent, {
       data: { imageUrl },
-      maxWidth: '95vw',
-      maxHeight: '95vh',
-      panelClass: ['image-dialog', 'responsive-dialog'],
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
     });
   }
 
