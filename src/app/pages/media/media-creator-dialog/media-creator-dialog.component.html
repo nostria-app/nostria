@@ -1,0 +1,212 @@
+<div dialog-content class="media-creator-dialog" (dragenter)="onDragEnter($event)" (dragover)="onDragOver($event)"
+  (dragleave)="onDragLeave($event)" (drop)="onDrop($event)" [class.drag-over]="isDragOver()">
+
+  @if (!mediaFile()) {
+  <!-- Empty state - File Selection -->
+  <div class="empty-state">
+    <div class="drop-zone" (click)="openFilePicker()" (keydown.enter)="openFilePicker()"
+      (keydown.space)="openFilePicker(); $event.preventDefault()" tabindex="0" role="button"
+      aria-label="Select media file">
+      <mat-icon class="upload-icon">add_photo_alternate</mat-icon>
+      <h3 i18n="@@media.creator.drop.title">Drop media here or click to browse</h3>
+      <p i18n="@@media.creator.drop.hint">Supports images and videos</p>
+    </div>
+    <input #fileInput type="file" accept="image/*,video/*" (change)="onFileSelected($event)" hidden />
+  </div>
+  } @else {
+  <!-- Media Preview with Filters -->
+  <div class="media-preview-section">
+    <div class="preview-container"
+      [class.vertical]="mediaFile()?.dimensions && mediaFile()!.dimensions!.height > mediaFile()!.dimensions!.width"
+      (touchstart)="onTouchStart($event)" (touchmove)="onTouchMove($event)" (touchend)="onTouchEnd($event)">
+
+      @if (isImage()) {
+      <!-- Image with filter canvas -->
+      <canvas #filterCanvas class="filter-canvas"></canvas>
+
+      <!-- Current filter badge -->
+      @if (selectedFilter() !== 'none') {
+      <div class="current-filter-badge">
+        <mat-icon>{{ getCurrentFilterIcon() }}</mat-icon>
+        <span>{{ getCurrentFilterName() }}</span>
+      </div>
+      }
+
+      <!-- Filter toggle button -->
+      <button mat-icon-button class="filters-button" (click)="toggleFilters()" [class.active]="showFilters()"
+        matTooltip="Filters" i18n-matTooltip="@@media.creator.filters.tooltip">
+        <mat-icon>photo_filter</mat-icon>
+      </button>
+
+      <!-- Filter selection panel -->
+      @if (showFilters()) {
+      <div class="filter-selection">
+        <div #filterChips class="filter-chips">
+          @for (filter of filterService.availableFilters; track filter.id) {
+          <button class="filter-chip" [class.selected]="selectedFilter() === filter.id"
+            (click)="selectFilter(filter.id)" [matTooltip]="filter.description">
+            <mat-icon>{{ filter.icon }}</mat-icon>
+            <span>{{ filter.name }}</span>
+          </button>
+          }
+        </div>
+        <div class="filter-indicator">
+          @for (filter of filterService.availableFilters; track filter.id; let i = $index) {
+          <span class="indicator-dot" [class.active]="i === getCurrentFilterIndex()"></span>
+          }
+        </div>
+      </div>
+      }
+      } @else {
+      <!-- Video preview -->
+      <video [src]="mediaFile()!.preview" controls class="video-preview"></video>
+
+      <!-- Video thumbnail preview -->
+      @if (thumbnailUrl()) {
+      <div class="thumbnail-badge">
+        <mat-icon>image</mat-icon>
+        <span i18n="@@media.creator.thumbnail.label">Thumbnail captured</span>
+      </div>
+      }
+      }
+
+      <!-- Media kind badge -->
+      <div class="media-kind-badge">
+        <mat-icon>{{ isImage() ? 'image' : 'videocam' }}</mat-icon>
+        <span>{{ mediaKindLabel() }} (kind {{ mediaKind() }})</span>
+      </div>
+
+      <!-- Dimensions badge -->
+      @if (mediaFile()?.dimensions) {
+      <div class="dimensions-badge">
+        {{ mediaFile()!.dimensions!.width }} × {{ mediaFile()!.dimensions!.height }}
+      </div>
+      }
+
+      <!-- Clear button -->
+      <button mat-icon-button class="clear-media-button" (click)="clearMedia()" matTooltip="Remove media"
+        i18n-matTooltip="@@media.creator.clear.tooltip">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <!-- Form Fields -->
+  <div class="form-section">
+    <!-- Title -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@media.creator.title.label">Title</mat-label>
+      <input matInput [value]="title()" (input)="title.set($any($event.target).value)"
+        placeholder="Give your media a title" i18n-placeholder="@@media.creator.title.placeholder" />
+      <mat-hint i18n="@@media.creator.title.hint">Optional but recommended</mat-hint>
+    </mat-form-field>
+
+    <!-- Description -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@media.creator.description.label">Description</mat-label>
+      <textarea matInput [value]="content()" (input)="content.set($any($event.target).value)"
+        placeholder="Add a description or caption" i18n-placeholder="@@media.creator.description.placeholder" rows="3"
+        class="auto-grow-textarea"></textarea>
+    </mat-form-field>
+
+    <!-- Alt Text -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@media.creator.alt.label">Alt Text</mat-label>
+      <input matInput [value]="alt()" (input)="alt.set($any($event.target).value)"
+        placeholder="Describe for accessibility" i18n-placeholder="@@media.creator.alt.placeholder" />
+      <mat-hint i18n="@@media.creator.alt.hint">Helps screen readers describe your media</mat-hint>
+    </mat-form-field>
+
+    <!-- Hashtags -->
+    <div class="hashtag-section">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label i18n="@@media.creator.hashtags.label">Hashtags</mat-label>
+        <input matInput [value]="hashtagInput()" (input)="hashtagInput.set($any($event.target).value)"
+          (keydown)="onHashtagKeydown($event)" placeholder="Type and press Enter"
+          i18n-placeholder="@@media.creator.hashtags.placeholder" />
+        <button mat-icon-button matSuffix (click)="addHashtag()" [disabled]="!hashtagInput().trim()">
+          <mat-icon>add</mat-icon>
+        </button>
+      </mat-form-field>
+
+      @if (hashtags().length > 0) {
+      <div class="hashtag-chips">
+        @for (tag of hashtags(); track tag) {
+        <span class="hashtag-chip">
+          #{{ tag }}
+          <button mat-icon-button (click)="removeHashtag(tag)">
+            <mat-icon>close</mat-icon>
+          </button>
+        </span>
+        }
+      </div>
+      }
+    </div>
+
+    <!-- Content Warning -->
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@media.creator.cw.label">Content Warning</mat-label>
+      <input matInput [value]="contentWarning()" (input)="contentWarning.set($any($event.target).value)"
+        placeholder="e.g., NSFW, violence" i18n-placeholder="@@media.creator.cw.placeholder" />
+      <mat-hint i18n="@@media.creator.cw.hint">Optional warning about sensitive content</mat-hint>
+    </mat-form-field>
+
+    <!-- Options -->
+    <div class="options-section">
+      <mat-slide-toggle [checked]="alsoPostAsNote()" (change)="alsoPostAsNote.set($event.checked)" color="primary"
+        matTooltip="Also create a regular note (kind 1) that references this media"
+        i18n-matTooltip="@@media.creator.note.tooltip">
+        <span i18n="@@media.creator.note.label">Also post as Note</span>
+      </mat-slide-toggle>
+
+      <mat-slide-toggle [checked]="uploadOriginal()" (change)="uploadOriginal.set($event.checked)" color="primary"
+        matTooltip="Skip server-side transcoding and upload the original file"
+        i18n-matTooltip="@@media.creator.original.tooltip">
+        <span i18n="@@media.creator.original.label">Upload original</span>
+      </mat-slide-toggle>
+    </div>
+  </div>
+  }
+
+  <!-- Drag overlay -->
+  @if (isDragOver()) {
+  <div class="drag-overlay">
+    <div class="drag-message">
+      <mat-icon>cloud_upload</mat-icon>
+      <span i18n="@@media.creator.drag.message">Drop your media here</span>
+    </div>
+  </div>
+  }
+
+  <!-- Upload progress -->
+  @if (isUploading()) {
+  <div class="upload-progress">
+    <mat-progress-bar mode="indeterminate"></mat-progress-bar>
+    <span class="upload-text">{{ uploadStatus() }}</span>
+  </div>
+  }
+</div>
+
+<div dialog-actions class="action-container">
+  <div class="left-actions">
+    @if (mediaFile()) {
+    <button mat-button (click)="openFilePicker()">
+      <mat-icon>swap_horiz</mat-icon>
+      <span i18n="@@media.creator.change">Change</span>
+    </button>
+    <input #fileInput type="file" accept="image/*,video/*" (change)="onFileSelected($event)" hidden />
+    }
+  </div>
+
+  <div class="right-actions">
+    <button mat-button (click)="cancel()" i18n="@@media.creator.cancel">Cancel</button>
+    <button mat-flat-button (click)="publish()" [disabled]="!canPublish()">
+      @if (isPublishing()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      } @else {
+      <mat-icon>send</mat-icon>
+      }
+      <span i18n="@@media.creator.publish">Publish {{ mediaKindLabel() }}</span>
+    </button>
+  </div>
+</div>

@@ -30,6 +30,11 @@ export class CreateOptionsSheetComponent {
       action: () => this.layout.createArticle(),
     },
     {
+      label: $localize`:@@create.option.media:Media`,
+      icon: 'add_photo_alternate',
+      action: () => this.layout.openMediaCreatorDialog(),
+    },
+    {
       label: $localize`:@@create.option.video:Video Clip`,
       icon: 'cinematic_blur',
       action: () => this.layout.openRecordVideoDialog(),
