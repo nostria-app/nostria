@@ -175,12 +175,14 @@ export class PhotoEventComponent {
     return warningTag?.[1] || 'Content may be sensitive';
   });
 
-  // Description text (content without hashtags)
+  // Description text (content without hashtags and image URLs)
   description = computed(() => {
     const event = this.event();
     if (!event || !event.content) return null;
 
-    return this.removeHashtagsFromContent(event.content);
+    // Get image URLs to strip from content
+    const urls = this.imageUrls();
+    return this.cleanContentForDisplay(event.content, urls);
   });
 
   // Alt text for accessibility (per image)
@@ -460,6 +462,28 @@ export class PhotoEventComponent {
     // Fallback to regular alt tag or title
     const altTag = event.tags.find(tag => tag[0] === 'alt');
     return altTag?.[1] || this.getEventTitle(event) || 'Photo';
+  }
+
+  /**
+   * Clean content for display by removing hashtags and image URLs
+   */
+  private cleanContentForDisplay(content: string, imageUrls: string[]): string | null {
+    let cleaned = content;
+
+    // Remove image URLs from content (they're already shown as images)
+    for (const url of imageUrls) {
+      // Escape special regex characters in the URL
+      const escapedUrl = url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      cleaned = cleaned.replace(new RegExp(escapedUrl, 'g'), '');
+    }
+
+    // Remove hashtags
+    cleaned = cleaned.replace(/#\w+/g, '');
+
+    // Clean up whitespace (multiple spaces, newlines, etc.)
+    cleaned = cleaned.replace(/\s+/g, ' ').trim();
+
+    return cleaned || null;
   }
 
   private removeHashtagsFromContent(content: string): string {
