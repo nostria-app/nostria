@@ -1219,7 +1219,7 @@ export class LayoutService implements OnDestroy {
     const dialogRef = this.customDialog.open<MediaCreatorDialogComponent, MediaCreatorResult>(
       MediaCreatorDialogComponent,
       {
-        title: $localize`:@@media.creator.dialog.title:Create Media`,
+        title: $localize`:@@media.creator.dialog.title:Post Media`,
         width: '950px',
         maxWidth: '95vw',
         disableClose: true,
