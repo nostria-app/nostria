@@ -72,6 +72,8 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   @ViewChild('fileInput') fileInput!: ElementRef<HTMLInputElement>;
   @ViewChild('filterCanvas') filterCanvas?: ElementRef<HTMLCanvasElement>;
   @ViewChild('filterChips') filterChipsContainer?: ElementRef<HTMLDivElement>;
+  @ViewChild('cameraVideo') cameraVideo?: ElementRef<HTMLVideoElement>;
+  @ViewChild('cameraCanvas') cameraCanvas?: ElementRef<HTMLCanvasElement>;
 
   // Step navigation (1: select, 2: edit, 3: details)
   currentStep = signal<1 | 2 | 3>(1);
@@ -89,6 +91,13 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   selectedMediaIndex = signal(0);
   isDragOver = signal(false);
   dragCounter = 0;
+
+  // Camera capture state
+  isCameraMode = signal(false);
+  cameraStream: MediaStream | null = null;
+  isCameraReady = signal(false);
+  cameraError = signal<string | null>(null);
+  facingMode = signal<'user' | 'environment'>('environment');
 
   // Computed for current selected media
   currentMedia = computed(() => {
@@ -218,6 +227,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.stopFilterRendering();
+    this.stopCamera();
     this.cleanupAllMedia();
     this.filterService.cleanup();
   }
@@ -264,6 +274,101 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
   // File selection methods
   openFilePicker(): void {
     this.fileInput?.nativeElement.click();
+  }
+
+  // Camera capture methods
+  async openCamera(): Promise<void> {
+    this.cameraError.set(null);
+    this.isCameraMode.set(true);
+
+    try {
+      // Check if camera is supported
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error('Camera not supported on this device');
+      }
+
+      // Request camera access
+      this.cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: this.facingMode(),
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+        },
+        audio: false,
+      });
+
+      // Wait for video element to be available
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      if (this.cameraVideo?.nativeElement) {
+        this.cameraVideo.nativeElement.srcObject = this.cameraStream;
+        await this.cameraVideo.nativeElement.play();
+        this.isCameraReady.set(true);
+      }
+    } catch (error: unknown) {
+      console.error('Camera error:', error);
+      const message = error instanceof Error ? error.message : 'Could not access camera';
+      this.cameraError.set(message);
+      this.stopCamera();
+    }
+  }
+
+  stopCamera(): void {
+    if (this.cameraStream) {
+      this.cameraStream.getTracks().forEach(track => track.stop());
+      this.cameraStream = null;
+    }
+    this.isCameraMode.set(false);
+    this.isCameraReady.set(false);
+  }
+
+  switchCamera(): void {
+    this.facingMode.set(this.facingMode() === 'user' ? 'environment' : 'user');
+    if (this.isCameraMode()) {
+      this.stopCamera();
+      this.openCamera();
+    }
+  }
+
+  async capturePhoto(): Promise<void> {
+    if (!this.cameraVideo?.nativeElement || !this.cameraCanvas?.nativeElement) return;
+
+    const video = this.cameraVideo.nativeElement;
+    const canvas = this.cameraCanvas.nativeElement;
+
+    // Set canvas size to match video
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // Draw video frame to canvas
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // If using front camera, mirror the image
+    if (this.facingMode() === 'user') {
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+    }
+
+    ctx.drawImage(video, 0, 0);
+
+    // Convert canvas to blob
+    const blob = await new Promise<Blob | null>(resolve => {
+      canvas.toBlob(resolve, 'image/jpeg', 0.95);
+    });
+
+    if (!blob) {
+      this.snackBar.open('Failed to capture photo', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Create file from blob
+    const filename = `photo_${Date.now()}.jpg`;
+    const file = new File([blob], filename, { type: 'image/jpeg' });
+
+    // Stop camera and process the captured photo
+    this.stopCamera();
+    await this.processFile(file);
   }
 
   onFileSelected(event: Event): void {
