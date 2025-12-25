@@ -82,7 +82,7 @@ export class MediaCreatorDialogComponent implements AfterViewInit, OnDestroy {
       case 1: return 'Select Media';
       case 2: return 'Edit';
       case 3: return 'Details';
-      default: return 'Create Media';
+      default: return 'Post Media';
     }
   });
 
