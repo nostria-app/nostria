@@ -1615,7 +1615,7 @@ export class App implements OnInit {
   /**
    * Gets the optimized image URL using the image cache service
    */
-  getOptimizedImageUrl(originalUrl: string): string {
+  getOptimizedImageUrl(originalUrl: string | undefined): string {
     if (!originalUrl) return '';
 
     return this.imageCacheService.getOptimizedImageUrl(originalUrl);
