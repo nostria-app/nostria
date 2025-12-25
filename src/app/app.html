@@ -121,7 +121,12 @@
       <button mat-icon-button [class.profile-button-picture]="accountState.profile()?.data?.picture"
         (click)="toggleProfileSidenav()" aria-label="Toggle profile" class="profile-button">
         @if (accountState.profile()?.data?.picture) {
+        @if (settings.settings().imageCacheEnabled) {
+        <img [src]="getOptimizedImageUrl(accountState.profile()?.data?.picture)" class="profile-button-avatar"
+          alt="Profile picture" />
+        } @else {
         <img [src]="accountState.profile()?.data?.picture" class="profile-button-avatar" alt="Profile picture" />
+        }
         } @else {
         @if (app.authenticated()) {
         <mat-icon>account_circle</mat-icon>
@@ -239,7 +244,11 @@
           @if (accountState.profile(); as metadata) {
           @if (metadata?.data?.picture) {
           <div class="profile-avatar">
+            @if (settings.settings().imageCacheEnabled) {
+            <img [src]="getOptimizedImageUrl(metadata.data.picture)" alt="Profile picture" class="avatar-image" />
+            } @else {
             <img [src]="metadata.data.picture" alt="Profile picture" class="avatar-image" />
+            }
           </div>
           } @else {
           <div class="profile-avatar">
@@ -323,7 +332,11 @@
           <a mat-list-item (click)="switchAccount(item.account.pubkey); toggleProfileSidenav()" class="account-item">
             @if (metadata.data?.picture) {
             <div class="account-avatar" matListItemIcon>
+              @if (settings.settings().imageCacheEnabled) {
+              <img [src]="getOptimizedImageUrl(metadata.data.picture)" alt="Profile picture" class="avatar-image" />
+              } @else {
               <img [src]="metadata.data.picture" alt="Profile picture" class="avatar-image" />
+              }
             </div>
             } @else {
             <div class="account-avatar" matListItemIcon>
