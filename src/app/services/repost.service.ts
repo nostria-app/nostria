@@ -6,6 +6,12 @@ import type { NostrRecord } from '../interfaces';
 import { NostrService } from './nostr.service';
 import { UtilitiesService } from './utilities.service';
 
+export interface RepostReference {
+  eventId: string;
+  relayHint?: string;
+  pubkey?: string;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -26,8 +32,55 @@ export class RepostService {
     return result.success;
   }
 
-  decodeRepost(event: Event): NostrRecord {
+  /**
+   * Check if this is a repost event (kind 6 or kind 16)
+   */
+  isRepostEvent(event: Event): boolean {
+    return event.kind === kinds.Repost || event.kind === kinds.GenericRepost;
+  }
+
+  /**
+   * Check if the repost has embedded content (event JSON in content field)
+   */
+  hasEmbeddedContent(event: Event): boolean {
+    return !!event.content && event.content.trim() !== '';
+  }
+
+  /**
+   * Get the referenced event info from the repost's e tag
+   * NIP-18: Reposts can have empty content and reference the event via e tag with relay hint
+   */
+  getRepostReference(event: Event): RepostReference | null {
+    if (!this.isRepostEvent(event)) return null;
+
+    // Find the e tag with the referenced event id and optional relay hint
+    const eTag = event.tags.find(tag => tag[0] === 'e');
+    if (!eTag || !eTag[1]) return null;
+
+    return {
+      eventId: eTag[1],
+      relayHint: eTag[2] || undefined,
+      pubkey: eTag[4] || undefined, // Some clients include pubkey as 5th element
+    };
+  }
+
+  /**
+   * Decode a repost that has embedded content
+   * Returns null if content is empty (use getRepostReference to fetch from relay)
+   */
+  decodeRepost(event: Event): NostrRecord | null {
+    // Return null if content is empty - caller should use async fetch
+    if (!event.content || event.content.trim() === '') {
+      return null;
+    }
+
     const repostedEvent = this.utilities.parseContent(event.content);
+
+    // Validate that we got a proper event object
+    if (!repostedEvent || typeof repostedEvent !== 'object' || !repostedEvent.id || !repostedEvent.pubkey) {
+      return null;
+    }
+
     return {
       event: repostedEvent,
       data: this.utilities.parseContent(repostedEvent.content),

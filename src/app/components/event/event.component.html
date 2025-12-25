@@ -11,6 +11,45 @@
 </div>
 } @else if (isAuthorMuted()) {
 <!-- Don't render events from muted/blocked accounts at all -->
+} @else if (isRepostEvent() && !repostedEvent && isLoadingRepostedEvent()) {
+<!-- Loading reposted event from relay hint -->
+<mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined">
+  <mat-card-header class="repost-header">
+    <mat-icon>repeat</mat-icon>
+    <span>
+      <app-profile-display-name [pubkey]="item!.event.pubkey"></app-profile-display-name>
+      reposted
+      <span [matTooltip]="item!.event.created_at | timestamp: 'medium'" matTooltipPosition="below">
+        {{ item!.event.created_at | ago }}
+      </span>
+    </span>
+    <app-event-menu [event]="item!.event" class="note-footer-right"></app-event-menu>
+  </mat-card-header>
+  <mat-card-content>
+    <div class="loading-container">
+      <mat-spinner diameter="24"></mat-spinner>
+      <p class="loading-text">Loading reposted event...</p>
+    </div>
+  </mat-card-content>
+</mat-card>
+} @else if (isRepostEvent() && !repostedEvent && !isLoadingRepostedEvent()) {
+<!-- Repost event but couldn't load the referenced event -->
+<mat-card class="note-card" [class.plain]="isPlain()" appearance="outlined">
+  <mat-card-header class="repost-header">
+    <mat-icon>repeat</mat-icon>
+    <span>
+      <app-profile-display-name [pubkey]="item!.event.pubkey"></app-profile-display-name>
+      reposted
+      <span [matTooltip]="item!.event.created_at | timestamp: 'medium'" matTooltipPosition="below">
+        {{ item!.event.created_at | ago }}
+      </span>
+    </span>
+    <app-event-menu [event]="item!.event" class="note-footer-right"></app-event-menu>
+  </mat-card-header>
+  <mat-card-content>
+    <p class="event-not-found">Could not load the reposted event</p>
+  </mat-card-content>
+</mat-card>
 } @else if (targetItem && item) {
 <mat-card class="note-card" [class.plain]="isPlain()" [class.clickable]="isCardClickable()" appearance="outlined"
   [class.selected]="isCurrentlySelected()" [attr.tabindex]="isCardClickable() ? 0 : null"
@@ -29,7 +68,7 @@
     <app-event-menu [event]="item.event" class="note-footer-right"></app-event-menu>
   </mat-card-header>
 
-  <app-event-header [event]="repostService.decodeRepost(item.event).event"></app-event-header>
+  <app-event-header [event]="repostedEvent"></app-event-header>
   <mat-card-content>
     @if (targetItem.event.kind === 20) {
     <app-photo-event [event]="targetItem.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
@@ -71,8 +110,8 @@
     @else if (targetItem.event.kind === 0) {
     <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
     } @else {
-    <app-content [content]="repostService.decodeRepost(item.event).data"
-      [event]="repostService.decodeRepost(item.event).event" [trustedByPubkey]="item.event.pubkey"></app-content>
+    <app-content [content]="repostedRecord()?.data" [event]="repostedEvent"
+      [trustedByPubkey]="item.event.pubkey"></app-content>
     }
   </mat-card-content>
 
