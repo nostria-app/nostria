@@ -20,30 +20,30 @@ export class CreateOptionsSheetComponent {
   // Creation options
   createOptions = [
     {
-      label: 'Note',
+      label: $localize`:@@create.option.note:Note`,
       icon: 'create',
       action: () => this.eventService.createNote(),
     },
     {
-      label: 'Video Clip',
-      icon: 'cinematic_blur',
-      action: () => this.layout.openRecordVideoDialog(),
-    },
-    {
-      label: 'Audio Clip',
-      icon: 'mic',
-      action: () => this.layout.openRecordAudioDialog(),
-    },
-    {
-      label: 'Article',
+      label: $localize`:@@create.option.article:Article`,
       icon: 'article',
       action: () => this.layout.createArticle(),
     },
     {
-      label: 'Upload',
-      icon: 'upload',
-      action: () => this.layout.uploadMedia(),
+      label: $localize`:@@create.option.video:Video Clip`,
+      icon: 'cinematic_blur',
+      action: () => this.layout.openRecordVideoDialog(),
     },
+    {
+      label: $localize`:@@create.option.audio:Audio Clip`,
+      icon: 'mic',
+      action: () => this.layout.openRecordAudioDialog(),
+    },
+    // {
+    //   label: 'Upload',
+    //   icon: 'upload',
+    //   action: () => this.layout.uploadMedia(),
+    // },
   ];
 
   // Handler for selecting an option

@@ -29,6 +29,11 @@ export class CreateMenuComponent {
       action: () => this.eventService.createNote(),
     },
     {
+      label: $localize`:@@create.option.article:Article`,
+      icon: 'article',
+      action: () => this.layout.createArticle(),
+    },
+    {
       label: $localize`:@@create.option.video:Video Clip`,
       icon: 'cinematic_blur',
       action: () => this.layout.openRecordVideoDialog(),
@@ -38,16 +43,11 @@ export class CreateMenuComponent {
       icon: 'mic',
       action: () => this.layout.openRecordAudioDialog(),
     },
-    {
-      label: $localize`:@@create.option.article:Article`,
-      icon: 'article',
-      action: () => this.layout.createArticle(),
-    },
-    {
-      label: $localize`:@@create.option.upload:Upload`,
-      icon: 'upload',
-      action: () => this.layout.uploadMedia(),
-    },
+    // {
+    //   label: $localize`:@@create.option.upload:Upload`,
+    //   icon: 'upload',
+    //   action: () => this.layout.uploadMedia(),
+    // },
   ];
 
   onItemClick(option: CreateOption): void {

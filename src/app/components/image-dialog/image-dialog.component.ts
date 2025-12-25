@@ -1,4 +1,4 @@
-import { Component, inject, signal, ViewChild, ElementRef, AfterViewInit, OnDestroy } from '@angular/core';
+import { Component, inject, signal, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatDialogModule, MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
@@ -14,7 +14,7 @@ export interface ImageDialogData {
   templateUrl: './image-dialog.component.html',
   styleUrl: './image-dialog.component.scss',
 })
-export class ImageDialogComponent implements AfterViewInit, OnDestroy {
+export class ImageDialogComponent {
   dialogData = inject<ImageDialogData>(MAT_DIALOG_DATA);
   dialogRef = inject(MatDialogRef<ImageDialogComponent>);
 
@@ -30,54 +30,6 @@ export class ImageDialogComponent implements AfterViewInit, OnDestroy {
   isDragging = signal(false);
   lastMouseX = signal(0);
   lastMouseY = signal(0);
-
-  private fullscreenChangeHandler = () => this.onFullscreenChange();
-
-  ngAfterViewInit() {
-    this.enterFullscreen();
-    document.addEventListener('fullscreenchange', this.fullscreenChangeHandler);
-  }
-
-  ngOnDestroy() {
-    document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
-    this.exitFullscreen();
-  }
-
-  /**
-   * Enter fullscreen mode with no navigation UI
-   */
-  private async enterFullscreen(): Promise<void> {
-    try {
-      const dialogContainer = document.querySelector('.cdk-overlay-pane');
-      if (dialogContainer && document.fullscreenEnabled) {
-        await dialogContainer.requestFullscreen({ navigationUI: 'hide' });
-      }
-    } catch (error) {
-      console.warn('Could not enter fullscreen mode:', error);
-    }
-  }
-
-  /**
-   * Exit fullscreen mode
-   */
-  private async exitFullscreen(): Promise<void> {
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      }
-    } catch (error) {
-      console.warn('Could not exit fullscreen mode:', error);
-    }
-  }
-
-  /**
-   * Handle fullscreen change events (e.g., user presses Escape)
-   */
-  private onFullscreenChange(): void {
-    if (!document.fullscreenElement) {
-      this.dialogRef.close();
-    }
-  }
 
   /**
    * Zoom in the image
