@@ -1220,7 +1220,7 @@ export class LayoutService implements OnDestroy {
       MediaCreatorDialogComponent,
       {
         title: $localize`:@@media.creator.dialog.title:Create Media`,
-        width: '600px',
+        width: '950px',
         maxWidth: '95vw',
         disableClose: true,
         showCloseButton: true,
