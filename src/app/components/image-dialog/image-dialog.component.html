@@ -1,5 +1,5 @@
 <div class="image-dialog-container">
-  <div class="toolbar">
+  <div class="controls-left">
     <button mat-icon-button (click)="zoomIn()" aria-label="Zoom in">
       <mat-icon>zoom_in</mat-icon>
     </button>
@@ -10,32 +10,19 @@
       <mat-icon>refresh</mat-icon>
     </button>
     <span class="zoom-level">{{ scale() * 100 }}%</span>
-    <button mat-icon-button class="close-button" (click)="close()" aria-label="Close dialog">
+  </div>
+
+  <div class="controls-right">
+    <button mat-icon-button (click)="close()" aria-label="Close dialog">
       <mat-icon>close</mat-icon>
     </button>
   </div>
 
-  <div
-    class="image-container"
-    #containerElement
-    (mousedown)="onPointerDown($event)"
-    (mousemove)="onPointerMove($event)"
-    (mouseup)="onPointerUp()"
-    (mouseleave)="onPointerUp()"
-    (touchstart)="onPointerDown($event)"
-    (touchmove)="onPointerMove($event)"
-    (touchend)="onPointerUp()"
-    (touchcancel)="onPointerUp()"
-    (wheel)="onWheel($event)"
-  >
-    <img
-      #imageElement
-      [src]="dialogData.imageUrl"
-      [style.transform]="getTransformStyle()"
-      [ngClass]="{ draggable: scale() > 1 }"
-      [style.cursor]="isDragging() ? 'grabbing' : scale() > 1 ? 'grab' : 'default'"
-      alt="Full size image"
-      draggable="false"
-    />
+  <div class="image-container" #containerElement (mousedown)="onPointerDown($event)" (mousemove)="onPointerMove($event)"
+    (mouseup)="onPointerUp()" (mouseleave)="onPointerUp()" (touchstart)="onPointerDown($event)"
+    (touchmove)="onPointerMove($event)" (touchend)="onPointerUp()" (touchcancel)="onPointerUp()"
+    (wheel)="onWheel($event)">
+    <img #imageElement [src]="dialogData.imageUrl" [style.transform]="getTransformStyle()" class="draggable"
+      [style.cursor]="isDragging() ? 'grabbing' : 'grab'" alt="Full size image" draggable="false" />
   </div>
 </div>
