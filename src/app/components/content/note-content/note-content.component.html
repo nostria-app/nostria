@@ -146,8 +146,7 @@
 <div class="media-container video-container" [class.portrait-video]="isPortraitVideo(token)"
   [class.blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
   [class.revealing]="shouldBlurImages() && isImageRevealed(token.content)"
-  [class.video-ready]="isVideoReady(token.content)"
-  [class.needs-rotation]="needsRotationCorrection(token)"
+  [class.video-ready]="isVideoReady(token.content)" [class.needs-rotation]="needsRotationCorrection(token)"
   [style.aspect-ratio]="videoAspect">
   <!-- Placeholder with fade transition -->
   @if (videoPlaceholder) {

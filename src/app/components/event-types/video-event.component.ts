@@ -304,7 +304,7 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
   needsRotationCorrection = computed(() => {
     const actualDims = this.videoActualDimensions();
     const dimensions = this.videoDimensions();
-    
+
     if (!actualDims || !dimensions) {
       return false;
     }

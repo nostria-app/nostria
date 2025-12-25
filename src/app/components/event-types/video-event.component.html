@@ -67,16 +67,16 @@
   } @else {
   <!-- Video Player (Expanded State) -->
   <div class="video-player-container" [style.aspect-ratio]="videoAspectRatio()" [class.video-ready]="videoReady()"
-    [class.needs-rotation]="needsRotationCorrection()"
-    (mouseenter)="onVideoContainerMouseEnter()" (mouseleave)="onVideoContainerMouseLeave()"
-    (mousemove)="onVideoContainerMouseMove()">
+    [class.needs-rotation]="needsRotationCorrection()" (mouseenter)="onVideoContainerMouseEnter()"
+    (mouseleave)="onVideoContainerMouseLeave()" (mousemove)="onVideoContainerMouseMove()">
     <!-- Placeholder shown until video is ready -->
     @if (blurhashUrl && !videoReady()) {
     <img [src]="blurhashUrl" class="video-placeholder-bg" alt="" aria-hidden="true" />
     }
     <video #videoPlayer class="video-player" [class.loaded]="videoReady()" [autoplay]="shouldAutoPlay()"
       [loop]="shouldRepeat()" [poster]="videoInfo.thumbnail || blurhashUrl || undefined" (play)="onVideoPlay($event)"
-      (pause)="onVideoPause($event)" (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()" (canplay)="onVideoCanPlay()">
+      (pause)="onVideoPause($event)" (timeupdate)="onTimeUpdate()" (loadedmetadata)="onLoadedMetadata()"
+      (canplay)="onVideoCanPlay()">
       <source [src]="videoInfo.url" [type]="videoMimeType()" />
       Your browser does not support the video tag.
     </video>
