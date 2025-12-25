@@ -99,7 +99,21 @@
         <!-- Filter panel for images -->
         @if (isImage()) {
         <div class="filter-panel">
-          <h4 i18n="@@media.creator.filters.title">Filters</h4>
+          <!-- Tabs for Filters / Adjustments -->
+          <div class="edit-tabs">
+            <button class="tab-btn" [class.active]="editPanelTab() === 'filters'" (click)="editPanelTab.set('filters')">
+              <mat-icon>photo_filter</mat-icon>
+              <span i18n="@@media.creator.tab.filters">Filters</span>
+            </button>
+            <button class="tab-btn" [class.active]="editPanelTab() === 'adjustments'"
+              (click)="editPanelTab.set('adjustments')">
+              <mat-icon>tune</mat-icon>
+              <span i18n="@@media.creator.tab.adjustments">Adjustments</span>
+            </button>
+          </div>
+
+          <!-- Filters Tab -->
+          @if (editPanelTab() === 'filters') {
           <div class="filter-grid">
             @for (filter of filterService.availableFilters; track filter.id) {
             <button class="filter-option" [class.selected]="selectedFilter() === filter.id"
@@ -109,6 +123,110 @@
             </button>
             }
           </div>
+
+          <!-- Filter Intensity Slider (only if a filter is selected) -->
+          @if (selectedFilter() !== 'none') {
+          <div class="intensity-slider">
+            <div class="slider-header">
+              <span i18n="@@media.creator.filter.intensity">Filter Intensity</span>
+              <span class="slider-value">{{ filterIntensity() }}%</span>
+            </div>
+            <mat-slider min="0" max="100" step="1" discrete class="full-width-slider">
+              <input matSliderThumb [value]="filterIntensity()" (valueChange)="updateFilterIntensity($any($event))"
+                aria-label="Filter intensity" />
+            </mat-slider>
+          </div>
+          }
+          }
+
+          <!-- Adjustments Tab -->
+          @if (editPanelTab() === 'adjustments') {
+          <div class="adjustments-panel">
+            <!-- Brightness -->
+            <div class="adjustment-slider">
+              <div class="slider-header">
+                <mat-icon>brightness_6</mat-icon>
+                <span i18n="@@media.creator.adjust.brightness">Brightness</span>
+                <span class="slider-value">{{ adjustments().brightness }}</span>
+              </div>
+              <mat-slider min="-100" max="100" step="1" discrete class="full-width-slider">
+                <input matSliderThumb [value]="adjustments().brightness"
+                  (valueChange)="updateAdjustment('brightness', $any($event))" aria-label="Brightness" />
+              </mat-slider>
+            </div>
+
+            <!-- Contrast -->
+            <div class="adjustment-slider">
+              <div class="slider-header">
+                <mat-icon>contrast</mat-icon>
+                <span i18n="@@media.creator.adjust.contrast">Contrast</span>
+                <span class="slider-value">{{ adjustments().contrast }}</span>
+              </div>
+              <mat-slider min="-100" max="100" step="1" discrete class="full-width-slider">
+                <input matSliderThumb [value]="adjustments().contrast"
+                  (valueChange)="updateAdjustment('contrast', $any($event))" aria-label="Contrast" />
+              </mat-slider>
+            </div>
+
+            <!-- Fade -->
+            <div class="adjustment-slider">
+              <div class="slider-header">
+                <mat-icon>gradient</mat-icon>
+                <span i18n="@@media.creator.adjust.fade">Fade</span>
+                <span class="slider-value">{{ adjustments().fade }}</span>
+              </div>
+              <mat-slider min="0" max="100" step="1" discrete class="full-width-slider">
+                <input matSliderThumb [value]="adjustments().fade"
+                  (valueChange)="updateAdjustment('fade', $any($event))" aria-label="Fade" />
+              </mat-slider>
+            </div>
+
+            <!-- Saturation -->
+            <div class="adjustment-slider">
+              <div class="slider-header">
+                <mat-icon>palette</mat-icon>
+                <span i18n="@@media.creator.adjust.saturation">Saturation</span>
+                <span class="slider-value">{{ adjustments().saturation }}</span>
+              </div>
+              <mat-slider min="-100" max="100" step="1" discrete class="full-width-slider">
+                <input matSliderThumb [value]="adjustments().saturation"
+                  (valueChange)="updateAdjustment('saturation', $any($event))" aria-label="Saturation" />
+              </mat-slider>
+            </div>
+
+            <!-- Temperature -->
+            <div class="adjustment-slider">
+              <div class="slider-header">
+                <mat-icon>thermostat</mat-icon>
+                <span i18n="@@media.creator.adjust.temperature">Temperature</span>
+                <span class="slider-value">{{ adjustments().temperature }}</span>
+              </div>
+              <mat-slider min="-100" max="100" step="1" discrete class="full-width-slider">
+                <input matSliderThumb [value]="adjustments().temperature"
+                  (valueChange)="updateAdjustment('temperature', $any($event))" aria-label="Temperature" />
+              </mat-slider>
+            </div>
+
+            <!-- Vignette -->
+            <div class="adjustment-slider">
+              <div class="slider-header">
+                <mat-icon>vignette</mat-icon>
+                <span i18n="@@media.creator.adjust.vignette">Vignette</span>
+                <span class="slider-value">{{ adjustments().vignette }}</span>
+              </div>
+              <mat-slider min="0" max="100" step="1" discrete class="full-width-slider">
+                <input matSliderThumb [value]="adjustments().vignette"
+                  (valueChange)="updateAdjustment('vignette', $any($event))" aria-label="Vignette" />
+              </mat-slider>
+            </div>
+
+            <!-- Reset button -->
+            <button mat-button class="reset-adjustments-btn" (click)="resetAdjustments()">
+              <mat-icon>refresh</mat-icon>
+              <span i18n="@@media.creator.adjust.reset">Reset All</span>
+            </button>
+          </div>
+          }
         </div>
         }
 
@@ -116,9 +234,11 @@
         @if (mediaFiles().length > 0) {
         <div class="media-thumbnails">
           <h4 i18n="@@media.creator.media.title">Media ({{ mediaFiles().length }})</h4>
-          <div class="thumbnail-grid">
+          <div class="thumbnail-grid" cdkDropList cdkDropListOrientation="horizontal"
+            (cdkDropListDropped)="onThumbnailDrop($event)">
             @for (media of mediaFiles(); track media.id; let i = $index) {
-            <button class="thumbnail-item" [class.selected]="selectedMediaIndex() === i" (click)="selectMedia(i)">
+            <button class="thumbnail-item" [class.selected]="selectedMediaIndex() === i" (click)="selectMedia(i)"
+              cdkDrag [cdkDragDisabled]="mediaFiles().length < 2">
               @if (media.type === 'image') {
               <img [src]="media.preview" alt="Media thumbnail" />
               } @else {
@@ -128,6 +248,9 @@
               <button mat-icon-button class="remove-thumb-btn" (click)="removeMedia(i); $event.stopPropagation()">
                 <mat-icon>close</mat-icon>
               </button>
+              @if (mediaFiles().length > 1) {
+              <mat-icon class="drag-handle">drag_indicator</mat-icon>
+              }
             </button>
             }
             <!-- Add more button -->
@@ -185,13 +308,33 @@
             rows="3" class="auto-grow-textarea"></textarea>
         </mat-form-field>
 
-        <!-- Alt Text -->
+        <!-- Alt Text (per-image) -->
         <mat-form-field appearance="outline" class="full-width">
-          <mat-label i18n="@@media.creator.alt.label">Alt Text</mat-label>
-          <input matInput [value]="alt()" (input)="alt.set($any($event.target).value)"
+          <mat-label>
+            <ng-container i18n="@@media.creator.alt.label">Alt Text</ng-container>
+            @if (mediaFiles().length > 1) {
+            <span class="alt-for-image"> ({{ selectedMediaIndex() + 1 }}/{{ mediaFiles().length }})</span>
+            }
+          </mat-label>
+          <input matInput [value]="currentAlt()" (input)="updateCurrentAlt($any($event.target).value)"
             placeholder="Describe for accessibility" i18n-placeholder="@@media.creator.alt.placeholder" />
           <mat-hint i18n="@@media.creator.alt.hint">Helps screen readers describe your media</mat-hint>
         </mat-form-field>
+
+        @if (mediaFiles().length > 1) {
+        <div class="alt-navigation">
+          <button mat-button [disabled]="selectedMediaIndex() === 0" (click)="selectMedia(selectedMediaIndex() - 1)">
+            <mat-icon>chevron_left</mat-icon>
+            <span i18n="@@media.creator.alt.previous">Previous</span>
+          </button>
+          <span class="alt-nav-label" i18n="@@media.creator.alt.set.for">Set alt text for each image</span>
+          <button mat-button [disabled]="selectedMediaIndex() === mediaFiles().length - 1"
+            (click)="selectMedia(selectedMediaIndex() + 1)">
+            <span i18n="@@media.creator.alt.next">Next</span>
+            <mat-icon>chevron_right</mat-icon>
+          </button>
+        </div>
+        }
 
         <!-- Hashtags -->
         <div class="hashtag-section">
