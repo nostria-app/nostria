@@ -54,7 +54,7 @@ export class EventRepublishService {
     details: { kind: number; status: 'success' | 'failed' | 'notFound' }[];
   }> {
     const userPubkey = pubkey || this.accountState.pubkey();
-    
+
     if (!userPubkey) {
       this.logger.warn('Cannot republish events: no active account');
       return { success: 0, failed: 0, notFound: 0, details: [] };
@@ -85,9 +85,9 @@ export class EventRepublishService {
 
           if (event) {
             this.logger.debug(`Republishing event kind ${kind}`, { eventId: event.id });
-            
+
             await this.accountRelay.publish(event);
-            
+
             results.success++;
             results.details.push({ kind, status: 'success' });
             this.logger.debug(`Successfully republished event kind ${kind}`);

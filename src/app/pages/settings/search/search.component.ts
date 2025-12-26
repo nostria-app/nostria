@@ -238,6 +238,35 @@ export class SearchSettingsComponent {
     }
   }
 
+  /**
+   * Add the default search relay (relay.nostr.band)
+   */
+  async addDefaultRelay() {
+    const defaultRelay = this.searchRelay.getDefaultRelays()[0];
+    
+    if (!defaultRelay) {
+      this.showMessage('No default relay configured');
+      return;
+    }
+
+    // Check if already exists
+    if (this.searchRelay.getRelayUrls().some(r => r === defaultRelay)) {
+      this.showMessage('Default relay is already in your list');
+      return;
+    }
+
+    const currentRelays = this.searchRelay.getRelayUrls();
+    const newRelays = [...currentRelays, defaultRelay];
+
+    // Save locally
+    this.searchRelay.setSearchRelays(newRelays);
+
+    // Publish to relays
+    await this.publishSearchRelayList(newRelays);
+
+    this.showMessage('Default search relay added');
+  }
+
   private showMessage(message: string) {
     this.snackBar.open(message, 'Dismiss', {
       duration: 3000,

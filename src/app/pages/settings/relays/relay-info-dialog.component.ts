@@ -419,7 +419,7 @@ export class RelayInfoDialogComponent {
   loading = signal<boolean>(true);
   error = signal<string | null>(null);
   migrateData = signal<boolean>(false);
-  
+
   // Migration state
   isMigrating = signal(false);
   migrationResult = signal<{ success: number; failed: number; notFound: number } | null>(null);
