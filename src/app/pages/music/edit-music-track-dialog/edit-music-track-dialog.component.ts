@@ -74,6 +74,7 @@ export class EditMusicTrackDialogComponent {
   coverImage = signal<string | null>(null);
   audioUrl = signal<string | null>(null);
   originalDTag = signal<string>('');
+  private initialized = false;
 
   // Zap splits
   zapSplits = signal<ZapSplit[]>([]);
@@ -126,7 +127,8 @@ export class EditMusicTrackDialogComponent {
     // Initialize form with track data when data input changes
     effect(() => {
       const trackData = this.data();
-      if (trackData?.track) {
+      if (trackData?.track && !this.initialized) {
+        this.initialized = true;
         this.initializeFromTrack(trackData.track);
       }
     });

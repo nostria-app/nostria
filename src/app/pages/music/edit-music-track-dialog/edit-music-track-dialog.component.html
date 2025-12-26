@@ -35,7 +35,7 @@
         <label class="field-label">Album Art</label>
         <div class="album-art-row">
           <div class="cover-preview"
-            [style.background]="coverImage() ? 'url(' + coverImage() + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')'">
+            [style.background-image]="coverImage() ? 'url(' + coverImage() + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')'">
             @if (!coverImage()) {
             <mat-icon>image</mat-icon>
             }
