@@ -685,8 +685,9 @@ export class SummaryComponent implements OnInit, OnDestroy {
     }
 
     // Update URL without navigation to support back button
+    // Use replaceState to avoid creating extra history entries
     const previousUrl = this.location.path();
-    this.location.go(`/e/${eventId}`);
+    this.location.replaceState(`/e/${eventId}`);
 
     // Open dialog using CustomDialogService
     this.currentEventDialogRef = this.customDialog.open<EventDialogComponent>(EventDialogComponent, {
@@ -711,9 +712,13 @@ export class SummaryComponent implements OnInit, OnDestroy {
       // Silently ignore profile fetch errors, keep default title
     });
 
-    // Restore URL when dialog is closed
-    this.currentEventDialogRef.afterClosed$.subscribe(() => {
-      this.location.go(previousUrl);
+    // Restore URL when dialog is closed (only if not closed via back button)
+    this.currentEventDialogRef.afterClosed$.subscribe(({ closedViaBackButton }) => {
+      // Only restore URL if dialog was closed programmatically (not via back button)
+      // When closed via back button, the browser already handled the URL navigation
+      if (!closedViaBackButton) {
+        this.location.replaceState(previousUrl);
+      }
       this.currentEventDialogRef = null;
     });
   }

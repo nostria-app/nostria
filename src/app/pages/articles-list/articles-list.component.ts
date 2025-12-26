@@ -57,7 +57,7 @@ export interface ArticleItem {
     MatDialogModule,
     MatTabsModule,
     AgoPipe
-],
+  ],
   templateUrl: './articles-list.component.html',
   styleUrl: './articles-list.component.scss',
 })
@@ -269,7 +269,7 @@ export class ArticlesListComponent {
     });
 
     const dialogRef = await this.layout.createArticle(naddr);
-    dialogRef.afterClosed$.subscribe((result) => {
+    dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result) {
         this.loadArticles();
       }
@@ -278,7 +278,7 @@ export class ArticlesListComponent {
 
   async createNewArticle(): Promise<void> {
     const dialogRef = await this.layout.createArticle();
-    dialogRef.afterClosed$.subscribe((result) => {
+    dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result) {
         this.loadArticles();
       }

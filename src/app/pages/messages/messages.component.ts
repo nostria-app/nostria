@@ -1065,9 +1065,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       }
     );
 
-    dialogRef.afterClosed$.subscribe((result: StartChatDialogResult | undefined) => {
+    dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result) {
-        this.startChatWithUser(result.pubkey, result.isLegacy);
+        this.startChatWithUser((result as StartChatDialogResult).pubkey, (result as StartChatDialogResult).isLegacy);
       }
     });
   }

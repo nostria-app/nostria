@@ -46,6 +46,7 @@ import { MatButtonModule } from '@angular/material/button';
       [class.stacked-backdrop]="isStacked()"
       (click)="onBackdropClick()"
       role="presentation">
+      
       <div 
         class="dialog-container" 
         [ngClass]="panelClass()"
