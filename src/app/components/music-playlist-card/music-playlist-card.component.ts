@@ -28,7 +28,7 @@ const MUSIC_KIND = 36787;
 
 @Component({
   selector: 'app-music-playlist-card',
-  imports: [MatIconModule, MatCardModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule],
+  imports: [MatIconModule, MatCardModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, EditMusicPlaylistDialogComponent],
   template: `
     <mat-card class="playlist-card" (click)="openPlaylist()" (keydown.enter)="openPlaylist()" 
       tabindex="0" role="button" [attr.aria-label]="'Open playlist ' + title()">
@@ -95,6 +95,10 @@ const MUSIC_KIND = 36787;
         </mat-menu>
       </mat-card-content>
     </mat-card>
+    
+    @if (showEditDialog() && editDialogData()) {
+      <app-edit-music-playlist-dialog [data]="editDialogData()!" (closed)="onEditDialogClosed($event)" />
+    }
   `,
   styles: [`
     .playlist-card {
@@ -280,6 +284,10 @@ export class MusicPlaylistCardComponent {
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   isLoadingTracks = signal(false);
+
+  // Edit dialog state
+  showEditDialog = signal(false);
+  editDialogData = signal<EditMusicPlaylistDialogData | null>(null);
 
   private profileLoaded = false;
 
@@ -468,13 +476,19 @@ export class MusicPlaylistCardComponent {
       };
     }
 
-    const dialogData: EditMusicPlaylistDialogData = { playlist };
+    // Use inline dialog instead of MatDialog
+    this.editDialogData.set({ playlist });
+    this.showEditDialog.set(true);
+  }
 
-    this.dialog.open(EditMusicPlaylistDialogComponent, {
-      data: dialogData,
-      width: '500px',
-      maxWidth: '95vw',
-    });
+  // Handle edit dialog closed
+  onEditDialogClosed(result: { updated: boolean; playlist?: any } | null): void {
+    this.showEditDialog.set(false);
+    this.editDialogData.set(null);
+
+    if (result?.updated) {
+      this.snackBar.open('Playlist updated', 'Close', { duration: 2000 });
+    }
   }
 
   // Play all tracks in the playlist
