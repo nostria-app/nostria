@@ -172,8 +172,9 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   // Check if this event card should be clickable (only kind 1)
   isCardClickable = computed<boolean>(() => {
-    const currentEvent = this.event() || this.record()?.event;
-    return currentEvent?.kind === 1 && !this.isCurrentlySelected();
+    // Use targetRecord to get the actual event (reposted event for reposts)
+    const targetEvent = this.targetRecord()?.event;
+    return targetEvent?.kind === 1 && !this.isCurrentlySelected();
   });
 
   // Check if root event card should be clickable (only kind 1)
@@ -1560,9 +1561,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   }
 
   onCardClick(event: MouseEvent) {
+    // Get the target event (for reposts, this is the reposted event)
+    const targetRecordData = this.targetRecord();
+    const targetEvent = targetRecordData?.event;
+
     // Only handle clicks for kind 1 events (text notes)
-    const currentEvent = this.event() || this.record()?.event;
-    if (!currentEvent || currentEvent.kind !== 1) {
+    if (!targetEvent || targetEvent.kind !== 1) {
       return;
     }
 
@@ -1594,8 +1598,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Navigate to the event
-    this.layout.openEvent(currentEvent.id, currentEvent);
+    // Navigate to the target event (reposted event for reposts, regular event otherwise)
+    this.layout.openEvent(targetEvent.id, targetEvent);
   }
 
   /**
