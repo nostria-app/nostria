@@ -28,7 +28,7 @@ import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialo
 import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../create-music-playlist-dialog/create-music-playlist-dialog.component';
-import { EditMusicTrackDialogComponent, EditMusicTrackDialogData } from '../edit-music-track-dialog/edit-music-track-dialog.component';
+import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 
 interface TopZapper {
   pubkey: string;
@@ -49,7 +49,7 @@ const MUSIC_KIND = 36787;
     MatSnackBarModule,
     ZapChipsComponent,
     CommentsListComponent,
-    EditMusicTrackDialogComponent,
+    MusicTrackDialogComponent,
   ],
   templateUrl: './song-detail.component.html',
   styleUrls: ['./song-detail.component.scss'],
@@ -88,7 +88,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
   // Edit dialog signals
   showEditDialog = signal(false);
-  editDialogData = signal<EditMusicTrackDialogData | null>(null);
+  editDialogData = signal<MusicTrackDialogData | null>(null);
 
   // Engagement metrics
   reactionCount = signal<number>(0);
@@ -642,7 +642,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     this.showEditDialog.set(true);
   }
 
-  onEditDialogClosed(result: { updated: boolean; event?: Event } | null): void {
+  onEditDialogClosed(result: { published: boolean; updated?: boolean; event?: Event } | null): void {
     this.showEditDialog.set(false);
     this.editDialogData.set(null);
 

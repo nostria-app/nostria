@@ -1,0 +1,275 @@
+<app-custom-dialog [title]="dialogTitle()" [showCloseButton]="true" [disableClose]="isPublishing()" [width]="'600px'"
+  [maxWidth]="'95vw'" (closed)="cancel()">
+
+  <div dialog-content>
+    <!-- No media servers warning -->
+    @if (!hasMediaServers()) {
+    <div class="media-server-warning">
+      <div class="warning-content">
+        <mat-icon color="warn">warning</mat-icon>
+        <span>You need to configure a media server to upload music files</span>
+      </div>
+      <button mat-flat-button type="button" (click)="navigateToMediaSettings()">
+        Configure Media Server
+      </button>
+    </div>
+    }
+
+    @if (!isEditMode()) {
+    <p class="dialog-subtitle">Share your music with the Nostr community and earn zaps</p>
+    }
+
+    <form [formGroup]="trackForm">
+      <!-- Audio File Section -->
+      <div class="audio-section">
+        <label class="field-label">Audio File @if (!isEditMode()) { * }</label>
+        <div class="audio-upload" [class.drag-over]="isDraggingAudio()" (dragover)="onAudioDragOver($event)"
+          (dragleave)="onAudioDragLeave($event)" (drop)="onAudioDrop($event)">
+          @if (isUploadingAudio()) {
+          <div class="uploading-indicator">
+            <mat-spinner diameter="24"></mat-spinner>
+            <span>Uploading audio...</span>
+          </div>
+          } @else if (audioFile()) {
+          <div class="audio-selected">
+            <mat-icon>audio_file</mat-icon>
+            <span>{{ audioFile()!.name }}</span>
+            <button mat-icon-button (click)="selectAudioFile()" aria-label="Change file">
+              <mat-icon>edit</mat-icon>
+            </button>
+          </div>
+          } @else if (audioUrl()) {
+          <div class="audio-selected">
+            <mat-icon>audio_file</mat-icon>
+            <span class="audio-url-display">{{ audioUrl() }}</span>
+            <button mat-stroked-button type="button" (click)="selectAudioFile()">
+              <mat-icon>upload</mat-icon>
+              Replace
+            </button>
+          </div>
+          } @else {
+          <div class="drop-zone" (click)="selectAudioFile()">
+            <mat-icon>cloud_upload</mat-icon>
+            <span class="drop-text">Drag & drop audio file here</span>
+            <span class="or-text">or</span>
+            <button mat-stroked-button type="button">
+              Browse Files
+            </button>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Track Title -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Track Title</mat-label>
+        <input matInput formControlName="title" placeholder="Summer Nights" required />
+      </mat-form-field>
+
+      <!-- Album Art -->
+      <div class="album-art-section">
+        <label class="field-label">Album Art</label>
+        <div class="album-art-drop-zone" [class.drag-over]="isDraggingImage()" (dragover)="onImageDragOver($event)"
+          (dragleave)="onImageDragLeave($event)" (drop)="onImageDrop($event)">
+          <div class="album-art-row">
+            <div class="cover-preview"
+              [style.background-image]="coverImage() ? 'url(' + coverImage() + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')'">
+              @if (!coverImage()) {
+              <mat-icon>image</mat-icon>
+              }
+            </div>
+            <div class="cover-actions">
+              <span class="drop-hint">Drag & drop image here or</span>
+              <button mat-stroked-button type="button" (click)="uploadImage()" [disabled]="isUploadingImage()">
+                @if (isUploadingImage()) {
+                <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                <mat-icon>photo_library</mat-icon>
+                }
+                {{ coverImage() ? 'Replace' : 'Upload' }} Image
+              </button>
+              <button mat-stroked-button type="button" (click)="randomizeGradient()">
+                <mat-icon>auto_awesome</mat-icon>
+                Random
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="image-url-row">
+          <span class="or-text">OR</span>
+          <mat-form-field appearance="outline" class="full-width">
+            <input matInput formControlName="imageUrl" placeholder="Paste image URL" (blur)="onImageUrlChange()" />
+          </mat-form-field>
+        </div>
+      </div>
+
+      <!-- Genres -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Genres</mat-label>
+        <mat-select formControlName="genres" multiple>
+          @for (genre of availableGenres; track genre) {
+          <mat-option [value]="genre">{{ genre }}</mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+
+      <!-- Artist Account (npub) -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Artist Account (npub)</mat-label>
+        <input matInput formControlName="artistNpub" placeholder="npub1... (optional)" />
+      </mat-form-field>
+
+      <!-- Artist Name -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Artist Name</mat-label>
+        <input matInput formControlName="artistName" placeholder="Leave blank to use your profile name" />
+      </mat-form-field>
+
+      <!-- AI-Generated Toggle -->
+      <div class="toggle-section">
+        <mat-slide-toggle formControlName="aiGenerated">
+          AI-Generated
+        </mat-slide-toggle>
+        <span class="toggle-hint">This track was assisted in part or generated in full by AI</span>
+      </div>
+
+      <!-- Zap Recipients Section -->
+      <div class="zap-recipients-section">
+        <div class="zap-header">
+          <div class="zap-title">
+            <mat-icon>bolt</mat-icon>
+            <span>Zap Recipients</span>
+          </div>
+          <button mat-stroked-button type="button" (click)="addZapSplit()">
+            <mat-icon>add</mat-icon>
+            Add Splits
+          </button>
+        </div>
+
+        <div class="splits-list">
+          @for (split of zapSplits(); track split.pubkey; let i = $index) {
+          <div class="split-item">
+            <div class="split-avatar">
+              @if (split.avatar) {
+              <img [src]="split.avatar" [alt]="split.name" />
+              } @else {
+              <mat-icon>person</mat-icon>
+              }
+            </div>
+            <div class="split-info">
+              <span class="split-name">{{ split.name }}</span>
+              <span class="split-role">{{ split.isUploader ? 'Uploader' : 'Collaborator' }} - receives {{
+                split.percentage }}% of zaps</span>
+            </div>
+            <div class="split-controls">
+              <input type="number" [value]="split.percentage" min="0" max="100"
+                (input)="updateSplitPercentage(i, +$any($event.target).value)" />
+              <span>%</span>
+              @if (!split.isUploader) {
+              <button mat-icon-button (click)="removeSplit(i)" aria-label="Remove split">
+                <mat-icon>close</mat-icon>
+              </button>
+              }
+            </div>
+          </div>
+          }
+        </div>
+
+        @if (totalSplitPercentage() !== 100) {
+        <div class="split-warning">
+          <mat-icon>warning</mat-icon>
+          <span>Total must equal 100% (currently {{ totalSplitPercentage() }}%)</span>
+        </div>
+        }
+
+        <p class="splits-hint">Click "Add Splits" to share zaps with collaborators.</p>
+      </div>
+
+      <!-- Advanced Settings -->
+      <mat-expansion-panel class="advanced-panel">
+        <mat-expansion-panel-header>
+          <mat-panel-title>Advanced Settings</mat-panel-title>
+        </mat-expansion-panel-header>
+
+        <div class="advanced-content">
+          <div class="row-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Album</mat-label>
+              <input matInput formControlName="album" placeholder="Album name" />
+            </mat-form-field>
+            <mat-form-field appearance="outline">
+              <mat-label>Track #</mat-label>
+              <input matInput formControlName="trackNumber" type="number" placeholder="1" />
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Release Date</mat-label>
+            <input matInput formControlName="releaseDate" type="date" />
+          </mat-form-field>
+
+          <div class="row-2">
+            <mat-form-field appearance="outline">
+              <mat-label>Language</mat-label>
+              <input matInput formControlName="language" placeholder="en" />
+              <mat-hint>ISO 639-1 code</mat-hint>
+            </mat-form-field>
+            <div class="checkbox-field">
+              <label class="field-label">Content Warning</label>
+              <mat-checkbox formControlName="explicitContent">Explicit content</mat-checkbox>
+            </div>
+          </div>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Lyrics</mat-label>
+            <textarea matInput formControlName="lyrics" rows="4" placeholder="Enter song lyrics..."></textarea>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Credits</mat-label>
+            <textarea matInput formControlName="credits" rows="3"
+              placeholder="Producer: John Doe&#10;Mix Engineer: Jane Smith&#10;Mastering: ..."></textarea>
+          </mat-form-field>
+        </div>
+      </mat-expansion-panel>
+
+      <!-- Terms of Service (only for new uploads) -->
+      @if (!isEditMode()) {
+      <div class="terms-section">
+        <mat-checkbox [checked]="agreedToTerms()" (change)="agreedToTerms.set($event.checked)">
+          I agree to the <a href="javascript:void(0)" (click)="showTermsDialog.set(true)">terms of service</a> and
+          verify copyright ownership
+        </mat-checkbox>
+        <p class="terms-hint">
+          By checking this box, you confirm that you own the copyright to this track or have the necessary rights to
+          share it, and you agree to Nostria's terms of service.
+        </p>
+      </div>
+
+      <!-- Upload Note -->
+      <div class="upload-note">
+        <strong>Note:</strong> Please do not close this window while uploading. Upload time may vary depending on file
+        size, typically taking up to a minute for larger files.
+      </div>
+      }
+    </form>
+  </div>
+
+  <div dialog-actions>
+    <button mat-stroked-button (click)="cancel()" [disabled]="isPublishing()">Cancel</button>
+    <button mat-flat-button (click)="submitTrack()"
+      [disabled]="!trackForm.valid || !audioUrl() || (!isEditMode() && !agreedToTerms()) || isPublishing() || totalSplitPercentage() !== 100">
+      @if (isPublishing()) {
+      <mat-spinner diameter="18"></mat-spinner>
+      {{ isEditMode() ? 'Saving...' : 'Publishing...' }}
+      } @else {
+      {{ isEditMode() ? 'Save Changes' : 'Publish Track' }}
+      }
+    </button>
+  </div>
+</app-custom-dialog>
+
+<!-- Terms Dialog -->
+@if (showTermsDialog()) {
+<app-music-terms-dialog (closed)="showTermsDialog.set(false)" />
+}

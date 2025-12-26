@@ -7,6 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Event, Filter } from 'nostr-tools';
@@ -17,6 +18,7 @@ import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { NostrRecord } from '../../../interfaces';
 
 const MUSIC_KIND = 36787;
@@ -47,6 +49,7 @@ export interface TrackItem {
     MatSlideToggleModule,
     MatProgressSpinnerModule,
     MatSnackBarModule,
+    MatDialogModule,
     DragDropModule,
     ReactiveFormsModule,
   ],
@@ -65,6 +68,7 @@ export class EditMusicPlaylistDialogComponent {
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
 
   // Media server availability
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
@@ -74,6 +78,7 @@ export class EditMusicPlaylistDialogComponent {
   isUploading = signal(false);
   isDraggingImage = signal(false);
   coverImage = signal<string | null>(null);
+  previousCoverImage = signal<string | null>(null); // Track original image for cleanup
   tracks = signal<TrackItem[]>([]);
   loadingTracks = signal(true);
 
@@ -120,6 +125,7 @@ export class EditMusicPlaylistDialogComponent {
 
           if (playlist.image) {
             this.coverImage.set(playlist.image);
+            this.previousCoverImage.set(playlist.image); // Track original for cleanup
           }
 
           // Load track details
@@ -318,6 +324,7 @@ export class EditMusicPlaylistDialogComponent {
   }
 
   private async handleImageFile(file: File): Promise<void> {
+    const oldImageUrl = this.previousCoverImage();
     this.isUploading.set(true);
     try {
       const servers = this.mediaService.mediaServers();
@@ -332,6 +339,13 @@ export class EditMusicPlaylistDialogComponent {
           this.coverImage.set(url);
           this.playlistForm.patchValue({ imageUrl: url });
           this.snackBar.open('Cover image uploaded', 'Close', { duration: 2000 });
+
+          // Prompt to delete old image if URL changed
+          if (oldImageUrl && oldImageUrl !== url) {
+            this.promptDeleteFile('cover image', oldImageUrl);
+          }
+          // Update previous image reference
+          this.previousCoverImage.set(url);
         }
       } else {
         this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
@@ -342,6 +356,61 @@ export class EditMusicPlaylistDialogComponent {
     } finally {
       this.isUploading.set(false);
     }
+  }
+
+  /**
+   * Extract SHA256 hash from a blossom URL
+   * URL format: https://server.com/<64-char-hex-hash>.<ext>
+   */
+  private extractHashFromUrl(url: string): string | null {
+    try {
+      const urlObj = new URL(url);
+      const pathname = urlObj.pathname;
+      // Extract the filename (last segment of path)
+      const segments = pathname.split('/');
+      const filename = segments[segments.length - 1];
+      // Remove extension and get the hash
+      const hashPart = filename.split('.')[0];
+      // Validate it looks like a SHA256 hash (64 hex characters)
+      if (/^[a-fA-F0-9]{64}$/.test(hashPart)) {
+        return hashPart;
+      }
+    } catch {
+      // Invalid URL
+    }
+    return null;
+  }
+
+  /**
+   * Prompt user to delete old file from blossom server
+   */
+  private promptDeleteFile(fileType: string, url: string): void {
+    const hash = this.extractHashFromUrl(url);
+    if (!hash) {
+      return; // Can't extract hash, skip deletion
+    }
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: `Delete old ${fileType}?`,
+        message: `You've uploaded a new ${fileType}. Would you like to delete the old one from the server to free up storage space?`,
+        confirmText: 'Delete',
+        cancelText: 'Keep',
+        confirmColor: 'warn'
+      }
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed) => {
+      if (confirmed) {
+        try {
+          await this.mediaService.deleteFile(hash);
+          this.snackBar.open(`Old ${fileType} deleted`, 'Close', { duration: 2000 });
+        } catch (error) {
+          console.error(`Failed to delete old ${fileType}:`, error);
+          this.snackBar.open(`Failed to delete old ${fileType}`, 'Close', { duration: 3000 });
+        }
+      }
+    });
   }
 
   onImageUrlChange(): void {

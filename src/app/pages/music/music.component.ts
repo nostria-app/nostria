@@ -17,7 +17,7 @@ import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
 import { CreateMusicPlaylistDialogComponent } from './create-music-playlist-dialog/create-music-playlist-dialog.component';
-import { UploadMusicTrackDialogComponent } from './upload-music-track-dialog/upload-music-track-dialog.component';
+import { MusicTrackDialogComponent } from './music-track-dialog/music-track-dialog.component';
 import { ImportRssDialogComponent } from './import-rss-dialog/import-rss-dialog.component';
 import { MusicPlaylist } from '../../services/music-playlist.service';
 
@@ -35,7 +35,7 @@ const SECTION_LIMIT = 12;
     MusicEventComponent,
     MusicPlaylistCardComponent,
     CreateMusicPlaylistDialogComponent,
-    UploadMusicTrackDialogComponent,
+    MusicTrackDialogComponent,
     ImportRssDialogComponent,
   ],
   templateUrl: './music.component.html',
