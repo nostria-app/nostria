@@ -42,6 +42,7 @@ import { Relay } from '../../../services/relays/relay';
 import { DiscoveryRelayService } from '../../../services/relays/discovery-relay';
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
 import { RelayAuthService } from '../../../services/relays/relay-auth.service';
+import { EventRepublishService } from '../../../services/event-republish.service';
 
 @Component({
   selector: 'app-relays-page',
@@ -81,6 +82,7 @@ export class RelaysComponent implements OnInit {
   private readonly discoveryRelay = inject(DiscoveryRelayService);
   private readonly data = inject(DataService);
   private readonly relaysService = inject(RelaysService);
+  private readonly eventRepublish = inject(EventRepublishService);
   readonly relayAuth = inject(RelayAuthService);
 
   followingRelayUrls = signal<string[]>([]);
@@ -544,6 +546,31 @@ export class RelaysComponent implements OnInit {
 
     await this.database.saveEvent(signedEvent);
     this.logger.debug('Saved relay list event to storage');
+
+    // Republish important events to all relays to ensure data is accessible
+    // This runs in the background and doesn't block the UI
+    this.republishImportantEventsInBackground();
+  }
+
+  /**
+   * Republish important events in the background when relay list changes.
+   * This ensures all important user data is synced to all their relays.
+   */
+  private async republishImportantEventsInBackground(): Promise<void> {
+    try {
+      this.logger.info('Starting background republish of important events');
+      const result = await this.eventRepublish.republishImportantEvents();
+      
+      if (result.success > 0) {
+        this.logger.info('Background republish completed', result);
+      }
+      
+      if (result.failed > 0) {
+        this.logger.warn('Some events failed to republish', { failed: result.failed });
+      }
+    } catch (error) {
+      this.logger.error('Failed to republish important events', error);
+    }
   }
 
   addBootstrapRelay(): void {

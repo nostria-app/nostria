@@ -90,17 +90,17 @@ export class SearchSettingsComponent {
       const event = await this.data.getEventByPubkeyAndKind(pubkey, SearchRelayListKind);
 
       if (event) {
+        // User has a 10007 event - respect their choice, even if empty
         const relayUrls = event.event.tags
           .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
           .map((tag: string[]) => tag[1]);
 
-        if (relayUrls.length > 0) {
-          this.searchRelay.setSearchRelays(relayUrls);
-          return;
-        }
+        // Set whatever the user has, including empty array
+        this.searchRelay.setSearchRelays(relayUrls);
+        return;
       }
 
-      // Fall back to local storage (which is handled by the service)
+      // No 10007 event found - fall back to local storage or defaults
       await this.searchRelay.load();
     } catch (error) {
       this.logger.error('Failed to load search relays', error);

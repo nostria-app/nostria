@@ -518,6 +518,8 @@ export class NostrService implements NostriaService {
         10001,               // 10001 - pinned notes
         kinds.RelayList,     // 10002 - relay configuration
         kinds.BookmarkList,  // 10003 - bookmarks
+        10007,               // Search relay list
+        kinds.DirectMessageRelaysList, // 10050 - DM relays
         10063,               // Media server list (BUD-03)
       ],
       authors: [pubkey],
@@ -594,6 +596,22 @@ export class NostrService implements NostriaService {
           this.logger.info('Updated bookmark list from subscription', {
             pubkey,
             bookmarkCount: event.tags.length,
+          });
+          break;
+        }
+
+        case 10007: {
+          this.logger.info('Updated search relay list from subscription', {
+            pubkey,
+            searchRelayCount: event.tags.filter(t => t[0] === 'relay').length,
+          });
+          break;
+        }
+
+        case kinds.DirectMessageRelaysList: {
+          this.logger.info('Updated DM relay list from subscription', {
+            pubkey,
+            dmRelayCount: event.tags.filter(t => t[0] === 'relay').length,
           });
           break;
         }
