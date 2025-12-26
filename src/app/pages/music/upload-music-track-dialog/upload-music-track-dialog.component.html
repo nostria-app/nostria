@@ -18,12 +18,6 @@
     <p class="dialog-subtitle">Share your music with the Nostr community and earn zaps</p>
 
     <form [formGroup]="trackForm">
-      <!-- Track Title -->
-      <mat-form-field appearance="outline" class="full-width">
-        <mat-label>Track Title</mat-label>
-        <input matInput formControlName="title" placeholder="Summer Nights" required />
-      </mat-form-field>
-
       <!-- Audio File -->
       <div class="audio-section">
         <label class="field-label">Audio File *</label>
@@ -54,6 +48,12 @@
           }
         </div>
       </div>
+
+      <!-- Track Title -->
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Track Title</mat-label>
+        <input matInput formControlName="title" placeholder="Summer Nights" required />
+      </mat-form-field>
 
       <!-- Album Art -->
       <div class="album-art-section">

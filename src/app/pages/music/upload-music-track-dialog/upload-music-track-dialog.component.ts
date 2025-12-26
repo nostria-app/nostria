@@ -319,7 +319,7 @@ export class UploadMusicTrackDialogComponent {
         const matchedGenres = metadata.common.genre
           .map(g => this.availableGenres.find(ag => ag.toLowerCase() === g.toLowerCase()))
           .filter((g): g is string => g !== undefined);
-        
+
         if (matchedGenres.length > 0) {
           this.trackForm.patchValue({ genres: matchedGenres });
         }
