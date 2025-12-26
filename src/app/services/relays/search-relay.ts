@@ -58,7 +58,8 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
   }
 
   /**
-   * Sets search relays and persists them to local storage
+   * Sets search relays and persists them to local storage.
+   * Users are allowed to have an empty search relay list.
    */
   setSearchRelays(relayUrls: string[]): void {
     try {
@@ -72,17 +73,12 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
         }
       });
 
-      if (validRelays.length === 0) {
-        this.logger.warn('No valid relay URLs provided, using default relays');
-        this.localStorage.removeItem(this.appState.SEARCH_RELAYS_STORAGE_KEY);
-        return;
-      }
-
+      // Save even if empty - user explicitly chose to have no search relays
       this.save(validRelays);
 
       this.logger.debug(`Saved ${validRelays.length} search relays to storage`);
 
-      // Reinitialize the service with new relays
+      // Reinitialize the service with new relays (or empty)
       this.init(validRelays);
     } catch (error) {
       this.logger.error('Error saving search relays to storage', error);
@@ -109,9 +105,10 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
   }
 
   /**
-   * Load search relays from kind 10007 event for a user
+   * Load search relays from kind 10007 event for a user.
+   * Returns null if no event exists (to distinguish from empty list).
    */
-  async loadFromEvent(pubkey: string): Promise<string[]> {
+  async loadFromEvent(pubkey: string): Promise<string[] | null> {
     try {
       // Try to get from database first
       const event = await this.database.getEventByPubkeyAndKind(pubkey, SearchRelayListKind);
@@ -121,16 +118,16 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
           .filter(tag => tag[0] === 'relay' && tag[1])
           .map(tag => tag[1]);
 
-        if (relayUrls.length > 0) {
-          this.logger.debug(`Loaded ${relayUrls.length} search relays from kind 10007 event`);
-          return relayUrls;
-        }
+        // Return whatever the user has, even if empty
+        this.logger.debug(`Loaded ${relayUrls.length} search relays from kind 10007 event`);
+        return relayUrls;
       }
     } catch (error) {
       this.logger.error('Error loading search relays from event', error);
     }
 
-    return this.DEFAULT_SEARCH_RELAYS;
+    // No event found
+    return null;
   }
 
   /**

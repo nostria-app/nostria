@@ -4,10 +4,12 @@ import { MAT_DIALOG_DATA, MatDialogModule, MatDialogRef } from '@angular/materia
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatIconModule } from '@angular/material/icon';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { RouterModule } from '@angular/router';
 import { LayoutService } from '../../../services/layout.service';
 import { LoggerService } from '../../../services/logger.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { EventRepublishService } from '../../../services/event-republish.service';
 
 export interface RelayDialogData {
   relayUrl: string;
@@ -46,6 +48,7 @@ interface RelayInfo {
     MatProgressSpinnerModule,
     MatSlideToggleModule,
     MatIconModule,
+    MatTooltipModule,
     RouterModule,
   ],
   template: `
@@ -189,27 +192,53 @@ interface RelayInfo {
           </div>
         }
 
-        <div class="migration-container">
-          <h3>Data Migration (Coming soon)</h3>
-          @if (accountState.hasActiveSubscription()) {
-            <p>Would you like to migrate your existing data to this relay?</p>
-            <mat-slide-toggle [checked]="migrateData()" [disabled]="true" (change)="migrateData.set($event.checked)">
-              Migrate data to this relay
-            </mat-slide-toggle>
-          } @else {
-            <div class="premium-feature">
-              <p>Data migration is a premium feature</p>
-              <button
-                [routerLink]="['/', 'premium']"
-                mat-dialog-close
-                mat-stroked-button
-                color="accent"
+        @if (!adding()) {
+          <div class="migration-container">
+            <h3>Data Migration</h3>
+            <p>Sync your important data to ensure it's accessible on this relay.</p>
+            
+            <div class="migration-actions">
+              <button 
+                mat-stroked-button 
+                (click)="migrateImportantEvents()" 
+                [disabled]="isMigrating()"
               >
-                Upgrade to Premium
+                @if (isMigrating()) {
+                  <ng-container>
+                    <mat-spinner [diameter]="18"></mat-spinner>
+                    Migrating...
+                  </ng-container>
+                } @else {
+                  <ng-container>
+                    <mat-icon>sync</mat-icon>
+                    Migrate Important Events
+                  </ng-container>
+                }
+              </button>
+              
+              <button 
+                mat-stroked-button 
+                [disabled]="true"
+                matTooltip="Coming soon - will migrate all your notes and content"
+              >
+                <mat-icon>cloud_upload</mat-icon>
+                Migrate All Events
               </button>
             </div>
-          }
-        </div>
+            
+            @if (migrationResult()) {
+              <div class="migration-result" [class.success]="migrationResult()!.failed === 0">
+                <mat-icon>{{ migrationResult()!.failed === 0 ? 'check_circle' : 'warning' }}</mat-icon>
+                <span>
+                  {{ migrationResult()!.success }} events synced
+                  @if (migrationResult()!.failed > 0) {
+                    , {{ migrationResult()!.failed }} failed
+                  }
+                </span>
+              </div>
+            }
+          </div>
+        }
       }
     </mat-dialog-content>
 
@@ -336,11 +365,49 @@ interface RelayInfo {
       font-style: italic;
       opacity: 0.8;
     }
+
+    .migration-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .migration-actions button {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .migration-actions mat-spinner {
+      margin-right: 4px;
+    }
+
+    .migration-result {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 16px;
+      padding: 12px;
+      border-radius: 8px;
+      background-color: var(--mat-sys-surface-container);
+    }
+
+    .migration-result.success {
+      background-color: var(--mat-success-color);
+      color: white;
+    }
+
+    .migration-result mat-icon {
+      flex-shrink: 0;
+    }
   `,
 })
 export class RelayInfoDialogComponent {
   private logger = inject(LoggerService);
   private dialogRef = inject(MatDialogRef<RelayInfoDialogComponent>);
+  private eventRepublish = inject(EventRepublishService);
   layout = inject(LayoutService);
   accountState = inject(AccountStateService);
 
@@ -352,6 +419,10 @@ export class RelayInfoDialogComponent {
   loading = signal<boolean>(true);
   error = signal<string | null>(null);
   migrateData = signal<boolean>(false);
+  
+  // Migration state
+  isMigrating = signal(false);
+  migrationResult = signal<{ success: number; failed: number; notFound: number } | null>(null);
   iconUrl = signal<string | null>(null);
   faviconUrl = signal<string | null>(null);
 
@@ -436,6 +507,33 @@ export class RelayInfoDialogComponent {
     const info = this.relayInfo();
     if (!info?.limitation) return false;
     return !!(info.limitation.payment_required || info.limitation.restricted_writes);
+  }
+
+  /**
+   * Migrate important events to all account relays
+   */
+  async migrateImportantEvents(): Promise<void> {
+    this.isMigrating.set(true);
+    this.migrationResult.set(null);
+
+    try {
+      const result = await this.eventRepublish.republishImportantEvents();
+      this.migrationResult.set({
+        success: result.success,
+        failed: result.failed,
+        notFound: result.notFound,
+      });
+      this.logger.info('Migration completed', result);
+    } catch (error) {
+      this.logger.error('Migration failed', error);
+      this.migrationResult.set({
+        success: 0,
+        failed: 1,
+        notFound: 0,
+      });
+    } finally {
+      this.isMigrating.set(false);
+    }
   }
 
   confirmAdd(): void {
