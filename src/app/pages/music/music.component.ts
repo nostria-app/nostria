@@ -4,7 +4,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
-import { Event, Filter, kinds } from 'nostr-tools';
+import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -260,7 +260,8 @@ export class MusicComponent implements OnDestroy {
   goToYourRecords(): void {
     const pubkey = this.currentPubkey();
     if (pubkey) {
-      this.router.navigate(['/music/artist', pubkey]);
+      const npub = nip19.npubEncode(pubkey);
+      this.router.navigate(['/music/artist', npub]);
     }
   }
 
