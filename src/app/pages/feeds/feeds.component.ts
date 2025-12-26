@@ -34,7 +34,7 @@ import {
   ConfirmDialogComponent,
   ConfirmDialogData,
 } from '../../components/confirm-dialog/confirm-dialog.component';
-import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
+import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FeedService, ColumnConfig } from '../../services/feed.service';
@@ -1542,8 +1542,11 @@ export class FeedsComponent implements OnDestroy {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   }
   openImageDialog(imageUrl: string, altText: string): void {
-    this.dialog.open(ImageDialogComponent, {
-      data: { imageUrl },
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: [{ url: imageUrl, type: 'image/jpeg', title: altText }],
+        initialIndex: 0,
+      },
       maxWidth: '100vw',
       maxHeight: '100vh',
       width: '100vw',

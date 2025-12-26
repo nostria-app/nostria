@@ -1,51 +1,48 @@
 <div class="media-preview-container" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
-  <div class="preview-header">
-    <div class="header-left">
-      @if (isImage()) {
-      <button mat-icon-button (click)="zoomIn()" aria-label="Zoom in">
-        <mat-icon>zoom_in</mat-icon>
-      </button>
-      <button mat-icon-button (click)="zoomOut()" aria-label="Zoom out">
-        <mat-icon>zoom_out</mat-icon>
-      </button>
-      <button mat-icon-button (click)="resetView()" aria-label="Reset view" class="hide-small">
-        <mat-icon>refresh</mat-icon>
-      </button>
-      <span class="zoom-level hide-small">{{ scale() * 100 }}%</span>
-      }
-    </div>
+  <!-- Top-left controls: zoom buttons -->
+  @if (isImage()) {
+  <div class="controls-left">
+    <button mat-icon-button (click)="zoomIn()" aria-label="Zoom in">
+      <mat-icon>zoom_in</mat-icon>
+    </button>
+    <button mat-icon-button (click)="zoomOut()" aria-label="Zoom out">
+      <mat-icon>zoom_out</mat-icon>
+    </button>
+    <button mat-icon-button (click)="resetView()" aria-label="Reset view">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    <span class="zoom-level">{{ scale() * 100 }}%</span>
+  </div>
+  }
 
-    <h2 class="preview-title hide-small">{{ currentMedia().title || 'Media' }}</h2>
-
-    @if (hasMultipleItems()) {
-    <div class="navigation-controls">
-      <button mat-icon-button (click)="previous()" [disabled]="!hasPrevious()" class="nav-button">
-        <mat-icon>chevron_left</mat-icon>
-      </button>
-
-      <span class="media-counter hide-small">
-        {{ currentIndex() + 1 }} / {{ mediaItems().length }}
-      </span>
-
-      <button mat-icon-button (click)="next()" [disabled]="!hasNext()" class="nav-button">
-        <mat-icon>chevron_right</mat-icon>
-      </button>
-    </div>
-    }
-
-    <button mat-icon-button (click)="close()">
+  <!-- Top-right control: close button -->
+  <div class="controls-right">
+    <button mat-icon-button (click)="close()" aria-label="Close dialog">
       <mat-icon>close</mat-icon>
     </button>
   </div>
 
-  <div class="preview-content" [ngClass]="{ 'video-content': isVideo() }">
+  <!-- Bottom center navigation: prev/next buttons -->
+  @if (hasMultipleItems()) {
+  <div class="controls-bottom">
+    <button mat-icon-button (click)="previous()" [disabled]="!hasPrevious()" aria-label="Previous image">
+      <mat-icon>chevron_left</mat-icon>
+    </button>
+    <span class="media-counter">{{ currentIndex() + 1 }} / {{ mediaItems().length }}</span>
+    <button mat-icon-button (click)="next()" [disabled]="!hasNext()" aria-label="Next image">
+      <mat-icon>chevron_right</mat-icon>
+    </button>
+  </div>
+  }
+
+  <div class="preview-content" [class.video-content]="isVideo()">
     @if (isImage()) {
     <div class="image-container" #containerElement (mousedown)="onPointerDown($event)"
       (mousemove)="onPointerMove($event)" (mouseup)="onPointerUp()" (mouseleave)="onPointerUp()"
       (touchstart)="onPointerDown($event)" (touchmove)="onPointerMove($event)" (touchend)="onPointerUp()"
       (touchcancel)="onPointerUp()" (wheel)="onWheel($event)">
       <img #imageElement [src]="currentMedia().url" [alt]="currentMedia().title || 'Media'"
-        title="{{ currentMedia().title || 'Media' }}" class="preview-image" [class.draggable]="scale() > 1"
+        class="preview-image" [class.draggable]="scale() > 1"
         [style.transform]="getTransformStyle()"
         [style.cursor]="isDragging() ? 'grabbing' : scale() > 1 ? 'grab' : 'default'" draggable="false" />
     </div>
