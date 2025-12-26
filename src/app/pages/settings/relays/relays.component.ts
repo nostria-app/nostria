@@ -424,12 +424,13 @@ export class RelaysComponent implements OnInit {
     });
   }
 
-  viewRelayInfo(relayUrl: string): void {
+  viewRelayInfo(relayUrl: string, showMigration = true): void {
     const dialogRef = this.dialog.open(RelayInfoDialogComponent, {
       width: '500px',
       data: {
         relayUrl: relayUrl,
         adding: false, // Set to false to indicate viewing only
+        showMigration: showMigration,
       },
     });
   }
