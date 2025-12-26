@@ -33,7 +33,7 @@ export class DataResolver implements Resolve<EventData | null> {
       return null;
     }
 
-    let id = route.params['id'];
+    let id = route.params['id'] || route.params['pubkey'];
 
     // For username routes, resolve the username to pubkey
     const username = route.params['username'];
