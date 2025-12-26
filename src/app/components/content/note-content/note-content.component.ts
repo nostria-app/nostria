@@ -97,7 +97,7 @@ export class NoteContentComponent implements OnDestroy {
   private readonly SWIPE_THRESHOLD = 50;
 
   // Computed: Group consecutive images into display items for Instagram-style carousel
-  // Images separated only by linebreaks are treated as a single group
+  // Images separated only by linebreaks or whitespace are treated as a single group
   displayItems = computed<DisplayItem[]>(() => {
     const tokens = this.contentTokens();
     const items: DisplayItem[] = [];
@@ -108,13 +108,15 @@ export class NoteContentComponent implements OnDestroy {
     for (const token of tokens) {
       const isImage = token.type === 'image' || token.type === 'base64-image';
       const isLinebreak = token.type === 'linebreak';
+      // Check if it's a whitespace-only text token (spaces between images)
+      const isWhitespaceOnly = token.type === 'text' && token.content.trim() === '';
 
       if (isImage) {
-        // Add to current image group, discard any pending linebreaks between images
+        // Add to current image group, discard any pending linebreaks/whitespace between images
         currentImageGroup.push(token);
         pendingLinebreaks = [];
-      } else if (isLinebreak && currentImageGroup.length > 0) {
-        // We're in an image group and hit a linebreak - save it temporarily
+      } else if ((isLinebreak || isWhitespaceOnly) && currentImageGroup.length > 0) {
+        // We're in an image group and hit a linebreak or whitespace - save it temporarily
         // in case more images follow
         pendingLinebreaks.push(token);
       } else {
