@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, inject, signal, computed, HostListener, ViewChild, ElementRef, OnDestroy } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -26,9 +26,10 @@ interface MediaPreviewData {
   host: {
     '(swiperight)': 'onSwipeRight()',
     '(swipeleft)': 'onSwipeLeft()',
+    '(mousemove)': 'onMouseMove()',
   },
 })
-export class MediaPreviewDialogComponent {
+export class MediaPreviewDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<MediaPreviewDialogComponent>);
   data: MediaPreviewData = inject(MAT_DIALOG_DATA);
 
@@ -39,6 +40,11 @@ export class MediaPreviewDialogComponent {
   private touchStartX = 0;
   private touchEndX = 0;
   private readonly SWIPE_THRESHOLD = 50;
+
+  // Auto-hide controls after inactivity
+  private hideControlsTimer: ReturnType<typeof setTimeout> | null = null;
+  private readonly HIDE_CONTROLS_DELAY = 3000; // 3 seconds
+  controlsVisible = signal(true);
 
   isVideoLoading = true;
 
@@ -88,15 +94,43 @@ export class MediaPreviewDialogComponent {
     if (this.data.initialIndex !== undefined) {
       this.currentIndex.set(this.data.initialIndex);
     }
+    // Start the auto-hide timer
+    this.resetHideControlsTimer();
+  }
+
+  ngOnDestroy(): void {
+    this.clearHideControlsTimer();
+  }
+
+  // Auto-hide controls management
+  private resetHideControlsTimer(): void {
+    this.clearHideControlsTimer();
+    this.controlsVisible.set(true);
+    this.hideControlsTimer = setTimeout(() => {
+      this.controlsVisible.set(false);
+    }, this.HIDE_CONTROLS_DELAY);
+  }
+
+  private clearHideControlsTimer(): void {
+    if (this.hideControlsTimer) {
+      clearTimeout(this.hideControlsTimer);
+      this.hideControlsTimer = null;
+    }
+  }
+
+  onMouseMove(): void {
+    this.resetHideControlsTimer();
   }
 
   // Zoom controls
   zoomIn(): void {
     this.scale.update(current => Math.min(current + 0.25, 5));
+    this.resetHideControlsTimer();
   }
 
   zoomOut(): void {
     this.scale.update(current => Math.max(current - 0.25, 0.5));
+    this.resetHideControlsTimer();
   }
 
   resetView(): void {
