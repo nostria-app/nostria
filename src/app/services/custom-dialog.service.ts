@@ -70,10 +70,10 @@ export class CustomDialogRef<T = unknown, R = unknown> {
     // Generate a unique state identifier for this dialog
     const dialogStateId = `dialog-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-    // Replace the current history state with one that includes our dialog marker
-    // We use replaceState (not pushState) so closing the dialog just goes back
-    // to the actual previous page, not an intermediate dialog state
-    window.history.replaceState({ dialogId: dialogStateId, dialogOpen: true }, '');
+    // Push a new history state for the dialog
+    // This way, back gesture/button will pop this state (closing the dialog)
+    // without navigating away from the current page
+    window.history.pushState({ dialogId: dialogStateId, dialogOpen: true }, '');
     this.historyStatePushed = true;
 
     // Listen for popstate (back button/gesture)
@@ -100,14 +100,11 @@ export class CustomDialogRef<T = unknown, R = unknown> {
       this.popstateHandler = null;
     }
 
-    // Clear the dialog marker from history state (we used replaceState, not pushState)
-    if (this.historyStatePushed && typeof window !== 'undefined') {
+    // If closed programmatically (not via back button), we need to go back
+    // in history to remove the state we pushed when opening
+    if (this.historyStatePushed && typeof window !== 'undefined' && !this._closedViaBackButton) {
       this.historyStatePushed = false;
-      // Remove the dialog marker from current state
-      const currentState = window.history.state || {};
-      delete currentState.dialogId;
-      delete currentState.dialogOpen;
-      window.history.replaceState(currentState, '');
+      window.history.back();
     }
   }
 
