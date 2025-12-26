@@ -73,6 +73,8 @@ export class UploadMusicTrackDialogComponent {
   isPublishing = signal(false);
   isUploadingAudio = signal(false);
   isUploadingImage = signal(false);
+  isDraggingAudio = signal(false);
+  isDraggingImage = signal(false);
   audioFile = signal<File | null>(null);
   audioUrl = signal<string | null>(null);
   coverImage = signal<string | null>(null);
@@ -194,39 +196,82 @@ export class UploadMusicTrackDialogComponent {
 
     input.onchange = async () => {
       const file = input.files?.[0];
-      if (!file) return;
-
-      this.audioFile.set(file);
-
-      // Upload the audio file
-      this.isUploadingAudio.set(true);
-      try {
-        const servers = this.mediaService.mediaServers();
-        if (servers.length === 0) {
-          this.snackBar.open('No media servers available', 'Close', { duration: 3000 });
-          return;
-        }
-        const result = await this.mediaService.uploadFile(file, false, servers);
-        if (result.status === 'success' || result.status === 'duplicate') {
-          const url = result.item?.url;
-          if (url) {
-            this.audioUrl.set(url);
-            this.snackBar.open('Audio uploaded successfully', 'Close', { duration: 2000 });
-          }
-        } else {
-          this.snackBar.open('Failed to upload audio', 'Close', { duration: 3000 });
-          this.audioFile.set(null);
-        }
-      } catch (error) {
-        console.error('Error uploading audio:', error);
-        this.snackBar.open('Error uploading audio', 'Close', { duration: 3000 });
-        this.audioFile.set(null);
-      } finally {
-        this.isUploadingAudio.set(false);
+      if (file) {
+        await this.handleAudioFile(file);
       }
     };
 
     input.click();
+  }
+
+  onAudioDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDraggingAudio.set(true);
+  }
+
+  onAudioDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDraggingAudio.set(false);
+  }
+
+  async onAudioDrop(event: DragEvent): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDraggingAudio.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    if (!file.type.startsWith('audio/')) {
+      this.snackBar.open('Please drop an audio file', 'Close', { duration: 3000 });
+      return;
+    }
+
+    await this.handleAudioFile(file);
+  }
+
+  private async handleAudioFile(file: File): Promise<void> {
+    this.audioFile.set(file);
+
+    // Auto-fill title from filename if empty
+    const currentTitle = this.trackForm.get('title')?.value;
+    if (!currentTitle) {
+      // Remove file extension and clean up the filename
+      const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
+      // Replace underscores and hyphens with spaces, then trim
+      const cleanTitle = fileName.replace(/[_-]/g, ' ').trim();
+      this.trackForm.patchValue({ title: cleanTitle });
+    }
+
+    // Upload the audio file
+    this.isUploadingAudio.set(true);
+    try {
+      const servers = this.mediaService.mediaServers();
+      if (servers.length === 0) {
+        this.snackBar.open('No media servers available', 'Close', { duration: 3000 });
+        return;
+      }
+      const result = await this.mediaService.uploadFile(file, false, servers);
+      if (result.status === 'success' || result.status === 'duplicate') {
+        const url = result.item?.url;
+        if (url) {
+          this.audioUrl.set(url);
+          this.snackBar.open('Audio uploaded successfully', 'Close', { duration: 2000 });
+        }
+      } else {
+        this.snackBar.open('Failed to upload audio', 'Close', { duration: 3000 });
+        this.audioFile.set(null);
+      }
+    } catch (error) {
+      console.error('Error uploading audio:', error);
+      this.snackBar.open('Error uploading audio', 'Close', { duration: 3000 });
+      this.audioFile.set(null);
+    } finally {
+      this.isUploadingAudio.set(false);
+    }
   }
 
   async uploadImage(): Promise<void> {
@@ -236,34 +281,67 @@ export class UploadMusicTrackDialogComponent {
 
     input.onchange = async () => {
       const file = input.files?.[0];
-      if (!file) return;
-
-      this.isUploadingImage.set(true);
-      try {
-        const servers = this.mediaService.mediaServers();
-        if (servers.length === 0) {
-          this.snackBar.open('No media servers available', 'Close', { duration: 3000 });
-          return;
-        }
-        const result = await this.mediaService.uploadFile(file, false, servers);
-        if (result.status === 'success' || result.status === 'duplicate') {
-          const url = result.item?.url;
-          if (url) {
-            this.coverImage.set(url);
-            this.trackForm.patchValue({ imageUrl: url });
-          }
-        } else {
-          this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
-        }
-      } catch (error) {
-        console.error('Error uploading image:', error);
-        this.snackBar.open('Error uploading image', 'Close', { duration: 3000 });
-      } finally {
-        this.isUploadingImage.set(false);
+      if (file) {
+        await this.handleImageFile(file);
       }
     };
 
     input.click();
+  }
+
+  onImageDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDraggingImage.set(true);
+  }
+
+  onImageDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDraggingImage.set(false);
+  }
+
+  async onImageDrop(event: DragEvent): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDraggingImage.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      this.snackBar.open('Please drop an image file', 'Close', { duration: 3000 });
+      return;
+    }
+
+    await this.handleImageFile(file);
+  }
+
+  private async handleImageFile(file: File): Promise<void> {
+    this.isUploadingImage.set(true);
+    try {
+      const servers = this.mediaService.mediaServers();
+      if (servers.length === 0) {
+        this.snackBar.open('No media servers available', 'Close', { duration: 3000 });
+        return;
+      }
+      const result = await this.mediaService.uploadFile(file, false, servers);
+      if (result.status === 'success' || result.status === 'duplicate') {
+        const url = result.item?.url;
+        if (url) {
+          this.coverImage.set(url);
+          this.trackForm.patchValue({ imageUrl: url });
+        }
+      } else {
+        this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      this.snackBar.open('Error uploading image', 'Close', { duration: 3000 });
+    } finally {
+      this.isUploadingImage.set(false);
+    }
   }
 
   onImageUrlChange(): void {

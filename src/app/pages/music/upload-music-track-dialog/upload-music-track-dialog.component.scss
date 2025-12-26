@@ -50,6 +50,51 @@ mat-dialog-content {
   margin-bottom: 1.5rem;
 
   .audio-upload {
+    border-radius: var(--mat-sys-corner-medium);
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+
+    &.drag-over {
+      .drop-zone {
+        border-color: var(--mat-sys-primary);
+        background-color: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+      }
+    }
+
+    .drop-zone {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 2rem 1rem;
+      border: 2px dashed var(--mat-sys-outline-variant);
+      border-radius: var(--mat-sys-corner-medium);
+      cursor: pointer;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+
+      &:hover {
+        border-color: var(--mat-sys-outline);
+        background-color: var(--mat-sys-surface-container);
+      }
+
+      mat-icon {
+        font-size: 2.5rem;
+        width: 2.5rem;
+        height: 2.5rem;
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .drop-text {
+        color: var(--mat-sys-on-surface);
+        font-size: 0.9375rem;
+      }
+
+      .or-text {
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 0.8125rem;
+      }
+    }
+
     .choose-file-btn {
       display: flex;
       align-items: center;
@@ -101,6 +146,19 @@ mat-dialog-content {
 .album-art-section {
   margin-bottom: 1.5rem;
 
+  .album-art-drop-zone {
+    border: 2px dashed transparent;
+    border-radius: var(--mat-sys-corner-medium);
+    padding: 0.75rem;
+    margin: -0.75rem;
+    transition: border-color 0.2s ease, background-color 0.2s ease;
+
+    &.drag-over {
+      border-color: var(--mat-sys-primary);
+      background-color: color-mix(in srgb, var(--mat-sys-primary) 10%, transparent);
+    }
+  }
+
   .album-art-row {
     display: flex;
     gap: 1rem;
@@ -130,6 +188,11 @@ mat-dialog-content {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
+
+    .drop-hint {
+      font-size: 0.8125rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
 
     button {
       justify-content: flex-start;

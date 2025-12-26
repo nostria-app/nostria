@@ -27,7 +27,8 @@
       <!-- Audio File -->
       <div class="audio-section">
         <label class="field-label">Audio File *</label>
-        <div class="audio-upload">
+        <div class="audio-upload" [class.drag-over]="isDraggingAudio()" (dragover)="onAudioDragOver($event)"
+          (dragleave)="onAudioDragLeave($event)" (drop)="onAudioDrop($event)">
           @if (isUploadingAudio()) {
           <div class="uploading-indicator">
             <mat-spinner diameter="24"></mat-spinner>
@@ -42,10 +43,14 @@
             </button>
           </div>
           } @else {
-          <button mat-stroked-button type="button" (click)="selectAudioFile()" class="choose-file-btn">
-            <span>Choose File</span>
-            <span class="no-file">No file chosen</span>
-          </button>
+          <div class="drop-zone" (click)="selectAudioFile()">
+            <mat-icon>cloud_upload</mat-icon>
+            <span class="drop-text">Drag & drop audio file here</span>
+            <span class="or-text">or</span>
+            <button mat-stroked-button type="button">
+              Browse Files
+            </button>
+          </div>
           }
         </div>
       </div>
@@ -53,26 +58,30 @@
       <!-- Album Art -->
       <div class="album-art-section">
         <label class="field-label">Album Art</label>
-        <div class="album-art-row">
-          <div class="cover-preview"
-            [style.background-image]="coverImage() ? 'url(' + coverImage() + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')'">
-            @if (!coverImage()) {
-            <mat-icon>image</mat-icon>
-            }
-          </div>
-          <div class="cover-actions">
-            <button mat-stroked-button type="button" (click)="uploadImage()" [disabled]="isUploadingImage()">
-              @if (isUploadingImage()) {
-              <mat-spinner diameter="18"></mat-spinner>
-              } @else {
-              <mat-icon>photo_library</mat-icon>
+        <div class="album-art-drop-zone" [class.drag-over]="isDraggingImage()" (dragover)="onImageDragOver($event)"
+          (dragleave)="onImageDragLeave($event)" (drop)="onImageDrop($event)">
+          <div class="album-art-row">
+            <div class="cover-preview"
+              [style.background-image]="coverImage() ? 'url(' + coverImage() + ')' : 'linear-gradient(135deg, ' + currentGradient() + ')'">
+              @if (!coverImage()) {
+              <mat-icon>image</mat-icon>
               }
-              Upload Image
-            </button>
-            <button mat-stroked-button type="button" (click)="randomizeGradient()">
-              <mat-icon>auto_awesome</mat-icon>
-              Random
-            </button>
+            </div>
+            <div class="cover-actions">
+              <span class="drop-hint">Drag & drop image here or</span>
+              <button mat-stroked-button type="button" (click)="uploadImage()" [disabled]="isUploadingImage()">
+                @if (isUploadingImage()) {
+                <mat-spinner diameter="18"></mat-spinner>
+                } @else {
+                <mat-icon>photo_library</mat-icon>
+                }
+                Upload Image
+              </button>
+              <button mat-stroked-button type="button" (click)="randomizeGradient()">
+                <mat-icon>auto_awesome</mat-icon>
+                Random
+              </button>
+            </div>
           </div>
         </div>
         <div class="image-url-row">
