@@ -12,6 +12,7 @@ import { MatExpansionModule } from '@angular/material/expansion';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Event } from 'nostr-tools';
+import { parseBlob, selectCover } from 'music-metadata';
 import { MediaService } from '../../../services/media.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { NostrService } from '../../../services/nostr.service';
@@ -236,15 +237,8 @@ export class UploadMusicTrackDialogComponent {
   private async handleAudioFile(file: File): Promise<void> {
     this.audioFile.set(file);
 
-    // Auto-fill title from filename if empty
-    const currentTitle = this.trackForm.get('title')?.value;
-    if (!currentTitle) {
-      // Remove file extension and clean up the filename
-      const fileName = file.name.replace(/\.[^/.]+$/, ''); // Remove extension
-      // Replace underscores and hyphens with spaces, then trim
-      const cleanTitle = fileName.replace(/[_-]/g, ' ').trim();
-      this.trackForm.patchValue({ title: cleanTitle });
-    }
+    // Extract metadata from audio file (title, album art, etc.)
+    await this.extractAudioMetadata(file);
 
     // Upload the audio file
     this.isUploadingAudio.set(true);
@@ -271,6 +265,71 @@ export class UploadMusicTrackDialogComponent {
       this.audioFile.set(null);
     } finally {
       this.isUploadingAudio.set(false);
+    }
+  }
+
+  private async extractAudioMetadata(file: File): Promise<void> {
+    try {
+      const metadata = await parseBlob(file);
+
+      // Auto-fill title from metadata or filename if empty
+      const currentTitle = this.trackForm.get('title')?.value;
+      if (!currentTitle) {
+        const title = metadata.common.title;
+        if (title) {
+          this.trackForm.patchValue({ title });
+        } else {
+          // Fallback to filename
+          const fileName = file.name.replace(/\.[^/.]+$/, '');
+          const cleanTitle = fileName.replace(/[_-]/g, ' ').trim();
+          this.trackForm.patchValue({ title: cleanTitle });
+        }
+      }
+
+      // Auto-fill artist if empty
+      const currentArtist = this.trackForm.get('artist')?.value;
+      if (!currentArtist && metadata.common.artist) {
+        this.trackForm.patchValue({ artist: metadata.common.artist });
+      }
+
+      // Auto-fill album if empty
+      const currentAlbum = this.trackForm.get('album')?.value;
+      if (!currentAlbum && metadata.common.album) {
+        this.trackForm.patchValue({ album: metadata.common.album });
+      }
+
+      // Extract and upload album art if no cover image is set
+      if (!this.coverImage()) {
+        const cover = selectCover(metadata.common.picture);
+        if (cover) {
+          await this.uploadExtractedCoverArt(cover);
+        }
+      }
+    } catch (error) {
+      console.error('Error extracting audio metadata:', error);
+      // Fallback to filename for title
+      const currentTitle = this.trackForm.get('title')?.value;
+      if (!currentTitle) {
+        const fileName = file.name.replace(/\.[^/.]+$/, '');
+        const cleanTitle = fileName.replace(/[_-]/g, ' ').trim();
+        this.trackForm.patchValue({ title: cleanTitle });
+      }
+    }
+  }
+
+  private async uploadExtractedCoverArt(cover: { format: string; data: Uint8Array }): Promise<void> {
+    try {
+      // Convert Uint8Array to Blob/File - copy to regular ArrayBuffer for compatibility
+      const buffer = new Uint8Array(cover.data).buffer;
+      const blob = new Blob([buffer], { type: cover.format });
+      const extension = cover.format.split('/')[1] || 'jpg';
+      const file = new File([blob], `cover.${extension}`, { type: cover.format });
+
+      // Upload the cover art
+      await this.handleImageFile(file);
+      this.snackBar.open('Album art extracted and uploaded', 'Close', { duration: 2000 });
+    } catch (error) {
+      console.error('Error uploading extracted cover art:', error);
     }
   }
 
