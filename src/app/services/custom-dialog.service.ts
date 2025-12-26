@@ -100,12 +100,10 @@ export class CustomDialogRef<T = unknown, R = unknown> {
       this.popstateHandler = null;
     }
 
-    // If closed programmatically (not via back button), we need to go back
-    // in history to remove the state we pushed when opening
-    if (this.historyStatePushed && typeof window !== 'undefined' && !this._closedViaBackButton) {
-      this.historyStatePushed = false;
-      window.history.back();
-    }
+    // Note: We intentionally don't call history.back() when closing programmatically.
+    // Calling history.back() would cause actual page navigation which is not desired.
+    // The orphan history state is harmless - worst case user needs an extra back press.
+    this.historyStatePushed = false;
   }
 
   /**
