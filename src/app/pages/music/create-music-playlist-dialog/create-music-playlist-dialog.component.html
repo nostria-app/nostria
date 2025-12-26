@@ -32,8 +32,15 @@
           autocomplete="off"></textarea>
       </mat-form-field>
 
-      <div class="cover-section">
+      <div class="cover-section" [class.drag-over]="isDraggingImage()" (dragover)="onImageDragOver($event)"
+        (dragleave)="onImageDragLeave($event)" (drop)="onImageDrop($event)">
         <span class="cover-label">Cover Image</span>
+        @if (isDraggingImage()) {
+        <div class="drag-overlay">
+          <mat-icon>add_photo_alternate</mat-icon>
+          <span>Drop image here</span>
+        </div>
+        }
         <div class="cover-row">
           <div class="cover-preview"
             [style.background]="coverImage() ? 'url(' + coverImage() + ')' : currentGradient()">
