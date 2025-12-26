@@ -84,10 +84,11 @@
             <span class="track-duration-header">
               <mat-icon>schedule</mat-icon>
             </span>
+            <span class="track-menu-header"></span>
           </div>
 
           <!-- Track List -->
-          <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+
           <div class="track-list" role="list">
             @for (track of tracks(); track track.id; let i = $index) {
             <div class="track-row" role="listitem" tabindex="0" (click)="playTrack(i)" (keydown.enter)="playTrack(i)">
