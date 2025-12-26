@@ -323,6 +323,16 @@
   transition: max-height 0.3s ease, padding 0.3s ease, border-color 0.3s ease, min-height 0.3s ease;
   isolation: isolate; // Create stacking context to prevent Material ripple from bleeding through
 
+  // The projected content (div[dialog-actions]) needs to also be flex with gap
+  // Use ::ng-deep to pierce view encapsulation for projected content
+  ::ng-deep>[dialog-actions] {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+  }
+
   // When it has visible child elements (buttons), expand
   // Using :has() to check for actual button/element children
   &:has(button),
