@@ -205,7 +205,9 @@ export class MediaDetailsComponent {
       },
       maxWidth: '100vw',
       maxHeight: '100vh',
-      panelClass: 'media-preview-dialog',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
     });
   }
 

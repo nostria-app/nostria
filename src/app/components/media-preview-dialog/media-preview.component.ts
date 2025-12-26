@@ -1,5 +1,4 @@
 import { Component, inject, signal, computed, HostListener, ViewChild, ElementRef } from '@angular/core';
-import { CommonModule } from '@angular/common';
 import { MAT_DIALOG_DATA, MatDialogRef, MatDialogModule } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -21,8 +20,7 @@ interface MediaPreviewData {
 
 @Component({
   selector: 'app-media-preview-dialog',
-  standalone: true,
-  imports: [CommonModule, MatDialogModule, MatButtonModule, MatIconModule, InlineVideoPlayerComponent],
+  imports: [MatDialogModule, MatButtonModule, MatIconModule, InlineVideoPlayerComponent],
   templateUrl: './media-preview.component.html',
   styleUrls: ['./media-preview.component.scss'],
   host: {

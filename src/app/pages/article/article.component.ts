@@ -31,7 +31,7 @@ import { UrlUpdateService } from '../../services/url-update.service';
 import { Cache } from '../../services/cache';
 import { BookmarkService } from '../../services/bookmark.service';
 import { AccountStateService } from '../../services/account-state.service';
-import { ImageDialogComponent } from '../../components/image-dialog/image-dialog.component';
+import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { ShareArticleDialogComponent, ShareArticleDialogData } from '../../components/share-article-dialog/share-article-dialog.component';
 import { NostrRecord } from '../../interfaces';
 import { ExternalLinkHandlerService } from '../../services/external-link-handler.service';
@@ -499,8 +499,11 @@ export class ArticleComponent implements OnDestroy {
   }
 
   private openImageDialog(imageUrl: string): void {
-    this.dialog.open(ImageDialogComponent, {
-      data: { imageUrl },
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: [{ url: imageUrl, type: 'image/jpeg', title: 'Article image' }],
+        initialIndex: 0,
+      },
       maxWidth: '100vw',
       maxHeight: '100vh',
       width: '100vw',

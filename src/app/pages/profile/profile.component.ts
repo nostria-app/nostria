@@ -654,7 +654,9 @@ export class ProfileComponent {
         },
         maxWidth: '100vw',
         maxHeight: '100vh',
-        panelClass: 'profile-picture-dialog',
+        width: '100vw',
+        height: '100vh',
+        panelClass: 'image-dialog-panel',
       });
 
       this.logger.debug('Opened profile picture dialog');

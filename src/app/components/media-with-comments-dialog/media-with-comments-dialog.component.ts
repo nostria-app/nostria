@@ -11,7 +11,6 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { Event } from 'nostr-tools';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { BookmarkService } from '../../services/bookmark.service';
-import { ImageDialogComponent } from '../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../media-preview-dialog/media-preview.component';
 import { EventMenuComponent } from '../event/event-menu/event-menu.component';
 import { InlineVideoPlayerComponent } from '../inline-video-player/inline-video-player.component';
@@ -256,14 +255,16 @@ export class MediaWithCommentsDialogComponent {
         },
         maxWidth: '100vw',
         maxHeight: '100vh',
-        panelClass: 'media-preview-dialog',
+        width: '100vw',
+        height: '100vh',
+        panelClass: 'image-dialog-panel',
       });
     } else if (imageUrls.length === 1) {
-      // Single image - use ImageDialogComponent
-      this.dialog.open(ImageDialogComponent, {
+      // Single image - use unified MediaPreviewDialogComponent
+      this.dialog.open(MediaPreviewDialogComponent, {
         data: {
-          imageUrl: imageUrls[0],
-          alt: this.title() || 'Photo'
+          mediaItems: [{ url: imageUrls[0], type: 'image/jpeg', title: this.title() || 'Photo' }],
+          initialIndex: 0,
         },
         maxWidth: '100vw',
         maxHeight: '100vh',

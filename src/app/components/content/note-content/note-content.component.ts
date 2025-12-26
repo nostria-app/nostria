@@ -6,7 +6,6 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
-import { ImageDialogComponent } from '../../image-dialog/image-dialog.component';
 import { MediaPreviewDialogComponent } from '../../media-preview-dialog/media-preview.component';
 import { ContentToken } from '../../../services/parsing.service';
 import { FormatService } from '../../../services/format/format.service';
@@ -569,12 +568,17 @@ export class NoteContentComponent implements OnDestroy {
         },
         maxWidth: '100vw',
         maxHeight: '100vh',
-        panelClass: 'media-preview-dialog',
+        width: '100vw',
+        height: '100vh',
+        panelClass: 'image-dialog-panel',
       });
     } else {
-      // Single image - use ImageDialogComponent
-      this.dialog.open(ImageDialogComponent, {
-        data: { imageUrl: images[0].content },
+      // Single image - use unified MediaPreviewDialogComponent
+      this.dialog.open(MediaPreviewDialogComponent, {
+        data: {
+          mediaItems: [{ url: images[0].content, type: 'image/jpeg', title: 'Image' }],
+          initialIndex: 0,
+        },
         maxWidth: '100vw',
         maxHeight: '100vh',
         width: '100vw',
@@ -595,8 +599,11 @@ export class NoteContentComponent implements OnDestroy {
     }
 
     console.log('Opening image dialog for URL:', imageUrl);
-    this.dialog.open(ImageDialogComponent, {
-      data: { imageUrl },
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaItems: [{ url: imageUrl, type: 'image/jpeg', title: 'Image' }],
+        initialIndex: 0,
+      },
       maxWidth: '100vw',
       maxHeight: '100vh',
       width: '100vw',
