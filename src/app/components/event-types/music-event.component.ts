@@ -17,11 +17,11 @@ import { AccountStateService } from '../../services/account-state.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
-import { EditMusicTrackDialogComponent, EditMusicTrackDialogData } from '../../pages/music/edit-music-track-dialog/edit-music-track-dialog.component';
+import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/music/music-track-dialog/music-track-dialog.component';
 
 @Component({
   selector: 'app-music-event',
-  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, EditMusicTrackDialogComponent],
+  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, MusicTrackDialogComponent],
   template: `
     <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
       [attr.aria-label]="'View ' + title()">
@@ -103,7 +103,7 @@ import { EditMusicTrackDialogComponent, EditMusicTrackDialogData } from '../../p
     </div>
     
     @if (showEditDialog() && editDialogData()) {
-      <app-edit-music-track-dialog
+      <app-music-track-dialog
         [data]="editDialogData()!"
         (closed)="onEditDialogClosed($event)"
       />
@@ -292,7 +292,7 @@ export class MusicEventComponent {
 
   // Edit dialog state
   showEditDialog = signal(false);
-  editDialogData = signal<EditMusicTrackDialogData | null>(null);
+  editDialogData = signal<MusicTrackDialogData | null>(null);
 
   // Check if this is the current user's track
   isOwnTrack = computed(() => {
@@ -542,7 +542,7 @@ export class MusicEventComponent {
     this.showEditDialog.set(true);
   }
 
-  onEditDialogClosed(result: { updated: boolean; event?: Event } | null): void {
+  onEditDialogClosed(result: { published: boolean; updated?: boolean; event?: Event } | null): void {
     this.showEditDialog.set(false);
     this.editDialogData.set(null);
 
