@@ -286,16 +286,43 @@ export class UploadMusicTrackDialogComponent {
         }
       }
 
-      // Auto-fill artist if empty
-      const currentArtist = this.trackForm.get('artist')?.value;
+      // Auto-fill artist name if empty
+      const currentArtist = this.trackForm.get('artistName')?.value;
       if (!currentArtist && metadata.common.artist) {
-        this.trackForm.patchValue({ artist: metadata.common.artist });
+        this.trackForm.patchValue({ artistName: metadata.common.artist });
       }
 
       // Auto-fill album if empty
       const currentAlbum = this.trackForm.get('album')?.value;
       if (!currentAlbum && metadata.common.album) {
         this.trackForm.patchValue({ album: metadata.common.album });
+      }
+
+      // Auto-fill year/release date if empty
+      const currentReleaseDate = this.trackForm.get('releaseDate')?.value;
+      if (!currentReleaseDate && metadata.common.year) {
+        // Convert year to YYYY-MM-DD format for date input
+        const year = metadata.common.year;
+        this.trackForm.patchValue({ releaseDate: `${year}-01-01` });
+      }
+
+      // Auto-fill track number if empty
+      const currentTrackNumber = this.trackForm.get('trackNumber')?.value;
+      if (!currentTrackNumber && metadata.common.track?.no) {
+        this.trackForm.patchValue({ trackNumber: metadata.common.track.no.toString() });
+      }
+
+      // Auto-fill genre if empty
+      const currentGenres = this.trackForm.get('genres')?.value;
+      if ((!currentGenres || currentGenres.length === 0) && metadata.common.genre && metadata.common.genre.length > 0) {
+        // Map extracted genres to available genres (case-insensitive match)
+        const matchedGenres = metadata.common.genre
+          .map(g => this.availableGenres.find(ag => ag.toLowerCase() === g.toLowerCase()))
+          .filter((g): g is string => g !== undefined);
+        
+        if (matchedGenres.length > 0) {
+          this.trackForm.patchValue({ genres: matchedGenres });
+        }
       }
 
       // Extract and upload album art if no cover image is set

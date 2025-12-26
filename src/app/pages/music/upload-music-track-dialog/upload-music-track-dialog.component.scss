@@ -397,7 +397,19 @@ mat-dialog-content {
 
 mat-dialog-actions {
   padding-top: 1rem;
+  display: flex;
+  gap: 0.5rem;
 
+  button {
+    min-width: 120px;
+
+    mat-spinner {
+      margin-right: 0.5rem;
+    }
+  }
+}
+
+[dialog-actions] {
   button {
     min-width: 120px;
 

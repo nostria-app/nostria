@@ -295,3 +295,10 @@ button mat-spinner {
   display: inline-block;
   margin-right: 8px;
 }
+
+// Dialog action buttons
+[dialog-actions] {
+  button {
+    min-width: 120px;
+  }
+}

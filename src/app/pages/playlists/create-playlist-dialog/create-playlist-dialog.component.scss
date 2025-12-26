@@ -43,3 +43,10 @@ mat-dialog-actions {
   gap: 8px;
   margin-top: 16px;
 }
+
+// Dialog action buttons
+[dialog-actions] {
+  button {
+    min-width: 100px;
+  }
+}
