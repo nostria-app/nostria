@@ -1,4 +1,5 @@
-<div class="media-preview-container" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)">
+<div class="media-preview-container" [class.controls-hidden]="!controlsVisible()" (touchstart)="onTouchStart($event)"
+  (touchend)="onTouchEnd($event)">
   <!-- Top-left controls: zoom buttons -->
   @if (isImage()) {
   <div class="controls-left">

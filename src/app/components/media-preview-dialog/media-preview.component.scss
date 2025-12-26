@@ -23,6 +23,8 @@
   -webkit-backdrop-filter: blur(10px);
   border-radius: 24px;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  opacity: 1;
+  transition: opacity 0.3s ease;
 
   button {
     color: white;
@@ -32,6 +34,18 @@
     font-size: 14px;
     color: rgba(255, 255, 255, 0.8);
     padding: 0 8px;
+  }
+}
+
+// Auto-hide controls when cursor is idle
+.media-preview-container.controls-hidden {
+  cursor: none;
+
+  .controls-left,
+  .controls-right,
+  .controls-bottom {
+    opacity: 0;
+    pointer-events: none;
   }
 }
 
