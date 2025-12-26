@@ -338,6 +338,7 @@ export const routes: Routes = [
     path: 'music/artist/:pubkey',
     loadComponent: () =>
       import('./pages/music/music-artist/music-artist.component').then(m => m.MusicArtistComponent),
+    resolve: { data: DataResolver },
     title: 'Artist',
   },
   {
