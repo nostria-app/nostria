@@ -965,12 +965,14 @@ export class LayoutService implements OnDestroy {
   }
 
   openGenericEvent(naddr: string, event?: Event, trustedByPubkey?: string): void {
-    // Check if we're currently on the feeds page
+    // Check if we're on a page where we should preserve state by using a dialog
     const currentUrl = this.router.url;
     const isOnFeedsPage = currentUrl === '/' || currentUrl.startsWith('/f/');
+    const isOnProfilePage = currentUrl.startsWith('/p/') || currentUrl.startsWith('/u/');
+    const isOnPeoplePage = currentUrl === '/people' || currentUrl.startsWith('/people');
 
-    if (isOnFeedsPage) {
-      // Open in dialog to preserve feeds state
+    if (isOnFeedsPage || isOnProfilePage || isOnPeoplePage) {
+      // Open in dialog to preserve page state and scroll position
       this.openEventInDialog(naddr, event, trustedByPubkey);
     } else {
       // Navigate normally for direct links or other contexts
@@ -985,8 +987,9 @@ export class LayoutService implements OnDestroy {
     }
 
     // Update URL without navigation to support back button
+    // Use replaceState to avoid creating extra history entries
     const previousUrl = this.location.path();
-    this.location.go(`/e/${eventId}`);
+    this.location.replaceState(`/e/${eventId}`);
 
     // Determine dialog title based on event author
     let dialogTitle = 'Thread';
@@ -1022,9 +1025,13 @@ export class LayoutService implements OnDestroy {
       });
     }
 
-    // Restore URL when dialog is closed
-    this.currentEventDialogRef.afterClosed$.subscribe(() => {
-      this.location.go(previousUrl);
+    // Restore URL when dialog is closed (only if not closed via back button)
+    this.currentEventDialogRef.afterClosed$.subscribe(({ closedViaBackButton }) => {
+      // Only restore URL if dialog was closed programmatically (not via back button)
+      // When closed via back button, the browser already handled the URL navigation
+      if (!closedViaBackButton) {
+        this.location.replaceState(previousUrl);
+      }
       this.currentEventDialogRef = null;
     });
   }
@@ -1085,7 +1092,7 @@ export class LayoutService implements OnDestroy {
       }
     );
 
-    dialogRef.afterClosed$.subscribe(async result => {
+    dialogRef.afterClosed$.subscribe(async ({ result }) => {
       if (result && result.file) {
         try {
           // Set uploading state to true
@@ -1228,7 +1235,7 @@ export class LayoutService implements OnDestroy {
       }
     );
 
-    dialogRef.afterClosed$.subscribe(result => {
+    dialogRef.afterClosed$.subscribe(({ result }) => {
       if (result?.published) {
         // Navigate to the published media event
         if (result.mediaEvent) {

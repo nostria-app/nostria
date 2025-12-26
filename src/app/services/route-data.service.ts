@@ -63,13 +63,11 @@ export class RouteDataService implements OnDestroy {
     if (typeof window !== 'undefined') {
       this.popstateListener = () => {
         if (!this.isProgrammaticNavigation) {
-          console.log('Browser back/forward detected');
           // Small delay to ensure router has processed the navigation
+          // and any dialog popstate handlers have run first
           setTimeout(() => {
             this.handleBrowserNavigation();
-          }, 50);
-        } else {
-          console.log('Programmatic navigation detected, skipping browser navigation handler');
+          }, 100);
         }
       };
       window.addEventListener('popstate', this.popstateListener);
@@ -138,26 +136,26 @@ export class RouteDataService implements OnDestroy {
   }
 
   private handleBrowserNavigation() {
-    console.log('Handling browser navigation...');
-
-    // When browser back/forward is used, adjust our history
+    // When browser back/forward is used, sync our history with the browser state
     const currentUrl = this.router.url;
     const currentHistory = this.navigationHistory();
 
-    console.log('Current URL:', currentUrl);
-    console.log('Current history length:', currentHistory.length);
+    // Find if the current URL exists in our history (search from end to beginning)
+    // This handles the case where the same URL appears multiple times
+    let existingIndex = -1;
+    for (let i = currentHistory.length - 1; i >= 0; i--) {
+      if (currentHistory[i].url === currentUrl) {
+        existingIndex = i;
+        break;
+      }
+    }
 
-    // Find if the current URL exists in our history
-    const existingIndex = currentHistory.findIndex(item => item.url === currentUrl);
-
-    if (existingIndex !== -1) {
-      console.log('Found URL in history at index:', existingIndex);
-      // If we found the URL in history, truncate history to that point
+    if (existingIndex !== -1 && existingIndex < currentHistory.length - 1) {
+      // User went back to a previous page - truncate history to that point
       this.navigationHistory.set(currentHistory.slice(0, existingIndex + 1));
-    } else {
-      console.log('URL not found in history, adding as new item');
-      // If URL not in history, add it as a new item
-      // This handles cases where user navigated via browser address bar or external links
+    } else if (existingIndex === -1) {
+      // URL not in history - this is a forward navigation or external navigation
+      // Add it as a new item
       const routeTitle = this.getRouteTitle(currentUrl);
       const newItem: NavigationHistoryItem = {
         url: currentUrl,
@@ -166,8 +164,7 @@ export class RouteDataService implements OnDestroy {
       };
       this.navigationHistory.set([...currentHistory, newItem].slice(-10));
     }
-
-    console.log('Updated history length:', this.navigationHistory().length);
+    // If existingIndex === currentHistory.length - 1, we're already at the right place
   }
 
   private getRouteTitle(url: string): string {

@@ -3,12 +3,25 @@ import { CustomDialogComponent } from '../components/custom-dialog/custom-dialog
 import { Subject } from 'rxjs';
 
 /**
+ * Result emitted when the dialog closes
+ */
+export interface DialogCloseResult<R = unknown> {
+  /** The result value passed to close() */
+  result?: R;
+  /** Whether the dialog was closed via native back button/gesture */
+  closedViaBackButton: boolean;
+}
+
+/**
  * Reference to a custom dialog instance
  */
 export class CustomDialogRef<T = unknown, R = unknown> {
   private closedSubject = signal<R | undefined>(undefined);
   private hasBeenClosed = signal(false);
-  private _afterClosed = new Subject<R | undefined>();
+  private _afterClosed = new Subject<DialogCloseResult<R>>();
+  private popstateHandler: ((event: PopStateEvent) => void) | null = null;
+  private historyStatePushed = false;
+  private _closedViaBackButton = false;
 
   /**
    * Observable-like signal that emits when the dialog closes
@@ -16,9 +29,16 @@ export class CustomDialogRef<T = unknown, R = unknown> {
   afterClosed = this.closedSubject.asReadonly;
 
   /**
-   * Observable that emits when the dialog closes
+   * Observable that emits when the dialog closes, including close method info
    */
   afterClosed$ = this._afterClosed.asObservable();
+
+  /**
+   * Whether the dialog was closed via the native back button/gesture
+   */
+  get wasClosedViaBackButton(): boolean {
+    return this._closedViaBackButton;
+  }
 
   /**
    * Signal indicating if the dialog has been closed
@@ -41,6 +61,57 @@ export class CustomDialogRef<T = unknown, R = unknown> {
   }
 
   /**
+   * Set up history-based back button handling
+   * This allows the native back gesture/button to close the dialog
+   */
+  setupHistoryHandling(): void {
+    if (typeof window === 'undefined') return;
+
+    // Generate a unique state identifier for this dialog
+    const dialogStateId = `dialog-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+
+    // Replace the current history state with one that includes our dialog marker
+    // We use replaceState (not pushState) so closing the dialog just goes back
+    // to the actual previous page, not an intermediate dialog state
+    window.history.replaceState({ dialogId: dialogStateId, dialogOpen: true }, '');
+    this.historyStatePushed = true;
+
+    // Listen for popstate (back button/gesture)
+    this.popstateHandler = () => {
+      // When back is triggered, close the dialog
+      if (!this.hasBeenClosed()) {
+        // Mark that this close was triggered by back button
+        // so we don't call history.back() again
+        this._closedViaBackButton = true;
+        this.close();
+      }
+    };
+
+    window.addEventListener('popstate', this.popstateHandler);
+  }
+
+  /**
+   * Clean up history handling when dialog is closed programmatically
+   */
+  private cleanupHistoryHandling(): void {
+    // Remove popstate listener first
+    if (this.popstateHandler) {
+      window.removeEventListener('popstate', this.popstateHandler);
+      this.popstateHandler = null;
+    }
+
+    // Clear the dialog marker from history state (we used replaceState, not pushState)
+    if (this.historyStatePushed && typeof window !== 'undefined') {
+      this.historyStatePushed = false;
+      // Remove the dialog marker from current state
+      const currentState = window.history.state || {};
+      delete currentState.dialogId;
+      delete currentState.dialogOpen;
+      window.history.replaceState(currentState, '');
+    }
+  }
+
+  /**
    * Update the dialog title dynamically
    */
   updateTitle(title: string): void {
@@ -56,8 +127,9 @@ export class CustomDialogRef<T = unknown, R = unknown> {
     if (this.hasBeenClosed()) return;
 
     this.hasBeenClosed.set(true);
+    this.cleanupHistoryHandling();
     this.closedSubject.set(result);
-    this._afterClosed.next(result);
+    this._afterClosed.next({ result, closedViaBackButton: this._closedViaBackButton });
     this._afterClosed.complete();
     this.onCloseCallback(result);
   }
@@ -269,6 +341,10 @@ export class CustomDialogService {
 
     // Track the dialog
     this.openDialogs.add(dialogRef);
+
+    // Set up history-based back button/gesture handling
+    // This allows native back gestures to close the dialog instead of navigating away
+    customDialogRef.setupHistoryHandling();
 
     // Set up close handler - subscribe to the dialog's closed output
     const subscription = dialogRef.instance.closed.subscribe(() => {
