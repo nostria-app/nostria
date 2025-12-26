@@ -325,6 +325,39 @@ export class UploadMusicTrackDialogComponent {
         }
       }
 
+      // Check for AI-generated music sources (e.g., Suno.com)
+      // Look for WWWAUDIOSOURCE or similar tags in native metadata
+      const nativeTags = metadata.native;
+      let isAiGenerated = false;
+
+      for (const tagType of Object.keys(nativeTags)) {
+        const tags = nativeTags[tagType];
+        for (const tag of tags) {
+          // Check WWWAUDIOSOURCE (ID3v2) or similar URL tags
+          if (tag.id === 'WWWAUDIOSOURCE' || tag.id === 'WOAS' || tag.id === 'website' || tag.id === 'WOAF') {
+            const value = typeof tag.value === 'string' ? tag.value : '';
+            if (value.toLowerCase().includes('suno.com')) {
+              isAiGenerated = true;
+              break;
+            }
+          }
+          // Also check comment fields that might contain source info
+          if (tag.id === 'COMM' || tag.id === 'comment') {
+            const value = typeof tag.value === 'string' ? tag.value :
+              (tag.value && typeof tag.value === 'object' && 'text' in tag.value ? String(tag.value.text) : '');
+            if (value.toLowerCase().includes('suno.com')) {
+              isAiGenerated = true;
+              break;
+            }
+          }
+        }
+        if (isAiGenerated) break;
+      }
+
+      if (isAiGenerated) {
+        this.trackForm.patchValue({ aiGenerated: true });
+      }
+
       // Extract and upload album art if no cover image is set
       if (!this.coverImage()) {
         const cover = selectCover(metadata.common.picture);

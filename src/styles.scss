@@ -1050,6 +1050,15 @@ iframe {
   height: 100dvh;
   z-index: 100000;
   pointer-events: auto;
+
+  // Dialog action buttons need gap between them
+  .dialog-actions [dialog-actions] {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    width: 100%;
+  }
 }
 
 .pointer {
