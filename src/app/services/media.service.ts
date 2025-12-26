@@ -446,6 +446,20 @@ export class MediaService implements NostriaService {
 
         // Only consider it a duplicate if both are original or both are optimized
         if ((uploadOriginal && isExistingOriginal) || (!uploadOriginal && !isExistingOriginal)) {
+          // Still trigger mirroring in background for duplicates - file might exist on one server but not mirrors
+          const otherServers = this.otherServers(existingFile.url, servers);
+          if (otherServers.length > 0) {
+            (async () => {
+              try {
+                const mirrorHeaders = await this.getAuthHeaders('Upload File', 'upload', existingFile.sha256);
+                await this.mirrorFile(existingFile.sha256, existingFile.url, otherServers, mirrorHeaders);
+                console.log('Background mirroring completed for duplicate:', existingFile.sha256);
+              } catch (err) {
+                console.warn('Background mirroring failed for duplicate:', err);
+              }
+            })();
+          }
+
           return {
             item: existingFile,
             status: 'duplicate',
