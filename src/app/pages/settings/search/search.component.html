@@ -29,6 +29,10 @@
         <p i18n="@@settings.search.empty.title">You don't have any search relays configured.</p>
         <p i18n="@@settings.search.empty.description">Add a search relay using the input above to enable search
           functionality.</p>
+        <button mat-stroked-button (click)="addDefaultRelay()" [disabled]="isPublishing()">
+          <mat-icon>add</mat-icon>
+          Add Default Relay (relay.nostr.band)
+        </button>
       </div>
       } @else {
       <mat-list>

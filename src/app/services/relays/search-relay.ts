@@ -49,6 +49,13 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
     this.init(this.DEFAULT_SEARCH_RELAYS);
   }
 
+  /**
+   * Get the default search relays
+   */
+  getDefaultRelays(): string[] {
+    return [...this.DEFAULT_SEARCH_RELAYS];
+  }
+
   save(relayUrls: string[]) {
     // Save to local storage
     this.localStorage.setItem(
@@ -165,7 +172,7 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
   async search(
     searchQuery: string,
     kinds: number[] = [1],
-    limit: number = 50,
+    limit = 50,
     options: { since?: number; until?: number; authors?: string[] } = {}
   ): Promise<Event[]> {
     await this.ensureInitialized();
@@ -205,7 +212,7 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
    * @param searchQuery The search query string
    * @param limit Maximum number of results (default: 20)
    */
-  async searchProfiles(searchQuery: string, limit: number = 20): Promise<Event[]> {
+  async searchProfiles(searchQuery: string, limit = 20): Promise<Event[]> {
     return this.search(searchQuery, [0], limit);
   }
 
@@ -214,7 +221,7 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
    * @param hashtag The hashtag to search for (without the # prefix)
    * @param limit Maximum number of results (default: 50)
    */
-  async searchByHashtag(hashtag: string, limit: number = 50): Promise<Event[]> {
+  async searchByHashtag(hashtag: string, limit = 50): Promise<Event[]> {
     // Remove # if present
     const tag = hashtag.startsWith('#') ? hashtag.slice(1) : hashtag;
     return this.search(`#${tag}`, [1], limit);
@@ -230,7 +237,7 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
   async searchForFeed(
     searchQuery: string,
     kinds: number[] = [1, 6, 7],
-    limit: number = 100,
+    limit = 100,
     since?: number
   ): Promise<Event[]> {
     const options: { since?: number } = {};

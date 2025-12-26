@@ -560,11 +560,11 @@ export class RelaysComponent implements OnInit {
     try {
       this.logger.info('Starting background republish of important events');
       const result = await this.eventRepublish.republishImportantEvents();
-      
+
       if (result.success > 0) {
         this.logger.info('Background republish completed', result);
       }
-      
+
       if (result.failed > 0) {
         this.logger.warn('Some events failed to republish', { failed: result.failed });
       }
@@ -584,10 +584,10 @@ export class RelaysComponent implements OnInit {
 
     // Check if relay already exists (using normalized URL comparison)
     const normalizedUrl = this.utilities.normalizeRelayUrl(url);
-    const existingDiscoveryRelays = this.discoveryRelay.getRelayUrls().map(relayUrl => 
+    const existingDiscoveryRelays = this.discoveryRelay.getRelayUrls().map(relayUrl =>
       this.utilities.normalizeRelayUrl(relayUrl)
     );
-    
+
     if (existingDiscoveryRelays.includes(normalizedUrl)) {
       this.showMessage('This Discovery Relay is already in your list');
       return;
@@ -671,10 +671,10 @@ export class RelaysComponent implements OnInit {
       );
 
       // Process results - normalize URLs for comparison
-      const existingDiscoveryRelays = this.discoveryRelay.getRelayUrls().map(url => 
+      const existingDiscoveryRelays = this.discoveryRelay.getRelayUrls().map(url =>
         this.utilities.normalizeRelayUrl(url)
       );
-      
+
       const successfulPings = pingResults
         .map((result, index) => {
           const normalizedUrl = this.utilities.normalizeRelayUrl(relaysToCheck[index]);
@@ -1017,10 +1017,10 @@ export class RelaysComponent implements OnInit {
             // and doesn't already have this discovery relay (using normalized URL comparison)
             const discoveryRelayUrl = selectedRegion.discoveryRelay;
             const normalizedDiscoveryUrl = this.utilities.normalizeRelayUrl(discoveryRelayUrl);
-            const existingDiscoveryRelays = this.discoveryRelay.getRelayUrls().map(url => 
+            const existingDiscoveryRelays = this.discoveryRelay.getRelayUrls().map(url =>
               this.utilities.normalizeRelayUrl(url)
             );
-            
+
             if (hadZeroRelays && !existingDiscoveryRelays.includes(normalizedDiscoveryUrl)) {
               this.logger.info('Adding Nostria discovery relay for new user', {
                 discoveryRelayUrl,
@@ -1031,9 +1031,9 @@ export class RelaysComponent implements OnInit {
               this.discoveryRelay.addRelay(discoveryRelayUrl);
               this.discoveryRelay.setDiscoveryRelays(this.discoveryRelay.getRelayUrls());
             } else if (existingDiscoveryRelays.includes(normalizedDiscoveryUrl)) {
-              this.logger.debug('Discovery relay already exists (normalized), skipping', { 
+              this.logger.debug('Discovery relay already exists (normalized), skipping', {
                 discoveryRelayUrl,
-                normalizedDiscoveryUrl 
+                normalizedDiscoveryUrl
               });
             } else {
               this.logger.debug('User already had relays, not auto-adding discovery relay', {
