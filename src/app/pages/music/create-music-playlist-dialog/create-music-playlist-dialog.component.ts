@@ -6,6 +6,7 @@ import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { MusicPlaylistService, CreateMusicPlaylistData, MusicPlaylist } from '../../../services/music-playlist.service';
 import { MediaService } from '../../../services/media.service';
@@ -27,6 +28,7 @@ export interface CreateMusicPlaylistDialogData {
     MatIconModule,
     MatSlideToggleModule,
     MatProgressSpinnerModule,
+    MatSnackBarModule,
     ReactiveFormsModule,
   ],
   templateUrl: './create-music-playlist-dialog.component.html',
@@ -40,6 +42,7 @@ export class CreateMusicPlaylistDialogComponent {
   private musicPlaylistService = inject(MusicPlaylistService);
   private mediaService = inject(MediaService);
   private router = inject(Router);
+  private snackBar = inject(MatSnackBar);
 
   // Media server availability
   hasMediaServers = computed(() => this.mediaService.mediaServers().length > 0);
@@ -47,6 +50,7 @@ export class CreateMusicPlaylistDialogComponent {
   playlistForm: FormGroup;
   isCreating = signal(false);
   isUploading = signal(false);
+  isDraggingImage = signal(false);
   coverImage = signal<string | null>(null);
 
   // Random gradients for default cover
@@ -115,6 +119,63 @@ export class CreateMusicPlaylistDialogComponent {
     };
 
     input.click();
+  }
+
+  // Drag and drop handlers for cover image
+  onImageDragOver(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDraggingImage.set(true);
+  }
+
+  onImageDragLeave(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDraggingImage.set(false);
+  }
+
+  async onImageDrop(event: DragEvent): Promise<void> {
+    event.preventDefault();
+    event.stopPropagation();
+    this.isDraggingImage.set(false);
+
+    const files = event.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      this.snackBar.open('Please drop an image file', 'Close', { duration: 3000 });
+      return;
+    }
+
+    await this.handleImageFile(file);
+  }
+
+  private async handleImageFile(file: File): Promise<void> {
+    this.isUploading.set(true);
+    try {
+      const servers = this.mediaService.mediaServers();
+      if (servers.length === 0) {
+        this.snackBar.open('No media servers available', 'Close', { duration: 3000 });
+        return;
+      }
+      const result = await this.mediaService.uploadFile(file, false, servers);
+      if (result.status === 'success' || result.status === 'duplicate') {
+        const url = result.item?.url;
+        if (url) {
+          this.coverImage.set(url);
+          this.playlistForm.patchValue({ imageUrl: url });
+          this.snackBar.open('Cover image uploaded', 'Close', { duration: 2000 });
+        }
+      } else {
+        this.snackBar.open('Failed to upload image', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      console.error('Failed to upload image:', error);
+      this.snackBar.open('Error uploading image', 'Close', { duration: 3000 });
+    } finally {
+      this.isUploading.set(false);
+    }
   }
 
   onImageUrlChange(): void {
