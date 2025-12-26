@@ -6,8 +6,13 @@ import { Meta } from '@angular/platform-browser';
 import { UtilitiesService } from './services/utilities.service';
 import { MetaService } from './services/meta.service';
 import { UsernameService } from './services/username';
+import { nip19 } from 'nostr-tools';
 
 export const EVENT_STATE_KEY = makeStateKey<any>('large-json-data');
+
+// Known addressable event kinds
+const MUSIC_KIND = 36787;
+const MUSIC_PLAYLIST_KIND = 34139;
 
 export interface EventData {
   title: string;
@@ -34,6 +39,7 @@ export class DataResolver implements Resolve<EventData | null> {
     }
 
     let id = route.params['id'] || route.params['pubkey'];
+    const identifier = route.params['identifier'];
 
     // For username routes, resolve the username to pubkey
     const username = route.params['username'];
@@ -41,6 +47,46 @@ export class DataResolver implements Resolve<EventData | null> {
       console.log('[SSR] DataResolver: Resolving username to pubkey:', username);
       id = await this.usernameService.getPubkey(username);
       console.log('[SSR] DataResolver: Resolved username', username, 'to pubkey:', id);
+    }
+
+    // For addressable events (tracks, playlists), create naddr from pubkey + identifier
+    if (id && identifier) {
+      const routePath = route.routeConfig?.path || '';
+      let kind: number | undefined;
+
+      if (routePath.includes('music/song')) {
+        kind = MUSIC_KIND;
+      } else if (routePath.includes('music/playlist')) {
+        kind = MUSIC_PLAYLIST_KIND;
+      }
+
+      if (kind) {
+        try {
+          // Decode npub to hex if needed
+          let pubkey = id;
+          if (id.startsWith('npub')) {
+            try {
+              const decoded = nip19.decode(id);
+              // Use type guard to extract pubkey
+              if ('data' in decoded && typeof decoded.data === 'string') {
+                pubkey = decoded.data;
+              }
+            } catch {
+              // Invalid npub, use as-is
+            }
+          }
+
+          const naddr = nip19.naddrEncode({
+            kind,
+            pubkey,
+            identifier,
+          });
+          id = naddr;
+          console.log('[SSR] DataResolver: Created naddr for addressable event:', naddr);
+        } catch (e) {
+          console.error('[SSR] DataResolver: Failed to create naddr:', e);
+        }
+      }
     }
 
     console.log('[SSR] DataResolver: Attempting to load metadata for id:', id);

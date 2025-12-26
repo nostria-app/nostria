@@ -332,6 +332,7 @@ export const routes: Routes = [
     path: 'music/song/:pubkey/:identifier',
     loadComponent: () =>
       import('./pages/music/song-detail/song-detail.component').then(m => m.SongDetailComponent),
+    resolve: { data: DataResolver },
     title: 'Song',
   },
   {
@@ -345,6 +346,7 @@ export const routes: Routes = [
     path: 'music/playlist/:pubkey/:identifier',
     loadComponent: () =>
       import('./pages/music/music-playlist/music-playlist.component').then(m => m.MusicPlaylistComponent),
+    resolve: { data: DataResolver },
     title: 'Playlist',
   },
   {
