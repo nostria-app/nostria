@@ -158,6 +158,7 @@ export class SearchSettingsComponent {
       data: {
         relayUrl: url,
         adding: true,
+        showMigration: false, // Don't show migration for search relays
       },
     });
 
@@ -225,6 +226,7 @@ export class SearchSettingsComponent {
       data: {
         relayUrl: relayUrl,
         adding: false,
+        showMigration: false, // Don't show migration for search relays
       },
     });
   }
@@ -243,7 +245,7 @@ export class SearchSettingsComponent {
    */
   async addDefaultRelay() {
     const defaultRelay = this.searchRelay.getDefaultRelays()[0];
-    
+
     if (!defaultRelay) {
       this.showMessage('No default relay configured');
       return;

@@ -14,6 +14,7 @@ import { EventRepublishService } from '../../../services/event-republish.service
 export interface RelayDialogData {
   relayUrl: string;
   adding: boolean;
+  showMigration?: boolean; // Only show for account relays, default true
 }
 
 interface RelayInfo {
@@ -192,7 +193,7 @@ interface RelayInfo {
           </div>
         }
 
-        @if (!adding()) {
+        @if (!adding() && showMigration()) {
           <div class="migration-container">
             <h3>Data Migration</h3>
             <p>Sync your important data to ensure it's accessible on this relay.</p>
@@ -414,6 +415,7 @@ export class RelayInfoDialogComponent {
   private data = inject<RelayDialogData>(MAT_DIALOG_DATA);
   relayUrl = signal(this.data.relayUrl);
   adding = signal(this.data.adding);
+  showMigration = signal(this.data.showMigration !== false); // Default to true
 
   relayInfo = signal<RelayInfo | null>(null);
   loading = signal<boolean>(true);
