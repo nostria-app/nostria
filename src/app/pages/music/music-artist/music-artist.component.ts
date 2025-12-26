@@ -4,7 +4,9 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
@@ -13,7 +15,6 @@ import { DataService } from '../../../services/data.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
-import { MusicEventComponent } from '../../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 
 const MUSIC_KIND = 36787;
@@ -26,8 +27,8 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatButtonModule,
     MatIconModule,
     MatTabsModule,
+    MatMenuModule,
     MatSnackBarModule,
-    MusicEventComponent,
     MusicPlaylistCardComponent,
   ],
   templateUrl: './music-artist.component.html',
@@ -43,6 +44,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private reporting = inject(ReportingService);
   private mediaPlayer = inject(MediaPlayerService);
   private snackBar = inject(MatSnackBar);
+  private clipboard = inject(Clipboard);
 
   pubkey = signal<string>('');
   loading = signal(true);
@@ -268,6 +270,135 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     this.mediaPlayer.play(mediaItems[0]);
     for (let i = 1; i < mediaItems.length; i++) {
       this.mediaPlayer.enque(mediaItems[i]);
+    }
+  }
+
+  // Helper methods for track display
+  getTrackTitle(track: Event): string {
+    const titleTag = track.tags.find(t => t[0] === 'title');
+    return titleTag?.[1] || 'Untitled Track';
+  }
+
+  getTrackImage(track: Event): string | null {
+    const imageTag = track.tags.find(t => t[0] === 'image');
+    return imageTag?.[1] || null;
+  }
+
+  getTrackArtist(track: Event): string {
+    // First check for artist tag in the event
+    const artistTag = track.tags.find(t => t[0] === 'artist');
+    if (artistTag?.[1]) {
+      return artistTag[1];
+    }
+    // Fall back to profile name
+    return this.artistName();
+  }
+
+  getTrackAlbum(track: Event): string {
+    const albumTag = track.tags.find(t => t[0] === 'album');
+    return albumTag?.[1] || '';
+  }
+
+  getTrackDate(track: Event): string {
+    const date = new Date(track.created_at * 1000);
+    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  }
+
+  getTrackDuration(track: Event): string {
+    const durationTag = track.tags.find(t => t[0] === 'duration');
+    if (durationTag?.[1]) {
+      const seconds = parseInt(durationTag[1], 10);
+      if (!isNaN(seconds)) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+      }
+    }
+    return '--:--';
+  }
+
+  playTrack(index: number): void {
+    const artistTracks = this.tracks();
+    if (index < 0 || index >= artistTracks.length) return;
+
+    const artistName = this.artistName();
+    const profile = this.authorProfile();
+
+    // Play from this track and queue the rest
+    for (let i = index; i < artistTracks.length; i++) {
+      const track = artistTracks[i];
+      const urlTag = track.tags.find(t => t[0] === 'url');
+      const url = urlTag?.[1];
+      if (!url) continue;
+
+      const titleTag = track.tags.find(t => t[0] === 'title');
+      const imageTag = track.tags.find(t => t[0] === 'image');
+      const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+
+      const mediaItem: MediaItem = {
+        source: url,
+        title: titleTag?.[1] || 'Untitled Track',
+        artist: this.getTrackArtist(track),
+        artwork: imageTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png',
+        type: 'Music',
+        eventPubkey: track.pubkey,
+        eventIdentifier: dTag,
+      };
+
+      if (i === index) {
+        this.mediaPlayer.play(mediaItem);
+      } else {
+        this.mediaPlayer.enque(mediaItem);
+      }
+    }
+  }
+
+  addTrackToQueue(track: Event): void {
+    const urlTag = track.tags.find(t => t[0] === 'url');
+    const url = urlTag?.[1];
+    if (!url) return;
+
+    const titleTag = track.tags.find(t => t[0] === 'title');
+    const imageTag = track.tags.find(t => t[0] === 'image');
+    const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+    const profile = this.authorProfile();
+
+    const mediaItem: MediaItem = {
+      source: url,
+      title: titleTag?.[1] || 'Untitled Track',
+      artist: this.getTrackArtist(track),
+      artwork: imageTag?.[1] || profile?.data?.picture || '/icons/icon-192x192.png',
+      type: 'Music',
+      eventPubkey: track.pubkey,
+      eventIdentifier: dTag,
+    };
+
+    this.mediaPlayer.enque(mediaItem);
+    this.snackBar.open('Added to queue', 'Close', { duration: 2000 });
+  }
+
+  goToTrackDetails(track: Event): void {
+    const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+    try {
+      const npub = nip19.npubEncode(track.pubkey);
+      this.router.navigate(['/music/song', npub, dTag]);
+    } catch {
+      // Ignore
+    }
+  }
+
+  copyTrackLink(track: Event): void {
+    try {
+      const dTag = track.tags.find(t => t[0] === 'd')?.[1] || '';
+      const naddr = nip19.naddrEncode({
+        kind: track.kind,
+        pubkey: track.pubkey,
+        identifier: dTag,
+      });
+      this.clipboard.copy(`nostr:${naddr}`);
+      this.snackBar.open('Track link copied!', 'Close', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
     }
   }
 }

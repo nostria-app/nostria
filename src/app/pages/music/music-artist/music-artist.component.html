@@ -75,9 +75,63 @@
             <p>No tracks found from this artist</p>
           </div>
           } @else {
-          <div class="tracks-grid">
-            @for (track of tracks(); track track.id) {
-            <app-music-event [event]="track"></app-music-event>
+          <!-- Table Header -->
+          <div class="track-header">
+            <span class="track-number">#</span>
+            <span class="track-title-header">Title</span>
+            <span class="track-album-header">Album</span>
+            <span class="track-date-header">Date added</span>
+            <span class="track-duration-header">
+              <mat-icon>schedule</mat-icon>
+            </span>
+          </div>
+
+          <!-- Track List -->
+          <!-- eslint-disable @angular-eslint/template/click-events-have-key-events, @angular-eslint/template/interactive-supports-focus -->
+          <div class="track-list" role="list">
+            @for (track of tracks(); track track.id; let i = $index) {
+            <div class="track-row" role="listitem" tabindex="0" (click)="playTrack(i)" (keydown.enter)="playTrack(i)">
+              <span class="track-number">
+                <span class="number-text">{{ i + 1 }}</span>
+                <mat-icon class="play-icon">play_arrow</mat-icon>
+              </span>
+              <div class="track-info">
+                <div class="track-image">
+                  @if (getTrackImage(track); as img) {
+                  <img [src]="img" [alt]="getTrackTitle(track)" title="Track cover" />
+                  } @else {
+                  <div class="track-placeholder">
+                    <mat-icon>music_note</mat-icon>
+                  </div>
+                  }
+                </div>
+                <div class="track-text">
+                  <span class="track-title">{{ getTrackTitle(track) }}</span>
+                  <span class="track-artist">{{ getTrackArtist(track) }}</span>
+                </div>
+              </div>
+              <span class="track-album">{{ getTrackAlbum(track) }}</span>
+              <span class="track-date">{{ getTrackDate(track) }}</span>
+              <span class="track-duration">{{ getTrackDuration(track) }}</span>
+              <button mat-icon-button class="track-menu-btn" [matMenuTriggerFor]="trackMenu" type="button"
+                aria-label="Track options" (click)="$event.stopPropagation()">
+                <mat-icon>more_horiz</mat-icon>
+              </button>
+              <mat-menu #trackMenu="matMenu">
+                <button mat-menu-item (click)="addTrackToQueue(track)">
+                  <mat-icon>queue_music</mat-icon>
+                  <span>Add to Queue</span>
+                </button>
+                <button mat-menu-item (click)="goToTrackDetails(track)">
+                  <mat-icon>info</mat-icon>
+                  <span>Track Details</span>
+                </button>
+                <button mat-menu-item (click)="copyTrackLink(track)">
+                  <mat-icon>link</mat-icon>
+                  <span>Copy Link</span>
+                </button>
+              </mat-menu>
+            </div>
             }
           </div>
           }
