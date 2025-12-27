@@ -14,6 +14,7 @@ import { ReactionService } from '../../services/reaction.service';
 import { MusicPlaylistService } from '../../services/music-playlist.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { EventService } from '../../services/event';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
@@ -58,6 +59,10 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/mus
           </button>
         }
         @if (isAuthenticated()) {
+          <button mat-menu-item (click)="shareTrack()">
+            <mat-icon>share</mat-icon>
+            <span>Share Track</span>
+          </button>
           <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
             <mat-icon>playlist_add</mat-icon>
             <span>Add to Playlist</span>
@@ -279,6 +284,7 @@ export class MusicEventComponent {
   private musicPlaylistService = inject(MusicPlaylistService);
   private app = inject(ApplicationService);
   private accountState = inject(AccountStateService);
+  private eventService = inject(EventService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -531,6 +537,23 @@ export class MusicEventComponent {
     const ev = this.event();
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  // Share track as a kind 1 note with reference
+  shareTrack(): void {
+    const ev = this.event();
+    const addr = this.naddr();
+    
+    if (!addr) {
+      this.snackBar.open('Failed to generate track reference', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Create content with nostr: reference to the track
+    const content = `nostr:${addr}`;
+
+    // Open note editor with the track reference
+    this.eventService.createNote({ content });
   }
 
   // Edit track (for user's own tracks)
