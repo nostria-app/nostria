@@ -415,7 +415,8 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
         pubkey: track.pubkey,
         identifier: dTag,
       });
-      this.clipboard.copy(`nostr:${naddr}`);
+      const link = `https://nostria.app/a/${naddr}`;
+      this.clipboard.copy(link);
       this.snackBar.open('Track link copied!', 'Close', { duration: 2000 });
     } catch {
       this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
