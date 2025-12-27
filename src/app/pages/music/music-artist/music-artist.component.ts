@@ -18,6 +18,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
+import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -33,6 +34,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatSnackBarModule,
     MusicPlaylistCardComponent,
     MusicTrackDialogComponent,
+    MusicTrackMenuComponent,
   ],
   templateUrl: './music-artist.component.html',
   styleUrls: ['./music-artist.component.scss'],
