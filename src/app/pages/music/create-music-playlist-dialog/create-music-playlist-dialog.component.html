@@ -32,8 +32,8 @@
           autocomplete="off"></textarea>
       </mat-form-field>
 
-      <div class="cover-section" [class.drag-over]="isDraggingImage()" (dragover)="onImageDragOver($event)"
-        (dragleave)="onImageDragLeave($event)" (drop)="onImageDrop($event)">
+      <div class="cover-section" [class.drag-over]="isDraggingImage()" (dragenter)="onImageDragEnter($event)"
+        (dragover)="onImageDragOver($event)" (dragleave)="onImageDragLeave($event)" (drop)="onImageDrop($event)">
         <span class="cover-label">Cover Image</span>
         @if (isDraggingImage()) {
         <div class="drag-overlay">
@@ -42,8 +42,8 @@
         </div>
         }
         <div class="cover-row">
-          <div class="cover-preview"
-            [style.background]="coverImage() ? 'url(' + coverImage() + ')' : currentGradient()">
+          <div class="cover-preview" [class.has-image]="coverImage()"
+            [style.background-image]="coverImage() ? 'url(' + coverImage() + ')' : currentGradient()">
             @if (!coverImage()) {
             <mat-icon class="cover-icon">music_note</mat-icon>
             }
