@@ -38,6 +38,9 @@ export class DataResolver implements Resolve<EventData | null> {
       return null;
     }
 
+    console.log('[SSR] DataResolver: Starting resolve for route:', route.routeConfig?.path);
+    console.log('[SSR] DataResolver: Route params:', JSON.stringify(route.params));
+
     let id = route.params['id'] || route.params['pubkey'];
     const identifier = route.params['identifier'];
 
@@ -52,6 +55,7 @@ export class DataResolver implements Resolve<EventData | null> {
     // For addressable events (tracks, playlists), create naddr from pubkey + identifier
     if (id && identifier) {
       const routePath = route.routeConfig?.path || '';
+      console.log('[SSR] DataResolver: Found identifier, routePath:', routePath);
       let kind: number | undefined;
 
       if (routePath.includes('music/song')) {
