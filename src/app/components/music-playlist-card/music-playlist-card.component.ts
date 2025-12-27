@@ -17,6 +17,7 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
+import { EventService } from '../../services/event';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import {
@@ -84,6 +85,10 @@ const MUSIC_KIND = 36787;
               <span>Edit Playlist</span>
             </button>
           }
+          <button mat-menu-item (click)="sharePlaylist()">
+            <mat-icon>share</mat-icon>
+            <span>Share Playlist</span>
+          </button>
           <button mat-menu-item (click)="copyEventLink()">
             <mat-icon>link</mat-icon>
             <span>Copy Event Link</span>
@@ -276,6 +281,7 @@ export class MusicPlaylistCardComponent {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
   private utilities = inject(UtilitiesService);
+  private eventService = inject(EventService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -440,6 +446,22 @@ export class MusicPlaylistCardComponent {
     const ev = this.event();
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  // Share playlist as a kind 1 note with reference
+  sharePlaylist(): void {
+    const addr = this.naddr();
+    
+    if (!addr) {
+      this.snackBar.open('Failed to generate playlist reference', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Create content with nostr: reference to the playlist
+    const content = `nostr:${addr}`;
+
+    // Open note editor with the playlist reference
+    this.eventService.createNote({ content });
   }
 
   // Edit playlist
