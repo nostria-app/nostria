@@ -430,7 +430,7 @@ export class ImportRssDialogComponent {
 
         // Add AI generated flag
         if (track.aiGenerated) {
-          tags.push(['ai', 'true']);
+          tags.push(['ai-generated', 'true']);
         }
 
         // Add alt tag for accessibility

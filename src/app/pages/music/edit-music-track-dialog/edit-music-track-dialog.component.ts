@@ -186,8 +186,9 @@ export class EditMusicTrackDialogComponent {
     // Extract artist name
     const artistName = track.tags.find(t => t[0] === 'artist')?.[1] || '';
 
-    // Extract AI flag
-    const aiGenerated = track.tags.find(t => t[0] === 'ai')?.[1] === 'true';
+    // Extract AI flag (check both 'ai-generated' and legacy 'ai' tag)
+    const aiGenerated = track.tags.find(t => t[0] === 'ai-generated')?.[1] === 'true' ||
+      track.tags.find(t => t[0] === 'ai')?.[1] === 'true';
 
     // Extract advanced settings
     const album = track.tags.find(t => t[0] === 'album')?.[1] || '';
@@ -470,7 +471,7 @@ export class EditMusicTrackDialogComponent {
 
       // Add AI generated flag
       if (formValue.aiGenerated) {
-        tags.push(['ai', 'true']);
+        tags.push(['ai-generated', 'true']);
       }
 
       // Advanced settings

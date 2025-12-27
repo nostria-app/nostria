@@ -596,7 +596,7 @@ export class UploadMusicTrackDialogComponent {
 
       // Add AI generated flag
       if (formValue.aiGenerated) {
-        tags.push(['ai', 'true']);
+        tags.push(['ai-generated', 'true']);
       }
 
       // Advanced settings
