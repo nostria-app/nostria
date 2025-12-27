@@ -447,6 +447,26 @@ export class MusicEmbedComponent {
         }
       }
 
+      // Final fallback: Try preferred relays (common public relays)
+      if (!event) {
+        try {
+          const filter = {
+            authors: [this.pubkey()],
+            kinds: [this.kind()],
+            '#d': [this.identifier()],
+          };
+          const preferredRelays = this.utilities.preferredRelays.slice(0, 5);
+          if (preferredRelays.length > 0) {
+            const relayEvent = await this.relayPool.get(preferredRelays, filter, 10000);
+            if (relayEvent) {
+              event = this.data.toRecord(relayEvent);
+            }
+          }
+        } catch {
+          console.debug(`Preferred relay fetch failed for music item ${this.identifier()}`);
+        }
+      }
+
       this.record.set(event);
     } catch (error) {
       console.error('Error loading music item:', error);
