@@ -81,7 +81,14 @@ export class StreamsComponent implements OnDestroy {
   });
 
   constructor() {
-    this.loadStreamsRelaySet();
+    this.initializeStreams();
+  }
+
+  /**
+   * Initialize streams by first loading relay set, then starting subscriptions
+   */
+  private async initializeStreams(): Promise<void> {
+    await this.loadStreamsRelaySet();
     this.startLiveSubscription();
   }
 
@@ -147,14 +154,24 @@ export class StreamsComponent implements OnDestroy {
   }
 
   private startLiveSubscription(): void {
-    const relayUrls = this.relaysService.getOptimalRelays(
+    // Get the default relays
+    const defaultRelays = this.relaysService.getOptimalRelays(
       this.utilities.preferredRelays
     );
 
-    if (relayUrls.length === 0) {
+    // Combine with streams-specific relays from the user's relay set
+    const customStreamsRelays = this.streamsRelays();
+    const allRelayUrls = [...new Set([...defaultRelays, ...customStreamsRelays])];
+
+    if (allRelayUrls.length === 0) {
       console.warn('No relays available for loading streams');
       this.loading.set(false);
       return;
+    }
+
+    // Log if we're using custom streams relays
+    if (customStreamsRelays.length > 0) {
+      console.log('[Streams] Using custom streams relays:', customStreamsRelays);
     }
 
     const filter: Filter = {
@@ -171,7 +188,7 @@ export class StreamsComponent implements OnDestroy {
     }, 5000); // 5 second timeout
 
     this.subscription = this.pool.subscribe(
-      relayUrls,
+      allRelayUrls,
       filter,
       (event: Event) => {
         // Use d-tag + pubkey as unique identifier for replaceable events (kind:30311)
