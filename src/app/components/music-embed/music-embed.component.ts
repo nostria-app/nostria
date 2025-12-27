@@ -11,6 +11,7 @@ import { DataService } from '../../services/data.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { RelayPoolService } from '../../services/relays/relay-pool';
+import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { UtilitiesService } from '../../services/utilities.service';
 import { UserDataService } from '../../services/user-data.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
@@ -264,6 +265,7 @@ export class MusicEmbedComponent {
   private accountState = inject(AccountStateService);
   private mediaPlayer = inject(MediaPlayerService);
   private relayPool = inject(RelayPoolService);
+  private discoveryRelay = inject(DiscoveryRelayService);
   private utilities = inject(UtilitiesService);
   private snackBar = inject(MatSnackBar);
   private router = inject(Router);
@@ -386,6 +388,7 @@ export class MusicEmbedComponent {
     try {
       let event: NostrRecord | null = null;
 
+      // Try relay hints first
       const validRelayHints = this.getValidRelayHints();
       if (validRelayHints.length > 0) {
         try {
@@ -403,6 +406,7 @@ export class MusicEmbedComponent {
         }
       }
 
+      // Try user's relays or current user's data service
       if (!event) {
         const isNotCurrentUser = !this.accountState.isCurrentUser(this.pubkey());
 
@@ -420,6 +424,26 @@ export class MusicEmbedComponent {
             this.identifier(),
             { save: false, cache: false }
           );
+        }
+      }
+
+      // Fallback: Try discovery relays directly
+      if (!event) {
+        try {
+          const filter = {
+            authors: [this.pubkey()],
+            kinds: [this.kind()],
+            '#d': [this.identifier()],
+          };
+          const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
+          if (discoveryRelayUrls.length > 0) {
+            const relayEvent = await this.relayPool.get(discoveryRelayUrls, filter, 10000);
+            if (relayEvent) {
+              event = this.data.toRecord(relayEvent);
+            }
+          }
+        } catch {
+          console.debug(`Discovery relay fetch failed for music item ${this.identifier()}`);
         }
       }
 

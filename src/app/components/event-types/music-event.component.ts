@@ -47,7 +47,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
           }
           
           <!-- Play button overlay -->
-          <button mat-fab class="play-overlay" (click)="playTrack($any($event))" 
+          <button mat-icon-button class="play-overlay" (click)="playTrack($any($event))" 
             aria-label="Play now" title="Play Now">
             <mat-icon>play_arrow</mat-icon>
           </button>
@@ -61,7 +61,8 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         <!-- Info section -->
         <div class="card-info">
           <h4 class="card-title">{{ title() || 'Untitled Track' }}</h4>
-          <span class="card-artist">{{ artistName() }}</span>
+          <span class="card-artist" (click)="openArtist($any($event))" (keydown.enter)="openArtist($any($event))" 
+            tabindex="0" role="link">{{ artistName() }}</span>
         </div>
       </div>
     } @else {
@@ -195,7 +196,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         
         .play-overlay {
           opacity: 1;
-          transform: scale(1);
+          transform: translateY(0);
         }
       }
       
@@ -255,16 +256,27 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         position: absolute;
         bottom: 8px;
         right: 8px;
+        width: 40px;
+        height: 40px;
         opacity: 0;
-        transform: scale(0.8);
+        transform: translateY(8px);
         transition: opacity 0.2s ease, transform 0.2s ease;
         background: var(--mat-sys-primary);
         color: var(--mat-sys-on-primary);
+        border-radius: 50%;
+        box-shadow: var(--mat-sys-level3);
         z-index: 2;
         
         &:hover {
           background: var(--mat-sys-primary-container);
           color: var(--mat-sys-on-primary-container);
+          transform: scale(1.1);
+        }
+        
+        mat-icon {
+          font-size: 24px;
+          width: 24px;
+          height: 24px;
         }
       }
       
@@ -307,6 +319,12 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        cursor: pointer;
+        
+        &:hover {
+          color: var(--mat-sys-primary);
+          text-decoration: underline;
+        }
       }
     }
     
