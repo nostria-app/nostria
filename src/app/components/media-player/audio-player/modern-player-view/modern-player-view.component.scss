@@ -139,6 +139,8 @@
     height: 100%;
     border-radius: 50%;
     object-fit: cover;
+    object-position: center;
+    aspect-ratio: 1 / 1;
     box-shadow:
       0 8px 32px rgba(0, 0, 0, 0.4),
       0 0 0 2px rgba(255, 255, 255, 0.1);
