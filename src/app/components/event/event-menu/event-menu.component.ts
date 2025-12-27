@@ -30,6 +30,7 @@ import { ProfileStateService } from '../../../services/profile-state.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { AiService } from '../../../services/ai.service';
 import { SettingsService } from '../../../services/settings.service';
+import { PlaylistService } from '../../../services/playlist.service';
 import { TranslateDialogComponent, TranslateDialogData } from '../translate-dialog/translate-dialog.component';
 import { AiInfoDialogComponent } from '../../ai-info-dialog/ai-info-dialog.component';
 import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dialog.component';
@@ -63,6 +64,7 @@ export class EventMenuComponent {
   settings = inject(SettingsService);
   mediaPlayer = inject(MediaPlayerService);
   utilities = inject(UtilitiesService);
+  playlistService = inject(PlaylistService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -445,5 +447,47 @@ export class EventMenuComponent {
     } catch {
       return url;
     }
+  }
+
+  /**
+   * Add media from the event to a specific playlist
+   */
+  addMediaToPlaylist(playlistId: string) {
+    const urls = this.mediaUrls();
+    if (urls.length === 0) {
+      return;
+    }
+
+    const event = this.event();
+    const author = event?.pubkey ? nip19.npubEncode(event.pubkey) : '';
+
+    for (const media of urls) {
+      let track;
+      if (media.isYouTube && media.youtubeId) {
+        track = this.playlistService.urlToPlaylistTrack(
+          `https://www.youtube.com/watch?v=${media.youtubeId}`,
+          'YouTube Video',
+          author
+        );
+      } else {
+        track = this.playlistService.urlToPlaylistTrack(
+          media.url,
+          this.extractFilename(media.url),
+          author
+        );
+      }
+      this.playlistService.addTrackToPlaylist(playlistId, track);
+    }
+
+    const playlist = this.playlistService.getPlaylist(playlistId);
+    const playlistName = playlist?.title || playlistId;
+
+    this.snackBar.open(
+      urls.length === 1
+        ? `Added to "${playlistName}"`
+        : `Added ${urls.length} items to "${playlistName}"`,
+      'Dismiss',
+      { duration: 3000 }
+    );
   }
 }

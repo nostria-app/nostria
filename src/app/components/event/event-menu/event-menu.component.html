@@ -65,6 +65,10 @@
     <mat-icon>playlist_add</mat-icon>
     Add to Queue
   </button>
+  <button mat-menu-item [matMenuTriggerFor]="playlistMenu">
+    <mat-icon>video_library</mat-icon>
+    Add to Playlist
+  </button>
   <button mat-menu-item (click)="playMediaInPlayer()">
     <mat-icon>play_circle</mat-icon>
     Play in Media Player
@@ -117,4 +121,22 @@
     <mat-icon>content_copy</mat-icon>
     Copy Note Data
   </button>
+</mat-menu>
+
+<mat-menu #playlistMenu="matMenu">
+  <button mat-menu-item (click)="addMediaToPlaylist('watch-later')">
+    <mat-icon>watch_later</mat-icon>
+    Watch Later
+  </button>
+  @if (playlistService.userPlaylists().length > 0) {
+  <mat-divider></mat-divider>
+  @for (playlist of playlistService.userPlaylists(); track playlist.id) {
+  @if (playlist.id !== 'watch-later') {
+  <button mat-menu-item (click)="addMediaToPlaylist(playlist.id)">
+    <mat-icon>playlist_play</mat-icon>
+    {{ playlist.title }}
+  </button>
+  }
+  }
+  }
 </mat-menu>
