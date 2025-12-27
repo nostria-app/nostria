@@ -7,6 +7,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ReportingService } from '../../services/reporting.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -46,6 +47,7 @@ const SECTION_LIMIT = 12;
 export class MusicComponent implements OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
+  private accountRelay = inject(AccountRelayService);
   private utilities = inject(UtilitiesService);
   private reporting = inject(ReportingService);
   private accountState = inject(AccountStateService);
@@ -223,8 +225,9 @@ export class MusicComponent implements OnDestroy {
   }
 
   private startSubscriptions(): void {
-    // Get the default relays
-    const defaultRelays = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    // Get the user's account relays (not the hardcoded preferredRelays)
+    const accountRelays = this.accountRelay.getRelayUrls();
+    const defaultRelays = this.relaysService.getOptimalRelays(accountRelays);
 
     // Combine with music-specific relays from the user's relay set
     const customMusicRelays = this.musicRelays();
