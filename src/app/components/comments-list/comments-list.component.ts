@@ -13,6 +13,13 @@ import { LayoutService } from '../../services/layout.service';
 import { EventService } from '../../services/event';
 import { SharedRelayService } from '../../services/relays/shared-relay';
 
+// Interface for threaded comments
+export interface CommentThread {
+  comment: NostrRecord;
+  replies: CommentThread[];
+  depth: number;
+}
+
 @Component({
   selector: 'app-comments-list',
   imports: [
@@ -54,6 +61,9 @@ export class CommentsListComponent implements AfterViewInit {
 
   // Computed count of comments
   commentCount = computed(() => this.comments().length);
+
+  // Build threaded comment tree from flat list
+  commentThreads = computed(() => this.buildThreadTree(this.comments()));
 
   constructor() {
     // Reset and reload comments when event changes
@@ -284,6 +294,11 @@ export class CommentsListComponent implements AfterViewInit {
     }, 2000);
   }
 
+  // Handle reply added from nested comment component
+  onCommentReplyAdded(event: Event): void {
+    this.addCommentToList(event);
+  }
+
   async refreshComments(): Promise<void> {
     // Reset state and reload
     this.hasLoadedInitial.set(false);
@@ -291,5 +306,138 @@ export class CommentsListComponent implements AfterViewInit {
     this.comments.set([]);
     this.hasMore.set(true);
     await this.loadComments();
+  }
+
+  /**
+   * Build a threaded tree structure from flat list of comments.
+   * NIP-22 threading:
+   * - Top-level comments: root tags (E/A/I) and parent tags (e/a/i) point to same value
+   * - Replies to comments: lowercase 'e' tag points to parent comment ID, 'k' tag is '1111'
+   */
+  private buildThreadTree(comments: NostrRecord[]): CommentThread[] {
+    if (comments.length === 0) return [];
+
+    const rootEvent = this.event();
+    const rootEventId = rootEvent.id;
+
+    // For addressable events, also check the A tag format
+    const isAddressable = rootEvent.kind >= 30000 && rootEvent.kind < 40000;
+    const dTag = rootEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
+    const aTagValue = isAddressable ? `${rootEvent.kind}:${rootEvent.pubkey}:${dTag}` : null;
+
+    // Create a map of comment ID to thread node
+    const threadMap = new Map<string, CommentThread>();
+
+    // Initialize all threads
+    for (const comment of comments) {
+      threadMap.set(comment.event.id, {
+        comment,
+        replies: [],
+        depth: 0
+      });
+    }
+
+    // Build the tree by finding parent relationships
+    const rootThreads: CommentThread[] = [];
+
+    for (const comment of comments) {
+      const thread = threadMap.get(comment.event.id)!;
+      const parentInfo = this.getParentCommentId(comment.event, rootEventId, aTagValue);
+
+      if (parentInfo.isTopLevel) {
+        // This is a top-level comment on the root event
+        thread.depth = 0;
+        rootThreads.push(thread);
+      } else if (parentInfo.parentCommentId) {
+        // This is a reply to another comment
+        const parentThread = threadMap.get(parentInfo.parentCommentId);
+        if (parentThread) {
+          thread.depth = parentThread.depth + 1;
+          parentThread.replies.push(thread);
+        } else {
+          // Parent not found (might not be loaded yet), treat as top-level
+          thread.depth = 0;
+          rootThreads.push(thread);
+        }
+      } else {
+        // Couldn't determine parent, treat as top-level
+        thread.depth = 0;
+        rootThreads.push(thread);
+      }
+    }
+
+    // Sort each level by created_at (oldest first)
+    const sortReplies = (threads: CommentThread[]) => {
+      threads.sort((a, b) => a.comment.event.created_at - b.comment.event.created_at);
+      for (const thread of threads) {
+        sortReplies(thread.replies);
+      }
+    };
+
+    sortReplies(rootThreads);
+
+    return rootThreads;
+  }
+
+  /**
+   * Determine the parent comment ID for a given comment event.
+   * Returns { isTopLevel: true } if it's a direct reply to the root event.
+   * Returns { parentCommentId: string } if it's a reply to another comment.
+   */
+  private getParentCommentId(
+    commentEvent: Event,
+    rootEventId: string,
+    aTagValue: string | null
+  ): { isTopLevel: boolean; parentCommentId?: string } {
+    const tags = commentEvent.tags;
+
+    // Find lowercase 'k' tag (parent kind)
+    const parentKindTag = tags.find(tag => tag[0] === 'k');
+    const parentKind = parentKindTag?.[1];
+
+    // If parent kind is 1111, it's a reply to another comment
+    if (parentKind === '1111') {
+      // Find the lowercase 'e' tag pointing to parent comment
+      const parentETag = tags.find(tag => tag[0] === 'e');
+      if (parentETag && parentETag[1]) {
+        return { isTopLevel: false, parentCommentId: parentETag[1] };
+      }
+    }
+
+    // Check if this is a top-level comment by comparing root and parent references
+    // For regular events: E tag (root) vs e tag (parent)
+    const rootETag = tags.find(tag => tag[0] === 'E');
+    const parentETag = tags.find(tag => tag[0] === 'e');
+
+    // For addressable events: A tag (root) vs a tag (parent)
+    const rootATag = tags.find(tag => tag[0] === 'A');
+    const parentATag = tags.find(tag => tag[0] === 'a');
+
+    // If root and parent point to the same value, it's top-level
+    if (rootETag && parentETag && rootETag[1] === parentETag[1]) {
+      return { isTopLevel: true };
+    }
+
+    if (rootATag && parentATag && rootATag[1] === parentATag[1]) {
+      return { isTopLevel: true };
+    }
+
+    // If parent 'e' tag points to root event ID, it's top-level
+    if (parentETag && parentETag[1] === rootEventId) {
+      return { isTopLevel: true };
+    }
+
+    // If parent 'a' tag points to root event address, it's top-level
+    if (aTagValue && parentATag && parentATag[1] === aTagValue) {
+      return { isTopLevel: true };
+    }
+
+    // If we have a parent 'e' tag that doesn't match root, it's a reply
+    if (parentETag && parentETag[1] && parentKind === '1111') {
+      return { isTopLevel: false, parentCommentId: parentETag[1] };
+    }
+
+    // Default to top-level if we can't determine
+    return { isTopLevel: true };
   }
 }

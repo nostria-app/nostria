@@ -1,9 +1,62 @@
-.comment-card {
-  margin-bottom: 16px;
+.comment-thread {
+  --depth: 0;
+  --indent-size: 24px;
+  --thread-line-color: var(--mat-sys-outline-variant);
 
   &.nested {
-    margin-left: 32px;
-    margin-top: 8px;
+    margin-left: calc(var(--depth) * var(--indent-size));
+    position: relative;
+
+    // Thread line connecting to parent
+    &::before {
+      content: '';
+      position: absolute;
+      left: calc(-1 * var(--indent-size) + 8px);
+      top: 0;
+      bottom: 0;
+      width: 2px;
+      background: var(--thread-line-color);
+      border-radius: 1px;
+    }
+
+    // Horizontal connector line
+    &::after {
+      content: '';
+      position: absolute;
+      left: calc(-1 * var(--indent-size) + 8px);
+      top: 24px;
+      width: calc(var(--indent-size) - 16px);
+      height: 2px;
+      background: var(--thread-line-color);
+      border-radius: 1px;
+    }
+  }
+}
+
+.comment-card {
+  margin-bottom: 12px;
+
+  .nested & {
+    // Slightly smaller padding for nested comments
+    --mdc-elevated-card-container-shape: 8px;
+  }
+}
+
+.replies-container {
+  margin-top: 4px;
+  padding-left: 8px;
+  position: relative;
+
+  // Continuous thread line for replies section
+  &::before {
+    content: '';
+    position: absolute;
+    left: 8px;
+    top: 0;
+    bottom: 24px;
+    width: 2px;
+    background: var(--mat-sys-outline-variant);
+    border-radius: 1px;
   }
 }
 
@@ -32,5 +85,12 @@ mat-card-header {
   ::ng-deep app-event-header {
     display: block;
     width: 100%;
+  }
+}
+
+// Dark mode adjustments
+:host-context(.dark) {
+  .comment-thread {
+    --thread-line-color: var(--mat-sys-outline-variant);
   }
 }

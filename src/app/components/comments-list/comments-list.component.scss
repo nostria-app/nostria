@@ -77,7 +77,11 @@
 .comments-list {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 8px;
+
+  &.threaded {
+    gap: 4px;
+  }
 }
 
 .loading-more {
