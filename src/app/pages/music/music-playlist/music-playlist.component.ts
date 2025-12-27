@@ -22,6 +22,7 @@ import {
   EditMusicPlaylistDialogComponent,
   EditMusicPlaylistDialogData,
 } from '../edit-music-playlist-dialog/edit-music-playlist-dialog.component';
+import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -36,6 +37,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatMenuModule,
     MatSnackBarModule,
     EditMusicPlaylistDialogComponent,
+    MusicTrackMenuComponent,
   ],
   templateUrl: './music-playlist.component.html',
   styleUrls: ['./music-playlist.component.scss'],

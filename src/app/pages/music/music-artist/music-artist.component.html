@@ -114,30 +114,16 @@
               <span class="track-album">{{ getTrackAlbum(track) }}</span>
               <span class="track-date">{{ getTrackDate(track) }}</span>
               <span class="track-duration">{{ getTrackDuration(track) }}</span>
-              <button mat-icon-button class="track-menu-btn" [matMenuTriggerFor]="trackMenu" type="button"
+              <app-music-track-menu 
+                [track]="track" 
+                [artistName]="getTrackArtist(track)"
+                [showEditOption]="isOwnProfile()"
+                (editRequested)="editTrack($event)"
+                #trackMenuRef="musicTrackMenu" />
+              <button mat-icon-button class="track-menu-btn" [matMenuTriggerFor]="trackMenuRef.trackMenu" type="button"
                 aria-label="Track options" (click)="$event.stopPropagation()">
                 <mat-icon>more_horiz</mat-icon>
               </button>
-              <mat-menu #trackMenu="matMenu">
-                @if (isOwnProfile()) {
-                <button mat-menu-item (click)="editTrack(track)">
-                  <mat-icon>edit</mat-icon>
-                  <span>Edit Track</span>
-                </button>
-                }
-                <button mat-menu-item (click)="addTrackToQueue(track)">
-                  <mat-icon>queue_music</mat-icon>
-                  <span>Add to Queue</span>
-                </button>
-                <button mat-menu-item (click)="goToTrackDetails(track)">
-                  <mat-icon>info</mat-icon>
-                  <span>Track Details</span>
-                </button>
-                <button mat-menu-item (click)="copyTrackLink(track)">
-                  <mat-icon>link</mat-icon>
-                  <span>Copy Link</span>
-                </button>
-              </mat-menu>
             </div>
             }
           </div>

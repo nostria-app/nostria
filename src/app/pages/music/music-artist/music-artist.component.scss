@@ -432,6 +432,10 @@
   transition: opacity 0.15s ease;
   width: 32px;
   height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 
   mat-icon {
     font-size: 1.25rem;
