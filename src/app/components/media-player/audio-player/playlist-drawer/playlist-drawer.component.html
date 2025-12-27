@@ -24,7 +24,7 @@
 
   <!-- Queue list -->
   <div class="queue-list" #queueList cdkDropList (cdkDropListDropped)="onDrop($event)">
-    @for (track of queue(); track track.source; let i = $index) {
+    @for (track of queue(); track $index; let i = $index) {
     <div class="queue-item" [class.current]="i === currentIndex()" [class.played]="i < currentIndex()" cdkDrag
       (click)="playTrack(i)" matRipple>
       <!-- Drag handle -->

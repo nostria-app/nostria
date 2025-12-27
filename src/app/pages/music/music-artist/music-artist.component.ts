@@ -275,6 +275,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
         type: 'Music' as const,
         eventPubkey: this.artistNpub(),
         eventIdentifier: dTag,
+        lyrics: this.utilities.extractLyricsFromEvent(track),
       };
     }).filter(item => item.source); // Only include tracks with valid stream URLs
 
@@ -360,6 +361,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
         type: 'Music',
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
+        lyrics: this.utilities.extractLyricsFromEvent(track),
       };
 
       if (i === index) {
@@ -388,6 +390,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       type: 'Music',
       eventPubkey: track.pubkey,
       eventIdentifier: dTag,
+      lyrics: this.utilities.extractLyricsFromEvent(track),
     };
 
     this.mediaPlayer.enque(mediaItem);

@@ -470,6 +470,7 @@ export class MusicEmbedComponent {
       type: 'Music',
       eventPubkey: npub,
       eventIdentifier: this.identifier(),
+      lyrics: this.utilities.extractLyricsFromEvent(ev),
     };
 
     this.mediaPlayer.play(mediaItem);
@@ -494,6 +495,7 @@ export class MusicEmbedComponent {
       type: 'Music',
       eventPubkey: npub,
       eventIdentifier: this.identifier(),
+      lyrics: this.utilities.extractLyricsFromEvent(ev),
     };
 
     this.mediaPlayer.enque(mediaItem);
@@ -614,6 +616,7 @@ export class MusicEmbedComponent {
           type: 'Music',
           eventPubkey: nip19.npubEncode(track.pubkey),
           eventIdentifier: dTag?.[1] || '',
+          lyrics: this.utilities.extractLyricsFromEvent(track),
         };
         return item;
       })

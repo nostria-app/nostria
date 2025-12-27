@@ -16,6 +16,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 import { CircularProgressComponent } from '../circular-progress/circular-progress.component';
+import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
 
 @Component({
   selector: 'app-cards-player-view',
@@ -26,6 +27,7 @@ import { CircularProgressComponent } from '../circular-progress/circular-progres
     MatTooltipModule,
     SwipeGestureDirective,
     CircularProgressComponent,
+    LyricsViewComponent,
   ],
   templateUrl: './cards-player-view.component.html',
   styleUrl: './cards-player-view.component.scss',
@@ -40,6 +42,14 @@ export class CardsPlayerViewComponent implements AfterViewInit, OnDestroy {
   // Swipe animation state
   swipeOffset = signal(0);
   isAnimating = signal(false);
+
+  // Lyrics view toggle
+  showLyrics = signal(false);
+  hasLyrics = computed(() => !!this.media.current()?.lyrics);
+
+  toggleLyrics(): void {
+    this.showLyrics.update(v => !v);
+  }
 
   // Circular seek gesture state
   private circularContainer = viewChild<ElementRef<HTMLDivElement>>('circularContainer');

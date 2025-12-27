@@ -110,4 +110,18 @@
       <mat-icon>{{ media.repeat() === 'one' ? 'repeat_one' : 'repeat' }}</mat-icon>
     </button>
   </div>
+
+  <!-- Lyrics button -->
+  @if (hasLyrics()) {
+  <button mat-icon-button class="lyrics-btn" [class.active]="showLyrics()" (click)="toggleLyrics()" matTooltip="Lyrics">
+    <mat-icon>lyrics</mat-icon>
+  </button>
+  }
+
+  <!-- Lyrics overlay -->
+  @if (showLyrics()) {
+  <div class="lyrics-overlay">
+    <app-lyrics-view (closeLyrics)="showLyrics.set(false)" />
+  </div>
+  }
 </div>

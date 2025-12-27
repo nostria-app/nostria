@@ -13,6 +13,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
+import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
 
 @Component({
   selector: 'app-winamp-player-view',
@@ -22,6 +23,7 @@ import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../
     MatIconModule,
     MatTooltipModule,
     SwipeGestureDirective,
+    LyricsViewComponent,
   ],
   templateUrl: './winamp-player-view.component.html',
   styleUrl: './winamp-player-view.component.scss',
@@ -52,6 +54,14 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
   scrollingTitle = signal('');
   private scrollPosition = 0;
   private scrollInterval: number | null = null;
+
+  // Lyrics view toggle
+  showLyrics = signal(false);
+  hasLyrics = computed(() => !!this.media.current()?.lyrics);
+
+  toggleLyrics(): void {
+    this.showLyrics.update(v => !v);
+  }
 
   ngOnInit(): void {
     this.startTitleScroll();

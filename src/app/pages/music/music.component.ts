@@ -446,6 +446,7 @@ export class MusicComponent implements OnDestroy {
           type: 'Music',
           eventPubkey: track.pubkey,
           eventIdentifier: dTag,
+          lyrics: this.utilities.extractLyricsFromEvent(track),
         };
 
         if (i === 0) {

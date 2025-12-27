@@ -118,9 +118,26 @@
         [matTooltip]="getRepeatTooltip()">
         <span>{{ media.repeat() === 'one' ? 'REPEAT 1' : 'REPEAT' }}</span>
       </button>
+      @if (hasLyrics()) {
+      <button class="toggle-btn" [class.active]="showLyrics()" (click)="toggleLyrics()" matTooltip="Lyrics">
+        <span>LYRICS</span>
+      </button>
+      }
     </div>
   </div>
 
+  <!-- Lyrics window (replaces EQ when visible) -->
+  @if (showLyrics()) {
+  <div class="winamp-lyrics">
+    <div class="lyrics-title-bar">
+      <span>WINAMP LYRICS</span>
+      <button class="title-btn close" (click)="showLyrics.set(false)" matTooltip="Close">×</button>
+    </div>
+    <div class="lyrics-content-wrapper">
+      <app-lyrics-view [compact]="true" (closeLyrics)="showLyrics.set(false)" />
+    </div>
+  </div>
+  } @else {
   <!-- Equalizer window -->
   <div class="winamp-eq">
     <div class="eq-title-bar">
@@ -156,4 +173,5 @@
       <button class="preset-btn">PRESETS</button>
     </div>
   </div>
+  }
 </div>

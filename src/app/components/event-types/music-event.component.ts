@@ -15,6 +15,7 @@ import { MusicPlaylistService } from '../../services/music-playlist.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { EventService } from '../../services/event';
+import { UtilitiesService } from '../../services/utilities.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
@@ -288,6 +289,7 @@ export class MusicEventComponent {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
+  private utilities = inject(UtilitiesService);
 
   event = input.required<Event>();
 
@@ -452,6 +454,7 @@ export class MusicEventComponent {
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
+      lyrics: this.utilities.extractLyricsFromEvent(this.event()),
     };
 
     this.mediaPlayer.play(mediaItem);
@@ -473,6 +476,7 @@ export class MusicEventComponent {
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
+      lyrics: this.utilities.extractLyricsFromEvent(this.event()),
     };
 
     this.mediaPlayer.enque(mediaItem);
@@ -543,7 +547,7 @@ export class MusicEventComponent {
   shareTrack(): void {
     const ev = this.event();
     const addr = this.naddr();
-    
+
     if (!addr) {
       this.snackBar.open('Failed to generate track reference', 'Close', { duration: 3000 });
       return;

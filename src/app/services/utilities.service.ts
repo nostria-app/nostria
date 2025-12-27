@@ -108,6 +108,43 @@ export class UtilitiesService {
     return null;
   }
 
+  /**
+   * Extract lyrics from a Nostr music event (kind 32123).
+   * Lyrics can be in: 1) 'lyrics' tag, 2) content with "Lyrics:" section, 3) plain content
+   */
+  extractLyricsFromEvent(event: Event): string | undefined {
+    // First check for lyrics tag
+    const lyricsTag = event.tags.find(t => t[0] === 'lyrics');
+    if (lyricsTag?.[1]) {
+      return lyricsTag[1];
+    }
+
+    // Check content for lyrics
+    const content = event.content;
+    if (!content || content.match(/^https?:\/\//)) {
+      return undefined;
+    }
+
+    // Try to parse "Lyrics:" section from content
+    const sectionRegex = /^(Lyrics|Credits|Description|Notes|About|Info):\s*\n?/gim;
+    const parts = content.split(sectionRegex).filter(p => p.trim());
+
+    if (parts.length >= 2) {
+      for (let i = 0; i < parts.length; i += 2) {
+        const header = parts[i]?.trim().toLowerCase();
+        const body = parts[i + 1]?.trim();
+        if (header === 'lyrics' && body) {
+          return body;
+        }
+      }
+    } else if (content.trim()) {
+      // No section headers, treat content as lyrics if it's not empty
+      return content.trim();
+    }
+
+    return undefined;
+  }
+
   toRecord(event: Event): NostrRecord {
     return {
       event,

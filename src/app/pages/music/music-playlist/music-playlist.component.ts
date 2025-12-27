@@ -392,6 +392,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         type: 'Music',
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
+        lyrics: this.utilities.extractLyricsFromEvent(track),
       };
 
       if (i === 0) {
@@ -613,6 +614,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         type: 'Music',
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
+        lyrics: this.utilities.extractLyricsFromEvent(track),
       };
 
       if (i === index) {
@@ -640,6 +642,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       type: 'Music',
       eventPubkey: track.pubkey,
       eventIdentifier: dTag,
+      lyrics: this.utilities.extractLyricsFromEvent(track),
     };
 
     this.mediaPlayer.enque(mediaItem);

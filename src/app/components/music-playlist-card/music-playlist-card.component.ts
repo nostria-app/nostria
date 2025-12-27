@@ -451,7 +451,7 @@ export class MusicPlaylistCardComponent {
   // Share playlist as a kind 1 note with reference
   sharePlaylist(): void {
     const addr = this.naddr();
-    
+
     if (!addr) {
       this.snackBar.open('Failed to generate playlist reference', 'Close', { duration: 3000 });
       return;
@@ -634,6 +634,7 @@ export class MusicPlaylistCardComponent {
           type: 'Music',
           eventPubkey: track.pubkey,
           eventIdentifier: trackDTag,
+          lyrics: this.utilities.extractLyricsFromEvent(track),
         };
 
         if (i === 0) {
