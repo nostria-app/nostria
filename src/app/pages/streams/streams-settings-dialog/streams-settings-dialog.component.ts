@@ -13,9 +13,11 @@ import { CustomDialogComponent } from '../../../components/custom-dialog/custom-
 import { AccountStateService } from '../../../services/account-state.service';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { NostrService } from '../../../services/nostr.service';
 import { LoggerService } from '../../../services/logger.service';
+import { DatabaseService } from '../../../services/database.service';
 
 const RELAY_SET_KIND = 30002;
 const STREAMS_RELAY_SET_D_TAG = 'streams';
@@ -53,10 +55,12 @@ export class StreamsSettingsDialogComponent implements OnInit {
   private accountState = inject(AccountStateService);
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
+  private accountRelay = inject(AccountRelayService);
   private utilities = inject(UtilitiesService);
   private nostrService = inject(NostrService);
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
+  private database = inject(DatabaseService);
 
   // State
   isLoading = signal(true);
@@ -96,7 +100,31 @@ export class StreamsSettingsDialogComponent implements OnInit {
     }
 
     try {
-      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      // First, try to load from local database for immediate use
+      const cachedEvent = await this.database.getParameterizedReplaceableEvent(
+        pubkey,
+        RELAY_SET_KIND,
+        STREAMS_RELAY_SET_D_TAG
+      );
+
+      if (cachedEvent) {
+        this.hasExistingRelaySet.set(true);
+        const relays = this.extractRelaysFromEvent(cachedEvent);
+        const title = cachedEvent.tags.find((t: string[]) => t[0] === 'title')?.[1];
+        const description = cachedEvent.tags.find((t: string[]) => t[0] === 'description')?.[1];
+
+        this.streamsRelaySet.set({
+          event: cachedEvent,
+          relays,
+          title,
+          description,
+        });
+        this.relays.set([...relays]);
+      }
+
+      // Then fetch from relays to get the latest version
+      const accountRelays = this.accountRelay.getRelayUrls();
+      const relayUrls = this.relaysService.getOptimalRelays(accountRelays);
 
       if (relayUrls.length === 0) {
         this.isLoading.set(false);
@@ -135,20 +163,28 @@ export class StreamsSettingsDialogComponent implements OnInit {
 
       if (foundEvent) {
         const event = foundEvent as Event;
-        this.hasExistingRelaySet.set(true);
-        const relays = this.extractRelaysFromEvent(event);
-        const title = event.tags.find((t: string[]) => t[0] === 'title')?.[1];
-        const description = event.tags.find((t: string[]) => t[0] === 'description')?.[1];
+        // Only update if newer than cached or no cache exists
+        const cachedTs = cachedEvent?.created_at ?? 0;
+        if (event.created_at > cachedTs) {
+          this.hasExistingRelaySet.set(true);
+          const relays = this.extractRelaysFromEvent(event);
+          const title = event.tags.find((t: string[]) => t[0] === 'title')?.[1];
+          const description = event.tags.find((t: string[]) => t[0] === 'description')?.[1];
 
-        this.streamsRelaySet.set({
-          event,
-          relays,
-          title,
-          description,
-        });
-        this.relays.set([...relays]);
-      } else {
-        // No existing relay set, suggest defaults
+          this.streamsRelaySet.set({
+            event,
+            relays,
+            title,
+            description,
+          });
+          this.relays.set([...relays]);
+
+          // Persist to database
+          const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
+          await this.database.saveEvent({ ...event, dTag });
+        }
+      } else if (!cachedEvent) {
+        // No existing relay set anywhere, suggest defaults
         this.hasExistingRelaySet.set(false);
         this.relays.set([...DEFAULT_STREAMS_RELAYS]);
       }
@@ -248,9 +284,13 @@ export class StreamsSettingsDialogComponent implements OnInit {
         throw new Error('Failed to sign event');
       }
 
-      // Publish to relays
-      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      // Publish to relays using account relays
+      const accountRelays = this.accountRelay.getRelayUrls();
+      const relayUrls = this.relaysService.getOptimalRelays(accountRelays);
       await this.pool.publish(relayUrls, signedEvent);
+
+      // Save to local database
+      await this.database.saveEvent({ ...signedEvent, dTag: STREAMS_RELAY_SET_D_TAG });
 
       this.snackBar.open('Streams relay settings saved!', 'Dismiss', { duration: 3000 });
       this.hasExistingRelaySet.set(true);

@@ -14,6 +14,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { DataService } from '../../services/data.service';
+import { DatabaseService } from '../../services/database.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -55,6 +56,7 @@ export class MusicComponent implements OnDestroy {
   private router = inject(Router);
   private mediaPlayer = inject(MediaPlayerService);
   private dataService = inject(DataService);
+  private database = inject(DatabaseService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
@@ -178,12 +180,30 @@ export class MusicComponent implements OnDestroy {
 
   /**
    * Pre-load the user's music relay set (kind 30002 with d tag "music")
+   * First checks the local database, then fetches from relays and persists
    */
   private async loadMusicRelaySet(): Promise<void> {
     const pubkey = this.currentPubkey();
     if (!pubkey) return;
 
     try {
+      // First, try to load from local database for immediate use
+      const cachedEvent = await this.database.getParameterizedReplaceableEvent(
+        pubkey,
+        this.RELAY_SET_KIND,
+        this.MUSIC_RELAY_SET_D_TAG
+      );
+
+      if (cachedEvent) {
+        console.log('[Music] Loaded relay set from database:', cachedEvent);
+        this.musicRelaySet.set(cachedEvent);
+        const relays = cachedEvent.tags
+          .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
+          .map((tag: string[]) => tag[1]);
+        this.musicRelays.set(relays);
+      }
+
+      // Then fetch from relays to get the latest version
       const accountRelays = this.accountRelay.getRelayUrls();
       const relayUrls = this.relaysService.getOptimalRelays(accountRelays);
       if (relayUrls.length === 0) return;
@@ -214,11 +234,20 @@ export class MusicComponent implements OnDestroy {
 
       if (foundEvent) {
         const event = foundEvent as Event;
-        this.musicRelaySet.set(event);
-        const relays = event.tags
-          .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
-          .map((tag: string[]) => tag[1]);
-        this.musicRelays.set(relays);
+        // Only update if newer than cached
+        if (!cachedEvent || event.created_at > cachedEvent.created_at) {
+          console.log('[Music] Found newer relay set from relays, updating...');
+          this.musicRelaySet.set(event);
+          const relays = event.tags
+            .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
+            .map((tag: string[]) => tag[1]);
+          this.musicRelays.set(relays);
+
+          // Persist to database
+          const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
+          await this.database.saveEvent({ ...event, dTag });
+          console.log('[Music] Saved relay set to database');
+        }
       }
     } catch (error) {
       console.error('Error loading music relay set:', error);
