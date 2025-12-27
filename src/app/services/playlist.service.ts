@@ -1020,4 +1020,66 @@ export class PlaylistService implements OnInitialized {
       return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
     }
   }
+
+  /**
+   * Get the "Watch Later" playlist, creating it if it doesn't exist
+   */
+  getOrCreateWatchLaterPlaylist(): Playlist {
+    const watchLaterId = 'watch-later';
+    let watchLater = this._playlists().find(p => p.id === watchLaterId);
+
+    if (!watchLater) {
+      // Create the watch-later playlist
+      watchLater = {
+        id: watchLaterId,
+        title: 'Watch Later',
+        description: 'Videos and media saved for later viewing',
+        tracks: [],
+        created_at: Math.floor(Date.now() / 1000),
+        pubkey: this.getCurrentUserPubkey(),
+        isLocal: true,
+      };
+
+      this._playlists.set([...this._playlists(), watchLater]);
+      this.savePlaylistsToStorage();
+    }
+
+    return watchLater;
+  }
+
+  /**
+   * Add a track to a playlist by ID
+   * If the playlist is 'watch-later' and doesn't exist, it will be created
+   */
+  addTrackToPlaylist(playlistId: string, track: PlaylistTrack): void {
+    // Special handling for watch-later
+    if (playlistId === 'watch-later') {
+      this.getOrCreateWatchLaterPlaylist();
+    }
+
+    const playlists = this._playlists();
+    const playlistIndex = playlists.findIndex(p => p.id === playlistId);
+
+    if (playlistIndex === -1) {
+      throw new Error(`Playlist with id ${playlistId} not found`);
+    }
+
+    const playlist = playlists[playlistIndex];
+
+    // Check if track already exists (by URL)
+    if (playlist.tracks.some(t => t.url === track.url)) {
+      return; // Track already in playlist
+    }
+
+    const updatedPlaylist: Playlist = {
+      ...playlist,
+      tracks: [...playlist.tracks, track],
+      totalDuration: this.calculateTotalDuration([...playlist.tracks, track]),
+    };
+
+    const newPlaylists = [...playlists];
+    newPlaylists[playlistIndex] = updatedPlaylist;
+    this._playlists.set(newPlaylists);
+    this.savePlaylistsToStorage();
+  }
 }
