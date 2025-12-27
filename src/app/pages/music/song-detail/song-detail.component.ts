@@ -23,6 +23,7 @@ import { ZapService } from '../../../services/zap.service';
 import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { LoggerService } from '../../../services/logger.service';
 import { MusicPlaylistService } from '../../../services/music-playlist.service';
+import { LayoutService } from '../../../services/layout.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
@@ -70,6 +71,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private sharedRelay = inject(SharedRelayService);
   private logger = inject(LoggerService);
   private musicPlaylistService = inject(MusicPlaylistService);
+  private layout = inject(LayoutService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -654,6 +656,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  publishTrack(): void {
+    const ev = this.song();
+    if (!ev) return;
+
+    this.layout.publishEvent(ev);
   }
 
   editTrack(): void {

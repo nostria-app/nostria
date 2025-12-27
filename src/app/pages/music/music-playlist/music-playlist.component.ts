@@ -18,6 +18,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { ReactionService } from '../../../services/reaction.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
 import { EventService } from '../../../services/event';
+import { LayoutService } from '../../../services/layout.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import {
   EditMusicPlaylistDialogComponent,
@@ -58,6 +59,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private musicPlaylistService = inject(MusicPlaylistService);
   private reactionService = inject(ReactionService);
   private eventService = inject(EventService);
+  private layout = inject(LayoutService);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
@@ -459,6 +461,13 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  publishPlaylist(): void {
+    const ev = this.playlist();
+    if (!ev) return;
+
+    this.layout.publishEvent(ev);
   }
 
   editPlaylist(): void {

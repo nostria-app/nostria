@@ -195,7 +195,25 @@ export class PublishDialogComponent {
 
   /** Check if the event has any mentioned users (p-tags) */
   hasMentionedUsers(): boolean {
-    return this.getMentionedPubkeys().length > 0;
+    return this.getMentionedPubkeys().length > 0 && this.isSocialEventKind();
+  }
+
+  /** Check if the event kind is a social interaction type where mentioned users' relays are relevant */
+  private isSocialEventKind(): boolean {
+    const event = this.customMode() ? this.getParsedEvent() : this.data.event;
+    if (!event) {
+      return false;
+    }
+
+    // Social interaction kinds where publishing to mentioned users' relays makes sense:
+    // 1 - Short text note
+    // 6 - Repost
+    // 7 - Reaction
+    // 16 - Generic repost
+    // 1111 - Comment
+    // 30023 - Long-form article
+    const socialKinds = [1, 6, 7, 16, 1111, 30023];
+    return socialKinds.includes(event.kind);
   }
 
   /** Load relays for all mentioned users */

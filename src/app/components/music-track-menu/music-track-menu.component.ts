@@ -13,6 +13,7 @@ import { MusicPlaylistService } from '../../services/music-playlist.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
+import { LayoutService } from '../../services/layout.service';
 import { MediaItem } from '../../interfaces';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
 
@@ -54,6 +55,10 @@ import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } fro
       <button mat-menu-item (click)="copyEventData()">
         <mat-icon>data_object</mat-icon>
         <span>Copy Event Data</span>
+      </button>
+      <button mat-menu-item (click)="publishEvent()">
+        <mat-icon>publish</mat-icon>
+        <span>Publish Event</span>
       </button>
     </mat-menu>
     
@@ -112,6 +117,7 @@ export class MusicTrackMenuComponent {
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
   private utilities = inject(UtilitiesService);
+  private layout = inject(LayoutService);
 
   // ViewChild for exposing the menu - must be public for template access
   @ViewChild('trackMenu', { static: true }) public trackMenu!: MatMenu;
@@ -234,6 +240,10 @@ export class MusicTrackMenuComponent {
     const ev = this.track();
     this.clipboard.copy(JSON.stringify(ev, null, 2));
     this.snackBar.open('Event data copied!', 'Close', { duration: 2000 });
+  }
+
+  publishEvent(): void {
+    this.layout.publishEvent(this.track());
   }
 
   createNewPlaylist(): void {
