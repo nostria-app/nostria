@@ -118,7 +118,7 @@
         [matTooltip]="getRepeatTooltip()">
         <span>{{ media.repeat() === 'one' ? 'REPEAT 1' : 'REPEAT' }}</span>
       </button>
-      @if (hasLyrics()) {
+      @if (canShowLyrics()) {
       <button class="toggle-btn" [class.active]="showLyrics()" (click)="toggleLyrics()" matTooltip="Lyrics">
         <span>LYRICS</span>
       </button>

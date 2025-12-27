@@ -112,7 +112,7 @@
   </div>
 
   <!-- Lyrics button -->
-  @if (hasLyrics()) {
+  @if (canShowLyrics()) {
   <button mat-icon-button class="lyrics-btn" [class.active]="showLyrics()" (click)="toggleLyrics()" matTooltip="Lyrics">
     <mat-icon>lyrics</mat-icon>
   </button>
