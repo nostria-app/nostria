@@ -14,7 +14,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import type { SafeHtml } from '@angular/platform-browser';
-import { ActivatedRoute, type ParamMap } from '@angular/router';
+import { ActivatedRoute, type ParamMap, Router } from '@angular/router';
 import { type Event, kinds, nip19 } from 'nostr-tools';
 import type { Subscription } from 'rxjs';
 import type { ArticleData } from '../../components/article-display/article-display.component';
@@ -52,6 +52,7 @@ import { ExternalLinkHandlerService } from '../../services/external-link-handler
 })
 export class ArticleComponent implements OnDestroy {
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private utilities = inject(UtilitiesService);
   private readonly userDataService = inject(UserDataService);
   private logger = inject(LoggerService);
@@ -168,6 +169,22 @@ export class ArticleComponent implements OnDestroy {
     let slug = '';
 
     if (receivedData) {
+      // Redirect non-article kinds to their proper routes
+      if (receivedData.kind !== kinds.LongFormArticle) {
+        const identifier = receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '';
+        const npub = nip19.npubEncode(receivedData.pubkey);
+        if (receivedData.kind === 34139) {
+          // Music playlist
+          this.router.navigate(['/music/playlist', npub, identifier], { replaceUrl: true });
+          return;
+        } else if (receivedData.kind === 36787) {
+          // Music track
+          this.router.navigate(['/music/song', npub, identifier], { replaceUrl: true });
+          return;
+        }
+        // For other unknown kinds, continue loading as-is (fallback)
+      }
+
       const encoded = nip19.naddrEncode({
         identifier: receivedData.tags.find(tag => tag[0] === 'd')?.[1] || '',
         kind: receivedData.kind,
@@ -198,6 +215,21 @@ export class ArticleComponent implements OnDestroy {
       };
       this.logger.debug('Decoded naddr:', addrData);
 
+      // Redirect non-article kinds to their proper routes
+      if (addrData.kind !== kinds.LongFormArticle) {
+        const npub = nip19.npubEncode(addrData.pubkey);
+        if (addrData.kind === 34139) {
+          // Music playlist
+          this.router.navigate(['/music/playlist', npub, addrData.identifier], { replaceUrl: true });
+          return;
+        } else if (addrData.kind === 36787) {
+          // Music track
+          this.router.navigate(['/music/song', npub, addrData.identifier], { replaceUrl: true });
+          return;
+        }
+        // For other unknown kinds, continue loading as-is (fallback)
+      }
+
       pubkey = addrData.pubkey;
       slug = decoded.data.identifier;
     } else if (this.isAddressableFormat(naddr)) {
@@ -208,6 +240,21 @@ export class ArticleComponent implements OnDestroy {
       slug = parts.slice(2).join(':'); // d-tag may contain colons
 
       this.logger.debug('Parsed addressable format:', { kind, pubkey, slug });
+
+      // Redirect non-article kinds to their proper routes
+      if (kind !== kinds.LongFormArticle) {
+        const npub = nip19.npubEncode(pubkey);
+        if (kind === 34139) {
+          // Music playlist
+          this.router.navigate(['/music/playlist', npub, slug], { replaceUrl: true });
+          return;
+        } else if (kind === 36787) {
+          // Music track
+          this.router.navigate(['/music/song', npub, slug], { replaceUrl: true });
+          return;
+        }
+        // For other unknown kinds, continue loading as-is (fallback)
+      }
 
       // Generate naddr for sharing
       const encoded = nip19.naddrEncode({

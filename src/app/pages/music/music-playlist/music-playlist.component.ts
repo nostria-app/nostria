@@ -17,6 +17,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { ReactionService } from '../../../services/reaction.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
+import { EventService } from '../../../services/event';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import {
   EditMusicPlaylistDialogComponent,
@@ -56,6 +57,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private musicPlaylistService = inject(MusicPlaylistService);
   private reactionService = inject(ReactionService);
+  private eventService = inject(EventService);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
@@ -420,15 +422,34 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
     try {
       const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+      const npub = nip19.npubEncode(ev.pubkey);
+      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
+      this.clipboard.copy(link);
+      this.snackBar.open('Event link copied!', 'Close', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
+    }
+  }
+
+  sharePlaylist(): void {
+    const ev = this.playlist();
+    if (!ev) return;
+
+    try {
+      const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
       const naddr = nip19.naddrEncode({
         kind: ev.kind,
         pubkey: ev.pubkey,
         identifier: dTag,
       });
-      this.clipboard.copy(`nostr:${naddr}`);
-      this.snackBar.open('Event link copied!', 'Close', { duration: 2000 });
+
+      // Create content with nostr: reference to the playlist
+      const content = `nostr:${naddr}`;
+
+      // Open note editor with the playlist reference
+      this.eventService.createNote({ content });
     } catch {
-      this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
+      this.snackBar.open('Failed to generate playlist reference', 'Close', { duration: 3000 });
     }
   }
 
@@ -677,7 +698,8 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         pubkey: track.pubkey,
         identifier: dTag,
       });
-      this.clipboard.copy(`nostr:${naddr}`);
+      const link = `https://nostria.app/a/${naddr}`;
+      this.clipboard.copy(link);
       this.snackBar.open('Track link copied!', 'Close', { duration: 2000 });
     } catch {
       this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });

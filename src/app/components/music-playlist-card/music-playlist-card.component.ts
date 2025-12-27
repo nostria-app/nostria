@@ -429,11 +429,13 @@ export class MusicPlaylistCardComponent {
     });
   }
 
-  // Copy event link (naddr)
+  // Copy event link (playlist URL)
   copyEventLink(): void {
-    const addr = this.naddr();
-    if (addr) {
-      const link = `https://nostria.app/a/${addr}`;
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1];
+    if (dTag) {
+      const npub = nip19.npubEncode(ev.pubkey);
+      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
       this.clipboard.copy(link);
       this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
     } else {
