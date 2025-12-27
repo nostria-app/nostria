@@ -225,23 +225,21 @@ export class MusicComponent implements OnDestroy {
   }
 
   private startSubscriptions(): void {
-    // Get the user's account relays (not the hardcoded preferredRelays)
+    // Get the user's account relays directly (no fallback)
     const accountRelays = this.accountRelay.getRelayUrls();
-    const defaultRelays = this.relaysService.getOptimalRelays(accountRelays);
 
     // Combine with music-specific relays from the user's relay set
     const customMusicRelays = this.musicRelays();
-    const allRelayUrls = [...new Set([...defaultRelays, ...customMusicRelays])];
+    const allRelayUrls = [...new Set([...accountRelays, ...customMusicRelays])];
+
+    console.log('[Music] Account relays:', accountRelays);
+    console.log('[Music] Custom music relays:', customMusicRelays);
+    console.log('[Music] All relays:', allRelayUrls);
 
     if (allRelayUrls.length === 0) {
       console.warn('No relays available for loading music');
       this.loading.set(false);
       return;
-    }
-
-    // Log if we're using custom music relays
-    if (customMusicRelays.length > 0) {
-      console.log('[Music] Using custom music relays:', customMusicRelays);
     }
 
     let tracksLoaded = false;
@@ -399,11 +397,12 @@ export class MusicComponent implements OnDestroy {
     this.showSettingsDialog.set(true);
   }
 
-  onSettingsDialogClosed(result: { saved: boolean } | null): void {
+  async onSettingsDialogClosed(result: { saved: boolean } | null): Promise<void> {
     this.showSettingsDialog.set(false);
     if (result?.saved) {
-      // Reload the music relay set after saving
-      this.loadMusicRelaySet();
+      // Reload the music relay set and restart subscriptions with new relays
+      await this.loadMusicRelaySet();
+      this.refresh();
     }
   }
 
