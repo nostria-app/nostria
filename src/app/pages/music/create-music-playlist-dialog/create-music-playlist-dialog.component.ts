@@ -51,6 +51,7 @@ export class CreateMusicPlaylistDialogComponent {
   isCreating = signal(false);
   isUploading = signal(false);
   isDraggingImage = signal(false);
+  private dragEnterCounter = 0;
   coverImage = signal<string | null>(null);
 
   // Random gradients for default cover
@@ -122,21 +123,32 @@ export class CreateMusicPlaylistDialogComponent {
   }
 
   // Drag and drop handlers for cover image
+  onImageDragEnter(event: DragEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.dragEnterCounter++;
+    this.isDraggingImage.set(true);
+  }
+
   onImageDragOver(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.isDraggingImage.set(true);
   }
 
   onImageDragLeave(event: DragEvent): void {
     event.preventDefault();
     event.stopPropagation();
-    this.isDraggingImage.set(false);
+    this.dragEnterCounter--;
+    if (this.dragEnterCounter <= 0) {
+      this.dragEnterCounter = 0;
+      this.isDraggingImage.set(false);
+    }
   }
 
   async onImageDrop(event: DragEvent): Promise<void> {
     event.preventDefault();
     event.stopPropagation();
+    this.dragEnterCounter = 0;
     this.isDraggingImage.set(false);
 
     const files = event.dataTransfer?.files;
