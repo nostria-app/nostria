@@ -29,9 +29,15 @@
       <p>No comments yet. Be the first to comment!</p>
     </div>
     } @else {
-    <div class="comments-list">
-      @for (comment of comments(); track comment.event.id) {
-      <app-comment [event]="comment.event" [rootEvent]="event()"></app-comment>
+    <div class="comments-list threaded">
+      @for (thread of commentThreads(); track thread.comment.event.id) {
+        <app-comment
+          [event]="thread.comment.event"
+          [rootEvent]="event()"
+          [replies]="thread.replies"
+          [depth]="thread.depth"
+          (replyAdded)="onCommentReplyAdded($event)"
+        ></app-comment>
       }
     </div>
 

@@ -1,23 +1,40 @@
-<mat-card class="comment-card" [class.nested]="nested()" appearance="outlined">
-  <mat-card-header>
-    <app-event-header [event]="event()"></app-event-header>
-  </mat-card-header>
+<div class="comment-thread" [class.nested]="depth() > 0" [style.--depth]="Math.min(depth(), maxVisualDepth)">
+  <mat-card class="comment-card" appearance="outlined">
+    <mat-card-header>
+      <app-event-header [event]="event()"></app-event-header>
+    </mat-card-header>
 
-  <mat-card-content>
-    <!-- Using @defer to break circular dependency: Comment -> Content -> NoteContent -> PhotoEvent -> CommentsList -> Comment -->
-    @defer {
-    <app-content [content]="commentContent()" [event]="event()" [hideTaggedReferences]="true"></app-content>
-    } @placeholder {
-    <div class="content-loading">Loading...</div>
-    }
-  </mat-card-content>
+    <mat-card-content>
+      <!-- Using @defer to break circular dependency: Comment -> Content -> NoteContent -> PhotoEvent -> CommentsList -> Comment -->
+      @defer {
+      <app-content [content]="commentContent()" [event]="event()" [hideTaggedReferences]="true"></app-content>
+      } @placeholder {
+      <div class="content-loading">Loading...</div>
+      }
+    </mat-card-content>
 
-  <mat-card-actions>
-    <div class="comment-actions">
-      <button mat-icon-button [matTooltip]="'Reply to comment'" (click)="onReply()">
-        <mat-icon>reply</mat-icon>
-      </button>
-      <app-event-menu [event]="event()"></app-event-menu>
+    <mat-card-actions>
+      <div class="comment-actions">
+        <button mat-icon-button [matTooltip]="'Reply to comment'" (click)="onReply()">
+          <mat-icon>reply</mat-icon>
+        </button>
+        <app-event-menu [event]="event()"></app-event-menu>
+      </div>
+    </mat-card-actions>
+  </mat-card>
+
+  <!-- Render nested replies -->
+  @if (replies().length > 0) {
+    <div class="replies-container">
+      @for (reply of replies(); track reply.comment.event.id) {
+        <app-comment
+          [event]="reply.comment.event"
+          [rootEvent]="rootEvent()"
+          [replies]="reply.replies"
+          [depth]="reply.depth"
+          (replyAdded)="replyAdded.emit($event)"
+        ></app-comment>
+      }
     </div>
-  </mat-card-actions>
-</mat-card>
+  }
+</div>

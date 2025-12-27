@@ -1,4 +1,4 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, output } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -11,6 +11,14 @@ import { EventMenuComponent } from '../event/event-menu/event-menu.component';
 import { EventService } from '../../services/event';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
+import { NostrRecord } from '../../interfaces';
+
+// Re-export CommentThread for recursive template usage
+export interface CommentThread {
+  comment: NostrRecord;
+  replies: CommentThread[];
+  depth: number;
+}
 
 interface CommentTags {
   // Root scope (uppercase tags)
@@ -48,10 +56,21 @@ export class CommentComponent {
   event = input.required<Event>();
   nested = input<boolean>(false);
   rootEvent = input.required<Event>(); // The original event being commented on
+  replies = input<CommentThread[]>([]); // Nested replies to this comment
+  depth = input<number>(0); // Nesting depth for styling
+
+  // Output event when a reply is added
+  replyAdded = output<Event>();
 
   private eventService = inject(EventService);
   private accountState = inject(AccountStateService);
   private layout = inject(LayoutService);
+
+  // Maximum nesting depth for visual indentation (after this, no more indent)
+  readonly maxVisualDepth = 4;
+
+  // Expose Math for template
+  protected readonly Math = Math;
 
   // Parse NIP-22 comment tags
   commentTags = computed(() => this.parseCommentTags(this.event()));
@@ -78,10 +97,11 @@ export class CommentComponent {
     // Open comment dialog to reply to this comment
     const dialogRef = this.eventService.createCommentReply(this.rootEvent(), this.event());
 
-    // Note: The reply will be shown after the parent comments-list refreshes
-    // We don't handle it here since comment replies are managed by the parent component
-    dialogRef.afterClosed().subscribe(() => {
-      // Could emit an event to notify parent to refresh if needed
+    // Handle dialog result and emit the new reply event
+    dialogRef.afterClosed().subscribe((result: { published: boolean; event?: Event } | undefined) => {
+      if (result?.published && result.event) {
+        this.replyAdded.emit(result.event);
+      }
     });
   }
 
