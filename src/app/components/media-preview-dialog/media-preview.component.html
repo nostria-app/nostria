@@ -43,8 +43,8 @@
       (touchstart)="onPointerDown($event)" (touchmove)="onPointerMove($event)" (touchend)="onPointerUp()"
       (touchcancel)="onPointerUp()" (wheel)="onWheel($event)">
       <img #imageElement [src]="currentMedia().url" [alt]="currentMedia().title || 'Media'" class="preview-image"
-        [class.draggable]="scale() > 1" [style.transform]="getTransformStyle()"
-        [style.cursor]="isDragging() ? 'grabbing' : scale() > 1 ? 'grab' : 'default'" draggable="false" />
+        draggable="false" [class.draggable]="true" [class.dragging]="isDragging()"
+        [style.transform]="getTransformStyle()" [style.cursor]="isDragging() ? 'grabbing' : 'grab'" />
     </div>
     } @else if (isVideo()) {
     <div class="video-container">

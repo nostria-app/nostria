@@ -219,11 +219,8 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     }
   }
 
-  // Pan/drag handlers for zoomed images
+  // Pan/drag handlers for images
   onPointerDown(event: MouseEvent | TouchEvent): void {
-    // Only allow dragging when zoomed in
-    if (this.scale() <= 1) return;
-
     let clientX: number, clientY: number;
 
     if (event instanceof TouchEvent) {
