@@ -36,6 +36,10 @@
         <mat-icon>data_object</mat-icon>
         <span>Copy Event Data</span>
       </button>
+      <button mat-menu-item (click)="publishTrack()">
+        <mat-icon>publish</mat-icon>
+        <span>Publish Event</span>
+      </button>
     </mat-menu>
     <mat-menu #playlistMenu="matMenu">
       <button mat-menu-item (click)="createNewPlaylist()">
