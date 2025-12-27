@@ -129,6 +129,7 @@ export class UploadMusicTrackDialogComponent {
       lyrics: [''],
       credits: [''],
       imageUrl: [''],
+      customTags: [''], // Custom tags as comma-separated values
     });
 
     // Initialize with current user as uploader
@@ -605,7 +606,7 @@ export class UploadMusicTrackDialogComponent {
       }
 
       if (formValue.trackNumber) {
-        tags.push(['track_number', formValue.trackNumber]);
+        tags.push(['track_number', String(formValue.trackNumber)]);
       }
 
       if (formValue.releaseDate) {
@@ -620,8 +621,15 @@ export class UploadMusicTrackDialogComponent {
         tags.push(['explicit', 'true']);
       }
 
-      if (formValue.lyrics) {
-        tags.push(['lyrics', formValue.lyrics]);
+      // Add custom tags
+      if (formValue.customTags) {
+        const customTagsList = formValue.customTags
+          .split(',')
+          .map((t: string) => t.trim().toLowerCase())
+          .filter((t: string) => t.length > 0);
+        for (const tag of customTagsList) {
+          tags.push(['t', tag]);
+        }
       }
 
       // Add zap splits
@@ -638,9 +646,13 @@ export class UploadMusicTrackDialogComponent {
       const artistDisplay = formValue.artistName || 'Unknown Artist';
       tags.push(['alt', `Music track: ${formValue.title} by ${artistDisplay}`]);
 
-      // Build content (credits go here)
+      // Build content (lyrics and credits go here per spec)
       let content = '';
-      if (formValue.credits) {
+      if (formValue.lyrics && formValue.credits) {
+        content = `Lyrics:\n${formValue.lyrics}\n\nCredits:\n${formValue.credits}`;
+      } else if (formValue.lyrics) {
+        content = `Lyrics:\n${formValue.lyrics}`;
+      } else if (formValue.credits) {
         content = `Credits:\n${formValue.credits}`;
       }
 

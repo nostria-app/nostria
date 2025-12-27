@@ -14,8 +14,10 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { DataService } from '../../../services/data.service';
 import { ReportingService } from '../../../services/reporting.service';
 import { MediaPlayerService } from '../../../services/media-player.service';
+import { AccountStateService } from '../../../services/account-state.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
+import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -30,6 +32,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatMenuModule,
     MatSnackBarModule,
     MusicPlaylistCardComponent,
+    MusicTrackDialogComponent,
   ],
   templateUrl: './music-artist.component.html',
   styleUrls: ['./music-artist.component.scss'],
@@ -43,6 +46,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private data = inject(DataService);
   private reporting = inject(ReportingService);
   private mediaPlayer = inject(MediaPlayerService);
+  private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
 
@@ -53,9 +57,20 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   tracks = signal<Event[]>([]);
   playlists = signal<Event[]>([]);
 
+  // Edit dialog state
+  showEditDialog = signal(false);
+  editDialogData = signal<MusicTrackDialogData | null>(null);
+
   private subscriptions: { close: () => void }[] = [];
   private trackMap = new Map<string, Event>();
   private playlistMap = new Map<string, Event>();
+
+  // Check if viewing own profile
+  isOwnProfile = computed(() => {
+    const currentPubkey = this.accountState.pubkey();
+    const viewingPubkey = this.pubkey();
+    return !!currentPubkey && currentPubkey === viewingPubkey;
+  });
 
   // Profile data
   artistName = computed(() => {
@@ -399,6 +414,27 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       this.snackBar.open('Track link copied!', 'Close', { duration: 2000 });
     } catch {
       this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
+    }
+  }
+
+  editTrack(track: Event): void {
+    if (!this.isOwnProfile()) return;
+    this.editDialogData.set({ track });
+    this.showEditDialog.set(true);
+  }
+
+  onEditDialogClosed(result: { published: boolean; updated?: boolean; event?: Event } | null): void {
+    this.showEditDialog.set(false);
+    this.editDialogData.set(null);
+
+    if (result?.updated && result?.event) {
+      // Update the track in the local map
+      const event = result.event;
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+      const uniqueId = `${event.pubkey}:${dTag}`;
+      this.trackMap.set(uniqueId, event);
+      this.updateTracks();
+      this.snackBar.open('Track updated', 'Close', { duration: 2000 });
     }
   }
 }

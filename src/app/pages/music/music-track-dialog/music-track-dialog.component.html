@@ -230,6 +230,12 @@
             <textarea matInput formControlName="credits" rows="3"
               placeholder="Producer: John Doe&#10;Mix Engineer: Jane Smith&#10;Mastering: ..."></textarea>
           </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Custom Tags</mat-label>
+            <input matInput formControlName="customTags" placeholder="tag1, tag2, tag3" />
+            <mat-hint>Comma-separated custom tags (in addition to genres)</mat-hint>
+          </mat-form-field>
         </div>
       </mat-expansion-panel>
 
