@@ -6,6 +6,7 @@ import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatChipsModule } from '@angular/material/chips';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, nip19 } from 'nostr-tools';
 import { DataService } from '../../services/data.service';
@@ -20,13 +21,17 @@ import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/music/music-track-dialog/music-track-dialog.component';
+import { UserProfileComponent } from '../user-profile/user-profile.component';
+import { DateToggleComponent } from '../date-toggle/date-toggle.component';
 
 @Component({
   selector: 'app-music-event',
-  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, MusicTrackDialogComponent],
+  imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, MatChipsModule, MusicTrackDialogComponent, UserProfileComponent, DateToggleComponent],
   template: `
     <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
       [attr.aria-label]="'View ' + title()">
+      
+      <!-- Cover image/placeholder -->
       <div class="music-cover" [style.background]="gradient() || ''">
         @if (image() && !gradient()) {
           <img [src]="image()" [alt]="title()" class="cover-image" loading="lazy" />
@@ -35,23 +40,38 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/mus
             <mat-icon>music_note</mat-icon>
           </div>
         }
-        <button class="play-overlay" (click)="playTrack($any($event))" aria-label="Play track">
-          <mat-icon class="play-icon">play_arrow</mat-icon>
-        </button>
         @if (isAiGenerated()) {
           <span class="ai-badge">AI</span>
         }
       </div>
+      
+      <!-- Info section -->
       <div class="music-info">
-        <div class="music-title-row">
-          <span class="music-title">{{ title() || 'Untitled Track' }}</span>
-          <button mat-icon-button class="menu-btn" [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
-            <mat-icon>more_vert</mat-icon>
-          </button>
+        <app-user-profile [pubkey]="event().pubkey" mode="list"></app-user-profile>
+        <h4 class="music-title">{{ title() || 'Untitled Track' }}</h4>
+        <div class="music-meta">
+          <app-date-toggle [date]="event().created_at"></app-date-toggle>
+          @if (hashtags().length > 0) {
+            <mat-chip-set>
+              @for (hashtag of hashtags().slice(0, 3); track hashtag) {
+                <mat-chip>{{ hashtag }}</mat-chip>
+              }
+            </mat-chip-set>
+          }
         </div>
-        <span class="music-artist" (click)="openArtist($any($event))" (keydown.enter)="openArtist($any($event))" 
-          tabindex="0" role="button">{{ artistName() }}</span>
       </div>
+      
+      <!-- Action buttons -->
+      <div class="music-actions">
+        <button mat-icon-button class="play-btn" (click)="playTrack($any($event))" 
+          aria-label="Play now" title="Play Now">
+          <mat-icon>play_arrow</mat-icon>
+        </button>
+        <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+      </div>
+      
       <mat-menu #menu="matMenu">
         @if (isOwnTrack()) {
           <button mat-menu-item (click)="editTrack()">
@@ -59,6 +79,14 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/mus
             <span>Edit Track</span>
           </button>
         }
+        <button mat-menu-item (click)="playTrack($any($event))">
+          <mat-icon>play_arrow</mat-icon>
+          <span>Play Now</span>
+        </button>
+        <button mat-menu-item (click)="addToQueue()">
+          <mat-icon>queue_music</mat-icon>
+          <span>Add to Queue</span>
+        </button>
         <button mat-menu-item (click)="shareTrack()">
           <mat-icon>share</mat-icon>
           <span>Share Track</span>
@@ -69,10 +97,6 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/mus
             <span>Add to Playlist</span>
           </button>
         }
-        <button mat-menu-item (click)="addToQueue()">
-          <mat-icon>queue_music</mat-icon>
-          <span>Add to Queue</span>
-        </button>
         <button mat-menu-item (click)="copyEventLink()">
           <mat-icon>link</mat-icon>
           <span>Copy Event Link</span>
@@ -118,33 +142,36 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/mus
   styles: [`
     .music-card {
       display: flex;
-      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
       cursor: pointer;
-      border-radius: var(--mat-sys-corner-large);
-      overflow: hidden;
-      background-color: var(--mat-sys-surface-container);
-      transition: transform 0.2s ease, background-color 0.2s ease;
+      border-radius: 12px;
+      border: 1px solid var(--mat-sys-outline-variant);
+      background-color: var(--mat-sys-surface-container-low);
+      transition: background-color 0.2s ease;
       
       &:hover {
-        transform: scale(1.02);
-        background-color: var(--mat-sys-surface-container-high);
-        
-        .play-overlay {
-          opacity: 1;
-        }
+        background-color: var(--mat-sys-surface-container);
       }
       
       &:focus {
         outline: 2px solid var(--mat-sys-primary);
-        outline-offset: 2px;
+        outline-offset: -2px;
       }
     }
     
     .music-cover {
       position: relative;
-      width: 100%;
-      aspect-ratio: 1;
+      width: 64px;
+      height: 64px;
+      min-width: 64px;
+      border-radius: 8px;
       overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
       
       .cover-image {
         width: 100%;
@@ -153,117 +180,93 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/mus
       }
       
       .cover-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
         width: 100%;
         height: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
         
         mat-icon {
-          font-size: 4rem;
-          width: 4rem;
-          height: 4rem;
-          color: var(--mat-sys-on-primary-container);
-          opacity: 0.5;
-        }
-      }
-      
-      .play-overlay {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background-color: rgba(0, 0, 0, 0.4);
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        border: none;
-        cursor: pointer;
-        
-        &:hover {
-          background-color: rgba(0, 0, 0, 0.6);
-        }
-        
-        .play-icon {
-          font-size: 3rem;
-          width: 3rem;
-          height: 3rem;
-          color: white;
+          font-size: 32px;
+          width: 32px;
+          height: 32px;
+          color: var(--mat-sys-on-tertiary-container);
+          opacity: 0.7;
         }
       }
       
       .ai-badge {
         position: absolute;
-        top: 8px;
-        right: 8px;
+        top: 4px;
+        right: 4px;
         background: rgba(0, 0, 0, 0.7);
         color: white;
-        font-size: 0.625rem;
-        padding: 2px 6px;
-        border-radius: 4px;
+        font-size: 0.5rem;
+        padding: 1px 4px;
+        border-radius: 3px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
     }
     
     .music-info {
-      display: flex;
-      flex-direction: column;
-      padding: 0.5rem 0.75rem;
-      gap: 0.125rem;
-    }
-
-    .music-title-row {
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-    }
-    
-    .music-title {
       flex: 1;
-      font-size: 0.875rem;
-      color: var(--mat-sys-on-surface);
-      white-space: nowrap;
+      min-width: 0;
       overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .menu-btn {
-      flex-shrink: 0;
-      width: 24px;
-      height: 24px;
-      padding: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      opacity: 0.6;
-      transition: opacity 0.2s ease;
-      --mdc-icon-button-state-layer-size: 24px;
-      --mdc-icon-button-icon-size: 18px;
-
-      mat-icon {
-        font-size: 18px;
-        width: 18px;
-        height: 18px;
+      
+      app-user-profile {
+        margin-bottom: 4px;
       }
-
-      &:hover {
-        opacity: 1;
+      
+      .music-title {
+        margin: 0;
+        font-size: 1rem;
+        line-height: 1.3;
+        color: var(--mat-sys-on-surface);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      
+      .music-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+        
+        app-date-toggle {
+          font-size: 0.75rem;
+          color: var(--mat-sys-on-surface-variant);
+        }
+        
+        mat-chip-set {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 4px;
+          
+          mat-chip {
+            --mdc-chip-container-height: 20px;
+            --mdc-chip-label-text-size: 0.7rem;
+          }
+        }
       }
     }
     
-    .music-artist {
-      font-size: 0.75rem;
-      color: var(--mat-sys-on-surface-variant);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      cursor: pointer;
+    .music-actions {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
       
-      &:hover {
-        text-decoration: underline;
+      .play-btn {
         color: var(--mat-sys-primary);
+        background-color: var(--mat-sys-primary-container);
+        
+        &:hover {
+          background-color: var(--mat-sys-primary);
+          color: var(--mat-sys-on-primary);
+        }
       }
     }
 
@@ -390,6 +393,14 @@ export class MusicEventComponent {
       return `linear-gradient(135deg, ${colors})`;
     }
     return null;
+  });
+
+  // Extract hashtags from t tags
+  hashtags = computed(() => {
+    const event = this.event();
+    return event.tags
+      .filter(t => t[0] === 't' && t[1])
+      .map(t => t[1]);
   });
 
   // Track liked state - set after liking
