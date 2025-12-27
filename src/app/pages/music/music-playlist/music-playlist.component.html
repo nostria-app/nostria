@@ -160,10 +160,7 @@
           </div>
           <span class="track-date">{{ getTrackDate(track) }}</span>
           <span class="track-duration">{{ getTrackDuration(track) }}</span>
-          <app-music-track-menu 
-            [track]="track" 
-            [artistName]="getTrackArtist(track)"
-            [showEditOption]="false"
+          <app-music-track-menu [track]="track" [artistName]="getTrackArtist(track)" [showEditOption]="false"
             #trackMenuRef="musicTrackMenu" />
           <button mat-icon-button class="track-menu-btn" [matMenuTriggerFor]="trackMenuRef.trackMenu" type="button"
             aria-label="Track options" (click)="$event.stopPropagation()">

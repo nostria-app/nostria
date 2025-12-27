@@ -83,7 +83,11 @@ import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } fro
   `,
   styles: [`
     :host {
-      display: contents;
+      position: absolute;
+      width: 0;
+      height: 0;
+      overflow: hidden;
+      pointer-events: none;
     }
     
     .playlist-loading, .no-playlists {
