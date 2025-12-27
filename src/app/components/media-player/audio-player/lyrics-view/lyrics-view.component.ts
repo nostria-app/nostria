@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 
 export interface LyricLine {
@@ -19,10 +20,22 @@ export interface LyricLine {
   text: string;
 }
 
+interface LrcLibSearchResult {
+  id: number;
+  name: string;
+  trackName: string;
+  artistName: string;
+  albumName: string;
+  duration: number;
+  instrumental: boolean;
+  plainLyrics: string | null;
+  syncedLyrics: string | null;
+}
+
 @Component({
   selector: 'app-lyrics-view',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule],
+  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule],
   template: `
     <div class="lyrics-container" [class.compact]="compact()">
       <div class="lyrics-header">
@@ -33,7 +46,12 @@ export interface LyricLine {
       </div>
 
       <div class="lyrics-content" #lyricsContent>
-        @if (syncedLyrics().length > 0) {
+        @if (loading()) {
+          <div class="lyrics-loading">
+            <mat-spinner diameter="32"></mat-spinner>
+            <span>Searching for lyrics...</span>
+          </div>
+        } @else if (syncedLyrics().length > 0) {
           <div class="synced-lyrics">
             @for (line of syncedLyrics(); track line.time) {
               <p 
@@ -48,6 +66,11 @@ export interface LyricLine {
         } @else if (plainLyrics()) {
           <div class="plain-lyrics">
             <p>{{ plainLyrics() }}</p>
+          </div>
+        } @else {
+          <div class="lyrics-empty">
+            <mat-icon>lyrics</mat-icon>
+            <span>No lyrics found</span>
           </div>
         }
       </div>
@@ -180,6 +203,7 @@ export class LyricsViewComponent {
 
   syncedLyrics = signal<LyricLine[]>([]);
   plainLyrics = signal<string | null>(null);
+  loading = signal(false);
 
   // Track the current song to detect changes
   private currentTrackId = signal<string | null>(null);
@@ -187,7 +211,7 @@ export class LyricsViewComponent {
   currentTime = computed(() => this.media.currentTimeSig());
 
   constructor() {
-    // Watch for track changes and parse lyrics from MediaItem
+    // Watch for track changes and parse lyrics from MediaItem or fetch from API
     effect(() => {
       const current = this.media.current();
       const trackId = current?.source || current?.title || null;
@@ -195,7 +219,11 @@ export class LyricsViewComponent {
       if (trackId !== this.currentTrackId()) {
         this.currentTrackId.set(trackId);
         if (current?.lyrics) {
+          // Use embedded lyrics
           this.parseLyrics(current.lyrics);
+        } else if (current?.title || current?.artist) {
+          // Try to fetch from LRCLIB API
+          this.fetchLyricsFromApi(current.title, current.artist);
         } else {
           this.clearLyrics();
         }
@@ -297,5 +325,49 @@ export class LyricsViewComponent {
   private clearLyrics(): void {
     this.syncedLyrics.set([]);
     this.plainLyrics.set(null);
+    this.loading.set(false);
+  }
+
+  private async fetchLyricsFromApi(title?: string, artist?: string): Promise<void> {
+    if (!title && !artist) {
+      this.clearLyrics();
+      return;
+    }
+
+    this.loading.set(true);
+    this.syncedLyrics.set([]);
+    this.plainLyrics.set(null);
+
+    try {
+      const params = new URLSearchParams();
+      if (title) params.set('track_name', title);
+      if (artist) params.set('artist_name', artist);
+
+      const response = await fetch(`https://lrclib.net/api/search?${params.toString()}`);
+      if (!response.ok) {
+        this.clearLyrics();
+        return;
+      }
+
+      const results: LrcLibSearchResult[] = await response.json();
+      if (results.length === 0) {
+        this.clearLyrics();
+        return;
+      }
+
+      // Use the first result
+      const bestMatch = results[0];
+      if (bestMatch.syncedLyrics) {
+        this.parseLyrics(bestMatch.syncedLyrics);
+      } else if (bestMatch.plainLyrics) {
+        this.parseLyrics(bestMatch.plainLyrics);
+      } else {
+        this.clearLyrics();
+      }
+    } catch {
+      this.clearLyrics();
+    } finally {
+      this.loading.set(false);
+    }
   }
 }
