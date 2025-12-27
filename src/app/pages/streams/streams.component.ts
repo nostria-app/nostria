@@ -108,7 +108,8 @@ export class StreamsComponent implements OnDestroy {
     if (!pubkey) return;
 
     try {
-      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      const accountRelays = this.accountRelay.getRelayUrls();
+      const relayUrls = this.relaysService.getOptimalRelays(accountRelays);
       if (relayUrls.length === 0) return;
 
       const filter: Filter = {
@@ -156,23 +157,21 @@ export class StreamsComponent implements OnDestroy {
   }
 
   private startLiveSubscription(): void {
-    // Get the user's account relays (not the hardcoded preferredRelays)
+    // Get the user's account relays directly (no fallback)
     const accountRelays = this.accountRelay.getRelayUrls();
-    const defaultRelays = this.relaysService.getOptimalRelays(accountRelays);
 
     // Combine with streams-specific relays from the user's relay set
     const customStreamsRelays = this.streamsRelays();
-    const allRelayUrls = [...new Set([...defaultRelays, ...customStreamsRelays])];
+    const allRelayUrls = [...new Set([...accountRelays, ...customStreamsRelays])];
+
+    console.log('[Streams] Account relays:', accountRelays);
+    console.log('[Streams] Custom streams relays:', customStreamsRelays);
+    console.log('[Streams] All relays:', allRelayUrls);
 
     if (allRelayUrls.length === 0) {
       console.warn('No relays available for loading streams');
       this.loading.set(false);
       return;
-    }
-
-    // Log if we're using custom streams relays
-    if (customStreamsRelays.length > 0) {
-      console.log('[Streams] Using custom streams relays:', customStreamsRelays);
     }
 
     const filter: Filter = {
@@ -299,11 +298,12 @@ export class StreamsComponent implements OnDestroy {
     this.showSettingsDialog.set(true);
   }
 
-  onSettingsDialogClosed(result: { saved: boolean } | null): void {
+  async onSettingsDialogClosed(result: { saved: boolean } | null): Promise<void> {
     this.showSettingsDialog.set(false);
     if (result?.saved) {
-      // Reload the streams relay set after saving
-      this.loadStreamsRelaySet();
+      // Reload the streams relay set and restart subscription with new relays
+      await this.loadStreamsRelaySet();
+      this.refresh();
     }
   }
 }
