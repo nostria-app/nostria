@@ -329,3 +329,37 @@
     }
   }
 }
+
+// Lyrics button
+.lyrics-btn {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  color: var(--mat-sys-on-surface-variant);
+  transition: color 0.2s, background-color 0.2s;
+  z-index: 10;
+
+  &.active {
+    color: var(--mat-sys-primary);
+    background-color: var(--mat-sys-primary-container);
+  }
+}
+
+// Lyrics overlay
+.lyrics-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: var(--mat-sys-surface);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

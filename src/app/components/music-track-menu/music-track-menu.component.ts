@@ -12,6 +12,7 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { MusicPlaylistService } from '../../services/music-playlist.service';
 import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
+import { UtilitiesService } from '../../services/utilities.service';
 import { MediaItem } from '../../interfaces';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
 
@@ -110,6 +111,7 @@ export class MusicTrackMenuComponent {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
+  private utilities = inject(UtilitiesService);
 
   // ViewChild for exposing the menu - must be public for template access
   @ViewChild('trackMenu', { static: true }) public trackMenu!: MatMenu;
@@ -201,6 +203,7 @@ export class MusicTrackMenuComponent {
       type: 'Music',
       eventPubkey: this.getArtistNpub(),
       eventIdentifier: this.getIdentifier(),
+      lyrics: this.utilities.extractLyricsFromEvent(this.track()),
     };
 
     this.mediaPlayer.enque(mediaItem);

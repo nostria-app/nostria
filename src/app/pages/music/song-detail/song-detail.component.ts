@@ -514,6 +514,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
+      lyrics: this.lyrics() || undefined,
     };
 
     this.mediaPlayer.play(mediaItem);
@@ -602,6 +603,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
+      lyrics: this.lyrics() || undefined,
     };
 
     this.mediaPlayer.enque(mediaItem);

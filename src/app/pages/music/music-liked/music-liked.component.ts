@@ -517,6 +517,7 @@ export class MusicLikedComponent implements OnDestroy, AfterViewInit {
         type: 'Music',
         eventPubkey: track.pubkey,
         eventIdentifier: dTag,
+        lyrics: this.utilities.extractLyricsFromEvent(track),
       };
 
       if (i === 0) {

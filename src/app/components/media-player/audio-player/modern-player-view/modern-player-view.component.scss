@@ -360,17 +360,27 @@
   }
 }
 
+// Bottom controls container
+.bottom-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  width: 100%;
+  max-width: 280px;
+  margin-top: 16px;
+}
+
 // Volume
 .volume-container {
   display: flex;
   align-items: center;
   gap: 6px;
-  width: 100%;
+  flex: 1;
   max-width: 160px;
   flex-shrink: 0;
   height: 28px;
   padding-left: 8px;
-  margin-top: 16px;
 
   .volume-icon {
     color: var(--mat-sys-on-surface-variant);
@@ -383,6 +393,36 @@
   .volume-slider {
     flex: 1;
     min-width: 0;
+  }
+}
+
+// Lyrics button
+.lyrics-btn {
+  color: var(--mat-sys-on-surface-variant);
+  transition: color 0.2s, background-color 0.2s;
+
+  &.active {
+    color: var(--mat-sys-primary);
+    background-color: var(--mat-sys-primary-container);
+  }
+}
+
+// Lyrics overlay
+.lyrics-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
+  background: var(--mat-sys-surface);
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
   }
 }
 

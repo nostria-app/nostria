@@ -14,6 +14,7 @@ import { MatSliderModule } from '@angular/material/slider';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 import { SwipeGestureDirective, SwipeEvent, SwipeProgressEvent } from '../../../../directives/swipe-gesture.directive';
 import { trigger, transition, style, animate, state } from '@angular/animations';
+import { LyricsViewComponent } from '../lyrics-view/lyrics-view.component';
 
 @Component({
   selector: 'app-modern-player-view',
@@ -24,6 +25,7 @@ import { trigger, transition, style, animate, state } from '@angular/animations'
     MatTooltipModule,
     MatSliderModule,
     SwipeGestureDirective,
+    LyricsViewComponent,
   ],
   templateUrl: './modern-player-view.component.html',
   styleUrl: './modern-player-view.component.scss',
@@ -58,6 +60,14 @@ export class ModernPlayerViewComponent {
   displayedArtwork = signal<string | undefined>(undefined);
   displayedTitle = signal<string>('Unknown Track');
   displayedArtist = signal<string>('Unknown Artist');
+
+  // Lyrics view toggle
+  showLyrics = signal(false);
+  hasLyrics = computed(() => !!this.media.current()?.lyrics);
+
+  toggleLyrics(): void {
+    this.showLyrics.update(v => !v);
+  }
 
   constructor() {
     // Watch for track changes and trigger animations

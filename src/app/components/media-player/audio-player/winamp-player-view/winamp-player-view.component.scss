@@ -467,3 +467,109 @@ $winamp-button-pressed: #2a2a2a;
     }
   }
 }
+
+// Lyrics window (styled like WinAmp window)
+.winamp-lyrics {
+  width: 275px;
+  min-height: 200px;
+  max-height: 300px;
+  background: linear-gradient(180deg, $winamp-bg 0%, $winamp-dark 100%);
+  border: 2px solid $winamp-border;
+  border-radius: 4px;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.1),
+    inset -1px -1px 0 rgba(0, 0, 0, 0.3),
+    0 4px 16px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+
+  .lyrics-title-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 4px;
+    background: linear-gradient(90deg, #4a4a6a, #2a2a4a);
+    border-bottom: 1px solid $winamp-border;
+    flex-shrink: 0;
+
+    span {
+      font-size: 10px;
+      color: white;
+      text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.5);
+      letter-spacing: 1px;
+    }
+
+    .title-btn {
+      width: 14px;
+      height: 12px;
+      font-size: 10px;
+      line-height: 1;
+      border: 1px solid #666;
+      background: linear-gradient(180deg, #5a5a5a, #3a3a3a);
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      &:hover {
+        background: linear-gradient(180deg, #6a6a6a, #4a4a4a);
+      }
+    }
+  }
+
+  .lyrics-content-wrapper {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+
+    app-lyrics-view {
+      display: block;
+      height: 100%;
+
+      ::ng-deep {
+        .lyrics-container {
+          background: transparent;
+          border-radius: 0;
+        }
+
+        .lyrics-header {
+          display: none;
+        }
+
+        .lyrics-content {
+          padding: 8px;
+        }
+
+        .synced-lyrics .lyric-line {
+          font-size: 0.75rem;
+          font-family: 'Courier New', monospace;
+          color: $winamp-text-dim;
+
+          &.active {
+            color: $winamp-text;
+            font-size: 0.85rem;
+            background: rgba(0, 255, 0, 0.1);
+          }
+        }
+
+        .plain-lyrics p {
+          font-size: 0.75rem;
+          font-family: 'Courier New', monospace;
+          color: $winamp-text;
+        }
+
+        .lyrics-empty,
+        .lyrics-loading,
+        .lyrics-error {
+          color: $winamp-text-dim;
+
+          mat-icon {
+            color: $winamp-text-dim;
+          }
+        }
+      }
+    }
+  }
+}

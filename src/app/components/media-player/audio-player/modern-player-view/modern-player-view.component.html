@@ -78,16 +78,32 @@
       </button>
     </div>
 
-    <!-- Volume -->
-    <div class="volume-container">
-      <mat-icon class="volume-icon">
-        {{ volume > 50 ? 'volume_up' : volume > 0 ? 'volume_down' : 'volume_off' }}
-      </mat-icon>
-      <mat-slider class="volume-slider" [min]="0" [max]="100" [step]="1">
-        <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
-      </mat-slider>
+    <!-- Volume and Lyrics toggle -->
+    <div class="bottom-controls">
+      <div class="volume-container">
+        <mat-icon class="volume-icon">
+          {{ volume > 50 ? 'volume_up' : volume > 0 ? 'volume_down' : 'volume_off' }}
+        </mat-icon>
+        <mat-slider class="volume-slider" [min]="0" [max]="100" [step]="1">
+          <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
+        </mat-slider>
+      </div>
+
+      @if (hasLyrics()) {
+      <button mat-icon-button class="lyrics-btn" [class.active]="showLyrics()" (click)="toggleLyrics()"
+        matTooltip="Lyrics">
+        <mat-icon>lyrics</mat-icon>
+      </button>
+      }
     </div>
   </div>
+
+  <!-- Lyrics overlay -->
+  @if (showLyrics()) {
+  <div class="lyrics-overlay">
+    <app-lyrics-view (closeLyrics)="showLyrics.set(false)" />
+  </div>
+  }
 
   <!-- Swipe hints -->
   <div class="swipe-hints">
