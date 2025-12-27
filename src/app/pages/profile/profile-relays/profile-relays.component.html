@@ -42,7 +42,13 @@
               <div class="relay-url">{{ formatRelayUrl(url) }}</div>
             </div>
           </div>
-          <mat-icon class="expand-icon">{{ isRelayExpanded(url) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          <div class="relay-actions">
+            <button mat-icon-button class="copy-button" (click)="copyRelayUrl($event, url)" aria-label="Copy relay URL"
+              matTooltip="Copy relay URL">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+            <mat-icon class="expand-icon">{{ isRelayExpanded(url) ? 'expand_less' : 'expand_more' }}</mat-icon>
+          </div>
         </div>
 
         @if (isRelayExpanded(url)) {
