@@ -57,7 +57,11 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
 
   // Lyrics view toggle
   showLyrics = signal(false);
-  hasLyrics = computed(() => !!this.media.current()?.lyrics);
+  canShowLyrics = computed(() => {
+    const current = this.media.current();
+    // Show lyrics button for Music type (can search API) or if lyrics exist
+    return current?.type === 'Music' || !!current?.lyrics;
+  });
 
   toggleLyrics(): void {
     this.showLyrics.update(v => !v);
