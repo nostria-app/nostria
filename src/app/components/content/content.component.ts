@@ -24,6 +24,11 @@ import { UserRelayService } from '../../services/relays/user-relay';
 import { ArticleComponent } from '../article/article.component';
 import { PhotoEventComponent } from '../event-types/photo-event.component';
 import { EventHeaderComponent } from '../event/header/header.component';
+import { MusicEmbedComponent } from '../music-embed/music-embed.component';
+
+// Music event kinds
+const MUSIC_TRACK_KIND = 36787;
+const MUSIC_PLAYLIST_KIND = 34139;
 
 interface ArticleMention {
   pubkey: string;
@@ -59,6 +64,7 @@ interface SocialPreview {
     ArticleComponent,
     PhotoEventComponent,
     EventHeaderComponent,
+    MusicEmbedComponent,
   ],
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss',
@@ -132,6 +138,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
   // Article mentions (naddr) - these use the ArticleComponent which handles its own loading
   articleMentions = signal<ArticleMention[]>([]);
+
+  // Music mentions (naddr with kind 36787 or 34139) - separate for specialized rendering
+  musicMentions = signal<ArticleMention[]>([]);
 
   // Proxy URL from the event's proxy tag (e.g., ActivityPub bridged content)
   proxyUrl = computed<string | null>(() => {
@@ -252,8 +261,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           t => t.type === 'nostr-mention' && t.nostrData?.type === 'naddr'
         );
 
-        // Create article mentions from naddr tokens
-        const articles: ArticleMention[] = articleTokens.map(token => {
+        // Create article mentions from naddr tokens, separating music from other articles
+        const allMentions: ArticleMention[] = articleTokens.map(token => {
           const data = token.nostrData?.data as { pubkey: string; identifier: string; kind: number; relays?: string[] };
           return {
             pubkey: data.pubkey,
@@ -262,6 +271,14 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
             relayHints: data.relays,
           };
         });
+
+        // Separate music mentions (tracks and playlists) from regular articles
+        const musicMentions = allMentions.filter(m =>
+          m.kind === MUSIC_TRACK_KIND || m.kind === MUSIC_PLAYLIST_KIND
+        );
+        const articles = allMentions.filter(m =>
+          m.kind !== MUSIC_TRACK_KIND && m.kind !== MUSIC_PLAYLIST_KIND
+        );
 
         // Create initial placeholders with loading state
         const initialMentions = mentionTokens.map(mention => {
@@ -282,6 +299,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           this._cachedTokens.set(newTokens);
           this.eventMentions.set(initialMentions);
           this.articleMentions.set(articles);
+          this.musicMentions.set(musicMentions);
           this._lastParsedContent = content;
         });
 
@@ -414,6 +432,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           this._cachedTokens.set(fallbackTokens);
           this.eventMentions.set([]);
           this.articleMentions.set([]);
+          this.musicMentions.set([]);
           this._lastParsedContent = content;
         });
       } finally {

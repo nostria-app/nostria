@@ -105,6 +105,11 @@
     [clickable]="true"></app-article>
   }
 
+  @for (music of musicMentions(); track music.identifier + music.pubkey) {
+  <app-music-embed [identifier]="music.identifier" [pubkey]="music.pubkey" [kind]="music.kind"
+    [relayHints]="music.relayHints"></app-music-embed>
+  }
+
   @for (preview of socialPreviews(); track preview.url) {
   @if (settings.settings().socialSharingPreview) {
   <app-social-preview class="social-preview" [url]="preview.url"></app-social-preview>
