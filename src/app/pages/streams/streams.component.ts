@@ -15,6 +15,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { ReportingService } from '../../services/reporting.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
+import { DatabaseService } from '../../services/database.service';
 import { LiveEventComponent } from '../../components/event-types/live-event.component';
 import { StreamingAppsDialogComponent } from './streaming-apps-dialog/streaming-apps-dialog.component';
 import { StreamsSettingsDialogComponent } from './streams-settings-dialog/streams-settings-dialog.component';
@@ -43,6 +44,7 @@ export class StreamsComponent implements OnDestroy {
   private dialog = inject(MatDialog);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
+  private database = inject(DatabaseService);
 
   liveStreams = signal<Event[]>([]);
   plannedStreams = signal<Event[]>([]);
@@ -102,12 +104,30 @@ export class StreamsComponent implements OnDestroy {
 
   /**
    * Pre-load the user's streams relay set (kind 30002 with d tag "streams")
+   * First checks the local database, then fetches from relays and persists
    */
   private async loadStreamsRelaySet(): Promise<void> {
     const pubkey = this.currentPubkey();
     if (!pubkey) return;
 
     try {
+      // First, try to load from local database for immediate use
+      const cachedEvent = await this.database.getParameterizedReplaceableEvent(
+        pubkey,
+        this.RELAY_SET_KIND,
+        this.STREAMS_RELAY_SET_D_TAG
+      );
+
+      if (cachedEvent) {
+        console.log('[Streams] Loaded relay set from database:', cachedEvent);
+        this.streamsRelaySet.set(cachedEvent);
+        const relays = cachedEvent.tags
+          .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
+          .map((tag: string[]) => tag[1]);
+        this.streamsRelays.set(relays);
+      }
+
+      // Then fetch from relays to get the latest version
       const accountRelays = this.accountRelay.getRelayUrls();
       const relayUrls = this.relaysService.getOptimalRelays(accountRelays);
       if (relayUrls.length === 0) return;
@@ -138,11 +158,20 @@ export class StreamsComponent implements OnDestroy {
 
       if (foundEvent) {
         const event = foundEvent as Event;
-        this.streamsRelaySet.set(event);
-        const relays = event.tags
-          .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
-          .map((tag: string[]) => tag[1]);
-        this.streamsRelays.set(relays);
+        // Only update if newer than cached
+        if (!cachedEvent || event.created_at > cachedEvent.created_at) {
+          console.log('[Streams] Found newer relay set from relays, updating...');
+          this.streamsRelaySet.set(event);
+          const relays = event.tags
+            .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
+            .map((tag: string[]) => tag[1]);
+          this.streamsRelays.set(relays);
+
+          // Persist to database
+          const dTag = event.tags.find((t: string[]) => t[0] === 'd')?.[1];
+          await this.database.saveEvent({ ...event, dTag });
+          console.log('[Streams] Saved relay set to database');
+        }
       }
     } catch (error) {
       console.error('Error loading streams relay set:', error);
