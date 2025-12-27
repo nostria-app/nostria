@@ -158,7 +158,14 @@ export class MusicComponent implements OnDestroy {
   private readonly MUSIC_RELAY_SET_D_TAG = 'music';
 
   constructor() {
-    this.loadMusicRelaySet();
+    this.initializeMusic();
+  }
+
+  /**
+   * Initialize music by first loading relay set, then starting subscriptions
+   */
+  private async initializeMusic(): Promise<void> {
+    await this.loadMusicRelaySet();
     this.startSubscriptions();
   }
 
@@ -216,12 +223,22 @@ export class MusicComponent implements OnDestroy {
   }
 
   private startSubscriptions(): void {
-    const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+    // Get the default relays
+    const defaultRelays = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
 
-    if (relayUrls.length === 0) {
+    // Combine with music-specific relays from the user's relay set
+    const customMusicRelays = this.musicRelays();
+    const allRelayUrls = [...new Set([...defaultRelays, ...customMusicRelays])];
+
+    if (allRelayUrls.length === 0) {
       console.warn('No relays available for loading music');
       this.loading.set(false);
       return;
+    }
+
+    // Log if we're using custom music relays
+    if (customMusicRelays.length > 0) {
+      console.log('[Music] Using custom music relays:', customMusicRelays);
     }
 
     let tracksLoaded = false;
@@ -250,7 +267,7 @@ export class MusicComponent implements OnDestroy {
       limit: 500,
     };
 
-    this.trackSubscription = this.pool.subscribe(relayUrls, trackFilter, (event: Event) => {
+    this.trackSubscription = this.pool.subscribe(allRelayUrls, trackFilter, (event: Event) => {
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
       const uniqueId = `${event.pubkey}:${dTag}`;
 
@@ -275,7 +292,7 @@ export class MusicComponent implements OnDestroy {
       limit: 200,
     };
 
-    this.playlistSubscription = this.pool.subscribe(relayUrls, playlistFilter, (event: Event) => {
+    this.playlistSubscription = this.pool.subscribe(allRelayUrls, playlistFilter, (event: Event) => {
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
       const uniqueId = `${event.pubkey}:${dTag}`;
 
