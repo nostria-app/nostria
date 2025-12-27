@@ -51,16 +51,16 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
             aria-label="Play now" title="Play Now">
             <mat-icon>play_arrow</mat-icon>
           </button>
-          
-          <!-- Menu button -->
-          <button mat-icon-button class="menu-btn" [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
-            <mat-icon>more_vert</mat-icon>
-          </button>
         </div>
         
         <!-- Info section -->
         <div class="card-info">
-          <h4 class="card-title">{{ title() || 'Untitled Track' }}</h4>
+          <div class="card-title-row">
+            <h4 class="card-title">{{ title() || 'Untitled Track' }}</h4>
+            <button mat-icon-button class="menu-btn" [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+          </div>
           <span class="card-artist" (click)="openArtist($any($event))" (keydown.enter)="openArtist($any($event))" 
             tabindex="0" role="link">{{ artistName() }}</span>
         </div>
@@ -279,42 +279,54 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
           height: 24px;
         }
       }
-      
-      .menu-btn {
-        position: absolute;
-        top: 4px;
-        right: 4px;
-        background: rgba(0, 0, 0, 0.5);
-        color: white;
-        z-index: 2;
-        
-        &:hover {
-          background: rgba(0, 0, 0, 0.7);
-        }
-      }
     }
     
     .card-info {
-      padding: 12px;
+      padding: 0.75rem;
+      padding-top: 0.5rem;
       display: flex;
       flex-direction: column;
-      gap: 4px;
-      min-height: 60px;
+      gap: 0.125rem;
       
-      .card-title {
-        margin: 0;
-        font-size: 0.875rem;
-        line-height: 1.3;
-        color: var(--mat-sys-on-surface);
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
+      .card-title-row {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        
+        .card-title {
+          flex: 1;
+          margin: 0;
+          font-size: 1rem;
+          line-height: 1.3;
+          color: var(--mat-sys-on-surface);
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        
+        .menu-btn {
+          flex-shrink: 0;
+          width: 32px;
+          height: 32px;
+          padding: 0;
+          margin: -4px -8px -4px 0;
+          opacity: 0.6;
+          transition: opacity 0.2s ease;
+          
+          mat-icon {
+            font-size: 1.25rem;
+            width: 1.25rem;
+            height: 1.25rem;
+          }
+          
+          &:hover {
+            opacity: 1;
+          }
+        }
       }
       
       .card-artist {
-        font-size: 0.75rem;
+        font-size: 0.875rem;
         color: var(--mat-sys-on-surface-variant);
         overflow: hidden;
         text-overflow: ellipsis;
