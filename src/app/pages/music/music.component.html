@@ -23,6 +23,10 @@
           <span i18n="@@music.menu.importRss">Import from RSS</span>
         </button>
       </mat-menu>
+      <button mat-icon-button (click)="openSettings()" i18n-aria-label="@@music.settings.aria"
+        aria-label="Music settings">
+        <mat-icon>settings</mat-icon>
+      </button>
       }
       <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@music.refresh.aria"
         aria-label="Refresh music">
@@ -228,4 +232,8 @@
 
 @if (showImportRssDialog()) {
 <app-import-rss-dialog (closed)="onImportRssDialogClosed($event)" />
+}
+
+@if (showSettingsDialog()) {
+<app-music-settings-dialog (closed)="onSettingsDialogClosed($event)" />
 }
