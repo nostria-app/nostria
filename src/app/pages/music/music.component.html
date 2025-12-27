@@ -144,7 +144,7 @@
       </div>
       <div class="music-grid">
         @for (track of followingTracksPreview(); track track.id) {
-        <app-music-event [event]="track"></app-music-event>
+        <app-music-event [event]="track" mode="card"></app-music-event>
         }
       </div>
     </section>
@@ -194,7 +194,7 @@
       </div>
       <div class="music-grid">
         @for (track of publicTracksPreview(); track track.id) {
-        <app-music-event [event]="track"></app-music-event>
+        <app-music-event [event]="track" mode="card"></app-music-event>
         }
       </div>
     </section>

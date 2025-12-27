@@ -69,7 +69,7 @@ const PAGE_SIZE = 24;
         } @else {
           <div class="music-grid">
             @for (track of displayedTracks(); track track.id) {
-              <app-music-event [event]="track"></app-music-event>
+              <app-music-event [event]="track" mode="card"></app-music-event>
             }
           </div>
 

@@ -28,109 +28,149 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
   selector: 'app-music-event',
   imports: [MatIconModule, MatButtonModule, MatMenuModule, MatSnackBarModule, MatProgressSpinnerModule, MatChipsModule, MusicTrackDialogComponent, UserProfileComponent, DateToggleComponent],
   template: `
-    <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
-      [attr.aria-label]="'View ' + title()">
-      
-      <!-- Cover image/placeholder -->
-      <div class="music-cover" [style.background]="gradient() || ''">
-        @if (image() && !gradient()) {
-          <img [src]="image()" [alt]="title()" class="cover-image" loading="lazy" />
-        } @else if (!gradient()) {
-          <div class="cover-placeholder">
-            <mat-icon>music_note</mat-icon>
-          </div>
-        }
-        @if (isAiGenerated()) {
-          <span class="ai-badge">AI</span>
-        }
-      </div>
-      
-      <!-- Info section -->
-      <div class="music-info">
-        <app-user-profile [pubkey]="event().pubkey" mode="list"></app-user-profile>
-        <h4 class="music-title">{{ title() || 'Untitled Track' }}</h4>
-        <div class="music-meta">
-          <app-date-toggle [date]="event().created_at"></app-date-toggle>
-          @if (hashtags().length > 0) {
-            <mat-chip-set>
-              @for (hashtag of hashtags().slice(0, 3); track hashtag) {
-                <mat-chip>{{ hashtag }}</mat-chip>
-              }
-            </mat-chip-set>
-          }
-        </div>
-      </div>
-      
-      <!-- Action buttons -->
-      <div class="music-actions">
-        <button mat-icon-button class="play-btn" (click)="playTrack($any($event))" 
-          aria-label="Play now" title="Play Now">
-          <mat-icon>play_arrow</mat-icon>
-        </button>
-        <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
-          <mat-icon>more_vert</mat-icon>
-        </button>
-      </div>
-      
-      <mat-menu #menu="matMenu">
-        @if (isOwnTrack()) {
-          <button mat-menu-item (click)="editTrack()">
-            <mat-icon>edit</mat-icon>
-            <span>Edit Track</span>
-          </button>
-        }
-        <button mat-menu-item (click)="playTrack($any($event))">
-          <mat-icon>play_arrow</mat-icon>
-          <span>Play Now</span>
-        </button>
-        <button mat-menu-item (click)="addToQueue()">
-          <mat-icon>queue_music</mat-icon>
-          <span>Add to Queue</span>
-        </button>
-        <button mat-menu-item (click)="shareTrack()">
-          <mat-icon>share</mat-icon>
-          <span>Share Track</span>
-        </button>
-        @if (isAuthenticated()) {
-          <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
-            <mat-icon>playlist_add</mat-icon>
-            <span>Add to Playlist</span>
-          </button>
-        }
-        <button mat-menu-item (click)="copyEventLink()">
-          <mat-icon>link</mat-icon>
-          <span>Copy Event Link</span>
-        </button>
-        <button mat-menu-item (click)="copyEventData()">
-          <mat-icon>data_object</mat-icon>
-          <span>Copy Event Data</span>
-        </button>
-      </mat-menu>
-      <mat-menu #playlistMenu="matMenu">
-        <button mat-menu-item (click)="createNewPlaylist()">
-          <mat-icon>add</mat-icon>
-          <span>New Playlist</span>
-        </button>
-        @if (playlistsLoading()) {
-          <div class="playlist-loading">
-            <mat-spinner diameter="20"></mat-spinner>
-            <span>Loading playlists...</span>
-          </div>
-        } @else {
-          @for (playlist of userPlaylists(); track playlist.id) {
-            <button mat-menu-item (click)="addToPlaylist(playlist.id)">
-              <mat-icon>queue_music</mat-icon>
-              <span>{{ playlist.title }}</span>
-            </button>
-          }
-          @if (userPlaylists().length === 0) {
-            <div class="no-playlists">
-              <span>No playlists yet</span>
+    <!-- Card mode: Vertical layout for grid views -->
+    @if (mode() === 'card') {
+      <div class="music-card-vertical" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
+        [attr.aria-label]="'View ' + title()">
+        
+        <!-- Cover image/placeholder -->
+        <div class="card-cover" [style.background]="gradient() || ''">
+          @if (image() && !gradient()) {
+            <img [src]="image()" [alt]="title()" class="cover-image" loading="lazy" />
+          } @else if (!gradient()) {
+            <div class="cover-placeholder">
+              <mat-icon>music_note</mat-icon>
             </div>
           }
+          @if (isAiGenerated()) {
+            <span class="ai-badge">AI</span>
+          }
+          
+          <!-- Play button overlay -->
+          <button mat-fab class="play-overlay" (click)="playTrack($any($event))" 
+            aria-label="Play now" title="Play Now">
+            <mat-icon>play_arrow</mat-icon>
+          </button>
+          
+          <!-- Menu button -->
+          <button mat-icon-button class="menu-btn" [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+        </div>
+        
+        <!-- Info section -->
+        <div class="card-info">
+          <h4 class="card-title">{{ title() || 'Untitled Track' }}</h4>
+          <span class="card-artist">{{ artistName() }}</span>
+        </div>
+      </div>
+    } @else {
+      <!-- List mode: Horizontal compact layout for embedding -->
+      <div class="music-card" (click)="openDetails($any($event))" (keydown.enter)="openDetails($any($event))" tabindex="0" role="button"
+        [attr.aria-label]="'View ' + title()">
+        
+        <!-- Cover image/placeholder -->
+        <div class="music-cover" [style.background]="gradient() || ''">
+          @if (image() && !gradient()) {
+            <img [src]="image()" [alt]="title()" class="cover-image" loading="lazy" />
+          } @else if (!gradient()) {
+            <div class="cover-placeholder">
+              <mat-icon>music_note</mat-icon>
+            </div>
+          }
+          @if (isAiGenerated()) {
+            <span class="ai-badge">AI</span>
+          }
+        </div>
+        
+        <!-- Info section -->
+        <div class="music-info">
+          <app-user-profile [pubkey]="event().pubkey" mode="list"></app-user-profile>
+          <h4 class="music-title">{{ title() || 'Untitled Track' }}</h4>
+          <div class="music-meta">
+            <app-date-toggle [date]="event().created_at"></app-date-toggle>
+            @if (hashtags().length > 0) {
+              <mat-chip-set>
+                @for (hashtag of hashtags().slice(0, 3); track hashtag) {
+                  <mat-chip>{{ hashtag }}</mat-chip>
+                }
+              </mat-chip-set>
+            }
+          </div>
+        </div>
+        
+        <!-- Action buttons -->
+        <div class="music-actions">
+          <button mat-icon-button class="play-btn" (click)="playTrack($any($event))" 
+            aria-label="Play now" title="Play Now">
+            <mat-icon>play_arrow</mat-icon>
+          </button>
+          <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+        </div>
+      </div>
+    }
+    
+    <!-- Shared menu for both modes -->
+    <mat-menu #menu="matMenu">
+      @if (isOwnTrack()) {
+        <button mat-menu-item (click)="editTrack()">
+          <mat-icon>edit</mat-icon>
+          <span>Edit Track</span>
+        </button>
+      }
+      <button mat-menu-item (click)="playTrack($any($event))">
+        <mat-icon>play_arrow</mat-icon>
+        <span>Play Now</span>
+      </button>
+      <button mat-menu-item (click)="addToQueue()">
+        <mat-icon>queue_music</mat-icon>
+        <span>Add to Queue</span>
+      </button>
+      <button mat-menu-item (click)="shareTrack()">
+        <mat-icon>share</mat-icon>
+        <span>Share Track</span>
+      </button>
+      @if (isAuthenticated()) {
+        <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
+          <mat-icon>playlist_add</mat-icon>
+          <span>Add to Playlist</span>
+        </button>
+      }
+      <button mat-menu-item (click)="copyEventLink()">
+        <mat-icon>link</mat-icon>
+        <span>Copy Event Link</span>
+      </button>
+      <button mat-menu-item (click)="copyEventData()">
+        <mat-icon>data_object</mat-icon>
+        <span>Copy Event Data</span>
+      </button>
+    </mat-menu>
+    <mat-menu #playlistMenu="matMenu">
+      <button mat-menu-item (click)="createNewPlaylist()">
+        <mat-icon>add</mat-icon>
+        <span>New Playlist</span>
+      </button>
+      @if (playlistsLoading()) {
+        <div class="playlist-loading">
+          <mat-spinner diameter="20"></mat-spinner>
+          <span>Loading playlists...</span>
+        </div>
+      } @else {
+        @for (playlist of userPlaylists(); track playlist.id) {
+          <button mat-menu-item (click)="addToPlaylist(playlist.id)">
+            <mat-icon>queue_music</mat-icon>
+            <span>{{ playlist.title }}</span>
+          </button>
         }
-      </mat-menu>
-    </div>
+        @if (userPlaylists().length === 0) {
+          <div class="no-playlists">
+            <span>No playlists yet</span>
+          </div>
+        }
+      }
+    </mat-menu>
     
     @if (showEditDialog() && editDialogData()) {
       <app-music-track-dialog
@@ -140,6 +180,137 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
     }
   `,
   styles: [`
+    /* ========== Card Mode (Vertical) ========== */
+    .music-card-vertical {
+      display: flex;
+      flex-direction: column;
+      cursor: pointer;
+      border-radius: 12px;
+      background-color: var(--mat-sys-surface-container-low);
+      overflow: hidden;
+      transition: background-color 0.2s ease, transform 0.2s ease;
+      
+      &:hover {
+        background-color: var(--mat-sys-surface-container);
+        
+        .play-overlay {
+          opacity: 1;
+          transform: scale(1);
+        }
+      }
+      
+      &:focus {
+        outline: 2px solid var(--mat-sys-primary);
+        outline-offset: -2px;
+      }
+    }
+    
+    .card-cover {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
+      
+      .cover-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      
+      .cover-placeholder {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        
+        mat-icon {
+          font-size: 48px;
+          width: 48px;
+          height: 48px;
+          color: var(--mat-sys-on-tertiary-container);
+          opacity: 0.5;
+        }
+      }
+      
+      .ai-badge {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        z-index: 2;
+      }
+      
+      .play-overlay {
+        position: absolute;
+        bottom: 8px;
+        right: 8px;
+        opacity: 0;
+        transform: scale(0.8);
+        transition: opacity 0.2s ease, transform 0.2s ease;
+        background: var(--mat-sys-primary);
+        color: var(--mat-sys-on-primary);
+        z-index: 2;
+        
+        &:hover {
+          background: var(--mat-sys-primary-container);
+          color: var(--mat-sys-on-primary-container);
+        }
+      }
+      
+      .menu-btn {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        z-index: 2;
+        
+        &:hover {
+          background: rgba(0, 0, 0, 0.7);
+        }
+      }
+    }
+    
+    .card-info {
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-height: 60px;
+      
+      .card-title {
+        margin: 0;
+        font-size: 0.875rem;
+        line-height: 1.3;
+        color: var(--mat-sys-on-surface);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+      }
+      
+      .card-artist {
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+    
+    /* ========== List Mode (Horizontal) ========== */
     .music-card {
       display: flex;
       align-items: center;
@@ -296,6 +467,7 @@ export class MusicEventComponent {
   private utilities = inject(UtilitiesService);
 
   event = input.required<Event>();
+  mode = input<'card' | 'list'>('list');
 
   authorProfile = signal<NostrRecord | undefined>(undefined);
   userPlaylists = this.musicPlaylistService.userPlaylists;
