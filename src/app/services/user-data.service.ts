@@ -125,7 +125,8 @@ export class UserDataService {
     const relayListEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
     if (relayListEvent) {
-      relayUrls = this.utilities.getRelayUrls(relayListEvent);
+      // Use getOptimalRelayUrlsForFetching to prioritize WRITE relays per NIP-65
+      relayUrls = this.utilities.getOptimalRelayUrlsForFetching(relayListEvent);
     }
 
     if (!relayUrls || relayUrls.length === 0) {
