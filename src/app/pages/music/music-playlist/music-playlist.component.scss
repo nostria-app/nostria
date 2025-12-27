@@ -331,6 +331,11 @@
   flex-direction: column;
 }
 
+// Prevent mat-menu from taking grid space
+.track-row mat-menu {
+  display: none;
+}
+
 // Individual track row
 .track-row {
   display: grid;

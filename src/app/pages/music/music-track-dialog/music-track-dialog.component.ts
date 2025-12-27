@@ -149,6 +149,7 @@ export class MusicTrackDialogComponent {
       lyrics: [''],
       credits: [''],
       imageUrl: [''],
+      customTags: [''], // Custom tags as comma-separated values
     });
 
     // Initialize based on mode
@@ -197,13 +198,20 @@ export class MusicTrackDialogComponent {
       this.currentGradient.set(gradientTag[2]);
     }
 
-    // Extract genres from t tags
-    const genres = track.tags
-      .filter(t => t[0] === 't')
-      .map(t => {
-        const genre = t[1];
-        return this.availableGenres.find(g => g.toLowerCase() === genre.toLowerCase()) || genre;
-      });
+    // Extract genres from t tags (exclude reserved tags)
+    const reservedTTags = ['music', 'ai-generated'];
+    const allTTags = track.tags.filter(t => t[0] === 't').map(t => t[1]);
+
+    const genres = allTTags
+      .filter(tag => !reservedTTags.includes(tag.toLowerCase()))
+      .filter(tag => this.availableGenres.some(g => g.toLowerCase() === tag.toLowerCase()))
+      .map(tag => this.availableGenres.find(g => g.toLowerCase() === tag.toLowerCase()) || tag);
+
+    // Extract custom tags (t tags that are not genres or reserved)
+    const genreLowerCase = this.availableGenres.map(g => g.toLowerCase());
+    const customTags = allTTags
+      .filter(tag => !reservedTTags.includes(tag.toLowerCase()))
+      .filter(tag => !genreLowerCase.includes(tag.toLowerCase()));
 
     // Extract artist npub from p tag
     const artistPubkey = track.tags.find(t => t[0] === 'p')?.[1];
@@ -229,12 +237,35 @@ export class MusicTrackDialogComponent {
     const releaseDate = track.tags.find(t => t[0] === 'released')?.[1] || '';
     const language = track.tags.find(t => t[0] === 'language')?.[1] || 'en';
     const explicitContent = track.tags.some(t => t[0] === 'explicit' && t[1] === 'true');
-    const lyrics = track.tags.find(t => t[0] === 'lyrics')?.[1] || '';
 
-    // Extract credits from content
+    // Extract lyrics and credits from content (per spec, both go in content field)
+    let lyrics = '';
     let credits = '';
-    if (track.content && track.content.startsWith('Credits:')) {
-      credits = track.content.replace('Credits:\n', '');
+    if (track.content) {
+      // Try to parse content for Lyrics: and Credits: sections
+      const lyricsMatch = track.content.match(/Lyrics:\n([\s\S]*?)(?=\n\nCredits:|$)/);
+      const creditsMatch = track.content.match(/Credits:\n([\s\S]*)$/);
+
+      if (lyricsMatch) {
+        lyrics = lyricsMatch[1].trim();
+      } else if (!track.content.startsWith('Credits:')) {
+        // If no explicit Lyrics: header and doesn't start with Credits:, assume entire content is lyrics
+        const creditsIndex = track.content.indexOf('\n\nCredits:');
+        if (creditsIndex > -1) {
+          lyrics = track.content.substring(0, creditsIndex).trim();
+        } else {
+          lyrics = track.content.trim();
+        }
+      }
+
+      if (creditsMatch) {
+        credits = creditsMatch[1].trim();
+      }
+    }
+
+    // Fallback: check for legacy lyrics tag
+    if (!lyrics) {
+      lyrics = track.tags.find(t => t[0] === 'lyrics')?.[1] || '';
     }
 
     // Set form values
@@ -252,6 +283,7 @@ export class MusicTrackDialogComponent {
       lyrics,
       credits,
       imageUrl: image || '',
+      customTags: customTags.join(', '),
     });
 
     // Extract zap splits
@@ -826,7 +858,7 @@ export class MusicTrackDialogComponent {
       }
 
       if (formValue.trackNumber) {
-        tags.push(['track_number', formValue.trackNumber]);
+        tags.push(['track_number', String(formValue.trackNumber)]);
       }
 
       if (formValue.releaseDate) {
@@ -841,8 +873,15 @@ export class MusicTrackDialogComponent {
         tags.push(['explicit', 'true']);
       }
 
-      if (formValue.lyrics) {
-        tags.push(['lyrics', formValue.lyrics]);
+      // Add custom tags
+      if (formValue.customTags) {
+        const customTagsList = formValue.customTags
+          .split(',')
+          .map((t: string) => t.trim().toLowerCase())
+          .filter((t: string) => t.length > 0);
+        for (const tag of customTagsList) {
+          tags.push(['t', tag]);
+        }
       }
 
       // Add zap splits
@@ -859,9 +898,13 @@ export class MusicTrackDialogComponent {
       const artistDisplay = formValue.artistName || 'Unknown Artist';
       tags.push(['alt', `Music track: ${formValue.title} by ${artistDisplay}`]);
 
-      // Build content (credits go here)
+      // Build content (lyrics and credits go here per spec)
       let content = '';
-      if (formValue.credits) {
+      if (formValue.lyrics && formValue.credits) {
+        content = `Lyrics:\n${formValue.lyrics}\n\nCredits:\n${formValue.credits}`;
+      } else if (formValue.lyrics) {
+        content = `Lyrics:\n${formValue.lyrics}`;
+      } else if (formValue.credits) {
         content = `Credits:\n${formValue.credits}`;
       }
 

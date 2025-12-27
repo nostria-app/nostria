@@ -119,6 +119,12 @@
                 <mat-icon>more_horiz</mat-icon>
               </button>
               <mat-menu #trackMenu="matMenu">
+                @if (isOwnProfile()) {
+                <button mat-menu-item (click)="editTrack(track)">
+                  <mat-icon>edit</mat-icon>
+                  <span>Edit Track</span>
+                </button>
+                }
                 <button mat-menu-item (click)="addTrackToQueue(track)">
                   <mat-icon>queue_music</mat-icon>
                   <span>Add to Queue</span>
@@ -166,3 +172,7 @@
   </div>
   }
 </div>
+
+@if (showEditDialog() && editDialogData()) {
+<app-music-track-dialog [data]="editDialogData()!" (closed)="onEditDialogClosed($event)" />
+}
