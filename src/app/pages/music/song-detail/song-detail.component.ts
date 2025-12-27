@@ -626,6 +626,25 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }
   }
 
+  shareTrack(): void {
+    const ev = this.song();
+    if (!ev) return;
+
+    try {
+      const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+      const naddr = nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+      });
+
+      // Open note editor with the track reference
+      this.eventService.createNote({ content: `nostr:${naddr}` });
+    } catch {
+      this.snackBar.open('Failed to share track', 'Close', { duration: 2000 });
+    }
+  }
+
   copyEventData(): void {
     const ev = this.song();
     if (!ev) return;
