@@ -145,6 +145,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       align-items: center;
       gap: 12px;
       padding: 12px;
+      margin: 0.5rem 0;
       cursor: pointer;
       border-radius: 12px;
       border: 1px solid var(--mat-sys-outline-variant);
