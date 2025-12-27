@@ -86,6 +86,10 @@
     @else if (targetItem.event.kind === 1222 || targetItem.event.kind === 1244) {
     <app-audio-event [event]="targetItem.event" [hideComments]="hideComments()"></app-audio-event>
     }
+    <!-- Music Track (kind 36787) -->
+    @else if (targetItem.event.kind === 36787) {
+    <app-music-event [event]="targetItem.event"></app-music-event>
+    }
     <!-- Articles (kind 30023) -->
     @else if (targetItem.event.kind === 30023) {
     <app-article-event [event]="targetItem.event"></app-article-event>
@@ -159,6 +163,10 @@
           <!-- Audio (kind 1222, 1244) -->
           @else if (rootRecordData.event.kind === 1222 || rootRecordData.event.kind === 1244) {
           <app-audio-event [event]="rootRecordData.event" [hideComments]="hideComments()"></app-audio-event>
+          }
+          <!-- Music Track (kind 36787) -->
+          @else if (rootRecordData.event.kind === 36787) {
+          <app-music-event [event]="rootRecordData.event"></app-music-event>
           }
           <!-- Articles (kind 30023) -->
           @else if (rootRecordData.event.kind === 30023) {
@@ -241,6 +249,10 @@
           @else if (parentRecordData.event.kind === 1222 || parentRecordData.event.kind === 1244) {
           <app-audio-event [event]="parentRecordData.event" [hideComments]="hideComments()"></app-audio-event>
           }
+          <!-- Music Track (kind 36787) -->
+          @else if (parentRecordData.event.kind === 36787) {
+          <app-music-event [event]="parentRecordData.event"></app-music-event>
+          }
           <!-- Articles (kind 30023) -->
           @else if (parentRecordData.event.kind === 30023) {
           <app-article-event [event]="parentRecordData.event"></app-article-event>
@@ -310,6 +322,10 @@
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
     <app-audio-event [event]="item.event" [hideComments]="hideComments()"></app-audio-event>
     }
+    <!-- Music Track (kind 36787) -->
+    @else if (item.event.kind === 36787) {
+    <app-music-event [event]="item.event"></app-music-event>
+    }
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {
     <app-article-event [event]="item.event"></app-article-event>
@@ -369,6 +385,10 @@
     <!-- Audio (kind 1222, 1244) -->
     @else if (item.event.kind === 1222 || item.event.kind === 1244) {
     <app-audio-event [event]="item.event" [hideComments]="hideComments()"></app-audio-event>
+    }
+    <!-- Music Track (kind 36787) -->
+    @else if (item.event.kind === 36787) {
+    <app-music-event [event]="item.event"></app-music-event>
     }
     <!-- Articles (kind 30023) -->
     @else if (item.event.kind === 30023) {

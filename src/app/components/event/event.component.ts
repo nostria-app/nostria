@@ -35,6 +35,7 @@ import {
   PollEventComponent,
   LiveEventComponent,
   AudioEventComponent,
+  MusicEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -78,6 +79,7 @@ type EventCardAppearance = 'card' | 'plain';
     PollEventComponent,
     LiveEventComponent,
     AudioEventComponent,
+    MusicEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
@@ -190,7 +192,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   });
 
   // Event kinds that support reactions (NIP-25)
-  // This includes: short text notes, photos, videos (short/long), audio, articles, polls, playlists, live events, starter packs
+  // This includes: short text notes, photos, videos (short/long), audio, articles, polls, playlists, live events, starter packs, music tracks
   private readonly REACTABLE_KINDS = new Set([
     1,      // Short text note (kind 1)
     20,     // Photo (kind 20)
@@ -204,6 +206,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     32100,  // M3U Playlist (kind 32100)
     34235,  // Video (kind 34235) - NIP-71 addressable horizontal video
     34236,  // Short video (kind 34236) - NIP-71 addressable vertical video
+    36787,  // Music track (kind 36787)
     39089,  // Starter pack (kind 39089)
   ]);
 
