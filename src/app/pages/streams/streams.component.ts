@@ -10,6 +10,7 @@ import { MatCardModule } from '@angular/material/card';
 import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ReportingService } from '../../services/reporting.service';
 import { AccountStateService } from '../../services/account-state.service';
@@ -36,6 +37,7 @@ import { StreamsSettingsDialogComponent } from './streams-settings-dialog/stream
 export class StreamsComponent implements OnDestroy {
   private pool = inject(RelayPoolService);
   private relaysService = inject(RelaysService);
+  private accountRelay = inject(AccountRelayService);
   private utilities = inject(UtilitiesService);
   private reporting = inject(ReportingService);
   private dialog = inject(MatDialog);
@@ -154,10 +156,9 @@ export class StreamsComponent implements OnDestroy {
   }
 
   private startLiveSubscription(): void {
-    // Get the default relays
-    const defaultRelays = this.relaysService.getOptimalRelays(
-      this.utilities.preferredRelays
-    );
+    // Get the user's account relays (not the hardcoded preferredRelays)
+    const accountRelays = this.accountRelay.getRelayUrls();
+    const defaultRelays = this.relaysService.getOptimalRelays(accountRelays);
 
     // Combine with streams-specific relays from the user's relay set
     const customStreamsRelays = this.streamsRelays();
