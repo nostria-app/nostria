@@ -58,11 +58,11 @@ import { MusicTrackDialogComponent, MusicTrackDialogData } from '../../pages/mus
             <span>Edit Track</span>
           </button>
         }
+        <button mat-menu-item (click)="shareTrack()">
+          <mat-icon>share</mat-icon>
+          <span>Share Track</span>
+        </button>
         @if (isAuthenticated()) {
-          <button mat-menu-item (click)="shareTrack()">
-            <mat-icon>share</mat-icon>
-            <span>Share Track</span>
-          </button>
           <button mat-menu-item [matMenuTriggerFor]="playlistMenu" (click)="loadPlaylists()">
             <mat-icon>playlist_add</mat-icon>
             <span>Add to Playlist</span>
