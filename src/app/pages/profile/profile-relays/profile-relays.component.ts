@@ -9,6 +9,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
@@ -26,6 +27,7 @@ import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
     MatTabsModule,
     MatCardModule,
     MatDividerModule,
+    MatTooltipModule,
     ScrollingModule,
   ],
   templateUrl: './profile-relays.component.html',
@@ -209,5 +211,10 @@ export class ProfileRelaysComponent {
 
   goBack(): void {
     this.location.back();
+  }
+
+  copyRelayUrl(event: Event, url: string): void {
+    event.stopPropagation(); // Prevent toggling relay details
+    this.layout.copyToClipboard(url, 'relay URL');
   }
 }

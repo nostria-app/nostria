@@ -177,6 +177,27 @@
   font-family: monospace;
 }
 
+.relay-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.copy-button {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+
+  .relay-card-header:hover &,
+  .relay-card-header:focus-within & {
+    opacity: 1;
+  }
+
+  &:focus {
+    opacity: 1;
+  }
+}
+
 .expand-icon {
   flex-shrink: 0;
   color: var(--mat-sys-on-surface-variant);
