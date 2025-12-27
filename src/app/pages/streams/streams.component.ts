@@ -12,8 +12,11 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ReportingService } from '../../services/reporting.service';
+import { AccountStateService } from '../../services/account-state.service';
+import { ApplicationService } from '../../services/application.service';
 import { LiveEventComponent } from '../../components/event-types/live-event.component';
 import { StreamingAppsDialogComponent } from './streaming-apps-dialog/streaming-apps-dialog.component';
+import { StreamsSettingsDialogComponent } from './streams-settings-dialog/streams-settings-dialog.component';
 
 @Component({
   selector: 'app-streams',
@@ -24,7 +27,8 @@ import { StreamingAppsDialogComponent } from './streaming-apps-dialog/streaming-
     MatChipsModule,
     MatTabsModule,
     MatCardModule,
-    LiveEventComponent
+    LiveEventComponent,
+    StreamsSettingsDialogComponent,
   ],
   templateUrl: './streams.component.html',
   styleUrl: './streams.component.scss',
@@ -35,12 +39,27 @@ export class StreamsComponent implements OnDestroy {
   private utilities = inject(UtilitiesService);
   private reporting = inject(ReportingService);
   private dialog = inject(MatDialog);
+  private accountState = inject(AccountStateService);
+  private app = inject(ApplicationService);
 
   liveStreams = signal<Event[]>([]);
   plannedStreams = signal<Event[]>([]);
   endedStreams = signal<Event[]>([]);
   loading = signal(true);
   selectedTabIndex = signal(0);
+  showSettingsDialog = signal(false);
+
+  // Streams relay set state
+  streamsRelaySet = signal<Event | null>(null);
+  streamsRelays = signal<string[]>([]);
+
+  // Relay set constants
+  private readonly RELAY_SET_KIND = 30002;
+  private readonly STREAMS_RELAY_SET_D_TAG = 'streams';
+
+  // Current user pubkey
+  private currentPubkey = computed(() => this.accountState.pubkey());
+  isAuthenticated = computed(() => this.app.authenticated());
 
   private subscription: { close: () => void } | null = null;
   private eventMap = new Map<string, Event>();
@@ -62,12 +81,61 @@ export class StreamsComponent implements OnDestroy {
   });
 
   constructor() {
+    this.loadStreamsRelaySet();
     this.startLiveSubscription();
   }
 
   ngOnDestroy(): void {
     if (this.subscription) {
       this.subscription.close();
+    }
+  }
+
+  /**
+   * Pre-load the user's streams relay set (kind 30002 with d tag "streams")
+   */
+  private async loadStreamsRelaySet(): Promise<void> {
+    const pubkey = this.currentPubkey();
+    if (!pubkey) return;
+
+    try {
+      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      if (relayUrls.length === 0) return;
+
+      const filter: Filter = {
+        kinds: [this.RELAY_SET_KIND],
+        authors: [pubkey],
+        '#d': [this.STREAMS_RELAY_SET_D_TAG],
+        limit: 1,
+      };
+
+      let foundEvent: Event | null = null;
+
+      await new Promise<void>(resolve => {
+        const timeout = setTimeout(resolve, 3000);
+        const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
+          if (!foundEvent || event.created_at > foundEvent.created_at) {
+            foundEvent = event;
+          }
+        });
+
+        setTimeout(() => {
+          sub.close();
+          clearTimeout(timeout);
+          resolve();
+        }, 2000);
+      });
+
+      if (foundEvent) {
+        const event = foundEvent as Event;
+        this.streamsRelaySet.set(event);
+        const relays = event.tags
+          .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
+          .map((tag: string[]) => tag[1]);
+        this.streamsRelays.set(relays);
+      }
+    } catch (error) {
+      console.error('Error loading streams relay set:', error);
     }
   }
 
@@ -207,5 +275,17 @@ export class StreamsComponent implements OnDestroy {
     }
 
     this.startLiveSubscription();
+  }
+
+  openSettings(): void {
+    this.showSettingsDialog.set(true);
+  }
+
+  onSettingsDialogClosed(result: { saved: boolean } | null): void {
+    this.showSettingsDialog.set(false);
+    if (result?.saved) {
+      // Reload the streams relay set after saving
+      this.loadStreamsRelaySet();
+    }
   }
 }

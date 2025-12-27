@@ -9,6 +9,12 @@
         <mat-icon>videocam</mat-icon>
         <span i18n="@@streams.wantToStream">Want to stream?</span>
       </button>
+      @if (isAuthenticated()) {
+      <button mat-icon-button (click)="openSettings()" i18n-aria-label="@@streams.settings.aria"
+        aria-label="Streams settings">
+        <mat-icon>settings</mat-icon>
+      </button>
+      }
       <button mat-icon-button (click)="refresh()" [disabled]="loading()" i18n-aria-label="@@streams.refresh.aria"
         aria-label="Refresh streams">
         <mat-icon>refresh</mat-icon>
@@ -87,3 +93,8 @@
     }
   </div>
 </div>
+
+<!-- Settings Dialog -->
+@if (showSettingsDialog()) {
+<app-streams-settings-dialog (closed)="onSettingsDialogClosed($event)" />
+}
