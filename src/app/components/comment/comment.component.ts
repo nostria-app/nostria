@@ -48,7 +48,7 @@ interface CommentTags {
     EventHeaderComponent,
     MatTooltipModule,
     EventMenuComponent
-],
+  ],
   templateUrl: './comment.component.html',
   styleUrl: './comment.component.scss',
 })

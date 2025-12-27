@@ -31,13 +31,8 @@
     } @else {
     <div class="comments-list threaded">
       @for (thread of commentThreads(); track thread.comment.event.id) {
-        <app-comment
-          [event]="thread.comment.event"
-          [rootEvent]="event()"
-          [replies]="thread.replies"
-          [depth]="thread.depth"
-          (replyAdded)="onCommentReplyAdded($event)"
-        ></app-comment>
+      <app-comment [event]="thread.comment.event" [rootEvent]="event()" [replies]="thread.replies"
+        [depth]="thread.depth" (replyAdded)="onCommentReplyAdded($event)"></app-comment>
       }
     </div>
 
