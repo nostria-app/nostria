@@ -7,7 +7,6 @@ import { Event } from 'nostr-tools';
 import { ContentComponent } from '../content/content.component';
 import { EventHeaderComponent } from '../event/header/header.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { EventMenuComponent } from '../event/event-menu/event-menu.component';
 import { EventService } from '../../services/event';
 import { AccountStateService } from '../../services/account-state.service';
 import { LayoutService } from '../../services/layout.service';
@@ -47,7 +46,6 @@ interface CommentTags {
     ContentComponent,
     EventHeaderComponent,
     MatTooltipModule,
-    EventMenuComponent
   ],
   templateUrl: './comment.component.html',
   styleUrl: './comment.component.scss',
