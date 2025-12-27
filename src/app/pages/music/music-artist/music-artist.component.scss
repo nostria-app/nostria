@@ -380,6 +380,12 @@
       color: var(--mat-sys-on-surface-variant);
     }
   }
+
+  .track-gradient {
+    width: 100%;
+    height: 100%;
+    border-radius: var(--mat-sys-corner-extra-small);
+  }
 }
 
 .track-text {

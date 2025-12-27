@@ -302,6 +302,14 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     return imageTag?.[1] || null;
   }
 
+  getTrackGradient(track: Event): string | null {
+    const gradientTag = track.tags.find(t => t[0] === 'gradient' && t[1] === 'colors');
+    if (gradientTag?.[2]) {
+      return `linear-gradient(135deg, ${gradientTag[2]})`;
+    }
+    return null;
+  }
+
   getTrackArtist(track: Event): string {
     // First check for artist tag in the event
     const artistTag = track.tags.find(t => t[0] === 'artist');
