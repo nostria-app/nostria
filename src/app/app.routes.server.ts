@@ -22,6 +22,18 @@ export const serverRoutes: ServerRoute[] = [
     renderMode: RenderMode.Server,
   },
   {
+    path: 'music/artist/**',
+    renderMode: RenderMode.Server,
+  },
+  {
+    path: 'music/song/**',
+    renderMode: RenderMode.Server,
+  },
+  {
+    path: 'music/playlist/**',
+    renderMode: RenderMode.Server,
+  },
+  {
     path: '**',
     renderMode: RenderMode.Client,
   },

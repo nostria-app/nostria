@@ -132,8 +132,11 @@ export class MetaService {
 
     const data = await firstValueFrom(this.http.get<MetadataResponse>(url));
 
-    // Extract image URL from imeta tag or content
-    let eventImageUrl = this.extractImageUrlFromImeta(data.tags);
+    // Extract image URL - check various tag formats
+    let eventImageUrl = this.extractImageUrlFromImageTag(data.tags); // Check 'image' tag first (music tracks, etc.)
+    if (!eventImageUrl) {
+      eventImageUrl = this.extractImageUrlFromImeta(data.tags);
+    }
     if (!eventImageUrl) {
       eventImageUrl = this.extractImageUrlFromContent(data.content);
     }
@@ -149,7 +152,13 @@ export class MetaService {
       imageUrl = data.author.profile.picture;
     }
 
-    title = data.author?.profile?.display_name || data.author?.profile?.name || 'Nostr Event';
+    // Extract title from 'title' tag if present (for addressable events like music tracks)
+    const eventTitle = this.extractTagValue(data.tags, 'title');
+    if (eventTitle) {
+      title = eventTitle;
+    } else {
+      title = data.author?.profile?.display_name || data.author?.profile?.name || 'Nostr Event';
+    }
 
     const fullDescription = data.content || 'No description available';
     description =
@@ -163,6 +172,32 @@ export class MetaService {
     });
 
     return data;
+  }
+
+  /**
+   * Extract a tag value by tag name
+   * @param tags The tags array from the event
+   * @param tagName The name of the tag to find (e.g., 'title', 'image')
+   * @returns The tag value or null if not found
+   */
+  private extractTagValue(tags: any[], tagName: string): string | null {
+    if (!tags || !Array.isArray(tags)) return null;
+
+    for (const tag of tags) {
+      if (Array.isArray(tag) && tag[0] === tagName && tag[1]) {
+        return tag[1];
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Extract image URL from 'image' tag (used by music tracks, etc.)
+   * @param tags The tags array from the event
+   * @returns The image URL or null if not found
+   */
+  private extractImageUrlFromImageTag(tags: any[]): string | null {
+    return this.extractTagValue(tags, 'image');
   }
 
   private extractImageUrlFromImeta(tags: any[]): string | null {

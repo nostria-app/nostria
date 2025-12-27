@@ -190,6 +190,7 @@ app.use(
  * Handle all other requests by rendering the Angular application.
  */
 app.use((req, res, next) => {
+  console.log(`[SSR] Handling request: ${req.url}`);
   angularApp
     .handle(req)
     .then(response => {
@@ -200,10 +201,21 @@ app.use((req, res, next) => {
       return next();
     })
     .catch(err => {
-      console.error(`[SSR] Error:`, err.message);
+      console.error(`[SSR] Error rendering ${req.url}:`, err);
       next(err);
     });
-});/**
+});
+
+// Global error handler for uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('[SSR] Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[SSR] Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
+/**
  * Start the server if this module is the main entry point.
  * The server listens on the port defined by the `PORT` environment variable, or defaults to 4000.
  */
