@@ -184,7 +184,8 @@ export class MusicComponent implements OnDestroy {
     if (!pubkey) return;
 
     try {
-      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      const accountRelays = this.accountRelay.getRelayUrls();
+      const relayUrls = this.relaysService.getOptimalRelays(accountRelays);
       if (relayUrls.length === 0) return;
 
       const filter: Filter = {
@@ -415,7 +416,10 @@ export class MusicComponent implements OnDestroy {
     this.isLoadingLikedSongs.set(true);
 
     try {
-      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      // Use account relays + custom music relays
+      const accountRelays = this.accountRelay.getRelayUrls();
+      const customMusicRelays = this.musicRelays();
+      const relayUrls = [...new Set([...accountRelays, ...customMusicRelays])];
 
       // First, fetch reactions (kind 7) from the user for music tracks
       const reactionsFilter: Filter = {

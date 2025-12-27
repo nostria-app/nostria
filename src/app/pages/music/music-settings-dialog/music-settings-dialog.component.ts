@@ -22,8 +22,8 @@ const MUSIC_RELAY_SET_D_TAG = 'music';
 
 // Default music relays to suggest when user has no relay set
 const DEFAULT_MUSIC_RELAYS = [
-  'wss://basspistol.org/',
   'wss://nos.lol/',
+  'wss://relay.damus.io/',
 ];
 
 interface MusicRelaySet {
