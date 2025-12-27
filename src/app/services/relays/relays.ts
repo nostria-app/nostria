@@ -227,7 +227,10 @@ export class RelaysService {
   }
 
   /**
-   * Get optimal relays for a user with connection preference
+   * Get optimal relays for a user with connection preference.
+   * Note: The input relayUrls should already be ordered by priority (e.g., WRITE relays first per NIP-65).
+   * This method will prefer connected relays within each priority tier, but will ensure
+   * that at least some of the highest-priority relays are included even if not connected.
    */
   getOptimalRelays(relayUrls: string[], limit = this.settings.maxRelaysPerUser()): string[] {
     // We have not discovered any relays for this user, what should we do?
@@ -238,12 +241,29 @@ export class RelaysService {
     // Use utilities to filter out bad relays first
     const validRelays = this.utilities.pickOptimalRelays(relayUrls, relayUrls.length);
 
-    // Sort by connection status and performance
-    const sortedRelays = validRelays.sort((a, b) => {
+    // Keep track of original order (priority order, e.g., WRITE relays first)
+    const originalOrder = new Map<string, number>();
+    validRelays.forEach((url, index) => originalOrder.set(url, index));
+
+    // Sort by connection status and performance, but give a boost to high-priority relays
+    const sortedRelays = [...validRelays].sort((a, b) => {
       const statsA = this.getRelayStats(a);
       const statsB = this.getRelayStats(b);
 
-      if (!statsA && !statsB) return 0;
+      const priorityA = originalOrder.get(a) ?? validRelays.length;
+      const priorityB = originalOrder.get(b) ?? validRelays.length;
+
+      // If both are in the top priority positions (first third of the list), prefer original order
+      const topPriorityThreshold = Math.max(3, Math.ceil(validRelays.length / 3));
+      const aIsTopPriority = priorityA < topPriorityThreshold;
+      const bIsTopPriority = priorityB < topPriorityThreshold;
+
+      // If one is top priority and the other isn't, prefer top priority
+      if (aIsTopPriority && !bIsTopPriority) return -1;
+      if (!aIsTopPriority && bIsTopPriority) return 1;
+
+      // Within the same priority tier, sort by connection status
+      if (!statsA && !statsB) return priorityA - priorityB; // Fall back to original order
       if (!statsA) return 1;
       if (!statsB) return -1;
 
@@ -251,7 +271,12 @@ export class RelaysService {
       if (statsA.isConnected && !statsB.isConnected) return -1;
       if (!statsA.isConnected && statsB.isConnected) return 1;
 
-      // Prefer relays with more events received
+      // Both connected or both not connected - prefer higher priority (lower index)
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // Same priority - prefer relays with more events received
       if (statsA.eventsReceived !== statsB.eventsReceived) {
         return statsB.eventsReceived - statsA.eventsReceived;
       }

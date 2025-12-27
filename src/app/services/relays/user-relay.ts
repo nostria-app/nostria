@@ -6,6 +6,7 @@ import { RelaysService } from './relays';
 import { RelayPoolService } from './relay-pool';
 import { UserRelaysService } from './user-relays';
 import { AccountRelayService } from './account-relay';
+import { UtilitiesService } from '../utilities.service';
 
 @Injectable({
   providedIn: 'root',
@@ -17,6 +18,7 @@ export class UserRelayService {
   private relaysService = inject(RelaysService);
   private userRelaysService = inject(UserRelaysService);
   private accountRelay = inject(AccountRelayService);
+  private utilities = inject(UtilitiesService);
   private injector = inject(Injector);
 
   // Private SimplePool instance for publishing with notification support
@@ -340,7 +342,9 @@ export class UserRelayService {
   }
 
   /**
-   * Get a single event by pubkey, kind and tag
+   * Get a single event by pubkey, kind and tag.
+   * First tries the user's relays (prioritizing WRITE relays per NIP-65),
+   * then falls back to preferred relays if not found.
    */
   async getEventByPubkeyAndKindAndTag(
     pubkey: string | string[],
@@ -367,11 +371,6 @@ export class UserRelayService {
 
     const relayUrls = this.getEffectiveRelayUrls(Array.from(allRelayUrls));
 
-    if (relayUrls.length === 0) {
-      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
-      return null;
-    }
-
     const filter = {
       authors: validPubkeys,
       kinds: [kind],
@@ -391,7 +390,34 @@ export class UserRelayService {
       filter['#d'] = [tag.value];
     }
 
-    return this.pool.get(relayUrls, filter);
+    // First try user's relays (prioritizing WRITE relays)
+    if (relayUrls.length > 0) {
+      const event = await this.pool.get(relayUrls, filter);
+      if (event) {
+        return event;
+      }
+      this.logger.debug(`[UserRelayService] Event not found on user's relays, trying preferred relays...`);
+    } else {
+      this.logger.warn(`[UserRelayService] No relays available for pubkeys: ${validPubkeys.map(pk => pk.slice(0, 16)).join(', ')}...`);
+    }
+
+    // Fallback: Try preferred relays (common public relays)
+    // This helps when users have changed their relay list but old events
+    // were published to different relays
+    const preferredRelays = this.relaysService.getOptimalRelays(
+      this.utilities.preferredRelays,
+      5
+    );
+
+    if (preferredRelays.length > 0) {
+      const event = await this.pool.get(preferredRelays, filter);
+      if (event) {
+        this.logger.debug(`[UserRelayService] Event found on preferred relays`);
+        return event;
+      }
+    }
+
+    return null;
   }
 
   /**
