@@ -28,7 +28,7 @@ export interface CommentThread {
     MatProgressSpinnerModule,
     MatTooltipModule,
     CommentComponent
-],
+  ],
   templateUrl: './comments-list.component.html',
   styleUrl: './comments-list.component.scss',
 })

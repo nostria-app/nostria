@@ -25,16 +25,11 @@
 
   <!-- Render nested replies -->
   @if (replies().length > 0) {
-    <div class="replies-container">
-      @for (reply of replies(); track reply.comment.event.id) {
-        <app-comment
-          [event]="reply.comment.event"
-          [rootEvent]="rootEvent()"
-          [replies]="reply.replies"
-          [depth]="reply.depth"
-          (replyAdded)="replyAdded.emit($event)"
-        ></app-comment>
-      }
-    </div>
+  <div class="replies-container">
+    @for (reply of replies(); track reply.comment.event.id) {
+    <app-comment [event]="reply.comment.event" [rootEvent]="rootEvent()" [replies]="reply.replies" [depth]="reply.depth"
+      (replyAdded)="replyAdded.emit($event)"></app-comment>
+    }
+  </div>
   }
 </div>
