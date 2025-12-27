@@ -343,7 +343,8 @@ export class ZapService {
       }
 
       if (relayListEvents.length > 0) {
-        const relays = this.utilities.getRelayUrls(relayListEvents[0]);
+        // Use getOptimalRelayUrlsForFetching to prioritize WRITE relays per NIP-65
+        const relays = this.utilities.getOptimalRelayUrlsForFetching(relayListEvents[0]);
         if (relays.length > 0) {
           this.logger.debug('Found relay list for recipient:', relays.slice(0, 5));
           return relays.slice(0, 10); // Limit to 10 relays

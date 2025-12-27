@@ -8,6 +8,16 @@ import { NostrTagKey } from '../standardized-tags';
 import { NostrRecord } from '../interfaces';
 import { encode } from 'blurhash';
 
+/**
+ * Represents a relay entry with its read/write markers per NIP-65.
+ * If neither read nor write is specified, the relay is both read and write.
+ */
+export interface RelayEntry {
+  url: string;
+  read: boolean;
+  write: boolean;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -365,6 +375,87 @@ export class UtilitiesService {
       });
 
     return relayUrls;
+  }
+
+  /**
+   * Parses relay list (NIP-65 kind 10002) and returns relay entries with read/write markers.
+   * Per NIP-65:
+   * - If no marker is present, the relay is both read and write
+   * - If "read" marker is present, it's a read-only relay (for receiving mentions)
+   * - If "write" marker is present, it's a write-only relay (where user publishes events)
+   *
+   * When fetching events FROM a user, prefer WRITE relays.
+   * When fetching events ABOUT a user (mentions), prefer READ relays.
+   */
+  getRelayEntries(event: Event): RelayEntry[] {
+    return event.tags
+      .filter(tag => tag.length >= 2 && tag[0] === 'r')
+      .map(tag => {
+        let url = tag[1];
+        const wssIndex = url.indexOf('wss://');
+        url = wssIndex >= 0 ? url.substring(wssIndex) : url;
+
+        const marker = tag[2]?.toLowerCase();
+
+        // Per NIP-65: If no marker, relay is both read and write
+        const isRead = marker === 'read' || !marker;
+        const isWrite = marker === 'write' || !marker;
+
+        return { url, read: isRead, write: isWrite };
+      });
+  }
+
+  /**
+   * Get relay URLs that are marked for writing (where user publishes events).
+   * Per NIP-65: When downloading events FROM a user, use their WRITE relays.
+   * Falls back to all relays if no specific write relays are found.
+   */
+  getWriteRelayUrls(event: Event): string[] {
+    const entries = this.getRelayEntries(event);
+    const writeRelays = entries.filter(e => e.write).map(e => e.url);
+
+    // If we have write-specific relays, return those
+    if (writeRelays.length > 0) {
+      return writeRelays;
+    }
+
+    // Fallback to all relays if no write relays are specified
+    return entries.map(e => e.url);
+  }
+
+  /**
+   * Get relay URLs that are marked for reading (where user receives mentions).
+   * Per NIP-65: When downloading events ABOUT a user (mentions), use their READ relays.
+   * Falls back to all relays if no specific read relays are found.
+   */
+  getReadRelayUrls(event: Event): string[] {
+    const entries = this.getRelayEntries(event);
+    const readRelays = entries.filter(e => e.read).map(e => e.url);
+
+    // If we have read-specific relays, return those
+    if (readRelays.length > 0) {
+      return readRelays;
+    }
+
+    // Fallback to all relays if no read relays are specified
+    return entries.map(e => e.url);
+  }
+
+  /**
+   * Get optimal relay URLs for fetching events from a user.
+   * Prioritizes WRITE relays first, then falls back to READ/WRITE relays.
+   * This follows NIP-65: "When downloading events from a user, use the write relays of that user."
+   */
+  getOptimalRelayUrlsForFetching(event: Event): string[] {
+    const entries = this.getRelayEntries(event);
+
+    // Separate into write-only, read-write, and read-only
+    const writeOnly = entries.filter(e => e.write && !e.read).map(e => e.url);
+    const readWrite = entries.filter(e => e.write && e.read).map(e => e.url);
+    const readOnly = entries.filter(e => e.read && !e.write).map(e => e.url);
+
+    // Prioritize: write-only first, then read-write, then read-only as last resort
+    return [...writeOnly, ...readWrite, ...readOnly];
   }
 
   /** This is an optimization we had to do to ensure that we have more success finding

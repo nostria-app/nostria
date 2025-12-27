@@ -134,9 +134,24 @@ const profile = await sharedRelay.get(
 ```typescript
 const discoveryRelay = inject(DiscoveryRelayService);
 
-// Get relay URLs for a user
+// Get relay URLs for a user (prioritizes WRITE relays per NIP-65)
 const relayUrls = await discoveryRelay.getUserRelayUrls(pubkey);
 ```
+
+## NIP-65 Relay List Prioritization
+
+When fetching events FROM a user, the system prioritizes WRITE relays as per NIP-65:
+
+- **No marker**: Relay is both READ and WRITE (prioritized)
+- **"write" marker**: Write-only relay (highest priority for fetching)
+- **"read" marker**: Read-only relay (for receiving mentions, lowest priority for fetching)
+
+The `utilities.getOptimalRelayUrlsForFetching()` method returns relays in this order:
+1. Write-only relays
+2. Read-write relays (no marker)
+3. Read-only relays (fallback)
+
+This ensures we connect to relays where the user actually publishes their events.
 
 ### Publishing Events
 ```typescript

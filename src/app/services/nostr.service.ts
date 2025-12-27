@@ -1209,7 +1209,7 @@ export class NostrService implements NostriaService {
         await this.database.saveEvent(relayListEvent);
 
         relayUrls = this.utilities.pickOptimalRelays(
-          this.utilities.getRelayUrls(relayListEvent),
+          this.utilities.getOptimalRelayUrlsForFetching(relayListEvent),
           this.settings.maxRelaysPerUser()
         );
       } else {

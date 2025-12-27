@@ -33,7 +33,9 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     let event = await this.getEventByPubkeyAndKind(pubkey, kinds.RelayList);
 
     if (event) {
-      relayUrls = this.utilities.getRelayUrls(event);
+      // Use getOptimalRelayUrlsForFetching to prioritize WRITE relays per NIP-65
+      // When fetching events FROM a user, we should prefer their WRITE relays
+      relayUrls = this.utilities.getOptimalRelayUrlsForFetching(event);
 
       // Save the relay list event to the database for future use
       try {
