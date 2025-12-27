@@ -19,6 +19,7 @@ import { MusicPlaylistCardComponent } from '../../components/music-playlist-card
 import { CreateMusicPlaylistDialogComponent } from './create-music-playlist-dialog/create-music-playlist-dialog.component';
 import { MusicTrackDialogComponent } from './music-track-dialog/music-track-dialog.component';
 import { ImportRssDialogComponent } from './import-rss-dialog/import-rss-dialog.component';
+import { MusicSettingsDialogComponent } from './music-settings-dialog/music-settings-dialog.component';
 import { MusicPlaylist } from '../../services/music-playlist.service';
 
 const MUSIC_KIND = 36787;
@@ -37,6 +38,7 @@ const SECTION_LIMIT = 12;
     CreateMusicPlaylistDialogComponent,
     MusicTrackDialogComponent,
     ImportRssDialogComponent,
+    MusicSettingsDialogComponent,
   ],
   templateUrl: './music.component.html',
   styleUrls: ['./music.component.scss'],
@@ -61,6 +63,11 @@ export class MusicComponent implements OnDestroy {
   showUploadDialog = signal(false);
   showCreatePlaylistDialog = signal(false);
   showImportRssDialog = signal(false);
+  showSettingsDialog = signal(false);
+
+  // Music relay set state
+  musicRelaySet = signal<Event | null>(null);
+  musicRelays = signal<string[]>([]);
 
   private trackSubscription: { close: () => void } | null = null;
   private playlistSubscription: { close: () => void } | null = null;
@@ -146,13 +153,66 @@ export class MusicComponent implements OnDestroy {
   publicPlaylistsCount = computed(() => this.publicPlaylists().length);
   publicTracksCount = computed(() => this.publicTracks().length);
 
+  // Music relay set constant
+  private readonly RELAY_SET_KIND = 30002;
+  private readonly MUSIC_RELAY_SET_D_TAG = 'music';
+
   constructor() {
+    this.loadMusicRelaySet();
     this.startSubscriptions();
   }
 
   ngOnDestroy(): void {
     this.trackSubscription?.close();
     this.playlistSubscription?.close();
+  }
+
+  /**
+   * Pre-load the user's music relay set (kind 30002 with d tag "music")
+   */
+  private async loadMusicRelaySet(): Promise<void> {
+    const pubkey = this.currentPubkey();
+    if (!pubkey) return;
+
+    try {
+      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      if (relayUrls.length === 0) return;
+
+      const filter: Filter = {
+        kinds: [this.RELAY_SET_KIND],
+        authors: [pubkey],
+        '#d': [this.MUSIC_RELAY_SET_D_TAG],
+        limit: 1,
+      };
+
+      let foundEvent: Event | null = null;
+
+      await new Promise<void>((resolve) => {
+        const timeout = setTimeout(resolve, 3000);
+        const sub = this.pool.subscribe(relayUrls, filter, (event: Event) => {
+          if (!foundEvent || event.created_at > foundEvent.created_at) {
+            foundEvent = event;
+          }
+        });
+
+        setTimeout(() => {
+          sub.close();
+          clearTimeout(timeout);
+          resolve();
+        }, 2000);
+      });
+
+      if (foundEvent) {
+        const event = foundEvent as Event;
+        this.musicRelaySet.set(event);
+        const relays = event.tags
+          .filter((tag: string[]) => tag[0] === 'relay' && tag[1])
+          .map((tag: string[]) => tag[1]);
+        this.musicRelays.set(relays);
+      }
+    } catch (error) {
+      console.error('Error loading music relay set:', error);
+    }
   }
 
   private startSubscriptions(): void {
@@ -312,6 +372,18 @@ export class MusicComponent implements OnDestroy {
     this.showImportRssDialog.set(false);
     if (result?.published) {
       this.refresh();
+    }
+  }
+
+  openSettings(): void {
+    this.showSettingsDialog.set(true);
+  }
+
+  onSettingsDialogClosed(result: { saved: boolean } | null): void {
+    this.showSettingsDialog.set(false);
+    if (result?.saved) {
+      // Reload the music relay set after saving
+      this.loadMusicRelaySet();
     }
   }
 
