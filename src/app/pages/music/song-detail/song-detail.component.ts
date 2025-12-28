@@ -141,14 +141,14 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     return null;
   });
 
-  // Parse content into sections (Lyrics, Credits, etc.)
+  // Parse content into sections (Lyrics, Credits, License, etc.)
   contentSections = computed(() => {
     const event = this.song();
     if (!event) return [];
 
     // Check for lyrics tag first
     const lyricsTag = event.tags.find(t => t[0] === 'lyrics');
-    const sections: { title: string; icon: string; content: string }[] = [];
+    const sections: { title: string; icon: string; content: string; url?: string }[] = [];
 
     if (lyricsTag?.[1]) {
       sections.push({ title: 'Lyrics', icon: 'lyrics', content: lyricsTag[1] });
@@ -157,8 +157,8 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     // Parse content for sections
     const content = event.content;
     if (content && !content.match(/^https?:\/\//)) {
-      // Try to parse sections like "Lyrics:\n..." or "Credits:\n..."
-      const sectionRegex = /^(Lyrics|Credits|Description|Notes|About|Info):\s*\n?/gim;
+      // Try to parse sections like "Lyrics:\n...", "Credits:\n...", "License:\n..."
+      const sectionRegex = /^(Lyrics|Credits|License|Description|Notes|About|Info):\s*\n?/gim;
       const parts = content.split(sectionRegex).filter(p => p.trim());
 
       if (parts.length >= 2) {
@@ -172,14 +172,33 @@ export class SongDetailComponent implements OnInit, OnDestroy {
             if (lowerHeader === 'lyrics' && lyricsTag?.[1]) continue;
 
             let icon = 'description';
+            let url: string | undefined;
+
             if (lowerHeader === 'lyrics') icon = 'lyrics';
             else if (lowerHeader === 'credits') icon = 'people';
-            else if (lowerHeader === 'notes' || lowerHeader === 'about' || lowerHeader === 'info') icon = 'info';
+            else if (lowerHeader === 'license') {
+              icon = 'gavel';
+              // Check if the body contains a URL on the second line
+              const lines = body.split('\n');
+              const firstLine = lines[0]?.trim() || '';
+              const secondLine = lines[1]?.trim() || '';
+              if (secondLine.startsWith('http')) {
+                url = secondLine;
+                sections.push({
+                  title: 'License',
+                  icon,
+                  content: firstLine,
+                  url
+                });
+                continue;
+              }
+            } else if (lowerHeader === 'notes' || lowerHeader === 'about' || lowerHeader === 'info') icon = 'info';
 
             sections.push({
               title: header.charAt(0).toUpperCase() + header.slice(1).toLowerCase(),
               icon,
-              content: body
+              content: body,
+              url
             });
           }
         }
@@ -190,6 +209,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     }
 
     return sections;
+  });
+
+  // License computed for easy access
+  license = computed(() => {
+    const sections = this.contentSections();
+    const licenseSection = sections.find(s => s.title === 'License');
+    return licenseSection ? { name: licenseSection.content, url: licenseSection.url } : null;
   });
 
   // Keep legacy lyrics computed for backwards compatibility

@@ -341,6 +341,37 @@
   color: var(--mat-sys-on-surface);
 }
 
+.license-content {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+
+  .license-name {
+    color: var(--mat-sys-on-surface);
+    font-size: 1rem;
+  }
+
+  .license-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+    font-size: 0.875rem;
+
+    &:hover {
+      text-decoration: underline;
+    }
+
+    mat-icon {
+      font-size: 1rem;
+      width: 1rem;
+      height: 1rem;
+    }
+  }
+}
+
 .comments-section {
   margin-top: 1rem;
 }
