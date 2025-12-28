@@ -773,11 +773,16 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
       const title = this.getTrackTitle(track);
       const artist = this.getTrackArtist(track);
+      const artwork = this.getTrackImage(track);
       const durationTag = track.tags.find(t => t[0] === 'duration');
       const duration = durationTag?.[1] ? parseInt(durationTag[1], 10) : -1;
 
       // EXTINF format: #EXTINF:duration,Artist - Title
       lines.push(`#EXTINF:${duration},${artist} - ${title}`);
+      // EXTALBUMARTURL for album art (supported by VLC and Jamendo)
+      if (artwork) {
+        lines.push(`#EXTALBUMARTURL:${artwork}`);
+      }
       lines.push(url);
     }
 
