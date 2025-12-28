@@ -34,7 +34,7 @@ const MUSIC_KIND = 36787;
     DateToggleComponent,
   ],
   template: `
-    <div class="music-embed" [class.track]="isTrack()" [class.playlist]="!isTrack()">
+    <div class="music-embed" (click)="$event.stopPropagation()" [class.track]="isTrack()" [class.playlist]="!isTrack()">
       @if (loading()) {
         <div class="loading-state">
           <mat-spinner diameter="24"></mat-spinner>
@@ -231,6 +231,7 @@ const MUSIC_KIND = 36787;
       .play-btn {
         background: var(--mat-sys-primary);
         color: var(--mat-sys-on-primary);
+        position: relative;
 
         &:hover:not(:disabled) {
           background: var(--mat-sys-primary-container);
@@ -238,8 +239,19 @@ const MUSIC_KIND = 36787;
         }
 
         mat-spinner {
-          ::ng-deep circle {
-            stroke: var(--mat-sys-on-primary) !important;
+          position: absolute;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          
+          ::ng-deep {
+            svg {
+              display: block;
+            }
+            
+            circle {
+              stroke: var(--mat-sys-on-primary) !important;
+            }
           }
         }
       }
