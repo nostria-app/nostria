@@ -3,6 +3,24 @@
     <button mat-icon-button (click)="goBack()" aria-label="Go back">
       <mat-icon>arrow_back</mat-icon>
     </button>
+    <span class="spacer"></span>
+    <button mat-icon-button [matMenuTriggerFor]="artistMenu" aria-label="More options">
+      <mat-icon>more_vert</mat-icon>
+    </button>
+    <mat-menu #artistMenu="matMenu">
+      <button mat-menu-item (click)="downloadTracksAsM3u8()" [disabled]="tracks().length === 0">
+        <mat-icon>download</mat-icon>
+        <span>Download Tracks (M3U8)</span>
+      </button>
+      <button mat-menu-item (click)="copyArtistLink()">
+        <mat-icon>link</mat-icon>
+        <span>Copy Artist Link</span>
+      </button>
+      <button mat-menu-item (click)="goToProfile()">
+        <mat-icon>person</mat-icon>
+        <span>View Profile</span>
+      </button>
+    </mat-menu>
   </div>
 
   @if (loading()) {

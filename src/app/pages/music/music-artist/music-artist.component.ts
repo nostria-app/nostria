@@ -451,4 +451,76 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
       this.snackBar.open('Track updated', 'Close', { duration: 2000 });
     }
   }
+
+  copyArtistLink(): void {
+    const npub = this.artistNpub();
+    if (!npub) return;
+
+    const link = `https://nostria.app/music/artist/${npub}`;
+    this.clipboard.copy(link);
+    this.snackBar.open('Artist link copied!', 'Close', { duration: 2000 });
+  }
+
+  downloadTracksAsM3u8(): void {
+    const allTracks = this.tracks();
+    if (allTracks.length === 0) {
+      this.snackBar.open('No tracks to download', 'Close', { duration: 2000 });
+      return;
+    }
+
+    // Build M3U8 content (Extended M3U format with UTF-8 BOM for unicode support)
+    const lines: string[] = ['#EXTM3U'];
+
+    for (const track of allTracks) {
+      const urlTag = track.tags.find(t => t[0] === 'url');
+      const url = urlTag?.[1];
+      if (!url) continue;
+
+      const title = this.getTrackTitle(track);
+      const artist = this.getTrackArtist(track);
+      const artwork = this.getTrackImage(track);
+      const durationTag = track.tags.find(t => t[0] === 'duration');
+      const duration = durationTag?.[1] ? parseInt(durationTag[1], 10) : -1;
+
+      // EXTINF format: #EXTINF:duration,Artist - Title
+      lines.push(`#EXTINF:${duration},${artist} - ${title}`);
+      // EXTALBUMARTURL for album art (supported by VLC and Jamendo)
+      if (artwork) {
+        lines.push(`#EXTALBUMARTURL:${artwork}`);
+      }
+      lines.push(url);
+    }
+
+    const content = lines.join('\n');
+
+    // Create blob with UTF-8 BOM for proper unicode support
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const textEncoder = new TextEncoder();
+    const textData = textEncoder.encode(content);
+    const combinedData = new Uint8Array(bom.length + textData.length);
+    combinedData.set(bom, 0);
+    combinedData.set(textData, bom.length);
+
+    const blob = new Blob([combinedData], { type: 'audio/x-mpegurl;charset=utf-8' });
+    const downloadUrl = URL.createObjectURL(blob);
+
+    // Create a safe filename from the artist name
+    const safeArtistName = this.artistName()
+      .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .substring(0, 100); // Limit length
+
+    const filename = `${safeArtistName || 'artist'}_tracks.m3u8`;
+
+    // Create download link and trigger download
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(downloadUrl);
+
+    this.snackBar.open('Tracks downloaded!', 'Close', { duration: 2000 });
+  }
 }
