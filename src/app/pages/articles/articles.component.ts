@@ -4,7 +4,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatCardModule } from '@angular/material/card';
-import { Event, Filter, kinds } from 'nostr-tools';
+import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -13,6 +13,8 @@ import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LayoutService } from '../../services/layout.service';
 import { ArticleEventComponent } from '../../components/event-types/article-event.component';
+import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { AgoPipe } from '../../pipes/ago.pipe';
 
 const PAGE_SIZE = 30;
 
@@ -25,6 +27,8 @@ const PAGE_SIZE = 30;
     MatButtonToggleModule,
     MatCardModule,
     ArticleEventComponent,
+    UserProfileComponent,
+    AgoPipe,
   ],
   templateUrl: './articles.component.html',
   styleUrls: ['./articles.component.scss'],
@@ -162,6 +166,21 @@ export class ArticlesDiscoverComponent implements OnDestroy {
 
   onSourceChange(source: 'following' | 'public'): void {
     this.feedSource.set(source);
+  }
+
+  openArticle(event: Event): void {
+    // Get the article identifier (d tag)
+    const dTag = event.tags.find(tag => tag[0] === 'd')?.[1] || '';
+
+    // Create naddr for the article
+    const naddr = nip19.naddrEncode({
+      identifier: dTag,
+      kind: event.kind,
+      pubkey: event.pubkey,
+    });
+
+    // Navigate to the article page using layout service
+    this.layout.openArticle(naddr, event);
   }
 
   private startSubscription(): void {

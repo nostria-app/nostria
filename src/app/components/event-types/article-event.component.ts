@@ -26,6 +26,7 @@ export class ArticleEventComponent {
   private chroniaCalendar = inject(ChroniaCalendarService);
   private ethiopianCalendar = inject(EthiopianCalendarService);
   private readonly MAX_LENGTH = 300;
+  private readonly MAX_SUMMARY_LENGTH = 200;
 
   event = input.required<Event>();
   showAuthor = input<boolean>(true);
@@ -45,6 +46,18 @@ export class ArticleEventComponent {
 
     const summaryTag = event.tags.find(tag => tag[0] === 'summary');
     return summaryTag?.[1] || null;
+  });
+
+  // Truncated summary for display in listings
+  truncatedSummary = computed(() => {
+    const fullSummary = this.summary();
+    if (!fullSummary) return null;
+
+    if (fullSummary.length <= this.MAX_SUMMARY_LENGTH) {
+      return fullSummary;
+    }
+
+    return fullSummary.substring(0, this.MAX_SUMMARY_LENGTH).trimEnd() + '…';
   });
 
   previewContent = signal<SafeHtml>('');
