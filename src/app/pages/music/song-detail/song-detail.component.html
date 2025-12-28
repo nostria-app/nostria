@@ -193,7 +193,19 @@
         </mat-card-title>
       </mat-card-header>
       <mat-card-content>
+        @if (section.title === 'License') {
+        <div class="license-content">
+          <span class="license-name">{{ section.content }}</span>
+          @if (section.url) {
+          <a [href]="section.url" target="_blank" rel="noopener noreferrer" class="license-link">
+            <mat-icon>open_in_new</mat-icon>
+            View License
+          </a>
+          }
+        </div>
+        } @else {
         <pre class="section-text">{{ section.content }}</pre>
+        }
       </mat-card-content>
     </mat-card>
     }
