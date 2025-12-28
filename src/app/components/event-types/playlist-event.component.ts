@@ -38,7 +38,7 @@ interface PlaylistData {
     MatMenuModule,
     MatDividerModule,
     CommentsListComponent
-],
+  ],
   templateUrl: './playlist-event.component.html',
   styleUrl: './playlist-event.component.scss',
 })
@@ -131,10 +131,11 @@ export class PlaylistEventComponent {
   }
 
   playPlaylist(playlistData: PlaylistData): void {
-    console.log('Playing playlist:', playlistData.title);
+    console.log('Playing playlist:', playlistData.title, 'Tracks:', playlistData.tracks.length);
 
     if (playlistData.tracks.length === 0) {
       console.warn('No tracks in playlist');
+      this.snackBar.open('Playlist has no tracks', 'Close', { duration: 3000 });
       return;
     }
 
@@ -158,14 +159,17 @@ export class PlaylistEventComponent {
       for (let i = 1; i < mediaItems.length; i++) {
         this.mediaPlayerService.enque(mediaItems[i]);
       }
+
+      this.snackBar.open(`Playing ${mediaItems.length} track${mediaItems.length > 1 ? 's' : ''}`, 'Close', { duration: 2000 });
     }
   }
 
   addPlaylistToQueue(playlistData: PlaylistData): void {
-    console.log('Adding playlist to queue:', playlistData.title);
+    console.log('Adding playlist to queue:', playlistData.title, 'Tracks:', playlistData.tracks.length);
 
     if (playlistData.tracks.length === 0) {
       console.warn('No tracks in playlist');
+      this.snackBar.open('Playlist has no tracks', 'Close', { duration: 3000 });
       return;
     }
 

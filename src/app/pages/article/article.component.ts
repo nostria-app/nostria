@@ -181,6 +181,15 @@ export class ArticleComponent implements OnDestroy {
           // Music track
           this.router.navigate(['/music/song', npub, identifier], { replaceUrl: true });
           return;
+        } else if (receivedData.kind === 32100) {
+          // M3U Playlist - redirect to event page
+          const nevent = nip19.neventEncode({
+            id: receivedData.id,
+            author: receivedData.pubkey,
+            kind: receivedData.kind,
+          });
+          this.router.navigate(['/e', nevent], { replaceUrl: true, state: { event: receivedData } });
+          return;
         }
         // For other unknown kinds, continue loading as-is (fallback)
       }
@@ -226,6 +235,15 @@ export class ArticleComponent implements OnDestroy {
           // Music track
           this.router.navigate(['/music/song', npub, addrData.identifier], { replaceUrl: true });
           return;
+        } else if (addrData.kind === 32100) {
+          // M3U Playlist - redirect to event page using naddr
+          const naddr = nip19.naddrEncode({
+            kind: addrData.kind,
+            pubkey: addrData.pubkey,
+            identifier: addrData.identifier,
+          });
+          this.router.navigate(['/e', naddr], { replaceUrl: true });
+          return;
         }
         // For other unknown kinds, continue loading as-is (fallback)
       }
@@ -251,6 +269,15 @@ export class ArticleComponent implements OnDestroy {
         } else if (kind === 36787) {
           // Music track
           this.router.navigate(['/music/song', npub, slug], { replaceUrl: true });
+          return;
+        } else if (kind === 32100) {
+          // M3U Playlist - redirect to event page using naddr
+          const naddr = nip19.naddrEncode({
+            kind: kind,
+            pubkey: pubkey,
+            identifier: slug,
+          });
+          this.router.navigate(['/e', naddr], { replaceUrl: true });
           return;
         }
         // For other unknown kinds, continue loading as-is (fallback)
