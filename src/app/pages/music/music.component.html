@@ -97,6 +97,7 @@
         </div>
 
         <!-- Offline Music Card -->
+        @if (offlineTrackCount() > 0) {
         <div class="offline-music-card" (click)="goToOfflineMusic()" (keydown.enter)="goToOfflineMusic()" tabindex="0"
           role="button">
           <div class="offline-music-cover">
@@ -108,6 +109,7 @@
               saved</span>
           </div>
         </div>
+        }
 
         <!-- User's playlists -->
         @for (playlist of myPlaylistsPreview(); track playlist.id) {
