@@ -18,6 +18,7 @@ import { AccountStateService } from '../../services/account-state.service';
 import { EventService } from '../../services/event';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ZapService } from '../../services/zap.service';
+import { OfflineMusicService } from '../../services/offline-music.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
@@ -45,6 +46,11 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
           }
           @if (isAiGenerated()) {
             <span class="ai-badge">AI</span>
+          }
+          @if (isOffline()) {
+            <span class="offline-badge" title="Available offline">
+              <mat-icon>offline_pin</mat-icon>
+            </span>
           }
           
           <!-- Play button overlay -->
@@ -82,6 +88,11 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
           }
           @if (isAiGenerated()) {
             <span class="ai-badge">AI</span>
+          }
+          @if (isOffline()) {
+            <span class="offline-badge" title="Available offline">
+              <mat-icon>offline_pin</mat-icon>
+            </span>
           }
         </div>
         
@@ -252,6 +263,27 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         letter-spacing: 0.5px;
         z-index: 2;
       }
+
+      .offline-badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        background: var(--mat-sys-tertiary-container);
+        color: var(--mat-sys-on-tertiary-container);
+        border-radius: 50%;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 2;
+        
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+        }
+      }
       
       .play-overlay {
         position: absolute;
@@ -410,6 +442,27 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
         text-transform: uppercase;
         letter-spacing: 0.5px;
       }
+
+      .offline-badge {
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        background: var(--mat-sys-tertiary-container);
+        color: var(--mat-sys-on-tertiary-container);
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        
+        mat-icon {
+          font-size: 14px;
+          width: 14px;
+          height: 14px;
+          opacity: 1;
+        }
+      }
     }
     
     .music-info {
@@ -497,6 +550,7 @@ export class MusicEventComponent {
   private clipboard = inject(Clipboard);
   private utilities = inject(UtilitiesService);
   private zapService = inject(ZapService);
+  private offlineMusicService = inject(OfflineMusicService);
 
   event = input.required<Event>();
   mode = input<'card' | 'list'>('list');
@@ -515,6 +569,13 @@ export class MusicEventComponent {
     const ev = this.event();
     const userPubkey = this.accountState.pubkey();
     return ev && userPubkey && ev.pubkey === userPubkey;
+  });
+
+  // Check if track is available offline
+  isOffline = computed(() => {
+    const ev = this.event();
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    return this.offlineMusicService.isTrackOffline(ev.pubkey, dTag);
   });
 
   private profileLoaded = false;

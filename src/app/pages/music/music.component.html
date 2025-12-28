@@ -96,6 +96,19 @@
           </div>
         </div>
 
+        <!-- Offline Music Card -->
+        <div class="offline-music-card" (click)="goToOfflineMusic()" (keydown.enter)="goToOfflineMusic()" tabindex="0"
+          role="button">
+          <div class="offline-music-cover">
+            <mat-icon>offline_pin</mat-icon>
+          </div>
+          <div class="offline-music-info">
+            <span class="offline-music-title">Offline Library</span>
+            <span class="offline-music-meta">{{ offlineTrackCount() }} track{{ offlineTrackCount() === 1 ? '' : 's' }}
+              saved</span>
+          </div>
+        </div>
+
         <!-- User's playlists -->
         @for (playlist of myPlaylistsPreview(); track playlist.id) {
         <app-music-playlist-card [event]="playlist"></app-music-playlist-card>

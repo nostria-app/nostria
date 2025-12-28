@@ -305,6 +305,12 @@ export const routes: Routes = [
     title: 'Music',
   },
   {
+    path: 'music/offline',
+    loadComponent: () =>
+      import('./pages/music/music-offline/music-offline.component').then(m => m.MusicOfflineComponent),
+    title: 'Offline Music',
+  },
+  {
     path: 'music/liked',
     loadComponent: () =>
       import('./pages/music/music-liked/music-liked.component').then(m => m.MusicLikedComponent),
