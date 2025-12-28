@@ -755,4 +755,62 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
     }
   }
+
+  downloadAsM3u8(): void {
+    const allTracks = this.tracks();
+    if (allTracks.length === 0) {
+      this.snackBar.open('No tracks to download', 'Close', { duration: 2000 });
+      return;
+    }
+
+    // Build M3U8 content (Extended M3U format with UTF-8 BOM for unicode support)
+    const lines: string[] = ['#EXTM3U'];
+
+    for (const track of allTracks) {
+      const urlTag = track.tags.find(t => t[0] === 'url');
+      const url = urlTag?.[1];
+      if (!url) continue;
+
+      const title = this.getTrackTitle(track);
+      const artist = this.getTrackArtist(track);
+      const durationTag = track.tags.find(t => t[0] === 'duration');
+      const duration = durationTag?.[1] ? parseInt(durationTag[1], 10) : -1;
+
+      // EXTINF format: #EXTINF:duration,Artist - Title
+      lines.push(`#EXTINF:${duration},${artist} - ${title}`);
+      lines.push(url);
+    }
+
+    const content = lines.join('\n');
+
+    // Create blob with UTF-8 BOM for proper unicode support
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const textEncoder = new TextEncoder();
+    const textData = textEncoder.encode(content);
+    const combinedData = new Uint8Array(bom.length + textData.length);
+    combinedData.set(bom, 0);
+    combinedData.set(textData, bom.length);
+
+    const blob = new Blob([combinedData], { type: 'audio/x-mpegurl;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    // Create a safe filename from the playlist title
+    const safeTitle = this.title()
+      .replace(/[<>:"/\\|?*]/g, '') // Remove invalid filename characters
+      .replace(/\s+/g, '_') // Replace spaces with underscores
+      .substring(0, 100); // Limit length
+
+    const filename = `${safeTitle || 'playlist'}.m3u8`;
+
+    // Create download link and trigger download
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    this.snackBar.open('Playlist downloaded!', 'Close', { duration: 2000 });
+  }
 }
