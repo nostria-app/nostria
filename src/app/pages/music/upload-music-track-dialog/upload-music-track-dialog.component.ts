@@ -15,6 +15,7 @@ import { Event } from 'nostr-tools';
 import { parseBlob, selectCover } from 'music-metadata';
 import { MediaService } from '../../../services/media.service';
 import { AccountStateService } from '../../../services/account-state.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { NostrService } from '../../../services/nostr.service';
 import { RelaysService } from '../../../services/relays/relays';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -59,6 +60,7 @@ export class UploadMusicTrackDialogComponent {
   private fb = inject(FormBuilder);
   private mediaService = inject(MediaService);
   private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private nostrService = inject(NostrService);
   private relaysService = inject(RelaysService);
   private pool = inject(RelayPoolService);
@@ -93,6 +95,20 @@ export class UploadMusicTrackDialogComponent {
     'Dance', 'House', 'Techno', 'Ambient', 'Experimental', 'Soul',
     'Reggae', 'Blues', 'Latin', 'World', 'Soundtrack', 'Lo-Fi',
     'Trap', 'Dubstep', 'Drum & Bass', 'Synthwave', 'Other'
+  ];
+
+  // Available license options
+  licenseOptions = [
+    { value: '', label: 'None', url: '' },
+    { value: 'All Rights Reserved', label: 'All Rights Reserved', url: '' },
+    { value: 'CC0 1.0', label: 'CC0 1.0', url: 'https://creativecommons.org/publicdomain/zero/1.0/' },
+    { value: 'CC-BY 4.0', label: 'CC-BY 4.0', url: 'https://creativecommons.org/licenses/by/4.0/' },
+    { value: 'CC BY-SA 4.0', label: 'CC BY-SA 4.0', url: 'https://creativecommons.org/licenses/by-sa/4.0/' },
+    { value: 'CC BY-ND 4.0', label: 'CC BY-ND 4.0', url: 'https://creativecommons.org/licenses/by-nd/4.0/' },
+    { value: 'CC BY-NC 4.0', label: 'CC BY-NC 4.0', url: 'https://creativecommons.org/licenses/by-nc/4.0/' },
+    { value: 'CC BY-NC-SA 4.0', label: 'CC BY-NC-SA 4.0', url: 'https://creativecommons.org/licenses/by-nc-sa/4.0/' },
+    { value: 'CC BY-NC-ND 4.0', label: 'CC BY-NC-ND 4.0', url: 'https://creativecommons.org/licenses/by-nc-nd/4.0/' },
+    { value: 'custom', label: 'Custom', url: '' },
   ];
 
   // Random gradients for default cover
@@ -130,10 +146,16 @@ export class UploadMusicTrackDialogComponent {
       credits: [''],
       imageUrl: [''],
       customTags: [''], // Custom tags as comma-separated values
+      license: [''], // License selection
+      customLicense: [''], // Custom license name
+      customLicenseUrl: [''], // Custom license URL
     });
 
     // Initialize with current user as uploader
     this.loadCurrentUserProfile();
+
+    // Load saved license preference
+    this.loadSavedLicensePreference();
 
     // Auto-fill artist name when npub is entered
     this.trackForm.get('artistNpub')?.valueChanges.subscribe(async (npub: string) => {
@@ -178,6 +200,43 @@ export class UploadMusicTrackDialogComponent {
         percentage: 100,
         isUploader: true,
       }]);
+    }
+  }
+
+  private loadSavedLicensePreference(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const savedLicense = this.accountLocalState.getMusicTrackLicense(pubkey);
+    const savedLicenseUrl = this.accountLocalState.getMusicTrackLicenseUrl(pubkey);
+
+    if (savedLicense) {
+      // Check if it's a standard license
+      const isStandardLicense = this.licenseOptions.some(opt => opt.value === savedLicense && opt.value !== 'custom');
+      if (isStandardLicense) {
+        this.trackForm.patchValue({ license: savedLicense });
+      } else if (savedLicense) {
+        // It's a custom license
+        this.trackForm.patchValue({
+          license: 'custom',
+          customLicense: savedLicense,
+          customLicenseUrl: savedLicenseUrl || '',
+        });
+      }
+    }
+  }
+
+  private saveLicensePreference(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const formValue = this.trackForm.value;
+    if (formValue.license === 'custom') {
+      this.accountLocalState.setMusicTrackLicense(pubkey, formValue.customLicense || undefined);
+      this.accountLocalState.setMusicTrackLicenseUrl(pubkey, formValue.customLicenseUrl || undefined);
+    } else {
+      this.accountLocalState.setMusicTrackLicense(pubkey, formValue.license || undefined);
+      this.accountLocalState.setMusicTrackLicenseUrl(pubkey, undefined);
     }
   }
 
@@ -646,15 +705,35 @@ export class UploadMusicTrackDialogComponent {
       const artistDisplay = formValue.artistName || 'Unknown Artist';
       tags.push(['alt', `Music track: ${formValue.title} by ${artistDisplay}`]);
 
-      // Build content (lyrics and credits go here per spec)
-      let content = '';
-      if (formValue.lyrics && formValue.credits) {
-        content = `Lyrics:\n${formValue.lyrics}\n\nCredits:\n${formValue.credits}`;
-      } else if (formValue.lyrics) {
-        content = `Lyrics:\n${formValue.lyrics}`;
-      } else if (formValue.credits) {
-        content = `Credits:\n${formValue.credits}`;
+      // Build content (lyrics, credits, and license go here per spec)
+      const contentParts: string[] = [];
+
+      if (formValue.lyrics) {
+        contentParts.push(`Lyrics:\n${formValue.lyrics}`);
       }
+
+      if (formValue.credits) {
+        contentParts.push(`Credits:\n${formValue.credits}`);
+      }
+
+      // Add license to content
+      const licenseName = formValue.license === 'custom' ? formValue.customLicense : formValue.license;
+      const licenseUrl = formValue.license === 'custom'
+        ? formValue.customLicenseUrl
+        : this.licenseOptions.find(opt => opt.value === formValue.license)?.url || '';
+
+      if (licenseName) {
+        let licenseSection = `License:\n${licenseName}`;
+        if (licenseUrl) {
+          licenseSection += `\n${licenseUrl}`;
+        }
+        contentParts.push(licenseSection);
+      }
+
+      const content = contentParts.join('\n\n');
+
+      // Save license preference
+      this.saveLicensePreference();
 
       // Create and sign the event
       const eventTemplate = {

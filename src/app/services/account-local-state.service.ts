@@ -49,6 +49,8 @@ interface AccountLocalState {
   unreadMessagesCount?: number; // Cached count of unread direct messages
   hiddenChatIds?: string[]; // Chat IDs that user has hidden
   globalEventExpiration?: number | null; // Global expiration time in hours for all events created (null = disabled)
+  musicTrackLicense?: string; // Last used license for music tracks
+  musicTrackLicenseUrl?: string; // Last used license URL for music tracks (for custom licenses)
 }
 
 /**
@@ -703,6 +705,36 @@ export class AccountLocalStateService {
    */
   setGlobalEventExpiration(pubkey: string, hours: number | null): void {
     this.updateAccountState(pubkey, { globalEventExpiration: hours });
+  }
+
+  /**
+   * Get last used music track license for an account
+   */
+  getMusicTrackLicense(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.musicTrackLicense;
+  }
+
+  /**
+   * Set last used music track license for an account
+   */
+  setMusicTrackLicense(pubkey: string, license: string | undefined): void {
+    this.updateAccountState(pubkey, { musicTrackLicense: license });
+  }
+
+  /**
+   * Get last used music track license URL for an account (for custom licenses)
+   */
+  getMusicTrackLicenseUrl(pubkey: string): string | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.musicTrackLicenseUrl;
+  }
+
+  /**
+   * Set last used music track license URL for an account (for custom licenses)
+   */
+  setMusicTrackLicenseUrl(pubkey: string, url: string | undefined): void {
+    this.updateAccountState(pubkey, { musicTrackLicenseUrl: url });
   }
 
   /**
