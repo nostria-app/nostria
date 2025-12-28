@@ -594,7 +594,12 @@ export class MusicEmbedComponent {
 
     try {
       const ev = this.event();
-      if (!ev) return [];
+      if (!ev) {
+        console.warn('[MusicEmbed] No event loaded for playlist');
+        return [];
+      }
+
+      console.log('[MusicEmbed] Loading playlist tracks from event:', ev.id, 'tags:', ev.tags);
 
       // Get track references from playlist tags
       const trackRefs = ev.tags
@@ -608,24 +613,44 @@ export class MusicEmbedComponent {
           };
         });
 
-      if (trackRefs.length === 0) return [];
+      console.log('[MusicEmbed] Found track references:', trackRefs.length, trackRefs);
+
+      if (trackRefs.length === 0) {
+        console.warn('[MusicEmbed] No track references found in playlist tags');
+        return [];
+      }
+
+      // Build relay list with fallbacks (same approach as loadItem)
+      const validRelayHints = this.getValidRelayHints();
+      const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
+      const preferredRelays = this.utilities.preferredRelays.slice(0, 5);
+
+      // Combine all relay sources, removing duplicates
+      const allRelays = [...new Set([
+        ...validRelayHints,
+        ...discoveryRelayUrls,
+        ...preferredRelays,
+      ])];
+
+      if (allRelays.length === 0) {
+        console.warn('[MusicEmbed] No relays available for fetching tracks');
+        return [];
+      }
+
+      console.log('[MusicEmbed] Using relays for track fetch:', allRelays);
 
       // Fetch tracks
-      const filters: Filter[] = trackRefs.map(ref => ({
-        kinds: [ref.kind],
-        authors: [ref.pubkey],
-        '#d': [ref.identifier],
-      }));
-
       const tracks: Event[] = [];
-      const validRelayHints = this.getValidRelayHints();
-      const relays = validRelayHints.length > 0 ? validRelayHints : undefined;
 
-      for (const filter of filters) {
+      for (const ref of trackRefs) {
+        const filter: Filter = {
+          kinds: [ref.kind],
+          authors: [ref.pubkey],
+          '#d': [ref.identifier],
+        };
+
         try {
-          const track = relays
-            ? await this.relayPool.get(relays, filter, 5000)
-            : await this.relayPool.get([], filter, 5000);
+          const track = await this.relayPool.get(allRelays, filter, 5000);
           if (track) {
             tracks.push(track);
           }
@@ -634,6 +659,7 @@ export class MusicEmbedComponent {
         }
       }
 
+      console.log('[MusicEmbed] Loaded tracks:', tracks.length);
       this.tracksCache.set(tracks);
       return tracks;
     } finally {
