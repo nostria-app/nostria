@@ -1,8 +1,7 @@
 <mat-card-header [class.compact]="compact()">
   <app-user-profile [pubkey]="event().pubkey" [view]="compact() ? 'compact' : 'list'">
     <a class="date-link" [routerLink]="eventUrl()" [title]="event().created_at | timestamp: 'medium'" tabindex="0"
-      (click)="openEventAndStopPropagation($event)" (keyup.enter)="layout.openEvent(event().id, event())"
-      (keyup.space)="layout.openEvent(event().id, event())">
+      (click)="openEventAndStopPropagation($event)" (keyup.enter)="navigateToEvent()" (keyup.space)="navigateToEvent()">
       {{ event().created_at | ago }}
     </a>
     @if (!compact()) {

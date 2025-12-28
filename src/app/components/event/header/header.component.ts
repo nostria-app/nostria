@@ -127,15 +127,16 @@ export class EventHeaderComponent {
     event.preventDefault();
     event.stopPropagation();
 
-    // Only open thread dialog for kind 1 events
-    // Other kinds (videos, articles, etc.) should navigate directly
-    if (currentEvent.kind === 1) {
-      this.layout.openEvent(currentEvent.id, currentEvent);
-    } else {
-      // Navigate with event state to ensure event data is available
-      const url = this.eventUrl();
-      this.router.navigate([url], { state: { event: currentEvent } });
-    }
+    // Always navigate to the event page - never open dialog from date link click
+    // The dialog should only be opened when clicking the card itself (for kind 1 events)
+    const url = this.eventUrl();
+    this.router.navigate([url], { state: { event: currentEvent } });
+  }
+
+  navigateToEvent() {
+    const currentEvent = this.event();
+    const url = this.eventUrl();
+    this.router.navigate([url], { state: { event: currentEvent } });
   }
 
   async deleteEvent() {

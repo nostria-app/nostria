@@ -81,7 +81,7 @@ const MUSIC_KIND = 36787;
                 <mat-icon>play_arrow</mat-icon>
               }
             </button>
-            <button mat-icon-button [matMenuTriggerFor]="menu" aria-label="More options">
+            <button mat-icon-button [matMenuTriggerFor]="menu" (click)="$event.stopPropagation()" aria-label="More options">
               <mat-icon>more_vert</mat-icon>
             </button>
             <mat-menu #menu="matMenu">
