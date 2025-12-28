@@ -373,6 +373,11 @@ export class App implements OnInit {
     //   authenticated: true,
     // },
     // { path: 'podcasts', label: 'Podcasts', icon: 'podcasts', showInMobile: false },
+    {
+      path: 'articles',
+      label: $localize`:@@app.nav.articles:Articles`,
+      icon: 'article',
+    },
     { path: 'discover', label: $localize`:@@app.nav.discover:Discover`, icon: 'explore', authenticated: true },
 
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
@@ -394,11 +399,6 @@ export class App implements OnInit {
       label: $localize`:@@app.nav.music:Music`,
       icon: 'music_note',
     },
-    // {
-    //   path: 'articles',
-    //   label: $localize`:@@app.nav.articles:Articles`,
-    //   icon: 'article',
-    // },
     {
       path: 'streams',
       label: $localize`:@@app.nav.streams:Streams`,

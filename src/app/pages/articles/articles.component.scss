@@ -134,11 +134,36 @@
   overflow: hidden;
   width: 100%;
 
+  &.clickable {
+    cursor: pointer;
+
+    &:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+    }
+  }
+
   mat-card-content {
     padding: 1rem;
     flex: 1;
     display: flex;
     flex-direction: column;
+  }
+}
+
+.article-author-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  .article-date {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.85rem;
+    white-space: nowrap;
   }
 }
 

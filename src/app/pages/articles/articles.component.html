@@ -57,9 +57,14 @@
     } @else {
     <div class="articles-grid">
       @for (article of currentArticles(); track article.id) {
-      <mat-card class="article-card">
+      <mat-card class="article-card clickable" (click)="openArticle(article)" (keydown.enter)="openArticle(article)"
+        (keydown.space)="openArticle(article)" tabindex="0" role="button">
         <mat-card-content>
-          <app-article-event [event]="article"></app-article-event>
+          <div class="article-author-row">
+            <app-user-profile [pubkey]="article.pubkey" view="compact" [showRank]="false"></app-user-profile>
+            <span class="article-date">{{ article.created_at | ago }}</span>
+          </div>
+          <app-article-event [event]="article" [showAuthor]="false"></app-article-event>
         </mat-card-content>
       </mat-card>
       }
