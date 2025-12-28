@@ -107,6 +107,9 @@ export class CardsPlayerViewComponent implements AfterViewInit, OnDestroy {
   }
 
   onSwipeProgress(event: SwipeProgressEvent): void {
+    // Disable gestures when lyrics are showing
+    if (this.showLyrics()) return;
+
     if (event.direction === 'horizontal') {
       // Limit the offset to prevent over-swiping
       const maxOffset = 150;
@@ -130,6 +133,9 @@ export class CardsPlayerViewComponent implements AfterViewInit, OnDestroy {
   }
 
   onSwipe(event: SwipeEvent): void {
+    // Disable gestures when lyrics are showing to prevent interference while scrolling
+    if (this.showLyrics()) return;
+
     switch (event.direction) {
       case 'left':
         if (this.media.canNext()) {
