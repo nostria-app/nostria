@@ -289,6 +289,8 @@
 }
 
 // Video container - needs different handling for proper sizing
+// When aspect-ratio is set (from imeta dim tag), use absolute positioning
+// When no aspect-ratio, let video determine container size via relative positioning
 .video-container {
   position: relative;
   overflow: hidden;
@@ -302,14 +304,22 @@
   // Ensure any direct <video> (e.g., base64-video) stays proportional and responsive.
   // Native video keeps its intrinsic ratio; we also allow an explicit aspect-ratio style binding.
   >video {
-    position: absolute;
-    inset: 0;
     display: block;
     width: 100%;
-    height: 100%;
+    height: auto;
+    max-height: 70vh;
     border-radius: 12px;
     object-fit: contain;
     flex-shrink: 0;
+  }
+
+  // When aspect-ratio is set on container, use absolute positioning
+  &.has-aspect-ratio {
+    >video {
+      position: absolute;
+      inset: 0;
+      height: 100%;
+    }
   }
 
   // Placeholder - positioned behind video, doesn't force aspect ratio
@@ -317,7 +327,8 @@
   .video-placeholder-bg {
     display: block;
     width: 100%;
-    height: 100%;
+    height: auto;
+    max-height: 70vh;
     border-radius: 12px;
     filter: blur(2px);
     opacity: 1;
@@ -329,29 +340,60 @@
       position: absolute;
       top: 0;
       left: 0;
+      height: 100%;
     }
   }
 
-  // Video player wrapper - let it size naturally when no aspect ratio is set
-  // When aspect-ratio is set on container, this will fill the container
-  // When aspect-ratio is not set, the video's natural dimensions will determine size
+  // Video player wrapper
+  // By default, use relative positioning so video's natural dimensions determine container size
+  // This is critical for videos without imeta dim tags
   .main-video {
-    position: absolute;
-    inset: 0;
     display: block;
     width: 100%;
     height: auto;
     max-height: 70vh;
     border-radius: 12px;
     object-fit: contain;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.4s ease-out, visibility 0.4s ease-out;
+    transition: opacity 0.4s ease-out;
+    // Always use relative positioning without aspect-ratio - video determines container size
+    position: relative;
 
-    // Only show when loaded AND not hidden (not blurred)
-    &.loaded:not(.hidden) {
+    // Before video is loaded, hide but keep in flow
+    &:not(.loaded) {
+      opacity: 0;
+    }
+
+    &.loaded {
       opacity: 1;
-      visibility: visible;
+    }
+
+    // Hidden class controls blur visibility, not positioning
+    &.hidden {
+      // Video is hidden due to blur - keep in flow but invisible
+      // The blur reveal overlay will be shown instead
+    }
+  }
+
+  // When aspect-ratio is set, use absolute positioning for video
+  &.has-aspect-ratio {
+    .main-video {
+      position: absolute;
+      inset: 0;
+      height: 100%;
+
+      &:not(.loaded) {
+        opacity: 0;
+      }
+
+      &.loaded {
+        opacity: 1;
+      }
+    }
+
+    .video-placeholder-bg {
+      position: absolute;
+      inset: 0;
+      height: 100%;
     }
   }
 
@@ -376,6 +418,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    // Provide minimum height for blurred videos without placeholder
+    min-height: 200px;
   }
 
   &.revealing {
