@@ -270,6 +270,39 @@
   }
 }
 
+.offline-toggle-container {
+  margin-top: 0.5rem;
+
+  mat-slide-toggle {
+    ::ng-deep .mdc-form-field {
+      align-items: center;
+    }
+  }
+
+  .offline-toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 0.875rem;
+
+    mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+
+    mat-spinner {
+      display: inline-block;
+    }
+  }
+
+  @media (max-width: 600px) {
+    display: flex;
+    justify-content: center;
+  }
+}
+
 .engagement-row {
   display: flex;
   align-items: center;

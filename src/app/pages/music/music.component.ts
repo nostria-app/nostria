@@ -15,6 +15,7 @@ import { ApplicationService } from '../../services/application.service';
 import { MediaPlayerService } from '../../services/media-player.service';
 import { DataService } from '../../services/data.service';
 import { DatabaseService } from '../../services/database.service';
+import { OfflineMusicService } from '../../services/offline-music.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -57,11 +58,15 @@ export class MusicComponent implements OnDestroy {
   private mediaPlayer = inject(MediaPlayerService);
   private dataService = inject(DataService);
   private database = inject(DatabaseService);
+  private offlineMusicService = inject(OfflineMusicService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
   loading = signal(true);
   isLoadingLikedSongs = signal(false);
+
+  // Offline music track count
+  offlineTrackCount = computed(() => this.offlineMusicService.offlineTracks().length);
 
   // Dialog visibility
   showUploadDialog = signal(false);
@@ -371,6 +376,10 @@ export class MusicComponent implements OnDestroy {
       const npub = nip19.npubEncode(pubkey);
       this.router.navigate(['/music/artist', npub]);
     }
+  }
+
+  goToOfflineMusic(): void {
+    this.router.navigate(['/music/offline']);
   }
 
   goToAllFollowingPlaylists(): void {

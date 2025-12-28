@@ -8,6 +8,7 @@ import { MatCardModule } from '@angular/material/card';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, nip19, kinds } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -24,6 +25,7 @@ import { SharedRelayService } from '../../../services/relays/shared-relay';
 import { LoggerService } from '../../../services/logger.service';
 import { MusicPlaylistService } from '../../../services/music-playlist.service';
 import { LayoutService } from '../../../services/layout.service';
+import { OfflineMusicService } from '../../../services/offline-music.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
@@ -48,6 +50,7 @@ const MUSIC_KIND = 36787;
     MatCardModule,
     MatMenuModule,
     MatSnackBarModule,
+    MatSlideToggleModule,
     ZapChipsComponent,
     CommentsListComponent,
     MusicTrackDialogComponent,
@@ -72,6 +75,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private logger = inject(LoggerService);
   private musicPlaylistService = inject(MusicPlaylistService);
   private layout = inject(LayoutService);
+  private offlineMusicService = inject(OfflineMusicService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -82,6 +86,17 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   isLiked = signal(false);
   isLiking = signal(false);
   isDownloading = signal(false);
+  isSavingOffline = signal(false);
+
+  // Offline music signals
+  isOffline = computed(() => {
+    const ev = this.song();
+    if (!ev) return false;
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+    return this.offlineMusicService.isTrackOffline(ev.pubkey, dTag);
+  });
+
+  offlineDownloadProgress = this.offlineMusicService.downloadProgress;
 
   // Playlist signals
   userPlaylists = this.musicPlaylistService.userPlaylists;
@@ -817,6 +832,52 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       this.snackBar.open('Failed to download track', 'Close', { duration: 3000 });
     } finally {
       this.isDownloading.set(false);
+    }
+  }
+
+  /**
+   * Toggle offline availability for this track
+   */
+  async toggleOffline(): Promise<void> {
+    const ev = this.song();
+    const url = this.audioUrl();
+    if (!ev || !url) return;
+
+    const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    if (this.isOffline()) {
+      // Remove from offline storage
+      this.isSavingOffline.set(true);
+      try {
+        const success = await this.offlineMusicService.removeTrackOffline(ev.pubkey, dTag);
+        if (success) {
+          this.snackBar.open('Removed from offline library', 'Close', { duration: 2000 });
+        } else {
+          this.snackBar.open('Failed to remove from offline library', 'Close', { duration: 3000 });
+        }
+      } finally {
+        this.isSavingOffline.set(false);
+      }
+    } else {
+      // Save for offline use
+      this.isSavingOffline.set(true);
+      try {
+        const success = await this.offlineMusicService.saveTrackOffline(
+          ev,
+          this.title(),
+          this.artistName(),
+          url,
+          this.image() || undefined
+        );
+
+        if (success) {
+          this.snackBar.open('Saved for offline listening', 'Close', { duration: 2000 });
+        } else {
+          this.snackBar.open('Failed to save for offline', 'Close', { duration: 3000 });
+        }
+      } finally {
+        this.isSavingOffline.set(false);
+      }
     }
   }
 }

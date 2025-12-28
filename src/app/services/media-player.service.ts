@@ -7,6 +7,7 @@ import { ApplicationService } from './application.service';
 import { LocalStorageService } from './local-storage.service';
 import { LayoutService } from './layout.service';
 import { WakeLockService } from './wake-lock.service';
+import { OfflineMusicService } from './offline-music.service';
 
 // YouTube Player API types
 interface YouTubePlayer {
@@ -40,6 +41,7 @@ export class MediaPlayerService implements OnInitialized {
   layout = inject(LayoutService);
   app = inject(ApplicationService);
   private wakeLockService = inject(WakeLockService);
+  private offlineMusicService = inject(OfflineMusicService);
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current = signal<MediaItem | undefined>(undefined);
@@ -845,15 +847,28 @@ export class MediaPlayerService implements OnInitialized {
         this.audio.removeEventListener('ended', this.handleMediaEnded);
       }
 
+      // Check if this track is available offline and use cached URL if so
+      let audioSource = file.source;
+      if (file.type === 'Music') {
+        try {
+          audioSource = await this.offlineMusicService.getCachedAudioUrl(file.source);
+          if (audioSource !== file.source) {
+            console.log('Using cached audio for offline playback');
+          }
+        } catch (err) {
+          console.warn('Failed to get cached audio, using original source:', err);
+        }
+      }
+
       if (!this.audio) {
-        this.audio = new Audio(file.source);
+        this.audio = new Audio(audioSource);
         this.audio.addEventListener('ratechange', () => {
           if (this.audio) {
             this.playbackRate.set(this.audio.playbackRate);
           }
         });
       } else {
-        this.audio.src = file.source;
+        this.audio.src = audioSource;
       }
 
       // Sync signal

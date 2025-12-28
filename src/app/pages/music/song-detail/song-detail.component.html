@@ -170,6 +170,26 @@
           </button>
         </div>
 
+        <!-- Offline availability toggle -->
+        <div class="offline-toggle-container">
+          <mat-slide-toggle [checked]="isOffline()" [disabled]="!audioUrl() || isSavingOffline()"
+            (change)="toggleOffline()" aria-label="Make available offline">
+            <div class="offline-toggle-label">
+              @if (isSavingOffline()) {
+              <mat-spinner diameter="16"></mat-spinner>
+              @if (offlineDownloadProgress() !== null) {
+              <span>Downloading... {{ offlineDownloadProgress() }}%</span>
+              } @else {
+              <span>Saving...</span>
+              }
+              } @else {
+              <mat-icon>{{ isOffline() ? 'offline_pin' : 'cloud_download' }}</mat-icon>
+              <span>{{ isOffline() ? 'Available offline' : 'Make available offline' }}</span>
+              }
+            </div>
+          </mat-slide-toggle>
+        </div>
+
         @if (genres().length > 0) {
         <div class="genres">
           @for (genre of genres(); track genre) {

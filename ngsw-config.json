@@ -28,6 +28,16 @@
       }
     },
     {
+      "name": "locale-files",
+      "installMode": "prefetch",
+      "updateMode": "prefetch",
+      "resources": {
+        "files": [
+          "/locale/*.json"
+        ]
+      }
+    },
+    {
       "name": "app-chunks",
       "installMode": "prefetch",
       "updateMode": "prefetch",
@@ -50,6 +60,18 @@
     }
   ],
   "dataGroups": [
+    {
+      "name": "google-fonts",
+      "urls": [
+        "https://fonts.googleapis.com/**",
+        "https://fonts.gstatic.com/**"
+      ],
+      "cacheConfig": {
+        "strategy": "performance",
+        "maxSize": 50,
+        "maxAge": "30d"
+      }
+    },
     {
       "name": "image-cache",
       "urls": [
