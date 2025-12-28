@@ -18,6 +18,7 @@ import { RelayPoolService } from '../../services/relays/relay-pool';
 import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { EventService } from '../../services/event';
+import { ZapService } from '../../services/zap.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import {
@@ -285,6 +286,7 @@ export class MusicPlaylistCardComponent {
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
+  private zapService = inject(ZapService);
 
   event = input.required<Event>();
 
@@ -413,6 +415,9 @@ export class MusicPlaylistCardComponent {
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
     const profile = this.authorProfile();
 
+    // Check for zap splits in the event
+    const zapSplits = this.zapService.parseZapSplits(ev);
+
     const data: ZapDialogData = {
       recipientPubkey: ev.pubkey,
       recipientMetadata: profile?.data,
@@ -420,6 +425,7 @@ export class MusicPlaylistCardComponent {
       eventKind: ev.kind,
       eventAddress: `${ev.kind}:${ev.pubkey}:${dTag}`,
       event: ev,
+      zapSplits: zapSplits.length > 0 ? zapSplits : undefined,
     };
 
     this.dialog.open(ZapDialogComponent, {

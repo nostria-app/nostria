@@ -589,6 +589,9 @@ export class SongDetailComponent implements OnInit, OnDestroy {
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
     const profile = this.authorProfile();
 
+    // Check for zap splits in the event
+    const zapSplits = this.zapService.parseZapSplits(ev);
+
     const data: ZapDialogData = {
       recipientPubkey: ev.pubkey,
       recipientName: this.artistName(),
@@ -597,6 +600,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
       eventKind: ev.kind,
       eventAddress: `${ev.kind}:${ev.pubkey}:${dTag}`,
       event: ev,
+      zapSplits: zapSplits.length > 0 ? zapSplits : undefined,
     };
 
     const dialogRef = this.dialog.open(ZapDialogComponent, {
