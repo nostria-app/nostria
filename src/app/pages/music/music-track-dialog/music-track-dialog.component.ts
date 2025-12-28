@@ -24,6 +24,8 @@ import { DataService } from '../../../services/data.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { MusicTermsDialogComponent } from '../music-terms-dialog/music-terms-dialog.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
+import { MentionAutocompleteComponent, MentionAutocompleteConfig, MentionSelection } from '../../../components/mention-autocomplete/mention-autocomplete.component';
+import { MentionInputService } from '../../../services/mention-input.service';
 
 const MUSIC_KIND = 36787;
 
@@ -56,6 +58,7 @@ interface ZapSplit {
     MatDialogModule,
     ReactiveFormsModule,
     MusicTermsDialogComponent,
+    MentionAutocompleteComponent,
   ],
   templateUrl: './music-track-dialog.component.html',
   styleUrl: './music-track-dialog.component.scss',
@@ -104,6 +107,15 @@ export class MusicTrackDialogComponent {
   zapSplits = signal<ZapSplit[]>([]);
   currentUserProfile = signal<{ name: string; avatar: string | null }>({ name: '', avatar: null });
 
+  // Add split form state
+  isAddingSplit = signal(false);
+  newSplitInput = signal('');
+
+  // Mention autocomplete for @ search
+  private mentionInputService = inject(MentionInputService);
+  mentionConfig = signal<MentionAutocompleteConfig | null>(null);
+  mentionPosition = signal({ top: 0, left: 0 });
+
   // Available genres for music
   availableGenres = [
     'Electronic', 'Rock', 'Pop', 'Hip Hop', 'R&B', 'Jazz', 'Classical',
@@ -142,7 +154,10 @@ export class MusicTrackDialogComponent {
   currentGradient = signal(this.getRandomGradient());
 
   totalSplitPercentage = computed(() => {
-    return this.zapSplits().reduce((sum, split) => sum + split.percentage, 0);
+    const splits = this.zapSplits();
+    // If no splits, consider it valid (100% goes to author)
+    if (splits.length === 0) return 100;
+    return splits.reduce((sum, split) => sum + split.percentage, 0);
   });
 
   private initialized = false;
@@ -789,21 +804,121 @@ export class MusicTrackDialogComponent {
     }
   }
 
-  async addZapSplit(): Promise<void> {
-    const npub = prompt('Enter the npub of the collaborator:');
-    if (!npub || !npub.startsWith('npub')) {
-      this.snackBar.open('Invalid npub', 'Close', { duration: 3000 });
+  toggleAddSplit(): void {
+    this.isAddingSplit.update(v => !v);
+    if (!this.isAddingSplit()) {
+      this.newSplitInput.set('');
+    }
+  }
+
+  cancelAddSplit(): void {
+    this.isAddingSplit.set(false);
+    this.newSplitInput.set('');
+    this.mentionConfig.set(null);
+  }
+
+  onSplitInputChange(event: globalThis.Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value;
+    this.newSplitInput.set(value);
+
+    // Check for @ mention
+    const detection = this.mentionInputService.detectMention(value, input.selectionStart || value.length);
+    if (detection.isTypingMention) {
+      // Calculate position for the autocomplete dropdown
+      const rect = input.getBoundingClientRect();
+      this.mentionPosition.set({
+        top: rect.bottom + 4,
+        left: rect.left
+      });
+      this.mentionConfig.set({
+        cursorPosition: detection.cursorPosition,
+        query: detection.query,
+        mentionStart: detection.mentionStart
+      });
+    } else {
+      this.mentionConfig.set(null);
+    }
+  }
+
+  onSplitInputKeyDown(event: KeyboardEvent): void {
+    // Let the mention autocomplete handle arrow keys and enter when visible
+    if (this.mentionConfig()) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', 'Escape'].includes(event.key)) {
+        // Don't prevent default for Escape - let it also close the form
+        if (event.key === 'Escape') {
+          this.mentionConfig.set(null);
+        }
+        // Let the mention autocomplete component handle these
+        return;
+      }
+    }
+  }
+
+  onMentionSelected(selection: MentionSelection): void {
+    // Add the selected user as a split
+    this.addSplitByPubkey(selection.pubkey, selection.displayName);
+    this.mentionConfig.set(null);
+  }
+
+  onMentionDismissed(): void {
+    this.mentionConfig.set(null);
+  }
+
+  private async addSplitByPubkey(pubkey: string, displayName?: string): Promise<void> {
+    // Check if already added
+    if (this.zapSplits().some(s => s.pubkey === pubkey)) {
+      this.snackBar.open('Collaborator already added', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Load profile for avatar
+    const profile = await this.dataService.getProfile(pubkey);
+    const name = displayName || profile?.data?.name || profile?.data?.display_name || nip19.npubEncode(pubkey).slice(0, 12) + '...';
+    const avatar = profile?.data?.picture || null;
+
+    // If this is the first split being added, give it 100%
+    const currentSplits = this.zapSplits();
+    const percentage = currentSplits.length === 0 ? 100 : 0;
+
+    this.zapSplits.update(splits => [...splits, {
+      pubkey,
+      name,
+      avatar,
+      percentage,
+      isUploader: false,
+    }]);
+
+    this.snackBar.open('Collaborator added', 'Close', { duration: 2000 });
+    this.cancelAddSplit();
+  }
+
+  async confirmAddSplit(): Promise<void> {
+    const input = this.newSplitInput().trim();
+    if (!input) {
+      this.snackBar.open('Please enter an npub or hex pubkey', 'Close', { duration: 3000 });
       return;
     }
 
     try {
-      const decoded = nip19.decode(npub);
-      if (decoded.type !== 'npub') {
-        this.snackBar.open('Invalid npub', 'Close', { duration: 3000 });
-        return;
-      }
+      let pubkey: string;
 
-      const pubkey = decoded.data;
+      // Check if it's an npub
+      if (input.startsWith('npub')) {
+        const decoded = nip19.decode(input);
+        if (decoded.type !== 'npub') {
+          this.snackBar.open('Invalid npub', 'Close', { duration: 3000 });
+          return;
+        }
+        pubkey = decoded.data;
+      } else {
+        // Assume it's a hex pubkey - validate it's 64 hex characters
+        if (!/^[0-9a-fA-F]{64}$/.test(input)) {
+          this.snackBar.open('Invalid pubkey format. Use npub or 64-character hex.', 'Close', { duration: 3000 });
+          return;
+        }
+        pubkey = input.toLowerCase();
+      }
 
       // Check if already added
       if (this.zapSplits().some(s => s.pubkey === pubkey)) {
@@ -813,19 +928,23 @@ export class MusicTrackDialogComponent {
 
       // Load profile
       const profile = await this.dataService.getProfile(pubkey);
-      const name = profile?.data?.name || profile?.data?.display_name || npub.slice(0, 12) + '...';
+      const name = profile?.data?.name || profile?.data?.display_name || nip19.npubEncode(pubkey).slice(0, 12) + '...';
       const avatar = profile?.data?.picture || null;
 
-      // Add with 0% initially
+      // If this is the first split being added, give it 100%
+      const currentSplits = this.zapSplits();
+      const percentage = currentSplits.length === 0 ? 100 : 0;
+
       this.zapSplits.update(splits => [...splits, {
         pubkey,
         name,
         avatar,
-        percentage: 0,
+        percentage,
         isUploader: false,
       }]);
 
       this.snackBar.open('Collaborator added', 'Close', { duration: 2000 });
+      this.cancelAddSplit();
     } catch {
       this.snackBar.open('Failed to add collaborator', 'Close', { duration: 3000 });
     }
@@ -840,12 +959,48 @@ export class MusicTrackDialogComponent {
   }
 
   removeSplit(index: number): void {
-    const split = this.zapSplits()[index];
-    if (split.isUploader) {
-      this.snackBar.open('Cannot remove uploader', 'Close', { duration: 3000 });
-      return;
+    const splits = this.zapSplits();
+    const removedPercentage = splits[index].percentage;
+    const remainingSplits = splits.filter((_, i) => i !== index);
+
+    // If there are remaining splits and removed split had a percentage, redistribute it
+    if (remainingSplits.length > 0 && removedPercentage > 0) {
+      const totalRemaining = remainingSplits.reduce((sum, s) => sum + s.percentage, 0);
+
+      if (totalRemaining === 0) {
+        // Distribute removed percentage equally among remaining splits
+        const perSplit = Math.floor(removedPercentage / remainingSplits.length);
+        const remainder = removedPercentage - (perSplit * remainingSplits.length);
+
+        this.zapSplits.set(remainingSplits.map((split, i) => ({
+          ...split,
+          percentage: perSplit + (i === 0 ? remainder : 0)
+        })));
+      } else {
+        // Distribute proportionally based on existing percentages
+        this.zapSplits.set(remainingSplits.map(split => {
+          const proportion = split.percentage / totalRemaining;
+          const addedPercentage = Math.round(removedPercentage * proportion);
+          return {
+            ...split,
+            percentage: split.percentage + addedPercentage
+          };
+        }));
+
+        // Adjust for rounding errors to ensure total is 100%
+        const currentTotal = this.zapSplits().reduce((sum, s) => sum + s.percentage, 0);
+        if (currentTotal !== 100) {
+          const diff = 100 - currentTotal;
+          this.zapSplits.update(splits => {
+            const updated = [...splits];
+            updated[0] = { ...updated[0], percentage: updated[0].percentage + diff };
+            return updated;
+          });
+        }
+      }
+    } else {
+      this.zapSplits.set(remainingSplits);
     }
-    this.zapSplits.update(splits => splits.filter((_, i) => i !== index));
   }
 
   async submitTrack(): Promise<void> {
@@ -853,8 +1008,9 @@ export class MusicTrackDialogComponent {
       return;
     }
 
-    // Validate split percentages
-    if (this.totalSplitPercentage() !== 100) {
+    // Validate split percentages (empty list is valid - 100% goes to author)
+    const splits = this.zapSplits();
+    if (splits.length > 0 && this.totalSplitPercentage() !== 100) {
       this.snackBar.open('Zap splits must total 100%', 'Close', { duration: 3000 });
       return;
     }

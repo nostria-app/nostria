@@ -170,8 +170,8 @@
           </div>
           <span class="track-date">{{ getTrackDate(track) }}</span>
           <span class="track-duration">{{ getTrackDuration(track) }}</span>
-          <app-music-track-menu [track]="track" [artistName]="getTrackArtist(track)" [showEditOption]="false"
-            #trackMenuRef="musicTrackMenu" />
+          <app-music-track-menu [track]="track" [artistName]="getTrackArtist(track)"
+            [showEditOption]="isOwnTrack(track)" (editRequested)="editTrack($event)" #trackMenuRef="musicTrackMenu" />
           <button mat-icon-button class="track-menu-btn" [matMenuTriggerFor]="trackMenuRef.trackMenu" type="button"
             aria-label="Track options" (click)="$event.stopPropagation()">
             <mat-icon>more_horiz</mat-icon>
@@ -187,4 +187,8 @@
 
 @if (showEditDialog() && editDialogData()) {
 <app-edit-music-playlist-dialog [data]="editDialogData()!" (closed)="onEditDialogClosed($event)" />
+}
+
+@if (showTrackEditDialog() && trackEditDialogData()) {
+<app-music-track-dialog [data]="trackEditDialogData()!" (closed)="onTrackEditDialogClosed($event)" />
 }

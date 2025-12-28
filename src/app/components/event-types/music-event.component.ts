@@ -17,6 +17,7 @@ import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { EventService } from '../../services/event';
 import { UtilitiesService } from '../../services/utilities.service';
+import { ZapService } from '../../services/zap.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
@@ -495,6 +496,7 @@ export class MusicEventComponent {
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
   private utilities = inject(UtilitiesService);
+  private zapService = inject(ZapService);
 
   event = input.required<Event>();
   mode = input<'card' | 'list'>('list');
@@ -720,6 +722,9 @@ export class MusicEventComponent {
     const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
     const profile = this.authorProfile();
 
+    // Check for zap splits in the event
+    const zapSplits = this.zapService.parseZapSplits(ev);
+
     const data: ZapDialogData = {
       recipientPubkey: ev.pubkey,
       recipientName: this.artistName(),
@@ -728,6 +733,7 @@ export class MusicEventComponent {
       eventKind: ev.kind,
       eventAddress: `${ev.kind}:${ev.pubkey}:${dTag}`,
       event: ev,
+      zapSplits: zapSplits.length > 0 ? zapSplits : undefined,
     };
 
     this.dialog.open(ZapDialogComponent, {

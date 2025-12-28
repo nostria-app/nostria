@@ -25,6 +25,7 @@ import {
   EditMusicPlaylistDialogData,
 } from '../edit-music-playlist-dialog/edit-music-playlist-dialog.component';
 import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
+import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -40,6 +41,7 @@ const MUSIC_PLAYLIST_KIND = 34139;
     MatSnackBarModule,
     EditMusicPlaylistDialogComponent,
     MusicTrackMenuComponent,
+    MusicTrackDialogComponent,
   ],
   templateUrl: './music-playlist.component.html',
   styleUrls: ['./music-playlist.component.scss'],
@@ -72,6 +74,10 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   // Edit dialog state
   showEditDialog = signal(false);
   editDialogData = signal<EditMusicPlaylistDialogData | null>(null);
+
+  // Track edit dialog state
+  showTrackEditDialog = signal(false);
+  trackEditDialogData = signal<MusicTrackDialogData | null>(null);
 
   private subscriptions: { close: () => void }[] = [];
   private likeSubscription: { close: () => void } | null = null;
@@ -516,6 +522,33 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
         this.tracks.set([]);
         this.loadPlaylist(pubkey, identifier);
       }
+    }
+  }
+
+  // Check if the current user owns a specific track
+  isOwnTrack(track: Event): boolean {
+    const currentPubkey = this.accountState.pubkey();
+    return !!currentPubkey && currentPubkey === track.pubkey;
+  }
+
+  editTrack(track: Event): void {
+    if (!this.isOwnTrack(track)) return;
+    this.trackEditDialogData.set({ track });
+    this.showTrackEditDialog.set(true);
+  }
+
+  onTrackEditDialogClosed(result: { published: boolean; updated?: boolean; event?: Event } | null): void {
+    this.showTrackEditDialog.set(false);
+    this.trackEditDialogData.set(null);
+
+    if (result?.updated && result?.event) {
+      // Update the track in the local map
+      const event = result.event;
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+      const uniqueId = `${event.pubkey}:${dTag}`;
+      this.trackMap.set(uniqueId, event);
+      this.updateTracks(this.trackRefs());
+      this.snackBar.open('Track updated', 'Close', { duration: 2000 });
     }
   }
 

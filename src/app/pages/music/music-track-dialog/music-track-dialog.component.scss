@@ -261,6 +261,23 @@ mat-dialog-content {
     }
   }
 
+  .add-split-form {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    background: var(--mat-sys-surface-container-high);
+    border-radius: var(--mat-sys-corner-small);
+
+    mat-form-field {
+      margin-bottom: 0.5rem;
+    }
+
+    .add-split-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+    }
+  }
+
   .splits-list {
     display: flex;
     flex-direction: column;
@@ -353,6 +370,22 @@ mat-dialog-content {
     margin: 0.75rem 0 0 0;
     font-size: 0.75rem;
     color: var(--mat-sys-on-surface-variant);
+
+    &.splits-default {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem;
+      background: var(--mat-sys-surface-container-high);
+      border-radius: var(--mat-sys-corner-small);
+
+      mat-icon {
+        font-size: 1rem;
+        width: 1rem;
+        height: 1rem;
+        color: var(--mat-sys-primary);
+      }
+    }
   }
 }
 
