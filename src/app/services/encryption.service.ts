@@ -5,6 +5,8 @@ import { EncryptionPermissionService } from './encryption-permission.service';
 import { hexToBytes } from '@noble/hashes/utils.js';
 import { Event, nip04 } from 'nostr-tools';
 import { v2 } from 'nostr-tools/nip44';
+import { BunkerSigner } from 'nostr-tools/nip46';
+import { SimplePool } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
 import { NostrService } from './nostr.service';
 
@@ -37,7 +39,32 @@ export class EncryptionService {
       this.nostrService = this.injector.get(NostrService);
     }
     return this.nostrService;
-  } /**
+  }
+
+  /**
+   * Create a BunkerSigner for remote signer accounts
+   */
+  private createBunkerSigner(account: any): BunkerSigner {
+    if (!account.bunker) {
+      throw new Error('No bunker configuration found for remote account');
+    }
+
+    let clientKey: Uint8Array;
+    if (account.bunkerClientKey) {
+      clientKey = hexToBytes(account.bunkerClientKey);
+    } else if (account.privkey) {
+      // Hybrid account - use local key for bunker communication
+      // Note: This won't work if the privkey is encrypted
+      clientKey = hexToBytes(account.privkey);
+    } else {
+      throw new Error('No client key available for remote signing');
+    }
+
+    const pool = new SimplePool();
+    return BunkerSigner.fromBunker(clientKey, account.bunker, { pool });
+  }
+
+  /**
    * Encrypt a message using NIP-04 (legacy, less secure)
    * Uses AES-256-CBC encryption
    */
@@ -48,6 +75,16 @@ export class EncryptionService {
       // Check if we can use the browser extension
       if (account?.source === 'extension' && window.nostr?.nip04) {
         return await window.nostr.nip04.encrypt(recipientPubkey, plaintext);
+      }
+
+      // Check if we have a remote signer account
+      if (account?.source === 'remote') {
+        const bunker = this.createBunkerSigner(account);
+        try {
+          return await bunker.nip04Encrypt(recipientPubkey, plaintext);
+        } finally {
+          await bunker.close();
+        }
       }
 
       if (!account?.privkey) {
@@ -83,6 +120,16 @@ export class EncryptionService {
         return await this.encryptionPermission.queueDecryptionRequest('nip04', ciphertext, pubkey);
       }
 
+      // Check if we have a remote signer account
+      if (account?.source === 'remote') {
+        const bunker = this.createBunkerSigner(account);
+        try {
+          return await bunker.nip04Decrypt(pubkey, ciphertext);
+        } finally {
+          await bunker.close();
+        }
+      }
+
       if (!account?.privkey) {
         throw new Error('Private key not available for decryption');
       }
@@ -113,6 +160,16 @@ export class EncryptionService {
       // Check if we can use the browser extension
       if (account?.source === 'extension' && window.nostr?.nip44) {
         return await window.nostr.nip44.encrypt(recipientPubkey, plaintext);
+      }
+
+      // Check if we have a remote signer account
+      if (account?.source === 'remote') {
+        const bunker = this.createBunkerSigner(account);
+        try {
+          return await bunker.nip44Encrypt(recipientPubkey, plaintext);
+        } finally {
+          await bunker.close();
+        }
       }
 
       if (!account?.privkey) {
@@ -148,6 +205,16 @@ export class EncryptionService {
       if (account?.source === 'extension' && window.nostr?.nip44) {
         // Use the permission service to handle the decryption request
         return await this.encryptionPermission.queueDecryptionRequest('nip44', ciphertext, senderPubkey);
+      }
+
+      // Check if we have a remote signer account
+      if (account?.source === 'remote') {
+        const bunker = this.createBunkerSigner(account);
+        try {
+          return await bunker.nip44Decrypt(senderPubkey, ciphertext);
+        } finally {
+          await bunker.close();
+        }
       }
 
       if (!account?.privkey) {
