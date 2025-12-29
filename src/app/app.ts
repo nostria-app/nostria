@@ -1136,6 +1136,24 @@ export class App implements OnInit {
       return;
     }
 
+    // Spacebar to toggle media player play/pause (when not in an input field)
+    if (event.code === 'Space' && this.layout.showMediaPlayer()) {
+      const target = event.target as HTMLElement;
+      const isInputField = target.tagName === 'INPUT' ||
+        target.tagName === 'TEXTAREA' ||
+        target.isContentEditable ||
+        target.closest('mat-form-field') !== null;
+
+      if (!isInputField) {
+        event.preventDefault();
+        if (this.media.paused) {
+          this.media.resume();
+        } else {
+          this.media.pause();
+        }
+      }
+    }
+
     // ALT+S shortcut to toggle search (global shortcut)
     if (event.altKey && event.key.toLowerCase() === 's') {
       event.preventDefault();
