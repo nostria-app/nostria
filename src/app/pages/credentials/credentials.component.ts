@@ -26,6 +26,8 @@ import { QRCodeDialogComponent } from '../../components/qrcode-dialog/qrcode-dia
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { RelaysService } from '../../services/relays/relays';
 import { SimplePool } from 'nostr-tools/pool';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
+import { BunkerPointer } from 'nostr-tools/nip46';
 
 @Component({
   selector: 'app-credentials',
@@ -437,11 +439,16 @@ export class CredentialsComponent implements OnInit, OnDestroy {
       // Generate a random secret for connection validation
       const secret = this.generateRandomSecret();
 
+      // Get the npub prefix to make the app name unique per account
+      const npub = this.getNpub();
+      const npubPrefix = npub ? npub.substring(0, 12) : '';
+      const appName = npubPrefix ? `Nostria ${npubPrefix}` : 'Nostria';
+
       // Build the nostrconnect:// URL
       const params = new URLSearchParams();
       relaysToUse.forEach(relay => params.append('relay', relay));
       params.append('secret', secret);
-      params.append('name', 'Nostria');
+      params.append('name', appName);
       params.append('url', 'https://nostria.app');
       // Request common permissions
       params.append('perms', 'sign_event:0,sign_event:1,sign_event:3,sign_event:4,sign_event:6,sign_event:7,sign_event:9734,sign_event:9735,sign_event:10002,sign_event:30023,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt');
@@ -532,22 +539,18 @@ export class CredentialsComponent implements OnInit, OnDestroy {
             // Validate the secret
             if (response.result === expectedSecret || response.result === 'ack') {
               // Connection successful!
-              // The remote signer pubkey is event.pubkey - can be used to construct bunker:// URL
+              const remoteSignerPubkey = event.pubkey;
 
-              this.snackBar.open('Remote signer connected successfully!', 'Dismiss', {
-                duration: 3000,
-              });
-
-              // Close the dialog
+              // Close the QR code dialog
               this.dialog.closeAll();
+
+              // Save the bunker configuration to the current account
+              await this.saveRemoteSignerConfig(remoteSignerPubkey, relays, expectedSecret);
+
               this.cleanupRemoteSignerConnection();
 
-              // Show success message with instructions
-              this.snackBar.open(
-                'Remote signer connected! You can now log in using the bunker:// URL from your signer app.',
-                'Dismiss',
-                { duration: 5000 }
-              );
+              // Show options dialog to user
+              this.showRemoteSignerSetupOptions();
             } else if (response.error) {
               console.error('Remote signer error:', response.error);
               this.snackBar.open(`Remote signer error: ${response.error}`, 'Dismiss', {
@@ -571,6 +574,158 @@ export class CredentialsComponent implements OnInit, OnDestroy {
         });
       }
     }, 120000);
+  }
+
+  private async saveRemoteSignerConfig(remoteSignerPubkey: string, relays: string[], secret: string): Promise<void> {
+    const account = this.accountState.account();
+    if (!account || !this.remoteSignerClientKey) return;
+
+    // Create bunker pointer from the connection info
+    // Store the client private key (hex) for future communication with the bunker
+    const bunker: BunkerPointer = {
+      pubkey: remoteSignerPubkey,
+      relays: relays,
+      secret: secret, // Original connection secret
+    };
+
+    // Update the account with bunker config while keeping the private key
+    const updatedAccount = {
+      ...account,
+      bunker: bunker,
+      // Note: The privkey field in the account will be used for bunker communication
+      // since source remains 'nsec', the app knows to use local signing by default
+    };
+
+    await this.nostrService.setAccount(updatedAccount);
+  }
+
+  private showRemoteSignerSetupOptions(): void {
+    this.snackBar.open(
+      'Remote signer connected! You can now choose to use it for signing.',
+      'Dismiss',
+      { duration: 5000 }
+    );
+  }
+
+  hasRemoteSigner(): boolean {
+    return !!this.accountState.account()?.bunker;
+  }
+
+  getPreferredSigningMethod(): 'local' | 'remote' {
+    return this.accountState.account()?.preferredSigningMethod || 'local';
+  }
+
+  async setPreferredSigningMethod(method: 'local' | 'remote'): Promise<void> {
+    const account = this.accountState.account();
+    if (!account) return;
+
+    const updatedAccount = {
+      ...account,
+      preferredSigningMethod: method,
+    };
+
+    await this.nostrService.setAccount(updatedAccount);
+
+    this.snackBar.open(
+      method === 'remote'
+        ? 'Now using remote signer for signing operations'
+        : 'Now using local private key for signing operations',
+      'Dismiss',
+      { duration: 3000 }
+    );
+  }
+
+  async removePrivateKey(): Promise<void> {
+    const account = this.accountState.account();
+    if (!account?.privkey) return;
+
+    // Show warning dialog
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '450px',
+      data: {
+        title: 'Remove Private Key',
+        message: `⚠️ WARNING: This action is IRREVERSIBLE!\n\n` +
+          `You are about to permanently remove the private key from this account. ` +
+          `After removal, you will only be able to sign using your remote signer.\n\n` +
+          `Before proceeding, make sure you have:\n` +
+          `• Backed up your private key (nsec) in a secure location\n` +
+          `• Verified that your remote signer is working correctly\n` +
+          `• Tested signing operations with the remote signer\n\n` +
+          `Are you absolutely sure you want to remove the private key?`,
+        confirmText: 'Yes, Remove Private Key',
+        cancelText: 'Cancel',
+        confirmColor: 'warn' as const,
+      } as ConfirmDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed) => {
+      if (confirmed) {
+        await this.performPrivateKeyRemoval();
+      }
+    });
+  }
+
+  private async performPrivateKeyRemoval(): Promise<void> {
+    const account = this.accountState.account();
+    if (!account) return;
+
+    // Remove private key and mnemonic, set source to remote
+    const updatedAccount = {
+      ...account,
+      privkey: undefined,
+      mnemonic: undefined,
+      isEncrypted: undefined,
+      isMnemonicEncrypted: undefined,
+      source: 'remote' as const,
+      preferredSigningMethod: 'remote' as const,
+    };
+
+    await this.nostrService.setAccount(updatedAccount);
+
+    // Clear cached values
+    this.cachedNsec.set('');
+    this.cachedMnemonic.set('');
+
+    this.snackBar.open(
+      'Private key removed. This account now uses remote signing only.',
+      'Dismiss',
+      { duration: 5000 }
+    );
+  }
+
+  async disconnectRemoteSigner(): Promise<void> {
+    const account = this.accountState.account();
+    if (!account?.bunker) return;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      width: '400px',
+      data: {
+        title: 'Disconnect Remote Signer',
+        message: 'Are you sure you want to disconnect the remote signer? ' +
+          'You can reconnect it later if needed.',
+        confirmText: 'Disconnect',
+        cancelText: 'Cancel',
+        confirmColor: 'warn' as const,
+      } as ConfirmDialogData,
+    });
+
+    dialogRef.afterClosed().subscribe(async (confirmed) => {
+      if (confirmed) {
+        const updatedAccount = {
+          ...account,
+          bunker: undefined,
+          preferredSigningMethod: 'local' as const,
+        };
+
+        await this.nostrService.setAccount(updatedAccount);
+
+        this.snackBar.open(
+          'Remote signer disconnected.',
+          'Dismiss',
+          { duration: 3000 }
+        );
+      }
+    });
   }
 
   getMaskedNsec(nsec: string): string {
