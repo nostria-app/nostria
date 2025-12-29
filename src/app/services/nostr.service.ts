@@ -85,6 +85,13 @@ export interface NostrUser {
    * Defaults to 'local' if not specified
    */
   preferredSigningMethod?: 'local' | 'remote';
+
+  /**
+   * Client secret key (hex) for NIP-46 bunker communication
+   * This is the client's key used to communicate with the remote signer
+   * Required for pure remote signer accounts (source='remote')
+   */
+  bunkerClientKey?: string;
 }
 
 export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
