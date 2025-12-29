@@ -500,7 +500,7 @@ export class MessagingService implements NostriaService {
           // Handle incoming wrapped events
           if (event.kind === kinds.GiftWrap) {
             this.logger.info('Received GiftWrap event, will attempt to unwrap:', { eventId: event.id });
-            
+
             // Push the async processing to pending array so we can wait for it
             const processPromise = (async () => {
               try {
