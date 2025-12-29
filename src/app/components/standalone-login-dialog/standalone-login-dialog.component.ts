@@ -75,9 +75,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
                 <mat-spinner diameter="20" class="button-spinner"></mat-spinner>
                 <span>Connecting...</span>
               </button>
-            } @else {
-              <button mat-flat-button (click)="loginComponent.loginWithNostrConnect()"
-                [disabled]="!loginComponent.nostrConnectUrl() || loginComponent.nostrConnectUrl().length < 10">
+            } @else if (loginComponent.nostrConnectUrl() && loginComponent.nostrConnectUrl().length >= 10) {
+              <button mat-flat-button (click)="loginComponent.loginWithNostrConnect()">
                 <mat-icon>phone_iphone</mat-icon>
                 <span>Connect</span>
               </button>
@@ -148,7 +147,7 @@ export class StandaloneLoginDialogComponent implements AfterViewInit {
       case LoginStep.NSEC_LOGIN:
         return 'Sign in with Private Key';
       case LoginStep.NOSTR_CONNECT:
-        return 'Sign in with Nostr Connect';
+        return 'Sign in with Remote Signer';
       case LoginStep.EXISTING_ACCOUNTS:
         return 'Choose an Account';
       case LoginStep.PREVIEW:
