@@ -459,7 +459,8 @@
 
       <!-- Like/Reactions -->
       <div class="reaction-group">
-        <app-reaction-button [event]="targetItem.event" [reactionsFromParent]="reactions()"></app-reaction-button>
+        <app-reaction-button [event]="targetItem.event" [reactionsFromParent]="reactions()"
+          (reactionChanged)="loadReactions(true)"></app-reaction-button>
         @if (!compact()) {
         <button mat-button class="count-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()">
           <span>{{ reactions().events.length }}</span>

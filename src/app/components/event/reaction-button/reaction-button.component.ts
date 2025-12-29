@@ -1,5 +1,5 @@
 
-import { Component, computed, effect, inject, input, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
@@ -53,6 +53,9 @@ export class ReactionButtonComponent {
   // Accept reactions from parent to avoid duplicate queries
   // If not provided, component will load independently
   reactionsFromParent = input<ReactionEvents | null>(null);
+
+  // Output to notify parent to reload reactions
+  reactionChanged = output<void>();
 
   likeReaction = computed<NostrRecord | undefined>(() => {
     const event = this.event();
@@ -174,6 +177,9 @@ export class ReactionButtonComponent {
       if (!success) {
         this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, true);
         this.snackBar.open('Failed to remove reaction. Please try again.', 'Dismiss', { duration: 3000 });
+      } else {
+        // Notify parent to reload reactions
+        this.reactionChanged.emit();
       }
       // Reload reactions in the background to sync
       setTimeout(() => this.loadReactions(true), 2000);
@@ -193,6 +199,9 @@ export class ReactionButtonComponent {
       if (!success) {
         this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, false);
         this.snackBar.open('Failed to add reaction. Please try again.', 'Dismiss', { duration: 3000 });
+      } else {
+        // Notify parent to reload reactions
+        this.reactionChanged.emit();
       }
       // Reload reactions in the background to sync
       setTimeout(() => this.loadReactions(true), 2000);
