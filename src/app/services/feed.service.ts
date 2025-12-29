@@ -1278,44 +1278,17 @@ export class FeedService {
         '7fa56f5d6962ab1e3cd424e758c3002b8665f7b0d8dcee9fe9e288d7751ac194', // verbiricha
       ];
 
-      // PHASE 0: IMMEDIATE content - use fallback pubkeys + following list RIGHT NOW
-      // Don't wait for relay initialization, starter packs, or anything else
-      const immediatePubkeys = new Set<string>(FALLBACK_POPULAR_PUBKEYS);
-
-      // Add following list immediately (limit to 20 most recent)
-      const followingList = this.accountState.followingList();
-      const limitedFollowing = followingList.slice(-20);
-      limitedFollowing.forEach(pubkey => immediatePubkeys.add(pubkey));
-
-      console.log(`⚡ [For You] IMMEDIATE fetch with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
-      this.logger.info(`⚡ [For You] IMMEDIATE fetch with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
-
-      // Start immediate fetch - don't wait for account relay, use discovery relay as fallback
-      const immediatePubkeysArray = Array.from(immediatePubkeys);
-
-      // Try to fetch immediately, even if account relay isn't ready
+      // Wait for account relay to be ready before fetching content
+      // Account relay is required since discovery relay only handles relay lists (kind 10002/3)
       let accountRelayInitialized = this.accountRelay.isInitialized();
       console.log(`⚡ [For You] Account relay initialized: ${accountRelayInitialized}`);
 
-      if (accountRelayInitialized) {
-        console.log('⚡ [For You] Using account relay for fetch');
-        await this.fetchEventsFromUsersFast(immediatePubkeysArray, feedData);
-      } else {
-        console.log('⚡ [For You] Account relay NOT initialized, using discovery relay');
-        this.logger.warn('Account relay not initialized, using discovery relay for immediate fetch');
-        // Use discovery relay as fallback for immediate content
-        await this.fetchEventsFromDiscoveryRelay(immediatePubkeysArray, feedData);
-      }
+      if (!accountRelayInitialized) {
+        console.log('⚡ [For You] Waiting for account relay to initialize...');
 
-      console.log(`⚡ [For You] Events after initial fetch: ${feedData.events().length}`);
-
-      // If we got 0 events and account relay wasn't ready, wait and retry
-      if (feedData.events().length === 0 && !accountRelayInitialized) {
-        console.log('⚡ [For You] No events yet, waiting for account relay...');
-
-        // Wait up to 3 seconds for account relay to be ready
-        const MAX_WAIT_MS = 3000;
-        const POLL_INTERVAL_MS = 200;
+        // Wait up to 5 seconds for account relay to be ready
+        const MAX_WAIT_MS = 5000;
+        const POLL_INTERVAL_MS = 100;
         let waitedMs = 0;
 
         while (!this.accountRelay.isInitialized() && waitedMs < MAX_WAIT_MS) {
@@ -1325,22 +1298,29 @@ export class FeedService {
 
         accountRelayInitialized = this.accountRelay.isInitialized();
         console.log(`⚡ [For You] After waiting ${waitedMs}ms, account relay initialized: ${accountRelayInitialized}`);
-
-        if (accountRelayInitialized) {
-          // Also check if following list has updated
-          const updatedFollowingList = this.accountState.followingList();
-          if (updatedFollowingList.length > limitedFollowing.length) {
-            console.log(`⚡ [For You] Following list updated: ${limitedFollowing.length} -> ${updatedFollowingList.length}`);
-            // Add more following to our pubkeys
-            updatedFollowingList.slice(-20).forEach(pubkey => immediatePubkeys.add(pubkey));
-          }
-
-          const retryPubkeys = Array.from(immediatePubkeys);
-          console.log(`⚡ [For You] Retrying fetch with ${retryPubkeys.length} pubkeys`);
-          await this.fetchEventsFromUsersFast(retryPubkeys, feedData);
-          console.log(`⚡ [For You] Events after retry: ${feedData.events().length}`);
-        }
       }
+
+      if (!accountRelayInitialized) {
+        console.log('⚡ [For You] Account relay not ready after waiting, cannot fetch content');
+        this.logger.warn('Account relay not ready, cannot load For You feed');
+        return;
+      }
+
+      // Build pubkey list: fallback popular + following
+      const immediatePubkeys = new Set<string>(FALLBACK_POPULAR_PUBKEYS);
+
+      // Add following list (limit to 20 most recent)
+      const followingList = this.accountState.followingList();
+      const limitedFollowing = followingList.slice(-20);
+      limitedFollowing.forEach(pubkey => immediatePubkeys.add(pubkey));
+
+      console.log(`⚡ [For You] Fetching with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
+      this.logger.info(`⚡ [For You] Fetching with ${immediatePubkeys.size} pubkeys (${FALLBACK_POPULAR_PUBKEYS.length} fallback + ${limitedFollowing.length} following)`);
+
+      const immediatePubkeysArray = Array.from(immediatePubkeys);
+      await this.fetchEventsFromUsersFast(immediatePubkeysArray, feedData);
+
+      console.log(`⚡ [For You] Events after fetch: ${feedData.events().length}`);
 
       // PHASE 1: Background enhancement - add starter pack users and algorithm recommendations
       // This runs in background and doesn't block the UI
@@ -1351,67 +1331,6 @@ export class FeedService {
     } catch (error) {
       console.error('❌ [For You] loadForYouFeed ERROR:', error);
       this.logger.error('Error loading For You feed:', error);
-    }
-  }
-
-  /**
-   * Fetch events using discovery relay as fallback when account relay isn't ready
-   */
-  private async fetchEventsFromDiscoveryRelay(pubkeys: string[], feedData: FeedItem) {
-    const TIMEOUT_MS = 3000;
-
-    try {
-      console.log(`⚡ [Discovery Relay] Starting fetch for ${pubkeys.length} pubkeys`);
-
-      // Check if discovery relay is initialized
-      const isInitialized = this.discoveryRelay.isInitialized();
-      console.log(`⚡ [Discovery Relay] Initialized: ${isInitialized}`);
-
-      if (!isInitialized) {
-        console.log('⚡ [Discovery Relay] Not initialized, trying to load...');
-        // Try to initialize/load the discovery relay
-        await this.discoveryRelay.load();
-      }
-
-      const filter = {
-        authors: pubkeys.slice(0, 30), // Limit to 30 pubkeys for speed
-        kinds: feedData.filter?.kinds || [1],
-        limit: 50,
-      };
-
-      console.log(`⚡ [Discovery Relay] Filter:`, JSON.stringify(filter));
-      this.logger.debug(`⚡ [Discovery Relay] Fetching from ${pubkeys.length} pubkeys`);
-      const events = await this.discoveryRelay.getMany(filter, { timeout: TIMEOUT_MS });
-      console.log(`⚡ [Discovery Relay] Got ${events.length} events`);
-
-      if (events.length > 0) {
-        this.logger.info(`⚡ [Discovery Relay] Got ${events.length} events`);
-
-        // Filter and add events to feed
-        const allowedKinds = new Set(feedData.column.kinds);
-        const validEvents = events.filter(
-          (event: Event) => !this.accountState.muted(event) && allowedKinds.has(event.kind)
-        );
-        console.log(`⚡ [Discovery Relay] Valid events after filtering: ${validEvents.length}`);
-
-        if (validEvents.length > 0) {
-          feedData.events.update((currentEvents: Event[]) => {
-            const existingIds = new Set(currentEvents.map(e => e.id));
-            const newEvents = validEvents.filter((e: Event) => !existingIds.has(e.id));
-            const combined = [...currentEvents, ...newEvents];
-            return combined.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-          });
-
-          this._hasInitialContent.set(true);
-          this.appState.feedHasInitialContent.set(true);
-          this.saveCachedEvents(feedData.column.id, feedData.events());
-        }
-      } else {
-        console.log('⚡ [Discovery Relay] No events returned');
-      }
-    } catch (error) {
-      console.error('⚡ [Discovery Relay] Error:', error);
-      this.logger.error('Error fetching from discovery relay:', error);
     }
   }
 
