@@ -13,16 +13,16 @@
   gap: 4px;
 
   // Ensure the icon button matches other buttons in the footer
-  > button[mat-icon-button] {
+  >button[mat-icon-button] {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     color: #666;
-    
+
     &:hover {
       color: #e91e63;
     }
-    
+
     &.reacted {
       color: #e91e63;
     }
@@ -111,7 +111,7 @@
     padding: 0;
     overflow: visible;
   }
-  
+
   .mat-mdc-menu-panel {
     overflow: visible;
   }
