@@ -2,8 +2,8 @@
   @if (view() === 'icon') {
   <!-- Icon view with reaction picker -->
   <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-    [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenu" (click)="$event.stopPropagation()"
-    matTooltip="React" matTooltipPosition="below">
+    [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenu" #menuTrigger="matMenuTrigger"
+    (click)="$event.stopPropagation()" matTooltip="React" matTooltipPosition="below">
     @if (userReaction()) {
     <span class="emoji-icon">{{ userReaction()!.event.content === '+' ? '❤️' : userReaction()!.event.content }}</span>
     } @else {
@@ -27,7 +27,8 @@
   <div class="reaction-full-view">
     <!-- Main reaction button -->
     <button mat-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
-      [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenuFull" (click)="$event.stopPropagation()">
+      [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenuFull" #menuTriggerFull="matMenuTrigger"
+      (click)="$event.stopPropagation()">
       @if (userReaction()) {
       <span class="emoji-icon">{{ userReaction()!.event.content === '+' ? '❤️' : userReaction()!.event.content }}</span>
       Unlike

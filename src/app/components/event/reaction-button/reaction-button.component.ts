@@ -1,8 +1,8 @@
 
-import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
+import { MatMenuModule, MatMenuTrigger } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -41,6 +41,10 @@ export class ReactionButtonComponent {
   private readonly reactionService = inject(ReactionService);
   private readonly layout = inject(LayoutService);
   private readonly snackBar = inject(MatSnackBar);
+
+  // Menu trigger references to close the menu after reaction
+  private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
+  private readonly menuTriggerFull = viewChild<MatMenuTrigger>('menuTriggerFull');
 
   isLoadingReactions = signal<boolean>(false);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
@@ -138,6 +142,9 @@ export class ReactionButtonComponent {
   }
 
   async addReaction(emoji: string) {
+    // Close the menu immediately after selection
+    this.closeMenu();
+
     // Check if user is logged in
     const userPubkey = this.accountState.pubkey();
     const currentAccount = this.accountState.account();
@@ -167,6 +174,11 @@ export class ReactionButtonComponent {
       // Add new reaction
       await this.addNewReaction(emoji);
     }
+  }
+
+  private closeMenu() {
+    this.menuTrigger()?.closeMenu();
+    this.menuTriggerFull()?.closeMenu();
   }
 
   private async removeReaction(reaction: NostrRecord, emoji: string) {
