@@ -499,15 +499,13 @@ export class MessagingService implements NostriaService {
           }
           // Handle incoming wrapped events
           if (event.kind === kinds.GiftWrap) {
-            this.logger.info('Received GiftWrap event, will attempt to unwrap:', { eventId: event.id });
-
             // Push the async processing to pending array so we can wait for it
             const processPromise = (async () => {
               try {
                 const wrappedevent = await this.unwrapMessageInternal(event);
 
                 if (!wrappedevent) {
-                  this.logger.warn('Failed to unwrap gift-wrapped message', event);
+                  this.logger.debug('Failed to unwrap gift-wrapped message', { eventId: event.id });
                   return;
                 }
 
@@ -841,13 +839,9 @@ export class MessagingService implements NostriaService {
     try {
       // Check if this message is for us
       const recipient = wrappedEvent.tags.find((t: string[]) => t[0] === 'p')?.[1];
-      this.logger.info('Checking if message is for us:', { recipient, myPubkey, eventPubkey: wrappedEvent.pubkey, eventId: wrappedEvent.id });
       if (recipient !== myPubkey && wrappedEvent.pubkey !== myPubkey) {
-        this.logger.debug('Skipping message - not for us', { recipient, myPubkey, eventPubkey: wrappedEvent.pubkey });
         return null;
       }
-
-      this.logger.info('Attempting to decrypt wrapped content', { eventId: wrappedEvent.id });
 
       // The "wrappedEvent.pubkey" is a random pubkey used to wrap the message. We must use recipient pubkey to decrypt the wrapped content.
       // const wrappedPubkey = recipient;
@@ -864,7 +858,7 @@ export class MessagingService implements NostriaService {
         );
         wrappedContent = JSON.parse(decryptionResult.content);
       } catch (err) {
-        this.logger.error('Failed to decrypt wrapped content', err);
+        this.logger.debug('Failed to decrypt wrapped content', { eventId: wrappedEvent.id });
         return null;
       }
 

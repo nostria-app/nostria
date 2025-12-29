@@ -142,7 +142,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly app = inject(ApplicationService);
   readonly utilities = inject(UtilitiesService);
   private readonly accountState = inject(AccountStateService);
-  private readonly encryption = inject(EncryptionService);
+  readonly encryption = inject(EncryptionService);
   private readonly encryptionPermission = inject(EncryptionPermissionService);
   layout = inject(LayoutService); // UI state signals
   private readonly database = inject(DatabaseService);

@@ -2,6 +2,19 @@
   @if (isLoading() && !selectedChat()) {
   <div class="loading-container">
     <app-loading-overlay message="Loading messages..."></app-loading-overlay>
+    @if (encryption.pendingBunkerOperations() > 0) {
+    <div class="remote-signer-status">
+      <mat-icon class="rotating">sync</mat-icon>
+      <span>Decrypting messages via remote signer... ({{ encryption.pendingBunkerOperations() }} remaining)</span>
+      <p class="hint">This may take a few minutes for the initial load.</p>
+    </div>
+    }
+    @if (encryption.isBunkerConnecting()) {
+    <div class="remote-signer-status">
+      <mat-icon class="rotating">sync</mat-icon>
+      <span>Connecting to remote signer...</span>
+    </div>
+    }
   </div>
   } @else if (error()) {
   <div class="error-container">
@@ -23,6 +36,13 @@
         <button mat-icon-button aria-label="New chat" (click)="startNewChat()" matTooltip="New chat">
           <mat-icon>edit</mat-icon>
         </button>
+        @if (encryption.pendingBunkerOperations() > 0 || encryption.isBunkerConnecting()) {
+        <button mat-icon-button 
+                [matTooltip]="encryption.isBunkerConnecting() ? 'Connecting to remote signer...' : 'Decrypting ' + encryption.pendingBunkerOperations() + ' messages via remote signer'"
+                class="remote-signer-indicator">
+          <mat-icon class="rotating">sync</mat-icon>
+        </button>
+        }
         <button mat-icon-button [matMenuTriggerFor]="chatSettingsMenu" aria-label="Chat settings">
           <mat-icon>settings</mat-icon>
         </button>
