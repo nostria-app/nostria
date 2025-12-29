@@ -496,6 +496,7 @@ export class MessagingService implements NostriaService {
           }
           // Handle incoming wrapped events
           if (event.kind === kinds.GiftWrap) {
+            this.logger.info('Received GiftWrap event, will attempt to unwrap:', { eventId: event.id });
             // let chats = this.chatsMap();
             // let chat = chats.get(event.pubkey);
 
@@ -807,9 +808,14 @@ export class MessagingService implements NostriaService {
           // Update the oldest timestamp for loading more chats
           this.oldestChatTimestamp.set(oldestTimestamp);
 
-          // Update the last check timestamp
-          const now = Math.floor(Date.now() / 1000);
-          this.accountLocalState.setMessagesLastCheck(myPubkey, now);
+          // Update the last check timestamp only if we have some chats loaded
+          // This prevents setting lastCheck when an incremental load finds nothing
+          // which would prevent future full loads from working
+          const hasChats = this.chatsMap().size > 0;
+          if (!isIncrementalSync || hasChats) {
+            const now = Math.floor(Date.now() / 1000);
+            this.accountLocalState.setMessagesLastCheck(myPubkey, now);
+          }
 
           // ...existing code...
 
@@ -893,8 +899,11 @@ export class MessagingService implements NostriaService {
       // Check if this message is for us
       const recipient = wrappedEvent.tags.find((t: string[]) => t[0] === 'p')?.[1];
       if (recipient !== myPubkey && wrappedEvent.pubkey !== myPubkey) {
+        this.logger.debug('Skipping message - not for us', { recipient, myPubkey, eventPubkey: wrappedEvent.pubkey });
         return null;
       }
+
+      this.logger.info('Attempting to decrypt wrapped content', { eventId: wrappedEvent.id });
 
       // The "wrappedEvent.pubkey" is a random pubkey used to wrap the message. We must use recipient pubkey to decrypt the wrapped content.
       // const wrappedPubkey = recipient;

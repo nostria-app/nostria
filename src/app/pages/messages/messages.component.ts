@@ -1073,10 +1073,13 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   /**
-   * Reset local messages cache - clears all decrypted messages from IndexedDB
+   * Reset messages cache - clears all decrypted messages from IndexedDB
    */
   async resetLocalMessagesCache(): Promise<void> {
     try {
+      // Clear any pending bunker operations first
+      this.encryption.clearBunkerQueue();
+
       await this.database.init();
       await this.database.clearAllMessages();
 
@@ -1093,12 +1096,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       this.selectedChatId.set(null);
       this.showMobileList.set(true);
 
-      this.snackBar.open('Local messages cache cleared successfully', 'Close', { duration: 3000 });
+      this.snackBar.open('Messages cache cleared. Reloading...', 'Close', { duration: 3000 });
 
       // Reload chats from relays
       await this.messaging.loadChats();
     } catch (error) {
-      this.logger.error('Failed to reset local messages cache:', error);
+      this.logger.error('Failed to reset messages cache:', error);
       this.snackBar.open('Failed to clear messages cache', 'Close', { duration: 3000 });
     }
   }
