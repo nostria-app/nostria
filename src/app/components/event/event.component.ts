@@ -178,7 +178,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isCardClickable = computed<boolean>(() => {
     // Use targetRecord to get the actual event (reposted event for reposts)
     const targetEvent = this.targetRecord()?.event;
-    return targetEvent?.kind === 1 && !this.isCurrentlySelected();
+    if (targetEvent?.kind !== 1) return false;
+
+    // For reposts, the reposted content should always be clickable to navigate to it
+    // even when viewing the repost directly
+    if (this.isRepostEvent()) {
+      return true;
+    }
+
+    return !this.isCurrentlySelected();
   });
 
   // Check if root event card should be clickable (only kind 1)
@@ -1575,13 +1583,18 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
-    // Don't navigate if navigation is explicitly disabled
-    if (this.navigationDisabled()) {
+    // For reposts, always allow navigation to the reposted event
+    // This takes priority over navigationDisabled and isCurrentlySelected checks
+    // because clicking a repost should navigate to the original content
+    const isRepost = this.isRepostEvent();
+
+    // Don't navigate if navigation is explicitly disabled (unless it's a repost)
+    if (this.navigationDisabled() && !isRepost) {
       return;
     }
 
-    // Don't navigate if this event is currently selected/displayed
-    if (this.isCurrentlySelected()) {
+    // Don't navigate if this event is currently selected/displayed (unless it's a repost)
+    if (this.isCurrentlySelected() && !isRepost) {
       return;
     }
 
