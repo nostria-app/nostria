@@ -125,7 +125,7 @@ export class EncryptionService {
         reject
       });
       this.pendingBunkerOperations.set(this.bunkerQueue.length);
-      
+
       // Start processing if not already running (fire and forget)
       if (!this.isProcessingQueue) {
         // Use setTimeout to avoid blocking the event loop
@@ -150,7 +150,7 @@ export class EncryptionService {
       if (!item) continue;
 
       this.pendingBunkerOperations.set(this.bunkerQueue.length);
-      
+
       try {
         // Add timeout to prevent hanging forever - 30 seconds per operation
         const timeoutPromise = new Promise<never>((_, reject) => {
