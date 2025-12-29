@@ -182,54 +182,6 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
-  {
-    id: 'default-feed-discover',
-    label: 'Discover',
-    icon: 'rocket_launch',
-    path: 'discover',
-    description: 'Curated content to discover Nostr accounts',
-    columns: [
-      {
-        id: 'discover-column',
-        label: '',
-        icon: 'group',
-        type: 'notes',
-        kinds: [kinds.ShortTextNote, kinds.Repost],
-        source: 'custom',
-        // Use the 'popular' starter pack dynamically fetched from relays
-        // Published by d1bd33333733dcc411f0ee893b38b8522fc0de227fff459d99044ced9e65581b
-        customUsers: [], // Will be populated dynamically from starter pack
-        customStarterPacks: ['popular'], // Reference the 'popular' starter pack by dTag
-        relayConfig: 'account',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-    ],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
-  {
-    id: 'default-feed-articles',
-    label: 'Articles',
-    icon: 'newsmode',
-    path: 'articles',
-    description: 'Long-form articles from your network',
-    columns: [
-      {
-        id: 'articles-column',
-        label: '',
-        icon: 'article',
-        type: 'articles',
-        kinds: [30023], // Long-form content
-        source: 'following',
-        relayConfig: 'account',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-    ],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
 ];
 
 @Injectable({

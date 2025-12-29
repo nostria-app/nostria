@@ -64,28 +64,32 @@
           <div class="form-group">
             <h4>Content Source</h4>
             <p class="section-description">Select source for events to include in this column</p>
-            <mat-button-toggle-group name="source" formControlName="source" class="source-toggle">
-              <mat-button-toggle value="for-you">
-                <mat-icon>for_you</mat-icon>
-                <span class="hide-tiny">For You</span>
-              </mat-button-toggle>
-              <mat-button-toggle value="following">
-                <mat-icon>people</mat-icon>
-                <span class="hide-tiny">Following</span>
-              </mat-button-toggle>
-              <mat-button-toggle value="public">
-                <mat-icon>public</mat-icon>
-                <span class="hide-tiny">Public</span>
-              </mat-button-toggle>
-              <mat-button-toggle value="search">
-                <mat-icon>search</mat-icon>
-                <span class="hide-tiny">Search</span>
-              </mat-button-toggle>
-              <mat-button-toggle value="custom">
-                <mat-icon>tune</mat-icon>
-                <span class="hide-tiny">Custom</span>
-              </mat-button-toggle>
-            </mat-button-toggle-group>
+            <mat-form-field class="full-width" appearance="outline">
+              <mat-label>Content Source</mat-label>
+              <mat-select formControlName="source">
+                <mat-option value="for-you">
+                  <mat-icon>for_you</mat-icon>
+                  <span>For You</span>
+                </mat-option>
+                <mat-option value="following">
+                  <mat-icon>people</mat-icon>
+                  <span>Following</span>
+                </mat-option>
+                <mat-option value="public">
+                  <mat-icon>public</mat-icon>
+                  <span>Public</span>
+                </mat-option>
+                <mat-option value="search">
+                  <mat-icon>search</mat-icon>
+                  <span>Search</span>
+                </mat-option>
+                <mat-option value="custom">
+                  <mat-icon>tune</mat-icon>
+                  <span>Custom</span>
+                </mat-option>
+              </mat-select>
+              <mat-icon matSuffix>arrow_drop_down</mat-icon>
+            </mat-form-field>
 
             <!-- Description for selected source -->
             @if (columnForm.get('source')?.value === 'following') {
