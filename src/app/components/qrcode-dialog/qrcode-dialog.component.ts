@@ -6,6 +6,13 @@ import { MAT_DIALOG_DATA, MatDialogModule } from '@angular/material/dialog';
 import { MatIconModule } from '@angular/material/icon';
 import encodeQR from 'qr';
 
+export interface QRCodeDialogData {
+  did: string;
+  hideToggle?: boolean;
+  title?: string;
+  mode?: 'default' | 'login' | 'remote-signer';
+}
+
 @Component({
   selector: 'app-qrcode-dialog',
   imports: [MatDialogModule, MatButtonModule, MatButtonToggleModule, FormsModule, MatIconModule],
@@ -17,7 +24,7 @@ export class QRCodeDialogComponent implements AfterViewInit {
 
   qrValue = '';
 
-  constructor(@Inject(MAT_DIALOG_DATA) public data: { did: string; hideToggle?: boolean; title?: string }) { }
+  constructor(@Inject(MAT_DIALOG_DATA) public data: QRCodeDialogData) { }
 
   ngAfterViewInit() {
     this.generateQR(this.data.did);

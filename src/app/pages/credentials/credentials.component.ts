@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal, effect, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, effect, OnInit, OnDestroy } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
@@ -20,9 +20,12 @@ import { Wallets, Wallet } from '../../services/wallets';
 import { LN, USD } from '@getalby/sdk';
 import { CryptoEncryptionService, EncryptedData } from '../../services/crypto-encryption.service';
 import { PinPromptService } from '../../services/pin-prompt.service';
-import { nip19 } from 'nostr-tools';
+import { nip19, generateSecretKey, getPublicKey, nip04, nip44 } from 'nostr-tools';
+import { bytesToHex } from '@noble/hashes/utils.js';
 import { QRCodeDialogComponent } from '../../components/qrcode-dialog/qrcode-dialog.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
+import { RelaysService } from '../../services/relays/relays';
+import { SimplePool } from 'nostr-tools/pool';
 
 @Component({
   selector: 'app-credentials',
@@ -45,7 +48,7 @@ import { UserProfileComponent } from '../../components/user-profile/user-profile
   styleUrl: './credentials.component.scss',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class CredentialsComponent implements OnInit {
+export class CredentialsComponent implements OnInit, OnDestroy {
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
   utilities = inject(UtilitiesService);
@@ -53,6 +56,7 @@ export class CredentialsComponent implements OnInit {
   crypto = inject(CryptoEncryptionService);
   pinPrompt = inject(PinPromptService);
   dialog = inject(MatDialog);
+  relaysService = inject(RelaysService);
   isNsecVisible = signal(false);
   isMnemonicVisible = signal(false);
   wallets = inject(Wallets);
@@ -77,6 +81,11 @@ export class CredentialsComponent implements OnInit {
 
   // Cached mnemonic value (decrypted on demand)
   private cachedMnemonic = signal<string>('');
+
+  // Remote signer connection state
+  private remoteSignerPool: SimplePool | null = null;
+  private remoteSignerClientKey: Uint8Array | null = null;
+  isWaitingForRemoteSigner = signal(false);
 
   // Donation-related properties
   developerPubkeys = ['17e2889fba01021d048a13fd0ba108ad31c38326295460c21e69c43fa8fbe515', 'cbec30a9038fe934b55272b046df47eb4d20ef006de0acbe46b0c0dae06e5d5b', '5f432a9f39b58ff132fc0a4c8af10d42efd917d8076f68bb7f2f91ed7d4f6a41', '7e2b09f951ed9be483284e7469ac20ac427d3264633d250c9d01e4265c99ed42'];
@@ -106,6 +115,20 @@ export class CredentialsComponent implements OnInit {
     // Load nsec and mnemonic on component initialization
     this.loadNsec();
     this.loadMnemonic();
+  }
+
+  ngOnDestroy(): void {
+    // Clean up remote signer connection if any
+    this.cleanupRemoteSignerConnection();
+  }
+
+  private cleanupRemoteSignerConnection(): void {
+    if (this.remoteSignerPool) {
+      this.remoteSignerPool.close([]);
+      this.remoteSignerPool = null;
+    }
+    this.remoteSignerClientKey = null;
+    this.isWaitingForRemoteSigner.set(false);
   }
 
   private async loadNsec(): Promise<void> {
@@ -390,6 +413,164 @@ export class CredentialsComponent implements OnInit {
         verticalPosition: 'bottom',
       });
     }
+  }
+
+  async exportToRemoteSigner(): Promise<void> {
+    // Clean up any previous connection attempt
+    this.cleanupRemoteSignerConnection();
+
+    try {
+      // Generate a temporary client keypair for this connection
+      this.remoteSignerClientKey = generateSecretKey();
+      const clientPubkey = getPublicKey(this.remoteSignerClientKey);
+
+      // Get connected relays to use for the connection
+      const connectedRelays = this.relaysService.getConnectedRelays();
+      if (connectedRelays.length === 0) {
+        // Fallback to preferred relays if none are connected
+        connectedRelays.push(...this.utilities.preferredRelays.slice(0, 3));
+      }
+
+      // Use up to 3 relays for the connection
+      const relaysToUse = connectedRelays.slice(0, 3);
+
+      // Generate a random secret for connection validation
+      const secret = this.generateRandomSecret();
+
+      // Build the nostrconnect:// URL
+      const params = new URLSearchParams();
+      relaysToUse.forEach(relay => params.append('relay', relay));
+      params.append('secret', secret);
+      params.append('name', 'Nostria');
+      params.append('url', 'https://nostria.app');
+      // Request common permissions
+      params.append('perms', 'sign_event:0,sign_event:1,sign_event:3,sign_event:4,sign_event:6,sign_event:7,sign_event:9734,sign_event:9735,sign_event:10002,sign_event:30023,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt');
+
+      const nostrconnectUrl = `nostrconnect://${clientPubkey}?${params.toString()}`;
+
+      // Start listening for the connect response
+      this.startListeningForRemoteSignerResponse(clientPubkey, relaysToUse, secret);
+
+      // Open QR code dialog with the nostrconnect URL
+      const dialogRef = this.dialog.open(QRCodeDialogComponent, {
+        width: '500px',
+        panelClass: 'responsive-dialog',
+        disableClose: true,
+        data: {
+          did: nostrconnectUrl,
+          hideToggle: true,
+          title: 'Connect Remote Signer',
+          mode: 'remote-signer'
+        },
+      });
+
+      // Clean up when dialog closes
+      dialogRef.afterClosed().subscribe(() => {
+        if (this.isWaitingForRemoteSigner()) {
+          this.cleanupRemoteSignerConnection();
+          this.snackBar.open('Remote signer connection cancelled', 'Dismiss', {
+            duration: 3000,
+          });
+        }
+      });
+    } catch (error) {
+      console.error('Failed to start remote signer export:', error);
+      this.cleanupRemoteSignerConnection();
+      this.snackBar.open('Failed to generate remote signer connection', 'Dismiss', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom',
+      });
+    }
+  }
+
+  private generateRandomSecret(): string {
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+  }
+
+  private startListeningForRemoteSignerResponse(clientPubkey: string, relays: string[], expectedSecret: string): void {
+    this.isWaitingForRemoteSigner.set(true);
+    this.remoteSignerPool = new SimplePool();
+
+    // Subscribe to kind 24133 responses addressed to our client pubkey
+    this.remoteSignerPool.subscribeMany(
+      relays,
+      {
+        kinds: [24133],
+        '#p': [clientPubkey],
+      },
+      {
+        onevent: async (event) => {
+          try {
+            if (!this.remoteSignerClientKey) return;
+
+            // Try to decrypt the response
+            let response: { id?: string; result?: string; error?: string };
+
+            // Try NIP-04 decryption first (check for ?iv= pattern)
+            if (event.content.includes('?iv=')) {
+              const decrypted = await nip04.decrypt(
+                bytesToHex(this.remoteSignerClientKey),
+                event.pubkey,
+                event.content
+              );
+              response = JSON.parse(decrypted);
+            } else {
+              // Try NIP-44 decryption
+              try {
+                const conversationKey = nip44.getConversationKey(this.remoteSignerClientKey, event.pubkey);
+                const decrypted = nip44.decrypt(event.content, conversationKey);
+                response = JSON.parse(decrypted);
+              } catch {
+                // Couldn't decrypt, skip this event
+                return;
+              }
+            }
+
+            // Validate the secret
+            if (response.result === expectedSecret || response.result === 'ack') {
+              // Connection successful!
+              // The remote signer pubkey is event.pubkey - can be used to construct bunker:// URL
+
+              this.snackBar.open('Remote signer connected successfully!', 'Dismiss', {
+                duration: 3000,
+              });
+
+              // Close the dialog
+              this.dialog.closeAll();
+              this.cleanupRemoteSignerConnection();
+
+              // Show success message with instructions
+              this.snackBar.open(
+                'Remote signer connected! You can now log in using the bunker:// URL from your signer app.',
+                'Dismiss',
+                { duration: 5000 }
+              );
+            } else if (response.error) {
+              console.error('Remote signer error:', response.error);
+              this.snackBar.open(`Remote signer error: ${response.error}`, 'Dismiss', {
+                duration: 5000,
+              });
+            }
+          } catch (error) {
+            console.error('Error processing remote signer response:', error);
+          }
+        },
+      }
+    );
+
+    // Set a timeout for the connection (2 minutes)
+    setTimeout(() => {
+      if (this.isWaitingForRemoteSigner()) {
+        this.dialog.closeAll();
+        this.cleanupRemoteSignerConnection();
+        this.snackBar.open('Remote signer connection timed out', 'Dismiss', {
+          duration: 3000,
+        });
+      }
+    }, 120000);
   }
 
   getMaskedNsec(nsec: string): string {
