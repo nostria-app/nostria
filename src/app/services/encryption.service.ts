@@ -1,4 +1,4 @@
-import { Injectable, inject, Injector, effect } from '@angular/core';
+import { Injectable, inject, Injector, effect, signal } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { EncryptionPermissionService } from './encryption-permission.service';
@@ -48,6 +48,10 @@ export class EncryptionService {
   private bunkerQueue: BunkerQueueItem<unknown>[] = [];
   private isProcessingQueue = false;
   private readonly BUNKER_OPERATION_DELAY_MS = 100; // Delay between operations
+
+  // Public signals for UI feedback
+  readonly pendingBunkerOperations = signal(0);
+  readonly isBunkerConnecting = signal(false);
 
   constructor() {
     // Clear cached bunker when account changes
@@ -114,19 +118,16 @@ export class EncryptionService {
    * This prevents overwhelming the remote signer with concurrent requests
    */
   private queueBunkerOperation<T>(operation: () => Promise<T>): Promise<T> {
-    const queueSize = this.bunkerQueue.length;
-    const isProcessing = this.isProcessingQueue;
-    this.logger.info(`Queueing bunker operation, queue size: ${queueSize}, isProcessing: ${isProcessing}`);
-
     return new Promise<T>((resolve, reject) => {
       this.bunkerQueue.push({
         operation,
         resolve: resolve as (value: unknown) => void,
         reject
       });
+      this.pendingBunkerOperations.set(this.bunkerQueue.length);
+      
       // Start processing if not already running (fire and forget)
       if (!this.isProcessingQueue) {
-        this.logger.info('Starting queue processing from queueBunkerOperation...');
         // Use setTimeout to avoid blocking the event loop
         setTimeout(() => this.processQueue(), 0);
       }
@@ -138,29 +139,27 @@ export class EncryptionService {
    */
   private async processQueue(): Promise<void> {
     if (this.isProcessingQueue) {
-      this.logger.info('processQueue called but already processing');
       return;
     }
 
     this.isProcessingQueue = true;
-    this.logger.info(`Starting bunker queue processing, ${this.bunkerQueue.length} items pending`);
+    this.logger.debug(`Starting bunker queue processing, ${this.bunkerQueue.length} items pending`);
 
     while (this.bunkerQueue.length > 0) {
       const item = this.bunkerQueue.shift();
       if (!item) continue;
 
-      this.logger.info(`Processing queue item, ${this.bunkerQueue.length} remaining`);
+      this.pendingBunkerOperations.set(this.bunkerQueue.length);
+      
       try {
-        this.logger.info('About to call bunker operation...');
         // Add timeout to prevent hanging forever - 30 seconds per operation
         const timeoutPromise = new Promise<never>((_, reject) => {
           setTimeout(() => reject(new Error('Bunker operation timed out after 30s')), 30000);
         });
         const result = await Promise.race([item.operation(), timeoutPromise]);
-        this.logger.info('Queue item completed successfully');
         item.resolve(result);
       } catch (error) {
-        this.logger.error('Bunker operation failed:', error);
+        this.logger.debug('Bunker operation failed:', error);
         item.reject(error instanceof Error ? error : new Error(String(error)));
       }
 
@@ -170,8 +169,9 @@ export class EncryptionService {
       }
     }
 
-    this.logger.info('Bunker queue processing complete');
+    this.logger.debug('Bunker queue processing complete');
     this.isProcessingQueue = false;
+    this.pendingBunkerOperations.set(0);
   }
 
   /**
@@ -188,19 +188,16 @@ export class EncryptionService {
    * Get or create a cached BunkerSigner for remote signer accounts
    */
   private async getBunkerSigner(account: NostrUser): Promise<BunkerSigner> {
-    this.logger.info('getBunkerSigner called');
-
     // If we have a cached signer for this account, wait for connection to be ready
     if (this.cachedBunkerSigner && this.cachedBunkerPubkey === account.pubkey) {
       if (this.bunkerConnectionPromise) {
-        this.logger.info('Waiting for existing bunker connection to complete...');
+        this.logger.debug('Waiting for existing bunker connection to complete...');
         await this.bunkerConnectionPromise;
       }
-      this.logger.info('Returning cached BunkerSigner');
       return this.cachedBunkerSigner;
     }
 
-    this.logger.info('Creating new BunkerSigner...');
+    this.logger.debug('Creating new BunkerSigner...');
     // Clear any existing cached bunker (but not the queue)
     if (this.cachedBunkerSigner) {
       try {
@@ -235,18 +232,18 @@ export class EncryptionService {
       throw new Error('No client key available for remote signing');
     }
 
-    this.logger.info('Creating new BunkerSigner for remote account');
+    this.logger.debug('Creating new BunkerSigner for remote account');
     this.cachedBunkerPool = new SimplePool();
     this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, account.bunker, { pool: this.cachedBunkerPool });
     this.cachedBunkerPubkey = account.pubkey;
 
     // Ping the bunker to establish connection and wait for it
     // Store the promise so other callers can wait for it
-    this.logger.info('Pinging bunker to establish connection...');
+    this.isBunkerConnecting.set(true);
     this.bunkerConnectionPromise = (async () => {
       try {
         await this.cachedBunkerSigner!.ping();
-        this.logger.info('Bunker ping successful - connection established');
+        this.logger.debug('Bunker connection established');
       } catch (err) {
         this.logger.error('Bunker ping failed:', err);
         // Clear the cached bunker on failure
@@ -256,12 +253,11 @@ export class EncryptionService {
         throw err;
       } finally {
         this.bunkerConnectionPromise = undefined;
+        this.isBunkerConnecting.set(false);
       }
     })();
 
     await this.bunkerConnectionPromise;
-
-    this.logger.info('BunkerSigner created and connected successfully');
 
     return this.cachedBunkerSigner;
   }
@@ -399,12 +395,8 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
-        this.logger.info('Using remote signer for NIP-44 decryption, senderPubkey:', senderPubkey.substring(0, 8) + '...');
         const bunker = await this.getBunkerSigner(account);
-        this.logger.info('Calling bunker.nip44Decrypt...');
-        const result = await this.queueBunkerOperation(() => bunker.nip44Decrypt(senderPubkey, ciphertext));
-        this.logger.info('NIP-44 decryption via remote signer succeeded');
-        return result;
+        return await this.queueBunkerOperation(() => bunker.nip44Decrypt(senderPubkey, ciphertext));
       }
 
       if (!account?.privkey) {
