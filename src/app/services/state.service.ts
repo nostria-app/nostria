@@ -92,13 +92,9 @@ export class StateService implements NostriaService {
 
     await this.media.load();
 
-    // Scan historical events for engagement metrics
-    // Delay by 2 minutes to reduce initial load pressure and prioritize feed content
-    setTimeout(() => {
-      this.metricsTracking.scanHistoricalEvents().catch(error => {
-        console.error('Error scanning historical events for metrics:', error);
-      });
-    }, 2 * 60 * 1000); // 2 minutes
+    // Schedule historical events scan for engagement metrics
+    // Uses built-in timeout management to prevent duplicate scans
+    this.metricsTracking.scheduleHistoricalScan();
 
     // NOTE: We don't automatically load chats here anymore
     // Chats are loaded on-demand when the user navigates to the messages page
@@ -106,6 +102,9 @@ export class StateService implements NostriaService {
   }
 
   clear() {
+    // Cancel any pending metrics scan when clearing state
+    this.metricsTracking.cancelPendingScan();
+
     this.accountState.clear();
     this.messaging.clear();
     this.nostr.clear();

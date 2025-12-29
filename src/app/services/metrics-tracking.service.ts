@@ -32,6 +32,10 @@ export class MetricsTrackingService {
 
   private initialized = false;
   private historicalScanInProgress = false;
+  /** Track which accounts have already been scanned in this session */
+  private scannedAccounts = new Set<string>();
+  /** Track the pending scan timeout so it can be cancelled */
+  private pendingScanTimeout: ReturnType<typeof setTimeout> | null = null;
 
   /**
    * Initialize the metrics tracking service.
@@ -49,14 +53,56 @@ export class MetricsTrackingService {
   }
 
   /**
+   * Schedule a historical scan to run after a delay.
+   * Cancels any previously scheduled scan.
+   * @param delayMs Delay in milliseconds before running the scan (default: 2 minutes)
+   */
+  scheduleHistoricalScan(delayMs: number = 2 * 60 * 1000): void {
+    // Cancel any pending scan
+    if (this.pendingScanTimeout) {
+      clearTimeout(this.pendingScanTimeout);
+      this.pendingScanTimeout = null;
+      this.logger.debug('Cancelled pending historical scan');
+    }
+
+    this.pendingScanTimeout = setTimeout(() => {
+      this.pendingScanTimeout = null;
+      this.scanHistoricalEvents().catch(error => {
+        this.logger.error('Error scanning historical events for metrics:', error);
+      });
+    }, delayMs);
+
+    this.logger.debug(`Scheduled historical scan in ${delayMs / 1000} seconds`);
+  }
+
+  /**
+   * Cancel any pending historical scan.
+   * Should be called when account changes.
+   */
+  cancelPendingScan(): void {
+    if (this.pendingScanTimeout) {
+      clearTimeout(this.pendingScanTimeout);
+      this.pendingScanTimeout = null;
+      this.logger.debug('Cancelled pending historical scan');
+    }
+  }
+
+  /**
    * Scan historical events from relays for the current account and calculate metrics.
    * This should be called when a user logs in to process their existing interactions.
    * Events that have already been processed will be skipped (duplicate prevention).
+   * Each account is only scanned once per session.
    */
   async scanHistoricalEvents(): Promise<void> {
     const currentPubkey = this.accountState.pubkey();
     if (!currentPubkey) {
       this.logger.warn('No current account, cannot scan historical events');
+      return;
+    }
+
+    // Check if this account has already been scanned in this session
+    if (this.scannedAccounts.has(currentPubkey)) {
+      this.logger.debug(`Account ${currentPubkey.substring(0, 8)} already scanned in this session, skipping`);
       return;
     }
 
@@ -118,6 +164,9 @@ export class MetricsTrackingService {
           skippedCount++;
         }
       }
+
+      // Mark this account as scanned so we don't scan again in this session
+      this.scannedAccounts.add(currentPubkey);
 
       this.logger.info(
         `Historical metrics scan complete: ${processedCount} events processed, ${skippedCount} skipped (already processed or invalid)`
