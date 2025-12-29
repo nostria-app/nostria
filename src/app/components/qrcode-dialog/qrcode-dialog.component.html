@@ -2,7 +2,27 @@
 <mat-dialog-content class="qr-code-content centered-dialog-content">
   <canvas #qrCanvas></canvas>
   <br />
-  @if (data.hideToggle) {
+  @if (data.mode === 'remote-signer') {
+  <div class="instructions">
+    <p><strong>To connect your remote signer:</strong></p>
+    <ol>
+      <li>Open your remote signer app (e.g., Amber, nsec.app, Nostr Nests)</li>
+      <li>Look for "Scan QR", "Connect App", or "Add Connection" option</li>
+      <li>Scan this QR code with your signer app</li>
+      <li>Approve the connection request in your signer</li>
+      <li>Once connected, your signer will handle all signing operations</li>
+    </ol>
+    <div class="info-box">
+      <mat-icon class="info-icon">info</mat-icon>
+      <p>This creates a secure connection between Nostria and your remote signer using NIP-46. Your private key stays
+        safely in your signer app.</p>
+    </div>
+    <div class="waiting-indicator">
+      <mat-icon class="waiting-icon spin">sync</mat-icon>
+      <p>Waiting for remote signer to connect...</p>
+    </div>
+  </div>
+  } @else if (data.hideToggle) {
   <div class="instructions">
     <p><strong>To add this account to another device:</strong></p>
     <ol>
@@ -28,5 +48,6 @@
   }
 </mat-dialog-content>
 <mat-dialog-actions align="end">
-  <button mat-button [mat-dialog-close]="true" cdkFocusInitial>Close</button>
+  <button mat-button [mat-dialog-close]="true" cdkFocusInitial>{{ data.mode === 'remote-signer' ? 'Cancel' : 'Close'
+    }}</button>
 </mat-dialog-actions>
