@@ -2,8 +2,8 @@
 // Global styles should be used for common styling patterns
 
 :host {
-  text-align: center; // to look good in mobile view
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
 }
 
 .reaction-container {
@@ -11,6 +11,22 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
+
+  // Ensure the icon button matches other buttons in the footer
+  > button[mat-icon-button] {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #666;
+    
+    &:hover {
+      color: #e91e63;
+    }
+    
+    &.reacted {
+      color: #e91e63;
+    }
+  }
 }
 
 .reacted {
@@ -22,8 +38,14 @@
 }
 
 .emoji-icon {
-  font-size: 1.2rem;
-  line-height: 1;
+  font-size: 1.25rem;
+  line-height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  text-align: center;
 }
 
 .reaction-count {
@@ -87,25 +109,39 @@
 ::ng-deep .reaction-picker-menu {
   .mat-mdc-menu-content {
     padding: 0;
+    overflow: visible;
+  }
+  
+  .mat-mdc-menu-panel {
+    overflow: visible;
   }
 }
 
 .reaction-picker {
   display: flex;
+  align-items: center;
   gap: 4px;
-  padding: 8px;
+  padding: 12px;
 
   .emoji-button {
     width: 36px;
     height: 36px;
     font-size: 1.25rem;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 50%;
     transition: background-color 0.2s ease, transform 0.15s ease;
     padding: 0;
     min-width: 36px;
+    line-height: 1;
+    text-align: center;
+
+    // Override mat-icon-button styles
+    &.mat-mdc-icon-button {
+      --mdc-icon-button-state-layer-size: 36px;
+      --mdc-icon-button-icon-size: 1.25rem;
+    }
 
     &:hover {
       background: var(--mat-sys-surface-container-highest);
