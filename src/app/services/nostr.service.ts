@@ -903,12 +903,23 @@ export class NostrService implements NostriaService {
           pubkey: eventPubkey,
         };
 
-        // Get the decrypted private key
-        const decryptedPrivkey = await this.getDecryptedPrivateKey(currentUser);
+        // Get the client key for NIP-46 communication
+        let clientKey: Uint8Array;
+
+        if (currentUser.bunkerClientKey) {
+          // Pure remote signer account - use stored client key
+          clientKey = hexToBytes(currentUser.bunkerClientKey);
+        } else if (currentUser.privkey) {
+          // Hybrid account with local key - use local key for bunker communication
+          const decryptedPrivkey = await this.getDecryptedPrivateKey(currentUser);
+          clientKey = hexToBytes(decryptedPrivkey);
+        } else {
+          throw new Error('No client key available for remote signing. Please re-connect your remote signer.');
+        }
 
         const pool = new SimplePool();
         const bunker = BunkerSigner.fromBunker(
-          hexToBytes(decryptedPrivkey),
+          clientKey,
           this.accountState.account()!.bunker!,
           { pool }
         );

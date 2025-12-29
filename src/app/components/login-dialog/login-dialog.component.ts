@@ -752,8 +752,9 @@ export class LoginDialogComponent implements OnDestroy {
 
               this.logger.info('Remote signer connected:', { pubkey: remoteSignerPubkey });
 
-              // Create the account with bunker configuration
-              await this.createRemoteSignerAccount(remoteSignerPubkey, relays, expectedSecret);
+              // Create the account with bunker configuration, passing the client key
+              const clientKeyHex = this.remoteSignerClientKey ? bytesToHex(this.remoteSignerClientKey) : undefined;
+              await this.createRemoteSignerAccount(remoteSignerPubkey, relays, expectedSecret, clientKeyHex);
 
               this.cleanupNostrConnectConnection();
             } else if (response.error) {
@@ -778,7 +779,7 @@ export class LoginDialogComponent implements OnDestroy {
     }, 120000);
   }
 
-  private async createRemoteSignerAccount(remoteSignerPubkey: string, relays: string[], secret: string): Promise<void> {
+  private async createRemoteSignerAccount(remoteSignerPubkey: string, relays: string[], secret: string, clientKeyHex?: string): Promise<void> {
     try {
       // Create bunker pointer
       const bunker: BunkerPointer = {
@@ -796,6 +797,7 @@ export class LoginDialogComponent implements OnDestroy {
         hasActivated: true,
         bunker: bunker,
         preferredSigningMethod: 'remote',
+        bunkerClientKey: clientKeyHex, // Store the client key for NIP-46 communication
       };
 
       await this.nostrService.setAccount(newUser);
