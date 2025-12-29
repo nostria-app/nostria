@@ -237,30 +237,65 @@
     </div>
     }
 
-    <div class="nostr-connect-input-container">
-      <mat-form-field class="nostr-connect-input">
-        <mat-label>Nostr Connect URL</mat-label>
-        <input matInput [ngModel]="nostrConnectUrl()" (ngModelChange)="nostrConnectUrl.set($event)"
-          placeholder="bunker://..." [disabled]="nostrConnectLoading()" autocomplete="off" autocorrect="off"
-          spellcheck="false" />
-        <mat-hint>Scan QR code from Nostria Signer app to get this URL</mat-hint>
-      </mat-form-field>
+    <div class="nostr-connect-qr-section">
+      <p class="scan-instruction">Scan this QR code with your remote signer app (e.g., Amber)</p>
 
-      <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNostrConnect()"
-        [disabled]="nostrConnectLoading()" matTooltip="Scan QR code">
-        <mat-icon>qr_code_scanner</mat-icon>
-      </button>
+      <div class="region-selector">
+        <span class="region-label">Select relay region:</span>
+        <div class="region-buttons">
+          <button mat-stroked-button [class.selected]="nostrConnectRegion() === 'eu'"
+            (click)="setNostrConnectRegion('eu')">
+            🇪🇺 Europe
+          </button>
+          <button mat-stroked-button [class.selected]="nostrConnectRegion() === 'us'"
+            (click)="setNostrConnectRegion('us')">
+            🇺🇸 United States
+          </button>
+        </div>
+      </div>
+
+      <div class="qr-code-container">
+        <canvas #nostrConnectCanvas></canvas>
+        @if (isWaitingForRemoteSigner()) {
+        <div class="waiting-overlay">
+          <mat-spinner diameter="40"></mat-spinner>
+          <p>Connecting...</p>
+        </div>
+        }
+      </div>
     </div>
 
     <mat-card class="nostr-connect-info">
       <mat-card-content>
         <div class="info-header">
-          <mat-icon color="primary">info</mat-icon>
-          <h3>About Nostr Connect</h3>
+          <mat-icon color="primary">phone_iphone</mat-icon>
+          <h3>How to connect</h3>
         </div>
-        <p>Use your private key from a separate device for enhanced security. Scan QR code from Nostria Signer app.</p>
+        <ol class="connect-steps">
+          <li>Open your remote signer app (Amber, nsec.app, etc.)</li>
+          <li>Look for "Scan QR" or "Connect App" option</li>
+          <li>Scan the QR code above</li>
+          <li>Approve the connection in your signer</li>
+        </ol>
       </mat-card-content>
     </mat-card>
+
+    <div class="manual-entry-section">
+      <p class="manual-entry-label">Or paste a bunker:// URL manually:</p>
+      <div class="nostr-connect-input-container">
+        <mat-form-field class="nostr-connect-input">
+          <mat-label>Nostr Connect URL</mat-label>
+          <input matInput [ngModel]="nostrConnectUrl()" (ngModelChange)="nostrConnectUrl.set($event)"
+            placeholder="bunker://..." [disabled]="nostrConnectLoading()" autocomplete="off" autocorrect="off"
+            spellcheck="false" />
+        </mat-form-field>
+
+        <button mat-icon-button class="qr-scan-button" (click)="scanQrCodeForNostrConnect()"
+          [disabled]="nostrConnectLoading()" matTooltip="Scan bunker QR code">
+          <mat-icon>qr_code_scanner</mat-icon>
+        </button>
+      </div>
+    </div>
     }
 
     <!-- Preview Mode -->

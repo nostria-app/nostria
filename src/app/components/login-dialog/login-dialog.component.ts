@@ -1,5 +1,7 @@
-import { Component, inject, signal, output, effect, ViewChild, ElementRef } from '@angular/core';
-import { nip19 } from 'nostr-tools';
+import { Component, inject, signal, output, effect, ViewChild, ElementRef, OnDestroy } from '@angular/core';
+import { nip19, nip04, nip44, generateSecretKey, getPublicKey, SimplePool } from 'nostr-tools';
+import { bytesToHex } from '@noble/hashes/utils.js';
+import { BunkerPointer } from 'nostr-tools/nip46';
 
 import { MatDialogModule, MatDialogRef, MatDialog } from '@angular/material/dialog';
 import { MatCardModule } from '@angular/material/card';
@@ -57,7 +59,7 @@ enum LoginStep {
   templateUrl: './login-dialog.component.html',
   styleUrl: './login-dialog.component.scss',
 })
-export class LoginDialogComponent {
+export class LoginDialogComponent implements OnDestroy {
   private dialogRef = inject(MatDialogRef<LoginDialogComponent>, { optional: true });
   private dialog = inject(MatDialog);
   private snackBar = inject(MatSnackBar);
@@ -99,6 +101,19 @@ export class LoginDialogComponent {
   profileImage = signal<string | null>(null);
   profileImageFile = signal<File | null>(null);
 
+  // Client-initiated nostrconnect signals
+  nostrConnectQrUrl = signal<string>('');
+  nostrConnectRegion = signal<'eu' | 'us'>('eu');
+  isWaitingForRemoteSigner = signal(false);
+  private remoteSignerClientKey: Uint8Array | null = null;
+  private remoteSignerPool: SimplePool | null = null;
+
+  // Default relays for nostrconnect by region
+  private readonly nostrConnectRelays = {
+    eu: ['wss://ribo.eu.nostria.app', 'wss://relay.damus.io', 'wss://nos.lol'],
+    us: ['wss://ribo.us.nostria.app', 'wss://relay.damus.io', 'wss://nos.lol'],
+  };
+
   // Input fields
   nsecKey = '';
   externalSignerPubkey = '';
@@ -106,6 +121,7 @@ export class LoginDialogComponent {
   previewPubkey = 'npub1lmtv5qjrgjak504pc0a2885w72df69lmk8jfaet2xc3x2rppjy8sfzxvac' // Coffee
 
   @ViewChild('externalSignerInput') externalSignerInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('nostrConnectCanvas') nostrConnectCanvas!: ElementRef<HTMLCanvasElement>;
 
   constructor() {
     effect(() => {
@@ -119,6 +135,34 @@ export class LoginDialogComponent {
         window.removeEventListener('focus', this.onWindowFocusExternalSigner);
       }
     });
+
+    // Generate QR code when entering NOSTR_CONNECT step
+    effect(() => {
+      if (this.currentStep() === LoginStep.NOSTR_CONNECT) {
+        // Small delay to ensure canvas is rendered
+        setTimeout(() => {
+          this.generateNostrConnectQR();
+        }, 100);
+      } else {
+        // Cleanup when leaving the step
+        this.cleanupNostrConnectConnection();
+      }
+    });
+  }
+
+  ngOnDestroy(): void {
+    this.cleanupNostrConnectConnection();
+    window.removeEventListener('focus', this.onWindowFocusExternalSigner);
+  }
+
+  private cleanupNostrConnectConnection(): void {
+    if (this.remoteSignerPool) {
+      this.remoteSignerPool.close([]);
+      this.remoteSignerPool = null;
+    }
+    this.remoteSignerClientKey = null;
+    this.isWaitingForRemoteSigner.set(false);
+    this.nostrConnectQrUrl.set('');
   }
 
   onWindowFocusExternalSigner = async () => {
@@ -562,6 +606,224 @@ export class LoginDialogComponent {
       this.nostrConnectError.set(errorMessage);
       this.nostrConnectLoading.set(false);
     }
+  }
+
+  /**
+   * Generate QR code for client-initiated nostrconnect
+   */
+  async generateNostrConnectQR(): Promise<void> {
+    // Clean up any previous connection
+    this.cleanupNostrConnectConnection();
+
+    try {
+      // Generate a temporary client keypair for this connection
+      this.remoteSignerClientKey = generateSecretKey();
+      const clientPubkey = getPublicKey(this.remoteSignerClientKey);
+
+      // Get relays based on selected region
+      const relaysToUse = this.nostrConnectRelays[this.nostrConnectRegion()];
+
+      // Generate a random secret for connection validation
+      const secret = this.generateRandomSecret();
+
+      // Build the nostrconnect:// URL
+      const params = new URLSearchParams();
+      relaysToUse.forEach(relay => params.append('relay', relay));
+      params.append('secret', secret);
+      params.append('name', 'Nostria');
+      params.append('url', 'https://nostria.app');
+      // Request common permissions
+      params.append('perms', 'sign_event:0,sign_event:1,sign_event:3,sign_event:4,sign_event:6,sign_event:7,sign_event:9734,sign_event:9735,sign_event:10002,sign_event:30023,nip04_encrypt,nip04_decrypt,nip44_encrypt,nip44_decrypt');
+
+      const nostrconnectUrl = `nostrconnect://${clientPubkey}?${params.toString()}`;
+      this.nostrConnectQrUrl.set(nostrconnectUrl);
+
+      // Render the QR code
+      this.renderNostrConnectQR(nostrconnectUrl);
+
+      // Start listening for the connect response
+      this.startListeningForNostrConnectResponse(clientPubkey, relaysToUse, secret);
+    } catch (error) {
+      this.logger.error('Failed to generate nostrconnect QR:', error);
+      this.nostrConnectError.set('Failed to generate connection QR code');
+    }
+  }
+
+  private generateRandomSecret(): string {
+    const array = new Uint8Array(16);
+    crypto.getRandomValues(array);
+    return Array.from(array).map(b => b.toString(16).padStart(2, '0')).join('').substring(0, 16);
+  }
+
+  private renderNostrConnectQR(data: string): void {
+    const canvas = this.nostrConnectCanvas?.nativeElement;
+    if (!canvas) {
+      this.logger.error('Canvas element not found for QR code');
+      return;
+    }
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      this.logger.error('Could not get canvas context');
+      return;
+    }
+
+    try {
+      // Dynamic import to avoid issues
+      import('qr').then(({ default: encodeQR }) => {
+        // Generate QR code as 2D boolean array
+        const qrMatrix = encodeQR(data, 'raw', {
+          ecc: 'medium',
+          border: 2,
+        });
+
+        const qrSize = qrMatrix.length;
+        const canvasSize = 256;
+        canvas.width = canvasSize;
+        canvas.height = canvasSize;
+
+        // Calculate cell size
+        const cellSize = Math.floor(canvasSize / qrSize);
+        const offset = Math.floor((canvasSize - qrSize * cellSize) / 2);
+
+        // Clear canvas with white background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Draw QR code
+        ctx.fillStyle = '#000000';
+        for (let y = 0; y < qrSize; y++) {
+          for (let x = 0; x < qrSize; x++) {
+            if (qrMatrix[y][x]) {
+              ctx.fillRect(offset + x * cellSize, offset + y * cellSize, cellSize, cellSize);
+            }
+          }
+        }
+      });
+    } catch (error) {
+      this.logger.error('Error generating QR code:', error);
+    }
+  }
+
+  private startListeningForNostrConnectResponse(clientPubkey: string, relays: string[], expectedSecret: string): void {
+    this.nostrConnectError.set(null);
+    this.remoteSignerPool = new SimplePool();
+
+    // Subscribe to kind 24133 responses addressed to our client pubkey
+    this.remoteSignerPool.subscribeMany(
+      relays,
+      {
+        kinds: [24133],
+        '#p': [clientPubkey],
+      },
+      {
+        onevent: async (event) => {
+          try {
+            if (!this.remoteSignerClientKey) return;
+
+            // Try to decrypt the response
+            let response: { id?: string; result?: string; error?: string };
+
+            // Try NIP-04 decryption first (check for ?iv= pattern)
+            if (event.content.includes('?iv=')) {
+              const decrypted = await nip04.decrypt(
+                bytesToHex(this.remoteSignerClientKey),
+                event.pubkey,
+                event.content
+              );
+              response = JSON.parse(decrypted);
+            } else {
+              // Try NIP-44 decryption
+              try {
+                const conversationKey = nip44.getConversationKey(this.remoteSignerClientKey, event.pubkey);
+                const decrypted = nip44.decrypt(event.content, conversationKey);
+                response = JSON.parse(decrypted);
+              } catch {
+                // Couldn't decrypt, skip this event
+                return;
+              }
+            }
+
+            // Validate the secret
+            if (response.result === expectedSecret || response.result === 'ack') {
+              // Connection successful! Show loading indicator while creating account
+              this.isWaitingForRemoteSigner.set(true);
+              const remoteSignerPubkey = event.pubkey;
+
+              this.logger.info('Remote signer connected:', { pubkey: remoteSignerPubkey });
+
+              // Create the account with bunker configuration
+              await this.createRemoteSignerAccount(remoteSignerPubkey, relays, expectedSecret);
+
+              this.cleanupNostrConnectConnection();
+            } else if (response.error) {
+              this.logger.error('Remote signer error:', response.error);
+              this.nostrConnectError.set(`Remote signer error: ${response.error}`);
+            }
+          } catch (error) {
+            this.logger.error('Error processing remote signer response:', error);
+          }
+        },
+      }
+    );
+
+    // Set a timeout for the connection (2 minutes)
+    setTimeout(() => {
+      if (this.remoteSignerPool && this.currentStep() === LoginStep.NOSTR_CONNECT) {
+        this.nostrConnectError.set('Connection timed out. Please try again.');
+        this.cleanupNostrConnectConnection();
+        // Re-generate QR code
+        this.generateNostrConnectQR();
+      }
+    }, 120000);
+  }
+
+  private async createRemoteSignerAccount(remoteSignerPubkey: string, relays: string[], secret: string): Promise<void> {
+    try {
+      // Create bunker pointer
+      const bunker: BunkerPointer = {
+        pubkey: remoteSignerPubkey,
+        relays: relays,
+        secret: secret,
+      };
+
+      // Create new user account with remote signing
+      const newUser: NostrUser = {
+        pubkey: remoteSignerPubkey,
+        name: 'Remote Signer',
+        source: 'remote',
+        lastUsed: Date.now(),
+        hasActivated: true,
+        bunker: bunker,
+        preferredSigningMethod: 'remote',
+      };
+
+      await this.nostrService.setAccount(newUser);
+      this.logger.info('Remote signer account created successfully');
+
+      // Check if the user has relay configuration
+      const hasRelays = await this.nostrService.hasRelayConfiguration(remoteSignerPubkey);
+
+      if (!hasRelays) {
+        this.logger.info('No relay configuration found, showing setup dialog');
+        await this.showSetupNewAccountDialog(newUser);
+      }
+
+      this.snackBar.open('Successfully connected with remote signer!', 'Dismiss', {
+        duration: 3000,
+      });
+
+      this.closeDialog();
+    } catch (error) {
+      this.logger.error('Failed to create remote signer account:', error);
+      this.nostrConnectError.set('Failed to create account. Please try again.');
+    }
+  }
+
+  setNostrConnectRegion(region: 'eu' | 'us'): void {
+    this.nostrConnectRegion.set(region);
+    // Regenerate QR code with new relays
+    this.generateNostrConnectQR();
   }
 
   scanQrCodeForNostrConnect(): void {
