@@ -100,10 +100,10 @@ export class EncryptionService {
     }
     this.bunkerQueue = [];
     this.isProcessingQueue = false;
-    
+
     // Also clear the cached bunker to force a fresh connection on next use
     this.clearCachedBunker();
-    
+
     if (queueLength > 0) {
       this.logger.debug(`Cleared ${queueLength} pending bunker operations and cached bunker`);
     }
@@ -117,7 +117,7 @@ export class EncryptionService {
     const queueSize = this.bunkerQueue.length;
     const isProcessing = this.isProcessingQueue;
     this.logger.info(`Queueing bunker operation, queue size: ${queueSize}, isProcessing: ${isProcessing}`);
-    
+
     return new Promise<T>((resolve, reject) => {
       this.bunkerQueue.push({
         operation,
@@ -189,7 +189,7 @@ export class EncryptionService {
    */
   private async getBunkerSigner(account: NostrUser): Promise<BunkerSigner> {
     this.logger.info('getBunkerSigner called');
-    
+
     // If we have a cached signer for this account, wait for connection to be ready
     if (this.cachedBunkerSigner && this.cachedBunkerPubkey === account.pubkey) {
       if (this.bunkerConnectionPromise) {
@@ -239,7 +239,7 @@ export class EncryptionService {
     this.cachedBunkerPool = new SimplePool();
     this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, account.bunker, { pool: this.cachedBunkerPool });
     this.cachedBunkerPubkey = account.pubkey;
-    
+
     // Ping the bunker to establish connection and wait for it
     // Store the promise so other callers can wait for it
     this.logger.info('Pinging bunker to establish connection...');
@@ -258,9 +258,9 @@ export class EncryptionService {
         this.bunkerConnectionPromise = undefined;
       }
     })();
-    
+
     await this.bunkerConnectionPromise;
-    
+
     this.logger.info('BunkerSigner created and connected successfully');
 
     return this.cachedBunkerSigner;
