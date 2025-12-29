@@ -1294,7 +1294,7 @@ export class FeedService {
       const immediatePubkeysArray = Array.from(immediatePubkeys);
 
       // Try to fetch immediately, even if account relay isn't ready
-      const accountRelayInitialized = this.accountRelay.isInitialized();
+      let accountRelayInitialized = this.accountRelay.isInitialized();
       console.log(`⚡ [For You] Account relay initialized: ${accountRelayInitialized}`);
 
       if (accountRelayInitialized) {
@@ -1307,7 +1307,40 @@ export class FeedService {
         await this.fetchEventsFromDiscoveryRelay(immediatePubkeysArray, feedData);
       }
 
-      console.log(`⚡ [For You] Events after fetch: ${feedData.events().length}`);
+      console.log(`⚡ [For You] Events after initial fetch: ${feedData.events().length}`);
+
+      // If we got 0 events and account relay wasn't ready, wait and retry
+      if (feedData.events().length === 0 && !accountRelayInitialized) {
+        console.log('⚡ [For You] No events yet, waiting for account relay...');
+
+        // Wait up to 3 seconds for account relay to be ready
+        const MAX_WAIT_MS = 3000;
+        const POLL_INTERVAL_MS = 200;
+        let waitedMs = 0;
+
+        while (!this.accountRelay.isInitialized() && waitedMs < MAX_WAIT_MS) {
+          await new Promise(resolve => setTimeout(resolve, POLL_INTERVAL_MS));
+          waitedMs += POLL_INTERVAL_MS;
+        }
+
+        accountRelayInitialized = this.accountRelay.isInitialized();
+        console.log(`⚡ [For You] After waiting ${waitedMs}ms, account relay initialized: ${accountRelayInitialized}`);
+
+        if (accountRelayInitialized) {
+          // Also check if following list has updated
+          const updatedFollowingList = this.accountState.followingList();
+          if (updatedFollowingList.length > limitedFollowing.length) {
+            console.log(`⚡ [For You] Following list updated: ${limitedFollowing.length} -> ${updatedFollowingList.length}`);
+            // Add more following to our pubkeys
+            updatedFollowingList.slice(-20).forEach(pubkey => immediatePubkeys.add(pubkey));
+          }
+
+          const retryPubkeys = Array.from(immediatePubkeys);
+          console.log(`⚡ [For You] Retrying fetch with ${retryPubkeys.length} pubkeys`);
+          await this.fetchEventsFromUsersFast(retryPubkeys, feedData);
+          console.log(`⚡ [For You] Events after retry: ${feedData.events().length}`);
+        }
+      }
 
       // PHASE 1: Background enhancement - add starter pack users and algorithm recommendations
       // This runs in background and doesn't block the UI
@@ -1325,18 +1358,31 @@ export class FeedService {
    * Fetch events using discovery relay as fallback when account relay isn't ready
    */
   private async fetchEventsFromDiscoveryRelay(pubkeys: string[], feedData: FeedItem) {
-    const BATCH_SIZE = 10;
     const TIMEOUT_MS = 3000;
 
     try {
+      console.log(`⚡ [Discovery Relay] Starting fetch for ${pubkeys.length} pubkeys`);
+
+      // Check if discovery relay is initialized
+      const isInitialized = this.discoveryRelay.isInitialized();
+      console.log(`⚡ [Discovery Relay] Initialized: ${isInitialized}`);
+
+      if (!isInitialized) {
+        console.log('⚡ [Discovery Relay] Not initialized, trying to load...');
+        // Try to initialize/load the discovery relay
+        await this.discoveryRelay.load();
+      }
+
       const filter = {
-        authors: pubkeys.slice(0, BATCH_SIZE * 3), // Limit to 30 pubkeys for speed
+        authors: pubkeys.slice(0, 30), // Limit to 30 pubkeys for speed
         kinds: feedData.filter?.kinds || [1],
         limit: 50,
       };
 
+      console.log(`⚡ [Discovery Relay] Filter:`, JSON.stringify(filter));
       this.logger.debug(`⚡ [Discovery Relay] Fetching from ${pubkeys.length} pubkeys`);
       const events = await this.discoveryRelay.getMany(filter, { timeout: TIMEOUT_MS });
+      console.log(`⚡ [Discovery Relay] Got ${events.length} events`);
 
       if (events.length > 0) {
         this.logger.info(`⚡ [Discovery Relay] Got ${events.length} events`);
@@ -1346,6 +1392,7 @@ export class FeedService {
         const validEvents = events.filter(
           (event: Event) => !this.accountState.muted(event) && allowedKinds.has(event.kind)
         );
+        console.log(`⚡ [Discovery Relay] Valid events after filtering: ${validEvents.length}`);
 
         if (validEvents.length > 0) {
           feedData.events.update((currentEvents: Event[]) => {
@@ -1359,8 +1406,11 @@ export class FeedService {
           this.appState.feedHasInitialContent.set(true);
           this.saveCachedEvents(feedData.column.id, feedData.events());
         }
+      } else {
+        console.log('⚡ [Discovery Relay] No events returned');
       }
     } catch (error) {
+      console.error('⚡ [Discovery Relay] Error:', error);
       this.logger.error('Error fetching from discovery relay:', error);
     }
   }
@@ -1370,6 +1420,8 @@ export class FeedService {
    * Runs after initial content is shown to add more diverse content
    */
   private async enhanceForYouFeedInBackground(feedData: FeedItem, isArticlesFeed: boolean) {
+    console.log('🔄 [For You Background] Starting enhancement...');
+
     // Wait for account relay to be ready (but don't block UI)
     const MAX_WAIT_MS = 5000;
     const POLL_INTERVAL_MS = 200;
@@ -1380,10 +1432,15 @@ export class FeedService {
       waitedMs += POLL_INTERVAL_MS;
     }
 
+    console.log(`🔄 [For You Background] Waited ${waitedMs}ms for account relay`);
+
     if (!this.accountRelay.isInitialized()) {
+      console.log('🔄 [For You Background] Account relay not ready, skipping');
       this.logger.warn('Account relay not ready for background enhancement, skipping');
       return;
     }
+
+    console.log('🔄 [For You Background] Account relay ready, fetching additional content...');
 
     try {
       const additionalPubkeys = new Set<string>();
@@ -1394,10 +1451,12 @@ export class FeedService {
         : await this.algorithms.getRecommendedUsers(5);
 
       topEngagedUsers.forEach(user => additionalPubkeys.add(user.pubkey));
+      console.log(`🔄 [For You Background] Added ${topEngagedUsers.length} algorithm-recommended users`);
       this.logger.debug(`[Background] Added ${topEngagedUsers.length} algorithm-recommended users`);
 
       // Fetch starter packs in background (with very short timeout)
       try {
+        console.log('🔄 [For You Background] Fetching starter packs...');
         const starterPackPromise = this.followset.fetchStarterPacks('popular');
         const timeoutPromise = new Promise<null>((resolve) => setTimeout(() => resolve(null), 1500));
         const result = await Promise.race([starterPackPromise, timeoutPromise]);
@@ -1406,18 +1465,30 @@ export class FeedService {
           const popularPack = result.find(pack => pack.dTag === 'popular');
           if (popularPack) {
             popularPack.pubkeys.slice(0, 10).forEach(pubkey => additionalPubkeys.add(pubkey));
+            console.log(`🔄 [For You Background] Added ${Math.min(10, popularPack.pubkeys.length)} starter pack users`);
             this.logger.debug(`[Background] Added ${Math.min(10, popularPack.pubkeys.length)} starter pack users`);
           }
+        } else {
+          console.log('🔄 [For You Background] No starter pack result or timed out');
         }
       } catch (error) {
+        console.log('🔄 [For You Background] Starter pack fetch failed:', error);
         this.logger.debug('[Background] Starter pack fetch failed, continuing without');
       }
 
+      console.log(`🔄 [For You Background] Total additional pubkeys: ${additionalPubkeys.size}`);
+
       if (additionalPubkeys.size > 0) {
         const pubkeysArray = Array.from(additionalPubkeys);
-        this.fetchEventsFromUsersBackground(pubkeysArray, feedData);
+        console.log(`🔄 [For You Background] Fetching events from ${pubkeysArray.length} additional users...`);
+        // Use fast fetch instead of slow outbox model for better performance
+        await this.fetchEventsFromUsersFast(pubkeysArray, feedData);
+        console.log(`🔄 [For You Background] Completed, total events: ${feedData.events().length}`);
+      } else {
+        console.log('🔄 [For You Background] No additional pubkeys to fetch');
       }
     } catch (error) {
+      console.error('🔄 [For You Background] Error:', error);
       this.logger.error('Error in background enhancement:', error);
     }
   }
