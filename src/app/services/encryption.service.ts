@@ -20,6 +20,13 @@ export interface DecryptionResult {
   algorithm: 'nip04' | 'nip44';
 }
 
+// Queue item for bunker operations
+interface BunkerQueueItem<T> {
+  operation: () => Promise<T>;
+  resolve: (value: T) => void;
+  reject: (error: Error) => void;
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -36,17 +43,24 @@ export class EncryptionService {
   private cachedBunkerPool?: SimplePool;
   private cachedBunkerPubkey?: string;
 
+  // Queue for bunker operations to prevent overwhelming the remote signer
+  private bunkerQueue: BunkerQueueItem<unknown>[] = [];
+  private isProcessingQueue = false;
+  private readonly BUNKER_OPERATION_DELAY_MS = 100; // Delay between operations
+
   constructor() {
     // Clear cached bunker when account changes
     effect(() => {
       const account = this.accountState.account();
       const pubkey = account?.pubkey;
 
-      // If account changed, clear the cached bunker
-      if (pubkey !== this.cachedBunkerPubkey) {
+      // If account changed, clear the cached bunker and queue
+      if (this.cachedBunkerPubkey !== undefined && pubkey !== this.cachedBunkerPubkey) {
+        this.logger.debug('Account changed, clearing bunker cache and queue');
         this.clearCachedBunker();
-        this.cachedBunkerPubkey = pubkey;
+        this.clearBunkerQueue();
       }
+      this.cachedBunkerPubkey = pubkey;
     });
   }
 
@@ -70,6 +84,74 @@ export class EncryptionService {
       }
       this.cachedBunkerPool = undefined;
     }
+    // Note: Don't clear the queue here - only clearBunkerQueue() should do that
+  }
+
+  /**
+   * Clear the bunker operation queue (public method for reset scenarios)
+   */
+  clearBunkerQueue(): void {
+    const queueLength = this.bunkerQueue.length;
+    // Reject all pending operations
+    for (const item of this.bunkerQueue) {
+      item.reject(new Error('Queue cleared'));
+    }
+    this.bunkerQueue = [];
+    this.isProcessingQueue = false;
+    if (queueLength > 0) {
+      this.logger.debug(`Cleared ${queueLength} pending bunker operations`);
+    }
+  }
+
+  /**
+   * Queue a bunker operation to be processed sequentially
+   * This prevents overwhelming the remote signer with concurrent requests
+   */
+  private queueBunkerOperation<T>(operation: () => Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      this.bunkerQueue.push({
+        operation,
+        resolve: resolve as (value: unknown) => void,
+        reject
+      });
+      // Start processing if not already running (fire and forget)
+      if (!this.isProcessingQueue) {
+        this.processQueue();
+      }
+    });
+  }
+
+  /**
+   * Process queued bunker operations one at a time
+   */
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue) {
+      return;
+    }
+
+    this.isProcessingQueue = true;
+    this.logger.debug(`Starting bunker queue processing, ${this.bunkerQueue.length} items pending`);
+
+    while (this.bunkerQueue.length > 0) {
+      const item = this.bunkerQueue.shift();
+      if (!item) continue;
+
+      try {
+        const result = await item.operation();
+        item.resolve(result);
+      } catch (error) {
+        this.logger.debug('Bunker operation failed:', error);
+        item.reject(error instanceof Error ? error : new Error(String(error)));
+      }
+
+      // Small delay between operations to prevent overwhelming the bunker
+      if (this.bunkerQueue.length > 0) {
+        await new Promise(resolve => setTimeout(resolve, this.BUNKER_OPERATION_DELAY_MS));
+      }
+    }
+
+    this.logger.debug('Bunker queue processing complete');
+    this.isProcessingQueue = false;
   }
 
   /**
@@ -91,8 +173,23 @@ export class EncryptionService {
       return this.cachedBunkerSigner;
     }
 
-    // Clear any existing cached bunker
-    this.clearCachedBunker();
+    // Clear any existing cached bunker (but not the queue)
+    if (this.cachedBunkerSigner) {
+      try {
+        this.cachedBunkerSigner.close();
+      } catch {
+        // Ignore errors when closing
+      }
+      this.cachedBunkerSigner = undefined;
+    }
+    if (this.cachedBunkerPool) {
+      try {
+        this.cachedBunkerPool.close([]);
+      } catch {
+        // Ignore errors when closing
+      }
+      this.cachedBunkerPool = undefined;
+    }
 
     if (!account.bunker) {
       throw new Error('No bunker configuration found for remote account');
@@ -109,6 +206,7 @@ export class EncryptionService {
       throw new Error('No client key available for remote signing');
     }
 
+    this.logger.debug('Creating new BunkerSigner for remote account');
     this.cachedBunkerPool = new SimplePool();
     this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, account.bunker, { pool: this.cachedBunkerPool });
     this.cachedBunkerPubkey = account.pubkey;
@@ -249,8 +347,11 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
+        this.logger.debug('Using remote signer for NIP-44 decryption');
         const bunker = this.getBunkerSigner(account);
-        return await bunker.nip44Decrypt(senderPubkey, ciphertext);
+        const result = await bunker.nip44Decrypt(senderPubkey, ciphertext);
+        this.logger.debug('NIP-44 decryption via remote signer succeeded');
+        return result;
       }
 
       if (!account?.privkey) {
