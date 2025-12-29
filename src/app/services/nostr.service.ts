@@ -77,6 +77,14 @@ export interface NostrUser {
    * If true, mnemonic contains JSON-stringified EncryptedData
    */
   isMnemonicEncrypted?: boolean;
+
+  /**
+   * Preferred signing method when both local key and remote signer are available
+   * - 'local': Use local private key for signing
+   * - 'remote': Use remote signer (bunker) for signing
+   * Defaults to 'local' if not specified
+   */
+  preferredSigningMethod?: 'local' | 'remote';
 }
 
 export interface UserMetadataWithPubkey extends NostrEventData<UserMetadata> {
@@ -746,7 +754,14 @@ export class NostrService implements NostriaService {
     // Get the pubkey - either from the event if it's an Event, or use current user's
     const eventPubkey = ('pubkey' in event) ? event.pubkey : currentUser.pubkey;
 
-    switch (currentUser?.source) {
+    // Determine the effective signing method
+    // If source is 'nsec' but user has bunker configured and prefers remote signing, use remote
+    let effectiveSource = currentUser.source;
+    if (currentUser.source === 'nsec' && currentUser.bunker && currentUser.preferredSigningMethod === 'remote') {
+      effectiveSource = 'remote';
+    }
+
+    switch (effectiveSource) {
       case 'external': {
         // Create the event object with pubkey
         // Order fields so content appears before tags for easier user review when signing
