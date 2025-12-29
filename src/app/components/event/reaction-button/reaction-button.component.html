@@ -1,28 +1,70 @@
-@if (view() === 'icon') {
-  <button
-    mat-icon-button
-    [class.active]="!!likeReaction()"
-    [class.liked]="!!likeReaction()"
-    [disabled]="isLoadingReactions()"
-    (click)="toggleLike(); $event.stopPropagation()"
-    matTooltip="Like"
-    matTooltipPosition="below"
-  >
-    <mat-icon>favorite</mat-icon>
-  </button>
-} @else {
-  <button
-    mat-button
-    [class.active]="!!likeReaction()"
-    [class.liked]="!!likeReaction()"
-    [disabled]="isLoadingReactions()"
-    (click)="toggleLike(); $event.stopPropagation()"
-  >
-    <mat-icon>favorite</mat-icon>
-    @if (!!likeReaction()) {
-      Unlike
+<div class="reaction-container">
+  @if (view() === 'icon') {
+  <!-- Icon view with reaction picker -->
+  <button mat-icon-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
+    [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenu" (click)="$event.stopPropagation()"
+    matTooltip="React" matTooltipPosition="below">
+    @if (userReaction()) {
+    <span class="emoji-icon">{{ userReaction()!.event.content === '+' ? '❤️' : userReaction()!.event.content }}</span>
     } @else {
-      Like
+    <mat-icon>favorite_border</mat-icon>
     }
   </button>
-}
+
+  <!-- Reaction picker menu -->
+  <mat-menu #reactionMenu="matMenu" class="reaction-picker-menu">
+    <div class="reaction-picker" tabindex="-1" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
+      @for (emoji of quickReactions; track emoji) {
+      <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+        (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+        {{ emoji }}
+      </button>
+      }
+    </div>
+  </mat-menu>
+  } @else {
+  <!-- Full view with reaction groups -->
+  <div class="reaction-full-view">
+    <!-- Main reaction button -->
+    <button mat-button [class.active]="!!userReaction()" [class.reacted]="!!userReaction()"
+      [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenuFull" (click)="$event.stopPropagation()">
+      @if (userReaction()) {
+      <span class="emoji-icon">{{ userReaction()!.event.content === '+' ? '❤️' : userReaction()!.event.content }}</span>
+      Unlike
+      } @else {
+      <ng-container>
+        <mat-icon>favorite_border</mat-icon>
+        Like
+      </ng-container>
+      }
+    </button>
+
+    <!-- Reaction picker menu -->
+    <mat-menu #reactionMenuFull="matMenu" class="reaction-picker-menu">
+      <div class="reaction-picker" tabindex="-1" (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()">
+        @for (emoji of quickReactions; track emoji) {
+        <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
+          (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
+          {{ emoji }}
+        </button>
+        }
+      </div>
+    </mat-menu>
+  </div>
+
+  <!-- Display reaction groups as chips -->
+  @if (reactionGroups().length > 0) {
+  <div class="reaction-chips">
+    @for (group of reactionGroups(); track group.content) {
+    <button class="reaction-chip" [class.user-reacted]="group.userReacted"
+      [matTooltip]="group.count + ' reaction' + (group.count > 1 ? 's' : '')"
+      (click)="addReaction(group.content); $event.stopPropagation()">
+      <span class="reaction-emoji">{{ group.content === '+' ? '❤️' : group.content }}</span>
+      <span class="reaction-chip-count">{{ group.count }}</span>
+    </button>
+    }
+  </div>
+  }
+  }
+</div>

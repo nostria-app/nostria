@@ -16,6 +16,13 @@ import { LayoutService } from '../../../services/layout.service';
 
 type ViewMode = 'icon' | 'full';
 
+interface ReactionGroup {
+  content: string;
+  count: number;
+  pubkeys: string[];
+  userReacted: boolean;
+}
+
 @Component({
   selector: 'app-reaction-button',
   imports: [
@@ -24,7 +31,7 @@ type ViewMode = 'icon' | 'full';
     MatTooltipModule,
     MatMenuModule,
     MatProgressSpinnerModule
-],
+  ],
   templateUrl: './reaction-button.component.html',
   styleUrls: ['./reaction-button.component.scss'],
 })
@@ -37,6 +44,9 @@ export class ReactionButtonComponent {
 
   isLoadingReactions = signal<boolean>(false);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
+
+  // Quick reactions for the picker
+  readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
 
   event = input.required<Event>();
   view = input<ViewMode>('icon');
@@ -54,6 +64,46 @@ export class ReactionButtonComponent {
 
   likes = computed<NostrRecord[]>(() => {
     return this.reactions().events.filter(r => r.event.content === '+');
+  });
+
+  // Computed: Get user's reaction (any emoji they reacted with)
+  userReaction = computed<NostrRecord | undefined>(() => {
+    const event = this.event();
+    if (!event) return;
+    return this.reactions().events.find(
+      r => r.event.pubkey === this.accountState.pubkey()
+    );
+  });
+
+  // Computed: Group reactions by emoji
+  reactionGroups = computed<ReactionGroup[]>(() => {
+    const currentUserPubkey = this.accountState.pubkey();
+    const groups = new Map<string, ReactionGroup>();
+
+    for (const record of this.reactions().events) {
+      const emoji = record.event.content;
+      if (!groups.has(emoji)) {
+        groups.set(emoji, {
+          content: emoji,
+          count: 0,
+          pubkeys: [],
+          userReacted: false
+        });
+      }
+      const group = groups.get(emoji)!;
+      group.count++;
+      group.pubkeys.push(record.event.pubkey);
+      if (record.event.pubkey === currentUserPubkey) {
+        group.userReacted = true;
+      }
+    }
+
+    return Array.from(groups.values());
+  });
+
+  // Computed: Total reaction count
+  totalReactionCount = computed<number>(() => {
+    return this.reactions().events.length;
   });
 
   constructor() {
@@ -82,6 +132,73 @@ export class ReactionButtonComponent {
         this.loadReactions();
       });
     });
+  }
+
+  async addReaction(emoji: string) {
+    // Check if user is logged in
+    const userPubkey = this.accountState.pubkey();
+    const currentAccount = this.accountState.account();
+    if (!userPubkey || currentAccount?.source === 'preview') {
+      await this.layout.showLoginDialog();
+      return;
+    }
+
+    const event = this.event();
+    if (!event) return;
+
+    // Check if user already reacted with this emoji
+    const existingReaction = this.reactions().events.find(
+      r => r.event.pubkey === userPubkey && r.event.content === emoji
+    );
+
+    if (existingReaction) {
+      // Remove the reaction
+      await this.removeReaction(existingReaction, emoji);
+    } else {
+      // Check if user has any existing reaction (to remove it first if different)
+      const userExistingReaction = this.userReaction();
+      if (userExistingReaction) {
+        // Remove old reaction first
+        await this.removeReaction(userExistingReaction, userExistingReaction.event.content);
+      }
+      // Add new reaction
+      await this.addNewReaction(emoji);
+    }
+  }
+
+  private async removeReaction(reaction: NostrRecord, emoji: string) {
+    this.isLoadingReactions.set(true);
+    try {
+      this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, false);
+      const success = await this.reactionService.deleteReaction(reaction.event);
+      if (!success) {
+        this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, true);
+        this.snackBar.open('Failed to remove reaction. Please try again.', 'Dismiss', { duration: 3000 });
+      }
+      // Reload reactions in the background to sync
+      setTimeout(() => this.loadReactions(true), 2000);
+    } finally {
+      this.isLoadingReactions.set(false);
+    }
+  }
+
+  private async addNewReaction(emoji: string) {
+    const event = this.event();
+    if (!event) return;
+
+    this.isLoadingReactions.set(true);
+    try {
+      this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, true);
+      const success = await this.reactionService.addReaction(emoji, event);
+      if (!success) {
+        this.updateReactionsOptimistically(this.accountState.pubkey()!, emoji, false);
+        this.snackBar.open('Failed to add reaction. Please try again.', 'Dismiss', { duration: 3000 });
+      }
+      // Reload reactions in the background to sync
+      setTimeout(() => this.loadReactions(true), 2000);
+    } finally {
+      this.isLoadingReactions.set(false);
+    }
   }
 
   async toggleLike() {

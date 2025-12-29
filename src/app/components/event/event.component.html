@@ -457,17 +457,12 @@
         }
       </div>
 
-      <!-- Like -->
+      <!-- Like/Reactions -->
       <div class="reaction-group">
-        <button mat-icon-button class="like-button" [ngClass]="{
-                  active: !!likeReaction(),
-                  liked: !!likeReaction()
-                }" [disabled]="isLoadingReactions()" (click)="toggleLike($event)">
-          <mat-icon>favorite</mat-icon>
-        </button>
+        <app-reaction-button [event]="targetItem.event" [reactionsFromParent]="reactions()"></app-reaction-button>
         @if (!compact()) {
         <button mat-button class="count-button" (click)="openReactionsDialog('likes'); $event.stopPropagation()">
-          <span>{{ likes().length }}</span>
+          <span>{{ reactions().events.length }}</span>
         </button>
         }
       </div>
