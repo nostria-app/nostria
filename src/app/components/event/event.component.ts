@@ -19,6 +19,7 @@ import { LocalSettingsService } from '../../services/local-settings.service';
 import { RepostService } from '../../services/repost.service';
 import { ContentComponent } from '../content/content.component';
 import { ReplyButtonComponent } from './reply-button/reply-button.component';
+import { ReactionButtonComponent } from './reaction-button/reaction-button.component';
 import { EventHeaderComponent } from './header/header.component';
 import { CommonModule } from '@angular/common';
 import { AccountStateService } from '../../services/account-state.service';
@@ -63,6 +64,7 @@ type EventCardAppearance = 'card' | 'plain';
     TimestampPipe,
     CommonModule,
     ReplyButtonComponent,
+    ReactionButtonComponent,
     RepostButtonComponent,
     EventHeaderComponent,
     ContentComponent,

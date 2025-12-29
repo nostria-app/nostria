@@ -3,12 +3,117 @@
 
 :host {
   text-align: center; // to look good in mobile view
+  display: inline-block;
 }
 
-.liked {
-  color: #e91e63; // Pink/red color for liked state
+.reaction-container {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.reacted {
+  color: #e91e63; // Pink/red color for reacted state
 }
 
 .active {
   opacity: 1;
+}
+
+.emoji-icon {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.reaction-count {
+  font-size: 0.75rem;
+  color: var(--mat-sys-on-surface-variant);
+  min-width: 16px;
+}
+
+// Full view styles
+.reaction-full-view {
+  position: relative;
+  display: inline-block;
+}
+
+// Reaction chips for displaying grouped reactions
+.reaction-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+
+  .reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: var(--mat-sys-surface-container-highest);
+    border: 1px solid var(--mat-sys-outline-variant);
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.875rem;
+
+    &:hover {
+      background: var(--mat-sys-surface-container-high);
+      border-color: var(--mat-sys-primary);
+    }
+
+    &.user-reacted {
+      background: var(--mat-sys-primary-container);
+      border-color: var(--mat-sys-primary);
+    }
+
+    .reaction-emoji {
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .reaction-chip-count {
+      font-size: 0.75rem;
+      color: var(--mat-sys-on-surface-variant);
+
+      .user-reacted & {
+        color: var(--mat-sys-on-primary-container);
+      }
+    }
+  }
+}
+
+// Reaction picker inside mat-menu
+::ng-deep .reaction-picker-menu {
+  .mat-mdc-menu-content {
+    padding: 0;
+  }
+}
+
+.reaction-picker {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+
+  .emoji-button {
+    width: 36px;
+    height: 36px;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s ease, transform 0.15s ease;
+    padding: 0;
+    min-width: 36px;
+
+    &:hover {
+      background: var(--mat-sys-surface-container-highest);
+      transform: scale(1.15);
+    }
+
+    &.selected {
+      background: var(--mat-sys-primary-container);
+    }
+  }
 }
