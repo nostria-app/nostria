@@ -1,4 +1,4 @@
-import { Injectable, inject, Injector } from '@angular/core';
+import { Injectable, inject, Injector, effect } from '@angular/core';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { EncryptionPermissionService } from './encryption-permission.service';
@@ -8,7 +8,7 @@ import { v2 } from 'nostr-tools/nip44';
 import { BunkerSigner } from 'nostr-tools/nip46';
 import { SimplePool } from 'nostr-tools';
 import { UtilitiesService } from './utilities.service';
-import { NostrService } from './nostr.service';
+import { NostrService, NostrUser } from './nostr.service';
 
 export interface EncryptionResult {
   content: string;
@@ -31,6 +31,47 @@ export class EncryptionService {
   private injector = inject(Injector);
   private nostrService?: NostrService; // Lazy inject to avoid circular dependency
 
+  // Cached BunkerSigner instance to avoid creating new connections for each operation
+  private cachedBunkerSigner?: BunkerSigner;
+  private cachedBunkerPool?: SimplePool;
+  private cachedBunkerPubkey?: string;
+
+  constructor() {
+    // Clear cached bunker when account changes
+    effect(() => {
+      const account = this.accountState.account();
+      const pubkey = account?.pubkey;
+
+      // If account changed, clear the cached bunker
+      if (pubkey !== this.cachedBunkerPubkey) {
+        this.clearCachedBunker();
+        this.cachedBunkerPubkey = pubkey;
+      }
+    });
+  }
+
+  /**
+   * Clear cached bunker signer and pool
+   */
+  private clearCachedBunker(): void {
+    if (this.cachedBunkerSigner) {
+      try {
+        this.cachedBunkerSigner.close();
+      } catch {
+        // Ignore errors when closing
+      }
+      this.cachedBunkerSigner = undefined;
+    }
+    if (this.cachedBunkerPool) {
+      try {
+        this.cachedBunkerPool.close([]);
+      } catch {
+        // Ignore errors when closing
+      }
+      this.cachedBunkerPool = undefined;
+    }
+  }
+
   /**
    * Get NostrService lazily to avoid circular dependency
    */
@@ -42,9 +83,17 @@ export class EncryptionService {
   }
 
   /**
-   * Create a BunkerSigner for remote signer accounts
+   * Get or create a cached BunkerSigner for remote signer accounts
    */
-  private createBunkerSigner(account: any): BunkerSigner {
+  private getBunkerSigner(account: NostrUser): BunkerSigner {
+    // Return cached signer if it exists and matches the account
+    if (this.cachedBunkerSigner && this.cachedBunkerPubkey === account.pubkey) {
+      return this.cachedBunkerSigner;
+    }
+
+    // Clear any existing cached bunker
+    this.clearCachedBunker();
+
     if (!account.bunker) {
       throw new Error('No bunker configuration found for remote account');
     }
@@ -60,8 +109,11 @@ export class EncryptionService {
       throw new Error('No client key available for remote signing');
     }
 
-    const pool = new SimplePool();
-    return BunkerSigner.fromBunker(clientKey, account.bunker, { pool });
+    this.cachedBunkerPool = new SimplePool();
+    this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, account.bunker, { pool: this.cachedBunkerPool });
+    this.cachedBunkerPubkey = account.pubkey;
+
+    return this.cachedBunkerSigner;
   }
 
   /**
@@ -79,12 +131,8 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
-        const bunker = this.createBunkerSigner(account);
-        try {
-          return await bunker.nip04Encrypt(recipientPubkey, plaintext);
-        } finally {
-          await bunker.close();
-        }
+        const bunker = this.getBunkerSigner(account);
+        return await bunker.nip04Encrypt(recipientPubkey, plaintext);
       }
 
       if (!account?.privkey) {
@@ -122,12 +170,8 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
-        const bunker = this.createBunkerSigner(account);
-        try {
-          return await bunker.nip04Decrypt(pubkey, ciphertext);
-        } finally {
-          await bunker.close();
-        }
+        const bunker = this.getBunkerSigner(account);
+        return await bunker.nip04Decrypt(pubkey, ciphertext);
       }
 
       if (!account?.privkey) {
@@ -145,9 +189,9 @@ export class EncryptionService {
       // Use nostr-tools nip04 decryption
       const privateKeyBytes = hexToBytes(decryptedPrivkey);
       return await nip04.decrypt(privateKeyBytes, pubkey, ciphertext);
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error('Failed to decrypt with NIP-04', error);
-      throw new Error('Decryption failed: ', error.message);
+      throw new Error('Decryption failed');
     }
   }
   /**
@@ -164,12 +208,8 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
-        const bunker = this.createBunkerSigner(account);
-        try {
-          return await bunker.nip44Encrypt(recipientPubkey, plaintext);
-        } finally {
-          await bunker.close();
-        }
+        const bunker = this.getBunkerSigner(account);
+        return await bunker.nip44Encrypt(recipientPubkey, plaintext);
       }
 
       if (!account?.privkey) {
@@ -209,12 +249,8 @@ export class EncryptionService {
 
       // Check if we have a remote signer account
       if (account?.source === 'remote') {
-        const bunker = this.createBunkerSigner(account);
-        try {
-          return await bunker.nip44Decrypt(senderPubkey, ciphertext);
-        } finally {
-          await bunker.close();
-        }
+        const bunker = this.getBunkerSigner(account);
+        return await bunker.nip44Decrypt(senderPubkey, ciphertext);
       }
 
       if (!account?.privkey) {
@@ -234,9 +270,9 @@ export class EncryptionService {
       const conversationKey = v2.utils.getConversationKey(privateKeyBytes, senderPubkey);
 
       return v2.decrypt(ciphertext, conversationKey);
-    } catch (error: any) {
+    } catch (error) {
       this.logger.error('Failed to decrypt with NIP-44', error);
-      throw new Error('Decryption failed: ', error.message);
+      throw new Error('Decryption failed');
     }
   }
 
@@ -262,11 +298,15 @@ export class EncryptionService {
 
   /**
    * Auto-detect encryption type and decrypt accordingly
+   * @param ciphertext The encrypted content
+   * @param senderPubkey The sender's public key
+   * @param _event (unused) The event containing the message - kept for API compatibility
    */
   async autoDecrypt(
     ciphertext: string,
     senderPubkey: string,
-    event: Event
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    _event?: Event
   ): Promise<DecryptionResult> {
     // First check if the content appears to be encrypted
     if (!this.isContentEncrypted(ciphertext)) {
