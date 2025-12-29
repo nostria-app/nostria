@@ -260,6 +260,9 @@ export class VideoControlsComponent implements OnDestroy {
     const video = this.videoElement();
     if (!video) return;
 
+    // Don't intercept keyboard shortcuts with modifier keys (Ctrl+F, Cmd+F, etc.)
+    if (event.ctrlKey || event.altKey || event.metaKey) return;
+
     // Only handle keys if our component or video is focused
     const activeElement = document.activeElement;
     const isInputFocused = activeElement?.tagName === 'INPUT' || activeElement?.tagName === 'TEXTAREA';
