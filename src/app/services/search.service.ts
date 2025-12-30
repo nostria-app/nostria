@@ -144,21 +144,9 @@ export class SearchService {
                     }
                   } catch (err) {
                     console.error('Failed to parse RSS:', err);
-                    // Fallback to adding as single item
-                    const startIndex = this.mediaPlayer.media().length;
-                    this.mediaPlayer.enque({
-                      artist: 'Unknown',
-                      artwork: '',
-                      title: result.url,
-                      source: result.url,
-                      type: 'Podcast',
-                    });
-                    this.layout.toast('Added to queue');
-
-                    if (result.playImmediately) {
-                      this.mediaPlayer.index = startIndex;
-                      this.mediaPlayer.start();
-                    }
+                    // Show error message instead of adding invalid URL to queue
+                    const errorMessage = err instanceof Error ? err.message : 'Failed to load RSS feed';
+                    this.layout.toast(errorMessage);
                   }
                 }
               });
