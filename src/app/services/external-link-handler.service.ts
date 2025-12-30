@@ -20,6 +20,7 @@ export class ExternalLinkHandlerService {
 
   // Default domains that should be handled internally
   private readonly DEFAULT_DOMAINS = [
+    'nostria.app',
     'primal.net',
     'yakihonne.com',
     'njump.me',
@@ -110,6 +111,15 @@ export class ExternalLinkHandlerService {
 
       this.logger.info('[ExternalLinkHandler] Handling link internally:', url);
 
+      // Check for nostria.app-specific routes first
+      // These are app-specific paths that don't follow the nostr identifier pattern
+      const nostriaRoute = this.handleNostriaAppRoute(path);
+      if (nostriaRoute) {
+        this.logger.info('[ExternalLinkHandler] Navigating to nostria route:', nostriaRoute);
+        this.router.navigate(nostriaRoute);
+        return true;
+      }
+
       // Try to extract nostr identifiers from the path
       // Different clients use different URL patterns:
       // - primal.net: /e/nevent..., /p/nprofile...
@@ -156,6 +166,94 @@ export class ExternalLinkHandlerService {
       this.logger.error('[ExternalLinkHandler] Error handling link:', error);
       return false;
     }
+  }
+
+  /**
+   * Handle nostria.app-specific routes that don't follow the nostr identifier pattern
+   * Returns the route segments array if matched, null otherwise
+   */
+  private handleNostriaAppRoute(path: string): string[] | null {
+    // Music song: /music/song/:pubkey/:identifier
+    const musicSongMatch = path.match(/^\/music\/song\/([a-zA-Z0-9]+)\/(.+)$/i);
+    if (musicSongMatch) {
+      const [, pubkey, identifier] = musicSongMatch;
+      return ['/music/song', pubkey, identifier];
+    }
+
+    // Music artist: /music/artist/:pubkey
+    const musicArtistMatch = path.match(/^\/music\/artist\/([a-zA-Z0-9]+)$/i);
+    if (musicArtistMatch) {
+      const [, pubkey] = musicArtistMatch;
+      return ['/music/artist', pubkey];
+    }
+
+    // Music playlist: /music/playlist/:pubkey/:identifier
+    const musicPlaylistMatch = path.match(/^\/music\/playlist\/([a-zA-Z0-9]+)\/(.+)$/i);
+    if (musicPlaylistMatch) {
+      const [, pubkey, identifier] = musicPlaylistMatch;
+      return ['/music/playlist', pubkey, identifier];
+    }
+
+    // Stream: /stream/:encodedEvent
+    const streamMatch = path.match(/^\/stream\/([a-zA-Z0-9]+)$/i);
+    if (streamMatch) {
+      const [, encodedEvent] = streamMatch;
+      return ['/stream', encodedEvent];
+    }
+
+    // Badge details: /b/:id or /badges/details/:id
+    const badgeMatch = path.match(/^\/(b|badges\/details)\/([a-zA-Z0-9]+)$/i);
+    if (badgeMatch) {
+      const [, , id] = badgeMatch;
+      return ['/b', id];
+    }
+
+    // Username profile: /u/:username
+    const usernameMatch = path.match(/^\/u\/([^/]+)$/i);
+    if (usernameMatch) {
+      const [, username] = usernameMatch;
+      return ['/u', username];
+    }
+
+    // Messages: /messages/:id
+    const messagesMatch = path.match(/^\/messages\/([^/]+)$/i);
+    if (messagesMatch) {
+      const [, id] = messagesMatch;
+      return ['/messages', id];
+    }
+
+    // Simple static routes that can be navigated directly
+    const staticRoutes = [
+      '/music',
+      '/music/offline',
+      '/music/liked',
+      '/music/liked-playlists',
+      '/music/tracks',
+      '/music/playlists',
+      '/music/terms',
+      '/articles',
+      '/streams',
+      '/meetings',
+      '/discover',
+      '/discover/media',
+      '/notifications',
+      '/search',
+      '/settings',
+      '/accounts',
+      '/credentials',
+      '/messages',
+      '/badges',
+      '/relays',
+      '/terms',
+      '/about',
+    ];
+
+    const normalizedPath = path.toLowerCase().replace(/\/$/, ''); // Remove trailing slash
+    if (staticRoutes.includes(normalizedPath)) {
+      return [normalizedPath];
+    }
+
+    return null;
   }
 
   /**
