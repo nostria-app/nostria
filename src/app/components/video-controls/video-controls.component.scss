@@ -7,7 +7,7 @@
   // Always pass through mouse events to parent - only controls-bar should capture
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.15s ease;
   z-index: 10;
 
   &.visible,

@@ -4,17 +4,17 @@
     [loop]="loop()" playsinline (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
     (click)="togglePlay()"></video>
 
-  <!-- Controls overlay -->
-  <div class="controls-overlay" [class.visible]="controlsVisible() || paused()">
+  <!-- Center play button - always visible when paused -->
+  @if (paused()) {
+  <button class="center-play-btn" (click)="togglePlay()" aria-label="Play">
+    <mat-icon>play_arrow</mat-icon>
+  </button>
+  }
+
+  <!-- Controls overlay - only visible on hover while playing -->
+  <div class="controls-overlay" [class.visible]="controlsVisible() && !paused()">
     <!-- Gradient background -->
     <div class="gradient-bottom"></div>
-
-    <!-- Center play button when paused -->
-    @if (paused()) {
-    <button class="center-play-btn" (click)="togglePlay()" aria-label="Play">
-      <mat-icon>play_arrow</mat-icon>
-    </button>
-    }
 
     <!-- Bottom controls bar -->
     <div class="controls-bar">
@@ -91,4 +91,11 @@
       </div>
     </div>
   </div>
+
+  <!-- Center pause button overlay when playing and hovering -->
+  @if (!paused() && controlsVisible()) {
+  <button class="center-pause-btn" (click)="togglePlay()" aria-label="Pause">
+    <mat-icon>pause</mat-icon>
+  </button>
+  }
 </div>
