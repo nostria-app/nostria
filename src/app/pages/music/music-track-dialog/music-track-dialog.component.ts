@@ -26,6 +26,7 @@ import { MusicTermsDialogComponent } from '../music-terms-dialog/music-terms-dia
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { MentionAutocompleteComponent, MentionAutocompleteConfig, MentionSelection } from '../../../components/mention-autocomplete/mention-autocomplete.component';
 import { MentionInputService } from '../../../services/mention-input.service';
+import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
 
 const MUSIC_KIND = 36787;
 
@@ -59,6 +60,7 @@ interface ZapSplit {
     ReactiveFormsModule,
     MusicTermsDialogComponent,
     MentionAutocompleteComponent,
+    RelayPublishSelectorComponent,
   ],
   templateUrl: './music-track-dialog.component.html',
   styleUrl: './music-track-dialog.component.scss',
@@ -110,6 +112,9 @@ export class MusicTrackDialogComponent {
   // Add split form state
   isAddingSplit = signal(false);
   newSplitInput = signal('');
+
+  // Relay publishing configuration
+  relayPublishConfig = signal<RelayPublishConfig | null>(null);
 
   // Mention autocomplete for @ search
   private mentionInputService = inject(MentionInputService);
@@ -1165,8 +1170,31 @@ export class MusicTrackDialogComponent {
         return;
       }
 
-      // Publish to relays
-      const relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      // Publish to relays - use custom selection if available, otherwise fall back to preferred relays
+      let relayUrls: string[] = [];
+      const config = this.relayPublishConfig();
+      if (config) {
+        // Build unique list from selected config
+        const relaySet = new Set<string>();
+        for (const relay of config.accountRelays) {
+          relaySet.add(relay);
+        }
+        if (config.includeMusicRelays) {
+          for (const relay of config.musicRelays) {
+            relaySet.add(relay);
+          }
+        }
+        for (const relay of config.customRelays) {
+          relaySet.add(relay);
+        }
+        relayUrls = Array.from(relaySet);
+      }
+
+      // Fallback to preferred relays if no custom selection
+      if (relayUrls.length === 0) {
+        relayUrls = this.relaysService.getOptimalRelays(this.utilities.preferredRelays);
+      }
+
       if (relayUrls.length === 0) {
         this.snackBar.open('No relays available', 'Close', { duration: 3000 });
         return;
@@ -1207,5 +1235,9 @@ export class MusicTrackDialogComponent {
   navigateToMediaSettings(): void {
     this.cancel();
     this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
+  }
+
+  onRelayConfigChanged(config: RelayPublishConfig): void {
+    this.relayPublishConfig.set(config);
   }
 }

@@ -31,6 +31,7 @@ export interface CreateMusicPlaylistData {
   image?: string;
   isPublic: boolean;
   isCollaborative: boolean;
+  customRelays?: string[]; // Optional custom relay URLs to publish to
 }
 
 @Injectable({
@@ -215,8 +216,12 @@ export class MusicPlaylistService {
       return null;
     }
 
-    // Publish to relays
-    await this.accountRelay.publish(signedEvent);
+    // Publish to relays - use custom relays if provided, otherwise use account relays
+    if (data.customRelays && data.customRelays.length > 0) {
+      await this.pool.publish(data.customRelays, signedEvent);
+    } else {
+      await this.accountRelay.publish(signedEvent);
+    }
 
     const playlist = this.parsePlaylistEvent(signedEvent);
     if (playlist) {
@@ -370,8 +375,12 @@ export class MusicPlaylistService {
       return null;
     }
 
-    // Publish to relays
-    await this.accountRelay.publish(signedEvent);
+    // Publish to relays - use custom relays if provided, otherwise use account relays
+    if (updates.customRelays && updates.customRelays.length > 0) {
+      await this.pool.publish(updates.customRelays, signedEvent);
+    } else {
+      await this.accountRelay.publish(signedEvent);
+    }
 
     // Update local state
     const updatedPlaylist = this.parsePlaylistEvent(signedEvent);

@@ -20,6 +20,7 @@ import { UtilitiesService } from '../../../services/utilities.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { NostrRecord } from '../../../interfaces';
+import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
 
 const MUSIC_KIND = 36787;
 
@@ -52,6 +53,7 @@ export interface TrackItem {
     MatDialogModule,
     DragDropModule,
     ReactiveFormsModule,
+    RelayPublishSelectorComponent,
   ],
   templateUrl: './edit-music-playlist-dialog.component.html',
   styleUrl: './edit-music-playlist-dialog.component.scss',
@@ -82,6 +84,9 @@ export class EditMusicPlaylistDialogComponent {
   previousCoverImage = signal<string | null>(null); // Track original image for cleanup
   tracks = signal<TrackItem[]>([]);
   loadingTracks = signal(true);
+
+  // Relay publishing configuration
+  relayPublishConfig = signal<RelayPublishConfig | null>(null);
 
   private artistProfiles = new Map<string, NostrRecord>();
 
@@ -464,6 +469,25 @@ export class EditMusicPlaylistDialogComponent {
       const formValue = this.playlistForm.value;
       const newTrackRefs = this.tracks().map(t => t.ref);
 
+      // Build custom relay list from config
+      let customRelays: string[] | undefined;
+      const config = this.relayPublishConfig();
+      if (config) {
+        const relaySet = new Set<string>();
+        for (const relay of config.accountRelays) {
+          relaySet.add(relay);
+        }
+        if (config.includeMusicRelays) {
+          for (const relay of config.musicRelays) {
+            relaySet.add(relay);
+          }
+        }
+        for (const relay of config.customRelays) {
+          relaySet.add(relay);
+        }
+        customRelays = Array.from(relaySet);
+      }
+
       const result = await this.musicPlaylistService.updatePlaylist(this.data().playlist.id, {
         title: formValue.title,
         description: formValue.description || undefined,
@@ -471,6 +495,7 @@ export class EditMusicPlaylistDialogComponent {
         isPublic: formValue.isPublic,
         isCollaborative: formValue.isCollaborative,
         trackRefs: newTrackRefs,
+        customRelays: customRelays && customRelays.length > 0 ? customRelays : undefined,
       });
 
       if (result) {
@@ -499,5 +524,9 @@ export class EditMusicPlaylistDialogComponent {
   navigateToMediaSettings(): void {
     this.onCancel();
     this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
+  }
+
+  onRelayConfigChanged(config: RelayPublishConfig): void {
+    this.relayPublishConfig.set(config);
   }
 }

@@ -89,6 +89,9 @@
           <mat-slide-toggle formControlName="isCollaborative"></mat-slide-toggle>
         </div>
       </div>
+
+      <!-- Relay Publishing Selection -->
+      <app-relay-publish-selector (relaysChanged)="onRelayConfigChanged($event)" />
     </form>
   </div>
 

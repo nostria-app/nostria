@@ -288,6 +288,9 @@
         </div>
       </mat-expansion-panel>
 
+      <!-- Relay Publishing Selection -->
+      <app-relay-publish-selector (relaysChanged)="onRelayConfigChanged($event)" />
+
       <!-- Terms of Service (only for new uploads) -->
       @if (!isEditMode()) {
       <div class="terms-section">
