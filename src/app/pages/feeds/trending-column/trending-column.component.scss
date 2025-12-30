@@ -1,0 +1,289 @@
+.trending-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+
+  .filter-options {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px;
+    flex-shrink: 0;
+
+    .filter-select {
+      flex: 1;
+
+      ::ng-deep {
+        .mat-mdc-form-field-subscript-wrapper {
+          display: none;
+        }
+
+        .mat-mdc-text-field-wrapper {
+          padding: 0 8px;
+        }
+
+        .mat-mdc-form-field-infix {
+          padding-top: 8px;
+          padding-bottom: 8px;
+          min-height: 40px;
+        }
+      }
+    }
+
+    .spinner-container {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+    }
+  }
+
+  .column-items {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  // Loading skeleton styles
+  .column-skeleton-items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .feed-item-skeleton {
+      padding: 16px;
+      background: var(--mat-sys-surface-container);
+      border-radius: 12px;
+
+      .item-header-skeleton {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 12px;
+
+        .avatar-skeleton {
+          width: 40px;
+          height: 40px;
+          border-radius: 50%;
+          background: linear-gradient(90deg,
+              var(--mat-sys-surface-container-high) 25%,
+              var(--mat-sys-surface-container-highest) 50%,
+              var(--mat-sys-surface-container-high) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+        }
+
+        .user-info-skeleton {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+
+          .username-skeleton {
+            width: 120px;
+            height: 14px;
+            border-radius: 4px;
+            background: linear-gradient(90deg,
+                var(--mat-sys-surface-container-high) 25%,
+                var(--mat-sys-surface-container-highest) 50%,
+                var(--mat-sys-surface-container-high) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+          }
+
+          .timestamp-skeleton {
+            width: 80px;
+            height: 12px;
+            border-radius: 4px;
+            background: linear-gradient(90deg,
+                var(--mat-sys-surface-container-high) 25%,
+                var(--mat-sys-surface-container-highest) 50%,
+                var(--mat-sys-surface-container-high) 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+          }
+        }
+      }
+
+      .item-content-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        margin-bottom: 12px;
+
+        .content-line-skeleton {
+          height: 14px;
+          border-radius: 4px;
+          background: linear-gradient(90deg,
+              var(--mat-sys-surface-container-high) 25%,
+              var(--mat-sys-surface-container-highest) 50%,
+              var(--mat-sys-surface-container-high) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+
+          &:nth-child(1) {
+            width: 100%;
+          }
+
+          &:nth-child(2) {
+            width: 90%;
+          }
+
+          &.short {
+            width: 60%;
+          }
+        }
+      }
+
+      .item-actions-skeleton {
+        display: flex;
+        gap: 24px;
+
+        .action-skeleton {
+          width: 32px;
+          height: 24px;
+          border-radius: 4px;
+          background: linear-gradient(90deg,
+              var(--mat-sys-surface-container-high) 25%,
+              var(--mat-sys-surface-container-highest) 50%,
+              var(--mat-sys-surface-container-high) 75%);
+          background-size: 200% 100%;
+          animation: shimmer 1.5s infinite;
+        }
+      }
+    }
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  // Error state
+  .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: var(--mat-sys-error);
+      margin-bottom: 16px;
+    }
+
+    p {
+      color: var(--mat-sys-on-surface-variant);
+      margin: 0 0 16px;
+    }
+
+    button {
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+        margin-right: 8px;
+        color: inherit;
+      }
+    }
+  }
+
+  // Empty state
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    text-align: center;
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+      color: var(--mat-sys-on-surface-variant);
+      margin-bottom: 16px;
+      opacity: 0.6;
+    }
+
+    p {
+      color: var(--mat-sys-on-surface-variant);
+      margin: 0;
+    }
+  }
+
+  // Load more trigger
+  .load-more-trigger {
+    min-height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    .loading-more {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 14px;
+    }
+  }
+
+  // End of feed message
+  .end-of-feed {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 24px;
+    text-align: center;
+    margin-top: 16px;
+    border-top: 1px dashed var(--mat-sys-outline-variant);
+
+    mat-icon {
+      font-size: 36px;
+      width: 36px;
+      height: 36px;
+      color: var(--mat-sys-primary);
+      margin-bottom: 12px;
+    }
+
+    p {
+      color: var(--mat-sys-on-surface);
+      margin: 0 0 8px;
+      font-size: 16px;
+    }
+
+    .end-subtitle {
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 13px;
+    }
+  }
+}
+
+// Dark mode adjustments
+:host-context(.dark) {
+  .trending-column {
+    .column-header {
+      border-bottom-color: rgba(255, 255, 255, 0.12);
+    }
+
+    .filter-options {
+      border-bottom-color: rgba(255, 255, 255, 0.08);
+    }
+  }
+}
