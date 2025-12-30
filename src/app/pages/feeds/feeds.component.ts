@@ -55,6 +55,7 @@ import { RepostService } from '../../services/repost.service';
 import { EventComponent } from '../../components/event/event.component';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
+import { TrendingColumnComponent } from './trending-column/trending-column.component';
 
 // NavLink interface removed because it was unused.
 
@@ -79,6 +80,7 @@ import { ImagePlaceholderService } from '../../services/image-placeholder.servic
     EventComponent,
     NewFeedDialogComponent,
     NewColumnDialogComponent,
+    TrendingColumnComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
@@ -403,6 +405,12 @@ export class FeedsComponent implements OnDestroy {
   feeds = computed(() => this.feedsCollectionService.feeds());
   activeFeed = computed(() => this.feedsCollectionService.activeFeed());
   columns = computed(() => this.feedsCollectionService.getActiveColumns());
+
+  // Check if the active feed is a system feed (cannot be deleted)
+  isSystemFeed = computed(() => {
+    const feed = this.activeFeed();
+    return feed?.isSystem ?? false;
+  });
 
   // Signals for state management
   visibleColumnIndex = signal(0);

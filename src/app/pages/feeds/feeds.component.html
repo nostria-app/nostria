@@ -60,11 +60,11 @@
           </button>
 
           <mat-menu #feedManagementMenu="matMenu">
-            <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed()">
+            <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed() || isSystemFeed()">
               <mat-icon>edit</mat-icon>
               <span>Edit Feed</span>
             </button>
-            <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed()">
+            <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed() || isSystemFeed()">
               <mat-icon>delete</mat-icon>
               <span>Delete Feed</span>
             </button>
@@ -125,7 +125,8 @@
 
         <!-- Feed Content with Individual Scrolling -->
         <div class="column-content">
-          <!-- Feed Header (Inside scrollable content) -->
+          <!-- Feed Header (Inside scrollable content) - hidden for trending columns -->
+          @if (column.source !== 'trending') {
           <div class="column-header">
             <div class="column-header-content">
               @if (isMobileView() && columns().length > 1) {
@@ -198,6 +199,7 @@
               </div>
             </div>
           </div>
+          }
 
           <!-- Floating new posts button -->
           @if (getPendingEventsCount(column.id) > 0) {
@@ -261,6 +263,9 @@
               <span class="loading-text">Loading content...</span>
             </div>
           </div>
+          } @else if (column.source === 'trending') {
+          <!-- Trending column uses dedicated trending component -->
+          <app-trending-column></app-trending-column>
           } @else {
           <div class="column-items">
             @let columnEventsData = columnEvents().get(column.id);

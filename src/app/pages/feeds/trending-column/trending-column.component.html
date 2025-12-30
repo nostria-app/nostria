@@ -1,0 +1,95 @@
+<div class="trending-column">
+  <!-- Filter Options -->
+  <div class="filter-options">
+    <mat-form-field appearance="outline" class="filter-select">
+      <mat-label>Time</mat-label>
+      <mat-select [value]="selectedHours()" (selectionChange)="onHoursChange($event.value)">
+        @for (option of hoursOptions; track option.value) {
+        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="filter-select">
+      <mat-label>Order by</mat-label>
+      <mat-select [value]="selectedOrder()" (selectionChange)="onOrderChange($event.value)">
+        @for (option of orderOptions; track option.value) {
+        <mat-option [value]="option.value">{{ option.label }}</mat-option>
+        }
+      </mat-select>
+    </mat-form-field>
+
+    @if (isRefreshing()) {
+    <div class="spinner-container">
+      <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
+    </div>
+    } @else {
+    <button mat-icon-button (click)="refresh()" matTooltip="Refresh trending">
+      <mat-icon>refresh</mat-icon>
+    </button>
+    }
+  </div>
+
+  <!-- Content Area -->
+  <div class="column-items">
+    @if (isLoading() && !isRefreshing()) {
+    <!-- Loading skeleton -->
+    <div class="column-skeleton-items">
+      @for (item of [1, 2, 3, 4, 5]; track $index) {
+      <div class="feed-item-skeleton">
+        <div class="item-header-skeleton">
+          <div class="avatar-skeleton"></div>
+          <div class="user-info-skeleton">
+            <div class="username-skeleton"></div>
+            <div class="timestamp-skeleton"></div>
+          </div>
+        </div>
+        <div class="item-content-skeleton">
+          <div class="content-line-skeleton"></div>
+          <div class="content-line-skeleton"></div>
+          <div class="content-line-skeleton short"></div>
+        </div>
+        <div class="item-actions-skeleton">
+          <div class="action-skeleton"></div>
+          <div class="action-skeleton"></div>
+          <div class="action-skeleton"></div>
+          <div class="action-skeleton"></div>
+        </div>
+      </div>
+      }
+    </div>
+    } @else if (error()) {
+    <!-- Error state -->
+    <div class="error-state">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-stroked-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Try Again
+      </button>
+    </div>
+    } @else if (hasEvents()) {
+    <!-- Events list - EventComponent loads each event lazily by ID -->
+    @for (eventId of displayedEventIds(); track eventId) {
+    <app-event [id]="eventId"></app-event>
+    }
+
+    <!-- Load more trigger -->
+    @if (hasMore()) {
+    <div #loadMoreTrigger class="load-more-trigger"></div>
+    } @else if (displayedEventIds().length > 0) {
+    <div class="end-of-feed">
+      <mat-icon>celebration</mat-icon>
+      <p>🎉 You've reached the end!</p>
+      <span class="end-subtitle">That's all 200 trending notes. Touch grass or hit refresh!</span>
+    </div>
+    }
+    } @else {
+    <!-- Empty state -->
+    <div class="empty-state">
+      <mat-icon>trending_flat</mat-icon>
+      <p>No trending content found</p>
+    </div>
+    }
+  </div>
+</div>

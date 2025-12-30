@@ -63,7 +63,7 @@ export interface ColumnConfig {
   path?: string;
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
-  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search';
+  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending';
   customUsers?: string[]; // Array of pubkeys for custom user selection
   customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
   customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
@@ -85,6 +85,7 @@ export interface FeedConfig {
   columns: ColumnConfig[];
   createdAt: number;
   updatedAt: number;
+  isSystem?: boolean; // System feeds cannot be deleted
 }
 
 export interface RelayConfig {
@@ -174,6 +175,29 @@ const DEFAULT_FEEDS: FeedConfig[] = [
         type: 'notes',
         kinds: [kinds.ShortTextNote, kinds.Repost],
         source: 'following',
+        relayConfig: 'account',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      },
+    ],
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  },
+  {
+    id: 'default-feed-trending',
+    label: 'Trending',
+    icon: 'trending_up',
+    path: 'trending',
+    description: 'Popular content from across the network',
+    isSystem: true, // Cannot be deleted
+    columns: [
+      {
+        id: 'trending-column',
+        label: '',
+        icon: 'trending_up',
+        type: 'notes',
+        kinds: [kinds.ShortTextNote],
+        source: 'trending',
         relayConfig: 'account',
         createdAt: Date.now(),
         updatedAt: Date.now(),
@@ -560,6 +584,12 @@ export class FeedService {
    * Subscribe to a single column
    */
   private async subscribeToColumn(column: ColumnConfig): Promise<void> {
+    // Skip subscription for trending columns - they use external API, not relay subscriptions
+    if (column.source === 'trending') {
+      this.logger.debug(`Column ${column.id} is a trending column - skipping subscription`);
+      return;
+    }
+
     // Don't subscribe if already subscribed
     if (this.data.has(column.id)) {
       this.logger.warn(`Column ${column.id} is already subscribed`);
@@ -2653,8 +2683,25 @@ export class FeedService {
       } else {
         // storedFeeds exists (could be empty array if user deleted all feeds)
         // Use whatever is stored, even if it's an empty array
+
+        // Auto-add Trending feed if it doesn't exist (for existing users)
+        const trendingFeed = storedFeeds.find(f => f.id === 'default-feed-trending');
+        if (!trendingFeed) {
+          const defaultTrending = DEFAULT_FEEDS.find(f => f.id === 'default-feed-trending');
+          if (defaultTrending) {
+            storedFeeds.push(JSON.parse(JSON.stringify(defaultTrending)));
+            this.logger.info('Auto-added Trending feed for existing user');
+          }
+        }
+
         this._feeds.set(storedFeeds);
         this._feedsLoaded.set(true);
+
+        // Save if we added the Trending feed
+        if (!trendingFeed) {
+          this.saveFeeds();
+        }
+
         this.logger.debug('Loaded feeds from storage for pubkey', pubkey, storedFeeds);
       }
     } catch (error) {
@@ -3020,6 +3067,13 @@ export class FeedService {
    * Remove a feed
    */
   removeFeed(id: string): boolean {
+    // Check if this is a system feed that cannot be deleted
+    const feedToRemove = this._feeds().find(f => f.id === id);
+    if (feedToRemove?.isSystem) {
+      this.logger.warn(`Cannot remove system feed: ${id}`);
+      return false;
+    }
+
     const initialLength = this._feeds().length;
 
     // Unsubscribe from the feed before removing it
