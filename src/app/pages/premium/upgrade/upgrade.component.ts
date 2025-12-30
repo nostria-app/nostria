@@ -41,6 +41,7 @@ interface TierDisplay {
   key: string;
   details: TierDetails;
   pricing: {
+    monthly: PricingDisplay;
     quarterly: PricingDisplay;
     yearly: PricingDisplay;
   };
@@ -95,7 +96,7 @@ export class UpgradeComponent implements OnDestroy {
   isCheckingUsername = signal<boolean>(false);
   tiers = signal<TierDisplay[]>([]);
   selectedTier = signal<TierDisplay | null>(null);
-  selectedPaymentOption = signal<'quarterly' | 'yearly' | null>('yearly');
+  selectedPaymentOption = signal<'monthly' | 'quarterly' | 'yearly' | null>('yearly');
   paymentInvoice = signal<PaymentInvoice | null>(null);
   invoiceExpiresIn = signal<string>('15');
   isGeneratingInvoice = signal<boolean>(false);
@@ -110,8 +111,9 @@ export class UpgradeComponent implements OnDestroy {
   );
   selectedTierTill = computed(() => {
     if (!this.selectedTier() || !this.selectedPaymentOption()) return '';
-    const validTill =
-      Date.now() + 24 * 60 * 60 * 1000 * (this.selectedPaymentOption() === 'quarterly' ? 92 : 365);
+    const paymentOption = this.selectedPaymentOption();
+    const days = paymentOption === 'monthly' ? 31 : paymentOption === 'quarterly' ? 92 : 365;
+    const validTill = Date.now() + 24 * 60 * 60 * 1000 * days;
     const date = new Date(validTill);
     const day = date.getDate().toString().padStart(2, '0');
     const month = date.toLocaleString('en-US', { month: 'long' });
@@ -132,6 +134,7 @@ export class UpgradeComponent implements OnDestroy {
                 key: tier.tier,
                 details: tier,
                 pricing: {
+                  monthly: this.getPricing(tier, 'monthly'),
                   quarterly: this.getPricing(tier, 'quarterly'),
                   yearly: this.getPricing(tier, 'yearly'),
                 },
@@ -441,16 +444,17 @@ export class UpgradeComponent implements OnDestroy {
   }
 
   // Helper for template: get pricing for a tier and billing period
-  getPricing(tier: TierDetails, period: 'quarterly' | 'yearly'): PricingDisplay {
+  getPricing(tier: TierDetails, period: 'monthly' | 'quarterly' | 'yearly'): PricingDisplay {
     const price = tier.pricing?.[period];
     if (!price) return { pricePerMonth: '', totalPrice: '', currency: '', period: '' };
+    const months = period === 'yearly' ? 12 : period === 'quarterly' ? 3 : 1;
     return {
       pricePerMonth: price.priceCents
-        ? (price.priceCents / 100 / (period === 'yearly' ? 12 : 3)).toFixed(2)
+        ? (price.priceCents / 100 / months).toFixed(2)
         : '-',
       totalPrice: price.priceCents ? (price.priceCents / 100).toFixed(2) : '-',
       currency: price.currency || 'USD',
-      period: period === 'yearly' ? '12 months' : '3 months',
+      period: period === 'yearly' ? '12 months' : period === 'quarterly' ? '3 months' : '1 month',
     };
   }
 }
