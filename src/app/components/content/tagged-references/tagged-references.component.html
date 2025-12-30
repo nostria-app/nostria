@@ -36,9 +36,9 @@
       </div>
       } @else {
       <!-- Loaded state -->
-      <a class="article-preview-card" (click)="onArticleClick(article)" (keydown.enter)="onArticleClick(article)"
-        (keydown.space)="onArticleClick(article)" tabindex="0" role="button"
-        [attr.aria-label]="'Open ' + getKindDisplayName(article.kind) + ': ' + getArticleTitle(article)">
+      <a class="article-preview-card" (click)="onArticleClick($event, article)"
+        (keydown.enter)="onArticleClick($event, article)" (keydown.space)="onArticleClick($event, article)" tabindex="0"
+        role="button" [attr.aria-label]="'Open ' + getKindDisplayName(article.kind) + ': ' + getArticleTitle(article)">
         <mat-card>
           <div class="preview-content">
             <div class="thumbnail-container">
