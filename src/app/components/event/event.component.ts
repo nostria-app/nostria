@@ -616,6 +616,12 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             try {
               const eventData = await this.data.getEventById(eventId);
               this.record.set(eventData);
+
+              // After loading the event by ID, check if we need to load interactions
+              // This handles the case where the element was already visible before the event loaded
+              // (e.g., trending posts) - the intersection observer won't re-trigger since the element
+              // was already visible, so we need to manually trigger interaction loading
+              this.checkAndLoadInteractionsIfVisible();
             } catch (error) {
               console.error('Error loading event:', error);
               this.loadingError.set('Failed to load event');
@@ -808,6 +814,55 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     const element = this.elementRef.nativeElement;
     if (element) {
       this.intersectionObserver.observe(element);
+    }
+  }
+
+  /**
+   * Check if the element is currently visible in the viewport and load interactions if needed.
+   * This is used after an event is loaded by ID, since the intersection observer may have
+   * already fired while the element was visible but before the event data was available.
+   */
+  private checkAndLoadInteractionsIfVisible(): void {
+    // Skip if interactions were already loaded
+    if (this.hasLoadedInteractions()) {
+      return;
+    }
+
+    const currentRecord = this.record();
+    if (!currentRecord) {
+      return;
+    }
+
+    const element = this.elementRef.nativeElement;
+    if (!element) {
+      return;
+    }
+
+    // Use getBoundingClientRect to check if element is in viewport
+    const rect = element.getBoundingClientRect();
+    const isVisible = (
+      rect.top < (window.innerHeight || document.documentElement.clientHeight) + 200 && // Add 200px margin like observer
+      rect.bottom > -200 &&
+      rect.left < (window.innerWidth || document.documentElement.clientWidth) &&
+      rect.right > 0
+    );
+
+    if (isVisible) {
+      const currentEventId = currentRecord.event.id;
+      console.log('👁️ [Lazy Load] Event was already visible when loaded:', currentEventId.substring(0, 8));
+
+      this.observedEventId = currentEventId;
+      this.hasLoadedInteractions.set(true);
+
+      // Load interactions for the event
+      if (this.supportsReactions()) {
+        const targetRecordData = this.targetRecord();
+        console.log('🚀 [Lazy Load] Loading interactions for already-visible event:',
+          targetRecordData?.event.id.substring(0, 8), 'kind:', targetRecordData?.event.kind);
+
+        this.loadAllInteractions();
+        this.loadZaps();
+      }
     }
   }
 
