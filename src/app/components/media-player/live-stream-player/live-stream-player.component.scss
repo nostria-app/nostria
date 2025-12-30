@@ -44,9 +44,8 @@
     background: #000;
     display: grid;
     grid-template-columns: 1fr auto;
-    grid-template-rows: auto 1fr auto;
+    grid-template-rows: 1fr auto;
     grid-template-areas:
-      "header header"
       "video chat"
       "info chat";
 
@@ -63,11 +62,6 @@
   &:fullscreen {
     display: flex;
     flex-direction: column;
-
-    .stream-header {
-      flex-shrink: 0;
-      background: var(--mat-sys-surface-container);
-    }
 
     .video-wrapper {
       flex: 1;
@@ -86,7 +80,7 @@
 
     .chat-sidebar {
       position: absolute;
-      top: 64px;
+      top: 0;
       right: 0;
       bottom: 0;
       width: 360px;
@@ -147,6 +141,47 @@
   background: #000;
   width: 100%;
   height: 100%;
+}
+
+// Stream controls overlay - positioned at top right of video
+.stream-controls-overlay {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 8px;
+  z-index: 20;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+
+  &.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .stream-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: rgba(0, 0, 0, 0.6);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border-radius: 8px;
+
+    button {
+      color: white;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+  }
+
+  // When chat is open, adjust position to not overlap
+  .chat-open & {
+    right: 0;
+  }
 }
 
 // Footer mode layout
@@ -420,6 +455,7 @@ app-stream-info-bar {
   align-items: center;
   justify-content: center;
   color: var(--mat-sys-on-surface);
+  position: relative;
 
   &.in-footer {
     position: absolute;
@@ -449,6 +485,15 @@ app-stream-info-bar {
       height: 300px;
       flex-shrink: 0;
     }
+  }
+
+  // Overlay controls for livekit/external
+  .stream-controls-overlay {
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 8px;
+    z-index: 20;
   }
 
   .livekit-content {
