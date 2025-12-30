@@ -15,7 +15,8 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
-import { LocalStorageService } from '../../../services/local-storage.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { SwipeGestureDirective, SwipeEvent } from '../../../directives/swipe-gesture.directive';
 import { ModernPlayerViewComponent } from './modern-player-view/modern-player-view.component';
@@ -25,8 +26,6 @@ import { PlaylistDrawerComponent } from './playlist-drawer/playlist-drawer.compo
 import { nip19 } from 'nostr-tools';
 
 export type PlayerViewType = 'modern' | 'cards' | 'winamp';
-
-const PLAYER_VIEW_STORAGE_KEY = 'nostria-audio-player-view';
 
 @Component({
   selector: 'app-audio-player',
@@ -60,7 +59,8 @@ export class AudioPlayerComponent {
   readonly media = inject(MediaPlayerService);
   readonly layout = inject(LayoutService);
   private router = inject(Router);
-  private localStorage = inject(LocalStorageService);
+  private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
 
   footer = input<boolean>(false);
 
@@ -77,7 +77,10 @@ export class AudioPlayerComponent {
   ];
 
   private loadSavedView(): PlayerViewType {
-    const saved = this.localStorage.getItem(PLAYER_VIEW_STORAGE_KEY);
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return 'modern';
+
+    const saved = this.accountLocalState.getAudioPlayerView(pubkey);
     if (saved && ['modern', 'cards', 'winamp'].includes(saved)) {
       return saved as PlayerViewType;
     }
@@ -86,7 +89,10 @@ export class AudioPlayerComponent {
 
   setView(view: PlayerViewType): void {
     this.currentView.set(view);
-    this.localStorage.setItem(PLAYER_VIEW_STORAGE_KEY, view);
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      this.accountLocalState.setAudioPlayerView(pubkey, view);
+    }
   }
 
   openQueue(): void {

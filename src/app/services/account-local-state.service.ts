@@ -51,6 +51,10 @@ interface AccountLocalState {
   globalEventExpiration?: number | null; // Global expiration time in hours for all events created (null = disabled)
   musicTrackLicense?: string; // Last used license for music tracks
   musicTrackLicenseUrl?: string; // Last used license URL for music tracks (for custom licenses)
+  volumeLevel?: number; // Video volume level (0-1)
+  volumeMuted?: boolean; // Whether video is muted
+  audioPlayerView?: string; // Audio player view preference (modern, cards, winamp)
+  aiDisclaimerSeen?: boolean; // Whether the AI disclaimer dialog has been seen
 }
 
 /**
@@ -735,6 +739,66 @@ export class AccountLocalStateService {
    */
   setMusicTrackLicenseUrl(pubkey: string, url: string | undefined): void {
     this.updateAccountState(pubkey, { musicTrackLicenseUrl: url });
+  }
+
+  /**
+   * Get video volume level for an account
+   */
+  getVolumeLevel(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.volumeLevel ?? 1; // Default to full volume
+  }
+
+  /**
+   * Set video volume level for an account
+   */
+  setVolumeLevel(pubkey: string, volume: number): void {
+    this.updateAccountState(pubkey, { volumeLevel: volume });
+  }
+
+  /**
+   * Get video muted state for an account
+   */
+  getVolumeMuted(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.volumeMuted ?? false;
+  }
+
+  /**
+   * Set video muted state for an account
+   */
+  setVolumeMuted(pubkey: string, muted: boolean): void {
+    this.updateAccountState(pubkey, { volumeMuted: muted });
+  }
+
+  /**
+   * Get audio player view preference for an account
+   */
+  getAudioPlayerView(pubkey: string): string {
+    const state = this.getAccountState(pubkey);
+    return state.audioPlayerView ?? 'modern';
+  }
+
+  /**
+   * Set audio player view preference for an account
+   */
+  setAudioPlayerView(pubkey: string, view: string): void {
+    this.updateAccountState(pubkey, { audioPlayerView: view });
+  }
+
+  /**
+   * Get AI disclaimer seen status for an account
+   */
+  getAiDisclaimerSeen(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.aiDisclaimerSeen ?? false;
+  }
+
+  /**
+   * Set AI disclaimer seen status for an account
+   */
+  setAiDisclaimerSeen(pubkey: string, seen: boolean): void {
+    this.updateAccountState(pubkey, { aiDisclaimerSeen: seen });
   }
 
   /**

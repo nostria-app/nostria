@@ -8,6 +8,8 @@ import { LocalStorageService } from './local-storage.service';
 import { LayoutService } from './layout.service';
 import { WakeLockService } from './wake-lock.service';
 import { OfflineMusicService } from './offline-music.service';
+import { AccountStateService } from './account-state.service';
+import { AccountLocalStateService } from './account-local-state.service';
 
 // YouTube Player API types
 interface YouTubePlayer {
@@ -42,6 +44,8 @@ export class MediaPlayerService implements OnInitialized {
   app = inject(ApplicationService);
   private wakeLockService = inject(WakeLockService);
   private offlineMusicService = inject(OfflineMusicService);
+  private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   media = signal<MediaItem[]>([]);
   audio?: HTMLAudioElement;
   current = signal<MediaItem | undefined>(undefined);
@@ -57,7 +61,6 @@ export class MediaPlayerService implements OnInitialized {
   }
   readonly MEDIA_STORAGE_KEY = 'nostria-media-queue';
   readonly PODCAST_POSITIONS_KEY = 'nostria-podcast-positions';
-  readonly VOLUME_SETTINGS_KEY = 'nostria-volume-settings';
 
   // Cache for YouTube embed URLs
   private _youtubeUrlCache = new Map<string, SafeResourceUrl>();
@@ -668,13 +671,13 @@ export class MediaPlayerService implements OnInitialized {
       videoElement.addEventListener('ended', this.handleMediaEnded);
       videoElement.addEventListener('play', this.handleVideoPlay);
       videoElement.addEventListener('pause', this.handleVideoPause);
-      
+
       // Restore saved volume settings
       this.restoreVolumeSettings(videoElement);
-      
+
       // Listen for volume/mute changes to persist them
       videoElement.addEventListener('volumechange', this.handleVolumeChange);
-      
+
       console.log('Video element registered for current video');
 
       // If we have a current video/HLS item that's waiting for the video element, set it up now
@@ -703,30 +706,23 @@ export class MediaPlayerService implements OnInitialized {
   };
 
   private saveVolumeSettings(volume: number, muted: boolean): void {
-    try {
-      const settings = { volume, muted };
-      localStorage.setItem(this.VOLUME_SETTINGS_KEY, JSON.stringify(settings));
-    } catch (e) {
-      console.warn('Failed to save volume settings:', e);
-    }
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    this.accountLocalState.setVolumeLevel(pubkey, volume);
+    this.accountLocalState.setVolumeMuted(pubkey, muted);
   }
 
   private restoreVolumeSettings(videoElement: HTMLVideoElement): void {
-    try {
-      const stored = localStorage.getItem(this.VOLUME_SETTINGS_KEY);
-      if (stored) {
-        const settings = JSON.parse(stored);
-        if (typeof settings.volume === 'number') {
-          videoElement.volume = Math.max(0, Math.min(1, settings.volume));
-        }
-        if (typeof settings.muted === 'boolean') {
-          videoElement.muted = settings.muted;
-        }
-        console.log('[MediaPlayer] Restored volume settings:', settings);
-      }
-    } catch (e) {
-      console.warn('Failed to restore volume settings:', e);
-    }
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    const volume = this.accountLocalState.getVolumeLevel(pubkey);
+    const muted = this.accountLocalState.getVolumeMuted(pubkey);
+
+    videoElement.volume = Math.max(0, Math.min(1, volume));
+    videoElement.muted = muted;
+    console.log('[MediaPlayer] Restored volume settings:', { volume, muted });
   }
 
   private handleMediaEnded = () => {
@@ -1016,7 +1012,7 @@ export class MediaPlayerService implements OnInitialized {
         this.hlsInstance.loadSource(url);
         this.hlsInstance.attachMedia(videoElement);
 
-        this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, async (_event: unknown, data: { levels: Array<{ height?: number; bitrate?: number }> }) => {
+        this.hlsInstance.on(Hls.Events.MANIFEST_PARSED, async (_event: unknown, data: { levels: { height?: number; bitrate?: number }[] }) => {
           console.log('HLS manifest parsed, starting playback');
 
           // Extract quality levels

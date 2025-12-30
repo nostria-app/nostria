@@ -11,6 +11,7 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { firstValueFrom } from 'rxjs';
 import type { NostrRecord } from '../../../interfaces';
 import { AccountStateService } from '../../../services/account-state.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 import { DataService } from '../../../services/data.service';
 import { NostrService } from '../../../services/nostr.service';
 import {
@@ -52,6 +53,7 @@ import { CustomDialogService } from '../../../services/custom-dialog.service';
 export class EventMenuComponent {
   layout = inject(LayoutService);
   accountState = inject(AccountStateService);
+  accountLocalState = inject(AccountLocalStateService);
   profileState = inject(ProfileStateService);
   dialog = inject(MatDialog);
   customDialog = inject(CustomDialogService);
@@ -171,14 +173,17 @@ export class EventMenuComponent {
     }
 
     // 2. Check if disclaimer seen
-    const disclaimerSeen = localStorage.getItem('aiDisclaimerSeen');
+    const pubkey = this.accountState.pubkey();
+    const disclaimerSeen = pubkey ? this.accountLocalState.getAiDisclaimerSeen(pubkey) : false;
     if (!disclaimerSeen) {
       const dialogRef = this.dialog.open(AiInfoDialogComponent);
       const result = await firstValueFrom(dialogRef.afterClosed());
       if (!result) {
         return false; // User cancelled or declined
       }
-      localStorage.setItem('aiDisclaimerSeen', 'true');
+      if (pubkey) {
+        this.accountLocalState.setAiDisclaimerSeen(pubkey, true);
+      }
     }
 
     // 3. Show loading dialog
