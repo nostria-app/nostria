@@ -4,375 +4,332 @@
   <div class="stepper-container">
     <div class="step-indicator-container">
       @for (i of [0, 1, 2, 3]; track i) {
-        <div
-          class="step-indicator"
-          [class.active]="currentStep() >= i"
-          [class.completed]="stepComplete()[i]"
-        >
-          <div class="step-circle">
-            @if (stepComplete()[i]) {
-              <mat-icon>check</mat-icon>
-            } @else {
-              {{ i + 1 }}
-            }
-          </div>
-          <div class="step-label">{{ getStepLabel(i) }}</div>
+      <div class="step-indicator" [class.active]="currentStep() >= i" [class.completed]="stepComplete()[i]">
+        <div class="step-circle">
+          @if (stepComplete()[i]) {
+          <mat-icon>check</mat-icon>
+          } @else {
+          {{ i + 1 }}
+          }
         </div>
-        @if (i < 3) {
-          <div class="step-connector" [class.active]="currentStep() > i"></div>
+        <div class="step-label">{{ getStepLabel(i) }}</div>
+      </div>
+      @if (i < 3) { <div class="step-connector" [class.active]="currentStep() > i">
+    </div>
+    }
+    }
+  </div>
+
+  <!-- Step 1: Username Selection -->
+  @if (currentStep() === 0) {
+  <div class="step-content username-step">
+    <h2>Choose Your Premium Username</h2>
+    <p class="step-description">
+      Your premium username will be uniquely yours across the Nostr network.
+    </p>
+
+    <form [formGroup]="usernameFormGroup">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Username</mat-label>
+        <input matInput formControlName="username" placeholder="Choose a username" autocomplete="off" />
+        <mat-icon matPrefix>alternate_email</mat-icon>
+        @if (isCheckingUsername()) {
+        <mat-spinner matSuffix diameter="20"></mat-spinner>
+        } @else if (usernameFormGroup.valid) {
+        <mat-icon matSuffix color="primary" matTooltip="Username is available">check_circle</mat-icon>
+        } @else {
+        <mat-icon matSuffix color="warn" matTooltip="Username already taken">error</mat-icon>
         }
+
+        @if (usernameFormGroup.get('username')?.hasError('required')) {
+        <mat-error> Username is required </mat-error>
+        }
+        @if (usernameFormGroup.get('username')?.hasError('minlength')) {
+        <mat-error> Username must be at least 3 characters </mat-error>
+        }
+        @if (usernameFormGroup.get('username')?.hasError('pattern')) {
+        <mat-error> Username must contain only letters, numbers, and underscores </mat-error>
+        }
+        @if (usernameFormGroup.get('username')?.errors?.['username']) {
+        <mat-error>
+          {{ usernameFormGroup.get('username')?.errors?.['username'] }}
+        </mat-error>
+        }
+      </mat-form-field>
+
+      <div class="username-info">
+        <mat-icon color="primary">info</mat-icon>
+        <p>
+          Your username must be at least 3 characters and can only contain letters, numbers, and
+          underscores.
+        </p>
+      </div>
+
+      @if (usernameFormGroup.valid) {
+      @if ((usernameFormGroup.get('username')?.value)!.length > 0) {
+      <div class="username-preview">
+        <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
+        <span class="domain-part">&#64;nostria.app</span>
+      </div>
+
+      <div class="username-preview">
+        <span class="domain-part">https://nostria.app/u/</span>
+        <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
+      </div>
+      }
+      } @else {
+      <div class="username-preview">
+        <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
+        <span class="domain-part">&nbsp;not available</span>
+      </div>
+      }
+    </form>
+
+    <div class="step-actions">
+      <button mat-flat-button color="primary" [disabled]="!usernameFormGroup.valid" (click)="nextStep()">
+        Next
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- Step 2: Payment Plan -->
+  @if (currentStep() === 1) {
+  <div class="step-content payment-plan-step">
+    <h2>Select Your Premium Plan</h2>
+    <p class="step-description">Choose a plan that works best for you.</p>
+
+    <div class="tier-options">
+      @for (tier of tiers(); track tier.key) {
+      <mat-card class="tier-option-card" [class.selected]="selectedTier()?.key === tier.key"
+        (click)="selectedTier.set(tier)">
+        <mat-card-header>
+          <mat-card-title>{{ tier.details.name }}</mat-card-title>
+        </mat-card-header>
+        <mat-card-content class="fill-card-content">
+          <ul class="feature-list">
+            @for (feature of getFeatureDescriptions(tier); track $index) {
+            <li>{{ feature }}</li>
+            }
+          </ul>
+          <div class="pricing-options">
+            <div class="payment-option-cards">
+              <mat-card class="payment-option-card" [class.selected]="
+                        selectedTier()?.key === tier.key && selectedPaymentOption() === 'monthly'
+                      ">
+                <label>
+                  <input type="radio" name="paymentOption-{{ tier.key }}" value="monthly" [checked]="
+                            selectedTier()?.key === tier.key &&
+                            selectedPaymentOption() === 'monthly'
+                          " (change)="selectedTier.set(tier); selectedPaymentOption.set('monthly')" />
+                  <div class="payment-option-content">
+                    <span class="pricing-label">Pay Monthly</span>
+                    <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.monthly.totalPrice
+                        }}</span>
+                      {{ tier.pricing.monthly.currency }}</span>
+                    <span class="pricing-detail">Billed every {{ tier.pricing.monthly.period }}</span>
+                  </div>
+                </label>
+              </mat-card>
+              <mat-card class="payment-option-card" [class.selected]="
+                        selectedTier()?.key === tier.key && selectedPaymentOption() === 'quarterly'
+                      ">
+                <label>
+                  <input type="radio" name="paymentOption-{{ tier.key }}" value="quarterly" [checked]="
+                            selectedTier()?.key === tier.key &&
+                            selectedPaymentOption() === 'quarterly'
+                          " (change)="selectedTier.set(tier); selectedPaymentOption.set('quarterly')" />
+                  <div class="payment-option-content">
+                    <span class="pricing-label">Pay Quarterly</span>
+                    <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.quarterly.totalPrice
+                        }}</span>
+                      {{ tier.pricing.quarterly.currency }} &bull; ${{
+                      tier.pricing.quarterly.pricePerMonth
+                      }}/mo</span>
+                    <span class="pricing-detail">Billed every {{ tier.pricing.quarterly.period }}</span>
+                  </div>
+                </label>
+              </mat-card>
+              <mat-card class="payment-option-card" [class.selected]="
+                        selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'
+                      ">
+                <label>
+                  <input type="radio" name="paymentOption-{{ tier.key }}" value="yearly" [checked]="
+                            selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'
+                          " (change)="selectedTier.set(tier); selectedPaymentOption.set('yearly')" />
+                  <div class="payment-option-content">
+                    <span class="pricing-label">Pay Yearly</span>
+                    <span class="pricing-detail"><span class="price-amount">${{ tier.pricing.yearly.totalPrice }}</span>
+                      {{ tier.pricing.yearly.currency }} &bull; ${{
+                      tier.pricing.yearly.pricePerMonth
+                      }}/mo</span>
+                    <span class="pricing-detail">Billed every {{ tier.pricing.yearly.period }}</span>
+                    <span class="best-value-tag">Best Value</span>
+                  </div>
+                </label>
+              </mat-card>
+            </div>
+          </div>
+        </mat-card-content>
+      </mat-card>
       }
     </div>
 
-    <!-- Step 1: Username Selection -->
-    @if (currentStep() === 0) {
-      <div class="step-content username-step">
-        <h2>Choose Your Premium Username</h2>
-        <p class="step-description">
-          Your premium username will be uniquely yours across the Nostr network.
+    @if (
+    selectedTier() &&
+    selectedPaymentOption() &&
+    getPricing(selectedTier()!.details, selectedPaymentOption()!)
+    ) {
+    <div class="payment-summary">
+      <h3>Order Summary</h3>
+      <div class="summary-row">
+        <span>{{ selectedTier()?.details?.name }} (valid till {{ selectedTierTill() }})</span>
+        <span>{{ (selectedPrice().priceCents || 0) / 100 }} {{ selectedPrice().currency }}</span>
+      </div>
+    </div>
+    }
+
+    <div class="step-actions">
+      <button mat-button (click)="prevStep()">Back</button>
+      <button mat-flat-button color="primary" [disabled]="!selectedTier() || !selectedPaymentOption()"
+        (click)="nextStep()">
+        Continue to Payment
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- Step 3: Bitcoin Lightning Payment -->
+  @if (currentStep() === 2) {
+  <div class="step-content payment-step">
+    <h2>Complete Your Payment</h2>
+    <p class="step-description">
+      Pay using Bitcoin Lightning Network to activate your premium account.
+    </p>
+
+    @if (isGeneratingInvoice()) {
+    <div class="loading-container">
+      <mat-spinner color="primary" diameter="50"></mat-spinner>
+      <p>Generating Lightning invoice...</p>
+    </div>
+    } @else if (paymentInvoice()) {
+    <div class="lightning-invoice">
+      @if (paymentInvoice()?.status === 'pending') {
+      <div class="qr-container">
+        <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{
+                    paymentInvoice()?.invoice
+                  }}&bgcolor=ffffff" alt="Lightning QR Code" class="qr-code" />
+        @if (isPaymentCompleted()) {
+        <div class="payment-check-overlay">
+          <div class="payment-success">
+            <mat-icon>check_circle</mat-icon>
+            <span>Payment Received!</span>
+          </div>
+        </div>
+        }
+      </div>
+
+      <div class="invoice-details">
+        <p class="invoice-instruction">
+          Scan the QR code or copy the payment request below to pay with your Lightning
+          wallet
         </p>
 
-        <form [formGroup]="usernameFormGroup">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Username</mat-label>
-            <input
-              matInput
-              formControlName="username"
-              placeholder="Choose a username"
-              autocomplete="off"
-            />
-            <mat-icon matPrefix>alternate_email</mat-icon>
-            @if (isCheckingUsername()) {
-              <mat-spinner matSuffix diameter="20"></mat-spinner>
-            } @else if (usernameFormGroup.valid) {
-              <mat-icon matSuffix color="primary" matTooltip="Username is available"
-                >check_circle</mat-icon
-              >
-            } @else {
-              <mat-icon matSuffix color="warn" matTooltip="Username already taken">error</mat-icon>
-            }
+        <div class="invoice-request">
+          <div class="invoice-text">
+            {{ paymentInvoice()?.invoice?.substring(0, 30) }}...{{
+            paymentInvoice()?.invoice?.substring((paymentInvoice()?.invoice)!.length - 20)
+            }}
+          </div>
+          <button mat-icon-button color="primary" (click)="copyToClipboard(paymentInvoice()?.invoice || '')">
+            <mat-icon>content_copy</mat-icon>
+          </button>
+        </div>
 
-            @if (usernameFormGroup.get('username')?.hasError('required')) {
-              <mat-error> Username is required </mat-error>
-            }
-            @if (usernameFormGroup.get('username')?.hasError('minlength')) {
-              <mat-error> Username must be at least 3 characters </mat-error>
-            }
-            @if (usernameFormGroup.get('username')?.hasError('pattern')) {
-              <mat-error> Username must contain only letters, numbers, and underscores </mat-error>
-            }
-            @if (usernameFormGroup.get('username')?.errors?.['username']) {
-              <mat-error>
-                {{ usernameFormGroup.get('username')?.errors?.['username'] }}
-              </mat-error>
-            }
-          </mat-form-field>
+        <div class="invoice-expiry">
+          <mat-icon>timer</mat-icon>
+          <span>This invoice expires in {{ invoiceExpiresIn() }} minutes</span>
+        </div>
 
-          <div class="username-info">
-            <mat-icon color="primary">info</mat-icon>
+        <div class="payment-status">
+          @if (!isPaymentCompleted()) {
+          <mat-spinner color="primary" diameter="20"></mat-spinner>
+          }
+          @if (!isPaymentCompleted()) {
+          <span>Waiting for payment...</span>
+          }
+          @if (isPaymentCompleted()) {
+          <mat-icon color="primary">check_circle</mat-icon>
+          }
+          @if (isPaymentCompleted()) {
+          <span>Payment successful!</span>
+          }
+        </div>
+      </div>
+      } @else if (paymentInvoice()?.status === 'expired') {
+      <div class="payment-expired">
+        <mat-icon color="warn">error_outline</mat-icon>
+        <h3>Payment Invoice Expired</h3>
+        <p>The payment invoice has expired. Please generate a new one to continue.</p>
+        <button mat-raised-button color="primary" (click)="generatePaymentInvoice()">
+          Generate New Invoice
+        </button>
+      </div>
+      }
+    </div>
+    }
+
+    <div class="step-actions">
+      <button mat-button (click)="resetPayment()" [disabled]="isPaymentCompleted()">
+        Back
+      </button>
+    </div>
+  </div>
+  }
+
+  <!-- Step 4: Completion -->
+  @if (currentStep() === 3) {
+  <div class="step-content completion-step">
+    <div class="completion-container">
+      <mat-icon class="completion-icon">verified</mat-icon>
+      <h2>Welcome to Nostria Premium!</h2>
+      <p>Your premium account is now active. You can now enjoy all premium features.</p>
+
+      <div class="premium-features">
+        <div class="feature-item">
+          <mat-icon>verified</mat-icon>
+          <div>
+            <h4>Verified Username</h4>
             <p>
-              Your username must be at least 3 characters and can only contain letters, numbers, and
-              underscores.
+              Your username
+              <strong>{{ usernameFormGroup.get('username')?.value }}&#64;nostria.app</strong>
+              is now uniquely yours
             </p>
           </div>
+        </div>
 
-          @if (usernameFormGroup.valid) {
-            @if ((usernameFormGroup.get('username')?.value)!.length > 0) {
-              <div class="username-preview">
-                <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
-                <span class="domain-part">&#64;nostria.app</span>
-              </div>
+        <div class="feature-item">
+          <mat-icon>cloud_done</mat-icon>
+          <div>
+            <h4>2GB Storage</h4>
+            <p>Your storage has been upgraded to 2GB</p>
+          </div>
+        </div>
 
-              <div class="username-preview">
-                <span class="domain-part">https://nostria.app/u/</span>
-                <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
-              </div>
-            }
-          } @else {
-            <div class="username-preview">
-              <span class="username-part">{{ usernameFormGroup.get('username')?.value }}</span>
-              <span class="domain-part">&nbsp;not available</span>
-            </div>
-          }
-        </form>
-
-        <div class="step-actions">
-          <button
-            mat-flat-button
-            color="primary"
-            [disabled]="!usernameFormGroup.valid"
-            (click)="nextStep()"
-          >
-            Next
-          </button>
+        <div class="feature-item">
+          <mat-icon>backup</mat-icon>
+          <div>
+            <h4>Automatic Backups</h4>
+            <p>Your data will be automatically backed up</p>
+          </div>
         </div>
       </div>
-    }
 
-    <!-- Step 2: Payment Plan -->
-    @if (currentStep() === 1) {
-      <div class="step-content payment-plan-step">
-        <h2>Select Your Premium Plan</h2>
-        <p class="step-description">Choose a plan that works best for you.</p>
-
-        <div class="tier-options">
-          @for (tier of tiers(); track tier.key) {
-            <mat-card
-              class="tier-option-card"
-              [class.selected]="selectedTier()?.key === tier.key"
-              (click)="selectedTier.set(tier)"
-            >
-              <mat-card-header>
-                <mat-card-title>{{ tier.details.name }}</mat-card-title>
-              </mat-card-header>
-              <mat-card-content class="fill-card-content">
-                <ul class="feature-list">
-                  @for (feature of getFeatureDescriptions(tier); track $index) {
-                    <li>{{ feature }}</li>
-                  }
-                </ul>
-                <div class="pricing-options">
-                  <div class="payment-option-cards">
-                    <mat-card
-                      class="payment-option-card"
-                      [class.selected]="
-                        selectedTier()?.key === tier.key && selectedPaymentOption() === 'quarterly'
-                      "
-                    >
-                      <label>
-                        <input
-                          type="radio"
-                          name="paymentOption-{{ tier.key }}"
-                          value="quarterly"
-                          [checked]="
-                            selectedTier()?.key === tier.key &&
-                            selectedPaymentOption() === 'quarterly'
-                          "
-                          (change)="selectedTier.set(tier); selectedPaymentOption.set('quarterly')"
-                        />
-                        <div class="payment-option-content">
-                          <span class="pricing-label">Pay Quarterly</span>
-                          <span class="pricing-detail"
-                            ><span class="price-amount"
-                              >${{ tier.pricing.quarterly.totalPrice }}</span
-                            >
-                            {{ tier.pricing.quarterly.currency }} &bull; ${{
-                              tier.pricing.quarterly.pricePerMonth
-                            }}/mo</span
-                          >
-                          <span class="pricing-detail"
-                            >Billed every {{ tier.pricing.quarterly.period }}</span
-                          >
-                        </div>
-                      </label>
-                    </mat-card>
-                    <mat-card
-                      class="payment-option-card"
-                      [class.selected]="
-                        selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'
-                      "
-                    >
-                      <label>
-                        <input
-                          type="radio"
-                          name="paymentOption-{{ tier.key }}"
-                          value="yearly"
-                          [checked]="
-                            selectedTier()?.key === tier.key && selectedPaymentOption() === 'yearly'
-                          "
-                          (change)="selectedTier.set(tier); selectedPaymentOption.set('yearly')"
-                        />
-                        <div class="payment-option-content">
-                          <span class="pricing-label">Pay Yearly</span>
-                          <span class="pricing-detail"
-                            ><span class="price-amount">${{ tier.pricing.yearly.totalPrice }}</span>
-                            {{ tier.pricing.yearly.currency }} &bull; ${{
-                              tier.pricing.yearly.pricePerMonth
-                            }}/mo</span
-                          >
-                          <span class="pricing-detail"
-                            >Billed every {{ tier.pricing.yearly.period }}</span
-                          >
-                          <span class="best-value-tag">Best Value</span>
-                        </div>
-                      </label>
-                    </mat-card>
-                  </div>
-                </div>
-              </mat-card-content>
-            </mat-card>
-          }
-        </div>
-
-        @if (
-          selectedTier() &&
-          selectedPaymentOption() &&
-          getPricing(selectedTier()!.details, selectedPaymentOption()!)
-        ) {
-          <div class="payment-summary">
-            <h3>Order Summary</h3>
-            <div class="summary-row">
-              <span>{{ selectedTier()?.details?.name }} (valid till {{ selectedTierTill() }})</span>
-              <span
-                >{{ (selectedPrice().priceCents || 0) / 100 }} {{ selectedPrice().currency }}</span
-              >
-            </div>
-          </div>
-        }
-
-        <div class="step-actions">
-          <button mat-button (click)="prevStep()">Back</button>
-          <button
-            mat-flat-button
-            color="primary"
-            [disabled]="!selectedTier() || !selectedPaymentOption()"
-            (click)="nextStep()"
-          >
-            Continue to Payment
-          </button>
-        </div>
-      </div>
-    }
-
-    <!-- Step 3: Bitcoin Lightning Payment -->
-    @if (currentStep() === 2) {
-      <div class="step-content payment-step">
-        <h2>Complete Your Payment</h2>
-        <p class="step-description">
-          Pay using Bitcoin Lightning Network to activate your premium account.
-        </p>
-
-        @if (isGeneratingInvoice()) {
-          <div class="loading-container">
-            <mat-spinner color="primary" diameter="50"></mat-spinner>
-            <p>Generating Lightning invoice...</p>
-          </div>
-        } @else if (paymentInvoice()) {
-          <div class="lightning-invoice">
-            @if (paymentInvoice()?.status === 'pending') {
-              <div class="qr-container">
-                <img
-                  src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{
-                    paymentInvoice()?.invoice
-                  }}&bgcolor=ffffff"
-                  alt="Lightning QR Code"
-                  class="qr-code"
-                />
-                @if (isPaymentCompleted()) {
-                  <div class="payment-check-overlay">
-                    <div class="payment-success">
-                      <mat-icon>check_circle</mat-icon>
-                      <span>Payment Received!</span>
-                    </div>
-                  </div>
-                }
-              </div>
-
-              <div class="invoice-details">
-                <p class="invoice-instruction">
-                  Scan the QR code or copy the payment request below to pay with your Lightning
-                  wallet
-                </p>
-
-                <div class="invoice-request">
-                  <div class="invoice-text">
-                    {{ paymentInvoice()?.invoice?.substring(0, 30) }}...{{
-                      paymentInvoice()?.invoice?.substring((paymentInvoice()?.invoice)!.length - 20)
-                    }}
-                  </div>
-                  <button
-                    mat-icon-button
-                    color="primary"
-                    (click)="copyToClipboard(paymentInvoice()?.invoice || '')"
-                  >
-                    <mat-icon>content_copy</mat-icon>
-                  </button>
-                </div>
-
-                <div class="invoice-expiry">
-                  <mat-icon>timer</mat-icon>
-                  <span>This invoice expires in {{ invoiceExpiresIn() }} minutes</span>
-                </div>
-
-                <div class="payment-status">
-                  @if (!isPaymentCompleted()) {
-                    <mat-spinner color="primary" diameter="20"></mat-spinner>
-                  }
-                  @if (!isPaymentCompleted()) {
-                    <span>Waiting for payment...</span>
-                  }
-                  @if (isPaymentCompleted()) {
-                    <mat-icon color="primary">check_circle</mat-icon>
-                  }
-                  @if (isPaymentCompleted()) {
-                    <span>Payment successful!</span>
-                  }
-                </div>
-              </div>
-            } @else if (paymentInvoice()?.status === 'expired') {
-              <div class="payment-expired">
-                <mat-icon color="warn">error_outline</mat-icon>
-                <h3>Payment Invoice Expired</h3>
-                <p>The payment invoice has expired. Please generate a new one to continue.</p>
-                <button mat-raised-button color="primary" (click)="generatePaymentInvoice()">
-                  Generate New Invoice
-                </button>
-              </div>
-            }
-          </div>
-        }
-
-        <div class="step-actions">
-          <button mat-button (click)="resetPayment()" [disabled]="isPaymentCompleted()">
-            Back
-          </button>
-        </div>
-      </div>
-    }
-
-    <!-- Step 4: Completion -->
-    @if (currentStep() === 3) {
-      <div class="step-content completion-step">
-        <div class="completion-container">
-          <mat-icon class="completion-icon">verified</mat-icon>
-          <h2>Welcome to Nostria Premium!</h2>
-          <p>Your premium account is now active. You can now enjoy all premium features.</p>
-
-          <div class="premium-features">
-            <div class="feature-item">
-              <mat-icon>verified</mat-icon>
-              <div>
-                <h4>Verified Username</h4>
-                <p>
-                  Your username
-                  <strong>{{ usernameFormGroup.get('username')?.value }}&#64;nostria.app</strong>
-                  is now uniquely yours
-                </p>
-              </div>
-            </div>
-
-            <div class="feature-item">
-              <mat-icon>cloud_done</mat-icon>
-              <div>
-                <h4>2GB Storage</h4>
-                <p>Your storage has been upgraded to 2GB</p>
-              </div>
-            </div>
-
-            <div class="feature-item">
-              <mat-icon>backup</mat-icon>
-              <div>
-                <h4>Automatic Backups</h4>
-                <p>Your data will be automatically backed up</p>
-              </div>
-            </div>
-          </div>
-
-          <button mat-flat-button color="primary" (click)="finishSetup()">
-            Continue to Nostria
-          </button>
-        </div>
-      </div>
-    }
+      <button mat-flat-button color="primary" (click)="finishSetup()">
+        Continue to Nostria
+      </button>
+    </div>
   </div>
+  }
+</div>
 </div>
