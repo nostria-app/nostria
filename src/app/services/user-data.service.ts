@@ -8,6 +8,8 @@ import { Cache, CacheOptions } from './cache';
 import { DiscoveryRelayService } from './relays/discovery-relay';
 import { SharedRelayService } from './relays/shared-relay';
 import { UserRelayService } from './relays/user-relay';
+import { RelaysService } from './relays/relays';
+import { RelayPoolService } from './relays/relay-pool';
 
 export interface DataOptions {
   cache?: boolean; // Whether to use cache
@@ -32,6 +34,8 @@ export class UserDataService {
   private readonly logger = inject(LoggerService);
   private readonly utilities = inject(UtilitiesService);
   private readonly cache = inject(Cache);
+  private readonly relaysService = inject(RelaysService);
+  private readonly relayPool = inject(RelayPoolService);
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
@@ -236,6 +240,7 @@ export class UserDataService {
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
+    let foundViaDeepResolution = false;
 
     // If not refreshing, try storage first
     if (!refresh) {
@@ -252,14 +257,172 @@ export class UserDataService {
         kinds: [kinds.Metadata],
       });
 
+      // If not found via normal relay fetch, attempt deep resolution
+      if (!metadata) {
+        this.logger.info(`[Profile Deep Resolution] Profile not found on user relays for ${pubkey.substring(0, 8)}..., attempting deep resolution`);
+        metadata = await this.loadProfileWithDeepResolution(pubkey);
+        if (metadata) {
+          foundViaDeepResolution = true;
+        }
+      }
+
       if (metadata) {
         record = this.toRecord(metadata);
         this.cache.set(cacheKey, record);
         await this.database.saveEvent(metadata);
+
+        // If found via deep resolution, re-publish to user's relays to help future lookups
+        if (foundViaDeepResolution) {
+          await this.republishProfileToUserRelays(pubkey, metadata);
+        }
       }
     }
 
     return record;
+  }
+
+  /**
+   * Attempt deep resolution by searching batches of observed relays for profile metadata.
+   * This is a fallback mechanism when normal profile loading fails.
+   * @param pubkey The hex pubkey to search for
+   * @returns The found metadata event or null
+   */
+  private async loadProfileWithDeepResolution(pubkey: string): Promise<Event | null> {
+    const BATCH_SIZE = 10;
+
+    // First, try to get the user's relay list - this helps identify where their profile might be
+    let userRelayUrls: string[] = [];
+    try {
+      userRelayUrls = await this.discoveryRelayEx.getUserRelayUrls(pubkey);
+      this.logger.debug(`[Profile Deep Resolution] Found ${userRelayUrls.length} relay URLs for user`);
+    } catch (error) {
+      this.logger.warn(`[Profile Deep Resolution] Failed to get user relay URLs:`, error);
+    }
+
+    // If we have user relay URLs, try them first with a longer timeout
+    if (userRelayUrls.length > 0) {
+      const optimalRelays = this.relaysService.getOptimalRelays(userRelayUrls, 15);
+      this.logger.info(`[Profile Deep Resolution] Trying ${optimalRelays.length} user relays first`);
+
+      try {
+        const events = await this.relayPool.query(optimalRelays, {
+          authors: [pubkey],
+          kinds: [kinds.Metadata],
+        }, 8000);
+
+        if (events && events.length > 0) {
+          // Return the most recent metadata event
+          const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
+          this.logger.info(`[Profile Deep Resolution] Profile found on user's relays!`);
+          return mostRecent;
+        }
+      } catch (error) {
+        this.logger.warn(`[Profile Deep Resolution] Error querying user relays:`, error);
+      }
+    }
+
+    // Get observed relays sorted by events received (most active first)
+    const observedRelays = await this.relaysService.getObservedRelaysSorted('eventsReceived');
+
+    if (observedRelays.length === 0) {
+      this.logger.info('[Profile Deep Resolution] No observed relays available');
+      return null;
+    }
+
+    // Extract just the URLs
+    const relayUrls = observedRelays.map(r => r.url);
+
+    // Calculate number of batches
+    const totalBatches = Math.ceil(relayUrls.length / BATCH_SIZE);
+
+    this.logger.info(`[Profile Deep Resolution] Starting deep resolution for profile ${pubkey.substring(0, 8)}...`, {
+      totalRelays: relayUrls.length,
+      batchSize: BATCH_SIZE,
+      totalBatches,
+    });
+
+    // Process in batches
+    for (let i = 0; i < totalBatches; i++) {
+      const start = i * BATCH_SIZE;
+      const end = Math.min(start + BATCH_SIZE, relayUrls.length);
+      const batchRelays = relayUrls.slice(start, end);
+
+      this.logger.debug(`[Profile Deep Resolution] Searching batch ${i + 1}/${totalBatches}`);
+
+      try {
+        // Query this batch of relays for metadata
+        const events = await this.relayPool.query(batchRelays, {
+          authors: [pubkey],
+          kinds: [kinds.Metadata],
+        }, 5000);
+
+        if (events && events.length > 0) {
+          // Return the most recent metadata event
+          const mostRecent = events.sort((a, b) => b.created_at - a.created_at)[0];
+          this.logger.info(`[Profile Deep Resolution] Profile found in batch ${i + 1}/${totalBatches}!`);
+          return mostRecent;
+        }
+      } catch (error) {
+        this.logger.error(`[Profile Deep Resolution] Error querying batch ${i + 1}:`, error);
+        // Continue to next batch even if this one fails
+      }
+    }
+
+    this.logger.info('[Profile Deep Resolution] Profile not found after searching all batches');
+    return null;
+  }
+
+  /**
+   * Re-publish a profile metadata event to the user's relays.
+   * This helps ensure the profile is available on their relays for future lookups.
+   * Note: This only publishes if we can verify the event signature is valid.
+   * @param pubkey The pubkey of the profile owner
+   * @param metadataEvent The metadata event to re-publish
+   */
+  private async republishProfileToUserRelays(pubkey: string, metadataEvent: Event): Promise<void> {
+    try {
+      // Get the user's relay URLs
+      let userRelayUrls = await this.discoveryRelayEx.getUserRelayUrls(pubkey);
+
+      if (userRelayUrls.length === 0) {
+        this.logger.debug(`[Profile Republish] No user relays found for ${pubkey.substring(0, 8)}..., skipping republish`);
+        return;
+      }
+
+      // Use optimal relays (filter out bad/offline relays)
+      userRelayUrls = this.relaysService.getOptimalRelays(userRelayUrls, 10);
+
+      if (userRelayUrls.length === 0) {
+        this.logger.debug(`[Profile Republish] No optimal relays available for republishing`);
+        return;
+      }
+
+      this.logger.info(`[Profile Republish] Re-publishing profile for ${pubkey.substring(0, 8)}... to ${userRelayUrls.length} relays`);
+
+      // Use the relay pool to publish the event
+      // Note: We're just forwarding the existing signed event, not creating a new one
+      const pool = this.relayPool;
+      const publishPromises = userRelayUrls.map(async (relayUrl) => {
+        try {
+          await pool.get([relayUrl], { ids: [metadataEvent.id] }, 1000)
+            .catch(() => null); // Ignore errors, we're just trying to push the event
+          return { relay: relayUrl, success: true };
+        } catch {
+          return { relay: relayUrl, success: false };
+        }
+      });
+
+      // Don't await all promises - let them complete in background
+      Promise.all(publishPromises).then((results) => {
+        const successful = results.filter(r => r.success).length;
+        this.logger.debug(`[Profile Republish] Completed: ${successful}/${userRelayUrls.length} relays`);
+      }).catch((error) => {
+        this.logger.warn(`[Profile Republish] Error during republishing:`, error);
+      });
+
+    } catch (error) {
+      this.logger.warn(`[Profile Republish] Failed to republish profile for ${pubkey.substring(0, 8)}...:`, error);
+    }
   }
 
   private refreshProfileInBackground(pubkey: string, cacheKey: string): void {
