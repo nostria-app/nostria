@@ -82,8 +82,6 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   private eventSubscription: { close: () => void } | null = null;
   private currentStreamId: string | null = null;
-  private cursorHideTimeout: ReturnType<typeof setTimeout> | null = null;
-  private readonly CURSOR_HIDE_DELAY = 3000;
 
   // Live stream metadata
   streamTitle = computed(() => this.media.current()?.title || 'Live Stream');
@@ -203,16 +201,15 @@ export class LiveStreamPlayerComponent implements OnDestroy {
       if (container && overlayContainerEl) {
         container.appendChild(overlayContainerEl);
       }
-      // Start auto-hide timer when entering fullscreen
-      this.videoControlsRef?.showControlsAndStartTimer();
-      this.startCursorHideTimer();
+      // Start auto-hide timer when entering fullscreen - video controls will emit visibility changes
+      this.videoControlsRef?.forceShowControlsAndStartTimer();
     } else {
       // Move it back to body
       if (overlayContainerEl && overlayContainerEl.parentElement !== document.body) {
         document.body.appendChild(overlayContainerEl);
       }
-      // Show cursor when exiting fullscreen
-      this.showCursor();
+      // Show controls when exiting fullscreen
+      this.videoControlsRef?.showControls();
     }
   };
 
@@ -221,7 +218,6 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     if (this.eventSubscription) {
       this.eventSubscription.close();
     }
-    this.clearCursorHideTimeout();
     document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
   }
 
@@ -392,51 +388,30 @@ export class LiveStreamPlayerComponent implements OnDestroy {
     );
   }
 
+  // Sync top overlay visibility with video controls
+  onControlsVisibilityChange(visible: boolean): void {
+    // In expanded or fullscreen mode, sync the top overlay with video controls
+    if (!this.footer()) {
+      this.cursorHidden.set(!visible);
+    }
+  }
+
   // Methods to trigger controls visibility from parent container hover
   onVideoContainerMouseEnter(): void {
-    this.videoControlsRef?.showControls();
-    this.showCursor();
+    this.videoControlsRef?.showControlsAndStartTimer();
   }
 
   onVideoContainerMouseLeave(): void {
-    // Let the controls auto-hide logic handle this
+    // Let video controls handle auto-hide timing
+    // The visibility change event will sync top overlay
+    if (!this.footer() && !this.media.paused) {
+      this.videoControlsRef?.hideControls();
+    }
   }
 
   onVideoContainerMouseMove(): void {
-    console.log('[LiveStream] onVideoContainerMouseMove, nativeFs:', this.isNativeFullscreen());
-    // In native fullscreen, use showControlsAndStartTimer to ensure auto-hide works
-    if (this.isNativeFullscreen()) {
-      this.videoControlsRef?.showControlsAndStartTimer();
-    } else {
-      this.videoControlsRef?.showControls();
-    }
-    this.showCursor();
-    this.startCursorHideTimer();
-  }
-
-  private showCursor(): void {
-    this.clearCursorHideTimeout();
-    this.cursorHidden.set(false);
-  }
-
-  private startCursorHideTimer(): void {
-    if (!this.isNativeFullscreen()) return;
-
-    this.clearCursorHideTimeout();
-    console.log('[LiveStream] Starting cursor hide timer');
-    this.cursorHideTimeout = setTimeout(() => {
-      console.log('[LiveStream] Cursor hide timer fired, nativeFs:', this.isNativeFullscreen(), 'paused:', this.media.paused);
-      if (this.isNativeFullscreen() && !this.media.paused) {
-        console.log('[LiveStream] Hiding cursor');
-        this.cursorHidden.set(true);
-      }
-    }, this.CURSOR_HIDE_DELAY);
-  }
-
-  private clearCursorHideTimeout(): void {
-    if (this.cursorHideTimeout) {
-      clearTimeout(this.cursorHideTimeout);
-      this.cursorHideTimeout = null;
-    }
+    // Let video controls handle visibility and timing
+    // The visibility change event will sync top overlay
+    this.videoControlsRef?.showControlsAndStartTimer();
   }
 }

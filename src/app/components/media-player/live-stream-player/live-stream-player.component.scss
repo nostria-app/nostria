@@ -24,8 +24,8 @@
   height: 100%;
   background: transparent;
 
-  // Hide cursor when idle in fullscreen
-  &.cursor-hidden {
+  // Hide cursor when idle - only in native fullscreen mode
+  &:fullscreen.cursor-hidden {
     cursor: none;
 
     * {
@@ -148,7 +148,7 @@
   position: absolute;
   top: 0;
   right: 0;
-  padding: 8px;
+  padding: 12px;
   z-index: 20;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -163,17 +163,22 @@
     display: flex;
     align-items: center;
     gap: 4px;
-    padding: 4px 8px;
-    background: rgba(0, 0, 0, 0.6);
-    -webkit-backdrop-filter: blur(8px);
-    backdrop-filter: blur(8px);
-    border-radius: 8px;
+    padding: 6px 12px;
+    background: rgba(0, 0, 0, 0.5);
+    -webkit-backdrop-filter: blur(20px) saturate(1.8);
+    backdrop-filter: blur(20px) saturate(1.8);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+      inset 0 0 0 1px rgba(255, 255, 255, 0.05),
+      0 4px 12px rgba(0, 0, 0, 0.3),
+      0 2px 4px rgba(0, 0, 0, 0.2);
 
     button {
       color: white;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.15);
       }
     }
   }

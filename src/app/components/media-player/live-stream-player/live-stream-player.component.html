@@ -29,7 +29,8 @@
       [qualityLevels]="qualityLevels()" [currentQuality]="currentQualityLevel()"
       [nativeFullscreen]="isNativeFullscreen()" (playPause)="onPlayPause()" (volumeChange)="onVideoVolumeChange($event)"
       (muteToggle)="onMuteToggle()" (qualityChange)="onQualityChange($event)"
-      (fullscreenToggle)="onNativeFullscreenToggle()" (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()" />
+      (fullscreenToggle)="onNativeFullscreenToggle()" (pipToggle)="pictureInPicture()" (castToggle)="castToDevice()"
+      (controlsVisibilityChange)="onControlsVisibilityChange($event)" />
     }
   </div>
   } @else if (isLiveKit()) {

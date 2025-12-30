@@ -90,6 +90,7 @@ export class VideoControlsComponent implements OnDestroy {
   pipToggle = output<void>();
   castToggle = output<void>();
   controlsBarHover = output<boolean>(); // Emits true when hovering controls-bar, false when leaving
+  controlsVisibilityChange = output<boolean>(); // Emits when controls visibility changes
 
   // Internal state - reactive signals for video state
   controlsVisible = signal(true);
@@ -164,6 +165,12 @@ export class VideoControlsComponent implements OnDestroy {
         // Initialize state from video
         this.updateStateFromVideo(video);
       }
+    });
+
+    // Emit controls visibility changes to parent
+    effect(() => {
+      const visible = this.controlsVisible();
+      this.controlsVisibilityChange.emit(visible);
     });
 
     // Auto-hide controls
