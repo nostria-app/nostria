@@ -421,6 +421,11 @@
   border-top: 1px solid var(--mat-sys-outline-variant);
   background: var(--mat-sys-surface-container-high);
 
+  // Mobile browser (non-PWA) on touch devices needs extra bottom padding for browser URL bar
+  @media (max-width: 599px) and (pointer: coarse) and (not (display-mode: standalone)) {
+    padding-bottom: calc(12px + 120px); // Extra 120px for browser UI (URL bar + nav buttons)
+  }
+
   .reply-indicator {
     display: flex;
     align-items: center;

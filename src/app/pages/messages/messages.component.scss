@@ -131,6 +131,11 @@
   @media (max-width: 599px) {
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
+
+  // Mobile browser (non-PWA) on touch devices needs extra bottom space for browser URL bar
+  @media (max-width: 599px) and (pointer: coarse) and (not (display-mode: standalone)) {
+    padding-bottom: calc(150px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 // tab-content allows scrolling behind mobile menu
@@ -371,6 +376,11 @@
   @media (max-width: 599px) {
     padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
   }
+
+  // Mobile browser (non-PWA) on touch devices needs extra bottom space for browser URL bar
+  @media (max-width: 599px) and (pointer: coarse) and (not (display-mode: standalone)) {
+    padding-bottom: calc(230px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .message-input-container {
@@ -400,6 +410,11 @@
     bottom: calc(90px + env(safe-area-inset-bottom, 0px));
     left: 8px;
     right: 8px;
+  }
+
+  // Mobile browser (non-PWA) on touch devices needs extra bottom space for browser URL bar
+  @media (max-width: 599px) and (pointer: coarse) and (not (display-mode: standalone)) {
+    bottom: calc(160px + env(safe-area-inset-bottom, 0px));
   }
 }
 
