@@ -160,7 +160,9 @@ export class MetaService {
       title = data.author?.profile?.display_name || data.author?.profile?.name || 'Nostr Event';
     }
 
-    const fullDescription = data.content || 'No description available';
+    // Extract summary/description - prefer 'summary' tag (NIP-23 articles) over content
+    const eventSummary = this.extractTagValue(data.tags, 'summary');
+    const fullDescription = eventSummary || data.content || 'No description available';
     description =
       fullDescription.length > 200 ? fullDescription.substring(0, 200) + '...' : fullDescription;
 

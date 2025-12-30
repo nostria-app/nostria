@@ -6,13 +6,14 @@ import { Meta } from '@angular/platform-browser';
 import { UtilitiesService } from './services/utilities.service';
 import { MetaService } from './services/meta.service';
 import { UsernameService } from './services/username';
-import { nip19 } from 'nostr-tools';
+import { kinds, nip05, nip19 } from 'nostr-tools';
 
 export const EVENT_STATE_KEY = makeStateKey<any>('large-json-data');
 
 // Known addressable event kinds
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
+const ARTICLE_KIND = kinds.LongFormArticle; // 30023
 
 export interface EventData {
   title: string;
@@ -43,6 +44,7 @@ export class DataResolver implements Resolve<EventData | null> {
 
     let id = route.params['id'] || route.params['pubkey'];
     const identifier = route.params['identifier'];
+    const slug = route.params['slug']; // For article routes like /a/:id/:slug
 
     // For username routes, resolve the username to pubkey
     const username = route.params['username'];
@@ -50,6 +52,54 @@ export class DataResolver implements Resolve<EventData | null> {
       console.log('[SSR] DataResolver: Resolving username to pubkey:', username);
       id = await this.usernameService.getPubkey(username);
       console.log('[SSR] DataResolver: Resolved username', username, 'to pubkey:', id);
+    }
+
+    // For article routes with slug parameter (e.g., /a/npub.../slug or /a/nip05@domain/slug)
+    if (id && slug) {
+      const routePath = route.routeConfig?.path || '';
+      console.log('[SSR] DataResolver: Article route detected with id:', id, 'slug:', slug);
+
+      try {
+        let pubkey: string | undefined;
+
+        // Check if id is a NIP-05 address (contains @)
+        if (id.includes('@')) {
+          console.log('[SSR] DataResolver: Resolving NIP-05 address:', id);
+          const profile = await nip05.queryProfile(id);
+          if (profile && profile.pubkey) {
+            pubkey = profile.pubkey;
+            console.log('[SSR] DataResolver: Resolved NIP-05 to pubkey:', pubkey);
+          } else {
+            console.warn('[SSR] DataResolver: Failed to resolve NIP-05 address:', id);
+          }
+        } else if (id.startsWith('npub')) {
+          // Decode npub to hex pubkey
+          try {
+            const decoded = nip19.decode(id);
+            if ('data' in decoded && typeof decoded.data === 'string') {
+              pubkey = decoded.data;
+              console.log('[SSR] DataResolver: Decoded npub to pubkey:', pubkey);
+            }
+          } catch (e) {
+            console.warn('[SSR] DataResolver: Failed to decode npub:', id, e);
+          }
+        } else if (this.utilities.isHex(id) && id.length === 64) {
+          // Already a hex pubkey
+          pubkey = id;
+        }
+
+        if (pubkey) {
+          const naddr = nip19.naddrEncode({
+            kind: ARTICLE_KIND,
+            pubkey,
+            identifier: slug,
+          });
+          id = naddr;
+          console.log('[SSR] DataResolver: Created naddr for article:', naddr);
+        }
+      } catch (e) {
+        console.error('[SSR] DataResolver: Failed to create naddr for article:', e);
+      }
     }
 
     // For addressable events (tracks, playlists), create naddr from pubkey + identifier
