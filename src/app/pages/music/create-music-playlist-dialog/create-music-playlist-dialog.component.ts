@@ -11,6 +11,7 @@ import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angula
 import { MusicPlaylistService, CreateMusicPlaylistData, MusicPlaylist } from '../../../services/music-playlist.service';
 import { MediaService } from '../../../services/media.service';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
+import { RelayPublishSelectorComponent, RelayPublishConfig } from '../../../components/relay-publish-selector/relay-publish-selector.component';
 
 export interface CreateMusicPlaylistDialogData {
   // Optional track to add immediately after creation
@@ -30,6 +31,7 @@ export interface CreateMusicPlaylistDialogData {
     MatProgressSpinnerModule,
     MatSnackBarModule,
     ReactiveFormsModule,
+    RelayPublishSelectorComponent,
   ],
   templateUrl: './create-music-playlist-dialog.component.html',
   styleUrl: './create-music-playlist-dialog.component.scss',
@@ -53,6 +55,9 @@ export class CreateMusicPlaylistDialogComponent {
   isDraggingImage = signal(false);
   private dragEnterCounter = 0;
   coverImage = signal<string | null>(null);
+
+  // Relay publishing configuration
+  relayPublishConfig = signal<RelayPublishConfig | null>(null);
 
   // Random gradients for default cover
   private gradients = [
@@ -216,12 +221,32 @@ export class CreateMusicPlaylistDialogComponent {
     try {
       const formValue = this.playlistForm.value;
 
+      // Build custom relay list from config
+      let customRelays: string[] | undefined;
+      const config = this.relayPublishConfig();
+      if (config) {
+        const relaySet = new Set<string>();
+        for (const relay of config.accountRelays) {
+          relaySet.add(relay);
+        }
+        if (config.includeMusicRelays) {
+          for (const relay of config.musicRelays) {
+            relaySet.add(relay);
+          }
+        }
+        for (const relay of config.customRelays) {
+          relaySet.add(relay);
+        }
+        customRelays = Array.from(relaySet);
+      }
+
       const data: CreateMusicPlaylistData = {
         title: formValue.title,
         description: formValue.description || undefined,
         image: formValue.imageUrl || undefined,
         isPublic: formValue.isPublic,
         isCollaborative: formValue.isCollaborative,
+        customRelays: customRelays && customRelays.length > 0 ? customRelays : undefined,
       };
 
       const playlist = await this.musicPlaylistService.createPlaylist(data);
@@ -257,5 +282,9 @@ export class CreateMusicPlaylistDialogComponent {
   navigateToMediaSettings(): void {
     this.onCancel();
     this.router.navigate(['/media'], { queryParams: { tab: 'servers' } });
+  }
+
+  onRelayConfigChanged(config: RelayPublishConfig): void {
+    this.relayPublishConfig.set(config);
   }
 }
