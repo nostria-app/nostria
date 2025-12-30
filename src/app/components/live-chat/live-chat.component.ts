@@ -738,10 +738,17 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   }
 
   toggleView(mode: string) {
+    // Remember if user was near bottom before switching views
+    const wasNearBottom = this.isUserNearBottom();
+    
     this.viewMode.set(mode as 'chat' | 'participants' | 'settings');
     if (mode === 'chat') {
       setTimeout(() => {
-        this.scrollToBottom();
+        // Only scroll to bottom if user was already at the bottom
+        // Don't force scroll if user had scrolled up to read older messages
+        if (wasNearBottom) {
+          this.scrollToBottom();
+        }
         // Check if we need more content after switching back to chat
         this.checkIfNeedsMoreContent();
       }, 50);

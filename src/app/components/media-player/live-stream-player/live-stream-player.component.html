@@ -8,6 +8,23 @@
     <video #videoElement class="stream-video" [muted]="media.muted" autoplay playsinline
       (error)="onVideoError($event)"></video>
     @if (!footer()) {
+    <!-- Stream controls overlay - positioned at top of video -->
+    <div class="stream-controls-overlay" [class.visible]="!cursorHidden()">
+      <div class="stream-actions">
+        <button mat-icon-button matTooltip="Toggle chat" (click)="toggleChatVisibility()">
+          <mat-icon>{{ chatVisible() ? 'chat' : 'chat_bubble_outline' }}</mat-icon>
+        </button>
+        <button mat-icon-button [matMenuTriggerFor]="streamMenu" matTooltip="More options">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
+          <mat-icon>minimize</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Close stream" (click)="exitStream()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
     <app-video-controls [videoElement]="videoElement" [config]="{ isLiveStream: true, showQuality: true }"
       [qualityLevels]="qualityLevels()" [currentQuality]="currentQualityLevel()"
       [nativeFullscreen]="isNativeFullscreen()" (playPause)="onPlayPause()" (volumeChange)="onVideoVolumeChange($event)"
@@ -17,6 +34,25 @@
   </div>
   } @else if (isLiveKit()) {
   <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
+    @if (!footer()) {
+    <!-- Stream controls overlay -->
+    <div class="stream-controls-overlay visible">
+      <div class="stream-actions">
+        <button mat-icon-button matTooltip="Toggle chat" (click)="toggleChatVisibility()">
+          <mat-icon>{{ chatVisible() ? 'chat' : 'chat_bubble_outline' }}</mat-icon>
+        </button>
+        <button mat-icon-button [matMenuTriggerFor]="streamMenu" matTooltip="More options">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
+          <mat-icon>minimize</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Close stream" (click)="exitStream()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+    }
     <div class="livekit-content">
       <mat-icon class="livekit-icon">groups</mat-icon>
       @if (!footer()) {
@@ -33,6 +69,25 @@
   </div>
   } @else if (isExternal()) {
   <div class="livekit-placeholder" [class.in-footer]="footer()" [class.in-fullscreen]="!footer()">
+    @if (!footer()) {
+    <!-- Stream controls overlay -->
+    <div class="stream-controls-overlay visible">
+      <div class="stream-actions">
+        <button mat-icon-button matTooltip="Toggle chat" (click)="toggleChatVisibility()">
+          <mat-icon>{{ chatVisible() ? 'chat' : 'chat_bubble_outline' }}</mat-icon>
+        </button>
+        <button mat-icon-button [matMenuTriggerFor]="streamMenu" matTooltip="More options">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
+          <mat-icon>minimize</mat-icon>
+        </button>
+        <button mat-icon-button matTooltip="Close stream" (click)="exitStream()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+    </div>
+    }
     <div class="livekit-content">
       <mat-icon class="livekit-icon">open_in_new</mat-icon>
       @if (!footer()) {
@@ -100,39 +155,6 @@
   }
 
   @if (!footer()) {
-  <!-- Normal/Fullscreen mode - full stream interface -->
-  <div class="stream-header">
-    <div class="stream-info">
-      <div class="stream-title-row">
-        <span class="live-badge">
-          <mat-icon>fiber_manual_record</mat-icon>
-          LIVE
-        </span>
-        <h2 class="stream-title">{{ streamTitle() }}</h2>
-      </div>
-      @if (viewerCount() > 0) {
-      <div class="stream-stats">
-        <mat-icon>visibility</mat-icon>
-        <span>{{ viewerCount() }} watching</span>
-      </div>
-      }
-    </div>
-    <div class="stream-actions">
-      <button mat-icon-button matTooltip="Toggle chat" (click)="toggleChatVisibility()">
-        <mat-icon>{{ chatVisible() ? 'chat' : 'chat_bubble_outline' }}</mat-icon>
-      </button>
-      <button mat-icon-button [matMenuTriggerFor]="streamMenu" matTooltip="More options">
-        <mat-icon>more_vert</mat-icon>
-      </button>
-      <button mat-icon-button matTooltip="Minimize" (click)="toggleFullscreen()">
-        <mat-icon>minimize</mat-icon>
-      </button>
-      <button mat-icon-button matTooltip="Close stream" (click)="exitStream()">
-        <mat-icon>close</mat-icon>
-      </button>
-    </div>
-  </div>
-
   <!-- Stream info bar at bottom of video (hidden in native fullscreen) -->
   @if (liveEvent() && !isNativeFullscreen()) {
   <app-stream-info-bar [liveEvent]="liveEvent()!" />
@@ -151,12 +173,6 @@
 <!-- Context menu for fullscreen mode -->
 <mat-menu #streamMenu="matMenu">
   @if (!isLiveKit() && !isExternal()) {
-  <div class="volume-menu-item" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0">
-    <mat-icon>volume_up</mat-icon>
-    <mat-slider class="volume-slider" [min]="0" [max]="100" [step]="1">
-      <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
-    </mat-slider>
-  </div>
   <button mat-menu-item (click)="pictureInPicture()">
     <mat-icon>picture_in_picture</mat-icon>
     <span>Picture-in-Picture</span>
@@ -174,14 +190,6 @@
 
 <!-- Context menu for footer mode -->
 <mat-menu #footerStreamMenu="matMenu">
-  @if (!isLiveKit() && !isExternal()) {
-  <div class="volume-menu-item" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()" tabindex="0">
-    <mat-icon>volume_up</mat-icon>
-    <mat-slider class="volume-slider" [min]="0" [max]="100" [step]="1">
-      <input matSliderThumb [value]="volume" (valueChange)="onVolumeChange($event)" aria-label="Volume" />
-    </mat-slider>
-  </div>
-  }
   <button mat-menu-item (click)="copyEventUrl()">
     <mat-icon>link</mat-icon>
     <span>Copy Stream URL</span>
