@@ -1,5 +1,5 @@
-<div class="audio-player">
-  <button mat-icon-button (click)="togglePlay()" class="play-button" [disabled]="isLoading()">
+<div class="audio-player" (click)="$event.stopPropagation()">
+  <button mat-icon-button (click)="togglePlay(); $event.stopPropagation()" class="play-button" [disabled]="isLoading()">
     @if (isLoading()) {
     <mat-spinner diameter="24"></mat-spinner>
     } @else {
@@ -7,7 +7,7 @@
     }
   </button>
 
-  <div class="waveform-container" (click)="onWaveformClick($event)">
+  <div class="waveform-container" (click)="onWaveformClick($event); $event.stopPropagation()">
     @if (waveform.length > 0) {
     <div class="waveform">
       @for (bar of waveform; track $index) {
