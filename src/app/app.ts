@@ -1512,6 +1512,13 @@ export class App implements OnInit {
    * - https://primal.net/p/npub1.../notes
    */
   private extractNostrEntityFromUrl(url: string): string | null {
+    // Check if URL ends with a file extension that indicates it's not a Nostr profile link
+    // This prevents RSS feeds, JSON files, etc. from being treated as Nostr entities
+    const feedExtensions = /\.(xml|rss|json|atom|txt|csv|pdf|zip|tar|gz)(\?.*)?$/i;
+    if (feedExtensions.test(url)) {
+      return null;
+    }
+
     // First, try to extract a nostr entity directly from the URL path
     // This handles most Nostr clients that include the entity in the URL
     const entityPattern = /(npub1[a-z0-9]+|nprofile1[a-z0-9]+|nevent1[a-z0-9]+|note1[a-z0-9]+|naddr1[a-z0-9]+)/i;
