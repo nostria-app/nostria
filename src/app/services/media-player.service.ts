@@ -57,6 +57,7 @@ export class MediaPlayerService implements OnInitialized {
   }
   readonly MEDIA_STORAGE_KEY = 'nostria-media-queue';
   readonly PODCAST_POSITIONS_KEY = 'nostria-podcast-positions';
+  readonly VOLUME_SETTINGS_KEY = 'nostria-volume-settings';
 
   // Cache for YouTube embed URLs
   private _youtubeUrlCache = new Map<string, SafeResourceUrl>();
@@ -657,6 +658,7 @@ export class MediaPlayerService implements OnInitialized {
       this.videoElement.removeEventListener('ended', this.handleMediaEnded);
       this.videoElement.removeEventListener('play', this.handleVideoPlay);
       this.videoElement.removeEventListener('pause', this.handleVideoPause);
+      this.videoElement.removeEventListener('volumechange', this.handleVolumeChange);
     }
 
     this.videoElement = videoElement;
@@ -666,6 +668,13 @@ export class MediaPlayerService implements OnInitialized {
       videoElement.addEventListener('ended', this.handleMediaEnded);
       videoElement.addEventListener('play', this.handleVideoPlay);
       videoElement.addEventListener('pause', this.handleVideoPause);
+      
+      // Restore saved volume settings
+      this.restoreVolumeSettings(videoElement);
+      
+      // Listen for volume/mute changes to persist them
+      videoElement.addEventListener('volumechange', this.handleVolumeChange);
+      
       console.log('Video element registered for current video');
 
       // If we have a current video/HLS item that's waiting for the video element, set it up now
@@ -686,6 +695,39 @@ export class MediaPlayerService implements OnInitialized {
     console.log('[MediaPlayer] Video paused, disabling wake lock');
     this.wakeLockService.disable();
   };
+
+  private handleVolumeChange = () => {
+    if (this.videoElement) {
+      this.saveVolumeSettings(this.videoElement.volume, this.videoElement.muted);
+    }
+  };
+
+  private saveVolumeSettings(volume: number, muted: boolean): void {
+    try {
+      const settings = { volume, muted };
+      localStorage.setItem(this.VOLUME_SETTINGS_KEY, JSON.stringify(settings));
+    } catch (e) {
+      console.warn('Failed to save volume settings:', e);
+    }
+  }
+
+  private restoreVolumeSettings(videoElement: HTMLVideoElement): void {
+    try {
+      const stored = localStorage.getItem(this.VOLUME_SETTINGS_KEY);
+      if (stored) {
+        const settings = JSON.parse(stored);
+        if (typeof settings.volume === 'number') {
+          videoElement.volume = Math.max(0, Math.min(1, settings.volume));
+        }
+        if (typeof settings.muted === 'boolean') {
+          videoElement.muted = settings.muted;
+        }
+        console.log('[MediaPlayer] Restored volume settings:', settings);
+      }
+    } catch (e) {
+      console.warn('Failed to restore volume settings:', e);
+    }
+  }
 
   private handleMediaEnded = () => {
     console.log('Media ended, checking for next item');
