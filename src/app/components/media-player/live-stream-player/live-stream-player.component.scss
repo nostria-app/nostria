@@ -183,9 +183,9 @@
     }
   }
 
-  // When chat is open, adjust position to not overlap
-  .chat-open & {
-    right: 0;
+  // In native fullscreen with chat open, position to the left of chat
+  :fullscreen .chat-open & {
+    right: 372px; // Chat width + padding
   }
 }
 

@@ -157,7 +157,7 @@
 
   @if (!footer()) {
   <!-- Stream info bar at bottom of video (hidden in native fullscreen) -->
-  @if (liveEvent() && !isNativeFullscreen()) {
+  @if (liveEvent() && !isNativeFullscreen() && streamInfoVisible()) {
   <app-stream-info-bar [liveEvent]="liveEvent()!" />
   }
 
@@ -179,6 +179,10 @@
     <span>Picture-in-Picture</span>
   </button>
   }
+  <button mat-menu-item (click)="toggleStreamInfoVisibility()">
+    <mat-icon>{{ streamInfoVisible() ? 'info' : 'info_outline' }}</mat-icon>
+    <span>{{ streamInfoVisible() ? 'Hide Stream Info' : 'Show Stream Info' }}</span>
+  </button>
   <button mat-menu-item (click)="copyEventUrl()">
     <mat-icon>link</mat-icon>
     <span>Copy Stream URL</span>
