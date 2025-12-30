@@ -42,7 +42,6 @@ export class EncryptionService {
   private cachedBunkerSigner?: BunkerSigner;
   private cachedBunkerPool?: SimplePool;
   private cachedBunkerPubkey?: string;
-  private bunkerConnectionPromise?: Promise<void>; // Track ongoing connection
 
   // Queue for bunker operations to prevent overwhelming the remote signer
   private bunkerQueue: BunkerQueueItem<unknown>[] = [];
@@ -188,12 +187,8 @@ export class EncryptionService {
    * Get or create a cached BunkerSigner for remote signer accounts
    */
   private async getBunkerSigner(account: NostrUser): Promise<BunkerSigner> {
-    // If we have a cached signer for this account, wait for connection to be ready
+    // If we have a cached signer for this account, return it
     if (this.cachedBunkerSigner && this.cachedBunkerPubkey === account.pubkey) {
-      if (this.bunkerConnectionPromise) {
-        this.logger.debug('Waiting for existing bunker connection to complete...');
-        await this.bunkerConnectionPromise;
-      }
       return this.cachedBunkerSigner;
     }
 
@@ -215,7 +210,6 @@ export class EncryptionService {
       }
       this.cachedBunkerPool = undefined;
     }
-    this.bunkerConnectionPromise = undefined;
 
     if (!account.bunker) {
       throw new Error('No bunker configuration found for remote account');
@@ -236,28 +230,6 @@ export class EncryptionService {
     this.cachedBunkerPool = new SimplePool();
     this.cachedBunkerSigner = BunkerSigner.fromBunker(clientKey, account.bunker, { pool: this.cachedBunkerPool });
     this.cachedBunkerPubkey = account.pubkey;
-
-    // Ping the bunker to establish connection and wait for it
-    // Store the promise so other callers can wait for it
-    this.isBunkerConnecting.set(true);
-    this.bunkerConnectionPromise = (async () => {
-      try {
-        await this.cachedBunkerSigner!.ping();
-        this.logger.debug('Bunker connection established');
-      } catch (err) {
-        this.logger.error('Bunker ping failed:', err);
-        // Clear the cached bunker on failure
-        this.cachedBunkerSigner = undefined;
-        this.cachedBunkerPool = undefined;
-        this.cachedBunkerPubkey = undefined;
-        throw err;
-      } finally {
-        this.bunkerConnectionPromise = undefined;
-        this.isBunkerConnecting.set(false);
-      }
-    })();
-
-    await this.bunkerConnectionPromise;
 
     return this.cachedBunkerSigner;
   }
