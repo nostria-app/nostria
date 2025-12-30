@@ -1609,7 +1609,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     // Check if the click is on an interactive element or its children
     // Include video elements and video containers to prevent thread opening when clicking on videos
     const isInteractiveElement = target.closest(
-      'img, video, button, a, mat-menu, [mat-menu-trigger-for], input, textarea, select, .user-profile-avatar, .user-profile-name, .date-link, .video-container, .video-thumbnail-container, .video-player-container'
+      'img, video, button, a, mat-menu, [mat-menu-trigger-for], input, textarea, select, .user-profile-avatar, .user-profile-name, .date-link, .video-container, .video-thumbnail-container, .video-player-container, .article-preview-card, app-tagged-references'
     );
 
     if (isInteractiveElement) {

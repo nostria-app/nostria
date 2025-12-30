@@ -37,7 +37,7 @@ interface ParsedArticle {
     MatChipsModule,
     MatProgressSpinnerModule,
     ProfileDisplayNameComponent
-],
+  ],
   templateUrl: './tagged-references.component.html',
   styleUrl: './tagged-references.component.scss',
 })
@@ -206,7 +206,10 @@ export class TaggedReferencesComponent {
     this.layout.openProfile(npub);
   }
 
-  onArticleClick(article: ParsedArticle): void {
+  onArticleClick(event: globalThis.Event, article: ParsedArticle): void {
+    // Stop propagation to prevent the parent event card from opening
+    event.stopPropagation();
+
     const naddr = nip19.naddrEncode({
       identifier: article.identifier,
       kind: article.kind,
