@@ -71,6 +71,7 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   footer = input<boolean>(false);
   chatVisible = signal(true);
+  streamInfoVisible = signal(true);
   isNativeFullscreen = signal(false);
   cursorHidden = signal(false);
 
@@ -302,6 +303,10 @@ export class LiveStreamPlayerComponent implements OnDestroy {
 
   toggleChatVisibility(): void {
     this.chatVisible.update(v => !v);
+  }
+
+  toggleStreamInfoVisibility(): void {
+    this.streamInfoVisible.update(v => !v);
   }
 
   async pictureInPicture(): Promise<void> {
