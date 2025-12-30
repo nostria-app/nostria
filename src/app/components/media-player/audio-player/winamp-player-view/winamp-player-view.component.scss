@@ -35,6 +35,18 @@ $winamp-button-pressed: #2a2a2a;
     user-drag: none;
     pointer-events: none;
   }
+
+  // 2x scale mode
+  &.double-size {
+
+    .winamp-main,
+    .winamp-eq,
+    .winamp-lyrics {
+      transform: scale(2);
+      transform-origin: top center;
+      margin-bottom: 100%; // Add space for scaled content
+    }
+  }
 }
 
 // Main player window
@@ -82,6 +94,12 @@ $winamp-button-pressed: #2a2a2a;
 
       &:active {
         background: linear-gradient(180deg, #3a3a3a, #5a5a5a);
+      }
+
+      &.active {
+        background: linear-gradient(180deg, #3a6a3a, #2a4a2a);
+        color: $winamp-text;
+        border-color: $winamp-text-dim;
       }
 
       &.close {
@@ -170,17 +188,22 @@ $winamp-button-pressed: #2a2a2a;
   flex-direction: column;
   gap: 4px;
   padding-left: 4px;
+  min-width: 0; // Allow flex child to shrink
 
   .scrolling-text {
     background: #000;
     padding: 2px 4px;
     overflow: hidden;
+    width: 100%; // Fixed width container
 
     .marquee-text {
       font-size: 10px;
       color: $winamp-text;
       white-space: nowrap;
       text-shadow: 0 0 4px rgba($winamp-text, 0.5);
+      display: block;
+      width: 150px; // Fixed width to prevent jumping
+      overflow: hidden;
     }
   }
 

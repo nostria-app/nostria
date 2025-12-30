@@ -1,5 +1,6 @@
-<div class="winamp-player" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" [trackProgress]="true"
-  (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)" (swipeEnd)="onSwipeEnd()">
+<div class="winamp-player" [class.double-size]="doubleSize()" appSwipeGesture [horizontalSwipe]="true"
+  [verticalSwipe]="true" [trackProgress]="true" (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)"
+  (swipeEnd)="onSwipeEnd()">
   <!-- Main player window -->
   <div class="winamp-main">
     <!-- Title bar -->
@@ -9,7 +10,8 @@
       </div>
       <div class="title-bar-buttons">
         <button class="title-btn minimize" matTooltip="Minimize">_</button>
-        <button class="title-btn maximize" matTooltip="Shade mode">□</button>
+        <button class="title-btn maximize" [class.active]="doubleSize()" (click)="toggleDoubleSize()"
+          matTooltip="Double size (2x)">2x</button>
         <button class="title-btn close" matTooltip="Close">×</button>
       </div>
     </div>

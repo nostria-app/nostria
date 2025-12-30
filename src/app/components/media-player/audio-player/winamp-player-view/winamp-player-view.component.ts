@@ -85,6 +85,13 @@ export class WinampPlayerViewComponent implements OnInit, OnDestroy {
   eqFrequencyLabels = EQ_FREQUENCY_LABELS;
   currentPreset = signal<string | null>(null);
 
+  // 2x scale mode
+  doubleSize = signal(false);
+
+  toggleDoubleSize(): void {
+    this.doubleSize.update(v => !v);
+  }
+
   // Effect for watching when current track changes to connect equalizer
   private audioWatchEffect = effect(() => {
     // React to current track signal to know when audio changes
