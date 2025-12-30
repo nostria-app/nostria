@@ -614,7 +614,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
             this.isLoadingEvent.set(true);
             this.loadingError.set(null);
             try {
-              const eventData = await this.data.getEventById(eventId);
+              // Use cache and save options to:
+              // 1. Check in-memory cache first
+              // 2. Check database before hitting relays
+              // 3. Persist fetched events for future loads
+              const eventData = await this.data.getEventById(eventId, { cache: true, save: true });
               this.record.set(eventData);
 
               // After loading the event by ID, check if we need to load interactions
