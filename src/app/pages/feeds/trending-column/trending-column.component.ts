@@ -89,11 +89,11 @@ export class TrendingColumnComponent implements OnDestroy {
   ];
 
   orderOptions: { value: TrendingOrder; label: string }[] = [
-    { value: 'replies', label: 'Replies' },
-    { value: 'reposts', label: 'Reposts' },
-    { value: 'reactions', label: 'Reactions' },
-    { value: 'zap_count', label: 'Zap Count' },
-    { value: 'zap_amount', label: 'Zap Amount' },
+    { value: 'replies', label: 'Replies count' },
+    { value: 'reposts', label: 'Reposts count' },
+    { value: 'reactions', label: 'Reactions count' },
+    { value: 'zap_count', label: 'Zap count' },
+    { value: 'zap_amount', label: 'Zap amount' },
   ];
 
   // Computed signals
