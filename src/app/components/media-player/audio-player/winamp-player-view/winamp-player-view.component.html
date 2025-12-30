@@ -143,34 +143,69 @@
     <div class="eq-title-bar">
       <span>WINAMP EQUALIZER</span>
       <div class="eq-toggle">
-        <button class="toggle-btn small active">ON</button>
-        <button class="toggle-btn small">AUTO</button>
+        <button class="toggle-btn small" [class.active]="eqEnabled()" (click)="toggleEq()"
+          matTooltip="Enable/Disable EQ">ON</button>
+        <button class="toggle-btn small" [class.active]="eqAuto()" (click)="toggleEqAuto()"
+          matTooltip="Auto EQ">AUTO</button>
+      </div>
+      <div class="eq-presets-inline">
+        <span class="presets-label">PRESETS</span>
+        <button class="preset-dropdown-btn" [matMenuTriggerFor]="presetMenu">
+          {{ currentPreset() || 'Custom' }}
+          <span class="dropdown-arrow">▼</span>
+        </button>
+        <mat-menu #presetMenu="matMenu" class="winamp-preset-menu">
+          @for (preset of eqPresets; track preset) {
+          <button mat-menu-item (click)="applyPreset(preset)" [class.active]="currentPreset() === preset">
+            {{ preset }}
+          </button>
+          }
+        </mat-menu>
+      </div>
+    </div>
+
+    <!-- EQ Graph visualization showing current curve -->
+    <div class="eq-graph">
+      <div class="eq-graph-grid">
+        <div class="grid-line top">+12 dB</div>
+        <div class="grid-line middle">0 dB</div>
+        <div class="grid-line bottom">-12 dB</div>
+      </div>
+      <div class="eq-curve">
+        @for (value of eqBands(); track $index) {
+        <div class="curve-point" [style.bottom.%]="value" [class.disabled]="!eqEnabled()"></div>
+        }
       </div>
     </div>
 
     <div class="eq-sliders">
       <div class="preamp">
-        <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="50" orient="vertical"
-          aria-label="Preamp" title="Preamp" />
+        <div class="slider-track">
+          <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="eqPreamp()"
+            (input)="updatePreamp($event)" orient="vertical" aria-label="Preamp"
+            [title]="'Preamp: ' + (eqPreamp() - 50 > 0 ? '+' : '') + ((eqPreamp() - 50) / 50 * 12).toFixed(1) + ' dB'"
+            [class.disabled]="!eqEnabled()" />
+          <div class="slider-fill" [style.height.%]="eqPreamp()" [class.disabled]="!eqEnabled()"></div>
+        </div>
         <span class="eq-label">PREAMP</span>
       </div>
 
       <div class="eq-divider"></div>
 
       <div class="frequency-bands">
-        @for (freq of ['60', '170', '310', '600', '1K', '3K', '6K', '12K', '14K', '16K']; track freq; let i = $index) {
+        @for (freq of eqFrequencyLabels; track freq; let i = $index) {
         <div class="eq-band">
-          <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="eqBands()[i]"
-            (input)="updateEqBand(i, $event)" orient="vertical" [attr.aria-label]="freq + ' Hz'"
-            [title]="freq + ' Hz'" />
+          <div class="slider-track">
+            <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="eqBands()[i]"
+              (input)="updateEqBand(i, $event)" orient="vertical" [attr.aria-label]="freq + ' Hz'"
+              [title]="freq + ' Hz: ' + (eqBands()[i] - 50 > 0 ? '+' : '') + ((eqBands()[i] - 50) / 50 * 12).toFixed(1) + ' dB'"
+              [class.disabled]="!eqEnabled()" />
+            <div class="slider-fill" [style.height.%]="eqBands()[i]" [class.disabled]="!eqEnabled()"></div>
+          </div>
           <span class="eq-label">{{ freq }}</span>
         </div>
         }
       </div>
-    </div>
-
-    <div class="eq-presets">
-      <button class="preset-btn">PRESETS</button>
     </div>
   </div>
   }
