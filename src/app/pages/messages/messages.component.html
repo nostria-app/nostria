@@ -166,30 +166,41 @@
                 (click)="selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
-                    <app-user-profile [pubkey]="chat.pubkey" view="small"></app-user-profile>
-                  </div>
-                  <div class="chat-info">
-                    <div class="chat-name-row">
-                      <span class="chat-name">{{ chat.pubkey | npub }}</span>
-                      @if (chat.unreadCount > 0) {
-                      <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
-                      }
-                    </div>
-                    <div class="chat-preview">
-                      @if (chat.lastMessage) {
-                      <span class="message-preview">
-                        @if (chat.lastMessage.isOutgoing) {
-                        <span class="outgoing-prefix">You: </span>
-                        }
-                        {{ chat.lastMessage.content }}
-                      </span>
-                      <span class="message-time">{{
-                        chat.lastMessage.created_at | ago
-                        }}</span>
-                      } @else {
-                      <span class="message-preview empty-message">New conversation</span>
-                      }
-                    </div>
+                    @if (chat.encryptionType === 'nip44') {
+                    <mat-icon inline="true" class="chat-encryption-icon">shield_lock</mat-icon>
+                    }
+
+                    <app-user-profile [pubkey]="chat.pubkey" view="icon" #otherProfileComp>
+                      <div class="chat-info">
+                        <div class="chat-name-row">
+                          <span class="chat-name">
+                            @if (otherProfileComp.profile()) {
+                            {{ otherProfileComp.profile().data | name }}
+                            } @else {
+                            Unknown
+                            }
+                          </span>
+                          @if (chat.unreadCount > 0) {
+                          <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
+                          }
+                          <span class="message-time-chats">{{
+                            chat.lastMessage?.created_at | ago
+                            }}</span>
+                        </div>
+                        <div class="chat-preview">
+                          @if (chat.lastMessage) {
+                          <span class="message-preview">
+                            @if (chat.lastMessage.isOutgoing) {
+                            <span class="outgoing-prefix">You: </span>
+                            }
+                            {{ chat.lastMessage.content }}
+                          </span>
+                          } @else {
+                          <span class="message-preview empty-message">New conversation</span>
+                          }
+                        </div>
+                      </div>
+                    </app-user-profile>
                   </div>
                 </div>
               </a>
