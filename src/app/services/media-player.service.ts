@@ -899,13 +899,18 @@ export class MediaPlayerService implements OnInitialized {
       }
 
       if (!this.audio) {
-        this.audio = new Audio(audioSource);
+        this.audio = new Audio();
+        // Set crossOrigin BEFORE setting src to allow Web Audio API (equalizer) to process the audio
+        this.audio.crossOrigin = 'anonymous';
+        this.audio.src = audioSource;
         this.audio.addEventListener('ratechange', () => {
           if (this.audio) {
             this.playbackRate.set(this.audio.playbackRate);
           }
         });
       } else {
+        // crossOrigin must be set before src for CORS to work properly
+        this.audio.crossOrigin = 'anonymous';
         this.audio.src = audioSource;
       }
 

@@ -386,10 +386,118 @@ $winamp-button-pressed: #2a2a2a;
     border-bottom: 1px solid $winamp-border;
     font-size: 9px;
     color: white;
+    gap: 4px;
 
     .eq-toggle {
       display: flex;
       gap: 2px;
+    }
+
+    .eq-presets-inline {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      margin-left: auto;
+
+      .presets-label {
+        font-size: 7px;
+        color: $winamp-text-dim;
+      }
+
+      .preset-dropdown-btn {
+        background: linear-gradient(180deg, #3a3a3a, #2a2a2a);
+        border: 1px solid #555;
+        color: $winamp-text;
+        font-size: 7px;
+        padding: 1px 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        min-width: 60px;
+
+        &:hover {
+          background: linear-gradient(180deg, #4a4a4a, #3a3a3a);
+        }
+
+        .dropdown-arrow {
+          font-size: 6px;
+          margin-left: auto;
+        }
+      }
+    }
+  }
+
+  // EQ Graph showing current curve
+  .eq-graph {
+    background: #000;
+    margin: 4px 4px 0;
+    border: 2px inset #333;
+    height: 32px;
+    position: relative;
+    overflow: hidden;
+
+    .eq-graph-grid {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 2px 4px;
+      pointer-events: none;
+
+      .grid-line {
+        font-size: 5px;
+        color: #333;
+        border-bottom: 1px dotted #222;
+
+        &.top {
+          color: #444;
+        }
+
+        &.middle {
+          color: $winamp-text-dim;
+        }
+
+        &.bottom {
+          border-bottom: none;
+        }
+      }
+    }
+
+    .eq-curve {
+      position: absolute;
+      inset: 4px;
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-around;
+      gap: 2px;
+
+      .curve-point {
+        width: 6px;
+        height: 6px;
+        background: $winamp-text;
+        border-radius: 50%;
+        box-shadow: 0 0 4px $winamp-text;
+        position: relative;
+        transition: bottom 0.1s ease;
+
+        &.disabled {
+          background: #444;
+          box-shadow: none;
+        }
+
+        &::before {
+          content: '';
+          position: absolute;
+          bottom: 3px;
+          left: 50%;
+          transform: translateX(-50%);
+          width: 1px;
+          height: 100px;
+          background: linear-gradient(to top, transparent, rgba($winamp-text, 0.3));
+        }
+      }
     }
   }
 
@@ -427,22 +535,104 @@ $winamp-button-pressed: #2a2a2a;
       gap: 4px;
     }
 
+    .slider-track {
+      position: relative;
+      width: 16px;
+      height: 50px;
+      display: flex;
+      justify-content: center;
+
+      .slider-fill {
+        position: absolute;
+        bottom: 0;
+        left: 2px;
+        right: 2px;
+        background: linear-gradient(to top, #003300, $winamp-text);
+        border-radius: 1px;
+        pointer-events: none;
+        opacity: 0.5;
+        transition: height 0.1s ease;
+
+        &.disabled {
+          background: linear-gradient(to top, #222, #444);
+        }
+      }
+    }
+
     .eq-slider {
       -webkit-appearance: slider-vertical;
       appearance: slider-vertical;
       writing-mode: vertical-lr;
       direction: rtl;
-      width: 12px;
+      width: 16px;
       height: 50px;
+      background: transparent;
+      position: relative;
+      z-index: 1;
 
-      &::-webkit-slider-track {
+      &::-webkit-slider-runnable-track {
         width: 6px;
         height: 100%;
+        background: linear-gradient(180deg,
+            #ff4444 0%, #ff4444 10%,
+            $winamp-highlight 10%, $winamp-highlight 30%,
+            $winamp-text 30%, $winamp-text 100%);
+        border: 1px solid #333;
+        border-radius: 2px;
+      }
+
+      &::-moz-range-track {
+        width: 6px;
+        height: 100%;
+        background: linear-gradient(180deg,
+            #ff4444 0%, #ff4444 10%,
+            $winamp-highlight 10%, $winamp-highlight 30%,
+            $winamp-text 30%, $winamp-text 100%);
+        border: 1px solid #333;
+        border-radius: 2px;
       }
 
       &::-webkit-slider-thumb {
-        width: 12px;
+        -webkit-appearance: none;
+        width: 16px;
         height: 6px;
+        background: linear-gradient(180deg, #ccc, #888, #666);
+        border: 1px solid #444;
+        border-radius: 1px;
+        cursor: grab;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.3),
+          0 1px 2px rgba(0, 0, 0, 0.5);
+
+        &:active {
+          cursor: grabbing;
+          background: linear-gradient(180deg, #888, #666, #444);
+        }
+      }
+
+      &::-moz-range-thumb {
+        width: 16px;
+        height: 6px;
+        background: linear-gradient(180deg, #ccc, #888, #666);
+        border: 1px solid #444;
+        border-radius: 1px;
+        cursor: grab;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.3),
+          0 1px 2px rgba(0, 0, 0, 0.5);
+      }
+
+      &.disabled {
+        opacity: 0.5;
+        pointer-events: none;
+
+        &::-webkit-slider-runnable-track {
+          background: linear-gradient(180deg, #333, #222);
+        }
+
+        &::-moz-range-track {
+          background: linear-gradient(180deg, #333, #222);
+        }
       }
     }
 
@@ -451,19 +641,30 @@ $winamp-button-pressed: #2a2a2a;
       color: $winamp-text-dim;
     }
   }
+}
 
-  .eq-presets {
-    padding: 4px 8px 8px;
-    display: flex;
-    justify-content: flex-end;
+// Custom styling for the preset menu
+::ng-deep .winamp-preset-menu {
+  .mat-mdc-menu-content {
+    background: linear-gradient(180deg, $winamp-bg, $winamp-dark) !important;
+    padding: 0 !important;
+  }
 
-    .preset-btn {
-      padding: 2px 8px;
-      font-size: 8px;
-      background: linear-gradient(180deg, #4a4a4a, #2a2a2a);
-      border: 1px solid #555;
-      color: #888;
-      cursor: pointer;
+  .mat-mdc-menu-item {
+    font-size: 10px !important;
+    font-family: 'Courier New', monospace !important;
+    color: $winamp-text-dim !important;
+    min-height: 24px !important;
+    padding: 4px 8px !important;
+
+    &:hover {
+      background: rgba($winamp-text, 0.1) !important;
+      color: $winamp-text !important;
+    }
+
+    &.active {
+      color: $winamp-text !important;
+      background: rgba($winamp-text, 0.2) !important;
     }
   }
 }
