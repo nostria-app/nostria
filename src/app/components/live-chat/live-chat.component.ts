@@ -274,7 +274,8 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
     // If container doesn't have scrollable content and there are more messages, load them
     if (!hasScrollableContent && this.hasMoreMessages() && this.messages().length > 0 && !this.isLoadingOlderMessages()) {
       console.log('[LiveChat] Container not scrollable, auto-loading older messages...');
-      this.loadOlderMessages().then(() => {
+      // Pass true to scroll to bottom after loading since this is during initial load
+      this.loadOlderMessages(true).then(() => {
         // Check again after loading
         setTimeout(() => this.checkIfNeedsMoreContent(), 500);
       });
@@ -317,6 +318,10 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
 
     // Ignore scroll events while restoring scroll position
     if (this.isRestoringScrollPosition) return;
+
+    // Don't trigger scroll-based loading during initial load phase
+    // Let checkIfNeedsMoreContent handle it instead
+    if (!this.initialLoadComplete) return;
 
     const container = this.messagesContainer.nativeElement;
     const scrollTop = container.scrollTop;
@@ -740,7 +745,7 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   toggleView(mode: string) {
     // Remember if user was near bottom before switching views
     const wasNearBottom = this.isUserNearBottom();
-    
+
     this.viewMode.set(mode as 'chat' | 'participants' | 'settings');
     if (mode === 'chat') {
       setTimeout(() => {
@@ -804,11 +809,12 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
   async forceLoadOlderMessages(): Promise<void> {
     // Reset hasMoreMessages to allow loading
     this.hasMoreMessages.set(true);
-    await this.loadOlderMessages();
+    // User triggered, so preserve scroll position (don't scroll to bottom)
+    await this.loadOlderMessages(false);
   }
 
-  async loadOlderMessages(): Promise<void> {
-    console.log('[LiveChat] loadOlderMessages called');
+  async loadOlderMessages(scrollToBottomAfter = false): Promise<void> {
+    console.log('[LiveChat] loadOlderMessages called, scrollToBottomAfter:', scrollToBottomAfter);
 
     // Don't load if already loading or no more messages
     if (this.isLoadingOlderMessages() || !this.hasMoreMessages()) {
@@ -963,9 +969,15 @@ export class LiveChatComponent implements AfterViewInit, OnDestroy {
           // Use requestAnimationFrame for smoother scroll restoration after DOM update
           requestAnimationFrame(() => {
             requestAnimationFrame(() => {
-              const newScrollHeight = container.scrollHeight;
-              const scrollDiff = newScrollHeight - previousScrollHeight;
-              container.scrollTop = scrollDiff;
+              if (scrollToBottomAfter) {
+                // During initial/auto-load, scroll to bottom to show latest messages
+                container.scrollTop = container.scrollHeight;
+              } else {
+                // User triggered load - preserve their scroll position
+                const newScrollHeight = container.scrollHeight;
+                const scrollDiff = newScrollHeight - previousScrollHeight;
+                container.scrollTop = scrollDiff;
+              }
               // Reset flags after scroll is set
               setTimeout(() => {
                 this.isRestoringScrollPosition = false;
