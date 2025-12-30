@@ -44,7 +44,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
   showCast: true,
   isLiveStream: false,
   autoHide: true,
-  autoHideDelay: 3000,
+  autoHideDelay: 1500, // Shorter delay for more responsive feel
 };
 
 @Component({
@@ -319,6 +319,11 @@ export class VideoControlsComponent implements OnDestroy {
     // In native fullscreen, don't track hovering - let parent handle it
     if (this.nativeFullscreen()) return;
     this.isHovering.set(false);
+    // Immediately hide controls when mouse leaves (no delay)
+    if (!this.paused()) {
+      this.clearAutoHideTimer();
+      this.controlsVisible.set(false);
+    }
   }
 
   onMouseMove(): void {

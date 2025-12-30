@@ -300,8 +300,10 @@ export class InlineVideoPlayerComponent implements OnDestroy {
   }
 
   onMouseLeave(): void {
+    // Immediately hide controls when mouse leaves (no delay)
     if (!this.paused()) {
-      this.startAutoHideTimer();
+      this.clearAutoHideTimer();
+      this.controlsVisible.set(false);
     }
   }
 
@@ -319,11 +321,12 @@ export class InlineVideoPlayerComponent implements OnDestroy {
 
   private startAutoHideTimer(): void {
     this.clearAutoHideTimer();
+    // Shorter timeout for auto-hide (1.5 seconds) for more responsive feel
     this.autoHideTimeout = setTimeout(() => {
       if (!this.paused()) {
         this.controlsVisible.set(false);
       }
-    }, 3000);
+    }, 1500);
   }
 
   private clearAutoHideTimer(): void {

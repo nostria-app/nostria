@@ -31,7 +31,7 @@
   }
 }
 
-// Controls overlay
+// Controls overlay (only visible on hover while playing)
 .controls-overlay {
   position: absolute;
   top: 0;
@@ -43,7 +43,7 @@
   justify-content: flex-end;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 0.25s ease;
+  transition: opacity 0.15s ease;
 
   &.visible {
     opacity: 1;
@@ -61,25 +61,26 @@
   pointer-events: none;
 }
 
-// Center play button
+// Center play button (shown when paused)
 .center-play-btn {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: 64px;
-  height: 64px;
+  width: 72px;
+  height: 72px;
   background: rgba(0, 0, 0, 0.6);
   border: none;
   border-radius: 50%;
   cursor: pointer;
   transition: background-color 0.2s ease, transform 0.2s ease;
   pointer-events: auto;
-  -webkit-backdrop-filter: blur(4px);
-  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
+  z-index: 5;
 
   &:hover {
     background: rgba(0, 0, 0, 0.8);
@@ -87,9 +88,45 @@
   }
 
   mat-icon {
-    font-size: 40px;
-    width: 40px;
-    height: 40px;
+    font-size: 44px;
+    width: 44px;
+    height: 44px;
+    color: white;
+  }
+}
+
+// Center pause button (shown when playing and hovering)
+.center-pause-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 72px;
+  height: 72px;
+  background: rgba(0, 0, 0, 0.4);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s ease, opacity 0.15s ease;
+  pointer-events: auto;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  opacity: 0.8;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.7);
+    transform: translate(-50%, -50%) scale(1.1);
+    opacity: 1;
+  }
+
+  mat-icon {
+    font-size: 44px;
+    width: 44px;
+    height: 44px;
     color: white;
   }
 }
