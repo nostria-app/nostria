@@ -1,214 +1,216 @@
-<div class="winamp-player" [class.double-size]="doubleSize()" appSwipeGesture [horizontalSwipe]="true"
-  [verticalSwipe]="true" [trackProgress]="true" (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)"
-  (swipeEnd)="onSwipeEnd()">
-  <!-- Main player window -->
-  <div class="winamp-main">
-    <!-- Title bar -->
-    <div class="title-bar">
-      <div class="title-bar-left">
-        <span class="winamp-logo">WINAMP</span>
+<div class="winamp-player" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" [trackProgress]="true"
+  (swipe)="onSwipe($event)" (swipeProgress)="onSwipeProgress($event)" (swipeEnd)="onSwipeEnd()">
+  <div class="winamp-content" [class.double-size]="doubleSize()">
+    <!-- Main player window -->
+    <div class="winamp-main">
+      <!-- Title bar -->
+      <div class="title-bar">
+        <div class="title-bar-left">
+          <span class="winamp-logo">WINAMP</span>
+        </div>
+        <div class="title-bar-buttons">
+          <button class="title-btn minimize" matTooltip="Minimize">_</button>
+          <button class="title-btn maximize" [class.active]="doubleSize()" (click)="toggleDoubleSize()"
+            matTooltip="Double size (2x)">2x</button>
+          <button class="title-btn close" matTooltip="Close">×</button>
+        </div>
       </div>
-      <div class="title-bar-buttons">
-        <button class="title-btn minimize" matTooltip="Minimize">_</button>
-        <button class="title-btn maximize" [class.active]="doubleSize()" (click)="toggleDoubleSize()"
-          matTooltip="Double size (2x)">2x</button>
-        <button class="title-btn close" matTooltip="Close">×</button>
-      </div>
-    </div>
 
-    <!-- Display section -->
-    <div class="display-section">
-      <!-- Left side - time display and visualizer -->
-      <div class="display-left">
-        <div class="time-display">
-          <span class="time-value">{{ formatTimeDisplay(currentTime()) }}</span>
+      <!-- Display section -->
+      <div class="display-section">
+        <!-- Left side - time display and visualizer -->
+        <div class="display-left">
+          <div class="time-display">
+            <span class="time-value">{{ formatTimeDisplay(currentTime()) }}</span>
+          </div>
+
+          <!-- Spectrum visualizer -->
+          <div class="visualizer">
+            @for (bar of visualizerBars(); track $index) {
+            <div class="visualizer-bar" [style.height.%]="bar * 100">
+              <div class="bar-segments">
+                @for (seg of [1,2,3,4,5,6,7,8,9,10,11,12]; track seg) {
+                <div class="segment" [class.active]="bar * 12 >= seg" [class.peak]="seg >= 10"
+                  [class.high]="seg >= 7 && seg < 10"></div>
+                }
+              </div>
+            </div>
+            }
+          </div>
         </div>
 
-        <!-- Spectrum visualizer -->
-        <div class="visualizer">
-          @for (bar of visualizerBars(); track $index) {
-          <div class="visualizer-bar" [style.height.%]="bar * 100">
-            <div class="bar-segments">
-              @for (seg of [1,2,3,4,5,6,7,8,9,10,11,12]; track seg) {
-              <div class="segment" [class.active]="bar * 12 >= seg" [class.peak]="seg >= 10"
-                [class.high]="seg >= 7 && seg < 10"></div>
-              }
+        <!-- Right side - track info -->
+        <div class="display-right">
+          <div class="scrolling-text">
+            <span class="marquee-text">{{ scrollingTitle() }}</span>
+          </div>
+
+          <div class="info-row">
+            <div class="bitrate">
+              <span class="label">256</span>
+              <span class="unit">kbps</span>
+            </div>
+            <div class="sample-rate">
+              <span class="label">44</span>
+              <span class="unit">kHz</span>
+            </div>
+            <div class="channels">
+              <span class="stereo active">stereo</span>
             </div>
           </div>
-          }
-        </div>
-      </div>
 
-      <!-- Right side - track info -->
-      <div class="display-right">
-        <div class="scrolling-text">
-          <span class="marquee-text">{{ scrollingTitle() }}</span>
-        </div>
-
-        <div class="info-row">
-          <div class="bitrate">
-            <span class="label">256</span>
-            <span class="unit">kbps</span>
-          </div>
-          <div class="sample-rate">
-            <span class="label">44</span>
-            <span class="unit">kHz</span>
-          </div>
-          <div class="channels">
-            <span class="stereo active">stereo</span>
+          <!-- Position indicator -->
+          <div class="position-bar">
+            <input type="range" class="winamp-slider position-slider" [min]="0" [max]="duration() || 0"
+              [value]="currentTime()" (input)="onTimeChange($event)" aria-label="Seek" />
           </div>
         </div>
+      </div>
 
-        <!-- Position indicator -->
-        <div class="position-bar">
-          <input type="range" class="winamp-slider position-slider" [min]="0" [max]="duration() || 0"
-            [value]="currentTime()" (input)="onTimeChange($event)" aria-label="Seek" />
+      <!-- Volume and balance -->
+      <div class="volume-section">
+        <div class="volume-control">
+          <span class="volume-label">Volume</span>
+          <input type="range" class="winamp-slider volume-slider" [min]="0" [max]="100" [value]="volume"
+            (input)="onVolumeChange($event)" aria-label="Volume" />
+        </div>
+        <div class="balance-control">
+          <span class="balance-label">Balance</span>
+          <input type="range" class="winamp-slider balance-slider" [min]="-100" [max]="100" [value]="0"
+            aria-label="Balance" />
         </div>
       </div>
-    </div>
 
-    <!-- Volume and balance -->
-    <div class="volume-section">
-      <div class="volume-control">
-        <span class="volume-label">Volume</span>
-        <input type="range" class="winamp-slider volume-slider" [min]="0" [max]="100" [value]="volume"
-          (input)="onVolumeChange($event)" aria-label="Volume" />
-      </div>
-      <div class="balance-control">
-        <span class="balance-label">Balance</span>
-        <input type="range" class="winamp-slider balance-slider" [min]="-100" [max]="100" [value]="0"
-          aria-label="Balance" />
-      </div>
-    </div>
-
-    <!-- Transport controls -->
-    <div class="transport-controls">
-      <button class="transport-btn prev" [disabled]="!media.canPrevious()" (click)="media.previous()"
-        matTooltip="Previous">
-        <mat-icon>skip_previous</mat-icon>
-      </button>
-
-      @if (media.paused) {
-      <button class="transport-btn play" (click)="media.resume()" matTooltip="Play">
-        <mat-icon>play_arrow</mat-icon>
-      </button>
-      } @else {
-      <button class="transport-btn pause" (click)="media.pause()" matTooltip="Pause">
-        <mat-icon>pause</mat-icon>
-      </button>
-      }
-
-      <button class="transport-btn stop" (click)="media.pause()" matTooltip="Stop">
-        <mat-icon>stop</mat-icon>
-      </button>
-
-      <button class="transport-btn next" [disabled]="!media.canNext()" (click)="media.next()" matTooltip="Next">
-        <mat-icon>skip_next</mat-icon>
-      </button>
-
-      <button class="transport-btn eject" (click)="openQueue.emit()" matTooltip="Open Playlist">
-        <mat-icon>eject</mat-icon>
-      </button>
-    </div>
-
-    <!-- Toggle buttons -->
-    <div class="toggle-buttons">
-      <button class="toggle-btn" [class.active]="media.shuffle()" (click)="media.toggleShuffle()" matTooltip="Shuffle">
-        <span>SHUFFLE</span>
-      </button>
-      <button class="toggle-btn" [class.active]="media.repeat() !== 'off'" (click)="media.toggleRepeat()"
-        [matTooltip]="getRepeatTooltip()">
-        <span>{{ media.repeat() === 'one' ? 'REPEAT 1' : 'REPEAT' }}</span>
-      </button>
-      @if (canShowLyrics()) {
-      <button class="toggle-btn" [class.active]="showLyrics()" (click)="toggleLyrics()" matTooltip="Lyrics">
-        <span>LYRICS</span>
-      </button>
-      }
-    </div>
-  </div>
-
-  <!-- Lyrics window (replaces EQ when visible) -->
-  @if (showLyrics()) {
-  <div class="winamp-lyrics">
-    <div class="lyrics-title-bar">
-      <span>WINAMP LYRICS</span>
-      <button class="title-btn close" (click)="showLyrics.set(false)" matTooltip="Close">×</button>
-    </div>
-    <div class="lyrics-content-wrapper">
-      <app-lyrics-view [compact]="true" (closeLyrics)="showLyrics.set(false)" />
-    </div>
-  </div>
-  } @else {
-  <!-- Equalizer window -->
-  <div class="winamp-eq">
-    <div class="eq-title-bar">
-      <span>WINAMP EQUALIZER</span>
-      <div class="eq-toggle">
-        <button class="toggle-btn small" [class.active]="eqEnabled()" (click)="toggleEq()"
-          matTooltip="Enable/Disable EQ">ON</button>
-        <button class="toggle-btn small" [class.active]="eqAuto()" (click)="toggleEqAuto()"
-          matTooltip="Auto EQ">AUTO</button>
-      </div>
-      <div class="eq-presets-inline">
-        <span class="presets-label">PRESETS</span>
-        <button class="preset-dropdown-btn" [matMenuTriggerFor]="presetMenu">
-          {{ currentPreset() || 'Custom' }}
-          <span class="dropdown-arrow">▼</span>
+      <!-- Transport controls -->
+      <div class="transport-controls">
+        <button class="transport-btn prev" [disabled]="!media.canPrevious()" (click)="media.previous()"
+          matTooltip="Previous">
+          <mat-icon>skip_previous</mat-icon>
         </button>
-        <mat-menu #presetMenu="matMenu" class="winamp-preset-menu">
-          @for (preset of eqPresets; track preset) {
-          <button mat-menu-item (click)="applyPreset(preset)" [class.active]="currentPreset() === preset">
-            {{ preset }}
+
+        @if (media.paused) {
+        <button class="transport-btn play" (click)="media.resume()" matTooltip="Play">
+          <mat-icon>play_arrow</mat-icon>
+        </button>
+        } @else {
+        <button class="transport-btn pause" (click)="media.pause()" matTooltip="Pause">
+          <mat-icon>pause</mat-icon>
+        </button>
+        }
+
+        <button class="transport-btn stop" (click)="media.pause()" matTooltip="Stop">
+          <mat-icon>stop</mat-icon>
+        </button>
+
+        <button class="transport-btn next" [disabled]="!media.canNext()" (click)="media.next()" matTooltip="Next">
+          <mat-icon>skip_next</mat-icon>
+        </button>
+
+        <button class="transport-btn eject" (click)="openQueue.emit()" matTooltip="Open Playlist">
+          <mat-icon>eject</mat-icon>
+        </button>
+      </div>
+
+      <!-- Toggle buttons -->
+      <div class="toggle-buttons">
+        <button class="toggle-btn" [class.active]="media.shuffle()" (click)="media.toggleShuffle()"
+          matTooltip="Shuffle">
+          <span>SHUFFLE</span>
+        </button>
+        <button class="toggle-btn" [class.active]="media.repeat() !== 'off'" (click)="media.toggleRepeat()"
+          [matTooltip]="getRepeatTooltip()">
+          <span>{{ media.repeat() === 'one' ? 'REPEAT 1' : 'REPEAT' }}</span>
+        </button>
+        @if (canShowLyrics()) {
+        <button class="toggle-btn" [class.active]="showLyrics()" (click)="toggleLyrics()" matTooltip="Lyrics">
+          <span>LYRICS</span>
+        </button>
+        }
+      </div>
+    </div>
+
+    <!-- Lyrics window (replaces EQ when visible) -->
+    @if (showLyrics()) {
+    <div class="winamp-lyrics">
+      <div class="lyrics-title-bar">
+        <span>WINAMP LYRICS</span>
+        <button class="title-btn close" (click)="showLyrics.set(false)" matTooltip="Close">×</button>
+      </div>
+      <div class="lyrics-content-wrapper">
+        <app-lyrics-view [compact]="true" (closeLyrics)="showLyrics.set(false)" />
+      </div>
+    </div>
+    } @else {
+    <!-- Equalizer window -->
+    <div class="winamp-eq">
+      <div class="eq-title-bar">
+        <span>WINAMP EQUALIZER</span>
+        <div class="eq-toggle">
+          <button class="toggle-btn small" [class.active]="eqEnabled()" (click)="toggleEq()"
+            matTooltip="Enable/Disable EQ">ON</button>
+          <button class="toggle-btn small" [class.active]="eqAuto()" (click)="toggleEqAuto()"
+            matTooltip="Auto EQ">AUTO</button>
+        </div>
+        <div class="eq-presets-inline">
+          <span class="presets-label">PRESETS</span>
+          <button class="preset-dropdown-btn" [matMenuTriggerFor]="presetMenu">
+            {{ currentPreset() || 'Custom' }}
+            <span class="dropdown-arrow">▼</span>
           </button>
+          <mat-menu #presetMenu="matMenu" class="winamp-preset-menu">
+            @for (preset of eqPresets; track preset) {
+            <button mat-menu-item (click)="applyPreset(preset)" [class.active]="currentPreset() === preset">
+              {{ preset }}
+            </button>
+            }
+          </mat-menu>
+        </div>
+      </div>
+
+      <!-- EQ Graph visualization showing current curve -->
+      <div class="eq-graph">
+        <div class="eq-graph-grid">
+          <div class="grid-line top">+12 dB</div>
+          <div class="grid-line middle">0 dB</div>
+          <div class="grid-line bottom">-12 dB</div>
+        </div>
+        <div class="eq-curve">
+          @for (value of eqBands(); track $index) {
+          <div class="curve-point" [style.bottom.%]="value" [class.disabled]="!eqEnabled()"></div>
           }
-        </mat-menu>
-      </div>
-    </div>
-
-    <!-- EQ Graph visualization showing current curve -->
-    <div class="eq-graph">
-      <div class="eq-graph-grid">
-        <div class="grid-line top">+12 dB</div>
-        <div class="grid-line middle">0 dB</div>
-        <div class="grid-line bottom">-12 dB</div>
-      </div>
-      <div class="eq-curve">
-        @for (value of eqBands(); track $index) {
-        <div class="curve-point" [style.bottom.%]="value" [class.disabled]="!eqEnabled()"></div>
-        }
-      </div>
-    </div>
-
-    <div class="eq-sliders">
-      <div class="preamp">
-        <div class="slider-track">
-          <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="eqPreamp()"
-            (input)="updatePreamp($event)" orient="vertical" aria-label="Preamp"
-            [title]="'Preamp: ' + (eqPreamp() - 50 > 0 ? '+' : '') + ((eqPreamp() - 50) / 50 * 12).toFixed(1) + ' dB'"
-            [class.disabled]="!eqEnabled()" />
-          <div class="slider-fill" [style.height.%]="eqPreamp()" [class.disabled]="!eqEnabled()"></div>
         </div>
-        <span class="eq-label">PREAMP</span>
       </div>
 
-      <div class="eq-divider"></div>
-
-      <div class="frequency-bands">
-        @for (freq of eqFrequencyLabels; track freq; let i = $index) {
-        <div class="eq-band">
+      <div class="eq-sliders">
+        <div class="preamp">
           <div class="slider-track">
-            <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="eqBands()[i]"
-              (input)="updateEqBand(i, $event)" orient="vertical" [attr.aria-label]="freq + ' Hz'"
-              [title]="freq + ' Hz: ' + (eqBands()[i] - 50 > 0 ? '+' : '') + ((eqBands()[i] - 50) / 50 * 12).toFixed(1) + ' dB'"
+            <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="eqPreamp()"
+              (input)="updatePreamp($event)" orient="vertical" aria-label="Preamp"
+              [title]="'Preamp: ' + (eqPreamp() - 50 > 0 ? '+' : '') + ((eqPreamp() - 50) / 50 * 12).toFixed(1) + ' dB'"
               [class.disabled]="!eqEnabled()" />
-            <div class="slider-fill" [style.height.%]="eqBands()[i]" [class.disabled]="!eqEnabled()"></div>
+            <div class="slider-fill" [style.height.%]="eqPreamp()" [class.disabled]="!eqEnabled()"></div>
           </div>
-          <span class="eq-label">{{ freq }}</span>
+          <span class="eq-label">PREAMP</span>
         </div>
-        }
+
+        <div class="eq-divider"></div>
+
+        <div class="frequency-bands">
+          @for (freq of eqFrequencyLabels; track freq; let i = $index) {
+          <div class="eq-band">
+            <div class="slider-track">
+              <input type="range" class="winamp-slider eq-slider" [min]="0" [max]="100" [value]="eqBands()[i]"
+                (input)="updateEqBand(i, $event)" orient="vertical" [attr.aria-label]="freq + ' Hz'"
+                [title]="freq + ' Hz: ' + (eqBands()[i] - 50 > 0 ? '+' : '') + ((eqBands()[i] - 50) / 50 * 12).toFixed(1) + ' dB'"
+                [class.disabled]="!eqEnabled()" />
+              <div class="slider-fill" [style.height.%]="eqBands()[i]" [class.disabled]="!eqEnabled()"></div>
+            </div>
+            <span class="eq-label">{{ freq }}</span>
+          </div>
+          }
+        </div>
       </div>
     </div>
+    }
   </div>
-  }
 </div>
