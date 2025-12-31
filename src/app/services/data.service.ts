@@ -282,8 +282,24 @@ export class DataService {
     return this.cache.get<NostrRecord>(cacheKey);
   }
 
-  async getProfile(pubkey: string, refresh = false): Promise<NostrRecord | undefined> {
+  async getProfile(pubkey: string, options?: boolean | { refresh?: boolean; forceRefresh?: boolean }): Promise<NostrRecord | undefined> {
+    // Parse options - support both boolean (for backwards compatibility) and object format
+    let refresh = false;
+    let forceRefresh = false;
+    if (typeof options === 'boolean') {
+      refresh = options;
+    } else if (options) {
+      refresh = options.refresh ?? false;
+      forceRefresh = options.forceRefresh ?? false;
+    }
+
     const cacheKey = `metadata-${pubkey}`;
+
+    // For forceRefresh, skip cache entirely and fetch fresh data from relays
+    if (forceRefresh) {
+      this.logger.debug(`[Profile] Force refreshing profile for: ${pubkey.substring(0, 8)}...`);
+      return this.loadProfile(pubkey, cacheKey, true);
+    }
 
     // CRITICAL: Check pending requests FIRST, synchronously, before any async work
     // This prevents the race condition where multiple callers slip through before
