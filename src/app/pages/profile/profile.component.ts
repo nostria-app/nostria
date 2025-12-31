@@ -423,9 +423,10 @@ export class ProfileComponent {
         setTimeout(() => this.layoutService.scrollToOptimalProfilePosition(), 100);
       }
 
-      // Then refresh profile data in the background to ensure it's up to date
-      this.logger.debug('Refreshing profile data in background for:', hexPubkey);
-      const refreshedMetadata = await this.data.getProfile(hexPubkey, true);
+      // Then force refresh profile data from relays to ensure it's up to date
+      // Using forceRefresh to bypass cache and get the latest from relays
+      this.logger.debug('Force refreshing profile data from relays for:', hexPubkey);
+      const refreshedMetadata = await this.data.getProfile(hexPubkey, { forceRefresh: true });
 
       // Only update if we got newer data or if we didn't have cached data
       if (refreshedMetadata && (!cachedMetadata || refreshedMetadata.event.created_at > cachedMetadata.event.created_at)) {
