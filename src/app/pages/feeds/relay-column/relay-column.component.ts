@@ -109,14 +109,18 @@ export class RelayColumnComponent implements OnDestroy {
   // Filter events based on showReplies setting
   private filteredEvents = computed(() => {
     const events = this.allEvents();
-    if (this.showReplies()) {
+    const showReplies = this.showReplies();
+    this.logger.debug(`Filtering events: showReplies=${showReplies}, totalEvents=${events.length}`);
+    if (showReplies) {
       return events;
     }
     // Filter out replies (events with 'e' tags that reference other events)
-    return events.filter(event => {
+    const filtered = events.filter(event => {
       const hasReplyTag = event.tags.some(tag => tag[0] === 'e');
       return !hasReplyTag;
     });
+    this.logger.debug(`Filtered to ${filtered.length} original posts (removed ${events.length - filtered.length} replies)`);
+    return filtered;
   });
 
   // Computed signals
@@ -162,12 +166,12 @@ export class RelayColumnComponent implements OnDestroy {
     return this.relayDomain() || 'Unknown Relay';
   });
 
-  // Check if contact is a URL
+  // Check if contact is a URL or mailto
   contactUrl = computed(() => {
     const contact = this.relayInfo()?.contact;
     if (!contact) return null;
-    // Check if it looks like a URL
-    if (contact.startsWith('http://') || contact.startsWith('https://')) {
+    // Check if it looks like a URL or mailto
+    if (contact.startsWith('http://') || contact.startsWith('https://') || contact.startsWith('mailto:')) {
       return contact;
     }
     return null;
@@ -287,8 +291,11 @@ export class RelayColumnComponent implements OnDestroy {
   }
 
   toggleShowReplies(): void {
-    this.showReplies.update(v => !v);
+    const newValue = !this.showReplies();
+    this.logger.debug(`toggleShowReplies: changing from ${this.showReplies()} to ${newValue}`);
+    this.showReplies.set(newValue);
     this.saveShowReplies();
+    this.logger.debug(`toggleShowReplies: showReplies is now ${this.showReplies()}`);
   }
 
   toggleExpanded(): void {
