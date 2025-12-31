@@ -350,9 +350,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
               }
             }
 
-            // If relay hints didn't work, fall back to regular fetch (no artificial timeout - let it complete)
+            // If relay hints didn't work, fall back to regular fetch (check database first, then relays)
             if (!eventData) {
-              eventData = await this.data.getEventById(eventId);
+              eventData = await this.data.getEventById(eventId, { save: true });
             }
 
             // If still not found, and we have an author hint, try fetching from author's relays

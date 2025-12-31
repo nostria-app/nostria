@@ -110,7 +110,7 @@ export class RelayColumnComponent implements OnDestroy {
   private filteredEvents = computed(() => {
     const events = this.allEvents();
     const showReplies = this.showReplies();
-    this.logger.debug(`Filtering events: showReplies=${showReplies}, totalEvents=${events.length}`);
+    console.log(`[RelayColumn] Filtering events: showReplies=${showReplies}, totalEvents=${events.length}`);
     if (showReplies) {
       return events;
     }
@@ -119,7 +119,7 @@ export class RelayColumnComponent implements OnDestroy {
       const hasReplyTag = event.tags.some(tag => tag[0] === 'e');
       return !hasReplyTag;
     });
-    this.logger.debug(`Filtered to ${filtered.length} original posts (removed ${events.length - filtered.length} replies)`);
+    console.log(`[RelayColumn] Filtered to ${filtered.length} original posts (removed ${events.length - filtered.length} replies)`);
     return filtered;
   });
 
@@ -292,10 +292,10 @@ export class RelayColumnComponent implements OnDestroy {
 
   toggleShowReplies(): void {
     const newValue = !this.showReplies();
-    this.logger.debug(`toggleShowReplies: changing from ${this.showReplies()} to ${newValue}`);
+    console.log(`[RelayColumn] toggleShowReplies: changing from ${this.showReplies()} to ${newValue}`);
     this.showReplies.set(newValue);
     this.saveShowReplies();
-    this.logger.debug(`toggleShowReplies: showReplies is now ${this.showReplies()}`);
+    console.log(`[RelayColumn] toggleShowReplies: showReplies is now ${this.showReplies()}`);
   }
 
   toggleExpanded(): void {
