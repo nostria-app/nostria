@@ -55,22 +55,36 @@
     @if (relayInfo()?.pubkey) {
     <div class="metadata-section">
       <span class="metadata-label">Operator Pubkey</span>
-      <span class="metadata-value monospace">{{ relayInfo()?.pubkey }}</span>
+      <div class="metadata-value operator-pubkey">
+        <app-user-profile [pubkey]="relayInfo()!.pubkey!" view="compact"></app-user-profile>
+      </div>
     </div>
     }
 
     @if (relayInfo()?.contact) {
     <div class="metadata-section">
       <span class="metadata-label">Contact</span>
+      @if (contactUrl()) {
+      <a [href]="contactUrl()" target="_blank" rel="noopener noreferrer" class="metadata-value link">
+        {{ relayInfo()?.contact }}
+      </a>
+      } @else {
       <span class="metadata-value">{{ relayInfo()?.contact }}</span>
+      }
     </div>
     }
 
     @if (relayInfo()?.software) {
     <div class="metadata-section">
       <span class="metadata-label">Software</span>
+      @if (softwareUrl()) {
+      <a [href]="softwareUrl()" target="_blank" rel="noopener noreferrer" class="metadata-value link">
+        {{ softwareDisplay() }}@if (relayInfo()?.version) { v{{ relayInfo()?.version }}}
+      </a>
+      } @else {
       <span class="metadata-value">{{ relayInfo()?.software }}@if (relayInfo()?.version) { v{{ relayInfo()?.version
         }}}</span>
+      }
     </div>
     }
 
@@ -124,7 +138,13 @@
 
     <div class="metadata-section">
       <span class="metadata-label">Relay URL</span>
-      <span class="metadata-value monospace">{{ relayUrl() }}</span>
+      <div class="relay-url-row">
+        <span class="metadata-value monospace">{{ relayUrl() }}</span>
+        <button mat-icon-button class="copy-btn" (click)="copyRelayUrl()"
+          [matTooltip]="copiedUrl() ? 'Copied!' : 'Copy URL'">
+          <mat-icon>{{ copiedUrl() ? 'check' : 'content_copy' }}</mat-icon>
+        </button>
+      </div>
     </div>
   </div>
   } @else if (isExpanded() && isLoadingInfo()) {

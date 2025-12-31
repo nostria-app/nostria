@@ -1,3 +1,4 @@
+import { Clipboard } from '@angular/cdk/clipboard';
 import {
   Component,
   inject,
@@ -16,6 +17,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { EventComponent } from '../../../components/event/event.component';
+import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { LoggerService } from '../../../services/logger.service';
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
 import { Router, ActivatedRoute } from '@angular/router';
@@ -52,6 +54,7 @@ const DEFAULT_RELAYS: string[] = [
     MatProgressSpinnerModule,
     MatTooltipModule,
     EventComponent,
+    UserProfileComponent,
   ],
   templateUrl: './relay-column.component.html',
   styleUrl: './relay-column.component.scss',
@@ -64,6 +67,7 @@ export class RelayColumnComponent implements OnDestroy {
   private accountLocalState = inject(AccountLocalStateService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
+  private clipboard = inject(Clipboard);
 
   // Input for the relay URL (without wss://)
   relayDomain = input<string>('');
@@ -142,6 +146,49 @@ export class RelayColumnComponent implements OnDestroy {
     return this.relayDomain() || 'Unknown Relay';
   });
 
+  // Check if contact is a URL
+  contactUrl = computed(() => {
+    const contact = this.relayInfo()?.contact;
+    if (!contact) return null;
+    // Check if it looks like a URL
+    if (contact.startsWith('http://') || contact.startsWith('https://')) {
+      return contact;
+    }
+    return null;
+  });
+
+  // Parse software URL from git+ prefix or plain URL
+  softwareUrl = computed(() => {
+    const software = this.relayInfo()?.software;
+    if (!software) return null;
+    // Handle git+https://... format
+    if (software.startsWith('git+')) {
+      const url = software.slice(4).split(' ')[0]; // Remove 'git+' and any version suffix
+      return url.replace(/\.git$/, ''); // Remove .git suffix if present
+    }
+    // Check if it's a plain URL
+    if (software.startsWith('http://') || software.startsWith('https://')) {
+      return software.split(' ')[0]; // Remove any version suffix
+    }
+    return null;
+  });
+
+  // Display software name (without git+ prefix)
+  softwareDisplay = computed(() => {
+    const software = this.relayInfo()?.software;
+    if (!software) return null;
+    // Handle git+https://... format - extract repo name
+    if (software.startsWith('git+')) {
+      const url = software.slice(4);
+      // Extract just the repo name from the URL
+      const match = url.match(/github\.com\/([^\/]+\/[^\/\.]+)/);
+      if (match) {
+        return match[1];
+      }
+    }
+    return software;
+  });
+
   constructor() {
     // React to relay domain changes
     effect(() => {
@@ -203,6 +250,18 @@ export class RelayColumnComponent implements OnDestroy {
 
   toggleExpanded(): void {
     this.isExpanded.update(v => !v);
+  }
+
+  // State for copy feedback
+  copiedUrl = signal(false);
+
+  copyRelayUrl(): void {
+    const url = this.relayUrl();
+    if (url) {
+      this.clipboard.copy(url);
+      this.copiedUrl.set(true);
+      setTimeout(() => this.copiedUrl.set(false), 2000);
+    }
   }
 
   addRelay(domain: string): void {
