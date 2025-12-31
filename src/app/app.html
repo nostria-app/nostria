@@ -444,3 +444,7 @@
 @if (layout.showTermsDialog()) {
 <app-standalone-terms-dialog (closed)="layout.handleTermsDialogClose()" />
 }
+<!-- Feed Edit Dialog -->
+@if (showFeedEditDialog()) {
+<app-new-feed-dialog [icons]="feedIconOptions" [feed]="editingFeed()" (closed)="onFeedEditDialogClosed($event)" />
+}
