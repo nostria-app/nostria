@@ -2427,3 +2427,41 @@ h1 {
     }
   }
 }
+
+// Relay Feed Container Styles
+.relay-feed-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  max-width: 700px;
+  margin: 0 auto;
+
+  .relay-feed-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background-color: var(--mat-sys-surface-container);
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+    flex-shrink: 0;
+
+    .relay-feed-title {
+      font-size: 16px;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  .relay-column-wrapper {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+}
+
+:host-context(.dark) .relay-feed-container {
+  .relay-feed-header {
+    background-color: var(--mat-sys-surface-container);
+  }
+}

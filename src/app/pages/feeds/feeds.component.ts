@@ -56,6 +56,8 @@ import { EventComponent } from '../../components/event/event.component';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ImagePlaceholderService } from '../../services/image-placeholder.service';
 import { TrendingColumnComponent } from './trending-column/trending-column.component';
+import { RelayColumnComponent } from './relay-column/relay-column.component';
+import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.component';
 
 // NavLink interface removed because it was unused.
 
@@ -81,6 +83,8 @@ import { TrendingColumnComponent } from './trending-column/trending-column.compo
     NewFeedDialogComponent,
     NewColumnDialogComponent,
     TrendingColumnComponent,
+    RelayColumnComponent,
+    RelayFeedMenuComponent,
   ],
   templateUrl: './feeds.component.html',
   styleUrl: './feeds.component.scss',
@@ -154,6 +158,12 @@ export class FeedsComponent implements OnDestroy {
   // Header visibility - hide when scrolling down, show when scrolling up
   headerHidden = signal(false);
   private lastScrollTop = 0;
+
+  // Relay feed state - for showing public posts from a specific relay
+  activeRelayDomain = signal<string>('');
+  showRelayFeed = computed(() => !!this.activeRelayDomain());
+  @ViewChild('relayFeedMenu') relayFeedMenu?: RelayFeedMenuComponent;
+  private queryParamsSubscription: import('rxjs').Subscription | null = null;
 
   // Horizontal scrollbar tracking
   hasHorizontalOverflow = signal(false);
@@ -529,7 +539,8 @@ export class FeedsComponent implements OnDestroy {
         // Sync URL with active feed (only if not triggered by route change)
         // This prevents infinite loops between route changes and feed changes
         // Also skip if we're currently processing a URL-based navigation
-        if (currentFeedId && !this.isProcessingUrlNavigation) {
+        // Also skip URL sync when showing a relay feed (to preserve the ?r= query param)
+        if (currentFeedId && !this.isProcessingUrlNavigation && !this.activeRelayDomain()) {
           const feed = this.feedsCollectionService.feeds().find(f => f.id === currentFeedId);
           if (feed) {
             const currentPath = this.route.snapshot.params['path'];
@@ -556,11 +567,11 @@ export class FeedsComponent implements OnDestroy {
 
             if (!urlMatchesFeed) {
               if (targetPath) {
-                this.router.navigate(['/f', targetPath], { replaceUrl: true });
+                this.router.navigate(['/f', targetPath], { replaceUrl: true, queryParamsHandling: 'preserve' });
                 this.logger.debug(`Synced URL to feed path: /f/${targetPath}`);
               } else if (this.router.url.startsWith('/f/')) {
                 // Feed has no path but URL has a path - navigate to /f
-                this.router.navigate(['/f'], { replaceUrl: true });
+                this.router.navigate(['/f'], { replaceUrl: true, queryParamsHandling: 'preserve' });
                 this.logger.debug('Synced URL to /f (feed has no path)');
               }
             }
@@ -601,7 +612,7 @@ export class FeedsComponent implements OnDestroy {
         } else {
           // If no feed with this path is found, redirect to default feed
           console.warn(`No feed found with path: ${pathParam}`);
-          this.router.navigate(['/f'], { replaceUrl: true });
+          this.router.navigate(['/f'], { replaceUrl: true, queryParamsHandling: 'preserve' });
         }
 
         // Clear the flag after a short delay to allow the feed change to process
@@ -618,6 +629,25 @@ export class FeedsComponent implements OnDestroy {
           this.feedsCollectionService.setActiveFeed(feeds[0].id);
         }
         // If there's already an active feed, keep it (already loaded from localStorage)
+      }
+    });
+
+    // Handle query parameters for relay feed (e.g., /f/?r=trending.relays.land)
+    this.queryParamsSubscription = this.route.queryParams.subscribe(params => {
+      const relayParam = params['r'];
+      if (relayParam) {
+        // Normalize the relay domain (remove wss:// if present)
+        const domain = relayParam.replace(/^wss?:\/\//, '').replace(/\/$/, '');
+        this.activeRelayDomain.set(domain);
+        this.logger.debug(`Activated relay feed from URL: ${domain}`);
+
+        // Update the relay feed menu selection if it's available
+        if (this.relayFeedMenu) {
+          this.relayFeedMenu.setSelectedRelay(domain);
+        }
+      } else {
+        // Clear relay feed when no query param
+        this.activeRelayDomain.set('');
       }
     });
 
@@ -1004,6 +1034,36 @@ export class FeedsComponent implements OnDestroy {
 
   toggleAdvancedFilters(): void {
     this.showAdvancedFilters.update(value => !value);
+  }
+
+  /**
+   * Handle relay selection from the relay feed menu
+   */
+  onRelaySelected(domain: string): void {
+    if (domain) {
+      // Navigate with relay query param (keeping nice URL without wss://)
+      this.router.navigate(['/f'], {
+        queryParams: { r: domain },
+        queryParamsHandling: 'merge',
+      });
+    } else {
+      // Clear relay param when deselecting
+      this.router.navigate(['/f'], {
+        queryParams: { r: null },
+        queryParamsHandling: 'merge',
+      });
+    }
+  }
+
+  /**
+   * Close the relay feed view
+   */
+  closeRelayFeed(): void {
+    this.activeRelayDomain.set('');
+    this.router.navigate(['/f'], {
+      queryParams: { r: null },
+      queryParamsHandling: 'merge',
+    });
   }
 
   toggleTagFilter(tag: string): void {
@@ -1439,6 +1499,12 @@ export class FeedsComponent implements OnDestroy {
     if (this.routeParamsSubscription) {
       this.routeParamsSubscription.unsubscribe();
       this.routeParamsSubscription = null;
+    }
+
+    // Clean up query params subscription
+    if (this.queryParamsSubscription) {
+      this.queryParamsSubscription.unsubscribe();
+      this.queryParamsSubscription = null;
     }
 
     // Clean up Intersection Observer

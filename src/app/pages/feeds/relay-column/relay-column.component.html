@@ -1,0 +1,126 @@
+<div class="relay-column">
+  <!-- Relay Info Header -->
+  <div class="relay-info-header">
+    <div class="relay-identity">
+      @if (iconUrl()) {
+      <img [src]="iconUrl()" alt="Relay icon" class="relay-icon" (error)="handleIconError($event)" />
+      } @else {
+      <mat-icon class="relay-icon-fallback">dns</mat-icon>
+      }
+      <div class="relay-details">
+        <span class="relay-name">{{ displayName() }}</span>
+        @if (relayInfo()?.description) {
+        <span class="relay-description">{{ relayInfo()?.description }}</span>
+        }
+      </div>
+    </div>
+
+    <div class="relay-actions">
+      @if (isRefreshing()) {
+      <div class="spinner-container">
+        <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
+      </div>
+      } @else {
+      <button mat-icon-button (click)="refresh()" matTooltip="Refresh">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      }
+
+      @if (!isRelayInList(relayDomain())) {
+      <button mat-icon-button (click)="addRelay(relayDomain())" matTooltip="Add to favorites">
+        <mat-icon>bookmark_border</mat-icon>
+      </button>
+      } @else {
+      <button mat-icon-button (click)="removeRelay(relayDomain())" matTooltip="Remove from favorites">
+        <mat-icon>bookmark</mat-icon>
+      </button>
+      }
+
+      <!-- Relay Selection Menu -->
+      <button mat-icon-button [matMenuTriggerFor]="relayMenu" matTooltip="Select relay">
+        <mat-icon>expand_more</mat-icon>
+      </button>
+      <mat-menu #relayMenu="matMenu" class="relay-selection-menu">
+        <div class="menu-header" mat-menu-item disabled>
+          <mat-icon>dns</mat-icon>
+          <span>Public Relay Feeds</span>
+        </div>
+        <mat-divider></mat-divider>
+        @for (relay of savedRelays(); track relay) {
+        <button mat-menu-item (click)="selectRelay(relay)" [class.active]="relay === relayDomain()">
+          <span class="relay-menu-item">
+            <span class="relay-url">{{ relay }}</span>
+            @if (relay === relayDomain()) {
+            <mat-icon class="active-indicator">check</mat-icon>
+            }
+          </span>
+        </button>
+        }
+      </mat-menu>
+    </div>
+  </div>
+
+  <!-- Content Area -->
+  <div class="column-items">
+    @if (isLoading() && !isRefreshing()) {
+    <!-- Loading skeleton -->
+    <div class="column-skeleton-items">
+      @for (item of [1, 2, 3, 4, 5]; track $index) {
+      <div class="feed-item-skeleton">
+        <div class="item-header-skeleton">
+          <div class="avatar-skeleton"></div>
+          <div class="user-info-skeleton">
+            <div class="username-skeleton"></div>
+            <div class="timestamp-skeleton"></div>
+          </div>
+        </div>
+        <div class="item-content-skeleton">
+          <div class="content-line-skeleton"></div>
+          <div class="content-line-skeleton"></div>
+          <div class="content-line-skeleton short"></div>
+        </div>
+        <div class="item-actions-skeleton">
+          <div class="action-skeleton"></div>
+          <div class="action-skeleton"></div>
+          <div class="action-skeleton"></div>
+          <div class="action-skeleton"></div>
+        </div>
+      </div>
+      }
+    </div>
+    } @else if (error()) {
+    <!-- Error state -->
+    <div class="error-state">
+      <mat-icon>error_outline</mat-icon>
+      <p>{{ error() }}</p>
+      <button mat-stroked-button (click)="refresh()">
+        <mat-icon>refresh</mat-icon>
+        Try Again
+      </button>
+    </div>
+    } @else if (hasEvents()) {
+    <!-- Events list -->
+    @for (event of displayedEvents(); track event.id) {
+    <app-event [event]="event"></app-event>
+    }
+
+    <!-- Load more trigger -->
+    @if (hasMore()) {
+    <div #loadMoreTrigger class="load-more-trigger"></div>
+    } @else if (displayedEvents().length > 0) {
+    <div class="end-of-feed">
+      <mat-icon>celebration</mat-icon>
+      <p>🎉 You've reached the end!</p>
+      <span class="end-subtitle">No more posts from this relay.</span>
+    </div>
+    }
+    } @else {
+    <!-- Empty state -->
+    <div class="empty-state">
+      <mat-icon>dns</mat-icon>
+      <p>No posts found from this relay</p>
+      <span class="empty-subtitle">Try refreshing or select a different relay</span>
+    </div>
+    }
+  </div>
+</div>

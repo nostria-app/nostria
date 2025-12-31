@@ -1,0 +1,322 @@
+.relay-column {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.relay-info-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  gap: 12px;
+}
+
+.relay-identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.relay-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.relay-icon-fallback {
+  width: 32px;
+  height: 32px;
+  color: var(--mat-sys-on-surface-variant);
+}
+
+.relay-details {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.relay-name {
+  font-size: 14px;
+  color: var(--mat-sys-on-surface);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.relay-description {
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+}
+
+.relay-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.spinner-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+}
+
+.column-items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0;
+}
+
+// Skeleton styles (matching trending-column)
+.column-skeleton-items {
+  padding: 8px;
+}
+
+.feed-item-skeleton {
+  padding: 16px;
+  margin-bottom: 8px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-medium);
+}
+
+.item-header-skeleton {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.avatar-skeleton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(90deg, var(--mat-sys-surface-container-high) 25%, var(--mat-sys-surface-container-highest) 50%, var(--mat-sys-surface-container-high) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.user-info-skeleton {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.username-skeleton {
+  height: 14px;
+  width: 120px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--mat-sys-surface-container-high) 25%, var(--mat-sys-surface-container-highest) 50%, var(--mat-sys-surface-container-high) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.timestamp-skeleton {
+  height: 12px;
+  width: 80px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--mat-sys-surface-container-high) 25%, var(--mat-sys-surface-container-highest) 50%, var(--mat-sys-surface-container-high) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+.item-content-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.content-line-skeleton {
+  height: 14px;
+  width: 100%;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--mat-sys-surface-container-high) 25%, var(--mat-sys-surface-container-highest) 50%, var(--mat-sys-surface-container-high) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+
+  &.short {
+    width: 60%;
+  }
+}
+
+.item-actions-skeleton {
+  display: flex;
+  gap: 24px;
+}
+
+.action-skeleton {
+  height: 20px;
+  width: 40px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, var(--mat-sys-surface-container-high) 25%, var(--mat-sys-surface-container-highest) 50%, var(--mat-sys-surface-container-high) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// Error state
+.error-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--mat-sys-error);
+    margin-bottom: 16px;
+  }
+
+  p {
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 16px;
+  }
+
+  button {
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+      margin-right: 8px;
+      color: inherit;
+    }
+  }
+}
+
+// Empty state
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 16px;
+  }
+
+  p {
+    color: var(--mat-sys-on-surface);
+    margin-bottom: 8px;
+  }
+
+  .empty-subtitle {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+// End of feed
+.end-of-feed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 24px;
+  text-align: center;
+
+  mat-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+    color: var(--mat-sys-primary);
+    margin-bottom: 12px;
+  }
+
+  p {
+    color: var(--mat-sys-on-surface);
+    margin-bottom: 4px;
+  }
+
+  .end-subtitle {
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+// Load more trigger
+.load-more-trigger {
+  height: 1px;
+  visibility: hidden;
+}
+
+// Menu styles
+::ng-deep .relay-selection-menu {
+  max-height: 400px;
+  min-width: 280px;
+
+  .menu-header {
+    opacity: 1 !important;
+    cursor: default;
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+
+    span {
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  .relay-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+
+    .relay-url {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .active-indicator {
+      color: var(--mat-sys-primary);
+      margin-left: 8px;
+    }
+  }
+
+  button.active {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+}
+
+:host-context(.dark) {
+  .relay-info-header {
+    background-color: var(--mat-sys-surface-container);
+  }
+
+  .feed-item-skeleton {
+    background-color: var(--mat-sys-surface-container);
+  }
+}
