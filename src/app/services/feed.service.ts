@@ -183,30 +183,35 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     createdAt: Date.now(),
     updatedAt: Date.now(),
   },
-  {
-    id: 'default-feed-trending',
-    label: 'Trending',
-    icon: 'trending_up',
-    path: 'trending',
-    description: 'Popular content from across the network',
-    isSystem: true, // Cannot be deleted
-    columns: [
-      {
-        id: 'trending-column',
-        label: '',
-        icon: 'trending_up',
-        type: 'notes',
-        kinds: [kinds.ShortTextNote],
-        source: 'trending',
-        relayConfig: 'account',
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-      },
-    ],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-  },
 ];
+
+// Trending feed ID constant - this feed is always appended at the end and never persisted
+const TRENDING_FEED_ID = 'default-feed-trending';
+
+// Trending feed definition - appended dynamically, not stored
+const TRENDING_FEED: FeedConfig = {
+  id: TRENDING_FEED_ID,
+  label: 'Trending',
+  icon: 'trending_up',
+  path: 'trending',
+  description: 'Popular content from across the network',
+  isSystem: true, // Cannot be deleted
+  columns: [
+    {
+      id: 'trending-column',
+      label: '',
+      icon: 'trending_up',
+      type: 'notes',
+      kinds: [kinds.ShortTextNote],
+      source: 'trending',
+      relayConfig: 'account',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    },
+  ],
+  createdAt: Date.now(),
+  updatedAt: Date.now(),
+};
 
 @Injectable({
   providedIn: 'root',
@@ -257,7 +262,11 @@ export class FeedService {
   private newEventCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   // Public computed signals
-  readonly feeds = computed(() => this._feeds());
+  // Always append Trending feed at the end (it's not persisted)
+  readonly feeds = computed(() => {
+    const storedFeeds = this._feeds().filter(f => f.id !== TRENDING_FEED_ID);
+    return [...storedFeeds, TRENDING_FEED];
+  });
   readonly userRelays = computed(() => this._userRelays());
   readonly discoveryRelays = computed(() => this._discoveryRelays());
   readonly activeFeedId = computed(() => this._activeFeedId());
@@ -2683,26 +2692,14 @@ export class FeedService {
       } else {
         // storedFeeds exists (could be empty array if user deleted all feeds)
         // Use whatever is stored, even if it's an empty array
+        // Filter out any Trending feed that may have been stored previously
+        // (Trending is now always appended dynamically via the feeds computed signal)
+        const filteredFeeds = storedFeeds.filter(f => f.id !== TRENDING_FEED_ID);
 
-        // Auto-add Trending feed if it doesn't exist (for existing users)
-        const trendingFeed = storedFeeds.find(f => f.id === 'default-feed-trending');
-        if (!trendingFeed) {
-          const defaultTrending = DEFAULT_FEEDS.find(f => f.id === 'default-feed-trending');
-          if (defaultTrending) {
-            storedFeeds.push(JSON.parse(JSON.stringify(defaultTrending)));
-            this.logger.info('Auto-added Trending feed for existing user');
-          }
-        }
-
-        this._feeds.set(storedFeeds);
+        this._feeds.set(filteredFeeds);
         this._feedsLoaded.set(true);
 
-        // Save if we added the Trending feed
-        if (!trendingFeed) {
-          this.saveFeeds();
-        }
-
-        this.logger.debug('Loaded feeds from storage for pubkey', pubkey, storedFeeds);
+        this.logger.debug('Loaded feeds from storage for pubkey', pubkey, filteredFeeds);
       }
     } catch (error) {
       this.logger.error('Error loading feeds from storage:', error);
@@ -2796,10 +2793,12 @@ export class FeedService {
           this.appState.FEEDS_STORAGE_KEY
         ) || {};
 
-      feedsByAccount[pubkey] = this._feeds();
+      // Filter out the Trending feed - it's always appended dynamically, never persisted
+      const feedsToSave = this._feeds().filter(f => f.id !== TRENDING_FEED_ID);
+      feedsByAccount[pubkey] = feedsToSave;
       this.localStorageService.setObject(this.appState.FEEDS_STORAGE_KEY, feedsByAccount);
 
-      this.logger.debug('Saved feeds to storage for pubkey', pubkey, this._feeds());
+      this.logger.debug('Saved feeds to storage for pubkey', pubkey, feedsToSave);
     } catch (error) {
       this.logger.error('Error saving feeds to storage:', error);
       // Note: Don't set feedsInitialized flag on error to allow retry
