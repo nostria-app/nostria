@@ -436,7 +436,7 @@ export class ProfileStateService {
     const events = await this.userRelayService.query(pubkey, {
       kinds: kindsToQuery,
       authors: [pubkey],
-      limit: 20,
+      limit: 50, // Increased limit for better initial load
     });
 
     // Critical check: verify we're still loading data for this pubkey
@@ -638,10 +638,13 @@ export class ProfileStateService {
     this.isLoadingMoreNotes.set(true);
     const pubkey = this.pubkey();
 
+    // Use a larger limit to fetch more events at once for better pagination
+    const LOAD_LIMIT = 50;
+
     try {
       const oldestTimestamp = beforeTimestamp || Math.floor(Date.now() / 1000);
 
-      this.logger.debug(`Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}`);
+      this.logger.debug(`Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}, limit: ${LOAD_LIMIT}`);
 
       const newNotes: NostrRecord[] = [];
       const newReplies: NostrRecord[] = [];
@@ -680,8 +683,12 @@ export class ProfileStateService {
         kinds: kindsToQuery,
         authors: [pubkey],
         until: oldestTimestamp,
-        limit: 15, // Increased limit to get more timeline content
+        limit: LOAD_LIMIT,
       });
+
+      // Track the total number of events returned by relay
+      const eventsFromRelay = events?.length || 0;
+      this.logger.debug(`Received ${eventsFromRelay} events from relay (requested limit: ${LOAD_LIMIT})`);
 
       // Check if profile was switched during the query
       if (this.currentlyLoadingPubkey() !== pubkey) {
@@ -907,10 +914,17 @@ export class ProfileStateService {
         });
       }
 
-      // Only keep hasMoreNotes true if we actually added new content
-      if (!addedAnyContent) {
+      // Determine if there are more notes to load
+      // - If relay returned fewer events than we requested, we've reached the end
+      // - If relay returned 0 events, we've reached the end  
+      // - Otherwise, there might be more events to load
+      const reachedEnd = eventsFromRelay === 0 || eventsFromRelay < LOAD_LIMIT;
+
+      if (reachedEnd) {
+        this.logger.info(`Reached end of notes for ${pubkey}: received ${eventsFromRelay} events (limit was ${LOAD_LIMIT})`);
         this.hasMoreNotes.set(false);
       } else {
+        // Relay returned a full page, there might be more events
         this.hasMoreNotes.set(true);
       }
 
