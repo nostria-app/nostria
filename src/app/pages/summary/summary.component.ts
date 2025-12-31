@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { Location } from '@angular/common';
 import { RouterModule } from '@angular/router';
+import { MatDialog } from '@angular/material/dialog';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -32,6 +33,7 @@ import { FollowingDataService } from '../../services/following-data.service';
 import { CustomDialogService, CustomDialogRef } from '../../services/custom-dialog.service';
 import { EventDialogComponent } from '../event/event-dialog/event-dialog.component';
 import { OnDemandUserDataService } from '../../services/on-demand-user-data.service';
+import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 
 interface ActivitySummary {
   notesCount: number;
@@ -93,6 +95,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   private readonly customDialog = inject(CustomDialogService);
   private readonly location = inject(Location);
   private readonly onDemandUserData = inject(OnDemandUserDataService);
+  private readonly dialog = inject(MatDialog);
   protected readonly app = inject(ApplicationService);
 
   // Current event dialog reference
@@ -872,5 +875,31 @@ export class SummaryComponent implements OnInit, OnDestroy {
     if (videoHosts.some(host => lowerUrl.includes(host))) return true;
 
     return false;
+  }
+
+  /**
+   * Open media in a fullscreen preview dialog
+   */
+  openMediaDialog(event: MouseEvent, mediaEvent: TimelineEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const mediaUrl = this.getMediaUrl(mediaEvent);
+    if (!mediaUrl) return;
+
+    const isVideo = this.isVideoUrl(mediaUrl);
+
+    this.dialog.open(MediaPreviewDialogComponent, {
+      data: {
+        mediaUrl: mediaUrl,
+        mediaType: isVideo ? 'video' : 'image',
+        mediaTitle: 'Media',
+      },
+      maxWidth: '100vw',
+      maxHeight: '100vh',
+      width: '100vw',
+      height: '100vh',
+      panelClass: 'image-dialog-panel',
+    });
   }
 }

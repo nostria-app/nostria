@@ -438,6 +438,12 @@
       font-size: 0.75rem;
       color: white;
       text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+      text-decoration: none;
+      cursor: pointer;
+
+      &:hover {
+        text-decoration: underline;
+      }
     }
   }
 }
