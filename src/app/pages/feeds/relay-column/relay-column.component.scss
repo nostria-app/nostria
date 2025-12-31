@@ -12,6 +12,16 @@
   background-color: var(--mat-sys-surface-container);
   border-bottom: 1px solid var(--mat-sys-outline-variant);
   gap: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+  }
+
+  &.expanded {
+    border-bottom: none;
+  }
 }
 
 .relay-identity {
@@ -72,6 +82,94 @@
   justify-content: center;
   width: 40px;
   height: 40px;
+}
+
+// Expanded metadata section
+.relay-metadata-expanded {
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+  &.loading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.metadata-section {
+  margin-bottom: 16px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.metadata-label {
+  display: block;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--mat-sys-on-surface-variant);
+  margin-bottom: 4px;
+}
+
+.metadata-value {
+  font-size: 13px;
+  color: var(--mat-sys-on-surface);
+  word-break: break-word;
+
+  &.description {
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  &.monospace {
+    font-family: monospace;
+    font-size: 12px;
+    background-color: var(--mat-sys-surface-container-high);
+    padding: 4px 8px;
+    border-radius: 4px;
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+.nips-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.nip-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 11px;
+  background-color: var(--mat-sys-primary-container);
+  color: var(--mat-sys-on-primary-container);
+  border-radius: 12px;
+}
+
+.limitations-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.limitation-item {
+  font-size: 12px;
+  color: var(--mat-sys-on-surface-variant);
+  background-color: var(--mat-sys-surface-container-high);
+  padding: 4px 8px;
+  border-radius: 4px;
+
+  &.warning {
+    background-color: var(--mat-sys-error-container);
+    color: var(--mat-sys-on-error-container);
+  }
 }
 
 .column-items {

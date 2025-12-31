@@ -1,6 +1,6 @@
 <div class="relay-column">
-  <!-- Relay Info Header -->
-  <div class="relay-info-header">
+  <!-- Relay Info Header - Clickable to expand -->
+  <div class="relay-info-header" [class.expanded]="isExpanded()" (click)="toggleExpanded()">
     <div class="relay-identity">
       @if (iconUrl()) {
       <img [src]="iconUrl()" alt="Relay icon" class="relay-icon" (error)="handleIconError($event)" />
@@ -9,13 +9,13 @@
       }
       <div class="relay-details">
         <span class="relay-name">{{ displayName() }}</span>
-        @if (relayInfo()?.description) {
+        @if (relayInfo()?.description && !isExpanded()) {
         <span class="relay-description">{{ relayInfo()?.description }}</span>
         }
       </div>
     </div>
 
-    <div class="relay-actions">
+    <div class="relay-actions" (click)="$event.stopPropagation()">
       @if (isRefreshing()) {
       <div class="spinner-container">
         <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
@@ -36,29 +36,103 @@
       </button>
       }
 
-      <!-- Relay Selection Menu -->
-      <button mat-icon-button [matMenuTriggerFor]="relayMenu" matTooltip="Select relay">
-        <mat-icon>expand_more</mat-icon>
+      <button mat-icon-button (click)="toggleExpanded()" [matTooltip]="isExpanded() ? 'Collapse' : 'Show relay info'">
+        <mat-icon>{{ isExpanded() ? 'expand_less' : 'expand_more' }}</mat-icon>
       </button>
-      <mat-menu #relayMenu="matMenu" class="relay-selection-menu">
-        <div class="menu-header" mat-menu-item disabled>
-          <mat-icon>dns</mat-icon>
-          <span>Public Relay Feeds</span>
-        </div>
-        <mat-divider></mat-divider>
-        @for (relay of savedRelays(); track relay) {
-        <button mat-menu-item (click)="selectRelay(relay)" [class.active]="relay === relayDomain()">
-          <span class="relay-menu-item">
-            <span class="relay-url">{{ relay }}</span>
-            @if (relay === relayDomain()) {
-            <mat-icon class="active-indicator">check</mat-icon>
-            }
-          </span>
-        </button>
-        }
-      </mat-menu>
     </div>
   </div>
+
+  <!-- Expanded NIP-11 Metadata Section -->
+  @if (isExpanded() && relayInfo()) {
+  <div class="relay-metadata-expanded">
+    @if (relayInfo()?.description) {
+    <div class="metadata-section">
+      <span class="metadata-label">Description</span>
+      <p class="metadata-value description">{{ relayInfo()?.description }}</p>
+    </div>
+    }
+
+    @if (relayInfo()?.pubkey) {
+    <div class="metadata-section">
+      <span class="metadata-label">Operator Pubkey</span>
+      <span class="metadata-value monospace">{{ relayInfo()?.pubkey }}</span>
+    </div>
+    }
+
+    @if (relayInfo()?.contact) {
+    <div class="metadata-section">
+      <span class="metadata-label">Contact</span>
+      <span class="metadata-value">{{ relayInfo()?.contact }}</span>
+    </div>
+    }
+
+    @if (relayInfo()?.software) {
+    <div class="metadata-section">
+      <span class="metadata-label">Software</span>
+      <span class="metadata-value">{{ relayInfo()?.software }}@if (relayInfo()?.version) { v{{ relayInfo()?.version
+        }}}</span>
+    </div>
+    }
+
+    @if (relayInfo()?.supported_nips && relayInfo()!.supported_nips!.length > 0) {
+    <div class="metadata-section">
+      <span class="metadata-label">Supported NIPs</span>
+      <div class="nips-list">
+        @for (nip of relayInfo()?.supported_nips; track nip) {
+        <span class="nip-chip">NIP-{{ nip }}</span>
+        }
+      </div>
+    </div>
+    }
+
+    @if (relayInfo()?.limitation) {
+    <div class="metadata-section">
+      <span class="metadata-label">Limitations</span>
+      <div class="limitations-grid">
+        @if (relayInfo()?.limitation?.max_message_length) {
+        <span class="limitation-item">Max message: {{ relayInfo()?.limitation?.max_message_length | number }}</span>
+        }
+        @if (relayInfo()?.limitation?.max_content_length) {
+        <span class="limitation-item">Max content: {{ relayInfo()?.limitation?.max_content_length | number }}</span>
+        }
+        @if (relayInfo()?.limitation?.max_subscriptions) {
+        <span class="limitation-item">Max subscriptions: {{ relayInfo()?.limitation?.max_subscriptions }}</span>
+        }
+        @if (relayInfo()?.limitation?.auth_required) {
+        <span class="limitation-item warning">Auth required</span>
+        }
+        @if (relayInfo()?.limitation?.payment_required) {
+        <span class="limitation-item warning">Payment required</span>
+        }
+      </div>
+    </div>
+    }
+
+    @if (relayInfo()?.relay_countries && relayInfo()!.relay_countries!.length > 0) {
+    <div class="metadata-section">
+      <span class="metadata-label">Countries</span>
+      <span class="metadata-value">{{ relayInfo()?.relay_countries?.join(', ') }}</span>
+    </div>
+    }
+
+    @if (relayInfo()?.language_tags && relayInfo()!.language_tags!.length > 0) {
+    <div class="metadata-section">
+      <span class="metadata-label">Languages</span>
+      <span class="metadata-value">{{ relayInfo()?.language_tags?.join(', ') }}</span>
+    </div>
+    }
+
+    <div class="metadata-section">
+      <span class="metadata-label">Relay URL</span>
+      <span class="metadata-value monospace">{{ relayUrl() }}</span>
+    </div>
+  </div>
+  } @else if (isExpanded() && isLoadingInfo()) {
+  <div class="relay-metadata-expanded loading">
+    <mat-spinner diameter="24"></mat-spinner>
+    <span>Loading relay information...</span>
+  </div>
+  }
 
   <!-- Content Area -->
   <div class="column-items">
