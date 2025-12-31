@@ -30,10 +30,6 @@
       <button mat-icon-button (click)="addRelay(relayDomain())" matTooltip="Add to favorites">
         <mat-icon>bookmark_border</mat-icon>
       </button>
-      } @else {
-      <button mat-icon-button (click)="removeRelay(relayDomain())" matTooltip="Remove from favorites">
-        <mat-icon>bookmark</mat-icon>
-      </button>
       }
 
       <button mat-icon-button (click)="toggleExpanded()" [matTooltip]="isExpanded() ? 'Collapse' : 'Show relay info'">

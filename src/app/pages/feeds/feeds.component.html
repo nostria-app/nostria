@@ -51,7 +51,8 @@
             <mat-icon>add</mat-icon>
           </button>
 
-          <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column" [disabled]="feeds().length === 0">
+          <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column"
+            [disabled]="feeds().length === 0 || showRelayFeed()">
             <mat-icon>add_column_right</mat-icon>
           </button>
 
@@ -64,11 +65,13 @@
           </button>
 
           <mat-menu #feedManagementMenu="matMenu">
-            <button mat-menu-item (click)="editCurrentFeed()" [disabled]="!activeFeed() || isSystemFeed()">
+            <button mat-menu-item (click)="editCurrentFeed()"
+              [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
               <mat-icon>edit</mat-icon>
               <span>Edit Feed</span>
             </button>
-            <button mat-menu-item (click)="deleteCurrentFeed()" [disabled]="!activeFeed() || isSystemFeed()">
+            <button mat-menu-item (click)="deleteCurrentFeed()"
+              [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
               <mat-icon>delete</mat-icon>
               <span>Delete Feed</span>
             </button>

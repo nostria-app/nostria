@@ -319,6 +319,14 @@ export class FeedsCollectionService {
   }
 
   /**
+   * Clear the active feed selection
+   */
+  clearActiveFeed(): void {
+    this._activeFeedId.set(null);
+    this.logger.debug('Cleared active feed');
+  }
+
+  /**
    * Add a column to a feed
    */
   async addColumnToFeed(
