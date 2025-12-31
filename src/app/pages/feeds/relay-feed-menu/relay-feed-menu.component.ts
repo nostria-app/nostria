@@ -332,10 +332,15 @@ export class RelayFeedMenuComponent {
 
   getRelayIcon(domain: string): string | null {
     const info = this.relayInfoCache().get(domain);
-    // Try icon first, then banner, then favicon
+    // If we have info, try icon first, then banner
     if (info?.icon) return info.icon;
     if (info?.banner) return info.banner;
-    return `https://${domain}/favicon.ico`;
+    // Only return favicon if we have info (meaning we fetched it but it has no icon/banner)
+    // If no info, return null to show the fallback icon while we fetch
+    if (info) {
+      return `https://${domain}/favicon.ico`;
+    }
+    return null;
   }
 
   onIconError(event: Event): void {

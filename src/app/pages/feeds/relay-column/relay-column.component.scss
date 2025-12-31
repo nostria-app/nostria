@@ -9,8 +9,9 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
+  margin: 0 8px;
   background-color: var(--mat-sys-surface-container);
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  border-radius: var(--mat-sys-corner-large);
   gap: 12px;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -20,7 +21,7 @@
   }
 
   &.expanded {
-    border-bottom: none;
+    border-radius: var(--mat-sys-corner-large) var(--mat-sys-corner-large) 0 0;
   }
 }
 
@@ -87,8 +88,9 @@
 // Expanded metadata section
 .relay-metadata-expanded {
   padding: 16px;
+  margin: 0 8px 16px 8px;
   background-color: var(--mat-sys-surface-container);
-  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 0 0 var(--mat-sys-corner-large) var(--mat-sys-corner-large);
 
   &.loading {
     display: flex;
@@ -209,6 +211,7 @@
   flex: 1;
   overflow-y: auto;
   padding: 0;
+  margin-top: 16px;
 }
 
 // Skeleton styles (matching trending-column)
