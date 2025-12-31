@@ -136,6 +136,39 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  &.link {
+    color: var(--mat-sys-primary);
+    text-decoration: none;
+    display: inline-block;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  &.operator-pubkey {
+    display: block;
+    margin-top: 4px;
+  }
+}
+
+.relay-url-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .copy-btn {
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
 }
 
 .nips-list {

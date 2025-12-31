@@ -268,6 +268,17 @@ export class RelayFeedMenuComponent {
         this.loadSavedRelays(pubkey);
       }
     });
+
+    // Fetch info for any relays missing from cache
+    effect(() => {
+      const relays = this.savedRelays();
+      const cache = this.relayInfoCache();
+      relays.forEach(relay => {
+        if (!cache.has(relay)) {
+          this.fetchRelayInfo(relay);
+        }
+      });
+    });
   }
 
   private loadSavedRelays(pubkey: string): void {
@@ -279,11 +290,6 @@ export class RelayFeedMenuComponent {
         this.savedRelays.set([...DEFAULT_RELAYS]);
         this.saveSavedRelays();
       }
-
-      // Pre-fetch info for first few relays
-      this.savedRelays()
-        .slice(0, 5)
-        .forEach(relay => this.fetchRelayInfo(relay));
     } catch (error) {
       this.logger.error('Error loading saved relays:', error);
       this.savedRelays.set([...DEFAULT_RELAYS]);
@@ -372,6 +378,14 @@ export class RelayFeedMenuComponent {
 
   setSelectedRelay(domain: string): void {
     this.selectedRelay.set(domain);
+    // Refresh saved relays from storage in case they changed (e.g., relay added from column)
+    const pubkey = this.accountState.pubkey();
+    if (pubkey) {
+      const stored = this.accountLocalState.getPublicRelayFeeds(pubkey);
+      if (stored && stored.length > 0) {
+        this.savedRelays.set(stored);
+      }
+    }
     if (domain && !this.relayInfoCache().has(domain)) {
       this.fetchRelayInfo(domain);
     }
