@@ -14,6 +14,7 @@ import {
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { EventComponent } from '../../../components/event/event.component';
@@ -51,6 +52,7 @@ const DEFAULT_RELAYS: string[] = [
     CommonModule,
     MatButtonModule,
     MatIconModule,
+    MatMenuModule,
     MatProgressSpinnerModule,
     MatTooltipModule,
     EventComponent,
@@ -90,6 +92,7 @@ export class RelayColumnComponent implements OnDestroy {
   relayInfo = signal<Nip11RelayInfo | null>(null);
   isLoadingInfo = signal(false);
   isExpanded = signal(false);
+  showReplies = signal(false);
 
   // Saved relay list
   savedRelays = signal<string[]>([]);
@@ -103,10 +106,23 @@ export class RelayColumnComponent implements OnDestroy {
   private abortController: AbortController | null = null;
   private intersectionObserver?: IntersectionObserver;
 
+  // Filter events based on showReplies setting
+  private filteredEvents = computed(() => {
+    const events = this.allEvents();
+    if (this.showReplies()) {
+      return events;
+    }
+    // Filter out replies (events with 'e' tags that reference other events)
+    return events.filter(event => {
+      const hasReplyTag = event.tags.some(tag => tag[0] === 'e');
+      return !hasReplyTag;
+    });
+  });
+
   // Computed signals
-  displayedEvents = computed(() => this.allEvents().slice(0, this.displayCount()));
+  displayedEvents = computed(() => this.filteredEvents().slice(0, this.displayCount()));
   hasEvents = computed(() => this.displayedEvents().length > 0);
-  hasMore = computed(() => this.displayCount() < this.allEvents().length);
+  hasMore = computed(() => this.displayCount() < this.filteredEvents().length);
 
   // Full WebSocket URL
   relayUrl = computed(() => {
@@ -199,11 +215,12 @@ export class RelayColumnComponent implements OnDestroy {
       }
     });
 
-    // Load saved relays when account changes
+    // Load saved relays and showReplies setting when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
       if (pubkey) {
         this.loadSavedRelays(pubkey);
+        this.loadShowReplies(pubkey);
       }
     });
 
@@ -246,6 +263,32 @@ export class RelayColumnComponent implements OnDestroy {
     } catch (error) {
       this.logger.error('Error saving relays:', error);
     }
+  }
+
+  private loadShowReplies(pubkey: string): void {
+    try {
+      const showReplies = this.accountLocalState.getPublicRelayShowReplies(pubkey);
+      this.showReplies.set(showReplies);
+    } catch (error) {
+      this.logger.error('Error loading showReplies setting:', error);
+      this.showReplies.set(false);
+    }
+  }
+
+  private saveShowReplies(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    try {
+      this.accountLocalState.setPublicRelayShowReplies(pubkey, this.showReplies());
+    } catch (error) {
+      this.logger.error('Error saving showReplies setting:', error);
+    }
+  }
+
+  toggleShowReplies(): void {
+    this.showReplies.update(v => !v);
+    this.saveShowReplies();
   }
 
   toggleExpanded(): void {

@@ -35,6 +35,8 @@ const DEFAULT_RELAYS: string[] = [
   'relay.damus.io',
   'relay.primal.net',
   'nostr21.com',
+  'ribo.eu.nostria.app',
+  'ribo.us.nostria.app',
 ];
 
 export interface RelayInfo {
