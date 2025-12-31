@@ -56,6 +56,7 @@ interface AccountLocalState {
   audioPlayerView?: string; // Audio player view preference (modern, cards, winamp)
   aiDisclaimerSeen?: boolean; // Whether the AI disclaimer dialog has been seen
   publicRelayFeeds?: string[]; // List of public relay feeds (domains) for the relay feed menu
+  publicRelayShowReplies?: boolean; // Whether to show replies in public relay feeds
 }
 
 /**
@@ -815,6 +816,21 @@ export class AccountLocalStateService {
    */
   setPublicRelayFeeds(pubkey: string, feeds: string[]): void {
     this.updateAccountState(pubkey, { publicRelayFeeds: feeds });
+  }
+
+  /**
+   * Get whether to show replies in public relay feeds
+   */
+  getPublicRelayShowReplies(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.publicRelayShowReplies ?? false; // Default to false
+  }
+
+  /**
+   * Set whether to show replies in public relay feeds
+   */
+  setPublicRelayShowReplies(pubkey: string, showReplies: boolean): void {
+    this.updateAccountState(pubkey, { publicRelayShowReplies: showReplies });
   }
 
   /**
