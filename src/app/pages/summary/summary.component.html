@@ -158,7 +158,8 @@
       <div class="media-grid">
         @for (event of mediaEvents().slice(0, 12); track event.id) {
         @if (getMediaUrl(event); as mediaUrl) {
-        <a class="media-card" [routerLink]="['/e', event.id]">
+        <div class="media-card" (click)="openMediaDialog($event, event)" tabindex="0" role="button"
+          (keydown.enter)="openMediaDialog($any($event), event)">
           <div class="media-preview">
             @if (isVideoUrl(mediaUrl)) {
             <div class="video-indicator">
@@ -169,9 +170,10 @@
           </div>
           <div class="media-overlay">
             <app-user-profile [pubkey]="event.pubkey" view="icon" class="media-author"></app-user-profile>
-            <span class="media-time">{{ event.created_at | ago }}</span>
+            <a class="media-time" [routerLink]="['/e', event.id]" (click)="$event.stopPropagation()">{{ event.created_at
+              | ago }}</a>
           </div>
-        </a>
+        </div>
         }
         }
       </div>
