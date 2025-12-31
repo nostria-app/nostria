@@ -14,26 +14,17 @@ import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { MatDividerModule } from '@angular/material/divider';
 import { EventComponent } from '../../../components/event/event.component';
 import { LoggerService } from '../../../services/logger.service';
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
-import { LocalStorageService } from '../../../services/local-storage.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { SimplePool, Filter } from 'nostr-tools';
 import { Event } from 'nostr-tools';
+import { AccountStateService } from '../../../services/account-state.service';
+import { AccountLocalStateService } from '../../../services/account-local-state.service';
 
 const PAGE_SIZE = 10;
-const STORAGE_KEY = 'nostria_public_relay_feeds';
-
-export interface PublicRelayConfig {
-  url: string;
-  name?: string;
-  description?: string;
-  icon?: string;
-}
 
 const DEFAULT_RELAYS: string[] = [
   'trending.relays.land',
@@ -59,9 +50,7 @@ const DEFAULT_RELAYS: string[] = [
     MatButtonModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatMenuModule,
     MatTooltipModule,
-    MatDividerModule,
     EventComponent,
   ],
   templateUrl: './relay-column.component.html',
@@ -71,7 +60,8 @@ const DEFAULT_RELAYS: string[] = [
 export class RelayColumnComponent implements OnDestroy {
   private logger = inject(LoggerService);
   private relaysService = inject(RelaysService);
-  private localStorage = inject(LocalStorageService);
+  private accountState = inject(AccountStateService);
+  private accountLocalState = inject(AccountLocalStateService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
 
@@ -95,6 +85,7 @@ export class RelayColumnComponent implements OnDestroy {
   error = signal<string | null>(null);
   relayInfo = signal<Nip11RelayInfo | null>(null);
   isLoadingInfo = signal(false);
+  isExpanded = signal(false);
 
   // Saved relay list
   savedRelays = signal<string[]>([]);
@@ -123,11 +114,16 @@ export class RelayColumnComponent implements OnDestroy {
     return `wss://${domain}`;
   });
 
-  // Icon URL - either from NIP-11 or default favicon
+  // Icon URL - try NIP-11 icon, then banner, then favicon
   iconUrl = computed(() => {
     const info = this.relayInfo();
+    // First try the icon field
     if (info?.icon) {
       return info.icon;
+    }
+    // Some relays use banner as icon
+    if (info?.banner) {
+      return info.banner;
     }
     // Fallback to favicon
     const domain = this.relayDomain();
@@ -147,15 +143,20 @@ export class RelayColumnComponent implements OnDestroy {
   });
 
   constructor() {
-    // Load saved relays from storage
-    this.loadSavedRelays();
-
     // React to relay domain changes
     effect(() => {
       const domain = this.relayDomain();
       if (domain) {
         this.fetchRelayInfo();
         this.fetchEvents();
+      }
+    });
+
+    // Load saved relays when account changes
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.loadSavedRelays(pubkey);
       }
     });
 
@@ -173,12 +174,11 @@ export class RelayColumnComponent implements OnDestroy {
     this.pool = null;
   }
 
-  private loadSavedRelays(): void {
+  private loadSavedRelays(pubkey: string): void {
     try {
-      const stored = this.localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const parsed = JSON.parse(stored) as string[];
-        this.savedRelays.set(parsed);
+      const stored = this.accountLocalState.getPublicRelayFeeds(pubkey);
+      if (stored && stored.length > 0) {
+        this.savedRelays.set(stored);
       } else {
         // Initialize with defaults
         this.savedRelays.set([...DEFAULT_RELAYS]);
@@ -191,11 +191,18 @@ export class RelayColumnComponent implements OnDestroy {
   }
 
   private saveSavedRelays(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
     try {
-      this.localStorage.setItem(STORAGE_KEY, JSON.stringify(this.savedRelays()));
+      this.accountLocalState.setPublicRelayFeeds(pubkey, this.savedRelays());
     } catch (error) {
       this.logger.error('Error saving relays:', error);
     }
+  }
+
+  toggleExpanded(): void {
+    this.isExpanded.update(v => !v);
   }
 
   addRelay(domain: string): void {
@@ -213,14 +220,6 @@ export class RelayColumnComponent implements OnDestroy {
 
   isRelayInList(domain: string): boolean {
     return this.savedRelays().includes(domain);
-  }
-
-  selectRelay(domain: string): void {
-    // Update URL with relay parameter
-    this.router.navigate(['/f'], {
-      queryParams: { r: domain },
-      queryParamsHandling: 'merge',
-    });
   }
 
   private setupIntersectionObserver(): void {

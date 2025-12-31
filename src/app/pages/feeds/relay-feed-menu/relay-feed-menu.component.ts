@@ -326,7 +326,9 @@ export class RelayFeedMenuComponent {
 
   getRelayIcon(domain: string): string | null {
     const info = this.relayInfoCache().get(domain);
+    // Try icon first, then banner, then favicon
     if (info?.icon) return info.icon;
+    if (info?.banner) return info.banner;
     return `https://${domain}/favicon.ico`;
   }
 

@@ -94,12 +94,6 @@
     <!-- Relay Feed View - shown when relay query param is present -->
     @if (showRelayFeed()) {
     <div class="relay-feed-container">
-      <div class="relay-feed-header">
-        <button mat-icon-button (click)="closeRelayFeed()" matTooltip="Back to feeds">
-          <mat-icon>arrow_back</mat-icon>
-        </button>
-        <span class="relay-feed-title">Public Relay Feed</span>
-      </div>
       <div class="relay-column-wrapper">
         <app-relay-column [relayDomain]="activeRelayDomain()"></app-relay-column>
       </div>
