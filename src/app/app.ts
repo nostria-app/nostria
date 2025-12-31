@@ -65,6 +65,7 @@ import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep
 import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
 import { FeedsCollectionService } from './services/feeds-collection.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
+import { FeedConfig } from './services/feed.service';
 import { FavoritesOverlayComponent } from './components/favorites-overlay/favorites-overlay.component';
 import { NostrRecord } from './interfaces';
 import { DatabaseErrorDialogComponent } from './components/database-error-dialog/database-error-dialog.component';
@@ -142,6 +143,7 @@ interface NavItem {
     FavoritesOverlayComponent,
     StandaloneLoginDialogComponent,
     StandaloneTermsDialogComponent,
+    NewFeedDialogComponent,
   ],
   templateUrl: './app.html',
   styleUrl: './app.scss',
@@ -243,6 +245,19 @@ export class App implements OnInit {
 
   // Signal to track expanded menu items
   expandedMenuItems = signal<Record<string, boolean>>({});
+
+  // Feed edit dialog state
+  showFeedEditDialog = signal(false);
+  editingFeed = signal<FeedConfig | undefined>(undefined);
+  feedIconOptions = [
+    'dynamic_feed',
+    'bookmark',
+    'explore',
+    'trending_up',
+    'star',
+    'favorite',
+    'rss_feed',
+  ];
 
   // Track if we've already restored the route for the current session
   private hasRestoredRoute = false;
@@ -1372,34 +1387,23 @@ export class App implements OnInit {
       return;
     }
 
-    const dialogRef = this.dialog.open(NewFeedDialogComponent, {
-      width: '900px',
-      // maxWidth: '90vw',
-      panelClass: 'responsive-dialog',
-      data: {
-        icons: [
-          'dynamic_feed',
-          'bookmark',
-          'explore',
-          'trending_up',
-          'star',
-          'favorite',
-          'rss_feed',
-        ],
-        feed: feed,
-      },
-    });
+    this.editingFeed.set(feed);
+    this.showFeedEditDialog.set(true);
+  }
 
-    dialogRef.afterClosed().subscribe(async result => {
-      if (result && feed) {
-        await this.feedsCollectionService.updateFeed(feed.id, {
-          label: result.label,
-          icon: result.icon,
-          description: result.description,
-          path: result.path,
-        });
-      }
-    });
+  async onFeedEditDialogClosed(result: FeedConfig | null): Promise<void> {
+    this.showFeedEditDialog.set(false);
+    const feed = this.editingFeed();
+    this.editingFeed.set(undefined);
+
+    if (result && feed) {
+      await this.feedsCollectionService.updateFeed(feed.id, {
+        label: result.label,
+        icon: result.icon,
+        description: result.description,
+        path: result.path,
+      });
+    }
   }
 
   showLoginDialog(): void {
