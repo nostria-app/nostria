@@ -70,6 +70,9 @@ export interface RelayInfo {
       <div class="menu-header" role="presentation">
         <mat-icon>dns</mat-icon>
         <span>Public Relay Feeds</span>
+        <button mat-icon-button (click)="onResetRelays(); $event.stopPropagation()" matTooltip="Reset to defaults" class="reset-btn">
+          <mat-icon>restore</mat-icon>
+        </button>
       </div>
 
       <mat-divider></mat-divider>
@@ -143,12 +146,26 @@ export interface RelayInfo {
         padding: 12px 16px;
         cursor: default;
 
-        mat-icon {
+        mat-icon:first-child {
           color: var(--mat-sys-primary);
         }
 
         span {
           color: var(--mat-sys-on-surface);
+          flex: 1;
+        }
+
+        .reset-btn {
+          width: 32px;
+          height: 32px;
+          margin: -8px -8px -8px 0;
+
+          mat-icon {
+            color: var(--mat-sys-on-surface-variant);
+            font-size: 20px;
+            width: 20px;
+            height: 20px;
+          }
         }
       }
 
@@ -393,6 +410,16 @@ export class RelayFeedMenuComponent {
     }
     if (domain && !this.relayInfoCache().has(domain)) {
       this.fetchRelayInfo(domain);
+    }
+  }
+
+  onResetRelays(): void {
+    this.savedRelays.set([...DEFAULT_RELAYS]);
+    this.saveSavedRelays();
+    // Clear selection if it's not in the default list
+    if (this.selectedRelay() && !DEFAULT_RELAYS.includes(this.selectedRelay())) {
+      this.selectedRelay.set('');
+      this.relaySelected.emit('');
     }
   }
 }

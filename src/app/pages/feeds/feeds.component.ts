@@ -1041,6 +1041,9 @@ export class FeedsComponent implements OnDestroy {
    */
   onRelaySelected(domain: string): void {
     if (domain) {
+      // Clear the active feed selection when viewing a public relay feed
+      this.feedsCollectionService.clearActiveFeed();
+
       // Navigate with relay query param (keeping nice URL without wss://)
       this.router.navigate(['/f'], {
         queryParams: { r: domain },
