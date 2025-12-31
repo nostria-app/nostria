@@ -55,6 +55,10 @@
             <mat-icon>add_column_right</mat-icon>
           </button>
 
+          <!-- Public Relay Feeds Menu -->
+          <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
+          </app-relay-feed-menu>
+
           <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Manage feeds">
             <mat-icon>more_vert</mat-icon>
           </button>
@@ -73,6 +77,7 @@
               <span>Reset Feeds</span>
             </button>
           </mat-menu>
+
         </div>
       </div>
     </div>
@@ -86,6 +91,20 @@
 
   <!-- Feeds Container with Connected Headers and Content -->
   <div class="columns-container" #columnsContainer (scroll)="onColumnsScroll($event)">
+    <!-- Relay Feed View - shown when relay query param is present -->
+    @if (showRelayFeed()) {
+    <div class="relay-feed-container">
+      <div class="relay-feed-header">
+        <button mat-icon-button (click)="closeRelayFeed()" matTooltip="Back to feeds">
+          <mat-icon>arrow_back</mat-icon>
+        </button>
+        <span class="relay-feed-title">Public Relay Feed</span>
+      </div>
+      <div class="relay-column-wrapper">
+        <app-relay-column [relayDomain]="activeRelayDomain()"></app-relay-column>
+      </div>
+    </div>
+    } @else {
     <!-- Scroll indicators -->
     @if (!isMobileView() && canScrollLeft()) {
     <div class="scroll-indicator left" (click)="scrollLeft()">
@@ -371,6 +390,7 @@
         </div>
         } -->
     </div>
+    }
   </div>
 
   <!-- Fixed horizontal scrollbar for desktop when many columns -->

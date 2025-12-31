@@ -55,6 +55,7 @@ interface AccountLocalState {
   volumeMuted?: boolean; // Whether video is muted
   audioPlayerView?: string; // Audio player view preference (modern, cards, winamp)
   aiDisclaimerSeen?: boolean; // Whether the AI disclaimer dialog has been seen
+  publicRelayFeeds?: string[]; // List of public relay feeds (domains) for the relay feed menu
 }
 
 /**
@@ -799,6 +800,21 @@ export class AccountLocalStateService {
    */
   setAiDisclaimerSeen(pubkey: string, seen: boolean): void {
     this.updateAccountState(pubkey, { aiDisclaimerSeen: seen });
+  }
+
+  /**
+   * Get public relay feeds for an account
+   */
+  getPublicRelayFeeds(pubkey: string): string[] | undefined {
+    const state = this.getAccountState(pubkey);
+    return state.publicRelayFeeds;
+  }
+
+  /**
+   * Set public relay feeds for an account
+   */
+  setPublicRelayFeeds(pubkey: string, feeds: string[]): void {
+    this.updateAccountState(pubkey, { publicRelayFeeds: feeds });
   }
 
   /**
