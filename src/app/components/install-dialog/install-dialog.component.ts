@@ -310,8 +310,7 @@ export class InstallDialogComponent {
   }
 
   openPlayStore(): void {
-    // TODO: Replace with actual Play Store link when available
-    window.open('https://play.google.com/apps/testing/app.nostria.twa', '_blank');
+    window.open('https://play.google.com/store/apps/details?id=app.nostria.twa', '_blank');
     this.dialogRef.close();
   }
 

@@ -274,13 +274,16 @@ export class FeedsComponent implements OnDestroy {
     if (!feedConfig) return new Map<string, boolean>();
 
     const followingList = this.accountState.followingList();
+    const followingListLoaded = this.accountState.followingListLoaded();
     const emptyColumnsMap = new Map<string, boolean>();
 
     feedConfig.columns.forEach((column: ColumnConfig) => {
-      // Check if column source is 'following' and user has zero following
+      // Check if column source is 'following', following list has been loaded, and user has zero following
+      // We only show the empty message after the following list has been loaded to avoid
+      // showing it prematurely on slow connections
       emptyColumnsMap.set(
         column.id,
-        column.source === 'following' && followingList.length === 0
+        column.source === 'following' && followingListLoaded && followingList.length === 0
       );
     });
 
