@@ -367,6 +367,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Initialize lastAccountPubkey with current account to avoid false "account changed" on first load
     this.lastAccountPubkey.set(this.accountState.account()?.pubkey || null);
 
+    // Effect to sync mobile nav visibility with chat selection on mobile
+    effect(() => {
+      const chatId = this.selectedChatId();
+      const isHandset = this.layout.isHandset();
+      const showingMobileList = this.showMobileList();
+
+      // On mobile, hide the nav when viewing a chat, show it when viewing the list
+      if (isHandset) {
+        this.layout.hideMobileNav.set(chatId !== null && !showingMobileList);
+      }
+    });
+
     // Effect to clean up pending messages once they're persisted
     effect(() => {
       const chatId = this.selectedChatId();
@@ -753,6 +765,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnDestroy(): void {
+    // Reset mobile nav visibility
+    this.layout.hideMobileNav.set(false);
+
     // Clean up scroll listener
     const scrollElement = this.messagesWrapper?.nativeElement;
     if (scrollElement) {
@@ -877,6 +892,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     // Only hide the chat list on mobile devices
     if (this.layout.isHandset()) {
       this.showMobileList.set(false);
+      this.layout.hideMobileNav.set(true);
     }
 
     // Mark chat as read when selected
@@ -1163,6 +1179,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    */
   backToList(): void {
     this.showMobileList.set(true);
+    this.layout.hideMobileNav.set(false);
   }
 
   /**
