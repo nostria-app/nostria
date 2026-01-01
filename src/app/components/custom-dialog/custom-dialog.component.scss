@@ -336,9 +336,11 @@
 
   // When it has visible child elements (buttons), expand
   // Using :has() to check for actual button/element children
+  // Also check for [dialog-actions] as a fallback for content projection
   &:has(button),
   &:has(a),
-  &:has(.mat-mdc-button) {
+  &:has(.mat-mdc-button),
+  &:has([dialog-actions]) {
     min-height: fit-content;
     max-height: 500px;
     // border-top-color: var(--mat-sys-outline-variant);

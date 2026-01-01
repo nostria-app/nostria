@@ -1,6 +1,7 @@
-<!-- Input State -->
-@if (currentState() === 'input') {
-<div dialog-content class="gift-premium-content">
+<!-- Content Area - always present, switches internally based on state -->
+<div dialog-content class="gift-premium-content" [class.confirmation-state]="currentState() === 'confirmation'">
+  <!-- Input State -->
+  @if (currentState() === 'input') {
   <!-- Recipient Preview -->
   @if (data.recipientPubkey) {
   <div class="recipient-preview">
@@ -135,21 +136,10 @@
     <span>{{ errorMessage() }}</span>
   </div>
   }
-</div>
+  }
 
-<div dialog-actions class="dialog-actions-input">
-  <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
-  <button mat-flat-button class="continue-button" (click)="proceedToConfirmation()"
-    [disabled]="isProcessing() || !giftForm.valid || loadingPrice()">
-    <mat-icon>arrow_forward</mat-icon>
-    Continue
-  </button>
-</div>
-}
-
-<!-- Confirmation State -->
-@if (currentState() === 'confirmation') {
-<div dialog-content class="gift-premium-content confirmation-state">
+  <!-- Confirmation State -->
+  @if (currentState() === 'confirmation') {
   <!-- Summary Section -->
   <div class="confirmation-summary">
     <div class="summary-header">
@@ -300,9 +290,22 @@
     <span>{{ errorMessage() }}</span>
   </div>
   }
+  }
 </div>
 
-<div dialog-actions class="dialog-actions-confirmation">
+<!-- Actions Area - always present, switches internally based on state -->
+<div dialog-actions [class.dialog-actions-input]="currentState() === 'input'"
+  [class.dialog-actions-confirmation]="currentState() === 'confirmation'">
+  @if (currentState() === 'input') {
+  <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
+  <button mat-flat-button class="continue-button" (click)="proceedToConfirmation()"
+    [disabled]="isProcessing() || !giftForm.valid || loadingPrice()">
+    <mat-icon>arrow_forward</mat-icon>
+    Continue
+  </button>
+  }
+
+  @if (currentState() === 'confirmation') {
   <button mat-button (click)="backToInput()" [disabled]="isProcessing()">
     <mat-icon>arrow_back</mat-icon>
     Back
@@ -342,8 +345,8 @@
     }
     }
   </div>
+  }
 </div>
-}
 
 <!-- Celebration Overlay -->
 @if (showCelebration()) {
