@@ -85,6 +85,10 @@ export class AccountStateService implements OnDestroy {
   // Signal to store the current profile's following list
   followingList = signal<string[]>([]);
 
+  // Signal to track if the following list has been loaded (even if empty)
+  // This helps distinguish between "not loaded yet" vs "loaded but empty"
+  followingListLoaded = signal(false);
+
   /** Use this signal to track if account has been loaded. */
   initialized = signal(false);
   account = signal<NostrUser | null>(null);
@@ -322,6 +326,7 @@ export class AccountStateService implements OnDestroy {
 
   clear() {
     this.followingList.set([]);
+    this.followingListLoaded.set(false); // Reset loading state when clearing
     this.profile.set(undefined);
     this.accountProfiles.set(new Map()); // Clear pre-loaded account profiles
     this.lastPreloadedAccountPubkeys.clear(); // Clear tracking set
@@ -461,6 +466,9 @@ export class AccountStateService implements OnDestroy {
         this.followingList.set(validFollowingTags);
         await this.database.saveEvent(event);
       }
+
+      // Mark as loaded since we received a valid contacts event
+      this.followingListLoaded.set(true);
     }
   }
 
@@ -468,6 +476,10 @@ export class AccountStateService implements OnDestroy {
     // Reset profile cache loaded flag when account changes
     // This ensures FollowingService waits for the new account's profiles to load
     this.profileCacheLoaded.set(false);
+
+    // Reset following list loaded flag when account changes
+    // This ensures UI doesn't show "not following anyone" while loading
+    this.followingListLoaded.set(false);
 
     // this.accountChanging.set(account?.pubkey || '');
     this.account.set(account);

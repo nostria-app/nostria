@@ -411,7 +411,9 @@ export class NostrService implements NostriaService {
       if (storedFollowing) {
         const followingTags = this.getTags(storedFollowing, 'p');
         this.accountState.followingList.set(followingTags);
+        this.accountState.followingListLoaded.set(true);
       }
+      // Note: If no stored following found, we wait for background relay fetch before marking as loaded
 
       const storedMuteList = await this.database.getEventByPubkeyAndKind(pubkey, kinds.Mutelist);
       if (storedMuteList) {
@@ -679,6 +681,10 @@ export class NostrService implements NostriaService {
       const followingTags = this.getTags(newestEvent, 'p');
       this.accountState.followingList.set(followingTags);
     }
+
+    // Mark following list as loaded regardless of whether data was found
+    // This allows UI to distinguish between "still loading" and "loaded but empty"
+    this.accountState.followingListLoaded.set(true);
   }
 
   private async loadAccountMuteList(pubkey: string) {
