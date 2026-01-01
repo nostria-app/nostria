@@ -1,17 +1,14 @@
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, inject, signal, computed, ChangeDetectionStrategy } from '@angular/core';
 import { FormControl, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
-import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatIconModule } from '@angular/material/icon';
 import { MatInputModule } from '@angular/material/input';
 import { MatSelectModule } from '@angular/material/select';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar } from '@angular/material/snack-bar';
-import { MatDividerModule } from '@angular/material/divider';
 import { MatRadioModule } from '@angular/material/radio';
-import { MatCardModule } from '@angular/material/card';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { BreakpointObserver } from '@angular/cdk/layout';
@@ -20,6 +17,7 @@ import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { QrCodeComponent } from '../qr-code/qr-code.component';
 import { ZapService } from '../../services/zap.service';
 import { Wallets } from '../../services/wallets';
+import { CustomDialogRef } from '../../services/custom-dialog.service';
 import { environment } from '../../../environments/environment';
 
 // Hardcoded Nostria Premium receiver
@@ -76,19 +74,15 @@ type PaymentMethod = 'nwc' | 'native' | 'manual';
 
 @Component({
   selector: 'app-gift-premium-dialog',
-  standalone: true,
   imports: [
     CommonModule,
-    MatDialogModule,
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
     MatSelectModule,
     MatIconModule,
     MatProgressSpinnerModule,
-    MatDividerModule,
     MatRadioModule,
-    MatCardModule,
     MatTooltipModule,
     ReactiveFormsModule,
     UserProfileComponent,
@@ -96,16 +90,17 @@ type PaymentMethod = 'nwc' | 'native' | 'manual';
   ],
   templateUrl: './gift-premium-dialog.component.html',
   styleUrls: ['./gift-premium-dialog.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class GiftPremiumDialogComponent {
-  private dialogRef = inject(MatDialogRef<GiftPremiumDialogComponent>);
+  dialogRef = inject(CustomDialogRef);
   private snackBar = inject(MatSnackBar);
   private zapService = inject(ZapService);
   private wallets = inject(Wallets);
   private router = inject(Router);
   private breakpointObserver = inject(BreakpointObserver);
 
-  data: GiftPremiumDialogData = inject(MAT_DIALOG_DATA);
+  data!: GiftPremiumDialogData;
 
   // State management
   currentState = signal<DialogState>('input');

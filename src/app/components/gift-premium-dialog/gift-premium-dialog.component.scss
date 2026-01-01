@@ -1,645 +1,674 @@
-.gift-premium-dialog {
-  min-width: 400px;
-  max-width: 600px;
+// Gift Premium Dialog - Modern, enticing design with mobile-first approach
 
-  @media (max-width: 768px) {
-    min-width: unset;
-    width: 100%;
+.gift-premium-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 0.5rem;
+  max-height: 70vh;
+  overflow-y: auto;
+
+  @media (max-width: 480px) {
+    gap: 1rem;
+    padding: 0.25rem;
+  }
+}
+
+// Recipient Preview
+.recipient-preview {
+  background: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 0.875rem 1rem;
+
+  .recipient-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 0.5rem;
   }
 
-  .recipient-preview {
-    margin-bottom: 1.5rem;
-    padding: 1rem;
-    background: var(--mat-sys-surface-container);
-    border-radius: 8px;
-
-    h4 {
-      margin: 0 0 0.75rem 0;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--mat-sys-on-surface-variant);
-    }
-
-    .recipient-info {
-      display: flex;
-      align-items: center;
-    }
-  }
-
-  .gift-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-
-    .full-width {
-      width: 100%;
-    }
-
-    h3 {
-      margin: 0 0 1rem 0;
-      font-size: 1rem;
-      font-weight: 500;
-      color: var(--mat-sys-on-surface);
-    }
-  }
-
-  .wallet-selection {
-    .wallet-option {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-
-      .wallet-name {
-        flex: 1;
-      }
-
-      .wallet-status {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-        border-radius: 12px;
-        background: var(--mat-sys-surface-variant);
-        color: var(--mat-sys-on-surface-variant);
-
-        &.connected {
-          background: rgba(var(--nostria-bitcoin-rgb), 0.2);
-          color: var(--nostria-bitcoin);
-        }
-      }
-    }
-  }
-
-  .premium-type-selection {
-    .premium-type-group {
-      display: flex;
-      flex-direction: row;
-      gap: 0.75rem;
-
-      @media (max-width: 480px) {
-        flex-direction: column;
-      }
-    }
-
-    .premium-option-card {
-      flex: 1;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: 2px solid transparent;
-      background: var(--mat-sys-surface-container-low);
-
-      &:hover {
-        border-color: var(--mat-sys-outline-variant);
-        background: var(--mat-sys-surface-container);
-      }
-
-      mat-radio-button {
-        width: 100%;
-      }
-
-      .premium-option-content {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        padding: 0.5rem 0;
-
-        .premium-header {
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
-
-          .premium-icon {
-            color: var(--mat-sys-primary);
-          }
-
-          .premium-name {
-            font-size: 1.125rem;
-            font-weight: 500;
-            color: var(--mat-sys-on-surface);
-          }
-        }
-
-        .premium-description {
-          font-size: 0.875rem;
-          color: var(--mat-sys-on-surface-variant);
-          margin-left: 2rem;
-        }
-      }
-
-      &.premium-plus {
-        .premium-icon {
-          color: var(--mat-sys-tertiary);
-        }
-      }
-    }
-  }
-
-  .duration-selection {
-    .duration-group {
-      display: flex;
-      gap: 0.75rem;
-
-      @media (max-width: 480px) {
-        flex-direction: column;
-      }
-    }
-
-    .duration-option-card {
-      flex: 1;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      border: 2px solid transparent;
-      background: var(--mat-sys-surface-container-low);
-
-      &:hover {
-        border-color: var(--mat-sys-outline-variant);
-        background: var(--mat-sys-surface-container);
-      }
-
-      mat-radio-button {
-        width: 100%;
-      }
-
-      .duration-option-content {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-        padding: 0.5rem 0;
-
-        .duration-text {
-          font-size: 1rem;
-          font-weight: 500;
-          color: var(--mat-sys-on-surface);
-        }
-
-        .duration-price {
-          font-size: 0.875rem;
-          color: var(--mat-sys-on-surface-variant);
-        }
-      }
-    }
-  }
-
-  .message-field {
-    margin-top: 0.5rem;
-  }
-
-  .total-amount-display {
-    padding: 1rem;
-    background: rgba(var(--nostria-bitcoin-rgb), 0.08);
-    border-radius: 8px;
-    border-left: 4px solid var(--nostria-bitcoin);
-
-    h3 {
-      margin: 0 0 0.5rem 0;
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: var(--mat-sys-on-surface-variant);
-    }
-
-    .amount-details {
-      display: flex;
-      align-items: baseline;
-      gap: 0.5rem;
-
-      .amount-sats {
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--nostria-bitcoin);
-      }
-
-      .amount-usd {
-        font-size: 1rem;
-        color: var(--mat-sys-on-surface-variant);
-      }
-    }
-  }
-
-  .error-message,
-  .warning-message {
+  .recipient-info {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1rem;
-    margin-top: 1rem;
-    border-radius: 8px;
+  }
+}
+
+// Form styling
+.gift-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+
+  .full-width {
+    width: 100%;
+  }
+}
+
+// Section groups
+.section-group {
+  .section-title {
+    margin: 0 0 0.75rem 0;
     font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+}
 
-    mat-icon {
-      font-size: 1.25rem;
-      width: 1.25rem;
-      height: 1.25rem;
+// Plan cards (Premium/Premium+)
+.premium-type-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.plan-card {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  padding: 1rem;
+  background: var(--mat-sys-surface-container-low);
+  border: 2px solid transparent;
+  border-radius: var(--mat-sys-corner-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  text-align: left;
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+    border-color: var(--mat-sys-outline-variant);
+  }
+
+  &.selected {
+    background: var(--mat-sys-primary-container);
+    border-color: var(--mat-sys-primary);
+  }
+
+  .hidden-radio {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .plan-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--mat-sys-surface-container-high);
+    border-radius: var(--mat-sys-corner-small);
+    flex-shrink: 0;
+
+    .plan-icon {
+      font-size: 24px;
+      width: 24px;
+      height: 24px;
+      color: var(--mat-sys-primary);
     }
   }
 
-  .error-message {
-    background: rgba(var(--mat-sys-error), 0.1);
-    color: var(--mat-sys-error);
-    border-left: 4px solid var(--mat-sys-error);
+  .plan-info {
+    flex: 1;
+    min-width: 0;
 
-    mat-icon {
-      color: var(--mat-sys-error);
+    .plan-name {
+      display: block;
+      font-size: 1rem;
+      color: var(--mat-sys-on-surface);
+    }
+
+    .plan-description {
+      display: block;
+      font-size: 0.813rem;
+      color: var(--mat-sys-on-surface-variant);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
   }
 
-  .warning-message {
-    background: rgba(var(--nostria-bitcoin-rgb), 0.1);
-    color: var(--nostria-bitcoin);
-    border-left: 4px solid var(--nostria-bitcoin);
+  .plan-check {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  &.premium-plus {
+    .plan-icon {
+      color: var(--mat-sys-tertiary);
+    }
+
+    &.selected {
+      background: var(--mat-sys-tertiary-container);
+      border-color: var(--mat-sys-tertiary);
+
+      .plan-check mat-icon {
+        color: var(--mat-sys-tertiary);
+      }
+    }
+  }
+}
+
+// Duration cards
+.duration-group {
+  display: flex;
+  gap: 0.75rem;
+
+  @media (max-width: 400px) {
+    flex-direction: column;
+  }
+}
+
+.duration-card {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 1rem;
+  background: var(--mat-sys-surface-container-low);
+  border: 2px solid transparent;
+  border-radius: var(--mat-sys-corner-medium);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  min-width: 0;
+
+  &:hover {
+    background: var(--mat-sys-surface-container);
+    border-color: var(--mat-sys-outline-variant);
+  }
+
+  &.selected {
+    background: var(--mat-sys-primary-container);
+    border-color: var(--mat-sys-primary);
+  }
+
+  .hidden-radio {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .duration-period {
+    font-size: 1rem;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .duration-price {
+    font-size: 0.813rem;
+    color: var(--mat-sys-on-surface-variant);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+  }
+}
+
+// Total section
+.total-section {
+  background: linear-gradient(135deg, rgba(var(--nostria-bitcoin-rgb), 0.1), rgba(var(--nostria-bitcoin-rgb), 0.05));
+  border-radius: var(--mat-sys-corner-medium);
+  padding: 1rem;
+  border-left: 3px solid var(--nostria-bitcoin);
+
+  .total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 
-    mat-icon {
+  .total-label {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .total-amount {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+
+    .lightning-icon {
+      color: var(--nostria-bitcoin);
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    .amount-sats {
+      font-size: 1.25rem;
       color: var(--nostria-bitcoin);
     }
 
-    span {
-      flex: 1;
-      min-width: 200px;
+    .amount-unit {
+      font-size: 0.875rem;
+      color: var(--nostria-bitcoin);
     }
 
-    button {
-      margin-left: auto;
+    .amount-usd {
+      font-size: 0.875rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+}
+
+// Wallet selection
+.wallet-selection {
+  .wallet-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .wallet-name {
+      flex: 1;
+    }
+
+    .wallet-status {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.4rem;
+      border-radius: 8px;
+      background: var(--mat-sys-surface-variant);
+      color: var(--mat-sys-on-surface-variant);
+
+      &.connected {
+        background: rgba(var(--nostria-bitcoin-rgb), 0.2);
+        color: var(--nostria-bitcoin);
+      }
+    }
+  }
+}
+
+// Error message
+.error-message {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--mat-sys-error-container);
+  border-radius: var(--mat-sys-corner-small);
+  color: var(--mat-sys-on-error-container);
+  font-size: 0.875rem;
+
+  mat-icon {
+    color: var(--mat-sys-error);
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+  }
+}
+
+// Dialog actions
+.dialog-actions-input,
+.dialog-actions-confirmation {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+
+  .continue-button,
+  .send-button,
+  .generate-button,
+  .paid-button {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    background: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
     }
   }
 
-  // Confirmation state styles
-  &.confirmation-state {
-    .confirmation-content {
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
+  .paid-button {
+    background: var(--mat-success-color);
+    color: #000;
+  }
+}
 
-      .section {
-        h3 {
-          margin: 0 0 0.75rem 0;
-          font-size: 0.875rem;
-          font-weight: 500;
+.dialog-actions-confirmation {
+  justify-content: space-between;
+
+  .action-buttons {
+    display: flex;
+    gap: 0.5rem;
+  }
+}
+
+// ============ Confirmation State ============
+
+.confirmation-state {
+  .confirmation-summary {
+    background: var(--mat-sys-surface-container);
+    border-radius: var(--mat-sys-corner-medium);
+    overflow: hidden;
+
+    .summary-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.875rem 1rem;
+      background: var(--mat-sys-surface-container-high);
+      color: var(--mat-sys-on-surface);
+      font-size: 0.9rem;
+
+      .summary-icon {
+        color: var(--mat-sys-primary);
+        font-size: 20px;
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    .summary-details {
+      padding: 0.5rem 1rem;
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.625rem 0;
+      gap: 0.75rem;
+
+      &.total {
+        padding-top: 0.75rem;
+      }
+
+      .summary-label {
+        font-size: 0.813rem;
+        color: var(--mat-sys-on-surface-variant);
+        flex-shrink: 0;
+      }
+
+      .summary-value {
+        font-size: 0.9rem;
+        color: var(--mat-sys-on-surface);
+        text-align: right;
+
+        &.highlight {
+          color: var(--mat-sys-primary);
+        }
+      }
+
+      .summary-recipient {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .summary-amount {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        .lightning-icon {
+          color: var(--nostria-bitcoin);
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+        }
+
+        .amount-value {
+          color: var(--nostria-bitcoin);
+        }
+
+        .amount-fiat {
+          font-size: 0.813rem;
           color: var(--mat-sys-on-surface-variant);
         }
       }
+    }
 
-      .gift-details-section {
-        .detail-row {
-          display: flex;
-          justify-content: space-between;
-          padding: 0.5rem 0;
+    .summary-divider {
+      height: 1px;
+      background: var(--mat-sys-outline-variant);
+      margin: 0;
+    }
+  }
+}
 
-          &.message-row {
-            flex-direction: column;
-            gap: 0.5rem;
-          }
+// Payment section
+.payment-section {
+  .section-title {
+    margin: 0 0 0.75rem 0;
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
 
-          .detail-label {
-            font-weight: 500;
-            color: var(--mat-sys-on-surface-variant);
-          }
+  .payment-method-buttons {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+    margin-bottom: 0.875rem;
 
-          .detail-value {
-            color: var(--mat-sys-on-surface);
+    @media (max-width: 400px) {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.375rem;
+    }
+  }
 
-            &.message-preview {
-              font-style: italic;
-              padding: 0.5rem;
-              background: var(--mat-sys-surface-container);
-              border-radius: 4px;
-              word-break: break-word;
-            }
-          }
-        }
-      }
+  .payment-method-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.75rem 0.5rem;
+    background: var(--mat-sys-surface-container-low);
+    border: 2px solid transparent;
+    border-radius: var(--mat-sys-corner-small);
+    cursor: pointer;
+    transition: all 0.2s ease;
 
-      .payment-section {
-        .payment-amount {
-          display: flex;
-          align-items: center;
-          gap: 1rem;
-          padding: 1rem;
-          background: rgba(var(--nostria-bitcoin-rgb), 0.08);
-          border-radius: 8px;
+    mat-icon {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      color: var(--mat-sys-on-surface-variant);
+    }
 
-          .payment-icon {
-            font-size: 2rem;
-            width: 2rem;
-            height: 2rem;
-            color: var(--nostria-bitcoin);
-          }
+    span {
+      font-size: 0.75rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
 
-          .payment-details {
-            display: flex;
-            flex-direction: column;
+    &:hover {
+      background: var(--mat-sys-surface-container);
+      border-color: var(--mat-sys-outline-variant);
+    }
 
-            .payment-sats {
-              font-size: 1.25rem;
-              font-weight: 600;
-              color: var(--nostria-bitcoin);
-            }
+    &.selected {
+      background: var(--mat-sys-primary-container);
+      border-color: var(--mat-sys-primary);
 
-            .payment-usd {
-              font-size: 0.875rem;
-              color: var(--mat-sys-on-surface-variant);
-            }
-          }
-        }
-      }
-
-      .payment-method-section {
-        .payment-method-buttons {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
-          margin-bottom: 16px;
-
-          button {
-            padding: 16px 12px;
-            font-size: 12px;
-            font-weight: 500;
-            border-radius: 8px;
-            transition: all 0.2s ease;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 6px;
-            min-height: 64px;
-
-            &.selected {
-              background-color: var(--mat-sys-primary);
-              color: var(--mat-sys-on-primary);
-              border-color: var(--mat-sys-primary);
-            }
-
-            &:hover:not(.selected) {
-              background-color: var(--mat-sys-surface-variant);
-              border-color: var(--mat-sys-primary);
-            }
-          }
-        }
-
-        .payment-method-content {
-          padding: 16px;
-          min-height: 80px;
-          background: var(--mat-sys-surface-container-low);
-          border-radius: 8px;
-
-          .wallet-info {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--mat-sys-on-surface);
-            margin-bottom: 8px;
-
-            mat-icon {
-              color: var(--mat-sys-tertiary);
-            }
-          }
-
-          .method-description {
-            color: var(--mat-sys-on-surface-variant);
-            margin: 0 0 16px 0;
-            line-height: 1.4;
-          }
-
-          .processing-indicator {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            color: var(--mat-sys-on-surface-variant);
-            padding: 20px 0;
-            justify-content: center;
-          }
-
-          .no-wallet-warning {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 16px;
-            background: var(--mat-sys-error-container);
-            border: 1px solid var(--mat-sys-error);
-            border-radius: 8px;
-
-            .warning-icon {
-              color: var(--mat-sys-error);
-            }
-
-            p {
-              margin: 0;
-              color: var(--mat-sys-on-error-container);
-            }
-          }
-
-          .native-wallet-section {
-            text-align: center;
-
-            .open-wallet-btn {
-              margin: 16px 0;
-              display: flex;
-              align-items: center;
-              gap: 8px;
-              width: 100%;
-              justify-content: center;
-            }
-
-            .wallet-hint {
-              font-size: 12px;
-              color: var(--mat-sys-on-surface-variant);
-              margin: 8px 0 0 0;
-            }
-          }
-
-          .qr-code-section {
-            text-align: center;
-
-            .qr-code-container {
-              display: flex;
-              justify-content: center;
-              margin: 16px 0;
-              padding: 16px;
-              background: var(--mat-sys-surface-variant);
-              border-radius: 8px;
-            }
-
-            .invoice-details {
-              margin-top: 16px;
-
-              .invoice-label {
-                font-size: 12px;
-                color: var(--mat-sys-on-surface-variant);
-                margin: 0 0 8px 0;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
-              }
-
-              .invoice-text {
-                display: flex;
-                align-items: center;
-                gap: 8px;
-                padding: 12px;
-                background: var(--mat-sys-surface-container);
-                border: 1px solid var(--mat-sys-outline-variant);
-                border-radius: 4px;
-                cursor: pointer;
-                transition: background-color 0.2s;
-                font-family: monospace;
-                font-size: 12px;
-                word-break: break-all;
-                min-height: 0;
-                justify-content: space-between;
-                width: 100%;
-
-                &:hover {
-                  background: var(--mat-sys-surface-container-high);
-                }
-
-                &:focus {
-                  outline: 2px solid var(--mat-sys-primary);
-                  background: var(--mat-sys-surface-container-high);
-                }
-
-                .invoice-value {
-                  flex: 1;
-                  text-align: left;
-                  color: var(--mat-sys-on-surface);
-                }
-
-                .copy-icon {
-                  color: var(--mat-sys-on-surface-variant);
-                  font-size: 16px;
-                  width: 16px;
-                  height: 16px;
-                  flex-shrink: 0;
-                }
-              }
-            }
-          }
-        }
+      mat-icon,
+      span {
+        color: var(--mat-sys-on-primary-container);
       }
     }
   }
 
-  mat-dialog-actions {
-    padding: 1rem 1.5rem;
-    gap: 0.5rem;
+  .payment-method-content {
+    background: var(--mat-sys-surface-container-low);
+    border-radius: var(--mat-sys-corner-small);
+    min-height: 100px;
+  }
 
-    button {
-      mat-spinner {
-        display: inline-block;
-        margin-right: 0.5rem;
+  .method-content-inner {
+    padding: 1rem;
+    text-align: center;
+
+    .wallet-info {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--mat-sys-surface-container);
+      border-radius: var(--mat-sys-corner-full);
+      margin-bottom: 0.5rem;
+
+      mat-icon {
+        color: var(--mat-sys-tertiary);
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+
+      span {
+        font-size: 0.875rem;
+        color: var(--mat-sys-on-surface);
+      }
+    }
+
+    .method-hint {
+      margin: 0 0 0.75rem 0;
+      font-size: 0.875rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .copy-hint {
+      margin: 0.75rem 0 0 0;
+      font-size: 0.813rem;
+      color: var(--mat-sys-on-surface-variant);
+    }
+
+    .text-btn {
+      background: none;
+      border: none;
+      color: var(--mat-sys-primary);
+      cursor: pointer;
+      padding: 0;
+      font-size: inherit;
+      text-decoration: underline;
+
+      &:hover {
+        color: var(--mat-sys-tertiary);
+      }
+    }
+
+    .open-wallet-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.375rem;
+      background: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+    }
+
+    .no-wallet-warning {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.875rem;
+      background: var(--mat-sys-error-container);
+      border-radius: var(--mat-sys-corner-small);
+      text-align: left;
+
+      .warning-icon {
+        color: var(--mat-sys-error);
+        font-size: 24px;
+        width: 24px;
+        height: 24px;
+        flex-shrink: 0;
+      }
+
+      .warning-text {
+        p {
+          margin: 0 0 0.5rem 0;
+          color: var(--mat-sys-on-error-container);
+          font-size: 0.875rem;
+        }
+
+        button {
+          display: inline-flex;
+          align-items: center;
+          gap: 0.25rem;
+          padding: 0.375rem 0.625rem;
+          font-size: 0.813rem;
+        }
+      }
+    }
+
+    .processing-indicator {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      padding: 1rem 0;
+      color: var(--mat-sys-on-surface-variant);
+
+      span {
+        font-size: 0.875rem;
+      }
+    }
+
+    .qr-code-wrapper {
+      display: flex;
+      justify-content: center;
+      padding: 1rem;
+      background: #fff;
+      border-radius: var(--mat-sys-corner-small);
+      margin: 0.75rem auto;
+      width: fit-content;
+    }
+
+    .invoice-copy-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      background: var(--mat-sys-surface-container);
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: var(--mat-sys-corner-small);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      max-width: 100%;
+
+      &:hover {
+        background: var(--mat-sys-surface-container-high);
+      }
+
+      .invoice-text {
+        font-family: monospace;
+        font-size: 0.75rem;
+        color: var(--mat-sys-on-surface-variant);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       mat-icon {
-        margin-right: 0.25rem;
+        color: var(--mat-sys-on-surface-variant);
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
       }
     }
   }
 }
 
-// Dark mode support
-@media (prefers-color-scheme: dark) {
-  .gift-premium-dialog {
-    .recipient-preview {
-      background: rgba(255, 255, 255, 0.05);
-
-      h4 {
-        color: rgba(255, 255, 255, 0.6);
-      }
-    }
-
-    .gift-form h3 {
-      color: rgba(255, 255, 255, 0.87);
-    }
-
-    .premium-option-card,
-    .duration-option-card {
-      &:hover {
-        border-color: rgba(255, 255, 255, 0.12);
-      }
-
-      .premium-description,
-      .duration-price {
-        color: rgba(255, 255, 255, 0.6);
-      }
-    }
-
-    .total-amount-display {
-      background: rgba(255, 152, 0, 0.15);
-
-      h3 {
-        color: rgba(255, 255, 255, 0.6);
-      }
-
-      .amount-usd {
-        color: rgba(255, 255, 255, 0.6);
-      }
-    }
-
-    .confirmation-content {
-      .section h3 {
-        color: rgba(255, 255, 255, 0.6);
-      }
-
-      .detail-label {
-        color: rgba(255, 255, 255, 0.7);
-      }
-
-      .detail-value {
-        color: rgba(255, 255, 255, 0.87);
-
-        &.message-preview {
-          background: rgba(255, 255, 255, 0.05);
-        }
-      }
-
-      .payment-amount {
-        background: rgba(255, 152, 0, 0.15);
-
-        .payment-usd {
-          color: rgba(255, 255, 255, 0.6);
-        }
-      }
-    }
-  }
-}
-
-@media (max-width: 480px) {
-  .gift-premium-dialog {
-    .payment-method-buttons {
-      grid-template-columns: repeat(1, 1fr) !important;
-
-      button {
-        padding: 18px 16px;
-        min-height: 68px;
-        gap: 8px;
-      }
-    }
-
-    .payment-method-content {
-      padding: 12px;
-      min-height: 60px;
-    }
-
-    .qr-code-container qr-code {
-      width: 150px;
-      height: 150px;
-    }
-  }
-}
-
-// Dialog title with close button
-h2[mat-dialog-title] {
-  .dialog-title-content {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    width: 100%;
-    gap: 16px;
-  }
-
-  .title-text {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-  }
-
-  .close-button {
-    margin-left: auto;
-    color: var(--mat-sys-on-surface-variant);
+// Button spinner alignment
+button {
+  mat-spinner {
+    display: inline-block;
   }
 }

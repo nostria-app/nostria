@@ -1831,7 +1831,7 @@ export class LayoutService implements OnDestroy {
     pubkey: string,
     recipientName?: string,
     recipientMetadata?: Record<string, unknown>
-  ) {
+  ): Promise<CustomDialogRef> {
     // No lightning address validation needed - payments go to Nostria, not the recipient
 
     // Dynamically import the dialog component
@@ -1845,11 +1845,14 @@ export class LayoutService implements OnDestroy {
       recipientMetadata: recipientMetadata,
     };
 
-    return this.dialog.open(GiftPremiumDialogComponent, {
+    return this.customDialog.open(GiftPremiumDialogComponent, {
       data: dialogData,
-      width: '500px',
+      width: '520px',
+      maxWidth: '95vw',
       disableClose: true,
-      panelClass: 'responsive-dialog',
+      title: 'Gift Premium Subscription',
+      headerIcon: '',
+      showCloseButton: true,
     });
   }
 
