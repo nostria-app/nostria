@@ -1,398 +1,346 @@
-<div class="gift-premium-dialog" [class.confirmation-state]="currentState() === 'confirmation'">
-  <!-- Input State -->
-  @if (currentState() === 'input') {
-  <h2 mat-dialog-title>
-    <div class="dialog-title-content">
-      <div class="title-text">
-        <mat-icon>card_giftcard</mat-icon>
-        Gift Premium Subscription
-      </div>
-      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close">
-        <mat-icon>close</mat-icon>
-      </button>
+<!-- Input State -->
+@if (currentState() === 'input') {
+<div dialog-content class="gift-premium-content">
+  <!-- Recipient Preview -->
+  @if (data.recipientPubkey) {
+  <div class="recipient-preview">
+    <span class="recipient-label">Gift to</span>
+    <div class="recipient-info">
+      <app-user-profile [pubkey]="data.recipientPubkey" [view]="'list'"></app-user-profile>
     </div>
-  </h2>
+  </div>
+  }
 
-  <mat-dialog-content>
-    @if (data.recipientPubkey) {
-    <div class="recipient-preview">
-      <h4>Gift to</h4>
-      <div class="recipient-info">
-        <app-user-profile [pubkey]="data.recipientPubkey" [view]="'list'"></app-user-profile>
-      </div>
+  <form [formGroup]="giftForm" class="gift-form">
+    <!-- Wallet Selection (if multiple) -->
+    @if (availableWallets().length > 1) {
+    <div class="wallet-selection">
+      <mat-form-field appearance="outline" class="full-width">
+        <mat-label>Select Wallet</mat-label>
+        <mat-select formControlName="selectedWallet">
+          @for (wallet of availableWallets(); track wallet.id) {
+          <mat-option [value]="wallet.id">
+            <div class="wallet-option">
+              <mat-icon>account_balance_wallet</mat-icon>
+              <span class="wallet-name">{{ wallet.name }}</span>
+              <span class="wallet-status" [class.connected]="wallet.connected">
+                {{ wallet.connected ? 'Connected' : 'Disconnected' }}
+              </span>
+            </div>
+          </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
     </div>
     }
 
-    <form [formGroup]="giftForm" class="gift-form">
-      @if (availableWallets().length > 1) {
-      <div class="wallet-selection">
-        <mat-form-field appearance="outline" class="full-width">
-          <mat-label>Select Wallet</mat-label>
-          <mat-select formControlName="selectedWallet">
-            @for (wallet of availableWallets(); track wallet.id) {
-            <mat-option [value]="wallet.id">
-              <div class="wallet-option">
-                <mat-icon>account_balance_wallet</mat-icon>
-                <span class="wallet-name">{{ wallet.name }}</span>
-                <span class="wallet-status" [class.connected]="wallet.connected">
-                  {{ wallet.connected ? 'Connected' : 'Disconnected' }}
-                </span>
-              </div>
-            </mat-option>
+    <!-- Subscription Type Selection -->
+    <div class="section-group">
+      <h3 class="section-title">Choose Plan</h3>
+      <mat-radio-group formControlName="premiumType" class="premium-type-group">
+        <button type="button" class="plan-card" [class.selected]="giftForm.get('premiumType')?.value === 'premium'"
+          (click)="giftForm.get('premiumType')?.setValue('premium')">
+          <mat-radio-button value="premium" class="hidden-radio"></mat-radio-button>
+          <div class="plan-icon-wrapper">
+            <mat-icon class="plan-icon">workspace_premium</mat-icon>
+          </div>
+          <div class="plan-info">
+            <span class="plan-name">Premium</span>
+            <span class="plan-description">Enhanced features</span>
+          </div>
+          <div class="plan-check">
+            @if (giftForm.get('premiumType')?.value === 'premium') {
+            <mat-icon>check_circle</mat-icon>
             }
-          </mat-select>
-          <mat-hint>Choose which wallet to use for this gift</mat-hint>
-        </mat-form-field>
-      </div>
-      }
+          </div>
+        </button>
 
-      <div class="premium-type-selection">
-        <h3>Select Subscription Type</h3>
-        <mat-radio-group formControlName="premiumType" class="premium-type-group">
-          <mat-card class="premium-option-card" (click)="giftForm.get('premiumType')?.setValue('premium')">
-            <mat-radio-button value="premium">
-              <div class="premium-option-content">
-                <div class="premium-header">
-                  <mat-icon class="premium-icon">workspace_premium</mat-icon>
-                  <span class="premium-name">Premium</span>
-                </div>
-                <div class="premium-description">
-                  Enhanced features
-                </div>
-              </div>
-            </mat-radio-button>
-          </mat-card>
+        <button type="button" class="plan-card premium-plus"
+          [class.selected]="giftForm.get('premiumType')?.value === 'premium-plus'"
+          (click)="giftForm.get('premiumType')?.setValue('premium-plus')">
+          <mat-radio-button value="premium-plus" class="hidden-radio"></mat-radio-button>
+          <div class="plan-icon-wrapper">
+            <mat-icon class="plan-icon">stars</mat-icon>
+          </div>
+          <div class="plan-info">
+            <span class="plan-name">Premium+</span>
+            <span class="plan-description">All features + exclusive benefits</span>
+          </div>
+          <div class="plan-check">
+            @if (giftForm.get('premiumType')?.value === 'premium-plus') {
+            <mat-icon>check_circle</mat-icon>
+            }
+          </div>
+        </button>
+      </mat-radio-group>
+    </div>
 
-          <mat-card class="premium-option-card premium-plus"
-            (click)="giftForm.get('premiumType')?.setValue('premium-plus')">
-            <mat-radio-button value="premium-plus">
-              <div class="premium-option-content">
-                <div class="premium-header">
-                  <mat-icon class="premium-icon">stars</mat-icon>
-                  <span class="premium-name">Premium+</span>
-                </div>
-                <div class="premium-description">
-                  All Premium features plus exclusive benefits
-                </div>
-              </div>
-            </mat-radio-button>
-          </mat-card>
-        </mat-radio-group>
-      </div>
+    <!-- Duration Selection -->
+    <div class="section-group">
+      <h3 class="section-title">Select Duration</h3>
+      <mat-radio-group formControlName="duration" class="duration-group">
+        <button type="button" class="duration-card" [class.selected]="giftForm.get('duration')?.value === 1"
+          (click)="giftForm.get('duration')?.setValue(1)">
+          <mat-radio-button [value]="1" class="hidden-radio"></mat-radio-button>
+          <span class="duration-period">1 Month</span>
+          <span class="duration-price">
+            @if (loadingPrice()) {
+            <mat-spinner diameter="16"></mat-spinner>
+            } @else if (giftForm.get('premiumType')?.value === 'premium') {
+            {{ (getDollarAmount('premium', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+            } @else {
+            {{ (getDollarAmount('premium-plus', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+            }
+          </span>
+        </button>
 
-      <mat-divider></mat-divider>
+        <button type="button" class="duration-card" [class.selected]="giftForm.get('duration')?.value === 3"
+          (click)="giftForm.get('duration')?.setValue(3)">
+          <mat-radio-button [value]="3" class="hidden-radio"></mat-radio-button>
+          <span class="duration-period">3 Months</span>
+          <span class="duration-price">
+            @if (loadingPrice()) {
+            <mat-spinner diameter="16"></mat-spinner>
+            } @else if (giftForm.get('premiumType')?.value === 'premium') {
+            {{ (getDollarAmount('premium', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+            } @else {
+            {{ (getDollarAmount('premium-plus', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
+            }
+          </span>
+        </button>
+      </mat-radio-group>
+    </div>
 
-      <div class="duration-selection">
-        <h3>Select Duration</h3>
-        <mat-radio-group formControlName="duration" class="duration-group">
-          <mat-card class="duration-option-card" (click)="giftForm.get('duration')?.setValue(1)">
-            <mat-radio-button [value]="1">
-              <div class="duration-option-content">
-                <span class="duration-text">1 Month</span>
-                <span class="duration-price">
-                  @if (loadingPrice()) {
-                  Loading...
-                  } @else if (giftForm.get('premiumType')?.value === 'premium') {
-                  {{ (getDollarAmount('premium', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
-                  } @else {
-                  {{ (getDollarAmount('premium-plus', 1) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
-                  }
-                </span>
-              </div>
-            </mat-radio-button>
-          </mat-card>
-
-          <mat-card class="duration-option-card" (click)="giftForm.get('duration')?.setValue(3)">
-            <mat-radio-button [value]="3">
-              <div class="duration-option-content">
-                <span class="duration-text">3 Months</span>
-                <span class="duration-price">
-                  @if (loadingPrice()) {
-                  Loading...
-                  } @else if (giftForm.get('premiumType')?.value === 'premium') {
-                  {{ (getDollarAmount('premium', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
-                  } @else {
-                  {{ (getDollarAmount('premium-plus', 3) / bitcoinPrice()!.usd * 100000000) | number:'1.0-0' }} sats
-                  }
-                </span>
-              </div>
-            </mat-radio-button>
-          </mat-card>
-        </mat-radio-group>
-      </div>
-
-      <mat-divider></mat-divider>
-
-      <!-- <mat-form-field appearance="outline" class="full-width message-field">
-        <mat-label>Personal Message (optional)</mat-label>
-        <textarea matInput maxlength="100" formControlName="message"
-          placeholder="Add a personal message to your gift..." rows="3"></textarea>
-        <mat-hint>{{ giftForm.get('message')?.value?.length || 0 }}/100 characters</mat-hint>
-        @if (giftForm.get('message')?.hasError('maxlength')) {
-        <mat-error>Message is too long (max 100 characters)</mat-error>
-        }
-      </mat-form-field> -->
-
-      <div class="total-amount-display">
-        <h3>Total Amount</h3>
-        <div class="amount-details">
+    <!-- Total Amount -->
+    <div class="total-section">
+      <div class="total-row">
+        <span class="total-label">Total</span>
+        <div class="total-amount">
           @if (loadingPrice()) {
-          <span class="amount-loading">Loading price...</span>
+          <mat-spinner diameter="20"></mat-spinner>
           } @else {
-          <span class="amount-sats">{{ totalAmount().toLocaleString() }} sats</span>
+          <mat-icon class="lightning-icon">bolt</mat-icon>
+          <span class="amount-sats">{{ totalAmount().toLocaleString() }}</span>
+          <span class="amount-unit">sats</span>
           <span class="amount-usd">({{ pricingInfo()?.usd }})</span>
           }
         </div>
       </div>
-    </form>
-
-    @if (errorMessage()) {
-    <div class="error-message">
-      <mat-icon>error</mat-icon>
-      {{ errorMessage() }}
     </div>
-    }
-  </mat-dialog-content>
+  </form>
 
-  <mat-dialog-actions align="end">
-    <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
-    <button mat-raised-button color="primary" (click)="proceedToConfirmation()"
-      [disabled]="isProcessing() || !giftForm.valid">
-      Continue
-    </button>
-  </mat-dialog-actions>
+  @if (errorMessage()) {
+  <div class="error-message">
+    <mat-icon>error</mat-icon>
+    <span>{{ errorMessage() }}</span>
+  </div>
   }
+</div>
 
-  <!-- Confirmation State -->
-  @if (currentState() === 'confirmation') {
-  <h2 mat-dialog-title>
-    <div class="dialog-title-content">
-      <div class="title-text">
-        <mat-icon>card_giftcard</mat-icon>
-        Confirm Gift
-      </div>
-      <button mat-icon-button class="close-button" (click)="close()" matTooltip="Close">
-        <mat-icon>close</mat-icon>
-      </button>
+<div dialog-actions class="dialog-actions-input">
+  <button mat-button (click)="onCancel()" [disabled]="isProcessing()">Cancel</button>
+  <button mat-flat-button class="continue-button" (click)="proceedToConfirmation()"
+    [disabled]="isProcessing() || !giftForm.valid || loadingPrice()">
+    <mat-icon>arrow_forward</mat-icon>
+    Continue
+  </button>
+</div>
+}
+
+<!-- Confirmation State -->
+@if (currentState() === 'confirmation') {
+<div dialog-content class="gift-premium-content confirmation-state">
+  <!-- Summary Section -->
+  <div class="confirmation-summary">
+    <div class="summary-header">
+      <mat-icon class="summary-icon">card_giftcard</mat-icon>
+      <span>Gift Summary</span>
     </div>
-  </h2>
 
-  <mat-dialog-content>
-    <div class="confirmation-content">
-      <!-- Recipient Info -->
-      <div class="section recipient-section">
-        <h3>Gifting to</h3>
-        <div class="recipient-info">
+    <div class="summary-details">
+      <div class="summary-row">
+        <span class="summary-label">Recipient</span>
+        <div class="summary-recipient">
           <app-user-profile [pubkey]="data.recipientPubkey" [view]="'list'"></app-user-profile>
         </div>
       </div>
 
-      <mat-divider></mat-divider>
+      <div class="summary-divider"></div>
 
-      <!-- Gift Details -->
-      <div class="section gift-details-section">
-        <h3>Gift Details</h3>
-        <div class="detail-row">
-          <span class="detail-label">Subscription:</span>
-          <span class="detail-value">{{ getPremiumTypeName(giftForm.get('premiumType')?.value) }}</span>
+      <div class="summary-row">
+        <span class="summary-label">Plan</span>
+        <span class="summary-value highlight">{{ getPremiumTypeName(giftForm.get('premiumType')?.value) }}</span>
+      </div>
+
+      <div class="summary-row">
+        <span class="summary-label">Duration</span>
+        <span class="summary-value">{{ getDurationText(giftForm.get('duration')?.value) }}</span>
+      </div>
+
+      <div class="summary-divider"></div>
+
+      <div class="summary-row total">
+        <span class="summary-label">Amount</span>
+        <div class="summary-amount">
+          <mat-icon class="lightning-icon">bolt</mat-icon>
+          <span class="amount-value">{{ totalAmount().toLocaleString() }} sats</span>
+          <span class="amount-fiat">({{ pricingInfo()?.usd }})</span>
         </div>
-        <div class="detail-row">
-          <span class="detail-label">Duration:</span>
-          <span class="detail-value">{{ getDurationText(giftForm.get('duration')?.value) }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment Method Selection -->
+  <div class="payment-section">
+    <h3 class="section-title">Payment Method</h3>
+
+    <div class="payment-method-buttons">
+      <button type="button" class="payment-method-btn" [class.selected]="selectedPaymentMethod() === 'nwc'"
+        (click)="selectPaymentMethod('nwc')">
+        <mat-icon>account_balance_wallet</mat-icon>
+        <span>Wallet</span>
+      </button>
+
+      <button type="button" class="payment-method-btn" [class.selected]="selectedPaymentMethod() === 'native'"
+        (click)="selectPaymentMethod('native')">
+        <mat-icon>smartphone</mat-icon>
+        <span>Lightning</span>
+      </button>
+
+      <button type="button" class="payment-method-btn" [class.selected]="selectedPaymentMethod() === 'manual'"
+        (click)="selectPaymentMethod('manual')">
+        <mat-icon>qr_code</mat-icon>
+        <span>QR Code</span>
+      </button>
+    </div>
+
+    <div class="payment-method-content">
+      <!-- NWC Content -->
+      @if (selectedPaymentMethod() === 'nwc') {
+      <div class="method-content-inner">
+        @if (hasNwcWallet()) {
+        <div class="wallet-info">
+          <mat-icon>account_balance_wallet</mat-icon>
+          <span>{{ getSelectedWalletName() }}</span>
         </div>
-        @if (giftForm.get('message')?.value) {
-        <div class="detail-row message-row">
-          <span class="detail-label">Message:</span>
-          <span class="detail-value message-preview">"{{ giftForm.get('message')?.value }}"</span>
+        <p class="method-hint">Pay automatically with your connected wallet</p>
+        } @else {
+        <div class="no-wallet-warning">
+          <mat-icon class="warning-icon">warning</mat-icon>
+          <div class="warning-text">
+            <p>No wallet connected</p>
+            <button mat-button (click)="openCredentials()">
+              <mat-icon>settings</mat-icon>
+              Connect Wallet
+            </button>
+          </div>
+        </div>
+        }
+
+        @if (isProcessing() && selectedPaymentMethod() === 'nwc') {
+        <div class="processing-indicator">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Processing payment...</span>
         </div>
         }
       </div>
+      }
 
-      <mat-divider></mat-divider>
-
-      <!-- Payment Details -->
-      <div class="section payment-section">
-        <h3>Payment</h3>
-        <div class="payment-amount">
-          <mat-icon class="payment-icon">bolt</mat-icon>
-          <div class="payment-details">
-            <span class="payment-sats">{{ totalAmount().toLocaleString() }} sats</span>
-            <span class="payment-usd">({{ pricingInfo()?.usd }})</span>
-          </div>
+      <!-- Native (Open Lightning) Content -->
+      @if (selectedPaymentMethod() === 'native') {
+      <div class="method-content-inner">
+        @if (invoiceUrl()) {
+        <p class="method-hint">Open your Lightning wallet app to pay</p>
+        <button mat-flat-button class="open-wallet-btn" (click)="openLightningWallet()">
+          <mat-icon>open_in_new</mat-icon>
+          Open Lightning Wallet
+        </button>
+        <p class="copy-hint">
+          Or <button type="button" class="text-btn" (click)="copyInvoice()">copy invoice</button> to paste manually
+        </p>
+        } @else if (isProcessing()) {
+        <div class="processing-indicator">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Generating invoice...</span>
         </div>
+        } @else {
+        <p class="method-hint">Generate an invoice for your Lightning wallet</p>
+        }
       </div>
+      }
 
-      <mat-divider></mat-divider>
-
-      <!-- Payment Method Selection -->
-      <div class="section payment-method-section">
-        <h3>Choose Payment Method</h3>
-
-        <div class="payment-method-buttons">
-          <button mat-raised-button (click)="selectPaymentMethod('nwc')"
-            [class.selected]="selectedPaymentMethod() === 'nwc'">
-            <mat-icon>account_balance_wallet</mat-icon>
-            Wallet Connect
-          </button>
-
-          <button mat-raised-button (click)="selectPaymentMethod('native')"
-            [class.selected]="selectedPaymentMethod() === 'native'">
-            <mat-icon>smartphone</mat-icon>
-            Lightning Wallet
-          </button>
-
-          <button mat-raised-button (click)="selectPaymentMethod('manual')"
-            [class.selected]="selectedPaymentMethod() === 'manual'">
-            <mat-icon>qr_code</mat-icon>
-            QR Code
-          </button>
+      <!-- Manual (QR Code) Content -->
+      @if (selectedPaymentMethod() === 'manual') {
+      <div class="method-content-inner">
+        @if (invoiceUrl()) {
+        <p class="method-hint">Scan with any Lightning wallet</p>
+        <div class="qr-code-wrapper">
+          <qr-code [qrdata]="invoiceUrl()!" [width]="180" [height]="180"></qr-code>
         </div>
-
-        <div class="payment-method-content">
-          <!-- NWC Content -->
-          @if (selectedPaymentMethod() === 'nwc') {
-          <div class="wallet-info">
-            <mat-icon>account_balance_wallet</mat-icon>
-            <span>{{ getSelectedWalletName() }}</span>
-          </div>
-          <p class="method-description">
-            Use your connected Nostr Wallet Connect (NWC) wallet to pay automatically.
-          </p>
-
-          @if (!hasNwcWallet()) {
-          <div class="no-wallet-warning">
-            <mat-icon class="warning-icon">warning</mat-icon>
-            <div>
-              <p>No NWC wallet connected.</p>
-              <p>
-                Please add your NWC connection string on the
-                <button mat-button color="primary" (click)="openCredentials()">
-                  Credentials
-                </button>
-                page.
-              </p>
-            </div>
-          </div>
-          }
-
-          @if (isProcessing() && selectedPaymentMethod() === 'nwc') {
-          <div class="processing-indicator">
-            <mat-spinner diameter="20"></mat-spinner>
-            <span>Processing payment...</span>
-          </div>
-          }
-          }
-
-          <!-- Native (Open Lightning) Content -->
-          @if (selectedPaymentMethod() === 'native') {
-          @if (invoiceUrl()) {
-          <div class="native-wallet-section">
-            <p class="method-description">
-              Open your mobile Lightning wallet app to pay this invoice.
-            </p>
-            <button mat-raised-button color="primary" (click)="openLightningWallet()" class="open-wallet-btn">
-              <mat-icon>open_in_new</mat-icon>
-              Open Lightning Wallet
-            </button>
-            <p class="wallet-hint">
-              If your wallet doesn't open automatically, copy the invoice manually.
-            </p>
-          </div>
-          } @else if (isProcessing() && selectedPaymentMethod() === 'native') {
-          <div class="processing-indicator">
-            <mat-spinner diameter="20"></mat-spinner>
-            <span>Generating invoice...</span>
-          </div>
-          } @else {
-          <p class="method-description">
-            Click "Generate Invoice" to create a Lightning invoice for your mobile wallet.
-          </p>
-          }
-          }
-
-          <!-- Manual (QR Code) Content -->
-          @if (selectedPaymentMethod() === 'manual') {
-          @if (invoiceUrl()) {
-          <div class="qr-code-section">
-            <p class="method-description">
-              Scan this QR code with any Lightning wallet to pay.
-            </p>
-            <div class="qr-code-container">
-              <qr-code [qrdata]="invoiceUrl()!" [width]="200" [height]="200"></qr-code>
-            </div>
-            <div class="invoice-details">
-              <p class="invoice-label">Lightning Invoice:</p>
-              <button class="invoice-text" (click)="copyInvoice()" (keydown.enter)="copyInvoice()"
-                (keydown.space)="copyInvoice()" type="button" aria-label="Copy invoice to clipboard">
-                <span class="invoice-value">{{ truncateInvoice(invoiceUrl()!) }}</span>
-                <mat-icon class="copy-icon">content_copy</mat-icon>
-              </button>
-            </div>
-          </div>
-          } @else if (isProcessing() && selectedPaymentMethod() === 'manual') {
-          <div class="processing-indicator">
-            <mat-spinner diameter="20"></mat-spinner>
-            <span>Generating QR code...</span>
-          </div>
-          } @else {
-          <p class="method-description">
-            Click "Generate QR Code" to create a QR code for manual payment.
-          </p>
-          }
-          }
+        <button type="button" class="invoice-copy-btn" (click)="copyInvoice()" matTooltip="Copy invoice">
+          <span class="invoice-text">{{ truncateInvoice(invoiceUrl()!) }}</span>
+          <mat-icon>content_copy</mat-icon>
+        </button>
+        } @else if (isProcessing()) {
+        <div class="processing-indicator">
+          <mat-spinner diameter="24"></mat-spinner>
+          <span>Generating QR code...</span>
         </div>
-      </div>
-
-      @if (errorMessage()) {
-      <div class="error-message">
-        <mat-icon>error</mat-icon>
-        {{ errorMessage() }}
+        } @else {
+        <p class="method-hint">Generate a QR code for manual payment</p>
+        }
       </div>
       }
     </div>
-  </mat-dialog-content>
+  </div>
 
-  <mat-dialog-actions>
-    <button mat-button (click)="backToInput()" [disabled]="isProcessing()">Back</button>
+  @if (errorMessage()) {
+  <div class="error-message">
+    <mat-icon>error</mat-icon>
+    <span>{{ errorMessage() }}</span>
+  </div>
+  }
+</div>
 
+<div dialog-actions class="dialog-actions-confirmation">
+  <button mat-button (click)="backToInput()" [disabled]="isProcessing()">
+    <mat-icon>arrow_back</mat-icon>
+    Back
+  </button>
+
+  <div class="action-buttons">
     @if (selectedPaymentMethod() === 'nwc') {
-    <button mat-flat-button color="primary" (click)="confirmGift()" class="confirm-button"
-      [disabled]="isProcessing() || !hasNwcWallet()">
+    <button mat-flat-button class="send-button" (click)="confirmGift()" [disabled]="isProcessing() || !hasNwcWallet()">
       @if (isProcessing()) {
-      <ng-container>
-        <mat-spinner diameter="18"></mat-spinner>
-        Processing...
-      </ng-container>
+      <mat-spinner diameter="18"></mat-spinner>
+      <span>Sending...</span>
       } @else {
       <ng-container>
         <mat-icon>send</mat-icon>
-        Send Gift
+        <span>Send Gift</span>
       </ng-container>
       }
     </button>
     } @else if (selectedPaymentMethod() === 'native' || selectedPaymentMethod() === 'manual') {
     @if (!invoiceUrl()) {
-    <button mat-flat-button color="primary" (click)="generateInvoice()" class="confirm-button"
-      [disabled]="isProcessing()">
+    <button mat-flat-button class="generate-button" (click)="generateInvoice()" [disabled]="isProcessing()">
       @if (isProcessing()) {
-      <ng-container>
-        <mat-spinner diameter="18"></mat-spinner>
-        Generating...
-      </ng-container>
+      <mat-spinner diameter="18"></mat-spinner>
+      <span>Generating...</span>
       } @else {
       <ng-container>
         <mat-icon>receipt</mat-icon>
-        {{ selectedPaymentMethod() === 'native' ? 'Generate Invoice' : 'Generate QR Code' }}
+        <span>{{ selectedPaymentMethod() === 'native' ? 'Generate Invoice' : 'Generate QR' }}</span>
       </ng-container>
       }
     </button>
     } @else {
-    <button mat-flat-button color="accent" (click)="markAsPaid()" class="confirm-button">
+    <button mat-flat-button class="paid-button" (click)="markAsPaid()">
       <mat-icon>check</mat-icon>
-      I've Paid
+      <span>I've Paid</span>
     </button>
     }
     }
-  </mat-dialog-actions>
-  }
+  </div>
 </div>
+}
