@@ -344,3 +344,33 @@
   </div>
 </div>
 }
+
+<!-- Celebration Overlay -->
+@if (showCelebration()) {
+<div class="celebration-overlay">
+  <!-- Confetti pieces -->
+  @for (i of confettiItems; track i) {
+  <div class="confetti" [style.--delay]="(i * 0.03) + 's'" [style.--x]="((i * 7) % 100) + '%'"
+    [style.--drift]="((i % 5) - 2) * 30 + 'px'" [style.--rotation]="(i * 47) % 360 + 'deg'" [attr.data-type]="i % 4">
+  </div>
+  }
+  <!-- Sparkles -->
+  @for (i of sparkleItems; track i) {
+  <div class="sparkle" [style.--delay]="(i * 0.08) + 's'" [style.--x]="((i * 13) % 100) + '%'"
+    [style.--y]="((i * 17) % 60 + 20) + '%'"></div>
+  }
+  <!-- Burst particles from center -->
+  @for (i of burstItems; track i) {
+  <div class="burst-particle" [style.--angle]="(i * 18) + 'deg'" [style.--distance]="(80 + (i % 3) * 40) + 'px'"
+    [style.--delay]="(i * 0.02) + 's'"></div>
+  }
+  <div class="celebration-message">
+    <div class="celebration-glow"></div>
+    <mat-icon class="celebration-icon">celebration</mat-icon>
+    <span>Thank you for gifting!</span>
+    <div class="celebration-hearts">
+      <span>💜</span><span>✨</span><span>💜</span>
+    </div>
+  </div>
+</div>
+}

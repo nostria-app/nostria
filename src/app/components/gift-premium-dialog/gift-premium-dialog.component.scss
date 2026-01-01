@@ -672,3 +672,354 @@ button {
     display: inline-block;
   }
 }
+
+// Celebration Overlay - Premium animation
+.celebration-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 10000;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 50%, rgba(var(--nostria-bitcoin-rgb), 0.1) 0%, transparent 70%);
+  animation: overlay-fade 3s ease-out forwards;
+
+  // Confetti pieces with different shapes
+  .confetti {
+    position: absolute;
+    top: -20px;
+    left: var(--x, 50%);
+    width: 12px;
+    height: 12px;
+    opacity: 0;
+    animation: confetti-fall 3s ease-out var(--delay, 0s) forwards;
+
+    &::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+    }
+
+    // Rectangle confetti
+    &[data-type="0"]::before {
+      background: linear-gradient(135deg, var(--mat-sys-primary), var(--mat-sys-tertiary));
+      border-radius: 2px;
+      width: 8px;
+      height: 16px;
+    }
+
+    // Circle confetti
+    &[data-type="1"]::before {
+      background: linear-gradient(135deg, #ffd700, #ffaa00);
+      border-radius: 50%;
+      box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+    }
+
+    // Star confetti
+    &[data-type="2"]::before {
+      background: var(--mat-sys-secondary);
+      clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+      width: 14px;
+      height: 14px;
+    }
+
+    // Diamond confetti
+    &[data-type="3"]::before {
+      background: linear-gradient(135deg, rgba(var(--nostria-bitcoin-rgb), 1), #ff6b35);
+      transform: rotate(45deg);
+      width: 10px;
+      height: 10px;
+      box-shadow: 0 0 8px rgba(var(--nostria-bitcoin-rgb), 0.6);
+    }
+  }
+
+  // Twinkling sparkles
+  .sparkle {
+    position: absolute;
+    left: var(--x, 50%);
+    top: var(--y, 50%);
+    width: 4px;
+    height: 4px;
+    animation: sparkle-twinkle 1.5s ease-in-out var(--delay, 0s) infinite;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      background: white;
+    }
+
+    &::before {
+      width: 100%;
+      height: 2px;
+      top: 50%;
+      left: 0;
+      transform: translateY(-50%);
+      border-radius: 2px;
+      box-shadow: 0 0 6px white, 0 0 12px rgba(255, 255, 255, 0.5);
+    }
+
+    &::after {
+      width: 2px;
+      height: 100%;
+      left: 50%;
+      top: 0;
+      transform: translateX(-50%);
+      border-radius: 2px;
+      box-shadow: 0 0 6px white, 0 0 12px rgba(255, 255, 255, 0.5);
+    }
+  }
+
+  // Burst particles from center
+  .burst-particle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 8px;
+    height: 8px;
+    background: var(--mat-sys-primary);
+    border-radius: 50%;
+    opacity: 0;
+    animation: burst-out 0.8s ease-out var(--delay, 0s) forwards;
+    box-shadow: 0 0 10px var(--mat-sys-primary);
+
+    &:nth-child(odd) {
+      background: #ffd700;
+      box-shadow: 0 0 10px #ffd700;
+    }
+
+    &:nth-child(3n) {
+      background: var(--mat-sys-secondary);
+      box-shadow: 0 0 10px var(--mat-sys-secondary);
+    }
+  }
+
+  // Celebration message
+  .celebration-message {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    background: linear-gradient(145deg, var(--mat-sys-surface-container-highest), var(--mat-sys-surface-container-high));
+    padding: 2rem 3rem;
+    border-radius: var(--mat-sys-corner-extra-large);
+    box-shadow:
+      var(--mat-sys-level5),
+      0 0 40px rgba(var(--nostria-bitcoin-rgb), 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    animation: celebration-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) 0.1s both;
+    pointer-events: auto;
+    border: 1px solid rgba(var(--nostria-bitcoin-rgb), 0.2);
+
+    .celebration-glow {
+      position: absolute;
+      inset: -2px;
+      border-radius: inherit;
+      background: linear-gradient(135deg, var(--mat-sys-primary), var(--mat-sys-secondary), rgba(var(--nostria-bitcoin-rgb), 1));
+      z-index: -1;
+      opacity: 0.6;
+      filter: blur(8px);
+      animation: glow-pulse 2s ease-in-out infinite;
+    }
+
+    .celebration-icon {
+      font-size: 56px;
+      width: 56px;
+      height: 56px;
+      background: linear-gradient(135deg, var(--mat-sys-primary), rgba(var(--nostria-bitcoin-rgb), 1));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: icon-celebrate 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) 0.3s both;
+      filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+    }
+
+    span {
+      font-size: 1.35rem;
+      color: var(--mat-sys-on-surface);
+      text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+
+    .celebration-hearts {
+      display: flex;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      animation: hearts-float 2s ease-in-out infinite;
+
+      span {
+        animation: heart-bounce 0.6s ease-out both;
+
+        &:nth-child(1) {
+          animation-delay: 0.5s;
+        }
+
+        &:nth-child(2) {
+          animation-delay: 0.6s;
+        }
+
+        &:nth-child(3) {
+          animation-delay: 0.7s;
+        }
+      }
+    }
+  }
+}
+
+// Keyframe animations
+@keyframes overlay-fade {
+  0% {
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  80% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) translateX(0) rotate(var(--rotation, 0deg)) scale(1);
+  }
+
+  25% {
+    opacity: 1;
+    transform: translateY(25vh) translateX(var(--drift, 20px)) rotate(calc(var(--rotation, 0deg) + 180deg)) scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: translateY(50vh) translateX(calc(var(--drift, 20px) * -0.5)) rotate(calc(var(--rotation, 0deg) + 360deg)) scale(0.8);
+  }
+
+  75% {
+    opacity: 0.7;
+    transform: translateY(75vh) translateX(var(--drift, 20px)) rotate(calc(var(--rotation, 0deg) + 540deg)) scale(0.6);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(105vh) translateX(calc(var(--drift, 20px) * -1)) rotate(calc(var(--rotation, 0deg) + 720deg)) scale(0.4);
+  }
+}
+
+@keyframes sparkle-twinkle {
+
+  0%,
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+@keyframes burst-out {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateY(0) scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) rotate(var(--angle, 0deg)) translateY(var(--distance, 100px)) scale(0.3);
+  }
+}
+
+@keyframes celebration-pop {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.3) rotate(-10deg);
+  }
+
+  50% {
+    transform: translate(-50%, -50%) scale(1.1) rotate(2deg);
+  }
+
+  70% {
+    transform: translate(-50%, -50%) scale(0.95) rotate(-1deg);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes icon-celebrate {
+  0% {
+    transform: scale(0) rotate(-180deg);
+  }
+
+  50% {
+    transform: scale(1.3) rotate(15deg);
+  }
+
+  70% {
+    transform: scale(0.9) rotate(-5deg);
+  }
+
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@keyframes glow-pulse {
+
+  0%,
+  100% {
+    opacity: 0.4;
+    filter: blur(8px);
+  }
+
+  50% {
+    opacity: 0.7;
+    filter: blur(12px);
+  }
+}
+
+@keyframes hearts-float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes heart-bounce {
+  0% {
+    opacity: 0;
+    transform: scale(0) translateY(20px);
+  }
+
+  50% {
+    transform: scale(1.3) translateY(-5px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}

@@ -110,6 +110,12 @@ export class GiftPremiumDialogComponent {
   invoiceUrl = signal<string | null>(null);
   bitcoinPrice = signal<BitcoinPrice | null>(null);
   loadingPrice = signal(true);
+  showCelebration = signal(false);
+
+  // Arrays for celebration particles
+  confettiItems = Array.from({ length: 50 }, (_, i) => i);
+  sparkleItems = Array.from({ length: 20 }, (_, i) => i);
+  burstItems = Array.from({ length: 20 }, (_, i) => i);
 
   // Form and reactive state
   giftForm = new FormGroup({
@@ -375,6 +381,8 @@ export class GiftPremiumDialogComponent {
     const premiumType = this.giftForm.get('premiumType')?.value as PremiumType;
     const duration = this.giftForm.get('duration')?.value as Duration;
 
+    this.triggerCelebration();
+
     this.snackBar.open(
       `Payment initiated for ${this.getPremiumTypeName(premiumType)} gift (${this.getDurationText(duration)})!`,
       'Dismiss',
@@ -385,7 +393,18 @@ export class GiftPremiumDialogComponent {
       }
     );
 
-    this.dialogRef.close({ success: true });
+    // Delay closing to show celebration
+    setTimeout(() => {
+      this.dialogRef.close({ success: true });
+    }, 2500);
+  }
+
+  triggerCelebration(): void {
+    this.showCelebration.set(true);
+    // Auto-hide after animation completes
+    setTimeout(() => {
+      this.showCelebration.set(false);
+    }, 3000);
   }
 
   backToInput(): void {
@@ -457,6 +476,8 @@ export class GiftPremiumDialogComponent {
         combinedRelays // Include both gift recipient's and Nostria's relays
       );
 
+      this.triggerCelebration();
+
       this.snackBar.open(
         `Successfully gifted ${this.getPremiumTypeName(premiumType)} for ${this.getDurationText(duration)}!`,
         'Dismiss',
@@ -467,7 +488,10 @@ export class GiftPremiumDialogComponent {
         }
       );
 
-      this.dialogRef.close({ success: true });
+      // Delay closing to show celebration
+      setTimeout(() => {
+        this.dialogRef.close({ success: true });
+      }, 2500);
     } catch (error) {
       console.error('Failed to send gift premium zap:', error);
 
