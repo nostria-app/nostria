@@ -5,8 +5,6 @@
   flex-direction: column;
   gap: 1.25rem;
   padding: 0.5rem;
-  max-height: 70vh;
-  overflow-y: auto;
 
   @media (max-width: 480px) {
     gap: 1rem;
