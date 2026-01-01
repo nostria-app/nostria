@@ -373,13 +373,14 @@
   padding-bottom: 80px; // Space for floating input
   min-height: 0;
 
+  // On mobile, add padding for the fixed input at the bottom (where mobile nav would be)
   @media (max-width: 599px) {
-    padding-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
   }
 
-  // Mobile browser (non-PWA) on touch devices needs extra bottom space for browser URL bar
-  @media (max-width: 599px) and (pointer: coarse) and (not (display-mode: standalone)) {
-    padding-bottom: calc(230px + env(safe-area-inset-bottom, 0px));
+  // Android standalone PWA - add extra bottom padding for navigation bar
+  @media (max-width: 599px) and (display-mode: standalone) {
+    padding-bottom: calc(140px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -406,15 +407,22 @@
     0px 2px 8px rgba(17, 17, 26, 0.08),
     0px 4px 16px rgba(17, 17, 26, 0.06);
 
+  // On mobile, position where the mobile nav would be and stretch wider
   @media (max-width: 599px) {
-    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
-    left: 8px;
-    right: 8px;
+    position: fixed;
+    bottom: max(24px, calc(24px + env(safe-area-inset-bottom, 0px)));
+    left: 16px;
+    right: 16px;
+    transform: none;
+    width: auto;
+    min-width: unset;
+    max-width: unset;
+    z-index: 1000;
   }
 
-  // Mobile browser (non-PWA) on touch devices needs extra bottom space for browser URL bar
-  @media (max-width: 599px) and (pointer: coarse) and (not (display-mode: standalone)) {
-    bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+  // Android standalone PWA - add extra bottom padding for navigation bar
+  @media (max-width: 599px) and (display-mode: standalone) {
+    bottom: max(48px, calc(24px + env(safe-area-inset-bottom, 0px)));
   }
 }
 

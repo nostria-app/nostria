@@ -675,6 +675,9 @@ export class LayoutService implements OnDestroy {
   // Signal to control Terms of Use dialog visibility
   showTermsDialog = signal(false);
 
+  // Signal to hide the mobile navigation (e.g., when in chat view)
+  hideMobileNav = signal(false);
+
   // Handle login dialog close
   handleLoginDialogClose(): void {
     this.logger.debug('Login dialog closed');
