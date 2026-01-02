@@ -3,6 +3,7 @@ import { Event } from 'nostr-tools';
 import { LoggerService } from './logger.service';
 import { UserRelaysService } from './relays/user-relays';
 import { RelayPoolService } from './relays/relay-pool';
+import { AccountRelayService } from './relays/account-relay';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { UtilitiesService } from './utilities.service';
@@ -43,6 +44,7 @@ export class RelayBatchService {
   private readonly logger = inject(LoggerService);
   private readonly userRelaysService = inject(UserRelaysService);
   private readonly relayPool = inject(RelayPoolService);
+  private readonly accountRelay = inject(AccountRelayService);
   private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly utilities = inject(UtilitiesService);
@@ -449,5 +451,305 @@ export class RelayBatchService {
     this.updateLastAppOpenTimestamp();
 
     return result.events;
+  }
+
+  /**
+   * TIME-WINDOW based fetching for following feed.
+   * 
+   * This method fetches ALL events within a specified time window from all following users.
+   * Instead of limiting by number of events per user (which causes issues with users who
+   * post at different frequencies), we limit by TIME WINDOW.
+   * 
+   * Benefits:
+   * - Gets ALL events from the time period without gaps
+   * - Users who post rarely won't have their 3-year-old posts mixed with recent ones
+   * - Enables proper infinite scrolling by loading older time windows
+   * - Events are delivered IMMEDIATELY as they arrive for instant UI updates
+   * 
+   * @param kinds Event kinds to fetch
+   * @param options.since Start of time window (in seconds, Unix timestamp)
+   * @param options.until End of time window (in seconds, Unix timestamp)
+   * @param options.timeout Timeout per batch in milliseconds
+   * @param onEventsReceived Callback fired IMMEDIATELY when events arrive (for instant UI)
+   */
+  async fetchAllFollowingEventsTimeWindow(
+    kinds: number[],
+    options: {
+      since: number;
+      until?: number;
+      timeout?: number;
+    },
+    onEventsReceived?: (events: Event[]) => void
+  ): Promise<Event[]> {
+    const followingList = this.accountState.followingList();
+
+    if (followingList.length === 0) {
+      this.logger.debug('[RelayBatchService] Following list is empty');
+      return [];
+    }
+
+    const { since, until, timeout = 10000 } = options;
+    const now = Math.floor(Date.now() / 1000);
+    const untilTimestamp = until ?? now;
+
+    this.logger.info(
+      `[RelayBatchService] TIME-WINDOW fetch: ${followingList.length} users, ` +
+      `from ${new Date(since * 1000).toISOString()} to ${new Date(untilTimestamp * 1000).toISOString()}`
+    );
+
+    this.isLoading.set(true);
+    this.progress.set({ processed: 0, total: followingList.length, batches: 0 });
+
+    const allEvents: Event[] = [];
+    const errors: string[] = [];
+    let eventsReceivedCount = 0;
+
+    try {
+      // Step 1: Discover relays for all pubkeys
+      const relayMap = await this.discoverRelaysForPubkeys(followingList);
+
+      // Step 2: Group pubkeys by shared relays for efficient batching
+      const batches = this.groupPubkeysByRelays(relayMap);
+      this.logger.info(`[RelayBatchService] Created ${batches.length} relay batches`);
+
+      // Step 3: Execute batched queries with TIME-WINDOW filter (no per-user limit!)
+      const batchPromises = batches.map(async (batch, index) => {
+        try {
+          // Create filter with time window - NO LIMIT, we want ALL events in this window
+          const filter: {
+            authors: string[];
+            kinds: number[];
+            since: number;
+            until: number;
+          } = {
+            authors: batch.pubkeys,
+            kinds: kinds,
+            since: since,
+            until: untilTimestamp,
+            // NOTE: No limit! We want ALL events from this time window
+          };
+
+          this.logger.debug(
+            `[RelayBatchService] Batch ${index + 1}/${batches.length}: ` +
+            `${batch.pubkeys.length} pubkeys via ${batch.relays.length} relays`
+          );
+
+          // Use relay pool to query multiple relays at once
+          const events = await new Promise<Event[]>((resolve) => {
+            const receivedEvents: Event[] = [];
+            let resolved = false;
+
+            // Timeout to ensure we don't wait forever
+            setTimeout(() => {
+              if (!resolved) {
+                resolved = true;
+                sub.close();
+                resolve(receivedEvents);
+              }
+            }, timeout);
+
+            const sub = this.relayPool.subscribe(
+              batch.relays,
+              filter,
+              (event: Event) => {
+                receivedEvents.push(event);
+                eventsReceivedCount++;
+
+                // IMMEDIATELY notify callback - this is critical for UX!
+                // The "new posts" button should show as soon as ANY event arrives
+                if (onEventsReceived) {
+                  onEventsReceived([event]);
+                }
+              }
+            );
+          });
+
+          allEvents.push(...events);
+
+          // Update progress
+          this.progress.update(p => ({
+            ...p,
+            processed: p.processed + batch.pubkeys.length,
+            batches: p.batches + 1,
+          }));
+
+          this.logger.debug(
+            `[RelayBatchService] Batch ${index + 1} complete: ${events.length} events`
+          );
+        } catch (error) {
+          errors.push(`Batch ${index + 1} failed: ${error}`);
+          this.logger.error(`[RelayBatchService] Batch ${index + 1} failed:`, error);
+        }
+      });
+
+      // Execute batches in parallel (limit concurrency to 10)
+      const CONCURRENT_BATCHES = 10;
+      for (let i = 0; i < batchPromises.length; i += CONCURRENT_BATCHES) {
+        await Promise.all(batchPromises.slice(i, i + CONCURRENT_BATCHES));
+      }
+
+      // Deduplicate events by ID
+      const eventMap = new Map<string, Event>();
+      for (const event of allEvents) {
+        eventMap.set(event.id, event);
+      }
+      const uniqueEvents = Array.from(eventMap.values());
+
+      // Sort by created_at (newest first)
+      uniqueEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+      this.logger.info(
+        `[RelayBatchService] TIME-WINDOW fetch complete: ${uniqueEvents.length} unique events ` +
+        `from ${batches.length} batches (${eventsReceivedCount} total received)`
+      );
+
+      return uniqueEvents;
+    } finally {
+      this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * FAST TIME-WINDOW fetch using account relays directly.
+   * 
+   * This is the PREFERRED method for initial Following feed loading because:
+   * 1. NO per-user relay discovery needed (which is VERY slow)
+   * 2. Uses the user's own account relays which are already connected
+   * 3. Returns events IMMEDIATELY as they arrive
+   * 4. Batches author queries to respect relay limits
+   * 
+   * The account relays typically have events from the users you follow because:
+   * - Popular relays aggregate content from many users
+   * - Your relay list is usually the same relays your friends use
+   * 
+   * @param kinds Event kinds to fetch
+   * @param options.since Start of time window (in seconds)
+   * @param options.until End of time window (in seconds)
+   * @param options.timeout Timeout per batch in milliseconds
+   * @param onEventsReceived Callback fired IMMEDIATELY when events arrive
+   */
+  async fetchFollowingEventsFast(
+    kinds: number[],
+    options: {
+      since: number;
+      until?: number;
+      timeout?: number;
+    },
+    onEventsReceived?: (events: Event[]) => void
+  ): Promise<Event[]> {
+    const followingList = this.accountState.followingList();
+
+    if (followingList.length === 0) {
+      this.logger.debug('[RelayBatchService] Following list is empty');
+      return [];
+    }
+
+    // Check if account relay is ready
+    if (!this.accountRelay.isInitialized()) {
+      this.logger.warn('[RelayBatchService] Account relay not initialized, waiting...');
+      // Wait a bit for account relay to initialize
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (!this.accountRelay.isInitialized()) {
+        this.logger.error('[RelayBatchService] Account relay still not initialized');
+        return [];
+      }
+    }
+
+    const { since, until, timeout = 3000 } = options;
+    const now = Math.floor(Date.now() / 1000);
+    const untilTimestamp = until ?? now;
+
+    this.logger.info(
+      `[RelayBatchService] FAST fetch: ${followingList.length} users via account relays, ` +
+      `from ${new Date(since * 1000).toISOString()} to ${new Date(untilTimestamp * 1000).toISOString()}`
+    );
+
+    this.isLoading.set(true);
+    this.progress.set({ processed: 0, total: followingList.length, batches: 0 });
+
+    const allEvents: Event[] = [];
+
+    try {
+      // Batch authors to respect relay limits (typically 10-50 per query)
+      const BATCH_SIZE = 20; // Conservative batch size
+      const batches: string[][] = [];
+      for (let i = 0; i < followingList.length; i += BATCH_SIZE) {
+        batches.push(followingList.slice(i, i + BATCH_SIZE));
+      }
+
+      this.logger.debug(`[RelayBatchService] FAST fetch: ${batches.length} batches of ~${BATCH_SIZE} authors`);
+
+      // Process batches with limited concurrency
+      const CONCURRENT_BATCHES = 3;
+
+      for (let i = 0; i < batches.length; i += CONCURRENT_BATCHES) {
+        const currentBatches = batches.slice(i, i + CONCURRENT_BATCHES);
+
+        const batchPromises = currentBatches.map(async (batchPubkeys, localIndex) => {
+          const batchIndex = i + localIndex;
+
+          const filter: {
+            kinds: number[];
+            authors: string[];
+            since: number;
+            until: number;
+          } = {
+            authors: batchPubkeys,
+            kinds: kinds,
+            since: since,
+            until: untilTimestamp,
+          };
+
+          try {
+            const events = await this.accountRelay.getMany<Event>(filter, { timeout });
+
+            // Immediately notify for each event
+            if (onEventsReceived && events.length > 0) {
+              onEventsReceived(events);
+            }
+
+            this.logger.debug(
+              `[RelayBatchService] FAST batch ${batchIndex + 1}/${batches.length}: ${events.length} events`
+            );
+
+            return events;
+          } catch (error) {
+            this.logger.debug(`[RelayBatchService] FAST batch ${batchIndex + 1} error:`, error);
+            return [];
+          }
+        });
+
+        const results = await Promise.all(batchPromises);
+        allEvents.push(...results.flat());
+
+        // Update progress
+        this.progress.update(p => ({
+          ...p,
+          processed: Math.min(p.processed + CONCURRENT_BATCHES * BATCH_SIZE, followingList.length),
+          batches: p.batches + currentBatches.length,
+        }));
+      }
+
+      // Deduplicate events
+      const eventMap = new Map<string, Event>();
+      for (const event of allEvents) {
+        eventMap.set(event.id, event);
+      }
+      const uniqueEvents = Array.from(eventMap.values());
+
+      // Sort by created_at (newest first)
+      uniqueEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+      this.logger.info(
+        `[RelayBatchService] FAST fetch complete: ${uniqueEvents.length} unique events in ${batches.length} batches`
+      );
+
+      // Update last app open timestamp
+      this.updateLastAppOpenTimestamp();
+
+      return uniqueEvents;
+    } finally {
+      this.isLoading.set(false);
+    }
   }
 }
