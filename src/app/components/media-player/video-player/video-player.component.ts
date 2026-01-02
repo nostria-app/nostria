@@ -248,6 +248,17 @@ export class VideoPlayerComponent implements OnDestroy {
     this.startAutoHideTimer();
   }
 
+  /** Handle touch events on the video container for mobile auto-hide support */
+  onVideoContainerTouchStart(event: TouchEvent): void {
+    // Only handle in expanded mode (not footer mode)
+    if (this.footer() || this.ignoreMouseEvents) return;
+
+    // Show controls and start auto-hide timer on touch
+    this.videoControlsRef?.showControlsAndStartTimer();
+    this.showCursor();
+    this.startAutoHideTimer();
+  }
+
   onControlsBarHover(hovering: boolean): void {
     this.isHoveringControlsBar.set(hovering);
     if (hovering) {
