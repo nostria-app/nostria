@@ -1,5 +1,5 @@
 <div class="inline-video-container" (mouseenter)="onMouseEnter()" (mouseleave)="onMouseLeave()"
-  (mousemove)="onMouseMove()">
+  (mousemove)="onMouseMove()" (click)="$event.stopPropagation()">
   <video #videoElement class="video-element" [src]="src()" [poster]="poster()" [autoplay]="autoplay()" [muted]="muted()"
     [loop]="loop()" playsinline (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
     (click)="togglePlay()"></video>
