@@ -16,9 +16,15 @@ import { LocalStorageService } from './local-storage.service';
  * 
  * Key features:
  * 1. Smart caching - avoids redundant fetches if data is fresh
- * 2. Time-based fetching - only fetches events since last fetch or max 6 hours
+ * 2. TIME-WINDOW based fetching - fetches events in 6-hour time windows
  * 3. Shared state - multiple consumers can access the same data
- * 4. Progressive loading - updates UI as events arrive
+ * 4. Progressive loading - updates UI IMMEDIATELY as events arrive
+ * 5. Infinite scroll support - loads older 6-hour windows on demand
+ * 
+ * PERFORMANCE OPTIMIZATION:
+ * Instead of limiting by number of events per user (which causes issues with
+ * users who post at different frequencies), we limit by TIME WINDOW.
+ * This ensures we get ALL events from the time period without gaps.
  */
 @Injectable({
   providedIn: 'root',
@@ -36,9 +42,9 @@ export class FollowingDataService {
   // How long before data is considered stale (5 minutes)
   private readonly STALE_THRESHOLD_MS = 5 * 60 * 1000;
 
-  // Maximum lookback period for RELAY fetching (6 hours in seconds)
-  // This limits how far back we fetch from relays to avoid excessive data transfer
-  private readonly MAX_RELAY_LOOKBACK_SECONDS = 6 * 60 * 60;
+  // Time window for fetching (6 hours in seconds)
+  // This is the size of each "page" when infinite scrolling
+  readonly TIME_WINDOW_SECONDS = 6 * 60 * 60;
 
   // Maximum lookback period for DATABASE queries (1 week in seconds)
   // This matches the column cache max age and allows showing all locally stored events
@@ -49,6 +55,9 @@ export class FollowingDataService {
   readonly isFetching = signal(false);
   readonly progress = computed(() => this.relayBatch.progress());
 
+  // Track the oldest timestamp we've fetched to (for infinite scroll)
+  private oldestFetchedTimestamp = signal<number | null>(null);
+
   // Last successful fetch timestamp (per account)
   private lastFetchTimestamp = signal<number | null>(null);
 
@@ -57,6 +66,9 @@ export class FollowingDataService {
 
   // Current fetch promise to avoid duplicate requests
   private currentFetchPromise: Promise<Event[]> | null = null;
+
+  // Current pagination fetch promise (for loading older events)
+  private paginationFetchPromise: Promise<Event[]> | null = null;
 
   /**
    * Get the timestamp of when we last fetched following data.
@@ -95,23 +107,19 @@ export class FollowingDataService {
 
   /**
    * Calculate the 'since' timestamp for RELAY fetching.
-   * Uses the last fetch time or max 6 hours ago.
-   * This limits data volume when fetching from relays.
+   * Returns the start of the current 6-hour time window.
    */
   private calculateRelayFetchSinceTimestamp(): number {
-    const lastFetch = this.getLastFetchTimestamp();
     const now = Math.floor(Date.now() / 1000);
-    const maxLookback = now - this.MAX_RELAY_LOOKBACK_SECONDS;
+    return now - this.TIME_WINDOW_SECONDS;
+  }
 
-    if (lastFetch === null) {
-      return maxLookback;
-    }
-
-    // Convert lastFetch from ms to seconds
-    const lastFetchSeconds = Math.floor(lastFetch / 1000);
-
-    // Use whichever is more recent (to limit data volume)
-    return Math.max(lastFetchSeconds, maxLookback);
+  /**
+   * Get the oldest timestamp we have fetched to.
+   * Used for infinite scroll pagination.
+   */
+  getOldestFetchedTimestamp(): number | null {
+    return this.oldestFetchedTimestamp();
   }
 
   /**
@@ -252,36 +260,48 @@ export class FollowingDataService {
   }
 
   /**
-   * Fetch events from relays using batch strategy.
-   * Only fetches events SINCE last fetch to avoid re-downloading.
+   * Fetch events from relays using the FAST method (account relays directly).
+   * 
+   * PERFORMANCE: This uses the user's own account relays instead of discovering
+   * each following user's relays. This is MUCH faster because:
+   * 1. No kind 10002/kind 3 fetch for each following user
+   * 2. Account relays are already connected
+   * 3. Batches authors together efficiently
+   * 
+   * Events are delivered IMMEDIATELY as they arrive via onProgress callback.
    * @param customSince Override the since timestamp (in seconds)
+   * @param customUntil Optional until timestamp for fetching older windows (in seconds)
    */
   private async fetchFromRelays(
     kinds: number[],
     existingEvents: Event[],
     onProgress?: (events: Event[]) => void,
-    customSince?: number
+    customSince?: number,
+    customUntil?: number
   ): Promise<Event[]> {
     const followingList = this.accountState.followingList();
 
     this.isLoading.set(true);
     this.isFetching.set(true);
 
-    // Calculate since timestamp for relay fetching
-    // Use custom if provided (e.g., for Summary page), otherwise use 6-hour limit
+    // Calculate time window for relay fetching
+    const now = Math.floor(Date.now() / 1000);
     const sinceTimestamp = customSince ?? this.calculateRelayFetchSinceTimestamp();
+    const untilTimestamp = customUntil ?? now;
 
     try {
       this.logger.info(
-        `[FollowingDataService] Fetching events from ${followingList.length} users since ${new Date(sinceTimestamp * 1000).toISOString()}`
+        `[FollowingDataService] FAST fetch from ${followingList.length} users ` +
+        `from ${new Date(sinceTimestamp * 1000).toISOString()} to ${new Date(untilTimestamp * 1000).toISOString()}`
       );
 
-      const newEvents = await this.relayBatch.fetchAllFollowingEvents(
+      // Use the FAST method that bypasses relay discovery
+      const newEvents = await this.relayBatch.fetchFollowingEventsFast(
         kinds,
         {
-          limitPerUser: 5,
-          timeout: 15000,
-          since: sinceTimestamp, // Only fetch since last fetch
+          since: sinceTimestamp,
+          until: untilTimestamp,
+          timeout: 5000, // Shorter timeout since we're using connected relays
         },
         (batchEvents: Event[]) => {
           // Save events to database as they arrive
@@ -291,7 +311,8 @@ export class FollowingDataService {
             });
           }
 
-          // Notify progress callback
+          // IMMEDIATELY notify progress callback - this is critical for UX
+          // The UI should show "new posts" button as soon as ANY event arrives
           if (onProgress) {
             onProgress(batchEvents);
           }
@@ -301,12 +322,24 @@ export class FollowingDataService {
       // Update last fetch timestamp to NOW
       this.setLastFetchTimestamp(Date.now());
 
+      // Track the oldest timestamp we've fetched
+      if (newEvents.length > 0) {
+        const oldestEventTime = Math.min(...newEvents.map(e => e.created_at || 0));
+        const currentOldest = this.oldestFetchedTimestamp();
+        if (!currentOldest || oldestEventTime < currentOldest) {
+          this.oldestFetchedTimestamp.set(oldestEventTime);
+        }
+      } else if (!this.oldestFetchedTimestamp()) {
+        // Even if no events, track the time window we searched
+        this.oldestFetchedTimestamp.set(sinceTimestamp);
+      }
+
       // Merge and cache all events
       const allEvents = this.mergeEvents(existingEvents, newEvents);
       this.cachedEvents.set(allEvents);
 
       this.logger.info(
-        `[FollowingDataService] Fetched ${newEvents.length} NEW events (total: ${allEvents.length})`
+        `[FollowingDataService] Fetched ${newEvents.length} events (total: ${allEvents.length})`
       );
 
       return newEvents; // Return only new events, caller merges
@@ -317,6 +350,79 @@ export class FollowingDataService {
       this.isLoading.set(false);
       this.isFetching.set(false);
     }
+  }
+
+  /**
+   * Load older events (next 6-hour window) for infinite scroll pagination.
+   * This is called when user scrolls to the bottom of the feed.
+   * 
+   * @param kinds Array of event kinds to fetch
+   * @param onProgress Callback for incremental updates as events arrive
+   * @returns The newly fetched events
+   */
+  async loadOlderEvents(
+    kinds: number[] = [1],
+    onProgress?: (events: Event[]) => void
+  ): Promise<Event[]> {
+    const followingList = this.accountState.followingList();
+
+    if (followingList.length === 0) {
+      this.logger.debug('[FollowingDataService] Following list is empty');
+      return [];
+    }
+
+    // Prevent duplicate pagination requests
+    if (this.paginationFetchPromise) {
+      this.logger.debug('[FollowingDataService] Pagination already in progress, waiting...');
+      return this.paginationFetchPromise;
+    }
+
+    // Determine the time window for the next page
+    const oldestTimestamp = this.oldestFetchedTimestamp();
+    if (!oldestTimestamp) {
+      // No previous fetch, just do initial load
+      return this.ensureFollowingData(kinds, true, onProgress);
+    }
+
+    // Calculate the next 6-hour window (going backwards in time)
+    const untilTimestamp = oldestTimestamp - 1; // Just before the oldest we have
+    const sinceTimestamp = untilTimestamp - this.TIME_WINDOW_SECONDS;
+
+    this.logger.info(
+      `[FollowingDataService] Loading older events: ` +
+      `from ${new Date(sinceTimestamp * 1000).toISOString()} to ${new Date(untilTimestamp * 1000).toISOString()}`
+    );
+
+    // Start pagination fetch
+    const existingEvents = this.cachedEvents();
+    this.paginationFetchPromise = this.fetchFromRelays(
+      kinds,
+      existingEvents,
+      onProgress,
+      sinceTimestamp,
+      untilTimestamp
+    );
+
+    try {
+      const newEvents = await this.paginationFetchPromise;
+      return newEvents;
+    } finally {
+      this.paginationFetchPromise = null;
+    }
+  }
+
+  /**
+   * Check if there are potentially more older events to load.
+   * We assume there are more events unless we've gone too far back.
+   */
+  hasMoreOlderEvents(): boolean {
+    const oldest = this.oldestFetchedTimestamp();
+    if (!oldest) return true;
+
+    // Stop if we've gone back more than 30 days
+    const now = Math.floor(Date.now() / 1000);
+    const thirtyDaysAgo = now - (30 * 24 * 60 * 60);
+    return oldest > thirtyDaysAgo;
   }
 
   /**
@@ -342,6 +448,8 @@ export class FollowingDataService {
   clearCache(): void {
     this.cachedEvents.set([]);
     this.lastFetchTimestamp.set(null);
+    this.oldestFetchedTimestamp.set(null);
     this.currentFetchPromise = null;
+    this.paginationFetchPromise = null;
   }
 }

@@ -1064,11 +1064,16 @@ export class FeedService {
   /**
    * Load following feed - fetches events from ALL users the current user follows.
    * 
+   * PERFORMANCE OPTIMIZED:
+   * - Uses TIME-WINDOW based fetching (6-hour windows) instead of per-user limits
+   * - Shows events IMMEDIATELY as they arrive (doesn't wait for all users)
+   * - Supports infinite scroll by loading older 6-hour windows
+   * 
    * This method uses the FollowingDataService for efficient batched fetching:
    * 1. Groups following users by shared relay sets
-   * 2. Sends batched queries to minimize relay connections
-   * 3. Only fetches events since last fetch (or max 6 hours)
-   * 4. Updates UI incrementally as events arrive
+   * 2. Fetches ALL events from the current 6-hour time window
+   * 3. Updates UI IMMEDIATELY as events arrive (shows "new posts" button ASAP)
+   * 4. Loads cached events first for instant UI
    * 5. Shares data with Summary page
    */
   private async loadFollowingFeed(feedData: FeedItem) {
@@ -1083,15 +1088,23 @@ export class FeedService {
 
       const kinds = feedData.filter?.kinds || [1]; // Default to text notes
 
-      this.logger.info(`📢 Loading FOLLOWING feed with ${followingList.length} users`);
+      this.logger.info(`📢 Loading FOLLOWING feed with ${followingList.length} users (TIME-WINDOW mode)`);
 
       // Use the centralized FollowingDataService for efficient fetching
       const events = await this.followingData.ensureFollowingData(
         kinds,
         false, // Don't force refresh if data is fresh
-        // Incremental update callback
+        // Incremental update callback - fires IMMEDIATELY when events arrive
         (newEvents: Event[]) => {
           this.handleFollowingIncrementalUpdate(feedData, newEvents);
+        },
+        // Cache loaded callback - fires when cached events are available
+        (cachedEvents: Event[]) => {
+          // Show cached events immediately for instant UI
+          if (cachedEvents.length > 0 && feedData.events().length === 0) {
+            this.handleFollowingIncrementalUpdate(feedData, cachedEvents);
+            this.logger.debug(`📦 Loaded ${cachedEvents.length} cached events immediately`);
+          }
         }
       );
 
@@ -1105,9 +1118,92 @@ export class FeedService {
   }
 
   /**
+   * Load more events for following feed (infinite scroll).
+   * Fetches the next 6-hour time window of events.
+   */
+  async loadMoreFollowingEvents(feedData: FeedItem): Promise<boolean> {
+    try {
+      const kinds = feedData.filter?.kinds || [1];
+
+      // Check if there are more events to load
+      if (!this.followingData.hasMoreOlderEvents()) {
+        this.logger.debug('No more older events available (reached 30-day limit)');
+        return false;
+      }
+
+      this.logger.info('📜 Loading older events (next 6-hour window)...');
+
+      const newEvents = await this.followingData.loadOlderEvents(
+        kinds,
+        // Incremental callback for older events
+        (batchEvents: Event[]) => {
+          // For pagination, add events directly (they're already older)
+          this.handleFollowingPaginationUpdate(feedData, batchEvents);
+        }
+      );
+
+      if (newEvents.length === 0) {
+        this.logger.debug('No events found in the older time window');
+        return false;
+      }
+
+      this.logger.info(`📜 Loaded ${newEvents.length} older events`);
+      return true;
+    } catch (error) {
+      this.logger.error('Error loading more following events:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Handle pagination updates for following feed (older events).
+   * These are always added to the end of the feed (they're older).
+   */
+  private handleFollowingPaginationUpdate(feedData: FeedItem, newEvents: Event[]) {
+    if (newEvents.length === 0) return;
+
+    const allowedKinds = new Set(feedData.column.kinds);
+
+    // Filter out muted events and events that don't match column's kinds
+    const filteredEvents = newEvents.filter(
+      event => !this.accountState.muted(event) && allowedKinds.has(event.kind)
+    );
+
+    if (filteredEvents.length === 0) return;
+
+    const existingEvents = feedData.events();
+    const existingIds = new Set(existingEvents.map(e => e.id));
+
+    // Only add events that don't already exist
+    const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
+
+    if (trulyNewEvents.length > 0) {
+      // Add to the feed and re-sort (older events will naturally go to the end)
+      const mergedEvents = [...existingEvents, ...trulyNewEvents]
+        .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+      feedData.events.set(mergedEvents);
+
+      // Trigger reactivity update for components
+      this._feedData.update(map => new Map(map));
+
+      // Save to database
+      for (const event of trulyNewEvents) {
+        this.saveEventToDatabase(event);
+      }
+
+      // Save to cache
+      this.saveCachedEvents(feedData.column.id, mergedEvents);
+    }
+  }
+
+  /**
    * Handle incremental updates for following feed as events arrive.
-   * During initial load (no events yet), shows events immediately for better UX.
-   * After initial load with existing events, queues new events to pending.
+   * 
+   * CRITICAL FOR PERFORMANCE:
+   * - Shows events IMMEDIATELY (doesn't wait for all users to complete)
+   * - If no cached events: render first batch immediately for fast initial paint
+   * - If has cached events: add to pending for "new posts" button (also immediate!)
    */
   private handleFollowingIncrementalUpdate(feedData: FeedItem, newEvents: Event[]) {
     if (newEvents.length === 0) return;
@@ -1145,6 +1241,9 @@ export class FeedService {
           const newPending = [...pending, ...trulyNewEvents];
           return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
         });
+
+        // Trigger reactivity update for components to see the new pending count
+        this._feedData.update(map => new Map(map));
 
         // Save to database for Summary page queries
         for (const event of trulyNewEvents) {
@@ -1185,6 +1284,9 @@ export class FeedService {
           const newPending = [...pending, ...trulyNewEvents];
           return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
         });
+
+        // Trigger reactivity update for components to see the new pending count
+        this._feedData.update(map => new Map(map));
 
         // Save to database for Summary page queries
         for (const event of trulyNewEvents) {
@@ -1878,6 +1980,9 @@ export class FeedService {
 
   /**
    * Load more events for pagination (called when user scrolls)
+   * 
+   * For 'following' feeds, uses TIME-WINDOW based pagination (6-hour windows).
+   * This ensures we get ALL events without gaps caused by users who post at different frequencies.
    */
   async loadMoreEvents(columnId: string) {
     console.log('[FeedService] loadMoreEvents called for column:', columnId);
@@ -1902,9 +2007,12 @@ export class FeedService {
       const column = feedData.column;
 
       if (column.source === 'following') {
-        // For following, use all following users
-        const followingList = this.accountState.followingList();
-        await this.fetchOlderEventsFromUsers(followingList, feedData);
+        // For following feeds, use TIME-WINDOW based pagination (6-hour windows)
+        // This is more efficient and avoids gaps from users with different posting frequencies
+        const hasMore = await this.loadMoreFollowingEvents(feedData);
+        if (!hasMore) {
+          feedData.hasMore.set(false);
+        }
       } else if (column.source === 'for-you') {
         // For "For You" feed, combine all sources like in initial load
         const allPubkeys = new Set<string>();

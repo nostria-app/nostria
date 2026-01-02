@@ -75,6 +75,11 @@ export class RelaysService {
   // Map of user public keys to their relay URLs
   private userRelays = new Map<string, string[]>();
 
+  // Cache for NIP-11 info to prevent repeated fetches
+  // Stores both successful results and failed attempts (null means fetch was attempted but failed)
+  private nip11Cache = new Map<string, Nip11RelayInfo | null>();
+  private nip11FetchInProgress = new Map<string, Promise<Nip11RelayInfo | null>>();
+
   // Signals for reactive updates
   readonly relayStatsSignal = signal<Map<string, RelayStats>>(new Map());
   readonly userRelaysSignal = signal<Map<string, string[]>>(new Map());
@@ -529,10 +534,44 @@ export class RelaysService {
 
   /**
    * Fetch NIP-11 relay information document from a relay
+   * Results are cached - both successful fetches and failures.
+   * A failed fetch will NOT be retried (returns null from cache).
    * @param relayUrl The WebSocket URL of the relay (wss://...)
    * @returns Promise resolving to relay information or null if fetch fails
    */
   async fetchNip11Info(relayUrl: string): Promise<Nip11RelayInfo | null> {
+    // Normalize the relay URL for consistent caching
+    const normalizedUrl = this.utilities.normalizeRelayUrl(relayUrl);
+
+    // Check cache first - if we've already tried this relay (success OR failure), return cached result
+    if (this.nip11Cache.has(normalizedUrl)) {
+      return this.nip11Cache.get(normalizedUrl) ?? null;
+    }
+
+    // Check if fetch is already in progress for this relay (deduplication)
+    if (this.nip11FetchInProgress.has(normalizedUrl)) {
+      return this.nip11FetchInProgress.get(normalizedUrl)!;
+    }
+
+    // Create the fetch promise
+    const fetchPromise = this.doFetchNip11Info(normalizedUrl);
+    this.nip11FetchInProgress.set(normalizedUrl, fetchPromise);
+
+    try {
+      const result = await fetchPromise;
+      // Cache the result (even if null/failed)
+      this.nip11Cache.set(normalizedUrl, result);
+      return result;
+    } finally {
+      // Clean up in-progress tracking
+      this.nip11FetchInProgress.delete(normalizedUrl);
+    }
+  }
+
+  /**
+   * Internal method to actually fetch NIP-11 info
+   */
+  private async doFetchNip11Info(relayUrl: string): Promise<Nip11RelayInfo | null> {
     try {
       // Convert wss:// to https:// for HTTP request
       const httpUrl = relayUrl.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://');
@@ -557,5 +596,20 @@ export class RelaysService {
       console.warn(`Failed to fetch NIP-11 info for ${relayUrl}:`, error);
       return null;
     }
+  }
+
+  /**
+   * Clear NIP-11 cache for a specific relay (allows retry)
+   */
+  clearNip11Cache(relayUrl: string): void {
+    const normalizedUrl = this.utilities.normalizeRelayUrl(relayUrl);
+    this.nip11Cache.delete(normalizedUrl);
+  }
+
+  /**
+   * Clear all NIP-11 cache (allows retry for all relays)
+   */
+  clearAllNip11Cache(): void {
+    this.nip11Cache.clear();
   }
 }
