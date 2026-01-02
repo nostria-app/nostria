@@ -1880,6 +1880,11 @@ export class NostrService implements NostriaService {
     // Create and publish DM Relay List event
     const relayDMTags = this.createTags('relay', [relayServerUrl!]);
 
+    // Add these 3 default relays to match account relays
+    relayDMTags.push(['relay', 'wss://relay.damus.io/']);
+    relayDMTags.push(['relay', 'wss://relay.snort.social/']);
+    relayDMTags.push(['relay', 'wss://nos.lol/']);
+
     const relayDMListEvent: UnsignedEvent = {
       pubkey: user.pubkey,
       created_at: Math.floor(Date.now() / 1000),
