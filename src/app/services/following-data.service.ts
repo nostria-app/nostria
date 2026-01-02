@@ -4,7 +4,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { DatabaseService } from './database.service';
 import { RelayBatchService } from './relay-batch.service';
-import { LocalStorageService } from './local-storage.service';
+import { AccountLocalStateService } from './account-local-state.service';
 
 /**
  * Service for managing following data fetching across the application.
@@ -34,10 +34,7 @@ export class FollowingDataService {
   private readonly accountState = inject(AccountStateService);
   private readonly database = inject(DatabaseService);
   private readonly relayBatch = inject(RelayBatchService);
-  private readonly localStorage = inject(LocalStorageService);
-
-  // Storage key for last fetch timestamp
-  private readonly LAST_FETCH_KEY = 'nostria-following-last-fetch';
+  private readonly accountLocalState = inject(AccountLocalStateService);
 
   // How long before data is considered stale (5 minutes)
   private readonly STALE_THRESHOLD_MS = 5 * 60 * 1000;
@@ -77,9 +74,8 @@ export class FollowingDataService {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return null;
 
-    const key = `${this.LAST_FETCH_KEY}-${pubkey}`;
-    const value = this.localStorage.getItem(key);
-    return value ? parseInt(value, 10) : null;
+    const timestamp = this.accountLocalState.getFollowingLastFetch(pubkey);
+    return timestamp || null;
   }
 
   /**
@@ -89,8 +85,7 @@ export class FollowingDataService {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
-    const key = `${this.LAST_FETCH_KEY}-${pubkey}`;
-    this.localStorage.setItem(key, timestamp.toString());
+    this.accountLocalState.setFollowingLastFetch(pubkey, timestamp);
     this.lastFetchTimestamp.set(timestamp);
   }
 
