@@ -181,29 +181,101 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   initialize(): void {
-    const mediaQueue = this.localStorage.getItem(this.MEDIA_STORAGE_KEY);
+    const pubkey = this.accountState.pubkey();
 
-    if (mediaQueue == null || mediaQueue == '' || mediaQueue === 'undefined') {
-      return;
+    // Load media queue
+    const mediaQueueJson = this.localStorage.getItem(this.MEDIA_STORAGE_KEY);
+    if (mediaQueueJson && mediaQueueJson !== '' && mediaQueueJson !== 'undefined') {
+      try {
+        const parsed = JSON.parse(mediaQueueJson);
+
+        // Check if it's the old format (array) or new format (Record<pubkey, MediaItem[]>)
+        if (Array.isArray(parsed)) {
+          // Old format: migrate to new format
+          console.log('Migrating media queue from old format to new pubkey-keyed format');
+          const allQueues: Record<string, MediaItem[]> = {};
+          if (pubkey && parsed.length > 0) {
+            allQueues[pubkey] = parsed;
+          }
+          this.localStorage.setItem(this.MEDIA_STORAGE_KEY, JSON.stringify(allQueues));
+          this.media.set(pubkey ? (allQueues[pubkey] || []) : []);
+        } else {
+          // New format: Record<pubkey, MediaItem[]>
+          const allQueues = parsed as Record<string, MediaItem[]>;
+          this.media.set(pubkey ? (allQueues[pubkey] || []) : []);
+        }
+      } catch {
+        this.media.set([]);
+      }
     }
-
-    this.media.set(JSON.parse(mediaQueue) as MediaItem[]);
 
     // Load podcast positions cache
     const positionsJson = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
     if (positionsJson && positionsJson !== 'undefined') {
       try {
-        this.podcastPositions.set(JSON.parse(positionsJson));
+        const parsed = JSON.parse(positionsJson);
+
+        // Check if it's the old format (flat Record<url, PodcastProgress>) or new format (Record<pubkey, Record<url, PodcastProgress>>)
+        // Old format has string keys that look like URLs, new format has pubkey keys
+        const firstKey = Object.keys(parsed)[0];
+        const isOldFormat = firstKey && (firstKey.startsWith('http') || firstKey.startsWith('/'));
+
+        if (isOldFormat) {
+          // Old format: migrate to new format
+          console.log('Migrating podcast positions from old format to new pubkey-keyed format');
+          const allPositions: Record<string, Record<string, PodcastProgress>> = {};
+          if (pubkey) {
+            allPositions[pubkey] = parsed as Record<string, PodcastProgress>;
+          }
+          this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(allPositions));
+          this.podcastPositions.set(pubkey ? (allPositions[pubkey] || {}) : {});
+        } else {
+          // New format: Record<pubkey, Record<url, PodcastProgress>>
+          const allPositions = parsed as Record<string, Record<string, PodcastProgress>>;
+          this.podcastPositions.set(pubkey ? (allPositions[pubkey] || {}) : {});
+        }
       } catch {
         this.podcastPositions.set({});
       }
     }
 
-    // Load video window state
-    const windowState = this.localStorage.getItem(this.WINDOW_STATE_STORAGE_KEY);
-    if (windowState && windowState !== 'undefined') {
-      this.videoWindowState.set(JSON.parse(windowState) as VideoWindowState);
+    // Load video window state (per-account UI preference for floating video player position/size)
+    const windowStateJson = this.localStorage.getItem(this.WINDOW_STATE_STORAGE_KEY);
+    if (windowStateJson && windowStateJson !== 'undefined') {
+      try {
+        const parsed = JSON.parse(windowStateJson);
+
+        // Check if it's the old format (VideoWindowState directly) or new format (Record<pubkey, VideoWindowState>)
+        // Old format has x, y, width, height properties directly
+        if ('x' in parsed && 'y' in parsed && 'width' in parsed) {
+          // Old format: migrate to new format
+          console.log('Migrating video window state from old format to new pubkey-keyed format');
+          const allStates: Record<string, VideoWindowState> = {};
+          if (pubkey) {
+            allStates[pubkey] = parsed as VideoWindowState;
+          }
+          this.localStorage.setItem(this.WINDOW_STATE_STORAGE_KEY, JSON.stringify(allStates));
+          this.videoWindowState.set(pubkey ? (allStates[pubkey] || this.getDefaultWindowState()) : this.getDefaultWindowState());
+        } else {
+          // New format: Record<pubkey, VideoWindowState>
+          const allStates = parsed as Record<string, VideoWindowState>;
+          this.videoWindowState.set(pubkey ? (allStates[pubkey] || this.getDefaultWindowState()) : this.getDefaultWindowState());
+        }
+      } catch {
+        this.videoWindowState.set(this.getDefaultWindowState());
+      }
     }
+  }
+
+  private getDefaultWindowState(): VideoWindowState {
+    return {
+      x: 100,
+      y: 100,
+      width: 560,
+      height: 315,
+      isMinimized: false,
+      isMaximized: false,
+    };
   }
 
   private loadYouTubeAPI(): void {
@@ -499,19 +571,61 @@ export class MediaPlayerService implements OnInitialized {
   }
 
   async save() {
-    if (this.media().length === 0) {
-      this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
-      return;
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    // Load existing data for all accounts
+    let allQueues: Record<string, MediaItem[]> = {};
+    const stored = this.localStorage.getItem(this.MEDIA_STORAGE_KEY);
+    if (stored && stored !== '' && stored !== 'undefined') {
+      try {
+        const parsed = JSON.parse(stored);
+        // Handle old format (array) - just replace with new format
+        if (!Array.isArray(parsed)) {
+          allQueues = parsed as Record<string, MediaItem[]>;
+        }
+      } catch {
+        allQueues = {};
+      }
     }
 
-    this.localStorage.setItem(this.MEDIA_STORAGE_KEY, JSON.stringify(this.media()));
+    // Update current user's queue
+    if (this.media().length === 0) {
+      delete allQueues[pubkey];
+    } else {
+      allQueues[pubkey] = this.media();
+    }
+
+    // Save or remove if empty
+    if (Object.keys(allQueues).length === 0) {
+      this.localStorage.removeItem(this.MEDIA_STORAGE_KEY);
+    } else {
+      this.localStorage.setItem(this.MEDIA_STORAGE_KEY, JSON.stringify(allQueues));
+    }
   }
 
   saveWindowState() {
-    this.localStorage.setItem(
-      this.WINDOW_STATE_STORAGE_KEY,
-      JSON.stringify(this.videoWindowState())
-    );
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    // Load existing data for all accounts
+    let allStates: Record<string, VideoWindowState> = {};
+    const stored = this.localStorage.getItem(this.WINDOW_STATE_STORAGE_KEY);
+    if (stored && stored !== 'undefined') {
+      try {
+        const parsed = JSON.parse(stored);
+        // Handle old format (VideoWindowState directly) - just replace with new format
+        if (!('x' in parsed && 'y' in parsed && 'width' in parsed)) {
+          allStates = parsed as Record<string, VideoWindowState>;
+        }
+      } catch {
+        allStates = {};
+      }
+    }
+
+    // Update current user's window state
+    allStates[pubkey] = this.videoWindowState();
+    this.localStorage.setItem(this.WINDOW_STATE_STORAGE_KEY, JSON.stringify(allStates));
   }
 
   /**
@@ -533,6 +647,9 @@ export class MediaPlayerService implements OnInitialized {
       return;
     }
 
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
     try {
       const positions = { ...this.podcastPositions() };
 
@@ -547,9 +664,28 @@ export class MediaPlayerService implements OnInitialized {
         completed: existing.completed, // Preserve completed status
       };
 
-      // Update both the signal cache and localStorage
+      // Update the signal cache
       this.podcastPositions.set(positions);
-      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
+
+      // Load existing data for all accounts and save
+      let allPositions: Record<string, Record<string, PodcastProgress>> = {};
+      const stored = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      if (stored && stored !== 'undefined') {
+        try {
+          const parsed = JSON.parse(stored);
+          // Handle old format - just replace with new format
+          const firstKey = Object.keys(parsed)[0];
+          const isOldFormat = firstKey && (firstKey.startsWith('http') || firstKey.startsWith('/'));
+          if (!isOldFormat) {
+            allPositions = parsed as Record<string, Record<string, PodcastProgress>>;
+          }
+        } catch {
+          allPositions = {};
+        }
+      }
+
+      allPositions[pubkey] = positions;
+      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(allPositions));
     } catch (error) {
       console.error('Error saving podcast position:', error);
     }
@@ -580,6 +716,9 @@ export class MediaPlayerService implements OnInitialized {
    * @param completed Whether the podcast is completed
    */
   setPodcastCompleted(url: string, completed: boolean): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
     try {
       const positions = { ...this.podcastPositions() };
 
@@ -597,9 +736,27 @@ export class MediaPlayerService implements OnInitialized {
         lastListenedAt: this.getCurrentNostrTimestamp(),
       };
 
-      // Update both the signal cache and localStorage
+      // Update the signal cache
       this.podcastPositions.set(positions);
-      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
+
+      // Load existing data for all accounts and save
+      let allPositions: Record<string, Record<string, PodcastProgress>> = {};
+      const stored = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      if (stored && stored !== 'undefined') {
+        try {
+          const parsed = JSON.parse(stored);
+          const firstKey = Object.keys(parsed)[0];
+          const isOldFormat = firstKey && (firstKey.startsWith('http') || firstKey.startsWith('/'));
+          if (!isOldFormat) {
+            allPositions = parsed as Record<string, Record<string, PodcastProgress>>;
+          }
+        } catch {
+          allPositions = {};
+        }
+      }
+
+      allPositions[pubkey] = positions;
+      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(allPositions));
     } catch (error) {
       console.error('Error setting podcast completed status:', error);
     }
@@ -610,13 +767,34 @@ export class MediaPlayerService implements OnInitialized {
    * @param url The media file URL used as unique identifier
    */
   resetPodcastProgress(url: string): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
     try {
       const positions = { ...this.podcastPositions() };
       delete positions[url];
 
-      // Update both the signal cache and localStorage
+      // Update the signal cache
       this.podcastPositions.set(positions);
-      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(positions));
+
+      // Load existing data for all accounts and save
+      let allPositions: Record<string, Record<string, PodcastProgress>> = {};
+      const stored = this.localStorage.getItem(this.PODCAST_POSITIONS_KEY);
+      if (stored && stored !== 'undefined') {
+        try {
+          const parsed = JSON.parse(stored);
+          const firstKey = Object.keys(parsed)[0];
+          const isOldFormat = firstKey && (firstKey.startsWith('http') || firstKey.startsWith('/'));
+          if (!isOldFormat) {
+            allPositions = parsed as Record<string, Record<string, PodcastProgress>>;
+          }
+        } catch {
+          allPositions = {};
+        }
+      }
+
+      allPositions[pubkey] = positions;
+      this.localStorage.setItem(this.PODCAST_POSITIONS_KEY, JSON.stringify(allPositions));
     } catch (error) {
       console.error('Error resetting podcast progress:', error);
     }

@@ -34,9 +34,17 @@ export class FollowingBackupService {
   private readonly MAX_BACKUPS = 10;
 
   /** Reactive signal for backups list */
-  readonly backups = signal<FollowingBackup[]>(this.loadBackups());
+  readonly backups = signal<FollowingBackup[]>([]);
 
   constructor() {
+    // Load backups when account changes
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.backups.set(this.loadBackupsForAccount(pubkey));
+      }
+    });
+
     // Automatically backup when following list changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
@@ -55,17 +63,88 @@ export class FollowingBackupService {
   }
 
   /**
-   * Load backups from local storage
+   * Load backups from local storage for a specific account
    */
-  private loadBackups(): FollowingBackup[] {
+  private loadBackupsForAccount(pubkey: string): FollowingBackup[] {
     const backupsJson = this.localStorage.getItem(this.BACKUP_KEY);
     if (!backupsJson) return [];
+
     try {
-      return JSON.parse(backupsJson);
+      const parsed = JSON.parse(backupsJson);
+
+      // Check if it's the old format (array) or new format (Record<pubkey, FollowingBackup[]>)
+      if (Array.isArray(parsed)) {
+        // Old format: migrate to new format
+        this.logger.info('[FollowingBackupService] Migrating backups from old format to new pubkey-keyed format');
+        const oldBackups = parsed as FollowingBackup[];
+
+        // Group backups by their event.pubkey
+        const allBackups: Record<string, FollowingBackup[]> = {};
+        for (const backup of oldBackups) {
+          const backupPubkey = backup.event?.pubkey || pubkey;
+          if (!allBackups[backupPubkey]) {
+            allBackups[backupPubkey] = [];
+          }
+          allBackups[backupPubkey].push(backup);
+        }
+
+        // Save in new format
+        this.localStorage.setItem(this.BACKUP_KEY, JSON.stringify(allBackups));
+
+        // Return backups for current account
+        return allBackups[pubkey] || [];
+      } else {
+        // New format: Record<pubkey, FollowingBackup[]>
+        const allBackups = parsed as Record<string, FollowingBackup[]>;
+        return allBackups[pubkey] || [];
+      }
     } catch (e) {
       this.logger.error('[FollowingBackupService] Failed to parse backups', e);
       return [];
     }
+  }
+
+  /**
+   * Load all backups from storage (internal use for saving)
+   */
+  private loadAllBackups(): Record<string, FollowingBackup[]> {
+    const backupsJson = this.localStorage.getItem(this.BACKUP_KEY);
+    if (!backupsJson) return {};
+
+    try {
+      const parsed = JSON.parse(backupsJson);
+
+      // Handle old format
+      if (Array.isArray(parsed)) {
+        // Should have been migrated already, but handle just in case
+        const oldBackups = parsed as FollowingBackup[];
+        const allBackups: Record<string, FollowingBackup[]> = {};
+        for (const backup of oldBackups) {
+          const backupPubkey = backup.event?.pubkey;
+          if (backupPubkey) {
+            if (!allBackups[backupPubkey]) {
+              allBackups[backupPubkey] = [];
+            }
+            allBackups[backupPubkey].push(backup);
+          }
+        }
+        return allBackups;
+      }
+
+      return parsed as Record<string, FollowingBackup[]>;
+    } catch (e) {
+      this.logger.error('[FollowingBackupService] Failed to parse all backups', e);
+      return {};
+    }
+  }
+
+  /**
+   * Save backups for current account
+   */
+  private saveBackups(pubkey: string, backups: FollowingBackup[]): void {
+    const allBackups = this.loadAllBackups();
+    allBackups[pubkey] = backups;
+    this.localStorage.setItem(this.BACKUP_KEY, JSON.stringify(allBackups));
   }
 
   /**
@@ -132,7 +211,7 @@ export class FollowingBackupService {
         backups.length = this.MAX_BACKUPS;
       }
 
-      this.localStorage.setItem(this.BACKUP_KEY, JSON.stringify(backups));
+      this.saveBackups(pubkey, backups);
       this.backups.set([...backups]);
       this.logger.info('[FollowingBackupService] Backup saved', {
         id: newBackup.id,
@@ -281,6 +360,12 @@ export class FollowingBackupService {
    * Delete a backup
    */
   deleteBackup(backupId: string): boolean {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.warn('[FollowingBackupService] Cannot delete backup - no account');
+      return false;
+    }
+
     try {
       const backups = this.getBackups();
       const filtered = backups.filter(b => b.id !== backupId);
@@ -290,7 +375,7 @@ export class FollowingBackupService {
         return false;
       }
 
-      this.localStorage.setItem(this.BACKUP_KEY, JSON.stringify(filtered));
+      this.saveBackups(pubkey, filtered);
       this.backups.set([...filtered]);
       this.logger.info('[FollowingBackupService] Backup deleted', backupId);
       return true;
@@ -301,12 +386,26 @@ export class FollowingBackupService {
   }
 
   /**
-   * Clear all backups
+   * Clear all backups for current account
    */
   clearAllBackups(): void {
-    this.localStorage.removeItem(this.BACKUP_KEY);
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.warn('[FollowingBackupService] Cannot clear backups - no account');
+      return;
+    }
+
+    const allBackups = this.loadAllBackups();
+    delete allBackups[pubkey];
+
+    if (Object.keys(allBackups).length === 0) {
+      this.localStorage.removeItem(this.BACKUP_KEY);
+    } else {
+      this.localStorage.setItem(this.BACKUP_KEY, JSON.stringify(allBackups));
+    }
+
     this.backups.set([]);
-    this.logger.info('[FollowingBackupService] All backups cleared');
+    this.logger.info('[FollowingBackupService] All backups cleared for current account');
   }
 
   /**
