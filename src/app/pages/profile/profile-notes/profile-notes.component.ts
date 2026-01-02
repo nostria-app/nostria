@@ -36,7 +36,7 @@ import { TimelineFilterOptions } from '../../../interfaces/timeline-filter';
     FormsModule,
     MatProgressSpinnerModule,
     MatExpansionModule
-],
+  ],
   templateUrl: './profile-notes.component.html',
   styleUrl: './profile-notes.component.scss',
 })
@@ -237,18 +237,9 @@ export class ProfileNotesComponent {
     this.logger.debug('Loading more timeline content for profile');
 
     try {
-      const currentTimeline = this.profileState.sortedTimeline();
-      const oldestTimestamp =
-        currentTimeline.length > 0
-          ? Math.min(...currentTimeline.map(n => n.event.created_at)) - 1
-          : undefined;
-
-      this.logger.debug(
-        `Current timeline count: ${currentTimeline.length}, oldest timestamp: ${oldestTimestamp}`
-      );
-
       // Load older notes from the profile state service
-      const olderNotes = await this.profileState.loadMoreNotes(oldestTimestamp);
+      // The service tracks the oldest relay timestamp internally for proper pagination
+      const olderNotes = await this.profileState.loadMoreNotes();
 
       this.logger.debug(`Loaded ${olderNotes.length} older timeline items`);
 
