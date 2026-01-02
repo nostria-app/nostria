@@ -506,6 +506,12 @@
   }
 }
 
+@media screen and (max-width: 369px) {
+  .bookmark-button {
+    display: none;
+  }
+}
+
 // Dark mode adjustments for collapsed content gradient
 :host-context(.dark) {
 
