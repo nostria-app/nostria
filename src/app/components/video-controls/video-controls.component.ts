@@ -66,6 +66,7 @@ const DEFAULT_CONFIG: VideoControlsConfig = {
     '(mouseenter)': 'onMouseEnter()',
     '(mouseleave)': 'onMouseLeave()',
     '(mousemove)': 'onMouseMove()',
+    '(touchstart)': 'onTouchStart($event)',
   },
 })
 export class VideoControlsComponent implements OnDestroy {
@@ -333,6 +334,15 @@ export class VideoControlsComponent implements OnDestroy {
     if (!this.isHovering() && !this.paused()) {
       this.startAutoHideTimer();
     }
+  }
+
+  /** Called on touch devices when user taps the controls area */
+  onTouchStart(event: TouchEvent): void {
+    // In native fullscreen, let parent handle touch events
+    if (this.nativeFullscreen()) return;
+
+    // Show controls and start auto-hide timer on touch
+    this.showControlsAndStartTimer();
   }
 
   /** Called when mouse enters the controls-bar (buttons area) */
