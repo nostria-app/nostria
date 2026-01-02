@@ -624,12 +624,14 @@ export class FeedsComponent implements OnDestroy {
         }, 100);
       } else if (this.router.url.startsWith('/f')) {
         // User navigated to /f without a path parameter
-        // Restore the previously active feed or use the first feed
+        // Restore the previously active feed or use "For You" as default
         const activeFeedId = this.feedsCollectionService.activeFeedId();
 
         if (!activeFeedId && feeds.length > 0) {
-          // No active feed yet, set the first one
-          this.feedsCollectionService.setActiveFeed(feeds[0].id);
+          // No active feed yet - prefer "For You" feed as it's optimized for new users
+          const forYouFeed = feeds.find(f => f.id === 'default-feed-for-you');
+          const defaultFeedId = forYouFeed ? forYouFeed.id : feeds[0].id;
+          this.feedsCollectionService.setActiveFeed(defaultFeedId);
         }
         // If there's already an active feed, keep it (already loaded from localStorage)
       }
