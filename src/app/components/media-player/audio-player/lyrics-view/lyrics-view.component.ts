@@ -13,6 +13,8 @@ import {
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { Clipboard } from '@angular/cdk/clipboard';
 import { MediaPlayerService } from '../../../../services/media-player.service';
 
 export interface LyricLine {
@@ -35,14 +37,21 @@ interface LrcLibSearchResult {
 @Component({
   selector: 'app-lyrics-view',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule],
+  imports: [MatButtonModule, MatIconModule, MatProgressSpinnerModule, MatSnackBarModule],
   template: `
     <div class="lyrics-container" [class.compact]="compact()">
       <div class="lyrics-header">
         <span class="lyrics-title">Lyrics</span>
-        <button mat-icon-button class="close-btn" (click)="closeLyrics.emit()">
-          <mat-icon>close</mat-icon>
-        </button>
+        <div class="header-actions">
+          @if (hasLyrics()) {
+            <button mat-icon-button class="copy-btn" (click)="copyLyrics()" title="Copy lyrics">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          }
+          <button mat-icon-button class="close-btn" (click)="closeLyrics.emit()">
+            <mat-icon>close</mat-icon>
+          </button>
+        </div>
       </div>
 
       <div class="lyrics-content" #lyricsContent>
@@ -109,6 +118,13 @@ interface LrcLibSearchResult {
         color: var(--mat-sys-on-surface);
       }
 
+      .header-actions {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .copy-btn,
       .close-btn {
         color: var(--mat-sys-on-surface-variant);
       }
@@ -196,6 +212,8 @@ interface LrcLibSearchResult {
 })
 export class LyricsViewComponent {
   private media = inject(MediaPlayerService);
+  private clipboard = inject(Clipboard);
+  private snackBar = inject(MatSnackBar);
   private lyricsContent = viewChild<ElementRef<HTMLDivElement>>('lyricsContent');
 
   compact = input(false);
@@ -204,6 +222,26 @@ export class LyricsViewComponent {
   syncedLyrics = signal<LyricLine[]>([]);
   plainLyrics = signal<string | null>(null);
   loading = signal(false);
+
+  // Check if there are any lyrics to copy
+  hasLyrics = computed(() => this.syncedLyrics().length > 0 || !!this.plainLyrics());
+
+  // Get full lyrics text for copying
+  fullLyricsText = computed(() => {
+    const synced = this.syncedLyrics();
+    if (synced.length > 0) {
+      return synced.map(line => line.text).join('\n');
+    }
+    return this.plainLyrics() || '';
+  });
+
+  copyLyrics(): void {
+    const text = this.fullLyricsText();
+    if (text) {
+      this.clipboard.copy(text);
+      this.snackBar.open('Lyrics copied to clipboard', 'OK', { duration: 2000 });
+    }
+  }
 
   // Track the current song to detect changes
   private currentTrackId = signal<string | null>(null);
