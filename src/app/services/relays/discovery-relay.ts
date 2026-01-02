@@ -26,6 +26,39 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       await this.load();
     }
 
+    // First, check if we have a cached relay list event in the database
+    // This is crucial for new accounts where the discovery relays may not have indexed the event yet
+    try {
+      await this.database.init();
+      const cachedEvents = await this.database.getEventsByPubkeyAndKind(pubkey, kinds.RelayList);
+      if (cachedEvents.length > 0) {
+        // Sort by created_at to get the most recent event
+        const latestEvent = cachedEvents.reduce((latest, current) =>
+          current.created_at > latest.created_at ? current : latest
+        );
+        const cachedRelayUrls = this.utilities.getOptimalRelayUrlsForFetching(latestEvent);
+        if (cachedRelayUrls.length > 0) {
+          this.logger.debug(`Found cached relay list (kind 10002) for pubkey ${pubkey} with ${cachedRelayUrls.length} relays`);
+          return cachedRelayUrls;
+        }
+      }
+
+      // Also check for kind 3 contacts event with relay info in the database
+      const cachedContactsEvents = await this.database.getEventsByPubkeyAndKind(pubkey, kinds.Contacts);
+      if (cachedContactsEvents.length > 0) {
+        const latestContactsEvent = cachedContactsEvents.reduce((latest, current) =>
+          current.created_at > latest.created_at ? current : latest
+        );
+        const cachedRelayUrls = this.utilities.getRelayUrlsFromFollowing(latestContactsEvent);
+        if (cachedRelayUrls.length > 0) {
+          this.logger.debug(`Found cached contacts event (kind 3) for pubkey ${pubkey} with ${cachedRelayUrls.length} relays`);
+          return cachedRelayUrls;
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`Error checking database for cached relay events: ${error}`);
+    }
+
     // Query the Discovery Relays for user relay URLs.
     // Instead of doing duplicate kinds, we will query in order to get the user relay URLs. When the global network has moved
     // away from kind 3 relay lists, this will be more optimal.

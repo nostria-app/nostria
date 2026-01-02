@@ -43,6 +43,20 @@ export class UserRelayService {
   }
 
   /**
+   * Check if relay discovery is in progress for a pubkey
+   */
+  isDiscoveryInProgress(pubkey: string): boolean {
+    return this.userRelaysService.isDiscoveryInProgress(pubkey);
+  }
+
+  /**
+   * Get the discovery in progress signal for reactive updates
+   */
+  get discoveryInProgressSignal() {
+    return this.userRelaysService.isDiscoveryInProgressSignal;
+  }
+
+  /**
    * Get effective relay URLs with optimization if enabled
    */
   private getEffectiveRelayUrls(relayUrls: string[]): string[] {

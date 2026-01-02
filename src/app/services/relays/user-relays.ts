@@ -15,11 +15,27 @@ export class UserRelaysService {
   private readonly cachedRelays = signal<Map<string, string[]>>(new Map());
   private readonly cacheTimestamps = new Map<string, number>();
 
+  // Signal to track which pubkeys are currently being discovered
+  private readonly discoveryInProgress = signal<Set<string>>(new Set());
+
   // Cache TTL: 5 minutes (in milliseconds)
   private readonly CACHE_TTL = 5 * 60 * 1000;
 
   // In-flight requests to prevent duplicate discovery calls
   private readonly inflightRequests = new Map<string, Promise<string[]>>();
+
+  /**
+   * Check if relay discovery is in progress for a pubkey
+   */
+  isDiscoveryInProgress(pubkey: string): boolean {
+    return this.discoveryInProgress().has(pubkey);
+  }
+
+  /**
+   * Get a computed signal that indicates if discovery is in progress for a pubkey
+   * Use this in templates or effects that need to react to loading state changes
+   */
+  isDiscoveryInProgressSignal = computed(() => this.discoveryInProgress());
 
   /**
    * Check if the cache is still valid for a given pubkey
@@ -49,6 +65,13 @@ export class UserRelaysService {
       return;
     }
 
+    // Mark discovery as in progress
+    this.discoveryInProgress.update(set => {
+      const newSet = new Set(set);
+      newSet.add(pubkey);
+      return newSet;
+    });
+
     // Start a new discovery request
     const discoveryPromise = this.discoverAndCacheRelays(pubkey);
     this.inflightRequests.set(pubkey, discoveryPromise);
@@ -58,6 +81,13 @@ export class UserRelaysService {
     } finally {
       // Clean up the in-flight request
       this.inflightRequests.delete(pubkey);
+
+      // Mark discovery as complete
+      this.discoveryInProgress.update(set => {
+        const newSet = new Set(set);
+        newSet.delete(pubkey);
+        return newSet;
+      });
     }
   }
 

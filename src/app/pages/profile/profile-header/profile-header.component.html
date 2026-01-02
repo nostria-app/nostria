@@ -232,10 +232,11 @@
           Following {{ profileState.followingList().length }}
         </a>
 
-        <!-- @if (profileState.relay?.userRelaysFound()) { -->
-        @if (
-        getUserRelays() && getUserRelays().length > 0
-        ) {
+        @if (isRelayDiscoveryInProgress()) {
+        <span class="relay-loading">
+          <mat-icon class="relay-loading-icon">dns</mat-icon>&nbsp; Loading relays...
+        </span>
+        } @else if (getUserRelays() && getUserRelays().length > 0) {
         <a class="following-count" [routerLink]="'relays'" [queryParamsHandling]="'preserve'">
           Relays {{ getUserRelays().length }}
         </a>

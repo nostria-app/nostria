@@ -492,6 +492,33 @@
   padding: 4px 8px;
 }
 
+.relay-loading {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 8px;
+  color: var(--mat-sys-on-surface-variant);
+  opacity: 0.8;
+
+  .relay-loading-icon {
+    font-size: 18px;
+    width: 18px;
+    height: 18px;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+}
+
+@keyframes pulse {
+
+  0%,
+  100% {
+    opacity: 0.5;
+  }
+
+  50% {
+    opacity: 1;
+  }
+}
+
 .qr-code-container {
   position: absolute;
   z-index: 1000;

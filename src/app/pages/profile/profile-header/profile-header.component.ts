@@ -293,6 +293,15 @@ export class ProfileHeaderComponent implements OnDestroy {
     return this.userRelayService.getRelaysForPubkey(pubkey) || [];
   });
 
+  // Computed to check if relay discovery is in progress for the current profile
+  isRelayDiscoveryInProgress = computed(() => {
+    const pubkey = this.profileState.pubkey();
+    if (!pubkey) return false;
+    // Access the signal to track the full set, then check if this pubkey is in it
+    const discoverySet = this.userRelayService.discoveryInProgressSignal();
+    return discoverySet.has(pubkey);
+  });
+
   // Check if the current user is blocked
   isUserBlocked = computed(() => {
     const pubkey = this.pubkey();
