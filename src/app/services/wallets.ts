@@ -1,4 +1,4 @@
-import { computed, effect, inject, Injectable, signal } from '@angular/core';
+import { computed, inject, Injectable, signal } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationStateService } from './application-state.service';
 
@@ -21,12 +21,7 @@ export class Wallets {
   hasWallets = computed(() => Object.keys(this.wallets()).length > 0);
 
   constructor() {
-    console.log('Wallets service initialized', this.wallets());
-
-    effect(() => {
-      const wallets = this.wallets();
-      console.log('Wallets updated in local storage', wallets);
-    });
+    // Note: We don't log wallet data as it contains secrets
   }
 
   /**
@@ -77,7 +72,7 @@ export class Wallets {
     return { pubkey, relay, secret };
   }
 
-  addWallet(pubkey: string, connection: string, data: any) {
+  addWallet(pubkey: string, connection: string, data: { relay: string[]; secret: string }) {
     const currentWallets = this.wallets();
     const currentWallet = currentWallets[pubkey] || {
       pubkey,
@@ -96,7 +91,6 @@ export class Wallets {
 
   save() {
     this.localStorage.setObject(this.appState.WALLETS_KEY, this.wallets());
-    console.log('Wallets saved to local storage', this.wallets());
   }
 
   removeWallet(pubkey: string) {

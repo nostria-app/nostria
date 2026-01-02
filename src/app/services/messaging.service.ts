@@ -1,4 +1,4 @@
-import { computed, inject, Injectable, signal } from '@angular/core';
+import { computed, effect, inject, Injectable, signal, untracked } from '@angular/core';
 import { NostrService } from './nostr.service';
 import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
@@ -86,24 +86,33 @@ export class MessagingService implements NostriaService {
 
   /**
    * Total unread messages count across all chats
+   * Note: Computed signals should be pure - side effects moved to an effect
    */
   totalUnreadCount = computed(() => {
     let count = 0;
     for (const [, chat] of this.chatsMap().entries()) {
       count += chat.unreadCount;
     }
-
-    // Save to local state for persistence (only if count changed)
-    const pubkey = this.accountState.pubkey();
-    if (pubkey) {
-      const cachedCount = this.accountLocalState.getUnreadMessagesCount(pubkey);
-      if (cachedCount !== count) {
-        this.accountLocalState.setUnreadMessagesCount(pubkey, count);
-      }
-    }
-
     return count;
   });
+
+  constructor() {
+    // Effect to persist unread count to local storage when it changes
+    effect(() => {
+      const count = this.totalUnreadCount();
+      const pubkey = this.accountState.pubkey();
+
+      if (pubkey) {
+        // Use untracked to avoid reading more signals
+        untracked(() => {
+          const cachedCount = this.accountLocalState.getUnreadMessagesCount(pubkey);
+          if (cachedCount !== count) {
+            this.accountLocalState.setUnreadMessagesCount(pubkey, count);
+          }
+        });
+      }
+    });
+  }
 
   hasMessage(chatId: string, messageId: string): boolean {
     const chat = this.chatsMap().get(chatId);
