@@ -13,7 +13,8 @@
 @let blurhashUrl = blurhashDataUrl();
 @if (videoInfo) {
 <div class="video-container" [class.clickable]="showOverlay()" [class.blurred]="shouldBlurMedia()"
-  [class.revealing]="!shouldBlurMedia() && isRevealed()" [style.aspect-ratio]="videoAspectRatio()">
+  [class.revealing]="!shouldBlurMedia() && isRevealed()" [style.aspect-ratio]="videoAspectRatio()"
+  (click)="$event.stopPropagation()">
   @if (!isExpanded()) {
   <!-- Video Thumbnail (Initial State) -->
   <div class="video-thumbnail-container" tabindex="0" role="button" (click)="expandVideo($any($event))"
