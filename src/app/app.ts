@@ -1083,7 +1083,8 @@ export class App implements OnInit {
 
   /**
    * Open search and focus the input.
-   * Uses multiple focus attempts to ensure iOS Safari compatibility.
+   * The input is always in the DOM (hidden via CSS) for iOS Safari focus compatibility.
+   * This allows us to focus immediately within the user gesture context.
    */
   openSearch(): void {
     if (this.layout.search()) {
@@ -1092,28 +1093,17 @@ export class App implements OnInit {
       return;
     }
 
-    // Open search
+    // Focus the input BEFORE toggling search state
+    // This is critical for iOS Safari - focus must happen in user gesture context
+    // Since the input is always in DOM (just hidden), we can focus it immediately
+    const input = this.searchInputElement?.nativeElement;
+    if (input) {
+      // Focus immediately while still in user gesture context
+      input.focus();
+    }
+
+    // Then open search (removes the hidden class)
     this.layout.toggleSearch();
-
-    // Focus the search input with iOS Safari workaround
-    // iOS Safari requires focus to happen in user interaction context
-    // We use multiple attempts with requestAnimationFrame and setTimeout
-    // to ensure the input is rendered and focusable
-    const focusInput = () => {
-      const input = this.searchInputElement?.nativeElement;
-      if (input) {
-        input.focus();
-        // iOS Safari sometimes needs a second focus after a micro delay
-        setTimeout(() => input.focus(), 50);
-      }
-    };
-
-    // First attempt: immediate after render
-    requestAnimationFrame(() => {
-      focusInput();
-      // Second attempt: after Angular change detection
-      setTimeout(focusInput, 100);
-    });
   }
 
   toggleMediaPlayer() {

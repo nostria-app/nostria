@@ -45,14 +45,15 @@
     }
 
     <span class="toolbar-spacer">
-      @if (layout.search()) {
-      <div class="search-container toolbar-section">
+      <!-- Search container is always rendered but hidden via CSS for iOS Safari focus compatibility -->
+      <div class="search-container toolbar-section" [class.search-hidden]="!layout.search()">
         <input type="search" class="search-input" #searchInputElement [(ngModel)]="layout.searchInput"
           (input)="layout.onSearchInput($event)" (keydown)="onSearchInputKeyDown($event)"
           (paste)="onSearchInputPaste($event)" i18n-placeholder="@@app.search.placeholder"
-          placeholder="Search for profiles or paste identifiers..." />
+          placeholder="Search for profiles or paste identifiers..." [attr.tabindex]="layout.search() ? 0 : -1" />
         <button mat-icon-button class="search-action-button voice-search-button" (click)="startSearchVoiceInput()"
-          [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search">
+          [disabled]="isSearchListening() || isSearchTranscribing()" matTooltip="Voice search"
+          [attr.tabindex]="layout.search() ? 0 : -1">
           @if (isSearchListening()) {
           <mat-icon class="pulse-icon">mic</mat-icon>
           } @else if (isSearchTranscribing()) {
@@ -61,15 +62,17 @@
           <mat-icon>mic</mat-icon>
           }
         </button>
-        <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()">
+        <button mat-icon-button class="search-action-button qr-button" (click)="qrScan()"
+          [attr.tabindex]="layout.search() ? 0 : -1">
           <mat-icon>qr_code_scanner</mat-icon>
         </button>
-        <button mat-icon-button class="search-action-button close-button" (click)="layout.toggleSearch()">
+        <button mat-icon-button class="search-action-button close-button" (click)="layout.toggleSearch()"
+          [attr.tabindex]="layout.search() ? 0 : -1">
           <mat-icon>close</mat-icon>
         </button>
         <app-search-results></app-search-results>
       </div>
-      } @else if (app.authenticated()) {
+      @if (!layout.search() && app.authenticated()) {
       <!-- Centered favorites overlay when not searching -->
       <app-favorites-overlay></app-favorites-overlay>
       }
