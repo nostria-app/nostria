@@ -58,6 +58,7 @@ interface AccountLocalState {
   publicRelayFeeds?: string[]; // List of public relay feeds (domains) for the relay feed menu
   publicRelayShowReplies?: boolean; // Whether to show replies in public relay feeds
   wallets?: Record<string, AccountWallet>; // NWC wallets for this account
+  followingLastFetch?: number; // Timestamp when following data was last fetched from relays
 }
 
 /**
@@ -498,6 +499,21 @@ export class AccountLocalStateService {
    */
   setLastSummaryCheck(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { lastSummaryCheck: timestamp });
+  }
+
+  /**
+   * Get following last fetch timestamp for an account
+   */
+  getFollowingLastFetch(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.followingLastFetch || 0;
+  }
+
+  /**
+   * Set following last fetch timestamp for an account
+   */
+  setFollowingLastFetch(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { followingLastFetch: timestamp });
   }
 
   /**
