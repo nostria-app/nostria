@@ -38,6 +38,9 @@ export interface FeedDefinition {
   isSystem?: boolean; // System feeds cannot be deleted
 }
 
+// Default feed ID for new users - "For You" is optimized for quick rendering
+const DEFAULT_FEED_ID = 'default-feed-for-you';
+
 @Injectable({
   providedIn: 'root',
 })
@@ -73,6 +76,7 @@ export class FeedsCollectionService {
     effect(() => {
       const pubkey = this.accountState.pubkey();
       const feedsLoaded = this.feedService.feedsLoaded(); // Wait for feeds to be loaded
+      const feeds = this.feeds(); // Get current feeds to validate saved feed
 
       untracked(() => {
         if (pubkey && feedsLoaded) {
@@ -86,11 +90,31 @@ export class FeedsCollectionService {
             this.lastAccountPubkey = pubkey;
             this.userChangedFeed = false;
 
-            const activeFeedId = this.accountLocalState.getActiveFeed(pubkey);
-            if (activeFeedId) {
-              this._activeFeedId.set(activeFeedId);
+            const savedFeedId = this.accountLocalState.getActiveFeed(pubkey);
+
+            // Validate that the saved feed still exists
+            // If not, fall back to "For You" feed for optimal new user experience
+            let feedIdToSet: string | null = null;
+
+            if (savedFeedId && feeds.some(f => f.id === savedFeedId)) {
+              // Saved feed exists, use it
+              feedIdToSet = savedFeedId;
+            } else if (feeds.length > 0) {
+              // Saved feed doesn't exist or is invalid - use "For You" as default
+              // Fall back to first feed if "For You" doesn't exist
+              const forYouFeed = feeds.find(f => f.id === DEFAULT_FEED_ID);
+              feedIdToSet = forYouFeed ? forYouFeed.id : feeds[0].id;
+              this.logger.debug(`Saved feed ${savedFeedId} not found, falling back to ${feedIdToSet}`);
+            }
+
+            if (feedIdToSet) {
+              this._activeFeedId.set(feedIdToSet);
               // Sync with FeedService
-              this.feedService.setActiveFeed(activeFeedId);
+              this.feedService.setActiveFeed(feedIdToSet);
+              // Save the corrected feed ID if we had to fall back
+              if (feedIdToSet !== savedFeedId) {
+                this.saveActiveFeed();
+              }
             }
           }
           // If account hasn't changed and user has manually selected a feed,
@@ -114,10 +138,15 @@ export class FeedsCollectionService {
         }
 
         if (feeds.length > 0 && !activeFeedId) {
-          this._activeFeedId.set(feeds[0].id);
+          // Prefer "For You" feed for new users as it's optimized for quick rendering
+          // Fall back to first feed if "For You" doesn't exist
+          const forYouFeed = feeds.find(f => f.id === DEFAULT_FEED_ID);
+          const defaultFeedId = forYouFeed ? forYouFeed.id : feeds[0].id;
+
+          this._activeFeedId.set(defaultFeedId);
           this.saveActiveFeed();
           // Also set in FeedService
-          this.feedService.setActiveFeed(feeds[0].id);
+          this.feedService.setActiveFeed(defaultFeedId);
         }
         // Removed: the else-if branch that always synced with FeedService
         // This was causing duplicate subscription attempts. FeedService is already
