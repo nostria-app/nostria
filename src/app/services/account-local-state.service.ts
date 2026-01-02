@@ -59,6 +59,7 @@ interface AccountLocalState {
   publicRelayShowReplies?: boolean; // Whether to show replies in public relay feeds
   wallets?: Record<string, AccountWallet>; // NWC wallets for this account
   followingLastFetch?: number; // Timestamp when following data was last fetched from relays
+  lastAppOpen?: number; // Timestamp (in seconds) when app was last opened
 }
 
 /**
@@ -514,6 +515,21 @@ export class AccountLocalStateService {
    */
   setFollowingLastFetch(pubkey: string, timestamp: number): void {
     this.updateAccountState(pubkey, { followingLastFetch: timestamp });
+  }
+
+  /**
+   * Get last app open timestamp for an account (in seconds)
+   */
+  getLastAppOpen(pubkey: string): number {
+    const state = this.getAccountState(pubkey);
+    return state.lastAppOpen || 0;
+  }
+
+  /**
+   * Set last app open timestamp for an account (in seconds)
+   */
+  setLastAppOpen(pubkey: string, timestamp: number): void {
+    this.updateAccountState(pubkey, { lastAppOpen: timestamp });
   }
 
   /**

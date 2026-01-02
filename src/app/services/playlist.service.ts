@@ -1,4 +1,4 @@
-import { Injectable, signal, computed, inject, effect } from '@angular/core';
+import { Injectable, signal, computed, inject, effect, untracked } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { ApplicationService } from './application.service';
 import { NostrService } from './nostr.service';
@@ -67,12 +67,18 @@ export class PlaylistService implements OnInitialized {
       }
     });
 
-    // Clean up playlists when account changes
+    // Reload playlists when account changes
     effect(() => {
       const pubkey = this.app.accountState.pubkey();
-      if (pubkey) {
-        this.cleanupPlaylists();
-        this.fetchSavedPlaylists(pubkey);
+      if (pubkey && this.app.initialized()) {
+        // Use untracked to prevent signal dependency loop
+        // (cleanupPlaylists reads _playlists which would create a circular dependency)
+        untracked(() => {
+          this.loadPlaylistsFromStorage();
+          this.loadDraftsFromStorage();
+          this.cleanupPlaylists();
+          this.fetchSavedPlaylists(pubkey);
+        });
       }
     });
   }
@@ -355,11 +361,41 @@ export class PlaylistService implements OnInitialized {
   }
 
   private loadPlaylistsFromStorage(): void {
+    const pubkey = this.getCurrentUserPubkey();
     const stored = this.localStorage.getItem(this.PLAYLISTS_STORAGE_KEY);
     if (stored && stored !== 'undefined' && stored !== '') {
       try {
-        const playlists = JSON.parse(stored) as Playlist[];
-        this._playlists.set(playlists);
+        const parsed = JSON.parse(stored);
+
+        // Check if it's the old format (array) or new format (Record<pubkey, Playlist[]>)
+        if (Array.isArray(parsed)) {
+          // Old format: migrate to new format
+          console.log('Migrating playlists from old format to new pubkey-keyed format');
+          const oldPlaylists = parsed as Playlist[];
+
+          // Group playlists by their pubkey
+          const allPlaylists: Record<string, Playlist[]> = {};
+          for (const playlist of oldPlaylists) {
+            const key = playlist.pubkey || pubkey || 'unknown';
+            if (!allPlaylists[key]) {
+              allPlaylists[key] = [];
+            }
+            allPlaylists[key].push(playlist);
+          }
+
+          // Save in new format
+          this.localStorage.setItem(this.PLAYLISTS_STORAGE_KEY, JSON.stringify(allPlaylists));
+
+          // Get playlists for current user
+          const playlists = pubkey ? (allPlaylists[pubkey] || []) : [];
+          this._playlists.set(playlists);
+        } else {
+          // New format: Record<pubkey, Playlist[]>
+          const allPlaylists = parsed as Record<string, Playlist[]>;
+          // Get playlists for current user, or empty array if none
+          const playlists = pubkey ? (allPlaylists[pubkey] || []) : [];
+          this._playlists.set(playlists);
+        }
       } catch (error) {
         console.error('Failed to load playlists from storage:', error);
         this._playlists.set([]);
@@ -368,9 +404,9 @@ export class PlaylistService implements OnInitialized {
   }
 
   /**
-   * Clean up playlists to:
-   * 1. Remove playlists from other accounts (keep only current user's playlists and local ones)
-   * 2. Remove duplicate playlists (for replaceable events with same kind:pubkey:dtag, keep only the newest)
+   * Clean up playlists to remove duplicate playlists
+   * (for replaceable events with same kind:pubkey:dtag, keep only the newest)
+   * Note: Since playlists are now stored per-account, we no longer need to filter by account
    */
   private cleanupPlaylists(): void {
     const currentPubkey = this.getCurrentUserPubkey();
@@ -382,18 +418,11 @@ export class PlaylistService implements OnInitialized {
     const playlists = this._playlists();
     console.log(`Cleaning up ${playlists.length} playlists for pubkey:`, currentPubkey);
 
-    // Step 1: Filter out playlists from other accounts
-    const filteredPlaylists = playlists.filter(playlist =>
-      playlist.isLocal || playlist.pubkey === currentPubkey
-    );
-
-    console.log(`After filtering by account: ${filteredPlaylists.length} playlists`);
-
-    // Step 2: Remove duplicates based on kind:pubkey:dtag (replaceable events)
+    // Remove duplicates based on kind:pubkey:dtag (replaceable events)
     // For each unique combination of pubkey and id (d-tag), keep only the newest event
     const playlistMap = new Map<string, Playlist>();
 
-    for (const playlist of filteredPlaylists) {
+    for (const playlist of playlists) {
       // Generate unique key: kind:pubkey:dtag
       // For kind 32100 (playlist) events, the unique identifier is pubkey:dtag
       const key = `${playlist.pubkey}:${playlist.id}`;
@@ -420,11 +449,37 @@ export class PlaylistService implements OnInitialized {
   }
 
   private loadDraftsFromStorage(): void {
+    const pubkey = this.getCurrentUserPubkey();
     const stored = this.localStorage.getItem(this.DRAFTS_STORAGE_KEY);
     if (stored && stored !== 'undefined' && stored !== '') {
       try {
-        const drafts = JSON.parse(stored) as PlaylistDraft[];
-        this._drafts.set(drafts);
+        const parsed = JSON.parse(stored);
+
+        // Check if it's the old format (array) or new format (Record<pubkey, PlaylistDraft[]>)
+        if (Array.isArray(parsed)) {
+          // Old format: migrate to new format
+          console.log('Migrating drafts from old format to new pubkey-keyed format');
+          const oldDrafts = parsed as PlaylistDraft[];
+
+          // All drafts belong to current user (drafts don't have pubkey field)
+          const allDrafts: Record<string, PlaylistDraft[]> = {};
+          if (pubkey && oldDrafts.length > 0) {
+            allDrafts[pubkey] = oldDrafts;
+          }
+
+          // Save in new format
+          this.localStorage.setItem(this.DRAFTS_STORAGE_KEY, JSON.stringify(allDrafts));
+
+          // Get drafts for current user
+          const drafts = pubkey ? (allDrafts[pubkey] || []) : [];
+          this._drafts.set(drafts);
+        } else {
+          // New format: Record<pubkey, PlaylistDraft[]>
+          const allDrafts = parsed as Record<string, PlaylistDraft[]>;
+          // Get drafts for current user, or empty array if none
+          const drafts = pubkey ? (allDrafts[pubkey] || []) : [];
+          this._drafts.set(drafts);
+        }
       } catch (error) {
         console.error('Failed to load drafts from storage:', error);
         this._drafts.set([]);
@@ -433,11 +488,51 @@ export class PlaylistService implements OnInitialized {
   }
 
   private savePlaylistsToStorage(): void {
-    this.localStorage.setItem(this.PLAYLISTS_STORAGE_KEY, JSON.stringify(this._playlists()));
+    const pubkey = this.getCurrentUserPubkey();
+    if (!pubkey) return;
+
+    // Load existing data for all accounts
+    let allPlaylists: Record<string, Playlist[]> = {};
+    const stored = this.localStorage.getItem(this.PLAYLISTS_STORAGE_KEY);
+    if (stored && stored !== 'undefined' && stored !== '') {
+      try {
+        const parsed = JSON.parse(stored);
+        // Handle old format (array) - just replace with new format
+        if (!Array.isArray(parsed)) {
+          allPlaylists = parsed as Record<string, Playlist[]>;
+        }
+      } catch {
+        allPlaylists = {};
+      }
+    }
+
+    // Update current user's playlists
+    allPlaylists[pubkey] = this._playlists();
+    this.localStorage.setItem(this.PLAYLISTS_STORAGE_KEY, JSON.stringify(allPlaylists));
   }
 
   private saveDraftsToStorage(): void {
-    this.localStorage.setItem(this.DRAFTS_STORAGE_KEY, JSON.stringify(this._drafts()));
+    const pubkey = this.getCurrentUserPubkey();
+    if (!pubkey) return;
+
+    // Load existing data for all accounts
+    let allDrafts: Record<string, PlaylistDraft[]> = {};
+    const stored = this.localStorage.getItem(this.DRAFTS_STORAGE_KEY);
+    if (stored && stored !== 'undefined' && stored !== '') {
+      try {
+        const parsed = JSON.parse(stored);
+        // Handle old format (array) - just replace with new format
+        if (!Array.isArray(parsed)) {
+          allDrafts = parsed as Record<string, PlaylistDraft[]>;
+        }
+      } catch {
+        allDrafts = {};
+      }
+    }
+
+    // Update current user's drafts
+    allDrafts[pubkey] = this._drafts();
+    this.localStorage.setItem(this.DRAFTS_STORAGE_KEY, JSON.stringify(allDrafts));
   }
 
   // Create a new playlist
