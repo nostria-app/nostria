@@ -264,6 +264,13 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   });
 
   artistName = computed(() => {
+    const event = this.song();
+    // First check if artist tag exists in the event
+    const artistTag = event?.tags.find(t => t[0] === 'artist');
+    if (artistTag?.[1]) {
+      return artistTag[1];
+    }
+    // Fallback to profile name
     const profile = this.authorProfile();
     return profile?.data?.name || profile?.data?.display_name || 'Unknown Artist';
   });
