@@ -40,6 +40,12 @@
         <mat-icon>publish</mat-icon>
         <span>Publish Event</span>
       </button>
+      @if (isOwnTrack()) {
+      <button mat-menu-item (click)="deleteTrack()" [disabled]="isDeleting()">
+        <mat-icon>delete</mat-icon>
+        <span>Delete</span>
+      </button>
+      }
     </mat-menu>
     <mat-menu #playlistMenu="matMenu">
       <button mat-menu-item (click)="createNewPlaylist()">
