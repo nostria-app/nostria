@@ -262,10 +262,18 @@ export class FeedService {
   private newEventCheckInterval: ReturnType<typeof setInterval> | null = null;
 
   // Public computed signals
-  // Always append Trending feed at the end (it's not persisted)
+  // Append Trending feed at the end ONLY after feeds have been loaded from storage
+  // This prevents Trending from being auto-selected during startup when it's temporarily the only feed
   readonly feeds = computed(() => {
+    const feedsLoaded = this._feedsLoaded();
     const storedFeeds = this._feeds().filter(f => f.id !== TRENDING_FEED_ID);
-    return [...storedFeeds, TRENDING_FEED];
+
+    // Only append Trending after feeds have been loaded from storage
+    // This prevents race conditions where Trending is the only available feed during startup
+    if (feedsLoaded) {
+      return [...storedFeeds, TRENDING_FEED];
+    }
+    return storedFeeds;
   });
   readonly userRelays = computed(() => this._userRelays());
   readonly discoveryRelays = computed(() => this._discoveryRelays());
