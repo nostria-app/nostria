@@ -48,6 +48,10 @@ export class ProfileStateService {
   isLoadingMoreNotes = signal<boolean>(false);
   hasMoreNotes = signal<boolean>(true);
 
+  // Track the oldest timestamp from relay-loaded events for pagination
+  // This is separate from cached events to ensure proper infinite scroll
+  private oldestRelayTimestamp = signal<number | null>(null);
+
   // Loading states for articles
   isLoadingMoreArticles = signal<boolean>(false);
   hasMoreArticles = signal<boolean>(true);
@@ -118,6 +122,7 @@ export class ProfileStateService {
     this.reposts.set([]);
     this.replies.set([]);
     this.articles.set([]);
+    this.oldestRelayTimestamp.set(null);
     this.media.set([]);
     this.audio.set([]);
     this.reactions.set([]);
@@ -542,6 +547,18 @@ export class ProfileStateService {
       }
     }
 
+    // Update the oldest relay timestamp for pagination
+    // This ensures we paginate from where the relay query left off, not from cached events
+    if (events && events.length > 0) {
+      const oldestFromRelay = Math.min(...events.map(e => e.created_at));
+      const currentOldest = this.oldestRelayTimestamp();
+      // Only update if this is older than what we have (or if we don't have a timestamp yet)
+      if (currentOldest === null || oldestFromRelay < currentOldest) {
+        this.oldestRelayTimestamp.set(oldestFromRelay);
+        this.logger.debug(`Initial load oldest timestamp from relay: ${oldestFromRelay}`);
+      }
+    }
+
     // Load additional media items separately to ensure we have enough for the media tab
     // This runs in parallel with the main query to optimize loading time
     this.loadInitialMedia(pubkey);
@@ -628,7 +645,7 @@ export class ProfileStateService {
 
   /**
    * Load more notes for the current profile
-   * @param beforeTimestamp - Load notes before this timestamp
+   * @param beforeTimestamp - Load notes before this timestamp (optional, uses tracked relay timestamp by default)
    */
   async loadMoreNotes(beforeTimestamp?: number): Promise<NostrRecord[]> {
     if (this.isLoadingMoreNotes() || !this.hasMoreNotes()) {
@@ -642,9 +659,14 @@ export class ProfileStateService {
     const LOAD_LIMIT = 50;
 
     try {
-      const oldestTimestamp = beforeTimestamp || Math.floor(Date.now() / 1000);
+      // Use the tracked relay timestamp for pagination, falling back to provided timestamp or current time
+      // This ensures we don't skip events by using cached event timestamps
+      const trackedTimestamp = this.oldestRelayTimestamp();
+      const oldestTimestamp = trackedTimestamp !== null
+        ? trackedTimestamp - 1
+        : (beforeTimestamp || Math.floor(Date.now() / 1000));
 
-      this.logger.debug(`Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp}, limit: ${LOAD_LIMIT}`);
+      this.logger.debug(`Loading more notes for ${pubkey}, before timestamp: ${oldestTimestamp} (tracked: ${trackedTimestamp}), limit: ${LOAD_LIMIT}`);
 
       const newNotes: NostrRecord[] = [];
       const newReplies: NostrRecord[] = [];
@@ -912,6 +934,20 @@ export class ProfileStateService {
 
           return [...existing, ...filtered];
         });
+      }
+
+      // Update the oldest relay timestamp for the next pagination
+      // Only update if the new oldest is actually older than what we have
+      // This prevents the timestamp from moving forward when loading gap-filling events
+      if (events && events.length > 0) {
+        const oldestFromBatch = Math.min(...events.map(e => e.created_at));
+        const currentOldest = this.oldestRelayTimestamp();
+        if (currentOldest === null || oldestFromBatch < currentOldest) {
+          this.oldestRelayTimestamp.set(oldestFromBatch);
+          this.logger.debug(`Updated oldest relay timestamp to: ${oldestFromBatch}`);
+        } else {
+          this.logger.debug(`Batch oldest ${oldestFromBatch} is not older than current ${currentOldest}, keeping current`);
+        }
       }
 
       // Determine if there are more notes to load
