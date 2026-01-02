@@ -10,6 +10,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { Clipboard } from '@angular/cdk/clipboard';
+import { firstValueFrom } from 'rxjs';
 import { Event, Filter, nip19, kinds } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
@@ -26,7 +27,9 @@ import { LoggerService } from '../../../services/logger.service';
 import { MusicPlaylistService } from '../../../services/music-playlist.service';
 import { LayoutService } from '../../../services/layout.service';
 import { OfflineMusicService } from '../../../services/offline-music.service';
+import { NostrService } from '../../../services/nostr.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
+import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 import { ZapChipsComponent } from '../../../components/zap-chips/zap-chips.component';
 import { CommentsListComponent } from '../../../components/comments-list/comments-list.component';
@@ -76,6 +79,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private musicPlaylistService = inject(MusicPlaylistService);
   private layout = inject(LayoutService);
   private offlineMusicService = inject(OfflineMusicService);
+  private nostrService = inject(NostrService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -87,6 +91,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   isLiking = signal(false);
   isDownloading = signal(false);
   isSavingOffline = signal(false);
+  isDeleting = signal(false);
 
   // Offline music signals
   isOffline = computed(() => {
@@ -884,6 +889,46 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         }
       } finally {
         this.isSavingOffline.set(false);
+      }
+    }
+  }
+
+  /**
+   * Delete the track (request deletion via NIP-09)
+   */
+  async deleteTrack(): Promise<void> {
+    const ev = this.song();
+    if (!ev || !this.isOwnTrack()) return;
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Track',
+        message: 'Are you sure you want to request deletion of this track? This action creates a deletion request (NIP-09) but cannot guarantee the track will be removed from all relays and clients.',
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn',
+      } as ConfirmDialogData,
+    });
+
+    const confirmedDelete = await firstValueFrom(dialogRef.afterClosed());
+    if (confirmedDelete) {
+      this.isDeleting.set(true);
+      try {
+        const deleteEvent = this.nostrService.createRetractionEvent(ev);
+        const result = await this.nostrService.signAndPublish(deleteEvent);
+
+        if (result.success) {
+          this.snackBar.open('Track deletion was requested', 'Dismiss', { duration: 3000 });
+          // Navigate back after successful deletion request
+          this.goBack();
+        } else {
+          this.snackBar.open('Failed to delete track', 'Close', { duration: 3000 });
+        }
+      } catch (error) {
+        this.logger.error('Error deleting track:', error);
+        this.snackBar.open('Failed to delete track', 'Close', { duration: 3000 });
+      } finally {
+        this.isDeleting.set(false);
       }
     }
   }
