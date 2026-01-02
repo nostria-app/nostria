@@ -57,6 +57,16 @@ interface AccountLocalState {
   aiDisclaimerSeen?: boolean; // Whether the AI disclaimer dialog has been seen
   publicRelayFeeds?: string[]; // List of public relay feeds (domains) for the relay feed menu
   publicRelayShowReplies?: boolean; // Whether to show replies in public relay feeds
+  wallets?: Record<string, AccountWallet>; // NWC wallets for this account
+}
+
+/**
+ * Wallet stored per-account
+ */
+export interface AccountWallet {
+  pubkey: string;
+  connections: string[];
+  name?: string;
 }
 
 /**
@@ -831,6 +841,21 @@ export class AccountLocalStateService {
    */
   setPublicRelayShowReplies(pubkey: string, showReplies: boolean): void {
     this.updateAccountState(pubkey, { publicRelayShowReplies: showReplies });
+  }
+
+  /**
+   * Get wallets for an account
+   */
+  getWallets(pubkey: string): Record<string, AccountWallet> {
+    const state = this.getAccountState(pubkey);
+    return state.wallets || {};
+  }
+
+  /**
+   * Set wallets for an account
+   */
+  setWallets(pubkey: string, wallets: Record<string, AccountWallet>): void {
+    this.updateAccountState(pubkey, { wallets });
   }
 
   /**

@@ -1,7 +1,8 @@
-import { inject, Injectable, signal, computed } from '@angular/core';
+import { inject, Injectable, signal, computed, effect } from '@angular/core';
 import { NWCClient } from '@getalby/sdk';
 import { LoggerService } from './logger.service';
 import { Wallets, Wallet } from './wallets';
+import { AccountStateService } from './account-state.service';
 
 /**
  * NIP-47 Transaction type
@@ -65,6 +66,10 @@ export interface WalletData {
 export class NwcService {
   private logger = inject(LoggerService);
   private walletsService = inject(Wallets);
+  private accountState = inject(AccountStateService);
+
+  // Track the current account pubkey to detect changes
+  private currentAccountPubkey = signal<string | null>(null);
 
   // Cache wallet data per pubkey
   private walletDataCache = signal<Record<string, WalletData>>({});
@@ -81,6 +86,42 @@ export class NwcService {
     if (!pubkey) return null;
     return this.walletDataCache()[pubkey] || null;
   });
+
+  constructor() {
+    // Effect to clear cache when account changes
+    effect(() => {
+      const accountPubkey = this.accountState.pubkey();
+      const previousPubkey = this.currentAccountPubkey();
+
+      // Only clear if the account actually changed
+      if (accountPubkey !== previousPubkey) {
+        this.currentAccountPubkey.set(accountPubkey);
+        this.clearCache();
+        this.logger.debug('NWC cache cleared due to account change');
+      }
+    });
+  }
+
+  /**
+   * Clear all cached wallet data and NWC clients
+   */
+  clearCache(): void {
+    // Clear NWC clients
+    for (const client of this.nwcClients.values()) {
+      try {
+        client.close();
+      } catch (e) {
+        // Ignore errors during cleanup
+      }
+    }
+    this.nwcClients.clear();
+
+    // Clear wallet data cache
+    this.walletDataCache.set({});
+
+    // Clear selected wallet
+    this.selectedWalletPubkey.set(null);
+  }
 
   /**
    * Get or create NWC client for a wallet
