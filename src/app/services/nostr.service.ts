@@ -130,6 +130,13 @@ export class NostrService implements NostriaService {
   MAX_WAIT_TIME = 2000;
   MAX_WAIT_TIME_METADATA = 2500;
   dataLoaded = false;
+
+  // Default relays for new user accounts
+  private readonly DEFAULT_RELAYS = [
+    'wss://relay.damus.io/',
+    'wss://relay.snort.social/',
+    'wss://nos.lol/',
+  ];
   publishQueue: any[] = [];
   accountSubscription: any = null;
 
@@ -1837,9 +1844,7 @@ export class NostrService implements NostriaService {
     const relayTags = this.createTags('r', [relayServerUrl!]);
 
     // Add these 3 default relays, most popular ones.
-    relayTags.push(['r', 'wss://relay.damus.io/']);
-    relayTags.push(['r', 'wss://relay.snort.social/']);
-    relayTags.push(['r', 'wss://nos.lol/']);
+    this.DEFAULT_RELAYS.forEach(relay => relayTags.push(['r', relay]));
 
     // Initialize the account relay so we can start using it
     this.accountRelay.init([relayServerUrl!]);
@@ -1881,9 +1886,7 @@ export class NostrService implements NostriaService {
     const relayDMTags = this.createTags('relay', [relayServerUrl!]);
 
     // Add these 3 default relays to match account relays
-    relayDMTags.push(['relay', 'wss://relay.damus.io/']);
-    relayDMTags.push(['relay', 'wss://relay.snort.social/']);
-    relayDMTags.push(['relay', 'wss://nos.lol/']);
+    this.DEFAULT_RELAYS.forEach(relay => relayDMTags.push(['relay', relay]));
 
     const relayDMListEvent: UnsignedEvent = {
       pubkey: user.pubkey,
