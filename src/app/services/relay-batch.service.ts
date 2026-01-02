@@ -5,7 +5,7 @@ import { UserRelaysService } from './relays/user-relays';
 import { RelayPoolService } from './relays/relay-pool';
 import { AccountRelayService } from './relays/account-relay';
 import { AccountStateService } from './account-state.service';
-import { LocalStorageService } from './local-storage.service';
+import { AccountLocalStateService } from './account-local-state.service';
 import { UtilitiesService } from './utilities.service';
 
 /**
@@ -46,11 +46,8 @@ export class RelayBatchService {
   private readonly relayPool = inject(RelayPoolService);
   private readonly accountRelay = inject(AccountRelayService);
   private readonly accountState = inject(AccountStateService);
-  private readonly localStorage = inject(LocalStorageService);
+  private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly utilities = inject(UtilitiesService);
-
-  // Storage key for last app open timestamp
-  private readonly LAST_APP_OPEN_KEY = 'nostria-last-app-open';
 
   // Loading state for UI feedback
   readonly isLoading = signal(false);
@@ -64,9 +61,8 @@ export class RelayBatchService {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return null;
 
-    const key = `${this.LAST_APP_OPEN_KEY}-${pubkey}`;
-    const value = this.localStorage.getItem(key);
-    return value ? parseInt(value, 10) : null;
+    const timestamp = this.accountLocalState.getLastAppOpen(pubkey);
+    return timestamp || null;
   }
 
   /**
@@ -76,9 +72,8 @@ export class RelayBatchService {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
-    const key = `${this.LAST_APP_OPEN_KEY}-${pubkey}`;
     const now = Math.floor(Date.now() / 1000);
-    this.localStorage.setItem(key, now.toString());
+    this.accountLocalState.setLastAppOpen(pubkey, now);
     this.logger.debug(`[RelayBatchService] Updated last app open timestamp: ${now}`);
   }
 
