@@ -9,6 +9,7 @@ import {
   PLATFORM_ID,
   DOCUMENT,
   OnInit,
+  ElementRef,
 } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { MatToolbarModule } from '@angular/material/toolbar';
@@ -218,6 +219,7 @@ export class App implements OnInit {
   @ViewChild('appsSidenav') appsSidenav!: MatSidenav;
   @ViewChild(SearchResultsComponent) searchResults!: SearchResultsComponent;
   @ViewChild(FavoritesOverlayComponent) favoritesOverlay?: FavoritesOverlayComponent;
+  @ViewChild('searchInputElement') searchInputElement?: ElementRef<HTMLInputElement>;
 
   // Apps menu overlay
   private appsMenuOverlayRef?: OverlayRef;
@@ -1077,6 +1079,41 @@ export class App implements OnInit {
 
   toggleAppsSidenav() {
     this.appsSidenav.toggle();
+  }
+
+  /**
+   * Open search and focus the input.
+   * Uses multiple focus attempts to ensure iOS Safari compatibility.
+   */
+  openSearch(): void {
+    if (this.layout.search()) {
+      // Already open, just toggle off
+      this.layout.toggleSearch();
+      return;
+    }
+
+    // Open search
+    this.layout.toggleSearch();
+
+    // Focus the search input with iOS Safari workaround
+    // iOS Safari requires focus to happen in user interaction context
+    // We use multiple attempts with requestAnimationFrame and setTimeout
+    // to ensure the input is rendered and focusable
+    const focusInput = () => {
+      const input = this.searchInputElement?.nativeElement;
+      if (input) {
+        input.focus();
+        // iOS Safari sometimes needs a second focus after a micro delay
+        setTimeout(() => input.focus(), 50);
+      }
+    };
+
+    // First attempt: immediate after render
+    requestAnimationFrame(() => {
+      focusInput();
+      // Second attempt: after Angular change detection
+      setTimeout(focusInput, 100);
+    });
   }
 
   toggleMediaPlayer() {
