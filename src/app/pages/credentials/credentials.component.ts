@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, inject, signal, effect, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal, effect, OnInit, untracked } from '@angular/core';
 import { FormControl, ReactiveFormsModule, Validators } from '@angular/forms';
 
 import { MatCardModule } from '@angular/material/card';
@@ -11,12 +11,14 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatSelectModule } from '@angular/material/select';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { RouterModule } from '@angular/router';
 import { MatDialog } from '@angular/material/dialog';
 import { NostrService } from '../../services/nostr.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { Wallets, Wallet } from '../../services/wallets';
+import { NwcService, WalletData, NwcTransaction } from '../../services/nwc.service';
 import { LN, USD } from '@getalby/sdk';
 import { CryptoEncryptionService, EncryptedData } from '../../services/crypto-encryption.service';
 import { PinPromptService } from '../../services/pin-prompt.service';
@@ -24,10 +26,10 @@ import { nip19 } from 'nostr-tools';
 import { QRCodeDialogComponent } from '../../components/qrcode-dialog/qrcode-dialog.component';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
+import { DatePipe, DecimalPipe } from '@angular/common';
 
 @Component({
   selector: 'app-credentials',
-  standalone: true,
   imports: [
     MatCardModule,
     MatIconModule,
@@ -38,9 +40,12 @@ import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/conf
     MatTooltipModule,
     MatTabsModule,
     MatSelectModule,
+    MatProgressSpinnerModule,
     ReactiveFormsModule,
     RouterModule,
     UserProfileComponent,
+    DatePipe,
+    DecimalPipe,
   ],
   templateUrl: './credentials.component.html',
   styleUrl: './credentials.component.scss',
@@ -54,6 +59,7 @@ export class CredentialsComponent implements OnInit {
   crypto = inject(CryptoEncryptionService);
   pinPrompt = inject(PinPromptService);
   dialog = inject(MatDialog);
+  nwcService = inject(NwcService);
   isNsecVisible = signal(false);
   isMnemonicVisible = signal(false);
   wallets = inject(Wallets);
@@ -66,6 +72,12 @@ export class CredentialsComponent implements OnInit {
   isAddingWallet = signal(false);
   editingWallet = signal<string | null>(null);
   editNameControl = new FormControl('', [Validators.required]);
+
+  // Wallet details view
+  expandedWallet = signal<string | null>(null);
+
+  // Track which wallets have had their balance loaded to prevent re-loading
+  private loadedWalletBalances = new Set<string>();
 
   // PIN change controls
   isChangingPin = signal(false);
@@ -100,6 +112,28 @@ export class CredentialsComponent implements OnInit {
         this.cachedNsec.set('');
         this.cachedMnemonic.set('');
       }
+    });
+
+    // Auto-load wallet balances when wallets change
+    effect(() => {
+      const walletEntries = Object.entries(this.wallets.wallets());
+
+      // Use untracked to prevent signal reads inside async calls from creating dependencies
+      untracked(() => {
+        for (const [pubkey] of walletEntries) {
+          // Skip if already loaded
+          if (this.loadedWalletBalances.has(pubkey)) {
+            continue;
+          }
+
+          // Mark as loaded before the async call to prevent re-triggering
+          this.loadedWalletBalances.add(pubkey);
+
+          // Initialize and load balance for each wallet
+          this.nwcService.selectWallet(pubkey);
+          this.nwcService.getBalance(pubkey);
+        }
+      });
     });
   }
 
@@ -755,6 +789,101 @@ export class CredentialsComponent implements OnInit {
 
     // Remove duplicates
     return [...new Set(relayUrls)];
+  }
+
+  // NWC Wallet Balance and Transactions
+
+  /**
+   * Toggle expanded wallet details view (for transactions)
+   */
+  toggleWalletDetails(pubkey: string): void {
+    if (this.expandedWallet() === pubkey) {
+      this.expandedWallet.set(null);
+    } else {
+      this.expandedWallet.set(pubkey);
+      // Load transactions when expanding
+      this.loadTransactions(pubkey);
+    }
+  }
+
+  /**
+   * Load transactions for a wallet
+   */
+  async loadTransactions(pubkey: string): Promise<void> {
+    await this.nwcService.getTransactions(pubkey, { limit: 20 });
+  }
+
+  /**
+   * Refresh wallet balance
+   */
+  async refreshBalance(pubkey: string): Promise<void> {
+    await this.nwcService.getBalance(pubkey);
+  }
+
+  /**
+   * Refresh wallet data (balance and transactions)
+   */
+  async refreshWalletData(pubkey: string): Promise<void> {
+    await this.nwcService.refreshWalletData(pubkey);
+  }
+
+  /**
+   * Get cached wallet data for display
+   */
+  getWalletData(pubkey: string): WalletData | null {
+    return this.nwcService.getWalletData(pubkey);
+  }
+
+  /**
+   * Format millisatoshis to readable string
+   */
+  formatMsats(msats: number): string {
+    return this.nwcService.formatMsats(msats);
+  }
+
+  /**
+   * Format balance to sats
+   */
+  formatBalanceToSats(msats: number): number {
+    return this.nwcService.formatBalanceToSats(msats);
+  }
+
+  /**
+   * Get transaction icon based on type
+   */
+  getTransactionIcon(tx: NwcTransaction): string {
+    return tx.type === 'incoming' ? 'call_received' : 'call_made';
+  }
+
+  /**
+   * Get transaction color class based on type
+   */
+  getTransactionClass(tx: NwcTransaction): string {
+    return tx.type === 'incoming' ? 'tx-incoming' : 'tx-outgoing';
+  }
+
+  /**
+   * Format transaction amount with sign
+   */
+  formatTransactionAmount(tx: NwcTransaction): string {
+    const sign = tx.type === 'incoming' ? '+' : '-';
+    return `${sign}${this.formatMsats(tx.amount)}`;
+  }
+
+  /**
+   * Get transaction description or fallback
+   */
+  getTransactionDescription(tx: NwcTransaction): string {
+    if (tx.description) return tx.description;
+    if (tx.type === 'incoming') return 'Received payment';
+    return 'Sent payment';
+  }
+
+  /**
+   * Format timestamp to relative or absolute date
+   */
+  formatTransactionDate(timestamp: number): Date {
+    return new Date(timestamp * 1000);
   }
 
   // PIN Management methods

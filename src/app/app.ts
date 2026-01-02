@@ -335,8 +335,6 @@ export class App implements OnInit {
     const feeds = this.feedsCollectionService.feeds();
     const expandedItems = this.expandedMenuItems();
 
-    this.logger.info('navigationItems recomputing, subscription:', subscription);
-
     return this.navItems.map(item => {
       // For the Feeds item, add feed boards as children
       if (item.label === 'Feeds') {
