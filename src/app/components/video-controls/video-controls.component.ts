@@ -98,6 +98,10 @@ export class VideoControlsComponent implements OnDestroy {
   isHovering = signal(false);
   isHoveringControlsBar = signal(false);
   isSeeking = signal(false);
+
+  // Track if last interaction was touch to ignore synthetic mouse events
+  private lastInteractionWasTouch = false;
+  private touchInteractionTimeout: ReturnType<typeof setTimeout> | null = null;
   volumeSliderVisible = signal(false);
 
   // Video state signals (updated via event listeners)
@@ -200,6 +204,9 @@ export class VideoControlsComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.cleanupVideoListeners();
     this.clearAutoHideTimer();
+    if (this.touchInteractionTimeout) {
+      clearTimeout(this.touchInteractionTimeout);
+    }
   }
 
   private attachVideoListeners(video: HTMLVideoElement): void {
@@ -312,6 +319,8 @@ export class VideoControlsComponent implements OnDestroy {
   onMouseEnter(): void {
     // In native fullscreen, don't track hovering - let parent handle it
     if (this.nativeFullscreen()) return;
+    // Ignore synthetic mouse events that follow touch events
+    if (this.lastInteractionWasTouch) return;
     this.isHovering.set(true);
     this.showControls();
   }
@@ -319,6 +328,8 @@ export class VideoControlsComponent implements OnDestroy {
   onMouseLeave(): void {
     // In native fullscreen, don't track hovering - let parent handle it
     if (this.nativeFullscreen()) return;
+    // Ignore synthetic mouse events that follow touch events
+    if (this.lastInteractionWasTouch) return;
     this.isHovering.set(false);
     // Immediately hide controls when mouse leaves (no delay)
     if (!this.paused()) {
@@ -330,6 +341,8 @@ export class VideoControlsComponent implements OnDestroy {
   onMouseMove(): void {
     // In native fullscreen, let parent handle mouse events
     if (this.nativeFullscreen()) return;
+    // Ignore synthetic mouse events that follow touch events
+    if (this.lastInteractionWasTouch) return;
     this.showControls();
     if (!this.isHovering() && !this.paused()) {
       this.startAutoHideTimer();
@@ -338,9 +351,22 @@ export class VideoControlsComponent implements OnDestroy {
 
   /** Called on touch devices when user taps the controls area */
   onTouchStart(event: TouchEvent): void {
+    // Mark that this was a touch interaction to ignore subsequent synthetic mouse events
+    this.lastInteractionWasTouch = true;
+    // Clear any existing timeout
+    if (this.touchInteractionTimeout) {
+      clearTimeout(this.touchInteractionTimeout);
+    }
+    // Reset the flag after a delay to allow real mouse events again
+    this.touchInteractionTimeout = setTimeout(() => {
+      this.lastInteractionWasTouch = false;
+    }, 500);
+
     // In native fullscreen, let parent handle touch events
     if (this.nativeFullscreen()) return;
 
+    // Reset hover state since we're on a touch device
+    this.isHovering.set(false);
     // Show controls and start auto-hide timer on touch
     this.showControlsAndStartTimer();
   }

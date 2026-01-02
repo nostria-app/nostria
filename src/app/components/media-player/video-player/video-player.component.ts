@@ -60,6 +60,9 @@ export class VideoPlayerComponent implements OnDestroy {
   private readonly AUTO_HIDE_DELAY = 3000;
   // Flag to ignore mouse events briefly after entering fullscreen
   private ignoreMouseEvents = false;
+  // Track if last interaction was touch to ignore synthetic mouse events
+  private lastInteractionWasTouch = false;
+  private touchInteractionTimeout: ReturnType<typeof setTimeout> | null = null;
 
   @ViewChild('videoElement', { static: false })
   videoElement?: ElementRef<HTMLVideoElement>;
@@ -81,6 +84,9 @@ export class VideoPlayerComponent implements OnDestroy {
   ngOnDestroy(): void {
     this.media.setVideoElement(undefined);
     this.clearAutoHideTimeout();
+    if (this.touchInteractionTimeout) {
+      clearTimeout(this.touchInteractionTimeout);
+    }
     document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
   }
 
@@ -219,6 +225,8 @@ export class VideoPlayerComponent implements OnDestroy {
   onVideoContainerMouseEnter(): void {
     // Only handle in expanded mode (not footer mode)
     if (this.footer() || this.ignoreMouseEvents) return;
+    // Ignore synthetic mouse events that follow touch events
+    if (this.lastInteractionWasTouch) return;
     // Use showControlsAndStartTimer to ensure auto-hide continues
     this.videoControlsRef?.showControlsAndStartTimer();
     this.showCursor();
@@ -228,6 +236,8 @@ export class VideoPlayerComponent implements OnDestroy {
   onVideoContainerMouseLeave(): void {
     // Only handle in expanded mode (not footer mode)
     if (this.footer() || this.ignoreMouseEvents) return;
+    // Ignore synthetic mouse events that follow touch events
+    if (this.lastInteractionWasTouch) return;
     // Start auto-hide immediately when leaving the video area
     if (!this.media.paused) {
       this.videoControlsRef?.showControlsAndStartTimer();
@@ -238,6 +248,8 @@ export class VideoPlayerComponent implements OnDestroy {
   onVideoContainerMouseMove(): void {
     // Only handle in expanded mode (not footer mode)
     if (this.footer() || this.ignoreMouseEvents) return;
+    // Ignore synthetic mouse events that follow touch events
+    if (this.lastInteractionWasTouch) return;
     // Don't restart timer if hovering controls bar
     if (this.isHoveringControlsBar()) {
       this.showCursor();
@@ -250,8 +262,22 @@ export class VideoPlayerComponent implements OnDestroy {
 
   /** Handle touch events on the video container for mobile auto-hide support */
   onVideoContainerTouchStart(event: TouchEvent): void {
+    // Mark that this was a touch interaction to ignore subsequent synthetic mouse events
+    this.lastInteractionWasTouch = true;
+    // Clear any existing timeout
+    if (this.touchInteractionTimeout) {
+      clearTimeout(this.touchInteractionTimeout);
+    }
+    // Reset the flag after a delay to allow real mouse events again
+    this.touchInteractionTimeout = setTimeout(() => {
+      this.lastInteractionWasTouch = false;
+    }, 500);
+
     // Only handle in expanded mode (not footer mode)
     if (this.footer() || this.ignoreMouseEvents) return;
+
+    // Reset hover state since we're on a touch device
+    this.isHoveringControlsBar.set(false);
 
     // Show controls and start auto-hide timer on touch
     this.videoControlsRef?.showControlsAndStartTimer();
