@@ -574,6 +574,35 @@ export class UserRelayService {
   }
 
   /**
+   * Publish an event to a user's DM relays (kind 10050 - NIP-17)
+   * Use this when publishing gift-wrapped direct messages.
+   */
+  async publishToDmRelays(pubkey: string, event: Event): Promise<void> {
+    this.logger.debug(`[UserRelayService] publishToDmRelays called for pubkey: ${pubkey.slice(0, 16)}...`);
+
+    // Use getUserDmRelaysForPublishing to get DM relays (kind 10050, falls back to regular)
+    const relayUrls = await this.userRelaysService.getUserDmRelaysForPublishing(pubkey);
+
+    this.logger.debug(`[UserRelayService] getUserDmRelaysForPublishing returned ${relayUrls.length} relays:`, relayUrls);
+
+    if (relayUrls.length === 0) {
+      this.logger.warn(`[UserRelayService] No DM relays available for publishing for pubkey: ${pubkey.slice(0, 16)}...`);
+      return;
+    }
+
+    this.logger.info(`[UserRelayService] Publishing DM to ${relayUrls.length} relays for pubkey: ${pubkey.slice(0, 16)}...`, relayUrls);
+
+    // Use the SimplePool directly to get publish promises
+    const publishResults = this.publishPool.publish(relayUrls, event);
+
+    // Wait for all publish attempts to complete and log results
+    const results = await Promise.allSettled(publishResults);
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    const failCount = results.filter(r => r.status === 'rejected').length;
+    this.logger.debug(`[UserRelayService] DM publish results: ${successCount} succeeded, ${failCount} failed`);
+  }
+
+  /**
    * Legacy publish method (tries to use default relays)
    * @deprecated Use publish(pubkey, event) instead
    */

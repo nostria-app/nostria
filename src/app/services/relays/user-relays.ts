@@ -254,6 +254,38 @@ export class UserRelaysService {
   }
 
   /**
+   * Get DM-specific relay URLs for a user (kind 10050 - NIP-17)
+   * Used for publishing gift-wrapped messages to a recipient.
+   * @param pubkey - The recipient's public key
+   * @returns Promise<string[]> - Array of DM relay URLs
+   */
+  async getUserDmRelaysForPublishing(pubkey: string): Promise<string[]> {
+    console.log(`[UserRelaysService] getUserDmRelaysForPublishing called for pubkey: ${pubkey.slice(0, 16)}...`);
+
+    try {
+      // Get DM relays from discovery service (kind 10050, falls back to kind 10002)
+      const dmRelays = await this.discoveryRelayService.getUserDmRelayUrls(pubkey);
+      console.log(`[UserRelaysService] discoveryRelayService.getUserDmRelayUrls returned:`, dmRelays);
+
+      // Also get fallback relays in case DM relays are not set
+      const fallbackRelays = await this.relaysService.getFallbackRelaysForPubkey(pubkey);
+      console.log(`[UserRelaysService] relaysService.getFallbackRelaysForPubkey returned:`, fallbackRelays);
+
+      // Combine and deduplicate
+      const allRelays = [...dmRelays, ...fallbackRelays];
+      const uniqueNormalizedRelays = this.utilitiesService.getUniqueNormalizedRelayUrls(allRelays);
+
+      console.log(`[UserRelaysService] Final relays for DM publishing to ${pubkey.slice(0, 16)}:`, uniqueNormalizedRelays);
+
+      return uniqueNormalizedRelays;
+    } catch (error) {
+      console.error('[UserRelaysService] Error fetching user DM relays for publishing:', error);
+      // Fall back to regular relay list
+      return this.getUserRelaysForPublishing(pubkey);
+    }
+  }
+
+  /**
    * Check if relays are cached for a user
    * @param pubkey - The user's public key
    * @returns boolean - Whether relays are cached
