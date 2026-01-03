@@ -6,6 +6,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { FeedService } from '../../services/feed.service';
 import { MetaService } from '../../services/meta.service';
 import { RelaysService } from '../../services/relays/relays';
+import { AccountRelayService } from '../../services/relays/account-relay';
 import { Event } from 'nostr-tools';
 import { STREAM_STATE_KEY, StreamData } from '../../stream-resolver';
 import { isPlatformServer, isPlatformBrowser } from '@angular/common';
@@ -46,6 +47,7 @@ export class StreamViewerComponent implements OnInit {
   private transferState = inject(TransferState);
   private platformId = inject(PLATFORM_ID);
   private relaysService = inject(RelaysService);
+  private accountRelay = inject(AccountRelayService);
 
   loading = false;
 
@@ -157,7 +159,7 @@ export class StreamViewerComponent implements OnInit {
       relaysToUse = relayHints;
       console.log('[StreamViewer] Using relay hints:', relaysToUse);
     } else {
-      const userRelays = this.feed.userRelays().map(r => r.url);
+      const userRelays = this.accountRelay.relays().map((r: { url: string }) => r.url);
       if (userRelays.length > 0) {
         relaysToUse = userRelays;
         console.log('[StreamViewer] Using user relays:', relaysToUse);
@@ -197,7 +199,7 @@ export class StreamViewerComponent implements OnInit {
     // Use relay hints if provided, otherwise use user's relays
     const relaysToUse = relayHints && relayHints.length > 0
       ? relayHints
-      : this.feed.userRelays().map(r => r.url);
+      : this.accountRelay.relays().map((r: { url: string }) => r.url);
 
     return new Promise((resolve) => {
       const timeout = setTimeout(() => {

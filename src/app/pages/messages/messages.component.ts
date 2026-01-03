@@ -77,7 +77,7 @@ interface Chat {
   lastMessage?: DirectMessage | null;
   relays?: string[];
   encryptionType?: 'nip04' | 'nip44';
-  isLegacy?: boolean; // true for NIP-04 chats
+  hasLegacyMessages?: boolean; // true if chat contains any NIP-04 messages
   messages: Map<string, DirectMessage>;
 }
 
@@ -1289,19 +1289,11 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /**
    * Check if a chat supports modern encryption (NIP-44)
-   * For now, we'll always prefer modern encryption when available
+   * For merged chats, we always use modern encryption for new messages
    */
   private supportsModernEncryption(chat: Chat): boolean {
-    // If chat already has an encryption type set, respect it
-    if (chat.encryptionType) {
-      return chat.encryptionType === 'nip44';
-    }
-
-    // For new chats, prefer modern encryption
-    // In a more sophisticated implementation, we could check:
-    // - If the recipient's client supports NIP-44
-    // - User preferences
-    // - Relay capabilities
+    // For merged chats, always prefer modern encryption for new messages
+    // The chat may contain legacy messages, but new messages will use NIP-44
     return true;
   }
 
@@ -1309,18 +1301,18 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Check if we should show encryption warning for a chat
    */
   shouldShowEncryptionWarning(chat: Chat): boolean {
-    // Show warning for legacy NIP-04 chats
-    return chat.encryptionType === 'nip04' || chat.isLegacy === true;
+    // Show warning if chat contains any legacy NIP-04 messages
+    return chat.hasLegacyMessages === true;
   }
 
   /**
    * Get encryption status message for a chat
    */
   getEncryptionStatusMessage(chat: Chat): string {
-    if (chat.encryptionType === 'nip04' || chat.isLegacy === true) {
-      return 'This chat uses legacy encryption (NIP-04). Consider starting a new chat for better security.';
+    if (chat.hasLegacyMessages === true) {
+      return 'This chat contains some messages using legacy encryption (NIP-04). New messages will use modern encryption (NIP-17).';
     }
-    return 'This chat uses modern encryption (NIP-44) for enhanced security.';
+    return 'This chat uses modern encryption (NIP-17) for enhanced security.';
   }
 
   /**
@@ -1518,25 +1510,23 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
   /**
    * Start a chat with a specific user
+   * Note: isLegacy parameter is kept for backward compatibility but ignored
+   * since all chats are now merged by pubkey
    */
   private async startChatWithUser(pubkey: string, isLegacy: boolean): Promise<void> {
     try {
-      // Create a chat ID based on encryption type
-      // IMPORTANT: This format must match the format in messaging.service.ts addMessageToChat()
-      const chatId = isLegacy ? `${pubkey}-nip04` : `${pubkey}-nip44`;
+      // Use pubkey directly as chatId - chats are now merged regardless of encryption type
+      const chatId = pubkey;
       this.logger.debug('startChatWithUser - chatId:', chatId);
 
-      // Check if chat already exists with requested encryption type
+      // Check if chat already exists
       let existingChat = this.messaging.getChat(chatId);
 
-      // If not found, also check the other encryption type
+      // Also check for legacy chatIds (for backward compatibility with old stored chats)
       if (!existingChat) {
-        const alternativeChatId = isLegacy ? `${pubkey}-nip44` : `${pubkey}-nip04`;
-        this.logger.debug('Chat not found with requested encryption, checking alternative:', alternativeChatId);
-        existingChat = this.messaging.getChat(alternativeChatId);
-
+        existingChat = this.messaging.getChat(`${pubkey}-nip44`) || this.messaging.getChat(`${pubkey}-nip04`);
         if (existingChat) {
-          this.logger.debug('Found existing chat with different encryption type');
+          this.logger.debug('Found existing chat with legacy chatId format');
         }
       }
 
@@ -1552,14 +1542,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // The chat will be created when the first message is sent
 
       // Create a temporary chat object for UI purposes
+      // New messages always use modern encryption (NIP-44)
       const tempChat: Chat = {
         id: chatId,
         pubkey: pubkey,
         unreadCount: 0,
         lastMessage: null,
         relays: [], // TODO: Use discovered relays from dialog
-        encryptionType: isLegacy ? 'nip04' : 'nip44',
-        isLegacy: isLegacy,
+        encryptionType: 'nip44',
+        hasLegacyMessages: false,
         messages: new Map(),
       };
 
@@ -1574,12 +1565,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Select the chat (this will show the chat interface)
       this.logger.debug('Calling selectChat');
       this.selectChat(tempChat);
-
-      // Show success message
-      // const chatType = isLegacy ? 'Legacy (NIP-04)' : 'Modern (NIP-44)';
-      // this.snackBar.open(`Ready to start ${chatType} chat`, 'Close', {
-      //   duration: 3000,
-      // });
     } catch (error) {
       console.error('Error starting chat:', error);
       this.snackBar.open('Failed to start chat', 'Close', { duration: 3000 });

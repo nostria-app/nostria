@@ -695,6 +695,14 @@
   left: 4px;
   top: 8px;
   font-size: 1.1rem;
+
+  &.secure {
+    color: var(--mat-success-color);
+  }
+
+  &.mixed {
+    color: var(--mat-sys-outline);
+  }
 }
 
 // Message meta (time, status) - moved outside bubble
@@ -709,6 +717,21 @@
 
   &.outgoing {
     justify-content: flex-end;
+  }
+
+  .encryption-icon {
+    font-size: 14px;
+    height: 14px;
+    width: 14px;
+    opacity: 0.8;
+
+    &.secure {
+      color: var(--mat-success-color);
+    }
+
+    &.insecure {
+      color: var(--mat-sys-outline);
+    }
   }
 
   .pending-spinner {
