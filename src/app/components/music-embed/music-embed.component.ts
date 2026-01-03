@@ -57,7 +57,7 @@ const MUSIC_KIND = 36787;
           
           <!-- Info section -->
           <div class="embed-info">
-            <app-user-profile [pubkey]="authorPubkey()" mode="list"></app-user-profile>
+            <app-user-profile [pubkey]="authorPubkey()" view="compact"></app-user-profile>
             <h4 class="embed-title">{{ title() }}</h4>
             <div class="embed-meta">
               <app-date-toggle [date]="createdAt()"></app-date-toggle>
@@ -146,6 +146,11 @@ const MUSIC_KIND = 36787;
         outline: 2px solid var(--mat-sys-primary);
         outline-offset: -2px;
       }
+
+      @media (max-width: 400px) {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
     }
 
     .embed-cover {
@@ -158,6 +163,7 @@ const MUSIC_KIND = 36787;
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
+      flex-shrink: 0;
 
       .cover-image {
         width: 100%;
@@ -180,6 +186,12 @@ const MUSIC_KIND = 36787;
           opacity: 0.7;
         }
       }
+
+      @media (max-width: 400px) {
+        width: 56px;
+        height: 56px;
+        min-width: 56px;
+      }
     }
 
     .embed-info {
@@ -199,6 +211,14 @@ const MUSIC_KIND = 36787;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+
+        @media (max-width: 400px) {
+          white-space: normal;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          line-clamp: 2;
+          -webkit-box-orient: vertical;
+        }
       }
 
       .embed-meta {
@@ -206,6 +226,7 @@ const MUSIC_KIND = 36787;
         align-items: center;
         gap: 8px;
         margin-top: 4px;
+        flex-wrap: wrap;
 
         app-date-toggle {
           font-size: 0.8rem;
@@ -220,6 +241,16 @@ const MUSIC_KIND = 36787;
             height: 24px;
           }
         }
+
+        @media (max-width: 400px) {
+          mat-chip-set {
+            display: none;
+          }
+        }
+      }
+
+      @media (max-width: 400px) {
+        flex: 1 1 calc(100% - 130px);
       }
     }
 
@@ -227,6 +258,7 @@ const MUSIC_KIND = 36787;
       display: flex;
       align-items: center;
       gap: 4px;
+      flex-shrink: 0;
 
       .play-btn {
         background: var(--mat-sys-primary);
