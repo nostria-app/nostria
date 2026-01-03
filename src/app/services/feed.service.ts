@@ -243,10 +243,8 @@ export class FeedService {
 
   private readonly algorithms = inject(Algorithms);
 
-  // Signals for feeds and relays
+  // Signals for feeds
   private readonly _feeds = signal<FeedConfig[]>([]);
-  private readonly _userRelays = signal<RelayConfig[]>([]);
-  private readonly _discoveryRelays = signal<RelayConfig[]>([]);
   private readonly _feedsLoaded = signal<boolean>(false);
   private readonly _hasInitialContent = signal<boolean>(false); // Track when first feed content is ready
 
@@ -275,8 +273,6 @@ export class FeedService {
     }
     return storedFeeds;
   });
-  readonly userRelays = computed(() => this._userRelays());
-  readonly discoveryRelays = computed(() => this._discoveryRelays());
   readonly activeFeedId = computed(() => this._activeFeedId());
   readonly feedsLoaded = computed(() => this._feedsLoaded());
   readonly feedsPageActive = computed(() => this._feedsPageActive());
@@ -320,7 +316,6 @@ export class FeedService {
             this._hasInitialContent.set(false);
             this.appState.feedHasInitialContent.set(false);
             await this.loadFeeds(pubkey);
-            this.loadRelays();
           }
         });
 
@@ -2970,63 +2965,7 @@ export class FeedService {
     }
   }
 
-  /**
-   * Load relay configurations from local storage
-   */
-  private loadRelays(): void {
-    try {
-      const relayData = this.localStorageService.getObject<{
-        user: RelayConfig[];
-        discovery: RelayConfig[];
-      }>(this.appState.RELAYS_STORAGE_KEY);
 
-      if (relayData) {
-        this._userRelays.set(relayData.user || []);
-        this._discoveryRelays.set(relayData.discovery || []);
-      } else {
-        // Set default relays
-        this.setDefaultRelays();
-      }
-    } catch (error) {
-      this.logger.error('Error loading relays from storage:', error);
-      this.setDefaultRelays();
-    }
-  }
-
-  /**
-   * Set default relay configurations
-   */
-  private setDefaultRelays(): void {
-    const defaultUserRelays: RelayConfig[] = [
-      { url: 'wss://relay.damus.io', read: true, write: true },
-      { url: 'wss://nos.lol', read: true, write: true },
-      { url: 'wss://relay.snort.social', read: true, write: true },
-    ];
-
-    const defaultDiscoveryRelays: RelayConfig[] = [
-      { url: 'wss://discovery.eu.nostria.app/', read: true, write: false },
-    ];
-
-    this._userRelays.set(defaultUserRelays);
-    this._discoveryRelays.set(defaultDiscoveryRelays);
-    this.saveRelays();
-  }
-
-  /**
-   * Save relay configurations to local storage
-   */
-  private saveRelays(): void {
-    try {
-      const relayData = {
-        user: this._userRelays(),
-        discovery: this._discoveryRelays(),
-      };
-      this.localStorageService.setObject(this.appState.RELAYS_STORAGE_KEY, relayData);
-      this.logger.debug('Saved relays to storage', relayData);
-    } catch (error) {
-      this.logger.error('Error saving relays to storage:', error);
-    }
-  }
   /**
    * Add a new feed
    */
@@ -3278,24 +3217,6 @@ export class FeedService {
       key: key as keyof typeof COLUMN_TYPES,
       ...value,
     }));
-  }
-
-  /**
-   * Update user relays
-   */
-  updateUserRelays(relays: RelayConfig[]): void {
-    this._userRelays.set(relays);
-    this.saveRelays();
-    this.logger.debug('Updated user relays', relays);
-  }
-
-  /**
-   * Update discovery relays
-   */
-  updateDiscoveryRelays(relays: RelayConfig[]): void {
-    this._discoveryRelays.set(relays);
-    this.saveRelays();
-    this.logger.debug('Updated discovery relays', relays);
   }
 
   /**

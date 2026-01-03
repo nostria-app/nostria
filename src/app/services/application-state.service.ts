@@ -27,7 +27,6 @@ export class ApplicationStateService {
   readonly PEOPLE_VIEW_MODE = 'nostria-peple-view-mode';
   readonly MEDIA_ACTIVE_TAB = 'nostria-media-active-tab';
   readonly FEEDS_STORAGE_KEY = 'nostria-feeds';
-  readonly RELAYS_STORAGE_KEY = 'nostria-relays';
   readonly PROCESSING_STORAGE_KEY = 'nostria-processing';
   readonly SETTINGS_KEY = 'nostria-settings';
   readonly WALLETS_KEY = 'nostria-wallets';

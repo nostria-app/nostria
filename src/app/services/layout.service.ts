@@ -917,7 +917,7 @@ export class LayoutService implements OnDestroy {
           // This is a reference to a live event (kind 30311)
           const [, pubkey, dTag] = parts;
           const relayHint = aTag[2] || '';
-          const relays = relayHint ? [relayHint] : this.feedService.userRelays().map((r: { url: string }) => r.url).slice(0, 3);
+          const relays = relayHint ? [relayHint] : this.accountRelay.relays().map((r: { url: string }) => r.url).slice(0, 3);
 
           // Encode as naddr (for parameterized replaceable events)
           const naddr = nip19.naddrEncode({
@@ -936,7 +936,7 @@ export class LayoutService implements OnDestroy {
 
     // Handle live events (kind 30311) - open the stream directly
     if (event.kind === 30311) {
-      const relayHints = this.feedService.userRelays().map((r: { url: string }) => r.url).slice(0, 3);
+      const relayHints = this.accountRelay.relays().map((r: { url: string }) => r.url).slice(0, 3);
       const dTag = event.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
 
       // Encode as naddr (for parameterized replaceable events)
