@@ -433,9 +433,57 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
       const npub = nip19.npubEncode(ev.pubkey);
       const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
       this.clipboard.copy(link);
-      this.snackBar.open('Event link copied!', 'Close', { duration: 2000 });
+      this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
     } catch {
       this.snackBar.open('Failed to copy link', 'Close', { duration: 2000 });
+    }
+  }
+
+  copyEventId(): void {
+    const ev = this.playlist();
+    if (!ev) return;
+
+    try {
+      const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+      const naddr = nip19.naddrEncode({
+        kind: ev.kind,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+      });
+      this.clipboard.copy(`nostr:${naddr}`);
+      this.snackBar.open('Event ID copied!', 'Close', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Failed to copy event ID', 'Close', { duration: 3000 });
+    }
+  }
+
+  shareNative(): void {
+    const ev = this.playlist();
+    if (!ev) return;
+
+    try {
+      const dTag = ev.tags.find(t => t[0] === 'd')?.[1] || '';
+      const npub = nip19.npubEncode(ev.pubkey);
+      const link = `https://nostria.app/music/playlist/${npub}/${encodeURIComponent(dTag)}`;
+      const playlistTitle = this.title();
+
+      if (navigator.share) {
+        navigator.share({
+          title: playlistTitle,
+          text: `Check out ${playlistTitle}`,
+          url: link,
+        }).catch(() => {
+          // User cancelled or error - fallback to copy
+          this.clipboard.copy(link);
+          this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
+        });
+      } else {
+        // Fallback for browsers without native share
+        this.clipboard.copy(link);
+        this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
+      }
+    } catch {
+      this.snackBar.open('Failed to share playlist', 'Close', { duration: 3000 });
     }
   }
 
