@@ -162,8 +162,8 @@ export class SearchSettingsComponent {
       },
     });
 
-    dialogRef.afterClosed().subscribe(async (result: { action: string }) => {
-      if (result && result.action === 'add') {
+    dialogRef.afterClosed().subscribe(async (result: { confirmed: boolean }) => {
+      if (result?.confirmed) {
         this.isPublishing.set(true);
 
         try {
