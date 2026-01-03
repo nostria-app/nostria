@@ -85,8 +85,12 @@
                 (click)="selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
-                    @if (chat.encryptionType === 'nip44') {
-                    <mat-icon inline="true" class="chat-encryption-icon">shield_lock</mat-icon>
+                    @if (!chat.hasLegacyMessages) {
+                    <mat-icon inline="true" class="chat-encryption-icon secure"
+                      matTooltip="All messages use secure encryption (NIP-17)">verified_user</mat-icon>
+                    } @else {
+                    <mat-icon inline="true" class="chat-encryption-icon mixed"
+                      matTooltip="Contains legacy messages (NIP-04)">shield</mat-icon>
                     }
 
                     <app-user-profile [pubkey]="chat.pubkey" view="icon" #profileComp>
@@ -166,8 +170,12 @@
                 (click)="selectChat(chat)">
                 <div class="chat-item-content">
                   <div class="chat-avatar">
-                    @if (chat.encryptionType === 'nip44') {
-                    <mat-icon inline="true" class="chat-encryption-icon">shield_lock</mat-icon>
+                    @if (!chat.hasLegacyMessages) {
+                    <mat-icon inline="true" class="chat-encryption-icon secure"
+                      matTooltip="All messages use secure encryption (NIP-17)">verified_user</mat-icon>
+                    } @else {
+                    <mat-icon inline="true" class="chat-encryption-icon mixed"
+                      matTooltip="Contains legacy messages (NIP-04)">shield</mat-icon>
                     }
 
                     <app-user-profile [pubkey]="chat.pubkey" view="icon" #otherProfileComp>
@@ -312,6 +320,13 @@
           </div>
 
           <div class="message-meta" [class.outgoing]="message.isOutgoing">
+            <!-- Encryption status indicator -->
+            @if (message.encryptionType === 'nip44') {
+            <mat-icon class="encryption-icon secure" matTooltip="Secure (NIP-17)">verified_user</mat-icon>
+            } @else {
+            <mat-icon class="encryption-icon insecure" matTooltip="Legacy encryption (NIP-04)">block</mat-icon>
+            }
+
             @if (message.pending) {
             <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
             } @else if (message.failed) {

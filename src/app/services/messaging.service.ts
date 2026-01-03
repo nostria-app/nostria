@@ -28,7 +28,7 @@ interface Chat {
   lastMessage?: DirectMessage | null;
   relays?: string[];
   encryptionType?: 'nip04' | 'nip44';
-  isLegacy?: boolean; // true for NIP-04 chats
+  hasLegacyMessages?: boolean; // true if chat contains any NIP-04 messages
   messages: Map<string, DirectMessage>;
 }
 
@@ -137,7 +137,8 @@ export class MessagingService implements NostriaService {
     }
 
     const currentMap = this.chatsMap();
-    const chatId = message.encryptionType === 'nip04' ? `${pubkey}-nip04` : `${pubkey}-nip44`;
+    // Use pubkey directly as chatId - messages are merged regardless of encryption type
+    const chatId = pubkey;
 
     // Check if this message already exists in any chat to prevent duplicates
     for (const existingChat of currentMap.values()) {
@@ -161,8 +162,8 @@ export class MessagingService implements NostriaService {
         unreadCount: 0,
         lastMessage: message,
         relays: [],
-        encryptionType: message.encryptionType || 'nip44',
-        isLegacy: message.encryptionType === 'nip04',
+        encryptionType: 'nip44', // Default to modern encryption for new messages
+        hasLegacyMessages: message.encryptionType === 'nip04',
         messages: new Map([[message.id, message]]),
       };
 
@@ -178,6 +179,8 @@ export class MessagingService implements NostriaService {
         messages: updatedMessagesMap,
         lastMessage: this.getLatestMessage(updatedMessagesMap),
         unreadCount: message.isOutgoing ? chat.unreadCount : chat.unreadCount + 1,
+        // Track if chat has any legacy (NIP-04) messages
+        hasLegacyMessages: chat.hasLegacyMessages || message.encryptionType === 'nip04',
       };
 
       // Update the chat in the new map
@@ -271,16 +274,22 @@ export class MessagingService implements NostriaService {
       // Track the oldest message timestamp from stored messages
       let oldestStoredTimestamp: number | null = null;
 
-      // Build chat map from stored messages
+      // Build chat map from stored messages - group by pubkey to merge NIP-04 and NIP-44 chats
+      const chatsByPubkey = new Map<string, { messages: StoredDirectMessage[], unreadCount: number }>();
+
       for (const chatSummary of storedChats) {
         const messages = await this.database.getMessagesForChat(myPubkey, chatSummary.chatId);
 
         if (messages.length === 0) continue;
 
-        // Extract pubkey and encryption type from chatId (format: pubkey-nip04 or pubkey-nip44)
-        const parts = chatSummary.chatId.split('-');
-        const encryptionType = parts[parts.length - 1] as 'nip04' | 'nip44';
-        const pubkey = parts.slice(0, -1).join('-');
+        // Extract pubkey from chatId (format: pubkey-nip04 or pubkey-nip44 for legacy, or just pubkey)
+        let pubkey: string;
+        if (chatSummary.chatId.endsWith('-nip04') || chatSummary.chatId.endsWith('-nip44')) {
+          const parts = chatSummary.chatId.split('-');
+          pubkey = parts.slice(0, -1).join('-');
+        } else {
+          pubkey = chatSummary.chatId;
+        }
 
         // Validate pubkey - skip invalid chats
         if (!pubkey || pubkey === 'undefined' || pubkey.length < 10) {
@@ -288,11 +297,23 @@ export class MessagingService implements NostriaService {
           continue;
         }
 
-        // Convert stored messages to DirectMessage format
+        // Merge messages for the same pubkey
+        const existing = chatsByPubkey.get(pubkey);
+        if (existing) {
+          existing.messages.push(...messages);
+          existing.unreadCount += chatSummary.unreadCount;
+        } else {
+          chatsByPubkey.set(pubkey, { messages: [...messages], unreadCount: chatSummary.unreadCount });
+        }
+      }
+
+      // Now create chat objects from merged data
+      for (const [pubkey, data] of chatsByPubkey.entries()) {
         const messagesMap = new Map<string, DirectMessage>();
         let lastMessage: DirectMessage | null = null;
+        let hasLegacyMessages = false;
 
-        for (const storedMsg of messages) {
+        for (const storedMsg of data.messages) {
           const dm: DirectMessage = {
             id: storedMsg.messageId,
             pubkey: storedMsg.pubkey,
@@ -313,26 +334,31 @@ export class MessagingService implements NostriaService {
             lastMessage = dm;
           }
 
+          // Track if chat has any legacy messages
+          if (storedMsg.encryptionType === 'nip04') {
+            hasLegacyMessages = true;
+          }
+
           // Track the oldest message timestamp across all chats
           if (oldestStoredTimestamp === null || dm.created_at < oldestStoredTimestamp) {
             oldestStoredTimestamp = dm.created_at;
           }
         }
 
-        // Create the chat object
+        // Create the chat object - use pubkey as chatId
         const chat: Chat = {
-          id: chatSummary.chatId,
+          id: pubkey,
           pubkey: pubkey,
-          unreadCount: chatSummary.unreadCount,
+          unreadCount: data.unreadCount,
           lastMessage: lastMessage,
-          encryptionType: encryptionType,
-          isLegacy: encryptionType === 'nip04',
+          encryptionType: 'nip44', // Default to modern encryption
+          hasLegacyMessages: hasLegacyMessages,
           messages: messagesMap,
         };
 
         this.chatsMap.update(map => {
           const newMap = new Map(map);
-          newMap.set(chatSummary.chatId, chat);
+          newMap.set(pubkey, chat);
           return newMap;
         });
       }
@@ -931,12 +957,11 @@ export class MessagingService implements NostriaService {
       }
     }
 
-    // Determine which message kinds to fetch based on chat encryption type
-    const messageKinds =
-      chat.encryptionType === 'nip04' ? [kinds.EncryptedDirectMessage] : [kinds.GiftWrap];
+    // Query both NIP-04 and NIP-44 messages for merged chats
+    const messageKinds = [kinds.EncryptedDirectMessage, kinds.GiftWrap];
 
     this.logger.debug(
-      `Loading more messages for chat ${chatId}, encryption type: ${chat.encryptionType}, until: ${until}`
+      `Loading more messages for chat ${chatId}, until: ${until}`
     );
 
     // Create filters for both received and sent messages
@@ -1007,7 +1032,7 @@ export class MessagingService implements NostriaService {
                   failed: false,
                   received: true,
                   read: false,
-                  encryptionType: chat.encryptionType,
+                  encryptionType: event.kind === kinds.EncryptedDirectMessage ? 'nip04' : 'nip44',
                 };
 
                 loadedMessages.push(directMessage);
@@ -1078,7 +1103,7 @@ export class MessagingService implements NostriaService {
                   failed: false,
                   received: true,
                   read: false,
-                  encryptionType: chat.encryptionType,
+                  encryptionType: event.kind === kinds.EncryptedDirectMessage ? 'nip04' : 'nip44',
                 };
 
                 loadedMessages.push(directMessage);
