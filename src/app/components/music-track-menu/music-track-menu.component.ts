@@ -51,6 +51,21 @@ const MUSIC_KIND = 36787;
         <mat-icon>info</mat-icon>
         <span>Track Details</span>
       </button>
+      <button mat-menu-item [matMenuTriggerFor]="copyMenu">
+        <mat-icon>content_copy</mat-icon>
+        <span>Copy</span>
+      </button>
+      <button mat-menu-item [matMenuTriggerFor]="shareMenu">
+        <mat-icon>share</mat-icon>
+        <span>Share</span>
+      </button>
+      <button mat-menu-item (click)="publishEvent()">
+        <mat-icon>publish</mat-icon>
+        <span>Publish Event</span>
+      </button>
+    </mat-menu>
+    
+    <mat-menu #copyMenu="matMenu">
       <button mat-menu-item (click)="copyTrackLink()">
         <mat-icon>link</mat-icon>
         <span>Copy Link</span>
@@ -59,17 +74,9 @@ const MUSIC_KIND = 36787;
         <mat-icon>fingerprint</mat-icon>
         <span>Copy Event ID</span>
       </button>
-      <button mat-menu-item [matMenuTriggerFor]="shareMenu">
-        <mat-icon>share</mat-icon>
-        <span>Share</span>
-      </button>
       <button mat-menu-item (click)="copyEventData()">
         <mat-icon>data_object</mat-icon>
         <span>Copy Event Data</span>
-      </button>
-      <button mat-menu-item (click)="publishEvent()">
-        <mat-icon>publish</mat-icon>
-        <span>Publish Event</span>
       </button>
     </mat-menu>
     
