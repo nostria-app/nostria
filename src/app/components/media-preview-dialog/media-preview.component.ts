@@ -57,6 +57,13 @@ export class MediaPreviewDialogComponent implements OnDestroy {
   lastMouseX = signal(0);
   lastMouseY = signal(0);
 
+  // Pinch-to-zoom tracking
+  private isPinching = false;
+  private initialPinchDistance = 0;
+  private initialPinchScale = 1;
+  private pinchCenterX = 0;
+  private pinchCenterY = 0;
+
   // Current index in media items array
   currentIndex = signal(0);
 
@@ -231,6 +238,11 @@ export class MediaPreviewDialogComponent implements OnDestroy {
 
     if (event instanceof TouchEvent) {
       event.preventDefault();
+      // Check for pinch gesture (two fingers)
+      if (event.touches.length === 2) {
+        this.startPinch(event);
+        return;
+      }
       if (event.touches.length !== 1) return;
       clientX = event.touches[0].clientX;
       clientY = event.touches[0].clientY;
@@ -247,12 +259,25 @@ export class MediaPreviewDialogComponent implements OnDestroy {
   }
 
   onPointerMove(event: MouseEvent | TouchEvent): void {
+    if (event instanceof TouchEvent) {
+      event.preventDefault();
+      // Handle pinch gesture
+      if (event.touches.length === 2 && this.isPinching) {
+        this.handlePinch(event);
+        return;
+      }
+      // If we were pinching but now have less than 2 fingers, stop pinching
+      if (this.isPinching && event.touches.length < 2) {
+        this.endPinch();
+        return;
+      }
+    }
+
     if (!this.isDragging()) return;
 
     let clientX: number, clientY: number;
 
     if (event instanceof TouchEvent) {
-      event.preventDefault();
       if (event.touches.length !== 1) return;
       clientX = event.touches[0].clientX;
       clientY = event.touches[0].clientY;
@@ -274,6 +299,47 @@ export class MediaPreviewDialogComponent implements OnDestroy {
 
   onPointerUp(): void {
     this.isDragging.set(false);
+    this.endPinch();
+  }
+
+  // Pinch-to-zoom methods
+  private startPinch(event: TouchEvent): void {
+    if (event.touches.length !== 2) return;
+
+    this.isPinching = true;
+    this.isDragging.set(false);
+    this.initialPinchDistance = this.getPinchDistance(event);
+    this.initialPinchScale = this.scale();
+
+    // Calculate pinch center point
+    this.pinchCenterX = (event.touches[0].clientX + event.touches[1].clientX) / 2;
+    this.pinchCenterY = (event.touches[0].clientY + event.touches[1].clientY) / 2;
+  }
+
+  private handlePinch(event: TouchEvent): void {
+    if (!this.isPinching || event.touches.length !== 2) return;
+
+    const currentDistance = this.getPinchDistance(event);
+    const scaleRatio = currentDistance / this.initialPinchDistance;
+    let newScale = this.initialPinchScale * scaleRatio;
+
+    // Clamp scale between 0.5 and 5
+    newScale = Math.max(0.5, Math.min(5, newScale));
+
+    this.scale.set(newScale);
+    this.resetHideControlsTimer();
+  }
+
+  private endPinch(): void {
+    this.isPinching = false;
+  }
+
+  private getPinchDistance(event: TouchEvent): number {
+    const touch1 = event.touches[0];
+    const touch2 = event.touches[1];
+    const dx = touch2.clientX - touch1.clientX;
+    const dy = touch2.clientY - touch1.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
   }
 
   onWheel(event: WheelEvent): void {
