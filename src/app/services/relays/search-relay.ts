@@ -22,7 +22,7 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
   private database = inject(DatabaseService);
   private initialized = false;
 
-  private readonly DEFAULT_SEARCH_RELAYS = ['wss://nostr.wine/'];
+  private readonly DEFAULT_SEARCH_RELAYS = ['wss://search.nos.today/'];
 
   constructor() {
     super(new SimplePool());
