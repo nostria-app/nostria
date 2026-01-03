@@ -469,7 +469,7 @@ export class UtilitiesService {
     'wss://nostr.wine/',
     'wss://eden.nostr.land/',
     'wss://relay.snort.social/',
-    'wss://relay.nostr.band/',
+    // 'wss://relay.nostr.band/',
     'wss://nostr.oxtr.dev/',
     'wss://nostr.mom/',
   ];
