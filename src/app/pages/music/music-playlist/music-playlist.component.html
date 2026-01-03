@@ -14,13 +14,17 @@
         <span>Edit Playlist</span>
       </button>
       }
-      <button mat-menu-item (click)="sharePlaylist()">
-        <mat-icon>share</mat-icon>
-        <span>Share Playlist</span>
-      </button>
       <button mat-menu-item (click)="copyEventLink()">
         <mat-icon>link</mat-icon>
-        <span>Copy Event Link</span>
+        <span>Copy Link</span>
+      </button>
+      <button mat-menu-item (click)="copyEventId()">
+        <mat-icon>fingerprint</mat-icon>
+        <span>Copy Event ID</span>
+      </button>
+      <button mat-menu-item [matMenuTriggerFor]="shareMenu">
+        <mat-icon>share</mat-icon>
+        <span>Share</span>
       </button>
       <button mat-menu-item (click)="copyEventData()">
         <mat-icon>data_object</mat-icon>
@@ -33,6 +37,16 @@
       <button mat-menu-item (click)="publishPlaylist()">
         <mat-icon>publish</mat-icon>
         <span>Publish Event</span>
+      </button>
+    </mat-menu>
+    <mat-menu #shareMenu="matMenu">
+      <button mat-menu-item (click)="shareNative()">
+        <mat-icon>ios_share</mat-icon>
+        <span>Share via...</span>
+      </button>
+      <button mat-menu-item (click)="sharePlaylist()">
+        <mat-icon>edit_note</mat-icon>
+        <span>Share as Note</span>
       </button>
     </mat-menu>
   </div>

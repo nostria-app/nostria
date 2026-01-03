@@ -14,8 +14,11 @@ import { ApplicationService } from '../../services/application.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
+import { EventService } from '../../services/event';
 import { MediaItem } from '../../interfaces';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
+
+const MUSIC_KIND = 36787;
 
 @Component({
   selector: 'app-music-track-menu',
@@ -52,6 +55,14 @@ import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } fro
         <mat-icon>link</mat-icon>
         <span>Copy Link</span>
       </button>
+      <button mat-menu-item (click)="copyEventId()">
+        <mat-icon>fingerprint</mat-icon>
+        <span>Copy Event ID</span>
+      </button>
+      <button mat-menu-item [matMenuTriggerFor]="shareMenu">
+        <mat-icon>share</mat-icon>
+        <span>Share</span>
+      </button>
       <button mat-menu-item (click)="copyEventData()">
         <mat-icon>data_object</mat-icon>
         <span>Copy Event Data</span>
@@ -59,6 +70,17 @@ import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } fro
       <button mat-menu-item (click)="publishEvent()">
         <mat-icon>publish</mat-icon>
         <span>Publish Event</span>
+      </button>
+    </mat-menu>
+    
+    <mat-menu #shareMenu="matMenu">
+      <button mat-menu-item (click)="shareNative()">
+        <mat-icon>ios_share</mat-icon>
+        <span>Share via...</span>
+      </button>
+      <button mat-menu-item (click)="shareAsNote()">
+        <mat-icon>edit_note</mat-icon>
+        <span>Share as Note</span>
       </button>
     </mat-menu>
     
@@ -118,6 +140,7 @@ export class MusicTrackMenuComponent {
   private clipboard = inject(Clipboard);
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
+  private eventService = inject(EventService);
 
   // ViewChild for exposing the menu - must be public for template access
   @ViewChild('trackMenu', { static: true }) public trackMenu!: MatMenu;
@@ -244,6 +267,66 @@ export class MusicTrackMenuComponent {
 
   publishEvent(): void {
     this.layout.publishEvent(this.track());
+  }
+
+  copyEventId(): void {
+    const ev = this.track();
+    const dTag = this.getIdentifier();
+    try {
+      const naddr = nip19.naddrEncode({
+        kind: MUSIC_KIND,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+      });
+      this.clipboard.copy(`nostr:${naddr}`);
+      this.snackBar.open('Event ID copied!', 'Close', { duration: 2000 });
+    } catch {
+      this.snackBar.open('Failed to copy event ID', 'Close', { duration: 3000 });
+    }
+  }
+
+  shareNative(): void {
+    const npub = this.getArtistNpub();
+    const id = this.getIdentifier();
+    const title = this.getTitle();
+    
+    if (!npub || !id) {
+      this.snackBar.open('Failed to generate share link', 'Close', { duration: 3000 });
+      return;
+    }
+
+    const link = `https://nostria.app/music/song/${npub}/${encodeURIComponent(id)}`;
+
+    if (navigator.share) {
+      navigator.share({
+        title: title,
+        text: `Listen to ${title}`,
+        url: link,
+      }).catch(() => {
+        // User cancelled or error - fallback to copy
+        this.clipboard.copy(link);
+        this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
+      });
+    } else {
+      // Fallback for browsers without native share
+      this.clipboard.copy(link);
+      this.snackBar.open('Link copied!', 'Close', { duration: 2000 });
+    }
+  }
+
+  shareAsNote(): void {
+    const ev = this.track();
+    const dTag = this.getIdentifier();
+    try {
+      const naddr = nip19.naddrEncode({
+        kind: MUSIC_KIND,
+        pubkey: ev.pubkey,
+        identifier: dTag,
+      });
+      this.eventService.createNote({ content: `nostr:${naddr}` });
+    } catch {
+      this.snackBar.open('Failed to generate track reference', 'Close', { duration: 3000 });
+    }
   }
 
   createNewPlaylist(): void {
