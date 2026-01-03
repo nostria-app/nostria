@@ -6,7 +6,7 @@
   <div class="flex-container add-relay-container">
     <mat-form-field appearance="outline" class="relay-input" subscriptSizing="dynamic">
       <mat-label i18n="@@settings.search.add-url">Relay URL (wss://...)</mat-label>
-      <input matInput placeholder="wss://relay.nostr.wine" [value]="newSearchRelayUrl()"
+      <input matInput placeholder="wss://nostr.wine" [value]="newSearchRelayUrl()"
         (input)="newSearchRelayUrl.set($any($event.target).value)" (keyup.enter)="addSearchRelay()" />
     </mat-form-field>
     <button mat-flat-button class="add-button" (click)="addSearchRelay()" [disabled]="isPublishing()"
@@ -31,7 +31,7 @@
           functionality.</p>
         <button mat-stroked-button (click)="addDefaultRelay()" [disabled]="isPublishing()">
           <mat-icon>add</mat-icon>
-          Add Default Relay (relay.nostr.wine)
+          Add Default Relay (nostr.wine)
         </button>
       </div>
       } @else {

@@ -146,7 +146,7 @@
     @let tags = displayHashtags();
     @if (tags.length > 0) {
     <div class="hashtags">
-      @for (tag of tags; track tag) {
+      @for (tag of tags; track $index) {
       <mat-chip class="hashtag-chip">
         <mat-icon matChipAvatar>tag</mat-icon>
         {{ tag }}

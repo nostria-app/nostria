@@ -64,6 +64,44 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
     return relayUrls;
   }
 
+  /**
+   * Get DM-specific relay URLs for a user (kind 10050 - NIP-17)
+   * These are the relays where a user expects to receive direct messages.
+   * Falls back to regular relay list (kind 10002) if no DM relays are found.
+   */
+  async getUserDmRelayUrls(pubkey: string): Promise<string[]> {
+    if (!this.initialized) {
+      await this.load();
+    }
+
+    this.logger.debug(`[DiscoveryRelay] getUserDmRelayUrls called for pubkey: ${pubkey.slice(0, 16)}...`);
+
+    // First try to get DM relays (kind 10050)
+    const dmRelayEvent = await this.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
+
+    this.logger.debug(`[DiscoveryRelay] DM relay event (kind 10050) found: ${!!dmRelayEvent}`);
+
+    if (dmRelayEvent) {
+      // Extract relay URLs from the event tags
+      // Format: ["relay", "wss://relay.example.com"]
+      const relayUrls = dmRelayEvent.tags
+        .filter((tag: string[]) => tag[0] === 'relay')
+        .map((tag: string[]) => tag[1])
+        .filter((url: string | undefined) => url && (url.startsWith('wss://') || url.startsWith('ws://')));
+
+      if (relayUrls.length > 0) {
+        this.logger.debug(`[DiscoveryRelay] Found ${relayUrls.length} DM relays (kind 10050) for pubkey ${pubkey.slice(0, 16)}:`, relayUrls);
+        return relayUrls;
+      }
+    }
+
+    // Fallback to regular relay list
+    this.logger.debug(`[DiscoveryRelay] No DM relays found for pubkey ${pubkey.slice(0, 16)}, falling back to regular relays`);
+    const fallbackRelays = await this.getUserRelayUrls(pubkey);
+    this.logger.debug(`[DiscoveryRelay] Fallback relays for pubkey ${pubkey.slice(0, 16)}:`, fallbackRelays);
+    return fallbackRelays;
+  }
+
   async load() {
     // Load bootstrap relays from local storage or use default ones
     const bootstrapRelays = this.loadDiscoveryRelaysFromStorage();

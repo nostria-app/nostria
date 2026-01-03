@@ -189,12 +189,15 @@ export class LiveEventComponent {
     const tags = this.hashtags();
     const game = this.gameData();
 
-    return tags.map(tag => {
+    const mappedTags = tags.map(tag => {
       if (tag.startsWith('igdb:') && game?.name) {
         return game.name;
       }
       return tag;
     });
+
+    // Remove duplicates to prevent Angular tracking errors
+    return [...new Set(mappedTags)];
   });
 
   // IGDB game ID from tags

@@ -64,6 +64,7 @@ import { LayoutService } from '../../services/layout.service';
 import { NamePipe } from '../../pipes/name.pipe';
 import { AccountRelayService } from '../../services/relays/account-relay';
 import { UserRelayService } from '../../services/relays/user-relay';
+import { DiscoveryRelayService } from '../../services/relays/discovery-relay';
 import { DatabaseService } from '../../services/database.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { SpeechService } from '../../services/speech.service';
@@ -161,6 +162,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   showChatDetails = signal<boolean>(false); // Chat details sidepanel
   showHiddenChats = signal<boolean>(false); // Toggle to show hidden chats
   private accountRelay = inject(AccountRelayService);
+  private discoveryRelay = inject(DiscoveryRelayService);
 
   // Timeout duration for waiting for chats to load when opening a specific chat
   private readonly CHAT_LOAD_TIMEOUT_MS = 10000;
@@ -570,16 +572,27 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             });
           }, this.CHAT_LOAD_TIMEOUT_MS);
         } else {
-          // Chats already loaded, start immediately
-          this.logger.debug('Chats already loaded, starting chat immediately');
-          this.startChatWithPubkey(pubkey);
+          // Chats already loaded - refresh to get any missed messages, then start chat
+          this.logger.debug('Chats already loaded, refreshing and starting chat');
+          this.messaging.refreshChats().then(() => {
+            this.startChatWithPubkey(pubkey);
+          }).catch(() => {
+            // Still start the chat even if refresh fails
+            this.startChatWithPubkey(pubkey);
+          });
         }
       } else {
         // No pubkey query param - just do regular initialization
-        // Load chats when the messages component initializes if not already loading
-        if (!this.messaging.isLoading() && this.messaging.sortedChats().length === 0) {
-          this.logger.debug('Loading chats on messages component init (no DM link)');
-          this.messaging.loadChats();
+        // Always refresh chats when entering the messages page to catch any missed messages
+        if (!this.messaging.isLoading()) {
+          if (this.messaging.sortedChats().length === 0) {
+            this.logger.debug('Loading chats on messages component init (no DM link)');
+            this.messaging.loadChats();
+          } else {
+            // Already have chats, do an incremental refresh to catch any messages we missed while away
+            this.logger.debug('Refreshing chats to catch any missed messages');
+            this.messaging.refreshChats();
+          }
         }
       }
     });
@@ -589,7 +602,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
    * Start the live subscription for incoming DMs.
    * This allows the message list to auto-update when new DMs arrive.
    */
-  private startLiveSubscription(): void {
+  private async startLiveSubscription(): Promise<void> {
     // Close any existing subscriptions first
     if (this.messageSubscription) {
       this.messageSubscription.close();
@@ -597,7 +610,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     }
 
     // Start the live subscription via the messaging service
-    const sub = this.messaging.subscribeToIncomingMessages();
+    const sub = await this.messaging.subscribeToIncomingMessages();
     if (sub) {
       this.messageSubscription = sub;
       this.logger.debug('Live DM subscription started');
@@ -1481,11 +1494,15 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
       // Sign the gift wrap with the ephemeral key
       // const signedGiftWrapSelf = finalizeEvent(giftWrapSelf, ephemeralKey);
 
-      // Publish both gift wraps to both the receiver's relays and your own account relays
-      // This ensures maximum delivery reliability
+      // Publish both gift wraps:
+      // - Recipient's gift wrap → recipient's DM relays + account relays + discovery relays (fallback)
+      // - Sender's gift wrap (self) → sender's DM relays + account relays (for sync across devices)
+      // Discovery relays ensure the message reaches recipients whose DM relays we couldn't discover
       await Promise.allSettled([
-        this.publishToUserRelays(signedGiftWrap, receiverPubkey), // Gift wrap for receiver → receiver's relays
+        this.publishToUserDmRelays(signedGiftWrap, receiverPubkey), // Gift wrap for receiver → receiver's DM relays
         this.publishToAccountRelays(signedGiftWrap), // Gift wrap for receiver → account relays (backup)
+        this.publishToDiscoveryRelays(signedGiftWrap), // Gift wrap for receiver → discovery relays (fallback)
+        this.publishToUserDmRelays(signedGiftWrap2, myPubkey), // Gift wrap for sender → sender's DM relays (for other devices)
         this.publishToAccountRelays(signedGiftWrap2), // Gift wrap for sender (self) → account relays
       ]);
 
@@ -1516,6 +1533,17 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
     await Promise.allSettled([promisesUser, promisesAccount]);
   }
 
+  /**
+   * Publish a gift-wrapped DM to the recipient's DM relays (NIP-17)
+   * Uses kind 10050 relays if available, falls back to regular relays
+   */
+  private async publishToUserDmRelays(event: NostrEvent, pubkey: string): Promise<void> {
+    const promisesUser = this.userRelayService.publishToDmRelays(pubkey, event);
+
+    // Wait for all publish attempts to complete
+    await Promise.allSettled([promisesUser]);
+  }
+
   private async publishToUserRelays(event: NostrEvent, pubkey: string): Promise<void> {
     const promisesUser = this.userRelayService.publish(pubkey, event);
 
@@ -1528,6 +1556,27 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Wait for all publish attempts to complete
     await Promise.allSettled([promisesAccount]);
+  }
+
+  /**
+   * Publish to discovery relays as a fallback
+   * Discovery relays are popular relays that both sender and recipient might use
+   */
+  private async publishToDiscoveryRelays(event: NostrEvent): Promise<void> {
+    const discoveryRelayUrls = this.discoveryRelay.getRelayUrls();
+    if (discoveryRelayUrls.length === 0) {
+      this.logger.debug('No discovery relays available for publishing');
+      return;
+    }
+
+    console.log('[MessagesComponent] Publishing to discovery relays:', discoveryRelayUrls);
+
+    // Use the SimplePool to publish directly to discovery relays
+    const pool = this.discoveryRelay.getPool();
+    if (pool) {
+      const publishResults = pool.publish(discoveryRelayUrls, event);
+      await Promise.allSettled(publishResults);
+    }
   }
 
   /**

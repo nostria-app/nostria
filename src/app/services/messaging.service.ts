@@ -19,6 +19,8 @@ import { bytesToHex } from 'nostr-tools/utils';
 import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService, StoredDirectMessage } from './database.service';
 import { AccountLocalStateService } from './account-local-state.service';
+import { RelayPoolService } from './relays/relay-pool';
+import { DiscoveryRelayService } from './relays/discovery-relay';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -52,6 +54,8 @@ interface DirectMessage {
 export class MessagingService implements NostriaService {
   private nostr = inject(NostrService);
   private relay = inject(AccountRelayService);
+  private discoveryRelay = inject(DiscoveryRelayService);
+  private pool = inject(RelayPoolService);
   private logger = inject(LoggerService);
   private readonly accountState = inject(AccountStateService);
   readonly utilities = inject(UtilitiesService);
@@ -112,6 +116,68 @@ export class MessagingService implements NostriaService {
         });
       }
     });
+
+    // Effect to auto-start DM subscription when user is logged in
+    // This ensures we receive incoming messages even when not on the Messages page
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+
+      if (pubkey) {
+        // User is logged in - start the subscription
+        untracked(() => {
+          this.logger.info('Auto-starting DM subscription for logged in user');
+          this.startDmSubscriptionWithRetry();
+        });
+      } else {
+        // User logged out - close the subscription
+        untracked(() => {
+          if (this.liveSubscription) {
+            this.logger.info('Closing DM subscription - user logged out');
+            this.closeLiveSubscription();
+          }
+        });
+      }
+    });
+  }
+
+  /**
+   * Start the DM subscription with retry logic to wait for relay initialization.
+   * Retries up to 10 times with 2-second intervals.
+   */
+  private async startDmSubscriptionWithRetry(retryCount = 0): Promise<void> {
+    const maxRetries = 10;
+    const retryDelay = 2000; // 2 seconds
+
+    console.log('[MessagingService] startDmSubscriptionWithRetry called', {
+      retryCount,
+      isRelayInitialized: this.relay.isInitialized(),
+      relayUrls: this.relay.getRelayUrls(),
+    });
+
+    // Check if relays are initialized
+    if (!this.relay.isInitialized()) {
+      if (retryCount < maxRetries) {
+        console.log(`[MessagingService] Waiting for relay initialization (attempt ${retryCount + 1}/${maxRetries})`);
+        this.logger.debug(`Waiting for relay initialization before starting DM subscription (attempt ${retryCount + 1}/${maxRetries})`);
+        setTimeout(() => {
+          this.startDmSubscriptionWithRetry(retryCount + 1);
+        }, retryDelay);
+        return;
+      } else {
+        console.warn('[MessagingService] Max retries reached waiting for relay initialization');
+        this.logger.warn('Max retries reached waiting for relay initialization, attempting subscription anyway');
+      }
+    }
+
+    console.log('[MessagingService] Starting DM subscription...');
+    const sub = await this.subscribeToIncomingMessages();
+    if (sub) {
+      console.log('[MessagingService] DM subscription started successfully');
+      this.logger.info('DM subscription started successfully');
+    } else {
+      console.warn('[MessagingService] Failed to start DM subscription');
+      this.logger.warn('Failed to start DM subscription');
+    }
   }
 
   hasMessage(chatId: string, messageId: string): boolean {
@@ -159,13 +225,20 @@ export class MessagingService implements NostriaService {
       const newChat: Chat = {
         id: chatId,
         pubkey: pubkey,
-        unreadCount: 0,
+        unreadCount: message.isOutgoing ? 0 : 1, // Count as unread if incoming
         lastMessage: message,
         relays: [],
         encryptionType: 'nip44', // Default to modern encryption for new messages
         hasLegacyMessages: message.encryptionType === 'nip04',
         messages: new Map([[message.id, message]]),
       };
+
+      console.log('[MessagingService] Created new chat with message', {
+        chatId,
+        messageId: message.id,
+        isOutgoing: message.isOutgoing,
+        unreadCount: newChat.unreadCount,
+      });
 
       // Add the new chat to the new map
       newMap.set(chatId, newChat);
@@ -182,6 +255,14 @@ export class MessagingService implements NostriaService {
         // Track if chat has any legacy (NIP-04) messages
         hasLegacyMessages: chat.hasLegacyMessages || message.encryptionType === 'nip04',
       };
+
+      console.log('[MessagingService] Updated chat with message', {
+        chatId,
+        messageId: message.id,
+        isOutgoing: message.isOutgoing,
+        previousUnread: chat.unreadCount,
+        newUnread: updatedChat.unreadCount,
+      });
 
       // Update the chat in the new map
       newMap.set(chatId, updatedChat);
@@ -462,6 +543,179 @@ export class MessagingService implements NostriaService {
     } catch (error) {
       this.logger.error('Failed to send NIP-44 message', error);
       throw error;
+    }
+  }
+
+  /**
+   * Refresh chats to catch any messages that were missed while the page was closed.
+   * This does an incremental sync from the last check timestamp.
+   * Unlike loadChats(), this is faster as it only fetches new messages.
+   */
+  async refreshChats(): Promise<void> {
+    const myPubkey = this.accountState.pubkey();
+
+    if (!myPubkey) {
+      this.logger.warn('Cannot refresh chats: no account pubkey');
+      return;
+    }
+
+    // Don't refresh if already loading
+    if (this.isLoading()) {
+      this.logger.debug('Already loading chats, skipping refresh');
+      return;
+    }
+
+    const lastCheck = this.accountLocalState.getMessagesLastCheck(myPubkey);
+
+    if (!lastCheck) {
+      // No last check timestamp, do a full load instead
+      this.logger.debug('No lastCheck timestamp, doing full load');
+      return this.loadChats();
+    }
+
+    // NIP-17 gift wraps have randomized timestamps up to 2 days (172800 seconds) in the past for privacy.
+    // We need to use a buffer that accounts for this when refreshing.
+    // Use the larger of: lastCheck - 3 days, or 0
+    const NIP17_TIMESTAMP_BUFFER = 259200; // 3 days in seconds
+    const since = Math.max(0, lastCheck - NIP17_TIMESTAMP_BUFFER);
+
+    this.logger.info(`Refreshing messages since: ${new Date(since * 1000).toISOString()} (with NIP-17 3-day buffer)`);
+
+    // Query both incoming messages (where we're tagged) AND outgoing (from us)
+    // This catches messages sent from other devices logged into the same account
+    const filterIncoming: Filter = {
+      kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
+      '#p': [myPubkey],
+      since: since,
+    };
+
+    const filterOutgoing: Filter = {
+      kinds: [kinds.EncryptedDirectMessage],
+      authors: [myPubkey],
+      since: since,
+    };
+
+    try {
+      // Collect all relays to query
+      // Include: DM relays, account relays, AND discovery relays
+      // Discovery relays are popular relays where messages might be published by senders
+      // who couldn't discover our DM relays
+      const dmRelayUrls = await this.getDmRelayUrls(myPubkey);
+      const accountRelays = this.relay.getRelayUrls();
+      const discoveryRelays = this.discoveryRelay.getRelayUrls();
+      const allRelays = [...new Set([...dmRelayUrls, ...accountRelays, ...discoveryRelays])];
+
+      console.log('[MessagingService] refreshChats relay setup:', {
+        dmRelayUrls,
+        accountRelays,
+        discoveryRelays,
+        allRelays,
+      });
+
+      if (allRelays.length === 0) {
+        this.logger.warn('No relays available for refresh');
+        return;
+      }
+
+      // Query for incoming messages
+      const incomingEvents = await this.pool.query(allRelays, filterIncoming, 15000);
+      this.logger.info(`Found ${incomingEvents.length} incoming events during refresh`);
+
+      for (const event of incomingEvents) {
+        await this.processIncomingEvent(event, myPubkey);
+      }
+
+      // Query for outgoing NIP-04 messages (outgoing NIP-44 are already caught via #p tag)
+      const outgoingEvents = await this.pool.query(accountRelays, filterOutgoing, 15000);
+      this.logger.info(`Found ${outgoingEvents.length} outgoing NIP-04 events during refresh`);
+
+      for (const event of outgoingEvents) {
+        await this.processIncomingEvent(event, myPubkey);
+      }
+
+      // Update lastCheck timestamp
+      const now = Math.floor(Date.now() / 1000);
+      this.accountLocalState.setMessagesLastCheck(myPubkey, now);
+
+      this.logger.info('Chat refresh complete');
+    } catch (err) {
+      this.logger.error('Error refreshing chats:', err);
+    }
+  }
+
+  /**
+   * Process an incoming DM event (either GiftWrap or EncryptedDirectMessage)
+   */
+  private async processIncomingEvent(event: NostrEvent, myPubkey: string): Promise<void> {
+    try {
+      if (event.kind === kinds.GiftWrap) {
+        const unwrappedMessage = await this.unwrapMessageInternal(event);
+        if (!unwrappedMessage) return;
+
+        let targetPubkey: string;
+        if (unwrappedMessage.pubkey === myPubkey) {
+          const pTags = this.utilities.getPTagsValuesFromEvent(unwrappedMessage);
+          if (pTags.length > 0 && pTags[0]) {
+            targetPubkey = pTags[0];
+          } else {
+            return;
+          }
+        } else {
+          targetPubkey = unwrappedMessage.pubkey;
+        }
+
+        if (!targetPubkey || targetPubkey === myPubkey) return;
+
+        const directMessage: DirectMessage = {
+          id: unwrappedMessage.id,
+          pubkey: unwrappedMessage.pubkey,
+          created_at: unwrappedMessage.created_at,
+          content: unwrappedMessage.content,
+          tags: unwrappedMessage.tags || [],
+          isOutgoing: unwrappedMessage.pubkey === myPubkey,
+          pending: false,
+          failed: false,
+          received: true,
+          read: false,
+          encryptionType: 'nip44',
+        };
+
+        this.addMessageToChat(targetPubkey, directMessage);
+      } else if (event.kind === kinds.EncryptedDirectMessage) {
+        let targetPubkey = event.pubkey;
+
+        if (targetPubkey === myPubkey) {
+          const pTags = this.utilities.getPTagsValuesFromEvent(event);
+          if (pTags.length > 0) {
+            targetPubkey = pTags[0];
+          } else {
+            return;
+          }
+        }
+
+        if (this.hasMessage(targetPubkey, event.id)) return;
+
+        const unwrappedMessage = await this.unwrapNip04Message(event);
+        if (!unwrappedMessage) return;
+
+        const directMessage: DirectMessage = {
+          id: unwrappedMessage.id,
+          pubkey: unwrappedMessage.pubkey,
+          created_at: unwrappedMessage.created_at,
+          content: unwrappedMessage.content,
+          tags: unwrappedMessage.tags || [],
+          isOutgoing: event.pubkey === myPubkey,
+          pending: false,
+          failed: false,
+          received: true,
+          read: false,
+          encryptionType: 'nip04',
+        };
+
+        this.addMessageToChat(targetPubkey, directMessage);
+      }
+    } catch (err) {
+      this.logger.error('Error processing incoming event:', err);
     }
   }
 
@@ -799,6 +1053,11 @@ export class MessagingService implements NostriaService {
         }
       );
 
+      // Also query DM relays (kind 10050) for messages that may have been sent to those relays
+      // This ensures we fetch messages from both account relays and DM-specific relays
+      // Note: This runs in parallel with the account relay subscriptions
+      await this.queryDmRelaysForMessages(myPubkey, filterReceived);
+
       // Convert to array of Chat objects
     } catch (err) {
       this.logger.error('Failed to load chats', err);
@@ -807,66 +1066,69 @@ export class MessagingService implements NostriaService {
     }
   }
 
-  // Store active live subscription reference for cleanup
-  private liveSubscription: { close: () => void } | null = null;
-
   /**
-   * Subscribe to real-time incoming direct messages.
-   * Opens a persistent subscription that stays open until explicitly closed.
-   * Call this when entering the Messages page and close when leaving.
-   * @returns A subscription object with a close() method for cleanup
+   * Query DM relays (from kind 10050) and discovery relays for messages.
+   * This supplements the main subscription by also checking DM-specific and discovery relays.
    */
-  subscribeToIncomingMessages(): { close: () => void } | null {
-    const myPubkey = this.accountState.pubkey();
+  private async queryDmRelaysForMessages(myPubkey: string, filter: Filter): Promise<void> {
+    try {
+      // Get DM relay URLs from kind 10050
+      const dmRelayEvent = await this.database.getEventByPubkeyAndKind(myPubkey, kinds.DirectMessageRelaysList);
+      
+      const dmRelayUrls = dmRelayEvent?.tags
+        .filter(t => t[0] === 'relay' && t[1])
+        .map(t => t[1]) || [];
 
-    if (!myPubkey) {
-      this.logger.warn('Cannot subscribe to messages: no account pubkey');
-      return null;
-    }
+      // Get discovery relay URLs
+      const discoveryRelays = this.discoveryRelay.getRelayUrls();
 
-    // Close any existing live subscription before creating a new one
-    if (this.liveSubscription) {
-      this.logger.info('Closing existing live message subscription');
-      this.liveSubscription.close();
-      this.liveSubscription = null;
-    }
+      // Combine all relays
+      const allAdditionalRelays = [...new Set([...dmRelayUrls, ...discoveryRelays])];
 
-    const now = Math.floor(Date.now() / 1000);
+      if (allAdditionalRelays.length === 0) {
+        this.logger.debug('No additional relays (DM or discovery) to query');
+        return;
+      }
 
-    // Filter for incoming gift-wrapped and legacy encrypted DMs
-    const filter: Filter = {
-      kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
-      '#p': [myPubkey],
-      since: now, // Only get new messages from now onwards
-    };
+      // Check which relays are different from account relays
+      const accountRelays = new Set(this.relay.getRelayUrls());
+      const uniqueRelays = allAdditionalRelays.filter(url => !accountRelays.has(url));
 
-    this.logger.info('Opening live subscription for incoming DMs', { since: new Date(now * 1000).toISOString() });
+      if (uniqueRelays.length === 0) {
+        this.logger.debug('All additional relays are same as account relays, skipping duplicate query');
+        return;
+      }
 
-    const rawSub = this.relay.subscribe(
-      filter,
-      async (event: NostrEvent) => {
-        this.logger.debug('Received real-time DM event', { kind: event.kind, id: event.id });
+      this.logger.info('Querying additional relays (DM + discovery) for messages', {
+        relayCount: uniqueRelays.length,
+        relays: uniqueRelays,
+      });
 
+      // Query all additional relays for messages
+      const events = await this.pool.query(uniqueRelays, filter, 10000);
+
+      this.logger.info(`Found ${events.length} events from additional relays`);
+
+      // Process each event
+      for (const event of events) {
         try {
           if (event.kind === kinds.GiftWrap) {
-            // Handle NIP-44 gift-wrapped message
             const unwrappedMessage = await this.unwrapMessageInternal(event);
-            if (!unwrappedMessage) return;
+            if (!unwrappedMessage) continue;
 
-            // Determine the chat partner pubkey
             let targetPubkey: string;
             if (unwrappedMessage.pubkey === myPubkey) {
-              // Outgoing message - get recipient from p tag
-              targetPubkey = unwrappedMessage.tags.find((t: string[]) => t[0] === 'p')?.[1];
+              const pTags = this.utilities.getPTagsValuesFromEvent(unwrappedMessage);
+              if (pTags.length > 0 && pTags[0]) {
+                targetPubkey = pTags[0];
+              } else {
+                continue;
+              }
             } else {
-              // Incoming message - sender is the pubkey
               targetPubkey = unwrappedMessage.pubkey;
             }
 
-            if (!targetPubkey || targetPubkey === 'undefined') {
-              this.logger.warn('Live subscription: Could not determine target pubkey from gift wrap');
-              return;
-            }
+            if (!targetPubkey || targetPubkey === myPubkey) continue;
 
             const directMessage: DirectMessage = {
               id: unwrappedMessage.id,
@@ -884,25 +1146,21 @@ export class MessagingService implements NostriaService {
 
             this.addMessageToChat(targetPubkey, directMessage);
           } else if (event.kind === kinds.EncryptedDirectMessage) {
-            // Handle NIP-04 legacy encrypted message
-            const unwrappedMessage = await this.unwrapNip04MessageInternal(event);
-            if (!unwrappedMessage) return;
+            let targetPubkey = event.pubkey;
 
-            // For NIP-04, determine chat partner
-            let targetPubkey: string;
-            if (event.pubkey === myPubkey) {
-              // Outgoing - get recipient from p tag
+            if (targetPubkey === myPubkey) {
               const pTags = this.utilities.getPTagsValuesFromEvent(event);
-              targetPubkey = pTags[0];
-            } else {
-              // Incoming - sender is pubkey
-              targetPubkey = event.pubkey;
+              if (pTags.length > 0) {
+                targetPubkey = pTags[0];
+              } else {
+                continue;
+              }
             }
 
-            if (!targetPubkey || targetPubkey === 'undefined') {
-              this.logger.warn('Live subscription: Could not determine target pubkey from NIP-04 message');
-              return;
-            }
+            if (this.hasMessage(targetPubkey, event.id)) continue;
+
+            const unwrappedMessage = await this.unwrapNip04Message(event);
+            if (!unwrappedMessage) continue;
 
             const directMessage: DirectMessage = {
               id: unwrappedMessage.id,
@@ -921,28 +1179,243 @@ export class MessagingService implements NostriaService {
             this.addMessageToChat(targetPubkey, directMessage);
           }
         } catch (err) {
-          this.logger.error('Error processing real-time DM event:', err);
+          this.logger.error('Error processing event from additional relay:', err);
         }
-      },
-      () => {
-        // EOSE callback - for live subscriptions this just signals initial sync complete
-        this.logger.debug('Live DM subscription reached EOSE');
       }
-    );
+    } catch (err) {
+      this.logger.error('Error querying additional relays for messages:', err);
+    }
+  }
 
-    // Normalize the subscription object to always have a close() method
-    const sub: { close: () => void } = {
-      close: () => {
-        if ('close' in rawSub && typeof rawSub.close === 'function') {
-          rawSub.close();
-        } else if ('unsubscribe' in rawSub && typeof rawSub.unsubscribe === 'function') {
-          rawSub.unsubscribe();
+  // Store active live subscription reference for cleanup
+  private liveSubscription: { close: () => void } | null = null;
+
+  /**
+   * Get the relay URLs to use for DM subscriptions.
+   * First tries to get DM relays from kind 10050 (NIP-17),
+   * falls back to account relays if no DM relays are configured.
+   */
+  private async getDmRelayUrls(pubkey: string): Promise<string[]> {
+    // Try to get DM relay list (kind 10050) from storage or relay
+    const dmRelayEvent = await this.database.getEventByPubkeyAndKind(pubkey, kinds.DirectMessageRelaysList);
+
+    if (dmRelayEvent) {
+      // Extract relay URLs from 'relay' tags
+      const dmRelayUrls = dmRelayEvent.tags
+        .filter(t => t[0] === 'relay' && t[1])
+        .map(t => t[1]);
+
+      if (dmRelayUrls.length > 0) {
+        this.logger.info('Using DM relays from kind 10050', { count: dmRelayUrls.length, relays: dmRelayUrls });
+        return dmRelayUrls;
+      }
+    }
+
+    // Fall back to account relays
+    const accountRelays = this.relay.getRelayUrls();
+    this.logger.info('No DM relays found, using account relays', { count: accountRelays.length });
+    return accountRelays;
+  }
+
+  /**
+   * Subscribe to real-time incoming direct messages.
+   * Opens a persistent subscription that stays open until explicitly closed.
+   * This is automatically called when the user logs in and closed when they log out.
+   * Uses DM relays (kind 10050) if available, falls back to account relays.
+   * @returns A subscription object with a close() method for cleanup
+   */
+  async subscribeToIncomingMessages(): Promise<{ close: () => void } | null> {
+    const myPubkey = this.accountState.pubkey();
+
+    if (!myPubkey) {
+      this.logger.warn('Cannot subscribe to messages: no account pubkey');
+      return null;
+    }
+
+    // Close any existing live subscription before creating a new one
+    if (this.liveSubscription) {
+      this.logger.info('Closing existing live message subscription');
+      this.liveSubscription.close();
+      this.liveSubscription = null;
+    }
+
+    // Get all relay URLs (combine DM relays, account relays, and discovery relays)
+    // Discovery relays ensure we catch messages from senders who couldn't find our DM relays
+    const dmRelayUrls = await this.getDmRelayUrls(myPubkey);
+    const accountRelays = this.relay.getRelayUrls();
+    const discoveryRelays = this.discoveryRelay.getRelayUrls();
+    const allRelays = [...new Set([...dmRelayUrls, ...accountRelays, ...discoveryRelays])];
+
+    console.log('[MessagingService] subscribeToIncomingMessages relay setup:', {
+      dmRelayUrls,
+      accountRelays,
+      discoveryRelays,
+      allRelays,
+    });
+
+    if (allRelays.length === 0) {
+      this.logger.warn('Cannot subscribe to messages: no relays available');
+      return null;
+    }
+
+    // NIP-17 gift wraps have randomized timestamps up to 2 days (172800 seconds) in the past for privacy.
+    // We need to use a buffer that accounts for this, plus some extra margin.
+    // Using 3 days (259200 seconds) to be safe.
+    const NIP17_TIMESTAMP_BUFFER = 259200; // 3 days in seconds
+    const since = Math.floor(Date.now() / 1000) - NIP17_TIMESTAMP_BUFFER;
+
+    // Filter for messages where we're tagged (incoming NIP-04/NIP-44, and our own outgoing NIP-44)
+    const filterTagged: Filter = {
+      kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
+      '#p': [myPubkey],
+      since: since,
+    };
+
+    // Filter for outgoing NIP-04 messages (authored by us)
+    const filterAuthored: Filter = {
+      kinds: [kinds.EncryptedDirectMessage],
+      authors: [myPubkey],
+      since: since,
+    };
+
+    console.log('[MessagingService] subscribeToIncomingMessages filters:', {
+      filterTagged,
+      filterAuthored,
+      sinceDate: new Date(since * 1000).toISOString(),
+      bufferDays: NIP17_TIMESTAMP_BUFFER / 86400,
+    });
+
+    this.logger.info('Opening live subscription for DMs', {
+      since: new Date(since * 1000).toISOString(),
+      relayCount: allRelays.length,
+      relays: allRelays,
+    });
+
+    // Track processed event IDs to avoid duplicates
+    const processedEventIds = new Set<string>();
+
+    const processEvent = async (event: NostrEvent) => {
+      // Skip if already processed
+      if (processedEventIds.has(event.id)) {
+        return;
+      }
+      processedEventIds.add(event.id);
+
+      this.logger.debug('Received real-time DM event', { kind: event.kind, id: event.id });
+
+      try {
+        if (event.kind === kinds.GiftWrap) {
+          // Handle NIP-44 gift-wrapped message
+          const unwrappedMessage = await this.unwrapMessageInternal(event);
+          if (!unwrappedMessage) {
+            this.logger.warn('Live subscription: Failed to unwrap gift-wrapped message', { eventId: event.id });
+            return;
+          }
+
+          // Determine the chat partner pubkey
+          let targetPubkey: string;
+          if (unwrappedMessage.pubkey === myPubkey) {
+            // Outgoing message - get recipient from p tag
+            targetPubkey = unwrappedMessage.tags.find((t: string[]) => t[0] === 'p')?.[1];
+          } else {
+            // Incoming message - sender is the pubkey
+            targetPubkey = unwrappedMessage.pubkey;
+          }
+
+          if (!targetPubkey || targetPubkey === 'undefined') {
+            this.logger.warn('Live subscription: Could not determine target pubkey from gift wrap');
+            return;
+          }
+
+          this.logger.info('Live subscription: Successfully unwrapped NIP-44 message', {
+            eventId: event.id,
+            targetPubkey: targetPubkey.slice(0, 16) + '...',
+            isOutgoing: unwrappedMessage.pubkey === myPubkey,
+          });
+
+          const directMessage: DirectMessage = {
+            id: unwrappedMessage.id,
+            pubkey: unwrappedMessage.pubkey,
+            created_at: unwrappedMessage.created_at,
+            content: unwrappedMessage.content,
+            tags: unwrappedMessage.tags || [],
+            isOutgoing: unwrappedMessage.pubkey === myPubkey,
+            pending: false,
+            failed: false,
+            received: true,
+            read: false,
+            encryptionType: 'nip44',
+          };
+
+          this.addMessageToChat(targetPubkey, directMessage);
+        } else if (event.kind === kinds.EncryptedDirectMessage) {
+          // Handle NIP-04 legacy encrypted message
+          const unwrappedMessage = await this.unwrapNip04MessageInternal(event);
+          if (!unwrappedMessage) {
+            this.logger.warn('Live subscription: Failed to unwrap NIP-04 message', { eventId: event.id });
+            return;
+          }
+
+          // For NIP-04, determine chat partner
+          let targetPubkey: string;
+          if (event.pubkey === myPubkey) {
+            // Outgoing - get recipient from p tag
+            const pTags = this.utilities.getPTagsValuesFromEvent(event);
+            targetPubkey = pTags[0];
+          } else {
+            // Incoming - sender is pubkey
+            targetPubkey = event.pubkey;
+          }
+
+          if (!targetPubkey || targetPubkey === 'undefined') {
+            this.logger.warn('Live subscription: Could not determine target pubkey from NIP-04 message');
+            return;
+          }
+
+          this.logger.info('Live subscription: Successfully unwrapped NIP-04 message', {
+            eventId: event.id,
+            targetPubkey: targetPubkey.slice(0, 16) + '...',
+            isOutgoing: event.pubkey === myPubkey,
+          });
+
+          const directMessage: DirectMessage = {
+            id: unwrappedMessage.id,
+            pubkey: unwrappedMessage.pubkey,
+            created_at: unwrappedMessage.created_at,
+            content: unwrappedMessage.content,
+            tags: unwrappedMessage.tags || [],
+            isOutgoing: event.pubkey === myPubkey,
+            pending: false,
+            failed: false,
+            received: true,
+            read: false,
+            encryptionType: 'nip04',
+          };
+
+          this.addMessageToChat(targetPubkey, directMessage);
         }
+      } catch (err) {
+        this.logger.error('Error processing real-time DM event:', err);
       }
     };
 
-    this.liveSubscription = sub;
-    return sub;
+    // Subscribe to messages where we're tagged (incoming + our outgoing NIP-44)
+    const sub1 = this.pool.subscribe(allRelays, filterTagged, processEvent);
+
+    // Subscribe to our outgoing NIP-04 messages
+    const sub2 = this.pool.subscribe(accountRelays, filterAuthored, processEvent);
+
+    // Create combined subscription object
+    const combinedSub = {
+      close: () => {
+        this.logger.info('Closing live message subscriptions');
+        sub1.close();
+        sub2.close();
+      },
+    };
+
+    this.liveSubscription = combinedSub;
+    return combinedSub;
   }
 
   /**
