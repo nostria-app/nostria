@@ -88,10 +88,14 @@ export class NotificationsComponent implements OnInit {
   isLoadingMore = signal(false);
   oldestTimestamp = signal<number | null>(null);
   hasMoreNotifications = signal(true);
+  // State for refreshing notifications
+  isRefreshing = signal(false);
   // Default lookback period in days
   private readonly DEFAULT_LOOKBACK_DAYS = 2;
   // How many more days to load when scrolling
   private readonly LOAD_MORE_DAYS = 2;
+  // How many days to look back when refreshing
+  private readonly REFRESH_LOOKBACK_DAYS = 7;
 
   // Notification type filter preferences
   notificationFilters = signal<Record<NotificationType, boolean>>({
@@ -297,6 +301,36 @@ export class NotificationsComponent implements OnInit {
       } catch (error) {
         await this.notificationService.updateRelayPromiseStatus(notificationId, relayUrl, 'failed', error);
       }
+    }
+  }
+
+  /**
+   * Refresh recent notifications by re-fetching from relays
+   * This helps catch any notifications that may have been missed due to relay issues
+   */
+  async refreshNotifications(): Promise<void> {
+    if (this.isRefreshing()) {
+      return;
+    }
+
+    this.isRefreshing.set(true);
+
+    try {
+      await this.contentNotificationService.refreshRecentNotifications(this.REFRESH_LOOKBACK_DAYS);
+      this.snackBar.open('Notifications refreshed', 'Close', {
+        duration: 2000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    } catch (error) {
+      console.error('Failed to refresh notifications:', error);
+      this.snackBar.open('Failed to refresh notifications', 'Close', {
+        duration: 3000,
+        horizontalPosition: 'center',
+        verticalPosition: 'bottom'
+      });
+    } finally {
+      this.isRefreshing.set(false);
     }
   }
 

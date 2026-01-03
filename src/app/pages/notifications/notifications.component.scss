@@ -66,6 +66,14 @@
         width: 20px;
         height: 20px;
       }
+
+      .refresh-spinner {
+        margin-right: 2px;
+      }
+
+      &:disabled {
+        opacity: 0.7;
+      }
     }
   }
 }

@@ -11,6 +11,15 @@
       </div>
     </div>
     <div class="header-actions">
+      <button mat-button (click)="refreshNotifications()" class="action-button" [disabled]="isRefreshing()"
+        matTooltip="Re-check recent notifications from relays">
+        @if (isRefreshing()) {
+        <mat-spinner diameter="18" class="refresh-spinner"></mat-spinner>
+        } @else {
+        <mat-icon>refresh</mat-icon>
+        }
+        Refresh
+      </button>
       @if (notifications().length > 0) {
       <button mat-button (click)="markAllAsRead()" class="action-button">
         <mat-icon>done_all</mat-icon>

@@ -615,6 +615,56 @@ export class ContentNotificationService {
   }
 
   /**
+   * Refresh recent notifications by re-fetching from relays
+   * This does NOT reset the last check timestamp - it just re-checks recent activity
+   * to catch any notifications that may have been missed due to relay issues.
+   * @param days Number of days to look back (default: 7 days)
+   */
+  async refreshRecentNotifications(days: number = 7): Promise<void> {
+    if (this.isChecking()) {
+      this.logger.debug('Already checking for notifications, skipping refresh');
+      return;
+    }
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.logger.warn('No active account, skipping notification refresh');
+      return;
+    }
+
+    this.isChecking.set(true);
+
+    try {
+      this.logger.info(`Refreshing notifications for the last ${days} days`);
+      const now = Math.floor(Date.now() / 1000); // Nostr uses seconds
+      const since = now - (days * 24 * 60 * 60);
+
+      this.logger.debug(`Fetching notifications from ${new Date(since * 1000).toISOString()} to now`);
+
+      // Check for all notification types in parallel
+      await Promise.all([
+        this.checkForNewFollowers(pubkey, since),
+        this.checkForMentions(pubkey, since),
+        this.checkForReposts(pubkey, since),
+        this.checkForReplies(pubkey, since),
+        this.checkForReactions(pubkey, since),
+        this.checkForZaps(pubkey, since),
+      ]);
+
+      // Note: We deliberately do NOT update the lastCheckTimestamp here
+      // This is a refresh operation, not a regular check
+      // The regular checkForNewNotifications will still work normally
+
+      this.logger.info('Completed refreshing recent notifications');
+    } catch (error) {
+      this.logger.error('Failed to refresh recent notifications', error);
+      throw error; // Re-throw so the UI can show an error message
+    } finally {
+      this.isChecking.set(false);
+    }
+  }
+
+  /**
    * Check for older notifications within a specific time range
    * Used for "load more" functionality when scrolling
    * @param since Unix timestamp (seconds) - start of range
