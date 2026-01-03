@@ -3,6 +3,9 @@
   height: 100%;
   overflow: hidden;
   position: relative;
+  // Prevent iOS Safari from auto-adjusting text sizes
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 
   // On mobile, extend past the parent's padding-bottom to fill the screen
   @media (max-width: 599px) {
@@ -531,7 +534,15 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 0.8rem;
+  font-size: 0.875rem; // 14px on desktop
+  // Prevent iOS Safari from auto-zooming text
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+
+  // On mobile/touch devices, use 16px minimum to prevent iOS auto-zoom
+  @media (pointer: coarse) {
+    font-size: 1rem;
+  }
 
   &.empty-message {
     font-style: italic;
@@ -546,13 +557,19 @@
 .message-time {
   flex-shrink: 0;
   margin-left: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
+  // Prevent iOS Safari from auto-zooming text
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .message-time-chats {
   flex-shrink: 0;
   margin-left: 8px;
-  font-size: 12px;
+  font-size: 0.75rem;
+  // Prevent iOS Safari from auto-zooming text
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   position: absolute;
   right: 6px;
 }
@@ -673,6 +690,48 @@
 .chat-item-content {
   display: flex;
   gap: 6px;
+}
+
+.chat-avatar {
+  display: flex;
+  position: relative;
+}
+
+.chat-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+  // Prevent iOS Safari from auto-zooming text
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+.chat-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  padding-right: 80px; // Space for timestamp
+}
+
+.chat-name {
+  font-size: 1rem; // 16px - iOS Safari won't auto-zoom at 16px or above
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+  min-width: 0;
+}
+
+.chat-preview {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.unread-badge {
+  flex-shrink: 0;
 }
 
 @media (max-width: 599px) {
