@@ -22,6 +22,7 @@ import { DataService } from '../../../services/data.service';
 import { EncryptionService } from '../../../services/encryption.service';
 import { LoggerService } from '../../../services/logger.service';
 import { FollowingService } from '../../../services/following.service';
+import { AccountRelayService } from '../../../services/relays/account-relay';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 
 export interface FollowSet {
@@ -95,6 +96,7 @@ export class NewColumnDialogComponent {
   private fb = inject(FormBuilder);
   private feedService = inject(FeedService);
   private accountState = inject(AccountStateService);
+  private accountRelay = inject(AccountRelayService);
   private followingService = inject(FollowingService);
   private followset = inject(Followset);
   private dataService = inject(DataService);
@@ -396,7 +398,7 @@ export class NewColumnDialogComponent {
 
     switch (relayConfig) {
       case 'account':
-        return this.feedService.userRelays().map(r => r.url);
+        return this.accountRelay.relays().map(r => r.url);
       case 'custom':
         return this.customRelays();
       default:
