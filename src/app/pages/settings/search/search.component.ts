@@ -75,6 +75,10 @@ export class SearchSettingsComponent {
   });
 
   constructor() {
+    // Initialize with defaults immediately so the UI shows something
+    // This will be overwritten by the effect if user has custom settings
+    this.searchRelay.ensureInitialized();
+
     // Effect to load search relays when account changes
     effect(async () => {
       const pubkey = this.accountState.pubkey();
