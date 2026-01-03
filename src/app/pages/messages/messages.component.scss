@@ -583,15 +583,18 @@
     white-space: pre-wrap;
     overflow: hidden;
 
+    .message-content {
+      display: inline;
+    }
+
     // Glass effect for incoming messages - light mode
     background-color: rgba(255, 255, 255, 0.7);
     -webkit-backdrop-filter: blur(20px) saturate(1.8);
     backdrop-filter: blur(20px) saturate(1.8);
-    box-shadow:
-      inset 0 0 0 1px rgba(255, 255, 255, 0.5),
-      inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
-      0px 2px 8px rgba(17, 17, 26, 0.08),
-      0px 4px 16px rgba(17, 17, 26, 0.06);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5),
+    inset 0 0 8px 2px rgba(255, 255, 255, 0.2),
+    0px 2px 8px rgba(17, 17, 26, 0.08),
+    0px 4px 16px rgba(17, 17, 26, 0.06);
 
     &.outgoing {
       // Glass effect for outgoing messages - light mode (purple tint)
@@ -705,7 +708,78 @@
   }
 }
 
-// Message meta (time, status) - moved outside bubble
+// Inline meta inside message bubble
+.message-inline-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  opacity: 0.7;
+  margin-left: 8px;
+  vertical-align: bottom;
+  white-space: nowrap;
+  float: right;
+  margin-top: 8px;
+  position: relative;
+  top: 4px;
+
+  .encryption-icon {
+    font-size: 13px;
+    height: 13px;
+    width: 13px;
+
+    &.secure {
+      color: var(--mat-success-color);
+    }
+
+    &.insecure {
+      color: var(--mat-sys-outline);
+    }
+  }
+
+  .pending-spinner {
+    margin-right: 2px;
+  }
+
+  .status-icon {
+    font-size: 13px;
+    height: 13px;
+    width: 13px;
+  }
+
+  .failed-icon {
+    color: var(--mat-sys-error);
+  }
+
+  .read-icon {
+    color: var(--mat-sys-primary);
+  }
+
+  .message-time {
+    font-size: 10px;
+  }
+}
+
+// Message actions (retry button for failed messages)
+.message-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+
+  .retry-button {
+    width: 24px;
+    height: 24px;
+    line-height: 24px;
+
+    mat-icon {
+      font-size: 16px;
+      width: 16px;
+      height: 16px;
+    }
+  }
+}
+
+// Message meta (time, status) - legacy, kept for backwards compatibility
 .message-meta {
   display: flex;
   align-items: center;

@@ -316,34 +316,35 @@
         @for (message of messages(); track message.id) {
         <div class="message-bubble-container" [class.outgoing]="message.isOutgoing">
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
-            [class.failed]="message.failed" [innerHTML]="message.content | linkify">
+            [class.failed]="message.failed">
+            <span class="message-content" [innerHTML]="message.content | linkify"></span>
+            <span class="message-inline-meta">
+              <!-- Encryption status indicator -->
+              @if (message.encryptionType === 'nip44') {
+              <mat-icon class="encryption-icon secure" matTooltip="Secure (NIP-17)">verified_user</mat-icon>
+              } @else {
+              <mat-icon class="encryption-icon insecure" matTooltip="Legacy encryption (NIP-04)">block</mat-icon>
+              }
+              @if (message.pending) {
+              <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
+              } @else if (message.failed) {
+              <mat-icon class="status-icon failed-icon">error_outline</mat-icon>
+              } @else if (message.isOutgoing && message.read) {
+              <mat-icon class="status-icon read-icon">done_all</mat-icon>
+              } @else if (message.isOutgoing && message.received) {
+              <mat-icon class="status-icon received-icon">done</mat-icon>
+              }
+              <span class="message-time">{{ message.created_at | timestamp:'short' }}</span>
+            </span>
           </div>
 
-          <div class="message-meta" [class.outgoing]="message.isOutgoing">
-            <!-- Encryption status indicator -->
-            @if (message.encryptionType === 'nip44') {
-            <mat-icon class="encryption-icon secure" matTooltip="Secure (NIP-17)">verified_user</mat-icon>
-            } @else {
-            <mat-icon class="encryption-icon insecure" matTooltip="Legacy encryption (NIP-04)">block</mat-icon>
-            }
-
-            @if (message.pending) {
-            <mat-spinner diameter="10" class="pending-spinner"></mat-spinner>
-            } @else if (message.failed) {
-            <mat-icon class="failed-icon">error_outline</mat-icon>
-            } @else if (message.isOutgoing && message.read) {
-            <mat-icon class="read-icon">done_all</mat-icon>
-            } @else if (message.isOutgoing && message.received) {
-            <mat-icon class="received-icon">done</mat-icon>
-            }
-            <span class="message-time">{{ message.created_at | timestamp:'short' }}</span>
-
-            @if (message.failed) {
+          @if (message.failed) {
+          <div class="message-actions">
             <button mat-icon-button class="retry-button" (click)="retryMessage(message)">
               <mat-icon>refresh</mat-icon>
             </button>
-            }
           </div>
+          }
         </div>
         }
       </div>
