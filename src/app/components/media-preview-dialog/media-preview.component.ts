@@ -97,6 +97,9 @@ export class MediaPreviewDialogComponent implements OnDestroy {
   hasPrevious = computed(() => this.currentIndex() > 0);
   hasNext = computed(() => this.currentIndex() < this.mediaItems().length - 1);
 
+  // Zoom percentage for display (rounded to avoid floating point issues)
+  zoomPercentage = computed(() => Math.round(this.scale() * 100));
+
   constructor() {
     // Set initial index if provided
     if (this.data.initialIndex !== undefined) {
@@ -323,7 +326,8 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     const scaleRatio = currentDistance / this.initialPinchDistance;
     let newScale = this.initialPinchScale * scaleRatio;
 
-    // Clamp scale between 0.5 and 5
+    // Round to nearest 0.01 (whole percentage) and clamp between 0.5 and 5
+    newScale = Math.round(newScale * 100) / 100;
     newScale = Math.max(0.5, Math.min(5, newScale));
 
     this.scale.set(newScale);
