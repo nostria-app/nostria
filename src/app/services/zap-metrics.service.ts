@@ -1,5 +1,6 @@
-import { Injectable, inject, signal, computed } from '@angular/core';
+import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
 import { LoggerService } from './logger.service';
+import { AccountStateService } from './account-state.service';
 
 export interface ZapMetrics {
   totalSent: number;
@@ -38,6 +39,7 @@ export interface ZapPerformanceEvent {
 })
 export class ZapMetricsService {
   private logger = inject(LoggerService);
+  private accountState = inject(AccountStateService);
 
   // Performance data storage
   private performanceEvents = signal<ZapPerformanceEvent[]>([]);
@@ -64,7 +66,17 @@ export class ZapMetricsService {
   });
 
   constructor() {
-    this.loadFromStorage();
+    // Load metrics when account changes
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      untracked(() => {
+        if (pubkey) {
+          this.loadFromStorage();
+        } else {
+          this.performanceEvents.set([]);
+        }
+      });
+    });
   }
 
   /**
@@ -293,35 +305,76 @@ export class ZapMetricsService {
   }
 
   /**
-   * Save metrics to localStorage
+   * Save metrics to localStorage (pubkey-keyed)
    */
   private saveToStorage(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
     try {
-      const data = {
+      // Load existing data for all accounts
+      const stored = localStorage.getItem(this.STORAGE_KEY);
+      let allData: Record<string, { events: ZapPerformanceEvent[]; lastUpdated: number }> = {};
+
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        // Check if it's already pubkey-keyed format
+        if (!parsed.events) {
+          allData = parsed;
+        }
+      }
+
+      // Update current account's data
+      allData[pubkey] = {
         events: this.performanceEvents(),
         lastUpdated: Date.now(),
       };
-      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(data));
+
+      localStorage.setItem(this.STORAGE_KEY, JSON.stringify(allData));
     } catch (error) {
       this.logger.warn('Failed to save metrics to storage:', error);
     }
   }
 
   /**
-   * Load metrics from localStorage
+   * Load metrics from localStorage (pubkey-keyed with migration)
    */
   private loadFromStorage(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.performanceEvents.set([]);
+      return;
+    }
+
     try {
       const stored = localStorage.getItem(this.STORAGE_KEY);
       if (stored) {
         const data = JSON.parse(stored);
+
+        // Check if this is old format (has 'events' at root level)
         if (data.events && Array.isArray(data.events)) {
+          // Migrate: assign all existing events to current user
+          this.logger.info('Migrating zap metrics to pubkey-keyed format');
           this.performanceEvents.set(data.events);
-          this.logger.info('Zap metrics loaded from storage');
+          // Save in new format
+          this.saveToStorage();
+          return;
         }
+
+        // New pubkey-keyed format
+        const accountData = data[pubkey];
+        if (accountData?.events && Array.isArray(accountData.events)) {
+          this.performanceEvents.set(accountData.events);
+          this.logger.info('Zap metrics loaded from storage');
+        } else {
+          this.performanceEvents.set([]);
+        }
+      } else {
+        this.performanceEvents.set([]);
       }
     } catch (error) {
       this.logger.warn('Failed to load metrics from storage:', error);
+      this.performanceEvents.set([]);
     }
   }
 }
