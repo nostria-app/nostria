@@ -27,6 +27,7 @@ interface MediaPreviewData {
     '(swiperight)': 'onSwipeRight()',
     '(swipeleft)': 'onSwipeLeft()',
     '(mousemove)': 'onMouseMove()',
+    '(touchstart)': 'onTouchInteraction()',
   },
 })
 export class MediaPreviewDialogComponent implements OnDestroy {
@@ -119,6 +120,11 @@ export class MediaPreviewDialogComponent implements OnDestroy {
   }
 
   onMouseMove(): void {
+    this.resetHideControlsTimer();
+  }
+
+  // Touch interaction handler - shows controls when user touches the screen
+  onTouchInteraction(): void {
     this.resetHideControlsTimer();
   }
 
