@@ -807,6 +807,156 @@ export class MessagingService implements NostriaService {
     }
   }
 
+  // Store active live subscription reference for cleanup
+  private liveSubscription: { close: () => void } | null = null;
+
+  /**
+   * Subscribe to real-time incoming direct messages.
+   * Opens a persistent subscription that stays open until explicitly closed.
+   * Call this when entering the Messages page and close when leaving.
+   * @returns A subscription object with a close() method for cleanup
+   */
+  subscribeToIncomingMessages(): { close: () => void } | null {
+    const myPubkey = this.accountState.pubkey();
+
+    if (!myPubkey) {
+      this.logger.warn('Cannot subscribe to messages: no account pubkey');
+      return null;
+    }
+
+    // Close any existing live subscription before creating a new one
+    if (this.liveSubscription) {
+      this.logger.info('Closing existing live message subscription');
+      this.liveSubscription.close();
+      this.liveSubscription = null;
+    }
+
+    const now = Math.floor(Date.now() / 1000);
+
+    // Filter for incoming gift-wrapped and legacy encrypted DMs
+    const filter: Filter = {
+      kinds: [kinds.GiftWrap, kinds.EncryptedDirectMessage],
+      '#p': [myPubkey],
+      since: now, // Only get new messages from now onwards
+    };
+
+    this.logger.info('Opening live subscription for incoming DMs', { since: new Date(now * 1000).toISOString() });
+
+    const rawSub = this.relay.subscribe(
+      filter,
+      async (event: NostrEvent) => {
+        this.logger.debug('Received real-time DM event', { kind: event.kind, id: event.id });
+
+        try {
+          if (event.kind === kinds.GiftWrap) {
+            // Handle NIP-44 gift-wrapped message
+            const unwrappedMessage = await this.unwrapMessageInternal(event);
+            if (!unwrappedMessage) return;
+
+            // Determine the chat partner pubkey
+            let targetPubkey: string;
+            if (unwrappedMessage.pubkey === myPubkey) {
+              // Outgoing message - get recipient from p tag
+              targetPubkey = unwrappedMessage.tags.find((t: string[]) => t[0] === 'p')?.[1];
+            } else {
+              // Incoming message - sender is the pubkey
+              targetPubkey = unwrappedMessage.pubkey;
+            }
+
+            if (!targetPubkey || targetPubkey === 'undefined') {
+              this.logger.warn('Live subscription: Could not determine target pubkey from gift wrap');
+              return;
+            }
+
+            const directMessage: DirectMessage = {
+              id: unwrappedMessage.id,
+              pubkey: unwrappedMessage.pubkey,
+              created_at: unwrappedMessage.created_at,
+              content: unwrappedMessage.content,
+              tags: unwrappedMessage.tags || [],
+              isOutgoing: unwrappedMessage.pubkey === myPubkey,
+              pending: false,
+              failed: false,
+              received: true,
+              read: false,
+              encryptionType: 'nip44',
+            };
+
+            this.addMessageToChat(targetPubkey, directMessage);
+          } else if (event.kind === kinds.EncryptedDirectMessage) {
+            // Handle NIP-04 legacy encrypted message
+            const unwrappedMessage = await this.unwrapNip04MessageInternal(event);
+            if (!unwrappedMessage) return;
+
+            // For NIP-04, determine chat partner
+            let targetPubkey: string;
+            if (event.pubkey === myPubkey) {
+              // Outgoing - get recipient from p tag
+              const pTags = this.utilities.getPTagsValuesFromEvent(event);
+              targetPubkey = pTags[0];
+            } else {
+              // Incoming - sender is pubkey
+              targetPubkey = event.pubkey;
+            }
+
+            if (!targetPubkey || targetPubkey === 'undefined') {
+              this.logger.warn('Live subscription: Could not determine target pubkey from NIP-04 message');
+              return;
+            }
+
+            const directMessage: DirectMessage = {
+              id: unwrappedMessage.id,
+              pubkey: unwrappedMessage.pubkey,
+              created_at: unwrappedMessage.created_at,
+              content: unwrappedMessage.content,
+              tags: unwrappedMessage.tags || [],
+              isOutgoing: event.pubkey === myPubkey,
+              pending: false,
+              failed: false,
+              received: true,
+              read: false,
+              encryptionType: 'nip04',
+            };
+
+            this.addMessageToChat(targetPubkey, directMessage);
+          }
+        } catch (err) {
+          this.logger.error('Error processing real-time DM event:', err);
+        }
+      },
+      () => {
+        // EOSE callback - for live subscriptions this just signals initial sync complete
+        this.logger.debug('Live DM subscription reached EOSE');
+      }
+    );
+
+    // Normalize the subscription object to always have a close() method
+    const sub: { close: () => void } = {
+      close: () => {
+        if ('close' in rawSub && typeof rawSub.close === 'function') {
+          rawSub.close();
+        } else if ('unsubscribe' in rawSub && typeof rawSub.unsubscribe === 'function') {
+          rawSub.unsubscribe();
+        }
+      }
+    };
+
+    this.liveSubscription = sub;
+    return sub;
+  }
+
+  /**
+   * Close the live incoming messages subscription.
+   * Call this when leaving the Messages page.
+   */
+  closeLiveSubscription(): void {
+    if (this.liveSubscription) {
+      this.logger.info('Closing live message subscription');
+      this.liveSubscription.close();
+      this.liveSubscription = null;
+    }
+  }
+
   /**
    * Unwrap and decrypt a NIP-04 direct message
    */

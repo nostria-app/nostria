@@ -521,6 +521,9 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngOnInit(): void {
+    // Start live subscription for incoming DMs
+    this.startLiveSubscription();
+
     // Check for route parameters first to see if we need to start a specific chat
     this.route.queryParams.subscribe(params => {
       const pubkey = params['pubkey'];
@@ -580,6 +583,25 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       }
     });
+  }
+
+  /**
+   * Start the live subscription for incoming DMs.
+   * This allows the message list to auto-update when new DMs arrive.
+   */
+  private startLiveSubscription(): void {
+    // Close any existing subscriptions first
+    if (this.messageSubscription) {
+      this.messageSubscription.close();
+      this.messageSubscription = null;
+    }
+
+    // Start the live subscription via the messaging service
+    const sub = this.messaging.subscribeToIncomingMessages();
+    if (sub) {
+      this.messageSubscription = sub;
+      this.logger.debug('Live DM subscription started');
+    }
   }
 
   ngAfterViewInit(): void {

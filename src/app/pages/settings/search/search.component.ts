@@ -164,32 +164,50 @@ export class SearchSettingsComponent {
 
     dialogRef.afterClosed().subscribe(async (result: { action: string }) => {
       if (result && result.action === 'add') {
-        const currentRelays = this.searchRelay.getRelayUrls();
-        const newRelays = [...currentRelays, url];
+        this.isPublishing.set(true);
 
-        // Save locally
-        this.searchRelay.setSearchRelays(newRelays);
+        try {
+          const currentRelays = this.searchRelay.getRelayUrls();
+          const newRelays = [...currentRelays, url];
 
-        // Publish to relays
-        await this.publishSearchRelayList(newRelays);
+          // Save locally
+          this.searchRelay.setSearchRelays(newRelays);
 
-        this.newSearchRelayUrl.set('');
-        this.showMessage('Search relay added');
+          // Publish to relays
+          await this.publishSearchRelayList(newRelays);
+
+          this.newSearchRelayUrl.set('');
+          this.showMessage('Search relay added');
+        } catch (error) {
+          this.logger.error('Failed to add search relay', error);
+          this.showMessage('Failed to add search relay');
+        } finally {
+          this.isPublishing.set(false);
+        }
       }
     });
   }
 
   async removeSearchRelay(relayUrl: string) {
-    const currentRelays = this.searchRelay.getRelayUrls();
-    const newRelays = currentRelays.filter(r => r !== relayUrl);
+    this.isPublishing.set(true);
 
-    // Save locally
-    this.searchRelay.setSearchRelays(newRelays);
+    try {
+      const currentRelays = this.searchRelay.getRelayUrls();
+      const newRelays = currentRelays.filter(r => r !== relayUrl);
 
-    // Publish to relays
-    await this.publishSearchRelayList(newRelays);
+      // Save locally
+      this.searchRelay.setSearchRelays(newRelays);
 
-    this.showMessage('Search relay removed');
+      // Publish to relays
+      await this.publishSearchRelayList(newRelays);
+
+      this.showMessage('Search relay removed');
+    } catch (error) {
+      this.logger.error('Failed to remove search relay', error);
+      this.showMessage('Failed to remove search relay');
+    } finally {
+      this.isPublishing.set(false);
+    }
   }
 
   async publishSearchRelayList(relayUrls: string[]) {
@@ -257,16 +275,25 @@ export class SearchSettingsComponent {
       return;
     }
 
-    const currentRelays = this.searchRelay.getRelayUrls();
-    const newRelays = [...currentRelays, defaultRelay];
+    this.isPublishing.set(true);
 
-    // Save locally
-    this.searchRelay.setSearchRelays(newRelays);
+    try {
+      const currentRelays = this.searchRelay.getRelayUrls();
+      const newRelays = [...currentRelays, defaultRelay];
 
-    // Publish to relays
-    await this.publishSearchRelayList(newRelays);
+      // Save locally
+      this.searchRelay.setSearchRelays(newRelays);
 
-    this.showMessage('Default search relay added');
+      // Publish to relays
+      await this.publishSearchRelayList(newRelays);
+
+      this.showMessage('Default search relay added');
+    } catch (error) {
+      this.logger.error('Failed to add default relay', error);
+      this.showMessage('Failed to add default relay');
+    } finally {
+      this.isPublishing.set(false);
+    }
   }
 
   private showMessage(message: string) {

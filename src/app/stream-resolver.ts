@@ -28,7 +28,7 @@ async function fetchEventFromRelays(eventId: string, relayHints?: string[]): Pro
   // Expand relay list - combine hints with popular relays for better discovery
   const popularRelays = [
     'wss://relay.damus.io',
-    'wss://relay.nostr.band',
+    // 'wss://relay.nostr.band',
     'wss://nos.lol',
     'wss://relay.snort.social',
     'wss://relay.primal.net',
@@ -79,7 +79,7 @@ async function fetchEventByAddress(kind: number, pubkey: string, identifier: str
 
   const popularRelays = [
     'wss://relay.damus.io',
-    'wss://relay.nostr.band',
+    // 'wss://relay.nostr.band',
     'wss://nos.lol',
     'wss://relay.snort.social',
     'wss://relay.primal.net',
