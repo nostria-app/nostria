@@ -188,6 +188,26 @@
       </div>
       }
     </div>
+    } @else if (authRequired()) {
+    <!-- Auth required state -->
+    <div class="auth-required-state">
+      <mat-icon>lock</mat-icon>
+      <p>This relay requires authentication</p>
+      @if (authError()) {
+      <span class="auth-error-message">{{ authError() }}</span>
+      }
+      @if (isAuthenticating()) {
+      <div class="authenticating">
+        <mat-spinner diameter="24"></mat-spinner>
+        <span>Authenticating...</span>
+      </div>
+      } @else {
+      <button mat-flat-button (click)="authenticateAndRetry()">
+        <mat-icon>login</mat-icon>
+        Authenticate & Retry
+      </button>
+      }
+    </div>
     } @else if (error()) {
     <!-- Error state -->
     <div class="error-state">
