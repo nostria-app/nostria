@@ -390,11 +390,21 @@
         <mat-icon>undo</mat-icon>
       </button>
       }
-      <button mat-icon-button type="button" (click)="openFileDialog()"
+      <button mat-icon-button type="button" [matMenuTriggerFor]="mediaMenu"
         [disabled]="isUploading() || isPublishing() || showPreview() || showAdvancedOptions()"
-        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Upload media">
+        [class.button-disabled-visible]="showPreview() || showAdvancedOptions()" matTooltip="Add media">
         <mat-icon>perm_media</mat-icon>
       </button>
+      <mat-menu #mediaMenu="matMenu">
+        <button mat-menu-item (click)="openFileDialog()">
+          <mat-icon>upload</mat-icon>
+          <span>Upload media</span>
+        </button>
+        <button mat-menu-item (click)="openMediaChooser()">
+          <mat-icon>photo_library</mat-icon>
+          <span>Choose from library</span>
+        </button>
+      </mat-menu>
       <button mat-icon-button type="button" (click)="toggleAdvancedOptions()"
         [color]="showAdvancedOptions() ? 'primary' : ''" matTooltip="Advanced options">
         <mat-icon>settings</mat-icon>

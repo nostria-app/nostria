@@ -1,0 +1,136 @@
+<div dialog-content class="media-chooser-dialog">
+  <!-- Search and actions bar -->
+  <div class="chooser-toolbar">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-icon matPrefix>search</mat-icon>
+      <input matInput [ngModel]="searchQuery()" (ngModelChange)="searchQuery.set($event)" placeholder="Search media...">
+    </mat-form-field>
+
+    <div class="toolbar-actions">
+      @if (isLoading() || isMediaServiceLoading()) {
+      <mat-spinner diameter="24"></mat-spinner>
+      } @else {
+      <button mat-icon-button (click)="refreshMedia()" matTooltip="Refresh">
+        <mat-icon>refresh</mat-icon>
+      </button>
+      }
+    </div>
+  </div>
+
+  <!-- Tabs for media types -->
+  <mat-tab-group [selectedIndex]="getTabIndex()" (selectedIndexChange)="onTabChange($event)">
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">image</mat-icon>
+        <span>Images ({{ images().length }})</span>
+      </ng-template>
+      <div class="tab-content">
+        @if (images().length === 0) {
+        <div class="empty-state">
+          <mat-icon>image</mat-icon>
+          <p>No images in your library</p>
+        </div>
+        } @else {
+        <div class="media-grid">
+          @for (item of images(); track item.sha256) {
+          <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
+            (keydown.enter)="selectItem(item)" (keydown.space)="selectItem(item)" tabindex="0" role="button">
+            <div class="media-thumbnail">
+              <div class="selection-indicator">
+                <mat-icon>check_circle</mat-icon>
+              </div>
+              <img [src]="item.url" [alt]="getFileName(item.url)" [title]="getFileName(item.url)" loading="lazy" />
+            </div>
+            <div class="media-info">
+              <span class="media-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
+              <span class="media-size">{{ formatFileSize(item.size) }}</span>
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">videocam</mat-icon>
+        <span>Videos ({{ videos().length }})</span>
+      </ng-template>
+      <div class="tab-content">
+        @if (videos().length === 0) {
+        <div class="empty-state">
+          <mat-icon>videocam</mat-icon>
+          <p>No videos in your library</p>
+        </div>
+        } @else {
+        <div class="media-grid">
+          @for (item of videos(); track item.sha256) {
+          <div class="media-card" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
+            (keydown.enter)="selectItem(item)" (keydown.space)="selectItem(item)" tabindex="0" role="button">
+            <div class="media-thumbnail video-thumbnail">
+              <div class="selection-indicator">
+                <mat-icon>check_circle</mat-icon>
+              </div>
+              <mat-icon class="video-play-icon">play_circle</mat-icon>
+              <video [src]="item.url" preload="metadata"></video>
+            </div>
+            <div class="media-info">
+              <span class="media-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
+              <span class="media-size">{{ formatFileSize(item.size) }}</span>
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </mat-tab>
+
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon class="tab-icon">insert_drive_file</mat-icon>
+        <span>Files ({{ files().length }})</span>
+      </ng-template>
+      <div class="tab-content">
+        @if (files().length === 0) {
+        <div class="empty-state">
+          <mat-icon>insert_drive_file</mat-icon>
+          <p>No files in your library</p>
+        </div>
+        } @else {
+        <div class="files-list">
+          @for (item of files(); track item.sha256) {
+          <div class="file-item" [class.selected]="isSelected(item.sha256)" (click)="selectItem(item)"
+            (keydown.enter)="selectItem(item)" (keydown.space)="selectItem(item)" tabindex="0" role="button">
+            <div class="selection-indicator">
+              <mat-icon>check_circle</mat-icon>
+            </div>
+            <mat-icon class="file-icon">insert_drive_file</mat-icon>
+            <div class="file-details">
+              <span class="file-name" [matTooltip]="getFileName(item.url)">{{ getFileName(item.url) }}</span>
+              <span class="file-meta">{{ item.type || 'Unknown type' }} • {{ formatFileSize(item.size) }}</span>
+            </div>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</div>
+
+<div dialog-actions class="chooser-actions">
+  <div class="selection-info">
+    @if (hasSelection()) {
+    <span>{{ selectionCount() }} item(s) selected</span>
+    }
+  </div>
+  <div class="action-buttons">
+    <button mat-button (click)="cancel()">Cancel</button>
+    @if (allowMultiple()) {
+    <button mat-flat-button (click)="confirm()" [disabled]="!hasSelection()">
+      Add Selected
+    </button>
+    }
+  </div>
+</div>

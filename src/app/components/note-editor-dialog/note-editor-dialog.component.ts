@@ -10,7 +10,7 @@ import {
   OnInit,
   HostListener,
 } from '@angular/core';
-import { CustomDialogRef } from '../../services/custom-dialog.service';
+import { CustomDialogRef, CustomDialogService } from '../../services/custom-dialog.service';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -144,6 +144,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private publishEventBus = inject(PublishEventBus);
   private publishSubscription?: Subscription;
   private dialog = inject(MatDialog);
+  private customDialog = inject(CustomDialogService);
   private aiService = inject(AiService);
   private speechService = inject(SpeechService);
 
@@ -1958,6 +1959,70 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         this.dialogRef?.close({ published: false });
       }
     });
+  }
+
+  async openMediaChooser(): Promise<void> {
+    // Check if user has media servers configured
+    if (!this.hasConfiguredMediaServers()) {
+      this.showMediaServerWarning();
+      return;
+    }
+
+    // Dynamically import the media chooser dialog
+    const { MediaChooserDialogComponent } = await import('../media-chooser-dialog/media-chooser-dialog.component');
+    type MediaChooserResult = import('../media-chooser-dialog/media-chooser-dialog.component').MediaChooserResult;
+    
+    const dialogRef = this.customDialog.open<typeof MediaChooserDialogComponent.prototype, MediaChooserResult>(MediaChooserDialogComponent, {
+      title: 'Choose from Library',
+      width: '700px',
+      maxWidth: '95vw',
+      data: {
+        multiple: true,
+        mediaType: 'all',
+      },
+    });
+
+    dialogRef.afterClosed$.subscribe(({ result }) => {
+      if (result?.items?.length) {
+        // Add selected media items to the editor
+        for (const item of result.items) {
+          this.addExistingMediaToEditor(item);
+        }
+      }
+    });
+  }
+
+  private addExistingMediaToEditor(item: { sha256: string; type: string; url: string; size: number }): void {
+    // Add the media URL to the content
+    const currentContent = this.content();
+    const urlToAdd = item.url;
+    
+    // Check if URL is already in content
+    if (currentContent.includes(urlToAdd)) {
+      this.snackBar.open('This media is already in your note', 'Dismiss', { duration: 3000 });
+      return;
+    }
+
+    // Add to media metadata for preview/imeta tags
+    const currentMetadata = this.mediaMetadata();
+    const alreadyAdded = currentMetadata.some(m => m.url === urlToAdd);
+    
+    if (!alreadyAdded) {
+      this.mediaMetadata.set([
+        ...currentMetadata,
+        {
+          url: urlToAdd,
+          mimeType: item.type,
+          sha256: item.sha256,
+        },
+      ]);
+    }
+
+    // Append URL to content
+    const separator = currentContent.trim() ? '\n\n' : '';
+    this.content.set(currentContent + separator + urlToAdd);
+
+    this.snackBar.open('Media added to note', 'Dismiss', { duration: 2000 });
   }
 
   onDragEnter(event: DragEvent): void {
