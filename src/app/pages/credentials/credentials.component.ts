@@ -19,7 +19,6 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { AccountStateService } from '../../services/account-state.service';
 import { Wallets, Wallet } from '../../services/wallets';
 import { NwcService, WalletData, NwcTransaction } from '../../services/nwc.service';
-import { CoinosWalletService } from '../../services/coinos-wallet.service';
 import { LN, USD } from '@getalby/sdk';
 import { CryptoEncryptionService, EncryptedData } from '../../services/crypto-encryption.service';
 import { PinPromptService } from '../../services/pin-prompt.service';
@@ -61,7 +60,6 @@ export class CredentialsComponent implements OnInit {
   pinPrompt = inject(PinPromptService);
   dialog = inject(MatDialog);
   nwcService = inject(NwcService);
-  coinosWallet = inject(CoinosWalletService);
   isNsecVisible = signal(false);
   isMnemonicVisible = signal(false);
   wallets = inject(Wallets);
@@ -620,21 +618,6 @@ export class CredentialsComponent implements OnInit {
       });
     } finally {
       this.isAddingWallet.set(false);
-    }
-  }
-
-  /**
-   * Activates a Coinos deterministic wallet with one click
-   */
-  async activateCoinosWallet(): Promise<void> {
-    const nwcUrl = await this.coinosWallet.activateWallet();
-
-    if (nwcUrl) {
-      this.snackBar.open('Coinos wallet activated successfully! You can now send and receive Lightning payments.', 'Dismiss', {
-        duration: 5000,
-        horizontalPosition: 'center',
-        verticalPosition: 'bottom',
-      });
     }
   }
 
