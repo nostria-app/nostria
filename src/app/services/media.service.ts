@@ -393,17 +393,64 @@ export class MediaService implements NostriaService {
     }
   }
 
+  /**
+   * Get the correct MIME type for a file, handling edge cases like .mpga
+   * which browsers may not recognize properly.
+   */
+  getFileMimeType(file: File): string {
+    // If browser detected a valid type, use it
+    if (file.type && file.type !== 'application/octet-stream') {
+      return file.type;
+    }
+
+    // Map common extensions to MIME types for files browsers don't recognize
+    const extensionMap: Record<string, string> = {
+      '.mpga': 'audio/mpeg',
+      '.mp3': 'audio/mpeg',
+      '.mp2': 'audio/mpeg',
+      '.m4a': 'audio/mp4',
+      '.aac': 'audio/aac',
+      '.ogg': 'audio/ogg',
+      '.oga': 'audio/ogg',
+      '.opus': 'audio/opus',
+      '.flac': 'audio/flac',
+      '.wav': 'audio/wav',
+      '.weba': 'audio/webm',
+      '.webm': 'video/webm',
+      '.mp4': 'video/mp4',
+      '.m4v': 'video/mp4',
+      '.mkv': 'video/x-matroska',
+      '.avi': 'video/x-msvideo',
+      '.mov': 'video/quicktime',
+    };
+
+    // Get file extension
+    const fileName = file.name.toLowerCase();
+    const dotIndex = fileName.lastIndexOf('.');
+    if (dotIndex !== -1) {
+      const ext = fileName.substring(dotIndex);
+      if (extensionMap[ext]) {
+        return extensionMap[ext];
+      }
+    }
+
+    // Fallback to browser-detected type or generic binary
+    return file.type || 'application/octet-stream';
+  }
+
   determineAction(file: File) {
+    const mimeType = this.getFileMimeType(file);
+
     // Check if file type is picture
-    const isPicture = file.type.startsWith('image/');
+    const isPicture = mimeType.startsWith('image/');
 
     // Check if file type is video
-    const isVideo = file.type.startsWith('video/');
+    const isVideo = mimeType.startsWith('video/');
 
     // Set action to "media" for pictures and videos, otherwise "upload"
     const action = isPicture || isVideo ? 'media' : 'upload';
 
-    return { isPicture, isVideo, action };
+    return { isPicture, isVideo, action, mimeType };
   }
 
   async getFileBytes(file: File): Promise<Uint8Array> {
@@ -476,9 +523,10 @@ export class MediaService implements NostriaService {
           const url = server.endsWith('/') ? server : `${server}/`;
 
           const action = this.determineAction(file);
+          const mimeType = action.mimeType;
 
           console.log(`Uploading to server: ${server}`);
-          console.log(`File type: ${file.type}, Action: ${action.action}, isPicture: ${action.isPicture}, isVideo: ${action.isVideo}`);
+          console.log(`File type: ${mimeType} (original: ${file.type}), Action: ${action.action}, isPicture: ${action.isPicture}, isVideo: ${action.isVideo}`);
 
           // If the user chose to upload the original file, set the action to 'upload'
           if (uploadOriginal) {
@@ -489,7 +537,7 @@ export class MediaService implements NostriaService {
           headers = await this.getAuthHeaders('Upload File', action.action, hash);
 
           headers['X-SHA-256'] = hash;
-          headers['X-Content-Type'] = file.type;
+          headers['X-Content-Type'] = mimeType;
           headers['X-Content-Length'] = file.size.toString();
 
           const api = action.action === 'media' ? 'media' : 'upload';
@@ -515,14 +563,14 @@ export class MediaService implements NostriaService {
           }
 
           console.log('HEAD request successful, proceeding with PUT...');
-          console.log(`File size: ${file.size} bytes, type: ${file.type}`);
+          console.log(`File size: ${file.size} bytes, type: ${mimeType}`);
 
           // Send the binary file directly
           const response = await fetch(`${url}${api}`, {
             method: 'PUT', // As per BUD-02 spec
             headers: {
               ...headers,
-              'Content-Type': file.type,
+              'Content-Type': mimeType,
               'Content-Length': file.size.toString(),
             },
             body: file, // Send the file directly as binary data

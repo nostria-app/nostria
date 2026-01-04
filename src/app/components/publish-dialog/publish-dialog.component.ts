@@ -256,29 +256,8 @@ export class PublishDialogComponent {
   }
 
   parseRelayUrl(relayUrl: string): string | null {
-    let url = relayUrl.trim();
-
-    if (!url) {
-      return null;
-    }
-
-    // Check if the URL has a valid protocol
-    if (!url.startsWith('wss://') && !url.startsWith('ws://')) {
-      // Default to wss:// if no protocol is specified
-      url = `wss://${url}`;
-    }
-
-    // Only append trailing slash if there's no path component (just domain)
-    try {
-      const parsedUrl = new URL(url);
-      if (parsedUrl.pathname === '/') {
-        url = url.endsWith('/') ? url : `${url}/`;
-      }
-    } catch {
-      return null;
-    }
-
-    return url;
+    const normalized = this.utilities.normalizeRelayUrl(relayUrl.trim());
+    return normalized || null;
   }
 
   addCustomRelay(): void {
@@ -326,8 +305,8 @@ export class PublishDialogComponent {
       allRelays.push(...this.customRelays());
     }
 
-    // Remove duplicates
-    return [...new Set(allRelays)];
+    // Normalize and remove duplicates
+    return this.utilities.getUniqueNormalizedRelayUrls(allRelays);
   }
 
   onOptionChange(option: 'account' | 'author' | 'mentioned' | 'custom', checked: boolean): void {

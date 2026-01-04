@@ -2095,7 +2095,10 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             }
             | undefined;
 
-          if (file.type.startsWith('video/')) {
+          // Use the media service to get the correct MIME type
+          const fileMimeType = this.mediaService.getFileMimeType(file);
+
+          if (fileMimeType.startsWith('video/')) {
             try {
               this.uploadStatus.set(`Extracting video thumbnail${fileLabel}...`);
 
@@ -2127,7 +2130,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
             }
           }
 
-          const isVideoUpload = file.type.startsWith('video/');
+          const isVideoUpload = fileMimeType.startsWith('video/');
           const uploadText = isVideoUpload && !this.uploadOriginal() ? 'Uploading and optimizing' : 'Uploading';
           this.uploadStatus.set(`${uploadText}${fileLabel}...`);
           const result = await this.mediaService.uploadFile(
@@ -2375,15 +2378,18 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
     }
   ): Promise<MediaMetadata | null> {
     try {
+      // Use the media service to get the correct MIME type (handles .mpga, etc.)
+      const mimeType = this.mediaService.getFileMimeType(file);
+
       const metadata: MediaMetadata = {
         url,
-        mimeType: file.type,
+        mimeType,
         sha256, // Include SHA-256 hash if provided
         fallbackUrls: mirrors && mirrors.length > 0 ? mirrors : undefined, // Add mirror URLs as fallbacks
       };
 
       // Handle images - use imagePlaceholder service for both blurhash and thumbhash
-      if (file.type.startsWith('image/')) {
+      if (mimeType.startsWith('image/')) {
         const placeholders = await this.imagePlaceholder.generatePlaceholders(file);
         metadata.blurhash = placeholders.blurhash;
         metadata.thumbhash = placeholders.thumbhash;
@@ -2396,7 +2402,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       }
 
       // Handle videos - use pre-extracted thumbnail data if available
-      if (file.type.startsWith('video/') && thumbnailData) {
+      if (mimeType.startsWith('video/') && thumbnailData) {
         try {
           // Upload the thumbnail blob to get a permanent URL
           const thumbnailFile = new File([thumbnailData.blob], 'thumbnail.jpg', {
@@ -2435,7 +2441,7 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
       // Return basic metadata even if processing fails
       return {
         url,
-        mimeType: file.type,
+        mimeType: this.mediaService.getFileMimeType(file),
         fallbackUrls: mirrors && mirrors.length > 0 ? mirrors : undefined,
       };
     }
