@@ -21,6 +21,7 @@ import { EventComponent } from '../../../components/event/event.component';
 import { UserProfileComponent } from '../../../components/user-profile/user-profile.component';
 import { LoggerService } from '../../../services/logger.service';
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
+import { RelayAuthService } from '../../../services/relays/relay-auth.service';
 import { Router, ActivatedRoute } from '@angular/router';
 import { SimplePool, Filter } from 'nostr-tools';
 import { Event } from 'nostr-tools';
@@ -65,6 +66,7 @@ const DEFAULT_RELAYS: string[] = [
 export class RelayColumnComponent implements OnDestroy {
   private logger = inject(LoggerService);
   private relaysService = inject(RelaysService);
+  private relayAuthService = inject(RelayAuthService);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
   private router = inject(Router);
@@ -93,6 +95,11 @@ export class RelayColumnComponent implements OnDestroy {
   isLoadingInfo = signal(false);
   isExpanded = signal(false);
   showReplies = signal(false);
+  
+  // Authentication state
+  authRequired = signal(false);
+  authError = signal<string | null>(null);
+  isAuthenticating = signal(false);
 
   // Saved relay list
   savedRelays = signal<string[]>([]);
@@ -370,6 +377,8 @@ export class RelayColumnComponent implements OnDestroy {
 
     this.isLoading.set(true);
     this.error.set(null);
+    this.authRequired.set(false);
+    this.authError.set(null);
     this.displayCount.set(PAGE_SIZE);
     this.allEvents.set([]);
 
@@ -385,8 +394,12 @@ export class RelayColumnComponent implements OnDestroy {
 
       const events: Event[] = [];
 
-      // Query the relay
+      // Get auth callback for NIP-42 authentication
+      const authCallback = this.relayAuthService.getAuthCallback();
+
+      // Query the relay with auth support
       const sub = this.pool.subscribeMany([url], filter, {
+        onauth: authCallback,
         onevent: (event: Event) => {
           events.push(event);
           // Sort by created_at descending and update
@@ -397,6 +410,22 @@ export class RelayColumnComponent implements OnDestroy {
           this.logger.debug(`Got ${events.length} events from ${url}`);
           this.isLoading.set(false);
           this.isRefreshing.set(false);
+        },
+        onclose: (reasons: string[]) => {
+          // Reasons is an array of close reasons from all relays
+          for (const reason of reasons) {
+            this.logger.debug(`Subscription closed for ${url}: ${reason}`);
+            
+            // Check for auth-required or restricted messages
+            if (reason.includes('auth-required:') || reason.includes('restricted:')) {
+              this.logger.info(`Relay ${url} requires authentication: ${reason}`);
+              this.authRequired.set(true);
+              this.authError.set(reason);
+              this.isLoading.set(false);
+              this.isRefreshing.set(false);
+              break;
+            }
+          }
         },
       });
 
@@ -409,6 +438,40 @@ export class RelayColumnComponent implements OnDestroy {
       this.error.set('Failed to load events from relay');
       this.isLoading.set(false);
       this.isRefreshing.set(false);
+    }
+  }
+
+  /**
+   * Attempt to authenticate with the relay and retry fetching events.
+   * This is called when user clicks "Authenticate" button after auth-required error.
+   */
+  async authenticateAndRetry(): Promise<void> {
+    const url = this.relayUrl();
+    if (!url) return;
+
+    // Check if we can sign (have a signer available)
+    if (!this.relayAuthService.canSign()) {
+      this.authError.set('No signer available. Please sign in with a wallet or extension.');
+      return;
+    }
+
+    this.isAuthenticating.set(true);
+    this.authError.set(null);
+
+    try {
+      // Reset any previous auth failure for this relay so we can retry
+      await this.relayAuthService.resetAuthFailure(url);
+      
+      // Clear the authRequired state and retry fetching
+      this.authRequired.set(false);
+      
+      // Retry fetching events - the onauth callback will handle the actual authentication
+      await this.fetchEvents();
+    } catch (error) {
+      this.logger.error('Error during authentication:', error);
+      this.authError.set(error instanceof Error ? error.message : 'Authentication failed');
+    } finally {
+      this.isAuthenticating.set(false);
     }
   }
 
