@@ -114,14 +114,14 @@ export interface RelayInfo {
 
       <mat-divider></mat-divider>
 
-      <div class="add-relay-section" role="presentation">
+      <div class="add-relay-section" (click)="$event.stopPropagation()" (keydown)="$event.stopPropagation()">
         <mat-form-field appearance="outline" class="add-relay-field">
           <mat-label>Add relay</mat-label>
           <input
             matInput
             [(ngModel)]="newRelayInput"
             placeholder="relay.example.com"
-            (keydown.enter)="onAddRelay()"
+            (keydown.enter)="onAddRelay(); $event.stopPropagation()"
           />
         </mat-form-field>
         <button mat-icon-button (click)="onAddRelay()" [disabled]="!newRelayInput">
@@ -276,27 +276,34 @@ export class RelayFeedMenuComponent {
   // State
   savedRelays = signal<string[]>([]);
   selectedRelay = signal<string>('');
-  relayInfoCache = signal<Map<string, Nip11RelayInfo>>(new Map());
+  // Using a plain Map instead of a signal to prevent cache updates from
+  // triggering change detection and stealing focus from the input field
+  private relayInfoCache = new Map<string, Nip11RelayInfo>();
+  private lastLoadedPubkey = '';
+  private initialRelaysFetched = false;
   newRelayInput = '';
 
   constructor() {
-    // Load saved relays when account changes
+    // Load saved relays when account changes - only if pubkey actually changed
     effect(() => {
       const pubkey = this.accountState.pubkey();
-      if (pubkey) {
+      if (pubkey && pubkey !== this.lastLoadedPubkey) {
+        this.lastLoadedPubkey = pubkey;
         this.loadSavedRelays(pubkey);
       }
     });
 
-    // Fetch info for any relays missing from cache
+    // Fetch info for relays only once on initialization
     effect(() => {
       const relays = this.savedRelays();
-      const cache = this.relayInfoCache();
-      relays.forEach(relay => {
-        if (!cache.has(relay)) {
-          this.fetchRelayInfo(relay);
-        }
-      });
+      if (!this.initialRelaysFetched && relays.length > 0) {
+        this.initialRelaysFetched = true;
+        relays.forEach(relay => {
+          if (!this.relayInfoCache.has(relay)) {
+            this.fetchRelayInfo(relay);
+          }
+        });
+      }
     });
   }
 
@@ -327,17 +334,13 @@ export class RelayFeedMenuComponent {
   }
 
   private async fetchRelayInfo(domain: string): Promise<void> {
-    if (this.relayInfoCache().has(domain)) return;
+    if (this.relayInfoCache.has(domain)) return;
 
     try {
       const url = domain.startsWith('wss://') ? domain : `wss://${domain}`;
       const info = await this.relaysService.fetchNip11Info(url);
       if (info) {
-        this.relayInfoCache.update(cache => {
-          const newCache = new Map(cache);
-          newCache.set(domain, info);
-          return newCache;
-        });
+        this.relayInfoCache.set(domain, info);
       }
     } catch {
       this.logger.debug(`Failed to fetch info for ${domain}`);
@@ -345,12 +348,12 @@ export class RelayFeedMenuComponent {
   }
 
   getRelayName(domain: string): string {
-    const info = this.relayInfoCache().get(domain);
+    const info = this.relayInfoCache.get(domain);
     return info?.name || domain;
   }
 
   getRelayIcon(domain: string): string | null {
-    const info = this.relayInfoCache().get(domain);
+    const info = this.relayInfoCache.get(domain);
     // If we have info, try icon first, then banner
     if (info?.icon) return info.icon;
     if (info?.banner) return info.banner;
@@ -403,14 +406,20 @@ export class RelayFeedMenuComponent {
   setSelectedRelay(domain: string): void {
     this.selectedRelay.set(domain);
     // Refresh saved relays from storage in case they changed (e.g., relay added from column)
+    // Only update if the arrays are actually different to prevent unnecessary re-renders
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
       const stored = this.accountLocalState.getPublicRelayFeeds(pubkey);
       if (stored && stored.length > 0) {
-        this.savedRelays.set(stored);
+        const current = this.savedRelays();
+        const isDifferent = stored.length !== current.length || 
+          stored.some((r, i) => r !== current[i]);
+        if (isDifferent) {
+          this.savedRelays.set(stored);
+        }
       }
     }
-    if (domain && !this.relayInfoCache().has(domain)) {
+    if (domain && !this.relayInfoCache.has(domain)) {
       this.fetchRelayInfo(domain);
     }
   }
