@@ -484,13 +484,13 @@ export class UtilitiesService {
    * @returns Array of unique normalized relay URLs
    */
   getUniqueNormalizedRelayUrls(urls: string[]): string[] {
-    // Remove duplicates first
-    const uniqueUrls = [...new Set(urls)]
-      .map(url => url.trim())
+    // Normalize all URLs first, then deduplicate
+    const normalizedUrls = urls
+      .map(url => this.normalizeRelayUrl(url.trim()))
       .filter(url => url.length > 0);
 
-    // Normalize all URLs (normalizeRelayUrls already filters out invalid ones)
-    return this.normalizeRelayUrls(uniqueUrls);
+    // Remove duplicates after normalization
+    return [...new Set(normalizedUrls)];
   }
 
   /**
