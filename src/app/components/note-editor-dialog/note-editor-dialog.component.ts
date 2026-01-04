@@ -614,26 +614,32 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
         kind: this.data.quote.kind,
       });
 
-      // Append quote to existing content (e.g. draft) or set it
+      const quoteText = `nostr:${nevent}`;
       const currentContent = this.content();
-      const quoteText = `\n\nnostr:${nevent}`;
 
-      if (currentContent) {
-        this.content.set(currentContent + quoteText);
-      } else {
-        this.content.set(quoteText);
+      // Only add the quote if it doesn't already exist in the content
+      if (!currentContent.includes(quoteText)) {
+        if (currentContent) {
+          this.content.set(currentContent + '\n\n' + quoteText);
+        } else {
+          this.content.set(quoteText);
+        }
       }
     }
 
     // Initialize content if provided (e.g. from Share Target)
     if (this.data?.content) {
       const currentContent = this.content();
-      const newContent = this.data.content;
+      const newContent = this.data.content.trim();
 
-      if (currentContent) {
-        this.content.set(currentContent + '\n' + newContent);
-      } else {
-        this.content.set(newContent);
+      // Only add the content if it doesn't already exist in the draft
+      // This handles nostr: URIs (naddr, nevent, note, etc.) and regular URLs
+      if (!this.contentAlreadyExists(currentContent, newContent)) {
+        if (currentContent) {
+          this.content.set(currentContent + '\n' + newContent);
+        } else {
+          this.content.set(newContent);
+        }
       }
     }
 
@@ -2454,6 +2460,65 @@ export class NoteEditorDialogComponent implements OnInit, AfterViewInit, OnDestr
   private containsNip19Identifier(text: string): boolean {
     const nip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1|nsec1)[a-zA-Z0-9]+\b/;
     return nip19Pattern.test(text);
+  }
+
+  /**
+   * Check if the new content already exists in the current draft content.
+   * Handles nostr: URIs (naddr, nevent, note, npub, nprofile) and regular URLs.
+   * For nostr: URIs, extracts the identifier and checks if it's present anywhere in the draft.
+   */
+  private contentAlreadyExists(currentContent: string, newContent: string): boolean {
+    if (!currentContent || !newContent) {
+      return false;
+    }
+
+    // Direct check - if the exact content already exists
+    if (currentContent.includes(newContent)) {
+      return true;
+    }
+
+    // Extract nostr: URIs from new content and check if they exist in current content
+    const nostrUriPattern = /nostr:(note1|nevent1|npub1|nprofile1|naddr1)[a-zA-Z0-9]+/g;
+    const nostrUris = newContent.match(nostrUriPattern);
+
+    if (nostrUris) {
+      for (const uri of nostrUris) {
+        if (currentContent.includes(uri)) {
+          return true;
+        }
+        // Also check without the nostr: prefix (in case it was added differently)
+        const identifier = uri.replace('nostr:', '');
+        if (currentContent.includes(identifier)) {
+          return true;
+        }
+      }
+    }
+
+    // Check for bare NIP-19 identifiers (without nostr: prefix) and see if they exist with prefix
+    const bareNip19Pattern = /\b(note1|nevent1|npub1|nprofile1|naddr1)([a-zA-Z0-9]+)\b/g;
+    const bareIdentifiers = newContent.match(bareNip19Pattern);
+
+    if (bareIdentifiers) {
+      for (const identifier of bareIdentifiers) {
+        if (currentContent.includes(identifier) || currentContent.includes(`nostr:${identifier}`)) {
+          return true;
+        }
+      }
+    }
+
+    // Check for regular URLs
+    const urlPattern = /https?:\/\/[^\s]+/g;
+    const urls = newContent.match(urlPattern);
+
+    if (urls) {
+      for (const url of urls) {
+        if (currentContent.includes(url)) {
+          return true;
+        }
+      }
+    }
+
+    return false;
   }
 
   /**

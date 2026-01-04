@@ -307,7 +307,7 @@ export class ParsingService {
       /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})(?=\s|##LINEBREAK##|$)/g;
     const imageRegex =
       /(https?:\/\/[^\s##]+\.(jpg|jpeg|png|gif|webp)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
-    const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|wav|ogg|m4a)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
+    const audioRegex = /(https?:\/\/[^\s##]+\.(mp3|mpga|mp2|wav|ogg|oga|opus|m4a|aac|flac|weba)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const videoRegex =
       /(https?:\/\/[^\s##]+\.(mp4|webm|mov|avi|wmv|flv|mkv)(\?[^\s##]*)?(?=\s|##LINEBREAK##|$))/gi;
     const nostrRegex =
