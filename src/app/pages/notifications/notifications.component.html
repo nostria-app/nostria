@@ -165,7 +165,7 @@
             <div class="notification-actions">
               @if (!notification.read) {
               <button mat-icon-button (click)="markAsRead(notification.id); $event.stopPropagation()"
-                matTooltip="Mark as read" class="action-icon-button">
+                matTooltip="Mark as read" class="action-icon-button mark-read-btn">
                 <mat-icon>check</mat-icon>
               </button>
               }
@@ -178,6 +178,12 @@
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #notificationMenu="matMenu">
+                @if (!notification.read) {
+                <button mat-menu-item class="menu-mark-read-btn" (click)="markAsRead(notification.id)">
+                  <mat-icon>check</mat-icon>
+                  <span>Mark as Read</span>
+                </button>
+                }
                 <button mat-menu-item class="menu-remove-btn" (click)="removeNotification(notification.id)">
                   <mat-icon>close</mat-icon>
                   <span>Remove</span>
@@ -263,7 +269,7 @@
             <div class="notification-actions">
               @if (!notification.read) {
               <button mat-icon-button (click)="markAsRead(notification.id)" matTooltip="Mark as read"
-                class="action-icon-button">
+                class="action-icon-button mark-read-btn">
                 <mat-icon>check</mat-icon>
               </button>
               }
@@ -276,6 +282,12 @@
                 <mat-icon>more_vert</mat-icon>
               </button>
               <mat-menu #systemNotificationMenu="matMenu">
+                @if (!notification.read) {
+                <button mat-menu-item class="menu-mark-read-btn" (click)="markAsRead(notification.id)">
+                  <mat-icon>check</mat-icon>
+                  <span>Mark as Read</span>
+                </button>
+                }
                 <button mat-menu-item (click)="copyNotificationData(notification)">
                   <mat-icon>content_copy</mat-icon>
                   <span>Copy event data</span>
