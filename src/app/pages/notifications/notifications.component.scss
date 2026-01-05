@@ -59,52 +59,26 @@
 .notifications-container {
   display: flex;
   flex-direction: column;
-  flex-grow: 1;
+  flex: 1;
+  min-height: 0; // Allow flex child to shrink
   border-radius: 12px;
-  overflow: hidden;
+  overflow: auto;
 }
 
-// Tabs styling
-.notifications-tabs {
-  height: 100%;
+// Notification badge in header
+.notification-badge {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  min-width: 20px;
+  text-align: center;
+}
 
-  // Prevent double scrollbar on Activity tab (which uses virtual scroll)
-  // The virtual scroll viewport handles scrolling internally
-  ::ng-deep .mat-mdc-tab-body-content:has(.notification-viewport) {
-    overflow: hidden !important;
-  }
-
-  // System tab needs to scroll normally
-  ::ng-deep .mat-mdc-tab-body-content:has(.notification-list) {
-    overflow-y: auto;
-  }
-
-  .tab-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    mat-icon {
-      font-size: 20px;
-      width: 20px;
-      height: 20px;
-    }
-
-    .tab-badge {
-      background: var(--mat-sys-primary);
-      color: var(--mat-sys-on-primary);
-      padding: 2px 8px;
-      border-radius: 12px;
-      font-size: 12px;
-      min-width: 20px;
-      text-align: center;
-
-      &.secondary {
-        background: var(--mat-sys-secondary-container);
-        color: var(--mat-sys-on-secondary-container);
-      }
-    }
-  }
+// Active state for search button
+.header-actions button.active {
+  color: var(--mat-sys-primary);
 }
 
 // Search container
@@ -167,8 +141,8 @@
 
 // Notification list
 .notification-viewport {
-  height: calc(100vh - 200px); // Account for header and tabs
-  min-height: 400px;
+  flex: 1;
+  min-height: 0;
   width: 100%;
   padding-bottom: 80px; // Space for mobile navigation menu
 
@@ -827,17 +801,17 @@
   .page-header {
     flex-direction: row;
     align-items: center;
-    gap: 16px;
-  }
-
-  // Hide tab text labels on medium screens
-  .notifications-tabs .tab-label .tab-text {
-    display: none;
+    gap: 8px;
   }
 
   // Hide "NEW" indicator on notification items
   .notification-item .notification-content .notification-header .new-indicator,
   .notification-system-item .notification-content .notification-header .new-indicator {
+    display: none;
+  }
+
+  // Hide notification badge in header on small screens
+  .notification-badge {
     display: none;
   }
 }
@@ -857,7 +831,7 @@
   }
 
   .notifications-page {
-    padding: 8px;
+    padding: 4px;
   }
 
   .page-header .header-left .header-icon {
@@ -998,41 +972,6 @@
 }
 
 // Filter button in tab label
-.tab-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  position: relative;
-
-  .filter-button {
-    margin-left: 4px;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    opacity: 0.7;
-    transition: opacity 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    &:hover {
-      opacity: 1;
-    }
-
-    &.active {
-      opacity: 1;
-      color: var(--mat-sys-primary);
-    }
-
-    mat-icon {
-      font-size: 18px;
-      width: 18px;
-      height: 18px;
-      line-height: 18px;
-    }
-  }
-}
-
 // Filter menu styles
 .filter-menu-header {
   display: flex;
