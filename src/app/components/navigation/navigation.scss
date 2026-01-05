@@ -1,7 +1,11 @@
+:host {
+  display: inline-flex;
+  align-items: center;
+}
+
 .app-icon {
   margin-left: 8px;
   margin-right: 4px;
-  margin-top: 5px;
   height: 32px;
   width: 32px;
   border-radius: 4px;
@@ -18,10 +22,6 @@
   justify-content: center;
   outline: none;
 
-  &.show-small-only {
-    display: none;
-  }
-
   &:hover {
     opacity: 0.8;
   }
@@ -34,16 +34,13 @@
 }
 
 @media screen and (max-width: 600px) {
-  .hide-small {
+  .icon-button.hide-small {
     display: none !important;
-  }
-
-  .icon-button.show-small-only {
-    display: inline-flex !important;
   }
 }
 
 .back-button {
+  margin-left: 4px;
   margin-right: 4px;
   transition:
     transform 0.2s ease,
