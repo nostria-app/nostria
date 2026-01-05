@@ -810,8 +810,9 @@
   }
 }
 
-// Hide the menu remove button on larger screens (shown via ::ng-deep for mat-menu)
-::ng-deep .menu-remove-btn {
+// Hide the menu remove button and mark-read button on larger screens (shown via ::ng-deep for mat-menu)
+::ng-deep .menu-remove-btn,
+::ng-deep .menu-mark-read-btn {
   display: none !important;
 }
 
@@ -841,9 +842,16 @@
 
 @media (max-width: 600px) {
 
-  // Show the menu remove button on small screens
-  ::ng-deep .menu-remove-btn {
+  // Show the menu remove button and mark-read button on small screens
+  ::ng-deep .menu-remove-btn,
+  ::ng-deep .menu-mark-read-btn {
     display: flex !important;
+  }
+
+  // Hide the standalone mark-read button on small screens (it's in the menu)
+  .notification-item .notification-actions .mark-read-btn,
+  .notification-system-item .notification-actions .mark-read-btn {
+    display: none;
   }
 
   .notifications-page {
