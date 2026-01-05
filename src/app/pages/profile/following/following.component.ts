@@ -2,12 +2,19 @@ import { Component, inject, signal, computed, effect, ViewChild, ElementRef } fr
 import { Router, ActivatedRoute } from '@angular/router';
 import { animate, style, transition, trigger } from '@angular/animations';
 import { Location } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { Subject } from 'rxjs';
+import { debounceTime } from 'rxjs/operators';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatListModule } from '@angular/material/list';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTabsModule } from '@angular/material/tabs';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatRadioModule } from '@angular/material/radio';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatDividerModule } from '@angular/material/divider';
 import { ScrollingModule } from '@angular/cdk/scrolling';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { LayoutService } from '../../../services/layout.service';
@@ -28,15 +35,22 @@ interface ProfileData {
   picture: string | null;
 }
 
+// Define sorting options
+type SortOption = 'default' | 'reverse' | 'name-asc' | 'name-desc';
+
 @Component({
   selector: 'app-following',
-  standalone: true,
   imports: [
+    FormsModule,
     MatButtonModule,
     MatIconModule,
     MatListModule,
     MatProgressSpinnerModule,
     MatTabsModule,
+    MatMenuModule,
+    MatRadioModule,
+    MatTooltipModule,
+    MatDividerModule,
     ScrollingModule,
     UserProfileComponent,
   ],
@@ -76,10 +90,50 @@ export class FollowingComponent {
   error = signal<string | null>(null);
   followingList = signal<UserProfile[]>([]);
 
+  // Search and sorting
+  searchTerm = signal<string>('');
+  private searchChanged = new Subject<string>();
+  sortOption = signal<SortOption>('default');
+
+  // Computed signal for filtered and sorted following list
+  filteredFollowingList = computed(() => {
+    let list = this.followingList();
+    const search = this.searchTerm().toLowerCase().trim();
+    const sort = this.sortOption();
+
+    // Apply search filter
+    if (search) {
+      list = list.filter(user => {
+        // Check if search matches pubkey/npub
+        if (user.id.toLowerCase().includes(search) || user.npub.toLowerCase().includes(search)) {
+          return true;
+        }
+        // Check if search matches cached profile name
+        const profile = this.accountState.getCachedProfile(user.id);
+        const profileData = profile?.data;
+        if (profileData?.name?.toLowerCase().includes(search)) {
+          return true;
+        }
+        if (profileData?.display_name?.toLowerCase().includes(search)) {
+          return true;
+        }
+        if (profileData?.nip05?.toLowerCase().includes(search)) {
+          return true;
+        }
+        return false;
+      });
+    }
+
+    // Apply sorting
+    list = this.applySorting(list, sort);
+
+    return list;
+  });
+
   // Computed signal for mutual connections
   mutualConnectionsList = computed(() => {
     const currentUserFollowing = this.accountState.followingList();
-    const profileFollowing = this.followingList();
+    const profileFollowing = this.filteredFollowingList();
 
     // Find users that both the current user and the profile are following
     const mutualPubkeys = currentUserFollowing.filter(pubkey =>
@@ -103,6 +157,11 @@ export class FollowingComponent {
   readonly maxBufferPx = 400;
 
   constructor() {
+    // Initialize search debounce
+    this.searchChanged.pipe(debounceTime(300)).subscribe(term => {
+      this.searchTerm.set(term);
+    });
+
     effect(async () => {
       const list = this.profileState.followingList();
       await this.loadFollowingList(list);
@@ -167,6 +226,48 @@ export class FollowingComponent {
   onTabChanged(tabIndex: number): void {
     this.selectedTabIndex.set(tabIndex);
     // this.scrollToTop();
+  }
+
+  updateSearch(value: string): void {
+    this.searchChanged.next(value);
+  }
+
+  changeSortOption(option: SortOption): void {
+    this.sortOption.set(option);
+  }
+
+  preventPropagation(event: Event): void {
+    event.stopPropagation();
+  }
+
+  private applySorting(list: UserProfile[], sortOption: SortOption): UserProfile[] {
+    const sorted = [...list];
+
+    switch (sortOption) {
+      case 'reverse':
+        return sorted.reverse();
+      case 'name-asc':
+        return sorted.sort((a, b) => {
+          const nameA = this.getDisplayName(a.id).toLowerCase();
+          const nameB = this.getDisplayName(b.id).toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+      case 'name-desc':
+        return sorted.sort((a, b) => {
+          const nameA = this.getDisplayName(a.id).toLowerCase();
+          const nameB = this.getDisplayName(b.id).toLowerCase();
+          return nameB.localeCompare(nameA);
+        });
+      case 'default':
+      default:
+        return sorted;
+    }
+  }
+
+  private getDisplayName(pubkey: string): string {
+    const profile = this.accountState.getCachedProfile(pubkey);
+    const profileData = profile?.data;
+    return profileData?.display_name || profileData?.name || pubkey.slice(0, 8);
   }
 
   goBack(): void {
