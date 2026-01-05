@@ -15,6 +15,7 @@ import { Event, nip19 } from 'nostr-tools';
 import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { NostrService } from '../../services/nostr.service';
+import { EventService } from '../../services/event';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
@@ -40,6 +41,7 @@ export class DeleteEventComponent implements OnInit {
   private readonly accountState = inject(AccountStateService);
   private readonly dataService = inject(DataService);
   private readonly nostrService = inject(NostrService);
+  private readonly eventService = inject(EventService);
 
   deleteForm: FormGroup;
   event = signal<Event | null>(null);
@@ -184,7 +186,10 @@ export class DeleteEventComponent implements OnInit {
       const result = await this.nostrService.signAndPublish(deleteEvent);
 
       if (result.success) {
-        this.snackBar.open('Event deletion request published successfully', 'Dismiss', {
+        // Delete from local database after successful deletion request
+        await this.eventService.deleteEventFromLocalStorage(event.id);
+        
+        this.snackBar.open('Event deleted successfully', 'Dismiss', {
           duration: 5000,
         });
 

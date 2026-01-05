@@ -17,6 +17,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { DataService } from '../../../services/data.service';
 import { LayoutService } from '../../../services/layout.service';
 import { NostrService } from '../../../services/nostr.service';
+import { EventService } from '../../../services/event';
 import {
   ConfirmDialogComponent,
   ConfirmDialogData,
@@ -50,6 +51,7 @@ export class EventHeaderComponent {
   data = inject(DataService);
   nostrService = inject(NostrService);
   snackBar = inject(MatSnackBar);
+  eventService = inject(EventService);
   event = input.required<Event>();
   compact = input<boolean>(false);
   record = signal<NostrRecord | null>(null);
@@ -161,7 +163,11 @@ export class EventHeaderComponent {
 
       const result = await this.nostrService.signAndPublish(deleteEvent);
       if (result.success) {
-        this.snackBar.open('Note deletion was requested', 'Dismiss', {
+        // Delete from local database after successful deletion request
+        // This ensures the user doesn't see the event cached locally
+        await this.eventService.deleteEventFromLocalStorage(event.id);
+        
+        this.snackBar.open('Note deleted successfully', 'Dismiss', {
           duration: 3000,
         });
       }

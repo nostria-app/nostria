@@ -918,7 +918,10 @@ export class SongDetailComponent implements OnInit, OnDestroy {
         const result = await this.nostrService.signAndPublish(deleteEvent);
 
         if (result.success) {
-          this.snackBar.open('Track deletion was requested', 'Dismiss', { duration: 3000 });
+          // Delete from local database after successful deletion request
+          await this.eventService.deleteEventFromLocalStorage(ev.id);
+          
+          this.snackBar.open('Track deleted successfully', 'Dismiss', { duration: 3000 });
           // Navigate back after successful deletion request
           this.goBack();
         } else {

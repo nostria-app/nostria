@@ -397,6 +397,75 @@ export class EventService {
   }
 
   /**
+   * Check if an event has been deleted by querying for kind 5 (deletion request) events.
+   * Per NIP-09, a deletion request is valid if:
+   * 1. It's a kind 5 event
+   * 2. It contains an 'e' tag referencing the event to delete
+   * 3. The pubkey of the deletion request matches the pubkey of the event being deleted
+   * 
+   * @param event The event to check for deletion
+   * @returns The deletion request event if found and valid, null otherwise
+   */
+  async checkDeletionRequest(event: Event): Promise<Event | null> {
+    try {
+      // Query for kind 5 events that reference this event ID
+      // and are authored by the same pubkey as the event
+      const filter: Filter = {
+        kinds: [kinds.EventDeletion], // kind 5
+        authors: [event.pubkey],
+        '#e': [event.id],
+      };
+
+      // Use account relays and any relays we know the author uses
+      const relays = this.accountRelay.getRelayUrls();
+      const authorRelays = await this.discoveryRelay.getUserRelayUrls(event.pubkey);
+      const combinedRelays = [...new Set([...relays, ...authorRelays])];
+
+      this.logger.debug(`[Deletion Check] Checking for deletion request for event ${event.id}`);
+
+      const deletionEvents = await this.relayPool.query(combinedRelays, filter, 5000);
+
+      if (deletionEvents && deletionEvents.length > 0) {
+        // Validate the deletion request
+        const deletionEvent = deletionEvents[0];
+        
+        // Check that the deletion event references this event in an 'e' tag
+        const hasValidETag = deletionEvent.tags.some(
+          tag => tag[0] === 'e' && tag[1] === event.id
+        );
+
+        if (hasValidETag && deletionEvent.pubkey === event.pubkey) {
+          this.logger.info(`[Deletion Check] Found valid deletion request for event ${event.id}`, {
+            deletionEventId: deletionEvent.id,
+            content: deletionEvent.content || '(no reason given)',
+          });
+          return deletionEvent;
+        }
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error('[Deletion Check] Error checking for deletion request:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Delete an event from local database.
+   * Used after successful deletion request or when a deletion request is found.
+   * 
+   * @param eventId The event ID to delete from local storage
+   */
+  async deleteEventFromLocalStorage(eventId: string): Promise<void> {
+    try {
+      await this.database.deleteEvent(eventId);
+      this.logger.info(`[Deletion] Deleted event ${eventId} from local database`);
+    } catch (error) {
+      this.logger.error(`[Deletion] Error deleting event ${eventId} from local database:`, error);
+    }
+  }
+
+  /**
    * Attempt deep resolution by searching batches of observed relays.
    * This is a fallback mechanism when normal event loading fails.
    * @param eventId The hex event ID to search for
