@@ -39,11 +39,10 @@
     </div>
   </div>
 
-  <!-- Search Bar -->
-  @if (showSearch()) {
-  <div class="search-bar">
+  <!-- Search Bar (always in DOM for Safari/iOS focus support) -->
+  <div class="search-bar" [class.hidden]="!showSearch()">
     <mat-icon class="search-icon">search</mat-icon>
-    <input type="text" class="search-input" placeholder="Search tracks, playlists, and artists..."
+    <input #searchInput type="text" class="search-input" placeholder="Search tracks, playlists, and artists..."
       [value]="searchQuery()" (input)="onSearchInput($any($event))" />
     @if (searchQuery()) {
     <button mat-icon-button class="clear-search-btn" (click)="clearSearch()" aria-label="Clear search">
@@ -51,7 +50,7 @@
     </button>
     }
   </div>
-  @if (searchQuery()) {
+  @if (showSearch() && searchQuery()) {
   <div class="search-results-info">
     @if (hasSearchResults()) {
     <span>Found {{ totalSearchResults() }} result{{ totalSearchResults() === 1 ? '' : 's' }} for "{{ searchQuery()
@@ -60,7 +59,6 @@
     <span>No results found for "{{ searchQuery() }}"</span>
     }
   </div>
-  }
   }
 
   <div class="music-content">

@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, effect } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -93,6 +93,9 @@ export class MusicComponent implements OnDestroy {
   private playlistSubscription: { close: () => void } | null = null;
   private trackMap = new Map<string, Event>();
   private playlistMap = new Map<string, Event>();
+
+  // Search input reference for focusing
+  @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
 
   // Following pubkeys for filtering
   private followingPubkeys = computed(() => {
@@ -560,7 +563,10 @@ export class MusicComponent implements OnDestroy {
     const wasVisible = this.showSearch();
     this.showSearch.set(!wasVisible);
     if (!wasVisible) {
-      // Focus the search input when opening (done in template with autofocus)
+      // Focus the search input when opening - use setTimeout for Safari/iOS
+      setTimeout(() => {
+        this.searchInput?.nativeElement?.focus();
+      }, 0);
     } else {
       // Clear search when closing
       this.searchQuery.set('');
