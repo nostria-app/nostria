@@ -766,6 +766,10 @@
 
 .unread-badge {
   flex-shrink: 0;
+  margin-right: 8px; // Space between badge and time
+  position: relative;
+  width: 24px; // Reserve space for the badge
+  height: 16px;
 }
 
 @media (max-width: 599px) {
