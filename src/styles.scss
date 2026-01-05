@@ -1547,3 +1547,16 @@ html[data-platform="android"][data-display-mode="standalone"] .mobile-nav {
     bottom: max(48px, calc(24px + env(safe-area-inset-bottom, 0px))) !important;
   }
 }
+
+// Messages chat list - fix user-profile overflow in chat items
+app-messages {
+  .chat-item .user-profile-custom-content {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  .chat-item .user-profile-container {
+    flex-wrap: nowrap;
+  }
+}

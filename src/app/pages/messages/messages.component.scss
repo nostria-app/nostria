@@ -132,6 +132,12 @@
 
 .chat-list {
   padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+
+  // Ensure list items don't overflow
+  ::ng-deep .mdc-list-item__content {
+    overflow: hidden;
+    width: 100%;
+  }
 }
 
 // tab-content allows scrolling behind mobile menu
@@ -528,6 +534,9 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.875rem; // 14px on desktop
+  opacity: 0.7;
+  flex: 1;
+  min-width: 0;
   // Prevent iOS Safari from auto-zooming text
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
@@ -539,11 +548,10 @@
 
   &.empty-message {
     font-style: italic;
-    opacity: 0.7;
   }
 
   .outgoing-prefix {
-    opacity: 0.7;
+    opacity: 0.85;
   }
 }
 
@@ -558,13 +566,14 @@
 
 .message-time-chats {
   flex-shrink: 0;
-  margin-left: 8px;
+  margin-left: auto;
+  padding-left: 8px;
   font-size: 0.75rem;
+  opacity: 0.7;
+  white-space: nowrap;
   // Prevent iOS Safari from auto-zooming text
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  position: absolute;
-  right: 6px;
 }
 
 .message-bubble-container {
@@ -658,6 +667,12 @@
   padding: 12px 16px;
   border-radius: 0;
   transition: background-color 0.2s ease;
+  overflow: hidden;
+
+  // Override Angular Material list item content wrapper
+  ::ng-deep .mdc-list-item__content {
+    overflow: hidden;
+  }
 
   &.active {
     // Glass effect for active chat - light mode
@@ -683,11 +698,36 @@
 .chat-item-content {
   display: flex;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .chat-avatar {
   display: flex;
   position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+
+  // Override user-profile styles within chat items
+  app-user-profile {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+
+    // Make the user profile container properly handle flex
+    ::ng-deep .user-profile-container {
+      flex-wrap: nowrap;
+    }
+
+    // Allow custom content to grow and shrink
+    ::ng-deep .user-profile-custom-content {
+      flex: 1;
+      min-width: 0;
+      overflow: hidden;
+    }
+  }
 }
 
 .chat-info {
@@ -704,8 +744,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  position: relative;
-  padding-right: 80px; // Space for timestamp
+  width: 100%;
 }
 
 .chat-name {
@@ -721,6 +760,8 @@
   display: flex;
   align-items: center;
   min-width: 0;
+  width: 100%;
+  overflow: hidden;
 }
 
 .unread-badge {

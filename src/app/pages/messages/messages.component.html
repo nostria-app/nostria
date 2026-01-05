@@ -108,9 +108,9 @@
                           @if (chat.unreadCount > 0) {
                           <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                           }
-                          <span class="message-time-chats">{{
-                            chat.lastMessage?.created_at | ago
-                            }}</span>
+                          @if (chat.lastMessage?.created_at) {
+                          <span class="message-time-chats">{{ chat.lastMessage?.created_at | ago }}</span>
+                          }
                         </div>
                         <div class="chat-preview">
                           @if (chat.lastMessage) {
@@ -191,9 +191,9 @@
                           @if (chat.unreadCount > 0) {
                           <span class="unread-badge" matBadge="{{ chat.unreadCount }}" matBadgeOverlap="false"></span>
                           }
-                          <span class="message-time-chats">{{
-                            chat.lastMessage?.created_at | ago
-                            }}</span>
+                          @if (chat.lastMessage?.created_at) {
+                          <span class="message-time-chats">{{ chat.lastMessage?.created_at | ago }}</span>
+                          }
                         </div>
                         <div class="chat-preview">
                           @if (chat.lastMessage) {
