@@ -87,6 +87,11 @@
     width: 32px;
     height: 32px;
     padding: 0;
+    flex-shrink: 0;
+
+    &.invisible {
+      visibility: hidden;
+    }
 
     mat-icon {
       font-size: 18px;
