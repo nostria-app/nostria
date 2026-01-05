@@ -1,11 +1,10 @@
 @if (hasState()) {
-<button mat-icon-button class="back-button hide-small" title="Go back • Right-click or long-press for history"
-  (click)="goBack()" (contextmenu)="onRightClick($event)" (touchstart)="onTouchStart($event)"
-  (touchend)="onTouchEnd($event)" (touchcancel)="onTouchCancel($event)">
+<button mat-icon-button class="back-button" title="Go back • Right-click or long-press for history" (click)="goBack()"
+  (contextmenu)="onRightClick($event)" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)"
+  (touchcancel)="onTouchCancel($event)">
   <mat-icon>arrow_back</mat-icon>
 </button>
 }
-<button type="button" class="icon-button" [class.show-small-only]="hasState()" (click)="navigateToHome()"
-  title="Go to home">
+<button type="button" class="icon-button" [class.hide-small]="hasState()" (click)="navigateToHome()" title="Go to home">
   <img src="icons/icon.svg" class="app-icon" alt="Nostria icon" />
 </button>
