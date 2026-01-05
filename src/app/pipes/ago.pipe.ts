@@ -7,8 +7,8 @@ export class AgoPipe implements PipeTransform {
   private localSettings = inject(LocalSettingsService);
   private chroniaService = inject(ChroniaCalendarService);
 
-  transform(value: number | any): string {
-    if (value === 0) {
+  transform(value: number | null | undefined): string {
+    if (value === null || value === undefined || value === 0) {
       return '';
     }
 
