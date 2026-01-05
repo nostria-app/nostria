@@ -651,6 +651,41 @@ export class DatabaseService {
   }
 
   /**
+   * Save a replaceable event to the database only if it's newer than the existing one.
+   * This is critical for replaceable events (kind 0, 3, 10000-19999) and parameterized
+   * replaceable events (kind 30000-39999) to prevent older events from overwriting newer ones.
+   *
+   * @param event The event to save
+   * @returns true if the event was saved, false if a newer event already exists
+   */
+  async saveReplaceableEvent(event: Event & { dTag?: string }): Promise<boolean> {
+    // Don't save expired events
+    if (this.isEventExpired(event)) {
+      this.logger.debug(`Skipping save for expired event: ${event.id}`);
+      return false;
+    }
+
+    // Get existing event to compare timestamps
+    const storedEvent = await this.getEventByPubkeyAndKind(event.pubkey, event.kind);
+
+    if (storedEvent && storedEvent.created_at > event.created_at) {
+      this.logger.debug(
+        `Skipping save for older replaceable event (kind ${event.kind}) for pubkey ${event.pubkey.slice(0, 16)}... ` +
+        `Stored: ${new Date(storedEvent.created_at * 1000).toISOString()}, ` +
+        `Received: ${new Date(event.created_at * 1000).toISOString()}`
+      );
+      return false;
+    }
+
+    await this.saveEvent(event);
+    this.logger.debug(
+      `Saved replaceable event (kind ${event.kind}) for pubkey ${event.pubkey.slice(0, 16)}... ` +
+      `Timestamp: ${new Date(event.created_at * 1000).toISOString()}`
+    );
+    return true;
+  }
+
+  /**
    * Save multiple events in a single transaction
    * Filters out expired events (NIP-40) before saving
    */

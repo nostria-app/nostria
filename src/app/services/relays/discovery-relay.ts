@@ -37,10 +37,10 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
       // When fetching events FROM a user, we should prefer their WRITE relays
       relayUrls = this.utilities.getOptimalRelayUrlsForFetching(event);
 
-      // Save the relay list event to the database for future use
+      // Save the relay list event to the database only if it's newer than what we have stored
+      // This prevents older relay lists from overwriting newer ones (NIP-65)
       try {
-        await this.database.saveEvent(event);
-        this.logger.debug(`Saved relay list event (kind 10002) for pubkey ${pubkey} to database`);
+        await this.database.saveReplaceableEvent(event);
       } catch (error) {
         this.logger.warn(`Failed to save relay list event for pubkey ${pubkey}:`, error);
       }
@@ -49,11 +49,10 @@ export class DiscoveryRelayService extends RelayServiceBase implements NostriaSe
 
       if (event) {
         relayUrls = this.utilities.getRelayUrlsFromFollowing(event);
-        // Save the contacts event to the database for future use
+        // Save the contacts event to the database only if it's newer than what we have stored
 
         try {
-          await this.database.saveEvent(event);
-          this.logger.debug(`Saved contacts event (kind 3) for pubkey ${pubkey} to database`);
+          await this.database.saveReplaceableEvent(event);
         } catch (error) {
           this.logger.warn(`Failed to save contacts event for pubkey ${pubkey}:`, error);
         }
