@@ -17,6 +17,7 @@ import { MediaPlayerService } from '../../services/media-player.service';
 import { DataService } from '../../services/data.service';
 import { DatabaseService } from '../../services/database.service';
 import { OfflineMusicService } from '../../services/offline-music.service';
+import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { MediaItem } from '../../interfaces';
 import { MusicEventComponent } from '../../components/event-types/music-event.component';
 import { MusicPlaylistCardComponent } from '../../components/music-playlist-card/music-playlist-card.component';
@@ -61,6 +62,7 @@ export class MusicComponent implements OnDestroy {
   private dataService = inject(DataService);
   private database = inject(DatabaseService);
   private offlineMusicService = inject(OfflineMusicService);
+  private accountLocalState = inject(AccountLocalStateService);
 
   allTracks = signal<Event[]>([]);
   allPlaylists = signal<Event[]>([]);
@@ -70,6 +72,9 @@ export class MusicComponent implements OnDestroy {
   // Search functionality
   searchQuery = signal('');
   showSearch = signal(false);
+
+  // "Yours" section collapsed state
+  yoursSectionCollapsed = signal(false);
 
   // Offline music track count
   offlineTrackCount = computed(() => this.offlineMusicService.offlineTracks().length);
@@ -244,6 +249,11 @@ export class MusicComponent implements OnDestroy {
   private readonly MUSIC_RELAY_SET_D_TAG = 'music';
 
   constructor() {
+    // Load collapsed state from storage
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.yoursSectionCollapsed.set(this.accountLocalState.getMusicYoursSectionCollapsed(pubkey));
+    }
     this.initializeMusic();
   }
 
@@ -564,6 +574,16 @@ export class MusicComponent implements OnDestroy {
   onSearchInput(event: InputEvent): void {
     const target = event.target as HTMLInputElement;
     this.searchQuery.set(target.value);
+  }
+
+  // Toggle "Yours" section collapsed state
+  toggleYoursSection(): void {
+    const newState = !this.yoursSectionCollapsed();
+    this.yoursSectionCollapsed.set(newState);
+    const pubkey = this.currentPubkey();
+    if (pubkey) {
+      this.accountLocalState.setMusicYoursSectionCollapsed(pubkey, newState);
+    }
   }
 
   // Menu actions

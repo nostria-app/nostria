@@ -70,12 +70,15 @@
       <p i18n="@@music.loading">Loading music...</p>
     </div>
     } @else {
-    <!-- YOURS SECTION (Only for authenticated users) -->
-    @if (isAuthenticated()) {
-    <section class="music-section">
-      <div class="section-header">
+    <!-- YOURS SECTION (Only for authenticated users, hidden during search) -->
+    @if (isAuthenticated() && !searchQuery()) {
+    <section class="music-section yours-section">
+      <div class="section-header collapsible" (click)="toggleYoursSection()" (keydown.enter)="toggleYoursSection()"
+        tabindex="0" role="button" [attr.aria-expanded]="!yoursSectionCollapsed()">
         <h2 i18n="@@music.section.yours">Yours</h2>
+        <mat-icon class="collapse-icon" [class.collapsed]="yoursSectionCollapsed()">expand_more</mat-icon>
       </div>
+      @if (!yoursSectionCollapsed()) {
       <div class="playlists-grid">
         <!-- Liked Songs Card -->
         <div class="liked-songs-card">
@@ -144,6 +147,7 @@
         <app-music-playlist-card [event]="playlist"></app-music-playlist-card>
         }
       </div>
+      }
     </section>
     }
 

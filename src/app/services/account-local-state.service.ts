@@ -60,6 +60,7 @@ interface AccountLocalState {
   wallets?: Record<string, AccountWallet>; // NWC wallets for this account
   followingLastFetch?: number; // Timestamp when following data was last fetched from relays
   lastAppOpen?: number; // Timestamp (in seconds) when app was last opened
+  musicYoursSectionCollapsed?: boolean; // Whether the "Yours" section in Music is collapsed
 }
 
 /**
@@ -873,6 +874,21 @@ export class AccountLocalStateService {
    */
   setPublicRelayShowReplies(pubkey: string, showReplies: boolean): void {
     this.updateAccountState(pubkey, { publicRelayShowReplies: showReplies });
+  }
+
+  /**
+   * Get music "Yours" section collapsed state for an account
+   */
+  getMusicYoursSectionCollapsed(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.musicYoursSectionCollapsed ?? false;
+  }
+
+  /**
+   * Set music "Yours" section collapsed state for an account
+   */
+  setMusicYoursSectionCollapsed(pubkey: string, collapsed: boolean): void {
+    this.updateAccountState(pubkey, { musicYoursSectionCollapsed: collapsed });
   }
 
   /**
