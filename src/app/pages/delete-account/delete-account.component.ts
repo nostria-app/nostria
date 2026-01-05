@@ -232,6 +232,8 @@ export class DeleteAccountComponent implements OnInit {
 
       // Process events in batches to avoid overwhelming the system
       const batchSize = 10;
+      const deletedEventIds: string[] = [];
+      
       for (let i = 0; i < events.length; i += batchSize) {
         const batch = events.slice(i, i + batchSize);
 
@@ -240,6 +242,9 @@ export class DeleteAccountComponent implements OnInit {
             // Create deletion event (NIP-09)
             const deleteEvent = this.nostrService.createRetractionEvent(event);
             const result = await this.nostrService.signAndPublish(deleteEvent);
+            if (result.success) {
+              deletedEventIds.push(event.id);
+            }
             return result.success;
           } catch (error) {
             console.error(`Failed to delete event ${event.id}:`, error);
@@ -266,6 +271,15 @@ export class DeleteAccountComponent implements OnInit {
         // Small delay between batches
         if (i + batchSize < events.length) {
           await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+
+      // Delete all successfully deleted events from local database
+      if (deletedEventIds.length > 0) {
+        try {
+          await this.databaseService.deleteEvents(deletedEventIds);
+        } catch (error) {
+          console.error('Error deleting events from local database:', error);
         }
       }
 

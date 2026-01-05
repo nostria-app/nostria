@@ -367,11 +367,31 @@
     color: var(--mat-sys-error);
   }
 
+  .deleted-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
   .error-title {
     font-size: 1.25rem;
-    font-weight: 500;
     margin: 0 0 16px 0;
     color: var(--mat-sys-on-surface);
+  }
+
+  .deletion-info {
+    font-size: 0.9rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin: 0 0 8px 0;
+  }
+
+  .deletion-reason {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+    font-style: italic;
+    margin: 0;
+    padding: 12px 16px;
+    background-color: var(--mat-sys-surface-container);
+    border-radius: 8px;
+    max-width: 400px;
   }
 }
 

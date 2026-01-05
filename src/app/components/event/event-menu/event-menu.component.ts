@@ -36,6 +36,7 @@ import { TranslateDialogComponent, TranslateDialogData } from '../translate-dial
 import { AiInfoDialogComponent } from '../../ai-info-dialog/ai-info-dialog.component';
 import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
+import { EventService } from '../../../services/event';
 
 @Component({
   selector: 'app-event-menu',
@@ -67,6 +68,7 @@ export class EventMenuComponent {
   mediaPlayer = inject(MediaPlayerService);
   utilities = inject(UtilitiesService);
   playlistService = inject(PlaylistService);
+  eventService = inject(EventService);
 
   event = input.required<Event>();
   view = input<'icon' | 'full'>('icon');
@@ -307,7 +309,11 @@ export class EventMenuComponent {
 
       const result = await this.nostrService.signAndPublish(deleteEvent);
       if (result.success) {
-        this.snackBar.open('Note deletion was requested', 'Dismiss', {
+        // Delete from local database after successful deletion request
+        // This ensures the user doesn't see the event cached locally
+        await this.eventService.deleteEventFromLocalStorage(event.id);
+        
+        this.snackBar.open('Note deleted successfully', 'Dismiss', {
           duration: 3000,
         });
       }

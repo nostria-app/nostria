@@ -68,6 +68,14 @@
 
 @if (error()) {
 <div class="error-container">
+  @if (isDeleted()) {
+  <mat-icon class="error-icon deleted-icon">delete_forever</mat-icon>
+  <h3 class="error-title">This event has been deleted</h3>
+  <p class="deletion-info">The author has requested deletion of this content.</p>
+  @if (deletionReason()) {
+  <p class="deletion-reason">Reason: {{ deletionReason() }}</p>
+  }
+  } @else {
   <mat-icon class="error-icon">error_outline</mat-icon>
   <h3 class="error-title">{{ error() }}</h3>
 
@@ -84,6 +92,7 @@
       </button>
     </div>
   </div>
+  }
   }
 </div>
 }

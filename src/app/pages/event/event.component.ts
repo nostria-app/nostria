@@ -134,6 +134,10 @@ export class EventPageComponent {
   showCompletionStatus = signal(false);
   deepResolutionProgress = signal<string>('');
 
+  // Track if the event has been deleted (NIP-09)
+  isDeleted = signal(false);
+  deletionReason = signal<string | null>(null);
+
   constructor() {
     // this.item = this.route.snapshot.data['data'];
     console.log('EventPageComponent initialized with data:', this.item);
@@ -228,13 +232,17 @@ export class EventPageComponent {
       this.replies.set([]);
       this.threadedReplies.set([]);
       this.reactions.set([]);
+      this.isDeleted.set(false);
+      this.deletionReason.set(null);
 
       // Use progressive loading to show content as it becomes available
       const progressiveLoader = this.eventService.loadThreadProgressively(nevent, this.item);
+      let mainEvent: Event | undefined;
 
       for await (const partialData of progressiveLoader) {
         // Update signals with partial data as it becomes available
         if (partialData.event) {
+          mainEvent = partialData.event;
           this.event.set(partialData.event);
           const hex = partialData.event.id;
           this.id.set(hex);
@@ -247,6 +255,10 @@ export class EventPageComponent {
 
           // Hide main loading spinner once we have the main event
           this.isLoading.set(false);
+
+          // Check for deletion request for the main event (NIP-09)
+          // This runs asynchronously so it doesn't block the UI
+          this.checkDeletionRequestForEvent(partialData.event);
         }
 
         if (partialData.parents !== undefined) {
@@ -410,6 +422,36 @@ export class EventPageComponent {
       this.logger.error('Deep resolution error:', err);
       this.error.set('Deep resolution failed');
       this.isLoading.set(false);
+    }
+  }
+
+  /**
+   * Check if the main event has a deletion request (NIP-09)
+   * If found, delete from local database and show deleted state
+   */
+  private async checkDeletionRequestForEvent(event: Event): Promise<void> {
+    try {
+      const deletionEvent = await this.eventService.checkDeletionRequest(event);
+      
+      if (deletionEvent) {
+        this.logger.info('Event has been deleted by author:', {
+          eventId: event.id,
+          deletionEventId: deletionEvent.id,
+          reason: deletionEvent.content || '(no reason given)',
+        });
+        
+        // Delete from local database
+        await this.eventService.deleteEventFromLocalStorage(event.id);
+        
+        // Update UI state
+        this.isDeleted.set(true);
+        this.deletionReason.set(deletionEvent.content || null);
+        this.event.set(undefined);
+        this.error.set('This event has been deleted by its author');
+      }
+    } catch (error) {
+      this.logger.error('Error checking deletion request:', error);
+      // Don't block the UI if deletion check fails
     }
   }
 }
