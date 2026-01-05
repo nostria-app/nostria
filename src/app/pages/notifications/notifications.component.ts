@@ -5,7 +5,6 @@ import { MatCardModule } from '@angular/material/card';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatDividerModule } from '@angular/material/divider';
-import { MatTabsModule } from '@angular/material/tabs';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { ScrollingModule } from '@angular/cdk/scrolling';
@@ -47,7 +46,6 @@ const NOTIFICATION_FILTERS_KEY = 'nostria-notification-filters';
     MatButtonModule,
     MatIconModule,
     MatDividerModule,
-    MatTabsModule,
     MatFormFieldModule,
     MatInputModule,
     ScrollingModule,
@@ -82,6 +80,8 @@ export class NotificationsComponent implements OnInit {
   searchQuery = signal('');
   // Whether to show the search input
   showSearch = signal(false);
+  // Whether to show system notifications view
+  showSystemNotifications = signal(false);
   notificationType = NotificationType;
 
   // State for loading older notifications
