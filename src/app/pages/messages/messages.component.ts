@@ -583,16 +583,12 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
         }
       } else {
         // No pubkey query param - just do regular initialization
-        // Always refresh chats when entering the messages page to catch any missed messages
+        // Always load all cached chats from database to ensure nothing is missed
         if (!this.messaging.isLoading()) {
-          if (this.messaging.sortedChats().length === 0) {
-            this.logger.debug('Loading chats on messages component init (no DM link)');
-            this.messaging.loadChats();
-          } else {
-            // Already have chats, do an incremental refresh to catch any messages we missed while away
-            this.logger.debug('Refreshing chats to catch any missed messages');
-            this.messaging.refreshChats();
-          }
+          this.logger.debug('Loading chats on messages component init (no DM link)');
+          // Always call loadChats() to ensure all cached chats are loaded from database
+          // loadChats() internally calls load() which loads from IndexedDB first
+          this.messaging.loadChats();
         }
       }
     });
