@@ -177,7 +177,7 @@
       </button>
     </div>
     } @else {
-    <cdk-virtual-scroll-viewport [itemSize]="110" class="notification-viewport"
+    <cdk-virtual-scroll-viewport [itemSize]="94" class="notification-viewport"
       (scrolledIndexChange)="onScrolledIndexChange($event)">
       <div *cdkVirtualFor="let notification of contentNotifications(); trackBy: trackByNotificationId"
         class="notification-item" [class.unread]="!notification.read" [class.clickable]="getEventId(notification)"
