@@ -44,11 +44,10 @@
     <mat-icon class="search-icon">search</mat-icon>
     <input #searchInput type="text" class="search-input" placeholder="Search tracks, playlists, and artists..."
       [value]="searchQuery()" (input)="onSearchInput($any($event))" />
-    @if (searchQuery()) {
-    <button mat-icon-button class="clear-search-btn" (click)="clearSearch()" aria-label="Clear search">
+    <button mat-icon-button class="clear-search-btn" [class.invisible]="!searchQuery()" (click)="clearSearch()"
+      aria-label="Clear search">
       <mat-icon>close</mat-icon>
     </button>
-    }
   </div>
   @if (showSearch() && searchQuery()) {
   <div class="search-results-info">
