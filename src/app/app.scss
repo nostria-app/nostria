@@ -294,7 +294,7 @@ mat-sidenav-content {
   // Add bottom padding for mobile navigation menu
   @media (max-width: 599px) {
     // Mobile nav height (64px) + bottom offset (24px) + safe area + extra space
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+    // padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -999,7 +999,7 @@ mat-sidenav-content {
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  z-index: 1000;
+  z-index: 1100; // Above mobile-nav (z-index: 1000)
   width: auto;
   min-width: 300px;
   max-width: 90%;
@@ -1008,6 +1008,11 @@ mat-sidenav-content {
   color: white;
   box-shadow: var(--mat-sys-level3);
   animation: slideUp 0.3s ease-out;
+
+  // Position above mobile navigation on small screens
+  @media (max-width: 599px) {
+    bottom: calc(100px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 .offline-content {

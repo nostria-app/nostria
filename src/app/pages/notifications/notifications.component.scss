@@ -141,10 +141,8 @@
 
 // Notification list
 .notification-viewport {
-  flex: 1;
-  min-height: 0;
+  height: calc(100vh - 150px); // Account for header
   width: 100%;
-  padding-bottom: 80px; // Space for mobile navigation menu
 
   ::ng-deep .cdk-virtual-scroll-content-wrapper {
     width: 100%;
@@ -832,6 +830,11 @@
 
   .notifications-page {
     padding: 4px;
+  }
+
+  // Adjust viewport height for mobile
+  .notification-viewport {
+    height: calc(100vh - 130px);
   }
 
   .page-header .header-left .header-icon {
