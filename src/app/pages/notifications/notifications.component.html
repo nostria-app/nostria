@@ -5,33 +5,32 @@
       <mat-icon class="header-icon">notifications</mat-icon>
       <div class="header-text">
         <h1>Notifications</h1>
-        @if (newNotificationCount() > 0) {
-        <span class="new-badge">{{ newNotificationCount() }} new</span>
-        }
       </div>
     </div>
     <div class="header-actions">
-      <button mat-button (click)="refreshNotifications()" class="action-button" [disabled]="isRefreshing()"
-        matTooltip="Re-check recent notifications from relays">
-        <span class="button-content">
+      <button mat-icon-button [matMenuTriggerFor]="headerActionsMenu" matTooltip="More options">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #headerActionsMenu="matMenu">
+        <button mat-menu-item (click)="refreshNotifications()" [disabled]="isRefreshing()">
           @if (isRefreshing()) {
           <mat-spinner diameter="18"></mat-spinner>
           } @else {
           <mat-icon>refresh</mat-icon>
           }
-          Refresh
-        </span>
-      </button>
-      @if (notifications().length > 0) {
-      <button mat-button (click)="markAllAsRead()" class="action-button">
-        <mat-icon>done_all</mat-icon>
-        Mark All Read
-      </button>
-      <button mat-button (click)="clearNotifications()" class="action-button">
-        <mat-icon>close</mat-icon>
-        Clear All
-      </button>
-      }
+          <span>Refresh</span>
+        </button>
+        @if (notifications().length > 0) {
+        <button mat-menu-item (click)="markAllAsRead()">
+          <mat-icon>done_all</mat-icon>
+          <span>Mark All Read</span>
+        </button>
+        <button mat-menu-item (click)="clearNotifications()">
+          <mat-icon>close</mat-icon>
+          <span>Clear All</span>
+        </button>
+        }
+      </mat-menu>
       <button mat-icon-button routerLink="/notifications/settings" matTooltip="Notification settings"
         i18n-matTooltip="@@notifications.settings.tooltip">
         <mat-icon>settings</mat-icon>
@@ -47,9 +46,9 @@
         <ng-template mat-tab-label>
           <span class="tab-label">
             <mat-icon>people</mat-icon>
-            Activity
-            @if (contentNotifications().length > 0) {
-            <span class="tab-badge">{{ contentNotifications().length }}</span>
+            <span class="tab-text">Activity</span>
+            @if (newNotificationCount() > 0) {
+            <span class="tab-badge">{{ newNotificationCount() }}</span>
             }
             <button mat-icon-button class="filter-button" [matMenuTriggerFor]="filterMenu"
               (click)="$event.stopPropagation()" matTooltip="Filter notifications">
@@ -217,7 +216,7 @@
         <ng-template mat-tab-label>
           <span class="tab-label">
             <mat-icon>priority</mat-icon>
-            System
+            <span class="tab-text">System</span>
           </span>
         </ng-template>
 
