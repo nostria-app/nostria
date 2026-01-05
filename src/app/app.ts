@@ -789,22 +789,13 @@ export class App implements OnInit {
     await this.checkForNostrProtocolInUrl();
 
     // Initialize content notification service
+    // This also starts periodic polling for new notifications with visibility awareness
     this.logger.info('[App] Initializing content notification service');
     try {
       await this.contentNotificationService.initialize();
       this.logger.info('[App] Content notification service initialized successfully');
-
-      // Set up periodic checks every 5 minutes for authenticated users
-      setInterval(async () => {
-        if (this.app.authenticated()) {
-          try {
-            await this.contentNotificationService.checkForNewNotifications();
-            this.logger.debug('[App] Periodic content notification check completed');
-          } catch (error) {
-            this.logger.error('[App] Periodic content notification check failed', error);
-          }
-        }
-      }, 5 * 60 * 1000); // 5 minutes
+      // Note: Periodic polling is now handled internally by ContentNotificationService
+      // with visibility awareness (pauses when hidden, checks immediately when visible)
     } catch (error) {
       this.logger.error('[App] Failed to initialize content notification service', error);
     }

@@ -1,4 +1,5 @@
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, inject, signal, PLATFORM_ID, OnDestroy } from '@angular/core';
+import { isPlatformBrowser } from '@angular/common';
 import { LoggerService } from './logger.service';
 import { NotificationService } from './notification.service';
 import { AccountRelayService } from './relays/account-relay';
@@ -26,17 +27,31 @@ const NOTIFICATION_QUERY_LIMITS = {
  * Service for managing content notifications (social interactions)
  * These are notifications about follows, mentions, reposts, replies, reactions, and zaps
  * that happen on the Nostr network.
+ * 
+ * This service also manages periodic polling for new notifications with visibility awareness:
+ * - Checks for new notifications every 5 minutes when the app is visible
+ * - Immediately checks when the app returns to visibility after being hidden
+ * - Pauses polling when the app is hidden to conserve resources
  */
 @Injectable({
   providedIn: 'root',
 })
-export class ContentNotificationService {
+export class ContentNotificationService implements OnDestroy {
   private logger = inject(LoggerService);
   private notificationService = inject(NotificationService);
   private accountRelay = inject(AccountRelayService);
   private accountLocalState = inject(AccountLocalStateService);
   private accountState = inject(AccountStateService);
   private database = inject(DatabaseService);
+  private platformId = inject(PLATFORM_ID);
+
+  // Polling configuration
+  private readonly POLLING_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+  private readonly MIN_TIME_BETWEEN_CHECKS_MS = 30 * 1000; // 30 seconds minimum between checks
+  private pollingIntervalId: ReturnType<typeof setInterval> | null = null;
+  private lastCheckTime = 0;
+  private visibilityChangeHandler: (() => void) | null = null;
+  private isPollingEnabled = false;
 
   // Track the last check timestamp to avoid duplicate notifications
   private _lastCheckTimestamp = signal<number>(0);
@@ -65,7 +80,15 @@ export class ContentNotificationService {
   }
 
   /**
+   * Clean up resources when service is destroyed
+   */
+  ngOnDestroy(): void {
+    this.stopPolling();
+  }
+
+  /**
    * Initialize the service and load the last check timestamp
+   * Also starts periodic polling for new notifications
    */
   async initialize(): Promise<void> {
     try {
@@ -73,8 +96,144 @@ export class ContentNotificationService {
       this._lastCheckTimestamp.set(timestamp);
       this._initialized.set(true);
       this.logger.debug(`Initialized with last check timestamp: ${timestamp}`);
+      
+      // Start periodic polling after initialization
+      this.startPolling();
     } catch (error) {
       this.logger.error('Failed to initialize ContentNotificationService', error);
+    }
+  }
+
+  /**
+   * Start periodic polling for new notifications
+   * This sets up:
+   * 1. An interval that checks every 5 minutes
+   * 2. A visibility change handler that checks immediately when returning to the app
+   */
+  startPolling(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      this.logger.debug('[Polling] Not in browser, skipping polling setup');
+      return;
+    }
+
+    if (this.isPollingEnabled) {
+      this.logger.debug('[Polling] Polling already enabled');
+      return;
+    }
+
+    this.isPollingEnabled = true;
+    this.logger.info('[Polling] Starting notification polling (5 minute interval)');
+
+    // Set up visibility change handler
+    this.visibilityChangeHandler = () => this.handleVisibilityChange();
+    document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+
+    // Start the polling interval
+    this.startPollingInterval();
+  }
+
+  /**
+   * Stop periodic polling for notifications
+   */
+  stopPolling(): void {
+    this.isPollingEnabled = false;
+
+    // Clear the polling interval
+    if (this.pollingIntervalId) {
+      clearInterval(this.pollingIntervalId);
+      this.pollingIntervalId = null;
+      this.logger.debug('[Polling] Cleared polling interval');
+    }
+
+    // Remove visibility change handler
+    if (this.visibilityChangeHandler && isPlatformBrowser(this.platformId)) {
+      document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
+      this.visibilityChangeHandler = null;
+      this.logger.debug('[Polling] Removed visibility change handler');
+    }
+
+    this.logger.info('[Polling] Notification polling stopped');
+  }
+
+  /**
+   * Start or restart the polling interval
+   */
+  private startPollingInterval(): void {
+    // Clear any existing interval
+    if (this.pollingIntervalId) {
+      clearInterval(this.pollingIntervalId);
+    }
+
+    // Only start if polling is enabled and document is visible
+    if (!this.isPollingEnabled) {
+      return;
+    }
+
+    if (isPlatformBrowser(this.platformId) && document.hidden) {
+      this.logger.debug('[Polling] Document is hidden, not starting interval');
+      return;
+    }
+
+    this.pollingIntervalId = setInterval(async () => {
+      await this.performPollingCheck();
+    }, this.POLLING_INTERVAL_MS);
+
+    this.logger.debug('[Polling] Started polling interval');
+  }
+
+  /**
+   * Handle visibility change events
+   * When the app becomes visible after being hidden, immediately check for new notifications
+   */
+  private handleVisibilityChange(): void {
+    if (!isPlatformBrowser(this.platformId)) {
+      return;
+    }
+
+    if (document.hidden) {
+      // App is now hidden - stop the polling interval to conserve resources
+      this.logger.debug('[Polling] App hidden, pausing polling interval');
+      if (this.pollingIntervalId) {
+        clearInterval(this.pollingIntervalId);
+        this.pollingIntervalId = null;
+      }
+    } else {
+      // App is now visible - check immediately and restart polling
+      this.logger.debug('[Polling] App visible, checking for notifications and resuming polling');
+      
+      // Immediately check for new notifications (with rate limiting)
+      this.performPollingCheck();
+      
+      // Restart the polling interval
+      this.startPollingInterval();
+    }
+  }
+
+  /**
+   * Perform a polling check for new notifications
+   * This is rate-limited to prevent excessive checks
+   */
+  private async performPollingCheck(): Promise<void> {
+    // Check if user is authenticated
+    if (!this.accountState.pubkey()) {
+      this.logger.debug('[Polling] No authenticated user, skipping check');
+      return;
+    }
+
+    // Rate limit: don't check more frequently than MIN_TIME_BETWEEN_CHECKS_MS
+    const now = Date.now();
+    if (now - this.lastCheckTime < this.MIN_TIME_BETWEEN_CHECKS_MS) {
+      this.logger.debug('[Polling] Rate limited, skipping check');
+      return;
+    }
+
+    this.lastCheckTime = now;
+
+    try {
+      await this.checkForNewNotifications();
+      this.logger.debug('[Polling] Periodic notification check completed');
+    } catch (error) {
+      this.logger.error('[Polling] Periodic notification check failed', error);
     }
   }
 
@@ -620,7 +779,7 @@ export class ContentNotificationService {
    * to catch any notifications that may have been missed due to relay issues.
    * @param days Number of days to look back (default: 7 days)
    */
-  async refreshRecentNotifications(days: number = 7): Promise<void> {
+  async refreshRecentNotifications(days = 7): Promise<void> {
     if (this.isChecking()) {
       this.logger.debug('Already checking for notifications, skipping refresh');
       return;
