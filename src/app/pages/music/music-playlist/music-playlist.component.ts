@@ -19,6 +19,7 @@ import { ReactionService } from '../../../services/reaction.service';
 import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-playlist.service';
 import { EventService } from '../../../services/event';
 import { LayoutService } from '../../../services/layout.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import {
   EditMusicPlaylistDialogComponent,
@@ -62,6 +63,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private reactionService = inject(ReactionService);
   private eventService = inject(EventService);
   private layout = inject(LayoutService);
+  private imageCache = inject(ImageCacheService);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
@@ -657,7 +659,9 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
 
   getTrackImage(track: Event): string | null {
     const imageTag = track.tags.find(t => t[0] === 'image');
-    return imageTag?.[1] || null;
+    const rawUrl = imageTag?.[1] || null;
+    if (!rawUrl) return null;
+    return this.imageCache.getOptimizedImageUrlWithSize(rawUrl, 64, 64);
   }
 
   getTrackGradient(track: Event): string | null {
