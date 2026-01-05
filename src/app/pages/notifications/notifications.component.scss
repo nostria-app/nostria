@@ -167,9 +167,10 @@
 
 // Notification list
 .notification-viewport {
-  height: calc(100vh - 320px); // Account for header, tabs, and padding
+  height: calc(100vh - 200px); // Account for header and tabs
   min-height: 400px;
   width: 100%;
+  padding-bottom: 80px; // Space for mobile navigation menu
 
   ::ng-deep .cdk-virtual-scroll-content-wrapper {
     width: 100%;
@@ -241,6 +242,7 @@
   flex-direction: column;
   width: 100%;
   overflow: visible;
+  padding-bottom: 80px; // Space for mobile navigation menu
 }
 
 // System notification items - completely separate from activity items
