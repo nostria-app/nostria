@@ -28,6 +28,7 @@ import { MusicPlaylistService } from '../../../services/music-playlist.service';
 import { LayoutService } from '../../../services/layout.service';
 import { OfflineMusicService } from '../../../services/offline-music.service';
 import { NostrService } from '../../../services/nostr.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import { ConfirmDialogComponent, ConfirmDialogData } from '../../../components/confirm-dialog/confirm-dialog.component';
 import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
@@ -80,6 +81,7 @@ export class SongDetailComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private offlineMusicService = inject(OfflineMusicService);
   private nostrService = inject(NostrService);
+  private imageCache = inject(ImageCacheService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
@@ -282,7 +284,10 @@ export class SongDetailComponent implements OnInit, OnDestroy {
 
   artistAvatar = computed(() => {
     const profile = this.authorProfile();
-    return profile?.data?.picture || null;
+    const rawUrl = profile?.data?.picture || null;
+    if (!rawUrl) return null;
+    // Use image proxy for artist avatar to reduce size
+    return this.imageCache.getOptimizedImageUrl(rawUrl);
   });
 
   artistNpub = computed(() => {

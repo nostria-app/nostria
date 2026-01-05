@@ -5,6 +5,10 @@
       <span i18n="@@music.title">Music</span>
     </h1>
     <div class="header-actions">
+      <button mat-icon-button (click)="toggleSearch()" [class.active]="showSearch()"
+        i18n-aria-label="@@music.search.aria" aria-label="Search music">
+        <mat-icon>search</mat-icon>
+      </button>
       @if (isAuthenticated()) {
       <button mat-icon-button [matMenuTriggerFor]="addMenu" aria-label="Add content">
         <mat-icon>add</mat-icon>
@@ -34,6 +38,30 @@
       </button>
     </div>
   </div>
+
+  <!-- Search Bar -->
+  @if (showSearch()) {
+  <div class="search-bar">
+    <mat-icon class="search-icon">search</mat-icon>
+    <input type="text" class="search-input" placeholder="Search tracks, playlists, and artists..."
+      [value]="searchQuery()" (input)="onSearchInput($any($event))" />
+    @if (searchQuery()) {
+    <button mat-icon-button class="clear-search-btn" (click)="clearSearch()" aria-label="Clear search">
+      <mat-icon>close</mat-icon>
+    </button>
+    }
+  </div>
+  @if (searchQuery()) {
+  <div class="search-results-info">
+    @if (hasSearchResults()) {
+    <span>Found {{ totalSearchResults() }} result{{ totalSearchResults() === 1 ? '' : 's' }} for "{{ searchQuery()
+      }}"</span>
+    } @else {
+    <span>No results found for "{{ searchQuery() }}"</span>
+    }
+  </div>
+  }
+  }
 
   <div class="music-content">
     @if (loading()) {

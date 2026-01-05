@@ -40,6 +40,22 @@ export class ImageCacheService {
   }
 
   /**
+   * Gets the optimized image URL with custom dimensions
+   * Useful for album art and other images that need different sizes
+   * @param originalUrl The original image URL
+   * @param width The desired width
+   * @param height The desired height
+   */
+  getOptimizedImageUrlWithSize(originalUrl: string, width: number, height: number): string {
+    if (!this.settingsService.settings().imageCacheEnabled) {
+      return originalUrl;
+    }
+
+    const encodedUrl = encodeURIComponent(originalUrl);
+    return `${this.proxyBaseUrl()}?w=${width}&h=${height}&url=${encodedUrl}`;
+  }
+
+  /**
    * Preload an image for faster display
    * @param originalUrl The original image URL
    */
