@@ -143,6 +143,7 @@
 .notification-viewport {
   height: calc(100vh - 150px); // Account for header
   width: 100%;
+  padding-bottom: 80px; // Space for mobile navigation menu
 
   ::ng-deep .cdk-virtual-scroll-content-wrapper {
     width: 100%;
@@ -388,6 +389,8 @@
   min-width: 0; // Enable proper flex shrinking
   overflow-x: hidden; // Prevent horizontal overflow only
   position: relative;
+  padding-left: 16px; // Space for left accent border
+
 
   // Left accent border based on notification type
   &::before {
@@ -835,6 +838,11 @@
   // Adjust viewport height for mobile
   .notification-viewport {
     height: calc(100vh - 130px);
+    padding-bottom: 120px; // Extra space for mobile navigation menu
+  }
+
+  .notification-list {
+    padding-bottom: 120px; // Extra space for mobile navigation menu
   }
 
   .page-header .header-left .header-icon {
@@ -848,7 +856,6 @@
   }
 
   .notification-item {
-    padding: 12px 8px;
     gap: 8px;
 
     // Shrink the avatar wrapper on small screens
