@@ -451,6 +451,50 @@ export class EventService {
   }
 
   /**
+   * Check if an event has been deleted by querying for kind 5 (deletion request) events
+   * when we only have the event ID (event was not found).
+   * 
+   * @param eventId The event ID to check for deletion
+   * @returns The deletion request event if found, null otherwise
+   */
+  async checkDeletionRequestById(eventId: string): Promise<Event | null> {
+    try {
+      // Query for kind 5 events that reference this event ID
+      // We don't know the author, so we can't filter by pubkey
+      const filter: Filter = {
+        kinds: [kinds.EventDeletion], // kind 5
+        '#e': [eventId],
+      };
+
+      // Use account relays for the query
+      const relays = this.accountRelay.getRelayUrls();
+
+      this.logger.debug(`[Deletion Check] Checking for deletion request for event ID ${eventId}`);
+
+      const deletionEvents = await this.relayPool.query(relays, filter, 5000);
+
+      if (deletionEvents && deletionEvents.length > 0) {
+        // Return the first deletion event found
+        // Note: Without the original event, we can't fully validate the deletion
+        // but finding any deletion request for this ID suggests it was deleted
+        const deletionEvent = deletionEvents[0];
+        
+        this.logger.info(`[Deletion Check] Found deletion request for event ID ${eventId}`, {
+          deletionEventId: deletionEvent.id,
+          author: deletionEvent.pubkey,
+          content: deletionEvent.content || '(no reason given)',
+        });
+        return deletionEvent;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.error('[Deletion Check] Error checking for deletion request by ID:', error);
+      return null;
+    }
+  }
+
+  /**
    * Delete an event from local database.
    * Used after successful deletion request or when a deletion request is found.
    * 
