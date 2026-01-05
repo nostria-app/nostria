@@ -263,7 +263,11 @@
 
   @media (max-width: 600px),
   (max-height: 700px) {
-    padding: 16px 20px;
+    padding: 12px 16px;
+  }
+
+  @media (max-width: 400px) {
+    padding: 8px 12px;
   }
 
   @media (max-height: 600px) {
@@ -365,7 +369,16 @@
     &:has(button),
     &:has(a),
     &:has(.mat-mdc-button) {
-      padding: 12px 20px 16px;
+      padding: 10px 16px 12px;
+    }
+  }
+
+  @media (max-width: 400px) {
+
+    &:has(button),
+    &:has(a),
+    &:has(.mat-mdc-button) {
+      padding: 8px 12px 10px;
     }
   }
 
@@ -435,12 +448,24 @@
   gap: 16px;
   flex-shrink: 0;
 
+  @media (max-width: 600px), (max-height: 700px) {
+    gap: 8px;
+  }
+
+  @media (max-width: 400px) {
+    gap: 6px;
+  }
+
   .left-actions,
   .right-actions {
     display: flex;
     gap: 4px;
     align-items: center;
     flex: 1;
+
+    @media (max-width: 400px) {
+      gap: 2px;
+    }
   }
 
   .left-actions {
