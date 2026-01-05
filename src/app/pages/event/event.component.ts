@@ -305,7 +305,14 @@ export class EventPageComponent {
       this.logger.info('Successfully completed progressive loading for event:', this.id());
     } catch (error) {
       this.logger.error('Error loading event:', error);
-      this.error.set(error instanceof Error ? error.message : 'Failed to load event');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load event';
+      
+      // If event not found, check if it was deleted (NIP-09)
+      if (errorMessage === 'Event not found') {
+        await this.checkIfEventWasDeleted(nevent);
+      } else {
+        this.error.set(errorMessage);
+      }
     } finally {
       // Ensure all loading states are cleared
       this.isLoading.set(false);
@@ -452,6 +459,57 @@ export class EventPageComponent {
     } catch (error) {
       this.logger.error('Error checking deletion request:', error);
       // Don't block the UI if deletion check fails
+    }
+  }
+
+  /**
+   * Check if an event was deleted when it cannot be found (NIP-09)
+   * This extracts the event ID from the nevent/note and queries for deletion requests
+   */
+  private async checkIfEventWasDeleted(nevent: string): Promise<void> {
+    try {
+      // Extract the event ID from the nevent/note
+      let eventId: string | null = null;
+
+      if (this.utilities.isHex(nevent)) {
+        eventId = nevent;
+      } else {
+        const decoded = this.utilities.decode(nevent);
+        if (decoded.type === 'note') {
+          eventId = decoded.data;
+        } else if (decoded.type === 'nevent') {
+          eventId = decoded.data.id;
+        }
+      }
+
+      if (!eventId) {
+        this.error.set('Event not found');
+        return;
+      }
+
+      this.logger.info('Checking if event was deleted:', eventId);
+
+      // Query for deletion request
+      const deletionEvent = await this.eventService.checkDeletionRequestById(eventId);
+
+      if (deletionEvent) {
+        this.logger.info('Event was deleted:', {
+          eventId,
+          deletionEventId: deletionEvent.id,
+          reason: deletionEvent.content || '(no reason given)',
+        });
+
+        // Update UI state to show deletion
+        this.isDeleted.set(true);
+        this.deletionReason.set(deletionEvent.content || null);
+        this.error.set('This event has been deleted by its author');
+      } else {
+        // No deletion found, show regular "Event not found" message
+        this.error.set('Event not found');
+      }
+    } catch (error) {
+      this.logger.error('Error checking if event was deleted:', error);
+      this.error.set('Event not found');
     }
   }
 }
