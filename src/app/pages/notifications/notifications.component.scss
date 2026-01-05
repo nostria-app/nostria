@@ -150,9 +150,9 @@
 
   // Fixed height for virtual scrolling items only
   .notification-item {
-    height: 110px;
-    min-height: 110px;
-    max-height: 110px;
+    height: 94px;
+    min-height: 94px;
+    max-height: 94px;
     overflow: hidden; // Clip content vertically and horizontally to fixed height
 
     // Constrain content to fit fixed height
