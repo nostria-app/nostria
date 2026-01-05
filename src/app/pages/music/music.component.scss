@@ -33,6 +33,11 @@
     display: flex;
     align-items: center;
     gap: 0.5rem;
+
+    button.active {
+      background-color: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+    }
   }
 
   button mat-icon {
@@ -40,6 +45,55 @@
     width: 20px;
     height: 20px;
   }
+}
+
+// Search bar styles
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: var(--mat-sys-corner-large);
+  margin-bottom: 0.5rem;
+
+  .search-icon {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 20px;
+    width: 20px;
+    height: 20px;
+  }
+
+  .search-input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 1rem;
+    color: var(--mat-sys-on-surface);
+    outline: none;
+
+    &::placeholder {
+      color: var(--mat-sys-on-surface-variant);
+    }
+  }
+
+  .clear-search-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+.search-results-info {
+  padding: 0.5rem 0;
+  font-size: 0.875rem;
+  color: var(--mat-sys-on-surface-variant);
 }
 
 .music-content {

@@ -1,5 +1,6 @@
 import { Component, inject, signal, computed, OnDestroy } from '@angular/core';
 import { Router } from '@angular/router';
+import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -36,6 +37,7 @@ const SECTION_LIMIT = 12;
     MatButtonModule,
     MatIconModule,
     MatMenuModule,
+    FormsModule,
     MusicEventComponent,
     MusicPlaylistCardComponent,
     CreateMusicPlaylistDialogComponent,
@@ -64,6 +66,10 @@ export class MusicComponent implements OnDestroy {
   allPlaylists = signal<Event[]>([]);
   loading = signal(true);
   isLoadingLikedSongs = signal(false);
+
+  // Search functionality
+  searchQuery = signal('');
+  showSearch = signal(false);
 
   // Offline music track count
   offlineTrackCount = computed(() => this.offlineMusicService.offlineTracks().length);
@@ -95,12 +101,70 @@ export class MusicComponent implements OnDestroy {
 
   isAuthenticated = computed(() => this.app.authenticated());
 
+  /**
+   * Helper to check if a track matches search query
+   * Searches in title, artist tag, and hashtags
+   */
+  private trackMatchesSearch(track: Event, query: string): boolean {
+    if (!query) return true;
+    const lowerQuery = query.toLowerCase();
+    
+    // Check title
+    const titleTag = track.tags.find(t => t[0] === 'title');
+    if (titleTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    
+    // Check artist tag
+    const artistTag = track.tags.find(t => t[0] === 'artist');
+    if (artistTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    
+    // Check hashtags
+    const hashtags = track.tags.filter(t => t[0] === 't').map(t => t[1]?.toLowerCase());
+    if (hashtags.some(tag => tag?.includes(lowerQuery))) return true;
+    
+    return false;
+  }
+
+  /**
+   * Helper to check if a playlist matches search query
+   * Searches in title and description
+   */
+  private playlistMatchesSearch(playlist: Event, query: string): boolean {
+    if (!query) return true;
+    const lowerQuery = query.toLowerCase();
+    
+    // Check title
+    const titleTag = playlist.tags.find(t => t[0] === 'title');
+    if (titleTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    
+    // Check description
+    const descTag = playlist.tags.find(t => t[0] === 'description');
+    if (descTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
+    
+    // Check content
+    if (playlist.content?.toLowerCase().includes(lowerQuery)) return true;
+    
+    return false;
+  }
+
+  // Filtered tracks and playlists based on search
+  private filteredTracks = computed(() => {
+    const query = this.searchQuery().trim();
+    if (!query) return this.allTracks();
+    return this.allTracks().filter(track => this.trackMatchesSearch(track, query));
+  });
+
+  private filteredPlaylists = computed(() => {
+    const query = this.searchQuery().trim();
+    if (!query) return this.allPlaylists();
+    return this.allPlaylists().filter(playlist => this.playlistMatchesSearch(playlist, query));
+  });
+
   // === YOUR SECTION ===
   // User's own playlists
   myPlaylists = computed(() => {
     const pubkey = this.currentPubkey();
     if (!pubkey) return [];
-    return this.allPlaylists()
+    return this.filteredPlaylists()
       .filter(p => p.pubkey === pubkey)
       .sort((a, b) => b.created_at - a.created_at);
   });
@@ -113,7 +177,7 @@ export class MusicComponent implements OnDestroy {
     const following = this.followingPubkeys();
     const myPubkey = this.currentPubkey();
     if (following.length === 0) return [];
-    return this.allPlaylists()
+    return this.filteredPlaylists()
       .filter(p => following.includes(p.pubkey) && p.pubkey !== myPubkey)
       .sort((a, b) => b.created_at - a.created_at);
   });
@@ -125,7 +189,7 @@ export class MusicComponent implements OnDestroy {
   followingTracks = computed(() => {
     const following = this.followingPubkeys();
     if (following.length === 0) return [];
-    return this.allTracks()
+    return this.filteredTracks()
       .filter(track => following.includes(track.pubkey))
       .sort((a, b) => b.created_at - a.created_at);
   });
@@ -137,7 +201,7 @@ export class MusicComponent implements OnDestroy {
   publicPlaylists = computed(() => {
     const following = this.followingPubkeys();
     const myPubkey = this.currentPubkey();
-    return this.allPlaylists()
+    return this.filteredPlaylists()
       .filter(p => !following.includes(p.pubkey) && p.pubkey !== myPubkey)
       .sort((a, b) => b.created_at - a.created_at);
   });
@@ -148,7 +212,7 @@ export class MusicComponent implements OnDestroy {
   // === SONGS (PUBLIC) ===
   publicTracks = computed(() => {
     const following = this.followingPubkeys();
-    return this.allTracks()
+    return this.filteredTracks()
       .filter(track => !following.includes(track.pubkey))
       .sort((a, b) => b.created_at - a.created_at);
   });
@@ -162,6 +226,19 @@ export class MusicComponent implements OnDestroy {
   publicPlaylistsCount = computed(() => this.publicPlaylists().length);
   publicTracksCount = computed(() => this.publicTracks().length);
 
+  // Search results indicator
+  hasSearchResults = computed(() => {
+    const query = this.searchQuery().trim();
+    if (!query) return true;
+    return this.filteredTracks().length > 0 || this.filteredPlaylists().length > 0;
+  });
+
+  totalSearchResults = computed(() => {
+    const query = this.searchQuery().trim();
+    if (!query) return 0;
+    return this.filteredTracks().length + this.filteredPlaylists().length;
+  });
+
   // Music relay set constant
   private readonly RELAY_SET_KIND = 30002;
   private readonly MUSIC_RELAY_SET_D_TAG = 'music';
@@ -171,11 +248,71 @@ export class MusicComponent implements OnDestroy {
   }
 
   /**
-   * Initialize music by first loading relay set, then starting subscriptions
+   * Initialize music by first loading from database, then relay set, then start subscriptions
    */
   private async initializeMusic(): Promise<void> {
+    // First, load cached tracks and playlists from database for instant display
+    await this.loadFromDatabase();
+    
+    // Then load relay set and start subscriptions for fresh data
     await this.loadMusicRelaySet();
     this.startSubscriptions();
+  }
+
+  /**
+   * Load tracks and playlists from local database for instant display
+   */
+  private async loadFromDatabase(): Promise<void> {
+    try {
+      console.log('[Music] Loading from database...');
+      
+      // Load tracks from database
+      const cachedTracks = await this.database.getEventsByKind(MUSIC_KIND);
+      for (const track of cachedTracks) {
+        if (this.reporting.isUserBlocked(track.pubkey)) continue;
+        if (this.reporting.isContentBlocked(track)) continue;
+        
+        const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+        const uniqueId = `${track.pubkey}:${dTag}`;
+        
+        const existing = this.trackMap.get(uniqueId);
+        if (!existing || track.created_at > existing.created_at) {
+          this.trackMap.set(uniqueId, track);
+        }
+      }
+      
+      if (this.trackMap.size > 0) {
+        this.allTracks.set(Array.from(this.trackMap.values()));
+        console.log(`[Music] Loaded ${this.trackMap.size} tracks from database`);
+      }
+      
+      // Load playlists from database
+      const cachedPlaylists = await this.database.getEventsByKind(PLAYLIST_KIND);
+      for (const playlist of cachedPlaylists) {
+        if (this.reporting.isUserBlocked(playlist.pubkey)) continue;
+        if (this.reporting.isContentBlocked(playlist)) continue;
+        
+        const dTag = playlist.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
+        const uniqueId = `${playlist.pubkey}:${dTag}`;
+        
+        const existing = this.playlistMap.get(uniqueId);
+        if (!existing || playlist.created_at > existing.created_at) {
+          this.playlistMap.set(uniqueId, playlist);
+        }
+      }
+      
+      if (this.playlistMap.size > 0) {
+        this.allPlaylists.set(Array.from(this.playlistMap.values()));
+        console.log(`[Music] Loaded ${this.playlistMap.size} playlists from database`);
+      }
+      
+      // If we have cached data, stop showing loading spinner immediately
+      if (this.trackMap.size > 0 || this.playlistMap.size > 0) {
+        this.loading.set(false);
+      }
+    } catch (error) {
+      console.error('[Music] Error loading from database:', error);
+    }
   }
 
   ngOnDestroy(): void {
@@ -315,6 +452,11 @@ export class MusicComponent implements OnDestroy {
       this.trackMap.set(uniqueId, event);
       this.allTracks.set(Array.from(this.trackMap.values()));
 
+      // Save to database for caching
+      this.database.saveEvent({ ...event, dTag }).catch(err => 
+        console.warn('[Music] Failed to save track to database:', err)
+      );
+
       if (!tracksLoaded) {
         clearTimeout(trackTimeout);
         tracksLoaded = true;
@@ -339,6 +481,11 @@ export class MusicComponent implements OnDestroy {
 
       this.playlistMap.set(uniqueId, event);
       this.allPlaylists.set(Array.from(this.playlistMap.values()));
+
+      // Save to database for caching
+      this.database.saveEvent({ ...event, dTag }).catch(err => 
+        console.warn('[Music] Failed to save playlist to database:', err)
+      );
 
       if (!playlistsLoaded) {
         clearTimeout(playlistTimeout);
@@ -396,6 +543,27 @@ export class MusicComponent implements OnDestroy {
 
   goToAllPublicTracks(): void {
     this.router.navigate(['/music/tracks'], { queryParams: { source: 'public' } });
+  }
+
+  // Search methods
+  toggleSearch(): void {
+    const wasVisible = this.showSearch();
+    this.showSearch.set(!wasVisible);
+    if (!wasVisible) {
+      // Focus the search input when opening (done in template with autofocus)
+    } else {
+      // Clear search when closing
+      this.searchQuery.set('');
+    }
+  }
+
+  clearSearch(): void {
+    this.searchQuery.set('');
+  }
+
+  onSearchInput(event: InputEvent): void {
+    const target = event.target as HTMLInputElement;
+    this.searchQuery.set(target.value);
   }
 
   // Menu actions

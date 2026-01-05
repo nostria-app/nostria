@@ -19,6 +19,7 @@ import { EventService } from '../../services/event';
 import { UtilitiesService } from '../../services/utilities.service';
 import { ZapService } from '../../services/zap.service';
 import { OfflineMusicService } from '../../services/offline-music.service';
+import { ImageCacheService } from '../../services/image-cache.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import { CreateMusicPlaylistDialogComponent, CreateMusicPlaylistDialogData } from '../../pages/music/create-music-playlist-dialog/create-music-playlist-dialog.component';
@@ -551,6 +552,7 @@ export class MusicEventComponent {
   private utilities = inject(UtilitiesService);
   private zapService = inject(ZapService);
   private offlineMusicService = inject(OfflineMusicService);
+  private imageCache = inject(ImageCacheService);
 
   event = input.required<Event>();
   mode = input<'card' | 'list'>('list');
@@ -635,11 +637,19 @@ export class MusicEventComponent {
     return match ? match[0] : '';
   });
 
-  // Extract cover image
-  image = computed(() => {
+  // Extract cover image (raw URL for media player)
+  rawImage = computed(() => {
     const event = this.event();
     const imageTag = event.tags.find(t => t[0] === 'image');
     return imageTag?.[1] || null;
+  });
+
+  // Extract cover image (proxied for display to reduce image size)
+  image = computed(() => {
+    const rawUrl = this.rawImage();
+    if (!rawUrl) return null;
+    // Use 200x200 for card display (covers both card and list modes)
+    return this.imageCache.getOptimizedImageUrlWithSize(rawUrl, 200, 200);
   });
 
   // Check if AI generated
@@ -734,7 +744,7 @@ export class MusicEventComponent {
       source: url,
       title: this.title() || 'Untitled Track',
       artist: this.artistName(),
-      artwork: this.image() || '/icons/icon-192x192.png',
+      artwork: this.rawImage() || '/icons/icon-192x192.png',
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),
@@ -756,7 +766,7 @@ export class MusicEventComponent {
       source: url,
       title: this.title() || 'Untitled Track',
       artist: this.artistName(),
-      artwork: this.image() || '/icons/icon-192x192.png',
+      artwork: this.rawImage() || '/icons/icon-192x192.png',
       type: 'Music',
       eventPubkey: this.artistNpub(),
       eventIdentifier: this.identifier(),

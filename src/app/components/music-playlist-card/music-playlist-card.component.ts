@@ -19,6 +19,7 @@ import { RelaysService } from '../../services/relays/relays';
 import { UtilitiesService } from '../../services/utilities.service';
 import { EventService } from '../../services/event';
 import { ZapService } from '../../services/zap.service';
+import { ImageCacheService } from '../../services/image-cache.service';
 import { NostrRecord, MediaItem } from '../../interfaces';
 import { ZapDialogComponent, ZapDialogData } from '../zap-dialog/zap-dialog.component';
 import {
@@ -287,6 +288,7 @@ export class MusicPlaylistCardComponent {
   private dialog = inject(MatDialog);
   private clipboard = inject(Clipboard);
   private zapService = inject(ZapService);
+  private imageCache = inject(ImageCacheService);
 
   event = input.required<Event>();
 
@@ -347,11 +349,19 @@ export class MusicPlaylistCardComponent {
     return publicTag?.[1] === 'true';
   });
 
-  // Cover image (first track's image or playlist image)
-  coverImage = computed(() => {
+  // Cover image (raw URL)
+  rawCoverImage = computed(() => {
     const event = this.event();
     const imageTag = event.tags.find(t => t[0] === 'image');
     return imageTag?.[1] || null;
+  });
+
+  // Cover image (proxied for display to reduce image size)
+  coverImage = computed(() => {
+    const rawUrl = this.rawCoverImage();
+    if (!rawUrl) return null;
+    // Use 320x320 for playlist card display
+    return this.imageCache.getOptimizedImageUrlWithSize(rawUrl, 320, 320);
   });
 
   // Get gradient background (alternative to image)
