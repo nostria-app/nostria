@@ -57,6 +57,10 @@
   border-radius: var(--mat-sys-corner-large);
   margin-bottom: 0.5rem;
 
+  &.hidden {
+    display: none;
+  }
+
   .search-icon {
     color: var(--mat-sys-on-surface-variant);
     font-size: 20px;

@@ -17,6 +17,7 @@ import { MediaPlayerService } from '../../../services/media-player.service';
 import { LayoutService } from '../../../services/layout.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
 import { UserProfileComponent } from '../../user-profile/user-profile.component';
 import { SwipeGestureDirective, SwipeEvent } from '../../../directives/swipe-gesture.directive';
 import { ModernPlayerViewComponent } from './modern-player-view/modern-player-view.component';
@@ -61,6 +62,7 @@ export class AudioPlayerComponent {
   private router = inject(Router);
   private accountState = inject(AccountStateService);
   private accountLocalState = inject(AccountLocalStateService);
+  private imageCache = inject(ImageCacheService);
 
   footer = input<boolean>(false);
 
@@ -125,6 +127,14 @@ export class AudioPlayerComponent {
   currentTime = computed(() => this.media.currentTimeSig());
   duration = computed(() => this.media.durationSig());
   isPodcast = computed(() => this.media.current()?.type === 'Podcast');
+  
+  // Proxied artwork for footer/minimized mode (smaller size for performance)
+  footerArtwork = computed(() => {
+    const artwork = this.media.current()?.artwork;
+    if (!artwork) return null;
+    // Use smaller image for footer mode
+    return this.imageCache.getOptimizedImageUrlWithSize(artwork, 64, 64);
+  });
 
   formatLabel(value: number): string {
     if (!value || isNaN(value)) {

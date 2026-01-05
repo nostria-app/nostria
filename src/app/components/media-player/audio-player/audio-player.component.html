@@ -4,8 +4,8 @@
   <div class="audio-player-footer" appSwipeGesture [horizontalSwipe]="true" [verticalSwipe]="true" [threshold]="30"
     (swipe)="onFooterSwipe($event)">
     <div class="media-info" [class.no-artwork]="!media.current()?.artwork">
-      @if (media.current()?.artwork) {
-      <img class="album-art" [src]="media.current()?.artwork" alt="{{ media.current()?.title || 'Album artwork' }}" />
+      @if (footerArtwork()) {
+      <img class="album-art" [src]="footerArtwork()" alt="{{ media.current()?.title || 'Album artwork' }}" />
       }
       <div class="media-info-text">
         <div class="media-title clickable" (click)="goToSong()" [class.has-link]="hasSongLink()">{{
