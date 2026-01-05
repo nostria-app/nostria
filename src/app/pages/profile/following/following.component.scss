@@ -20,28 +20,110 @@
   z-index: 3;
   background-color: var(--mat-sidenav-content-background-color, var(--mat-sys-background));
   margin-bottom: 0;
+  gap: 8px;
+  flex-wrap: wrap;
   /* Ensure no margin at bottom */
 }
 
 .back-button {
-  margin-right: 16px;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  flex-shrink: 0;
+
+  .search-container {
+    display: flex;
+    align-items: center;
+    border-radius: 24px;
+    padding: 0 12px;
+    background-color: var(--mat-sys-surface-container);
+    max-width: 200px;
+
+    mat-icon {
+      opacity: 0.5;
+      margin-right: 4px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    input {
+      border: none;
+      background: transparent;
+      outline: none;
+      width: 100%;
+      min-width: 80px;
+      padding: 8px 0;
+      color: var(--mat-sys-on-surface);
+      font-size: 14px;
+
+      &::placeholder {
+        color: var(--mat-sys-on-surface-variant);
+      }
+    }
+
+    .clear-search {
+      width: 24px;
+      height: 24px;
+      line-height: 24px;
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        margin: 0;
+        opacity: 1;
+      }
+    }
+  }
+}
+
+// Sort menu styles
+.sort-menu,
+::ng-deep .sort-menu {
+  .filter-menu-header {
+    padding: 12px 16px 8px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .filter-section {
+    padding: 8px 16px 16px;
+
+    mat-radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+  }
 }
 
 .profile-mini {
   display: flex;
   align-items: center;
   flex: 1;
+  min-width: 0;
+  overflow: hidden;
 
   &-avatar {
     width: 40px;
     height: 40px;
     border-radius: 50%;
     overflow: hidden;
-    margin-right: 16px;
+    margin-right: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     background-color: var(--mat-card-subtle-surface-color, #e0e0e0);
+    flex-shrink: 0;
 
     img {
       width: 100%;
@@ -60,6 +142,9 @@
   &-name {
     margin: 0;
     font-size: 18px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
