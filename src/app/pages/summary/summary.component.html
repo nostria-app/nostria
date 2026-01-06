@@ -139,6 +139,49 @@
     </section>
     }
 
+    <!-- Articles Section -->
+    @if (articleEvents().length > 0) {
+    <mat-divider></mat-divider>
+
+    <section class="articles-section">
+      <h2 class="section-title clickable" (click)="articlesCollapsed.set(!articlesCollapsed())"
+        (keydown.enter)="articlesCollapsed.set(!articlesCollapsed())"
+        (keydown.space)="articlesCollapsed.set(!articlesCollapsed()); $event.preventDefault()" tabindex="0"
+        role="button" [attr.aria-expanded]="!articlesCollapsed()">
+        <mat-icon class="collapse-icon" [class.collapsed]="articlesCollapsed()">expand_more</mat-icon>
+        <mat-icon>article</mat-icon>
+        Articles
+        <span class="section-count">{{ articleEvents().length }}</span>
+      </h2>
+      @if (!articlesCollapsed()) {
+      <p class="section-description">Long-form articles published recently</p>
+      <div class="articles-grid">
+        @for (event of articleEvents().slice(0, 12); track event.id) {
+        <a class="article-card" [routerLink]="getArticleRoute(event)">
+          @if (getArticleImage(event); as imageUrl) {
+          <div class="article-image">
+            <img [src]="imageUrl" alt="Article cover" loading="lazy" />
+          </div>
+          } @else {
+          <div class="article-image article-placeholder">
+            <mat-icon>article</mat-icon>
+          </div>
+          }
+          <div class="article-content">
+            <h3 class="article-title">{{ getArticleTitle(event) }}</h3>
+            <p class="article-summary">{{ getArticleSummary(event) }}</p>
+            <div class="article-footer">
+              <app-user-profile [pubkey]="event.pubkey" view="icon" class="article-author"></app-user-profile>
+              <span class="article-time">{{ event.created_at | ago }}</span>
+            </div>
+          </div>
+        </a>
+        }
+      </div>
+      }
+    </section>
+    }
+
     <!-- Media Section -->
     @if (mediaEvents().length > 0) {
     <mat-divider></mat-divider>

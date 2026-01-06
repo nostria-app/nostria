@@ -149,6 +149,7 @@ export class SummaryComponent implements OnInit, OnDestroy {
   // Section collapse states
   postersCollapsed = signal(false);
   mediaCollapsed = signal(false);
+  articlesCollapsed = signal(false);
 
   // Selected posters for filtering the timeline (empty means show all)
   selectedPosters = signal<Set<string>>(new Set());
@@ -836,6 +837,46 @@ export class SummaryComponent implements OnInit, OnDestroy {
       return (num / 1000).toFixed(1) + 'K';
     }
     return num.toString();
+  }
+
+  /**
+   * Get article title from tags
+   */
+  getArticleTitle(event: TimelineEvent): string {
+    if (event.tags) {
+      const title = event.tags.find(t => t[0] === 'title')?.[1];
+      if (title) return title;
+    }
+    // Fallback to content preview
+    const content = event.content || '';
+    return content.length > 60 ? content.substring(0, 60) + '...' : content || 'Untitled';
+  }
+
+  /**
+   * Get article summary/description from tags
+   */
+  getArticleSummary(event: TimelineEvent): string {
+    if (event.tags) {
+      const summary = event.tags.find(t => t[0] === 'summary')?.[1];
+      if (summary) return summary.length > 120 ? summary.substring(0, 120) + '...' : summary;
+    }
+    // Fallback to content preview
+    const content = event.content || '';
+    return content.length > 120 ? content.substring(0, 120) + '...' : content;
+  }
+
+  /**
+   * Get article image from tags
+   */
+  getArticleImage(event: TimelineEvent): string | null {
+    if (!event.tags) return null;
+    // Look for image tag
+    const imageTag = event.tags.find(t => t[0] === 'image')?.[1];
+    if (imageTag) return imageTag;
+    // Fallback to thumb tag
+    const thumbTag = event.tags.find(t => t[0] === 'thumb')?.[1];
+    if (thumbTag) return thumbTag;
+    return null;
   }
 
   /**
