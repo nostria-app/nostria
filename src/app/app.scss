@@ -307,8 +307,7 @@ mat-sidenav-content {
 .mobile-nav {
   position: fixed;
   // Use max() to ensure minimum padding for Android devices where env() returns 0
-  // Android gesture navigation typically needs ~20-24px extra space
-  bottom: max(24px, calc(24px + env(safe-area-inset-bottom, 0px)));
+  bottom: max(12px, calc(12px + env(safe-area-inset-bottom, 0px)));
   left: 50%;
   transform: translateX(-50%);
   right: auto;
@@ -349,7 +348,7 @@ mat-sidenav-content {
   .mobile-nav {
     // When running as installed PWA, add extra padding
     // Android gesture nav bar is typically ~48px on most devices
-    bottom: max(48px, calc(24px + env(safe-area-inset-bottom, 0px)));
+    bottom: max(36px, calc(12px + env(safe-area-inset-bottom, 0px)));
   }
 }
 
