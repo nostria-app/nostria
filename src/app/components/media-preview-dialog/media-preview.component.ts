@@ -346,6 +346,43 @@ export class MediaPreviewDialogComponent implements OnDestroy {
     return Math.sqrt(dx * dx + dy * dy);
   }
 
+  onDoubleClick(event: MouseEvent): void {
+    event.preventDefault();
+
+    if (!this.imageElement?.nativeElement || !this.containerElement?.nativeElement) return;
+
+    const currentScale = this.scale();
+
+    // If already zoomed in, reset to normal view
+    if (currentScale > 1) {
+      this.resetView();
+      return;
+    }
+
+    // Zoom in to 2x centered on click position
+    const targetScale = 2;
+    const img = this.imageElement.nativeElement;
+    const imgRect = img.getBoundingClientRect();
+
+    const mouseX = event.clientX - imgRect.left;
+    const mouseY = event.clientY - imgRect.top;
+
+    const displayWidth = imgRect.width;
+    const displayHeight = imgRect.height;
+
+    const relX = mouseX / displayWidth;
+    const relY = mouseY / displayHeight;
+
+    const offsetX = (relX * displayWidth - displayWidth / 2) / currentScale;
+    const offsetY = (relY * displayHeight - displayHeight / 2) / currentScale;
+
+    this.scale.set(targetScale);
+    this.translateX.set(-offsetX * (targetScale - currentScale));
+    this.translateY.set(-offsetY * (targetScale - currentScale));
+
+    this.resetHideControlsTimer();
+  }
+
   onWheel(event: WheelEvent): void {
     event.preventDefault();
 
