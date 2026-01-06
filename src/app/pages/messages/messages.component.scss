@@ -370,13 +370,15 @@
 .message-list {
   flex: 1;
   overflow-y: auto;
-  padding: 0 12px;
+  padding: 0 6px;
   padding-top: 88px; // Space for floating header
   padding-bottom: 80px; // Space for floating input
   min-height: 0;
 
   // On mobile, add padding for the fixed input at the bottom (where mobile nav would be)
   @media (max-width: 599px) {
+    padding-left: 4px;
+    padding-right: 4px;
     padding-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
   }
 
@@ -576,22 +578,72 @@
   text-size-adjust: 100%;
 }
 
+// Date header for message grouping
+.date-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px 0 8px;
+  margin: 8px 0;
+
+  .date-label {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface);
+    opacity: 0.7;
+    padding: 4px 12px;
+    border-radius: 12px;
+    background-color: var(--mat-sys-surface-container);
+  }
+}
+
+// Time displayed on the side of message bubbles
+.message-time-side {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  opacity: 0.5;
+  align-self: center;
+  white-space: nowrap;
+  min-width: 40px;
+  // Prevent iOS Safari from auto-zooming text
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+
+  @media (max-width: 599px) {
+    font-size: 0.65rem;
+    min-width: 36px;
+  }
+}
+
 .message-bubble-container {
   display: flex;
   align-items: flex-end;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   word-wrap: break-word;
   overflow-wrap: break-word;
   min-width: 0;
 
-  &.outgoing {
-    flex-direction: row-reverse;
+  // Push time to edges using margin-auto on bubble
+  .message-time-side {
+    margin-left: 0;
   }
 
   .message-bubble {
-    max-width: 70%;
+    margin-right: auto;
+  }
+
+  &.outgoing {
+    flex-direction: row-reverse;
+
+    .message-bubble {
+      margin-right: 0;
+      margin-left: auto;
+    }
+  }
+
+  .message-bubble {
+    max-width: calc(100% - 50px);
     min-width: 0;
-    padding: 12px 16px;
+    padding: 10px 14px;
     border-radius: 18px;
     position: relative;
     word-wrap: break-word;
@@ -601,6 +653,11 @@
     hyphens: auto;
     white-space: pre-wrap;
     overflow: hidden;
+
+    @media (max-width: 599px) {
+      max-width: calc(100% - 44px);
+      padding: 8px 12px;
+    }
 
     .message-content {
       display: inline;
@@ -809,21 +866,21 @@
 .message-inline-meta {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  font-size: 11px;
-  opacity: 0.7;
-  margin-left: 8px;
+  gap: 2px;
+  font-size: 10px;
+  opacity: 0.6;
+  margin-left: 6px;
   vertical-align: bottom;
   white-space: nowrap;
   float: right;
-  margin-top: 8px;
+  margin-top: 4px;
   position: relative;
-  top: 4px;
+  top: 2px;
 
   .encryption-icon {
-    font-size: 13px;
-    height: 13px;
-    width: 13px;
+    font-size: 12px;
+    height: 12px;
+    width: 12px;
 
     &.secure {
       color: var(--mat-success-color);
@@ -839,9 +896,9 @@
   }
 
   .status-icon {
-    font-size: 13px;
-    height: 13px;
-    width: 13px;
+    font-size: 12px;
+    height: 12px;
+    width: 12px;
   }
 
   .failed-icon {
@@ -850,10 +907,6 @@
 
   .read-icon {
     color: var(--mat-sys-primary);
-  }
-
-  .message-time {
-    font-size: 10px;
   }
 }
 

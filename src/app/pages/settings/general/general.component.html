@@ -224,7 +224,7 @@
         <mat-option value="ethiopian" i18n="@@settings.calendar.ethiopian">Ethiopian Calendar</mat-option>
       </mat-select>
     </mat-form-field>
-    <p>
+    <p class="setting-description">
       @switch (localSettings.calendarType()) {
       @case ('gregorian') {
       <ng-container i18n="@@settings.calendar.gregorian.description">The standard civil calendar used worldwide with 12
@@ -240,6 +240,14 @@
       }
       }
     </p>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label i18n="@@settings.time-format.label">Time Format</mat-label>
+      <mat-select [ngModel]="localSettings.timeFormat()" (selectionChange)="setTimeFormat($event.value)">
+        <mat-option value="24h" i18n="@@settings.time-format.24h">24-hour (14:30)</mat-option>
+        <mat-option value="12h" i18n="@@settings.time-format.12h">12-hour (2:30 PM)</mat-option>
+      </mat-select>
+    </mat-form-field>
   </div>
 
   @if (accountState.hasActiveSubscription()) {

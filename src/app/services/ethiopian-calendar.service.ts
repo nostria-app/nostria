@@ -243,34 +243,46 @@ export class EthiopianCalendarService {
 
   /**
    * Format an Ethiopian date to a string
-   * Supports formats: 'short', 'medium', 'long', 'full', 'shortDate', 'mediumDate', 'longDate', 'fullDate'
+   * Supports formats: 'short', 'medium', 'long', 'full', 'shortDate', 'mediumDate', 'longDate', 'fullDate', 'time'
    */
-  format(ethiopianDate: EthiopianDateTime, format = 'medium'): string {
+  format(ethiopianDate: EthiopianDateTime, format = 'medium', timeFormat: '12h' | '24h' = '24h'): string {
     const { year, month, day, hour, minute, second } = ethiopianDate;
     const monthName = this.getMonthName(month);
     const shortMonthName = this.getShortMonthName(month);
 
-    // Format time in 12-hour format
-    const hour12 = hour % 12 || 12;
-    const ampm = hour >= 12 ? 'PM' : 'AM';
+    // Format time based on preference
     const minuteStr = minute.toString().padStart(2, '0');
     const secondStr = second.toString().padStart(2, '0');
 
+    let timeStr: string;
+    let timeStrWithSeconds: string;
+    if (timeFormat === '24h') {
+      timeStr = `${hour.toString().padStart(2, '0')}:${minuteStr}`;
+      timeStrWithSeconds = `${hour.toString().padStart(2, '0')}:${minuteStr}:${secondStr}`;
+    } else {
+      const hour12 = hour % 12 || 12;
+      const ampm = hour >= 12 ? 'PM' : 'AM';
+      timeStr = `${hour12}:${minuteStr} ${ampm}`;
+      timeStrWithSeconds = `${hour12}:${minuteStr}:${secondStr} ${ampm}`;
+    }
+
     switch (format) {
+      case 'time':
+        return timeStr;
       case 'short':
-        return `${month}/${day}/${year % 100}, ${hour12}:${minuteStr} ${ampm}`;
+        return `${month}/${day}/${year % 100}, ${timeStr}`;
       case 'shortDate':
         return `${month}/${day}/${year % 100}`;
       case 'medium':
-        return `${monthName} ${day}, ${year}, ${hour12}:${minuteStr}:${secondStr} ${ampm}`;
+        return `${monthName} ${day}, ${year}, ${timeStrWithSeconds}`;
       case 'mediumDate':
         return `${monthName} ${day}, ${year}`;
       case 'long':
-        return `${monthName} ${day}, ${year}, ${hour12}:${minuteStr}:${secondStr} ${ampm}`;
+        return `${monthName} ${day}, ${year}, ${timeStrWithSeconds}`;
       case 'longDate':
         return `${monthName} ${day}, ${year}`;
       case 'full':
-        return `${monthName} ${day}, ${year}, ${hour12}:${minuteStr}:${secondStr} ${ampm}`;
+        return `${monthName} ${day}, ${year}, ${timeStrWithSeconds}`;
       case 'fullDate':
         return `${monthName} ${day}, ${year}`;
       default:
@@ -281,9 +293,9 @@ export class EthiopianCalendarService {
   /**
    * Convert Unix timestamp (seconds) to formatted Ethiopian date string
    */
-  formatUnixTimestamp(timestamp: number, format = 'medium'): string {
+  formatUnixTimestamp(timestamp: number, format = 'medium', timeFormat: '12h' | '24h' = '24h'): string {
     const ethiopianDate = this.fromUnixTimestamp(timestamp);
-    return this.format(ethiopianDate, format);
+    return this.format(ethiopianDate, format, timeFormat);
   }
 
   /**

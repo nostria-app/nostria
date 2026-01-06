@@ -313,14 +313,14 @@ export class ChroniaCalendarService {
 
   /**
    * Format a Chronia date to a string
-   * Supports formats: 'short', 'medium', 'long', 'full', 'shortDate', 'mediumDate', 'longDate', 'fullDate'
+   * Supports formats: 'short', 'medium', 'long', 'full', 'shortDate', 'mediumDate', 'longDate', 'fullDate', 'time'
    */
-  format(chroniaDate: ChroniaDateTime, format = 'medium'): string {
+  format(chroniaDate: ChroniaDateTime, format = 'medium', timeFormat: '12h' | '24h' = '24h'): string {
     if (chroniaDate.isSolsticeDay) {
-      return this.formatSpecialDay(this.getSolsticeDayName(), chroniaDate, format);
+      return this.formatSpecialDay(this.getSolsticeDayName(), chroniaDate, format, timeFormat);
     }
     if (chroniaDate.isLeapDay) {
-      return this.formatSpecialDay(this.getLeapDayName(), chroniaDate, format);
+      return this.formatSpecialDay(this.getLeapDayName(), chroniaDate, format, timeFormat);
     }
 
     const year = chroniaDate.year.toString().padStart(2, '0');
@@ -329,17 +329,32 @@ export class ChroniaCalendarService {
     const monthName = this.getMonthName(chroniaDate.month);
     const yearLabel = this.getYearLabel();
 
-    const hour = chroniaDate.hour.toString().padStart(2, '0');
     const minute = chroniaDate.minute.toString().padStart(2, '0');
     const second = chroniaDate.second.toString().padStart(2, '0');
 
+    // Format time based on preference
+    let timeStr: string;
+    let timeStrWithSeconds: string;
+    if (timeFormat === '24h') {
+      const hour = chroniaDate.hour.toString().padStart(2, '0');
+      timeStr = `${hour}:${minute}`;
+      timeStrWithSeconds = `${hour}:${minute}:${second}`;
+    } else {
+      const hour12 = chroniaDate.hour % 12 || 12;
+      const ampm = chroniaDate.hour >= 12 ? 'PM' : 'AM';
+      timeStr = `${hour12}:${minute} ${ampm}`;
+      timeStrWithSeconds = `${hour12}:${minute}:${second} ${ampm}`;
+    }
+
     switch (format) {
+      case 'time':
+        return timeStr;
       case 'short':
-        return `${year}.${month}.${day} ${hour}:${minute}`;
+        return `${year}.${month}.${day} ${timeStr}`;
       case 'shortDate':
         return `${year}.${month}.${day}`;
       case 'medium':
-        return `${monthName} ${day}, ${year} ${hour}:${minute}:${second}`;
+        return `${monthName} ${day}, ${year} ${timeStrWithSeconds}`;
       case 'mediumDate':
         return `${monthName} ${day}, ${year}`;
       case 'long':
@@ -356,20 +371,35 @@ export class ChroniaCalendarService {
   /**
    * Format special days (Solstice Day or Leap Day)
    */
-  private formatSpecialDay(dayName: string, chroniaDate: ChroniaDateTime, format: string): string {
+  private formatSpecialDay(dayName: string, chroniaDate: ChroniaDateTime, format: string, timeFormat: '12h' | '24h' = '24h'): string {
     const year = chroniaDate.year.toString().padStart(2, '0');
     const yearLabel = this.getYearLabel();
-    const hour = chroniaDate.hour.toString().padStart(2, '0');
     const minute = chroniaDate.minute.toString().padStart(2, '0');
     const second = chroniaDate.second.toString().padStart(2, '0');
 
+    // Format time based on preference
+    let timeStr: string;
+    let timeStrWithSeconds: string;
+    if (timeFormat === '24h') {
+      const hour = chroniaDate.hour.toString().padStart(2, '0');
+      timeStr = `${hour}:${minute}`;
+      timeStrWithSeconds = `${hour}:${minute}:${second}`;
+    } else {
+      const hour12 = chroniaDate.hour % 12 || 12;
+      const ampm = chroniaDate.hour >= 12 ? 'PM' : 'AM';
+      timeStr = `${hour12}:${minute} ${ampm}`;
+      timeStrWithSeconds = `${hour12}:${minute}:${second} ${ampm}`;
+    }
+
     switch (format) {
+      case 'time':
+        return timeStr;
       case 'short':
-        return `${dayName} ${year} ${hour}:${minute}`;
+        return `${dayName} ${year} ${timeStr}`;
       case 'shortDate':
         return `${dayName} ${year}`;
       case 'medium':
-        return `${dayName}, ${yearLabel} ${year} ${hour}:${minute}:${second}`;
+        return `${dayName}, ${yearLabel} ${year} ${timeStrWithSeconds}`;
       case 'mediumDate':
         return `${dayName}, ${yearLabel} ${year}`;
       case 'long':
@@ -385,9 +415,9 @@ export class ChroniaCalendarService {
   /**
    * Convert Unix timestamp (seconds) to formatted Chronia date string
    */
-  formatUnixTimestamp(timestamp: number, format = 'medium'): string {
+  formatUnixTimestamp(timestamp: number, format = 'medium', timeFormat: '12h' | '24h' = '24h'): string {
     const chroniaDate = this.fromUnixTimestamp(timestamp);
-    return this.format(chroniaDate, format);
+    return this.format(chroniaDate, format, timeFormat);
   }
 
   /**
