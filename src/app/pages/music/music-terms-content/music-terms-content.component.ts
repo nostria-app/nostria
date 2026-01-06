@@ -124,7 +124,6 @@ import { Component, ChangeDetectionStrategy } from '@angular/core';
     .terms-content {
       h1 {
         margin: 0 0 0.5rem 0;
-        font-size: 1.75rem;
         color: var(--mat-sys-on-surface);
       }
 
