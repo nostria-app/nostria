@@ -325,6 +325,143 @@
   }
 }
 
+// Articles Grid
+.articles-section {
+  .section-description {
+    margin-bottom: 1rem;
+  }
+}
+
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+
+  @media (max-width: 599px) {
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 960px) {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  }
+}
+
+.article-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--mat-sys-corner-large);
+  overflow: hidden;
+  background-color: var(--mat-sys-surface-container);
+  text-decoration: none;
+  color: inherit;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--mat-sys-level3);
+  }
+
+  .article-image {
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    background-color: var(--mat-sys-surface-container-high);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    &.article-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      mat-icon {
+        font-size: 3rem;
+        width: 3rem;
+        height: 3rem;
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.4;
+      }
+    }
+  }
+
+  .article-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    padding: 1rem;
+    gap: 0.5rem;
+  }
+
+  .article-title {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.3;
+    color: var(--mat-sys-on-surface);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .article-summary {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--mat-sys-on-surface-variant);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    flex: 1;
+  }
+
+  .article-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.5rem;
+  }
+
+  .article-author {
+    width: 24px;
+    height: 24px;
+
+    ::ng-deep {
+
+      app-user-profile,
+      .user-profile,
+      .user-profile-container,
+      .user-profile-avatar-container,
+      a.user-profile-avatar {
+        width: 24px !important;
+        height: 24px !important;
+      }
+
+      img.user-avatar {
+        width: 24px !important;
+        height: 24px !important;
+        border-radius: 50% !important;
+      }
+
+      mat-icon.default-user-avatar {
+        font-size: 24px !important;
+        width: 24px !important;
+        height: 24px !important;
+      }
+    }
+  }
+
+  .article-time {
+    font-size: 0.75rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
 .media-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
