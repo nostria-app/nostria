@@ -5,6 +5,7 @@ import { BreakpointObserver } from '@angular/cdk/layout';
 import { isPlatformBrowser } from '@angular/common';
 
 export type CalendarType = 'gregorian' | 'chronia' | 'ethiopian';
+export type TimeFormat = '12h' | '24h';
 
 export interface LocalSettings {
   menuOpen: boolean;
@@ -22,6 +23,7 @@ export interface LocalSettings {
   openThreadsExpanded: boolean;
   removeTrackingParameters: boolean;
   calendarType: CalendarType;
+  timeFormat: TimeFormat;
 }
 
 const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
@@ -40,6 +42,7 @@ const DEFAULT_LOCAL_SETTINGS: LocalSettings = {
   openThreadsExpanded: true,
   removeTrackingParameters: true,
   calendarType: 'gregorian',
+  timeFormat: '24h',
 };
 
 /**
@@ -88,6 +91,7 @@ export class LocalSettingsService {
   readonly openThreadsExpanded = computed(() => this.settings().openThreadsExpanded);
   readonly removeTrackingParameters = computed(() => this.settings().removeTrackingParameters);
   readonly calendarType = computed(() => this.settings().calendarType);
+  readonly timeFormat = computed(() => this.settings().timeFormat);
 
   constructor() {
     this.loadSettings();
@@ -348,6 +352,13 @@ export class LocalSettingsService {
    */
   setCalendarType(calendarType: CalendarType): void {
     this.updateSettings({ calendarType });
+  }
+
+  /**
+   * Set time format preference
+   */
+  setTimeFormat(timeFormat: TimeFormat): void {
+    this.updateSettings({ timeFormat });
   }
 
   /**

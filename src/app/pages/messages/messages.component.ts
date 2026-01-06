@@ -69,6 +69,7 @@ import { DatabaseService } from '../../services/database.service';
 import { AccountLocalStateService } from '../../services/account-local-state.service';
 import { SpeechService } from '../../services/speech.service';
 import { SettingsService } from '../../services/settings.service';
+import { LocalSettingsService } from '../../services/local-settings.service';
 
 // Define interfaces for our DM data structures
 interface Chat {
@@ -94,6 +95,12 @@ interface DirectMessage {
   received?: boolean;
   read?: boolean;
   encryptionType?: 'nip04' | 'nip44';
+}
+
+interface MessageGroup {
+  dateLabel: string;
+  dateTimestamp: number;
+  messages: DirectMessage[];
 }
 
 @Component({
@@ -150,6 +157,7 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
   private readonly accountLocalState = inject(AccountLocalStateService);
   private readonly speechService = inject(SpeechService);
   private readonly settings = inject(SettingsService);
+  readonly localSettings = inject(LocalSettingsService);
   isLoading = signal<boolean>(false);
   isLoadingMore = signal<boolean>(false);
   isSending = signal<boolean>(false);
@@ -212,6 +220,34 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Merge and sort by timestamp
     return [...persistedMessages, ...pending].sort((a, b) => a.created_at - b.created_at);
+  });
+
+  // Computed signal for messages grouped by date
+  groupedMessages = computed(() => {
+    const msgs = this.messages();
+    if (msgs.length === 0) return [];
+
+    const groups: MessageGroup[] = [];
+    let currentGroup: MessageGroup | null = null;
+
+    for (const message of msgs) {
+      const messageDate = new Date(message.created_at * 1000);
+      const dateKey = this.getDateKey(messageDate);
+      const dateLabel = this.getDateLabel(messageDate);
+
+      if (!currentGroup || currentGroup.dateTimestamp !== dateKey) {
+        currentGroup = {
+          dateLabel,
+          dateTimestamp: dateKey,
+          messages: []
+        };
+        groups.push(currentGroup);
+      }
+
+      currentGroup.messages.push(message);
+    }
+
+    return groups;
   });
 
   newMessageText = signal<string>('');
@@ -1647,5 +1683,96 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // Clear messages since we can no longer decrypt them
     this.messaging.clear();
+  }
+
+  /**
+   * Get a unique key for a date (timestamp at midnight)
+   */
+  private getDateKey(date: Date): number {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime();
+  }
+
+  /**
+   * Get a human-readable label for a date
+   */
+  getDateLabel(date: Date): string {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const dateKey = this.getDateKey(date);
+    const todayKey = this.getDateKey(today);
+    const yesterdayKey = this.getDateKey(yesterday);
+
+    if (dateKey === todayKey) {
+      return $localize`:@@messages.date.today:Today`;
+    }
+
+    if (dateKey === yesterdayKey) {
+      return $localize`:@@messages.date.yesterday:Yesterday`;
+    }
+
+    // For dates within the last week, show day name
+    const daysDiff = Math.floor((todayKey - dateKey) / (1000 * 60 * 60 * 24));
+    if (daysDiff < 7) {
+      const dayNames = [
+        $localize`:@@messages.date.sunday:Sunday`,
+        $localize`:@@messages.date.monday:Monday`,
+        $localize`:@@messages.date.tuesday:Tuesday`,
+        $localize`:@@messages.date.wednesday:Wednesday`,
+        $localize`:@@messages.date.thursday:Thursday`,
+        $localize`:@@messages.date.friday:Friday`,
+        $localize`:@@messages.date.saturday:Saturday`
+      ];
+      return dayNames[date.getDay()];
+    }
+
+    // For older dates, show formatted date like "Jan 3., Sat"
+    const shortMonths = [
+      $localize`:@@messages.date.jan:Jan`,
+      $localize`:@@messages.date.feb:Feb`,
+      $localize`:@@messages.date.mar:Mar`,
+      $localize`:@@messages.date.apr:Apr`,
+      $localize`:@@messages.date.may:May`,
+      $localize`:@@messages.date.jun:Jun`,
+      $localize`:@@messages.date.jul:Jul`,
+      $localize`:@@messages.date.aug:Aug`,
+      $localize`:@@messages.date.sep:Sep`,
+      $localize`:@@messages.date.oct:Oct`,
+      $localize`:@@messages.date.nov:Nov`,
+      $localize`:@@messages.date.dec:Dec`
+    ];
+    const shortDays = [
+      $localize`:@@messages.date.sun:Sun`,
+      $localize`:@@messages.date.mon:Mon`,
+      $localize`:@@messages.date.tue:Tue`,
+      $localize`:@@messages.date.wed:Wed`,
+      $localize`:@@messages.date.thu:Thu`,
+      $localize`:@@messages.date.fri:Fri`,
+      $localize`:@@messages.date.sat:Sat`
+    ];
+
+    const month = shortMonths[date.getMonth()];
+    const day = date.getDate();
+    const dayName = shortDays[date.getDay()];
+
+    return `${month} ${day}., ${dayName}`;
+  }
+
+  /**
+   * Format time for a message based on user's time format preference
+   */
+  formatMessageTime(timestamp: number): string {
+    const date = new Date(timestamp * 1000);
+    const hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+
+    if (this.localSettings.timeFormat() === '24h') {
+      return `${hours.toString().padStart(2, '0')}:${minutes}`;
+    } else {
+      const hour12 = hours % 12 || 12;
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      return `${hour12}:${minutes} ${ampm}`;
+    }
   }
 }

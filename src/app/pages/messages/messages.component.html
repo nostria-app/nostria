@@ -313,7 +313,11 @@
         </div>
         }
 
-        @for (message of messages(); track message.id) {
+        @for (group of groupedMessages(); track group.dateTimestamp) {
+        <div class="date-header">
+          <span class="date-label">{{ group.dateLabel }}</span>
+        </div>
+        @for (message of group.messages; track message.id) {
         <div class="message-bubble-container" [class.outgoing]="message.isOutgoing">
           <div class="message-bubble" [class.outgoing]="message.isOutgoing" [class.pending]="message.pending"
             [class.failed]="message.failed">
@@ -334,9 +338,9 @@
               } @else if (message.isOutgoing && message.received) {
               <mat-icon class="status-icon received-icon">done</mat-icon>
               }
-              <span class="message-time">{{ message.created_at | timestamp:'short' }}</span>
             </span>
           </div>
+          <span class="message-time-side">{{ formatMessageTime(message.created_at) }}</span>
 
           @if (message.failed) {
           <div class="message-actions">
@@ -346,6 +350,7 @@
           </div>
           }
         </div>
+        }
         }
       </div>
       <div class="message-input-container">

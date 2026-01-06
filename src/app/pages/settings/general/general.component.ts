@@ -12,7 +12,7 @@ import { FeatureLevel, LoggerService, LogLevel } from '../../../services/logger.
 import { ThemeService } from '../../../services/theme.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
 import { ApplicationService } from '../../../services/application.service';
-import { CalendarType, LocalSettingsService } from '../../../services/local-settings.service';
+import { CalendarType, LocalSettingsService, TimeFormat } from '../../../services/local-settings.service';
 import { PlaceholderAlgorithm, SettingsService } from '../../../services/settings.service';
 import { StorageStatsComponent } from '../../../components/storage-stats/storage-stats.component';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
@@ -141,6 +141,10 @@ export class GeneralSettingsComponent {
 
   setCalendarType(calendarType: CalendarType): void {
     this.localSettings.setCalendarType(calendarType);
+  }
+
+  setTimeFormat(timeFormat: TimeFormat): void {
+    this.localSettings.setTimeFormat(timeFormat);
   }
 
   toggleAutoPlayShortForm(): void {
