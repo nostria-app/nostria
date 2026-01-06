@@ -27,6 +27,7 @@ import { SimplePool, Filter } from 'nostr-tools';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
+import { RepostService } from '../../../services/repost.service';
 
 const PAGE_SIZE = 10;
 
@@ -72,6 +73,7 @@ export class RelayColumnComponent implements OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private clipboard = inject(Clipboard);
+  private repostService = inject(RepostService);
 
   // Input for the relay URL (without wss://)
   relayDomain = input<string>('');
@@ -95,7 +97,8 @@ export class RelayColumnComponent implements OnDestroy {
   isLoadingInfo = signal(false);
   isExpanded = signal(false);
   showReplies = signal(false);
-  
+  showReposts = signal(true);
+
   // Authentication state
   authRequired = signal(false);
   authError = signal<string | null>(null);
@@ -113,16 +116,28 @@ export class RelayColumnComponent implements OnDestroy {
   private abortController: AbortController | null = null;
   private intersectionObserver?: IntersectionObserver;
 
-  // Filter events based on showReplies setting
+  // Filter events based on showReplies and showReposts settings
   private filteredEvents = computed(() => {
     const events = this.allEvents();
-    if (this.showReplies()) {
-      return events;
-    }
-    // Filter out replies (events with 'e' tags that reference other events)
+    const showReplies = this.showReplies();
+    const showReposts = this.showReposts();
+
     return events.filter(event => {
-      const hasReplyTag = event.tags.some(tag => tag[0] === 'e');
-      return !hasReplyTag;
+      // Check if it's a repost (kind 6 or kind 16)
+      const isRepost = this.repostService.isRepostEvent(event);
+
+      // If it's a repost, filter based on showReposts setting
+      if (isRepost) {
+        return showReposts;
+      }
+
+      // For non-repost events, filter based on showReplies setting
+      if (!showReplies) {
+        const hasReplyTag = event.tags.some(tag => tag[0] === 'e');
+        return !hasReplyTag;
+      }
+
+      return true;
     });
   });
 
@@ -222,12 +237,13 @@ export class RelayColumnComponent implements OnDestroy {
       }
     });
 
-    // Load saved relays and showReplies setting when account changes
+    // Load saved relays and showReplies/showReposts settings when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
       if (pubkey) {
         this.loadSavedRelays(pubkey);
         this.loadShowReplies(pubkey);
+        this.loadShowReposts(pubkey);
       }
     });
 
@@ -293,9 +309,35 @@ export class RelayColumnComponent implements OnDestroy {
     }
   }
 
+  private loadShowReposts(pubkey: string): void {
+    try {
+      const showReposts = this.accountLocalState.getPublicRelayShowReposts(pubkey);
+      this.showReposts.set(showReposts);
+    } catch (error) {
+      this.logger.error('Error loading showReposts setting:', error);
+      this.showReposts.set(true);
+    }
+  }
+
+  private saveShowReposts(): void {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    try {
+      this.accountLocalState.setPublicRelayShowReposts(pubkey, this.showReposts());
+    } catch (error) {
+      this.logger.error('Error saving showReposts setting:', error);
+    }
+  }
+
   toggleShowReplies(): void {
     this.showReplies.update(v => !v);
     this.saveShowReplies();
+  }
+
+  toggleShowReposts(): void {
+    this.showReposts.update(v => !v);
+    this.saveShowReposts();
   }
 
   toggleExpanded(): void {
@@ -415,7 +457,7 @@ export class RelayColumnComponent implements OnDestroy {
           // Reasons is an array of close reasons from all relays
           for (const reason of reasons) {
             this.logger.debug(`Subscription closed for ${url}: ${reason}`);
-            
+
             // Check for auth-required or restricted messages
             if (reason.includes('auth-required:') || reason.includes('restricted:')) {
               this.logger.info(`Relay ${url} requires authentication: ${reason}`);
@@ -461,10 +503,10 @@ export class RelayColumnComponent implements OnDestroy {
     try {
       // Reset any previous auth failure for this relay so we can retry
       await this.relayAuthService.resetAuthFailure(url);
-      
+
       // Clear the authRequired state and retry fetching
       this.authRequired.set(false);
-      
+
       // Retry fetching events - the onauth callback will handle the actual authentication
       await this.fetchEvents();
     } catch (error) {

@@ -40,6 +40,10 @@
           <mat-icon>{{ showReplies() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
           <span>Show Replies</span>
         </button>
+        <button mat-menu-item (click)="toggleShowReposts()">
+          <mat-icon>{{ showReposts() ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+          <span>Show Reposts</span>
+        </button>
       </mat-menu>
 
       <button mat-icon-button (click)="toggleExpanded()" [matTooltip]="isExpanded() ? 'Collapse' : 'Show relay info'">

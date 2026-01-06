@@ -57,6 +57,7 @@ interface AccountLocalState {
   aiDisclaimerSeen?: boolean; // Whether the AI disclaimer dialog has been seen
   publicRelayFeeds?: string[]; // List of public relay feeds (domains) for the relay feed menu
   publicRelayShowReplies?: boolean; // Whether to show replies in public relay feeds
+  publicRelayShowReposts?: boolean; // Whether to show reposts in public relay feeds (default: true)
   wallets?: Record<string, AccountWallet>; // NWC wallets for this account
   followingLastFetch?: number; // Timestamp when following data was last fetched from relays
   lastAppOpen?: number; // Timestamp (in seconds) when app was last opened
@@ -874,6 +875,21 @@ export class AccountLocalStateService {
    */
   setPublicRelayShowReplies(pubkey: string, showReplies: boolean): void {
     this.updateAccountState(pubkey, { publicRelayShowReplies: showReplies });
+  }
+
+  /**
+   * Get whether to show reposts in public relay feeds
+   */
+  getPublicRelayShowReposts(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.publicRelayShowReposts ?? true; // Default to true
+  }
+
+  /**
+   * Set whether to show reposts in public relay feeds
+   */
+  setPublicRelayShowReposts(pubkey: string, showReposts: boolean): void {
+    this.updateAccountState(pubkey, { publicRelayShowReposts: showReposts });
   }
 
   /**

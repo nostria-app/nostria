@@ -204,6 +204,10 @@
                     <mat-icon>{{ column.showReplies ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
                     <span>Show Replies</span>
                   </button>
+                  <button mat-menu-item (click)="toggleShowReposts(column)">
+                    <mat-icon>{{ (column.showReposts ?? true) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+                    <span>Show Reposts</span>
+                  </button>
                   <button mat-menu-item (click)="editColumn(i)">
                     <mat-icon>edit</mat-icon>
                     <span>Edit Column</span>
