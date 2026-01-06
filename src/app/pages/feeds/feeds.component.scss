@@ -534,6 +534,13 @@ app-user-profile {
             width: 100%;
             padding: 10px;
 
+            // Remove padding on mobile for edge-to-edge content
+            @media (max-width: 599px) {
+              padding: 0;
+              gap: 1px;
+              background-color: var(--mat-sys-outline-variant);
+            }
+
             // Content card with max width
             .content-card {
               width: 100%;
@@ -569,6 +576,11 @@ app-user-profile {
           .empty-following-state,
           .column-skeleton-items {
             padding: 10px;
+
+            // Remove padding on mobile for edge-to-edge content
+            @media (max-width: 599px) {
+              padding: 0;
+            }
           }
 
           .column-loading {
