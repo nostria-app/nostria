@@ -72,6 +72,7 @@ export interface ColumnConfig {
   customRelays?: string[];
   filters?: Record<string, unknown>;
   showReplies?: boolean; // Whether to show replies in the feed (default: false)
+  showReposts?: boolean; // Whether to show reposts in the feed (default: true)
   createdAt: number;
   updatedAt: number;
   lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays

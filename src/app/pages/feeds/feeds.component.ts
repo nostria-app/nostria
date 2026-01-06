@@ -321,14 +321,30 @@ export class FeedsComponent implements OnDestroy {
   private scrollCheckCleanup: (() => void) | null = null;
 
   /**
-   * Helper method to filter events based on column's showReplies setting
+   * Helper method to filter events based on column's showReplies and showReposts settings
    * Filters out reply events when showReplies is false
+   * Filters out repost events when showReposts is false
    */
-  private filterEventsByReplySetting(events: Event[], column: ColumnDefinition): Event[] {
-    if (!column.showReplies) {
-      return events.filter(event => this.utilities.isRootPost(event));
-    }
-    return events;
+  private filterEventsByColumnSettings(events: Event[], column: ColumnDefinition): Event[] {
+    const showReplies = column.showReplies ?? false;
+    const showReposts = column.showReposts ?? true; // Default to true for reposts
+
+    return events.filter(event => {
+      // Check if it's a repost (kind 6 or kind 16)
+      const isRepost = this.repostService.isRepostEvent(event);
+
+      // If it's a repost, filter based on showReposts setting
+      if (isRepost) {
+        return showReposts;
+      }
+
+      // For non-repost events, filter based on showReplies setting
+      if (!showReplies) {
+        return this.utilities.isRootPost(event);
+      }
+
+      return true;
+    });
   }
 
   // Computed signal for ALL events (in-memory, not rendered)
@@ -354,8 +370,8 @@ export class FeedsComponent implements OnDestroy {
         this._eventCache.set(column.id, events);
       }
 
-      // Filter out replies if showReplies is false (default)
-      events = this.filterEventsByReplySetting(events, column);
+      // Filter based on column showReplies and showReposts settings
+      events = this.filterEventsByColumnSettings(events, column);
 
       eventsMap.set(column.id, events);
     });
@@ -471,8 +487,8 @@ export class FeedsComponent implements OnDestroy {
     columns.forEach(column => {
       const columnData = feedDataMap.get(column.id);
       if (columnData && columnData.pendingEvents) {
-        // Get pending events and filter based on showReplies setting
-        const pendingEvents = this.filterEventsByReplySetting(
+        // Get pending events and filter based on column settings
+        const pendingEvents = this.filterEventsByColumnSettings(
           columnData.pendingEvents(),
           column
         );
@@ -1448,6 +1464,14 @@ export class FeedsComponent implements OnDestroy {
   toggleShowReplies(column: ColumnDefinition): void {
     const newValue = !column.showReplies;
     this.feedsCollectionService.updateColumn(column.id, { showReplies: newValue });
+  }
+
+  /**
+   * Toggle whether reposts are shown in a column
+   */
+  toggleShowReposts(column: ColumnDefinition): void {
+    const newValue = !(column.showReposts ?? true); // Default is true
+    this.feedsCollectionService.updateColumn(column.id, { showReposts: newValue });
   }
 
   /**
