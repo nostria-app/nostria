@@ -512,6 +512,16 @@
   }
 }
 
+// Edge-to-edge styling for mobile feeds
+@media screen and (max-width: 599px) {
+  .note-card {
+    border-radius: 0 !important;
+    margin-bottom: 0;
+    border-left: none !important;
+    border-right: none !important;
+  }
+}
+
 // Dark mode adjustments for collapsed content gradient
 :host-context(.dark) {
 
