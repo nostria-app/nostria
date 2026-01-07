@@ -78,12 +78,25 @@
         </span>
       </app-user-profile>
     </mat-card-header>
-    <mat-card-content>
+    <mat-card-content [class.collapsed]="isMentionContentLong(mention) && !mention.expanded">
       <div class="content-container">
         <app-note-content [contentTokens]="mention.contentTokens" [authorPubkey]="mention.event.event.pubkey"
           [trustedByPubkey]="trustedByPubkey() || event()?.pubkey"></app-note-content>
       </div>
     </mat-card-content>
+    @if (isMentionContentLong(mention)) {
+    @if (!mention.expanded) {
+    <button mat-button class="show-more-btn" (click)="toggleMentionExpand(mention.eventId, $event)">
+      <mat-icon>expand_more</mat-icon>
+      Show more
+    </button>
+    } @else {
+    <button mat-button class="show-less-btn" (click)="toggleMentionExpand(mention.eventId, $event)">
+      <mat-icon>expand_less</mat-icon>
+      Show less
+    </button>
+    }
+    }
   </mat-card>
   }
   } @else {

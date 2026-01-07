@@ -3,6 +3,7 @@ import { Component, Input, ViewChild, ElementRef, AfterViewInit, OnDestroy, comp
 import { MatCardModule } from '@angular/material/card';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
 import { SocialPreviewComponent } from '../social-preview/social-preview.component';
 import { SettingsService } from '../../services/settings.service';
 import { UtilitiesService } from '../../services/utilities.service';
@@ -55,6 +56,7 @@ interface SocialPreview {
     MatProgressSpinnerModule,
     MatIconModule,
     MatTooltipModule,
+    MatButtonModule,
     SocialPreviewComponent,
     AgoPipe,
     TimestampPipe,
@@ -95,6 +97,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Pubkey of someone who shared/reposted this content - if trusted, media should be revealed
   trustedByPubkey = input<string | undefined>(undefined);
 
+  // Disable content expansion (for dialogs and direct event views)
+  disableExpansion = input<boolean>(false);
+
   // Track visibility of the component
   private _isVisible = signal<boolean>(false);
   private _hasBeenVisible = signal<boolean>(false);
@@ -133,8 +138,11 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   // Social previews for URLs
   socialPreviews = signal<SocialPreview[]>([]);
 
-  // Event mentions with loading state
-  eventMentions = signal<{ event: NostrRecord | null; contentTokens: ContentToken[]; loading: boolean; eventId: string; currentImageIndex: number }[]>([]);
+  // Content length threshold for showing "Show more" button (in characters)
+  private readonly CONTENT_LENGTH_THRESHOLD = 500;
+
+  // Event mentions with loading state and expansion state
+  eventMentions = signal<{ event: NostrRecord | null; contentTokens: ContentToken[]; loading: boolean; eventId: string; currentImageIndex: number; expanded: boolean }[]>([]);
 
   // Article mentions (naddr) - these use the ArticleComponent which handles its own loading
   articleMentions = signal<ArticleMention[]>([]);
@@ -291,6 +299,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
             loading: true,
             eventId: eventId as string,
             currentImageIndex: 0,
+            expanded: false,
           };
         });
 
@@ -385,6 +394,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
                   loading: false,
                   eventId: eventId as string,
                   currentImageIndex: 0,
+                  expanded: mentions[i]?.expanded ?? false,
                 };
                 return updated;
               });
@@ -398,6 +408,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
                   loading: false,
                   eventId: eventId as string,
                   currentImageIndex: 0,
+                  expanded: false,
                 };
                 return updated;
               });
@@ -413,6 +424,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
                 loading: false,
                 eventId: eventId as string,
                 currentImageIndex: 0,
+                expanded: false,
               };
               return updated;
             });
@@ -745,5 +757,30 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
   getVideoTitle(event: NostrEvent): string | null {
     const titleTag = event.tags.find(tag => tag[0] === 'title');
     return titleTag?.[1] || null;
+  }
+
+  /**
+   * Check if an event mention has long content that should be collapsible
+   */
+  isMentionContentLong(mention: { event: NostrRecord | null }): boolean {
+    // Don't show expander if expansion is disabled (dialogs, direct event views)
+    if (this.disableExpansion()) return false;
+    if (!mention.event) return false;
+    // Only apply to text notes (kind 1)
+    if (mention.event.event.kind !== 1) return false;
+    const content = mention.event.event.content || '';
+    return content.length > this.CONTENT_LENGTH_THRESHOLD;
+  }
+
+  /**
+   * Toggle expansion state for an event mention
+   */
+  toggleMentionExpand(eventId: string, event: MouseEvent): void {
+    event.stopPropagation(); // Prevent card click navigation
+    this.eventMentions.update(mentions =>
+      mentions.map(m =>
+        m.eventId === eventId ? { ...m, expanded: !m.expanded } : m
+      )
+    );
   }
 }
