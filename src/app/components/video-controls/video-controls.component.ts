@@ -446,6 +446,13 @@ export class VideoControlsComponent implements OnDestroy {
     this.playPause.emit();
   }
 
+  // Handle center play button click - start auto-hide timer after playing
+  onCenterPlayButtonClick(): void {
+    this.playPause.emit();
+    // Start auto-hide timer immediately after clicking play
+    this.startAutoHideTimer();
+  }
+
   // Volume
   onVolumeSliderChange(value: number): void {
     this.volumeChange.emit(value / 100);

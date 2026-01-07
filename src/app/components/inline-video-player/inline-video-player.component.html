@@ -1,12 +1,12 @@
 <div class="inline-video-container" (mouseenter)="onMouseEnter()" (mouseleave)="onMouseLeave()"
-  (mousemove)="onMouseMove()" (click)="$event.stopPropagation()">
+  (mousemove)="onMouseMove()" (touchstart)="onTouchStart()" (click)="$event.stopPropagation()">
   <video #videoElement class="video-element" [src]="src()" [poster]="poster()" [autoplay]="autoplay()" [muted]="muted()"
     [loop]="loop()" playsinline (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
-    (click)="togglePlay()"></video>
+    (click)="onVideoClick($event)"></video>
 
   <!-- Center play button - always visible when paused -->
   @if (paused()) {
-  <button class="center-play-btn" (click)="togglePlay()" aria-label="Play">
+  <button class="center-play-btn" (click)="onPlayButtonClick()" aria-label="Play">
     <mat-icon>play_arrow</mat-icon>
   </button>
   }
@@ -94,7 +94,7 @@
 
   <!-- Center pause button overlay when playing and hovering -->
   @if (!paused() && controlsVisible()) {
-  <button class="center-pause-btn" (click)="togglePlay()" aria-label="Pause">
+  <button class="center-pause-btn" (click)="onPauseButtonClick()" aria-label="Pause">
     <mat-icon>pause</mat-icon>
   </button>
   }

@@ -200,8 +200,38 @@ export class InlineVideoPlayerComponent implements OnDestroy {
       video.play().catch(() => {
         // Play failed, likely due to autoplay restrictions
       });
+      // Start auto-hide timer when video starts playing
+      this.startAutoHideTimer();
     } else {
       video.pause();
+    }
+  }
+
+  onVideoClick(event: MouseEvent | TouchEvent): void {
+    // Toggle play/pause when clicking on video
+    // Show controls briefly on touch devices
+    if (event instanceof TouchEvent) {
+      if (!this.paused()) {
+        this.showControls();
+        this.startAutoHideTimer();
+      }
+    }
+    this.togglePlay();
+  }
+
+  onPlayButtonClick(): void {
+    this.togglePlay();
+  }
+
+  onPauseButtonClick(): void {
+    this.togglePlay();
+  }
+
+  onTouchStart(): void {
+    // On touch devices, show controls when user touches the container
+    if (!this.paused()) {
+      this.showControls();
+      this.startAutoHideTimer();
     }
   }
 
