@@ -306,8 +306,8 @@ mat-sidenav-content {
 // Mobile navigation footer
 .mobile-nav {
   position: fixed;
-  // Position near bottom, respecting safe area insets
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  // Position near bottom - use fixed value, safe-area-inset causes issues on various platforms
+  bottom: 8px;
   left: 50%;
   transform: translateX(-50%);
   right: auto;
@@ -341,14 +341,6 @@ mat-sidenav-content {
 
   /* Smooth transition for hide/show */
   transition: opacity 0.3s ease-out, visibility 0.3s ease-out, transform 0.3s ease-out;
-}
-
-// Android/iOS standalone PWA - ignore safe-area-inset as it reports too high
-// The system nav bar is transparent and we can render behind it
-@media all and (display-mode: standalone) {
-  .mobile-nav {
-    bottom: 8px;
-  }
 }
 
 // Hide mobile nav completely when fullscreen is active
