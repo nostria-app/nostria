@@ -698,6 +698,8 @@ export class SummaryComponent implements OnInit, OnDestroy {
       title: 'Thread',
       width: '800px',
       maxWidth: '100%',
+      showBackButton: true,
+      showCloseButton: false,
       data: { eventId },
     });
 
