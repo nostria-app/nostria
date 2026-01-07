@@ -306,8 +306,8 @@ mat-sidenav-content {
 // Mobile navigation footer
 .mobile-nav {
   position: fixed;
-  // Use max() to ensure minimum padding for Android devices where env() returns 0
-  bottom: max(12px, calc(12px + env(safe-area-inset-bottom, 0px)));
+  // Position near bottom, respecting safe area insets
+  bottom: calc(4px + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   right: auto;
@@ -346,9 +346,9 @@ mat-sidenav-content {
 // Android standalone PWA - add extra bottom padding for navigation bar
 @media all and (display-mode: standalone) {
   .mobile-nav {
-    // When running as installed PWA, add extra padding
-    // Android gesture nav bar is typically ~48px on most devices
-    bottom: max(36px, calc(12px + env(safe-area-inset-bottom, 0px)));
+    // When running as installed PWA, use safe area inset
+    // Android gesture nav bar should be handled by env(safe-area-inset-bottom)
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   }
 }
 
