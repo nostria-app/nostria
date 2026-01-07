@@ -622,9 +622,15 @@ export class ProfileHeaderComponent implements OnDestroy {
   }
 
   copyFollowingList(): void {
-    // Placeholder for actual implementation that would fetch the following list
-    this.logger.debug('Copy following list requested for:', this.pubkey());
-    this.layout.copyToClipboard('Following list not implemented yet', 'following list');
+    const followingList = this.profileState.followingList();
+    if (!followingList || followingList.length === 0) {
+      this.snackBar.open('No following list available', 'Close', { duration: 2000 });
+      return;
+    }
+
+    // Copy the following list as formatted JSON
+    const followingData = JSON.stringify(followingList, null, 2);
+    this.layout.copyToClipboard(followingData, 'following list');
   }
 
   copyRelayList(): void {
@@ -941,8 +947,8 @@ export class ProfileHeaderComponent implements OnDestroy {
     }
 
     try {
-      // Get the following list event (kind 3)
-      const followingListEvent = await this.database.getEventByPubkeyAndKind(
+      // Get the following list event (kind 3) from user relay service
+      const followingListEvent = await this.userRelayService.getEventByPubkeyAndKind(
         currentPubkey,
         kinds.Contacts
       );
