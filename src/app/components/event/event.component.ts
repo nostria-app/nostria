@@ -180,6 +180,30 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   // Content length threshold for showing "Show more" button (in characters)
   private readonly CONTENT_LENGTH_THRESHOLD = 500;
 
+  // Check if root event content should be collapsible (content is long enough)
+  isRootContentLong = computed<boolean>(() => {
+    // Don't show expander in dialogs or thread view - only in feed
+    if (this.navigationDisabled()) return false;
+    const rootRecordData = this.rootRecord();
+    if (!rootRecordData) return false;
+    // Only apply to text notes (kind 1)
+    if (rootRecordData.event.kind !== 1) return false;
+    const content = rootRecordData.event.content || '';
+    return content.length > this.CONTENT_LENGTH_THRESHOLD;
+  });
+
+  // Check if parent event content should be collapsible (content is long enough)
+  isParentContentLong = computed<boolean>(() => {
+    // Don't show expander in dialogs or thread view - only in feed
+    if (this.navigationDisabled()) return false;
+    const parentRecordData = this.parentRecord();
+    if (!parentRecordData) return false;
+    // Only apply to text notes (kind 1)
+    if (parentRecordData.event.kind !== 1) return false;
+    const content = parentRecordData.event.content || '';
+    return content.length > this.CONTENT_LENGTH_THRESHOLD;
+  });
+
   // Check if main content should be collapsible (content is long enough)
   isMainContentLong = computed<boolean>(() => {
     // Don't show expander in dialogs or thread view - only in feed

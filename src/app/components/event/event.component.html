@@ -115,8 +115,8 @@
     <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="repostedRecord()?.data" [event]="repostedEvent"
-        [trustedByPubkey]="item.event.pubkey"></app-content>
+      <app-content [content]="repostedRecord()?.data" [event]="repostedEvent" [trustedByPubkey]="item.event.pubkey"
+        [disableExpansion]="navigationDisabled()"></app-content>
     </div>
     @if (isMainContentLong()) {
     @if (!isMainContentExpanded()) {
@@ -164,7 +164,7 @@
       <mat-card appearance="outlined" class="root-event" [style.cursor]="isRootCardClickable() ? 'pointer' : 'auto'"
         (click)="onRootEventClick($event)">
         <app-event-header [event]="rootRecordData.event" [compact]="true"></app-event-header>
-        <mat-card-content [class.collapsed]="!isRootEventExpanded()">
+        <mat-card-content [class.collapsed]="isRootContentLong() && !isRootEventExpanded()">
           @if (rootRecordData.event.kind === 20) {
           <app-photo-event [event]="rootRecordData.event" [hideComments]="hideComments()" [showOverlay]="showOverlay()"
             [allMediaEvents]="allMediaEvents()" [mediaEventIndex]="mediaEventIndex()"></app-photo-event>
@@ -208,9 +208,11 @@
           <app-user-profile [view]="'details'" [event]="rootRecordData.event"></app-user-profile>
           } @else {
           <app-content [content]="rootRecordData.data" [event]="rootRecordData.event"
-            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
+            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+            [disableExpansion]="navigationDisabled()"></app-content>
           }
         </mat-card-content>
+        @if (isRootContentLong()) {
         @if (!isRootEventExpanded()) {
         <button mat-button class="show-more-btn" (click)="onExpandClick($event, isRootEventExpanded, true)">
           <mat-icon>expand_more</mat-icon>
@@ -221,6 +223,7 @@
           <mat-icon>expand_less</mat-icon>
           Show less
         </button>
+        }
         }
       </mat-card>
     </div>
@@ -245,7 +248,7 @@
       <mat-card appearance="outlined" class="parent-event" [style.cursor]="isParentCardClickable() ? 'pointer' : 'auto'"
         (click)="onParentEventClick($event)">
         <app-event-header [event]="parentRecordData.event" [compact]="true"></app-event-header>
-        <mat-card-content [class.collapsed]="!isParentEventExpanded()">
+        <mat-card-content [class.collapsed]="isParentContentLong() && !isParentEventExpanded()">
           @if (parentRecordData.event.kind === 20) {
           <app-photo-event [event]="parentRecordData.event" [hideComments]="hideComments()"
             [showOverlay]="showOverlay()" [allMediaEvents]="allMediaEvents()"
@@ -293,9 +296,11 @@
           <app-user-profile [view]="'details'" [event]="parentRecordData.event"></app-user-profile>
           } @else {
           <app-content [content]="parentRecordData.data" [event]="parentRecordData.event"
-            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
+            [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+            [disableExpansion]="navigationDisabled()"></app-content>
           }
         </mat-card-content>
+        @if (isParentContentLong()) {
         @if (!isParentEventExpanded()) {
         <button mat-button class="show-more-btn" (click)="onExpandClick($event, isParentEventExpanded, true)">
           <mat-icon>expand_more</mat-icon>
@@ -306,6 +311,7 @@
           <mat-icon>expand_less</mat-icon>
           Show less
         </button>
+        }
         }
       </mat-card>
     </div>
@@ -370,8 +376,8 @@
     <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="item.data" [event]="item.event"
-        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
+      <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+        [disableExpansion]="navigationDisabled()"></app-content>
     </div>
     @if (isMainContentLong()) {
     @if (!isMainContentExpanded()) {
@@ -452,8 +458,8 @@
     <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
     } @else {
     <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
-      <app-content [content]="item.data" [event]="item.event"
-        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
+      <app-content [content]="item.data" [event]="item.event" [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"
+        [disableExpansion]="navigationDisabled()"></app-content>
     </div>
     @if (isMainContentLong()) {
     @if (!isMainContentExpanded()) {

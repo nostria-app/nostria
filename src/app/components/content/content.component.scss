@@ -252,6 +252,48 @@
       transform: none;
     }
   }
+
+  // Collapsed state for long content
+  mat-card-content.collapsed {
+    max-height: 300px;
+    overflow: hidden;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3em;
+      background: linear-gradient(to bottom,
+          transparent,
+          var(--mat-sys-surface-container-low));
+      pointer-events: none;
+    }
+  }
+
+  // Show more/less buttons
+  .show-more-btn,
+  .show-less-btn {
+    width: 100%;
+    margin-top: 4px;
+    color: var(--mat-sys-primary);
+    justify-content: center;
+
+    mat-icon {
+      margin-right: 4px;
+    }
+  }
+}
+
+// Dark mode adjustments for event mention collapsed content
+:host-context(.dark) .event-mention-card {
+  mat-card-content.collapsed::after {
+    background: linear-gradient(to bottom,
+        transparent,
+        var(--mat-sys-surface-container-low)) !important;
+  }
 }
 
 // Skeleton loading animation
