@@ -214,6 +214,8 @@ export class FeedsCollectionService {
     if (updates.description !== undefined) feedConfig.description = updates.description;
     if (updates.path !== undefined) feedConfig.path = updates.path;
     if (updates.columns !== undefined) feedConfig.columns = updates.columns as ColumnConfig[];
+    if (updates.showReplies !== undefined) feedConfig.showReplies = updates.showReplies;
+    if (updates.showReposts !== undefined) feedConfig.showReposts = updates.showReposts;
     if (updates.updatedAt !== undefined) feedConfig.updatedAt = updates.updatedAt;
 
     return await this.feedService.updateFeed(id, feedConfig);

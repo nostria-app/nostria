@@ -37,7 +37,7 @@ import {
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { FeedService, ColumnConfig } from '../../services/feed.service';
+import { FeedService, ColumnConfig, FeedConfig } from '../../services/feed.service';
 import {
   FeedsCollectionService,
   ColumnDefinition,
@@ -1389,19 +1389,19 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Toggle whether replies are shown in a column
+   * Toggle whether replies are shown in a feed
    */
-  toggleShowReplies(column: ColumnDefinition): void {
-    const newValue = !column.showReplies;
-    this.feedsCollectionService.updateColumn(column.id, { showReplies: newValue });
+  toggleShowReplies(feed: FeedConfig): void {
+    const newValue = !feed.showReplies;
+    this.feedsCollectionService.updateFeed(feed.id, { showReplies: newValue });
   }
 
   /**
-   * Toggle whether reposts are shown in a column
+   * Toggle whether reposts are shown in a feed
    */
-  toggleShowReposts(column: ColumnDefinition): void {
-    const newValue = !(column.showReposts ?? true); // Default is true
-    this.feedsCollectionService.updateColumn(column.id, { showReposts: newValue });
+  toggleShowReposts(feed: FeedConfig): void {
+    const newValue = !(feed.showReposts ?? true); // Default is true
+    this.feedsCollectionService.updateFeed(feed.id, { showReposts: newValue });
   }
 
   /**
