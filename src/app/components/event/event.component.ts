@@ -182,6 +182,8 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
   // Check if main content should be collapsible (content is long enough)
   isMainContentLong = computed<boolean>(() => {
+    // Don't show expander in dialogs or thread view - only in feed
+    if (this.navigationDisabled()) return false;
     const targetItem = this.targetRecord();
     if (!targetItem) return false;
     // Only apply to text notes (kind 1) - not photos, videos, articles, etc.
