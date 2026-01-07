@@ -2,7 +2,7 @@
   (mousemove)="onMouseMove()" (touchstart)="onTouchStart()" (click)="$event.stopPropagation()">
   <video #videoElement class="video-element" [src]="src()" [poster]="poster()" [autoplay]="autoplay()" [muted]="muted()"
     [loop]="loop()" playsinline (loadedmetadata)="onVideoElementReady()" [class.blurred]="blurred()"
-    (click)="onVideoClick($event)"></video>
+    (click)="onVideoClick($event)" (dblclick)="onVideoDoubleClick($event)"></video>
 
   <!-- Center play button - always visible when paused -->
   @if (paused()) {

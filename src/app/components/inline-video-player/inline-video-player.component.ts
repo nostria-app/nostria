@@ -219,6 +219,12 @@ export class InlineVideoPlayerComponent implements OnDestroy {
     this.togglePlay();
   }
 
+  onVideoDoubleClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.toggleFullscreen();
+  }
+
   onPlayButtonClick(): void {
     this.togglePlay();
   }
