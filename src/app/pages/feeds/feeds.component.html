@@ -48,24 +48,46 @@
 
         <!-- Feed actions - same for mobile and desktop -->
         <div class="feed-actions">
+          <!-- Refresh button -->
+          @let feed = activeFeed();
+          @if (feed && !showRelayFeed()) {
+          @let isRefreshing = feedService.getColumnRefreshingState(feed.id);
+          @if (isRefreshing && isRefreshing()) {
+          <div class="spinner-container">
+            <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
+          </div>
+          } @else {
+          <button mat-icon-button (click)="refreshColumn(feed)" matTooltip="Refresh content"
+            [disabled]="isRefreshing && isRefreshing()">
+            <mat-icon>refresh</mat-icon>
+          </button>
+          }
+          }
+
           <button mat-icon-button (click)="addNewFeed()" matTooltip="Add feed">
             <mat-icon>add</mat-icon>
-          </button>
-
-          <button mat-icon-button (click)="addNewColumn()" matTooltip="Add column"
-            [disabled]="feeds().length === 0 || showRelayFeed()">
-            <mat-icon>add_column_right</mat-icon>
           </button>
 
           <!-- Public Relay Feeds Menu -->
           <app-relay-feed-menu #relayFeedMenu (relaySelected)="onRelaySelected($event)">
           </app-relay-feed-menu>
 
-          <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Manage feeds">
+          <button mat-icon-button [matMenuTriggerFor]="feedManagementMenu" matTooltip="Feed options">
             <mat-icon>more_vert</mat-icon>
           </button>
 
           <mat-menu #feedManagementMenu="matMenu">
+            @if (feed && !showRelayFeed()) {
+            <button mat-menu-item (click)="toggleShowReplies(feed)">
+              <mat-icon>{{ feed.showReplies ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+              <span>Show Replies</span>
+            </button>
+            <button mat-menu-item (click)="toggleShowReposts(feed)">
+              <mat-icon>{{ (feed.showReposts ?? true) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+              <span>Show Reposts</span>
+            </button>
+            <mat-divider></mat-divider>
+            }
             <button mat-menu-item (click)="editCurrentFeed()"
               [disabled]="!activeFeed() || isSystemFeed() || showRelayFeed()">
               <mat-icon>edit</mat-icon>
@@ -76,6 +98,7 @@
               <mat-icon>delete</mat-icon>
               <span>Delete Feed</span>
             </button>
+            <mat-divider></mat-divider>
             <button mat-menu-item (click)="resetFeeds()">
               <mat-icon>restore</mat-icon>
               <span>Reset Feeds</span>
@@ -126,16 +149,12 @@
     </div>
     }
 
-    <div class="columns-wrapper" #columnsWrapper cdkDropList cdkDropListOrientation="horizontal"
-      [cdkDropListData]="columns()" (cdkDropListDropped)="onColumnDrop($event)">
+    <div class="columns-wrapper" #columnsWrapper>
       <!-- Normal Feeds with connected headers and content - only show when initialized -->
-      @if (app.initialized() && accountState.initialized() && feedService.feedsLoaded()) {
-      @for (column of columns(); track column.id; let i = $index) {
-      <div class="column-unit" [attr.data-column-id]="column.id" cdkDrag [cdkDragData]="i"
-        [cdkDragDisabled]="isMobileView() || columns().length <= 1"
-        [class.visible]="!isMobileView() || (isMobileView() && i === visibleColumnIndex())"
-        [attr.aria-hidden]="isMobileView() && i !== visibleColumnIndex()" (cdkDragStarted)="onDragStarted()"
-        (cdkDragEnded)="onDragEnded()">
+      @if (app.initialized() && accountState.initialized() && feedService.feedsLoaded() && activeFeed()) {
+      @let feed = activeFeed();
+      @if (feed) {
+      <div class="column-unit" [attr.data-column-id]="feed.id" [class.visible]="true">
 
         <!-- Filters Section -->
         @if (showAdvancedFilters()) {
@@ -153,98 +172,19 @@
 
         <!-- Feed Content with Individual Scrolling -->
         <div class="column-content">
-          <!-- Feed Header (Inside scrollable content) - hidden for trending columns -->
-          @if (column.source !== 'trending') {
-          <div class="column-header">
-            <div class="column-header-content">
-              @if (isMobileView() && columns().length > 1) {
-              <div class="column-navigation-buttons">
-                <button mat-icon-button (click)="navigateToPreviousColumn()" matTooltip="Previous column"
-                  [disabled]="visibleColumnIndex() === 0">
-                  <mat-icon>chevron_left</mat-icon>
-                </button>
-                <span class="column-counter">{{ visibleColumnIndex() + 1 }} / {{ columns().length }}</span>
-                <button mat-icon-button (click)="navigateToNextColumn()" matTooltip="Next column"
-                  [disabled]="visibleColumnIndex() === columns().length - 1">
-                  <mat-icon>chevron_right</mat-icon>
-                </button>
-              </div>
-              }
-
-              @if (!isMobileView() && columns().length > 1) {
-              <div class="drag-handle" cdkDragHandle>
-                <mat-icon>drag_indicator</mat-icon>
-              </div>
-              }
-
-              <div class="column-header-actions">
-                @let isRefreshing = feedService.getColumnRefreshingState(column.id);
-
-
-                @if (isRefreshing && isRefreshing()) {
-                <div class="spinner-container">
-                  <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
-                </div>
-                }
-                @else {
-                <button mat-icon-button (click)="refreshColumn(column)" matTooltip="Refresh content"
-                  [disabled]="isRefreshing && isRefreshing()">
-                  <mat-icon>refresh</mat-icon>
-                </button>
-                }
-
-
-                <!-- <button mat-icon-button (click)="toggleAdvancedFilters()" matTooltip="Toggle filters">
-                    <mat-icon>filter_list</mat-icon>
-                  </button> -->
-                <!-- @if (isColumnPaused(column.id)) {
-                <button mat-icon-button (click)="continueColumn(column)" matTooltip="Resume live feed">
-                  <mat-icon>play_circle</mat-icon>
-                </button>
-                } @else {
-                <button mat-icon-button (click)="pauseColumn(column)" matTooltip="Pause the feed">
-                  <mat-icon>pause_circle</mat-icon>
-                </button>
-                } -->
-
-                <button mat-icon-button [matMenuTriggerFor]="columnMenu" (click)="$event.stopPropagation()">
-                  <mat-icon>more_vert</mat-icon>
-                </button>
-                <mat-menu #columnMenu="matMenu">
-                  <button mat-menu-item (click)="toggleShowReplies(column)">
-                    <mat-icon>{{ column.showReplies ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-                    <span>Show Replies</span>
-                  </button>
-                  <button mat-menu-item (click)="toggleShowReposts(column)">
-                    <mat-icon>{{ (column.showReposts ?? true) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
-                    <span>Show Reposts</span>
-                  </button>
-                  <button mat-menu-item (click)="editColumn(i)">
-                    <mat-icon>edit</mat-icon>
-                    <span>Edit Column</span>
-                  </button>
-                  <button mat-menu-item (click)="removeColumn(i)">
-                    <mat-icon>delete</mat-icon>
-                    <span>Remove Column</span>
-                  </button>
-                </mat-menu>
-              </div>
-            </div>
-          </div>
-          }
 
           <!-- Floating new posts button -->
-          @if (getPendingEventsCount(column.id) > 0) {
+          @if (getPendingEventsCount(feed.id) > 0) {
           <div class="new-posts-floating">
-            <button mat-raised-button color="primary" (click)="loadNewPosts(column.id)" class="new-posts-button">
+            <button mat-raised-button color="primary" (click)="loadNewPosts(feed.id)" class="new-posts-button">
               <mat-icon>arrow_upward</mat-icon>
-              {{ getPendingEventsCount(column.id) }} new {{ getPendingEventsCount(column.id) === 1 ? 'post' : 'posts' }}
+              {{ getPendingEventsCount(feed.id) }} new {{ getPendingEventsCount(feed.id) === 1 ? 'post' : 'posts' }}
             </button>
           </div>
           }
 
           <!-- Empty following state message -->
-          @if (shouldShowEmptyFollowingMessage().get(column.id)) {
+          @if (shouldShowEmptyFollowingMessage().get(feed.id)) {
           <div class="empty-following-state">
             <div class="empty-state-content">
               <mat-icon class="empty-state-icon">group_add</mat-icon>
@@ -259,7 +199,7 @@
               </button>
             </div>
           </div>
-          } @else if (isLoading() && !columnContentLoaded()[column.id]) {
+          } @else if (isLoading() && !columnContentLoaded()[feed.id]) {
           <!-- Show skeleton items while content is loading -->
           <div class="column-skeleton-items">
             @for (item of [1, 2, 3, 4, 5, 6]; track $index) {
@@ -295,21 +235,21 @@
               <span class="loading-text">Loading content...</span>
             </div>
           </div>
-          } @else if (column.source === 'trending') {
+          } @else if (feed.source === 'trending') {
           <!-- Trending column uses dedicated trending component -->
           <app-trending-column></app-trending-column>
           } @else {
           <div class="column-items">
-            @let columnEventsData = columnEvents().get(column.id);
+            @let columnEventsData = columnEvents().get(feed.id);
             @if (columnEventsData) {
             @for (event of columnEventsData; track event.id) {
             <app-event [event]="event"></app-event>
             }
 
             <!-- Show "Load More" button when there are more events in memory to render -->
-            @if (hasMoreEventsToRender(column.id)) {
+            @if (hasMoreEventsToRender(feed.id)) {
             <div class="load-more-rendered-events">
-              <button mat-stroked-button (click)="loadMoreRenderedEvents(column.id)" class="load-more-button">
+              <button mat-stroked-button (click)="loadMoreRenderedEvents(feed.id)" class="load-more-button">
                 <mat-icon>expand_more</mat-icon>
                 Show more
               </button>
@@ -321,15 +261,15 @@
             }
             <!-- @else {
                       <div class="no-events">
-                        <p>No events available for this board</p>
+                        <p>No events available for this feed</p>
                       </div>
                     } -->
           </div>
 
           <!-- Loading more indicator - only show when we have content and are loading more -->
-          @let columnLoadingState = feedService.getColumnLoadingState(column.id);
-          @let columnHasMore = feedService.getColumnHasMore(column.id);
-          @let loadMoreEventsData = columnEvents().get(column.id);
+          @let columnLoadingState = feedService.getColumnLoadingState(feed.id);
+          @let columnHasMore = feedService.getColumnHasMore(feed.id);
+          @let loadMoreEventsData = columnEvents().get(feed.id);
           @if (loadMoreEventsData && loadMoreEventsData.length > 0 && columnLoadingState && columnLoadingState() &&
           columnHasMore && columnHasMore()) {
           <div class="column-loading-more">
@@ -339,15 +279,6 @@
           }
           }
         </div>
-
-        <!-- Preview for drag operation -->
-        <ng-template cdkDragPreview>
-          <div class="column-drag-preview">
-            <div class="preview-header">
-              <mat-icon>{{ column.icon }}</mat-icon>
-            </div>
-          </div>
-        </ng-template>
       </div>
       }
       }
@@ -362,7 +293,7 @@
       </div>
       }
 
-      <!-- Zero state when no boards are available -->
+      <!-- Zero state when no feeds are available -->
       @else if (feeds().length === 0) {
       <div class="empty-columns-state">
         <div class="empty-state-content">
@@ -372,21 +303,6 @@
             Create your first feed to start organizing and viewing content from various sources.
           </p>
           <button mat-raised-button color="primary" (click)="addNewFeed()" class="add-first-column-btn">
-            <mat-icon>add</mat-icon>
-            Add Your First Feed
-          </button>
-        </div>
-      </div>
-      }
-
-      <!-- Zero state when no feeds are available but boards exist -->
-      @else if (columns().length === 0) {
-      <div class="empty-columns-state">
-        <div class="empty-state-content">
-          <mat-icon class="empty-state-icon">view_column</mat-icon>
-          <h2>No feeds in this board</h2>
-          <p>Get started by adding your first feed to organize and view content.</p>
-          <button mat-raised-button color="primary" (click)="addNewColumn()" class="add-first-column-btn">
             <mat-icon>add</mat-icon>
             Add Your First Feed
           </button>

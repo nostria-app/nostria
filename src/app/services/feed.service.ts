@@ -2899,6 +2899,7 @@ export class FeedService {
    */
   /**
    * Migrate legacy column-based feed to new flat feed structure
+   * Returns the migrated feed (or original if no migration needed)
    */
   private migrateLegacyFeed(feed: FeedConfig): FeedConfig {
     // If feed has columns array and it's not empty, migrate first column's settings to feed level
@@ -2906,34 +2907,75 @@ export class FeedService {
       const firstColumn = feed.columns[0];
 
       if (feed.columns.length > 1) {
-        this.logger.warn(`Feed "${feed.label}" has ${feed.columns.length} columns. Only the first column will be preserved.`);
+        this.logger.warn(
+          `Feed "${feed.label}" (${feed.id}) has ${feed.columns.length} columns. ` +
+          `Only the first column "${firstColumn.label}" will be preserved. ` +
+          `Other columns will be lost. Consider creating separate feeds for different content types.`
+        );
       }
 
-      this.logger.info(`Migrating legacy feed "${feed.label}" from column-based to flat structure`);
+      this.logger.info(
+        `🔄 Migrating legacy feed "${feed.label}" (${feed.id}) from column-based to flat structure. ` +
+        `Preserving settings from column: "${firstColumn.label}"`
+      );
 
-      return {
-        ...feed,
+      // Create migrated feed with all necessary properties
+      const migratedFeed: FeedConfig = {
+        // Keep original feed properties
+        id: feed.id,
+        label: feed.label,
+        icon: feed.icon,
+        path: feed.path,
+        description: feed.description || `${feed.label} feed`,
+        createdAt: feed.createdAt,
+
         // Copy column settings to feed level
         type: firstColumn.type,
         kinds: firstColumn.kinds,
-        source: firstColumn.source,
+        source: firstColumn.source || 'public',
+        relayConfig: firstColumn.relayConfig,
+
+        // Optional settings from column
         customUsers: firstColumn.customUsers,
         customStarterPacks: firstColumn.customStarterPacks,
         customFollowSets: firstColumn.customFollowSets,
         searchQuery: firstColumn.searchQuery,
-        relayConfig: firstColumn.relayConfig,
         customRelays: firstColumn.customRelays,
         filters: firstColumn.filters,
         showReplies: firstColumn.showReplies,
         showReposts: firstColumn.showReposts,
         lastRetrieved: firstColumn.lastRetrieved,
-        // Remove columns array
-        columns: undefined,
+
+        // Mark as updated and remove columns
         updatedAt: Date.now(),
+        columns: undefined,
+      };
+
+      return migratedFeed;
+    }
+
+    // If feed already has type, kinds, and relayConfig, it's already migrated
+    if (feed.type && feed.kinds && feed.relayConfig !== undefined) {
+      return feed;
+    }
+
+    // If feed has no columns but also lacks required properties, set defaults
+    if (!feed.type || !feed.kinds || feed.relayConfig === undefined) {
+      this.logger.warn(
+        `Feed "${feed.label}" (${feed.id}) is missing required properties. Setting defaults.`
+      );
+
+      return {
+        ...feed,
+        type: feed.type || 'notes',
+        kinds: feed.kinds || [1],
+        source: feed.source || 'public',
+        relayConfig: feed.relayConfig ?? 'account',
+        updatedAt: Date.now(),
+        columns: undefined,
       };
     }
 
-    // If no columns array or type is already set, feed is already migrated
     return feed;
   }
 
@@ -2956,10 +2998,25 @@ export class FeedService {
         let filteredFeeds = storedFeeds.filter(f => f.id !== TRENDING_FEED_ID);
 
         // Migrate any legacy column-based feeds
-        filteredFeeds = filteredFeeds.map(feed => this.migrateLegacyFeed(feed));
+        const feedsBeforeMigration = filteredFeeds.length;
+        let migrationOccurred = false;
+
+        filteredFeeds = filteredFeeds.map(feed => {
+          const migrated = this.migrateLegacyFeed(feed);
+          if (migrated !== feed) {
+            migrationOccurred = true;
+          }
+          return migrated;
+        });
 
         this._feeds.set(filteredFeeds);
         this._feedsLoaded.set(true);
+
+        // If migration occurred, save the migrated feeds back to storage
+        if (migrationOccurred) {
+          this.logger.info(`Migration completed for ${feedsBeforeMigration} feeds. Saving migrated feeds to storage.`);
+          this.saveFeeds();
+        }
 
         this.logger.debug('Loaded feeds from storage for pubkey', pubkey, filteredFeeds);
       }

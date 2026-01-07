@@ -357,32 +357,34 @@ export class FeedsComponent implements OnDestroy {
 
   // Computed signal for ALL events (in-memory, not rendered)
   allColumnEvents = computed(() => {
-    const columns = this.columns();
+    const feed = this.activeFeed();
     const isDragging = this.isDragging();
     const eventsMap = new Map<string, Event[]>();
+
+    if (!feed) {
+      return eventsMap;
+    }
 
     // Get reactive feed data map from service
     const feedDataMap = this.feedService.feedDataReactive();
 
-    columns.forEach(column => {
-      let events: Event[];
-      if (isDragging) {
-        // During drag operations, use cached events to prevent DOM updates
-        events = this._eventCache.get(column.id) || [];
-      } else {
-        // Normal operation: get fresh events from reactive service
-        const columnData = feedDataMap.get(column.id);
-        events = columnData?.events() || [];
+    let events: Event[];
+    if (isDragging) {
+      // During drag operations, use cached events to prevent DOM updates
+      events = this._eventCache.get(feed.id) || [];
+    } else {
+      // Normal operation: get fresh events from reactive service
+      const feedData = feedDataMap.get(feed.id);
+      events = feedData?.events() || [];
 
-        // Update cache for potential drag operations
-        this._eventCache.set(column.id, events);
-      }
+      // Update cache for potential drag operations
+      this._eventCache.set(feed.id, events);
+    }
 
-      // Filter based on column showReplies and showReposts settings
-      events = this.filterEventsByColumnSettings(events, column);
+    // Filter based on feed showReplies and showReposts settings
+    events = this.filterEventsByColumnSettings(events, feed);
 
-      eventsMap.set(column.id, events);
-    });
+    eventsMap.set(feed.id, events);
 
     return eventsMap;
   });
