@@ -114,8 +114,23 @@
     @else if (targetItem.event.kind === 0) {
     <app-user-profile [view]="'details'" [event]="targetItem.event"></app-user-profile>
     } @else {
-    <app-content [content]="repostedRecord()?.data" [event]="repostedEvent"
-      [trustedByPubkey]="item.event.pubkey"></app-content>
+    <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
+      <app-content [content]="repostedRecord()?.data" [event]="repostedEvent"
+        [trustedByPubkey]="item.event.pubkey"></app-content>
+    </div>
+    @if (isMainContentLong()) {
+    @if (!isMainContentExpanded()) {
+    <button mat-button class="show-more-btn" (click)="onExpandClick($event, isMainContentExpanded, true)">
+      <mat-icon>expand_more</mat-icon>
+      Show more
+    </button>
+    } @else {
+    <button mat-button class="show-less-btn" (click)="onExpandClick($event, isMainContentExpanded, false)">
+      <mat-icon>expand_less</mat-icon>
+      Show less
+    </button>
+    }
+    }
     }
   </mat-card-content>
 
@@ -354,8 +369,23 @@
     {{ item.data.about }}
     <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
     } @else {
-    <app-content [content]="item.data" [event]="item.event"
-      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
+    <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
+      <app-content [content]="item.data" [event]="item.event"
+        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
+    </div>
+    @if (isMainContentLong()) {
+    @if (!isMainContentExpanded()) {
+    <button mat-button class="show-more-btn" (click)="onExpandClick($event, isMainContentExpanded, true)">
+      <mat-icon>expand_more</mat-icon>
+      Show more
+    </button>
+    } @else {
+    <button mat-button class="show-less-btn" (click)="onExpandClick($event, isMainContentExpanded, false)">
+      <mat-icon>expand_less</mat-icon>
+      Show less
+    </button>
+    }
+    }
     }
     }
   </mat-card-content>
@@ -421,8 +451,23 @@
     {{ item.data.about }}
     <!-- <app-user-profile [view]="'details'" [event]="item.event"></app-user-profile> -->
     } @else {
-    <app-content [content]="item.data" [event]="item.event"
-      [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
+    <div class="main-content-wrapper" [class.collapsed]="isMainContentCollapsed()">
+      <app-content [content]="item.data" [event]="item.event"
+        [trustedByPubkey]="trustedByPubkey() || item.event.pubkey"></app-content>
+    </div>
+    @if (isMainContentLong()) {
+    @if (!isMainContentExpanded()) {
+    <button mat-button class="show-more-btn" (click)="onExpandClick($event, isMainContentExpanded, true)">
+      <mat-icon>expand_more</mat-icon>
+      Show more
+    </button>
+    } @else {
+    <button mat-button class="show-less-btn" (click)="onExpandClick($event, isMainContentExpanded, false)">
+      <mat-icon>expand_less</mat-icon>
+      Show less
+    </button>
+    }
+    }
     }
     }
   </mat-card-content>

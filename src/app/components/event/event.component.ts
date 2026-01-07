@@ -174,6 +174,27 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   isRootEventExpanded = signal<boolean>(false);
   isParentEventExpanded = signal<boolean>(false);
 
+  // Expansion state for main event content
+  isMainContentExpanded = signal<boolean>(false);
+
+  // Content length threshold for showing "Show more" button (in characters)
+  private readonly CONTENT_LENGTH_THRESHOLD = 500;
+
+  // Check if main content should be collapsible (content is long enough)
+  isMainContentLong = computed<boolean>(() => {
+    const targetItem = this.targetRecord();
+    if (!targetItem) return false;
+    // Only apply to text notes (kind 1) - not photos, videos, articles, etc.
+    if (targetItem.event.kind !== 1) return false;
+    const content = targetItem.event.content || '';
+    return content.length > this.CONTENT_LENGTH_THRESHOLD;
+  });
+
+  // Check if main content should show collapsed state
+  isMainContentCollapsed = computed<boolean>(() => {
+    return this.isMainContentLong() && !this.isMainContentExpanded();
+  });
+
   // Check if this event card should be clickable (only kind 1)
   isCardClickable = computed<boolean>(() => {
     // Use targetRecord to get the actual event (reposted event for reposts)
