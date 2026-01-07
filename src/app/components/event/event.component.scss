@@ -3,6 +3,19 @@
   justify-content: center;
 }
 
+// Event Scroll snap support - when parent enables snap scrolling
+:host(.scroll-snap-item) {
+  display: block;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  min-height: 80px;
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  
+  &:last-of-type {
+    border-bottom: none;
+  }
+}
+
 .loading-container {
   display: flex;
   flex-direction: column;

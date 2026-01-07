@@ -141,7 +141,7 @@
         }
 
         <!-- Feed Content with Individual Scrolling -->
-        <div class="column-content">
+        <div class="column-content" [class.event-scroll-enabled]="column.eventScroll">
           <!-- Feed Header (Inside scrollable content) - hidden for trending columns -->
           @if (column.source !== 'trending') {
           <div class="column-header">
@@ -208,6 +208,11 @@
                     <mat-icon>{{ (column.showReposts ?? true) ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
                     <span>Show Reposts</span>
                   </button>
+                  <button mat-menu-item (click)="toggleEventScroll(column)">
+                    <mat-icon>{{ column.eventScroll ? 'check_box' : 'check_box_outline_blank' }}</mat-icon>
+                    <span>Event Scroll</span>
+                  </button>
+                  <mat-divider></mat-divider>
                   <button mat-menu-item (click)="editColumn(i)">
                     <mat-icon>edit</mat-icon>
                     <span>Edit Column</span>
@@ -292,7 +297,7 @@
             @let columnEventsData = columnEvents().get(column.id);
             @if (columnEventsData) {
             @for (event of columnEventsData; track event.id) {
-            <app-event [event]="event"></app-event>
+            <app-event [event]="event" [class.scroll-snap-item]="column.eventScroll"></app-event>
             }
 
             <!-- Show "Load More" button when there are more events in memory to render -->

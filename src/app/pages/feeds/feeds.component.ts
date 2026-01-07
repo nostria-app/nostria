@@ -877,6 +877,51 @@ export class FeedsComponent implements OnDestroy {
     // Store listener reference for cleanup
     (container as HTMLElement & { __headerScrollListener?: () => void }).__headerScrollListener = scrollListener;
     container.addEventListener('scroll', scrollListener, { passive: true });
+
+    // Also set up listeners on event-scroll-enabled column content (for mobile)
+    this.setupEventScrollHeaderListeners();
+  }
+
+  /**
+   * Set up scroll listeners on event-scroll-enabled columns for header auto-hide
+   */
+  private setupEventScrollHeaderListeners(): void {
+    const eventScrollContainers = document.querySelectorAll('.column-content.event-scroll-enabled');
+    
+    eventScrollContainers.forEach((container) => {
+      const element = container as HTMLElement & { __eventScrollHeaderListener?: () => void; __lastScrollTop?: number };
+      
+      // Remove existing listener if any
+      if (element.__eventScrollHeaderListener) {
+        element.removeEventListener('scroll', element.__eventScrollHeaderListener);
+      }
+
+      element.__lastScrollTop = 0;
+
+      const scrollListener = () => {
+        const scrollTop = element.scrollTop;
+        const lastScrollTop = element.__lastScrollTop || 0;
+        const scrollDelta = scrollTop - lastScrollTop;
+
+        // Scrolling down - hide header after scrolling down past threshold
+        if (scrollDelta > 10 && scrollTop > 100) {
+          this.headerHidden.set(true);
+        }
+        // Scrolling up - show header immediately
+        else if (scrollDelta < -10) {
+          this.headerHidden.set(false);
+        }
+        // At the very top - always show header
+        else if (scrollTop <= 50) {
+          this.headerHidden.set(false);
+        }
+
+        element.__lastScrollTop = scrollTop;
+      };
+
+      element.__eventScrollHeaderListener = scrollListener;
+      element.addEventListener('scroll', scrollListener, { passive: true });
+    });
   }
 
   /**
@@ -1472,6 +1517,19 @@ export class FeedsComponent implements OnDestroy {
   toggleShowReposts(column: ColumnDefinition): void {
     const newValue = !(column.showReposts ?? true); // Default is true
     this.feedsCollectionService.updateColumn(column.id, { showReposts: newValue });
+  }
+
+  /**
+   * Toggle event scroll (snap scrolling) for a column
+   */
+  toggleEventScroll(column: ColumnDefinition): void {
+    const newValue = !column.eventScroll;
+    this.feedsCollectionService.updateColumn(column.id, { eventScroll: newValue });
+    
+    // Re-setup header scroll listeners after DOM updates
+    setTimeout(() => {
+      this.setupEventScrollHeaderListeners();
+    }, 100);
   }
 
   /**

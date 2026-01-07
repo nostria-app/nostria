@@ -383,6 +383,7 @@ app-user-profile {
         max-width: 700px;
         min-width: 700px; // Ensure consistent width during loading
         flex: 0 0 700px; // Fixed width, don't grow or shrink
+        height: 100%; // Important for scroll snap to work
         background-color: var(--mat-app-surface-color);
         border-radius: 8px;
         box-shadow: var(--mat-sys-level1);
@@ -426,6 +427,22 @@ app-user-profile {
           overflow-y: auto;
           overflow-x: hidden;
           position: relative; // Keep relative for absolute positioning of floating button
+
+          // Event Scroll mode - snap scrolling on the scrollable container
+          &.event-scroll-enabled {
+            // CRITICAL: These are the essential scroll-snap properties
+            scroll-snap-type: y mandatory;
+            overflow-y: scroll !important; // Force scroll, not auto
+            // Improve mobile scrolling
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            
+            // Style the column-items container when event scroll is enabled
+            .column-items {
+              gap: 0;
+              padding: 0;
+            }
+          }
 
           // Column header - inside scrollable content
           .column-header {
@@ -808,6 +825,19 @@ app-user-profile {
           overflow: visible;
           flex: none;
           height: auto;
+          
+          // BUT if event scroll is enabled, re-enable scrolling with fixed height
+          &.event-scroll-enabled {
+            overflow-y: scroll !important;
+            scroll-snap-type: y mandatory;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+            // Use full viewport height minus toolbar only - extend behind mobile nav
+            height: calc(100vh - var(--toolbar-height, 64px)) !important;
+            flex: none;
+            // Add bottom padding so content can scroll up past mobile nav
+            padding-bottom: calc(112px + env(safe-area-inset-bottom, 0px));
+          }
         }
       }
     }
@@ -2008,6 +2038,16 @@ h1 {
         // Remove internal column scrolling on mobile - page scrolls instead
         .column-content {
           overflow: visible !important;
+          
+          // Re-enable scrolling when event scroll is enabled on mobile
+          &.event-scroll-enabled {
+            overflow-y: auto !important;
+            height: calc(100vh - var(--toolbar-height, 64px) - 100px - env(safe-area-inset-bottom, 0px)) !important;
+            scroll-snap-type: y mandatory;
+            scroll-behavior: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+          }
         }
 
         // Show the column header on mobile for refresh/edit buttons

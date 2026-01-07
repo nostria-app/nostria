@@ -73,6 +73,7 @@ export interface ColumnConfig {
   filters?: Record<string, unknown>;
   showReplies?: boolean; // Whether to show replies in the feed (default: false)
   showReposts?: boolean; // Whether to show reposts in the feed (default: true)
+  eventScroll?: boolean; // Whether to enable snap scrolling for events (default: false)
   createdAt: number;
   updatedAt: number;
   lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
