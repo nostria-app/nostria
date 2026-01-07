@@ -354,6 +354,12 @@ export class CustomDialogService {
       subscription.unsubscribe();
     });
 
+    // Set up back button handler - subscribe to the dialog's backClicked output
+    const backSubscription = dialogRef.instance.backClicked.subscribe(() => {
+      customDialogRef.close();
+      backSubscription.unsubscribe();
+    });
+
     return customDialogRef;
   }
 

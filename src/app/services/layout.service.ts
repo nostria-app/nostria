@@ -1006,6 +1006,8 @@ export class LayoutService implements OnDestroy {
       title: dialogTitle,
       width: '800px',
       maxWidth: '100%',
+      showBackButton: true,
+      showCloseButton: false,
       data: { eventId, event, trustedByPubkey },
     });
 
