@@ -246,6 +246,9 @@ export class ProfileComponent {
             this.isBlockedProfileRevealed.set(false); // Reset blocked profile reveal state
             this.previousBlockedState.set(false); // Reset previous blocked state tracking
 
+            // Preserve the original npub if present
+            const originalNpub = id.startsWith('npub') ? id : null;
+
             if (id.startsWith('npub')) {
               id = this.utilities.getPubkeyFromNpub(id);
 
@@ -259,9 +262,9 @@ export class ProfileComponent {
                   if (username) {
                     this.url.updatePathSilently(['/u', username]);
                   } else {
-                    // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
-                    const encoded = nip19.npubEncode(identifier);
-                    this.url.updatePathSilently(['/p', identifier]);
+                    // If we already have npub in URL, keep it; otherwise encode the hex pubkey
+                    const encoded = originalNpub || nip19.npubEncode(identifier);
+                    this.url.updatePathSilently(['/p', encoded]);
                   }
                 });
               }
@@ -274,7 +277,7 @@ export class ProfileComponent {
                   } else {
                     // If we find event only by ID, we should update the URL to include the NIP-19 encoded value that includes the pubkey.
                     const encoded = nip19.npubEncode(identifier);
-                    this.url.updatePathSilently(['/p', identifier]);
+                    this.url.updatePathSilently(['/p', encoded]);
                   }
                 });
               }
