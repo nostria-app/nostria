@@ -1544,7 +1544,7 @@ html[data-platform="android"][data-display-mode="standalone"] .mobile-nav {
   .mobile-nav {
     // More aggressive bottom padding for standalone PWAs
     // Android gesture nav bar is typically ~48px on most devices
-    bottom: max(48px, calc(24px + env(safe-area-inset-bottom, 0px))) !important;
+    // bottom: max(48px, calc(24px + env(safe-area-inset-bottom, 0px))) !important;
   }
 }
 

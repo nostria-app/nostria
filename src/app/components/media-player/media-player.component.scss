@@ -13,8 +13,8 @@
     flex-direction: row;
 
     // Floating pill layout (Always applied)
-    // Use safe-area for browser, standalone mode overrides below
-    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    // Use fixed value - safe-area-inset causes issues on various platforms
+    bottom: 8px;
     left: 0;
     right: 0;
     margin: 0 auto;
@@ -25,11 +25,6 @@
     padding-bottom: 0;
     transform: none;
 
-    // Android/iOS standalone PWA - ignore safe-area-inset as it reports too high
-    @media all and (display-mode: standalone) {
-      bottom: 8px;
-    }
-
     // Glass effect - IMPORTANT: Reset background first
     background: initial;
     background-color: rgba(255, 255, 255, 0.05) !important;
@@ -38,13 +33,13 @@
     border: none;
 
     box-shadow: // Inner white highlight (sharp edge)
-    inset 0 0 0 1px rgba(255, 255, 255, 0.4),
-    // Inner glow
-    inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
-    // Drop shadows
-    0px 4px 16px rgba(17, 17, 26, 0.1),
-    0px 8px 24px rgba(17, 17, 26, 0.1),
-    0px 16px 56px rgba(17, 17, 26, 0.1);
+      inset 0 0 0 1px rgba(255, 255, 255, 0.4),
+      // Inner glow
+      inset 0 0 10px 4px rgba(255, 255, 255, 0.15),
+      // Drop shadows
+      0px 4px 16px rgba(17, 17, 26, 0.1),
+      0px 8px 24px rgba(17, 17, 26, 0.1),
+      0px 16px 56px rgba(17, 17, 26, 0.1);
 
     &.podcast-mode {
       height: 84px;
