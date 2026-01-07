@@ -533,6 +533,50 @@
           var(--mat-sys-surface-container-low)) !important;
     }
   }
+
+  .main-content-wrapper.collapsed::after {
+    background: linear-gradient(to bottom,
+        transparent,
+        var(--mat-sys-surface-container-low)) !important;
+  }
+}
+
+// Main content collapsible wrapper
+.main-content-wrapper {
+  &.collapsed {
+    max-height: 300px;
+    overflow: hidden;
+    position: relative;
+
+    &::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 3em;
+      background: linear-gradient(to bottom,
+          transparent,
+          var(--mat-sys-surface-container-low));
+      pointer-events: none;
+    }
+  }
+}
+
+// Show more/less buttons for main content
+mat-card-content {
+
+  .show-more-btn,
+  .show-less-btn {
+    width: 100%;
+    margin-top: 8px;
+    color: var(--mat-sys-primary);
+    justify-content: center;
+
+    mat-icon {
+      margin-right: 4px;
+    }
+  }
 }
 
 // Event not found message styling
