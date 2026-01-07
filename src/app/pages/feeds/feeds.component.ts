@@ -277,15 +277,15 @@ export class FeedsComponent implements OnDestroy {
     const followingListLoaded = this.accountState.followingListLoaded();
     const emptyColumnsMap = new Map<string, boolean>();
 
-    feedConfig.columns.forEach((column: ColumnConfig) => {
-      // Check if column source is 'following', following list has been loaded, and user has zero following
-      // We only show the empty message after the following list has been loaded to avoid
-      // showing it prematurely on slow connections
+    // Check if feed source is 'following', following list has been loaded, and user has zero following
+    // We only show the empty message after the following list has been loaded to avoid
+    // showing it prematurely on slow connections
+    if (feedConfig.source === 'following' || feedConfig.source === 'for-you') {
       emptyColumnsMap.set(
-        column.id,
-        column.source === 'following' && followingListLoaded && followingList.length === 0
+        feedConfig.id,
+        feedConfig.source === 'following' && followingListLoaded && followingList.length === 0
       );
-    });
+    }
 
     return emptyColumnsMap;
   });
@@ -1208,55 +1208,21 @@ export class FeedsComponent implements OnDestroy {
         return;
       }
 
-      // Get the current columns and reorder them
-      const columns = [...activeFeed.columns];
-      moveItemInArray(columns, previousIndex, currentIndex);
+      // Column reordering is deprecated - feeds no longer have columns
+      console.warn('Column reordering is no longer supported - feeds are now flat structures');
+      return;
+    }
 
-      console.log(
-        '📋 Columns reordered:',
-        columns.map(col => `${col.label} (${col.id})`)
-      );
-
-      // Update the actual feed data using the optimized method
-      console.log('⚡ Using optimized updateColumnOrder method');
-      this.feedsCollectionService.updateColumnOrder(activeFeed.id, columns);
-
-      // Update the visible column index if in mobile view
-      if (this.isMobileView()) {
-        if (this.visibleColumnIndex() === previousIndex) {
-          // If the currently visible column was moved, update the index
-          this.visibleColumnIndex.set(currentIndex);
-        } else if (
-          previousIndex < this.visibleColumnIndex() &&
-          currentIndex >= this.visibleColumnIndex()
-        ) {
-          // If a column was moved from before the visible one to after it, shift visibility back
-          this.visibleColumnIndex.update(idx => idx - 1);
-        } else if (
-          previousIndex > this.visibleColumnIndex() &&
-          currentIndex <= this.visibleColumnIndex()
-        ) {
-          // If a column was moved from after the visible one to before it, shift visibility forward
-          this.visibleColumnIndex.update(idx => idx + 1);
-        }
-      }
-
-      // this.notificationService.notify('Column order changed');
-      this.logger.debug(
-        'Column order changed',
-        columns.map(col => col.id)
-      );
-
-      // Let's scroll to ensure the dropped column is visible
-      if (!this.isMobileView()) {
-        setTimeout(() => {
-          this.scrollToColumn(currentIndex);
-        }, 50);
-      }
+    // Let's scroll to ensure the view is correct
+    if (!this.isMobileView()) {
+      setTimeout(() => {
+        this.scrollToColumn(currentIndex);
+      }, 50);
     }
 
     // Change detection will be reattached in onDragEnded()
   }
+
   // Drag event handlers to manage state with CHANGE DETECTION CONTROL
   onDragStarted(): void {
     console.log('🚀 Drag started - DETACHING CHANGE DETECTION');
@@ -1364,41 +1330,13 @@ export class FeedsComponent implements OnDestroy {
       const editingIndex = this.editingColumnIndex();
 
       if (editingIndex >= 0) {
-        // Update existing column
-        const updatedColumns = [...activeFeed.columns];
-        updatedColumns[editingIndex] = result;
-
-        const updatedFeed = {
-          ...activeFeed,
-          columns: updatedColumns,
-          updatedAt: Date.now(),
-        };
-
-        await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
+        // Column editing is deprecated - edit the feed directly instead
+        console.warn('Column editing is deprecated. Edit feed properties directly.');
+        // For now, update the feed with the new settings from the dialog
+        await this.feedsCollectionService.updateFeed(activeFeed.id, result);
       } else {
-        // Add new column
-        const updatedFeed = {
-          ...activeFeed,
-          columns: [...activeFeed.columns, result],
-          updatedAt: Date.now(),
-        };
-
-        await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
-
-        const newColumnIndex = updatedFeed.columns.length - 1;
-
-        if (this.isMobileView()) {
-          this.visibleColumnIndex.set(newColumnIndex);
-        } else {
-          setTimeout(() => {
-            this.scrollToColumn(newColumnIndex);
-          }, 100);
-        }
-
-        this.columnContentLoaded.update(loaded => ({
-          ...loaded,
-          [result.id]: false,
-        }));
+        // Adding columns is deprecated - create a new feed instead
+        console.warn('Adding columns is deprecated. Create a new feed instead.');
       }
     }
 
@@ -1424,27 +1362,9 @@ export class FeedsComponent implements OnDestroy {
 
     if (!activeFeed) return;
 
-    // Update the feed by removing the column at the specified index
-    const updatedColumns = activeFeed.columns.filter((_, i) => i !== index);
-
-    const updatedFeed = {
-      ...activeFeed,
-      columns: updatedColumns,
-      updatedAt: Date.now(),
-    };
-
-    await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
-
-    // Adjust visible column index if needed for mobile view
-    if (this.isMobileView()) {
-      if (this.visibleColumnIndex() >= updatedColumns.length) {
-        this.visibleColumnIndex.set(Math.max(0, updatedColumns.length - 1));
-      } else if (this.visibleColumnIndex() > index) {
-        this.visibleColumnIndex.update(idx => idx - 1);
-      }
-    }
-
-    // this.notificationService.notify(`Column "${column.label}" removed`);
+    // Column deletion is deprecated - feeds no longer have columns
+    // If user wants to remove a feed, they should delete the entire feed
+    console.warn('Column deletion is no longer supported - delete the entire feed instead');
   }
 
   async refreshColumn(column: ColumnDefinition): Promise<void> {
@@ -1728,8 +1648,11 @@ export class FeedsComponent implements OnDestroy {
           label: result.label,
           icon: result.icon,
           description: result.description,
-          columns: result.columns,
           path: result.path,
+          type: result.type || 'notes',
+          kinds: result.kinds || [1],
+          source: result.source || 'public',
+          relayConfig: result.relayConfig || 'account',
         });
 
         if (newBoard.path) {
@@ -2050,14 +1973,11 @@ export class FeedsComponent implements OnDestroy {
       return;
     }
 
-    this.logger.info('Pull-to-refresh: Reloading active feed columns');
+    this.logger.info('Pull-to-refresh: Reloading active feed');
 
-    // Refresh all columns in the active feed
-    const refreshPromises = activeFeed.columns.map(column =>
-      this.feedsCollectionService.refreshColumn(column.id)
-    );
+    // Refresh the active feed
+    await this.feedsCollectionService.refreshColumn(activeFeed.id);
 
-    await Promise.all(refreshPromises);
     this.logger.info('Pull-to-refresh: Feed reload complete');
   }
 }
