@@ -72,14 +72,17 @@ export class NewFeedDialogComponent {
       const formValue = this.feedForm.value;
       const existingFeed = this.feed();
 
-      // Create feed config with empty columns array
+      // Create feed config with required properties
       const feedData: FeedConfig = {
         id: existingFeed?.id || crypto.randomUUID(),
         label: formValue.label!,
         icon: formValue.icon!,
         path: formValue.path || undefined,
         description: formValue.description || `${formValue.label} feed`,
-        columns: existingFeed?.columns || [],
+        type: existingFeed?.type || 'notes',
+        kinds: existingFeed?.kinds || [1],
+        source: existingFeed?.source || 'public',
+        relayConfig: existingFeed?.relayConfig || 'account',
         createdAt: existingFeed?.createdAt || Date.now(),
         updatedAt: Date.now(),
       };

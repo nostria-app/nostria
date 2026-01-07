@@ -5,6 +5,10 @@ import { FeedService, FeedConfig, ColumnConfig } from './feed.service';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 
+// FeedDefinition is now the same as FeedConfig - no more separate column definitions
+export type FeedDefinition = FeedConfig;
+
+// Legacy ColumnDefinition kept for backward compatibility during migration
 export interface ColumnDefinition {
   id: string;
   label: string;
@@ -25,18 +29,6 @@ export interface ColumnDefinition {
   createdAt: number;
   updatedAt: number;
   lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
-}
-
-export interface FeedDefinition {
-  id: string;
-  label: string;
-  icon: string;
-  path?: string;
-  description?: string;
-  columns: ColumnDefinition[];
-  createdAt: number;
-  updatedAt: number;
-  isSystem?: boolean; // System feeds cannot be deleted
 }
 
 // Default feed ID for new users - "For You" is optimized for quick rendering
@@ -64,7 +56,8 @@ export class FeedsCollectionService {
   private lastAccountPubkey: string | null = null;
 
   // Public computed signals that use FeedService as source of truth
-  readonly feeds = computed(() => this.convertFeedConfigsToDefinitions(this.feedService.feeds()));
+  // Since FeedDefinition is now the same as FeedConfig, no conversion needed
+  readonly feeds = computed(() => this.feedService.feeds());
   readonly activeFeedId = computed(() => this._activeFeedId());
   readonly activeFeed = computed(() => {
     const feedId = this._activeFeedId();
@@ -157,37 +150,6 @@ export class FeedsCollectionService {
   }
 
   /**
-   * Convert FeedConfig to FeedDefinition for UI compatibility
-   */
-  private convertFeedConfigsToDefinitions(feedConfigs: FeedConfig[]): FeedDefinition[] {
-    return feedConfigs.map(config => ({
-      id: config.id,
-      label: config.label,
-      icon: config.icon,
-      path: config.path,
-      description: config.description,
-      columns: config.columns as ColumnDefinition[],
-      createdAt: config.createdAt,
-      updatedAt: config.updatedAt,
-    }));
-  }
-
-  /**
-   * Convert FeedDefinition to FeedConfig for FeedService compatibility
-   */
-  private convertDefinitionToConfig(definition: FeedDefinition): FeedConfig {
-    return {
-      id: definition.id,
-      label: definition.label,
-      icon: definition.icon,
-      path: definition.path,
-      description: definition.description,
-      columns: definition.columns as ColumnConfig[],
-      createdAt: definition.createdAt,
-      updatedAt: definition.updatedAt,
-    };
-  }
-  /**
    * Load active feed ID from storage
    */
   private loadActiveFeed(): void {
@@ -233,15 +195,8 @@ export class FeedsCollectionService {
   async addFeed(
     feedData: Omit<FeedDefinition, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<FeedDefinition> {
-    const feedConfig = await this.feedService.addFeed({
-      label: feedData.label,
-      icon: feedData.icon,
-      description: feedData.description,
-      path: feedData.path,
-      columns: feedData.columns as ColumnConfig[],
-    });
-
-    return this.convertFeedConfigsToDefinitions([feedConfig])[0];
+    const feedConfig = await this.feedService.addFeed(feedData);
+    return feedConfig;
   }
 
   /**
@@ -357,88 +312,42 @@ export class FeedsCollectionService {
   }
 
   /**
-   * Add a column to a feed
+   * @deprecated Columns have been removed. Use updateFeed() instead to modify feed properties.
    */
   async addColumnToFeed(
     feedId: string,
     columnData: Omit<ColumnDefinition, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<boolean> {
-    const feed = this.getFeedById(feedId);
-    if (!feed) {
-      this.logger.warn(`Feed with id ${feedId} not found`);
-      return false;
-    }
-
-    const newColumn: ColumnDefinition = {
-      ...columnData,
-      id: crypto.randomUUID(),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-
-    const updatedColumns = [...feed.columns, newColumn];
-    return await this.updateFeed(feedId, {
-      columns: updatedColumns,
-      updatedAt: Date.now(),
-    });
+    this.logger.warn('addColumnToFeed is deprecated. Columns have been removed.');
+    return false;
   }
 
   /**
-   * Remove a column from a feed
+   * @deprecated Columns have been removed. This method is no longer functional.
    */
   async removeColumnFromFeed(feedId: string, columnId: string): Promise<boolean> {
-    const feed = this.getFeedById(feedId);
-    if (!feed) {
-      this.logger.warn(`Feed with id ${feedId} not found`);
-      return false;
-    }
-
-    const updatedColumns = feed.columns.filter(col => col.id !== columnId);
-    return await this.updateFeed(feedId, {
-      columns: updatedColumns,
-      updatedAt: Date.now(),
-    });
+    this.logger.warn('removeColumnFromFeed is deprecated. Columns have been removed.');
+    return false;
   }
 
   /**
-   * Update a column in a feed
+   * @deprecated Columns have been removed. Use updateFeed() instead to modify feed properties.
    */
   async updateColumnInFeed(
     feedId: string,
     columnId: string,
     updates: Partial<Omit<ColumnDefinition, 'id' | 'createdAt'>>
   ): Promise<boolean> {
-    const feed = this.getFeedById(feedId);
-    if (!feed) {
-      this.logger.warn(`Feed with id ${feedId} not found`);
-      return false;
-    }
-
-    const columnIndex = feed.columns.findIndex(col => col.id === columnId);
-    if (columnIndex === -1) {
-      this.logger.warn(`Column with id ${columnId} not found in feed ${feedId}`);
-      return false;
-    }
-
-    const updatedColumns = [...feed.columns];
-    updatedColumns[columnIndex] = {
-      ...updatedColumns[columnIndex],
-      ...updates,
-      updatedAt: Date.now(),
-    };
-
-    return await this.updateFeed(feedId, {
-      columns: updatedColumns,
-      updatedAt: Date.now(),
-    });
+    this.logger.warn('updateColumnInFeed is deprecated. Use updateFeed() instead.');
+    return false;
   }
 
   /**
-   * Get columns for the currently active feed
+   * @deprecated Columns have been removed. Returns empty array for backward compatibility.
    */
   getActiveColumns(): ColumnDefinition[] {
-    const activeFeed = this.activeFeed();
-    return activeFeed?.columns || [];
+    this.logger.warn('getActiveColumns is deprecated. Columns have been removed.');
+    return [];
   }
 
   /**
