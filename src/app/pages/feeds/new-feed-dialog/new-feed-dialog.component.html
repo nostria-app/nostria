@@ -1,5 +1,5 @@
 <app-custom-dialog [title]="isEditMode() ? 'Edit Feed' : 'Create New Feed'" [disableEnterSubmit]="true"
-  (closed)="onClose()">
+  [disableClose]="true" (closed)="onClose()">
 
   <div dialog-content>
     <form [formGroup]="feedForm" (ngSubmit)="onSubmit()">
