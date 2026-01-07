@@ -16,8 +16,11 @@
   </div>
   }
 
-  <!-- Top-right control: close button -->
+  <!-- Top-right control: download and close buttons -->
   <div class="controls-right">
+    <button mat-icon-button (click)="downloadMedia()" aria-label="Download media">
+      <mat-icon>download</mat-icon>
+    </button>
     <button mat-icon-button (click)="close()" aria-label="Close dialog">
       <mat-icon>close</mat-icon>
     </button>

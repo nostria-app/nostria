@@ -42,6 +42,13 @@ export class MediaPreviewDialogComponent implements OnDestroy {
   private touchEndX = 0;
   private readonly SWIPE_THRESHOLD = 50;
 
+  // Double-tap tracking
+  private lastTapTime = 0;
+  private lastTapX = 0;
+  private lastTapY = 0;
+  private readonly DOUBLE_TAP_DELAY = 300; // milliseconds
+  private readonly DOUBLE_TAP_DISTANCE = 50; // pixels
+
   // Auto-hide controls after inactivity
   private hideControlsTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly HIDE_CONTROLS_DELAY = 3000; // 3 seconds
@@ -249,6 +256,24 @@ export class MediaPreviewDialogComponent implements OnDestroy {
       if (event.touches.length !== 1) return;
       clientX = event.touches[0].clientX;
       clientY = event.touches[0].clientY;
+
+      // Check for double-tap
+      const now = Date.now();
+      const timeDiff = now - this.lastTapTime;
+      const distance = Math.sqrt(
+        Math.pow(clientX - this.lastTapX, 2) + Math.pow(clientY - this.lastTapY, 2)
+      );
+
+      if (timeDiff < this.DOUBLE_TAP_DELAY && distance < this.DOUBLE_TAP_DISTANCE) {
+        // Double-tap detected
+        this.onDoubleTap(clientX, clientY);
+        this.lastTapTime = 0; // Reset to prevent triple-tap
+        return;
+      }
+
+      this.lastTapTime = now;
+      this.lastTapX = clientX;
+      this.lastTapY = clientY;
     } else {
       event.preventDefault();
       if (event.button !== 0) return; // Only left mouse button
@@ -351,6 +376,24 @@ export class MediaPreviewDialogComponent implements OnDestroy {
 
     if (!this.imageElement?.nativeElement || !this.containerElement?.nativeElement) return;
 
+    const imgRect = this.imageElement.nativeElement.getBoundingClientRect();
+    const mouseX = event.clientX - imgRect.left;
+    const mouseY = event.clientY - imgRect.top;
+
+    this.handleZoomToggle(mouseX, mouseY, imgRect.width, imgRect.height);
+  }
+
+  onDoubleTap(clientX: number, clientY: number): void {
+    if (!this.imageElement?.nativeElement || !this.containerElement?.nativeElement) return;
+
+    const imgRect = this.imageElement.nativeElement.getBoundingClientRect();
+    const tapX = clientX - imgRect.left;
+    const tapY = clientY - imgRect.top;
+
+    this.handleZoomToggle(tapX, tapY, imgRect.width, imgRect.height);
+  }
+
+  private handleZoomToggle(x: number, y: number, width: number, height: number): void {
     const currentScale = this.scale();
 
     // If already zoomed in, reset to normal view
@@ -359,26 +402,37 @@ export class MediaPreviewDialogComponent implements OnDestroy {
       return;
     }
 
-    // Zoom in to 2x centered on click position
+    // Zoom in to 2x centered on click/tap position
     const targetScale = 2;
-    const img = this.imageElement.nativeElement;
-    const imgRect = img.getBoundingClientRect();
 
-    const mouseX = event.clientX - imgRect.left;
-    const mouseY = event.clientY - imgRect.top;
+    const relX = x / width;
+    const relY = y / height;
 
-    const displayWidth = imgRect.width;
-    const displayHeight = imgRect.height;
-
-    const relX = mouseX / displayWidth;
-    const relY = mouseY / displayHeight;
-
-    const offsetX = (relX * displayWidth - displayWidth / 2) / currentScale;
-    const offsetY = (relY * displayHeight - displayHeight / 2) / currentScale;
+    const offsetX = (relX * width - width / 2) / currentScale;
+    const offsetY = (relY * height - height / 2) / currentScale;
 
     this.scale.set(targetScale);
     this.translateX.set(-offsetX * (targetScale - currentScale));
     this.translateY.set(-offsetY * (targetScale - currentScale));
+
+    this.resetHideControlsTimer();
+  }
+
+  downloadMedia(): void {
+    const media = this.currentMedia();
+    if (!media) return;
+
+    // Create a temporary anchor element to trigger download
+    const link = document.createElement('a');
+    link.href = media.url;
+    link.download = media.title || `media-${Date.now()}`;
+    link.target = '_blank';
+
+    // For cross-origin resources, this will open in a new tab instead of downloading
+    // But for same-origin or properly configured CORS resources, it will download
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
     this.resetHideControlsTimer();
   }
