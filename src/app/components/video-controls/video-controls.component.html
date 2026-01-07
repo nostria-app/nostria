@@ -4,7 +4,7 @@
 
   <!-- Center play button (large, only when paused) -->
   @if (paused()) {
-  <button class="center-play-btn" mat-icon-button (click)="onPlayPause()" aria-label="Play">
+  <button class="center-play-btn" mat-icon-button (click)="onCenterPlayButtonClick()" aria-label="Play">
     <mat-icon>play_arrow</mat-icon>
   </button>
   }
@@ -15,8 +15,8 @@
   <div class="controls-bar" (mouseenter)="onControlsBarMouseEnter()" (mouseleave)="onControlsBarMouseLeave()">
     <!-- Progress bar (hidden for live streams) -->
     @if (!mergedConfig().isLiveStream) {
-    <div class="progress-container" tabindex="0" role="slider" aria-valuenow="0"
-      aria-valuemin="0" aria-valuemax="100" aria-label="Video progress" (click)="onProgressClick($event)"
+    <div class="progress-container" tabindex="0" role="slider" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"
+      aria-label="Video progress" (click)="onProgressClick($event)"
       (keydown)="$event.key === 'ArrowLeft' ? seekRelative(-5) : $event.key === 'ArrowRight' ? seekRelative(5) : null"
       (mousedown)="onProgressMouseDown($event)">
       <div class="progress-buffered" [style.width.%]="bufferedPercent()"></div>
