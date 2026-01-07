@@ -534,6 +534,12 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  onVideoDoubleClick(event: MouseEvent): void {
+    event.preventDefault();
+    event.stopPropagation();
+    this.toggleFullscreen();
+  }
+
   async togglePictureInPicture(): Promise<void> {
     const video = this.videoPlayerRef?.nativeElement;
     if (!video) return;
