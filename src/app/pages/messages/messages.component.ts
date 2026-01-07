@@ -467,11 +467,6 @@ export class MessagesComponent implements OnInit, OnDestroy, AfterViewInit {
             setTimeout(() => {
               this.setupScrollListener();
             }, 200);
-
-            // Auto-focus the message input field
-            setTimeout(() => {
-              this.messageInput?.nativeElement?.focus();
-            }, 300);
           } else if (!this.isLoadingMoreMessages() && chatMessages.length > 0) {
             // Same chat but check for new messages
             const latestLocalTimestamp =
