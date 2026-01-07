@@ -95,7 +95,7 @@ app-user-profile {
     background: transparent;
     // Use fixed positioning for proper hide/show behavior on all screen sizes
     position: fixed;
-    top: var(--toolbar-height, 64px);
+    top: calc(var(--toolbar-height, 64px) - 8px);
     left: 0;
     right: 0;
 
@@ -316,7 +316,7 @@ app-user-profile {
     overflow-y: hidden;
     position: relative;
     // Add top padding to account for fixed header on all screen sizes
-    padding-top: 48px;
+    padding-top: 56px;
     // Add bottom padding for the fixed scrollbar
     padding-bottom: 16px;
     scrollbar-width: thin;
@@ -2477,6 +2477,7 @@ h1 {
     background-color: var(--mat-sys-surface-container);
   }
 }
+
 // Pull-to-refresh indicator
 .pull-to-refresh-indicator {
   position: fixed;
@@ -2520,4 +2521,3 @@ h1 {
 :host-context(.dark) .pull-to-refresh-indicator mat-icon {
   color: var(--mat-sys-primary);
 }
-
