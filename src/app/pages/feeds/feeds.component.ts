@@ -298,6 +298,14 @@ export class FeedsComponent implements OnDestroy {
   // Drag state to prevent unnecessary re-renders during column reordering
   private isDragging = signal(false);
 
+  // Pull-to-refresh state
+  pullToRefreshActive = signal(false);
+  pullDistance = signal(0);
+  pullThreshold = 80; // pixels to trigger reload
+  private startY = 0;
+  private isPulling = false;
+  @ViewChild('feedsContainer') feedsContainer?: ElementRef<HTMLDivElement>;
+
   // Cache to store events during drag operations
   private _eventCache = new Map<string, Event[]>();
 
@@ -1974,5 +1982,82 @@ export class FeedsComponent implements OnDestroy {
       };
       this.mediaPlayerService.enque(mediaItem);
     });
+  }
+
+  /**
+   * Pull-to-refresh: Handle touch/mouse start
+   */
+  onPullStart(event: TouchEvent | MouseEvent): void {
+    const containerEl = this.feedsContainer?.nativeElement;
+    if (!containerEl) return;
+
+    // Only activate pull-to-refresh when scrolled to the top
+    if (containerEl.scrollTop === 0) {
+      this.isPulling = true;
+      this.startY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
+      this.pullToRefreshActive.set(true);
+    }
+  }
+
+  /**
+   * Pull-to-refresh: Handle touch/mouse move
+   */
+  onPullMove(event: TouchEvent | MouseEvent): void {
+    if (!this.isPulling) return;
+
+    const containerEl = this.feedsContainer?.nativeElement;
+    if (!containerEl) return;
+
+    const currentY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
+    const deltaY = currentY - this.startY;
+
+    // Only track downward pulls when at the top
+    if (deltaY > 0 && containerEl.scrollTop === 0) {
+      event.preventDefault();
+      // Apply resistance to the pull (diminishing returns)
+      const resistance = 0.5;
+      const distance = Math.min(deltaY * resistance, this.pullThreshold * 1.5);
+      this.pullDistance.set(distance);
+    }
+  }
+
+  /**
+   * Pull-to-refresh: Handle touch/mouse end
+   */
+  onPullEnd(): void {
+    if (!this.isPulling) return;
+
+    const distance = this.pullDistance();
+
+    // Trigger reload if threshold was exceeded
+    if (distance >= this.pullThreshold) {
+      this.triggerReload();
+    }
+
+    // Reset state
+    this.isPulling = false;
+    this.pullToRefreshActive.set(false);
+    this.pullDistance.set(0);
+  }
+
+  /**
+   * Trigger reload operation - refreshes all columns in the active feed
+   */
+  private async triggerReload(): Promise<void> {
+    const activeFeed = this.activeFeed();
+    if (!activeFeed) {
+      this.logger.warn('No active feed to reload');
+      return;
+    }
+
+    this.logger.info('Pull-to-refresh: Reloading active feed columns');
+
+    // Refresh all columns in the active feed
+    const refreshPromises = activeFeed.columns.map(column =>
+      this.feedsCollectionService.refreshColumn(column.id)
+    );
+
+    await Promise.all(refreshPromises);
+    this.logger.info('Pull-to-refresh: Feed reload complete');
   }
 }
