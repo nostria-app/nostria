@@ -272,7 +272,11 @@ export class EventPageComponent {
 
         if (partialData.threadedReplies !== undefined) {
           this.threadedReplies.set(partialData.threadedReplies);
-          this.isLoadingReplies.set(false);
+          // Only mark as not loading if we actually have replies OR if this is the final update
+          // This prevents showing "No replies yet" during progressive loading
+          if (partialData.threadedReplies.length > 0) {
+            this.isLoadingReplies.set(false);
+          }
 
           // If openThreadsExpanded is false, collapse top-level replies by default
           if (!this.localSettings.openThreadsExpanded() && partialData.threadedReplies.length > 0) {
@@ -306,7 +310,7 @@ export class EventPageComponent {
     } catch (error) {
       this.logger.error('Error loading event:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to load event';
-      
+
       // If event not found, check if it was deleted (NIP-09)
       if (errorMessage === 'Event not found') {
         await this.checkIfEventWasDeleted(nevent);
@@ -439,17 +443,17 @@ export class EventPageComponent {
   private async checkDeletionRequestForEvent(event: Event): Promise<void> {
     try {
       const deletionEvent = await this.eventService.checkDeletionRequest(event);
-      
+
       if (deletionEvent) {
         this.logger.info('Event has been deleted by author:', {
           eventId: event.id,
           deletionEventId: deletionEvent.id,
           reason: deletionEvent.content || '(no reason given)',
         });
-        
+
         // Delete from local database
         await this.eventService.deleteEventFromLocalStorage(event.id);
-        
+
         // Update UI state
         this.isDeleted.set(true);
         this.deletionReason.set(deletionEvent.content || null);
