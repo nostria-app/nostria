@@ -9,67 +9,79 @@
 
 // Feed type selection section
 .feed-type-section {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 
   h3 {
-    margin-bottom: 16px;
-    font-size: 1.1rem;
+    margin-bottom: 12px;
+    font-size: 1rem;
     color: var(--mat-sys-on-surface);
   }
 }
 
 .feed-type-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
-
-  @media screen and (max-width: 600px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  @media screen and (max-width: 420px) {
-    grid-template-columns: 1fr;
-  }
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .feed-type-card {
   cursor: pointer;
-  padding: 16px;
+  padding: 10px 16px;
   text-align: center;
-  border: 2px solid transparent;
-  border-radius: 12px;
+  border: 1.5px solid var(--mat-sys-outline-variant);
+  border-radius: 24px;
   transition: all 0.2s ease-in-out;
   background-color: var(--mat-sys-surface-container);
+  min-width: auto;
 
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
     border-color: var(--mat-sys-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   }
 
   &.selected {
     background-color: var(--mat-sys-primary-container);
     border-color: var(--mat-sys-primary);
+    border-width: 2px;
+    padding: 9px 15px;
+
+    .type-header {
+      mat-icon {
+        color: var(--mat-sys-primary);
+      }
+
+      h4 {
+        color: var(--mat-sys-on-primary-container);
+      }
+    }
+  }
+
+  .mat-mdc-card-content {
+    padding: 0 !important;
+  }
+
+  .type-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   mat-icon {
-    font-size: 2rem;
-    width: 2rem;
-    height: 2rem;
-    margin-bottom: 8px;
-    color: var(--mat-sys-primary);
-  }
-
-  .type-name {
-    font-weight: 500;
-    font-size: 0.95rem;
-    margin-bottom: 4px;
-    color: var(--mat-sys-on-surface);
-  }
-
-  .type-desc {
-    font-size: 0.75rem;
-    opacity: 0.7;
+    font-size: 1.35rem;
+    width: 1.35rem;
+    height: 1.35rem;
+    margin: 0;
     color: var(--mat-sys-on-surface-variant);
+  }
+
+  h4 {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin: 0;
+    color: var(--mat-sys-on-surface);
+    white-space: nowrap;
   }
 }
 
@@ -91,14 +103,6 @@
     &.name-field {
       flex: 2;
     }
-
-    &.icon-field {
-      flex: 0 0 120px;
-
-      @media screen and (max-width: 600px) {
-        flex: 1;
-      }
-    }
   }
 }
 
@@ -107,30 +111,9 @@
   flex-direction: column;
   gap: 16px;
 
-  .name-icon-row {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-
-    .name-field {
-      flex: 1;
-    }
-
-    .icon-field {
-      width: 120px;
-      flex-shrink: 0;
-
-      ::ng-deep .mat-mdc-select-value {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      ::ng-deep .mat-mdc-select-value-text {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
+  .icon-picker-button {
+    mat-icon {
+      color: var(--mat-sys-primary);
     }
   }
 
@@ -334,15 +317,45 @@
   width: 100%;
 }
 
-// Responsive design
-@media (max-width: 600px) {
-  .basic-config {
-    .name-icon-row {
-      flex-direction: column;
+// Icon picker menu styling
+::ng-deep .mat-mdc-menu-panel.icon-picker-menu {
+  max-width: 144px !important;
+  min-width: 144px !important;
 
-      .icon-field {
-        width: 100%;
-      }
+  .mat-mdc-menu-content {
+    padding: 0 !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    width: 144px !important;
+  }
+
+  .icon-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 48px) !important;
+    gap: 0 !important;
+    width: 144px !important;
+  }
+
+  .icon-item {
+    min-width: 48px !important;
+    width: 48px !important;
+    height: 48px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-high) !important;
+    }
+
+    mat-icon {
+      margin: 0 !important;
+      width: 24px !important;
+      height: 24px !important;
+      font-size: 24px !important;
     }
   }
 }
