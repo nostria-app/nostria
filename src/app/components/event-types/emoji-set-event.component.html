@@ -7,7 +7,8 @@
       <span class="emoji-set-description">{{ description() }}</span>
       }
     </div>
-    <button mat-flat-button [disabled]="isInstalling() || isInstalled()" (click)="installEmojiSet()">
+    <button mat-stroked-button class="install-button" [disabled]="isInstalling() || isInstalled()"
+      (click)="installEmojiSet()">
       @if (isInstalling()) {
       <mat-icon>hourglass_empty</mat-icon>
       Installing...

@@ -19,8 +19,17 @@
     color: var(--mat-sys-on-surface-variant);
   }
 
-  button {
+  .install-button {
+    font-size: 13px;
+    height: 32px;
+    padding: 0 12px;
+    min-width: auto;
+    border-radius: 16px;
+
     mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
       margin-right: 4px;
     }
   }
