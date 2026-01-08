@@ -248,16 +248,29 @@ export class VideoEventComponent implements AfterViewInit, OnDestroy {
     const event = this.event();
     if (!event) return null;
 
-    return this.getVideoData(event);
+    const data = this.getVideoData(event);
+    // Safety check: if we have a video event but no video data, something is wrong
+    if (!data && (event.kind === 21 || event.kind === 22 || event.kind === 34235 || event.kind === 34236)) {
+      console.warn('[VideoEvent] Video event has no video data:', event.id);
+    }
+    return data;
+  });
+
+  // Check if we have valid video data to display
+  hasValidVideo = computed(() => {
+    const data = this.videoData();
+    return data !== null && !!data.url;
   });
 
   // Computed placeholder data URL - uses default if none available (supports blurhash and thumbhash)
   // Uses preserveAspectRatio to ensure placeholder matches video dimensions
   placeholderDataUrl = computed(() => {
     const event = this.event();
-    if (!event) return this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
+    const defaultPlaceholder = this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
+    if (!event) return defaultPlaceholder;
 
-    return this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, 0, true);
+    const placeholder = this.imagePlaceholder.getPlaceholderDataUrlFromEvent(event, 0, true);
+    return placeholder || defaultPlaceholder;
   });
 
   // Legacy alias for backward compatibility

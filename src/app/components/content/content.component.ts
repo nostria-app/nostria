@@ -469,6 +469,16 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
       return;
     }
 
+    // Safety timeout: if intersection observer doesn't trigger within 2 seconds,
+    // force content to be visible to prevent blank screens
+    const safetyTimeout = setTimeout(() => {
+      if (!this._isVisible() && !this._hasBeenVisible()) {
+        console.warn('[ContentComponent] Forcing content visible after timeout');
+        this._isVisible.set(true);
+        this._hasBeenVisible.set(true);
+      }
+    }, 2000);
+
     // Options for the observer (which part of item visible, etc)
     // Using rootMargin to trigger slightly before element enters viewport for seamless UX
     const options = {
@@ -484,6 +494,8 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
         // Once visible, mark as having been visible (to keep content loaded)
         if (isIntersecting) {
           this._hasBeenVisible.set(true);
+          // Clear safety timeout since observer worked
+          clearTimeout(safetyTimeout);
         }
       });
     }, options);

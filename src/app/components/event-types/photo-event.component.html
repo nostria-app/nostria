@@ -9,6 +9,7 @@
 <h3 class="media-title">{{ title() }}</h3>
 }
 
+@if (hasValidImages()) {
 <div class="photo-carousel-container" (touchstart)="onTouchStart($event)" (touchend)="onTouchEnd($event)"
   [class.clickable]="showOverlay()"
   (click)="showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $event) : null">
@@ -20,12 +21,19 @@
       <img [src]="currentBlurhashDataUrl()!" class="photo-item blurhash-placeholder" [alt]="currentAltText()"
         [title]="currentAltText()" aria-hidden="true" />
       }
+      @if (currentImageUrl()) {
       <img [src]="currentImageUrl()" [alt]="currentAltText()" [title]="currentAltText()" title="{{ currentAltText() }}"
         class="photo-item main-image" [class.hidden]="shouldBlurMedia()" [class.loaded]="isCurrentImageLoaded()"
         loading="lazy" (load)="onImageLoad($event)"
         (click)="!showOverlay() ? openImageDialog(currentImageUrl(), currentAltText(), $any($event)) : null"
         tabindex="0" role="button" (keyup.enter)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))"
         (keyup.space)="openImageDialog(currentImageUrl(), currentAltText(), $any($event))" />
+      } @else {
+      <!-- Fallback when image URL is missing -->
+      <div class="photo-error-inline">
+        <mat-icon>broken_image</mat-icon>
+      </div>
+      }
 
       <!-- Click to reveal overlay for blurred images -->
       @if (shouldBlurMedia()) {
@@ -76,6 +84,13 @@
 <p class="photo-description">
   {{ description() }}
 </p>
+}
+} @else {
+<!-- Fallback when no valid images found -->
+<div class="photo-error">
+  <mat-icon>broken_image</mat-icon>
+  <p>No images available</p>
+</div>
 }
 
 <!-- Comments are handled by the parent EventComponent to avoid circular dependency -->
