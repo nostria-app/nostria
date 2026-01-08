@@ -685,12 +685,13 @@ export class MusicEventComponent {
     return null;
   });
 
-  // Extract hashtags from t tags
+  // Extract hashtags from t tags (excluding common tags like 'music')
   hashtags = computed(() => {
     const event = this.event();
     return event.tags
       .filter(t => t[0] === 't' && t[1])
-      .map(t => t[1]);
+      .map(t => t[1])
+      .filter(tag => tag.toLowerCase() !== 'music'); // Filter out 'music' tag
   });
 
   // Extract duration from tags
