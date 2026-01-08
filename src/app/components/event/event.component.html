@@ -98,8 +98,8 @@
     @else if (targetItem.event.kind === 1068) {
     <app-poll-event [event]="targetItem.event"></app-poll-event>
     }
-    <!-- M3U Playlists (kind 32100) -->
-    @else if (targetItem.event.kind === 32100) {
+    <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
+    @else if (targetItem.event.kind === 32100 || targetItem.event.kind === 34139) {
     <app-playlist-event [event]="targetItem.event"></app-playlist-event>
     }
     <!-- Starter Packs (kind 39089) -->
@@ -191,8 +191,8 @@
           @else if (rootRecordData.event.kind === 1068) {
           <app-poll-event [event]="rootRecordData.event"></app-poll-event>
           }
-          <!-- M3U Playlists (kind 32100) -->
-          @else if (rootRecordData.event.kind === 32100) {
+          <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
+          @else if (rootRecordData.event.kind === 32100 || rootRecordData.event.kind === 34139) {
           <app-playlist-event [event]="rootRecordData.event"></app-playlist-event>
           }
           <!-- Starter Packs (kind 39089) -->
@@ -279,8 +279,8 @@
           @else if (parentRecordData.event.kind === 1068) {
           <app-poll-event [event]="parentRecordData.event"></app-poll-event>
           }
-          <!-- M3U Playlists (kind 32100) -->
-          @else if (parentRecordData.event.kind === 32100) {
+          <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
+          @else if (parentRecordData.event.kind === 32100 || parentRecordData.event.kind === 34139) {
           <app-playlist-event [event]="parentRecordData.event"></app-playlist-event>
           }
           <!-- Starter Packs (kind 39089) -->
@@ -361,8 +361,8 @@
       <span>Following {{ followingCount() }} accounts</span>
     </div>
     }
-    <!-- M3U Playlists (kind 32100) -->
-    @else if (item.event.kind === 32100) {
+    <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
+    @else if (item.event.kind === 32100 || item.event.kind === 34139) {
     <app-playlist-event [event]="item.event"></app-playlist-event>
     } @else if (item.event.kind === 39089) {
     <!-- Starter Packs (kind 39089) -->
@@ -440,8 +440,8 @@
       <span>Following {{ followingCount() }} accounts</span>
     </div>
     }
-    <!-- M3U Playlists (kind 32100) -->
-    @else if (item.event.kind === 32100) {
+    <!-- M3U Playlists (kind 32100) & Nostr Playlists (kind 34139) -->
+    @else if (item.event.kind === 32100 || item.event.kind === 34139) {
     <app-playlist-event [event]="targetItem.event"></app-playlist-event>
     } @else if (item.event.kind === 39089) {
     <!-- Starter Packs (kind 39089) -->

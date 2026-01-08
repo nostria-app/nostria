@@ -1,35 +1,106 @@
 // Feed dialog content styles
 // Dialog container styles are handled by CustomDialogComponent
 
+.settings-container {
+  width: 100%;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+// Feed type selection section
+.feed-type-section {
+  margin-bottom: 20px;
+
+  h3 {
+    margin-bottom: 12px;
+    font-size: 1rem;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.feed-type-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.feed-type-card {
+  cursor: pointer;
+  padding: 10px 16px;
+  border: 1.5px solid var(--mat-sys-outline-variant);
+  border-radius: 24px;
+  transition: all 0.2s ease-in-out;
+  background-color: var(--mat-sys-surface-container);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  white-space: nowrap;
+  outline: none;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-high);
+    border-color: var(--mat-sys-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  &.selected {
+    background-color: var(--mat-sys-primary-container);
+    border-color: var(--mat-sys-primary);
+    border-width: 2px;
+    padding: 9px 15px;
+    color: var(--mat-sys-on-primary-container);
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+  }
+
+  mat-icon {
+    font-size: 1.35rem;
+    width: 1.35rem;
+    height: 1.35rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  span {
+    line-height: 1;
+  }
+}
+
+// Form rows and sections
+.form-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+
+  @media screen and (max-width: 600px) {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .form-field {
+    flex: 1;
+    min-width: 0;
+
+    &.name-field {
+      flex: 2;
+    }
+  }
+}
+
 .basic-config {
   display: flex;
   flex-direction: column;
   gap: 16px;
 
-  .name-icon-row {
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-
-    .name-field {
-      flex: 1;
-    }
-
-    .icon-field {
-      width: 120px;
-      flex-shrink: 0;
-
-      ::ng-deep .mat-mdc-select-value {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-
-      ::ng-deep .mat-mdc-select-value-text {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
+  .icon-picker-button {
+    mat-icon {
+      color: var(--mat-sys-primary);
     }
   }
 
@@ -38,15 +109,240 @@
   }
 }
 
-// Responsive design
-@media (max-width: 600px) {
-  .basic-config {
-    .name-icon-row {
-      flex-direction: column;
+.form-group {
+  h4 {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+}
 
-      .icon-field {
-        width: 100%;
-      }
+// Description box for source options
+.source-description {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 12px;
+  padding: 12px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  border-left: 3px solid var(--mat-sys-primary);
+
+  mat-icon {
+    color: var(--mat-sys-primary);
+    flex-shrink: 0;
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+    margin-top: 2px;
+  }
+
+  span {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+// Search source configuration
+.search-source-panel {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  border-left: 3px solid var(--mat-sys-secondary);
+
+  h4 {
+    margin-top: 0;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.relay-toggle {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+
+  mat-button-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    min-width: 140px;
+    justify-content: flex-start;
+    flex: 1 1 auto;
+
+    mat-icon {
+      font-size: 1.2rem;
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+  }
+
+  // Responsive adjustments for smaller screens
+  @media screen and (max-width: 600px) {
+    mat-button-toggle {
+      min-width: 100px;
+      padding: 8px 12px;
+      gap: 6px;
+    }
+  }
+
+  @media screen and (max-width: 420px) {
+    mat-button-toggle {
+      min-width: unset;
+      padding: 8px;
+      justify-content: center;
+      flex: 1 1 25%;
+    }
+  }
+}
+
+// Icon selection styles
+::ng-deep .mat-mdc-option {
+  &.icon-option {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 48px;
+
+    mat-icon {
+      font-size: 1.5rem;
+      width: 1.5rem;
+      height: 1.5rem;
+    }
+  }
+}
+
+.relay-list {
+  max-height: 120px;
+  overflow-y: auto;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  border-radius: 4px;
+  background-color: rgba(0, 0, 0, 0.02);
+}
+
+.relay-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .relay-status {
+    font-size: 1rem;
+    width: 1rem;
+    height: 1rem;
+    color: #4caf50;
+  }
+
+  .relay-url {
+    font-family: monospace;
+    font-size: 0.85rem;
+  }
+}
+
+.no-relays {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  justify-content: center;
+  opacity: 0.5;
+
+  mat-icon {
+    color: #ff9800;
+  }
+}
+
+// PoW Filter styles
+.pow-slider-container {
+  padding: 12px 0;
+  overflow: hidden; // Prevent slider from causing horizontal scroll
+
+  .pow-label {
+    display: block;
+    font-size: 1rem;
+    margin-bottom: 16px;
+    color: var(--mat-sys-on-surface);
+
+    .pow-strength {
+      color: var(--mat-sys-primary);
+      font-weight: 500;
+      margin-left: 8px;
+    }
+  }
+
+  mat-slider {
+    width: 100%;
+    max-width: 100%;
+    margin-bottom: 12px;
+    box-sizing: border-box;
+  }
+
+  .pow-description {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 0 0;
+    font-size: 0.875rem;
+    opacity: 0.8;
+
+    mat-icon {
+      font-size: 1.2rem;
+      width: 1.2rem;
+      height: 1.2rem;
+    }
+  }
+}
+
+.full-width {
+  width: 100%;
+}
+
+// Icon picker menu styling
+::ng-deep .mat-mdc-menu-panel.icon-picker-menu {
+  max-width: 144px !important;
+  min-width: 144px !important;
+
+  .mat-mdc-menu-content {
+    padding: 0 !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    width: 144px !important;
+  }
+
+  .icon-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 48px) !important;
+    gap: 0 !important;
+    width: 144px !important;
+  }
+
+  .icon-item {
+    min-width: 48px !important;
+    width: 48px !important;
+    height: 48px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-high) !important;
+    }
+
+    mat-icon {
+      margin: 0 !important;
+      width: 24px !important;
+      height: 24px !important;
+      font-size: 24px !important;
     }
   }
 }

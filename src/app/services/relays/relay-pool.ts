@@ -22,10 +22,18 @@ export class RelayPoolService {
    * Add relays to the pool and register them with RelaysService
    */
   private addRelays(relayUrls: string[]): void {
+    // Filter out insecure ws:// relays - they cannot be used from secure context
+    const secureRelays = relayUrls.filter(url => !url.startsWith('ws://'));
+
+    if (secureRelays.length < relayUrls.length) {
+      const filtered = relayUrls.length - secureRelays.length;
+      this.logger.warn(`[RelayPoolService] Filtered out ${filtered} insecure ws:// relay(s) - secure context requires wss://`);
+    }
+
     // Get current relays from RelaysService
     const allRelayStats = this.relaysService.getAllRelayStats();
     const currentRelays = Array.from(allRelayStats.keys());
-    const newRelays = relayUrls.filter(url => !currentRelays.includes(url));
+    const newRelays = secureRelays.filter(url => !currentRelays.includes(url));
 
     if (newRelays.length > 0) {
       // Register each new relay with the RelaysService for tracking
@@ -43,8 +51,15 @@ export class RelayPoolService {
       return null;
     }
 
+    // Filter out insecure ws:// relays - they cannot be used from secure context
+    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    if (secureUrls.length === 0) {
+      this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
+      return null;
+    }
+
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
     if (filteredUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays have failed authentication, cannot execute get');
       return null;
@@ -106,8 +121,15 @@ export class RelayPoolService {
       return [];
     }
 
+    // Filter out insecure ws:// relays - they cannot be used from secure context
+    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    if (secureUrls.length === 0) {
+      this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
+      return [];
+    }
+
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
     if (filteredUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays have failed authentication, cannot execute query');
       return [];
@@ -176,8 +198,19 @@ export class RelayPoolService {
    * Subscribe to events
    */
   subscribe(relayUrls: string[], filter: Filter, onEvent: (event: Event) => void) {
+    // Filter out insecure ws:// relays - they cannot be used from secure context
+    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    if (secureUrls.length === 0) {
+      this.logger.warn('[RelayPoolService] All relays are insecure (ws://), cannot connect from secure context');
+      return {
+        close: () => {
+          this.logger.debug('[RelayPoolService] No subscription to close (all relays insecure)');
+        },
+      };
+    }
+
     // Filter out relays that have failed authentication
-    const filteredUrls = this.relayAuth.filterAuthFailedRelays(relayUrls);
+    const filteredUrls = this.relayAuth.filterAuthFailedRelays(secureUrls);
     if (filteredUrls.length === 0) {
       this.logger.warn('[RelayPoolService] All relays have failed authentication, cannot subscribe');
       return {

@@ -70,15 +70,21 @@ export class SearchRelayService extends RelayServiceBase implements NostriaServi
    */
   setSearchRelays(relayUrls: string[]): void {
     try {
-      // Validate that all URLs are valid relay URLs
+      // Validate that all URLs are valid relay URLs and filter out insecure ws://
       const validRelays = relayUrls.filter(url => {
         try {
           const parsed = new URL(url);
-          return parsed.protocol === 'wss:' || parsed.protocol === 'ws:';
+          // Only allow secure wss:// - ws:// cannot be used from secure context
+          return parsed.protocol === 'wss:';
         } catch {
           return false;
         }
       });
+
+      if (validRelays.length < relayUrls.length) {
+        const filtered = relayUrls.length - validRelays.length;
+        this.logger.warn(`[SearchRelayService] Filtered out ${filtered} invalid or insecure relay(s)`);
+      }
 
       // Save even if empty - user explicitly chose to have no search relays
       this.save(validRelays);

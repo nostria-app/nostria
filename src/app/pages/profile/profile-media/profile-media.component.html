@@ -1,5 +1,10 @@
 <div class="tab-content">
-  @if (media().length === 0) {
+  @if (profileState.isInitiallyLoading() && media().length === 0) {
+  <div class="loading-state">
+    <mat-spinner [diameter]="40"></mat-spinner>
+    <p>Loading media...</p>
+  </div>
+  } @else if (media().length === 0) {
   <div class="empty-state">
     <mat-icon>image</mat-icon>
     <p>No media to display yet</p>

@@ -1,17 +1,20 @@
-import { Component, computed, input, inject } from '@angular/core';
+import { Component, computed, input, inject, signal, effect, untracked } from '@angular/core';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { Event } from 'nostr-tools';
 import { MediaPlayerService } from '../../services/media-player.service';
-import { MediaItem, Playlist } from '../../interfaces';
+import { MediaItem, Playlist, NostrRecord } from '../../interfaces';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { LayoutService } from '../../services/layout.service';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatDividerModule } from '@angular/material/divider';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { CommentsListComponent } from '../comments-list/comments-list.component';
 import { PlaylistService } from '../../services/playlist.service';
 import { MatSnackBar } from '@angular/material/snack-bar';
+import { DataService } from '../../services/data.service';
+import { MusicEventComponent } from './music-event.component';
 
 interface PlaylistTrack {
   url: string;
@@ -37,7 +40,9 @@ interface PlaylistData {
     MatTooltipModule,
     MatMenuModule,
     MatDividerModule,
-    CommentsListComponent
+    MatProgressSpinnerModule,
+    CommentsListComponent,
+    MusicEventComponent
   ],
   templateUrl: './playlist-event.component.html',
   styleUrl: './playlist-event.component.scss',
@@ -45,12 +50,29 @@ interface PlaylistData {
 export class PlaylistEventComponent {
   event = input.required<Event>();
 
-  // Inject the media player service
+  // Inject services
   private mediaPlayerService = inject(MediaPlayerService);
   private playlistService = inject(PlaylistService);
   private snackBar = inject(MatSnackBar);
+  private dataService = inject(DataService);
 
   layout = inject(LayoutService);
+
+  // Track events loaded from 'a' tags
+  trackEvents = signal<Event[]>([]);
+  loadingTracks = signal<boolean>(false);
+
+  constructor() {
+    // Load track events when playlist event changes
+    effect(() => {
+      const event = this.event();
+      if (event) {
+        untracked(() => {
+          this.loadTrackEvents(event);
+        });
+      }
+    });
+  }
 
   // Playlist data parsed from the event
   playlistData = computed(() => {
@@ -131,25 +153,34 @@ export class PlaylistEventComponent {
   }
 
   playPlaylist(playlistData: PlaylistData): void {
-    console.log('Playing playlist:', playlistData.title, 'Tracks:', playlistData.tracks.length);
+    const tracks = this.trackEvents();
 
-    if (playlistData.tracks.length === 0) {
+    if (tracks.length === 0) {
       console.warn('No tracks in playlist');
       this.snackBar.open('Playlist has no tracks', 'Close', { duration: 3000 });
       return;
     }
 
+    console.log('Playing playlist:', playlistData.title, 'Tracks:', tracks.length);
+
     // Clear current queue and add all tracks
     this.mediaPlayerService.clearQueue();
 
-    // Convert playlist tracks to MediaItems
-    const mediaItems: MediaItem[] = playlistData.tracks.map((track, index) => ({
-      source: track.url,
-      title: track.title || `Track ${index + 1}`,
-      artist: track.artist || 'Unknown Artist',
-      artwork: '/icons/icon-192x192.png', // Default artwork
-      type: this.getMediaType(track.url),
-    }));
+    // Convert track events to MediaItems
+    const mediaItems: MediaItem[] = tracks.map((trackEvent, index) => {
+      const urlTag = trackEvent.tags.find(t => t[0] === 'url');
+      const titleTag = trackEvent.tags.find(t => t[0] === 'title');
+      const artistTag = trackEvent.tags.find(t => t[0] === 'artist');
+      const imageTag = trackEvent.tags.find(t => t[0] === 'image');
+
+      return {
+        source: urlTag?.[1] || '',
+        title: titleTag?.[1] || `Track ${index + 1}`,
+        artist: artistTag?.[1] || 'Unknown Artist',
+        artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        type: this.getMediaType(urlTag?.[1] || ''),
+      };
+    });
 
     // Add first track and start playing
     if (mediaItems.length > 0) {
@@ -165,27 +196,38 @@ export class PlaylistEventComponent {
   }
 
   addPlaylistToQueue(playlistData: PlaylistData): void {
-    console.log('Adding playlist to queue:', playlistData.title, 'Tracks:', playlistData.tracks.length);
+    const tracks = this.trackEvents();
 
-    if (playlistData.tracks.length === 0) {
+    if (tracks.length === 0) {
       console.warn('No tracks in playlist');
       this.snackBar.open('Playlist has no tracks', 'Close', { duration: 3000 });
       return;
     }
 
-    // Convert playlist tracks to MediaItems and add to queue
-    const mediaItems: MediaItem[] = playlistData.tracks.map((track, index) => ({
-      source: track.url,
-      title: track.title || `Track ${index + 1}`,
-      artist: track.artist || 'Unknown Artist',
-      artwork: '/icons/icon-192x192.png', // Default artwork
-      type: this.getMediaType(track.url),
-    }));
+    console.log('Adding playlist to queue:', playlistData.title, 'Tracks:', tracks.length);
+
+    // Convert track events to MediaItems and add to queue
+    const mediaItems: MediaItem[] = tracks.map((trackEvent, index) => {
+      const urlTag = trackEvent.tags.find(t => t[0] === 'url');
+      const titleTag = trackEvent.tags.find(t => t[0] === 'title');
+      const artistTag = trackEvent.tags.find(t => t[0] === 'artist');
+      const imageTag = trackEvent.tags.find(t => t[0] === 'image');
+
+      return {
+        source: urlTag?.[1] || '',
+        title: titleTag?.[1] || `Track ${index + 1}`,
+        artist: artistTag?.[1] || 'Unknown Artist',
+        artwork: imageTag?.[1] || '/icons/icon-192x192.png',
+        type: this.getMediaType(urlTag?.[1] || ''),
+      };
+    });
 
     // Add all tracks to queue
     mediaItems.forEach(item => {
       this.mediaPlayerService.enque(item);
     });
+
+    this.snackBar.open(`Added ${mediaItems.length} track${mediaItems.length > 1 ? 's' : ''} to queue`, 'Close', { duration: 2000 });
   }
 
   downloadM3U(): void {
@@ -409,6 +451,63 @@ export class PlaylistEventComponent {
       return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
     } else {
       return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+    }
+  }
+
+  private async loadTrackEvents(event: Event): Promise<void> {
+    // Get all 'a' tags that reference track events (kind 36787)
+    const aTags = event.tags.filter(tag => tag[0] === 'a');
+
+    console.log('[PlaylistEvent] Loading tracks from a-tags:', aTags.length);
+
+    if (aTags.length === 0) {
+      console.log('[PlaylistEvent] No a-tags found in playlist event');
+      return;
+    }
+
+    this.loadingTracks.set(true);
+    const tracks: Event[] = [];
+
+    try {
+      for (const aTag of aTags) {
+        const coordinate = aTag[1];
+        if (!coordinate) continue;
+
+        // Parse coordinate format: kind:pubkey:d-tag
+        const parts = coordinate.split(':');
+        if (parts.length !== 3) continue;
+
+        const [kindStr, pubkey, dTag] = parts;
+        const kind = parseInt(kindStr, 10);
+
+        console.log(`[PlaylistEvent] Loading track: kind=${kind}, pubkey=${pubkey.substring(0, 8)}..., dTag=${dTag}`);
+
+        // Only load track events (kind 36787)
+        if (kind !== 36787) continue;
+
+        try {
+          const record = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
+            pubkey,
+            kind,
+            dTag,
+            { cache: true, save: true }
+          );
+
+          if (record && record.event) {
+            console.log(`[PlaylistEvent] Successfully loaded track: ${record.event.id}`);
+            tracks.push(record.event);
+          } else {
+            console.warn(`[PlaylistEvent] Track not found: ${coordinate}`);
+          }
+        } catch (error) {
+          console.error(`[PlaylistEvent] Failed to load track ${coordinate}:`, error);
+        }
+      }
+
+      console.log(`[PlaylistEvent] Loaded ${tracks.length} tracks total`);
+      this.trackEvents.set(tracks);
+    } finally {
+      this.loadingTracks.set(false);
     }
   }
 }

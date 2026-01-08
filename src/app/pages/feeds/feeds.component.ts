@@ -27,7 +27,7 @@ import { LayoutService } from '../../services/layout.service';
 import { LocalSettingsService } from '../../services/local-settings.service';
 import { CdkDragDrop, DragDropModule, moveItemInArray } from '@angular/cdk/drag-drop';
 import { NewFeedDialogComponent } from './new-feed-dialog/new-feed-dialog.component';
-import { NewColumnDialogComponent } from './new-column-dialog/new-column-dialog.component';
+
 import { Router, ActivatedRoute, RouterModule } from '@angular/router';
 import { MatDialog, MatDialogModule } from '@angular/material/dialog';
 import {
@@ -37,10 +37,9 @@ import {
 import { MediaPreviewDialogComponent } from '../../components/media-preview-dialog/media-preview.component';
 import { LoggerService } from '../../services/logger.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { FeedService, ColumnConfig } from '../../services/feed.service';
+import { FeedService, FeedConfig } from '../../services/feed.service';
 import {
   FeedsCollectionService,
-  ColumnDefinition,
 } from '../../services/feeds-collection.service';
 import { MediaItem, NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
@@ -81,7 +80,6 @@ import { RelayFeedMenuComponent } from './relay-feed-menu/relay-feed-menu.compon
     Introduction,
     EventComponent,
     NewFeedDialogComponent,
-    NewColumnDialogComponent,
     TrendingColumnComponent,
     RelayColumnComponent,
     RelayFeedMenuComponent,
@@ -115,10 +113,7 @@ export class FeedsComponent implements OnDestroy {
 
   // Dialog State Signals
   showNewFeedDialog = signal(false);
-  showNewColumnDialog = signal(false);
   editingFeed = signal<import('../../services/feed.service').FeedConfig | undefined>(undefined);
-  editingColumn = signal<ColumnConfig | undefined>(undefined);
-  editingColumnIndex = signal<number>(-1);
 
   // Dialog icon options
   feedIcons = [
@@ -129,6 +124,37 @@ export class FeedsComponent implements OnDestroy {
     'star',
     'favorite',
     'rss_feed',
+    'chat',
+    'article',
+    'image',
+    'photo',
+    'video_library',
+    'music_note',
+    'people',
+    'group',
+    'public',
+    'tag',
+    'local_fire_department',
+    'bolt',
+    'lightbulb',
+    'science',
+    'sports_esports',
+    'sports_soccer',
+    'restaurant',
+    'coffee',
+    'shopping_cart',
+    'work',
+    'home',
+    'school',
+    'flight',
+    'directions_car',
+    'palette',
+    'pets',
+    'spa',
+    'nightlife',
+    'celebration',
+    'emoji_events',
+    'military_tech',
   ];
 
   columnIcons = [
@@ -162,6 +188,10 @@ export class FeedsComponent implements OnDestroy {
   // Relay feed state - for showing public posts from a specific relay
   activeRelayDomain = signal<string>('');
   showRelayFeed = computed(() => !!this.activeRelayDomain());
+  isSystemFeed = computed(() => {
+    const feed = this.activeFeed();
+    return feed?.isSystem ?? false;
+  });
   @ViewChild('relayFeedMenu') relayFeedMenu?: RelayFeedMenuComponent;
   private queryParamsSubscription: import('rxjs').Subscription | null = null;
 
@@ -169,6 +199,13 @@ export class FeedsComponent implements OnDestroy {
   hasHorizontalOverflow = signal(false);
   columnsScrollWidth = signal(0);
   columnsScrollLeft = signal(0);
+  canScrollLeft = computed(() => this.columnsScrollLeft() > 0);
+  canScrollRight = computed(() => {
+    const scrollLeft = this.columnsScrollLeft();
+    const scrollWidth = this.columnsScrollWidth();
+    const clientWidth = this.columnsContainer?.nativeElement?.clientWidth || 0;
+    return scrollLeft + clientWidth < scrollWidth - 1;
+  });
   @ViewChild('columnsContainer') columnsContainer!: ElementRef<HTMLDivElement>;
   @ViewChild('fixedScrollbar') fixedScrollbar!: ElementRef<HTMLDivElement>;
   private isSyncingScroll = false;
@@ -214,6 +251,23 @@ export class FeedsComponent implements OnDestroy {
     const activeFeed = this.activeFeed();
     return activeFeed ? activeFeed.label : '';
   });
+
+  // Track which feeds have loaded content
+  columnContentLoaded = signal<Record<string, boolean>>({});
+
+  // Computed signal to check if a feed has actual events to display
+  feedHasEvents = computed(() => {
+    const eventMap = new Map<string, boolean>();
+    this.feeds().forEach(feed => {
+      const events = this.columnEvents().get(feed.id);
+      eventMap.set(feed.id, events !== undefined && events.length > 0);
+    });
+    return eventMap;
+  });
+
+  // Legacy column references - kept for backward compatibility
+  // columns now maps directly to feeds since we merged the column concept with feeds
+  columns = computed(() => this.feeds());
 
   // Content Signals
   trendingEvents = signal<NostrRecord[]>([]);
@@ -277,15 +331,15 @@ export class FeedsComponent implements OnDestroy {
     const followingListLoaded = this.accountState.followingListLoaded();
     const emptyColumnsMap = new Map<string, boolean>();
 
-    feedConfig.columns.forEach((column: ColumnConfig) => {
-      // Check if column source is 'following', following list has been loaded, and user has zero following
-      // We only show the empty message after the following list has been loaded to avoid
-      // showing it prematurely on slow connections
+    // Check if feed source is 'following', following list has been loaded, and user has zero following
+    // We only show the empty message after the following list has been loaded to avoid
+    // showing it prematurely on slow connections
+    if (feedConfig.source === 'following' || feedConfig.source === 'for-you') {
       emptyColumnsMap.set(
-        column.id,
-        column.source === 'following' && followingListLoaded && followingList.length === 0
+        feedConfig.id,
+        feedConfig.source === 'following' && followingListLoaded && followingList.length === 0
       );
-    });
+    }
 
     return emptyColumnsMap;
   });
@@ -298,6 +352,14 @@ export class FeedsComponent implements OnDestroy {
   // Drag state to prevent unnecessary re-renders during column reordering
   private isDragging = signal(false);
 
+  // Pull-to-refresh state
+  pullToRefreshActive = signal(false);
+  pullDistance = signal(0);
+  pullThreshold = 80; // pixels to trigger reload
+  private startY = 0;
+  private isPulling = false;
+  @ViewChild('feedsContainer') feedsContainer?: ElementRef<HTMLDivElement>;
+
   // Cache to store events during drag operations
   private _eventCache = new Map<string, Event[]>();
 
@@ -308,26 +370,25 @@ export class FeedsComponent implements OnDestroy {
   private routeParamsSubscription: import('rxjs').Subscription | null = null;
 
   // Virtual list configuration
-  private readonly INITIAL_RENDER_COUNT = 15; // Render 15 events initially for smoother initial view
-  private readonly RENDER_BATCH_SIZE = 15; // Add 15 more events when scrolling for smoother experience
+  INITIAL_RENDER_COUNT = 30;
+  RENDER_BATCH_SIZE = 15;
 
-  // Track rendered event counts per column (virtual list)
-  private renderedEventCounts = signal<Record<string, number>>({});
+  // Track rendered event counts per feed (virtual list)
+  renderedEventCounts = signal<Record<string, number>>({});
 
-  // Intersection Observer for auto-loading more content
-  private loadMoreObservers = new Map<string, IntersectionObserver>(); // One observer per column
-  private loadMoreCooldowns = new Map<string, number>(); // Track cooldowns per column
-  private readonly LOAD_MORE_COOLDOWN_MS = 300; // Minimum time between loads
-  private scrollCheckCleanup: (() => void) | null = null;
+  // Scroll detection for auto-loading more content
+  lastLoadTime = 0;
+  LOAD_MORE_COOLDOWN_MS = 1000;
+  scrollCheckCleanup: (() => void) | null = null;
 
   /**
-   * Helper method to filter events based on column's showReplies and showReposts settings
+   * Helper method to filter events based on feed's showReplies and showReposts settings
    * Filters out reply events when showReplies is false
    * Filters out repost events when showReposts is false
    */
-  private filterEventsByColumnSettings(events: Event[], column: ColumnDefinition): Event[] {
-    const showReplies = column.showReplies ?? false;
-    const showReposts = column.showReposts ?? true; // Default to true for reposts
+  private filterEventsByFeedSettings(events: Event[], feed: FeedConfig): Event[] {
+    const showReplies = feed.showReplies ?? false;
+    const showReposts = feed.showReposts ?? true; // Default to true for reposts
 
     return events.filter(event => {
       // Check if it's a repost (kind 6 or kind 16)
@@ -349,32 +410,49 @@ export class FeedsComponent implements OnDestroy {
 
   // Computed signal for ALL events (in-memory, not rendered)
   allColumnEvents = computed(() => {
-    const columns = this.columns();
+    const feed = this.activeFeed();
     const isDragging = this.isDragging();
     const eventsMap = new Map<string, Event[]>();
+
+    if (!feed) {
+      console.log('[allColumnEvents] No active feed');
+      return eventsMap;
+    }
 
     // Get reactive feed data map from service
     const feedDataMap = this.feedService.feedDataReactive();
 
-    columns.forEach(column => {
-      let events: Event[];
-      if (isDragging) {
-        // During drag operations, use cached events to prevent DOM updates
-        events = this._eventCache.get(column.id) || [];
-      } else {
-        // Normal operation: get fresh events from reactive service
-        const columnData = feedDataMap.get(column.id);
-        events = columnData?.events() || [];
+    let events: Event[];
+    if (isDragging) {
+      // During drag operations, use cached events to prevent DOM updates
+      events = this._eventCache.get(feed.id) || [];
+    } else {
+      // Normal operation: get fresh events from reactive service
+      const feedData = feedDataMap.get(feed.id);
+      events = feedData?.events() || [];
 
-        // Update cache for potential drag operations
-        this._eventCache.set(column.id, events);
-      }
+      // Update cache for potential drag operations
+      this._eventCache.set(feed.id, events);
+    }
 
-      // Filter based on column showReplies and showReposts settings
-      events = this.filterEventsByColumnSettings(events, column);
+    const rawEventCount = events.length;
 
-      eventsMap.set(column.id, events);
+    // Filter based on feed showReplies and showReposts settings
+    events = this.filterEventsByFeedSettings(events, feed);
+
+    // Always log for debugging
+    console.log(`[allColumnEvents] Feed "${feed.label}" (${feed.id}):`, {
+      type: feed.type,
+      source: feed.source,
+      feedDataExists: feedDataMap.has(feed.id),
+      rawEvents: rawEventCount,
+      filteredEvents: events.length,
+      showReplies: feed.showReplies,
+      showReposts: feed.showReposts,
+      isDragging
     });
+
+    eventsMap.set(feed.id, events);
 
     return eventsMap;
   });
@@ -433,77 +511,39 @@ export class FeedsComponent implements OnDestroy {
   // }  // Replace the old columns signal with columns from active feed
   feeds = computed(() => this.feedsCollectionService.feeds());
   activeFeed = computed(() => this.feedsCollectionService.activeFeed());
-  columns = computed(() => this.feedsCollectionService.getActiveColumns());
 
-  // Check if the active feed is a system feed (cannot be deleted)
-  isSystemFeed = computed(() => {
+  // Check if the active feed is paused (no active subscription)
+  isActiveFeedPaused = computed(() => {
     const feed = this.activeFeed();
-    return feed?.isSystem ?? false;
-  });
+    if (!feed) return false;
 
-  // Signals for state management
-  visibleColumnIndex = signal(0);
-  columnContentLoaded = signal<Record<string, boolean>>({});
-
-  // Reference to columns wrapper for scrolling
-  @ViewChild('columnsWrapper') columnsWrapper!: ElementRef<HTMLDivElement>;
-  // Reference to home container for mobile scroll detection
-  @ViewChild('homeContainer') homeContainer!: ElementRef<HTMLDivElement>;
-
-  // Signals to track scroll position
-  private scrollPosition = signal(0);
-  private maxScroll = signal(0);
-
-  // Computed signals for scroll indicators
-  canScrollLeft = computed(() => this.scrollPosition() > 0);
-
-  canScrollRight = computed(() => {
-    const maxScroll = this.maxScroll();
-    return maxScroll > 0 && this.scrollPosition() < maxScroll;
-  });
-
-  // Computed signal to track which columns are paused (no active subscription)
-  pausedColumns = computed(() => {
-    const columns = this.columns();
-    const feedDataMap = this.feedService.feedDataReactive(); // Use reactive signal instead of regular Map
-    const pausedSet = new Set<string>();
-
-    columns.forEach(column => {
-      const columnData = feedDataMap.get(column.id);
-      if (columnData && !columnData.subscription) {
-        pausedSet.add(column.id);
-      }
-    });
-
-    return pausedSet;
-  });
-
-  // Computed signal to get pending events count for each column
-  pendingEventsCount = computed(() => {
-    const columns = this.columns();
     const feedDataMap = this.feedService.feedDataReactive();
-    const countsMap = new Map<string, number>();
-
-    columns.forEach(column => {
-      const columnData = feedDataMap.get(column.id);
-      if (columnData && columnData.pendingEvents) {
-        // Get pending events and filter based on column settings
-        const pendingEvents = this.filterEventsByColumnSettings(
-          columnData.pendingEvents(),
-          column
-        );
-        countsMap.set(column.id, pendingEvents.length);
-      } else {
-        countsMap.set(column.id, 0);
-      }
-    });
-
-    return countsMap;
+    const feedData = feedDataMap.get(feed.id);
+    return feedData ? !feedData.subscription : false;
   });
 
-  // Helper method to check if a specific column is paused
-  isColumnPaused(columnId: string): boolean {
-    return this.pausedColumns().has(columnId);
+  // Get pending events count for active feed
+  activeFeedPendingCount = computed(() => {
+    const feed = this.activeFeed();
+    if (!feed) return 0;
+
+    const feedDataMap = this.feedService.feedDataReactive();
+    const feedData = feedDataMap.get(feed.id);
+    if (feedData && feedData.pendingEvents) {
+      const pendingEvents = this.filterEventsByFeedSettings(
+        feedData.pendingEvents(),
+        feed
+      );
+      return pendingEvents.length;
+    }
+    return 0;
+  });
+
+  // Helper method to check if a specific feed is paused
+  isFeedPaused(feedId: string): boolean {
+    const feedDataMap = this.feedService.feedDataReactive();
+    const feedData = feedDataMap.get(feedId);
+    return feedData ? !feedData.subscription : false;
   }
 
   // Helper method to get pause status for debugging
@@ -695,21 +735,20 @@ export class FeedsComponent implements OnDestroy {
       }
     });
 
-    // Set up scroll listeners for columns after they're rendered
+    // Set up scroll listeners for the active feed
     effect(() => {
-      const columns = this.columns();
+      const activeFeed = this.activeFeed();
+      const account = this.accountState.account();
 
-      // Only set up scroll listeners if there's an active account
-      if (!this.accountState.account()) {
+      // Only set up scroll listeners if there's an active account and feed
+      if (!account || !activeFeed) {
         return;
       }
 
-      if (columns.length > 0 && this.layoutService.isBrowser()) {
-        // Wait for columns to be rendered
+      if (this.layoutService.isBrowser()) {
+        // Wait for feed content to be rendered
         setTimeout(() => {
-          this.setupColumnScrollListeners(columns);
-          // Check for horizontal overflow after columns are rendered
-          this.updateHorizontalOverflow();
+          this.setupFeedScrollListener(activeFeed);
         }, 500);
       }
     });
@@ -727,114 +766,80 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Set up scroll listeners for each column to detect when user scrolls to bottom
-   * Uses a scroll event with visibility check for reliable detection
+   * Set up scroll listener for the active feed to detect when user scrolls to bottom
+   * Simplified from the old multi-column architecture
    */
-  private setupColumnScrollListeners(columns: ColumnDefinition[]) {
+  private setupFeedScrollListener(feed: FeedConfig) {
     // Clean up existing listeners
-    this.cleanupLoadMoreObserver();
+    this.cleanupScrollListener();
 
-    // Find all possible scroll containers
-    const scrollContainers: HTMLElement[] = [];
-
-    // Check content-wrapper (main app scrolling container)
+    // Find the main scroll container - this is typically .content-wrapper
     const contentWrapper = document.querySelector('.content-wrapper') as HTMLElement;
-    if (contentWrapper) {
-      scrollContainers.push(contentWrapper);
+
+    if (!contentWrapper) {
+      return;
     }
 
-    // Check home container (mobile scrolling)
-    const homeContainer = document.querySelector('.home-container') as HTMLElement;
-    if (homeContainer) {
-      scrollContainers.push(homeContainer);
-    }
+    // Create scroll check function
+    const checkScrollPosition = () => {
+      const now = Date.now();
 
-    // Check each column's content (desktop per-column scrolling)
-    columns.forEach(column => {
-      const columnElement = document.querySelector(`[data-column-id="${column.id}"]`);
-      const scrollContainer = columnElement?.querySelector('.column-content') as HTMLElement;
-      if (scrollContainer) {
-        scrollContainers.push(scrollContainer);
+      // Check cooldown
+      if (now - this.lastLoadTime < this.LOAD_MORE_COOLDOWN_MS) {
+        return;
       }
-    });
 
-    // Create a single check function
-    const checkTriggerVisibility = () => {
-      columns.forEach(column => {
-        // Check cooldown
-        const now = Date.now();
-        const lastLoad = this.loadMoreCooldowns.get(column.id) || 0;
-        if (now - lastLoad < this.LOAD_MORE_COOLDOWN_MS) {
-          return;
+      const scrollTop = contentWrapper.scrollTop;
+      const scrollHeight = contentWrapper.scrollHeight;
+      const clientHeight = contentWrapper.clientHeight;
+
+      // Trigger when within 500px of bottom
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+      if (distanceFromBottom < 500) {
+        this.lastLoadTime = now;
+
+        // Render more events from cache if available
+        if (this.hasMoreEventsToRender(feed.id)) {
+          this.loadMoreRenderedEvents(feed.id);
         }
 
-        const columnElement = document.querySelector(`[data-column-id="${column.id}"]`);
-        const trigger = columnElement?.querySelector('.load-more-trigger') as HTMLElement;
-
-        if (!trigger) {
-          return;
-        }
-
-        // Check if the trigger is visible in the viewport
-        const rect = trigger.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-
-        // Trigger is "visible" if it's within 600px of the viewport bottom
-        // Using a larger threshold (600px) to start loading earlier and avoid jumpy UI
-        const isNearViewport = rect.top < viewportHeight + 600;
-
-        if (isNearViewport) {
-          this.loadMoreCooldowns.set(column.id, now);
-
-          if (this.hasMoreEventsToRender(column.id)) {
-            this.loadMoreRenderedEvents(column.id);
-          } else {
-            this.loadMoreForColumn(column.id);
-          }
-        }
-      });
+        // Also fetch more events from network if needed
+        this.loadMoreForFeed(feed.id);
+      }
     };
 
-    // Add scroll listener to all possible containers
+    // Throttled scroll handler
     const scrollHandler = () => {
-      requestAnimationFrame(checkTriggerVisibility);
+      requestAnimationFrame(checkScrollPosition);
     };
 
-    scrollContainers.forEach(container => {
-      container.addEventListener('scroll', scrollHandler, { passive: true });
-    });
-
-    // Also listen on window for any missed scroll events
-    window.addEventListener('scroll', scrollHandler, { passive: true });
+    // Add scroll listener
+    contentWrapper.addEventListener('scroll', scrollHandler, { passive: true });
 
     // Store cleanup function
     this.scrollCheckCleanup = () => {
-      scrollContainers.forEach(container => {
-        container.removeEventListener('scroll', scrollHandler);
-      });
-      window.removeEventListener('scroll', scrollHandler);
+      contentWrapper.removeEventListener('scroll', scrollHandler);
     };
 
-    // Do initial check in case we're already scrolled to bottom
-    setTimeout(checkTriggerVisibility, 100);
+    // Do initial check in case we're already scrolled down
+    setTimeout(() => {
+      checkScrollPosition();
+    }, 100);
+
+    setTimeout(() => {
+      checkScrollPosition();
+    }, 1000);
   }
 
   /**
-   * Clean up all scroll listeners
+   * Clean up scroll listeners
    */
-  private cleanupLoadMoreObserver(): void {
-    // Clean up scroll listeners
+  private cleanupScrollListener(): void {
     if (this.scrollCheckCleanup) {
       this.scrollCheckCleanup();
       this.scrollCheckCleanup = null;
     }
-
-    // Clean up any remaining observers
-    this.loadMoreObservers.forEach(observer => {
-      observer.disconnect();
-    });
-    this.loadMoreObservers.clear();
-    this.loadMoreCooldowns.clear();
   }
 
   /**
@@ -927,18 +932,16 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Load more content for a specific column
+   * Load more content for a specific feed
    */
-  private async loadMoreForColumn(columnId: string) {
+  private async loadMoreForFeed(feedId: string) {
     try {
       // Check if already loading or no more content
-      const isLoadingSignal = this.feedService.getColumnLoadingState(columnId);
-      const hasMoreSignal = this.feedService.getColumnHasMore(columnId);
+      const isLoadingSignal = this.feedService.getColumnLoadingState(feedId);
+      const hasMoreSignal = this.feedService.getColumnHasMore(feedId);
 
       // Guard: Ensure signals exist and check their values
-      // If signals don't exist yet, the column hasn't been subscribed - this is normal during initial load
       if (!isLoadingSignal || !hasMoreSignal) {
-        // Don't log warning - this is expected during initial feed setup
         return;
       }
 
@@ -947,10 +950,10 @@ export class FeedsComponent implements OnDestroy {
         return;
       }
 
-      this.logger.debug(`Loading more content for column: ${columnId}`);
-      await this.feedService.loadMoreEventsForColumn(columnId);
+      this.logger.debug(`Loading more content for feed: ${feedId}`);
+      await this.feedService.loadMoreEventsForColumn(feedId);
     } catch (error) {
-      this.logger.error(`Failed to load more content for column ${columnId}:`, error);
+      this.logger.error(`Failed to load more content for feed ${feedId}:`, error);
     }
   }
 
@@ -1125,374 +1128,79 @@ export class FeedsComponent implements OnDestroy {
     this.notificationService.notify(`Content bookmarked: ${eventId}`);
   }
 
-  selectColumn(index: number): void {
-    console.log(`Selecting column ${index}`);
-    this.visibleColumnIndex.set(index);
-    this.loadColumnContentIfNeeded(index);
+  // Column navigation methods removed - feeds are now flat structures without columns
+  // The following methods (selectColumn, navigateToPreviousColumn, navigateToNextColumn,
+  // loadColumnContentIfNeeded, handleColumnKeydown) have been deprecated
+
+  onColumnDrop(event: CdkDragDrop<FeedConfig[]>): void {
+    // Column reordering is deprecated - feeds no longer have columns
+    console.warn('Column reordering is no longer supported - feeds are now flat structures');
+    return;
   }
 
-  navigateToPreviousColumn(): void {
-    const currentIndex = this.visibleColumnIndex();
-    if (currentIndex > 0) {
-      this.selectColumn(currentIndex - 1);
-    }
-  }
-
-  navigateToNextColumn(): void {
-    const currentIndex = this.visibleColumnIndex();
-    const columnCount = this.columns().length;
-    if (currentIndex < columnCount - 1) {
-      this.selectColumn(currentIndex + 1);
-    }
-  }
-
-  loadColumnContentIfNeeded(index: number): void {
-    const selectedColumn = this.columns()[index];
-    if (!selectedColumn) return;
-
-    const columnId = selectedColumn.id;
-
-    if (!this.columnContentLoaded()[columnId]) {
-      this.isLoading.set(true);
-
-      // Simulate loading content for this specific column
-      setTimeout(() => {
-        this.columnContentLoaded.update(loaded => ({
-          ...loaded,
-          [columnId]: true,
-        }));
-        this.isLoading.set(false);
-      }, 1000);
-    }
-  }
-
-  handleColumnKeydown(event: KeyboardEvent, index: number): void {
-    const columnCount = this.columns().length;
-
-    switch (event.key) {
-      case 'ArrowLeft':
-        event.preventDefault();
-        this.selectColumn(index > 0 ? index - 1 : columnCount - 1);
-        break;
-      case 'ArrowRight':
-        event.preventDefault();
-        this.selectColumn(index < columnCount - 1 ? index + 1 : 0);
-        break;
-      case 'Home':
-        event.preventDefault();
-        this.selectColumn(0);
-        break;
-      case 'End':
-        event.preventDefault();
-        this.selectColumn(columnCount - 1);
-        break;
-    }
-  }
-  onColumnDrop(event: CdkDragDrop<ColumnDefinition[]>): void {
-    const previousIndex = event.previousIndex;
-    const currentIndex = event.currentIndex;
-
-    console.log('🔄 Column drop event:', { previousIndex, currentIndex });
-
-    if (previousIndex !== currentIndex) {
-      const activeFeed = this.activeFeed();
-      if (!activeFeed) {
-        return;
-      }
-
-      // Get the current columns and reorder them
-      const columns = [...activeFeed.columns];
-      moveItemInArray(columns, previousIndex, currentIndex);
-
-      console.log(
-        '📋 Columns reordered:',
-        columns.map(col => `${col.label} (${col.id})`)
-      );
-
-      // Update the actual feed data using the optimized method
-      console.log('⚡ Using optimized updateColumnOrder method');
-      this.feedsCollectionService.updateColumnOrder(activeFeed.id, columns);
-
-      // Update the visible column index if in mobile view
-      if (this.isMobileView()) {
-        if (this.visibleColumnIndex() === previousIndex) {
-          // If the currently visible column was moved, update the index
-          this.visibleColumnIndex.set(currentIndex);
-        } else if (
-          previousIndex < this.visibleColumnIndex() &&
-          currentIndex >= this.visibleColumnIndex()
-        ) {
-          // If a column was moved from before the visible one to after it, shift visibility back
-          this.visibleColumnIndex.update(idx => idx - 1);
-        } else if (
-          previousIndex > this.visibleColumnIndex() &&
-          currentIndex <= this.visibleColumnIndex()
-        ) {
-          // If a column was moved from after the visible one to before it, shift visibility forward
-          this.visibleColumnIndex.update(idx => idx + 1);
-        }
-      }
-
-      // this.notificationService.notify('Column order changed');
-      this.logger.debug(
-        'Column order changed',
-        columns.map(col => col.id)
-      );
-
-      // Let's scroll to ensure the dropped column is visible
-      if (!this.isMobileView()) {
-        setTimeout(() => {
-          this.scrollToColumn(currentIndex);
-        }, 50);
-      }
-    }
-
-    // Change detection will be reattached in onDragEnded()
-  }
-  // Drag event handlers to manage state with CHANGE DETECTION CONTROL
-  onDragStarted(): void {
-    console.log('🚀 Drag started - DETACHING CHANGE DETECTION');
-    this.isDragging.set(true);
-
-    // **RADICAL APPROACH**: Detach change detection completely during drag
-    this.cdr.detach();
-
-    // Pre-cache all column events to prevent DOM updates during drag
-    const columns = this.columns();
-    const feedDataMap = this.feedService.feedDataReactive();
-    columns.forEach(column => {
-      const columnData = feedDataMap.get(column.id);
-      const events = columnData?.events() || [];
-      this._eventCache.set(column.id, events);
-    });
-  }
-
-  onDragEnded(): void {
-    console.log('🏁 Drag ended - REATTACHING CHANGE DETECTION');
-
-    // **RADICAL APPROACH**: Reattach change detection and force update
-    this.cdr.reattach();
-    this.cdr.detectChanges();
-
-    // Clear drag state
-    this.isDragging.set(false);
-  }
+  // Drag event handlers removed - column dragging is no longer supported
+  // (onDragStarted, onDragEnded methods deprecated)
 
   scrollLeft(): void {
-    if (!this.columnsWrapper) return;
+    const container = this.columnsContainer?.nativeElement;
+    if (!container) return;
 
-    const wrapper = this.columnsWrapper.nativeElement;
-    const newPosition = Math.max(0, this.scrollPosition() - 750); // Scroll approximately one column
-
-    wrapper.scrollTo({
-      left: newPosition,
+    container.scrollBy({
+      left: -750,
       behavior: 'smooth',
     });
   }
 
   scrollRight(): void {
-    if (!this.columnsWrapper) return;
+    const container = this.columnsContainer?.nativeElement;
+    if (!container) return;
 
-    const wrapper = this.columnsWrapper.nativeElement;
-    const newPosition = Math.min(
-      this.maxScroll(),
-      this.scrollPosition() + 750 // Scroll approximately one column
-    );
-
-    wrapper.scrollTo({
-      left: newPosition,
+    container.scrollBy({
+      left: 750,
       behavior: 'smooth',
     });
   }
-  scrollToColumn(index: number): void {
-    if (this.isMobileView() || !this.columnsWrapper) return;
+  // scrollToColumn method removed - no longer needed without column navigation
 
-    const wrapper = this.columnsWrapper.nativeElement;
-    const columnElements = wrapper.querySelectorAll<HTMLElement>('.column-unit');
 
-    if (index >= 0 && index < columnElements.length) {
-      const columnElement = columnElements[index];
-      const columnLeft = columnElement.offsetLeft;
-      const columnWidth = columnElement.offsetWidth;
-      const wrapperWidth = wrapper.offsetWidth;
-      const currentScroll = wrapper.scrollLeft;
 
-      // Check if column is not fully visible
-      if (columnLeft < currentScroll) {
-        // Column is to the left of the viewport
-        wrapper.scrollTo({
-          left: columnLeft - 12, // Account for padding
-          behavior: 'smooth',
-        });
-      } else if (columnLeft + columnWidth > currentScroll + wrapperWidth) {
-        // Column is to the right of the viewport
-        wrapper.scrollTo({
-          left: columnLeft + columnWidth - wrapperWidth + 12, // Account for padding
-          behavior: 'smooth',
-        });
-      }
-    }
-  }
 
-  addNewColumn(): void {
-    const activeFeed = this.activeFeed();
-    if (!activeFeed) {
-      this.notificationService.notify('Please add a board first');
-      return;
-    }
 
-    this.editingColumn.set(undefined);
-    this.editingColumnIndex.set(-1);
-    this.showNewColumnDialog.set(true);
-  }
-
-  async onColumnDialogClosed(result: ColumnConfig | null): Promise<void> {
-    this.showNewColumnDialog.set(false);
-
-    if (result) {
-      const activeFeed = this.activeFeed();
-      if (!activeFeed) return;
-
-      const editingIndex = this.editingColumnIndex();
-
-      if (editingIndex >= 0) {
-        // Update existing column
-        const updatedColumns = [...activeFeed.columns];
-        updatedColumns[editingIndex] = result;
-
-        const updatedFeed = {
-          ...activeFeed,
-          columns: updatedColumns,
-          updatedAt: Date.now(),
-        };
-
-        await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
-      } else {
-        // Add new column
-        const updatedFeed = {
-          ...activeFeed,
-          columns: [...activeFeed.columns, result],
-          updatedAt: Date.now(),
-        };
-
-        await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
-
-        const newColumnIndex = updatedFeed.columns.length - 1;
-
-        if (this.isMobileView()) {
-          this.visibleColumnIndex.set(newColumnIndex);
-        } else {
-          setTimeout(() => {
-            this.scrollToColumn(newColumnIndex);
-          }, 100);
-        }
-
-        this.columnContentLoaded.update(loaded => ({
-          ...loaded,
-          [result.id]: false,
-        }));
-      }
-    }
-
-    // Reset editing state
-    this.editingColumn.set(undefined);
-    this.editingColumnIndex.set(-1);
-  }
-
-  editColumn(index: number): void {
-    const activeFeed = this.activeFeed();
-    const columns = this.columns();
-
-    if (!activeFeed || index < 0 || index >= columns.length) return;
-
-    const column = columns[index];
-
-    this.editingColumn.set(column);
-    this.editingColumnIndex.set(index);
-    this.showNewColumnDialog.set(true);
-  }
-  async removeColumn(index: number): Promise<void> {
-    const activeFeed = this.activeFeed();
-
-    if (!activeFeed) return;
-
-    // Update the feed by removing the column at the specified index
-    const updatedColumns = activeFeed.columns.filter((_, i) => i !== index);
-
-    const updatedFeed = {
-      ...activeFeed,
-      columns: updatedColumns,
-      updatedAt: Date.now(),
-    };
-
-    await this.feedsCollectionService.updateFeed(activeFeed.id, updatedFeed);
-
-    // Adjust visible column index if needed for mobile view
-    if (this.isMobileView()) {
-      if (this.visibleColumnIndex() >= updatedColumns.length) {
-        this.visibleColumnIndex.set(Math.max(0, updatedColumns.length - 1));
-      } else if (this.visibleColumnIndex() > index) {
-        this.visibleColumnIndex.update(idx => idx - 1);
-      }
-    }
-
-    // this.notificationService.notify(`Column "${column.label}" removed`);
-  }
-
-  async refreshColumn(column: ColumnDefinition): Promise<void> {
-    console.log('🔄 Refreshing column:', column.label, `(${column.id})`);
-    await this.feedsCollectionService.refreshColumn(column.id);
-  }
-  pauseColumn(column: ColumnDefinition): void {
-    console.log('⏸️ Pausing column:', column.label, `(${column.id})`);
-    console.log('📊 Column status before pause:', this.getColumnStatus(column.id));
-    this.feedsCollectionService.pauseColumn(column.id);
-    // this.notificationService.notify(`Column "${column.label}" paused`);
-    console.log('📊 Column status after pause:', this.getColumnStatus(column.id));
-  }
-  async continueColumn(column: ColumnDefinition): Promise<void> {
-    console.log('▶️ Continue column:', column.label, `(${column.id})`);
-    console.log('📊 Column status before continue:', this.getColumnStatus(column.id));
-    await this.feedsCollectionService.continueColumn(column.id);
-    // this.notificationService.notify(`Column "${column.label}" continued`);
-    console.log('📊 Column status after continue:', this.getColumnStatus(column.id));
+  /**
+   * Toggle whether replies are shown in a feed
+   */
+  toggleShowReplies(feed: FeedConfig): void {
+    const newValue = !feed.showReplies;
+    this.feedsCollectionService.updateFeed(feed.id, { showReplies: newValue });
   }
 
   /**
-   * Toggle whether replies are shown in a column
+   * Toggle whether reposts are shown in a feed
    */
-  toggleShowReplies(column: ColumnDefinition): void {
-    const newValue = !column.showReplies;
-    this.feedsCollectionService.updateColumn(column.id, { showReplies: newValue });
-  }
-
-  /**
-   * Toggle whether reposts are shown in a column
-   */
-  toggleShowReposts(column: ColumnDefinition): void {
-    const newValue = !(column.showReposts ?? true); // Default is true
-    this.feedsCollectionService.updateColumn(column.id, { showReposts: newValue });
+  toggleShowReposts(feed: FeedConfig): void {
+    const newValue = !(feed.showReposts ?? true); // Default is true
+    this.feedsCollectionService.updateFeed(feed.id, { showReposts: newValue });
   }
 
   /**
    * Load pending new events into the main feed
    */
-  loadNewPosts(columnId: string): void {
-    const pendingCount = this.pendingEventsCount().get(columnId) || 0;
-    this.feedService.loadPendingEvents(columnId);
+  loadNewPosts(feedId: string): void {
+    const pendingCount = this.getPendingEventsCount(feedId);
+    this.feedService.loadPendingEvents(feedId);
 
     // Only render initial batch (INITIAL_RENDER_COUNT) to improve performance
     // The rest will load progressively as the user scrolls
     this.renderedEventCounts.update(counts => ({
       ...counts,
-      [columnId]: this.INITIAL_RENDER_COUNT
+      [feedId]: this.INITIAL_RENDER_COUNT
     }));
 
-    // Scroll the column to the top to show the new posts
+    // Scroll the feed to the top to show the new posts
     setTimeout(() => {
-      const columnElement = document.querySelector(`[data-column-id="${columnId}"] .column-content`) as HTMLElement;
-      if (columnElement) {
-        columnElement.scrollTo({ top: 0, behavior: 'smooth' });
+      const feedElement = document.querySelector(`[data-column-id="${feedId}"] .column-content`) as HTMLElement;
+      if (feedElement) {
+        feedElement.scrollTo({ top: 0, behavior: 'smooth' });
       }
     }, 0);
 
@@ -1504,8 +1212,20 @@ export class FeedsComponent implements OnDestroy {
   /**
    * Get pending events count for a column
    */
-  getPendingEventsCount(columnId: string): number {
-    return this.pendingEventsCount().get(columnId) || 0;
+  getPendingEventsCount(feedId: string): number {
+    const feed = this.feeds().find(f => f.id === feedId);
+    if (!feed) return 0;
+
+    const feedDataMap = this.feedService.feedDataReactive();
+    const feedData = feedDataMap.get(feedId);
+    if (feedData && feedData.pendingEvents) {
+      const pendingEvents = this.filterEventsByFeedSettings(
+        feedData.pendingEvents(),
+        feed
+      );
+      return pendingEvents.length;
+    }
+    return 0;
   }
 
   // Video expansion state management methods
@@ -1539,8 +1259,8 @@ export class FeedsComponent implements OnDestroy {
       this.queryParamsSubscription = null;
     }
 
-    // Clean up Intersection Observer
-    this.cleanupLoadMoreObserver();
+    // Clean up scroll listeners
+    this.cleanupScrollListener();
 
     // Mark feeds page as inactive - this will trigger unsubscribe in FeedService
     this.feedService.setFeedsPageActive(false);
@@ -1711,7 +1431,6 @@ export class FeedsComponent implements OnDestroy {
         await this.feedsCollectionService.updateFeed(editingFeedData.id, {
           label: result.label,
           icon: result.icon,
-          description: result.description,
           path: result.path,
         });
       } else {
@@ -1719,10 +1438,26 @@ export class FeedsComponent implements OnDestroy {
         const newBoard = await this.feedsCollectionService.addFeed({
           label: result.label,
           icon: result.icon,
-          description: result.description,
-          columns: result.columns,
           path: result.path,
+          type: result.type || 'notes',
+          kinds: result.kinds || [1],
+          source: result.source || 'public',
+          relayConfig: result.relayConfig || 'account',
+          customRelays: result.customRelays,
+          customUsers: result.customUsers,
+          customStarterPacks: result.customStarterPacks,
+          customFollowSets: result.customFollowSets,
+          searchQuery: result.searchQuery,
+          showReplies: result.showReplies,
+          showReposts: result.showReposts,
+          filters: result.filters || {},
         });
+
+        // Mark the new feed as content loaded BEFORE setting it active
+        this.columnContentLoaded.update(loaded => ({
+          ...loaded,
+          [newBoard.id]: true,
+        }));
 
         if (newBoard.path) {
           this.url.updatePathSilently(['/f', newBoard.path]);
@@ -1974,5 +1709,92 @@ export class FeedsComponent implements OnDestroy {
       };
       this.mediaPlayerService.enque(mediaItem);
     });
+  }
+
+  /**
+   * Pull-to-refresh: Handle touch/mouse start
+   */
+  onPullStart(event: TouchEvent | MouseEvent): void {
+    const containerEl = this.feedsContainer?.nativeElement;
+    if (!containerEl) return;
+
+    // For mouse events, only respond to left mouse button (button 0)
+    // Ignore middle mouse button (button 1) and right mouse button (button 2)
+    if (event instanceof MouseEvent && event.button !== 0) {
+      return;
+    }
+
+    // Only activate pull-to-refresh when scrolled to the top
+    if (containerEl.scrollTop === 0) {
+      this.isPulling = true;
+      this.startY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
+      this.pullToRefreshActive.set(true);
+    }
+  }
+
+  /**
+   * Pull-to-refresh: Handle touch/mouse move
+   */
+  onPullMove(event: TouchEvent | MouseEvent): void {
+    if (!this.isPulling) return;
+
+    const containerEl = this.feedsContainer?.nativeElement;
+    if (!containerEl) return;
+
+    const currentY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
+    const deltaY = currentY - this.startY;
+
+    // Only track downward pulls when at the top
+    if (deltaY > 0 && containerEl.scrollTop === 0) {
+      event.preventDefault();
+      // Apply resistance to the pull (diminishing returns)
+      const resistance = 0.5;
+      const distance = Math.min(deltaY * resistance, this.pullThreshold * 1.5);
+      this.pullDistance.set(distance);
+    }
+  }
+
+  /**
+   * Pull-to-refresh: Handle touch/mouse end
+   */
+  onPullEnd(): void {
+    if (!this.isPulling) return;
+
+    const distance = this.pullDistance();
+
+    // Trigger reload if threshold was exceeded
+    if (distance >= this.pullThreshold) {
+      this.triggerReload();
+    }
+
+    // Reset state
+    this.isPulling = false;
+    this.pullToRefreshActive.set(false);
+    this.pullDistance.set(0);
+  }
+
+  /**
+   * Trigger reload operation - refreshes the active feed
+   */
+  private async triggerReload(): Promise<void> {
+    const activeFeed = this.activeFeed();
+    if (!activeFeed) {
+      this.logger.warn('No active feed to reload');
+      return;
+    }
+
+    this.logger.info('Pull-to-refresh: Reloading active feed');
+
+    // Refresh the active feed
+    await this.feedService.refreshFeed(activeFeed.id);
+
+    this.logger.info('Pull-to-refresh: Feed reload complete');
+  }
+
+  /**
+   * Refresh a feed by unsubscribing and resubscribing
+   */
+  async refreshFeed(feed: FeedConfig): Promise<void> {
+    await this.feedService.refreshFeed(feed.id);
   }
 }

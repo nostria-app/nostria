@@ -246,7 +246,9 @@ export class UserRelaysService {
           return `wss://${relay}`;
         }
         return relay;
-      });
+      })
+      // Filter out insecure ws:// relays - they cannot be used from secure context
+      .filter(relay => !relay.startsWith('ws://'));
 
     // TODO: Add logic to sort by reliability/performance metrics
     // For now, return first 10 relays to avoid overwhelming connections

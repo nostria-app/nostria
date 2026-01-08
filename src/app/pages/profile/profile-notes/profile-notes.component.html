@@ -1,8 +1,11 @@
 <div class="tab-content">
   <div class="notes-container">
     <div class="notes-list-container">
-      @if (isLoading()) {
-      <app-loading-overlay message="Loading timeline..."></app-loading-overlay>
+      @if (profileState.isInitiallyLoading() && profileState.sortedTimeline().length === 0) {
+      <div class="loading-state">
+        <mat-spinner [diameter]="40"></mat-spinner>
+        <p>Loading timeline...</p>
+      </div>
       } @else if (error()) {
       <div class="error-state">
         <mat-icon>error</mat-icon>

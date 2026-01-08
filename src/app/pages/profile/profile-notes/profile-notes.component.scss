@@ -317,7 +317,8 @@
 }
 
 .empty-state,
-.error-state {
+.error-state,
+.loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -331,6 +332,11 @@
     width: 48px;
     margin-bottom: 1rem;
     opacity: 0.5;
+  }
+
+  p {
+    margin-top: 0.5rem;
+    opacity: 0.7;
   }
 }
 
