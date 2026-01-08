@@ -199,6 +199,9 @@
               </button>
             </div>
           </div>
+          } @else if (feed.id === 'trending' || feed.path === 'trending') {
+          <!-- Trending column uses dedicated trending component -->
+          <app-trending-column></app-trending-column>
           } @else if (isLoading() || !feedHasEvents().get(feed.id)) {
           <!-- Show skeleton items while content is loading or no events available yet -->
           <div class="column-skeleton-items">
