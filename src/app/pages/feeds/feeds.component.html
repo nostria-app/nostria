@@ -241,7 +241,7 @@
           } @else {
           <div class="column-items">
             @let columnEventsData = columnEvents().get(feed.id);
-            @if (columnEventsData) {
+            @if (columnEventsData && columnEventsData.length > 0) {
             @for (event of columnEventsData; track event.id) {
             <app-event [event]="event"></app-event>
             }
