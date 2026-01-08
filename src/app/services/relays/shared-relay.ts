@@ -73,15 +73,22 @@ export class SharedRelayService {
     filter: any,
     timeout: number,
   ): Promise<T | null> {
+    // Filter out insecure ws:// relays - they cannot be used from secure context
+    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    if (secureUrls.length === 0) {
+      this.logger.warn('[SharedRelayService] All relays are insecure (ws://), cannot connect from secure context');
+      return null;
+    }
+
     await this.acquireSemaphore();
 
     try {
       // Track that we're attempting to connect to these relays
-      relayUrls.forEach((url) => {
+      secureUrls.forEach((url) => {
         this.relaysService.updateRelayConnection(url, true);
       });
 
-      const event = (await this.#pool.get(relayUrls, filter, {
+      const event = (await this.#pool.get(secureUrls, filter, {
         maxWait: timeout,
       })) as unknown as T;
 
@@ -93,7 +100,7 @@ export class SharedRelayService {
 
       // If we received an event, increment the count for all relays that could have provided it
       if (event) {
-        relayUrls.forEach((url) => {
+        secureUrls.forEach((url) => {
           this.relaysService.incrementEventCount(url);
         });
       }
