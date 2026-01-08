@@ -135,7 +135,7 @@ export class NewFeedDialogComponent {
   // Signals and state
   isEditMode = signal(false);
   selectedFeedType = signal<string>('notes');
-  selectedKinds = signal<number[]>([1]);
+  selectedKinds = signal<number[]>([]); // Will be set by selectFeedType in constructor
   customRelays = signal<string[]>([]);
   selectedRelayConfig = signal<string>('account');
   showCustomRelays = computed(() => this.selectedRelayConfig() === 'custom');
@@ -279,6 +279,11 @@ export class NewFeedDialogComponent {
     });
 
     this.initializeData();
+
+    // Initialize with default "notes" feed type kinds when not editing
+    if (!this.feed()) {
+      this.selectFeedType('notes');
+    }
   }
 
   private async initializeData(): Promise<void> {
