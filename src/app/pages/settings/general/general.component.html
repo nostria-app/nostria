@@ -345,6 +345,19 @@
     <app-storage-stats class="mb-4"></app-storage-stats>
   </div>
 
+  <div>
+    <h2 i18n="@@settings.cache.title">Cache Management</h2>
+    
+    <div class="danger-action">
+      <div>
+        <h3 i18n="@@settings.cache.emoji.title">Clear Emoji Cache</h3>
+        <p i18n="@@settings.cache.emoji.description">Clear cached emoji sets from the database. This will force the app to reload emoji sets on next use.</p>
+      </div>
+      <button mat-stroked-button (click)="clearEmojiCache()"
+        i18n="@@settings.cache.emoji.button">Clear Emoji Cache</button>
+    </div>
+  </div>
+
   <div class="setting-item danger-zone">
     <div>
       <h2 i18n="@@settings.danger-zone.title">Danger Zone</h2>

@@ -49,7 +49,7 @@ export class ReactionButtonComponent {
 
   isLoadingReactions = signal<boolean>(false);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
-  customEmojis = signal<Array<{ shortcode: string; url: string }>>([]);
+  customEmojis = signal<{ shortcode: string; url: string }[]>([]);
 
   // Quick reactions for the picker
   readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
@@ -119,20 +119,25 @@ export class ReactionButtonComponent {
     // Load user's custom emojis
     effect(() => {
       const pubkey = this.accountState.pubkey();
+      console.log('[ReactionButton] Effect triggered, pubkey:', pubkey?.slice(0, 8));
       if (!pubkey) {
+        console.log('[ReactionButton] No pubkey, clearing custom emojis');
         this.customEmojis.set([]);
         return;
       }
 
       untracked(async () => {
         try {
+          console.log('[ReactionButton] Fetching user emoji sets for:', pubkey.slice(0, 8));
           const userEmojis = await this.emojiSetService.getUserEmojiSets(pubkey);
+          console.log('[ReactionButton] getUserEmojiSets returned:', userEmojis.size, 'emojis');
           const emojiArray = Array.from(userEmojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
           // Limit to first 6 custom emojis for the picker
-          console.log('Loaded custom emojis for reactions:', emojiArray.slice(0, 6));
+          console.log('[ReactionButton] Loaded custom emojis for reactions:', emojiArray.slice(0, 6));
           this.customEmojis.set(emojiArray.slice(0, 6));
+          console.log('[ReactionButton] customEmojis signal set to:', this.customEmojis());
         } catch (error) {
-          console.error('Failed to load custom emojis for reactions:', error);
+          console.error('[ReactionButton] Failed to load custom emojis for reactions:', error);
           this.customEmojis.set([]);
         }
       });
