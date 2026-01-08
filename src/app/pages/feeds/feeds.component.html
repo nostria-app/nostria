@@ -57,7 +57,7 @@
             <mat-spinner diameter="20" strokeWidth="3"></mat-spinner>
           </div>
           } @else {
-          <button mat-icon-button (click)="refreshColumn(feed)" matTooltip="Refresh content"
+          <button mat-icon-button (click)="refreshFeed(feed)" matTooltip="Refresh content"
             [disabled]="isRefreshing && isRefreshing()">
             <mat-icon>refresh</mat-icon>
           </button>
@@ -335,10 +335,4 @@
 @if (showNewFeedDialog()) {
 <app-new-feed-dialog [icons]="feedIcons" [feed]="editingFeed()" (closed)="onFeedDialogClosed($event)">
 </app-new-feed-dialog>
-}
-
-<!-- New Column Dialog -->
-@if (showNewColumnDialog()) {
-<app-new-column-dialog [icons]="columnIcons" [column]="editingColumn()" (closed)="onColumnDialogClosed($event)">
-</app-new-column-dialog>
 }

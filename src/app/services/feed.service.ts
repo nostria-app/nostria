@@ -56,35 +56,12 @@ export interface FeedItem {
   initialLoadComplete?: boolean; // Track when initial relay loading is done
 }
 
-// Legacy ColumnConfig kept for migration purposes only - will be removed
-export interface ColumnConfig {
-  id: string;
-  label: string;
-  icon: string;
-  path?: string;
-  type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
-  kinds: number[];
-  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending';
-  customUsers?: string[]; // Array of pubkeys for custom user selection
-  customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
-  customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
-  searchQuery?: string; // Search query for search-based columns (NIP-50)
-  relayConfig: 'account' | 'custom' | 'search';
-  customRelays?: string[];
-  filters?: Record<string, unknown>;
-  showReplies?: boolean; // Whether to show replies in the feed (default: false)
-  showReposts?: boolean; // Whether to show reposts in the feed (default: true)
-  createdAt: number;
-  updatedAt: number;
-  lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
-}
-
 export interface FeedConfig {
   id: string;
   label: string;
   icon: string;
   path?: string;
-  // Feed content configuration (moved from ColumnConfig)
+  // Feed content configuration
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
   source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending';
@@ -97,8 +74,6 @@ export interface FeedConfig {
   filters?: Record<string, unknown>;
   showReplies?: boolean; // Whether to show replies in the feed (default: false)
   showReposts?: boolean; // Whether to show reposts in the feed (default: true)
-  // Legacy columns array - kept for backward compatibility during migration
-  columns?: ColumnConfig[];
   createdAt: number;
   updatedAt: number;
   lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
@@ -562,17 +537,11 @@ export class FeedService {
 
   /**
    * Subscribe to a single feed
-   * Supports both new flat feed structure and legacy column-based feeds
+   * New flat feed structure only
    */
   private async subscribeToFeed(feed: FeedConfig): Promise<void> {
-    // Check if this is a legacy column-based feed or new flat feed
-    if (feed.columns && feed.columns.length > 0) {
-      // Legacy: Subscribe to all columns in parallel for faster initial load
-      await Promise.all(feed.columns.map(column => this.subscribeToColumn(column)));
-    } else {
-      // New flat structure: Subscribe to the feed directly using feed ID
-      await this.subscribeToFeedDirect(feed);
-    }
+    // New flat structure: Subscribe to the feed directly using feed ID
+    await this.subscribeToFeedDirect(feed);
   }
 
   /**
@@ -1988,8 +1957,7 @@ export class FeedService {
     userEventsMap: Map<string, Event[]>,
     feedData: FeedItem,
     processedUsers: number,
-    totalUsers: number,
-
+    totalUsers: number
   ) {
     // Aggregate current events from the user events map
     const aggregatedEvents = this.aggregateAndSortEvents(userEventsMap);
@@ -2533,21 +2501,7 @@ export class FeedService {
     }
   }
 
-  /**
-   * Unsubscribe from a single feed (unsubscribes from all its columns)
-   */
-  private unsubscribeFromFeed(feedId: string): void {
-    const feed = this.getFeedById(feedId);
-    if (feed && feed.columns) {
-      // Unsubscribe from each column in the feed
-      feed.columns.forEach(column => {
-        this.unsubscribeFromColumn(feed.id);
-      });
-      this.logger.debug(`Unsubscribed from all columns in feed: ${feedId}`);
-    } else {
-      this.logger.warn(`Cannot unsubscribe from feed ${feedId}: feed not found or has no columns`);
-    }
-  }
+
   /**
    * Unsubscribe from a single column
    */
@@ -2575,6 +2529,35 @@ export class FeedService {
 
       this.logger.debug(`Unsubscribed from column: ${columnId}`);
     }
+  }
+
+  /**
+   * Unsubscribe from a single feed
+   */
+  private unsubscribeFromFeed(feedId: string): void {
+    // Delegate to unsubscribeFromColumn (same implementation)
+    this.unsubscribeFromColumn(feedId);
+  }
+
+  /**
+   * Refresh a feed by unsubscribing and resubscribing
+   */
+  async refreshFeed(feedId: string): Promise<void> {
+    const feed = this.getFeedById(feedId);
+    if (!feed) {
+      this.logger.warn(`Cannot refresh feed ${feedId}: feed not found`);
+      return;
+    }
+
+    this.logger.info(`Refreshing feed: ${feed.label} (${feedId})`);
+
+    // Unsubscribe from the feed
+    this.unsubscribeFromFeed(feedId);
+
+    // Resubscribe to the feed
+    await this.subscribeToFeed(feed);
+
+    this.logger.info(`Feed refreshed: ${feed.label}`);
   }
 
   // Helper method to get events for a specific feed
@@ -2621,45 +2604,7 @@ export class FeedService {
     return feedData?.lastTimestamp;
   }
 
-  /**
-   * Get column information including algorithm status
-   * (Kept for backward compatibility - works with both feed IDs and legacy column IDs)
-   */
-  getColumnInfo(
-    columnId: string
-  ): { column: ColumnConfig; isFollowing: boolean; lastTimestamp?: number } | undefined {
-    const feedData = this.data.get(columnId);
-    if (!feedData) return undefined;
 
-    // Convert feed back to column format for backward compatibility
-    const columnLike: ColumnConfig = {
-      id: feedData.feed.id,
-      label: feedData.feed.label,
-      icon: feedData.feed.icon,
-      path: feedData.feed.path,
-      type: feedData.feed.type,
-      kinds: feedData.feed.kinds,
-      source: feedData.feed.source,
-      customUsers: feedData.feed.customUsers,
-      customStarterPacks: feedData.feed.customStarterPacks,
-      customFollowSets: feedData.feed.customFollowSets,
-      searchQuery: feedData.feed.searchQuery,
-      relayConfig: feedData.feed.relayConfig,
-      customRelays: feedData.feed.customRelays,
-      filters: feedData.feed.filters,
-      showReplies: feedData.feed.showReplies,
-      showReposts: feedData.feed.showReposts,
-      createdAt: feedData.feed.createdAt,
-      updatedAt: feedData.feed.updatedAt,
-      lastRetrieved: feedData.feed.lastRetrieved,
-    };
-
-    return {
-      column: columnLike,
-      isFollowing: feedData.feed.source === 'following',
-      lastTimestamp: feedData.lastTimestamp,
-    };
-  }
 
   unsubscribe() {
     this.data.forEach(item => this.closeSubscription(item.subscription));
@@ -2998,84 +2943,28 @@ export class FeedService {
    * - Feed configurations persist across sessions
    */
   /**
-   * Migrate legacy column-based feed to new flat feed structure
-   * Returns the migrated feed (or original if no migration needed)
+   * Ensure feed has all required properties
+   * Returns the feed with defaults applied if needed
    */
   private migrateLegacyFeed(feed: FeedConfig): FeedConfig {
-    // If feed has columns array and it's not empty, migrate first column's settings to feed level
-    if (feed.columns && feed.columns.length > 0) {
-      const firstColumn = feed.columns[0];
-
-      if (feed.columns.length > 1) {
-        this.logger.warn(
-          `Feed "${feed.label}" (${feed.id}) has ${feed.columns.length} columns. ` +
-          `Only the first column "${firstColumn.label}" will be preserved. ` +
-          `Other columns will be lost. Consider creating separate feeds for different content types.`
-        );
-      }
-
-      this.logger.info(
-        `🔄 Migrating legacy feed "${feed.label}" (${feed.id}) from column-based to flat structure. ` +
-        `Preserving settings from column: "${firstColumn.label}"`
-      );
-
-      // Create migrated feed with all necessary properties
-      const migratedFeed: FeedConfig = {
-        // Keep original feed properties
-        id: feed.id,
-        label: feed.label,
-        icon: feed.icon,
-        path: feed.path,
-        createdAt: feed.createdAt,
-
-        // Copy column settings to feed level
-        type: firstColumn.type,
-        kinds: firstColumn.kinds,
-        source: firstColumn.source || 'public',
-        relayConfig: firstColumn.relayConfig,
-
-        // Optional settings from column
-        customUsers: firstColumn.customUsers,
-        customStarterPacks: firstColumn.customStarterPacks,
-        customFollowSets: firstColumn.customFollowSets,
-        searchQuery: firstColumn.searchQuery,
-        customRelays: firstColumn.customRelays,
-        filters: firstColumn.filters,
-        showReplies: firstColumn.showReplies,
-        showReposts: firstColumn.showReposts,
-        lastRetrieved: firstColumn.lastRetrieved,
-
-        // Mark as updated and remove columns
-        updatedAt: Date.now(),
-        columns: undefined,
-      };
-
-      return migratedFeed;
-    }
-
-    // If feed already has type, kinds, and relayConfig, it's already migrated
+    // If feed already has type, kinds, and relayConfig, it's good to go
     if (feed.type && feed.kinds && feed.relayConfig !== undefined) {
       return feed;
     }
 
-    // If feed has no columns but also lacks required properties, set defaults
-    if (!feed.type || !feed.kinds || feed.relayConfig === undefined) {
-      this.logger.warn(
-        `Feed "${feed.label}" (${feed.id}) is missing required properties. Setting defaults.`
-      );
+    // If feed lacks required properties, set defaults
+    this.logger.warn(
+      `Feed "${feed.label}" (${feed.id}) is missing required properties. Setting defaults.`
+    );
 
-      return {
-        ...feed,
-        type: feed.type || 'notes',
-        kinds: feed.kinds || [1],
-        source: feed.source || 'public',
-        relayConfig: feed.relayConfig ?? 'account',
-        updatedAt: Date.now(),
-        columns: undefined,
-      };
-    }
-
-    return feed;
+    return {
+      ...feed,
+      type: feed.type || 'notes',
+      kinds: feed.kinds || [1, 6], // Default to notes and reposts
+      source: feed.source || 'public',
+      relayConfig: feed.relayConfig ?? 'account',
+      updatedAt: Date.now(),
+    };
   }
 
   private async loadFeeds(pubkey: string): Promise<void> {
@@ -3237,7 +3126,7 @@ export class FeedService {
       const feeds = this._feeds();
       let updated = false;
 
-      // First try to find a feed with this ID directly (new structure)
+      // First try to find a feed with this ID directly
       const feedIndex = feeds.findIndex(f => f.id === feedId);
       if (feedIndex !== -1) {
         this._feeds.update(currentFeeds => {
@@ -3254,41 +3143,12 @@ export class FeedService {
         });
         updated = true;
         this.logger.debug(`Updated lastRetrieved for feed ${feedId} to ${currentTimestamp}`);
-      } else {
-        // Legacy: Try to find a column with this ID (backward compatibility)
-        for (const feed of feeds) {
-          if (feed.columns) {
-            const columnIndex = feed.columns.findIndex(col => col.id === feedId);
-            if (columnIndex !== -1) {
-              this._feeds.update(currentFeeds => {
-                return currentFeeds.map(f => {
-                  if (f.id === feed.id) {
-                    const updatedColumns = [...f.columns!];
-                    updatedColumns[columnIndex] = {
-                      ...updatedColumns[columnIndex],
-                      lastRetrieved: currentTimestamp,
-                    };
-                    return {
-                      ...f,
-                      columns: updatedColumns,
-                      updatedAt: Date.now(),
-                    };
-                  }
-                  return f;
-                });
-              });
-              updated = true;
-              this.logger.debug(`Updated lastRetrieved for legacy column ${feedId} to ${currentTimestamp}`);
-              break;
-            }
-          }
-        }
       }
 
       if (updated) {
         this.saveFeeds();
       } else {
-        this.logger.warn(`Feed/Column ${feedId} not found for lastRetrieved update`);
+        this.logger.warn(`Feed ${feedId} not found for lastRetrieved update`);
       }
     } catch (error) {
       this.logger.error('Error updating lastRetrieved:', error);
@@ -3370,42 +3230,7 @@ export class FeedService {
     this.logger.debug(`Updated feed ${id}`, updates);
     return true;
   }
-  /**
-   * Update only the column order without triggering subscription changes
-   * This is optimized for drag and drop operations to preserve DOM state
-   */
-  updateColumnOrder(id: string, columns: ColumnConfig[]): boolean {
-    console.log(`🔄 FeedService: Updating column order for feed ${id}`);
-    console.log(
-      '📋 New column order:',
-      columns.map(col => `${col.label} (${col.id})`)
-    );
-    const feedIndex = this._feeds().findIndex(feed => feed.id === id);
-    if (feedIndex === -1) {
-      this.logger.warn(`Feed with id ${id} not found`);
-      console.warn(`❌ Feed ${id} not found`);
-      return false;
-    }
 
-    // Update only the column order directly without triggering subscription logic
-    this._feeds.update(feeds => {
-      const updatedFeeds = [...feeds];
-      updatedFeeds[feedIndex] = {
-        ...updatedFeeds[feedIndex],
-        columns: columns,
-        updatedAt: Date.now(),
-      };
-      return updatedFeeds;
-    });
-
-    this.saveFeeds();
-    this.logger.debug(
-      `Updated column order for feed ${id}`,
-      columns.map(col => col.id)
-    );
-    console.log(`✅ FeedService: Column order updated successfully without subscription changes`);
-    return true;
-  }
 
   /**
    * Remove a feed
@@ -3532,155 +3357,6 @@ export class FeedService {
     } catch {
       return false;
     }
-  }
-
-  /**
-   * Refresh a specific column by unsubscribing and resubscribing
-   */
-  async refreshColumn(columnId: string): Promise<void> {
-    console.log(`🔄 FeedService: Refreshing feed ${columnId}`);
-    const feedData = this.data.get(columnId);
-    if (!feedData) {
-      this.logger.warn(`Cannot refresh feed ${columnId}: feed not found`);
-      console.warn(`❌ Feed ${columnId} not found in data map`);
-      return;
-    }
-
-    const feed = feedData.feed;
-    console.log(`📊 Feed found: ${feed.label}, unsubscribing and resubscribing...`);
-    console.log(`📊 Feed filters BEFORE refresh:`, feed.filters);
-
-    // Unsubscribe from the feed (this removes it from data map)
-    this.unsubscribeFromColumn(columnId);
-
-    // Verify the feed is fully removed
-    if (this.data.has(columnId)) {
-      console.warn(`⚠️ Feed ${columnId} still in data map after unsubscribe, forcing removal`);
-      this.data.delete(columnId);
-      this._feedData.update(map => {
-        const newMap = new Map(map);
-        newMap.delete(columnId);
-        return newMap;
-      });
-    }
-
-    // Resubscribe to the feed (this will rebuild the filter with current settings)
-    await this.subscribeToColumn(feed);
-
-    this.logger.debug(`Refreshed feed: ${columnId}`);
-    console.log(`✅ FeedService: Feed ${columnId} refreshed successfully`);
-  }
-
-  /**
-   * Refresh the active feed if it has 'following' or 'for-you' source
-   * This should be called after the user's following list changes to reload content
-   */
-  async refreshFollowingColumns(): Promise<void> {
-    console.log(`🔄 FeedService: Refreshing following-related feed`);
-    const activeFeedId = this._activeFeedId();
-    if (!activeFeedId) {
-      this.logger.warn('Cannot refresh following feed: no active feed');
-      return;
-    }
-
-    const activeFeed = this.getFeedById(activeFeedId);
-    if (!activeFeed) {
-      this.logger.warn(`Cannot refresh following feed: active feed ${activeFeedId} not found`);
-      return;
-    }
-
-    // Check if the active feed is following-related
-    if (activeFeed.source !== 'following' && activeFeed.source !== 'for-you') {
-      this.logger.debug('Active feed is not following-related, skipping refresh');
-      console.log(`ℹ️ Feed "${activeFeed.label}" is not following-related, no refresh needed`);
-      return;
-    }
-
-    console.log(`📊 Refreshing ${activeFeed.source} feed: ${activeFeed.label} (${activeFeed.id})`);
-    await this.refreshColumn(activeFeed.id);
-
-    this.logger.debug(`Refreshed following-related feed`);
-    console.log(`✅ FeedService: Following-related feed refreshed successfully`);
-  }
-
-  /**
-   * Pause a specific column by closing subscription while preserving events
-   */
-  pauseColumn(columnId: string): void {
-    console.log(`⏸️ FeedService: Pausing column ${columnId}`);
-    const columnData = this.data.get(columnId);
-    if (!columnData) {
-      this.logger.warn(`Cannot pause column ${columnId}: column not found`);
-      console.warn(`❌ Column ${columnId} not found in data map`);
-      return;
-    }
-
-    // Close the subscription if it exists
-    if (columnData.subscription) {
-      this.closeSubscription(columnData.subscription);
-      columnData.subscription = null;
-      this.logger.debug(`Closed subscription for paused column: ${columnId}`);
-      console.log(`⏸️ Subscription closed for column: ${columnData.feed.label}`);
-
-      // Update the reactive signal to trigger UI updates
-      this._feedData.update(map => {
-        const newMap = new Map(map);
-        newMap.set(columnId, columnData);
-        return newMap;
-      });
-    }
-
-    // Note: Events are preserved in columnData.events signal
-    this.logger.debug(`Paused column: ${columnId} (events preserved)`);
-    console.log(`✅ FeedService: Column ${columnId} paused successfully`);
-  }
-  /**
-   * Continue a specific column by restarting subscription
-   */
-  async continueColumn(columnId: string): Promise<void> {
-    console.log(`▶️ FeedService: Continuing column ${columnId}`);
-    const columnData = this.data.get(columnId);
-    if (!columnData) {
-      this.logger.warn(`Cannot continue column ${columnId}: column not found`);
-      console.warn(`❌ Column ${columnId} not found in data map`);
-      return;
-    }
-
-    // Check if already subscribed
-    if (columnData.subscription) {
-      this.logger.warn(`Feed ${columnId} is already subscribed`);
-      console.warn(`⚠️ Feed ${columnData.feed.label} is already active`);
-      return;
-    }
-
-    const feed = columnData.feed;
-    console.log(`📊 Restarting subscription for feed: ${feed.label}`);
-
-    // Handle following feeds with algorithm
-    if (feed.source === 'following') {
-      await this.loadFollowingFeed(columnData);
-    } else {
-      // Subscribe to relay events again
-      const sub = this.accountRelay.subscribe(
-        columnData.filter ? columnData.filter : {},
-        event => {
-          columnData.events.update((events: Event[]) => [event, ...events]);
-          this.logger.debug(`Feed event received for ${columnId}:`, event);
-        }
-      );
-
-      columnData.subscription = sub;
-    }
-
-    // Update the reactive signal to trigger UI updates
-    this._feedData.update(map => {
-      const newMap = new Map(map);
-      newMap.set(columnId, columnData);
-      return newMap;
-    });
-
-    this.logger.debug(`Continued column: ${columnId}`);
-    console.log(`✅ FeedService: Column ${columnId} continued successfully`);
   }
 }
 
