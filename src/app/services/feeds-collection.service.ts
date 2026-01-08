@@ -211,7 +211,6 @@ export class FeedsCollectionService {
 
     if (updates.label !== undefined) feedConfig.label = updates.label;
     if (updates.icon !== undefined) feedConfig.icon = updates.icon;
-    if (updates.description !== undefined) feedConfig.description = updates.description;
     if (updates.path !== undefined) feedConfig.path = updates.path;
     if (updates.columns !== undefined) feedConfig.columns = updates.columns as ColumnConfig[];
     if (updates.showReplies !== undefined) feedConfig.showReplies = updates.showReplies;

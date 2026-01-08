@@ -1641,7 +1641,6 @@ export class FeedsComponent implements OnDestroy {
         await this.feedsCollectionService.updateFeed(editingFeedData.id, {
           label: result.label,
           icon: result.icon,
-          description: result.description,
           path: result.path,
         });
       } else {
@@ -1649,7 +1648,6 @@ export class FeedsComponent implements OnDestroy {
         const newBoard = await this.feedsCollectionService.addFeed({
           label: result.label,
           icon: result.icon,
-          description: result.description,
           path: result.path,
           type: result.type || 'notes',
           kinds: result.kinds || [1],
