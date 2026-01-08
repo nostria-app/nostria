@@ -390,20 +390,20 @@ app-user-profile {
         position: relative;
 
         // Set a preferred width but allow shrinking when necessary
-        @media (max-width: 1500px) {
-          width: 700px;
-          min-width: 500px; // Fixed minimum, not percentage-based
-          max-width: 100%;
-          flex: 1 1 700px; // Allow growing and shrinking with fixed basis
-        }
+        // @media (max-width: 1500px) {
+        //   width: 700px;
+        //   min-width: 500px; // Fixed minimum, not percentage-based
+        //   max-width: 100%;
+        //   flex: 1 1 700px; // Allow growing and shrinking with fixed basis
+        // }
 
         // When really constrained, adapt further
-        @media (max-width: 1100px) and (min-width: 1024px) {
-          width: 600px;
-          min-width: 400px; // Fixed minimum, not percentage-based
-          max-width: 100%;
-          flex: 1 1 600px;
-        }
+        // @media (max-width: 1100px) and (min-width: 1024px) {
+        //   width: 600px;
+        //   min-width: 400px; // Fixed minimum, not percentage-based
+        //   max-width: 100%;
+        //   flex: 1 1 600px;
+        // }
 
         // Mobile: full width, no fixed dimensions
         @media (max-width: 1023px) {
