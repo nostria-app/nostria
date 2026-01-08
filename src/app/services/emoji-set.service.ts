@@ -1,5 +1,6 @@
 import { inject, Injectable } from '@angular/core';
 import { DataService } from './data.service';
+import { DatabaseService } from './database.service';
 import { NostrService } from './nostr.service';
 import { Event as NostrEvent } from 'nostr-tools';
 import { LoggerService } from './logger.service';
@@ -16,6 +17,7 @@ interface EmojiSet {
 })
 export class EmojiSetService {
   private readonly data = inject(DataService);
+  private readonly database = inject(DatabaseService);
   private readonly nostr = inject(NostrService);
   private readonly logger = inject(LoggerService);
 
@@ -121,39 +123,48 @@ export class EmojiSetService {
   async getUserEmojiSets(pubkey: string): Promise<Map<string, string>> {
     // Check cache first
     if (this.userEmojiPreferences.has(pubkey)) {
+      this.logger.debug(`[getUserEmojiSets] Using cached emoji sets for ${pubkey.slice(0, 8)}, ${this.userEmojiPreferences.get(pubkey)!.size} emojis`);
       return this.userEmojiPreferences.get(pubkey)!;
     }
 
     try {
-      // Fetch the user's emoji preferences (kind 10030) - it's a replaceable event without identifier
-      const emojiList = await this.data.getEventByPubkeyAndKindAndReplaceableEvent(
-        pubkey,
-        10030,
-        '',
-        { save: true, cache: false }
-      );
+      this.logger.debug(`[getUserEmojiSets] Fetching emoji preferences (kind 10030) for ${pubkey.slice(0, 8)}`);
+      // Kind 10030 is a replaceable event (10000-19999), not parameterized replaceable
+      // It has no d-tag, just pubkey+kind
+      const emojiListEvent = await this.database.getEventByPubkeyAndKind(pubkey, 10030);
+      this.logger.debug(`[getUserEmojiSets] getEventByPubkeyAndKind returned:`, emojiListEvent);
 
-      if (!emojiList) {
+      if (!emojiListEvent) {
+        this.logger.debug(`[getUserEmojiSets] No emoji preferences found for ${pubkey.slice(0, 8)}`);
+        this.logger.info(`No emoji preferences (kind 10030) event found. To use custom emojis, install an emoji set first.`);
+        // Don't cache empty results - user might install an emoji set later
         return new Map();
       }
+
+      this.logger.debug(`[getUserEmojiSets] Found emoji list event:`, emojiListEvent);
+      this.logger.debug(`[getUserEmojiSets] Event tags:`, emojiListEvent.tags);
 
       const allEmojis = new Map<string, string>();
 
       // Process inline emoji tags
-      for (const tag of emojiList.event.tags) {
+      for (const tag of emojiListEvent.tags) {
         if (tag[0] === 'emoji' && tag[1] && tag[2]) {
           allEmojis.set(tag[1], tag[2]);
+          this.logger.debug(`[getUserEmojiSets] Found inline emoji: ${tag[1]} -> ${tag[2]}`);
         }
       }
 
       // Process emoji set references (a tags pointing to kind 30030)
-      const emojiSetRefs = emojiList.event.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith('30030:'));
+      const emojiSetRefs = emojiListEvent.tags.filter(tag => tag[0] === 'a' && tag[1]?.startsWith('30030:'));
+      this.logger.debug(`[getUserEmojiSets] Found ${emojiSetRefs.length} emoji set references`);
 
       for (const ref of emojiSetRefs) {
         const [kind, refPubkey, identifier] = ref[1].split(':');
+        this.logger.debug(`[getUserEmojiSets] Processing emoji set reference: ${ref[1]}`);
         if (kind === '30030' && refPubkey && identifier) {
           const emojiSet = await this.getEmojiSet(refPubkey, identifier);
           if (emojiSet) {
+            this.logger.debug(`[getUserEmojiSets] Loaded emoji set '${emojiSet.title}' with ${emojiSet.emojis.size} emojis`);
             // Merge emojis from the set
             for (const [shortcode, url] of emojiSet.emojis) {
               // Don't override inline emojis
@@ -161,12 +172,15 @@ export class EmojiSetService {
                 allEmojis.set(shortcode, url);
               }
             }
+          } else {
+            this.logger.warn(`[getUserEmojiSets] Failed to load emoji set: ${ref[1]}`);
           }
         }
       }
 
       // Cache the result
       this.userEmojiPreferences.set(pubkey, allEmojis);
+      this.logger.debug(`[getUserEmojiSets] Total emojis loaded for ${pubkey.slice(0, 8)}: ${allEmojis.size}`);
 
       return allEmojis;
     } catch (error) {
@@ -188,5 +202,19 @@ export class EmojiSetService {
   clearAllCaches(): void {
     this.emojiSetCache.clear();
     this.userEmojiPreferences.clear();
+  }
+
+  /**
+   * Preload user's emoji sets in the background
+   * This should be called when the app initializes or when the user logs in
+   */
+  async preloadUserEmojiSets(pubkey: string): Promise<void> {
+    try {
+      this.logger.info('Preloading emoji sets for user:', pubkey);
+      const emojis = await this.getUserEmojiSets(pubkey);
+      this.logger.info(`Preloaded ${emojis.size} emojis from user's sets`);
+    } catch (error) {
+      this.logger.error('Failed to preload user emoji sets:', error);
+    }
   }
 }

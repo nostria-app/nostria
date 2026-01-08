@@ -7,6 +7,7 @@ import { Event } from 'nostr-tools';
 import { EmojiSetService } from '../../services/emoji-set.service';
 import { NostrService } from '../../services/nostr.service';
 import { DataService } from '../../services/data.service';
+import { DatabaseService } from '../../services/database.service';
 import { AccountStateService } from '../../services/account-state.service';
 
 interface EmojiItem {
@@ -24,6 +25,7 @@ export class EmojiSetEventComponent {
   private emojiSetService = inject(EmojiSetService);
   private nostrService = inject(NostrService);
   private dataService = inject(DataService);
+  private databaseService = inject(DatabaseService);
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
 
@@ -117,12 +119,7 @@ export class EmojiSetEventComponent {
 
     try {
       // Get the current emoji preferences (kind 10030)
-      const existingPrefs = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
-        pubkey,
-        10030,
-        '',
-        { save: false, cache: false }
-      );
+      const existingPrefs = await this.databaseService.getEventByPubkeyAndKind(pubkey, 10030);
 
       // Get the 'd' tag from the emoji set event
       const dTag = currentEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
@@ -132,7 +129,7 @@ export class EmojiSetEventComponent {
 
       // Add existing tags (except duplicate 'a' references to this set)
       if (existingPrefs) {
-        for (const tag of existingPrefs.event.tags) {
+        for (const tag of existingPrefs.tags) {
           const aTagValue = `30030:${currentEvent.pubkey}:${dTag}`;
           if (tag[0] === 'a' && tag[1] === aTagValue) {
             // Skip - already installed
@@ -149,13 +146,28 @@ export class EmojiSetEventComponent {
       const prefsEvent = this.nostrService.createEvent(10030, '', tags);
       const result = await this.nostrService.signAndPublish(prefsEvent);
 
-      if (result.success) {
+      if (result.success && result.event) {
+        console.log('[EmojiSetInstall] Published kind 10030 event:', result.event);
+        
+        // Save to database for immediate local availability
+        try {
+          const saved = await this.databaseService.saveReplaceableEvent(result.event);
+          console.log('[EmojiSetInstall] saveReplaceableEvent returned:', saved);
+          
+          // Verify it was saved (kind 10030 is replaceable, not parameterized - no d-tag)
+          const verification = await this.databaseService.getEventByPubkeyAndKind(pubkey, 10030);
+          console.log('[EmojiSetInstall] Verification query returned:', verification);
+        } catch (saveError) {
+          console.error('[EmojiSetInstall] Error saving to database:', saveError);
+        }
+        
         this.isInstalled.set(true);
         this.snackBar.open('Emoji set installed!', 'Close', { duration: 3000 });
 
         // Clear cache so it reloads with new preferences
         this.emojiSetService.clearUserCache(pubkey);
       } else {
+        console.error('[EmojiSetInstall] Failed to publish:', result);
         this.snackBar.open('Failed to install emoji set', 'Close', { duration: 3000 });
       }
     } catch (error) {

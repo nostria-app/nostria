@@ -8,6 +8,7 @@ import { MatSelectModule } from '@angular/material/select';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
 import { MatSliderModule } from '@angular/material/slider';
 import { MatDialog } from '@angular/material/dialog';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { FeatureLevel, LoggerService, LogLevel } from '../../../services/logger.service';
 import { ThemeService } from '../../../services/theme.service';
 import { ApplicationStateService } from '../../../services/application-state.service';
@@ -21,6 +22,7 @@ import { ImagePlaceholderService } from '../../../services/image-placeholder.ser
 import { ExternalLinkHandlerService } from '../../../services/external-link-handler.service';
 import { MatInputModule } from '@angular/material/input';
 import { AccountLocalStateService } from '../../../services/account-local-state.service';
+import { EmojiSetService } from '../../../services/emoji-set.service';
 
 interface Language {
   code: string;
@@ -57,6 +59,8 @@ export class GeneralSettingsComponent {
   imagePlaceholder = inject(ImagePlaceholderService);
   externalLinkHandler = inject(ExternalLinkHandlerService);
   accountLocalState = inject(AccountLocalStateService);
+  emojiSetService = inject(EmojiSetService);
+  snackBar = inject(MatSnackBar);
 
   currentFeatureLevel = signal<FeatureLevel>(this.app.featureLevel());
 
@@ -230,5 +234,10 @@ export class GeneralSettingsComponent {
 
     this.globalEventExpiration.set(hours);
     this.accountLocalState.setGlobalEventExpiration(pubkey, hours);
+  }
+
+  clearEmojiCache(): void {
+    this.emojiSetService.clearAllCaches();
+    this.snackBar.open('Emoji cache cleared', 'Close', { duration: 3000 });
   }
 }
