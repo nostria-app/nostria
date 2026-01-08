@@ -401,12 +401,12 @@ export class ParsingService {
       });
     }
 
-    // Batch process nostr URIs with a short timeout to balance speed and data completeness
+    // Batch process nostr URIs with a short timeout to balance speed and completeness
     const nostrDataPromises = nostrMatches.map(async nostrMatch => {
       try {
-        // Add timeout protection (1 second per URI) to prevent long waits
+        // Add timeout protection (800ms per URI) for quick loading
         const timeoutPromise = new Promise<null>((resolve) =>
-          setTimeout(() => resolve(null), 1000)
+          setTimeout(() => resolve(null), 800)
         );
 
         const nostrDataPromise = this.parseNostrUri(nostrMatch.match[0]);
@@ -425,11 +425,10 @@ export class ParsingService {
       }
     });
 
-    // Wait for all nostr URIs to complete (each has its own 1 second timeout)
+    // Wait for all nostr URIs to complete (each has its own timeout)
     const processedNostrMatches = await Promise.all(nostrDataPromises);
 
-    // Add nostr matches to the matches array
-    // Include matches even without nostrData so they can be rendered as fallback text
+    // Add all nostr matches to the matches array (with or without resolved data)
     for (const { match, index, length, nostrData } of processedNostrMatches) {
       matches.push({
         start: index,
