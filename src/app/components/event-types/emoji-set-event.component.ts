@@ -148,19 +148,19 @@ export class EmojiSetEventComponent {
 
       if (result.success && result.event) {
         console.log('[EmojiSetInstall] Published kind 10030 event:', result.event);
-        
+
         // Save to database for immediate local availability
         try {
           const saved = await this.databaseService.saveReplaceableEvent(result.event);
           console.log('[EmojiSetInstall] saveReplaceableEvent returned:', saved);
-          
+
           // Verify it was saved (kind 10030 is replaceable, not parameterized - no d-tag)
           const verification = await this.databaseService.getEventByPubkeyAndKind(pubkey, 10030);
           console.log('[EmojiSetInstall] Verification query returned:', verification);
         } catch (saveError) {
           console.error('[EmojiSetInstall] Error saving to database:', saveError);
         }
-        
+
         this.isInstalled.set(true);
         this.snackBar.open('Emoji set installed!', 'Close', { duration: 3000 });
 

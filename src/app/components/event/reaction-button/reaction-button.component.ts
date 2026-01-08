@@ -132,9 +132,9 @@ export class ReactionButtonComponent {
           const userEmojis = await this.emojiSetService.getUserEmojiSets(pubkey);
           console.log('[ReactionButton] getUserEmojiSets returned:', userEmojis.size, 'emojis');
           const emojiArray = Array.from(userEmojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
-          // Limit to first 6 custom emojis for the picker
-          console.log('[ReactionButton] Loaded custom emojis for reactions:', emojiArray.slice(0, 6));
-          this.customEmojis.set(emojiArray.slice(0, 6));
+          // Show all custom emojis (no limit)
+          console.log('[ReactionButton] Loaded custom emojis for reactions:', emojiArray);
+          this.customEmojis.set(emojiArray);
           console.log('[ReactionButton] customEmojis signal set to:', this.customEmojis());
         } catch (error) {
           console.error('[ReactionButton] Failed to load custom emojis for reactions:', error);
