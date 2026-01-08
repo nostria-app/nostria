@@ -119,13 +119,22 @@ export class ReactionButtonComponent {
     // Load user's custom emojis
     effect(() => {
       const pubkey = this.accountState.pubkey();
-      if (!pubkey) return;
+      if (!pubkey) {
+        this.customEmojis.set([]);
+        return;
+      }
 
       untracked(async () => {
-        const userEmojis = await this.emojiSetService.getUserEmojiSets(pubkey);
-        const emojiArray = Array.from(userEmojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
-        // Limit to first 6 custom emojis for the picker
-        this.customEmojis.set(emojiArray.slice(0, 6));
+        try {
+          const userEmojis = await this.emojiSetService.getUserEmojiSets(pubkey);
+          const emojiArray = Array.from(userEmojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
+          // Limit to first 6 custom emojis for the picker
+          console.log('Loaded custom emojis for reactions:', emojiArray.slice(0, 6));
+          this.customEmojis.set(emojiArray.slice(0, 6));
+        } catch (error) {
+          console.error('Failed to load custom emojis for reactions:', error);
+          this.customEmojis.set([]);
+        }
       });
     });
 
