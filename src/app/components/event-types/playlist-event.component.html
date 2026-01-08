@@ -18,7 +18,7 @@
       <p class="playlist-descriptor">{{ playlist.alt }}</p>
       }
       <div class="playlist-meta">
-        <span class="track-count">{{ playlist.tracks.length }} tracks</span>
+        <span class="track-count">{{ trackEvents().length }} tracks</span>
         @if (playlist.totalDuration) {
         <span class="playlist-duration">{{ playlist.totalDuration }}</span>
         }
@@ -51,30 +51,25 @@
     }
   </div>
 
-  @if (playlist.tracks.length > 0) {
+  @if (trackEvents().length > 0 || loadingTracks()) {
   <div class="playlist-tracks">
     <h4 class="tracks-header">Tracks</h4>
+    @if (loadingTracks()) {
+    <div class="loading-tracks">
+      <mat-spinner diameter="32"></mat-spinner>
+      <span>Loading tracks...</span>
+    </div>
+    } @else if (trackEvents().length > 0) {
     <div class="track-list">
-      @for (track of playlist.tracks.slice(0, 5); track track.url; let i = $index) {
-      <div class="track-item">
-        <span class="track-number">{{ i + 1 }}</span>
-        <div class="track-info">
-          <span class="track-title">{{ track.title || 'Unknown Track' }}</span>
-          @if (track.artist) {
-          <span class="track-artist">{{ track.artist }}</span>
-          }
-        </div>
-        @if (track.duration) {
-        <span class="track-duration">{{ track.duration }}</span>
-        }
-      </div>
-      }
-      @if (playlist.tracks.length > 5) {
-      <div class="track-item more-tracks">
-        <span class="more-indicator"> +{{ playlist.tracks.length - 5 }} more tracks </span>
-      </div>
+      @for (trackEvent of trackEvents(); track trackEvent.id) {
+      <app-music-event [event]="trackEvent" mode="list"></app-music-event>
       }
     </div>
+    } @else {
+    <div class="no-tracks">
+      <span>No tracks available</span>
+    </div>
+    }
   </div>
   }
 </div>
