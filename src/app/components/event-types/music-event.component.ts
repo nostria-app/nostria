@@ -103,6 +103,9 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
           <h4 class="music-title">{{ title() || 'Untitled Track' }}</h4>
           <div class="music-meta">
             <app-date-toggle [date]="event().created_at"></app-date-toggle>
+            @if (duration()) {
+              <span class="music-duration">{{ duration() }}</span>
+            }
             @if (hashtags().length > 0) {
               <mat-chip-set>
                 @for (hashtag of hashtags().slice(0, 3); track hashtag) {
@@ -497,6 +500,17 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
           color: var(--mat-sys-on-surface-variant);
         }
         
+        .music-duration {
+          font-size: 0.75rem;
+          color: var(--mat-sys-on-surface-variant);
+          font-variant-numeric: tabular-nums;
+          
+          &::before {
+            content: '•';
+            margin-right: 8px;
+          }
+        }
+        
         mat-chip-set {
           display: flex;
           flex-wrap: wrap;
@@ -677,6 +691,26 @@ export class MusicEventComponent {
     return event.tags
       .filter(t => t[0] === 't' && t[1])
       .map(t => t[1]);
+  });
+
+  // Extract duration from tags
+  duration = computed(() => {
+    const event = this.event();
+    const durationTag = event.tags.find(t => t[0] === 'duration');
+    const durationSeconds = durationTag?.[1] ? parseInt(durationTag[1], 10) : null;
+
+    if (!durationSeconds) return null;
+
+    // Format as MM:SS or HH:MM:SS
+    const hours = Math.floor(durationSeconds / 3600);
+    const minutes = Math.floor((durationSeconds % 3600) / 60);
+    const seconds = durationSeconds % 60;
+
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    } else {
+      return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    }
   });
 
   // Track liked state - set after liking
