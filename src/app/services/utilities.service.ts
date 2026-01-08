@@ -70,7 +70,7 @@ export class UtilitiesService {
   }
 
   /**
-   * Validate if a pubkey (hex or npub) is valid
+   * Validate if a pubkey (hex, npub, or nprofile) is valid
    */
   isValidPubkey(pubkey: string): boolean {
     if (!pubkey || typeof pubkey !== 'string') {
@@ -92,11 +92,25 @@ export class UtilitiesService {
       }
     }
 
+    // Check if it's a valid nprofile
+    if (pubkey.startsWith('nprofile1')) {
+      try {
+        const decoded = nip19.decode(pubkey);
+        if (decoded.type === 'nprofile') {
+          const profileData = decoded.data as { pubkey: string };
+          return this.isValidHexPubkey(profileData.pubkey);
+        }
+        return false;
+      } catch {
+        return false;
+      }
+    }
+
     return false;
   }
 
   /**
-   * Safely get hex pubkey from either hex or npub input
+   * Safely get hex pubkey from hex, npub, or nprofile input
    */
   safeGetHexPubkey(pubkey: string): string | null {
     if (!this.isValidPubkey(pubkey)) {
@@ -110,6 +124,20 @@ export class UtilitiesService {
     if (this.isValidNpub(pubkey)) {
       try {
         return this.getPubkeyFromNpub(pubkey);
+      } catch {
+        return null;
+      }
+    }
+
+    // Handle nprofile format
+    if (pubkey.startsWith('nprofile1')) {
+      try {
+        const decoded = nip19.decode(pubkey);
+        if (decoded.type === 'nprofile') {
+          const profileData = decoded.data as { pubkey: string };
+          return profileData.pubkey;
+        }
+        return null;
       } catch {
         return null;
       }

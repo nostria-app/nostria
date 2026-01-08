@@ -218,8 +218,9 @@
 <a class="nostr-mention" (click)="onNostrMentionClick(token)" (mouseenter)="onMentionMouseEnter($event, token)"
   (mouseleave)="onMentionMouseLeave()">&#64;{{ token.nostrData?.displayName }}</a>
 } @else if (token.type === 'nostr-mention' && !token.nostrData) {
-<!-- Nostr mention without resolved data yet - show loading placeholder but make it clickable -->
-<a class="nostr-mention loading" (click)="onNostrMentionClick(token)" title="{{ token.content }}">@...</a>
+<!-- Nostr mention without resolved data yet - show loading placeholder but make it clickable with hover -->
+<a class="nostr-mention loading" (click)="onNostrMentionClick(token)" (mouseenter)="onMentionMouseEnter($event, token)"
+  (mouseleave)="onMentionMouseLeave()" title="{{ token.content }}">@...</a>
 } @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note'))
 {
 @if (getEventLoadingState(token.id) === 'loading') {
