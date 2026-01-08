@@ -151,5 +151,13 @@
     &.selected {
       background: var(--mat-sys-primary-container);
     }
+
+    &.custom-emoji {
+      .custom-emoji-img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+      }
+    }
   }
 }

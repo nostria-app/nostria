@@ -1,8 +1,13 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, input, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { MatButtonModule } from '@angular/material/button';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSnackBar } from '@angular/material/snack-bar';
 import { Event } from 'nostr-tools';
+import { EmojiSetService } from '../../services/emoji-set.service';
+import { NostrService } from '../../services/nostr.service';
+import { DataService } from '../../services/data.service';
+import { AccountStateService } from '../../services/account-state.service';
 
 interface EmojiItem {
   shortcode: string;
@@ -16,7 +21,15 @@ interface EmojiItem {
   styleUrl: './emoji-set-event.component.scss',
 })
 export class EmojiSetEventComponent {
+  private emojiSetService = inject(EmojiSetService);
+  private nostrService = inject(NostrService);
+  private dataService = inject(DataService);
+  private accountState = inject(AccountStateService);
+  private snackBar = inject(MatSnackBar);
+
   event = input.required<Event>();
+  isInstalling = signal(false);
+  isInstalled = signal(false);
 
   // Extract the title from tags
   title = computed(() => {
@@ -84,6 +97,72 @@ export class EmojiSetEventComponent {
       }, 2000);
     } catch (err) {
       console.error('Failed to copy emoji:', err);
+    }
+  }
+
+  // Install emoji set to user's preferences (kind 10030)
+  async installEmojiSet(): Promise<void> {
+    if (this.isInstalling()) return;
+
+    const currentEvent = this.event();
+    if (!currentEvent) return;
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      this.snackBar.open('Please sign in to install emoji sets', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.isInstalling.set(true);
+
+    try {
+      // Get the current emoji preferences (kind 10030)
+      const existingPrefs = await this.dataService.getEventByPubkeyAndKindAndReplaceableEvent(
+        pubkey,
+        10030,
+        '',
+        { save: false, cache: false }
+      );
+
+      // Get the 'd' tag from the emoji set event
+      const dTag = currentEvent.tags.find(tag => tag[0] === 'd')?.[1] || '';
+
+      // Build new tags
+      const tags: string[][] = [];
+
+      // Add existing tags (except duplicate 'a' references to this set)
+      if (existingPrefs) {
+        for (const tag of existingPrefs.event.tags) {
+          const aTagValue = `30030:${currentEvent.pubkey}:${dTag}`;
+          if (tag[0] === 'a' && tag[1] === aTagValue) {
+            // Skip - already installed
+            continue;
+          }
+          tags.push(tag);
+        }
+      }
+
+      // Add reference to this emoji set
+      tags.push(['a', `30030:${currentEvent.pubkey}:${dTag}`]);
+
+      // Create and publish kind 10030 event
+      const prefsEvent = this.nostrService.createEvent(10030, '', tags);
+      const result = await this.nostrService.signAndPublish(prefsEvent);
+
+      if (result.success) {
+        this.isInstalled.set(true);
+        this.snackBar.open('Emoji set installed!', 'Close', { duration: 3000 });
+
+        // Clear cache so it reloads with new preferences
+        this.emojiSetService.clearUserCache(pubkey);
+      } else {
+        this.snackBar.open('Failed to install emoji set', 'Close', { duration: 3000 });
+      }
+    } catch (error) {
+      console.error('Error installing emoji set:', error);
+      this.snackBar.open('Failed to install emoji set', 'Close', { duration: 3000 });
+    } finally {
+      this.isInstalling.set(false);
     }
   }
 }
