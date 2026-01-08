@@ -835,11 +835,22 @@ export class FeedsComponent implements OnDestroy {
         const rect = trigger.getBoundingClientRect();
         const viewportHeight = window.innerHeight;
 
-        // Trigger is "visible" if it's within 600px of the viewport bottom
-        // Using a larger threshold (600px) to start loading earlier and avoid jumpy UI
-        const isNearViewport = rect.top < viewportHeight + 600;
+        // Trigger is "visible" if it's within 800px of the viewport bottom
+        // Using a larger threshold (800px) to start loading earlier and avoid jumpy UI
+        const isNearViewport = rect.top < viewportHeight + 800;
 
-        if (isNearViewport) {
+        // Also check if we're near the bottom of the scrollable container
+        const columnContent = columnElement?.querySelector('.column-content') as HTMLElement;
+        let isNearBottom = false;
+        if (columnContent) {
+          const scrollTop = columnContent.scrollTop;
+          const scrollHeight = columnContent.scrollHeight;
+          const clientHeight = columnContent.clientHeight;
+          // Trigger when within 400px of bottom
+          isNearBottom = scrollTop + clientHeight >= scrollHeight - 400;
+        }
+
+        if (isNearViewport || isNearBottom) {
           this.loadMoreCooldowns.set(column.id, now);
 
           if (this.hasMoreEventsToRender(column.id)) {
@@ -1973,6 +1984,12 @@ export class FeedsComponent implements OnDestroy {
   onPullStart(event: TouchEvent | MouseEvent): void {
     const containerEl = this.feedsContainer?.nativeElement;
     if (!containerEl) return;
+
+    // For mouse events, only respond to left mouse button (button 0)
+    // Ignore middle mouse button (button 1) and right mouse button (button 2)
+    if (event instanceof MouseEvent && event.button !== 0) {
+      return;
+    }
 
     // Only activate pull-to-refresh when scrolled to the top
     if (containerEl.scrollTop === 0) {
