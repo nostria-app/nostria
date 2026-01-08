@@ -255,6 +255,16 @@ export class FeedsComponent implements OnDestroy {
   // Track which feeds have loaded content
   columnContentLoaded = signal<Record<string, boolean>>({});
 
+  // Computed signal to check if a feed has actual events to display
+  feedHasEvents = computed(() => {
+    const eventMap = new Map<string, boolean>();
+    this.feeds().forEach(feed => {
+      const events = this.columnEvents().get(feed.id);
+      eventMap.set(feed.id, events !== undefined && events.length > 0);
+    });
+    return eventMap;
+  });
+
   // Legacy column references - kept for backward compatibility
   // columns now maps directly to feeds since we merged the column concept with feeds
   columns = computed(() => this.feeds());

@@ -199,8 +199,8 @@
               </button>
             </div>
           </div>
-          } @else if (isLoading() && !columnContentLoaded()[feed.id]) {
-          <!-- Show skeleton items while content is loading -->
+          } @else if (isLoading() || !feedHasEvents().get(feed.id)) {
+          <!-- Show skeleton items while content is loading or no events available yet -->
           <div class="column-skeleton-items">
             @for (item of [1, 2, 3, 4, 5, 6]; track $index) {
             <div class="feed-item-skeleton">
