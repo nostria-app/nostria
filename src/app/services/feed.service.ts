@@ -80,6 +80,10 @@ export interface FeedConfig {
   isSystem?: boolean; // System feeds cannot be deleted
 }
 
+// Legacy type alias for backward compatibility with old components
+// ColumnConfig is now the same as FeedConfig (columns were converted to individual feeds)
+export type ColumnConfig = FeedConfig;
+
 export interface RelayConfig {
   url: string;
   read: boolean;
@@ -2943,13 +2947,78 @@ export class FeedService {
    * - Feed configurations persist across sessions
    */
   /**
-   * Ensure feed has all required properties
-   * Returns the feed with defaults applied if needed
+   * Migrate legacy feeds to new structure
+   * - If feed has a columns array, convert each column into a separate feed
+   * - If feed lacks required properties, set defaults
+   * Returns an array of feeds (usually 1, but multiple if columns existed)
    */
-  private migrateLegacyFeed(feed: FeedConfig): FeedConfig {
-    // If feed already has type, kinds, and relayConfig, it's good to go
+  private migrateLegacyFeed(feed: any): FeedConfig[] {
+    // Check if this is an old feed with columns array
+    if (feed.columns && Array.isArray(feed.columns) && feed.columns.length > 0) {
+      this.logger.info(
+        `🔄 Migrating legacy feed "${feed.label}" (${feed.id}) with ${feed.columns.length} column(s) to separate feed(s).`
+      );
+
+      // Convert each column into a separate feed
+      const migratedFeeds: FeedConfig[] = feed.columns.map((column: any, index: number) => {
+        // Generate a new feed ID for each column (except use original feed ID for first column)
+        const feedId = index === 0 ? feed.id : `${feed.id}-column-${index + 1}`;
+
+        // Generate a label - use column label if it exists, otherwise auto-generate
+        let feedLabel: string;
+        if (column.label && column.label.trim()) {
+          feedLabel = column.label;
+        } else if (index === 0 && feed.label) {
+          feedLabel = feed.label;
+        } else {
+          // Auto-generate a label based on type
+          const typeName = column.type ? COLUMN_TYPES[column.type as keyof typeof COLUMN_TYPES]?.label : 'Feed';
+          feedLabel = `${feed.label} - ${typeName || 'Column ' + (index + 1)}`;
+        }
+
+        // Create new feed from column properties
+        const migratedFeed: FeedConfig = {
+          id: feedId,
+          label: feedLabel,
+          icon: feed.icon || column.icon || 'dynamic_feed',
+          path: index === 0 ? feed.path : undefined, // Only first feed keeps the path
+          type: column.type || 'notes',
+          kinds: column.kinds || [1, 6],
+          source: column.source || 'public',
+          relayConfig: column.relayConfig ?? 'account',
+          customUsers: column.customUsers,
+          customStarterPacks: column.customStarterPacks,
+          customFollowSets: column.customFollowSets,
+          searchQuery: column.searchQuery,
+          customRelays: column.customRelays,
+          filters: column.filters,
+          showReplies: column.showReplies,
+          showReposts: column.showReposts,
+          createdAt: feed.createdAt || Date.now(),
+          updatedAt: Date.now(),
+          lastRetrieved: column.lastRetrieved,
+          isSystem: feed.isSystem,
+        };
+
+        this.logger.info(
+          `   ✅ Column ${index + 1}: "${column.label || 'Unnamed'}" → Feed "${feedLabel}" (${feedId})`
+        );
+
+        return migratedFeed;
+      });
+
+      if (feed.columns.length > 1) {
+        this.logger.info(
+          `✅ Migration complete: Created ${migratedFeeds.length} separate feeds from "${feed.label}"`
+        );
+      }
+
+      return migratedFeeds;
+    }
+
+    // No columns array - check if feed has required properties
     if (feed.type && feed.kinds && feed.relayConfig !== undefined) {
-      return feed;
+      return [feed as FeedConfig];
     }
 
     // If feed lacks required properties, set defaults
@@ -2957,7 +3026,7 @@ export class FeedService {
       `Feed "${feed.label}" (${feed.id}) is missing required properties. Setting defaults.`
     );
 
-    return {
+    const migratedFeed: FeedConfig = {
       ...feed,
       type: feed.type || 'notes',
       kinds: feed.kinds || [1, 6], // Default to notes and reposts
@@ -2965,6 +3034,8 @@ export class FeedService {
       relayConfig: feed.relayConfig ?? 'account',
       updatedAt: Date.now(),
     };
+
+    return [migratedFeed];
   }
 
   private async loadFeeds(pubkey: string): Promise<void> {
@@ -2989,24 +3060,30 @@ export class FeedService {
         const feedsBeforeMigration = filteredFeeds.length;
         let migrationOccurred = false;
 
-        filteredFeeds = filteredFeeds.map(feed => {
-          const migrated = this.migrateLegacyFeed(feed);
-          if (migrated !== feed) {
+        // Migration can return multiple feeds per legacy feed (if it had columns)
+        const migratedFeeds: FeedConfig[] = [];
+        filteredFeeds.forEach(feed => {
+          const result = this.migrateLegacyFeed(feed);
+          // Migration returns an array - it could be 1 feed or multiple
+          if (result.length !== 1 || result[0] !== feed) {
             migrationOccurred = true;
           }
-          return migrated;
+          migratedFeeds.push(...result);
         });
 
-        this._feeds.set(filteredFeeds);
+        this._feeds.set(migratedFeeds);
         this._feedsLoaded.set(true);
 
         // If migration occurred, save the migrated feeds back to storage
         if (migrationOccurred) {
-          this.logger.info(`Migration completed for ${feedsBeforeMigration} feeds. Saving migrated feeds to storage.`);
+          const feedsAfterMigration = migratedFeeds.length;
+          this.logger.info(
+            `✅ Migration completed: ${feedsBeforeMigration} feed(s) migrated to ${feedsAfterMigration} feed(s). Saving to storage.`
+          );
           this.saveFeeds();
         }
 
-        this.logger.debug('Loaded feeds from storage for pubkey', pubkey, filteredFeeds);
+        this.logger.debug('Loaded feeds from storage for pubkey', pubkey, migratedFeeds);
       }
     } catch (error) {
       this.logger.error('Error loading feeds from storage:', error);
