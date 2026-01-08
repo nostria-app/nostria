@@ -842,13 +842,14 @@ export class FeedService {
     // Add 'since' parameter based on lastRetrieved timestamp to prevent re-fetching old events
     // Use lastRetrieved instead of event.created_at since users can set arbitrary timestamps
     // IMPORTANT: Only use lastRetrieved if we have cached events to display.
-    // If there are no cached events, we need to fetch historical events without the 'since' filter,
-    // otherwise the feed will appear empty.
-    if (feed.lastRetrieved && item.filter && cachedEvents.length > 0) {
+    // If there are very few cached events (< 5), also ignore lastRetrieved to fetch more historical data.
+    // This helps when a feed was created but only fetched a few recent events.
+    const hasSubstantialCache = cachedEvents.length >= 5;
+    if (feed.lastRetrieved && item.filter && hasSubstantialCache) {
       item.filter.since = feed.lastRetrieved;
-      this.logger.info(`📅 Feed ${feed.id}: Using since=${feed.lastRetrieved} (lastRetrieved) to fetch only new events`);
-    } else if (feed.lastRetrieved && cachedEvents.length === 0) {
-      this.logger.info(`📅 Feed ${feed.id}: No cached events, ignoring lastRetrieved=${feed.lastRetrieved} to fetch historical events`);
+      this.logger.info(`📅 Feed ${feed.id}: Using since=${feed.lastRetrieved} (lastRetrieved) to fetch only new events (${cachedEvents.length} cached)`);
+    } else if (feed.lastRetrieved && !hasSubstantialCache) {
+      this.logger.info(`📅 Feed ${feed.id}: Only ${cachedEvents.length} cached events, ignoring lastRetrieved=${feed.lastRetrieved} to fetch historical events`);
     }
 
     // Now start loading fresh events in the BACKGROUND (don't await)
@@ -1079,22 +1080,40 @@ export class FeedService {
                     .map((t: string[]) => t[1]);
 
                   publicPubkeys.forEach((pk: string) => allPubkeys.add(pk));
-                  this.logger.debug(`[loadCustomFeed] Follow set "${dTag}" has ${publicPubkeys.length} public pubkeys`);
+                  this.logger.info(`[loadCustomFeed] Follow set "${dTag}" has ${publicPubkeys.length} public pubkeys`);
 
                   // Extract private pubkeys from encrypted content
+                  let privatePubkeysCount = 0;
                   if (event.content && event.content.trim() !== '') {
                     try {
                       const isEncrypted = this.encryption.isContentEncrypted(event.content);
+                      this.logger.info(`[loadCustomFeed] Follow set "${dTag}" content is encrypted: ${isEncrypted}`);
+
                       if (isEncrypted) {
                         const decrypted = await this.encryption.autoDecrypt(event.content, pubkey, event);
+                        this.logger.info(`[loadCustomFeed] Decryption result: ${decrypted ? 'success' : 'failed'}`);
+
                         if (decrypted && decrypted.content) {
-                          const privateData = JSON.parse(decrypted.content);
-                          if (Array.isArray(privateData)) {
-                            const privatePubkeys = privateData
-                              .filter((tag: string[]) => tag[0] === 'p' && tag[1])
-                              .map((tag: string[]) => tag[1]);
-                            privatePubkeys.forEach(pk => allPubkeys.add(pk));
+                          this.logger.info(`[loadCustomFeed] Decrypted content (first 200 chars): ${decrypted.content.substring(0, 200)}`);
+
+                          try {
+                            const privateData = JSON.parse(decrypted.content);
+                            this.logger.info(`[loadCustomFeed] Decrypted data type: ${typeof privateData}, is array: ${Array.isArray(privateData)}, length: ${Array.isArray(privateData) ? privateData.length : 'N/A'}`);
+
+                            if (Array.isArray(privateData)) {
+                              this.logger.info(`[loadCustomFeed] First tag in privateData: ${JSON.stringify(privateData[0])}`);
+                              const privatePubkeys = privateData
+                                .filter((tag: string[]) => tag[0] === 'p' && tag[1])
+                                .map((tag: string[]) => tag[1]);
+                              privatePubkeys.forEach(pk => allPubkeys.add(pk));
+                              privatePubkeysCount = privatePubkeys.length;
+                              this.logger.info(`[loadCustomFeed] Follow set "${dTag}" has ${privatePubkeysCount} private (encrypted) pubkeys: ${privatePubkeys.map(pk => pk.slice(0, 8)).join(', ')}`);
+                            }
+                          } catch (parseError) {
+                            this.logger.error(`[loadCustomFeed] Failed to parse decrypted content as JSON:`, parseError);
                           }
+                        } else {
+                          this.logger.warn(`[loadCustomFeed] Decryption succeeded but no content returned`);
                         }
                       }
                     } catch (error) {
@@ -1102,7 +1121,7 @@ export class FeedService {
                     }
                   }
 
-                  this.logger.debug(`Added follow set ${dTag} with ${publicPubkeys.length} public users`);
+                  this.logger.info(`[loadCustomFeed] ✅ Added follow set "${dTag}" with ${publicPubkeys.length} public + ${privatePubkeysCount} private users = ${publicPubkeys.length + privatePubkeysCount} total`);
                 }
               }
 
@@ -1119,8 +1138,12 @@ export class FeedService {
 
       const pubkeysArray = Array.from(allPubkeys);
 
-      this.logger.debug(`[loadCustomFeed] Total unique pubkeys collected: ${pubkeysArray.length}`);
-      this.logger.debug(`[loadCustomFeed] Breakdown - Custom users: ${feed.customUsers?.length || 0}, Starter packs: ${feed.customStarterPacks?.length || 0}, Follow sets: ${feed.customFollowSets?.length || 0}`);
+      this.logger.info(`[loadCustomFeed] ✅ Total unique pubkeys collected: ${pubkeysArray.length}`);
+      this.logger.info(`[loadCustomFeed] 📊 Breakdown - Custom users: ${feed.customUsers?.length || 0}, Starter packs: ${feed.customStarterPacks?.length || 0}, Follow sets: ${feed.customFollowSets?.length || 0}`);
+
+      if (pubkeysArray.length > 0) {
+        this.logger.info(`[loadCustomFeed] 👥 Pubkeys: ${pubkeysArray.map(pk => pk.slice(0, 8)).join(', ')}`);
+      }
 
       if (pubkeysArray.length === 0) {
         this.logger.warn('No pubkeys found for custom feed, falling back to following');
@@ -1138,12 +1161,27 @@ export class FeedService {
         return;
       }
 
-      this.logger.debug(`Loading custom feed with ${pubkeysArray.length} unique users (ALL will be used, no algorithm filtering)`);
+      this.logger.info(`[loadCustomFeed] 🚀 Loading custom feed with ${pubkeysArray.length} unique users (ALL will be used, no algorithm filtering)`);
+
+      // Clear existing events and lastRetrieved to force a full historical fetch
+      // This is important for Follow Sets where the users might have changed
+      const existingEvents = feedData.events();
+      if (existingEvents.length > 0) {
+        this.logger.info(`[loadCustomFeed] 🧹 Clearing ${existingEvents.length} existing events to fetch fresh data for Follow Set users`);
+        feedData.events.set([]);
+        feedData.pendingEvents?.set([]);
+
+        // Also clear lastRetrieved to ensure we fetch historical events, not just new ones
+        if (feedData.feed.lastRetrieved) {
+          this.logger.info(`[loadCustomFeed] 🧹 Clearing lastRetrieved timestamp to fetch historical events`);
+          feedData.feed.lastRetrieved = undefined;
+        }
+      }
 
       // Fetch events from ALL specified users (no algorithm filtering)
       await this.fetchEventsFromUsers(pubkeysArray, feedData);
 
-      this.logger.debug(`Loaded custom feed with ${pubkeysArray.length} users`);
+      this.logger.info(`[loadCustomFeed] ✅ Loaded custom feed with ${pubkeysArray.length} users`);
     } catch (error) {
       this.logger.error('Error loading custom feed:', error);
     }
@@ -1885,7 +1923,10 @@ export class FeedService {
    */
   private async fetchEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
     const isArticlesFeed = feedData.filter?.kinds?.includes(30023);
-    const eventsPerUser = isArticlesFeed ? 5 : 3; // Reduced from 10/5 to 5/3 for better performance
+    // Increase limit for better initial load experience, especially for custom feeds
+    const eventsPerUser = isArticlesFeed ? 10 : 20;
+
+    this.logger.info(`[fetchEventsFromUsers] 🔍 Fetching ${eventsPerUser} events per user from ${pubkeys.length} users`);
 
     // Removed time cutoff to allow infinite scrolling - events are now only limited by relay availability
     // Previously: const daysBack = isArticlesFeed ? 90 : 7;
@@ -1911,12 +1952,23 @@ export class FeedService {
 
         // Add 'since' parameter based on column's lastRetrieved timestamp
         // This prevents re-fetching old events when reopening the column
-        // IMPORTANT: Only use lastRetrieved if we have existing events to display.
-        // If there are no events, we need to fetch historical events without the 'since' filter.
+        // IMPORTANT: Only use lastRetrieved if we have existing events to display AND
+        // if the feed has been retrieved before (lastRetrieved exists).
+        // For new/first-time loads, DO NOT use 'since' to ensure we get historical events.
         const existingEvents = feedData.events();
-        if (feedData.feed.lastRetrieved && existingEvents.length > 0) {
+        const hasExistingContent = existingEvents.length > 0;
+        const isRefresh = feedData.feed.lastRetrieved && hasExistingContent;
+
+        // Only add 'since' filter if this is a refresh with existing content
+        // For initial loads (no lastRetrieved or no existing events), fetch historical data
+        if (isRefresh) {
           filterConfig.since = feedData.feed.lastRetrieved;
+          this.logger.info(`[fetchEventsFromUsers] 📅 Using since=${filterConfig.since} for user ${pubkey.slice(0, 8)}`);
+        } else {
+          this.logger.info(`[fetchEventsFromUsers] 📜 Fetching historical events for user ${pubkey.slice(0, 8)} (no since filter)`);
         }
+
+        this.logger.info(`[fetchEventsFromUsers] 🔧 Filter for ${pubkey.slice(0, 8)}: ${JSON.stringify(filterConfig)}`);
 
         const events = await this.sharedRelayEx.getMany(
           pubkey,
@@ -1924,10 +1976,7 @@ export class FeedService {
           { timeout: 2500 }
         );
 
-        // Reduced logging to prevent console spam - only log summary at debug level
-        if (events.length > 0) {
-          this.logger.debug(`Found ${events.length} events for user ${pubkey.slice(0, 8)}...`);
-        }
+        this.logger.info(`[fetchEventsFromUsers] ✅ Found ${events.length} events for user ${pubkey.slice(0, 8)}`);
 
         // Store events for this user
         if (events.length > 0) {
@@ -1949,6 +1998,8 @@ export class FeedService {
 
     // Wait for all requests to complete
     await Promise.all(fetchPromises);
+
+    this.logger.info(`[fetchEventsFromUsers] 🏁 Completed fetching from ${pubkeys.length} users. Total events: ${Array.from(userEventsMap.values()).reduce((sum, events) => sum + events.length, 0)}`);
 
     // Final update to ensure everything is properly sorted
     this.finalizeIncrementalFeed(userEventsMap, feedData);
@@ -2343,7 +2394,7 @@ export class FeedService {
    * Fetch older events for pagination with incremental updates
    */
   private async fetchOlderEventsFromUsers(pubkeys: string[], feedData: FeedItem) {
-    const eventsPerUser = 3; // Reduced from 5 to 3 for better performance
+    const eventsPerUser = 10; // Increased for better pagination experience
 
     // Removed maxAge limit to allow infinite scrolling
     // Previously: const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days for older content
@@ -2545,15 +2596,29 @@ export class FeedService {
 
   /**
    * Refresh a feed by unsubscribing and resubscribing
+   * @param clearHistory If true, clears the lastRetrieved timestamp to force fetching historical events
    */
-  async refreshFeed(feedId: string): Promise<void> {
+  async refreshFeed(feedId: string, clearHistory = false): Promise<void> {
     const feed = this.getFeedById(feedId);
     if (!feed) {
       this.logger.warn(`Cannot refresh feed ${feedId}: feed not found`);
       return;
     }
 
-    this.logger.info(`Refreshing feed: ${feed.label} (${feedId})`);
+    this.logger.info(`Refreshing feed: ${feed.label} (${feedId}), clearHistory: ${clearHistory}`);
+
+    // Clear lastRetrieved timestamp if requested - this forces a full historical fetch
+    if (clearHistory) {
+      this.logger.info(`Clearing lastRetrieved timestamp for feed ${feedId} to force historical fetch`);
+      await this.updateFeed(feedId, { lastRetrieved: undefined });
+
+      // Also clear cached events to start fresh
+      const feedData = this.data.get(feedId);
+      if (feedData) {
+        feedData.events.set([]);
+        feedData.pendingEvents?.set([]);
+      }
+    }
 
     // Unsubscribe from the feed
     this.unsubscribeFromFeed(feedId);
@@ -3054,7 +3119,7 @@ export class FeedService {
         // Use whatever is stored, even if it's an empty array
         // Filter out any Trending feed that may have been stored previously
         // (Trending is now always appended dynamically via the feeds computed signal)
-        let filteredFeeds = storedFeeds.filter(f => f.id !== TRENDING_FEED_ID);
+        const filteredFeeds = storedFeeds.filter(f => f.id !== TRENDING_FEED_ID);
 
         // Migrate any legacy column-based feeds
         const feedsBeforeMigration = filteredFeeds.length;
