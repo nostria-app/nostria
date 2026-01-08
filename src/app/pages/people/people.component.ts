@@ -400,7 +400,7 @@ export class PeopleComponent {
 
       // Only refresh following feeds if we're on the feeds page
       if (this.router.url.startsWith('/feeds')) {
-        await this.feedsCollectionService.refreshFollowingColumns();
+        await this.feedsCollectionService.refreshFollowingFeeds();
       }
 
       // Reset followset display state
