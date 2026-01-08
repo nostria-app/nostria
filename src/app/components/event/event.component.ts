@@ -37,6 +37,7 @@ import {
   LiveEventComponent,
   AudioEventComponent,
   MusicEventComponent,
+  EmojiSetEventComponent,
 } from '../event-types';
 import { UserProfileComponent } from '../user-profile/user-profile.component';
 import { BadgeComponent } from '../../pages/badges/badge/badge.component';
@@ -82,6 +83,7 @@ type EventCardAppearance = 'card' | 'plain';
     LiveEventComponent,
     AudioEventComponent,
     MusicEventComponent,
+    EmojiSetEventComponent,
     UserProfileComponent,
     BadgeComponent,
     ReportedContentComponent,
@@ -249,7 +251,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
   });
 
   // Event kinds that support reactions (NIP-25)
-  // This includes: short text notes, photos, videos (short/long), audio, articles, polls, playlists, live events, starter packs, music tracks
+  // This includes: short text notes, photos, videos (short/long), audio, articles, polls, playlists, live events, starter packs, music tracks, emoji sets
   private readonly REACTABLE_KINDS = new Set([
     1,      // Short text note (kind 1)
     20,     // Photo (kind 20)
@@ -259,6 +261,7 @@ export class EventComponent implements AfterViewInit, OnDestroy {
     1222,   // Audio track (kind 1222)
     1244,   // Audio file (kind 1244)
     30023,  // Long-form article (kind 30023)
+    30030,  // Emoji set (kind 30030)
     30311,  // Live event (kind 30311)
     32100,  // M3U Playlist (kind 32100)
     34235,  // Video (kind 34235) - NIP-71 addressable horizontal video
@@ -612,6 +615,11 @@ export class EventComponent implements AfterViewInit, OnDestroy {
 
       if (!event) {
         return;
+      }
+
+      // Debug: Log emoji set events
+      if (event.kind === 30030) {
+        console.log('🎨 Event component: Detected emoji set event (kind 30030)', event);
       }
 
       untracked(async () => {

@@ -1715,7 +1715,7 @@ export class FeedsComponent implements OnDestroy {
    * Pull-to-refresh: Handle touch start
    * Only works with touch events and when scrolled to the top
    */
-  onPullStart(event: TouchEvent): void {
+  onPullStart(event: TouchEvent | MouseEvent): void {
     const containerEl = this.feedsContainer?.nativeElement;
     if (!containerEl) return;
 
@@ -1723,7 +1723,7 @@ export class FeedsComponent implements OnDestroy {
     // Use a small threshold to account for sub-pixel scrolling
     if (containerEl.scrollTop <= 1) {
       this.isPulling = true;
-      this.startY = event.touches[0].clientY;
+      this.startY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
       this.pullToRefreshActive.set(true);
     }
   }
@@ -1732,13 +1732,13 @@ export class FeedsComponent implements OnDestroy {
    * Pull-to-refresh: Handle touch move
    * Only processes if pull was initiated from the top
    */
-  onPullMove(event: TouchEvent): void {
+  onPullMove(event: TouchEvent | MouseEvent): void {
     if (!this.isPulling) return;
 
     const containerEl = this.feedsContainer?.nativeElement;
     if (!containerEl) return;
 
-    const currentY = event.touches[0].clientY;
+    const currentY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
     const deltaY = currentY - this.startY;
 
     // Only track downward pulls (positive deltaY) when at the top

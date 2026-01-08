@@ -1,0 +1,27 @@
+<div class="emoji-set-container">
+  <div class="emoji-set-header">
+    <mat-icon>emoji_emotions</mat-icon>
+    <h3 class="emoji-set-title">{{ title() }}</h3>
+    @if (description()) {
+    <span class="emoji-set-description">{{ description() }}</span>
+    }
+  </div>
+
+  @if (image()) {
+  <img class="emoji-set-image" [src]="image()!" [alt]="title()">
+  }
+
+  @if (emojis().length > 0) {
+  <div class="emoji-grid">
+    @for (emoji of emojis(); track emoji.shortcode) {
+    <button mat-icon-button class="emoji-item"
+      [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode" (click)="copyEmoji(emoji, $event)">
+      <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
+    </button>
+    }
+  </div>
+  <div class="emoji-count">{{ emojis().length }} {{ emojis().length === 1 ? 'emoji' : 'emojis' }}</div>
+  } @else {
+  <p class="no-emojis">No emojis in this set</p>
+  }
+</div>

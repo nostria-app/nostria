@@ -106,6 +106,10 @@
     @else if (targetItem.event.kind === 39089) {
     <app-starter-pack-event [event]="targetItem.event"></app-starter-pack-event>
     }
+    <!-- Emoji Sets (kind 30030) -->
+    @else if (targetItem.event.kind === 30030) {
+    <app-emoji-set-event [event]="targetItem.event"></app-emoji-set-event>
+    }
     <!-- Live Events (kind 30311) -->
     @else if (targetItem.event.kind === 30311) {
     <app-live-event [event]="targetItem.event"></app-live-event>
@@ -355,6 +359,10 @@
     @else if (item.event.kind === 1068) {
     <app-poll-event [event]="item.event"></app-poll-event>
     }
+    <!-- Emoji Sets (kind 30030) -->
+    @else if (item.event.kind === 30030) {
+    <app-emoji-set-event [event]="item.event"></app-emoji-set-event>
+    }
     @else if (item.event.kind === 3) {
     <div class="following-event">
       <mat-icon>people</mat-icon>
@@ -433,6 +441,10 @@
     <!-- Polls (kind 1068) -->
     @else if (item.event.kind === 1068) {
     <app-poll-event [event]="item.event"></app-poll-event>
+    }
+    <!-- Emoji Sets (kind 30030) -->
+    @else if (item.event.kind === 30030) {
+    <app-emoji-set-event [event]="item.event"></app-emoji-set-event>
     }
     @else if (item.event.kind === 3) {
     <div class="following-event">

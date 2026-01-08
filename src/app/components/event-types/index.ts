@@ -7,3 +7,4 @@ export { PollEventComponent } from './poll-event.component';
 export { LiveEventComponent } from './live-event.component';
 export { AudioEventComponent } from './audio-event.component';
 export { MusicEventComponent } from './music-event.component';
+export { EmojiSetEventComponent } from './emoji-set-event.component';

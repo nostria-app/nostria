@@ -123,6 +123,10 @@
     [relayHints]="music.relayHints"></app-music-embed>
   }
 
+  @for (emojiSet of emojiSetMentions(); track emojiSet.identifier + emojiSet.pubkey) {
+  <app-emoji-set-mention [identifier]="emojiSet.identifier" [pubkey]="emojiSet.pubkey"></app-emoji-set-mention>
+  }
+
   @for (preview of socialPreviews(); track preview.url) {
   @if (settings.settings().socialSharingPreview) {
   <app-social-preview class="social-preview" [url]="preview.url"></app-social-preview>
