@@ -9,6 +9,7 @@ import { LoggerService } from './logger.service';
 import type { SafeResourceUrl } from '@angular/platform-browser';
 import { MediaPlayerService } from './media-player.service';
 import { getDecodedToken } from '@cashu/cashu-ts';
+import { EmojiSetService } from './emoji-set.service';
 
 export interface NostrData {
   type: string;
@@ -66,6 +67,7 @@ export class ParsingService {
   utilities = inject(UtilitiesService);
   logger = inject(LoggerService);
   readonly media = inject(MediaPlayerService);
+  private emojiSetService = inject(EmojiSetService);
 
   // Cache for parsed nostr URIs to prevent repeated parsing
   private nostrUriCache = new Map<
@@ -292,7 +294,7 @@ export class ParsingService {
     ':black_circle:': '⚫',
   };
 
-  async parseContent(content: string, tags?: string[][]): Promise<ContentToken[]> {
+  async parseContent(content: string, tags?: string[][], authorPubkey?: string): Promise<ContentToken[]> {
     if (!content) return [];
 
     // Replace line breaks with placeholders
@@ -339,6 +341,23 @@ export class ParsingService {
           // Store as :shortcode: -> image-url
           customEmojiMap.set(`:${tag[1]}:`, tag[2]);
         }
+      }
+    }
+
+    // Fetch user's emoji sets if authorPubkey is provided
+    // This allows emojis from emoji sets to be available for rendering
+    if (authorPubkey) {
+      try {
+        const userEmojis = await this.emojiSetService.getUserEmojiSets(authorPubkey);
+        // Merge user emojis, but don't override inline emoji tags
+        for (const [shortcode, url] of userEmojis) {
+          const emojiKey = `:${shortcode}:`;
+          if (!customEmojiMap.has(emojiKey)) {
+            customEmojiMap.set(emojiKey, url);
+          }
+        }
+      } catch (error) {
+        this.logger.warn('Failed to fetch user emoji sets:', error);
       }
     }
 

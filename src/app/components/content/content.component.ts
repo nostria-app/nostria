@@ -26,6 +26,7 @@ import { ArticleComponent } from '../article/article.component';
 import { PhotoEventComponent } from '../event-types/photo-event.component';
 import { EventHeaderComponent } from '../event/header/header.component';
 import { MusicEmbedComponent } from '../music-embed/music-embed.component';
+import { EmojiSetMentionComponent } from '../emoji-set-mention/emoji-set-mention.component';
 
 // Music event kinds
 const MUSIC_TRACK_KIND = 36787;
@@ -67,6 +68,7 @@ interface SocialPreview {
     PhotoEventComponent,
     EventHeaderComponent,
     MusicEmbedComponent,
+    EmojiSetMentionComponent,
   ],
   templateUrl: './content.component.html',
   styleUrl: './content.component.scss',
@@ -149,6 +151,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
 
   // Music mentions (naddr with kind 36787 or 34139) - separate for specialized rendering
   musicMentions = signal<ArticleMention[]>([]);
+
+  // Emoji set mentions (naddr with kind 30030) - separate for specialized rendering
+  emojiSetMentions = signal<ArticleMention[]>([]);
 
   // Proxy URL from the event's proxy tag (e.g., ActivityPub bridged content)
   proxyUrl = computed<string | null>(() => {
@@ -257,7 +262,9 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
     this.parseDebounceTimer = window.setTimeout(async () => {
       try {
         this._isParsing.set(true);
-        const newTokens = await this.parsing.parseContent(content, this.event()?.tags);
+        const currentEvent = this.event();
+        const authorPubkey = currentEvent?.pubkey;
+        const newTokens = await this.parsing.parseContent(content, currentEvent?.tags, authorPubkey);
 
         // Extract event mention tokens and create initial loading placeholders
         const mentionTokens = newTokens.filter(
@@ -280,12 +287,13 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           };
         });
 
-        // Separate music mentions (tracks and playlists) from regular articles
+        // Separate music mentions (tracks and playlists) and emoji sets from regular articles
         const musicMentions = allMentions.filter(m =>
           m.kind === MUSIC_TRACK_KIND || m.kind === MUSIC_PLAYLIST_KIND
         );
+        const emojiSetMentions = allMentions.filter(m => m.kind === 30030);
         const articles = allMentions.filter(m =>
-          m.kind !== MUSIC_TRACK_KIND && m.kind !== MUSIC_PLAYLIST_KIND
+          m.kind !== MUSIC_TRACK_KIND && m.kind !== MUSIC_PLAYLIST_KIND && m.kind !== 30030
         );
 
         // Create initial placeholders with loading state
@@ -309,6 +317,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
           this.eventMentions.set(initialMentions);
           this.articleMentions.set(articles);
           this.musicMentions.set(musicMentions);
+          this.emojiSetMentions.set(emojiSetMentions);
           this._lastParsedContent = content;
         });
 
@@ -383,7 +392,7 @@ export class ContentComponent implements AfterViewInit, OnDestroy {
             }
 
             if (eventData) {
-              const contentTokens = await this.parsing.parseContent(eventData?.data, eventData?.event.tags);
+              const contentTokens = await this.parsing.parseContent(eventData?.data, eventData?.event.tags, eventData?.event.pubkey);
 
               // Update this specific mention
               this.eventMentions.update(mentions => {
