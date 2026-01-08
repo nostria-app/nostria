@@ -714,6 +714,11 @@ export class NoteContentComponent implements OnDestroy {
    * Note: Blurhash is decoded at small size but with correct aspect ratio for proper positioning
    */
   getImagePlaceholderUrl(token: ContentToken): string | null {
+    if (!token) {
+      console.warn('[NoteContent] getImagePlaceholderUrl called with null/undefined token');
+      return this.imagePlaceholder.getDefaultPlaceholderDataUrl(400, 400);
+    }
+
     // Calculate small dimensions that preserve aspect ratio
     const dims = this.imagePlaceholder.getPlaceholderDimensions(token.dimensions);
     // First try thumbhash, then blurhash from the token
@@ -745,6 +750,11 @@ export class NoteContentComponent implements OnDestroy {
    * Note: Blurhash is decoded at small size (32x32) for performance - CSS scales it up
    */
   getVideoPlaceholderUrl(token: ContentToken): string | null {
+    if (!token) {
+      console.warn('[NoteContent] getVideoPlaceholderUrl called with null/undefined token');
+      return this.imagePlaceholder.getDefaultPlaceholderDataUrl(32, 32);
+    }
+
     // First try thumbhash, then blurhash from the token
     if (token.thumbhash) {
       const url = this.imagePlaceholder.decodeThumbhash(token.thumbhash);

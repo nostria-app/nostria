@@ -9,9 +9,9 @@
 <h3 class="media-title">{{ title() }}</h3>
 }
 
-@let videoInfo = videoData();
+@if (hasValidVideo()) {
+@let videoInfo = videoData()!;
 @let blurhashUrl = blurhashDataUrl();
-@if (videoInfo) {
 <div class="video-container" [class.clickable]="showOverlay()" [class.blurred]="shouldBlurMedia()"
   [class.revealing]="!shouldBlurMedia() && isRevealed()" [style.aspect-ratio]="videoAspectRatio()"
   (click)="$event.stopPropagation()">
@@ -90,6 +90,12 @@
     </button>
   </div>
   }
+</div>
+} @else {
+<!-- Fallback when no valid video found -->
+<div class="video-error">
+  <mat-icon>videocam_off</mat-icon>
+  <p>No video available</p>
 </div>
 }
 

@@ -104,7 +104,13 @@ export class PhotoEventComponent {
     const event = this.event();
     if (!event) return [];
 
-    return this.getImageUrls(event);
+    const urls = this.getImageUrls(event);
+    // Safety check: if we have an event but no URLs, something is wrong
+    // Log a warning to help debug, but don't break the rendering
+    if (urls.length === 0 && event.kind === 20) {
+      console.warn('[PhotoEvent] Kind 20 event has no image URLs:', event.id);
+    }
+    return urls;
   });
 
   // Computed media data with placeholders and dimensions for each image
@@ -113,6 +119,11 @@ export class PhotoEventComponent {
     if (!event) return [];
 
     return this.imagePlaceholder.getAllMediaFromEvent(event);
+  });
+
+  // Check if we have valid images to display
+  hasValidImages = computed(() => {
+    return this.imageUrls().length > 0;
   });
 
   // Computed placeholder data URLs for performance - supports both blurhash and thumbhash
@@ -206,6 +217,10 @@ export class PhotoEventComponent {
   // Current image for carousel display
   currentImageUrl = computed(() => {
     const urls = this.imageUrls();
+    if (urls.length === 0) {
+      console.warn('[PhotoEvent] No image URLs available');
+      return '';
+    }
     const index = this.currentCarouselIndex();
     return urls[index] || urls[0];
   });
