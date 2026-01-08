@@ -39,21 +39,13 @@
 </div>
 }
 
-<!-- Loading status indicator - shows what's still loading -->
-@if (isLoadingParents() || isLoadingReplies()) {
+<!-- Loading status indicator - shows thread loading -->
+@if (isLoadingParents()) {
 <div class="loading-status">
-  @if (isLoadingParents()) {
   <div class="status-item">
     <mat-spinner diameter="14"></mat-spinner>
     <span>Loading thread...</span>
   </div>
-  }
-  @if (isLoadingReplies()) {
-  <div class="status-item">
-    <mat-spinner diameter="14"></mat-spinner>
-    <span>Loading replies...</span>
-  </div>
-  }
 </div>
 }
 
@@ -105,16 +97,26 @@
 }
 
 <div class="replies-section">
-  @if (threadedReplies().length === 0 && isLoadingReplies()) {
-  <div class="replies-loading">
-    <mat-spinner diameter="20"></mat-spinner>
+  <!-- Always show loading indicator when replies are being fetched -->
+  @if (isLoadingReplies()) {
+  <div class="replies-loading-header">
+    <mat-spinner diameter="16"></mat-spinner>
     <p class="loading-text">Loading replies...</p>
   </div>
-  } @else {
+  }
+
+  <!-- Show replies if available -->
   @for (threadedEvent of threadedReplies(); track threadedEvent.event.id) {
   <ng-container [ngTemplateOutlet]="replyTemplate"
     [ngTemplateOutletContext]="{ threadedEvent: threadedEvent }"></ng-container>
   }
+
+  <!-- Only show "No replies yet" when loading is complete AND there are no replies -->
+  @if (threadedReplies().length === 0 && !isLoadingReplies()) {
+  <div class="no-replies">
+    <mat-icon>chat_bubble_outline</mat-icon>
+    <p>No replies yet</p>
+  </div>
   }
 </div>
 }
