@@ -109,7 +109,7 @@ export class DiscoverPeopleComponent implements OnInit {
 
       // Only refresh following feeds if we're on the feeds page
       if (this.router.url.startsWith('/feeds')) {
-        await this.feedsCollectionService.refreshFollowingColumns();
+        await this.feedsCollectionService.refreshFollowingFeeds();
       }
     } catch (error) {
       this.logger.error('Failed to follow profile:', error);

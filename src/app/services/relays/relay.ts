@@ -78,7 +78,14 @@ export abstract class RelayServiceBase {
    * @param forceRecreate When true always destroy the existing pool and create a new one
    */
   init(relayUrls: string[], forceRecreate = false) {
-    const urlsChanged = this.relayUrls.length !== relayUrls.length || this.relayUrls.some((u, i) => u !== relayUrls[i]);
+    // Filter out insecure ws:// relays - they cannot be used from secure context
+    const secureUrls = relayUrls.filter(url => !url.startsWith('ws://'));
+    if (secureUrls.length < relayUrls.length) {
+      const filtered = relayUrls.length - secureUrls.length;
+      this.logger.warn(`[${this.constructor.name}] Filtered out ${filtered} insecure ws:// relay(s) - secure context requires wss://`);
+    }
+
+    const urlsChanged = this.relayUrls.length !== secureUrls.length || this.relayUrls.some((u, i) => u !== secureUrls[i]);
 
     // Decide whether to recreate pool
     const shouldRecreate = forceRecreate || !this.#pool || this._destroyed || urlsChanged;
@@ -99,7 +106,7 @@ export abstract class RelayServiceBase {
       this.logger.debug(`[${this.constructor.name}] Created new SimplePool (recreate=${forceRecreate}, urlsChanged=${urlsChanged})`);
     }
 
-    this.relayUrls = relayUrls;
+    this.relayUrls = secureUrls;
     this.updateRelaysSignal();
     this.notifyRelaysModified();
   }

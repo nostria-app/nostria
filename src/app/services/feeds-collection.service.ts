@@ -1,43 +1,12 @@
 import { Injectable, inject, signal, computed, effect, untracked } from '@angular/core';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
-import { FeedService, FeedConfig, ColumnConfig } from './feed.service';
+import { FeedService, FeedConfig } from './feed.service';
 import { AccountStateService } from './account-state.service';
 import { AccountLocalStateService } from './account-local-state.service';
 
-export interface ColumnDefinition {
-  id: string;
-  label: string;
-  icon: string;
-  path?: string;
-  type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
-  kinds: number[];
-  source?: 'following' | 'public' | 'custom' | 'for-you' | 'search' | 'trending';
-  customUsers?: string[]; // Array of pubkeys for custom user selection
-  customStarterPacks?: string[]; // Array of starter pack identifiers (d tags)
-  customFollowSets?: string[]; // Array of follow set identifiers (d tags from kind 30000 events)
-  searchQuery?: string; // Search query for search-based columns (NIP-50)
-  relayConfig: 'account' | 'custom' | 'search';
-  customRelays?: string[];
-  filters?: Record<string, unknown>;
-  showReplies?: boolean; // Whether to show replies in the feed (default: false)
-  showReposts?: boolean; // Whether to show reposts in the feed (default: true)
-  createdAt: number;
-  updatedAt: number;
-  lastRetrieved?: number; // Timestamp (seconds) of when data was last successfully retrieved from relays
-}
-
-export interface FeedDefinition {
-  id: string;
-  label: string;
-  icon: string;
-  path?: string;
-  description?: string;
-  columns: ColumnDefinition[];
-  createdAt: number;
-  updatedAt: number;
-  isSystem?: boolean; // System feeds cannot be deleted
-}
+// FeedDefinition is now the same as FeedConfig - no more separate column definitions
+export type FeedDefinition = FeedConfig;
 
 // Default feed ID for new users - "For You" is optimized for quick rendering
 const DEFAULT_FEED_ID = 'default-feed-for-you';
@@ -64,7 +33,8 @@ export class FeedsCollectionService {
   private lastAccountPubkey: string | null = null;
 
   // Public computed signals that use FeedService as source of truth
-  readonly feeds = computed(() => this.convertFeedConfigsToDefinitions(this.feedService.feeds()));
+  // Since FeedDefinition is now the same as FeedConfig, no conversion needed
+  readonly feeds = computed(() => this.feedService.feeds());
   readonly activeFeedId = computed(() => this._activeFeedId());
   readonly activeFeed = computed(() => {
     const feedId = this._activeFeedId();
@@ -157,37 +127,6 @@ export class FeedsCollectionService {
   }
 
   /**
-   * Convert FeedConfig to FeedDefinition for UI compatibility
-   */
-  private convertFeedConfigsToDefinitions(feedConfigs: FeedConfig[]): FeedDefinition[] {
-    return feedConfigs.map(config => ({
-      id: config.id,
-      label: config.label,
-      icon: config.icon,
-      path: config.path,
-      description: config.description,
-      columns: config.columns as ColumnDefinition[],
-      createdAt: config.createdAt,
-      updatedAt: config.updatedAt,
-    }));
-  }
-
-  /**
-   * Convert FeedDefinition to FeedConfig for FeedService compatibility
-   */
-  private convertDefinitionToConfig(definition: FeedDefinition): FeedConfig {
-    return {
-      id: definition.id,
-      label: definition.label,
-      icon: definition.icon,
-      path: definition.path,
-      description: definition.description,
-      columns: definition.columns as ColumnConfig[],
-      createdAt: definition.createdAt,
-      updatedAt: definition.updatedAt,
-    };
-  }
-  /**
    * Load active feed ID from storage
    */
   private loadActiveFeed(): void {
@@ -233,15 +172,8 @@ export class FeedsCollectionService {
   async addFeed(
     feedData: Omit<FeedDefinition, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<FeedDefinition> {
-    const feedConfig = await this.feedService.addFeed({
-      label: feedData.label,
-      icon: feedData.icon,
-      description: feedData.description,
-      path: feedData.path,
-      columns: feedData.columns as ColumnConfig[],
-    });
-
-    return this.convertFeedConfigsToDefinitions([feedConfig])[0];
+    const feedConfig = await this.feedService.addFeed(feedData);
+    return feedConfig;
   }
 
   /**
@@ -256,25 +188,14 @@ export class FeedsCollectionService {
 
     if (updates.label !== undefined) feedConfig.label = updates.label;
     if (updates.icon !== undefined) feedConfig.icon = updates.icon;
-    if (updates.description !== undefined) feedConfig.description = updates.description;
     if (updates.path !== undefined) feedConfig.path = updates.path;
-    if (updates.columns !== undefined) feedConfig.columns = updates.columns as ColumnConfig[];
+    if (updates.showReplies !== undefined) feedConfig.showReplies = updates.showReplies;
+    if (updates.showReposts !== undefined) feedConfig.showReposts = updates.showReposts;
     if (updates.updatedAt !== undefined) feedConfig.updatedAt = updates.updatedAt;
 
     return await this.feedService.updateFeed(id, feedConfig);
   }
-  /**
-   * Update only the column order without triggering subscription changes
-   * This is optimized for drag and drop operations to preserve DOM state
-   */
-  updateColumnOrder(id: string, columns: ColumnDefinition[]): boolean {
-    console.log(`⚡ FeedsCollectionService: Updating column order for feed ${id}`);
-    console.log(
-      `📋 New column order:`,
-      columns.map(col => `${col.label} (${col.id})`)
-    );
-    return this.feedService.updateColumnOrder(id, columns as ColumnConfig[]);
-  }
+
 
   /**
    * Remove a feed (delegates to FeedService)
@@ -356,89 +277,36 @@ export class FeedsCollectionService {
     this.logger.debug('Cleared active feed');
   }
 
-  /**
-   * Add a column to a feed
-   */
-  async addColumnToFeed(
-    feedId: string,
-    columnData: Omit<ColumnDefinition, 'id' | 'createdAt' | 'updatedAt'>
-  ): Promise<boolean> {
-    const feed = this.getFeedById(feedId);
-    if (!feed) {
-      this.logger.warn(`Feed with id ${feedId} not found`);
-      return false;
-    }
 
-    const newColumn: ColumnDefinition = {
-      ...columnData,
-      id: crypto.randomUUID(),
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
 
-    const updatedColumns = [...feed.columns, newColumn];
-    return await this.updateFeed(feedId, {
-      columns: updatedColumns,
-      updatedAt: Date.now(),
-    });
-  }
+
+
+
+
 
   /**
-   * Remove a column from a feed
+   * Refresh the active feed if it has 'following' or 'for-you' source
+   * This should be called after the user's following list changes to reload content
    */
-  async removeColumnFromFeed(feedId: string, columnId: string): Promise<boolean> {
-    const feed = this.getFeedById(feedId);
-    if (!feed) {
-      this.logger.warn(`Feed with id ${feedId} not found`);
-      return false;
-    }
-
-    const updatedColumns = feed.columns.filter(col => col.id !== columnId);
-    return await this.updateFeed(feedId, {
-      columns: updatedColumns,
-      updatedAt: Date.now(),
-    });
-  }
-
-  /**
-   * Update a column in a feed
-   */
-  async updateColumnInFeed(
-    feedId: string,
-    columnId: string,
-    updates: Partial<Omit<ColumnDefinition, 'id' | 'createdAt'>>
-  ): Promise<boolean> {
-    const feed = this.getFeedById(feedId);
-    if (!feed) {
-      this.logger.warn(`Feed with id ${feedId} not found`);
-      return false;
-    }
-
-    const columnIndex = feed.columns.findIndex(col => col.id === columnId);
-    if (columnIndex === -1) {
-      this.logger.warn(`Column with id ${columnId} not found in feed ${feedId}`);
-      return false;
-    }
-
-    const updatedColumns = [...feed.columns];
-    updatedColumns[columnIndex] = {
-      ...updatedColumns[columnIndex],
-      ...updates,
-      updatedAt: Date.now(),
-    };
-
-    return await this.updateFeed(feedId, {
-      columns: updatedColumns,
-      updatedAt: Date.now(),
-    });
-  }
-
-  /**
-   * Get columns for the currently active feed
-   */
-  getActiveColumns(): ColumnDefinition[] {
+  async refreshFollowingFeeds(): Promise<void> {
     const activeFeed = this.activeFeed();
-    return activeFeed?.columns || [];
+    if (!activeFeed) {
+      this.logger.warn('Cannot refresh following feed: no active feed');
+      return;
+    }
+
+    // Check if the active feed is following-related
+    if (activeFeed.source !== 'following' && activeFeed.source !== 'for-you') {
+      this.logger.debug('Active feed is not following-related, skipping refresh');
+      return;
+    }
+
+    this.logger.info(`Refreshing ${activeFeed.source} feed: ${activeFeed.label}`);
+
+    // Use the feed service's refreshFeed method
+    await this.feedService.refreshFeed(activeFeed.id);
+
+    this.logger.debug('Refreshed following-related feed');
   }
 
   /**
@@ -448,51 +316,6 @@ export class FeedsCollectionService {
     this.feedService.reorderFeeds(newOrder);
     this.logger.debug('Reordered feeds', newOrder);
   }
-  /**
-   * Refresh a specific column (delegates to FeedService)
-   */
-  async refreshColumn(columnId: string): Promise<void> {
-    await this.feedService.refreshColumn(columnId);
-  }
 
-  /**
-   * Refresh all following columns in the active feed (delegates to FeedService)
-   * This should be called after the user's following list changes
-   */
-  async refreshFollowingColumns(): Promise<void> {
-    await this.feedService.refreshFollowingColumns();
-    this.logger.debug('Refreshed all following columns');
-  }
-
-  /**
-   * Pause a specific column (delegates to FeedService)
-   */
-  pauseColumn(columnId: string): void {
-    this.feedService.pauseColumn(columnId);
-    this.logger.debug(`Paused column: ${columnId}`);
-  }
-
-  /**
-   * Continue a specific column (delegates to FeedService)
-   */
-  async continueColumn(columnId: string): Promise<void> {
-    await this.feedService.continueColumn(columnId);
-    this.logger.debug(`Continued column: ${columnId}`);
-  }
-
-  /**
-   * Update a column in the active feed
-   * Convenience method that finds the column in the active feed and updates it
-   */
-  async updateColumn(
-    columnId: string,
-    updates: Partial<Omit<ColumnDefinition, 'id' | 'createdAt'>>
-  ): Promise<boolean> {
-    const activeFeedId = this._activeFeedId();
-    if (!activeFeedId) {
-      this.logger.warn('No active feed to update column in');
-      return false;
-    }
-    return await this.updateColumnInFeed(activeFeedId, columnId, updates);
-  }
 }
+

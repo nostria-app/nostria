@@ -356,6 +356,35 @@ export class NoteContentComponent implements OnDestroy {
   }
 
   onNostrMentionClick(token: ContentToken) {
+    // If nostrData is not available yet but we have the raw URI, try to parse it
+    if (!token.nostrData && token.content) {
+      // Extract the nostr URI and navigate based on the prefix
+      const nostrUri = token.content;
+
+      if (nostrUri.startsWith('nostr:npub') || nostrUri.startsWith('nostr:nprofile')) {
+        // Extract pubkey (supports both npub and nprofile)
+        const identifier = nostrUri.replace('nostr:', '');
+        const hexPubkey = this.utilities.safeGetHexPubkey(identifier);
+        if (hexPubkey) {
+          this.router.navigate(['/p', hexPubkey]);
+        } else {
+          // Fallback to raw identifier if conversion fails
+          this.router.navigate(['/p', identifier]);
+        }
+        return;
+      } else if (nostrUri.startsWith('nostr:note') || nostrUri.startsWith('nostr:nevent')) {
+        // Navigate to the event page using the raw note/nevent
+        const identifier = nostrUri.replace('nostr:', '');
+        this.router.navigate(['/e', identifier]);
+        return;
+      } else if (nostrUri.startsWith('nostr:naddr')) {
+        // Navigate to the article page using the raw naddr
+        const identifier = nostrUri.replace('nostr:', '');
+        this.router.navigate(['/a', identifier]);
+        return;
+      }
+    }
+
     if (!token.nostrData) return;
 
     const { type, data } = token.nostrData;
@@ -862,17 +891,26 @@ export class NoteContentComponent implements OnDestroy {
     }
     this.isMouseOverTrigger.set(true);
 
-    // Only show hover card for npub/nprofile mentions
-    if (!token.nostrData) {
-      console.log('[NoteContent] No nostrData on token');
-      return;
+    // Try to extract pubkey from nostrData or raw content
+    let pubkey: string | undefined;
+
+    if (token.nostrData) {
+      const { type, data } = token.nostrData;
+      const record = data as Record<string, unknown>;
+      pubkey = type === 'npub' ? String(data) : String(record['pubkey'] || '');
+      console.log('[NoteContent] Mention hover - type:', type, 'pubkey:', pubkey);
+    } else if (token.content) {
+      // Use utilities service to extract pubkey from npub/nprofile
+      const nostrUri = token.content;
+      if (nostrUri.startsWith('nostr:npub') || nostrUri.startsWith('nostr:nprofile')) {
+        const identifier = nostrUri.replace('nostr:', '');
+        const hexPubkey = this.utilities.safeGetHexPubkey(identifier);
+        if (hexPubkey) {
+          pubkey = hexPubkey;
+          console.log('[NoteContent] Extracted pubkey using utilities service:', pubkey);
+        }
+      }
     }
-
-    const { type, data } = token.nostrData;
-    const record = data as Record<string, unknown>;
-    const pubkey = type === 'npub' ? String(data) : String(record['pubkey'] || '');
-
-    console.log('[NoteContent] Mention hover - type:', type, 'pubkey:', pubkey);
 
     if (!pubkey) {
       console.log('[NoteContent] No pubkey found');
@@ -887,7 +925,7 @@ export class NoteContentComponent implements OnDestroy {
     this.hoverTimeout = setTimeout(() => {
       if (this.isMouseOverTrigger()) {
         console.log('[NoteContent] Showing hover card for pubkey:', pubkey);
-        this.showMentionHoverCard(event.target as HTMLElement, pubkey);
+        this.showMentionHoverCard(event.target as HTMLElement, pubkey!);
       }
     }, 500) as unknown as number;
   }

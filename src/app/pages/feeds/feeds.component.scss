@@ -95,7 +95,7 @@ app-user-profile {
     background: transparent;
     // Use fixed positioning for proper hide/show behavior on all screen sizes
     position: fixed;
-    top: var(--toolbar-height, 64px);
+    top: calc(var(--toolbar-height, 64px) - 8px);
     left: 0;
     right: 0;
 
@@ -316,7 +316,7 @@ app-user-profile {
     overflow-y: hidden;
     position: relative;
     // Add top padding to account for fixed header on all screen sizes
-    padding-top: 48px;
+    padding-top: 56px;
     // Add bottom padding for the fixed scrollbar
     padding-bottom: 16px;
     scrollbar-width: thin;
@@ -2476,4 +2476,48 @@ h1 {
   .relay-feed-header {
     background-color: var(--mat-sys-surface-container);
   }
+}
+
+// Pull-to-refresh indicator
+.pull-to-refresh-indicator {
+  position: fixed;
+  top: calc(var(--toolbar-height, 64px) + 60px); // Below toolbar and feed selector
+  left: 50%;
+  transform: translateX(-50%);
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  pointer-events: none;
+  transition: transform 0.1s ease-out;
+  background: none;
+  border: none;
+  box-shadow: none;
+
+  mat-icon {
+    font-size: 40px;
+    width: 40px;
+    height: 40px;
+    line-height: 40px;
+    color: var(--mat-sys-primary);
+    transition: transform 0.2s ease-out;
+    background: none;
+    border: none;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  &.active mat-icon {
+    transform: rotate(180deg);
+    color: var(--mat-sys-secondary);
+  }
+}
+
+:host-context(.dark) .pull-to-refresh-indicator mat-icon {
+  color: var(--mat-sys-primary);
 }

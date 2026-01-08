@@ -46,7 +46,6 @@
       .playlist-title {
         margin: 0 0 8px 0;
         font-size: 1.25rem;
-        font-weight: 600;
         color: var(--mat-sys-on-surface);
         line-height: 1.3;
       }
@@ -165,6 +164,17 @@
           font-variant-numeric: tabular-nums;
         }
       }
+    }
+
+    .loading-tracks,
+    .no-tracks {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 24px;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 0.875rem;
     }
   }
 

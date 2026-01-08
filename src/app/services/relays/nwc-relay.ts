@@ -45,8 +45,18 @@ export class NwcRelayService extends RelayServiceBase {
         throw new Error('No NWC relay URLs provided');
       }
 
-      const pool = this.getPoolForRelays(nwcRelayUrls);
-      const publishResults = pool.publish(nwcRelayUrls, event);
+      // Filter out insecure ws:// relays - they cannot be used from secure context
+      const secureRelays = nwcRelayUrls.filter(url => !url.startsWith('ws://'));
+      if (secureRelays.length === 0) {
+        throw new Error('All NWC relays are insecure (ws://) - cannot connect from secure context');
+      }
+
+      if (secureRelays.length < nwcRelayUrls.length) {
+        this.logger.warn(`[NwcRelayService] Filtered out ${nwcRelayUrls.length - secureRelays.length} insecure ws:// relay(s)`);
+      }
+
+      const pool = this.getPoolForRelays(secureRelays);
+      const publishResults = pool.publish(secureRelays, event);
 
       this.logger.debug('NWC publish results:', publishResults);
       return publishResults;
@@ -73,9 +83,19 @@ export class NwcRelayService extends RelayServiceBase {
         throw new Error('No NWC relay URLs provided for subscription');
       }
 
-      const pool = this.getPoolForRelays(nwcRelayUrls);
+      // Filter out insecure ws:// relays - they cannot be used from secure context
+      const secureRelays = nwcRelayUrls.filter(url => !url.startsWith('ws://'));
+      if (secureRelays.length === 0) {
+        throw new Error('All NWC relays are insecure (ws://) - cannot connect from secure context');
+      }
 
-      const subscription = pool.subscribeMany(nwcRelayUrls, filter, {
+      if (secureRelays.length < nwcRelayUrls.length) {
+        this.logger.warn(`[NwcRelayService] Filtered out ${nwcRelayUrls.length - secureRelays.length} insecure ws:// relay(s)`);
+      }
+
+      const pool = this.getPoolForRelays(secureRelays);
+
+      const subscription = pool.subscribeMany(secureRelays, filter, {
         onevent: (event: Event) => {
           this.logger.debug('Received NWC response event:', event);
           onEvent(event);
