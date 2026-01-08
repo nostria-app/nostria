@@ -157,7 +157,8 @@
     aria-hidden="true" />
   }
   @if (isVideoFormatSupported(token.content)) {
-  <app-inline-video-player [src]="token.content" [poster]="videoPlaceholder || undefined" [blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
+  <app-inline-video-player [src]="token.content" [poster]="videoPlaceholder || undefined"
+    [blurred]="shouldBlurImages() && !isImageRevealed(token.content)"
     (videoLoadedMetadata)="onVideoMetadataLoaded($event, token.content)" (videoCanPlay)="onVideoReady(token.content)"
     class="main-video" [class.loaded]="isVideoReady(token.content)"
     [class.hidden]="shouldBlurImages() && !isImageRevealed(token.content)" />
