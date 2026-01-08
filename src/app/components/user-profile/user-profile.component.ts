@@ -461,12 +461,22 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
   aliasOrNpub = computed(() => {
     const profile = this.profile();
 
-    if (!profile || !profile.data || !profile.data.nip05) {
+    if (!profile || !profile.data) {
       return this.npub();
     }
 
-    // Ensure nip05 is a string
-    return this.utilities.parseNip05(profile.data.nip05);
+    // Show NIP-05 if available (first priority)
+    if (profile.data.nip05) {
+      return this.utilities.parseNip05(profile.data.nip05);
+    }
+
+    // Show LUD16 if available and no NIP-05 (second priority)
+    if (profile.data.lud16) {
+      return profile.data.lud16;
+    }
+
+    // Fallback to npub if neither NIP-05 nor LUD16 is available
+    return this.npub();
   });
 
   /**
