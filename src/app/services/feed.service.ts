@@ -135,12 +135,7 @@ const COLUMN_TYPES = {
   music: {
     label: 'Music',
     icon: 'music_note',
-    kinds: [32100],
-  },
-  polls: {
-    label: 'Polls',
-    icon: 'poll',
-    kinds: [1068],
+    kinds: [32100, 36787, 34139], // Kind 32100 (Music), Kind 36787 (Music Tracks), Kind 34139 (Playlist)
   },
   custom: {
     label: 'Custom',

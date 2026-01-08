@@ -7,32 +7,32 @@
 
         <!-- Basic Feed Configuration -->
         <div class="section basic-config-section">
-          <h3>Feed Information</h3>
-          <div class="name-icon-row">
-            <mat-form-field appearance="outline" class="name-field">
-              <mat-label>Feed Name</mat-label>
-              <input matInput formControlName="label" placeholder="My Custom Feed" />
-              @if (feedForm.get('label')?.hasError('required')) {
-              <mat-error>Feed name is required</mat-error>
-              }
-            </mat-form-field>
+          <!-- <h3>Feed Information</h3> -->
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Feed Name</mat-label>
+            <input matInput formControlName="label" placeholder="My Custom Feed" />
+            <button mat-icon-button matSuffix type="button" [matMenuTriggerFor]="iconMenu" class="icon-picker-button">
+              <mat-icon>{{ feedForm.get('icon')?.value || 'widgets' }}</mat-icon>
+            </button>
+            <!-- @if (feedForm.get('label')?.hasError('required')) {
+            <mat-error>Feed name is required</mat-error>
+            } -->
+          </mat-form-field>
 
-            <mat-form-field appearance="outline" class="icon-field">
-              <mat-select formControlName="icon">
-                @for (icon of icons(); track icon) {
-                <mat-option [value]="icon">
-                  <mat-icon>{{ icon }}</mat-icon>
-                </mat-option>
-                }
-              </mat-select>
-              <mat-icon matSuffix>{{ feedForm.get('icon')?.value || 'widgets' }}</mat-icon>
-            </mat-form-field>
-          </div>
+          <mat-menu #iconMenu="matMenu" class="icon-picker-menu" xPosition="before">
+            <div class="icon-grid">
+              @for (icon of icons(); track icon) {
+              <button mat-menu-item type="button" (click)="feedForm.patchValue({icon: icon}); iconMenu.closed.emit()"
+                class="icon-item">
+                <mat-icon>{{ icon }}</mat-icon>
+              </button>
+              }
+            </div>
+          </mat-menu>
 
           <mat-form-field appearance="outline" class="full-width">
             <mat-label>URL Path (Optional)</mat-label>
             <input matInput formControlName="path" placeholder="custom-feed" />
-            <mat-hint>URL identifier for this feed</mat-hint>
             <mat-icon matSuffix>link</mat-icon>
           </mat-form-field>
         </div>
@@ -63,10 +63,10 @@
 
           <!-- Event Kinds Selection -->
           <div class="form-group">
-            <h4>Event Kinds</h4>
-            <p class="section-description">
+            <!-- <h4>Event Kinds</h4> -->
+            <!-- <p class="section-description">
               Select which types of Nostr events to include in this feed
-            </p>
+            </p> -->
 
             <mat-form-field class="full-width" appearance="outline">
               <mat-label>Event Kinds</mat-label>
@@ -96,8 +96,8 @@
 
           <!-- Content Source -->
           <div class="form-group">
-            <h4>Content Source</h4>
-            <p class="section-description">Select source for events to include in this feed</p>
+            <!-- <h4>Content Source</h4> -->
+            <!-- <p class="section-description">Select source for events to include in this feed</p> -->
             <mat-form-field class="full-width" appearance="outline">
               <mat-label>Content Source</mat-label>
               <mat-select formControlName="source">
@@ -291,7 +291,7 @@
         <!-- Relay Configuration -->
         <div class="section relay-config-section">
           <h3>Relay Configuration</h3>
-          <p class="section-description">Choose which relays to use for this feed</p>
+          <!-- <p class="section-description">Choose which relays to use for this feed</p> -->
 
           <div class="form-group">
             <mat-button-toggle-group name="relayConfig" formControlName="relayConfig" class="relay-toggle"
@@ -356,7 +356,7 @@
         <!-- Display Options -->
         <div class="section display-options-section">
           <h3>Display Options</h3>
-          <p class="section-description">Configure what content to show in this feed</p>
+          <!-- <p class="section-description">Configure what content to show in this feed</p> -->
 
           <div class="toggle-options">
             <mat-slide-toggle formControlName="showReplies">

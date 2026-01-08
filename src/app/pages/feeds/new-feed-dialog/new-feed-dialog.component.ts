@@ -5,6 +5,7 @@ import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatCardModule } from '@angular/material/card';
@@ -70,8 +71,10 @@ const NOSTR_KINDS = [
   { value: 30024, label: 'Draft Long-form Content (30024)' },
   { value: 30078, label: 'Application-specific Data (30078)' },
   { value: 32100, label: 'M3U Playlist (32100)' },
+  { value: 34139, label: 'Playlist (34139)' },
   { value: 34235, label: 'Addressable Video (34235)' },
   { value: 34236, label: 'Addressable Short Video (34236)' },
+  { value: 36787, label: 'Music Tracks (36787)' },
 ];
 
 @Component({
@@ -82,6 +85,7 @@ const NOSTR_KINDS = [
     MatInputModule,
     MatIconModule,
     MatSelectModule,
+    MatMenuModule,
     MatChipsModule,
     MatAutocompleteModule,
     MatCardModule,
