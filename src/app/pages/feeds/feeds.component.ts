@@ -347,17 +347,16 @@ export class FeedsComponent implements OnDestroy {
   private routeParamsSubscription: import('rxjs').Subscription | null = null;
 
   // Virtual list configuration
-  private readonly INITIAL_RENDER_COUNT = 15; // Render 15 events initially for smoother initial view
-  private readonly RENDER_BATCH_SIZE = 15; // Add 15 more events when scrolling for smoother experience
+  INITIAL_RENDER_COUNT = 30;
+  RENDER_BATCH_SIZE = 15;
 
-  // Track rendered event counts per column (virtual list)
-  private renderedEventCounts = signal<Record<string, number>>({});
+  // Track rendered event counts per feed (virtual list)
+  renderedEventCounts = signal<Record<string, number>>({});
 
-  // Intersection Observer for auto-loading more content
-  private loadMoreObservers = new Map<string, IntersectionObserver>(); // One observer per column
-  private loadMoreCooldowns = new Map<string, number>(); // Track cooldowns per column
-  private readonly LOAD_MORE_COOLDOWN_MS = 300; // Minimum time between loads
-  private scrollCheckCleanup: (() => void) | null = null;
+  // Scroll detection for auto-loading more content
+  lastLoadTime = 0;
+  LOAD_MORE_COOLDOWN_MS = 1000;
+  scrollCheckCleanup: (() => void) | null = null;
 
   /**
    * Helper method to filter events based on column's showReplies and showReposts settings
@@ -751,21 +750,20 @@ export class FeedsComponent implements OnDestroy {
       }
     });
 
-    // Set up scroll listeners for columns after they're rendered
+    // Set up scroll listeners for the active feed
     effect(() => {
-      const columns = this.columns();
+      const activeFeed = this.activeFeed();
+      const account = this.accountState.account();
 
-      // Only set up scroll listeners if there's an active account
-      if (!this.accountState.account()) {
+      // Only set up scroll listeners if there's an active account and feed
+      if (!account || !activeFeed) {
         return;
       }
 
-      if (columns.length > 0 && this.layoutService.isBrowser()) {
-        // Wait for columns to be rendered
+      if (this.layoutService.isBrowser()) {
+        // Wait for feed content to be rendered
         setTimeout(() => {
-          this.setupColumnScrollListeners(columns);
-          // Check for horizontal overflow after columns are rendered
-          this.updateHorizontalOverflow();
+          this.setupFeedScrollListener(activeFeed);
         }, 500);
       }
     });
@@ -783,125 +781,80 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Set up scroll listeners for each column to detect when user scrolls to bottom
-   * Uses a scroll event with visibility check for reliable detection
+   * Set up scroll listener for the active feed to detect when user scrolls to bottom
+   * Simplified from the old multi-column architecture
    */
-  private setupColumnScrollListeners(columns: ColumnDefinition[]) {
+  private setupFeedScrollListener(feed: FeedConfig) {
     // Clean up existing listeners
-    this.cleanupLoadMoreObserver();
+    this.cleanupScrollListener();
 
-    // Find all possible scroll containers
-    const scrollContainers: HTMLElement[] = [];
-
-    // Check content-wrapper (main app scrolling container)
+    // Find the main scroll container - this is typically .content-wrapper
     const contentWrapper = document.querySelector('.content-wrapper') as HTMLElement;
-    if (contentWrapper) {
-      scrollContainers.push(contentWrapper);
+
+    if (!contentWrapper) {
+      return;
     }
 
-    // Check home container (mobile scrolling)
-    const homeContainer = document.querySelector('.home-container') as HTMLElement;
-    if (homeContainer) {
-      scrollContainers.push(homeContainer);
-    }
+    // Create scroll check function
+    const checkScrollPosition = () => {
+      const now = Date.now();
 
-    // Check each column's content (desktop per-column scrolling)
-    columns.forEach(column => {
-      const columnElement = document.querySelector(`[data-column-id="${column.id}"]`);
-      const scrollContainer = columnElement?.querySelector('.column-content') as HTMLElement;
-      if (scrollContainer) {
-        scrollContainers.push(scrollContainer);
+      // Check cooldown
+      if (now - this.lastLoadTime < this.LOAD_MORE_COOLDOWN_MS) {
+        return;
       }
-    });
 
-    // Create a single check function
-    const checkTriggerVisibility = () => {
-      columns.forEach(column => {
-        // Check cooldown
-        const now = Date.now();
-        const lastLoad = this.loadMoreCooldowns.get(column.id) || 0;
-        if (now - lastLoad < this.LOAD_MORE_COOLDOWN_MS) {
-          return;
+      const scrollTop = contentWrapper.scrollTop;
+      const scrollHeight = contentWrapper.scrollHeight;
+      const clientHeight = contentWrapper.clientHeight;
+
+      // Trigger when within 500px of bottom
+      const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+
+      if (distanceFromBottom < 500) {
+        this.lastLoadTime = now;
+
+        // Render more events from cache if available
+        if (this.hasMoreEventsToRender(feed.id)) {
+          this.loadMoreRenderedEvents(feed.id);
         }
 
-        const columnElement = document.querySelector(`[data-column-id="${column.id}"]`);
-        const trigger = columnElement?.querySelector('.load-more-trigger') as HTMLElement;
-
-        if (!trigger) {
-          return;
-        }
-
-        // Check if the trigger is visible in the viewport
-        const rect = trigger.getBoundingClientRect();
-        const viewportHeight = window.innerHeight;
-
-        // Trigger is "visible" if it's within 800px of the viewport bottom
-        // Using a larger threshold (800px) to start loading earlier and avoid jumpy UI
-        const isNearViewport = rect.top < viewportHeight + 800;
-
-        // Also check if we're near the bottom of the scrollable container
-        const columnContent = columnElement?.querySelector('.column-content') as HTMLElement;
-        let isNearBottom = false;
-        if (columnContent) {
-          const scrollTop = columnContent.scrollTop;
-          const scrollHeight = columnContent.scrollHeight;
-          const clientHeight = columnContent.clientHeight;
-          // Trigger when within 400px of bottom
-          isNearBottom = scrollTop + clientHeight >= scrollHeight - 400;
-        }
-
-        if (isNearViewport || isNearBottom) {
-          this.loadMoreCooldowns.set(column.id, now);
-
-          if (this.hasMoreEventsToRender(column.id)) {
-            this.loadMoreRenderedEvents(column.id);
-          } else {
-            this.loadMoreForColumn(column.id);
-          }
-        }
-      });
+        // Also fetch more events from network if needed
+        this.loadMoreForFeed(feed.id);
+      }
     };
 
-    // Add scroll listener to all possible containers
+    // Throttled scroll handler
     const scrollHandler = () => {
-      requestAnimationFrame(checkTriggerVisibility);
+      requestAnimationFrame(checkScrollPosition);
     };
 
-    scrollContainers.forEach(container => {
-      container.addEventListener('scroll', scrollHandler, { passive: true });
-    });
-
-    // Also listen on window for any missed scroll events
-    window.addEventListener('scroll', scrollHandler, { passive: true });
+    // Add scroll listener
+    contentWrapper.addEventListener('scroll', scrollHandler, { passive: true });
 
     // Store cleanup function
     this.scrollCheckCleanup = () => {
-      scrollContainers.forEach(container => {
-        container.removeEventListener('scroll', scrollHandler);
-      });
-      window.removeEventListener('scroll', scrollHandler);
+      contentWrapper.removeEventListener('scroll', scrollHandler);
     };
 
-    // Do initial check in case we're already scrolled to bottom
-    setTimeout(checkTriggerVisibility, 100);
+    // Do initial check in case we're already scrolled down
+    setTimeout(() => {
+      checkScrollPosition();
+    }, 100);
+
+    setTimeout(() => {
+      checkScrollPosition();
+    }, 1000);
   }
 
   /**
-   * Clean up all scroll listeners
+   * Clean up scroll listeners
    */
-  private cleanupLoadMoreObserver(): void {
-    // Clean up scroll listeners
+  private cleanupScrollListener(): void {
     if (this.scrollCheckCleanup) {
       this.scrollCheckCleanup();
       this.scrollCheckCleanup = null;
     }
-
-    // Clean up any remaining observers
-    this.loadMoreObservers.forEach(observer => {
-      observer.disconnect();
-    });
-    this.loadMoreObservers.clear();
-    this.loadMoreCooldowns.clear();
   }
 
   /**
@@ -994,18 +947,16 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Load more content for a specific column
+   * Load more content for a specific feed
    */
-  private async loadMoreForColumn(columnId: string) {
+  private async loadMoreForFeed(feedId: string) {
     try {
       // Check if already loading or no more content
-      const isLoadingSignal = this.feedService.getColumnLoadingState(columnId);
-      const hasMoreSignal = this.feedService.getColumnHasMore(columnId);
+      const isLoadingSignal = this.feedService.getColumnLoadingState(feedId);
+      const hasMoreSignal = this.feedService.getColumnHasMore(feedId);
 
       // Guard: Ensure signals exist and check their values
-      // If signals don't exist yet, the column hasn't been subscribed - this is normal during initial load
       if (!isLoadingSignal || !hasMoreSignal) {
-        // Don't log warning - this is expected during initial feed setup
         return;
       }
 
@@ -1014,10 +965,10 @@ export class FeedsComponent implements OnDestroy {
         return;
       }
 
-      this.logger.debug(`Loading more content for column: ${columnId}`);
-      await this.feedService.loadMoreEventsForColumn(columnId);
+      this.logger.debug(`Loading more content for feed: ${feedId}`);
+      await this.feedService.loadMoreEventsForColumn(feedId);
     } catch (error) {
-      this.logger.error(`Failed to load more content for column ${columnId}:`, error);
+      this.logger.error(`Failed to load more content for feed ${feedId}:`, error);
     }
   }
 
@@ -1526,8 +1477,8 @@ export class FeedsComponent implements OnDestroy {
       this.queryParamsSubscription = null;
     }
 
-    // Clean up Intersection Observer
-    this.cleanupLoadMoreObserver();
+    // Clean up scroll listeners
+    this.cleanupScrollListener();
 
     // Mark feeds page as inactive - this will trigger unsubscribe in FeedService
     this.feedService.setFeedsPageActive(false);
