@@ -82,7 +82,15 @@ export interface ReactionsDialogData {
                           ></app-user-profile>
                         </div>
                         <div class="reaction-meta">
-                          <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
+                          @if (getCustomEmojiUrl(reaction.event)) {
+                            <img 
+                              [src]="getCustomEmojiUrl(reaction.event)!" 
+                              [alt]="reaction.event.content"
+                              class="reaction-emoji-img"
+                              [title]="reaction.event.content">
+                          } @else {
+                            <span class="reaction-emoji">{{ getReactionDisplay(reaction.event.content) }}</span>
+                          }
                           <span class="reaction-time">{{ reaction.event.created_at | ago }}</span>
                         </div>
                       </div>
@@ -297,6 +305,12 @@ export interface ReactionsDialogData {
         line-height: 1;
       }
 
+      .reaction-emoji-img {
+        width: 24px;
+        height: 24px;
+        object-fit: contain;
+      }
+
       .reaction-time {
         color: var(--mat-sys-on-surface-variant);
         font-size: 12px;
@@ -483,6 +497,21 @@ export class ReactionsDialogComponent {
       return '❤️';
     }
     return content;
+  }
+
+  /**
+   * Get custom emoji URL from reaction event tags (NIP-30)
+   * Returns the image URL if the reaction has an emoji tag matching the content
+   */
+  getCustomEmojiUrl(event: Event): string | null {
+    if (!event.content || !event.content.startsWith(':') || !event.content.endsWith(':')) {
+      return null;
+    }
+
+    const shortcode = event.content.slice(1, -1); // Remove colons
+    const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+
+    return emojiTag?.[2] || null;
   }
 
   onTabChange(index: number): void {
