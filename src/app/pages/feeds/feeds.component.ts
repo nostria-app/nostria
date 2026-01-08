@@ -1712,45 +1712,55 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Pull-to-refresh: Handle touch/mouse start
+   * Pull-to-refresh: Handle touch start
+   * Only works with touch events and when scrolled to the top
    */
-  onPullStart(event: TouchEvent | MouseEvent): void {
+  onPullStart(event: TouchEvent): void {
     const containerEl = this.feedsContainer?.nativeElement;
     if (!containerEl) return;
 
-    // For mouse events, only respond to left mouse button (button 0)
-    // Ignore middle mouse button (button 1) and right mouse button (button 2)
-    if (event instanceof MouseEvent && event.button !== 0) {
-      return;
-    }
-
-    // Only activate pull-to-refresh when scrolled to the top
-    if (containerEl.scrollTop === 0) {
+    // Only activate pull-to-refresh when scrolled to the very top
+    // Use a small threshold to account for sub-pixel scrolling
+    if (containerEl.scrollTop <= 1) {
       this.isPulling = true;
-      this.startY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
+      this.startY = event.touches[0].clientY;
       this.pullToRefreshActive.set(true);
     }
   }
 
   /**
-   * Pull-to-refresh: Handle touch/mouse move
+   * Pull-to-refresh: Handle touch move
+   * Only processes if pull was initiated from the top
    */
-  onPullMove(event: TouchEvent | MouseEvent): void {
+  onPullMove(event: TouchEvent): void {
     if (!this.isPulling) return;
 
     const containerEl = this.feedsContainer?.nativeElement;
     if (!containerEl) return;
 
-    const currentY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
+    const currentY = event.touches[0].clientY;
     const deltaY = currentY - this.startY;
 
-    // Only track downward pulls when at the top
-    if (deltaY > 0 && containerEl.scrollTop === 0) {
+    // Only track downward pulls (positive deltaY) when at the top
+    // If user has scrolled down even slightly, cancel the pull
+    if (containerEl.scrollTop > 1) {
+      // User scrolled down, cancel pull-to-refresh
+      this.isPulling = false;
+      this.pullToRefreshActive.set(false);
+      this.pullDistance.set(0);
+      return;
+    }
+
+    // Only process downward pulls
+    if (deltaY > 0) {
       event.preventDefault();
       // Apply resistance to the pull (diminishing returns)
       const resistance = 0.5;
       const distance = Math.min(deltaY * resistance, this.pullThreshold * 1.5);
       this.pullDistance.set(distance);
+    } else {
+      // User is pulling upward, reset
+      this.pullDistance.set(0);
     }
   }
 
