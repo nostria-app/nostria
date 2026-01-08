@@ -48,6 +48,18 @@
   text-align: center;
 }
 
+.emoji-icon-img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+
+.reaction-emoji-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
 .reaction-count {
   font-size: 0.75rem;
   color: var(--mat-sys-on-surface-variant);
