@@ -322,6 +322,32 @@ export class ReactionButtonComponent {
   }
 
   /**
+   * Get the display text for a reaction
+   * Converts '+' to heart emoji, otherwise displays the actual reaction content
+   */
+  getReactionDisplay(content: string): string {
+    if (!content || content === '+') {
+      return '❤️';
+    }
+    return content;
+  }
+
+  /**
+   * Get custom emoji URL from reaction event tags (NIP-30)
+   * Returns the image URL if the reaction has an emoji tag matching the content
+   */
+  getCustomEmojiUrl(event: Event): string | null {
+    if (!event.content || !event.content.startsWith(':') || !event.content.endsWith(':')) {
+      return null;
+    }
+
+    const shortcode = event.content.slice(1, -1); // Remove colons
+    const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+
+    return emojiTag?.[2] || null;
+  }
+
+  /**
    * Optimistically update reactions for immediate UI feedback
    */
   private updateReactionsOptimistically(userPubkey: string, emoji: string, isAdding: boolean) {
@@ -332,17 +358,25 @@ export class ReactionButtonComponent {
 
     if (isAdding) {
       // Create a temporary reaction event for optimistic UI
+      const baseTags: string[][] = [
+        ['e', currentEvent?.id || ''],
+        ['p', currentEvent?.pubkey || ''],
+        ['k', currentEvent?.kind.toString() || ''],
+      ];
+
+      // Check if this is a custom emoji and add emoji tag for NIP-30
+      const customEmoji = this.customEmojis().find(e => e.shortcode === emoji);
+      if (customEmoji) {
+        baseTags.push(['emoji', customEmoji.shortcode, customEmoji.url]);
+      }
+
       const tempReactionEvent = {
         id: `temp-${userPubkey}-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`,
         pubkey: userPubkey,
         created_at: Math.floor(Date.now() / 1000),
         kind: kinds.Reaction,
         content: emoji,
-        tags: [
-          ['e', currentEvent?.id || ''],
-          ['p', currentEvent?.pubkey || ''],
-          ['k', currentEvent?.kind.toString() || ''],
-        ],
+        tags: baseTags,
         sig: '',
       };
 

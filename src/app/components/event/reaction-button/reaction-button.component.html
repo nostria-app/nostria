@@ -5,7 +5,11 @@
     [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenu" #menuTrigger="matMenuTrigger"
     (click)="$event.stopPropagation()" matTooltip="React" matTooltipPosition="below">
     @if (userReaction()) {
-    <span class="emoji-icon">{{ userReaction()!.event.content === '+' ? '❤️' : userReaction()!.event.content }}</span>
+    @if (getCustomEmojiUrl(userReaction()!.event)) {
+    <img [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content" class="emoji-icon-img">
+    } @else {
+    <span class="emoji-icon">{{ getReactionDisplay(userReaction()!.event.content) }}</span>
+    }
     } @else {
     <mat-icon>favorite_border</mat-icon>
     }
@@ -38,7 +42,12 @@
       [disabled]="isLoadingReactions()" [matMenuTriggerFor]="reactionMenuFull" #menuTriggerFull="matMenuTrigger"
       (click)="$event.stopPropagation()">
       @if (userReaction()) {
-      <span class="emoji-icon">{{ userReaction()!.event.content === '+' ? '❤️' : userReaction()!.event.content }}</span>
+      @if (getCustomEmojiUrl(userReaction()!.event)) {
+      <img [src]="getCustomEmojiUrl(userReaction()!.event)!" [alt]="userReaction()!.event.content"
+        class="emoji-icon-img">
+      } @else {
+      <span class="emoji-icon">{{ getReactionDisplay(userReaction()!.event.content) }}</span>
+      }
       Unlike
       } @else {
       <ng-container>
@@ -77,7 +86,15 @@
     <button class="reaction-chip" [class.user-reacted]="group.userReacted"
       [matTooltip]="group.count + ' reaction' + (group.count > 1 ? 's' : '')"
       (click)="addReaction(group.content); $event.stopPropagation()">
-      <span class="reaction-emoji">{{ group.content === '+' ? '❤️' : group.content }}</span>
+      @if (group.content.startsWith(':') && group.content.endsWith(':')) {
+      @for (reaction of reactions().events; track reaction.event.id) {
+      @if (reaction.event.content === group.content && getCustomEmojiUrl(reaction.event)) {
+      <img [src]="getCustomEmojiUrl(reaction.event)!" [alt]="group.content" class="reaction-emoji-img">
+      }
+      }
+      } @else {
+      <span class="reaction-emoji">{{ getReactionDisplay(group.content) }}</span>
+      }
       <span class="reaction-chip-count">{{ group.count }}</span>
     </button>
     }
