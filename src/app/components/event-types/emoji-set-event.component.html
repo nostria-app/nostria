@@ -1,10 +1,24 @@
 <div class="emoji-set-container">
   <div class="emoji-set-header">
-    <mat-icon>emoji_emotions</mat-icon>
-    <h3 class="emoji-set-title">{{ title() }}</h3>
-    @if (description()) {
-    <span class="emoji-set-description">{{ description() }}</span>
-    }
+    <div class="header-info">
+      <mat-icon>emoji_emotions</mat-icon>
+      <h3 class="emoji-set-title">{{ title() }}</h3>
+      @if (description()) {
+      <span class="emoji-set-description">{{ description() }}</span>
+      }
+    </div>
+    <button mat-flat-button [disabled]="isInstalling() || isInstalled()" (click)="installEmojiSet()">
+      @if (isInstalling()) {
+      <mat-icon>hourglass_empty</mat-icon>
+      Installing...
+      } @else if (isInstalled()) {
+      <mat-icon>check</mat-icon>
+      Installed
+      } @else {
+      <mat-icon>download</mat-icon>
+      Install
+      }
+    </button>
   </div>
 
   @if (image()) {

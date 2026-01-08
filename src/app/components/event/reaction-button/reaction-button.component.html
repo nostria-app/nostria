@@ -20,6 +20,14 @@
         {{ emoji }}
       </button>
       }
+      @for (emoji of customEmojis(); track emoji.shortcode) {
+      <button mat-icon-button class="emoji-button custom-emoji"
+        [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
+        (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()" [disabled]="isLoadingReactions()"
+        [matTooltip]="emoji.shortcode">
+        <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
+      </button>
+      }
     </div>
   </mat-menu>
   } @else {
@@ -48,6 +56,14 @@
         <button mat-icon-button class="emoji-button" [class.selected]="userReaction()?.event?.content === emoji"
           (click)="addReaction(emoji); $event.stopPropagation()" [disabled]="isLoadingReactions()">
           {{ emoji }}
+        </button>
+        }
+        @for (emoji of customEmojis(); track emoji.shortcode) {
+        <button mat-icon-button class="emoji-button custom-emoji"
+          [class.selected]="userReaction()?.event?.content === ':' + emoji.shortcode + ':'"
+          (click)="addReaction(':' + emoji.shortcode + ':'); $event.stopPropagation()" [disabled]="isLoadingReactions()"
+          [matTooltip]="emoji.shortcode">
+          <img [src]="emoji.url" [alt]="emoji.shortcode" class="custom-emoji-img">
         </button>
         }
       </div>

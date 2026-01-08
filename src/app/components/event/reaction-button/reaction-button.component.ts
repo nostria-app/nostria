@@ -1,4 +1,3 @@
-
 import { Component, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -13,6 +12,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { EventService, ReactionEvents } from '../../../services/event';
 import { ReactionService } from '../../../services/reaction.service';
 import { LayoutService } from '../../../services/layout.service';
+import { EmojiSetService } from '../../../services/emoji-set.service';
 
 type ViewMode = 'icon' | 'full';
 
@@ -41,6 +41,7 @@ export class ReactionButtonComponent {
   private readonly reactionService = inject(ReactionService);
   private readonly layout = inject(LayoutService);
   private readonly snackBar = inject(MatSnackBar);
+  private readonly emojiSetService = inject(EmojiSetService);
 
   // Menu trigger references to close the menu after reaction
   private readonly menuTrigger = viewChild<MatMenuTrigger>('menuTrigger');
@@ -48,6 +49,7 @@ export class ReactionButtonComponent {
 
   isLoadingReactions = signal<boolean>(false);
   reactions = signal<ReactionEvents>({ events: [], data: new Map() });
+  customEmojis = signal<Array<{ shortcode: string; url: string }>>([]);
 
   // Quick reactions for the picker
   readonly quickReactions = ['👍', '❤️', '😂', '🔥', '🎉', '👏'];
@@ -114,6 +116,19 @@ export class ReactionButtonComponent {
   });
 
   constructor() {
+    // Load user's custom emojis
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) return;
+
+      untracked(async () => {
+        const userEmojis = await this.emojiSetService.getUserEmojiSets(pubkey);
+        const emojiArray = Array.from(userEmojis.entries()).map(([shortcode, url]) => ({ shortcode, url }));
+        // Limit to first 6 custom emojis for the picker
+        this.customEmojis.set(emojiArray.slice(0, 6));
+      });
+    });
+
     // Watch for parent reactions and use them when available
     effect(() => {
       const parentReactions = this.reactionsFromParent();

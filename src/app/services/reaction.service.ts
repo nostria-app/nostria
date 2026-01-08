@@ -3,6 +3,8 @@ import type { Event } from 'nostr-tools';
 import { kinds } from 'nostr-tools';
 import { NostrService } from './nostr.service';
 import { UtilitiesService } from './utilities.service';
+import { EmojiSetService } from './emoji-set.service';
+import { AccountStateService } from './account-state.service';
 
 @Injectable({
   providedIn: 'root',
@@ -10,8 +12,16 @@ import { UtilitiesService } from './utilities.service';
 export class ReactionService {
   private nostrService = inject(NostrService);
   private utilities = inject(UtilitiesService);
+  private emojiSetService = inject(EmojiSetService);
+  private accountState = inject(AccountStateService);
 
-  async addReaction(content: string, event: Event): Promise<boolean> {
+  /**
+   * Add a reaction to an event. Supports custom emoji via NIP-30.
+   * @param content The reaction content (e.g., '+', '-', ':custom_emoji:')
+   * @param event The event to react to
+   * @param customEmojiUrl Optional URL for custom emoji if content contains :shortcode:
+   */
+  async addReaction(content: string, event: Event, customEmojiUrl?: string): Promise<boolean> {
     const tags: string[][] = [
       ['e', event.id],
       ['p', event.pubkey],
@@ -24,6 +34,23 @@ export class ReactionService {
       if (dTag !== undefined) {
         const aTag = `${event.kind}:${event.pubkey}:${dTag}`;
         tags.push(['a', aTag]);
+      }
+    }
+
+    // NIP-30: Add emoji tag for custom emoji reactions
+    if (customEmojiUrl) {
+      const shortcode = content.replace(/:/g, ''); // Remove colons
+      tags.push(['emoji', shortcode, customEmojiUrl]);
+    } else if (content.startsWith(':') && content.endsWith(':')) {
+      // Try to find the emoji URL from user's preferences
+      const shortcode = content.slice(1, -1);
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        const userEmojis = await this.emojiSetService.getUserEmojiSets(pubkey);
+        const emojiUrl = userEmojis.get(shortcode);
+        if (emojiUrl) {
+          tags.push(['emoji', shortcode, emojiUrl]);
+        }
       }
     }
 
