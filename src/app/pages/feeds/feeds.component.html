@@ -38,7 +38,7 @@
           @for (feed of feeds(); track feed.id) {
           <button class="feed-tab" mat-button
             [class.active]="!showRelayFeed() && feed.id === feedsCollectionService.activeFeedId()"
-            (click)="selectFeed(feed.id)" [matTooltip]="feed.description || feed.label">
+            (click)="selectFeed(feed.id)" [matTooltip]="feed.label">
             <mat-icon>{{ feed.icon }}</mat-icon>
             <span>{{ feed.label }}</span>
           </button>

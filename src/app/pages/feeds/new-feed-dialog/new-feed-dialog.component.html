@@ -35,12 +35,6 @@
             <mat-hint>URL identifier for this feed</mat-hint>
             <mat-icon matSuffix>link</mat-icon>
           </mat-form-field>
-
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Description (Optional)</mat-label>
-            <input matInput formControlName="description" placeholder="Brief description of this feed" />
-            <mat-icon matSuffix>description</mat-icon>
-          </mat-form-field>
         </div>
 
         @if (!isEditMode()) {
@@ -56,7 +50,6 @@
                   <mat-icon>{{ type.icon }}</mat-icon>
                   <h4>{{ type.label }}</h4>
                 </div>
-                <p class="type-description">{{ type.description }}</p>
               </mat-card-content>
             </mat-card>
             }

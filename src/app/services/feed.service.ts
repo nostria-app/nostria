@@ -84,7 +84,6 @@ export interface FeedConfig {
   label: string;
   icon: string;
   path?: string;
-  description?: string;
   // Feed content configuration (moved from ColumnConfig)
   type: 'notes' | 'articles' | 'photos' | 'videos' | 'music' | 'polls' | 'custom';
   kinds: number[];
@@ -117,43 +116,36 @@ const COLUMN_TYPES = {
     label: 'Notes',
     icon: 'chat',
     kinds: [1], // Text notes
-    description: 'Short text posts and updates',
   },
   articles: {
     label: 'Articles',
     icon: 'article',
     kinds: [30023], // Long-form content
-    description: 'Long-form articles and blog posts',
   },
   photos: {
     label: 'Photos',
     icon: 'image',
     kinds: [20],
-    description: 'Images',
   },
   videos: {
     label: 'Videos',
     icon: 'movie',
     kinds: [21, 22, 34235, 34236],
-    description: 'Videos (normal, short, and addressable)',
   },
   music: {
     label: 'Music',
     icon: 'music_note',
     kinds: [32100],
-    description: 'Music playlists (.m3u)',
   },
   polls: {
     label: 'Polls',
     icon: 'poll',
     kinds: [1068],
-    description: 'Polls and surveys',
   },
   custom: {
     label: 'Custom',
     icon: 'tune',
     kinds: [],
-    description: 'Custom configuration',
   },
 };
 
@@ -162,7 +154,6 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     id: 'default-feed-for-you',
     label: 'For You',
     icon: 'for_you',
-    description: 'Personalized content based on your interests and network',
     type: 'notes',
     kinds: [kinds.ShortTextNote, kinds.Repost],
     source: 'for-you',
@@ -175,7 +166,6 @@ const DEFAULT_FEEDS: FeedConfig[] = [
     label: 'Following',
     icon: 'diversity_2',
     path: 'following',
-    description: 'Content from people you follow',
     type: 'notes',
     kinds: [kinds.ShortTextNote, kinds.Repost],
     source: 'following',
@@ -194,7 +184,6 @@ const TRENDING_FEED: FeedConfig = {
   label: 'Trending',
   icon: 'trending_up',
   path: 'trending',
-  description: 'Popular content from across the network',
   isSystem: true, // Cannot be deleted
   type: 'notes',
   kinds: [kinds.ShortTextNote],
@@ -2926,7 +2915,6 @@ export class FeedService {
         label: feed.label,
         icon: feed.icon,
         path: feed.path,
-        description: feed.description || `${feed.label} feed`,
         createdAt: feed.createdAt,
 
         // Copy column settings to feed level
