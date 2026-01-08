@@ -344,22 +344,10 @@ export class ParsingService {
       }
     }
 
-    // Fetch user's emoji sets if authorPubkey is provided
-    // This allows emojis from emoji sets to be available for rendering
-    if (authorPubkey) {
-      try {
-        const userEmojis = await this.emojiSetService.getUserEmojiSets(authorPubkey);
-        // Merge user emojis, but don't override inline emoji tags
-        for (const [shortcode, url] of userEmojis) {
-          const emojiKey = `:${shortcode}:`;
-          if (!customEmojiMap.has(emojiKey)) {
-            customEmojiMap.set(emojiKey, url);
-          }
-        }
-      } catch (error) {
-        this.logger.warn('Failed to fetch user emoji sets:', error);
-      }
-    }
+    // Note: We DON'T fetch user emoji sets here anymore to avoid performance issues.
+    // User emoji sets are only needed for reactions (handled by ReactionButtonComponent)
+    // and for rendering emoji set events themselves.
+    // Regular content should use inline emoji tags only.
 
     // Find all matches and their positions
     const matches: {
