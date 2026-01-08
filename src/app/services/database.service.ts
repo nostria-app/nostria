@@ -1861,12 +1861,13 @@ export class DatabaseService {
   // Feed Event Caching Methods
   // ============================================
 
-  // Keep events for 1 week (in seconds)
-  private readonly CACHE_MAX_AGE_SECONDS = 7 * 24 * 60 * 60;
+  // Keep events for 90 days (in seconds) to support infinite scrolling
+  // Increased from 7 days to allow users to scroll back further in their feeds
+  private readonly CACHE_MAX_AGE_SECONDS = 90 * 24 * 60 * 60;
 
   /**
    * Save cached events for a feed column
-   * Keeps events from the last week to match Summary page maximum time range
+   * Keeps events from the last 90 days to support infinite scrolling
    */
   async saveCachedEvents(
     accountPubkey: string,
@@ -1879,7 +1880,7 @@ export class DatabaseService {
     const now = Math.floor(Date.now() / 1000);
     const cutoffTimestamp = now - this.CACHE_MAX_AGE_SECONDS;
 
-    // Filter events to only include those within the last week, sorted by created_at (newest first)
+    // Filter events to only include those within the last 90 days, sorted by created_at (newest first)
     const eventsToCache = [...events]
       .filter(e => (e.created_at || 0) >= cutoffTimestamp)
       .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
@@ -2030,7 +2031,7 @@ export class DatabaseService {
           }
         }
 
-        this.logger.debug(`Cleanup: found ${allCachedEvents.length} cached events, deleting ${deletedCount} older than 1 week`);
+        this.logger.debug(`Cleanup: found ${allCachedEvents.length} cached events, deleting ${deletedCount} older than 90 days`);
       };
 
       transaction.oncomplete = () => {

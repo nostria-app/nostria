@@ -43,9 +43,9 @@ export class FollowingDataService {
   // This is the size of each "page" when infinite scrolling
   readonly TIME_WINDOW_SECONDS = 6 * 60 * 60;
 
-  // Maximum lookback period for DATABASE queries (1 week in seconds)
+  // Maximum lookback period for DATABASE queries (90 days in seconds)
   // This matches the column cache max age and allows showing all locally stored events
-  private readonly MAX_DATABASE_LOOKBACK_SECONDS = 7 * 24 * 60 * 60;
+  private readonly MAX_DATABASE_LOOKBACK_SECONDS = 90 * 24 * 60 * 60;
 
   // Loading state
   readonly isLoading = signal(false);
@@ -414,10 +414,9 @@ export class FollowingDataService {
     const oldest = this.oldestFetchedTimestamp();
     if (!oldest) return true;
 
-    // Stop if we've gone back more than 30 days
-    const now = Math.floor(Date.now() / 1000);
-    const thirtyDaysAgo = now - (30 * 24 * 60 * 60);
-    return oldest > thirtyDaysAgo;
+    // Allow infinite scrolling - no time limit
+    // Previously limited to 30 days, now removed to support continuous loading
+    return true;
   }
 
   /**
