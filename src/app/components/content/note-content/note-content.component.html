@@ -217,6 +217,9 @@
 'nprofile')) {
 <a class="nostr-mention" (click)="onNostrMentionClick(token)" (mouseenter)="onMentionMouseEnter($event, token)"
   (mouseleave)="onMentionMouseLeave()">&#64;{{ token.nostrData?.displayName }}</a>
+} @else if (token.type === 'nostr-mention' && !token.nostrData) {
+<!-- Nostr mention without resolved data yet - show plain text -->
+<span class="text-token">{{ token.content }}</span>
 } @else if (token.type === 'nostr-mention' && (token.nostrData?.type === 'nevent' || token.nostrData?.type === 'note'))
 {
 @if (getEventLoadingState(token.id) === 'loading') {
