@@ -393,6 +393,7 @@ export class FeedsComponent implements OnDestroy {
     const eventsMap = new Map<string, Event[]>();
 
     if (!feed) {
+      console.log('[allColumnEvents] No active feed');
       return eventsMap;
     }
 
@@ -412,8 +413,22 @@ export class FeedsComponent implements OnDestroy {
       this._eventCache.set(feed.id, events);
     }
 
+    const rawEventCount = events.length;
+
     // Filter based on feed showReplies and showReposts settings
     events = this.filterEventsByColumnSettings(events, feed);
+
+    // Always log for debugging
+    console.log(`[allColumnEvents] Feed "${feed.label}" (${feed.id}):`, {
+      type: feed.type,
+      source: feed.source,
+      feedDataExists: feedDataMap.has(feed.id),
+      rawEvents: rawEventCount,
+      filteredEvents: events.length,
+      showReplies: feed.showReplies,
+      showReposts: feed.showReposts,
+      isDragging
+    });
 
     eventsMap.set(feed.id, events);
 
@@ -1693,6 +1708,12 @@ export class FeedsComponent implements OnDestroy {
           showReposts: result.showReposts,
           filters: result.filters || {},
         });
+
+        // Mark the new feed as content loaded BEFORE setting it active
+        this.columnContentLoaded.update(loaded => ({
+          ...loaded,
+          [newBoard.id]: true,
+        }));
 
         if (newBoard.path) {
           this.url.updatePathSilently(['/f', newBoard.path]);

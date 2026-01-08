@@ -673,8 +673,121 @@ export class FeedService {
       );
     } else {
       console.log(`📍 Loading GLOBAL/OTHER feed for ${feed.id}, source:`, feed.source);
-      // For global or relay-based feeds, subscription happens in subscribeToColumn method
-      await this.subscribeToColumn(feed);
+
+      // Subscribe to relay events using the appropriate relay service
+      let sub: { unsubscribe: () => void } | { close: () => void } | null = null;
+
+      if (
+        feed.relayConfig === 'custom' &&
+        feed.customRelays &&
+        feed.customRelays.length > 0
+      ) {
+        // Use custom relays for this feed via RelayPoolService
+        this.logger.debug(`Using custom relays for feed ${feed.id}:`, feed.customRelays);
+        console.log(`🚀 Using RelayPoolService.subscribe with custom relays:`, feed.customRelays);
+        console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
+
+        sub = this.relayPool.subscribe(feed.customRelays, item.filter, (event: Event) => {
+          console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
+
+          // Save event to database
+          this.saveEventToDatabase(event);
+
+          // Filter out muted events
+          if (this.accountState.muted(event)) {
+            console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
+            return;
+          }
+
+          const currentEvents = item.events();
+          // Queue events if initial load is complete AND there are existing events
+          if (item.initialLoadComplete && currentEvents.length > 0) {
+            console.log(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            item.pendingEvents?.update((pending: Event[]) => {
+              if (pending.some(e => e.id === event.id)) {
+                return pending;
+              }
+              const newPending = [...pending, event];
+              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            });
+          } else {
+            console.log(`➕ Adding relay event to feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            item.events.update((events: Event[]) => {
+              if (events.some(e => e.id === event.id)) {
+                return events;
+              }
+              const newEvents = [...events, event];
+              const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              this.saveCachedEvents(feed.id, sortedEvents);
+              return sortedEvents;
+            });
+          }
+
+          this.logger.debug(`Feed event received for ${feed.id}:`, event);
+        });
+      } else {
+        // Use account relays (default)
+        this.logger.debug(`Using account relays for feed ${feed.id}`);
+        console.log(`🚀 Using AccountRelayService.subscribe`);
+        console.log(`🚀 Subscribing to relay with filter:`, JSON.stringify(item.filter, null, 2));
+
+        sub = this.accountRelay.subscribe(item.filter, (event: Event) => {
+          console.log(`📨 Event received in callback: ${event.id.substring(0, 8)}...`);
+
+          // Save event to database
+          this.saveEventToDatabase(event);
+
+          // Filter out muted events
+          if (this.accountState.muted(event)) {
+            console.log(`🔇 Event muted: ${event.id.substring(0, 8)}...`);
+            return;
+          }
+
+          const currentEvents = item.events();
+          // Queue events if initial load is complete AND there are existing events
+          if (item.initialLoadComplete && currentEvents.length > 0) {
+            console.log(`📥 Queuing relay event for feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            item.pendingEvents?.update((pending: Event[]) => {
+              if (pending.some(e => e.id === event.id)) {
+                return pending;
+              }
+              const newPending = [...pending, event];
+              return newPending.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+            });
+          } else {
+            console.log(`➕ Adding relay event to feed ${feed.id}: ${event.id.substring(0, 8)}...`);
+            item.events.update((events: Event[]) => {
+              if (events.some(e => e.id === event.id)) {
+                return events;
+              }
+              const newEvents = [...events, event];
+              const sortedEvents = newEvents.sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+              this.saveCachedEvents(feed.id, sortedEvents);
+              return sortedEvents;
+            });
+          }
+
+          this.logger.debug(`Feed event received for ${feed.id}:`, event);
+        });
+      }
+
+      // Store subscription for later cleanup
+      item.subscription = sub;
+
+      // Mark initial load as complete after brief delay to allow relay events to flow in
+      const hasCachedEvents = cachedEvents.length > 0;
+      if (!hasCachedEvents) {
+        setTimeout(() => {
+          if (!item.initialLoadComplete) {
+            item.initialLoadComplete = true;
+            item.isRefreshing?.set(false);
+            this.logger.info(`✅ Initial relay load complete for feed ${feed.id} - new events will be queued`);
+          }
+        }, 2000);
+      } else {
+        // If we have cached events, set isRefreshing to false immediately so they display
+        item.isRefreshing?.set(false);
+      }
     }
   }
 
@@ -1302,12 +1415,31 @@ export class FeedService {
     if (filteredEvents.length === 0) return;
 
     // Dynamic update strategy:
-    // - If NO existing events: show first batch immediately, then mark initial load complete
-    // - If HAS existing events (from cache): queue all relay events to pending for "new posts" button
-    // This allows users to see new content arriving dynamically via the button
+    // - If initial load NOT complete: show events immediately
+    // - If initial load complete AND has existing events: queue to pending for "new posts" button
+    // This allows users to see cached events immediately, then new content via the button
     const hasExistingEvents = existingEvents.length > 0;
 
-    if (hasExistingEvents) {
+    if (!feedData.initialLoadComplete) {
+      // Initial load - show events immediately (whether from cache or relay)
+      const existingIds = new Set(existingEvents.map(e => e.id));
+      const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
+
+      if (trulyNewEvents.length > 0) {
+        const mergedEvents = [...existingEvents, ...trulyNewEvents]
+          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
+
+        feedData.events.set(mergedEvents);
+
+        // Mark initial load as complete after first batch is shown
+        feedData.initialLoadComplete = true;
+
+        // Save to database for Summary page queries
+        for (const event of trulyNewEvents) {
+          this.saveEventToDatabase(event);
+        }
+      }
+    } else if (hasExistingEvents) {
       // User has cached events - queue ALL relay events to pending
       // This shows the "X new posts" button updating dynamically
       const existingIds = new Set(existingEvents.map(e => e.id));
@@ -1331,28 +1463,9 @@ export class FeedService {
           this.saveEventToDatabase(event);
         }
       }
-    } else if (!feedData.initialLoadComplete) {
-      // No existing events - show first batch immediately
-      const existingIds = new Set(existingEvents.map(e => e.id));
-      const trulyNewEvents = filteredEvents.filter(e => !existingIds.has(e.id));
-
-      if (trulyNewEvents.length > 0) {
-        const mergedEvents = [...existingEvents, ...trulyNewEvents]
-          .sort((a, b) => (b.created_at || 0) - (a.created_at || 0));
-
-        feedData.events.set(mergedEvents);
-
-        // Mark initial load as complete after first batch is shown
-        // Subsequent batches will go to pending for dynamic "new posts" button
-        feedData.initialLoadComplete = true;
-
-        // Save to database for Summary page queries
-        for (const event of trulyNewEvents) {
-          this.saveEventToDatabase(event);
-        }
-      }
-    } else {
-      // Initial load complete and this is a subsequent batch - queue to pending
+    } else if (hasExistingEvents) {
+      // Initial load complete and has existing events - queue ALL new relay events to pending
+      // This shows the "X new posts" button updating dynamically
       const existingIds = new Set(existingEvents.map(e => e.id));
       const pendingIds = new Set(feedData.pendingEvents?.()?.map(e => e.id) || []);
 
@@ -1374,6 +1487,9 @@ export class FeedService {
           this.saveEventToDatabase(event);
         }
       }
+    } else {
+      // Should not reach here, but handle just in case
+      this.logger.warn('Unexpected state in handleFollowingIncrementalUpdate');
     }
   }
 
