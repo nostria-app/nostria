@@ -115,7 +115,7 @@ const COLUMN_TYPES = {
   notes: {
     label: 'Notes',
     icon: 'chat',
-    kinds: [1], // Text notes
+    kinds: [1, 6], // Text notes and reposts
   },
   articles: {
     label: 'Articles',

@@ -43,15 +43,11 @@
           <h3>Feed Type</h3>
           <div class="feed-type-cards">
             @for (type of feedTypes(); track type.key) {
-            <mat-card class="feed-type-card" [class.selected]="selectedFeedType() === type.key"
+            <button type="button" class="feed-type-card" [class.selected]="selectedFeedType() === type.key"
               (click)="selectFeedType(type.key)">
-              <mat-card-content>
-                <div class="type-header">
-                  <mat-icon>{{ type.icon }}</mat-icon>
-                  <h4>{{ type.label }}</h4>
-                </div>
-              </mat-card-content>
-            </mat-card>
+              <mat-icon>{{ type.icon }}</mat-icon>
+              <span>{{ type.label }}</span>
+            </button>
             }
           </div>
         </div>

@@ -302,9 +302,15 @@ export class NewFeedDialogComponent {
     const validTypes = ['notes', 'articles', 'photos', 'videos', 'music', 'custom'] as const;
     if (validTypes.includes(typeKey as (typeof validTypes)[number])) {
       const feedType = this.feedService.getFeedType(typeKey as (typeof validTypes)[number]);
-      if (feedType && feedType.kinds.length > 0) {
-        this.selectedKinds.set(feedType.kinds);
-        this.feedForm.patchValue({ kinds: feedType.kinds });
+      if (feedType) {
+        // Clear kinds for custom, otherwise use the feed type's default kinds
+        if (typeKey === 'custom') {
+          this.selectedKinds.set([]);
+          this.feedForm.patchValue({ kinds: [] });
+        } else if (feedType.kinds.length > 0) {
+          this.selectedKinds.set(feedType.kinds);
+          this.feedForm.patchValue({ kinds: feedType.kinds });
+        }
       }
     }
   }

@@ -27,12 +27,19 @@
 .feed-type-card {
   cursor: pointer;
   padding: 10px 16px;
-  text-align: center;
   border: 1.5px solid var(--mat-sys-outline-variant);
   border-radius: 24px;
   transition: all 0.2s ease-in-out;
   background-color: var(--mat-sys-surface-container);
-  min-width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--mat-sys-on-surface);
+  white-space: nowrap;
+  outline: none;
 
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
@@ -46,42 +53,22 @@
     border-color: var(--mat-sys-primary);
     border-width: 2px;
     padding: 9px 15px;
+    color: var(--mat-sys-on-primary-container);
 
-    .type-header {
-      mat-icon {
-        color: var(--mat-sys-primary);
-      }
-
-      h4 {
-        color: var(--mat-sys-on-primary-container);
-      }
+    mat-icon {
+      color: var(--mat-sys-primary);
     }
-  }
-
-  .mat-mdc-card-content {
-    padding: 0 !important;
-  }
-
-  .type-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
   }
 
   mat-icon {
     font-size: 1.35rem;
     width: 1.35rem;
     height: 1.35rem;
-    margin: 0;
     color: var(--mat-sys-on-surface-variant);
   }
 
-  h4 {
-    font-size: 0.9rem;
-    font-weight: 500;
-    margin: 0;
-    color: var(--mat-sys-on-surface);
-    white-space: nowrap;
+  span {
+    line-height: 1;
   }
 }
 
