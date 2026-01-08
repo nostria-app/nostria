@@ -401,12 +401,12 @@ export class ParsingService {
       });
     }
 
-    // Batch process nostr URIs to avoid sequential awaits
+    // Batch process nostr URIs with a short timeout to balance speed and data completeness
     const nostrDataPromises = nostrMatches.map(async nostrMatch => {
       try {
-        // Add timeout protection (5 seconds) to prevent hanging
+        // Add timeout protection (1 second per URI) to prevent long waits
         const timeoutPromise = new Promise<null>((resolve) =>
-          setTimeout(() => resolve(null), 5000)
+          setTimeout(() => resolve(null), 1000)
         );
 
         const nostrDataPromise = this.parseNostrUri(nostrMatch.match[0]);
@@ -425,20 +425,19 @@ export class ParsingService {
       }
     });
 
-    // Wait for all nostr URIs to be processed
+    // Wait for all nostr URIs to complete (each has its own 1 second timeout)
     const processedNostrMatches = await Promise.all(nostrDataPromises);
 
-    // Add valid nostr matches to the matches array
+    // Add nostr matches to the matches array
+    // Include matches even without nostrData so they can be rendered as fallback text
     for (const { match, index, length, nostrData } of processedNostrMatches) {
-      if (nostrData) {
-        matches.push({
-          start: index,
-          end: index + length,
-          content: match[0],
-          type: 'nostr-mention',
-          nostrData,
-        });
-      }
+      matches.push({
+        start: index,
+        end: index + length,
+        content: match[0],
+        type: 'nostr-mention',
+        nostrData: nostrData || undefined,
+      });
     }
 
     // Find Cashu tokens (ecash)
