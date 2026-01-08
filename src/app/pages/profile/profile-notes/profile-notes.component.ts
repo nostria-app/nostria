@@ -3,7 +3,6 @@ import { Component, effect, inject, signal } from '@angular/core';
 import { MatIconModule } from '@angular/material/icon';
 import { RouterModule } from '@angular/router';
 import { LoggerService } from '../../../services/logger.service';
-import { LoadingOverlayComponent } from '../../../components/loading-overlay/loading-overlay.component';
 import { ProfileStateService } from '../../../services/profile-state.service';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { BookmarkService } from '../../../services/bookmark.service';
@@ -27,7 +26,6 @@ import { TimelineFilterOptions } from '../../../interfaces/timeline-filter';
   imports: [
     EventComponent,
     MatIconModule,
-    LoadingOverlayComponent,
     RouterModule,
     MatTooltipModule,
     MatIconModule,
@@ -50,7 +48,6 @@ export class ProfileNotesComponent {
   data = inject(DataService);
   userRelay = inject(UserRelayService);
 
-  isLoading = signal<boolean>(false);
   error = signal<string | null>(null);
   pinnedNotes = signal<NostrRecord[]>([]);
   isLoadingPinned = signal<boolean>(false);

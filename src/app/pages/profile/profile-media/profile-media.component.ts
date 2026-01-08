@@ -15,7 +15,7 @@ import { EventComponent } from '../../../components/event/event.component';
   },
 })
 export class ProfileMediaComponent implements AfterViewInit {
-  private profileState = inject(ProfileStateService);
+  profileState = inject(ProfileStateService);
 
   error = signal<string | null>(null);
   private isInitialized = signal<boolean>(false);

@@ -45,6 +45,7 @@ export class ProfileStateService {
   private currentlyLoadingPubkey = signal<string>('');
 
   // Loading states
+  isInitiallyLoading = signal<boolean>(false);
   isLoadingMoreNotes = signal<boolean>(false);
   hasMoreNotes = signal<boolean>(true);
 
@@ -117,6 +118,7 @@ export class ProfileStateService {
   reset() {
     // Reset the loading tracker first to immediately invalidate any in-flight requests
     this.currentlyLoadingPubkey.set('');
+    this.isInitiallyLoading.set(false);
     this.followingList.set([]);
     this.notes.set([]);
     this.reposts.set([]);
@@ -327,6 +329,7 @@ export class ProfileStateService {
   async loadUserData(pubkey: string) {
     // Set the currently loading pubkey to track this request
     this.currentlyLoadingPubkey.set(pubkey);
+    this.isInitiallyLoading.set(true);
     this.logger.info(`Starting to load profile data for: ${pubkey}`);
 
     // First, load cached events from database for immediate display
@@ -335,6 +338,7 @@ export class ProfileStateService {
     // Check if profile was switched during cache loading
     if (this.currentlyLoadingPubkey() !== pubkey) {
       this.logger.info(`Profile switched during cache load. Stopping for: ${pubkey}`);
+      this.isInitiallyLoading.set(false);
       return;
     }
 
@@ -345,12 +349,14 @@ export class ProfileStateService {
     // Check if we're still loading this profile (user didn't switch to another profile)
     if (this.currentlyLoadingPubkey() !== pubkey) {
       this.logger.info(`Profile switched during contacts load. Discarding results for: ${pubkey}`);
+      this.isInitiallyLoading.set(false);
       return;
     }
 
     // Double-check against the current pubkey
     if (this.pubkey() !== pubkey) {
       this.logger.info(`Current profile changed during contacts load. Discarding results for: ${pubkey}`);
+      this.isInitiallyLoading.set(false);
       return;
     }
 
@@ -447,12 +453,14 @@ export class ProfileStateService {
     // Critical check: verify we're still loading data for this pubkey
     if (this.currentlyLoadingPubkey() !== pubkey) {
       this.logger.info(`Profile switched during events query. Discarding ${events?.length || 0} results for: ${pubkey}`);
+      this.isInitiallyLoading.set(false);
       return;
     }
 
     // Double-check against the current pubkey
     if (this.pubkey() !== pubkey) {
       this.logger.info(`Current profile changed during events query. Discarding ${events?.length || 0} results for: ${pubkey}`);
+      this.isInitiallyLoading.set(false);
       return;
     }
 
@@ -562,6 +570,10 @@ export class ProfileStateService {
     // Load additional media items separately to ensure we have enough for the media tab
     // This runs in parallel with the main query to optimize loading time
     this.loadInitialMedia(pubkey);
+
+    // Initial load complete - set loading to false
+    this.isInitiallyLoading.set(false);
+    this.logger.info(`Initial profile data load completed for: ${pubkey}`);
 
     // this.relay?.subscribeEose(
     //   pubkey,

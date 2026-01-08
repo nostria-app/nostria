@@ -1,5 +1,10 @@
 <div class="tab-content">
-  @if (sortedArticles().length === 0 && !profileState.isLoadingMoreArticles()) {
+  @if (profileState.isInitiallyLoading() && sortedArticles().length === 0) {
+  <div class="loading-state">
+    <mat-spinner [diameter]="40"></mat-spinner>
+    <p>Loading articles...</p>
+  </div>
+  } @else if (sortedArticles().length === 0 && !profileState.isLoadingMoreArticles()) {
   <div class="empty-state">
     <mat-icon>article</mat-icon>
     <p>No articles to display yet</p>
