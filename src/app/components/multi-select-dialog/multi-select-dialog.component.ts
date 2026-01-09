@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatMenuModule } from '@angular/material/menu';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CustomDialogComponent } from '../custom-dialog/custom-dialog.component';
@@ -24,6 +25,7 @@ export interface SelectableItem {
     MatCheckboxModule,
     MatFormFieldModule,
     MatInputModule,
+    MatMenuModule,
     ReactiveFormsModule,
     CustomDialogComponent,
   ],
@@ -37,9 +39,13 @@ export class MultiSelectDialogComponent {
   items = input<SelectableItem[]>([]);
   searchPlaceholder = input<string>('Search...');
   emptyMessage = input<string>('No items available');
+  showEditOption = input<boolean>(false);
+  showDeleteOption = input<boolean>(false);
 
   // Outputs
   closed = output<SelectableItem[] | null>();
+  itemEdit = output<SelectableItem>();
+  itemDelete = output<SelectableItem>();
 
   // State
   searchControl = new FormControl('');
@@ -140,5 +146,19 @@ export class MultiSelectDialogComponent {
   onConfirm(): void {
     const selected = this.items().filter(item => item.selected);
     this.closed.emit(selected);
+  }
+
+  onEdit(item: SelectableItem, event: Event): void {
+    event.stopPropagation();
+    this.itemEdit.emit(item);
+  }
+
+  onDelete(item: SelectableItem, event: Event): void {
+    event.stopPropagation();
+    this.itemDelete.emit(item);
+  }
+
+  hasMenuOptions(): boolean {
+    return this.showEditOption() || this.showDeleteOption();
   }
 }

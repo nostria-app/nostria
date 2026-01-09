@@ -1,4 +1,5 @@
 import { Component, inject, signal, computed, input, output, ChangeDetectionStrategy, effect } from '@angular/core';
+import { Router } from '@angular/router';
 
 import { MatButtonModule } from '@angular/material/button';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -111,6 +112,7 @@ export class NewFeedDialogComponent {
   private dataService = inject(DataService);
   private encryption = inject(EncryptionService);
   private logger = inject(LoggerService);
+  private router = inject(Router);
 
   // Inputs
   icons = input<string[]>([]);
@@ -579,6 +581,48 @@ export class NewFeedDialogComponent {
 
   removeFollowSet(followSet: FollowSet): void {
     this.selectedFollowSets.update(sets => sets.filter(s => s.id !== followSet.id));
+  }
+
+  // Handlers for starter pack actions
+  onStarterPackEdit(item: SelectableItem): void {
+    // Navigate to lists page for editing the starter pack
+    this.router.navigate(['/lists']);
+    // Close the dialog
+    this.closed.emit(null);
+  }
+
+  async onStarterPackDelete(item: SelectableItem): Promise<void> {
+    const pack = this.availableStarterPacks().find(p => p.id === item.id);
+    if (!pack) return;
+
+    // TODO: Implement deletion - need to create deletion event (NIP-09)
+    // For now, just log
+    this.logger.info('Delete starter pack:', pack);
+    
+    // Remove from available and selected
+    this.availableStarterPacks.update(packs => packs.filter(p => p.id !== item.id));
+    this.selectedStarterPacks.update(packs => packs.filter(p => p.id !== item.id));
+  }
+
+  // Handlers for follow set actions
+  onFollowSetEdit(item: SelectableItem): void {
+    // Navigate to lists page for editing the follow set
+    this.router.navigate(['/lists']);
+    // Close the dialog
+    this.closed.emit(null);
+  }
+
+  async onFollowSetDelete(item: SelectableItem): Promise<void> {
+    const set = this.availableFollowSets().find(s => s.id === item.id);
+    if (!set) return;
+
+    // TODO: Implement deletion - need to create deletion event (NIP-09)
+    // For now, just log
+    this.logger.info('Delete follow set:', set);
+    
+    // Remove from available and selected
+    this.availableFollowSets.update(sets => sets.filter(s => s.id !== item.id));
+    this.selectedFollowSets.update(sets => sets.filter(s => s.id !== item.id));
   }
 
   onClose(): void {

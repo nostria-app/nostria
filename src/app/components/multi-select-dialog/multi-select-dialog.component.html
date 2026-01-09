@@ -48,6 +48,25 @@
             <div class="item-count">{{ item.count }} users</div>
             }
           </div>
+          @if (hasMenuOptions()) {
+          <button mat-icon-button [matMenuTriggerFor]="itemMenu" (click)="$event.stopPropagation()" class="item-menu-btn">
+            <mat-icon>more_vert</mat-icon>
+          </button>
+          <mat-menu #itemMenu="matMenu">
+            @if (showEditOption()) {
+            <button mat-menu-item (click)="onEdit(item, $event)">
+              <mat-icon>edit</mat-icon>
+              <span>Edit</span>
+            </button>
+            }
+            @if (showDeleteOption()) {
+            <button mat-menu-item (click)="onDelete(item, $event)">
+              <mat-icon>delete</mat-icon>
+              <span>Delete</span>
+            </button>
+            }
+          </mat-menu>
+          }
         </div>
         }
         }
