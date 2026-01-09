@@ -97,14 +97,8 @@ export class FollowSetsService {
           }
         );
 
-        // Filter to only nostria-prefixed follow sets
-        const nostriaEvents = events.filter(record => {
-          const dTag = this.getDTagFromEvent(record.event);
-          return dTag?.startsWith(NOSTRIA_PREFIX);
-        });
-
-        // Convert events to FollowSet objects
-        const sets = nostriaEvents
+        // Convert all events to FollowSet objects (no filtering)
+        const sets = events
           .map(record => this.parseFollowSetEvent(record.event))
           .filter((set): set is FollowSet => set !== null);
 
