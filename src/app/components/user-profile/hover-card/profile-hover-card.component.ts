@@ -32,6 +32,7 @@ import { TrustService } from '../../../services/trust.service';
 import { FavoritesService } from '../../../services/favorites.service';
 import { PublishService } from '../../../services/publish.service';
 import { NostrService } from '../../../services/nostr.service';
+import { FollowSetsService } from '../../../services/follow-sets.service';
 import { firstValueFrom } from 'rxjs';
 
 interface ProfileData {
@@ -80,6 +81,7 @@ export class ProfileHoverCardComponent {
   private publishService = inject(PublishService);
   private nostrService = inject(NostrService);
   private snackBar = inject(MatSnackBar);
+  private followSetsService = inject(FollowSetsService);
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);
@@ -97,6 +99,10 @@ export class ProfileHoverCardComponent {
   });
 
   trustEnabled = computed(() => this.trustService.isEnabled());
+
+  availableFollowSets = computed(() => {
+    return this.followSetsService.followSets();
+  });
 
   npubValue = computed<string>(() => {
     const pubkey = this.pubkey();
@@ -342,6 +348,50 @@ export class ProfileHoverCardComponent {
       } else {
         this.layout.toast('Added to favorites');
       }
+    }
+  }
+
+  isInFollowSet(dTag: string): boolean {
+    const set = this.followSetsService.getFollowSetByDTag(dTag);
+    return set ? set.pubkeys.includes(this.pubkey()) : false;
+  }
+
+  async addToFollowSet(dTag: string): Promise<void> {
+    const pubkey = this.pubkey();
+    const isCurrentlyInSet = this.isInFollowSet(dTag);
+    
+    try {
+      if (isCurrentlyInSet) {
+        // Remove from set
+        await this.followSetsService.removeFromFollowSet(dTag, pubkey);
+        this.layout.toast('Removed from follow set');
+      } else {
+        // Add to set
+        await this.followSetsService.addToFollowSet(dTag, pubkey);
+        this.layout.toast('Added to follow set');
+      }
+    } catch (error) {
+      this.layout.toast('Failed to update follow set');
+    }
+  }
+
+  async createNewFollowSet(): Promise<void> {
+    const setName = prompt('Enter a name for the new follow set:');
+    if (!setName || setName.trim() === '') {
+      return;
+    }
+
+    try {
+      const pubkey = this.pubkey();
+      const newSet = await this.followSetsService.createFollowSet(setName.trim(), [pubkey]);
+      
+      if (newSet) {
+        this.layout.toast(`Created follow set "${setName}" and added user`);
+      } else {
+        this.layout.toast('Failed to create follow set');
+      }
+    } catch (error) {
+      this.layout.toast('Failed to create follow set');
     }
   }
 
