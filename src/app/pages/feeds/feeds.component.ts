@@ -352,14 +352,6 @@ export class FeedsComponent implements OnDestroy {
   // Drag state to prevent unnecessary re-renders during column reordering
   private isDragging = signal(false);
 
-  // Pull-to-refresh state
-  pullToRefreshActive = signal(false);
-  pullDistance = signal(0);
-  pullThreshold = 80; // pixels to trigger reload
-  private startY = 0;
-  private isPulling = false;
-  @ViewChild('feedsContainer') feedsContainer?: ElementRef<HTMLDivElement>;
-
   // Cache to store events during drag operations
   private _eventCache = new Map<string, Event[]>();
 
@@ -1712,93 +1704,62 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Pull-to-refresh: Handle touch start
-   * Only works with touch events and when scrolled to the top
+   * Get or initialize scroll state for a column
    */
-  onPullStart(event: TouchEvent | MouseEvent): void {
-    const containerEl = this.feedsContainer?.nativeElement;
-    if (!containerEl) return;
-
-    // Only activate pull-to-refresh when scrolled to the very top
-    // Use a small threshold to account for sub-pixel scrolling
-    if (containerEl.scrollTop <= 1) {
-      this.isPulling = true;
-      this.startY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
-      this.pullToRefreshActive.set(true);
+  getColumnPullState(feedId: string) {
+    if (!this.columnScrollStates.has(feedId)) {
+      this.columnScrollStates.set(feedId, {
+        showScrollToTop: signal(false),
+        lastScrollTop: 0
+      });
     }
+    return this.columnScrollStates.get(feedId)!;
   }
 
   /**
-   * Pull-to-refresh: Handle touch move
-   * Only processes if pull was initiated from the top
+   * Handle scroll on a column to show/hide scroll-to-top button
    */
-  onPullMove(event: TouchEvent | MouseEvent): void {
-    if (!this.isPulling) return;
+  onColumnScroll(event: globalThis.Event, feedId: string): void {
+    const state = this.getColumnPullState(feedId);
+    const target = event.target as HTMLElement;
 
-    const containerEl = this.feedsContainer?.nativeElement;
-    if (!containerEl) return;
-
-    const currentY = event instanceof TouchEvent ? event.touches[0].clientY : event.clientY;
-    const deltaY = currentY - this.startY;
-
-    // Only track downward pulls (positive deltaY) when at the top
-    // If user has scrolled down even slightly, cancel the pull
-    if (containerEl.scrollTop > 1) {
-      // User scrolled down, cancel pull-to-refresh
-      this.isPulling = false;
-      this.pullToRefreshActive.set(false);
-      this.pullDistance.set(0);
+    if (!target) {
+      console.log('No target element in scroll event');
       return;
     }
 
-    // Only process downward pulls
-    if (deltaY > 0) {
-      event.preventDefault();
-      // Apply resistance to the pull (diminishing returns)
-      const resistance = 0.5;
-      const distance = Math.min(deltaY * resistance, this.pullThreshold * 1.5);
-      this.pullDistance.set(distance);
-    } else {
-      // User is pulling upward, reset
-      this.pullDistance.set(0);
+    state.element = target;
+    const scrollTop = target.scrollTop;
+
+    // Show scroll-to-top button when scrolled down
+    const shouldShow = scrollTop > this.scrollToTopThreshold;
+
+    console.log('Scroll event for', feedId, {
+      scrollTop,
+      threshold: this.scrollToTopThreshold,
+      shouldShow,
+      currentlyShowing: state.showScrollToTop()
+    });
+
+    if (state.showScrollToTop() !== shouldShow) {
+      console.log('Updating scroll-to-top visibility to:', shouldShow);
+      state.showScrollToTop.set(shouldShow);
     }
+
+    state.lastScrollTop = scrollTop;
   }
 
   /**
-   * Pull-to-refresh: Handle touch/mouse end
+   * Scroll a specific column to the top
    */
-  onPullEnd(): void {
-    if (!this.isPulling) return;
+  scrollColumnToTop(feedId: string): void {
+    const state = this.getColumnPullState(feedId);
+    if (!state.element) return;
 
-    const distance = this.pullDistance();
-
-    // Trigger reload if threshold was exceeded
-    if (distance >= this.pullThreshold) {
-      this.triggerReload();
-    }
-
-    // Reset state
-    this.isPulling = false;
-    this.pullToRefreshActive.set(false);
-    this.pullDistance.set(0);
-  }
-
-  /**
-   * Trigger reload operation - refreshes the active feed
-   */
-  private async triggerReload(): Promise<void> {
-    const activeFeed = this.activeFeed();
-    if (!activeFeed) {
-      this.logger.warn('No active feed to reload');
-      return;
-    }
-
-    this.logger.info('Pull-to-refresh: Reloading active feed');
-
-    // Refresh the active feed
-    await this.feedService.refreshFeed(activeFeed.id);
-
-    this.logger.info('Pull-to-refresh: Feed reload complete');
+    state.element.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
   }
 
   /**
