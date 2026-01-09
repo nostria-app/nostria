@@ -52,10 +52,10 @@
                 <mat-icon>edit</mat-icon>
                 Edit
               </button>
-              <!-- <button mat-button color="warn" (click)="deleteList(list)">
+              <button mat-button color="warn" (click)="deleteList(list)">
                 <mat-icon>delete</mat-icon>
                 Delete
-              </button> -->
+              </button>
               } @else {
               <button mat-raised-button color="primary" (click)="createList(listType)">
                 <mat-icon>add</mat-icon>
@@ -89,7 +89,18 @@
             <div class="set-title">
               <mat-icon>{{ listType.icon }}</mat-icon>
               <h2>{{ listType.name }}</h2>
+              @if (getSets(listType.kind); as sets) {
+              @if (sets.length > 0) {
               <span class="kind-badge">Kind {{ listType.kind }}</span>
+              <span class="count-badge">
+                <mat-icon>tag</mat-icon>
+                <span class="count-number">{{ sets.length }}</span>
+                <span class="count-label">{{ sets.length === 1 ? 'set' : 'sets' }}</span>
+              </span>
+              } @else {
+              <span class="kind-badge">Kind {{ listType.kind }}</span>
+              }
+              }
             </div>
             <button mat-raised-button color="primary" (click)="createList(listType)">
               <mat-icon>add</mat-icon>
@@ -132,10 +143,10 @@
                   <mat-icon>edit</mat-icon>
                   Edit
                 </button>
-                <!-- <button mat-button color="warn" (click)="deleteList(set)">
+                <button mat-button color="warn" (click)="deleteList(set)">
                   <mat-icon>delete</mat-icon>
                   Delete
-                </button> -->
+                </button>
               </mat-card-actions>
             </mat-card>
             }

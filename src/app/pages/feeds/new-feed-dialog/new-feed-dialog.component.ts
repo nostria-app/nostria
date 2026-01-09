@@ -12,6 +12,7 @@ import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { MatCardModule } from '@angular/material/card';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatDialog } from '@angular/material/dialog';
 import { FormBuilder, Validators, ReactiveFormsModule, FormControl } from '@angular/forms';
 import { COMMA, ENTER } from '@angular/cdk/keycodes';
 import { MatChipInputEvent } from '@angular/material/chips';
@@ -29,6 +30,7 @@ import { FollowingService } from '../../../services/following.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
 import { MultiSelectDialogComponent, SelectableItem } from '../../../components/multi-select-dialog/multi-select-dialog.component';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 export interface FollowSet {
   id: string;
@@ -113,6 +115,7 @@ export class NewFeedDialogComponent {
   private encryption = inject(EncryptionService);
   private logger = inject(LoggerService);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
 
   // Inputs
   icons = input<string[]>([]);
@@ -197,7 +200,7 @@ export class NewFeedDialogComponent {
   userSelectableItems = computed((): SelectableItem[] => {
     const users = this.followingUsers();
     const selectedPubkeys = this.selectedUsers().map(u => u.event.pubkey);
-    
+
     return users.map(user => ({
       id: user.event.pubkey,
       title: user.data.display_name || user.data.name || 'Unknown',
@@ -209,7 +212,7 @@ export class NewFeedDialogComponent {
   starterPackSelectableItems = computed((): SelectableItem[] => {
     const packs = this.availableStarterPacks();
     const selectedIds = this.selectedStarterPacks().map(p => p.id);
-    
+
     return packs.map(pack => ({
       id: pack.id,
       title: pack.title,
@@ -222,7 +225,7 @@ export class NewFeedDialogComponent {
   followSetSelectableItems = computed((): SelectableItem[] => {
     const sets = this.availableFollowSets();
     const selectedIds = this.selectedFollowSets().map(s => s.id);
-    
+
     return sets.map(set => ({
       id: set.id,
       title: set.title,
@@ -528,7 +531,7 @@ export class NewFeedDialogComponent {
   // Methods to handle dialog results
   onUserSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
     this.showUserSelectDialog.set(false);
-    
+
     if (selectedItems === null) {
       return; // User cancelled
     }
@@ -537,13 +540,13 @@ export class NewFeedDialogComponent {
     const selected = selectedItems
       .map(item => users.find(u => u.event.pubkey === item.id))
       .filter((u): u is NostrRecord => u !== undefined);
-    
+
     this.selectedUsers.set(selected);
   }
 
   onStarterPackSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
     this.showStarterPackSelectDialog.set(false);
-    
+
     if (selectedItems === null) {
       return; // User cancelled
     }
@@ -552,13 +555,13 @@ export class NewFeedDialogComponent {
     const selected = selectedItems
       .map(item => packs.find(p => p.id === item.id))
       .filter((p): p is StarterPack => p !== undefined);
-    
+
     this.selectedStarterPacks.set(selected);
   }
 
   onFollowSetSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
     this.showFollowSetSelectDialog.set(false);
-    
+
     if (selectedItems === null) {
       return; // User cancelled
     }
@@ -567,7 +570,7 @@ export class NewFeedDialogComponent {
     const selected = selectedItems
       .map(item => sets.find(s => s.id === item.id))
       .filter((s): s is FollowSet => s !== undefined);
-    
+
     this.selectedFollowSets.set(selected);
   }
 
@@ -598,7 +601,7 @@ export class NewFeedDialogComponent {
     // TODO: Implement deletion - need to create deletion event (NIP-09)
     // For now, just log
     this.logger.info('Delete starter pack:', pack);
-    
+
     // Remove from available and selected
     this.availableStarterPacks.update(packs => packs.filter(p => p.id !== item.id));
     this.selectedStarterPacks.update(packs => packs.filter(p => p.id !== item.id));
@@ -619,7 +622,7 @@ export class NewFeedDialogComponent {
     // TODO: Implement deletion - need to create deletion event (NIP-09)
     // For now, just log
     this.logger.info('Delete follow set:', set);
-    
+
     // Remove from available and selected
     this.availableFollowSets.update(sets => sets.filter(s => s.id !== item.id));
     this.selectedFollowSets.update(sets => sets.filter(s => s.id !== item.id));
