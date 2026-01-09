@@ -26,7 +26,7 @@ html {
         primary: nostria-theme.$primary-palette,
         tertiary: nostria-theme.$tertiary-palette,
       ),
-      typography: Roboto,
+      typography: "Nunito Sans",
       density: 0,
     ));
 }
@@ -52,7 +52,15 @@ html,
 body {
   height: 100dvh;
   margin: 0;
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  // font-family: Roboto, 'Helvetica Neue', sans-serif;
+
+  font-family: "Nunito Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings:
+    "wdth" 100,
+    "YTLC" 500;
+
   overscroll-behavior: none;
   overflow: hidden;
 }
@@ -370,7 +378,16 @@ a:hover {
 // Main theme-related styles
 body {
   margin: 0;
-  font-family: Roboto, 'Helvetica Neue', sans-serif;
+  // font-family: Roboto, 'Helvetica Neue', sans-serif;
+
+  font-family: "Nunito Sans", sans-serif;
+  font-optical-sizing: auto;
+  font-style: normal;
+  font-variation-settings:
+    "wdth" 100,
+    "YTLC" 500;
+
+
   height: 100dvh;
   transition: background-color 0.3s ease;
 }
