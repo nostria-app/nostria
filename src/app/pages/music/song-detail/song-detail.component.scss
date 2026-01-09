@@ -82,8 +82,8 @@
     width: 280px;
     height: 280px;
     object-fit: cover;
-    border-radius: var(--mat-sys-corner-large);
-    box-shadow: var(--mat-sys-level3);
+    border-radius: 8px;
+    box-shadow: var(--mat-sys-level2);
 
     @media (max-width: 600px) {
       width: 200px;
@@ -97,7 +97,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--mat-sys-corner-large);
+    border-radius: 8px;
     background: linear-gradient(135deg, var(--mat-sys-primary-container) 0%, var(--mat-sys-secondary-container) 100%);
 
     @media (max-width: 600px) {
@@ -120,8 +120,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--mat-sys-corner-large);
-    box-shadow: var(--mat-sys-level3);
+    border-radius: 8px;
+    box-shadow: var(--mat-sys-level2);
 
     @media (max-width: 600px) {
       width: 200px;
