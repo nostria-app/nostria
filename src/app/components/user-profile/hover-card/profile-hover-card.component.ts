@@ -33,6 +33,7 @@ import { FavoritesService } from '../../../services/favorites.service';
 import { PublishService } from '../../../services/publish.service';
 import { NostrService } from '../../../services/nostr.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
+import { TextInputDialogComponent, TextInputDialogData } from '../../text-input-dialog/text-input-dialog.component';
 import { firstValueFrom } from 'rxjs';
 
 interface ProfileData {
@@ -376,8 +377,21 @@ export class ProfileHoverCardComponent {
   }
 
   async createNewFollowSet(): Promise<void> {
-    // TODO: Replace prompt() with a proper Material Design dialog
-    const setName = prompt('Enter a name for the new follow set:');
+    const dialogRef = this.dialog.open(TextInputDialogComponent, {
+      data: {
+        title: 'Create New Follow Set',
+        message: 'Enter a name for the new follow set',
+        label: 'Follow Set Name',
+        placeholder: 'e.g., Developers, Friends, Artists',
+        required: true,
+        minLength: 1,
+        maxLength: 100,
+      } as TextInputDialogData,
+      width: '400px',
+    });
+
+    const setName = await firstValueFrom(dialogRef.afterClosed());
+    
     if (!setName || setName.trim() === '') {
       return;
     }
