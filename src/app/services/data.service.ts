@@ -1,4 +1,4 @@
-import { inject, Injectable } from '@angular/core';
+import { inject, Injectable, Injector } from '@angular/core';
 import { DatabaseService } from './database.service';
 import { NostrRecord } from '../interfaces';
 import { LoggerService } from './logger.service';
@@ -11,6 +11,7 @@ import { SharedRelayService } from './relays/shared-relay';
 import { AccountRelayService } from './relays/account-relay';
 import { RelaysService } from './relays/relays';
 import { RelayPoolService } from './relays/relay-pool';
+import type { AccountStateService } from './account-state.service';
 
 export interface DataOptions {
   cache?: boolean; // Whether to use cache
@@ -32,6 +33,18 @@ export class DataService {
   private readonly cache = inject(Cache);
   private readonly relaysService = inject(RelaysService);
   private readonly relayPool = inject(RelayPoolService);
+  private readonly injector = inject(Injector);
+
+  // Lazy-loaded to avoid circular dependency
+  private get accountState(): AccountStateService {
+    return this.injector.get(
+      // Dynamically import to avoid circular dependency at module load time
+      (() => {
+        const { AccountStateService } = require('./account-state.service');
+        return AccountStateService;
+      })()
+    );
+  }
 
   // Map to track pending profile requests to prevent race conditions
   private pendingProfileRequests = new Map<string, Promise<NostrRecord | undefined>>();
@@ -316,6 +329,31 @@ export class DataService {
     if (forceRefresh) {
       this.logger.debug(`[Profile] Force refreshing profile for: ${pubkey.substring(0, 8)}...`);
       return this.loadProfile(pubkey, cacheKey, true);
+    }
+
+    // OPTIMIZATION: For returning users, wait briefly for profile cache to load from storage
+    // This prevents 30+ individual storage lookups on initial page load
+    const currentPubkey = this.accountState.pubkey();
+    if (currentPubkey && this.accountState.hasProfileDiscoveryBeenDone(currentPubkey)) {
+      // Returning user - wait briefly for cache load if not already loaded
+      if (!this.accountState.profileCacheLoaded()) {
+        const maxWaitTime = 300; // Wait max 300ms for cache
+        const pollInterval = 20;
+        let waited = 0;
+
+        while (!this.accountState.profileCacheLoaded() && waited < maxWaitTime) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          waited += pollInterval;
+        }
+
+        if (waited > 0 && waited < maxWaitTime) {
+          // Cache loaded during our wait - profile might be there now
+          const cached = this.cache.get<NostrRecord>(cacheKey);
+          if (cached) {
+            return cached;
+          }
+        }
+      }
     }
 
     // CRITICAL: Check pending requests FIRST, synchronously, before any async work
