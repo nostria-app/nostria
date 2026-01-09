@@ -27,6 +27,7 @@ import { LoggerService } from '../../../services/logger.service';
 import { FollowingService } from '../../../services/following.service';
 import { AccountRelayService } from '../../../services/relays/account-relay';
 import { CustomDialogComponent } from '../../../components/custom-dialog/custom-dialog.component';
+import { MultiSelectDialogComponent, SelectableItem } from '../../../components/multi-select-dialog/multi-select-dialog.component';
 
 export interface FollowSet {
   id: string;
@@ -94,6 +95,7 @@ const NOSTR_KINDS = [
     ReactiveFormsModule,
     MatButtonToggleModule,
     CustomDialogComponent,
+    MultiSelectDialogComponent,
   ],
   templateUrl: './new-feed-dialog.component.html',
   styleUrls: ['./new-feed-dialog.component.scss'],
@@ -147,18 +149,17 @@ export class NewFeedDialogComponent {
   selectedFollowSets = signal<FollowSet[]>([]);
   availableFollowSets = signal<FollowSet[]>([]);
 
+  // Multi-select dialog visibility signals
+  showUserSelectDialog = signal(false);
+  showStarterPackSelectDialog = signal(false);
+  showFollowSetSelectDialog = signal(false);
+
   // Form controls for chips and autocomplete
   kindInputControl = new FormControl('');
   relayInputControl = new FormControl('');
-  userInputControl = new FormControl('');
-  starterPackInputControl = new FormControl('');
-  followSetInputControl = new FormControl('');
 
   // Reactive signals for input values
   kindInputValue = signal('');
-  userInputValue = signal('');
-  starterPackInputValue = signal('');
-  followSetInputValue = signal('');
 
   // Chip separator keys
   readonly separatorKeysCodes = [ENTER, COMMA] as const;
@@ -177,7 +178,7 @@ export class NewFeedDialogComponent {
     return this.accountState.followingList().length;
   });
 
-  // Filtered options for autocomplete
+  // Filtered options for autocomplete (only for kinds now)
   filteredKinds = computed(() => {
     const input = this.kindInputValue().toLowerCase();
     const selected = this.selectedKinds();
@@ -190,47 +191,43 @@ export class NewFeedDialogComponent {
     });
   });
 
-  filteredUsers = computed(() => {
-    const input = this.userInputValue();
-    if (!input || input.length < 1) {
-      return this.followingUsers().filter(profile => {
-        return !this.selectedUsers().some(selected => selected.event.pubkey === profile.event.pubkey);
-      });
-    }
-
-    const searchResults = this.followingService.searchProfiles(input);
-    const selected = this.selectedUsers();
-    const records = this.followingService.toNostrRecords(searchResults);
-
-    return records.filter(profile => {
-      return !selected.some(s => s.event.pubkey === profile.event.pubkey);
-    });
+  // Computed properties for multi-select dialogs
+  userSelectableItems = computed((): SelectableItem[] => {
+    const users = this.followingUsers();
+    const selectedPubkeys = this.selectedUsers().map(u => u.event.pubkey);
+    
+    return users.map(user => ({
+      id: user.event.pubkey,
+      title: user.data.display_name || user.data.name || 'Unknown',
+      subtitle: user.data.nip05 || undefined,
+      selected: selectedPubkeys.includes(user.event.pubkey)
+    }));
   });
 
-  filteredStarterPacks = computed(() => {
-    const input = this.starterPackInputValue().toLowerCase();
-    const available = this.availableStarterPacks();
-    const selected = this.selectedStarterPacks();
-
-    return available.filter(pack => {
-      const matchesInput = pack.title.toLowerCase().includes(input) ||
-        pack.description?.toLowerCase().includes(input);
-      const notSelected = !selected.some(s => s.id === pack.id);
-      return matchesInput && notSelected;
-    });
+  starterPackSelectableItems = computed((): SelectableItem[] => {
+    const packs = this.availableStarterPacks();
+    const selectedIds = this.selectedStarterPacks().map(p => p.id);
+    
+    return packs.map(pack => ({
+      id: pack.id,
+      title: pack.title,
+      subtitle: pack.description,
+      count: pack.pubkeys.length,
+      selected: selectedIds.includes(pack.id)
+    }));
   });
 
-  filteredFollowSets = computed(() => {
-    const input = this.followSetInputValue().toLowerCase();
-    const available = this.availableFollowSets();
-    const selected = this.selectedFollowSets();
-
-    return available.filter(set => {
-      const matchesInput = set.title.toLowerCase().includes(input) ||
-        set.description?.toLowerCase().includes(input);
-      const notSelected = !selected.some(s => s.id === set.id);
-      return matchesInput && notSelected;
-    });
+  followSetSelectableItems = computed((): SelectableItem[] => {
+    const sets = this.availableFollowSets();
+    const selectedIds = this.selectedFollowSets().map(s => s.id);
+    
+    return sets.map(set => ({
+      id: set.id,
+      title: set.title,
+      subtitle: set.description,
+      count: set.pubkeys.length,
+      selected: selectedIds.includes(set.id)
+    }));
   });
 
   private initialized = false;
@@ -261,21 +258,9 @@ export class NewFeedDialogComponent {
       }
     });
 
-    // Set up reactive input value tracking
+    // Set up reactive input value tracking (only for kinds now)
     this.kindInputControl.valueChanges.subscribe(value => {
       this.kindInputValue.set(value || '');
-    });
-
-    this.userInputControl.valueChanges.subscribe(value => {
-      this.userInputValue.set(value || '');
-    });
-
-    this.starterPackInputControl.valueChanges.subscribe(value => {
-      this.starterPackInputValue.set(value || '');
-    });
-
-    this.followSetInputControl.valueChanges.subscribe(value => {
-      this.followSetInputValue.set(value || '');
     });
 
     this.initializeData();
@@ -525,48 +510,71 @@ export class NewFeedDialogComponent {
     }
   }
 
-  onUserSelected(event: MatAutocompleteSelectedEvent): void {
-    const pubkey = event.option.value;
-    const profile = this.followingUsers().find(p => p.event.pubkey === pubkey);
+  // Methods to open multi-select dialogs
+  openUserSelectDialog(): void {
+    this.showUserSelectDialog.set(true);
+  }
 
-    if (profile && !this.selectedUsers().some(u => u.event.pubkey === pubkey)) {
-      this.selectedUsers.update(users => [...users, profile]);
+  openStarterPackSelectDialog(): void {
+    this.showStarterPackSelectDialog.set(true);
+  }
+
+  openFollowSetSelectDialog(): void {
+    this.showFollowSetSelectDialog.set(true);
+  }
+
+  // Methods to handle dialog results
+  onUserSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
+    this.showUserSelectDialog.set(false);
+    
+    if (selectedItems === null) {
+      return; // User cancelled
     }
 
-    this.userInputControl.setValue('');
-    this.userInputValue.set('');
+    const users = this.followingUsers();
+    const selected = selectedItems
+      .map(item => users.find(u => u.event.pubkey === item.id))
+      .filter((u): u is NostrRecord => u !== undefined);
+    
+    this.selectedUsers.set(selected);
+  }
+
+  onStarterPackSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
+    this.showStarterPackSelectDialog.set(false);
+    
+    if (selectedItems === null) {
+      return; // User cancelled
+    }
+
+    const packs = this.availableStarterPacks();
+    const selected = selectedItems
+      .map(item => packs.find(p => p.id === item.id))
+      .filter((p): p is StarterPack => p !== undefined);
+    
+    this.selectedStarterPacks.set(selected);
+  }
+
+  onFollowSetSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
+    this.showFollowSetSelectDialog.set(false);
+    
+    if (selectedItems === null) {
+      return; // User cancelled
+    }
+
+    const sets = this.availableFollowSets();
+    const selected = selectedItems
+      .map(item => sets.find(s => s.id === item.id))
+      .filter((s): s is FollowSet => s !== undefined);
+    
+    this.selectedFollowSets.set(selected);
   }
 
   removeUser(user: NostrRecord): void {
     this.selectedUsers.update(users => users.filter(u => u.event.pubkey !== user.event.pubkey));
   }
 
-  onStarterPackSelected(event: MatAutocompleteSelectedEvent): void {
-    const packId = event.option.value;
-    const pack = this.availableStarterPacks().find(p => p.id === packId);
-
-    if (pack && !this.selectedStarterPacks().some(p => p.id === packId)) {
-      this.selectedStarterPacks.update(packs => [...packs, pack]);
-    }
-
-    this.starterPackInputControl.setValue('');
-    this.starterPackInputValue.set('');
-  }
-
   removeStarterPack(pack: StarterPack): void {
     this.selectedStarterPacks.update(packs => packs.filter(p => p.id !== pack.id));
-  }
-
-  onFollowSetSelected(event: MatAutocompleteSelectedEvent): void {
-    const setId = event.option.value;
-    const followSet = this.availableFollowSets().find(s => s.id === setId);
-
-    if (followSet && !this.selectedFollowSets().some(s => s.id === setId)) {
-      this.selectedFollowSets.update(sets => [...sets, followSet]);
-    }
-
-    this.followSetInputControl.setValue('');
-    this.followSetInputValue.set('');
   }
 
   removeFollowSet(followSet: FollowSet): void {
