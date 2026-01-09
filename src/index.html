@@ -25,12 +25,9 @@
   <meta name="twitter:image" content="/assets/nostria-social.jpg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- <link
+  <link
     href="https://fonts.googleapis.com/css2?family=Protest+Strike&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap"
-    rel="stylesheet" /> -->
-
-<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wght@0,6..12,200..1000;1,6..12,200..1000&family=Protest+Strike&display=swap" rel="stylesheet">
-
+    rel="stylesheet" />
 
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet" />
   <link rel="manifest" href="manifest.webmanifest" />
@@ -268,7 +265,7 @@
         <button class="app-loading-reload-btn" onclick="clearCachesAndReload()">Clear Cache & Reload</button>
       </div>
       <script>
-        // Show reload button after 10 seconds if still loading
+        // Show reload button after 5 seconds if still loading
         setTimeout(function () {
           var reloadEl = document.getElementById('app-loading-reload');
           var loadingEl = document.getElementById('app-loading');
@@ -276,7 +273,7 @@
           if (reloadEl && loadingEl && loadingEl.offsetParent !== null) {
             reloadEl.classList.add('visible');
           }
-        }, 10000);
+        }, 5000);
       </script>
     </div>
   </app-root>

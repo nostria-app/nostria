@@ -268,6 +268,11 @@
 
   &:last-child {
     margin-bottom: 0;
+
+    // For the last threaded reply, stop the line at the bottom of the element
+    .thread-line-clickable.no-replies::before {
+      bottom: 0;
+    }
   }
 
   // When lines are hidden in settings, make them transparent but still functional
@@ -319,9 +324,10 @@
     transition: background-color 0.15s ease, width 0.15s ease;
   }
 
-  // Non-interactive lines (no replies) - just visual, no cursor change
-  &.no-replies {
-    cursor: default;
+  // Non-interactive lines (no replies) - extend to connect with next sibling
+  &.no-replies::before {
+    // Extend the line down to connect to the next event (using a large value to ensure connection)
+    bottom: -9999px;
   }
 
   // Interactive lines (has replies) - clickable
