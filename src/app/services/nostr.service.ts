@@ -830,33 +830,31 @@ export class NostrService implements NostriaService {
           throw new Error('Signing cancelled');
         }
 
-        // The result can be a signature string or a full JSON event
-        const signature = result.trim();
+        // The result can be either:
+        // 1. A full signed event JSON (with 'sig' field)
+        // 2. Just the signature string (64 bytes hex = 128 characters)
+        // Per NIP-55, the signer returns the 'result' field which contains either format
+        const resultData = result.trim();
 
-        // Check if it's a JSON object (full event)
-        if (signature.startsWith('{')) {
+        // Check if it's a JSON object (full signed event)
+        if (resultData.startsWith('{')) {
           try {
-            const parsedEvent = JSON.parse(signature);
-            if (parsedEvent.sig) {
-              signedEvent = parsedEvent;
-            } else if (parsedEvent.signature) {
-              // Some signers might return { signature: ... } ?
-              // But NIP-55 says returnType=signature returns just the signature string usually, 
-              // or returnType=event returns the full event.
-              // If user pasted full event:
+            const parsedEvent = JSON.parse(resultData);
+            // Validate it's a properly signed event
+            if (parsedEvent.sig && typeof parsedEvent.sig === 'string') {
               signedEvent = parsedEvent;
             }
           } catch {
-            // Not JSON, assume it's signature
+            // Not valid JSON, assume it's a raw signature string
           }
         }
 
         if (!signedEvent) {
-          // It's a signature string
+          // It's a raw signature string - construct the signed event
           signedEvent = {
             ...unsignedEvent,
             id: eventId,
-            sig: signature
+            sig: resultData
           };
         }
 
