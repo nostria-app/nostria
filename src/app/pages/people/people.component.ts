@@ -30,6 +30,7 @@ import { NotificationService } from '../../services/notification.service';
 import { FeedsCollectionService } from '../../services/feeds-collection.service';
 import { AccountLocalStateService, PeopleFilters } from '../../services/account-local-state.service';
 import { FollowingService } from '../../services/following.service';
+import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
@@ -71,6 +72,7 @@ export class PeopleComponent {
   private notificationService = inject(NotificationService);
   private feedsCollectionService = inject(FeedsCollectionService);
   readonly followingService = inject(FollowingService);
+  private followSetsService = inject(FollowSetsService);
 
   // Search functionality
   searchTerm = signal<string>('');
@@ -91,14 +93,49 @@ export class PeopleComponent {
   // Sorting options
   sortOption = signal<SortOption>('default');
 
+  // Follow set selection
+  selectedFollowSet = signal<FollowSet | null>(null);
+
+  // Top 5 most recently edited follow sets
+  topFollowSets = computed(() => {
+    const sets = this.followSetsService.followSets();
+    return [...sets]
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, 5);
+  });
+
   // Computed signal for filtered and sorted people using FollowingService
   filteredAndSortedProfiles = computed(() => {
     const search = this.searchTerm();
     const filters = this.filters();
     const sortOption = this.sortOption();
     const favorites = this.favoritesService.favorites();
+    const selectedSet = this.selectedFollowSet();
 
-    // Start with search if applicable
+    // If a follow set is selected, filter to only those pubkeys
+    if (selectedSet) {
+      const setProfiles = this.followingService.profiles()
+        .filter(p => selectedSet.pubkeys.includes(p.pubkey));
+
+      // Apply search if applicable
+      let profiles = search
+        ? setProfiles.filter(p => {
+          const name = (p.info?.['name'] as string)?.toLowerCase?.() || '';
+          const displayName = (p.info?.['display_name'] as string)?.toLowerCase?.() || '';
+          const nip05 = (p.info?.['nip05'] as string)?.toLowerCase?.() || '';
+          const searchLower = search.toLowerCase();
+          return name.includes(searchLower) ||
+            displayName.includes(searchLower) ||
+            nip05.includes(searchLower);
+        })
+        : setProfiles;
+
+      // Apply sorting
+      profiles = this.followingService.getSortedProfiles(profiles, sortOption);
+      return profiles;
+    }
+
+    // Normal filtering when no follow set is selected
     let profiles = search
       ? this.followingService.searchProfiles(search)
       : this.followingService.profiles();
@@ -310,6 +347,44 @@ export class PeopleComponent {
 
   viewProfile(pubkey: string) {
     this.router.navigate(['/p', pubkey]);
+  }
+
+  /**
+   * Select a follow set to filter people
+   */
+  selectFollowSet(followSet: FollowSet | null) {
+    this.selectedFollowSet.set(followSet);
+    // Reset display limit when follow set changes
+    this.displayLimit.set(this.PAGE_SIZE);
+    // Clear search when selecting a follow set
+    if (followSet) {
+      this.updateSearch('');
+    }
+  }
+
+  /**
+   * Create a feed from the currently selected follow set
+   */
+  async createFeedFromFollowSet() {
+    const selectedSet = this.selectedFollowSet();
+    if (!selectedSet) {
+      this.logger.warn('[People] No follow set selected for feed creation');
+      return;
+    }
+
+    try {
+      // Navigate to feeds page with the follow set as a parameter
+      // The feeds component will handle creating the feed
+      await this.router.navigate(['/feeds'], {
+        queryParams: {
+          createFrom: 'followset',
+          dTag: selectedSet.dTag,
+          title: selectedSet.title
+        }
+      });
+    } catch (error) {
+      this.logger.error('[People] Failed to navigate to feed creation:', error);
+    }
   }
 
   openAddPersonDialog() {

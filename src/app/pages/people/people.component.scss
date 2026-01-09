@@ -37,6 +37,21 @@
     align-items: center;
     gap: 1rem;
 
+    .follow-set-selector {
+      background-color: var(--mat-sys-surface-container);
+
+      .dropdown-icon {
+        margin-left: 4px;
+      }
+    }
+
+    .set-count {
+      margin-left: auto;
+      opacity: 0.6;
+      font-size: 0.85em;
+      margin-right: 0;
+    }
+
     button[mat-flat-button] {
       mat-icon {
         margin-right: 0.5rem;

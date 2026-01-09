@@ -7,6 +7,43 @@
     </div>
 
     <div class="controls-section">
+      <!-- Follow Set Selector -->
+      @if (topFollowSets().length > 0) {
+      <button mat-button [matMenuTriggerFor]="followSetsMenu" class="follow-set-selector">
+        <mat-icon>{{ selectedFollowSet() ? 'filter_alt' : 'group' }}</mat-icon>
+        {{ selectedFollowSet() ? selectedFollowSet()!.title : 'All Following' }}
+        <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
+      </button>
+
+      <mat-menu #followSetsMenu="matMenu">
+        <button mat-menu-item (click)="selectFollowSet(null)">
+          <mat-icon>people</mat-icon>
+          <span>All Following</span>
+        </button>
+        <mat-divider></mat-divider>
+        @for (set of topFollowSets(); track set.id) {
+        <button mat-menu-item (click)="selectFollowSet(set)">
+          <mat-icon>{{ set.dTag === 'nostria-favorites' ? 'star' : 'group' }}</mat-icon>
+          <span>{{ set.title }}</span>
+          <span class="set-count">({{ set.pubkeys.length }})</span>
+        </button>
+        }
+        <mat-divider></mat-divider>
+        <button mat-menu-item routerLink="/lists">
+          <mat-icon>settings</mat-icon>
+          <span>Manage Follow Sets</span>
+        </button>
+      </mat-menu>
+      }
+
+      <!-- Create Feed from Follow Set button (only visible when a set is selected) -->
+      @if (selectedFollowSet()) {
+      <button mat-button (click)="createFeedFromFollowSet()" matTooltip="Create a feed from this follow set">
+        <mat-icon>rss_feed</mat-icon>
+        Create Feed
+      </button>
+      }
+
       <!-- Find People Button -->
       <button mat-button routerLink="/people/discover" matTooltip="Discover new people to follow">
         <mat-icon>explore</mat-icon>
