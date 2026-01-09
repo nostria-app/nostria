@@ -96,12 +96,10 @@ export class PeopleComponent {
   // Follow set selection
   selectedFollowSet = signal<FollowSet | null>(null);
 
-  // Top 5 most recently edited follow sets
-  topFollowSets = computed(() => {
+  // All follow sets (no limit for dropdown in People component)
+  allFollowSets = computed(() => {
     const sets = this.followSetsService.followSets();
-    return [...sets]
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, 5);
+    return [...sets].sort((a, b) => b.createdAt - a.createdAt);
   });
 
   // Computed signal for filtered and sorted people using FollowingService

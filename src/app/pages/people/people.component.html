@@ -8,7 +8,7 @@
 
     <div class="controls-section">
       <!-- Follow Set Selector -->
-      @if (topFollowSets().length > 0) {
+      @if (allFollowSets().length > 0) {
       <button mat-button [matMenuTriggerFor]="followSetsMenu" class="follow-set-selector">
         <mat-icon>{{ selectedFollowSet() ? 'filter_alt' : 'group' }}</mat-icon>
         {{ selectedFollowSet() ? selectedFollowSet()!.title : 'All Following' }}
@@ -21,7 +21,7 @@
           <span>All Following</span>
         </button>
         <mat-divider></mat-divider>
-        @for (set of topFollowSets(); track set.id) {
+        @for (set of allFollowSets(); track set.id) {
         <button mat-menu-item (click)="selectFollowSet(set)">
           <mat-icon>{{ set.dTag === 'nostria-favorites' ? 'star' : 'group' }}</mat-icon>
           <span>{{ set.title }}</span>
