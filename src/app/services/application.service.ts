@@ -61,7 +61,7 @@ export class ApplicationService {
   };
 
   previousPubKey = '';
-  
+
   // Track previous following list to avoid reprocessing unchanged lists
   private previousFollowingListSize = 0;
   private previousFollowingListHash = '';
@@ -83,12 +83,12 @@ export class ApplicationService {
       // OPTIMIZATION: Check if following list actually changed
       // Create a simple hash of the list to detect changes
       const currentHash = followingList.join(',');
-      if (this.previousFollowingListSize === followingList.length && 
-          this.previousFollowingListHash === currentHash) {
+      if (this.previousFollowingListSize === followingList.length &&
+        this.previousFollowingListHash === currentHash) {
         console.log('⏭️ [Profile Loading Effect] Skipping - following list unchanged');
         return;
       }
-      
+
       // Update tracking
       this.previousFollowingListSize = followingList.length;
       this.previousFollowingListHash = currentHash;
@@ -260,7 +260,7 @@ export class ApplicationService {
    * Returns immediately if content is already available, otherwise waits up to maxWaitMs
    * @param maxWaitMs Maximum time to wait for content (default 5000ms)
    */
-  private async waitForFeedContent(maxWaitMs: number = 5000): Promise<void> {
+  private async waitForFeedContent(maxWaitMs = 5000): Promise<void> {
     // Check if content is already ready
     if (this.appState.feedHasInitialContent()) {
       console.log('📋 [Profile Loading] Feed content already ready, proceeding immediately');
