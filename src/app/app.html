@@ -189,7 +189,7 @@
           <span class="nav-label">{{ item.label }}</span>
           @if (item.expandable) {
           <button mat-icon-button class="expand-button"
-            (click)="$event.stopPropagation(); $event.preventDefault(); toggleMenuExpansion('feeds')"
+            (click)="$event.stopPropagation(); $event.preventDefault(); toggleMenuExpansion(item.label.toLowerCase())"
             [attr.aria-label]="item.expanded ? 'Collapse' : 'Expand'" tabindex="0">
             <mat-icon class="expand-icon">
               {{ item.expanded ? 'keyboard_arrow_down' : 'keyboard_arrow_right' }}
@@ -203,15 +203,22 @@
         @if (item.expandable && item.expanded && item.children && displayLabels()) {
         @for (child of item.children; track child.path) {
         <div class="child-nav-item-container">
-          <button mat-list-item class="child-nav-item" (click)="navigateToFeed(child.path.split('=')[1])"
-            (keyup.enter)="navigateToFeed(child.path.split('=')[1])">
+          <button mat-list-item class="child-nav-item" (click)="navigateToChildItem(child)"
+            (keyup.enter)="navigateToChildItem(child)">
             <mat-icon matListItemIcon>{{ child.icon }}</mat-icon>
             <span class="nav-label child-label">{{ child.label }}</span>
           </button>
           @if (child.feedId) {
           <button mat-icon-button class="feed-edit-button"
             (click)="$event.stopPropagation(); openFeedEditDialog(child.feedId)" i18n-matTooltip="@@app.feed.edit"
-            matTooltip="Edit board" tabindex="0">
+            matTooltip="Edit feed" tabindex="0">
+            <mat-icon>settings</mat-icon>
+          </button>
+          }
+          @if (child.followSetId && item.label === 'People') {
+          <button mat-icon-button class="feed-edit-button"
+            (click)="$event.stopPropagation(); openFollowSetEditDialog(child.followSetId)" i18n-matTooltip="@@app.followset.edit"
+            matTooltip="Edit people" tabindex="0">
             <mat-icon>settings</mat-icon>
           </button>
           }
