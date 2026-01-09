@@ -360,7 +360,12 @@ export class App implements OnInit {
 
       // For the People item, add follow sets as children
       if (item.label === 'People') {
-        const followSetChildren: NavItem[] = followSets.map(set => ({
+        // Limit to top 5 most recent follow sets for the sidebar
+        const topFollowSets = [...followSets]
+          .sort((a, b) => b.createdAt - a.createdAt)
+          .slice(0, 5);
+
+        const followSetChildren: NavItem[] = topFollowSets.map(set => ({
           path: `/people?set=${set.dTag}`,
           label: set.title,
           icon: set.dTag === 'nostria-favorites' ? 'star' : 'group',
@@ -1455,7 +1460,7 @@ export class App implements OnInit {
     this.router.navigate(['/people'], {
       queryParams: { manage: 'true', set: followSetId }
     });
-    
+
     // Close sidenav on mobile
     if (this.layout.isHandset()) {
       this.localSettings.setMenuOpen(false);
