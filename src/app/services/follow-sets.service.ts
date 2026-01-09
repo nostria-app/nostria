@@ -33,6 +33,11 @@ export class FollowSetsService {
   isLoading = signal<boolean>(false);
   error = signal<string | null>(null);
 
+  // Track ongoing load to prevent concurrent loads
+  private loadingPromise: Promise<void> | null = null;
+  private lastLoadedPubkey: string | null = null;
+  private lastEffectPubkey: string | null = null;
+
   // Function to sign events - must be set by NostrService to avoid circular dependency
   private signFunction?: (event: UnsignedEvent) => Promise<Event>;
 
@@ -47,53 +52,74 @@ export class FollowSetsService {
     // Load follow sets when account changes
     effect(() => {
       const pubkey = this.accountState.pubkey();
+
+      // Only load if pubkey actually changed
+      if (pubkey === this.lastEffectPubkey) {
+        return;
+      }
+
+      this.lastEffectPubkey = pubkey;
+      this.logger.debug('[FollowSets] Effect triggered, pubkey:', pubkey?.substring(0, 8));
+
       if (pubkey) {
         this.loadFollowSets(pubkey);
       } else {
         this.followSets.set([]);
       }
-    });
+    }, { allowSignalWrites: true });
   }
 
   /**
    * Load follow sets for a given pubkey from database and relays
    */
   async loadFollowSets(pubkey: string): Promise<void> {
+    // If already loading for the same pubkey, return existing promise
+    if (this.loadingPromise && this.lastLoadedPubkey === pubkey) {
+      this.logger.debug('[FollowSets] Already loading for this pubkey, reusing existing load');
+      return this.loadingPromise;
+    }
+
+    this.lastLoadedPubkey = pubkey;
     this.isLoading.set(true);
     this.error.set(null);
 
-    try {
-      this.logger.debug('[FollowSets] Loading follow sets for pubkey:', pubkey);
+    this.loadingPromise = (async () => {
+      try {
+        this.logger.debug('[FollowSets] Loading follow sets for pubkey:', pubkey);
 
-      // Fetch kind 30000 events from database and relays
-      const events = await this.dataService.getEventsByPubkeyAndKind(
-        pubkey,
-        30000,
-        {
-          cache: true,
-          save: true,
-        }
-      );
+        // Fetch kind 30000 events from database and relays
+        const events = await this.dataService.getEventsByPubkeyAndKind(
+          pubkey,
+          30000,
+          {
+            cache: true,
+            save: true,
+          }
+        );
 
-      // Filter to only nostria-prefixed follow sets
-      const nostriaEvents = events.filter(record => {
-        const dTag = this.getDTagFromEvent(record.event);
-        return dTag?.startsWith(NOSTRIA_PREFIX);
-      });
+        // Filter to only nostria-prefixed follow sets
+        const nostriaEvents = events.filter(record => {
+          const dTag = this.getDTagFromEvent(record.event);
+          return dTag?.startsWith(NOSTRIA_PREFIX);
+        });
 
-      // Convert events to FollowSet objects
-      const sets = nostriaEvents
-        .map(record => this.parseFollowSetEvent(record.event))
-        .filter((set): set is FollowSet => set !== null);
+        // Convert events to FollowSet objects
+        const sets = nostriaEvents
+          .map(record => this.parseFollowSetEvent(record.event))
+          .filter((set): set is FollowSet => set !== null);
 
-      this.followSets.set(sets);
-      this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets`);
-    } catch (error) {
-      this.logger.error('[FollowSets] Failed to load follow sets:', error);
-      this.error.set('Failed to load follow sets');
-    } finally {
-      this.isLoading.set(false);
-    }
+        this.followSets.set(sets);
+        this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets`);
+      } catch (error) {
+        this.logger.error('[FollowSets] Failed to load follow sets:', error);
+        this.error.set('Failed to load follow sets');
+      } finally {
+        this.isLoading.set(false);
+        this.loadingPromise = null;
+      }
+    })();
+
+    return this.loadingPromise;
   }
 
   /**
@@ -144,13 +170,13 @@ export class FollowSetsService {
   private formatTitle(dTag: string): string {
     // Remove nostria prefix
     let title = dTag.replace(NOSTRIA_PREFIX, '');
-    
+
     // Convert hyphens to spaces and capitalize
     title = title
       .split('-')
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
-    
+
     return title;
   }
 
@@ -208,15 +234,26 @@ export class FollowSetsService {
       };
 
       // Sign and publish
-      await this.publishService.signAndPublishAuto(unsignedEvent, this.signFunction);
+      const publishResult = await this.publishService.signAndPublishAuto(unsignedEvent, this.signFunction);
+      const signedEvent = publishResult.event;
+
+      // Save to database to ensure it appears in Lists component immediately
+      try {
+        await this.database.saveEvent(signedEvent);
+        this.logger.debug('[FollowSets] Saved follow set event to database');
+      } catch (dbError) {
+        this.logger.warn('[FollowSets] Failed to save follow set to database:', dbError);
+        // Continue anyway - event was published successfully
+      }
 
       // Create FollowSet object for local update
       const followSet: FollowSet = {
-        id: '', // Will be set after signing
+        id: signedEvent.id,
         dTag: prefixedDTag,
         title,
         pubkeys,
-        createdAt: unsignedEvent.created_at,
+        createdAt: signedEvent.created_at,
+        event: signedEvent,
       };
 
       // Update local state

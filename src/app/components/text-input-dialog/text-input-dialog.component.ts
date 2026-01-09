@@ -88,15 +88,15 @@ export class TextInputDialogComponent {
 
   constructor() {
     const validators = [];
-    
+
     if (this.data.required !== false) {
       validators.push(Validators.required);
     }
-    
+
     if (this.data.minLength) {
       validators.push(Validators.minLength(this.data.minLength));
     }
-    
+
     if (this.data.maxLength) {
       validators.push(Validators.maxLength(this.data.maxLength));
     }

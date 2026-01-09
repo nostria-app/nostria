@@ -57,7 +57,7 @@ export class FavoritesOverlayComponent {
   private touchCurrentY = 0;
   private touchCurrentX = 0;
   private touchDragTimer: ReturnType<typeof setTimeout> | null = null;
-
+  
   // Get favorites from the service
   favorites = this.favoritesService.favorites;
 

@@ -754,12 +754,17 @@ export class DataService {
       events = await this.database.getEventsByPubkeyAndKind(pubkey, kind);
     }
 
-    if (events.length === 0) {
+    // For replaceable/parameterized replaceable events, always fetch from relays
+    // to ensure we have the latest version (similar to getEventById logic)
+    if (events.length === 0 || this.utilities.shouldAlwaysFetchFromRelay(kind)) {
       const relayEvents = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, kind);
       eventFromRelays = true;
 
       if (relayEvents && relayEvents.length > 0) {
         events = relayEvents;
+      } else if (events.length > 0) {
+        // If relay fetch failed but we have cached replaceable events, use them
+        this.logger.debug(`Relay fetch failed for kind ${kind}, using cached version`);
       }
     }
 

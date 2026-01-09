@@ -360,7 +360,7 @@ export class ProfileHoverCardComponent {
   async addToFollowSet(dTag: string): Promise<void> {
     const pubkey = this.pubkey();
     const isCurrentlyInSet = this.isInFollowSet(dTag);
-    
+
     try {
       if (isCurrentlyInSet) {
         // Remove from set
@@ -391,7 +391,7 @@ export class ProfileHoverCardComponent {
     });
 
     const setName = await firstValueFrom(dialogRef.afterClosed());
-    
+
     if (!setName || setName.trim() === '') {
       return;
     }
@@ -399,7 +399,7 @@ export class ProfileHoverCardComponent {
     try {
       const pubkey = this.pubkey();
       const newSet = await this.followSetsService.createFollowSet(setName.trim(), [pubkey]);
-      
+
       if (newSet) {
         this.layout.toast(`Created follow set "${setName}" and added user`);
       } else {

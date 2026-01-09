@@ -62,6 +62,7 @@ interface AccountLocalState {
   followingLastFetch?: number; // Timestamp when following data was last fetched from relays
   lastAppOpen?: number; // Timestamp (in seconds) when app was last opened
   musicYoursSectionCollapsed?: boolean; // Whether the "Yours" section in Music is collapsed
+  favoritesMigrated?: boolean; // Whether favorites have been migrated to Nostr (kind 30000)
 }
 
 /**
@@ -920,6 +921,21 @@ export class AccountLocalStateService {
    */
   setWallets(pubkey: string, wallets: Record<string, AccountWallet>): void {
     this.updateAccountState(pubkey, { wallets });
+  }
+
+  /**
+   * Get favorites migrated status for an account
+   */
+  getFavoritesMigrated(pubkey: string): boolean {
+    const state = this.getAccountState(pubkey);
+    return state.favoritesMigrated || false;
+  }
+
+  /**
+   * Set favorites migrated status for an account
+   */
+  setFavoritesMigrated(pubkey: string, migrated: boolean): void {
+    this.updateAccountState(pubkey, { favoritesMigrated: migrated });
   }
 
   /**

@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal, effect } from '@angular/core';
+import { Injectable, computed, inject, signal, effect, untracked } from '@angular/core';
 import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
@@ -21,9 +21,6 @@ export class FavoritesService {
   // Internal signal to trigger reactivity when favorites change
   private favoritesVersion = signal(0);
 
-  // Track if we've synced to Nostr yet (per account)
-  private syncedAccounts = new Set<string>();
-
   // Track pending sync operations to prevent multiple simultaneous syncs
   private pendingSyncPromise: Promise<void> | null = null;
 
@@ -40,13 +37,14 @@ export class FavoritesService {
     const currentPubkey = this.accountState.pubkey();
     if (!currentPubkey) return [];
 
-    // Try to get from follow sets first (kind 30000)
-    const favoritesSet = this.followSetsService.getFavorites();
+    // Use untracked to get current followSets value without creating reactive dependency
+    // We use favoritesVersion to trigger recomputation when needed
+    const favoritesSet = untracked(() => this.followSetsService.getFavorites());
     if (favoritesSet && favoritesSet.pubkeys.length > 0) {
       return favoritesSet.pubkeys;
     }
 
-    // Fall back to local state
+    // Fall back to local state (only during migration)
     return this.accountLocalState.getFavorites(currentPubkey);
   });
 
@@ -64,25 +62,49 @@ export class FavoritesService {
       }
     });
 
+    // Watch for follow sets changes and trigger refresh
+    effect(() => {
+      // Track the followSets signal to detect when new sets are loaded
+      const sets = this.followSetsService.followSets();
+      const isLoading = this.followSetsService.isLoading();
+
+      // Only trigger refresh when loading completes and we have sets
+      if (!isLoading) {
+        // Use untracked to avoid creating additional dependencies
+        untracked(() => {
+          this.favoritesVersion.update(v => v + 1);
+        });
+      }
+    });
+
     // Sync local favorites to Nostr when account loads (once per account)
     effect(() => {
       const pubkey = this.accountState.pubkey();
       const followSetsLoaded = !this.followSetsService.isLoading();
 
-      if (pubkey && followSetsLoaded && !this.syncedAccounts.has(pubkey) && !this.pendingSyncPromise) {
+      if (pubkey && followSetsLoaded && !this.hasBeenMigrated(pubkey) && !this.pendingSyncPromise) {
         this.syncFavoritesToNostr(pubkey);
       }
-    });
-
-    // Watch for changes in follow sets and trigger refresh
-    effect(() => {
-      this.followSetsService.followSets();
-      this.favoritesVersion.update(v => v + 1);
     });
   }
 
   /**
-   * Sync local favorites to Nostr as a follow set
+   * Check if an account has been migrated to Nostr
+   */
+  private hasBeenMigrated(pubkey: string): boolean {
+    return this.accountLocalState.getFavoritesMigrated(pubkey);
+  }
+
+  /**
+   * Mark an account as migrated to Nostr
+   */
+  private markAsMigrated(pubkey: string): void {
+    this.accountLocalState.setFavoritesMigrated(pubkey, true);
+    this.logger.info(`[Favorites] Marked account as migrated: ${pubkey.substring(0, 8)}...`);
+  }
+
+  /**
+   * Sync local favorites to Nostr as a follow set (ONE-TIME MIGRATION)
    */
   private async syncFavoritesToNostr(pubkey: string): Promise<void> {
     // Prevent multiple simultaneous syncs
@@ -94,25 +116,42 @@ export class FavoritesService {
     this.pendingSyncPromise = (async () => {
       try {
         const localFavorites = this.accountLocalState.getFavorites(pubkey);
+        const favoritesSet = this.followSetsService.getFavorites();
 
-        // Only sync if we have local favorites
-        if (localFavorites.length > 0) {
-          const favoritesSet = this.followSetsService.getFavorites();
-
-          // Only sync if the Nostr version doesn't exist or is different
-          // Use Set-based comparison for efficiency
-          if (!favoritesSet || !this.arraysEqual(favoritesSet.pubkeys, localFavorites)) {
-            this.logger.info('[Favorites] Syncing local favorites to Nostr');
-            await this.followSetsService.migrateFavorites(localFavorites);
-          } else {
-            this.logger.debug('[Favorites] Favorites already synced, skipping');
-          }
+        // Case 1: No local favorites and no Nostr favorites - nothing to do
+        if (localFavorites.length === 0 && !favoritesSet) {
+          this.logger.debug('[Favorites] No favorites to migrate');
+          this.markAsMigrated(pubkey);
+          return;
         }
 
-        // Mark this account as synced
-        this.syncedAccounts.add(pubkey);
+        // Case 2: Nostr favorites already exist - migration already done, clear local
+        if (favoritesSet && favoritesSet.pubkeys.length > 0) {
+          this.logger.info('[Favorites] Nostr favorites already exist, clearing local favorites');
+          this.accountLocalState.setFavorites(pubkey, []);
+          this.markAsMigrated(pubkey);
+          this.favoritesVersion.update(v => v + 1);
+          return;
+        }
+
+        // Case 3: Have local favorites but no Nostr favorites - migrate them
+        if (localFavorites.length > 0 && !favoritesSet) {
+          this.logger.info(`[Favorites] Migrating ${localFavorites.length} local favorites to Nostr`);
+          await this.followSetsService.migrateFavorites(localFavorites);
+
+          // Clear local favorites after successful migration
+          this.logger.info('[Favorites] Migration successful, clearing local favorites');
+          this.accountLocalState.setFavorites(pubkey, []);
+          this.markAsMigrated(pubkey);
+          this.favoritesVersion.update(v => v + 1);
+          return;
+        }
+
+        // Default: Mark as migrated to prevent future attempts
+        this.markAsMigrated(pubkey);
       } catch (error) {
         this.logger.error('[Favorites] Failed to sync favorites to Nostr:', error);
+        // Don't mark as migrated on error - allow retry on next load
       } finally {
         this.pendingSyncPromise = null;
       }
@@ -169,6 +208,13 @@ export class FavoritesService {
   }
 
   /**
+   * Trigger a refresh of favorites - called by FollowSetsService when data changes
+   */
+  refresh(): void {
+    this.favoritesVersion.update(v => v + 1);
+  }
+
+  /**
    * Schedule a debounced sync to Nostr
    */
   private scheduleSyncToNostr(pubkey: string, favorites: string[]): void {
@@ -201,9 +247,10 @@ export class FavoritesService {
       return false;
     }
 
-    const currentFavorites = this.accountLocalState.getFavorites(currentPubkey);
+    // Get current favorites from Nostr (or empty array if none exist)
+    const favoritesSet = this.followSetsService.getFavorites();
+    const currentFavorites = favoritesSet?.pubkeys || [];
     const updatedFavorites = [...currentFavorites, userPubkey];
-    this.accountLocalState.setFavorites(currentPubkey, updatedFavorites);
 
     // Schedule debounced sync to Nostr
     this.scheduleSyncToNostr(currentPubkey, updatedFavorites);
@@ -233,9 +280,10 @@ export class FavoritesService {
       return false;
     }
 
-    const currentFavorites = this.accountLocalState.getFavorites(currentPubkey);
+    // Get current favorites from Nostr
+    const favoritesSet = this.followSetsService.getFavorites();
+    const currentFavorites = favoritesSet?.pubkeys || [];
     const updatedFavorites = currentFavorites.filter(pubkey => pubkey !== userPubkey);
-    this.accountLocalState.setFavorites(currentPubkey, updatedFavorites);
 
     // Schedule debounced sync to Nostr
     this.scheduleSyncToNostr(currentPubkey, updatedFavorites);
@@ -271,8 +319,10 @@ export class FavoritesService {
       return false;
     }
 
-    // Validate that newOrder contains the same pubkeys as current favorites
-    const currentFavorites = this.accountLocalState.getFavorites(currentPubkey);
+    // Get current favorites from Nostr
+    const favoritesSet = this.followSetsService.getFavorites();
+    const currentFavorites = favoritesSet?.pubkeys || [];
+
     if (newOrder.length !== currentFavorites.length) {
       this.logger.warn('Cannot reorder favorites: length mismatch', {
         current: currentFavorites.length,
@@ -289,8 +339,8 @@ export class FavoritesService {
       return false;
     }
 
-    // Update the order
-    this.accountLocalState.setFavorites(currentPubkey, newOrder);
+    // Schedule debounced sync to Nostr with new order
+    this.scheduleSyncToNostr(currentPubkey, newOrder);
 
     // Trigger reactivity
     this.favoritesVersion.update(v => v + 1);
@@ -306,6 +356,12 @@ export class FavoritesService {
    * Get favorites for a specific account (useful for debugging or admin purposes)
    */
   getFavoritesForAccount(accountPubkey: string): string[] {
+    // Always return from Nostr if available
+    const favoritesSet = this.followSetsService.getFavorites();
+    if (favoritesSet) {
+      return favoritesSet.pubkeys;
+    }
+    // Fallback to local state for backward compatibility during migration
     return this.accountLocalState.getFavorites(accountPubkey);
   }
 
@@ -319,7 +375,11 @@ export class FavoritesService {
       return;
     }
 
-    this.accountLocalState.setFavorites(currentPubkey, []);
+    // Clear in Nostr by syncing empty array
+    this.scheduleSyncToNostr(currentPubkey, []);
+
+    // Trigger reactivity
+    this.favoritesVersion.update(v => v + 1);
 
     this.logger.info('Cleared all favorites for current account', {
       account: currentPubkey,
