@@ -313,6 +313,16 @@ export class DatabaseService {
   private db: IDBDatabase | null = null;
 
   /**
+   * Extract the d-tag value from a parameterized replaceable event
+   * @param event The event to extract d-tag from
+   * @returns The d-tag value or null if not found
+   */
+  private extractDTag(event: Event): string | null {
+    const dTag = event.tags.find(tag => tag[0] === 'd');
+    return dTag && dTag.length > 1 ? dTag[1] : null;
+  }
+
+  /**
    * Check if an event has expired according to NIP-40
    * @param event The event to check
    * @returns true if the event has expired, false otherwise
@@ -634,6 +644,14 @@ export class DatabaseService {
       return;
     }
 
+    // Extract and add dTag for parameterized replaceable events (kind 30000-39999)
+    if (event.kind >= 30000 && event.kind < 40000) {
+      const dTag = this.extractDTag(event);
+      if (dTag) {
+        event.dTag = dTag;
+      }
+    }
+
     const db = this.ensureInitialized();
 
     return new Promise((resolve, reject) => {
@@ -665,10 +683,23 @@ export class DatabaseService {
       return false;
     }
 
-    // Get existing event to compare timestamps
-    const storedEvent = await this.getEventByPubkeyAndKind(event.pubkey, event.kind);
+    let storedEvent: Event | null = null;
 
-    if (storedEvent && storedEvent.created_at > event.created_at) {
+    // For parameterized replaceable events (kind 30000-39999), check by pubkey+kind+dTag
+    if (event.kind >= 30000 && event.kind < 40000) {
+      const dTag = this.extractDTag(event);
+      if (dTag) {
+        storedEvent = await this.getParameterizedReplaceableEvent(event.pubkey, event.kind, dTag);
+      } else {
+        this.logger.warn(`Parameterized replaceable event (kind ${event.kind}) missing d-tag: ${event.id}`);
+        // Still save it, but log the warning
+      }
+    } else {
+      // For regular replaceable events (kind 0, 3, 10000-19999), check by pubkey+kind
+      storedEvent = await this.getEventByPubkeyAndKind(event.pubkey, event.kind);
+    }
+
+    if (storedEvent && storedEvent.created_at >= event.created_at) {
       this.logger.debug(
         `Skipping save for older replaceable event (kind ${event.kind}) for pubkey ${event.pubkey.slice(0, 16)}... ` +
         `Stored: ${new Date(storedEvent.created_at * 1000).toISOString()}, ` +
