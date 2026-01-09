@@ -1,5 +1,5 @@
 import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, effect, HostListener } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
@@ -39,6 +39,7 @@ const SECTION_LIMIT = 12;
     MatIconModule,
     MatMenuModule,
     FormsModule,
+    RouterLink,
     MusicEventComponent,
     MusicPlaylistCardComponent,
     CreateMusicPlaylistDialogComponent,
@@ -267,6 +268,43 @@ export class MusicComponent implements OnDestroy {
   publicPlaylistsCount = computed(() => this.publicPlaylists().length);
   publicTracksCount = computed(() => this.publicTracks().length);
 
+  // === ARTISTS ===
+  /**
+   * Extract all unique artists from tracks
+   * Returns artist names sorted alphabetically
+   */
+  allArtists = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    const artistSet = new Set<string>();
+    
+    this.filteredTracks().forEach(track => {
+      const artistTag = track.tags.find(t => t[0] === 'artist');
+      if (artistTag?.[1]) {
+        const artistName = artistTag[1].trim();
+        if (artistName) {
+          // Apply search filter if active
+          if (!query || artistName.toLowerCase().includes(query)) {
+            artistSet.add(artistName);
+          }
+        }
+      }
+    });
+    
+    return Array.from(artistSet).sort((a, b) => a.localeCompare(b));
+  });
+
+  artistsPreview = computed(() => {
+    const limit = this.calculateArtistLimit();
+    return this.allArtists().slice(0, limit);
+  });
+
+  hasMoreArtists = computed(() => {
+    const limit = this.calculateArtistLimit();
+    return this.allArtists().length > limit;
+  });
+
+  artistsCount = computed(() => this.allArtists().length);
+
   // Search results indicator
   hasSearchResults = computed(() => {
     const query = this.searchQuery().trim();
@@ -329,6 +367,22 @@ export class MusicComponent implements OnDestroy {
     if (width === 0) return SECTION_LIMIT;
 
     // Track cards are minmax(180px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 180;
+    const gap = 16;
+    const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
+
+    // Return at least 1 item, max items per row to prevent wrapping
+    return Math.max(1, itemsPerRow);
+  }
+
+  /**
+   * Calculate how many artist cards can fit in one row
+   */
+  private calculateArtistLimit(): number {
+    const width = this.containerWidth();
+    if (width === 0) return SECTION_LIMIT;
+
+    // Artist cards are minmax(180px, 1fr) with 1rem (16px) gap
     const cardMinWidth = 180;
     const gap = 16;
     const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
@@ -633,6 +687,10 @@ export class MusicComponent implements OnDestroy {
 
   goToAllPublicTracks(): void {
     this.router.navigate(['/music/tracks'], { queryParams: { source: 'public' } });
+  }
+
+  goToAllArtists(): void {
+    this.router.navigate(['/music/artists']);
   }
 
   // Search methods

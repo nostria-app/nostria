@@ -248,6 +248,38 @@
     </section>
     }
 
+    <!-- ARTISTS SECTION -->
+    @if (artistsPreview().length > 0) {
+    <section class="music-section">
+      <div class="section-header">
+        <h2>
+          <span i18n="@@music.section.artists">Artists</span>
+          @if (artistsCount() > 0) {
+          <span class="section-count">{{ artistsCount() }}</span>
+          }
+        </h2>
+        @if (hasMoreArtists()) {
+        <button mat-button (click)="goToAllArtists()" class="show-all-btn">
+          <span i18n="@@music.showAll">Show all</span>
+          <mat-icon>arrow_forward</mat-icon>
+        </button>
+        }
+      </div>
+      <div class="artists-grid">
+        @for (artist of artistsPreview(); track artist) {
+        <div class="artist-card" [routerLink]="['/music/artist', artist]" tabindex="0" role="button">
+          <div class="artist-avatar">
+            <mat-icon>person</mat-icon>
+          </div>
+          <div class="artist-info">
+            <span class="artist-name">{{ artist }}</span>
+          </div>
+        </div>
+        }
+      </div>
+    </section>
+    }
+
     <!-- EMPTY STATE -->
     @if (followingTracksPreview().length === 0 && publicTracksPreview().length === 0 &&
     followingPlaylistsPreview().length === 0 && publicPlaylistsPreview().length === 0) {
