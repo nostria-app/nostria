@@ -21,8 +21,15 @@ export class FavoritesService {
   // Internal signal to trigger reactivity when favorites change
   private favoritesVersion = signal(0);
 
-  // Track if we've synced to Nostr yet
-  private hasSyncedToNostr = signal(false);
+  // Track if we've synced to Nostr yet (per account)
+  private syncedAccounts = new Set<string>();
+
+  // Track pending sync operations to prevent multiple simultaneous syncs
+  private pendingSyncPromise: Promise<void> | null = null;
+
+  // Debounce timer for Nostr sync
+  private syncToNostrTimer: any = null;
+  private readonly SYNC_DEBOUNCE_MS = 1000; // Wait 1 second before syncing to Nostr
 
   // Computed signal for current account's favorites
   // Now pulls from follow sets service if available, otherwise uses local state
@@ -49,16 +56,20 @@ export class FavoritesService {
 
     // Watch for account changes and trigger refresh
     effect(() => {
-      this.accountState.pubkey();
-      this.favoritesVersion.update(v => v + 1);
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        this.favoritesVersion.update(v => v + 1);
+        // Reset sync tracking when account changes
+        this.pendingSyncPromise = null;
+      }
     });
 
-    // Sync local favorites to Nostr when account loads
+    // Sync local favorites to Nostr when account loads (once per account)
     effect(() => {
       const pubkey = this.accountState.pubkey();
       const followSetsLoaded = !this.followSetsService.isLoading();
-      
-      if (pubkey && followSetsLoaded && !this.hasSyncedToNostr()) {
+
+      if (pubkey && followSetsLoaded && !this.syncedAccounts.has(pubkey) && !this.pendingSyncPromise) {
         this.syncFavoritesToNostr(pubkey);
       }
     });
@@ -74,25 +85,40 @@ export class FavoritesService {
    * Sync local favorites to Nostr as a follow set
    */
   private async syncFavoritesToNostr(pubkey: string): Promise<void> {
-    try {
-      const localFavorites = this.accountLocalState.getFavorites(pubkey);
-      
-      // Only sync if we have local favorites
-      if (localFavorites.length > 0) {
-        const favoritesSet = this.followSetsService.getFavorites();
-        
-        // Only sync if the Nostr version doesn't exist or is different
-        // Use Set-based comparison for efficiency
-        if (!favoritesSet || !this.arraysEqual(favoritesSet.pubkeys, localFavorites)) {
-          this.logger.info('[Favorites] Syncing local favorites to Nostr');
-          await this.followSetsService.migrateFavorites(localFavorites);
-        }
-      }
-      
-      this.hasSyncedToNostr.set(true);
-    } catch (error) {
-      this.logger.error('[Favorites] Failed to sync favorites to Nostr:', error);
+    // Prevent multiple simultaneous syncs
+    if (this.pendingSyncPromise) {
+      this.logger.debug('[Favorites] Sync already in progress, skipping');
+      return this.pendingSyncPromise;
     }
+
+    this.pendingSyncPromise = (async () => {
+      try {
+        const localFavorites = this.accountLocalState.getFavorites(pubkey);
+
+        // Only sync if we have local favorites
+        if (localFavorites.length > 0) {
+          const favoritesSet = this.followSetsService.getFavorites();
+
+          // Only sync if the Nostr version doesn't exist or is different
+          // Use Set-based comparison for efficiency
+          if (!favoritesSet || !this.arraysEqual(favoritesSet.pubkeys, localFavorites)) {
+            this.logger.info('[Favorites] Syncing local favorites to Nostr');
+            await this.followSetsService.migrateFavorites(localFavorites);
+          } else {
+            this.logger.debug('[Favorites] Favorites already synced, skipping');
+          }
+        }
+
+        // Mark this account as synced
+        this.syncedAccounts.add(pubkey);
+      } catch (error) {
+        this.logger.error('[Favorites] Failed to sync favorites to Nostr:', error);
+      } finally {
+        this.pendingSyncPromise = null;
+      }
+    })();
+
+    return this.pendingSyncPromise;
   }
 
   /**
@@ -143,6 +169,24 @@ export class FavoritesService {
   }
 
   /**
+   * Schedule a debounced sync to Nostr
+   */
+  private scheduleSyncToNostr(pubkey: string, favorites: string[]): void {
+    // Clear any existing timer
+    if (this.syncToNostrTimer) {
+      clearTimeout(this.syncToNostrTimer);
+    }
+
+    // Schedule new sync
+    this.syncToNostrTimer = setTimeout(() => {
+      this.followSetsService.migrateFavorites(favorites).catch(error => {
+        this.logger.error('Failed to sync favorites to Nostr:', error);
+      });
+      this.syncToNostrTimer = null;
+    }, this.SYNC_DEBOUNCE_MS);
+  }
+
+  /**
    * Add a user to the current account's favorites
    */
   addFavorite(userPubkey: string): boolean {
@@ -161,10 +205,8 @@ export class FavoritesService {
     const updatedFavorites = [...currentFavorites, userPubkey];
     this.accountLocalState.setFavorites(currentPubkey, updatedFavorites);
 
-    // Also save to Nostr
-    this.followSetsService.migrateFavorites(updatedFavorites).catch(error => {
-      this.logger.error('Failed to sync favorites to Nostr:', error);
-    });
+    // Schedule debounced sync to Nostr
+    this.scheduleSyncToNostr(currentPubkey, updatedFavorites);
 
     // Trigger reactivity
     this.favoritesVersion.update(v => v + 1);
@@ -195,10 +237,8 @@ export class FavoritesService {
     const updatedFavorites = currentFavorites.filter(pubkey => pubkey !== userPubkey);
     this.accountLocalState.setFavorites(currentPubkey, updatedFavorites);
 
-    // Also save to Nostr
-    this.followSetsService.migrateFavorites(updatedFavorites).catch(error => {
-      this.logger.error('Failed to sync favorites to Nostr:', error);
-    });
+    // Schedule debounced sync to Nostr
+    this.scheduleSyncToNostr(currentPubkey, updatedFavorites);
 
     // Trigger reactivity
     this.favoritesVersion.update(v => v + 1);
