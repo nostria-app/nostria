@@ -157,31 +157,20 @@
           @if (feedForm.get('source')?.value === 'custom') {
           <div class="form-group custom-source-panel">
             <h4>Custom Source Configuration</h4>
-            <p class="section-description">Select specific users and starter packs to include</p>
+            <p class="section-description">Select specific users, starter packs, and follow sets to include</p>
 
             <!-- User Selection -->
             <div class="custom-users-section">
               <h5>Select Users</h5>
               <p class="subsection-description">Choose users from your following list</p>
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Search and select users</mat-label>
-                <input type="text" matInput placeholder="Type to search users..." [matAutocomplete]="userAutocomplete"
-                  #userInput [formControl]="userInputControl">
-                <mat-autocomplete #userAutocomplete="matAutocomplete" (optionSelected)="onUserSelected($event)">
-                  @for (profile of filteredUsers(); track profile.event.pubkey) {
-                  <mat-option [value]="profile.event.pubkey">
-                    <div class="user-option">
-                      <div class="user-info">
-                        <span class="user-name">{{ profile.data.display_name || profile.data.name || 'Unknown' }}</span>
-                        @if (profile.data.nip05) {
-                        (<span class="user-npub">{{ profile.data.nip05 }}</span>)
-                        }
-                      </div>
-                    </div>
-                  </mat-option>
-                  }
-                </mat-autocomplete>
-              </mat-form-field>
+              
+              <button mat-flat-button type="button" class="select-button" (click)="openUserSelectDialog()">
+                <mat-icon>person_add</mat-icon>
+                Select Users
+                @if (selectedUsers().length > 0) {
+                  <span class="badge">{{ selectedUsers().length }}</span>
+                }
+              </button>
 
               <!-- Selected Users Display -->
               @if (selectedUsers().length > 0) {
@@ -203,25 +192,14 @@
             <div class="starter-packs-section">
               <h5>Select Starter Packs</h5>
               <p class="subsection-description">Choose from available starter packs</p>
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Search and select starter packs</mat-label>
-                <input type="text" matInput placeholder="Type to search starter packs..."
-                  [matAutocomplete]="starterPackAutocomplete" #starterPackInput [formControl]="starterPackInputControl">
-                <mat-autocomplete #starterPackAutocomplete="matAutocomplete"
-                  (optionSelected)="onStarterPackSelected($event)">
-                  @for (pack of filteredStarterPacks(); track pack.id) {
-                  <mat-option [value]="pack.id">
-                    <div class="starter-pack-option">
-                      <div class="pack-info">
-                        <span class="pack-title">{{ pack.title }}</span>
-                        <span class="pack-description">{{ pack.description }}</span>
-                        (<span class="pack-users">{{ pack.pubkeys.length }} users</span>)
-                      </div>
-                    </div>
-                  </mat-option>
-                  }
-                </mat-autocomplete>
-              </mat-form-field>
+              
+              <button mat-flat-button type="button" class="select-button" (click)="openStarterPackSelectDialog()">
+                <mat-icon>package_2</mat-icon>
+                Select Starter Packs
+                @if (selectedStarterPacks().length > 0) {
+                  <span class="badge">{{ selectedStarterPacks().length }}</span>
+                }
+              </button>
 
               <!-- Selected Starter Packs Display -->
               @if (selectedStarterPacks().length > 0) {
@@ -243,27 +221,14 @@
             <div class="follow-sets-section">
               <h5>Select Follow Sets</h5>
               <p class="subsection-description">Choose from your Follow Sets (kind 30000)</p>
-              <mat-form-field appearance="outline" class="full-width">
-                <mat-label>Search and select follow sets</mat-label>
-                <input type="text" matInput placeholder="Type to search follow sets..."
-                  [matAutocomplete]="followSetAutocomplete" #followSetInput [formControl]="followSetInputControl">
-                <mat-autocomplete #followSetAutocomplete="matAutocomplete"
-                  (optionSelected)="onFollowSetSelected($event)">
-                  @for (set of filteredFollowSets(); track set.id) {
-                  <mat-option [value]="set.id">
-                    <div class="follow-set-option">
-                      <div class="set-info">
-                        <span class="set-title">{{ set.title }}</span>
-                        @if (set.description) {
-                        <span class="set-description">{{ set.description }}</span>
-                        }
-                        (<span class="set-users">{{ set.pubkeys.length }} users</span>)
-                      </div>
-                    </div>
-                  </mat-option>
-                  }
-                </mat-autocomplete>
-              </mat-form-field>
+              
+              <button mat-flat-button type="button" class="select-button" (click)="openFollowSetSelectDialog()">
+                <mat-icon>group</mat-icon>
+                Select Follow Sets
+                @if (selectedFollowSets().length > 0) {
+                  <span class="badge">{{ selectedFollowSets().length }}</span>
+                }
+              </button>
 
               <!-- Selected Follow Sets Display -->
               @if (selectedFollowSets().length > 0) {
@@ -384,3 +349,34 @@
     </div>
   </div>
 </app-custom-dialog>
+
+<!-- Multi-select dialogs -->
+@if (showUserSelectDialog()) {
+  <app-multi-select-dialog
+    [title]="'Select Users'"
+    [items]="userSelectableItems()"
+    [searchPlaceholder]="'Search users...'"
+    [emptyMessage]="'No users found'"
+    (closed)="onUserSelectionConfirmed($event)">
+  </app-multi-select-dialog>
+}
+
+@if (showStarterPackSelectDialog()) {
+  <app-multi-select-dialog
+    [title]="'Select Starter Packs'"
+    [items]="starterPackSelectableItems()"
+    [searchPlaceholder]="'Search starter packs...'"
+    [emptyMessage]="'No starter packs available'"
+    (closed)="onStarterPackSelectionConfirmed($event)">
+  </app-multi-select-dialog>
+}
+
+@if (showFollowSetSelectDialog()) {
+  <app-multi-select-dialog
+    [title]="'Select Follow Sets'"
+    [items]="followSetSelectableItems()"
+    [searchPlaceholder]="'Search follow sets...'"
+    [emptyMessage]="'No follow sets available'"
+    (closed)="onFollowSetSelectionConfirmed($event)">
+  </app-multi-select-dialog>
+}
