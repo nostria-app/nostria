@@ -1095,10 +1095,20 @@ export class AccountStateService implements OnDestroy {
       // OPTIMIZATION: Deduplicate to keep only the latest event per pubkey
       // This avoids processing old duplicate metadata events
       const latestEventsByPubkey = new Map<string, Event>();
+      const oldEventIds: string[] = [];
+
       for (const event of events) {
         const existing = latestEventsByPubkey.get(event.pubkey);
         if (!existing || event.created_at > existing.created_at) {
+          // This is the newest event for this pubkey
+          if (existing) {
+            // Mark the older event for deletion
+            oldEventIds.push(existing.id);
+          }
           latestEventsByPubkey.set(event.pubkey, event);
+        } else {
+          // This event is older than what we already have
+          oldEventIds.push(event.id);
         }
       }
 
@@ -1107,18 +1117,24 @@ export class AccountStateService implements OnDestroy {
 
       console.log(`💾 [Profile Loading] Found ${events.length} metadata records in storage (${records.length} unique profiles)`);
 
+      // Clean up old duplicate metadata events from database
+      if (oldEventIds.length > 0) {
+        console.log(`🧹 [Profile Loading] Cleaning up ${oldEventIds.length} old duplicate metadata events from database...`);
+        await databaseService.deleteEvents(oldEventIds).catch(err => {
+          console.error('❌ [Profile Loading] Failed to delete old metadata events:', err);
+        });
+      }
+
       // Add all found profiles to cache
-      let addedCount = 0;
       for (const record of records) {
         this.addToCache(record.event.pubkey, record);
-        addedCount++;
       }
 
       const duration = Date.now() - startTime;
       const missingCount = followingList.length - records.length;
 
       console.log(`✅ [Profile Loading] Storage load completed in ${duration}ms`);
-      console.log(`📈 [Profile Loading] Added ${addedCount} profiles to cache`);
+      console.log(`📈 [Profile Loading] Added ${records.length} profiles to cache`);
       if (missingCount > 0) {
         console.warn(`⚠️ [Profile Loading] Missing ${missingCount} profiles from storage (${followingList.length - records.length}/${followingList.length})`);
       }
