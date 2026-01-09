@@ -75,6 +75,10 @@
 
   &:hover {
     background-color: var(--mat-sys-surface-container-high);
+    
+    .item-menu-btn {
+      opacity: 1;
+    }
   }
 
   mat-checkbox {
@@ -85,6 +89,18 @@
   .item-content {
     flex: 1;
     min-width: 0;
+  }
+
+  .item-menu-btn {
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+    margin-top: -4px;
+    margin-right: -8px;
+
+    &:focus {
+      opacity: 1;
+    }
   }
 
   .item-title {

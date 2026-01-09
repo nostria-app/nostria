@@ -367,7 +367,11 @@
     [items]="starterPackSelectableItems()"
     [searchPlaceholder]="'Search starter packs...'"
     [emptyMessage]="'No starter packs available'"
-    (closed)="onStarterPackSelectionConfirmed($event)">
+    [showEditOption]="true"
+    [showDeleteOption]="true"
+    (closed)="onStarterPackSelectionConfirmed($event)"
+    (itemEdit)="onStarterPackEdit($event)"
+    (itemDelete)="onStarterPackDelete($event)">
   </app-multi-select-dialog>
 }
 
@@ -377,6 +381,10 @@
     [items]="followSetSelectableItems()"
     [searchPlaceholder]="'Search follow sets...'"
     [emptyMessage]="'No follow sets available'"
-    (closed)="onFollowSetSelectionConfirmed($event)">
+    [showEditOption]="true"
+    [showDeleteOption]="true"
+    (closed)="onFollowSetSelectionConfirmed($event)"
+    (itemEdit)="onFollowSetEdit($event)"
+    (itemDelete)="onFollowSetDelete($event)">
   </app-multi-select-dialog>
 }
