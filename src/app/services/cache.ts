@@ -109,6 +109,25 @@ export class Cache {
   }
 
   /**
+   * Gets the cache entry with metadata (for staleness checking)
+   */
+  getEntry<T>(key: string): CacheEntry<T> | undefined {
+    const entry = this.cache.get(key) as CacheEntry<T> | undefined;
+    
+    if (!entry) {
+      return undefined;
+    }
+
+    // Check if entry has expired
+    if (entry.expiresAt && Date.now() > entry.expiresAt) {
+      this.cache.delete(key);
+      return undefined;
+    }
+
+    return entry;
+  }
+
+  /**
    * Removes a specific key from the cache
    */
   delete(key: string): boolean {

@@ -56,6 +56,23 @@ export class DataService {
     return this.utilities.toRecords(events);
   }
 
+  /**
+   * How long before a cached profile is considered stale (24 hours)
+   * This is much longer than general cache TTL since profiles don't change often
+   */
+  private readonly PROFILE_STALE_THRESHOLD_MS = 24 * 60 * 60 * 1000;
+
+  /**
+   * Check if a cached profile is stale and should be refreshed
+   */
+  private isProfileStale(cacheKey: string): boolean {
+    const entry = this.cache.getEntry(cacheKey);
+    if (!entry) return true;
+
+    const age = Date.now() - entry.timestamp;
+    return age > this.PROFILE_STALE_THRESHOLD_MS;
+  }
+
   async getEventById(
     id: string,
     options?: CacheOptions & DataOptions,
@@ -212,7 +229,7 @@ export class DataService {
       for (const event of storageEvents) {
         const record = this.toRecord(event);
         const cacheKey = `metadata-${event.pubkey}`;
-        this.cache.set(cacheKey, record);
+        this.cache.set(cacheKey, record, { persistent: true });
         results.set(event.pubkey, record);
       }
 
@@ -250,7 +267,7 @@ export class DataService {
           for (const event of events) {
             const record = this.toRecord(event);
             const cacheKey = `metadata-${event.pubkey}`;
-            this.cache.set(cacheKey, record);
+            this.cache.set(cacheKey, record, { persistent: true });
             results.set(event.pubkey, record);
 
             // Save to storage
@@ -313,11 +330,13 @@ export class DataService {
     if (this.cache.has(cacheKey)) {
       const record = this.cache.get<NostrRecord>(cacheKey);
       if (record) {
-        // If refresh is requested, load fresh data in background
-        if (refresh) {
-          this.logger.debug(`Returning cached profile and refreshing in background: ${pubkey}`);
-          // Load fresh data without blocking the return
-          this.refreshProfileInBackground(pubkey, cacheKey);
+        // If refresh is explicitly requested OR profile is stale (>24h old), refresh in background
+        if (refresh || this.isProfileStale(cacheKey)) {
+          // Only log if not already pending to reduce console spam
+          if (!this.pendingProfileRequests.has(pubkey)) {
+            this.logger.debug(`[Profile] Refreshing ${refresh ? 'on request' : 'stale'} profile in background: ${pubkey.substring(0, 8)}...`);
+            this.refreshProfileInBackground(pubkey, cacheKey);
+          }
         }
         return record;
       }
@@ -385,7 +404,9 @@ export class DataService {
 
       if (metadata) {
         record = this.toRecord(metadata);
-        this.cache.set(cacheKey, record);
+        // Store profile in persistent cache (never expires based on TTL)
+        // We check staleness manually (24h) instead of using cache expiration
+        this.cache.set(cacheKey, record, { persistent: true });
         await this.database.saveEvent(metadata);
         // Also save to new DatabaseService for Summary queries
         await this.saveEventToDatabase(metadata);
@@ -403,7 +424,7 @@ export class DataService {
 
       if (metadata) {
         record = this.toRecord(metadata);
-        this.cache.set(cacheKey, record);
+        this.cache.set(cacheKey, record, { persistent: true });
       } else {
         // Try to get from relays - reduced logging to prevent console spam
         metadata = await this.sharedRelayEx.get(pubkey, {
@@ -422,7 +443,7 @@ export class DataService {
 
         if (metadata) {
           record = this.toRecord(metadata);
-          this.cache.set(cacheKey, record);
+          this.cache.set(cacheKey, record, { persistent: true });
           await this.database.saveEvent(metadata);
           // Also save to new DatabaseService for Summary queries
           await this.saveEventToDatabase(metadata);
