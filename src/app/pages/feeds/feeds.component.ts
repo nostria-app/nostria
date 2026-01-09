@@ -1704,65 +1704,6 @@ export class FeedsComponent implements OnDestroy {
   }
 
   /**
-   * Get or initialize scroll state for a column
-   */
-  getColumnPullState(feedId: string) {
-    if (!this.columnScrollStates.has(feedId)) {
-      this.columnScrollStates.set(feedId, {
-        showScrollToTop: signal(false),
-        lastScrollTop: 0
-      });
-    }
-    return this.columnScrollStates.get(feedId)!;
-  }
-
-  /**
-   * Handle scroll on a column to show/hide scroll-to-top button
-   */
-  onColumnScroll(event: globalThis.Event, feedId: string): void {
-    const state = this.getColumnPullState(feedId);
-    const target = event.target as HTMLElement;
-
-    if (!target) {
-      console.log('No target element in scroll event');
-      return;
-    }
-
-    state.element = target;
-    const scrollTop = target.scrollTop;
-
-    // Show scroll-to-top button when scrolled down
-    const shouldShow = scrollTop > this.scrollToTopThreshold;
-
-    console.log('Scroll event for', feedId, {
-      scrollTop,
-      threshold: this.scrollToTopThreshold,
-      shouldShow,
-      currentlyShowing: state.showScrollToTop()
-    });
-
-    if (state.showScrollToTop() !== shouldShow) {
-      console.log('Updating scroll-to-top visibility to:', shouldShow);
-      state.showScrollToTop.set(shouldShow);
-    }
-
-    state.lastScrollTop = scrollTop;
-  }
-
-  /**
-   * Scroll a specific column to the top
-   */
-  scrollColumnToTop(feedId: string): void {
-    const state = this.getColumnPullState(feedId);
-    if (!state.element) return;
-
-    state.element.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
-  }
-
-  /**
    * Refresh a feed by unsubscribing and resubscribing
    */
   async refreshFeed(feed: FeedConfig): Promise<void> {
