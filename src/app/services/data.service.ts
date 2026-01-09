@@ -782,7 +782,13 @@ export class DataService {
       // Use new DatabaseService for saving events
       await this.database.init();
       for (const event of events) {
-        await this.database.saveEvent(event);
+        // Use saveReplaceableEvent for replaceable and parameterized replaceable events
+        // to ensure only the newest version is kept
+        if (this.utilities.shouldAlwaysFetchFromRelay(kind)) {
+          await this.database.saveReplaceableEvent(event);
+        } else {
+          await this.database.saveEvent(event);
+        }
         // Process relay hints when saving events from relays
         await this.processEventForRelayHints(event);
       }
