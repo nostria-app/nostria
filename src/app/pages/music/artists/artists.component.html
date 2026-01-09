@@ -1,0 +1,62 @@
+<div class="artists-container">
+  <div class="artists-header">
+    <button mat-icon-button (click)="goBack()" aria-label="Go back">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+    <h1>
+      <mat-icon>person</mat-icon>
+      <span i18n="@@music.artists.title">Artists</span>
+    </h1>
+    <div class="header-actions">
+      <mat-select [(value)]="sortBy" class="sort-select" aria-label="Sort artists">
+        <mat-option value="name-asc" i18n="@@music.artists.sort.nameAsc">Name (A-Z)</mat-option>
+        <mat-option value="name-desc" i18n="@@music.artists.sort.nameDesc">Name (Z-A)</mat-option>
+        <mat-option value="tracks-desc" i18n="@@music.artists.sort.tracksDesc">Tracks (Most)</mat-option>
+        <mat-option value="tracks-asc" i18n="@@music.artists.sort.tracksAsc">Tracks (Least)</mat-option>
+      </mat-select>
+    </div>
+  </div>
+
+  <div class="artists-content">
+    @if (loading()) {
+    <div class="loading-container">
+      <mat-spinner diameter="50"></mat-spinner>
+      <p i18n="@@music.artists.loading">Loading artists...</p>
+    </div>
+    } @else {
+    @if (artists().length > 0) {
+    <div class="artists-count">
+      <span i18n="@@music.artists.count">{{ artists().length }} artist{{ artists().length === 1 ? '' : 's' }}</span>
+    </div>
+    <div class="artists-grid">
+      @for (artist of artists(); track artist.name) {
+      <div class="artist-card" (click)="goToArtist(artist.pubkey)" (keydown.enter)="goToArtist(artist.pubkey)"
+        tabindex="0" role="button">
+        <div class="artist-avatar">
+          @if (getArtistPicture(artist.pubkey)) {
+          <img [src]="getArtistPicture(artist.pubkey)" alt="{{ artist.name }}" />
+          } @else {
+          <mat-icon>person</mat-icon>
+          }
+        </div>
+        <div class="artist-info">
+          <span class="artist-name">{{ artist.name }}</span>
+          <span class="artist-track-count">{{ artist.trackCount }} track{{ artist.trackCount === 1 ? '' : 's' }}</span>
+        </div>
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="empty-state">
+      <mat-icon>person_off</mat-icon>
+      <h2 i18n="@@music.artists.empty.title">No artists found</h2>
+      <p i18n="@@music.artists.empty.message">No music tracks with artist information were found.</p>
+      <button mat-flat-button (click)="goBack()">
+        <mat-icon>arrow_back</mat-icon>
+        <span i18n="@@music.artists.goBack">Go back to Music</span>
+      </button>
+    </div>
+    }
+    }
+  </div>
+</div>

@@ -270,13 +270,13 @@ export class MusicComponent implements OnDestroy {
 
   // === ARTISTS ===
   /**
-   * Extract all unique artists from tracks
-   * Returns artist names sorted alphabetically
+   * Extract all unique artists from tracks with their pubkeys
+   * Returns artist data sorted alphabetically by name
    */
   allArtists = computed(() => {
     const query = this.searchQuery().trim().toLowerCase();
-    const artistSet = new Set<string>();
-    
+    const artistMap = new Map<string, { name: string; pubkey: string }>();
+
     this.filteredTracks().forEach(track => {
       const artistTag = track.tags.find(t => t[0] === 'artist');
       if (artistTag?.[1]) {
@@ -284,13 +284,16 @@ export class MusicComponent implements OnDestroy {
         if (artistName) {
           // Apply search filter if active
           if (!query || artistName.toLowerCase().includes(query)) {
-            artistSet.add(artistName);
+            // Use the first pubkey we find for each artist name
+            if (!artistMap.has(artistName)) {
+              artistMap.set(artistName, { name: artistName, pubkey: track.pubkey });
+            }
           }
         }
       }
     });
-    
-    return Array.from(artistSet).sort((a, b) => a.localeCompare(b));
+
+    return Array.from(artistMap.values()).sort((a, b) => a.name.localeCompare(b.name));
   });
 
   artistsPreview = computed(() => {
@@ -691,6 +694,19 @@ export class MusicComponent implements OnDestroy {
 
   goToAllArtists(): void {
     this.router.navigate(['/music/artists']);
+  }
+
+  goToArtist(pubkey: string): void {
+    const npub = nip19.npubEncode(pubkey);
+    this.router.navigate(['/music/artist', npub]);
+  }
+
+  /**
+   * Get profile picture URL for an artist's pubkey
+   */
+  getArtistPicture(pubkey: string): string | null {
+    const profile = this.dataService.getCachedProfile(pubkey);
+    return profile?.data?.picture || null;
   }
 
   // Search methods

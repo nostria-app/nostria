@@ -335,6 +335,12 @@ export const routes: Routes = [
     title: 'All Playlists',
   },
   {
+    path: 'music/artists',
+    loadComponent: () =>
+      import('./pages/music/artists/artists.component').then(m => m.ArtistsComponent),
+    title: 'Artists',
+  },
+  {
     path: 'music/song/:pubkey/:identifier',
     loadComponent: () =>
       import('./pages/music/song-detail/song-detail.component').then(m => m.SongDetailComponent),

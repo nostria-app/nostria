@@ -266,13 +266,18 @@
         }
       </div>
       <div class="artists-grid">
-        @for (artist of artistsPreview(); track artist) {
-        <div class="artist-card" [routerLink]="['/music/artist', artist]" tabindex="0" role="button">
+        @for (artist of artistsPreview(); track artist.name) {
+        <div class="artist-card" (click)="goToArtist(artist.pubkey)" (keydown.enter)="goToArtist(artist.pubkey)"
+          tabindex="0" role="button">
           <div class="artist-avatar">
+            @if (getArtistPicture(artist.pubkey)) {
+            <img [src]="getArtistPicture(artist.pubkey)" alt="{{ artist.name }}" />
+            } @else {
             <mat-icon>person</mat-icon>
+            }
           </div>
           <div class="artist-info">
-            <span class="artist-name">{{ artist }}</span>
+            <span class="artist-name">{{ artist.name }}</span>
           </div>
         </div>
         }
