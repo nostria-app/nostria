@@ -32,12 +32,12 @@
       }
 
       <!-- Create Feed from Follow Set button (only visible when a set is selected) -->
-      @if (selectedFollowSet()) {
+      <!-- @if (selectedFollowSet()) {
       <button mat-button (click)="createFeedFromFollowSet()" matTooltip="Create a feed from this follow set">
         <mat-icon>rss_feed</mat-icon>
         Create Feed
       </button>
-      }
+      } -->
 
       <!-- Find People Button -->
       <button mat-button routerLink="/people/discover" matTooltip="Discover new people to follow">
