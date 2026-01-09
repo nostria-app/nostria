@@ -526,6 +526,15 @@ export class FeedsComponent implements OnDestroy {
         feedData.pendingEvents(),
         feed
       );
+
+      // Only count events newer than the most recent displayed event
+      const currentEvents = feedData.events();
+      if (currentEvents.length > 0) {
+        const mostRecentTimestamp = Math.max(...currentEvents.map(e => e.created_at || 0));
+        const newerEvents = pendingEvents.filter(e => (e.created_at || 0) > mostRecentTimestamp);
+        return newerEvents.length;
+      }
+
       return pendingEvents.length;
     }
     return 0;
@@ -1215,6 +1224,15 @@ export class FeedsComponent implements OnDestroy {
         feedData.pendingEvents(),
         feed
       );
+
+      // Only count events newer than the most recent displayed event
+      const currentEvents = feedData.events();
+      if (currentEvents.length > 0) {
+        const mostRecentTimestamp = Math.max(...currentEvents.map(e => e.created_at || 0));
+        const newerEvents = pendingEvents.filter(e => (e.created_at || 0) > mostRecentTimestamp);
+        return newerEvents.length;
+      }
+
       return pendingEvents.length;
     }
     return 0;
