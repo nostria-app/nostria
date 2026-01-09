@@ -59,13 +59,13 @@ export class NotificationService {
     effect(() => {
       const pubkey = this.accountState.pubkey();
       const previousPubkey = untracked(() => this._previousPubkey());
-      
+
       // Only reload if pubkey actually changed (not initial load)
       if (pubkey && previousPubkey && pubkey !== previousPubkey) {
         this.logger.info(`Account changed from ${previousPubkey.substring(0, 8)}... to ${pubkey.substring(0, 8)}..., reloading notifications`);
         this.loadNotifications();
       }
-      
+
       // Update previous pubkey
       untracked(() => this._previousPubkey.set(pubkey));
     });
