@@ -181,8 +181,8 @@
         @for (item of navigationItems(); track $index) {
         <!-- Main navigation item -->
         <a mat-list-item [routerLink]="item.action ? undefined : [item.path]" routerLinkActive="active-link"
-          [routerLinkActiveOptions]="{ exact: true }" (click)="onNavItemClick($event, item)" class="nav-item"
-          [class.expandable-nav-item]="item.expandable">
+          [routerLinkActiveOptions]="{ exact: item.path === 'people' ? false : true }"
+          (click)="onNavItemClick($event, item)" class="nav-item" [class.expandable-nav-item]="item.expandable">
           <mat-icon matListItemIcon [matBadge]="item.badge ? item.badge() : null" matBadgeSize="small">{{ item.icon
             }}</mat-icon>
           @if (displayLabels()) {
@@ -217,8 +217,8 @@
           }
           @if (child.followSetId && item.label === 'People') {
           <button mat-icon-button class="feed-edit-button"
-            (click)="$event.stopPropagation(); openFollowSetEditDialog(child.followSetId)" i18n-matTooltip="@@app.followset.edit"
-            matTooltip="Edit people" tabindex="0">
+            (click)="$event.stopPropagation(); openFollowSetEditDialog(child.followSetId)"
+            i18n-matTooltip="@@app.followset.edit" matTooltip="Edit people" tabindex="0">
             <mat-icon>settings</mat-icon>
           </button>
           }
@@ -407,7 +407,7 @@
     </a>
 
     <a mat-button class="mobile-nav-button" [routerLink]="['/people']" routerLinkActive="active-link"
-      [routerLinkActiveOptions]="{ exact: true }">
+      [routerLinkActiveOptions]="{ exact: false }">
       <mat-icon>people</mat-icon>
       <div class="mobile-nav-label" i18n="@@app.mobile.people">People</div>
     </a>
