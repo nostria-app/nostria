@@ -130,8 +130,10 @@ const MUSIC_KIND = 36787;
 
     .playlist-cover {
       height: 160px;
+      aspect-ratio: 1;
       overflow: hidden;
       position: relative;
+      border-radius: 8px;
 
       .cover-image {
         width: 100%;

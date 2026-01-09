@@ -85,8 +85,8 @@
   .cover-placeholder {
     width: 232px;
     height: 232px;
-    border-radius: var(--mat-sys-corner-medium);
-    box-shadow: 0 4px 60px rgba(0, 0, 0, 0.5);
+    border-radius: 8px;
+    box-shadow: var(--mat-sys-level2);
 
     @media (max-width: 600px) {
       width: 180px;

@@ -173,7 +173,7 @@ mat-dialog-content {
   .cover-preview {
     width: 120px;
     height: 120px;
-    border-radius: var(--mat-sys-corner-medium);
+    border-radius: 8px;
     background-size: cover;
     background-position: center;
     display: flex;

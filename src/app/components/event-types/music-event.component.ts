@@ -231,6 +231,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       align-items: center;
       justify-content: center;
       background: linear-gradient(135deg, var(--mat-sys-tertiary-container) 0%, var(--mat-sys-secondary-container) 100%);
+      border-radius: 8px;
       
       .cover-image {
         width: 100%;
@@ -405,7 +406,7 @@ import { DateToggleComponent } from '../date-toggle/date-toggle.component';
       width: 64px;
       height: 64px;
       min-width: 64px;
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
       display: flex;
       align-items: center;
