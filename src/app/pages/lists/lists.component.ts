@@ -27,6 +27,7 @@ import { UtilitiesService } from '../../services/utilities.service';
 import { LayoutService } from '../../services/layout.service';
 import { EncryptionService } from '../../services/encryption.service';
 import { DatabaseService } from '../../services/database.service';
+import { FollowSetsService } from '../../services/follow-sets.service';
 import { ListEditorDialogComponent } from './list-editor-dialog/list-editor-dialog.component';
 
 // NIP-51 List type definitions
@@ -344,6 +345,7 @@ export class ListsComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly layout = inject(LayoutService);
   private readonly database = inject(DatabaseService);
+  private readonly followSetsService = inject(FollowSetsService);
 
   // Available list types
   standardLists = STANDARD_LISTS;
@@ -979,10 +981,43 @@ export class ListsComponent implements OnInit {
       // Publish to ALL account relays (not optimized) - important for deletion to propagate
       await this.publish.publish(signedEvent, { useOptimizedRelays: false });
 
+      // Immediately remove from local state for responsive UI
+      if (!listData.type.isReplaceable && listData.identifier) {
+        // For parameterized replaceable sets (30000 series), remove from setsData
+        const setKind = listData.type.kind;
+
+        // Special handling for follow sets (kind 30000) - also update FollowSetsService
+        if (setKind === 30000) {
+          this.followSetsService.followSets.update(sets =>
+            sets.filter(set => set.dTag !== listData.identifier)
+          );
+        }
+
+        // Remove from local setsData signal for all set types
+        this.setsData.update(map => {
+          const newMap = new Map(map);
+          const existingSets = newMap.get(setKind) || [];
+          const updatedSets = existingSets.filter(s => s.identifier !== listData.identifier);
+          if (updatedSets.length > 0) {
+            newMap.set(setKind, updatedSets);
+          } else {
+            newMap.delete(setKind);
+          }
+          return newMap;
+        });
+      } else if (listData.type.isReplaceable) {
+        // For standard replaceable lists (10000 series), remove from standardListsData
+        this.standardListsData.update(map => {
+          const newMap = new Map(map);
+          newMap.delete(listData.type.kind);
+          return newMap;
+        });
+      }
+
       this.snackBar.open('List deleted successfully', 'Close', { duration: 3000 });
 
-      // Reload lists
-      await this.loadAllLists();
+      // Don't reload - the deletion event needs time to propagate to database
+      // We've already updated the local signals, so the UI is already correct
     } catch (error) {
       this.logger.error('[ListsComponent] Error deleting list', error);
       this.snackBar.open('Failed to delete list', 'Close', { duration: 3000 });
