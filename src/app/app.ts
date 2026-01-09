@@ -65,6 +65,7 @@ import { SleepModeService } from './services/sleep-mode.service';
 import { SleepModeOverlayComponent } from './components/sleep-mode-overlay/sleep-mode-overlay.component';
 import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new-dialog.component';
 import { FeedsCollectionService } from './services/feeds-collection.service';
+import { FollowSetsService } from './services/follow-sets.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
 import { FeedConfig } from './services/feed.service';
 import { FavoritesOverlayComponent } from './components/favorites-overlay/favorites-overlay.component';
@@ -109,6 +110,7 @@ interface NavItem {
   children?: NavItem[];
   expanded?: boolean;
   feedId?: string;
+  followSetId?: string;
   badge?: () => number | null; // Function that returns badge count or null
 }
 
@@ -213,6 +215,7 @@ export class App implements OnInit {
   private readonly overlay = inject(Overlay);
   private readonly followingBackupService = inject(FollowingBackupService);
   private readonly messagingService = inject(MessagingService);
+  private readonly followSetsService = inject(FollowSetsService);
 
   @ViewChild('sidenav') sidenav!: MatSidenav;
   @ViewChild('profileSidenav') profileSidenav!: MatSidenav;
@@ -333,6 +336,7 @@ export class App implements OnInit {
   navigationItems = computed(() => {
     const subscription = this.accountState.subscription();
     const feeds = this.feedsCollectionService.feeds();
+    const followSets = this.followSetsService.followSets();
     const expandedItems = this.expandedMenuItems();
 
     return this.navItems.map(item => {
@@ -351,6 +355,24 @@ export class App implements OnInit {
           expandable: true,
           expanded: expandedItems['feeds'] || false,
           children: feedChildren,
+        };
+      }
+
+      // For the People item, add follow sets as children
+      if (item.label === 'People') {
+        const followSetChildren: NavItem[] = followSets.map(set => ({
+          path: `/people?set=${set.dTag}`,
+          label: set.title,
+          icon: set.dTag === 'nostria-favorites' ? 'star' : 'group',
+          authenticated: false,
+          followSetId: set.dTag,
+        }));
+
+        return {
+          ...item,
+          expandable: true,
+          expanded: expandedItems['people'] || false,
+          children: followSetChildren,
         };
       }
 
@@ -1127,6 +1149,27 @@ export class App implements OnInit {
     }
   }
 
+  navigateToChildItem(child: NavItem) {
+    // Close sidenav on mobile
+    if (this.layout.isHandset()) {
+      this.localSettings.setMenuOpen(false);
+    }
+
+    if (child.feedId) {
+      // Navigate to feed
+      const feedId = child.path.split('=')[1];
+      this.navigateToFeed(feedId);
+    } else if (child.followSetId) {
+      // Navigate to people page with follow set filter
+      this.router.navigate([child.path.split('?')[0]], {
+        queryParams: { set: child.followSetId }
+      });
+    } else {
+      // Default navigation
+      this.router.navigate([child.path]);
+    }
+  }
+
   onNavItemClick(event: MouseEvent, item: NavItem) {
     // If the item has an action, execute it
     if (item.action) {
@@ -1405,6 +1448,18 @@ export class App implements OnInit {
 
     this.editingFeed.set(feed);
     this.showFeedEditDialog.set(true);
+  }
+
+  openFollowSetEditDialog(followSetId: string): void {
+    // Navigate to people page with management mode
+    this.router.navigate(['/people'], {
+      queryParams: { manage: 'true', set: followSetId }
+    });
+    
+    // Close sidenav on mobile
+    if (this.layout.isHandset()) {
+      this.localSettings.setMenuOpen(false);
+    }
   }
 
   async onFeedEditDialogClosed(result: FeedConfig | null): Promise<void> {
