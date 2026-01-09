@@ -56,7 +56,6 @@
   flex-direction: column;
   align-items: center;
   gap: 8px;
-  margin: 0 0 32px 0;
   color: var(--mat-sys-on-surface-variant);
   opacity: 0.6;
 
@@ -271,6 +270,7 @@
 
     // For the last threaded reply, stop the line at the bottom of the element
     .thread-line-clickable.no-replies::before {
+      height: auto;
       bottom: 0;
     }
   }
@@ -310,6 +310,7 @@
   min-width: 12px;
   position: relative;
   margin-right: 4px;
+  overflow: visible; // Allow the line to extend beyond this container
 
   // The actual line
   &::before {
@@ -327,7 +328,7 @@
   // Non-interactive lines (no replies) - extend to connect with next sibling
   &.no-replies::before {
     // Extend the line down to connect to the next event (using a large value to ensure connection)
-    bottom: -9999px;
+    height: 9999px;
   }
 
   // Interactive lines (has replies) - clickable
