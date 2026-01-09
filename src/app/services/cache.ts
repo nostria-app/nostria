@@ -113,7 +113,7 @@ export class Cache {
    */
   getEntry<T>(key: string): CacheEntry<T> | undefined {
     const entry = this.cache.get(key) as CacheEntry<T> | undefined;
-    
+
     if (!entry) {
       return undefined;
     }
