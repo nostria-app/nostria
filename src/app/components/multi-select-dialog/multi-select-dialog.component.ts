@@ -1,10 +1,11 @@
-import { Component, input, output, signal, computed, ChangeDetectionStrategy } from '@angular/core';
+import { Component, input, output, signal, computed, ChangeDetectionStrategy, effect, DestroyRef, inject } from '@angular/core';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CustomDialogComponent } from '../custom-dialog/custom-dialog.component';
 
 export interface SelectableItem {
@@ -38,22 +39,27 @@ export class MultiSelectDialogComponent {
   emptyMessage = input<string>('No items available');
 
   // Outputs
-  closed = output<SelectableItem[]>();
+  closed = output<SelectableItem[] | null>();
 
   // State
   searchControl = new FormControl('');
   searchValue = signal('');
   selectedItems = signal<SelectableItem[]>([]);
+  private destroyRef = inject(DestroyRef);
 
   constructor() {
-    // Track search input
-    this.searchControl.valueChanges.subscribe(value => {
-      this.searchValue.set((value || '').toLowerCase());
-    });
+    // Track search input with proper cleanup
+    this.searchControl.valueChanges
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe(value => {
+        this.searchValue.set((value || '').toLowerCase());
+      });
 
-    // Initialize selected items from input
-    const items = this.items();
-    this.selectedItems.set(items.filter(item => item.selected));
+    // Initialize selected items when input items change
+    effect(() => {
+      const items = this.items();
+      this.selectedItems.set(items.filter(item => item.selected));
+    });
   }
 
   // Filtered items based on search
@@ -77,37 +83,52 @@ export class MultiSelectDialogComponent {
   });
 
   toggleItem(item: SelectableItem): void {
-    item.selected = !item.selected;
+    // Update selection without mutating input
+    const items = this.items();
+    const itemIndex = items.indexOf(item);
+    if (itemIndex !== -1) {
+      items[itemIndex].selected = !items[itemIndex].selected;
+    }
     
     // Update the selected items signal
-    const selected = this.items().filter(i => i.selected);
+    const selected = items.filter(i => i.selected);
     this.selectedItems.set(selected);
   }
 
   selectAll(): void {
     const filtered = this.filteredItems();
-    filtered.forEach(item => {
-      item.selected = true;
+    const items = this.items();
+    
+    filtered.forEach(filteredItem => {
+      const item = items.find(i => i.id === filteredItem.id);
+      if (item) {
+        item.selected = true;
+      }
     });
     
     // Update the selected items signal
-    const selected = this.items().filter(i => i.selected);
+    const selected = items.filter(i => i.selected);
     this.selectedItems.set(selected);
   }
 
   clearAll(): void {
     const filtered = this.filteredItems();
-    filtered.forEach(item => {
-      item.selected = false;
+    const items = this.items();
+    
+    filtered.forEach(filteredItem => {
+      const item = items.find(i => i.id === filteredItem.id);
+      if (item) {
+        item.selected = false;
+      }
     });
     
     // Update the selected items signal
-    const selected = this.items().filter(i => i.selected);
+    const selected = items.filter(i => i.selected);
     this.selectedItems.set(selected);
   }
 
   onCancel(): void {
-    this.closed.emit([]);
+    this.closed.emit(null);
   }
 
   onConfirm(): void {

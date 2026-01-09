@@ -524,10 +524,10 @@ export class NewFeedDialogComponent {
   }
 
   // Methods to handle dialog results
-  onUserSelectionConfirmed(selectedItems: SelectableItem[]): void {
+  onUserSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
     this.showUserSelectDialog.set(false);
     
-    if (selectedItems.length === 0) {
+    if (selectedItems === null) {
       return; // User cancelled
     }
 
@@ -539,10 +539,10 @@ export class NewFeedDialogComponent {
     this.selectedUsers.set(selected);
   }
 
-  onStarterPackSelectionConfirmed(selectedItems: SelectableItem[]): void {
+  onStarterPackSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
     this.showStarterPackSelectDialog.set(false);
     
-    if (selectedItems.length === 0) {
+    if (selectedItems === null) {
       return; // User cancelled
     }
 
@@ -554,10 +554,10 @@ export class NewFeedDialogComponent {
     this.selectedStarterPacks.set(selected);
   }
 
-  onFollowSetSelectionConfirmed(selectedItems: SelectableItem[]): void {
+  onFollowSetSelectionConfirmed(selectedItems: SelectableItem[] | null): void {
     this.showFollowSetSelectDialog.set(false);
     
-    if (selectedItems.length === 0) {
+    if (selectedItems === null) {
       return; // User cancelled
     }
 
