@@ -428,8 +428,9 @@ export class ProfileComponent {
 
       // Then force refresh profile data from relays to ensure it's up to date
       // Using forceRefresh to bypass cache and get the latest from relays
+      // Enable deepResolve to search all observed relays if not found on user's relays
       this.logger.debug('Force refreshing profile data from relays for:', hexPubkey);
-      const refreshedMetadata = await this.data.getProfile(hexPubkey, { forceRefresh: true });
+      const refreshedMetadata = await this.data.getProfile(hexPubkey, { forceRefresh: true, deepResolve: true });
 
       // Only update if we got newer data or if we didn't have cached data
       if (refreshedMetadata && (!cachedMetadata || refreshedMetadata.event.created_at > cachedMetadata.event.created_at)) {

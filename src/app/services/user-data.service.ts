@@ -161,15 +161,17 @@ export class UserDataService {
     return metadataList;
   }
 
-  async getProfile(pubkey: string, options?: { refresh?: boolean; skipRelay?: boolean } | boolean): Promise<NostrRecord | undefined> {
+  async getProfile(pubkey: string, options?: { refresh?: boolean; skipRelay?: boolean; deepResolve?: boolean } | boolean): Promise<NostrRecord | undefined> {
     let refresh = false;
     let skipRelay = false;
+    let deepResolve = false;
 
     if (typeof options === 'boolean') {
       refresh = options;
     } else if (options) {
       refresh = options.refresh || false;
       skipRelay = options.skipRelay || false;
+      deepResolve = options.deepResolve || false;
     }
 
     // Validate pubkey parameter
@@ -218,7 +220,7 @@ export class UserDataService {
 
     // Now do the async work
     try {
-      const result = await this.loadProfile(pubkey, cacheKey, refresh, skipRelay);
+      const result = await this.loadProfile(pubkey, cacheKey, refresh, skipRelay, deepResolve);
       resolvePromise!(result);
       return result;
     } catch (error) {
@@ -237,6 +239,7 @@ export class UserDataService {
     cacheKey: string,
     refresh: boolean,
     skipRelay = false,
+    deepResolve = false
   ): Promise<NostrRecord | undefined> {
     let metadata: Event | null = null;
     let record: NostrRecord | undefined = undefined;
@@ -257,8 +260,8 @@ export class UserDataService {
         kinds: [kinds.Metadata],
       });
 
-      // If not found via normal relay fetch, attempt deep resolution
-      if (!metadata) {
+      // If not found via normal relay fetch, attempt deep resolution (ONLY if explicitly enabled)
+      if (!metadata && deepResolve) {
         this.logger.info(`[Profile Deep Resolution] Profile not found on user relays for ${pubkey.substring(0, 8)}..., attempting deep resolution`);
         metadata = await this.loadProfileWithDeepResolution(pubkey);
         if (metadata) {
