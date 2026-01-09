@@ -44,7 +44,7 @@ export class MultiSelectDialogComponent {
   // State
   searchControl = new FormControl('');
   searchValue = signal('');
-  selectedItems = signal<SelectableItem[]>([]);
+  selectedIds = signal<Set<string>>(new Set());
   private destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -55,10 +55,11 @@ export class MultiSelectDialogComponent {
         this.searchValue.set((value || '').toLowerCase());
       });
 
-    // Initialize selected items when input items change
+    // Initialize selected IDs when input items change
     effect(() => {
       const items = this.items();
-      this.selectedItems.set(items.filter(item => item.selected));
+      const selectedIds = new Set(items.filter(item => item.selected).map(item => item.id));
+      this.selectedIds.set(selectedIds);
     });
   }
 
@@ -79,52 +80,57 @@ export class MultiSelectDialogComponent {
   });
 
   selectedCount = computed(() => {
-    return this.items().filter(item => item.selected).length;
+    return this.selectedIds().size;
   });
 
+  isSelected(itemId: string): boolean {
+    return this.selectedIds().has(itemId);
+  }
+
   toggleItem(item: SelectableItem): void {
-    // Update selection without mutating input
-    const items = this.items();
-    const itemIndex = items.indexOf(item);
-    if (itemIndex !== -1) {
-      items[itemIndex].selected = !items[itemIndex].selected;
+    const selectedIds = new Set(this.selectedIds());
+
+    if (selectedIds.has(item.id)) {
+      selectedIds.delete(item.id);
+      item.selected = false;
+    } else {
+      selectedIds.add(item.id);
+      item.selected = true;
     }
-    
-    // Update the selected items signal
-    const selected = items.filter(i => i.selected);
-    this.selectedItems.set(selected);
+
+    this.selectedIds.set(selectedIds);
   }
 
   selectAll(): void {
     const filtered = this.filteredItems();
     const items = this.items();
-    
+    const selectedIds = new Set(this.selectedIds());
+
     filtered.forEach(filteredItem => {
       const item = items.find(i => i.id === filteredItem.id);
       if (item) {
         item.selected = true;
+        selectedIds.add(item.id);
       }
     });
-    
-    // Update the selected items signal
-    const selected = items.filter(i => i.selected);
-    this.selectedItems.set(selected);
+
+    this.selectedIds.set(selectedIds);
   }
 
   clearAll(): void {
     const filtered = this.filteredItems();
     const items = this.items();
-    
+    const selectedIds = new Set(this.selectedIds());
+
     filtered.forEach(filteredItem => {
       const item = items.find(i => i.id === filteredItem.id);
       if (item) {
         item.selected = false;
+        selectedIds.delete(item.id);
       }
     });
-    
-    // Update the selected items signal
-    const selected = items.filter(i => i.selected);
-    this.selectedItems.set(selected);
+
+    this.selectedIds.set(selectedIds);
   }
 
   onCancel(): void {

@@ -30,29 +30,26 @@
       <!-- Items List -->
       <div class="items-list">
         @if (filteredItems().length === 0) {
-          <div class="empty-state">
-            <mat-icon>inbox</mat-icon>
-            <p>{{ emptyMessage() }}</p>
-          </div>
+        <div class="empty-state">
+          <mat-icon>inbox</mat-icon>
+          <p>{{ emptyMessage() }}</p>
+        </div>
         } @else {
-          @for (item of filteredItems(); track item.id) {
-            <div class="item-row" (click)="toggleItem(item)">
-              <mat-checkbox 
-                [checked]="item.selected"
-                (click)="$event.stopPropagation()"
-                (change)="toggleItem(item)">
-              </mat-checkbox>
-              <div class="item-content">
-                <div class="item-title">{{ item.title }}</div>
-                @if (item.subtitle) {
-                  <div class="item-subtitle">{{ item.subtitle }}</div>
-                }
-                @if (item.count !== undefined) {
-                  <div class="item-count">{{ item.count }} users</div>
-                }
-              </div>
-            </div>
-          }
+        @for (item of filteredItems(); track item.id) {
+        <div class="item-row" (click)="toggleItem(item)">
+          <mat-checkbox [checked]="isSelected(item.id)" (click)="$event.stopPropagation()" (change)="toggleItem(item)">
+          </mat-checkbox>
+          <div class="item-content">
+            <div class="item-title">{{ item.title }}</div>
+            @if (item.subtitle) {
+            <div class="item-subtitle">{{ item.subtitle }}</div>
+            }
+            @if (item.count !== undefined) {
+            <div class="item-count">{{ item.count }} users</div>
+            }
+          </div>
+        </div>
+        }
         }
       </div>
     </div>
