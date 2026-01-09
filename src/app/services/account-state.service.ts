@@ -1091,9 +1091,21 @@ export class AccountStateService implements OnDestroy {
 
       // Load metadata events from storage for all following users
       const events = await databaseService.getEventsByPubkeyAndKind(followingList, 0); // kind 0 is metadata
-      const records = dataService.toRecords(events);
 
-      console.log(`💾 [Profile Loading] Found ${records.length} metadata records in storage`);
+      // OPTIMIZATION: Deduplicate to keep only the latest event per pubkey
+      // This avoids processing old duplicate metadata events
+      const latestEventsByPubkey = new Map<string, Event>();
+      for (const event of events) {
+        const existing = latestEventsByPubkey.get(event.pubkey);
+        if (!existing || event.created_at > existing.created_at) {
+          latestEventsByPubkey.set(event.pubkey, event);
+        }
+      }
+
+      const deduplicatedEvents = Array.from(latestEventsByPubkey.values());
+      const records = dataService.toRecords(deduplicatedEvents);
+
+      console.log(`💾 [Profile Loading] Found ${events.length} metadata records in storage (${records.length} unique profiles)`);
 
       // Add all found profiles to cache
       let addedCount = 0;
