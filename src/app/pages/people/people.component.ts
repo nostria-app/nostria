@@ -379,6 +379,19 @@ export class PeopleComponent {
     // Clear search when selecting a follow set
     if (followSet) {
       this.updateSearch('');
+      // Update URL query parameter to maintain selection
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { set: followSet.dTag },
+        queryParamsHandling: 'merge'
+      });
+    } else {
+      // Clear the query parameter when deselecting
+      this.router.navigate([], {
+        relativeTo: this.route,
+        queryParams: { set: null },
+        queryParamsHandling: 'merge'
+      });
     }
   }
 
