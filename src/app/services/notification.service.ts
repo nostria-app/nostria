@@ -35,6 +35,9 @@ export class NotificationService {
   // Track previously seen muted accounts to detect new mutes
   private _previousMutedAccounts = signal<string[]>([]);
 
+  // Track previous pubkey to detect actual account changes
+  private _previousPubkey = signal<string | null>(null);
+
   // Track active publishing notifications by event ID
   private activePublishNotifications = new Map<string, string>(); // eventId -> notificationId
 
@@ -52,13 +55,19 @@ export class NotificationService {
       }
     });
 
-    // Set up effect to reload notifications when account changes
+    // Set up effect to reload notifications when account ACTUALLY changes (not initial load)
     effect(() => {
       const pubkey = this.accountState.pubkey();
-      if (pubkey && this._notificationsLoaded()) {
-        this.logger.info(`Account changed to ${pubkey}, reloading notifications`);
+      const previousPubkey = untracked(() => this._previousPubkey());
+      
+      // Only reload if pubkey actually changed (not initial load)
+      if (pubkey && previousPubkey && pubkey !== previousPubkey) {
+        this.logger.info(`Account changed from ${previousPubkey.substring(0, 8)}... to ${pubkey.substring(0, 8)}..., reloading notifications`);
         this.loadNotifications();
       }
+      
+      // Update previous pubkey
+      untracked(() => this._previousPubkey.set(pubkey));
     });
 
     // Set up effect to clean up notifications when accounts are muted
