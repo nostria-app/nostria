@@ -295,17 +295,6 @@ export class EventService {
       // appear in the parent events list above the main event.
     }
 
-    // Log extracted thread info for debugging
-    if (rootId || replyId) {
-      this.logger.info(`[getEventTags] Event ${event.id.slice(0, 16)} thread info:`, {
-        rootId: rootId?.slice(0, 16),
-        rootAuthor: author?.slice(0, 8),
-        replyId: replyId?.slice(0, 16),
-        replyAuthor: replyAuthor?.slice(0, 8),
-        intermediateCount: intermediates.length,
-      });
-    }
-
     return { author, replyAuthor, rootId, replyId, pTags, rootRelays, replyRelays, pTagRelays, mentionIds, intermediates, quoteId, quoteAuthor, quoteRelays };
   }
 
@@ -428,7 +417,7 @@ export class EventService {
       if (deletionEvents && deletionEvents.length > 0) {
         // Validate the deletion request
         const deletionEvent = deletionEvents[0];
-        
+
         // Check that the deletion event references this event in an 'e' tag
         const hasValidETag = deletionEvent.tags.some(
           tag => tag[0] === 'e' && tag[1] === event.id
@@ -478,7 +467,7 @@ export class EventService {
         // Note: Without the original event, we can't fully validate the deletion
         // but finding any deletion request for this ID suggests it was deleted
         const deletionEvent = deletionEvents[0];
-        
+
         this.logger.info(`[Deletion Check] Found deletion request for event ID ${eventId}`, {
           deletionEventId: deletionEvent.id,
           author: deletionEvent.pubkey,
