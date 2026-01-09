@@ -4,6 +4,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { MatIconModule } from '@angular/material/icon';
+import { MatSelectModule } from '@angular/material/select';
 import { Event, Filter } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
 import { RelaysService } from '../../../services/relays/relays';
@@ -24,6 +25,7 @@ const PAGE_SIZE = 24;
     MatButtonModule,
     MatButtonToggleModule,
     MatIconModule,
+    MatSelectModule,
     MusicPlaylistCardComponent,
   ],
   template: `
@@ -37,6 +39,11 @@ const PAGE_SIZE = 24;
           <p class="subtitle">{{ playlistsCount() }} <span i18n="@@music.playlists.count">playlists</span></p>
         </div>
         <div class="header-actions">
+          <mat-select class="sort-select" [(value)]="sortBy" aria-label="Sort playlists">
+            <mat-option value="recents">Recents</mat-option>
+            <mat-option value="alphabetical">Alphabetical</mat-option>
+            <mat-option value="artist">Artist</mat-option>
+          </mat-select>
           @if (isAuthenticated()) {
             <mat-button-toggle-group [value]="source()" (change)="onSourceChange($event.value)" class="source-toggle">
               <mat-button-toggle value="following">
@@ -137,6 +144,12 @@ const PAGE_SIZE = 24;
       display: flex;
       align-items: center;
       gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .sort-select {
+      font-size: 0.875rem;
+      min-width: 130px;
     }
 
     .source-toggle {
@@ -246,6 +259,7 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
   loadingMore = signal(false);
   displayLimit = signal(PAGE_SIZE);
   source = signal<'following' | 'public'>('following');
+  sortBy = signal<'recents' | 'alphabetical' | 'artist'>('recents');
 
   private playlistSubscription: { close: () => void } | null = null;
   private playlistMap = new Map<string, Event>();
@@ -265,11 +279,33 @@ export class MusicPlaylistsComponent implements OnInit, OnDestroy, AfterViewInit
     const following = this.followingPubkeys();
     const myPubkey = this.currentPubkey();
     const sourceVal = this.source();
+    const sort = this.sortBy();
 
+    let filtered: Event[];
     if (sourceVal === 'following' && following.length > 0) {
-      return playlists.filter(p => following.includes(p.pubkey) && p.pubkey !== myPubkey);
+      filtered = playlists.filter(p => following.includes(p.pubkey) && p.pubkey !== myPubkey);
     } else {
-      return playlists.filter(p => !following.includes(p.pubkey) && p.pubkey !== myPubkey);
+      filtered = playlists.filter(p => !following.includes(p.pubkey) && p.pubkey !== myPubkey);
+    }
+
+    // Apply sorting
+    switch (sort) {
+      case 'alphabetical':
+        return [...filtered].sort((a, b) => {
+          const titleA = a.tags.find(t => t[0] === 'title')?.[1] || '';
+          const titleB = b.tags.find(t => t[0] === 'title')?.[1] || '';
+          return titleA.localeCompare(titleB);
+        });
+
+      case 'artist':
+        return [...filtered].sort((a, b) => {
+          // Sort by pubkey as a proxy for artist
+          return a.pubkey.localeCompare(b.pubkey);
+        });
+
+      case 'recents':
+      default:
+        return filtered;
     }
   });
 
