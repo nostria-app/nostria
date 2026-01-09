@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, effect } from '@angular/core';
+import { Component, inject, signal, computed, OnDestroy, ViewChild, ElementRef, effect, HostListener } from '@angular/core';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
@@ -76,6 +76,9 @@ export class MusicComponent implements OnDestroy {
   // "Yours" section collapsed state
   yoursSectionCollapsed = signal(false);
 
+  // Container width for dynamic rendering
+  containerWidth = signal(0);
+
   // Offline music track count
   offlineTrackCount = computed(() => this.offlineMusicService.offlineTracks().length);
 
@@ -96,6 +99,12 @@ export class MusicComponent implements OnDestroy {
 
   // Search input reference for focusing
   @ViewChild('searchInput') searchInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('musicContent') musicContent?: ElementRef<HTMLDivElement>;
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.updateContainerWidth();
+  }
 
   // Following pubkeys for filtering
   private followingPubkeys = computed(() => {
@@ -116,19 +125,19 @@ export class MusicComponent implements OnDestroy {
   private trackMatchesSearch(track: Event, query: string): boolean {
     if (!query) return true;
     const lowerQuery = query.toLowerCase();
-    
+
     // Check title
     const titleTag = track.tags.find(t => t[0] === 'title');
     if (titleTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
-    
+
     // Check artist tag
     const artistTag = track.tags.find(t => t[0] === 'artist');
     if (artistTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
-    
+
     // Check hashtags
     const hashtags = track.tags.filter(t => t[0] === 't').map(t => t[1]?.toLowerCase());
     if (hashtags.some(tag => tag?.includes(lowerQuery))) return true;
-    
+
     return false;
   }
 
@@ -139,18 +148,18 @@ export class MusicComponent implements OnDestroy {
   private playlistMatchesSearch(playlist: Event, query: string): boolean {
     if (!query) return true;
     const lowerQuery = query.toLowerCase();
-    
+
     // Check title
     const titleTag = playlist.tags.find(t => t[0] === 'title');
     if (titleTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
-    
+
     // Check description
     const descTag = playlist.tags.find(t => t[0] === 'description');
     if (descTag?.[1]?.toLowerCase().includes(lowerQuery)) return true;
-    
+
     // Check content
     if (playlist.content?.toLowerCase().includes(lowerQuery)) return true;
-    
+
     return false;
   }
 
@@ -190,8 +199,14 @@ export class MusicComponent implements OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
   });
 
-  followingPlaylistsPreview = computed(() => this.followingPlaylists().slice(0, SECTION_LIMIT));
-  hasMoreFollowingPlaylists = computed(() => this.followingPlaylists().length > SECTION_LIMIT);
+  followingPlaylistsPreview = computed(() => {
+    const limit = this.calculatePlaylistLimit();
+    return this.followingPlaylists().slice(0, limit);
+  });
+  hasMoreFollowingPlaylists = computed(() => {
+    const limit = this.calculatePlaylistLimit();
+    return this.followingPlaylists().length > limit;
+  });
 
   // === SONGS (FOLLOWING) ===
   followingTracks = computed(() => {
@@ -202,8 +217,14 @@ export class MusicComponent implements OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
   });
 
-  followingTracksPreview = computed(() => this.followingTracks().slice(0, SECTION_LIMIT));
-  hasMoreFollowingTracks = computed(() => this.followingTracks().length > SECTION_LIMIT);
+  followingTracksPreview = computed(() => {
+    const limit = this.calculateTrackLimit();
+    return this.followingTracks().slice(0, limit);
+  });
+  hasMoreFollowingTracks = computed(() => {
+    const limit = this.calculateTrackLimit();
+    return this.followingTracks().length > limit;
+  });
 
   // === PLAYLISTS (PUBLIC) ===
   publicPlaylists = computed(() => {
@@ -214,8 +235,14 @@ export class MusicComponent implements OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
   });
 
-  publicPlaylistsPreview = computed(() => this.publicPlaylists().slice(0, SECTION_LIMIT));
-  hasMorePublicPlaylists = computed(() => this.publicPlaylists().length > SECTION_LIMIT);
+  publicPlaylistsPreview = computed(() => {
+    const limit = this.calculatePlaylistLimit();
+    return this.publicPlaylists().slice(0, limit);
+  });
+  hasMorePublicPlaylists = computed(() => {
+    const limit = this.calculatePlaylistLimit();
+    return this.publicPlaylists().length > limit;
+  });
 
   // === SONGS (PUBLIC) ===
   publicTracks = computed(() => {
@@ -225,8 +252,14 @@ export class MusicComponent implements OnDestroy {
       .sort((a, b) => b.created_at - a.created_at);
   });
 
-  publicTracksPreview = computed(() => this.publicTracks().slice(0, SECTION_LIMIT));
-  hasMorePublicTracks = computed(() => this.publicTracks().length > SECTION_LIMIT);
+  publicTracksPreview = computed(() => {
+    const limit = this.calculateTrackLimit();
+    return this.publicTracks().slice(0, limit);
+  });
+  hasMorePublicTracks = computed(() => {
+    const limit = this.calculateTrackLimit();
+    return this.publicTracks().length > limit;
+  });
 
   // Counts for display
   followingPlaylistsCount = computed(() => this.followingPlaylists().length);
@@ -258,6 +291,50 @@ export class MusicComponent implements OnDestroy {
       this.yoursSectionCollapsed.set(this.accountLocalState.getMusicYoursSectionCollapsed(pubkey));
     }
     this.initializeMusic();
+
+    // Update container width after view init
+    setTimeout(() => this.updateContainerWidth(), 100);
+  }
+
+  /**
+   * Update the container width for dynamic rendering
+   */
+  private updateContainerWidth(): void {
+    if (this.musicContent?.nativeElement) {
+      this.containerWidth.set(this.musicContent.nativeElement.offsetWidth);
+    }
+  }
+
+  /**
+   * Calculate how many playlists can fit in one row
+   */
+  private calculatePlaylistLimit(): number {
+    const width = this.containerWidth();
+    if (width === 0) return SECTION_LIMIT;
+
+    // Playlist cards are minmax(160px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 160;
+    const gap = 16;
+    const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
+
+    // Return at least 1 item, max items per row to prevent wrapping
+    return Math.max(1, itemsPerRow);
+  }
+
+  /**
+   * Calculate how many tracks can fit in one row
+   */
+  private calculateTrackLimit(): number {
+    const width = this.containerWidth();
+    if (width === 0) return SECTION_LIMIT;
+
+    // Track cards are minmax(180px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 180;
+    const gap = 16;
+    const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
+
+    // Return at least 1 item, max items per row to prevent wrapping
+    return Math.max(1, itemsPerRow);
   }
 
   /**
@@ -266,7 +343,7 @@ export class MusicComponent implements OnDestroy {
   private async initializeMusic(): Promise<void> {
     // First, load cached tracks and playlists from database for instant display
     await this.loadFromDatabase();
-    
+
     // Then load relay set and start subscriptions for fresh data
     await this.loadMusicRelaySet();
     this.startSubscriptions();
@@ -278,47 +355,47 @@ export class MusicComponent implements OnDestroy {
   private async loadFromDatabase(): Promise<void> {
     try {
       console.log('[Music] Loading from database...');
-      
+
       // Load tracks from database
       const cachedTracks = await this.database.getEventsByKind(MUSIC_KIND);
       for (const track of cachedTracks) {
         if (this.reporting.isUserBlocked(track.pubkey)) continue;
         if (this.reporting.isContentBlocked(track)) continue;
-        
+
         const dTag = track.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
         const uniqueId = `${track.pubkey}:${dTag}`;
-        
+
         const existing = this.trackMap.get(uniqueId);
         if (!existing || track.created_at > existing.created_at) {
           this.trackMap.set(uniqueId, track);
         }
       }
-      
+
       if (this.trackMap.size > 0) {
         this.allTracks.set(Array.from(this.trackMap.values()));
         console.log(`[Music] Loaded ${this.trackMap.size} tracks from database`);
       }
-      
+
       // Load playlists from database
       const cachedPlaylists = await this.database.getEventsByKind(PLAYLIST_KIND);
       for (const playlist of cachedPlaylists) {
         if (this.reporting.isUserBlocked(playlist.pubkey)) continue;
         if (this.reporting.isContentBlocked(playlist)) continue;
-        
+
         const dTag = playlist.tags.find((tag: string[]) => tag[0] === 'd')?.[1] || '';
         const uniqueId = `${playlist.pubkey}:${dTag}`;
-        
+
         const existing = this.playlistMap.get(uniqueId);
         if (!existing || playlist.created_at > existing.created_at) {
           this.playlistMap.set(uniqueId, playlist);
         }
       }
-      
+
       if (this.playlistMap.size > 0) {
         this.allPlaylists.set(Array.from(this.playlistMap.values()));
         console.log(`[Music] Loaded ${this.playlistMap.size} playlists from database`);
       }
-      
+
       // If we have cached data, stop showing loading spinner immediately
       if (this.trackMap.size > 0 || this.playlistMap.size > 0) {
         this.loading.set(false);
@@ -466,7 +543,7 @@ export class MusicComponent implements OnDestroy {
       this.allTracks.set(Array.from(this.trackMap.values()));
 
       // Save to database for caching
-      this.database.saveEvent({ ...event, dTag }).catch(err => 
+      this.database.saveEvent({ ...event, dTag }).catch(err =>
         console.warn('[Music] Failed to save track to database:', err)
       );
 
@@ -496,7 +573,7 @@ export class MusicComponent implements OnDestroy {
       this.allPlaylists.set(Array.from(this.playlistMap.values()));
 
       // Save to database for caching
-      this.database.saveEvent({ ...event, dTag }).catch(err => 
+      this.database.saveEvent({ ...event, dTag }).catch(err =>
         console.warn('[Music] Failed to save playlist to database:', err)
       );
 
