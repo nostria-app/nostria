@@ -171,10 +171,11 @@ export class FollowingDataService {
    * Ensure following data is loaded. This is the main entry point.
    * 
    * Behavior:
-   * 1. ALWAYS loads cached events from database first (for instant UI)
-   * 2. If data is fresh (< 5 minutes old), returns cached data without fetching
-   * 3. If data is stale, fetches NEW events since last fetch (not all)
-   * 4. Multiple simultaneous calls share the same fetch promise
+   * 1. If in-memory cache exists and is fresh, return immediately (no database hit)
+   * 2. Otherwise, load cached events from database first (for instant UI)
+   * 3. If data is fresh (< 5 minutes old), returns cached data without fetching
+   * 4. If data is stale, fetches NEW events since last fetch (not all)
+   * 5. Multiple simultaneous calls share the same fetch promise
    * 
    * @param kinds Array of event kinds to fetch (default: [1] for notes)
    * @param force Force a fresh fetch even if data is fresh
@@ -196,10 +197,21 @@ export class FollowingDataService {
       return [];
     }
 
-    // ALWAYS load cached events first for instant UI
+    // OPTIMIZATION: If we have in-memory cache and data is fresh, return immediately
+    // This avoids hitting IndexedDB on subsequent calls within the 5-minute window
+    const memoryCache = this.cachedEvents();
+    if (memoryCache.length > 0 && !force && this.isDataFresh()) {
+      this.logger.debug(`[FollowingDataService] Using in-memory cache (${memoryCache.length} events)`);
+      if (onCacheLoaded) {
+        onCacheLoaded(memoryCache);
+      }
+      return memoryCache;
+    }
+
+    // Load from database if we don't have in-memory cache or data is stale
     const cachedEvents = await this.getCachedEvents(kinds, customSince);
     if (cachedEvents.length > 0) {
-      this.logger.debug(`[FollowingDataService] Loaded ${cachedEvents.length} cached events`);
+      this.logger.debug(`[FollowingDataService] Loaded ${cachedEvents.length} cached events from database`);
       // Notify caller about cached events immediately
       if (onCacheLoaded) {
         onCacheLoaded(cachedEvents);
