@@ -117,17 +117,7 @@
   </header>
 
   <!-- Feeds Container with Connected Headers and Content -->
-  <div class="columns-container" #columnsContainer #feedsContainer (scroll)="onColumnsScroll($event)"
-    (touchstart)="onPullStart($event)" (touchmove)="onPullMove($event)" (touchend)="onPullEnd()"
-    (mousedown)="onPullStart($event)" (mousemove)="onPullMove($event)" (mouseup)="onPullEnd()">
-
-    <!-- Pull-to-refresh indicator -->
-    @if (pullToRefreshActive()) {
-    <div class="pull-to-refresh-indicator" [style.transform]="'translateY(' + pullDistance() + 'px)'"
-      [style.opacity]="pullDistance() / pullThreshold" [class.active]="pullDistance() >= pullThreshold">
-      <mat-icon>refresh</mat-icon>
-    </div>
-    }
+  <div class="columns-container" #columnsContainer #feedsContainer (scroll)="onColumnsScroll($event)">
 
     <!-- Relay Feed View - shown when relay query param is present -->
     @if (showRelayFeed()) {
@@ -171,7 +161,7 @@
         }
 
         <!-- Feed Content with Individual Scrolling -->
-        <div class="column-content">
+        <div class="column-content" #columnContent>
 
           <!-- Floating new posts button -->
           @if (getPendingEventsCount(feed.id) > 0) {
