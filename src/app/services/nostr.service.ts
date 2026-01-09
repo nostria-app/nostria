@@ -37,6 +37,7 @@ import { PinPromptService } from './pin-prompt.service';
 import { MnemonicService } from './mnemonic.service';
 import { RelayAuthService } from './relays/relay-auth.service';
 import { AccountLocalStateService } from './account-local-state.service';
+import { FollowSetsService } from './follow-sets.service';
 
 export interface NostrUser {
   pubkey: string;
@@ -124,6 +125,7 @@ export class NostrService implements NostriaService {
   private readonly mnemonicService = inject(MnemonicService);
   private readonly relayAuth = inject(RelayAuthService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly followSetsService = inject(FollowSetsService);
 
   initialized = signal(false);
   private accountsInitialized = false;
@@ -161,6 +163,9 @@ export class NostrService implements NostriaService {
 
     // Set the signing function in AccountStateService to avoid circular dependency
     this.accountState.setSignFunction((event: UnsignedEvent) => this.sign(event));
+
+    // Set the signing function for FollowSetsService to avoid circular dependency
+    this.followSetsService.setSignFunction((event: UnsignedEvent) => this.sign(event));
 
     // Set the signing function for NIP-42 relay authentication
     this.relayAuth.setSignFunction((event: EventTemplate) => this.signEvent(event));

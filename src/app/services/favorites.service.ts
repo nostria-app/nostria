@@ -3,6 +3,7 @@ import { AccountStateService } from './account-state.service';
 import { LocalStorageService } from './local-storage.service';
 import { LoggerService } from './logger.service';
 import { AccountLocalStateService } from './account-local-state.service';
+import { FollowSetsService } from './follow-sets.service';
 
 type FavoritesData = Record<string, string[]>;
 
@@ -13,13 +14,18 @@ export class FavoritesService {
   private readonly accountState = inject(AccountStateService);
   private readonly localStorage = inject(LocalStorageService);
   private readonly accountLocalState = inject(AccountLocalStateService);
+  private readonly followSetsService = inject(FollowSetsService);
   private readonly logger = inject(LoggerService);
   readonly STORAGE_KEY = 'nostria-favorites';
 
   // Internal signal to trigger reactivity when favorites change
   private favoritesVersion = signal(0);
 
+  // Track if we've synced to Nostr yet
+  private hasSyncedToNostr = signal(false);
+
   // Computed signal for current account's favorites
+  // Now pulls from follow sets service if available, otherwise uses local state
   readonly favorites = computed(() => {
     // Depend on version to trigger recomputation
     this.favoritesVersion();
@@ -27,7 +33,13 @@ export class FavoritesService {
     const currentPubkey = this.accountState.pubkey();
     if (!currentPubkey) return [];
 
-    // Get favorites from centralized state
+    // Try to get from follow sets first (kind 30000)
+    const favoritesSet = this.followSetsService.getFavorites();
+    if (favoritesSet && favoritesSet.pubkeys.length > 0) {
+      return favoritesSet.pubkeys;
+    }
+
+    // Fall back to local state
     return this.accountLocalState.getFavorites(currentPubkey);
   });
 
@@ -40,6 +52,46 @@ export class FavoritesService {
       this.accountState.pubkey();
       this.favoritesVersion.update(v => v + 1);
     });
+
+    // Sync local favorites to Nostr when account loads
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      const followSetsLoaded = !this.followSetsService.isLoading();
+      
+      if (pubkey && followSetsLoaded && !this.hasSyncedToNostr()) {
+        this.syncFavoritesToNostr(pubkey);
+      }
+    });
+
+    // Watch for changes in follow sets and trigger refresh
+    effect(() => {
+      this.followSetsService.followSets();
+      this.favoritesVersion.update(v => v + 1);
+    });
+  }
+
+  /**
+   * Sync local favorites to Nostr as a follow set
+   */
+  private async syncFavoritesToNostr(pubkey: string): Promise<void> {
+    try {
+      const localFavorites = this.accountLocalState.getFavorites(pubkey);
+      
+      // Only sync if we have local favorites
+      if (localFavorites.length > 0) {
+        const favoritesSet = this.followSetsService.getFavorites();
+        
+        // Only sync if the Nostr version doesn't exist or is different
+        if (!favoritesSet || JSON.stringify([...favoritesSet.pubkeys].sort()) !== JSON.stringify([...localFavorites].sort())) {
+          this.logger.info('[Favorites] Syncing local favorites to Nostr');
+          await this.followSetsService.migrateFavorites(localFavorites);
+        }
+      }
+      
+      this.hasSyncedToNostr.set(true);
+    } catch (error) {
+      this.logger.error('[Favorites] Failed to sync favorites to Nostr:', error);
+    }
   }
 
   /**
@@ -91,7 +143,13 @@ export class FavoritesService {
     }
 
     const currentFavorites = this.accountLocalState.getFavorites(currentPubkey);
-    this.accountLocalState.setFavorites(currentPubkey, [...currentFavorites, userPubkey]);
+    const updatedFavorites = [...currentFavorites, userPubkey];
+    this.accountLocalState.setFavorites(currentPubkey, updatedFavorites);
+
+    // Also save to Nostr
+    this.followSetsService.migrateFavorites(updatedFavorites).catch(error => {
+      this.logger.error('Failed to sync favorites to Nostr:', error);
+    });
 
     // Trigger reactivity
     this.favoritesVersion.update(v => v + 1);
@@ -121,6 +179,11 @@ export class FavoritesService {
     const currentFavorites = this.accountLocalState.getFavorites(currentPubkey);
     const updatedFavorites = currentFavorites.filter(pubkey => pubkey !== userPubkey);
     this.accountLocalState.setFavorites(currentPubkey, updatedFavorites);
+
+    // Also save to Nostr
+    this.followSetsService.migrateFavorites(updatedFavorites).catch(error => {
+      this.logger.error('Failed to sync favorites to Nostr:', error);
+    });
 
     // Trigger reactivity
     this.favoritesVersion.update(v => v + 1);
