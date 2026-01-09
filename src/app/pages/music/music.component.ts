@@ -312,8 +312,8 @@ export class MusicComponent implements OnDestroy {
     const width = this.containerWidth();
     if (width === 0) return SECTION_LIMIT;
 
-    // Playlist cards are minmax(160px, 1fr) with 1rem (16px) gap
-    const cardMinWidth = 160;
+    // Playlist cards are minmax(180px, 1fr) with 1rem (16px) gap
+    const cardMinWidth = 180;
     const gap = 16;
     const itemsPerRow = Math.floor((width + gap) / (cardMinWidth + gap));
 

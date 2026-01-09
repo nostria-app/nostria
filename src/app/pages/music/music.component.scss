@@ -193,7 +193,7 @@
 // Playlists grid - larger cards
 .playlists-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
   gap: 1rem;
   padding: 0.5rem 0;
   max-width: 100%;
