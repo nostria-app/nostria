@@ -5,6 +5,7 @@ import { LoggerService } from './logger.service';
 import { AccountStateService } from './account-state.service';
 import { DatabaseService } from './database.service';
 import { PublishService } from './publish.service';
+import { EncryptionService } from './encryption.service';
 
 export interface FollowSet {
   id: string; // Event ID
@@ -27,6 +28,7 @@ export class FollowSetsService {
   private readonly accountState = inject(AccountStateService);
   private readonly database = inject(DatabaseService);
   private readonly publishService = inject(PublishService);
+  private readonly encryption = inject(EncryptionService);
 
   // Signals for reactive state
   followSets = signal<FollowSet[]>([]);
@@ -98,9 +100,9 @@ export class FollowSetsService {
         );
 
         // Convert all events to FollowSet objects (no filtering)
-        const sets = events
-          .map(record => this.parseFollowSetEvent(record.event))
-          .filter((set): set is FollowSet => set !== null);
+        const sets = (await Promise.all(
+          events.map(record => this.parseFollowSetEvent(record.event))
+        )).filter((set): set is FollowSet => set !== null);
 
         this.followSets.set(sets);
         this.logger.info(`[FollowSets] Loaded ${sets.length} follow sets`);
@@ -127,7 +129,7 @@ export class FollowSetsService {
   /**
    * Parse a kind 30000 event into a FollowSet object
    */
-  private parseFollowSetEvent(event: Event): FollowSet | null {
+  private async parseFollowSetEvent(event: Event): Promise<FollowSet | null> {
     try {
       const dTag = this.getDTagFromEvent(event);
       if (!dTag) {
@@ -139,22 +141,73 @@ export class FollowSetsService {
       const titleTag = event.tags.find(tag => tag[0] === 'title');
       const title = titleTag ? titleTag[1] : this.formatTitle(dTag);
 
-      // Extract pubkeys from p tags
-      const pubkeys = event.tags
+      // Extract pubkeys from public p tags
+      const publicPubkeys = event.tags
         .filter(tag => tag[0] === 'p')
         .map(tag => tag[1]);
+
+      // Try to decrypt private content if it exists
+      const privatePubkeys = await this.parsePrivatePubkeys(event.content);
+
+      // Combine public and private pubkeys
+      const allPubkeys = [...publicPubkeys, ...privatePubkeys];
 
       return {
         id: event.id,
         dTag,
         title,
-        pubkeys,
+        pubkeys: allPubkeys,
         createdAt: event.created_at,
         event,
       };
     } catch (error) {
       this.logger.error('[FollowSets] Failed to parse follow set event:', error);
       return null;
+    }
+  }
+
+  /**
+   * Parse private pubkeys from encrypted content
+   */
+  private async parsePrivatePubkeys(content: string): Promise<string[]> {
+    if (!content || content.trim() === '') {
+      return [];
+    }
+
+    // Check if content is encrypted
+    if (!this.encryption.isContentEncrypted(content)) {
+      return [];
+    }
+
+    try {
+      const pubkey = this.accountState.pubkey();
+      if (!pubkey) {
+        this.logger.debug('[FollowSets] No pubkey available for decryption');
+        return [];
+      }
+
+      // Decrypt content - try NIP-44 first, fallback to NIP-04
+      let decrypted: string;
+      try {
+        decrypted = await this.encryption.decryptNip44(content, pubkey);
+      } catch (nip44Error) {
+        this.logger.debug('[FollowSets] NIP-44 decryption failed, trying NIP-04...');
+        decrypted = await this.encryption.decryptNip04(content, pubkey);
+      }
+
+      // Parse the decrypted JSON array of tags
+      const privateTags: string[][] = JSON.parse(decrypted);
+
+      // Extract pubkeys from p tags
+      const pubkeys = privateTags
+        .filter(tag => Array.isArray(tag) && tag[0] === 'p' && tag[1])
+        .map(tag => tag[1]);
+
+      this.logger.debug(`[FollowSets] Decrypted ${pubkeys.length} private pubkeys`);
+      return pubkeys;
+    } catch (error) {
+      this.logger.debug('[FollowSets] Could not decrypt private content:', error);
+      return [];
     }
   }
 
