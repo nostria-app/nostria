@@ -124,15 +124,15 @@
             @if (feedForm.get('source')?.value === 'following') {
             <div class="source-description">
               <mat-icon>info</mat-icon>
-              <span>Fetches events from all your following ({{followingCount()}}).
+              <span>Fetches notes from all your following ({{followingCount()}}).
                 Optimizes queries by batching users with shared relays.
-                Only loads events from the last 6 hours or since you last checked.</span>
+                Only loads notes from the last 6 hours or since you last checked.</span>
             </div>
             }
             @if (feedForm.get('source')?.value === 'search') {
             <div class="source-description">
               <mat-icon>info</mat-icon>
-              <span>Search for events using NIP-50 search on your configured search relays.
+              <span>Search for notes using NIP-50 search on your configured search relays.
                 Enter hashtags or keywords to find relevant content.</span>
             </div>
             }
