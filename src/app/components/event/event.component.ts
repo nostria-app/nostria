@@ -1031,12 +1031,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         filteredReportData.set(reportType, (filteredReportData.get(reportType) || 0) + 1);
       }
 
-      console.log('🔒 [Mute Filter] Filtered interactions from', mutedAccounts.length, 'muted accounts');
-      console.log('   - Reactions after filter:', filteredReactionEvents.length);
-      console.log('   - Reposts after filter:', filteredReposts.length);
-      console.log('   - Quotes after filter:', filteredQuotes.length);
-      console.log('   - Reports after filter:', filteredReportEvents.length);
-
       // Update all states from the filtered results
       this.reactions.set({
         events: filteredReactionEvents,
@@ -1198,7 +1192,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         }
       }
 
-      console.log('✅ [Loading Zaps] Successfully loaded', parsedZaps.length, 'zaps for event:', targetEventId.substring(0, 8));
       this.zaps.set(parsedZaps);
     } catch (error) {
       console.error('Error loading zaps:', error);
