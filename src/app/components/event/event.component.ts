@@ -1006,13 +1006,6 @@ export class EventComponent implements AfterViewInit, OnDestroy {
         return;
       }
 
-      console.log('✅ [Loading Interactions] Successfully loaded for event:', targetEventId.substring(0, 8));
-      console.log('   - Reactions:', interactions.reactions.events.length);
-      console.log('   - Reposts:', interactions.reposts.length);
-      console.log('   - Quotes:', quotesResult.length);
-      console.log('   - Reports:', interactions.reports.events.length);
-      console.log('   - Replies:', interactions.replyCount);
-
       // CRITICAL: Filter out interactions from muted accounts
       const mutedAccounts = this.accountState.mutedAccounts();
 

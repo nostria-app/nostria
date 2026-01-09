@@ -61,6 +61,10 @@ export class ApplicationService {
   };
 
   previousPubKey = '';
+  
+  // Track previous following list to avoid reprocessing unchanged lists
+  private previousFollowingListSize = 0;
+  private previousFollowingListHash = '';
 
   constructor() {
     // Effect for profile processing when following list changes
@@ -75,6 +79,19 @@ export class ApplicationService {
         console.log('⏭️ [Profile Loading Effect] Skipping - no account or empty following list');
         return;
       }
+
+      // OPTIMIZATION: Check if following list actually changed
+      // Create a simple hash of the list to detect changes
+      const currentHash = followingList.join(',');
+      if (this.previousFollowingListSize === followingList.length && 
+          this.previousFollowingListHash === currentHash) {
+        console.log('⏭️ [Profile Loading Effect] Skipping - following list unchanged');
+        return;
+      }
+      
+      // Update tracking
+      this.previousFollowingListSize = followingList.length;
+      this.previousFollowingListHash = currentHash;
 
       untracked(async () => {
         try {

@@ -144,10 +144,8 @@ export class ParsingService {
       // Handle both npub and nprofile types
       if (decoded.type === 'nprofile') {
         pubkey = (decoded.data as ProfilePointer).pubkey;
-        this.logger.debug(`Decoded nprofile mention for pubkey: ${pubkey.substring(0, 8)}...`);
       } else if (decoded.type === 'npub') {
         pubkey = decoded.data;
-        this.logger.debug(`Decoded npub mention for pubkey: ${pubkey.substring(0, 8)}...`);
       }
 
       if (pubkey) {

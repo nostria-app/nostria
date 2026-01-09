@@ -43,7 +43,7 @@ export class LocalStorageService {
     try {
       if (this.isAvailable()) {
         const value = localStorage.getItem(key);
-        this.logger.debug(`Retrieved "${key}" from localStorage`);
+        // Removed debug logging to reduce console spam
         return value;
       } else {
         const value = this.memoryStore()[key] ?? null;
