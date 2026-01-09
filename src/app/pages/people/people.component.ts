@@ -9,7 +9,8 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatRadioModule } from '@angular/material/radio';
-import { RouterModule } from '@angular/router';
+import { RouterModule, ActivatedRoute } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
 import { LoggerService } from '../../services/logger.service';
 import { debounceTime } from 'rxjs/operators';
 import { Subject } from 'rxjs';
@@ -61,6 +62,7 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' |
 })
 export class PeopleComponent {
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private logger = inject(LoggerService);
   private accountState = inject(AccountStateService);
   private app = inject(ApplicationService);
@@ -101,6 +103,9 @@ export class PeopleComponent {
     const sets = this.followSetsService.followSets();
     return [...sets].sort((a, b) => b.createdAt - a.createdAt);
   });
+
+  // Read query parameters
+  private queryParams = toSignal(this.route.queryParams);
 
   // Computed signal for filtered and sorted people using FollowingService
   filteredAndSortedProfiles = computed(() => {
@@ -289,6 +294,23 @@ export class PeopleComponent {
       const pubkey = this.accountState.pubkey();
       if (pubkey) {
         this.accountLocalState.setPeopleSortOption(pubkey, this.sortOption());
+      }
+    });
+
+    // Watch for 'set' query parameter and select the corresponding follow set
+    effect(() => {
+      const params = this.queryParams();
+      const setDTag = params?.['set'];
+      const followSets = this.allFollowSets();
+
+      if (setDTag && followSets.length > 0) {
+        const matchingSet = followSets.find(s => s.dTag === setDTag);
+        if (matchingSet && this.selectedFollowSet()?.dTag !== setDTag) {
+          this.selectFollowSet(matchingSet);
+        }
+      } else if (!setDTag && this.selectedFollowSet()) {
+        // Clear selection when no set parameter
+        this.selectFollowSet(null);
       }
     });
   }
