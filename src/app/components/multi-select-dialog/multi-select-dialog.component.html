@@ -1,0 +1,70 @@
+<app-custom-dialog [title]="title()" [disableClose]="false" (closed)="onCancel()">
+  <div dialog-content>
+    <div class="multi-select-container">
+      <!-- Search Bar -->
+      <div class="search-section">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label>{{ searchPlaceholder() }}</mat-label>
+          <input matInput [formControl]="searchControl" autocomplete="off">
+          <mat-icon matPrefix>search</mat-icon>
+        </mat-form-field>
+      </div>
+
+      <!-- Selection Actions -->
+      <div class="selection-actions">
+        <div class="selected-info">
+          <span class="count">{{ selectedCount() }} selected</span>
+        </div>
+        <div class="action-buttons">
+          <button mat-button type="button" (click)="selectAll()" [disabled]="filteredItems().length === 0">
+            <mat-icon>select_all</mat-icon>
+            Select All
+          </button>
+          <button mat-button type="button" (click)="clearAll()" [disabled]="selectedCount() === 0">
+            <mat-icon>clear</mat-icon>
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Items List -->
+      <div class="items-list">
+        @if (filteredItems().length === 0) {
+          <div class="empty-state">
+            <mat-icon>inbox</mat-icon>
+            <p>{{ emptyMessage() }}</p>
+          </div>
+        } @else {
+          @for (item of filteredItems(); track item.id) {
+            <div class="item-row" (click)="toggleItem(item)">
+              <mat-checkbox 
+                [checked]="item.selected"
+                (click)="$event.stopPropagation()"
+                (change)="toggleItem(item)">
+              </mat-checkbox>
+              <div class="item-content">
+                <div class="item-title">{{ item.title }}</div>
+                @if (item.subtitle) {
+                  <div class="item-subtitle">{{ item.subtitle }}</div>
+                }
+                @if (item.count !== undefined) {
+                  <div class="item-count">{{ item.count }} users</div>
+                }
+              </div>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  <div dialog-actions class="action-container">
+    <div class="left-actions"></div>
+    <div class="right-actions">
+      <button mat-button type="button" (click)="onCancel()">Cancel</button>
+      <button mat-flat-button type="button" (click)="onConfirm()">
+        Confirm ({{ selectedCount() }})
+      </button>
+    </div>
+  </div>
+</app-custom-dialog>

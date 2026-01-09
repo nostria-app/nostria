@@ -144,6 +144,105 @@
   }
 }
 
+// Custom source panel styling
+.custom-source-panel {
+  margin-top: 16px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+  border-left: 3px solid var(--mat-sys-tertiary);
+
+  h4 {
+    margin-top: 0;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .section-description {
+    font-size: 0.85rem;
+    line-height: 1.4;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 16px;
+  }
+}
+
+.custom-users-section,
+.starter-packs-section,
+.follow-sets-section {
+  margin-bottom: 24px;
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+
+  h5 {
+    margin: 0 0 4px 0;
+    font-size: 0.95rem;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .subsection-description {
+    font-size: 0.8rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 12px;
+  }
+}
+
+// Select button styling
+.select-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  margin-bottom: 12px;
+  position: relative;
+
+  mat-icon {
+    font-size: 1.2rem;
+    width: 1.2rem;
+    height: 1.2rem;
+  }
+
+  .badge {
+    position: absolute;
+    right: 12px;
+    background-color: var(--mat-sys-primary);
+    color: var(--mat-sys-on-primary);
+    border-radius: 12px;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    min-width: 20px;
+    text-align: center;
+  }
+}
+
+// Selected items display
+.selected-items {
+  margin-top: 12px;
+
+  h6 {
+    margin: 0 0 8px 0;
+    font-size: 0.85rem;
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .selected-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 12px;
+    background-color: var(--mat-sys-surface-container-high);
+    border-radius: 8px;
+    border: 1px solid var(--mat-sys-outline-variant);
+
+    mat-chip-row {
+      background-color: var(--mat-sys-primary-container);
+      color: var(--mat-sys-on-primary-container);
+    }
+  }
+}
+
 // Search source configuration
 .search-source-panel {
   margin-top: 16px;
