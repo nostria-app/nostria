@@ -82,7 +82,8 @@ export class FavoritesService {
         const favoritesSet = this.followSetsService.getFavorites();
         
         // Only sync if the Nostr version doesn't exist or is different
-        if (!favoritesSet || JSON.stringify([...favoritesSet.pubkeys].sort()) !== JSON.stringify([...localFavorites].sort())) {
+        // Use Set-based comparison for efficiency
+        if (!favoritesSet || !this.arraysEqual(favoritesSet.pubkeys, localFavorites)) {
           this.logger.info('[Favorites] Syncing local favorites to Nostr');
           await this.followSetsService.migrateFavorites(localFavorites);
         }
@@ -92,6 +93,20 @@ export class FavoritesService {
     } catch (error) {
       this.logger.error('[Favorites] Failed to sync favorites to Nostr:', error);
     }
+  }
+
+  /**
+   * Compare two arrays for equality (order-independent)
+   */
+  private arraysEqual(arr1: string[], arr2: string[]): boolean {
+    if (arr1.length !== arr2.length) return false;
+    const set1 = new Set(arr1);
+    const set2 = new Set(arr2);
+    if (set1.size !== set2.size) return false;
+    for (const item of set1) {
+      if (!set2.has(item)) return false;
+    }
+    return true;
   }
 
   /**

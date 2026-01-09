@@ -183,7 +183,7 @@ export class FollowSetsService {
     }
 
     if (!this.signFunction) {
-      this.logger.error('[FollowSets] Sign function not set. Cannot save follow set.');
+      this.logger.error('[FollowSets] Sign function not initialized. Ensure NostrService has called setSignFunction() before using this service.');
       return null;
     }
 
@@ -259,7 +259,7 @@ export class FollowSetsService {
     }
 
     if (!this.signFunction) {
-      this.logger.error('[FollowSets] Sign function not set. Cannot delete follow set.');
+      this.logger.error('[FollowSets] Sign function not initialized. Ensure NostrService has called setSignFunction() before using this service.');
       return false;
     }
 

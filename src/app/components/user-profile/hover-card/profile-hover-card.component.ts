@@ -376,6 +376,7 @@ export class ProfileHoverCardComponent {
   }
 
   async createNewFollowSet(): Promise<void> {
+    // TODO: Replace prompt() with a proper Material Design dialog
     const setName = prompt('Enter a name for the new follow set:');
     if (!setName || setName.trim() === '') {
       return;

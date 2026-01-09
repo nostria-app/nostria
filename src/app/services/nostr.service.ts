@@ -165,7 +165,11 @@ export class NostrService implements NostriaService {
     this.accountState.setSignFunction((event: UnsignedEvent) => this.sign(event));
 
     // Set the signing function for FollowSetsService to avoid circular dependency
-    this.followSetsService.setSignFunction((event: UnsignedEvent) => this.sign(event));
+    try {
+      this.followSetsService.setSignFunction((event: UnsignedEvent) => this.sign(event));
+    } catch (error) {
+      this.logger.error('Failed to set signing function for FollowSetsService:', error);
+    }
 
     // Set the signing function for NIP-42 relay authentication
     this.relayAuth.setSignFunction((event: EventTemplate) => this.signEvent(event));
