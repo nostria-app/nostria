@@ -142,6 +142,37 @@
       font-size: 12px;
       font-weight: 500;
     }
+
+    .count-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--md-sys-color-primary-container);
+      color: var(--md-sys-color-on-primary-container);
+      padding: 6px 14px;
+      border-radius: 16px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+      mat-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        opacity: 0.8;
+      }
+
+      .count-number {
+        font-size: 14px;
+        font-weight: 700;
+      }
+
+      .count-label {
+        font-size: 12px;
+        font-weight: 500;
+        opacity: 0.9;
+      }
+    }
   }
 
   button {

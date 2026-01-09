@@ -163,12 +163,12 @@
             <div class="custom-users-section">
               <h5>Select Users</h5>
               <p class="subsection-description">Choose users from your following list</p>
-              
+
               <button mat-flat-button type="button" class="select-button" (click)="openUserSelectDialog()">
                 <mat-icon>person_add</mat-icon>
                 Select Users
                 @if (selectedUsers().length > 0) {
-                  <span class="badge">{{ selectedUsers().length }}</span>
+                <span class="badge">{{ selectedUsers().length }}</span>
                 }
               </button>
 
@@ -192,12 +192,12 @@
             <div class="starter-packs-section">
               <h5>Select Starter Packs</h5>
               <p class="subsection-description">Choose from available starter packs</p>
-              
+
               <button mat-flat-button type="button" class="select-button" (click)="openStarterPackSelectDialog()">
                 <mat-icon>package_2</mat-icon>
                 Select Starter Packs
                 @if (selectedStarterPacks().length > 0) {
-                  <span class="badge">{{ selectedStarterPacks().length }}</span>
+                <span class="badge">{{ selectedStarterPacks().length }}</span>
                 }
               </button>
 
@@ -221,12 +221,12 @@
             <div class="follow-sets-section">
               <h5>Select Follow Sets</h5>
               <p class="subsection-description">Choose from your Follow Sets (kind 30000)</p>
-              
+
               <button mat-flat-button type="button" class="select-button" (click)="openFollowSetSelectDialog()">
                 <mat-icon>group</mat-icon>
                 Select Follow Sets
                 @if (selectedFollowSets().length > 0) {
-                  <span class="badge">{{ selectedFollowSets().length }}</span>
+                <span class="badge">{{ selectedFollowSets().length }}</span>
                 }
               </button>
 
@@ -352,39 +352,23 @@
 
 <!-- Multi-select dialogs -->
 @if (showUserSelectDialog()) {
-  <app-multi-select-dialog
-    [title]="'Select Users'"
-    [items]="userSelectableItems()"
-    [searchPlaceholder]="'Search users...'"
-    [emptyMessage]="'No users found'"
-    (closed)="onUserSelectionConfirmed($event)">
-  </app-multi-select-dialog>
+<app-multi-select-dialog [title]="'Select Users'" [items]="userSelectableItems()"
+  [searchPlaceholder]="'Search users...'" [emptyMessage]="'No users found'" (closed)="onUserSelectionConfirmed($event)">
+</app-multi-select-dialog>
 }
 
 @if (showStarterPackSelectDialog()) {
-  <app-multi-select-dialog
-    [title]="'Select Starter Packs'"
-    [items]="starterPackSelectableItems()"
-    [searchPlaceholder]="'Search starter packs...'"
-    [emptyMessage]="'No starter packs available'"
-    [showEditOption]="true"
-    [showDeleteOption]="true"
-    (closed)="onStarterPackSelectionConfirmed($event)"
-    (itemEdit)="onStarterPackEdit($event)"
-    (itemDelete)="onStarterPackDelete($event)">
-  </app-multi-select-dialog>
+<app-multi-select-dialog [title]="'Select Starter Packs'" [items]="starterPackSelectableItems()"
+  [searchPlaceholder]="'Search starter packs...'" [emptyMessage]="'No starter packs available'" [showEditOption]="true"
+  [showDeleteOption]="true" (closed)="onStarterPackSelectionConfirmed($event)" (itemEdit)="onStarterPackEdit($event)"
+  (itemDelete)="onStarterPackDelete($event)">
+</app-multi-select-dialog>
 }
 
 @if (showFollowSetSelectDialog()) {
-  <app-multi-select-dialog
-    [title]="'Select Follow Sets'"
-    [items]="followSetSelectableItems()"
-    [searchPlaceholder]="'Search follow sets...'"
-    [emptyMessage]="'No follow sets available'"
-    [showEditOption]="true"
-    [showDeleteOption]="true"
-    (closed)="onFollowSetSelectionConfirmed($event)"
-    (itemEdit)="onFollowSetEdit($event)"
-    (itemDelete)="onFollowSetDelete($event)">
-  </app-multi-select-dialog>
+<app-multi-select-dialog [title]="'Select Follow Sets'" [items]="followSetSelectableItems()"
+  [searchPlaceholder]="'Search follow sets...'" [emptyMessage]="'No follow sets available'" [showEditOption]="true"
+  [showDeleteOption]="true" (closed)="onFollowSetSelectionConfirmed($event)" (itemEdit)="onFollowSetEdit($event)"
+  (itemDelete)="onFollowSetDelete($event)">
+</app-multi-select-dialog>
 }

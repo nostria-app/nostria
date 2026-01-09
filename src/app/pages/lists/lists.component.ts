@@ -17,6 +17,7 @@ import { MatTabsModule } from '@angular/material/tabs';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { Router } from '@angular/router';
 import { Event, kinds } from 'nostr-tools';
+import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { DataService } from '../../services/data.service';
 import { LoggerService } from '../../services/logger.service';
@@ -943,9 +944,17 @@ export class ListsComponent implements OnInit {
    * Delete a list
    */
   async deleteList(listData: ListData) {
-    const confirmed = confirm(
-      `Are you sure you want to delete "${listData.title || listData.type.name}"?`
-    );
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete List',
+        message: `Are you sure you want to delete "${listData.title || listData.type.name}"? This action cannot be undone.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn'
+      }
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
     if (!confirmed) return;
 
     this.loading.set(true);

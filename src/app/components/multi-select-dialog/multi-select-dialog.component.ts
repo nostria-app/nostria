@@ -5,9 +5,11 @@ import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog } from '@angular/material/dialog';
 import { FormControl, ReactiveFormsModule } from '@angular/forms';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { CustomDialogComponent } from '../custom-dialog/custom-dialog.component';
+import { ConfirmDialogComponent } from '../confirm-dialog/confirm-dialog.component';
 
 export interface SelectableItem {
   id: string;
@@ -52,6 +54,7 @@ export class MultiSelectDialogComponent {
   searchValue = signal('');
   selectedIds = signal<Set<string>>(new Set());
   private destroyRef = inject(DestroyRef);
+  private dialog = inject(MatDialog);
 
   constructor() {
     // Track search input with proper cleanup
@@ -153,9 +156,23 @@ export class MultiSelectDialogComponent {
     this.itemEdit.emit(item);
   }
 
-  onDelete(item: SelectableItem, event: Event): void {
+  async onDelete(item: SelectableItem, event: Event): Promise<void> {
     event.stopPropagation();
-    this.itemDelete.emit(item);
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Item',
+        message: `Are you sure you want to delete "${item.title}"? This action cannot be undone.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn'
+      }
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
+    if (confirmed) {
+      this.itemDelete.emit(item);
+    }
   }
 
   hasMenuOptions(): boolean {
