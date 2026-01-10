@@ -35,7 +35,7 @@ import { PublishService } from '../../../services/publish.service';
 import { NostrService } from '../../../services/nostr.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
 import { ProfileHoverCardService } from '../../../services/profile-hover-card.service';
-import { TextInputDialogComponent, TextInputDialogData } from '../../text-input-dialog/text-input-dialog.component';
+import { CreateListDialogComponent, CreateListDialogResult } from '../../create-list-dialog/create-list-dialog.component';
 import { firstValueFrom } from 'rxjs';
 
 interface ProfileData {
@@ -368,48 +368,47 @@ export class ProfileHoverCardComponent {
       if (isCurrentlyInSet) {
         // Remove from set
         await this.followSetsService.removeFromFollowSet(dTag, pubkey);
-        this.layout.toast('Removed from follow set');
+        this.layout.toast('Removed from list');
       } else {
         // Add to set
         await this.followSetsService.addToFollowSet(dTag, pubkey);
-        this.layout.toast('Added to follow set');
+        this.layout.toast('Added to list');
       }
     } catch (error) {
-      this.layout.toast('Failed to update follow set');
+      this.layout.toast('Failed to update list');
     }
   }
 
   async createNewFollowSet(): Promise<void> {
-    const dialogRef = this.dialog.open(TextInputDialogComponent, {
+    const dialogRef = this.dialog.open(CreateListDialogComponent, {
       data: {
-        title: 'Create New Follow Set',
-        message: 'Enter a name for the new follow set',
-        label: 'Follow Set Name',
-        placeholder: 'e.g., Developers, Friends, Artists',
-        required: true,
-        minLength: 1,
-        maxLength: 100,
-      } as TextInputDialogData,
-      width: '400px',
+        initialPrivate: false,
+      },
+      width: '450px',
     });
 
-    const setName = await firstValueFrom(dialogRef.afterClosed());
+    const result: CreateListDialogResult | null = await firstValueFrom(dialogRef.afterClosed());
 
-    if (!setName || setName.trim() === '') {
+    if (!result || !result.title.trim()) {
       return;
     }
 
     try {
       const pubkey = this.pubkey();
-      const newSet = await this.followSetsService.createFollowSet(setName.trim(), [pubkey]);
+      const newSet = await this.followSetsService.createFollowSet(
+        result.title.trim(),
+        [pubkey],
+        result.isPrivate
+      );
 
       if (newSet) {
-        this.layout.toast(`Created follow set "${setName}" and added user`);
+        const privacyLabel = result.isPrivate ? 'private list' : 'list';
+        this.layout.toast(`Created ${privacyLabel} "${result.title}" and added user`);
       } else {
-        this.layout.toast('Failed to create follow set');
+        this.layout.toast('Failed to create list');
       }
     } catch (error) {
-      this.layout.toast('Failed to create follow set');
+      this.layout.toast('Failed to create list');
     }
   }
 

@@ -13,6 +13,7 @@ export interface FollowSet {
   title: string; // Human-readable name
   pubkeys: string[]; // List of pubkeys in this set
   createdAt: number; // Timestamp
+  isPrivate: boolean; // Whether this set is encrypted (private)
   event?: Event; // The raw Nostr event
 }
 
@@ -149,6 +150,9 @@ export class FollowSetsService {
       // Try to decrypt private content if it exists
       const privatePubkeys = await this.parsePrivatePubkeys(event.content);
 
+      // Determine if this set is private based on whether content is encrypted
+      const isPrivate = this.encryption.isContentEncrypted(event.content);
+
       // Combine public and private pubkeys
       const allPubkeys = [...publicPubkeys, ...privatePubkeys];
 
@@ -158,6 +162,7 @@ export class FollowSetsService {
         title,
         pubkeys: allPubkeys,
         createdAt: event.created_at,
+        isPrivate,
         event,
       };
     } catch (error) {
@@ -247,7 +252,8 @@ export class FollowSetsService {
   async saveFollowSet(
     dTag: string,
     title: string,
-    pubkeys: string[]
+    pubkeys: string[],
+    isPrivate: boolean = false
   ): Promise<FollowSet | null> {
     const currentPubkey = this.accountState.pubkey();
     if (!currentPubkey) {
@@ -264,19 +270,30 @@ export class FollowSetsService {
       // Ensure d-tag has nostria prefix
       const prefixedDTag = dTag.startsWith(NOSTRIA_PREFIX) ? dTag : `${NOSTRIA_PREFIX}${dTag}`;
 
-      // Build tags
+      // Build tags - only include d and title tags
       const tags: string[][] = [
         ['d', prefixedDTag],
         ['title', title],
-        ...pubkeys.map(pubkey => ['p', pubkey]),
       ];
+
+      // Handle encryption for private lists
+      let content = '';
+      if (isPrivate) {
+        // For private lists, encrypt all pubkeys in content
+        const privateTags: string[][] = pubkeys.map(pubkey => ['p', pubkey]);
+        const jsonString = JSON.stringify(privateTags);
+        content = await this.encryption.encryptNip44(jsonString, currentPubkey);
+      } else {
+        // For public lists, add pubkeys as public tags
+        tags.push(...pubkeys.map(pubkey => ['p', pubkey]));
+      }
 
       // Create unsigned event
       const unsignedEvent: UnsignedEvent = {
         kind: 30000,
         created_at: Math.floor(Date.now() / 1000),
         tags,
-        content: '',
+        content,
         pubkey: currentPubkey,
       };
 
@@ -300,13 +317,14 @@ export class FollowSetsService {
         title,
         pubkeys,
         createdAt: signedEvent.created_at,
+        isPrivate,
         event: signedEvent,
       };
 
       // Update local state
       this.updateLocalFollowSet(followSet);
 
-      this.logger.info(`[FollowSets] Saved follow set: ${title}`);
+      this.logger.info(`[FollowSets] Saved follow set: ${title} (${isPrivate ? 'private' : 'public'})`);
       return followSet;
     } catch (error) {
       this.logger.error('[FollowSets] Failed to save follow set:', error);
@@ -391,9 +409,9 @@ export class FollowSetsService {
       return true;
     }
 
-    // Add pubkey and save
+    // Add pubkey and save, preserving the isPrivate setting
     const updatedPubkeys = [...followSet.pubkeys, pubkey];
-    const result = await this.saveFollowSet(dTag, followSet.title, updatedPubkeys);
+    const result = await this.saveFollowSet(dTag, followSet.title, updatedPubkeys, followSet.isPrivate);
     return result !== null;
   }
 
@@ -407,16 +425,16 @@ export class FollowSetsService {
       return false;
     }
 
-    // Remove pubkey and save
+    // Remove pubkey and save, preserving the isPrivate setting
     const updatedPubkeys = followSet.pubkeys.filter(pk => pk !== pubkey);
-    const result = await this.saveFollowSet(dTag, followSet.title, updatedPubkeys);
+    const result = await this.saveFollowSet(dTag, followSet.title, updatedPubkeys, followSet.isPrivate);
     return result !== null;
   }
 
   /**
    * Create a new follow set with a unique d-tag
    */
-  async createFollowSet(title: string, pubkeys: string[] = []): Promise<FollowSet | null> {
+  async createFollowSet(title: string, pubkeys: string[] = [], isPrivate: boolean = false): Promise<FollowSet | null> {
     // Generate a unique d-tag from the title
     const baseDTag = title
       .toLowerCase()
@@ -432,7 +450,7 @@ export class FollowSetsService {
       counter++;
     }
 
-    return this.saveFollowSet(dTag, title, pubkeys);
+    return this.saveFollowSet(dTag, title, pubkeys, isPrivate);
   }
 
   /**
