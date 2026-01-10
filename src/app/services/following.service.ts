@@ -456,11 +456,24 @@ export class FollowingService {
         return sorted.sort((a, b) => {
           const aDisplayName = ((a.profile?.data?.display_name as string) || '').trim();
           const aNameField = ((a.profile?.data?.name as string) || '').trim();
-          const aName = aDisplayName || aNameField || a.pubkey;
+          const aName = aDisplayName || aNameField;
 
           const bDisplayName = ((b.profile?.data?.display_name as string) || '').trim();
           const bNameField = ((b.profile?.data?.name as string) || '').trim();
-          const bName = bDisplayName || bNameField || b.pubkey;
+          const bName = bDisplayName || bNameField;
+
+          // Check if names start with numbers/symbols (# category) or are empty
+          const aIsSymbol = !aName || /^[^A-Za-z]/.test(aName);
+          const bIsSymbol = !bName || /^[^A-Za-z]/.test(bName);
+
+          // Sort symbols/numbers/empty to the end
+          if (aIsSymbol && !bIsSymbol) return 1;
+          if (!aIsSymbol && bIsSymbol) return -1;
+
+          // If both are symbols/empty, compare pubkeys
+          if (aIsSymbol && bIsSymbol) {
+            return a.pubkey.localeCompare(b.pubkey);
+          }
 
           return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         });
@@ -469,11 +482,24 @@ export class FollowingService {
         return sorted.sort((a, b) => {
           const aDisplayName = ((a.profile?.data?.display_name as string) || '').trim();
           const aNameField = ((a.profile?.data?.name as string) || '').trim();
-          const aName = aDisplayName || aNameField || a.pubkey;
+          const aName = aDisplayName || aNameField;
 
           const bDisplayName = ((b.profile?.data?.display_name as string) || '').trim();
           const bNameField = ((b.profile?.data?.name as string) || '').trim();
-          const bName = bDisplayName || bNameField || b.pubkey;
+          const bName = bDisplayName || bNameField;
+
+          // Check if names start with numbers/symbols (# category) or are empty
+          const aIsSymbol = !aName || /^[^A-Za-z]/.test(aName);
+          const bIsSymbol = !bName || /^[^A-Za-z]/.test(bName);
+
+          // Sort symbols/numbers/empty to the end (keep them at bottom even in desc)
+          if (aIsSymbol && !bIsSymbol) return 1;
+          if (!aIsSymbol && bIsSymbol) return -1;
+
+          // If both are symbols/empty, compare pubkeys
+          if (aIsSymbol && bIsSymbol) {
+            return a.pubkey.localeCompare(b.pubkey);
+          }
 
           return bName.localeCompare(aName, undefined, { sensitivity: 'base' });
         });
