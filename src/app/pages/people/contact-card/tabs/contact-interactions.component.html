@@ -40,7 +40,11 @@
               </div>
               } @else if (interaction.type === 'like-given' || interaction.type === 'like-received') {
               <div class="reaction-emoji">
+                @if (getCustomEmojiUrl(interaction); as emojiUrl) {
+                <img [src]="emojiUrl" alt="Custom emoji" class="custom-emoji" loading="lazy" />
+                } @else {
                 {{ getInteractionContent(interaction) }}
+                }
               </div>
               }
             </div>

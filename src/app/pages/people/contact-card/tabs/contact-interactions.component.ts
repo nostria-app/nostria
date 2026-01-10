@@ -187,10 +187,27 @@ export class ContactInteractionsComponent {
 
     // For reactions, show the reaction emoji
     if (interaction.type === 'like-given' || interaction.type === 'like-received') {
-      return event.content || '+';
+      const content = event.content;
+      // Convert + to thumbs up, - to thumbs down
+      if (content === '+') return '👍';
+      if (content === '-') return '👎';
+      // Return the emoji content (handles both regular emojis and custom emoji shortcodes)
+      return content || '👍';
     }
 
     return '';
+  }
+
+  getCustomEmojiUrl(interaction: Interaction): string | null {
+    const event = interaction.event;
+    if (!event.content || !event.content.startsWith(':') || !event.content.endsWith(':')) {
+      return null;
+    }
+
+    const shortcode = event.content.slice(1, -1); // Remove colons
+    const emojiTag = event.tags.find(tag => tag[0] === 'emoji' && tag[1] === shortcode);
+
+    return emojiTag?.[2] || null;
   }
 
   navigateToEvent(interaction: Interaction): void {
