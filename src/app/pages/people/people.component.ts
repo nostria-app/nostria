@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, viewChild, ElementRef, afterNextRender, OnDestroy } from '@angular/core';
+import { Component, inject, signal, computed, effect, viewChild, ElementRef, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -31,9 +31,8 @@ import { Followset } from '../../services/followset';
 import { NotificationService } from '../../services/notification.service';
 import { FeedsCollectionService } from '../../services/feeds-collection.service';
 import { AccountLocalStateService, PeopleFilters } from '../../services/account-local-state.service';
-import { FollowingService } from '../../services/following.service';
+import { FollowingService, FollowingProfile } from '../../services/following.service';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
-import { NostrRecord } from '../../interfaces';
 import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
 
 // Re-export for local use
@@ -149,6 +148,8 @@ export class PeopleComponent implements OnDestroy {
 
   // Follow set selection
   selectedFollowSet = signal<FollowSet | null>(null);
+  followSetProfiles = signal<FollowingProfile[]>([]);
+  loadingFollowSetProfiles = signal(false);
 
   // All follow sets (no limit for dropdown in People component)
   allFollowSets = computed(() => {
@@ -164,17 +165,14 @@ export class PeopleComponent implements OnDestroy {
     const search = this.searchTerm();
     const filters = this.filters();
     const sortOption = this.sortOption();
-    const favorites = this.favoritesService.favorites();
     const selectedSet = this.selectedFollowSet();
+    const followSetProfiles = this.followSetProfiles();
 
-    // If a follow set is selected, filter to only those pubkeys
-    if (selectedSet) {
-      const setProfiles = this.followingService.profiles()
-        .filter(p => selectedSet.pubkeys.includes(p.pubkey));
-
+    // If a follow set is selected, use the loaded follow set profiles
+    if (selectedSet && followSetProfiles.length > 0) {
       // Apply search if applicable
       let profiles = search
-        ? setProfiles.filter(p => {
+        ? followSetProfiles.filter(p => {
           const name = (p.profile?.data?.['name'] as string)?.toLowerCase?.() || '';
           const displayName = (p.profile?.data?.['display_name'] as string)?.toLowerCase?.() || '';
           const nip05 = (p.profile?.data?.['nip05'] as string)?.toLowerCase?.() || '';
@@ -183,7 +181,7 @@ export class PeopleComponent implements OnDestroy {
             displayName.includes(searchLower) ||
             nip05.includes(searchLower);
         })
-        : setProfiles;
+        : followSetProfiles;
 
       // Apply sorting
       profiles = this.followingService.getSortedProfiles(profiles, sortOption);
@@ -197,10 +195,7 @@ export class PeopleComponent implements OnDestroy {
 
     // Apply filters on the search results
     profiles = this.followingService.getFilteredProfiles(
-      {
-        ...filters,
-        favoritesList: favorites,
-      },
+      filters,
       profiles
     );
 
@@ -553,13 +548,27 @@ export class PeopleComponent implements OnDestroy {
   /**
    * Select a follow set to filter people
    */
-  selectFollowSet(followSet: FollowSet | null) {
+  async selectFollowSet(followSet: FollowSet | null) {
     this.selectedFollowSet.set(followSet);
+    this.followSetProfiles.set([]);
+
     // Reset display limit when follow set changes
     this.displayLimit.set(this.PAGE_SIZE);
     // Clear search when selecting a follow set
     if (followSet) {
       this.updateSearch('');
+
+      // Load profiles for all pubkeys in the follow set
+      this.loadingFollowSetProfiles.set(true);
+      try {
+        const profiles = await this.followingService.loadProfilesForPubkeys(followSet.pubkeys);
+        this.followSetProfiles.set(profiles);
+      } catch (error) {
+        console.error('Failed to load follow set profiles:', error);
+      } finally {
+        this.loadingFollowSetProfiles.set(false);
+      }
+
       // Update URL query parameter to maintain selection
       this.router.navigate([], {
         relativeTo: this.route,
