@@ -263,38 +263,44 @@ export class SearchSettingsComponent {
   }
 
   /**
-   * Add the default search relay (relay.nostr.band)
+   * Add all default search relays that are not already in the list
    */
   async addDefaultRelay() {
-    const defaultRelay = this.searchRelay.getDefaultRelays()[0];
+    const defaultRelays = this.searchRelay.getDefaultRelays();
 
-    if (!defaultRelay) {
-      this.showMessage('No default relay configured');
+    if (!defaultRelays || defaultRelays.length === 0) {
+      this.showMessage('No default relays configured');
       return;
     }
 
-    // Check if already exists
-    if (this.searchRelay.getRelayUrls().some(r => r === defaultRelay)) {
-      this.showMessage('Default relay is already in your list');
+    const currentRelays = this.searchRelay.getRelayUrls();
+
+    // Filter out relays that already exist
+    const newRelays = defaultRelays.filter(relay => !currentRelays.includes(relay));
+
+    if (newRelays.length === 0) {
+      this.showMessage('All default relays are already in your list');
       return;
     }
 
     this.isPublishing.set(true);
 
     try {
-      const currentRelays = this.searchRelay.getRelayUrls();
-      const newRelays = [...currentRelays, defaultRelay];
+      const updatedRelays = [...currentRelays, ...newRelays];
 
       // Save locally
-      this.searchRelay.setSearchRelays(newRelays);
+      this.searchRelay.setSearchRelays(updatedRelays);
 
       // Publish to relays
-      await this.publishSearchRelayList(newRelays);
+      await this.publishSearchRelayList(updatedRelays);
 
-      this.showMessage('Default search relay added');
+      const message = newRelays.length === 1
+        ? 'Default search relay added'
+        : `${newRelays.length} default search relays added`;
+      this.showMessage(message);
     } catch (error) {
-      this.logger.error('Failed to add default relay', error);
-      this.showMessage('Failed to add default relay');
+      this.logger.error('Failed to add default relays', error);
+      this.showMessage('Failed to add default relays');
     } finally {
       this.isPublishing.set(false);
     }
