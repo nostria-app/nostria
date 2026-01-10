@@ -155,9 +155,11 @@
         <!-- Compact header when contact selected -->
         <div class="compact-header">
           <h3>People</h3>
-          <button mat-icon-button (click)="closeContactCard()" matTooltip="Close contact card">
+          @if (searchTerm()) {
+          <button mat-icon-button (click)="updateSearch('')" matTooltip="Clear search">
             <mat-icon>close</mat-icon>
           </button>
+          }
         </div>
         }
       </div>
