@@ -24,10 +24,11 @@
           <mat-icon matListItemIcon>fingerprint</mat-icon>
           <div matListItemTitle>Public Key</div>
           <div matListItemLine class="monospace-text">{{ getNpub() }}</div>
-          <button mat-icon-button matListItemMeta (click)="copyToClipboard(getNpub(), 'Public key')"
-            matTooltip="Copy to clipboard">
-            <mat-icon>content_copy</mat-icon>
-          </button>
+          <div matListItemMeta>
+            <button mat-icon-button (click)="copyToClipboard(getNpub(), 'Public key')" matTooltip="Copy to clipboard">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
         </mat-list-item>
         <mat-divider></mat-divider>
 
@@ -37,10 +38,12 @@
           <mat-icon matListItemIcon>verified</mat-icon>
           <div matListItemTitle>NIP-05 Identifier</div>
           <div matListItemLine>{{ getNip05() }}</div>
-          <button mat-icon-button matListItemMeta (click)="copyToClipboard(getNip05()!, 'NIP-05 identifier')"
-            matTooltip="Copy to clipboard">
-            <mat-icon>content_copy</mat-icon>
-          </button>
+          <div matListItemMeta>
+            <button mat-icon-button (click)="copyToClipboard(getNip05()!, 'NIP-05 identifier')"
+              matTooltip="Copy to clipboard">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
         </mat-list-item>
         <mat-divider></mat-divider>
         }
@@ -50,11 +53,8 @@
         <mat-list-item>
           <mat-icon matListItemIcon>link</mat-icon>
           <div matListItemTitle>Website</div>
-          <div matListItemLine>
-            <a [href]="getWebsite()!" target="_blank" rel="noopener noreferrer">
-              {{ getWebsite() }}
-            </a>
-          </div>
+          <div matListItemLine><a [href]="getWebsite()!" target="_blank" rel="noopener noreferrer">{{ getWebsite()
+              }}</a></div>
         </mat-list-item>
         <mat-divider></mat-divider>
         }
@@ -65,10 +65,12 @@
           <mat-icon matListItemIcon>bolt</mat-icon>
           <div matListItemTitle>Lightning Address</div>
           <div matListItemLine>{{ getLud16() }}</div>
-          <button mat-icon-button matListItemMeta (click)="copyToClipboard(getLud16()!, 'Lightning address')"
-            matTooltip="Copy to clipboard">
-            <mat-icon>content_copy</mat-icon>
-          </button>
+          <div matListItemMeta>
+            <button mat-icon-button (click)="copyToClipboard(getLud16()!, 'Lightning address')"
+              matTooltip="Copy to clipboard">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
         </mat-list-item>
         }
       </mat-list>
@@ -96,19 +98,22 @@
             }
           </div>
           <div matListItemLine>
-            @if (identity.url) {
-            <a [href]="identity.url" target="_blank" rel="noopener noreferrer">
+            @if (identity.profileUrl) {
+            <a [href]="identity.profileUrl" target="_blank" rel="noopener noreferrer" class="profile-link">
               {{ identity.displayName }}
             </a>
             } @else {
-            {{ identity.displayName }}
+            <span class="profile-text">{{ identity.displayName }}</span>
             }
           </div>
-          @if (identity.url) {
-          <a mat-icon-button matListItemMeta [href]="identity.url" target="_blank" rel="noopener noreferrer"
-            matTooltip="Visit profile">
-            <mat-icon>open_in_new</mat-icon>
-          </a>
+          @if (identity.proofUrl) {
+          <div matListItemMeta>
+            <a mat-stroked-button [href]="identity.proofUrl" target="_blank" rel="noopener noreferrer"
+              class="proof-button">
+              <mat-icon>fact_check</mat-icon>
+              View Proof
+            </a>
+          </div>
           }
         </mat-list-item>
         @if (!last) {
