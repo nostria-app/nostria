@@ -28,7 +28,8 @@
   transition: all 0.3s ease;
   min-width: 0;
   height: 100vh;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
 
   &.compact {
     max-width: 80px;
@@ -91,20 +92,26 @@
     padding: 0.5rem;
 
     .person-item {
-      width: 100%;
+      width: 64px;
+      height: 64px;
       cursor: pointer;
       border-radius: 50%;
       transition: all 0.2s ease;
-      border: 2px solid transparent;
+      border: 3px solid transparent;
+      position: relative;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
 
       &:hover {
-        transform: scale(1.1);
-        border-color: var(--mat-sys-primary);
+        transform: scale(1.05);
+        border-color: var(--mat-sys-outline);
       }
 
       &.selected {
         border-color: var(--mat-sys-primary);
-        background-color: var(--mat-sys-primary-container);
+        box-shadow: 0 0 0 2px var(--mat-sys-surface), 0 0 0 4px var(--mat-sys-primary);
       }
 
       &:focus-visible {
@@ -202,8 +209,6 @@
 .people-content {
   padding: 0;
   padding-bottom: 100px;
-  overflow-y: auto;
-  overflow-x: hidden;
   flex: 1;
   min-height: 0;
 
@@ -233,6 +238,12 @@
   p {
     margin: 0.5rem 0;
   }
+}
+
+.scroll-sentinel {
+  height: 1px;
+  width: 100%;
+  pointer-events: none;
 }
 
 // Large icons view

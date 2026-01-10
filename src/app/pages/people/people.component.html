@@ -213,17 +213,12 @@
           </app-user-profile>
         </div>
         }
-      </div>
 
-      <!-- Load More button -->
-      @if (hasMorePeople() && !selectedContactPubkey()) {
-      <div class="load-more-container">
-        <button mat-button (click)="loadMore()">
-          <mat-icon>expand_more</mat-icon>
-          Load More ({{remainingCount()}} remaining)
-        </button>
+        <!-- Scroll sentinel for infinite loading -->
+        @if (hasMorePeople()) {
+        <div class="scroll-sentinel" #scrollSentinel></div>
+        }
       </div>
-      }
       }
     </div>
   </div>
