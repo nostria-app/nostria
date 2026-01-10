@@ -1,3 +1,12 @@
+// Override content-wrapper padding for full-width layout
+:host {
+  display: block;
+
+  @media (min-width: 1200px) {
+    margin-right: calc(var(--content-wrapper-padding-right, 0px) * -1);
+  }
+}
+
 .page {
   display: flex;
   flex-direction: column;
@@ -8,11 +17,6 @@
   max-width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;
-
-  // Override content-wrapper padding for full-width layout
-  @media (min-width: 1200px) {
-    margin-right: calc(var(--content-wrapper-padding-right, 0px) * -1);
-  }
 
   @media (max-width: 599px) {
     min-height: calc(100vh - var(--toolbar-height) - 88px);
