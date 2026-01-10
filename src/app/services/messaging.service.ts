@@ -1080,7 +1080,7 @@ export class MessagingService implements NostriaService {
     try {
       // Get DM relay URLs from kind 10050
       const dmRelayEvent = await this.database.getEventByPubkeyAndKind(myPubkey, kinds.DirectMessageRelaysList);
-      
+
       const dmRelayUrls = dmRelayEvent?.tags
         .filter(t => t[0] === 'relay' && t[1])
         .map(t => t[1]) || [];
