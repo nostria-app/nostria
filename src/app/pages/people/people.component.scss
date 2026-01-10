@@ -601,37 +601,19 @@
 
 // Mobile responsive styles
 @media (max-width: 768px) {
-  .people-page.split-view {
-    flex-direction: column;
+  .people-page {
+    &.split-view {
 
-    .people-sidebar.compact {
-      max-width: 100%;
-      flex-direction: row;
-      border-right: none;
-      border-bottom: 1px solid var(--mat-sys-outline-variant);
-
-      .people-header {
-        padding: 0.5rem;
-
-        .compact-header {
-          flex-direction: row;
-          justify-content: space-between;
-
-          h3 {
-            writing-mode: horizontal-tb;
-            font-size: 1rem;
-          }
-        }
+      // On mobile, hide the sidebar completely when viewing contact
+      .people-sidebar {
+        display: none;
       }
 
-      .people-content {
-        display: none; // Hide avatar list on mobile when contact selected
+      .contact-panel {
+        display: block;
+        flex: 1;
+        min-height: 0;
       }
-    }
-
-    .contact-panel {
-      flex: 1;
-      min-height: 0;
     }
   }
 }

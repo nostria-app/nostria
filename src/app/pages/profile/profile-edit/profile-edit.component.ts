@@ -80,6 +80,7 @@ export class ProfileEditComponent implements OnInit {
   newIdentityPlatform = signal<string>('');
   newIdentityValue = signal<string>('');
   newIdentityProof = signal<string>('');
+  editingIdentityIndex = signal<number>(-1);
 
   constructor() {
     effect(() => {
@@ -473,14 +474,27 @@ export class ProfileEditComponent implements OnInit {
       return;
     }
 
-    // Check for duplicates
-    const exists = this.externalIdentities().some(id => id.platform === platform && id.identity === identity);
-    if (exists) {
-      this.snackBar.open('This identity already exists', 'Close', { duration: 3000 });
-      return;
-    }
+    const editIndex = this.editingIdentityIndex();
 
-    this.externalIdentities.update(identities => [...identities, { platform, identity, proof }]);
+    if (editIndex >= 0) {
+      // Update existing identity
+      this.externalIdentities.update(identities => {
+        const updated = [...identities];
+        updated[editIndex] = { platform, identity, proof };
+        return updated;
+      });
+      this.editingIdentityIndex.set(-1);
+    } else {
+      // Check for duplicates only when adding new
+      const exists = this.externalIdentities().some(id => id.platform === platform && id.identity === identity);
+      if (exists) {
+        this.snackBar.open('This identity already exists', 'Close', { duration: 3000 });
+        return;
+      }
+
+      // Add new identity
+      this.externalIdentities.update(identities => [...identities, { platform, identity, proof }]);
+    }
 
     // Reset form
     this.newIdentityPlatform.set('');
@@ -490,6 +504,25 @@ export class ProfileEditComponent implements OnInit {
 
   removeExternalIdentity(index: number): void {
     this.externalIdentities.update(identities => identities.filter((_, i) => i !== index));
+    // If we're editing this identity, cancel the edit
+    if (this.editingIdentityIndex() === index) {
+      this.cancelEditIdentity();
+    }
+  }
+
+  editExternalIdentity(index: number): void {
+    const identity = this.externalIdentities()[index];
+    this.newIdentityPlatform.set(identity.platform);
+    this.newIdentityValue.set(identity.identity);
+    this.newIdentityProof.set(identity.proof);
+    this.editingIdentityIndex.set(index);
+  }
+
+  cancelEditIdentity(): void {
+    this.newIdentityPlatform.set('');
+    this.newIdentityValue.set('');
+    this.newIdentityProof.set('');
+    this.editingIdentityIndex.set(-1);
   }
 
   selectPlatformPreset(platform: string): void {

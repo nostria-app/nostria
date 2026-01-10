@@ -168,9 +168,14 @@
             @if (identity.proof) {
             <div matListItemLine class="proof-text">Proof: {{ identity.proof }}</div>
             }
-            <button mat-icon-button matListItemMeta (click)="removeExternalIdentity($index)" matTooltip="Remove">
-              <mat-icon>delete</mat-icon>
-            </button>
+            <div matListItemMeta class="identity-actions">
+              <button mat-icon-button (click)="editExternalIdentity($index)" matTooltip="Edit">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button (click)="removeExternalIdentity($index)" matTooltip="Remove">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
           </mat-list-item>
           }
         </mat-list>
@@ -228,10 +233,18 @@
               placeholder="Gist ID, Tweet ID, or other proof URL/ID" />
           </mat-form-field>
 
-          <button mat-stroked-button color="primary" (click)="addExternalIdentity()" class="add-button">
-            <mat-icon>add</mat-icon>
-            Add Identity
-          </button>
+          <div class="button-row">
+            <button mat-stroked-button color="primary" (click)="addExternalIdentity()" class="add-button">
+              <mat-icon>{{ editingIdentityIndex() >= 0 ? 'check' : 'add' }}</mat-icon>
+              {{ editingIdentityIndex() >= 0 ? 'Update Identity' : 'Add Identity' }}
+            </button>
+            @if (editingIdentityIndex() >= 0) {
+            <button mat-button (click)="cancelEditIdentity()" class="cancel-button">
+              <mat-icon>close</mat-icon>
+              Cancel
+            </button>
+            }
+          </div>
         </div>
       </div>
 

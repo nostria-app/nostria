@@ -103,6 +103,7 @@
     object-fit: cover;
   }
 }
+
 .external-identities-section {
   margin-top: 32px;
   margin-bottom: 24px;
@@ -139,6 +140,11 @@
         color: var(--mat-sys-on-surface-variant);
         font-family: monospace;
       }
+
+      .identity-actions {
+        display: flex;
+        gap: 4px;
+      }
     }
   }
 
@@ -161,8 +167,18 @@
       margin-bottom: 12px;
     }
 
+    .button-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
     .add-button {
-      width: 100%;
+      flex: 1;
+    }
+
+    .cancel-button {
+      flex-shrink: 0;
     }
   }
 }
