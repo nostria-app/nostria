@@ -623,7 +623,7 @@
 // Alphabet Navigation Sidebar
 .alphabet-nav {
   position: fixed;
-  right: 4px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -650,14 +650,14 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 20px;
+    width: 26px;
+    height: 22px;
     padding: 0;
     margin: 0;
     border: none;
     background: transparent;
     color: var(--mat-sys-on-surface-variant);
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
     transition: all 0.15s ease;
     border-radius: var(--mat-sys-corner-extra-small);
@@ -681,9 +681,9 @@
 
     // Touch-friendly sizing on mobile
     @media (pointer: coarse) {
-      width: 28px;
-      height: 22px;
-      font-size: 12px;
+      width: 30px;
+      height: 24px;
+      font-size: 13px;
     }
   }
 }
