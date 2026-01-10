@@ -133,6 +133,7 @@ export declare interface NostriaService {
 // }
 
 export type ViewMode =
+  | 'comfortable'
   | 'large'
   | 'medium'
   | 'small'

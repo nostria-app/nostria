@@ -289,6 +289,55 @@
   }
 
   // View-specific styles
+  &.comfortable {
+    width: 100%;
+
+    .user-profile-container {
+      padding: 1rem;
+      gap: 1rem;
+      justify-content: flex-start;
+    }
+
+    .user-profile-avatar {
+      width: 64px;
+      height: 64px;
+      flex-shrink: 0;
+    }
+
+    .default-user-avatar {
+      font-size: 64px;
+    }
+
+    .user-profile-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      align-items: center;
+    }
+
+    app-profile-display-name,
+    .user-profile-name {
+      font-size: 1.125rem;
+      font-weight: 500;
+      line-height: 1.4;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .user-profile-nip05 {
+      display: none;
+    }
+
+    .user-about {
+      display: none;
+    }
+
+    .user-profile-actions {
+      display: none;
+    }
+  }
+
   &.large {
     width: auto; // Changed from 300px to auto
     flex-shrink: 0;
