@@ -380,8 +380,6 @@ export class FollowingService {
       hasRelayList?: boolean;
       hasFollowingList?: boolean;
       hasNip05?: boolean;
-      favoritesOnly?: boolean;
-      favoritesList?: string[];
     },
     profiles?: FollowingProfile[]
   ): FollowingProfile[] {
@@ -392,13 +390,6 @@ export class FollowingService {
     }
 
     return allProfiles.filter((profile) => {
-      // Favorites filter
-      if (filters.favoritesOnly && filters.favoritesList) {
-        if (!filters.favoritesList.includes(profile.pubkey)) {
-          return false;
-        }
-      }
-
       // Relay list filter
       if (filters.hasRelayList) {
         // Check if user has relay list (kind 10002 or kind 3 relay tags)
@@ -570,6 +561,44 @@ export class FollowingService {
     return profiles
       .filter(p => p.profile !== null)
       .map(p => p.profile!);
+  }
+
+  /**
+   * Load profiles for arbitrary pubkeys (not necessarily in following list)
+   * Useful for displaying follow sets, favorites, or any other list of users
+   */
+  async loadProfilesForPubkeys(pubkeys: string[]): Promise<FollowingProfile[]> {
+    if (pubkeys.length === 0) {
+      return [];
+    }
+
+    this.logger.info(`[FollowingService] Loading ${pubkeys.length} profiles for pubkey list...`);
+
+    try {
+      const profiles = await Promise.all(
+        pubkeys.map(async (pubkey) => {
+          try {
+            // Check if already in following cache
+            const cached = this.profilesMap().get(pubkey);
+            if (cached) {
+              return cached;
+            }
+
+            // Load from storage/relay
+            return await this.loadSingleProfile(pubkey, false);
+          } catch (error) {
+            this.logger.error(`[FollowingService] Failed to load profile for ${pubkey}:`, error);
+            return this.createMinimalProfile(pubkey);
+          }
+        })
+      );
+
+      this.logger.info(`[FollowingService] Successfully loaded ${profiles.length} profiles for pubkey list`);
+      return profiles;
+    } catch (error) {
+      this.logger.error('[FollowingService] Error loading profiles for pubkeys:', error);
+      return [];
+    }
   }
 
   /**
