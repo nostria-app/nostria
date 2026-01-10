@@ -74,7 +74,9 @@
 .contact-panel {
   display: none;
   overflow-y: auto;
+  overflow-x: hidden;
   background-color: var(--mat-sys-surface-container-lowest);
+  height: 100vh;
 }
 
 .people-container {
@@ -198,6 +200,10 @@
 .people-content {
   padding: 0;
   padding-bottom: 100px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  min-height: 0;
 
   @media (max-width: 599px) {
     padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));

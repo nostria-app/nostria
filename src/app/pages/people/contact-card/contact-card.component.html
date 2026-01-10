@@ -1,4 +1,4 @@
-<div class="contact-card-container">
+<div class="contact-card-container" #contactContainer>
   @if (isLoading()) {
   <div class="loading-container">
     <mat-spinner></mat-spinner>
@@ -6,7 +6,61 @@
   </div>
   } @else {
   @if (userMetadata(); as metadata) {
-  <app-profile-header [pubkey]="pubkey()" [profile]="metadata"></app-profile-header>
+  <!-- Simple Contact Header -->
+  <div class="contact-header">
+    <button mat-icon-button class="back-button" (click)="closeContact()">
+      <mat-icon>arrow_back</mat-icon>
+    </button>
+
+    <div class="contact-header-content">
+      <div class="contact-avatar-large">
+        @if (metadata.data?.picture) {
+        <img [src]="metadata.data.picture" alt="Profile photo" />
+        } @else {
+        <mat-icon>account_circle</mat-icon>
+        }
+      </div>
+
+      <div class="contact-name-section">
+        <h1>{{ getFormattedName() }}</h1>
+        @if (getVerifiedIdentifier()) {
+        <p class="verified-badge">
+          <mat-icon>verified</mat-icon>
+          {{ getVerifiedIdentifier() }}
+        </p>
+        }
+      </div>
+
+      <div class="contact-actions-top">
+        <button mat-icon-button matTooltip="Open full profile" (click)="openFullProfile()">
+          <mat-icon>open_in_new</mat-icon>
+        </button>
+        <button mat-icon-button [matMenuTriggerFor]="moreMenu">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="contact-quick-actions">
+      <button mat-button class="action-button">
+        <mat-icon>mail</mat-icon>
+        <span>Message</span>
+      </button>
+      <button mat-button class="action-button">
+        <mat-icon>bolt</mat-icon>
+        <span>Zap</span>
+      </button>
+      <button mat-button class="action-button">
+        <mat-icon>share</mat-icon>
+        <span>Share</span>
+      </button>
+      <button mat-button class="action-button">
+        <mat-icon>link</mat-icon>
+        <span>Copy Link</span>
+      </button>
+    </div>
+  </div>
 
   <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="contact-tabs" [animationDuration]="'200ms'">
     <!-- Overview Tab -->
@@ -44,3 +98,18 @@
   }
   }
 </div>
+
+<mat-menu #moreMenu="matMenu">
+  <button mat-menu-item (click)="openFullProfile()">
+    <mat-icon>person</mat-icon>
+    <span>View full profile</span>
+  </button>
+  <button mat-menu-item>
+    <mat-icon>block</mat-icon>
+    <span>Block contact</span>
+  </button>
+  <button mat-menu-item>
+    <mat-icon>report</mat-icon>
+    <span>Report</span>
+  </button>
+</mat-menu>

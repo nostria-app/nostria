@@ -1,7 +1,115 @@
 .contact-card-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 0;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--mat-sys-surface);
+}
+
+// Google Contacts-style header
+.contact-header {
+  padding: 24px 24px 16px;
+  background-color: var(--mat-sys-surface);
+  border-bottom: 1px solid var(--mat-sys-outline-variant);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+
+  .back-button {
+    margin-bottom: 16px;
+  }
+}
+
+.contact-header-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.contact-avatar-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: var(--mat-sys-surface-container-high);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  mat-icon {
+    font-size: 72px;
+    width: 72px;
+    height: 72px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
+
+.contact-name-section {
+  flex: 1;
+  min-width: 0;
+
+  h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 400;
+    color: var(--mat-sys-on-surface);
+    margin-bottom: 4px;
+  }
+
+  .verified-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0;
+    color: var(--mat-sys-primary);
+    font-size: 14px;
+
+    mat-icon {
+      font-size: 18px;
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+.contact-actions-top {
+  display: flex;
+  gap: 8px;
+}
+
+.contact-quick-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+
+  .action-button {
+    min-width: 100px;
+    border-radius: 20px;
+    background-color: var(--mat-sys-surface-container-high);
+    color: var(--mat-sys-on-surface);
+
+    mat-icon {
+      margin-right: 8px;
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+    }
+
+    span {
+      font-size: 14px;
+    }
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-highest);
+    }
+  }
 }
 
 .loading-container,
@@ -42,6 +150,49 @@
 }
 
 @media (max-width: 600px) {
+  .contact-header {
+    padding: 16px;
+
+    .contact-header-content {
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+    }
+
+    .contact-avatar-large {
+      width: 96px;
+      height: 96px;
+
+      mat-icon {
+        font-size: 56px;
+        width: 56px;
+        height: 56px;
+      }
+    }
+
+    .contact-name-section {
+      h1 {
+        font-size: 24px;
+      }
+    }
+
+    .contact-actions-top {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+    }
+
+    .contact-quick-actions {
+      justify-content: center;
+
+      .action-button {
+        min-width: auto;
+        flex: 1;
+      }
+    }
+  }
+
   .contact-card-container {
     padding: 0;
   }
@@ -49,15 +200,25 @@
   .contact-tabs {
     ::ng-deep .mat-mdc-tab-label {
       min-width: 80px;
-      padding: 0 8px;
+      padding: 0 12px;
 
       span {
         display: none;
       }
-
-      .mat-icon {
-        margin-right: 0;
-      }
     }
   }
+}
+
+min-width: 80px;
+padding: 0 8px;
+
+span {
+  display: none;
+}
+
+.mat-icon {
+  margin-right: 0;
+}
+}
+}
 }
