@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect } from '@angular/core';
+import { Component, inject, signal, computed, effect, viewChild, ElementRef, afterNextRender } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -87,6 +87,13 @@ export class PeopleComponent {
 
   // Selected contact for viewing in contact card panel
   selectedContactPubkey = signal<string | null>(null);
+
+  // Scroll container reference
+  peopleContent = viewChild<ElementRef>('peopleContent');
+  scrollSentinel = viewChild<ElementRef>('scrollSentinel');
+
+  // Intersection observer for infinite scroll
+  private scrollObserver?: IntersectionObserver;
 
   // View mode
   viewMode = signal<string>('medium');
@@ -321,6 +328,15 @@ export class PeopleComponent {
         this.selectFollowSet(null);
       }
     });
+
+    // Setup infinite scroll when sentinel becomes available
+    effect(() => {
+      const sentinel = this.scrollSentinel();
+      if (sentinel) {
+        // Use setTimeout to ensure DOM is ready
+        setTimeout(() => this.setupInfiniteScroll(), 100);
+      }
+    });
   }
 
 
@@ -334,6 +350,40 @@ export class PeopleComponent {
   // Load more people (pagination)
   loadMore(): void {
     this.displayLimit.update(limit => limit + this.PAGE_SIZE);
+  }
+
+  private setupInfiniteScroll(): void {
+    const sentinel = this.scrollSentinel();
+    if (!sentinel) return;
+
+    // Disconnect existing observer
+    if (this.scrollObserver) {
+      this.scrollObserver.disconnect();
+    }
+
+    // Create intersection observer for infinite scrolling
+    this.scrollObserver = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        if (entry.isIntersecting && this.hasMorePeople() && !this.isLoading()) {
+          this.loadMore();
+        }
+      },
+      {
+        root: null, // Use viewport as root
+        rootMargin: '400px', // Load more when user is 400px from the bottom
+        threshold: 0,
+      }
+    );
+
+    // Observe the sentinel element
+    this.scrollObserver.observe(sentinel.nativeElement);
+  }
+
+  ngOnDestroy(): void {
+    if (this.scrollObserver) {
+      this.scrollObserver.disconnect();
+    }
   }
 
   changeViewMode(mode: string) {
