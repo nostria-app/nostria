@@ -1,0 +1,112 @@
+<div class="tab-content">
+  @if (isLoading()) {
+  <div class="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading connection data...</p>
+  </div>
+  } @else {
+  <!-- Relationship Status -->
+  <mat-card class="stats-card">
+    <mat-card-content>
+      <div class="relationship-status">
+        <mat-icon [class]="'status-icon ' + (stats().isFollowing && stats().followsUs ? 'mutual' : '')">
+          {{ getRelationshipIcon() }}
+        </mat-icon>
+        <div class="status-text">
+          <h3>{{ getRelationshipStatus() }}</h3>
+          @if (stats().firstInteraction) {
+          <p class="first-interaction">
+            First interaction was {{ stats().daysSinceFirstInteraction }}
+            {{ stats().daysSinceFirstInteraction === 1 ? 'day' : 'days' }} ago
+          </p>
+          } @else {
+          <p class="first-interaction">No interactions yet</p>
+          }
+        </div>
+      </div>
+    </mat-card-content>
+  </mat-card>
+
+  <!-- Statistics Grid -->
+  <div class="stats-grid">
+    <!-- Total Interactions -->
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <mat-icon>swap_horiz</mat-icon>
+        <div class="stat-value">{{ stats().totalInteractions }}</div>
+        <div class="stat-label">Total Interactions</div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Likes Given/Received -->
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <mat-icon>favorite</mat-icon>
+        <div class="stat-breakdown">
+          <div class="stat-item">
+            <span class="stat-value">{{ stats().ourLikes }}</span>
+            <span class="stat-sublabel">Given</span>
+          </div>
+          <mat-divider [vertical]="true"></mat-divider>
+          <div class="stat-item">
+            <span class="stat-value">{{ stats().theirLikes }}</span>
+            <span class="stat-sublabel">Received</span>
+          </div>
+        </div>
+        <div class="stat-label">Likes</div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Replies Given/Received -->
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <mat-icon>reply</mat-icon>
+        <div class="stat-breakdown">
+          <div class="stat-item">
+            <span class="stat-value">{{ stats().ourReplies }}</span>
+            <span class="stat-sublabel">Given</span>
+          </div>
+          <mat-divider [vertical]="true"></mat-divider>
+          <div class="stat-item">
+            <span class="stat-value">{{ stats().theirReplies }}</span>
+            <span class="stat-sublabel">Received</span>
+          </div>
+        </div>
+        <div class="stat-label">Replies</div>
+      </mat-card-content>
+    </mat-card>
+
+    <!-- Reposts Given/Received -->
+    <mat-card class="stat-card">
+      <mat-card-content>
+        <mat-icon>repeat</mat-icon>
+        <div class="stat-breakdown">
+          <div class="stat-item">
+            <span class="stat-value">{{ stats().ourReposts }}</span>
+            <span class="stat-sublabel">Given</span>
+          </div>
+          <mat-divider [vertical]="true"></mat-divider>
+          <div class="stat-item">
+            <span class="stat-value">{{ stats().theirReposts }}</span>
+            <span class="stat-sublabel">Received</span>
+          </div>
+        </div>
+        <div class="stat-label">Reposts</div>
+      </mat-card-content>
+    </mat-card>
+  </div>
+
+  <!-- Connection Notes Section -->
+  <mat-card class="notes-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>notes</mat-icon>
+        Connection Notes
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <p class="placeholder-text">Notes feature coming soon...</p>
+    </mat-card-content>
+  </mat-card>
+  }
+</div>

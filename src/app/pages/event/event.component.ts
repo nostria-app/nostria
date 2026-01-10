@@ -53,6 +53,9 @@ import { LocalSettingsService } from '../../services/local-settings.service';
   imports: [CommonModule, EventComponent, MatIconModule, MatButtonModule, MatProgressSpinnerModule],
   templateUrl: './event.component.html',
   styleUrl: './event.component.scss',
+  host: {
+    '[class.dialog-mode]': 'isInDialogMode()'
+  }
 })
 export class EventPageComponent {
   // Input for dialog mode - when provided, uses this instead of route params
@@ -60,6 +63,9 @@ export class EventPageComponent {
   dialogEvent = input<Event | undefined>(undefined);
   // Optional: pubkey of a trusted user who shared this (for blur bypass on main event)
   trustedByPubkey = input<string | undefined>(undefined);
+
+  // Computed to check if we're in dialog mode
+  isInDialogMode = computed(() => !!this.dialogEventId());
 
   event = signal<Event | undefined>(undefined);
   private readonly utilities = inject(UtilitiesService);

@@ -1,7 +1,11 @@
 :host {
-  max-width: 680px;
   display: block;
   margin: 0 auto;
+
+  // Only apply max-width when not in dialog mode
+  &:not(.dialog-mode) {
+    max-width: 680px;
+  }
 
   // Override Angular Material card content padding
   ::ng-deep .mat-mdc-card-content:first-child {
@@ -327,8 +331,9 @@
 
   // Non-interactive lines (no replies) - extend to connect with next sibling
   &.no-replies::before {
-    // Extend the line down to connect to the next event (using a large value to ensure connection)
-    height: 9999px;
+    // Extend the line down to connect to the next event
+    // Use a reasonable height instead of 9999px to avoid phantom scrolling
+    height: 100%;
   }
 
   // Interactive lines (has replies) - clickable

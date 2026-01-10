@@ -1,0 +1,46 @@
+<div class="contact-card-container">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner></mat-spinner>
+    <p>Loading contact...</p>
+  </div>
+  } @else {
+  @if (userMetadata(); as metadata) {
+  <app-profile-header [pubkey]="pubkey()" [profile]="metadata"></app-profile-header>
+
+  <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="contact-tabs" [animationDuration]="'200ms'">
+    <!-- Overview Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>dashboard</mat-icon>
+        <span>Overview</span>
+      </ng-template>
+      <app-contact-overview [pubkey]="pubkey()" [metadata]="metadata"></app-contact-overview>
+    </mat-tab>
+
+    <!-- Contact Info Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>contact_page</mat-icon>
+        <span>Contact</span>
+      </ng-template>
+      <app-contact-info [pubkey]="pubkey()" [metadata]="metadata"></app-contact-info>
+    </mat-tab>
+
+    <!-- Interactions Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>timeline</mat-icon>
+        <span>Interactions</span>
+      </ng-template>
+      <app-contact-interactions [pubkey]="pubkey()"></app-contact-interactions>
+    </mat-tab>
+  </mat-tab-group>
+  } @else {
+  <div class="error-container">
+    <mat-icon>error_outline</mat-icon>
+    <p>Contact not found</p>
+  </div>
+  }
+  }
+</div>
