@@ -15,6 +15,7 @@ import { DataService } from '../../../services/data.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
+import { LayoutService } from '../../../services/layout.service';
 import { NostrRecord } from '../../../interfaces';
 import { nip19 } from 'nostr-tools';
 
@@ -49,6 +50,7 @@ export class ContactCardComponent {
   private accountState = inject(AccountStateService);
   private logger = inject(LoggerService);
   private utilities = inject(UtilitiesService);
+  private layout = inject(LayoutService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -146,13 +148,7 @@ export class ContactCardComponent {
   openMessage(): void {
     const pubkey = this.pubkey();
     if (pubkey) {
-      // Convert hex to npub
-      try {
-        const npub = nip19.npubEncode(pubkey);
-        this.router.navigate(['/messages', npub]);
-      } catch (error) {
-        this.logger.error('Error converting pubkey to npub:', error);
-      }
+      this.layout.openSendMessage(pubkey);
     }
   }
 
