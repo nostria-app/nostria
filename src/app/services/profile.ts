@@ -36,6 +36,8 @@ export interface ProfileUpdateOptions {
   bannerImageFile?: File;
   /** Whether to skip media server validation and allow profile creation without file uploads */
   skipMediaServerCheck?: boolean;
+  /** External identities (NIP-39) - array of [platform, identity, proof?] */
+  externalIdentities?: Array<{ platform: string; identity: string; proof?: string }>;
 }
 
 /**
@@ -153,8 +155,20 @@ export class Profile {
       // Clean the profile data
       const cleanedProfile = this.cleanProfileData(profileData);
 
+      // Build tags array for external identities (NIP-39)
+      const tags: string[][] = [];
+      if (options.externalIdentities && options.externalIdentities.length > 0) {
+        for (const identity of options.externalIdentities) {
+          const tag = ['i', `${identity.platform}:${identity.identity}`];
+          if (identity.proof) {
+            tag.push(identity.proof);
+          }
+          tags.push(tag);
+        }
+      }
+
       // Create and publish the profile event
-      const profileEvent = await this.createProfileEvent(cleanedProfile);
+      const profileEvent = await this.createProfileEvent(cleanedProfile, tags);
 
       // Publish to relays
       await this.accountRelay.publish(profileEvent);
@@ -278,13 +292,13 @@ export class Profile {
   /**
    * Creates a Nostr event for the profile data
    * @param profileData Cleaned profile data
+   * @param tags Optional tags array (e.g., for NIP-39 external identities)
    * @returns Signed Nostr event
    */
-  private async createProfileEvent(profileData: ProfileData): Promise<Event> {
-    // Get existing profile to preserve kind and tags
+  private async createProfileEvent(profileData: ProfileData, tags: string[][] = []): Promise<Event> {
+    // Get existing profile to preserve kind
     const existingProfile = this.accountState.profile();
     const kind = existingProfile?.event.kind || 0; // Default to kind 0 for metadata
-    const tags = existingProfile?.event.tags || []; // Default to empty tags array
 
     // Create unsigned event
     const unsignedEvent = this.nostr.createEvent(kind, JSON.stringify(profileData), tags);
