@@ -1,4 +1,4 @@
-import { Component, inject, signal, computed, effect, viewChild, ElementRef, afterNextRender } from '@angular/core';
+import { Component, inject, signal, computed, effect, viewChild, ElementRef, afterNextRender, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
@@ -64,7 +64,7 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' |
   templateUrl: './people.component.html',
   styleUrls: ['./people.component.scss'],
 })
-export class PeopleComponent {
+export class PeopleComponent implements OnDestroy {
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private logger = inject(LoggerService);
@@ -100,12 +100,12 @@ export class PeopleComponent {
   selectedLetter = signal<string | null>(null);
   availableLetters = computed(() => {
     if (!this.showAlphabetNav()) return [];
-    
+
     const profiles = this.filteredAndSortedProfiles();
     const letters = new Set<string>();
-    
+
     profiles.forEach(p => {
-      const name = (p.info?.['display_name'] as string) || (p.info?.['name'] as string) || '';
+      const name = ((p.profile?.data?.['display_name'] as string) || (p.profile?.data?.['name'] as string) || '').trim();
       if (name) {
         const firstChar = name.charAt(0).toUpperCase();
         if (/[A-Z]/.test(firstChar)) {
@@ -115,7 +115,7 @@ export class PeopleComponent {
         }
       }
     });
-    
+
     return Array.from(letters).sort();
   });
 
@@ -461,7 +461,7 @@ export class PeopleComponent {
     // Close any open hover card to prevent interference
     this.hoverCardService.closeHoverCard();
     this.selectedContactPubkey.set(pubkey);
-    
+
     // Auto-scroll to selected contact in compact mode
     setTimeout(() => this.scrollToSelectedContact(), 100);
   }
@@ -472,10 +472,10 @@ export class PeopleComponent {
   private scrollToSelectedContact() {
     const selectedPubkey = this.selectedContactPubkey();
     if (!selectedPubkey) return;
-    
+
     const container = this.peopleContent();
     if (!container) return;
-    
+
     const element = container.nativeElement.querySelector(`[data-pubkey="${selectedPubkey}"]`);
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -487,24 +487,24 @@ export class PeopleComponent {
    */
   scrollToLetter(letter: string) {
     this.selectedLetter.set(letter);
-    
+
     const profiles = this.filteredAndSortedProfiles();
     const index = profiles.findIndex(p => {
-      const name = (p.info?.['display_name'] as string) || (p.info?.['name'] as string) || '';
+      const name = ((p.info?.['display_name'] as string) || (p.info?.['name'] as string) || '').trim();
       if (!name) return false;
-      
+
       const firstChar = name.charAt(0).toUpperCase();
       if (letter === '#') {
         return /[0-9]/.test(firstChar);
       }
       return firstChar === letter;
     });
-    
+
     if (index !== -1 && index < this.visiblePeople().length) {
       const pubkey = this.visiblePeople()[index];
       const container = this.peopleContent();
       if (!container) return;
-      
+
       const element = container.nativeElement.querySelector(`[data-pubkey="${pubkey}"]`);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
