@@ -10,7 +10,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatTooltipModule } from '@angular/material/tooltip';
-import { ContactOverviewComponent, ContactInfoComponent, ContactInteractionsComponent } from './tabs';
+import { ContactOverviewComponent, ContactInteractionsComponent, ContactMonetaryComponent } from './tabs';
 import { DataService } from '../../../services/data.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
@@ -33,8 +33,8 @@ import { nip19 } from 'nostr-tools';
     MatMenuModule,
     MatTooltipModule,
     ContactOverviewComponent,
-    ContactInfoComponent,
     ContactInteractionsComponent,
+    ContactMonetaryComponent,
   ],
   templateUrl: './contact-card.component.html',
   styleUrl: './contact-card.component.scss',
