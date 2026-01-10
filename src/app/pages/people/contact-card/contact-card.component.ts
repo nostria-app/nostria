@@ -1,5 +1,6 @@
-import { Component, inject, signal, effect, input } from '@angular/core';
+import { Component, inject, signal, effect, input, output, viewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatCardModule } from '@angular/material/card';
 import { MatIconModule } from '@angular/material/icon';
@@ -7,13 +8,15 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatChipsModule } from '@angular/material/chips';
-import { ProfileHeaderComponent } from '../../profile/profile-header/profile-header.component';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { ContactOverviewComponent, ContactInfoComponent, ContactInteractionsComponent } from './tabs';
 import { DataService } from '../../../services/data.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { NostrRecord } from '../../../interfaces';
+import { nip19 } from 'nostr-tools';
 
 @Component({
   selector: 'app-contact-card',
@@ -26,7 +29,8 @@ import { NostrRecord } from '../../../interfaces';
     MatProgressSpinnerModule,
     MatDividerModule,
     MatChipsModule,
-    ProfileHeaderComponent,
+    MatMenuModule,
+    MatTooltipModule,
     ContactOverviewComponent,
     ContactInfoComponent,
     ContactInteractionsComponent,
@@ -36,8 +40,12 @@ import { NostrRecord } from '../../../interfaces';
 })
 export class ContactCardComponent {
   pubkeyParam = input.required<string>();
+  close = output<void>();
+
+  contactContainer = viewChild<ElementRef>('contactContainer');
 
   private data = inject(DataService);
+  private router = inject(Router);
   private accountState = inject(AccountStateService);
   private logger = inject(LoggerService);
   private utilities = inject(UtilitiesService);
@@ -81,6 +89,9 @@ export class ContactCardComponent {
       this.pubkey.set(hexPubkey);
       this.lastLoadedPubkey = pubkeyParam;
 
+      // Scroll to top when opening new contact
+      this.scrollToTop();
+
       // Load user metadata - don't refresh, just get from cache
       const metadata = await this.data.getProfile(hexPubkey, { refresh: false });
       this.userMetadata.set(metadata);
@@ -113,5 +124,29 @@ export class ContactCardComponent {
     if (!metadata || !metadata.data.nip05) return null;
 
     return this.utilities.parseNip05(metadata.data.nip05 as string);
+  }
+
+  closeContact(): void {
+    this.close.emit();
+  }
+
+  openFullProfile(): void {
+    const pubkey = this.pubkey();
+    if (pubkey) {
+      // Convert hex to npub
+      try {
+        const npub = nip19.npubEncode(pubkey);
+        this.router.navigate(['/profile', npub]);
+      } catch (error) {
+        this.logger.error('Error converting pubkey to npub:', error);
+      }
+    }
+  }
+
+  private scrollToTop(): void {
+    const container = this.contactContainer();
+    if (container) {
+      container.nativeElement.scrollTop = 0;
+    }
   }
 }

@@ -110,7 +110,8 @@
         <mat-menu #filtersMenu="matMenu" class="filter-menu" [overlapTrigger]="false">
           <div class="filter-menu-header" (click)="preventPropagation($event)">
             <span>Filters</span>
-            @if (filters().hasRelayList || filters().hasFollowingList || filters().hasNip05 || filters().favoritesOnly) {
+            @if (filters().hasRelayList || filters().hasFollowingList || filters().hasNip05 || filters().favoritesOnly)
+            {
             <button mat-button (click)="resetFilters()">Reset</button>
             }
           </div>
@@ -200,23 +201,15 @@
               'compact-avatars': selectedContactPubkey()
             }">
         @for (pubkey of visiblePeople(); track pubkey) {
-        <div 
-          class="person-item" 
-          [class.selected]="selectedContactPubkey() === pubkey"
-          (click)="selectContact(pubkey)"
-          (keydown.enter)="selectContact(pubkey)"
-          (keydown.space)="selectContact(pubkey); $event.preventDefault()"
-          tabindex="0"
-          role="button"
+        <div class="person-item" [class.selected]="selectedContactPubkey() === pubkey" (click)="selectContact(pubkey)"
+          (keydown.enter)="selectContact(pubkey)" (keydown.space)="selectContact(pubkey); $event.preventDefault()"
+          tabindex="0" role="button"
           [attr.aria-label]="'View contact details for ' + (followingService.getProfile(pubkey)?.info?.['displayName'] || 'user')">
-          <app-user-profile 
-            [info]="followingService.getProfile(pubkey)?.info ?? undefined"
-            [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" 
-            [pubkey]="pubkey" 
+          <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
+            [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey"
             [view]="selectedContactPubkey() ? 'avatar' : $any(viewMode())"
             [hostWidthAuto]="viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
-            [showRank]="filters().showRank && !selectedContactPubkey()"
-            [disableLink]="true">
+            [showRank]="filters().showRank && !selectedContactPubkey()" [disableLink]="true">
           </app-user-profile>
         </div>
         }
@@ -238,7 +231,7 @@
   <!-- Contact Card Panel -->
   @if (selectedContactPubkey(); as contactPubkey) {
   <div class="contact-panel">
-    <app-contact-card [pubkeyParam]="contactPubkey"></app-contact-card>
+    <app-contact-card [pubkeyParam]="contactPubkey" (close)="closeContactCard()"></app-contact-card>
   </div>
   }
 </div>
