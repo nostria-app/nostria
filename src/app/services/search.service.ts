@@ -24,7 +24,7 @@ export interface SearchAction {
 }
 
 export interface SearchResultProfile extends NostrRecord {
-  source: 'local' | 'remote';
+  source: 'following' | 'cached' | 'remote';
 }
 
 @Injectable({
@@ -179,36 +179,66 @@ export class SearchService {
           return;
         }
 
-        // First, search in cached profiles using FollowingService
+        // First, search in following profiles using FollowingService
         const followingResults = untracked(() => this.followingService.searchProfiles(searchValue));
-        const cachedResults = this.followingService.toNostrRecords(followingResults);
+        const followingRecords = this.followingService.toNostrRecords(followingResults);
 
-        // Mark local results with source
-        const localResults: SearchResultProfile[] = cachedResults.map(profile => ({
+        // Mark following results with source
+        const followingProfileResults: SearchResultProfile[] = followingRecords.map(profile => ({
           ...profile,
-          source: 'local' as const,
+          source: 'following' as const,
         }));
 
         console.log(
-          'Local search results:',
-          localResults.length,
+          'Following search results:',
+          followingProfileResults.length,
           'results for query:',
           searchValue
         );
 
+        // Search in all cached profiles from database (excluding already found following profiles)
+        const followingPubkeys = new Set(followingRecords.map(p => p.event.pubkey));
+        const cachedProfileEvents = await this.database.searchCachedProfiles(searchValue);
+
+        const cachedProfileResults: SearchResultProfile[] = cachedProfileEvents
+          .filter(event => !followingPubkeys.has(event.pubkey)) // Exclude duplicates
+          .map(event => {
+            let data = {};
+            try {
+              data = JSON.parse(event.content);
+            } catch {
+              // Invalid JSON in content
+            }
+            return {
+              event,
+              data,
+              source: 'cached' as const,
+            };
+          });
+
+        console.log(
+          'Cached search results:',
+          cachedProfileResults.length,
+          'additional cached profiles for query:',
+          searchValue
+        );
+
+        // Combine following and cached results
+        const allLocalResults = [...followingProfileResults, ...cachedProfileResults];
+
         // Use untracked to prevent creating reactive dependencies
         untracked(() => {
-          this.searchResults.set(localResults);
+          this.searchResults.set(allLocalResults);
         });
 
         // Also search for profiles on search relays (in background)
-        this.searchProfilesOnSearchRelays(searchValue, localResults);
+        this.searchProfilesOnSearchRelays(searchValue, allLocalResults);
 
         // Check if the query is a valid hex string (64 characters) - potential event ID
         const isHexEventId = /^[0-9a-f]{64}$/i.test(searchValue);
 
         // If no cached results and query looks like an event ID, search for the event
-        if (localResults.length === 0 && isHexEventId) {
+        if (allLocalResults.length === 0 && isHexEventId) {
           await this.searchForEventById(searchValue);
         }
 

@@ -2783,6 +2783,42 @@ export class DatabaseService {
   }
 
   /**
+   * Search cached profile events (kind 0) by name, display_name, nip05, or about
+   * Returns profile events that match the search query
+   */
+  async searchCachedProfiles(query: string): Promise<Event[]> {
+    if (!query || query.trim() === '') {
+      return [];
+    }
+
+    const searchTerm = query.toLowerCase().trim();
+
+    // Get all kind 0 events (profile metadata)
+    const profileEvents = await this.getEventsByKind(0);
+
+    // Filter profiles that match the search term
+    return profileEvents.filter((event) => {
+      try {
+        const data = JSON.parse(event.content);
+        const name = data.name?.toLowerCase() || '';
+        const displayName = data.display_name?.toLowerCase() || '';
+        const nip05 = data.nip05?.toLowerCase() || '';
+        const about = data.about?.toLowerCase() || '';
+
+        return (
+          name.includes(searchTerm) ||
+          displayName.includes(searchTerm) ||
+          nip05.includes(searchTerm) ||
+          about.includes(searchTerm)
+        );
+      } catch {
+        // Invalid JSON in content, skip this event
+        return false;
+      }
+    });
+  }
+
+  /**
    * Format bytes to human readable size
    */
   formatSize(bytes: number): string {

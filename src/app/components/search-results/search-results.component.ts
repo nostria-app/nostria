@@ -98,8 +98,10 @@ import { LayoutService } from '../../services/layout.service';
                     }}
                     @if (profile.source === 'remote') {
                       <span class="source-badge remote-badge">Remote</span>
-                    } @else {
-                      <span class="source-badge local-badge">Following</span>
+                    } @else if (profile.source === 'following') {
+                      <span class="source-badge following-badge">Following</span>
+                    } @else if (profile.source === 'cached') {
+                      <span class="source-badge cached-badge">Cached</span>
                     }
                   </div>
                   @if (profile.data.nip05) {
@@ -281,9 +283,14 @@ import { LayoutService } from '../../services/layout.service';
         vertical-align: middle;
       }
 
-      .local-badge {
+      .following-badge {
         background: var(--mat-sys-primary-container);
         color: var(--mat-sys-on-primary-container);
+      }
+
+      .cached-badge {
+        background: var(--mat-sys-tertiary-container);
+        color: var(--mat-sys-on-tertiary-container);
       }
 
       .remote-badge {
