@@ -253,6 +253,33 @@
   pointer-events: none;
 }
 
+// Comfortable list view - large avatars with names in a vertical list
+.comfortable-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  padding: 0;
+
+  app-person-card {
+    width: 100%;
+    display: block;
+    border-bottom: 1px solid var(--mat-sys-outline-variant);
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background-color: var(--mat-sys-surface-container-highest);
+    }
+
+    &.selected {
+      background-color: var(--mat-sys-surface-container-high);
+    }
+  }
+}
+
 // Large icons view
 .large-grid {
   width: 100%; // Changed back to 100% to fill container

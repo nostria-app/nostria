@@ -53,6 +53,10 @@
         </button>
 
         <mat-menu #viewMenu="matMenu">
+          <button mat-menu-item (click)="changeViewMode('comfortable')">
+            <mat-icon>view_agenda</mat-icon>
+            <span>Large list</span>
+          </button>
           <button mat-menu-item (click)="changeViewMode('medium')">
             <mat-icon>view_module</mat-icon>
             <span>Medium icons</span>
@@ -212,8 +216,7 @@
       </div>
       } @else {
       <!-- Apply different container classes based on viewMode() and compact state -->
-      <div class="people-container" [ngClass]="{
-              'large-grid': viewMode() === 'large' || viewMode() === 'grid',
+      <div class="people-container" [ngClass]="{              'comfortable-list': viewMode() === 'comfortable',              'large-grid': viewMode() === 'large' || viewMode() === 'grid',
               'medium-grid': viewMode() === 'medium',
               'small-grid': viewMode() === 'small',
               'details-list': viewMode() === 'details' || viewMode() === 'list',
@@ -227,7 +230,7 @@
           <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
             [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey"
             [view]="selectedContactPubkey() ? 'avatar' : $any(viewMode())"
-            [hostWidthAuto]="viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
+            [hostWidthAuto]="viewMode() === 'comfortable' || viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
             [showRank]="filters().showRank && !selectedContactPubkey()" [disableLink]="true">
           </app-user-profile>
         </div>
