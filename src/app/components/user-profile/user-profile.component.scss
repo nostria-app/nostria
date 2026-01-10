@@ -821,14 +821,19 @@
 
 // Avatar-only view mode
 .user-profile.avatar {
+  width: 100%;
+  height: 100%;
+
   .user-profile-container {
     justify-content: center;
-    padding: 0.5rem;
+    padding: 0;
+    width: 100%;
+    height: 100%;
   }
 
   .user-profile-avatar.avatar-only {
-    width: 64px;
-    height: 64px;
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     overflow: hidden;
     display: flex;
