@@ -17,7 +17,8 @@ interface ExternalIdentity {
   proof: string;
   displayName: string;
   icon: string;
-  url: string | null;
+  profileUrl: string | null;
+  proofUrl: string | null;
   verified: boolean;
 }
 
@@ -76,6 +77,15 @@ export class ContactInfoComponent {
     return identities;
   }
 
+  private isUrl(str: string): boolean {
+    return str.startsWith('http://') || str.startsWith('https://');
+  }
+
+  private buildProofUrl(proof: string, fallbackUrl: string): string | null {
+    if (!proof) return null;
+    return this.isUrl(proof) ? proof : fallbackUrl;
+  }
+
   private buildExternalIdentity(
     platform: string,
     identity: string,
@@ -91,7 +101,8 @@ export class ContactInfoComponent {
           proof,
           displayName: `@${identity}`,
           icon: 'code',
-          url: proof ? `https://gist.github.com/${identity}/${proof}` : `https://github.com/${identity}`,
+          profileUrl: `https://github.com/${identity}`,
+          proofUrl: this.buildProofUrl(proof, `https://gist.github.com/${identity}/${proof}`),
           verified: !!proof,
         };
 
@@ -103,7 +114,8 @@ export class ContactInfoComponent {
           proof,
           displayName: `@${identity}`,
           icon: 'alternate_email',
-          url: proof ? `https://twitter.com/${identity}/status/${proof}` : `https://twitter.com/${identity}`,
+          profileUrl: `https://twitter.com/${identity}`,
+          proofUrl: this.buildProofUrl(proof, `https://twitter.com/${identity}/status/${proof}`),
           verified: !!proof,
         };
 
@@ -116,7 +128,8 @@ export class ContactInfoComponent {
           proof,
           displayName: `@${identity.split('/@')[1] || identity}`,
           icon: 'rss_feed',
-          url: proof ? `${mastodonUrl}/${proof}` : mastodonUrl,
+          profileUrl: mastodonUrl,
+          proofUrl: this.buildProofUrl(proof, `${mastodonUrl}/${proof}`),
           verified: !!proof,
         };
       }
@@ -128,7 +141,8 @@ export class ContactInfoComponent {
           proof,
           displayName: identity,
           icon: 'send',
-          url: proof ? `https://t.me/${proof}` : null,
+          profileUrl: null,
+          proofUrl: this.buildProofUrl(proof, `https://t.me/${proof}`),
           verified: !!proof,
         };
 
@@ -139,7 +153,8 @@ export class ContactInfoComponent {
           proof,
           displayName: identity,
           icon: 'business',
-          url: `https://linkedin.com/in/${identity}`,
+          profileUrl: `https://linkedin.com/in/${identity}`,
+          proofUrl: null,
           verified: !!proof,
         };
 
@@ -150,7 +165,8 @@ export class ContactInfoComponent {
           proof,
           displayName: identity,
           icon: 'people',
-          url: `https://facebook.com/${identity}`,
+          profileUrl: `https://facebook.com/${identity}`,
+          proofUrl: null,
           verified: !!proof,
         };
 
@@ -161,7 +177,8 @@ export class ContactInfoComponent {
           proof,
           displayName: `@${identity}`,
           icon: 'photo_camera',
-          url: `https://instagram.com/${identity}`,
+          profileUrl: `https://instagram.com/${identity}`,
+          proofUrl: null,
           verified: !!proof,
         };
 
@@ -172,7 +189,8 @@ export class ContactInfoComponent {
           proof,
           displayName: `u/${identity}`,
           icon: 'forum',
-          url: `https://reddit.com/user/${identity}`,
+          profileUrl: `https://reddit.com/user/${identity}`,
+          proofUrl: null,
           verified: !!proof,
         };
 
@@ -183,7 +201,8 @@ export class ContactInfoComponent {
           proof,
           displayName: identity,
           icon: 'link',
-          url: null,
+          profileUrl: null,
+          proofUrl: this.isUrl(proof) ? proof : null,
           verified: !!proof,
         };
     }
