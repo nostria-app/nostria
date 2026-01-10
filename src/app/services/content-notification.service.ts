@@ -96,7 +96,7 @@ export class ContentNotificationService implements OnDestroy {
       this._lastCheckTimestamp.set(timestamp);
       this._initialized.set(true);
       this.logger.debug(`Initialized with last check timestamp: ${timestamp}`);
-      
+
       // Start periodic polling after initialization
       this.startPolling();
     } catch (error) {
@@ -200,10 +200,10 @@ export class ContentNotificationService implements OnDestroy {
     } else {
       // App is now visible - check immediately and restart polling
       this.logger.debug('[Polling] App visible, checking for notifications and resuming polling');
-      
+
       // Immediately check for new notifications (with rate limiting)
       this.performPollingCheck();
-      
+
       // Restart the polling interval
       this.startPollingInterval();
     }
@@ -697,10 +697,19 @@ export class ContentNotificationService implements OnDestroy {
       notificationId = `content-${data.type}-${data.authorPubkey}-${data.timestamp}`;
     }
 
-    // Check if notification already exists in storage to prevent duplicates
-    // This is a defensive check in case we re-fetch old events
-    const existingNotification = await this.database.getNotification(notificationId);
-    if (existingNotification) {
+    // Check if notification already exists to prevent duplicates
+    // This prevents re-parsed events from marking already-read notifications as unread
+
+    // First check in-memory notifications (fastest)
+    const existingInMemory = this.notificationService.notifications().find(n => n.id === notificationId);
+    if (existingInMemory) {
+      this.logger.debug(`Skipping duplicate notification: ${notificationId} (already exists in memory)`);
+      return;
+    }
+
+    // Also check storage as a fallback (in case notification was cleared from memory but still in storage)
+    const existingInStorage = await this.database.getNotification(notificationId);
+    if (existingInStorage) {
       this.logger.debug(`Skipping duplicate notification: ${notificationId} (already exists in storage)`);
       return;
     }
