@@ -622,7 +622,7 @@
 
 // Alphabet Navigation Sidebar
 .alphabet-nav {
-  position: absolute;
+  position: fixed;
   right: 4px;
   top: 50%;
   transform: translateY(-50%);
@@ -632,7 +632,7 @@
   justify-content: center;
   padding: 0.5rem 0.25rem;
   gap: 2px;
-  z-index: 10;
+  z-index: 100;
   pointer-events: none;
   max-height: calc(100vh - var(--toolbar-height) - 120px);
   overflow-y: auto;
