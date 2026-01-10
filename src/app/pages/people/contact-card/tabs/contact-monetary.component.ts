@@ -69,7 +69,7 @@ export class ContactMonetaryComponent {
   });
 
   balance = computed(() => {
-    return this.totalReceived() - this.totalSent();
+    return this.totalSent() - this.totalReceived();
   });
 
   private lastLoadedPubkey = '';

@@ -34,6 +34,7 @@
   height: 100%;
   overflow-y: auto;
   overflow-x: hidden;
+  position: relative;
 
   &.compact {
     max-width: 90px;
@@ -617,4 +618,70 @@
       }
     }
   }
+}
+// Alphabet Navigation Sidebar
+.alphabet-nav {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.25rem;
+  gap: 2px;
+  z-index: 10;
+  pointer-events: none;
+  
+  .letter-button {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 20px;
+    padding: 0;
+    margin: 0;
+    border: none;
+    background: transparent;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border-radius: var(--mat-sys-corner-extra-small);
+    -webkit-user-select: none;
+    user-select: none;
+    touch-action: manipulation;
+    
+    &:hover,
+    &:active,
+    &.active {
+      background: var(--mat-sys-primary);
+      color: var(--mat-sys-on-primary);
+      transform: scale(1.2);
+      font-weight: 500;
+    }
+    
+    &:focus-visible {
+      outline: 2px solid var(--mat-sys-primary);
+      outline-offset: 2px;
+    }
+    
+    // Touch-friendly sizing on mobile
+    @media (pointer: coarse) {
+      width: 28px;
+      height: 22px;
+      font-size: 12px;
+    }
+  }
+  
+  // Hide on very small screens or when sidebar is compact
+  @media (max-width: 600px) {
+    display: none;
+  }
+}
+
+.people-sidebar.compact .alphabet-nav {
+  display: none;
 }
