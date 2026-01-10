@@ -31,8 +31,8 @@
       </a>
 
       <!-- Context menu -->
-      <button mat-icon-button [matMenuTriggerFor]="menu" class="menu-button" (menuOpened)="isMenuOpen.set(true)"
-        (menuClosed)="isMenuOpen.set(false)">
+      <button mat-icon-button [matMenuTriggerFor]="menu" class="menu-button" (mouseenter)="onMenuButtonEnter()"
+        (mouseleave)="onMenuButtonLeave()" (menuOpened)="isMenuOpen.set(true)" (menuClosed)="isMenuOpen.set(false)">
         <mat-icon>more_horiz</mat-icon>
       </button>
 
@@ -59,10 +59,10 @@
       <!-- Submenu for Follow Sets -->
       <mat-menu #followSetsMenu="matMenu">
         @for (set of availableFollowSets(); track set.dTag) {
-          <button mat-menu-item (click)="addToFollowSet(set.dTag)">
-            <mat-icon>{{ isInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
-            <span>{{ set.title }}</span>
-          </button>
+        <button mat-menu-item (click)="addToFollowSet(set.dTag)">
+          <mat-icon>{{ isInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+          <span>{{ set.title }}</span>
+        </button>
         }
         <mat-divider></mat-divider>
         <button mat-menu-item (click)="createNewFollowSet()">

@@ -477,10 +477,23 @@ export class ProfileHoverCardComponent {
     return `${Math.floor(diff / 604800)}w ago`;
   }
 
+  onMenuButtonEnter(): void {
+    // Signal to the service that we're over the menu button
+    this.isMenuOpen.set(true);
+  }
+
+  onMenuButtonLeave(): void {
+    // Only reset if menu isn't actually open
+    // The menuOpened/menuClosed handlers will manage the actual state
+  }
+
   @HostListener('click', ['$event'])
   onCardClick(event: MouseEvent): void {
     const target = event.target as HTMLElement;
-    // Close hover card when clicking on any link or button
+    // Close hover card when clicking on any link or button (except menu button)
+    if (target.closest('.menu-button')) {
+      return; // Don't close for menu button
+    }
     if (target.tagName === 'A' || target.closest('a') || target.tagName === 'BUTTON' || target.closest('button')) {
       setTimeout(() => this.hoverCardService.closeHoverCard(), 100);
     }

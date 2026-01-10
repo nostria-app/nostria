@@ -36,10 +36,19 @@ export class ProfileHoverCardService implements OnDestroy {
   // Scroll listener bound function
   private scrollListener = this.onScroll.bind(this);
   constructor() {
-    // Close hover card on navigation
+    // Close hover card immediately on navigation
     this.router.events
       .pipe(filter(event => event instanceof NavigationStart))
       .subscribe(() => {
+        // Clear all timers and close immediately
+        if (this.hoverTimeout) {
+          window.clearTimeout(this.hoverTimeout);
+          this.hoverTimeout = undefined;
+        }
+        if (this.closeTimeout) {
+          window.clearTimeout(this.closeTimeout);
+          this.closeTimeout = undefined;
+        }
         this.closeHoverCard();
       });
   }
@@ -329,7 +338,14 @@ export class ProfileHoverCardService implements OnDestroy {
       }
     });
 
-    overlayElement.addEventListener('mouseleave', () => {
+    overlayElement.addEventListener('mouseleave', (event: MouseEvent) => {
+      // Don't close if moving to a menu (Material menus are rendered outside the overlay)
+      const relatedTarget = event.relatedTarget as HTMLElement;
+      if (relatedTarget?.closest('.cdk-overlay-pane')) {
+        // Moving to another overlay (like a menu), don't schedule close yet
+        return;
+      }
+
       this.isMouseOverCard.set(false);
       this.scheduleClose();
     });
@@ -350,6 +366,9 @@ export class ProfileHoverCardService implements OnDestroy {
       const isMenuOpen = this.hoverCardComponentRef?.instance?.isMenuOpen?.();
       if (!this.isMouseOverTrigger() && !this.isMouseOverCard() && !isMenuOpen) {
         this.closeHoverCard();
+      } else if (isMenuOpen) {
+        // If menu is open, check again after it might be closed
+        this.scheduleClose();
       }
     }, 500);
   }
