@@ -619,12 +619,13 @@
     }
   }
 }
+
 // Alphabet Navigation Sidebar
 .alphabet-nav {
   position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -633,7 +634,17 @@
   gap: 2px;
   z-index: 10;
   pointer-events: none;
-  
+  max-height: calc(100vh - var(--toolbar-height) - 120px);
+  overflow-y: auto;
+  overflow-x: visible;
+
+  &::-webkit-scrollbar {
+    width: 0;
+    display: none;
+  }
+
+  scrollbar-width: none;
+
   .letter-button {
     pointer-events: auto;
     display: flex;
@@ -653,7 +664,7 @@
     -webkit-user-select: none;
     user-select: none;
     touch-action: manipulation;
-    
+
     &:hover,
     &:active,
     &.active {
@@ -662,12 +673,12 @@
       transform: scale(1.2);
       font-weight: 500;
     }
-    
+
     &:focus-visible {
       outline: 2px solid var(--mat-sys-primary);
       outline-offset: 2px;
     }
-    
+
     // Touch-friendly sizing on mobile
     @media (pointer: coarse) {
       width: 28px;
@@ -675,7 +686,7 @@
       font-size: 12px;
     }
   }
-  
+
   // Hide on very small screens or when sidebar is compact
   @media (max-width: 600px) {
     display: none;

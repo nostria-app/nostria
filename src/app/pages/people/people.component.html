@@ -172,6 +172,18 @@
 
     <mat-divider></mat-divider>
 
+    <!-- Alphabet Navigation Sidebar -->
+    @if (showAlphabetNav() && !selectedContactPubkey() && sortedPeople().length > 0) {
+    <div class="alphabet-nav">
+      @for (letter of availableLetters(); track letter) {
+      <button class="letter-button" [class.active]="selectedLetter() === letter" (click)="scrollToLetter(letter)"
+        (mouseenter)="scrollToLetter(letter)" [attr.aria-label]="'Jump to ' + letter">
+        {{ letter }}
+      </button>
+      }
+    </div>
+    }
+
     <!-- Content section -->
     <div class="people-content" #peopleContent>
       @if (isLoading()) {
@@ -228,18 +240,6 @@
       </div>
       }
     </div>
-
-    <!-- Alphabet Navigation Sidebar -->
-    @if (showAlphabetNav() && !selectedContactPubkey() && sortedPeople().length > 0) {
-    <div class="alphabet-nav">
-      @for (letter of availableLetters(); track letter) {
-      <button class="letter-button" [class.active]="selectedLetter() === letter" (click)="scrollToLetter(letter)"
-        (mouseenter)="scrollToLetter(letter)" [attr.aria-label]="'Jump to ' + letter">
-        {{ letter }}
-      </button>
-      }
-    </div>
-    }
   </div>
 
   <!-- Contact Card Panel -->
