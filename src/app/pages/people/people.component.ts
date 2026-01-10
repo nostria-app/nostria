@@ -116,7 +116,14 @@ export class PeopleComponent implements OnDestroy {
       }
     });
 
-    return Array.from(letters).sort();
+    const sorted = Array.from(letters).sort();
+    // Move # to the end if it exists
+    const hashIndex = sorted.indexOf('#');
+    if (hashIndex !== -1) {
+      sorted.splice(hashIndex, 1);
+      sorted.push('#');
+    }
+    return sorted;
   });
 
   // Intersection observer for infinite scroll
@@ -490,7 +497,7 @@ export class PeopleComponent implements OnDestroy {
 
     const profiles = this.filteredAndSortedProfiles();
     const index = profiles.findIndex(p => {
-      const name = ((p.profile?.data?.['display_name'] as string) || (p.profile?.data?.['name'] as string) || '').trim();
+      const name = ((p.profile?.data?.display_name as string) || (p.profile?.data?.name as string) || '').trim();
       if (!name) return false;
 
       const firstChar = name.charAt(0).toUpperCase();
