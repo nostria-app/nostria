@@ -6,6 +6,12 @@
   // Prevent iOS Safari from auto-adjusting text sizes
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+
+  // Override content-wrapper padding for full-width layout
+  // Messages component should take full width, not be centered
+  @media (min-width: 1200px) {
+    margin-right: calc(var(--content-wrapper-padding-right, 0px) * -1);
+  }
 }
 
 .messages {
