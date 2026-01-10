@@ -56,7 +56,7 @@
         </button>
       </mat-menu>
 
-      <!-- Submenu for Follow Sets -->
+      <!-- Submenu for Lists -->
       <mat-menu #followSetsMenu="matMenu">
         @for (set of availableFollowSets(); track set.dTag) {
         <button mat-menu-item (click)="addToFollowSet(set.dTag)">
