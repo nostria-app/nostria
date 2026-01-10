@@ -40,11 +40,12 @@
       </div>
       <div class="balance-description">
         @if (balance() > 0) {
-        <span>They owe you</span>
-        } @else if (balance() < 0) { <span>You owe them</span>
-          } @else {
-          <span>Balanced</span>
-          }
+        <span>You're owed</span>
+        } @else if (balance() < 0) {
+        <span>They're owed</span>
+        } @else {
+        <span>Balanced</span>
+        }
       </div>
     </div>
   </div>

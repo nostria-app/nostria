@@ -444,13 +444,27 @@ export class FollowingService {
    */
   getSortedProfiles(
     profiles: FollowingProfile[],
-    sortBy: 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' | 'trust-asc' | 'trust-desc'
+    sortBy: 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' | 'trust-asc' | 'trust-desc' | 'name-asc' | 'name-desc'
   ): FollowingProfile[] {
     const sorted = [...profiles];
 
     switch (sortBy) {
       case 'reverse':
         return sorted.reverse();
+
+      case 'name-asc':
+        return sorted.sort((a, b) => {
+          const aName = ((a.info?.['display_name'] as string) || (a.info?.['name'] as string) || a.pubkey).toLowerCase();
+          const bName = ((b.info?.['display_name'] as string) || (b.info?.['name'] as string) || b.pubkey).toLowerCase();
+          return aName.localeCompare(bName);
+        });
+
+      case 'name-desc':
+        return sorted.sort((a, b) => {
+          const aName = ((a.info?.['display_name'] as string) || (a.info?.['name'] as string) || a.pubkey).toLowerCase();
+          const bName = ((b.info?.['display_name'] as string) || (b.info?.['name'] as string) || b.pubkey).toLowerCase();
+          return bName.localeCompare(aName);
+        });
 
       case 'engagement-asc':
         return sorted.sort((a, b) => {

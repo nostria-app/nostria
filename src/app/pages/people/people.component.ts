@@ -40,7 +40,7 @@ import { ProfileHoverCardService } from '../../services/profile-hover-card.servi
 type FilterOptions = PeopleFilters;
 
 // Define sorting options
-type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' | 'trust-asc' | 'trust-desc';
+type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' | 'trust-asc' | 'trust-desc' | 'name-asc' | 'name-desc';
 
 @Component({
   selector: 'app-people',
@@ -91,6 +91,33 @@ export class PeopleComponent {
   // Scroll container reference
   peopleContent = viewChild<ElementRef>('peopleContent');
   scrollSentinel = viewChild<ElementRef>('scrollSentinel');
+
+  // Alphabet navigation
+  showAlphabetNav = computed(() => {
+    const sort = this.sortOption();
+    return sort === 'name-asc' || sort === 'name-desc';
+  });
+  selectedLetter = signal<string | null>(null);
+  availableLetters = computed(() => {
+    if (!this.showAlphabetNav()) return [];
+    
+    const profiles = this.filteredAndSortedProfiles();
+    const letters = new Set<string>();
+    
+    profiles.forEach(p => {
+      const name = (p.info?.['display_name'] as string) || (p.info?.['name'] as string) || '';
+      if (name) {
+        const firstChar = name.charAt(0).toUpperCase();
+        if (/[A-Z]/.test(firstChar)) {
+          letters.add(firstChar);
+        } else if (/[0-9]/.test(firstChar)) {
+          letters.add('#');
+        }
+      }
+    });
+    
+    return Array.from(letters).sort();
+  });
 
   // Intersection observer for infinite scroll
   private scrollObserver?: IntersectionObserver;
@@ -434,6 +461,59 @@ export class PeopleComponent {
     // Close any open hover card to prevent interference
     this.hoverCardService.closeHoverCard();
     this.selectedContactPubkey.set(pubkey);
+    
+    // Auto-scroll to selected contact in compact mode
+    setTimeout(() => this.scrollToSelectedContact(), 100);
+  }
+
+  /**
+   * Scroll to the selected contact in the people list
+   */
+  private scrollToSelectedContact() {
+    const selectedPubkey = this.selectedContactPubkey();
+    if (!selectedPubkey) return;
+    
+    const container = this.peopleContent();
+    if (!container) return;
+    
+    const element = container.nativeElement.querySelector(`[data-pubkey="${selectedPubkey}"]`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  /**
+   * Scroll to a specific letter in the alphabet navigation
+   */
+  scrollToLetter(letter: string) {
+    this.selectedLetter.set(letter);
+    
+    const profiles = this.filteredAndSortedProfiles();
+    const index = profiles.findIndex(p => {
+      const name = (p.info?.['display_name'] as string) || (p.info?.['name'] as string) || '';
+      if (!name) return false;
+      
+      const firstChar = name.charAt(0).toUpperCase();
+      if (letter === '#') {
+        return /[0-9]/.test(firstChar);
+      }
+      return firstChar === letter;
+    });
+    
+    if (index !== -1 && index < this.visiblePeople().length) {
+      const pubkey = this.visiblePeople()[index];
+      const container = this.peopleContent();
+      if (!container) return;
+      
+      const element = container.nativeElement.querySelector(`[data-pubkey="${pubkey}"]`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    } else if (index >= this.visiblePeople().length) {
+      // Load more items to reach this letter
+      this.displayLimit.set(Math.min(index + 50, this.sortedPeople().length));
+      setTimeout(() => this.scrollToLetter(letter), 100);
+    }
   }
 
   /**

@@ -86,6 +86,12 @@
               <mat-radio-button value="reverse" (click)="preventPropagation($event)">
                 Reverse
               </mat-radio-button>
+              <mat-radio-button value="name-asc" (click)="preventPropagation($event)">
+                Name (A to Z)
+              </mat-radio-button>
+              <mat-radio-button value="name-desc" (click)="preventPropagation($event)">
+                Name (Z to A)
+              </mat-radio-button>
               <mat-radio-button value="trust-desc" (click)="preventPropagation($event)">
                 Trust Rank (High to Low)
               </mat-radio-button>
@@ -167,7 +173,7 @@
     <mat-divider></mat-divider>
 
     <!-- Content section -->
-    <div class="people-content">
+    <div class="people-content" #peopleContent>
       @if (isLoading()) {
       <div class="loading-container">
         <mat-spinner diameter="40"></mat-spinner>
@@ -202,9 +208,9 @@
               'compact-avatars': selectedContactPubkey()
             }">
         @for (pubkey of visiblePeople(); track pubkey) {
-        <div class="person-item" [class.selected]="selectedContactPubkey() === pubkey" (click)="selectContact(pubkey)"
-          (keydown.enter)="selectContact(pubkey)" (keydown.space)="selectContact(pubkey); $event.preventDefault()"
-          tabindex="0" role="button"
+        <div class="person-item" [class.selected]="selectedContactPubkey() === pubkey" [attr.data-pubkey]="pubkey"
+          (click)="selectContact(pubkey)" (keydown.enter)="selectContact(pubkey)"
+          (keydown.space)="selectContact(pubkey); $event.preventDefault()" tabindex="0" role="button"
           [attr.aria-label]="'View contact details for ' + (followingService.getProfile(pubkey)?.info?.['displayName'] || 'user')">
           <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
             [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey"
@@ -222,6 +228,18 @@
       </div>
       }
     </div>
+
+    <!-- Alphabet Navigation Sidebar -->
+    @if (showAlphabetNav() && !selectedContactPubkey() && sortedPeople().length > 0) {
+    <div class="alphabet-nav">
+      @for (letter of availableLetters(); track letter) {
+      <button class="letter-button" [class.active]="selectedLetter() === letter" (click)="scrollToLetter(letter)"
+        (mouseenter)="scrollToLetter(letter)" [attr.aria-label]="'Jump to ' + letter">
+        {{ letter }}
+      </button>
+      }
+    </div>
+    }
   </div>
 
   <!-- Contact Card Panel -->
