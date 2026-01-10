@@ -5,10 +5,16 @@
   background-color: var(--mat-sys-surface);
   position: relative;
 
+  // Override content-wrapper padding for full-width layout
+  // People component should take full width, not be centered
+  @media (min-width: 1200px) {
+    margin-right: calc(var(--content-wrapper-padding-right, 0px) * -1);
+  }
+
   &.split-view {
     .people-sidebar {
       flex: 0 0 auto;
-      max-width: 80px;
+      max-width: 90px;
       border-right: 1px solid var(--mat-sys-outline-variant);
     }
 
@@ -30,7 +36,7 @@
   overflow-x: hidden;
 
   &.compact {
-    max-width: 80px;
+    max-width: 90px;
 
     .people-header {
       padding: 0.5rem;

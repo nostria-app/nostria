@@ -4,6 +4,12 @@
   padding: 1rem;
   padding-bottom: 120px; // Extra padding for media player
   gap: 1rem;
+
+  // Override content-wrapper padding for full-width layout
+  // Music component should take full width, not be centered
+  @media (min-width: 1200px) {
+    margin-right: calc(var(--content-wrapper-padding-right, 0px) * -1);
+  }
 }
 
 .music-header {

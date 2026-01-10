@@ -281,13 +281,16 @@ mat-sidenav-content {
   // When sidenav is open in side mode, add equal padding-right to balance
   // This keeps the scrollbar at the edge while centering the content
   // Only apply on large screens where there's enough room (min 1200px)
+  // Full-width components can override this using CSS variables
   @media (min-width: 1200px) {
     &.sidenav-open-expanded {
       padding-right: 200px; // Match expanded sidenav width (sidenav-labels)
+      --content-wrapper-padding-right: 200px;
     }
 
     &.sidenav-open-collapsed {
       padding-right: 56px; // Match collapsed sidenav width (sidenav-small)
+      --content-wrapper-padding-right: 56px;
     }
   }
 
