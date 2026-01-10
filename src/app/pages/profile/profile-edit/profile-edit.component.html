@@ -151,6 +151,90 @@
           <input matInput type="text" [(ngModel)]="lud16" placeholder="user@domain" />
         </mat-form-field>
       </p>
+
+      <!-- External Identities Section -->
+      <div class="external-identities-section">
+        <h3>
+          <mat-icon>public</mat-icon>
+          External Identities
+        </h3>
+
+        @if (externalIdentities().length > 0) {
+        <mat-list class="identities-list">
+          @for (identity of externalIdentities(); track $index) {
+          <mat-list-item>
+            <mat-icon matListItemIcon>link</mat-icon>
+            <div matListItemTitle>{{ identity.platform }}:{{ identity.identity }}</div>
+            @if (identity.proof) {
+            <div matListItemLine class="proof-text">Proof: {{ identity.proof }}</div>
+            }
+            <button mat-icon-button matListItemMeta (click)="removeExternalIdentity($index)" matTooltip="Remove">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </mat-list-item>
+          }
+        </mat-list>
+        }
+
+        <div class="add-identity-form">
+          <div class="form-row">
+            <mat-form-field class="platform-field">
+              <mat-icon matPrefix>label</mat-icon>
+              <mat-label>Platform</mat-label>
+              <input matInput type="text" [(ngModel)]="newIdentityPlatformValue" placeholder="github" />
+              <button mat-icon-button matSuffix [matMenuTriggerFor]="platformMenu" matTooltip="Select preset">
+                <mat-icon>arrow_drop_down</mat-icon>
+              </button>
+            </mat-form-field>
+
+            <mat-menu #platformMenu="matMenu">
+              <button mat-menu-item (click)="selectPlatformPreset('github')">
+                <mat-icon>code</mat-icon>
+                <span>GitHub</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('twitter')">
+                <mat-icon>alternate_email</mat-icon>
+                <span>Twitter/X</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('mastodon')">
+                <mat-icon>rss_feed</mat-icon>
+                <span>Mastodon</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('telegram')">
+                <mat-icon>send</mat-icon>
+                <span>Telegram</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('linkedin')">
+                <mat-icon>business</mat-icon>
+                <span>LinkedIn</span>
+              </button>
+              <button mat-menu-item (click)="selectPlatformPreset('instagram')">
+                <mat-icon>photo_camera</mat-icon>
+                <span>Instagram</span>
+              </button>
+            </mat-menu>
+
+            <mat-form-field class="identity-field">
+              <mat-icon matPrefix>person</mat-icon>
+              <mat-label>Identity</mat-label>
+              <input matInput type="text" [(ngModel)]="newIdentityValueValue" placeholder="username" />
+            </mat-form-field>
+          </div>
+
+          <mat-form-field class="input-full-width proof-field">
+            <mat-icon matPrefix>verified</mat-icon>
+            <mat-label>Proof (optional)</mat-label>
+            <input matInput type="text" [(ngModel)]="newIdentityProofValue"
+              placeholder="Gist ID, Tweet ID, or other proof URL/ID" />
+          </mat-form-field>
+
+          <button mat-stroked-button color="primary" (click)="addExternalIdentity()" class="add-button">
+            <mat-icon>add</mat-icon>
+            Add Identity
+          </button>
+        </div>
+      </div>
+
       @if (accountState.profile()) {
       <p>Last updated: {{ accountState.profile()!.event.created_at | ago }}</p>
       } @else {

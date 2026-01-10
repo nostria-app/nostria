@@ -12,11 +12,20 @@ import { NostrService } from '../../../services/nostr.service';
 import { Router } from '@angular/router';
 import { DatabaseService } from '../../../services/database.service';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatListModule } from '@angular/material/list';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatTooltipModule } from '@angular/material/tooltip';
 import { DataService } from '../../../services/data.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { MediaService } from '../../../services/media.service';
 import { Profile, ProfileData, ProfileUpdateOptions } from '../../../services/profile';
 import { AccountRelayService } from '../../../services/relays/account-relay';
+
+interface ExternalIdentity {
+  platform: string;
+  identity: string;
+  proof: string;
+}
 
 @Component({
   selector: 'app-profile-edit',
@@ -30,6 +39,9 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
     AgoPipe,
     MatProgressSpinnerModule,
     MatSlideToggleModule,
+    MatListModule,
+    MatMenuModule,
+    MatTooltipModule,
   ],
   templateUrl: './profile-edit.component.html',
   styleUrl: './profile-edit.component.scss',
@@ -62,6 +74,12 @@ export class ProfileEditComponent implements OnInit {
 
   // Media server availability
   hasMediaServers = computed(() => this.media.mediaServers().length > 0);
+
+  // External identities (NIP-39)
+  externalIdentities = signal<ExternalIdentity[]>([]);
+  newIdentityPlatform = signal<string>('');
+  newIdentityValue = signal<string>('');
+  newIdentityProof = signal<string>('');
 
   constructor() {
     effect(() => {
@@ -99,6 +117,9 @@ export class ProfileEditComponent implements OnInit {
         this.useBannerUrl.set(true);
         this.previewBanner.set(profileClone.banner);
       }
+
+      // Load external identities from existing metadata tags
+      this.loadExternalIdentities(metadata.event.tags);
     } else {
       // User has no profile, create a basic empty profile
       this.profile.set({
@@ -185,6 +206,30 @@ export class ProfileEditComponent implements OnInit {
     this.profile.update(p => ({ ...p, lud16: value }));
   }
 
+  get newIdentityPlatformValue(): string {
+    return this.newIdentityPlatform();
+  }
+
+  set newIdentityPlatformValue(value: string) {
+    this.newIdentityPlatform.set(value);
+  }
+
+  get newIdentityValueValue(): string {
+    return this.newIdentityValue();
+  }
+
+  set newIdentityValueValue(value: string) {
+    this.newIdentityValue.set(value);
+  }
+
+  get newIdentityProofValue(): string {
+    return this.newIdentityProof();
+  }
+
+  set newIdentityProofValue(value: string) {
+    this.newIdentityProof.set(value);
+  }
+
   async updateMetadata(): Promise<void> {
     if (!this.profile()) {
       this.snackBar.open('No profile to update', 'Close', { duration: 3000 });
@@ -211,6 +256,7 @@ export class ProfileEditComponent implements OnInit {
       // Create update options
       const updateOptions: ProfileUpdateOptions = {
         profileData,
+        externalIdentities: this.externalIdentities(),
       };
 
       // Add profile image file if selected
@@ -384,5 +430,69 @@ export class ProfileEditComponent implements OnInit {
       const fileInput = document.querySelectorAll('input[type="file"][accept="image/*"]')[1] as HTMLInputElement;
       if (fileInput) fileInput.value = '';
     }
+  }
+
+  // External identities methods
+  loadExternalIdentities(tags: string[][]): void {
+    if (!tags) return;
+
+    const identities: ExternalIdentity[] = [];
+    const iTags = tags.filter(tag => tag[0] === 'i' && tag.length >= 2);
+
+    for (const tag of iTags) {
+      const platformIdentity = tag[1];
+      const proof = tag[2] || '';
+
+      const separatorIndex = platformIdentity.indexOf(':');
+      if (separatorIndex === -1) continue;
+
+      const platform = platformIdentity.substring(0, separatorIndex);
+      const identity = platformIdentity.substring(separatorIndex + 1);
+
+      identities.push({ platform, identity, proof });
+    }
+
+    this.externalIdentities.set(identities);
+  }
+
+  addExternalIdentity(): void {
+    const platform = this.newIdentityPlatform().trim();
+    const identity = this.newIdentityValue().trim();
+    const proof = this.newIdentityProof().trim();
+
+    if (!platform || !identity) {
+      this.snackBar.open('Platform and identity are required', 'Close', { duration: 3000 });
+      return;
+    }
+
+    // Validate platform name (only a-z, 0-9, and ._-/)
+    if (!/^[a-z0-9._\-/]+$/.test(platform)) {
+      this.snackBar.open('Platform name should only contain lowercase letters, numbers, and ._-/', 'Close', {
+        duration: 3000,
+      });
+      return;
+    }
+
+    // Check for duplicates
+    const exists = this.externalIdentities().some(id => id.platform === platform && id.identity === identity);
+    if (exists) {
+      this.snackBar.open('This identity already exists', 'Close', { duration: 3000 });
+      return;
+    }
+
+    this.externalIdentities.update(identities => [...identities, { platform, identity, proof }]);
+
+    // Reset form
+    this.newIdentityPlatform.set('');
+    this.newIdentityValue.set('');
+    this.newIdentityProof.set('');
+  }
+
+  removeExternalIdentity(index: number): void {
+    this.externalIdentities.update(identities => identities.filter((_, i) => i !== index));
+  }
+
+  selectPlatformPreset(platform: string): void {
+    this.newIdentityPlatform.set(platform);
   }
 }
