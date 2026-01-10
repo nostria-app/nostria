@@ -120,6 +120,7 @@
 
 .notes-card {
   background: var(--mat-sys-surface-container);
+  margin-bottom: 24px;
 
   mat-card-header {
     mat-card-title {
@@ -137,6 +138,115 @@
     color: var(--mat-sys-on-surface-variant);
     font-style: italic;
     margin: 16px 0 0 0;
+  }
+}
+
+// Contact card styles (merged from contact-info)
+.contact-card {
+  margin-bottom: 24px;
+  background: var(--mat-sys-surface-container);
+
+  mat-card-header {
+    mat-card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      mat-icon {
+        color: var(--mat-sys-primary);
+      }
+    }
+  }
+
+  mat-list {
+    padding: 0;
+
+    mat-list-item {
+      min-height: 64px;
+      height: auto;
+      padding: 12px 0;
+
+      mat-icon[matListItemIcon] {
+        color: var(--mat-sys-on-surface-variant);
+      }
+
+      .monospace-text {
+        font-family: monospace;
+        font-size: 12px;
+        word-break: break-all;
+      }
+
+      .about-text {
+        white-space: pre-wrap;
+        margin-top: 8px;
+      }
+
+      a {
+        color: var(--mat-sys-primary);
+        text-decoration: none;
+
+        &:hover {
+          text-decoration: underline;
+        }
+      }
+
+      .profile-link {
+        font-weight: 500;
+      }
+
+      .profile-text {
+        color: var(--mat-sys-on-surface);
+      }
+
+      .proof-button {
+        font-size: 12px;
+        line-height: 32px;
+        height: 32px;
+
+        mat-icon {
+          font-size: 16px;
+          width: 16px;
+          height: 16px;
+          margin-right: 4px;
+        }
+      }
+
+      .identity-title {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .verified-badge {
+          font-size: 18px;
+          width: 18px;
+          height: 18px;
+          color: var(--mat-success-color);
+        }
+      }
+    }
+  }
+}
+
+.empty-card {
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 24px;
+    gap: 16px;
+    color: var(--mat-sys-on-surface-variant);
+
+    mat-icon {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+    }
+
+    p {
+      margin: 0;
+      font-style: italic;
+    }
   }
 }
 
@@ -176,6 +286,16 @@
           .stat-value {
             font-size: 20px;
           }
+        }
+      }
+    }
+  }
+
+  .contact-card {
+    mat-list {
+      mat-list-item {
+        .monospace-text {
+          font-size: 10px;
         }
       }
     }

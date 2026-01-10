@@ -51,22 +51,13 @@
   </div>
 
   <mat-tab-group [(selectedIndex)]="selectedTabIndex" class="contact-tabs" [animationDuration]="'200ms'">
-    <!-- Overview Tab -->
+    <!-- Overview Tab (merged with Contact Info) -->
     <mat-tab>
       <ng-template mat-tab-label>
-        <mat-icon>dashboard</mat-icon>
-        <span>Overview</span>
+        <mat-icon>person</mat-icon>
+        <span>Profile</span>
       </ng-template>
       <app-contact-overview [pubkey]="pubkey()" [metadata]="metadata"></app-contact-overview>
-    </mat-tab>
-
-    <!-- Contact Info Tab -->
-    <mat-tab>
-      <ng-template mat-tab-label>
-        <mat-icon>contact_page</mat-icon>
-        <span>Contact</span>
-      </ng-template>
-      <app-contact-info [pubkey]="pubkey()" [metadata]="metadata"></app-contact-info>
     </mat-tab>
 
     <!-- Interactions Tab -->

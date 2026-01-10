@@ -97,7 +97,7 @@
   </div>
 
   <!-- Connection Notes Section -->
-  <mat-card class="notes-card">
+  <!-- <mat-card class="notes-card">
     <mat-card-header>
       <mat-card-title>
         <mat-icon>notes</mat-icon>
@@ -107,6 +107,132 @@
     <mat-card-content>
       <p class="placeholder-text">Notes feature coming soon...</p>
     </mat-card-content>
+  </mat-card> -->
+
+  <!-- Basic Contact Info (merged from Contact tab) -->
+  <mat-card class="contact-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>contact_page</mat-icon>
+        Contact Information
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-list>
+        <!-- About -->
+        @if (getAbout()) {
+        <mat-list-item>
+          <mat-icon matListItemIcon>info</mat-icon>
+          <div matListItemTitle>About</div>
+          <div matListItemLine class="about-text">{{ getAbout() }}</div>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+        }
+
+        <!-- Public Key -->
+        <mat-list-item>
+          <mat-icon matListItemIcon>fingerprint</mat-icon>
+          <div matListItemTitle>Public Key</div>
+          <div matListItemLine class="monospace-text">{{ getNpub() }}</div>
+          <div matListItemMeta>
+            <button mat-icon-button (click)="copyToClipboard(getNpub(), 'Public key')" matTooltip="Copy to clipboard">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+
+        <!-- NIP-05 -->
+        @if (getNip05()) {
+        <mat-list-item>
+          <mat-icon matListItemIcon>verified</mat-icon>
+          <div matListItemTitle>NIP-05 Identifier</div>
+          <div matListItemLine>{{ getNip05() }}</div>
+          <div matListItemMeta>
+            <button mat-icon-button (click)="copyToClipboard(getNip05()!, 'NIP-05 identifier')"
+              matTooltip="Copy to clipboard">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+        }
+
+        <!-- Website -->
+        @if (getWebsite()) {
+        <mat-list-item>
+          <mat-icon matListItemIcon>link</mat-icon>
+          <div matListItemTitle>Website</div>
+          <div matListItemLine><a [href]="getWebsite()!" target="_blank" rel="noopener noreferrer">{{ getWebsite()
+              }}</a></div>
+        </mat-list-item>
+        <mat-divider></mat-divider>
+        }
+
+        <!-- Lightning Address -->
+        @if (getLud16()) {
+        <mat-list-item>
+          <mat-icon matListItemIcon>bolt</mat-icon>
+          <div matListItemTitle>Lightning Address</div>
+          <div matListItemLine>{{ getLud16() }}</div>
+          <div matListItemMeta>
+            <button mat-icon-button (click)="copyToClipboard(getLud16()!, 'Lightning address')"
+              matTooltip="Copy to clipboard">
+              <mat-icon>content_copy</mat-icon>
+            </button>
+          </div>
+        </mat-list-item>
+        }
+      </mat-list>
+    </mat-card-content>
   </mat-card>
+
+  <!-- External Identities (NIP-39) -->
+  @if (externalIdentities().length > 0) {
+  <mat-card class="contact-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>public</mat-icon>
+        External Identities
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <mat-list>
+        @for (identity of externalIdentities(); track identity.platform + identity.identity; let last = $last) {
+        <mat-list-item>
+          <mat-icon matListItemIcon>{{ identity.icon }}</mat-icon>
+          <div matListItemTitle class="identity-title">
+            <span>{{ identity.platform }}</span>
+            @if (identity.verified) {
+            <mat-icon class="verified-badge" matTooltip="Verified">verified</mat-icon>
+            }
+          </div>
+          <div matListItemLine>
+            @if (identity.profileUrl) {
+            <a [href]="identity.profileUrl" target="_blank" rel="noopener noreferrer" class="profile-link">
+              {{ identity.displayName }}
+            </a>
+            } @else {
+            <span class="profile-text">{{ identity.displayName }}</span>
+            }
+          </div>
+          @if (identity.proofUrl) {
+          <div matListItemMeta>
+            <a mat-stroked-button [href]="identity.proofUrl" target="_blank" rel="noopener noreferrer"
+              class="proof-button">
+              <mat-icon>fact_check</mat-icon>
+              View Proof
+            </a>
+          </div>
+          }
+        </mat-list-item>
+        @if (!last) {
+        <mat-divider></mat-divider>
+        }
+        }
+      </mat-list>
+    </mat-card-content>
+  </mat-card>
+  }
   }
 </div>
