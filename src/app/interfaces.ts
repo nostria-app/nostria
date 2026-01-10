@@ -144,7 +144,8 @@ export type ViewMode =
   | 'compact'
   | 'card'
   | 'tiny'
-  | 'name';
+  | 'name'
+  | 'avatar';
 
 /** Static time constants in milliseconds */
 export const minutes = {

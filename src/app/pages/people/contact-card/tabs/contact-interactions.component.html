@@ -1,0 +1,55 @@
+<div class="tab-content">
+  @if (isLoading()) {
+  <div class="loading">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading interactions...</p>
+  </div>
+  } @else if (interactions().length === 0) {
+  <div class="empty-state">
+    <mat-icon>timeline</mat-icon>
+    <p>No interactions found</p>
+  </div>
+  } @else {
+  <mat-card class="interactions-card">
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>timeline</mat-icon>
+        Interaction Timeline
+      </mat-card-title>
+    </mat-card-header>
+    <mat-card-content>
+      <div class="timeline">
+        @for (interaction of interactions(); track interaction.event.id) {
+        <div class="timeline-item" (click)="navigateToEvent(interaction)" (keydown.enter)="navigateToEvent(interaction)"
+          (keydown.space)="navigateToEvent(interaction); $event.preventDefault()" tabindex="0" role="button"
+          [attr.aria-label]="'Navigate to ' + interaction.description">
+          <div class="timeline-marker">
+            <mat-icon [style.color]="interaction.iconColor">{{ interaction.icon }}</mat-icon>
+          </div>
+          <div class="timeline-content">
+            <div class="interaction-header">
+              <span class="interaction-description">{{ interaction.description }}</span>
+              <span class="interaction-time">{{ interaction.timestamp | ago }}</span>
+            </div>
+            @if (getInteractionContent(interaction)) {
+            <div class="interaction-details">
+              @if (interaction.type === 'reply-given' || interaction.type === 'reply-received') {
+              <div class="reply-content">
+                <mat-icon class="quote-icon">format_quote</mat-icon>
+                <span>{{ getInteractionContent(interaction) }}</span>
+              </div>
+              } @else if (interaction.type === 'like-given' || interaction.type === 'like-received') {
+              <div class="reaction-emoji">
+                {{ getInteractionContent(interaction) }}
+              </div>
+              }
+            </div>
+            }
+          </div>
+        </div>
+        }
+      </div>
+    </mat-card-content>
+  </mat-card>
+  }
+</div>

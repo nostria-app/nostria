@@ -818,3 +818,39 @@
     line-height: 1.1;
   }
 }
+
+// Avatar-only view mode
+.user-profile.avatar {
+  .user-profile-container {
+    justify-content: center;
+    padding: 0.5rem;
+  }
+
+  .user-profile-avatar.avatar-only {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+
+    &:hover {
+      transform: scale(1.05);
+    }
+
+    .user-avatar {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .default-user-avatar {
+      font-size: 48px;
+      width: 48px;
+      height: 48px;
+    }
+  }
+}

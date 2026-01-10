@@ -1,0 +1,63 @@
+.contact-card-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.loading-container,
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  gap: 16px;
+  color: var(--mat-sys-on-surface-variant);
+
+  mat-icon {
+    font-size: 48px;
+    width: 48px;
+    height: 48px;
+  }
+}
+
+.contact-tabs {
+  background: transparent;
+
+  ::ng-deep .mat-mdc-tab-labels {
+    background: var(--mat-sys-surface-container-low);
+  }
+
+  ::ng-deep .mat-mdc-tab-label {
+    min-width: 120px;
+
+    .mat-icon {
+      margin-right: 8px;
+    }
+  }
+
+  ::ng-deep .mat-mdc-tab-body-wrapper {
+    padding: 24px 0;
+  }
+}
+
+@media (max-width: 600px) {
+  .contact-card-container {
+    padding: 0;
+  }
+
+  .contact-tabs {
+    ::ng-deep .mat-mdc-tab-label {
+      min-width: 80px;
+      padding: 0 8px;
+
+      span {
+        display: none;
+      }
+
+      .mat-icon {
+        margin-right: 0;
+      }
+    }
+  }
+}

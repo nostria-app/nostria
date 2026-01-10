@@ -1,229 +1,244 @@
-<div class="people-page">
-  <!-- Header section with controls -->
-  <div class="people-header">
-    <div class="controls-section">
-      <!-- Follow Set Selector -->
-      @if (allFollowSets().length > 0) {
-      <button mat-button [matMenuTriggerFor]="followSetsMenu" class="follow-set-selector">
-        <mat-icon>{{ selectedFollowSet() ? 'filter_alt' : 'group' }}</mat-icon>
-        {{ selectedFollowSet() ? selectedFollowSet()!.title : 'All Following' }}
-        <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
-      </button>
+<div class="people-page" [class.split-view]="selectedContactPubkey()">
+  <!-- Sidebar - People List -->
+  <div class="people-sidebar" [class.compact]="selectedContactPubkey()">
+    <!-- Header section with controls -->
+    <div class="people-header">
+      <div class="controls-section">
+        @if (!selectedContactPubkey()) {
+        <!-- Full header when no contact selected -->
+        <!-- List Selector -->
+        @if (allFollowSets().length > 0) {
+        <button mat-button [matMenuTriggerFor]="followSetsMenu" class="follow-set-selector">
+          <mat-icon>{{ selectedFollowSet() ? 'filter_alt' : 'group' }}</mat-icon>
+          {{ selectedFollowSet() ? selectedFollowSet()!.title : 'All Following' }}
+          <mat-icon class="dropdown-icon">arrow_drop_down</mat-icon>
+        </button>
 
-      <mat-menu #followSetsMenu="matMenu">
-        <button mat-menu-item (click)="selectFollowSet(null)">
-          <mat-icon>people</mat-icon>
-          <span>All Following</span>
-        </button>
-        <mat-divider></mat-divider>
-        @for (set of allFollowSets(); track set.id) {
-        <button mat-menu-item (click)="selectFollowSet(set)">
-          <mat-icon>{{ set.dTag === 'nostria-favorites' ? 'star' : 'group' }}</mat-icon>
-          <span>{{ set.title }}</span>
-          <span class="set-count">({{ set.pubkeys.length }})</span>
-        </button>
+        <mat-menu #followSetsMenu="matMenu">
+          <button mat-menu-item (click)="selectFollowSet(null)">
+            <mat-icon>people</mat-icon>
+            <span>All Following</span>
+          </button>
+          <mat-divider></mat-divider>
+          @for (set of allFollowSets(); track set.id) {
+          <button mat-menu-item (click)="selectFollowSet(set)">
+            <mat-icon>{{ set.dTag === 'nostria-favorites' ? 'star' : 'group' }}</mat-icon>
+            <span>{{ set.title }}</span>
+            <span class="set-count">({{ set.pubkeys.length }})</span>
+          </button>
+          }
+          <mat-divider></mat-divider>
+          <button mat-menu-item routerLink="/lists">
+            <mat-icon>settings</mat-icon>
+            <span>Manage Lists</span>
+          </button>
+        </mat-menu>
         }
-        <mat-divider></mat-divider>
-        <button mat-menu-item routerLink="/lists">
-          <mat-icon>settings</mat-icon>
-          <span>Manage Follow Sets</span>
+
+        <!-- Find People Button -->
+        <button mat-button routerLink="/people/discover" matTooltip="Discover new people to follow">
+          <mat-icon>explore</mat-icon>
+          Find<span class="hide-tiny"> People</span>
         </button>
-      </mat-menu>
-      }
 
-      <!-- Create Feed from Follow Set button (only visible when a set is selected) -->
-      <!-- @if (selectedFollowSet()) {
-      <button mat-button (click)="createFeedFromFollowSet()" matTooltip="Create a feed from this follow set">
-        <mat-icon>rss_feed</mat-icon>
-        Create Feed
-      </button>
-      } -->
-
-      <!-- Find People Button -->
-      <button mat-button routerLink="/people/discover" matTooltip="Discover new people to follow">
-        <mat-icon>explore</mat-icon>
-        Find<span class="hide-tiny"> People</span>
-      </button>
-
-      <!-- Add Person Button -->
-      <button mat-button (click)="openAddPersonDialog()" matTooltip="Add a new person to follow">
-        <mat-icon>person_add</mat-icon>
-        Add<span class="hide-tiny"> Person</span>
-      </button>
-
-      <!-- View menu -->
-      <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="View options">
-        <mat-icon>view_comfy</mat-icon>
-      </button>
-
-      <mat-menu #viewMenu="matMenu">
-        <!-- <button mat-menu-item (click)="changeViewMode('large')">
-          <mat-icon>calendar_view_month</mat-icon>
-          <span>Large icons</span>
-        </button> -->
-        <button mat-menu-item (click)="changeViewMode('medium')">
-          <mat-icon>view_module</mat-icon>
-          <span>Medium icons</span>
+        <!-- Add Person Button -->
+        <button mat-button (click)="openAddPersonDialog()" matTooltip="Add a new person to follow">
+          <mat-icon>person_add</mat-icon>
+          Add<span class="hide-tiny"> Person</span>
         </button>
-        <button mat-menu-item (click)="changeViewMode('small')">
-          <mat-icon>apps</mat-icon>
-          <span>Small icons</span>
+
+        <!-- View menu -->
+        <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="View options">
+          <mat-icon>view_comfy</mat-icon>
         </button>
-        <button mat-menu-item (click)="changeViewMode('details')">
-          <mat-icon>view_list</mat-icon>
-          <span>Details</span>
+
+        <mat-menu #viewMenu="matMenu">
+          <button mat-menu-item (click)="changeViewMode('medium')">
+            <mat-icon>view_module</mat-icon>
+            <span>Medium icons</span>
+          </button>
+          <button mat-menu-item (click)="changeViewMode('small')">
+            <mat-icon>apps</mat-icon>
+            <span>Small icons</span>
+          </button>
+          <button mat-menu-item (click)="changeViewMode('details')">
+            <mat-icon>view_list</mat-icon>
+            <span>Details</span>
+          </button>
+        </mat-menu>
+
+        <!-- Sort button with menu -->
+        <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort options">
+          <mat-icon>sort</mat-icon>
         </button>
-      </mat-menu>
 
-      <!-- Sort button with menu -->
-      <button mat-icon-button [matMenuTriggerFor]="sortMenu" matTooltip="Sort options">
-        <mat-icon>sort</mat-icon>
-      </button>
+        <mat-menu #sortMenu="matMenu" class="sort-menu" [overlapTrigger]="false">
+          <div class="filter-menu-header" (click)="preventPropagation($event)">
+            <span>Sort By</span>
+          </div>
+          <mat-divider></mat-divider>
 
-      <mat-menu #sortMenu="matMenu" class="sort-menu" [overlapTrigger]="false">
-        <div class="filter-menu-header" (click)="preventPropagation($event)">
-          <span>Sort By</span>
-        </div>
-        <mat-divider></mat-divider>
+          <div class="filter-section" (click)="preventPropagation($event)">
+            <mat-radio-group [value]="sortOption()" (change)="changeSortOption($event.value)">
+              <mat-radio-button value="default" (click)="preventPropagation($event)">
+                Default
+              </mat-radio-button>
+              <mat-radio-button value="reverse" (click)="preventPropagation($event)">
+                Reverse
+              </mat-radio-button>
+              <mat-radio-button value="trust-desc" (click)="preventPropagation($event)">
+                Trust Rank (High to Low)
+              </mat-radio-button>
+              <mat-radio-button value="trust-asc" (click)="preventPropagation($event)">
+                Trust Rank (Low to High)
+              </mat-radio-button>
+              <mat-radio-button value="engagement-desc" (click)="preventPropagation($event)">
+                Engagement (High to Low)
+              </mat-radio-button>
+              <mat-radio-button value="engagement-asc" (click)="preventPropagation($event)">
+                Engagement (Low to High)
+              </mat-radio-button>
+            </mat-radio-group>
+          </div>
+        </mat-menu>
 
-        <div class="filter-section" (click)="preventPropagation($event)">
-          <mat-radio-group [value]="sortOption()" (change)="changeSortOption($event.value)">
-            <mat-radio-button value="default" (click)="preventPropagation($event)">
-              Default
-            </mat-radio-button>
-            <mat-radio-button value="reverse" (click)="preventPropagation($event)">
-              Reverse
-            </mat-radio-button>
-            <mat-radio-button value="trust-desc" (click)="preventPropagation($event)">
-              Trust Rank (High to Low)
-            </mat-radio-button>
-            <mat-radio-button value="trust-asc" (click)="preventPropagation($event)">
-              Trust Rank (Low to High)
-            </mat-radio-button>
-            <mat-radio-button value="engagement-desc" (click)="preventPropagation($event)">
-              Engagement (High to Low)
-            </mat-radio-button>
-            <mat-radio-button value="engagement-asc" (click)="preventPropagation($event)">
-              Engagement (Low to High)
-            </mat-radio-button>
-          </mat-radio-group>
-        </div>
-      </mat-menu>
+        <!-- Filters menu -->
+        <button mat-icon-button [matMenuTriggerFor]="filtersMenu" matTooltip="Filter options">
+          <mat-icon>filter_list</mat-icon>
+        </button>
 
-      <!-- Filter button with menu -->
-      <button mat-icon-button [matMenuTriggerFor]="filterMenu" matTooltip="Filter options">
-        <mat-icon [class.active-filters]="hasActiveFilters()">filter_list</mat-icon>
-      </button>
+        <mat-menu #filtersMenu="matMenu" class="filter-menu" [overlapTrigger]="false">
+          <div class="filter-menu-header" (click)="preventPropagation($event)">
+            <span>Filters</span>
+            @if (filters().hasRelayList || filters().hasFollowingList || filters().hasNip05 || filters().favoritesOnly) {
+            <button mat-button (click)="resetFilters()">Reset</button>
+            }
+          </div>
+          <mat-divider></mat-divider>
+          <div class="filter-section" (click)="preventPropagation($event)">
+            <mat-checkbox [checked]="filters().hasRelayList" (change)="toggleFilter('hasRelayList')"
+              (click)="preventPropagation($event)">
+              Has Relay List
+            </mat-checkbox>
+            <mat-checkbox [checked]="filters().hasFollowingList" (change)="toggleFilter('hasFollowingList')"
+              (click)="preventPropagation($event)">
+              Has Following List
+            </mat-checkbox>
+            <mat-checkbox [checked]="filters().hasNip05" (change)="toggleFilter('hasNip05')"
+              (click)="preventPropagation($event)">
+              NIP-05 Verified
+            </mat-checkbox>
+            <mat-checkbox [checked]="filters().favoritesOnly" (change)="toggleFilter('favoritesOnly')"
+              (click)="preventPropagation($event)">
+              Favorites Only
+            </mat-checkbox>
+            <mat-checkbox [checked]="filters().showRank" (change)="toggleFilter('showRank')"
+              (click)="preventPropagation($event)">
+              Show Trust Rank
+            </mat-checkbox>
+          </div>
+        </mat-menu>
 
-      <mat-menu #filterMenu="matMenu" class="filter-menu" [overlapTrigger]="false">
-        <div class="filter-menu-header" (click)="preventPropagation($event)">
-          <span>Filter Options</span>
-          @if (hasActiveFilters()) {
-          <button mat-button color="primary" (click)="resetFilters(); preventPropagation($event)">
-            Reset all
+        <!-- Search input -->
+        <div class="search-container">
+          <mat-icon>search</mat-icon>
+          <input type="text" placeholder="Search people..." [value]="searchTerm()"
+            (input)="updateSearch($any($event.target).value)" />
+          @if (searchTerm()) {
+          <button mat-icon-button (click)="updateSearch('')">
+            <mat-icon>close</mat-icon>
           </button>
           }
         </div>
-        <mat-divider></mat-divider>
-
-        <!-- <div class="filter-section" (click)="preventPropagation($event)">
-          <h3>User Properties</h3>
-          <mat-checkbox [checked]="filters().hasRelayList" (change)="toggleFilter('hasRelayList')"
-            (click)="preventPropagation($event)">
-            Use Relay List
-          </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasFollowingList" (change)="toggleFilter('hasFollowingList')"
-            (click)="preventPropagation($event)">
-            Has Following List
-          </mat-checkbox>
-          <mat-checkbox [checked]="filters().hasNip05" (change)="toggleFilter('hasNip05')"
-            (click)="preventPropagation($event)">
-            Has Verified NIP-05
-          </mat-checkbox>
+        } @else {
+        <!-- Compact header when contact selected -->
+        <div class="compact-header">
+          <h3>People</h3>
+          <button mat-icon-button (click)="closeContactCard()" matTooltip="Close contact card">
+            <mat-icon>close</mat-icon>
+          </button>
         </div>
-
-        <mat-divider></mat-divider> -->
-
-        <div class="filter-section" (click)="preventPropagation($event)">
-          <h3>Display</h3>
-          <mat-checkbox [checked]="filters().favoritesOnly" (change)="toggleFilter('favoritesOnly')"
-            (click)="preventPropagation($event)">
-            Favorites Only
-          </mat-checkbox>
-          <mat-checkbox [checked]="filters().showRank" (change)="toggleFilter('showRank')"
-            (click)="preventPropagation($event)">
-            Show Trust Rank
-          </mat-checkbox>
-        </div>
-      </mat-menu>
-
-      <!-- Search input -->
-      <div class="search-container">
-        <mat-icon>search</mat-icon>
-        <input type="text" placeholder="Search people..." [value]="searchTerm()"
-          (input)="updateSearch($any($event.target).value)" />
-        @if (searchTerm()) {
-        <button mat-icon-button (click)="updateSearch('')">
-          <mat-icon>close</mat-icon>
-        </button>
         }
       </div>
     </div>
-  </div>
 
-  <mat-divider></mat-divider>
+    <mat-divider></mat-divider>
 
-  <!-- Content section -->
-  <div class="people-content">
-    @if (isLoading()) {
-    <div class="loading-container">
-      <mat-spinner diameter="40"></mat-spinner>
-      <p>Loading people...</p>
-    </div>
-    } @else if (error()) {
-    <div class="error-container">
-      <mat-icon color="warn">error</mat-icon>
-      <p>{{ error() }}</p>
-    </div>
-    } @else if (sortedPeople().length === 0) {
-    <div class="empty-container">
-      @if (searchTerm()) {
-      <mat-icon>search_off</mat-icon>
-      <p>No results for "{{ searchTerm() }}"</p>
-      <button mat-button color="primary" (click)="updateSearch('')">Clear search</button>
+    <!-- Content section -->
+    <div class="people-content">
+      @if (isLoading()) {
+      <div class="loading-container">
+        <mat-spinner diameter="40"></mat-spinner>
+        <p>Loading...</p>
+      </div>
+      } @else if (error()) {
+      <div class="error-container">
+        <mat-icon color="warn">error</mat-icon>
+        <p>{{ error() }}</p>
+      </div>
+      } @else if (sortedPeople().length === 0) {
+      <div class="empty-container">
+        @if (searchTerm()) {
+        <mat-icon>search_off</mat-icon>
+        <p>No results</p>
+        <button mat-button color="primary" (click)="updateSearch('')">Clear</button>
+        } @else {
+        <mat-icon>people_outline</mat-icon>
+        <p>No people</p>
+        <button mat-flat-button routerLink="/people/discover">
+          Discover
+        </button>
+        }
+      </div>
       } @else {
-      <mat-icon>people_outline</mat-icon>
-      <p>You aren't following anyone yet</p>
-      <button mat-flat-button routerLink="/people/discover">
-        Discover People
-      </button>
-      }
-    </div>
-    } @else {
-    <!-- Apply different container classes based on viewMode() -->
-    <div class="people-container" [ngClass]="{
-            'large-grid': viewMode() === 'large' || viewMode() === 'grid',
-            'medium-grid': viewMode() === 'medium',
-            'small-grid': viewMode() === 'small',
-            'details-list': viewMode() === 'details' || viewMode() === 'list',
-          }">
-      @for (pubkey of visiblePeople(); track pubkey) {
-      <app-user-profile [info]="followingService.getProfile(pubkey)?.info ?? undefined"
-        [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" [pubkey]="pubkey" [view]="$any(viewMode())"
-        [hostWidthAuto]="viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
-        [showRank]="filters().showRank"></app-user-profile>
-      }
-    </div>
+      <!-- Apply different container classes based on viewMode() and compact state -->
+      <div class="people-container" [ngClass]="{
+              'large-grid': viewMode() === 'large' || viewMode() === 'grid',
+              'medium-grid': viewMode() === 'medium',
+              'small-grid': viewMode() === 'small',
+              'details-list': viewMode() === 'details' || viewMode() === 'list',
+              'compact-avatars': selectedContactPubkey()
+            }">
+        @for (pubkey of visiblePeople(); track pubkey) {
+        <div 
+          class="person-item" 
+          [class.selected]="selectedContactPubkey() === pubkey"
+          (click)="selectContact(pubkey)"
+          (keydown.enter)="selectContact(pubkey)"
+          (keydown.space)="selectContact(pubkey); $event.preventDefault()"
+          tabindex="0"
+          role="button"
+          [attr.aria-label]="'View contact details for ' + (followingService.getProfile(pubkey)?.info?.['displayName'] || 'user')">
+          <app-user-profile 
+            [info]="followingService.getProfile(pubkey)?.info ?? undefined"
+            [trust]="followingService.getProfile(pubkey)?.trust ?? undefined" 
+            [pubkey]="pubkey" 
+            [view]="selectedContactPubkey() ? 'avatar' : $any(viewMode())"
+            [hostWidthAuto]="viewMode() === 'large' || viewMode() === 'medium' || viewMode() === 'small'"
+            [showRank]="filters().showRank && !selectedContactPubkey()"
+            [disableLink]="true">
+          </app-user-profile>
+        </div>
+        }
+      </div>
 
-    <!-- Load More button -->
-    @if (hasMorePeople()) {
-    <div class="load-more-container">
-      <button mat-button (click)="loadMore()">
-        <mat-icon>expand_more</mat-icon>
-        Load More ({{remainingCount()}} remaining)
-      </button>
+      <!-- Load More button -->
+      @if (hasMorePeople() && !selectedContactPubkey()) {
+      <div class="load-more-container">
+        <button mat-button (click)="loadMore()">
+          <mat-icon>expand_more</mat-icon>
+          Load More ({{remainingCount()}} remaining)
+        </button>
+      </div>
+      }
+      }
     </div>
-    }
-    }
   </div>
+
+  <!-- Contact Card Panel -->
+  @if (selectedContactPubkey(); as contactPubkey) {
+  <div class="contact-panel">
+    <app-contact-card [pubkeyParam]="contactPubkey"></app-contact-card>
+  </div>
+  }
 </div>

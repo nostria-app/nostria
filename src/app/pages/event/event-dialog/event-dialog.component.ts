@@ -34,12 +34,6 @@ export interface EventDialogData {
   styles: [`
     :host {
       display: block;
-      height: 100%;
-    }
-
-    .event-dialog-content {
-      height: 100%;
-      overflow-y: auto;
     }
   `],
 })

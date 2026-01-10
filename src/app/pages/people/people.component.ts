@@ -16,6 +16,7 @@ import { debounceTime } from 'rxjs/operators';
 import { Subject } from 'rxjs';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { Router } from '@angular/router';
+import { ContactCardComponent } from './contact-card/contact-card.component';
 import { AccountStateService } from '../../services/account-state.service';
 import { ApplicationService } from '../../services/application.service';
 import { LocalStorageService } from '../../services/local-storage.service';
@@ -32,6 +33,7 @@ import { FeedsCollectionService } from '../../services/feeds-collection.service'
 import { AccountLocalStateService, PeopleFilters } from '../../services/account-local-state.service';
 import { FollowingService } from '../../services/following.service';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
+import { NostrRecord } from '../../interfaces';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
@@ -55,6 +57,7 @@ type SortOption = 'default' | 'reverse' | 'engagement-asc' | 'engagement-desc' |
     MatRadioModule,
     RouterModule,
     UserProfileComponent,
+    ContactCardComponent,
     MatMenuModule
   ],
   templateUrl: './people.component.html',
@@ -79,6 +82,9 @@ export class PeopleComponent {
   // Search functionality
   searchTerm = signal<string>('');
   private searchChanged = new Subject<string>();
+
+  // Selected contact for viewing in contact card panel
+  selectedContactPubkey = signal<string | null>(null);
 
   // View mode
   viewMode = signal<string>('medium');
@@ -367,6 +373,20 @@ export class PeopleComponent {
 
   viewProfile(pubkey: string) {
     this.router.navigate(['/p', pubkey]);
+  }
+
+  /**
+   * Select a contact to view in the contact card panel
+   */
+  selectContact(pubkey: string) {
+    this.selectedContactPubkey.set(pubkey);
+  }
+
+  /**
+   * Close the contact card panel
+   */
+  closeContactCard() {
+    this.selectedContactPubkey.set(null);
   }
 
   /**

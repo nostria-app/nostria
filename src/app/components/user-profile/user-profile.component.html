@@ -21,9 +21,9 @@
     }
 
     <!-- Avatar section - single image element -->
-    @if (view() !== 'name' && view() !== 'tiny') {
+    @if (view() !== 'name' && view() !== 'tiny' && view() !== 'avatar') {
     <div class="user-profile-avatar-container">
-      <a [routerLink]="disableLink() ? null : ['/p', npubValue()]" class="user-profile-avatar"
+      <a [routerLink]="disableLink() ? null : [routePrefix(), npubValue()]" class="user-profile-avatar"
         [class.has-custom-tooltip]="view() === 'large' || view() === 'medium' || view() === 'small'"
         [attr.data-tooltip]="getTooltipContent()" (touchstart)="showTooltipOnTouch($event)" #avatarElement
         (mouseenter)="onMouseEnter($event, avatarElement)" (mouseleave)="onMouseLeave()"
@@ -71,14 +71,14 @@
     ) {
     <div class="user-profile-content">
       <!-- Name section -->
-      <a [routerLink]="['/p', npubValue()]" class="user-profile-name-link" #nameElement
+      <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-name-link" #nameElement
         (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()">
         <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
       </a>
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details' || view() === 'grid') {
-      <a [routerLink]="['/p', npubValue()]" class="user-profile-npub-link" #npubElement
+      <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-npub-link" #npubElement
         (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()">
         <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       </a>
@@ -105,7 +105,7 @@
 
     @if (view() === 'name') {
     <div class="user-profile-content name-view">
-      <a [routerLink]="['/p', npubValue()]" class="user-profile-avatar">
+      <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-avatar">
         <div class="user-profile-avatar name-avatar">
           @if (isLoading()) {
           <mat-spinner [diameter]="24" color="primary"></mat-spinner>
@@ -135,7 +135,7 @@
     }
 
     @if (view() === 'tiny') {
-    <a [routerLink]="['/p', npubValue()]" class="user-profile-content tiny-view">
+    <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-content tiny-view">
       <div class="user-profile-avatar name-avatar">
         @if (isLoading()) {
         <mat-spinner [diameter]="24" color="primary"></mat-spinner>
@@ -160,6 +160,31 @@
       <span class="user-profile-name name-label">
         <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
       </span>
+    </a>
+    }
+
+    @if (view() === 'avatar') {
+    <a [routerLink]="disableLink() ? null : [routePrefix(), npubValue()]" class="user-profile-avatar avatar-only"
+      [matTooltip]="getTooltipContent()" (click)="disableLink() && $event.preventDefault()">
+      @if (isLoading()) {
+      <mat-spinner [diameter]="48" color="primary"></mat-spinner>
+      } @else if (profile()?.data?.picture && !imageLoadError()) {
+      @if (settingsService.settings().imageCacheEnabled) {
+      <img [src]="getOptimizedImageUrl(profile().data.picture)" (error)="onImageLoadError()" alt="User Avatar"
+        class="user-avatar" loading="lazy" />
+      } @else {
+      <img [src]="profile().data.picture" (error)="onImageLoadError()" alt="User Avatar" class="user-avatar"
+        loading="lazy" />
+      }
+      } @else {
+      <mat-icon [ngClass]="[
+              'default-user-avatar',
+              isProfileNotFound() ? 'not-found-avatar' : '',
+              imageLoadError() ? 'error-avatar' : '',
+            ]" [style.font-size]="'48px'" [style.height]="'48px'" [style.width]="'48px'">
+        {{ isProfileNotFound() ? 'no_accounts' : 'account_circle' }}
+      </mat-icon>
+      }
     </a>
     }
 

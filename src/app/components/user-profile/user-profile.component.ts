@@ -106,6 +106,11 @@ export class UserProfileComponent implements AfterViewInit, OnDestroy {
    */
   disableLink = input<boolean>(false);
 
+  /**
+   * Custom route prefix to use instead of '/p'. For example, '/people' for contact cards.
+   */
+  routePrefix = input<string>('/p');
+
   // Trust rank - computed from trust input
   trustRank = computed(() => this.trust()?.rank);
   trustEnabled = computed(() => this.trustService.isEnabled());
