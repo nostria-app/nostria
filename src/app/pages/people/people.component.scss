@@ -686,11 +686,6 @@
       font-size: 12px;
     }
   }
-
-  // Hide on very small screens or when sidebar is compact
-  @media (max-width: 600px) {
-    display: none;
-  }
 }
 
 .people-sidebar.compact .alphabet-nav {

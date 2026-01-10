@@ -165,9 +165,9 @@ export class PeopleComponent implements OnDestroy {
       // Apply search if applicable
       let profiles = search
         ? setProfiles.filter(p => {
-          const name = (p.info?.['name'] as string)?.toLowerCase?.() || '';
-          const displayName = (p.info?.['display_name'] as string)?.toLowerCase?.() || '';
-          const nip05 = (p.info?.['nip05'] as string)?.toLowerCase?.() || '';
+          const name = (p.profile?.data?.['name'] as string)?.toLowerCase?.() || '';
+          const displayName = (p.profile?.data?.['display_name'] as string)?.toLowerCase?.() || '';
+          const nip05 = (p.profile?.data?.['nip05'] as string)?.toLowerCase?.() || '';
           const searchLower = search.toLowerCase();
           return name.includes(searchLower) ||
             displayName.includes(searchLower) ||
@@ -490,7 +490,7 @@ export class PeopleComponent implements OnDestroy {
 
     const profiles = this.filteredAndSortedProfiles();
     const index = profiles.findIndex(p => {
-      const name = ((p.info?.['display_name'] as string) || (p.info?.['name'] as string) || '').trim();
+      const name = ((p.profile?.data?.['display_name'] as string) || (p.profile?.data?.['name'] as string) || '').trim();
       if (!name) return false;
 
       const firstChar = name.charAt(0).toUpperCase();
@@ -500,19 +500,32 @@ export class PeopleComponent implements OnDestroy {
       return firstChar === letter;
     });
 
-    if (index !== -1 && index < this.visiblePeople().length) {
-      const pubkey = this.visiblePeople()[index];
-      const container = this.peopleContent();
-      if (!container) return;
-
-      const element = container.nativeElement.querySelector(`[data-pubkey="${pubkey}"]`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (index !== -1) {
+      // Ensure we have loaded enough items to reach this index
+      if (index >= this.displayLimit()) {
+        this.displayLimit.set(Math.min(index + 50, this.sortedPeople().length));
+        // Wait for the DOM to update
+        setTimeout(() => this.scrollToLetterElement(index), 100);
+      } else {
+        this.scrollToLetterElement(index);
       }
-    } else if (index >= this.visiblePeople().length) {
-      // Load more items to reach this letter
-      this.displayLimit.set(Math.min(index + 50, this.sortedPeople().length));
-      setTimeout(() => this.scrollToLetter(letter), 100);
+    }
+  }
+
+  /**
+   * Helper to scroll to a specific element by index
+   */
+  private scrollToLetterElement(index: number) {
+    const sortedPeople = this.sortedPeople();
+    if (index < 0 || index >= sortedPeople.length) return;
+
+    const pubkey = sortedPeople[index];
+    const container = this.peopleContent();
+    if (!container) return;
+
+    const element = container.nativeElement.querySelector(`[data-pubkey="${pubkey}"]`);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 
