@@ -27,6 +27,8 @@
   flex-direction: column;
   transition: all 0.3s ease;
   min-width: 0;
+  height: 100vh;
+  overflow: hidden;
 
   &.compact {
     max-width: 80px;

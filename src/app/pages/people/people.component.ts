@@ -34,6 +34,7 @@ import { AccountLocalStateService, PeopleFilters } from '../../services/account-
 import { FollowingService } from '../../services/following.service';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { NostrRecord } from '../../interfaces';
+import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
@@ -78,6 +79,7 @@ export class PeopleComponent {
   private feedsCollectionService = inject(FeedsCollectionService);
   readonly followingService = inject(FollowingService);
   private followSetsService = inject(FollowSetsService);
+  private hoverCardService = inject(ProfileHoverCardService);
 
   // Search functionality
   searchTerm = signal<string>('');
@@ -379,6 +381,8 @@ export class PeopleComponent {
    * Select a contact to view in the contact card panel
    */
   selectContact(pubkey: string) {
+    // Close any open hover card to prevent interference
+    this.hoverCardService.closeHoverCard();
     this.selectedContactPubkey.set(pubkey);
   }
 
@@ -386,6 +390,7 @@ export class PeopleComponent {
    * Close the contact card panel
    */
   closeContactCard() {
+    this.hoverCardService.closeHoverCard();
     this.selectedContactPubkey.set(null);
   }
 

@@ -7,6 +7,7 @@ import {
   inject,
   untracked,
   ViewEncapsulation,
+  HostListener,
 } from '@angular/core';
 
 import { MatCardModule } from '@angular/material/card';
@@ -33,6 +34,7 @@ import { FavoritesService } from '../../../services/favorites.service';
 import { PublishService } from '../../../services/publish.service';
 import { NostrService } from '../../../services/nostr.service';
 import { FollowSetsService } from '../../../services/follow-sets.service';
+import { ProfileHoverCardService } from '../../../services/profile-hover-card.service';
 import { TextInputDialogComponent, TextInputDialogData } from '../../text-input-dialog/text-input-dialog.component';
 import { firstValueFrom } from 'rxjs';
 
@@ -83,6 +85,7 @@ export class ProfileHoverCardComponent {
   private nostrService = inject(NostrService);
   private snackBar = inject(MatSnackBar);
   private followSetsService = inject(FollowSetsService);
+  private hoverCardService = inject(ProfileHoverCardService);
 
   pubkey = input.required<string>();
   profile = signal<ProfileData | null>(null);
@@ -472,5 +475,14 @@ export class ProfileHoverCardComponent {
     if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
     if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
     return `${Math.floor(diff / 604800)}w ago`;
+  }
+
+  @HostListener('click', ['$event'])
+  onCardClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement;
+    // Close hover card when clicking on any link or button
+    if (target.tagName === 'A' || target.closest('a') || target.tagName === 'BUTTON' || target.closest('button')) {
+      setTimeout(() => this.hoverCardService.closeHoverCard(), 100);
+    }
   }
 }

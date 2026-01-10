@@ -136,7 +136,20 @@ export class ContactCardComponent {
       // Convert hex to npub
       try {
         const npub = nip19.npubEncode(pubkey);
-        this.router.navigate(['/profile', npub]);
+        this.router.navigate(['/p', npub]);
+      } catch (error) {
+        this.logger.error('Error converting pubkey to npub:', error);
+      }
+    }
+  }
+
+  openMessage(): void {
+    const pubkey = this.pubkey();
+    if (pubkey) {
+      // Convert hex to npub
+      try {
+        const npub = nip19.npubEncode(pubkey);
+        this.router.navigate(['/messages', npub]);
       } catch (error) {
         this.logger.error('Error converting pubkey to npub:', error);
       }

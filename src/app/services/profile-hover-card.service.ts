@@ -357,7 +357,7 @@ export class ProfileHoverCardService implements OnDestroy {
   /**
    * Closes and cleans up the hover card
    */
-  private closeHoverCard(): void {
+  closeHoverCard(): void {
     if (this.hoverTimeout) {
       window.clearTimeout(this.hoverTimeout);
       this.hoverTimeout = undefined;
