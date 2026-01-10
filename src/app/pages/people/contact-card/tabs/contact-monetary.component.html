@@ -1,0 +1,119 @@
+<div class="contact-monetary-container">
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+    <p>Loading payment history...</p>
+  </div>
+  } @else {
+  <!-- Summary Stats -->
+  <div class="stats-section">
+    <div class="stat-card sent">
+      <div class="stat-header">
+        <mat-icon>trending_up</mat-icon>
+        <span class="stat-label">You Sent</span>
+      </div>
+      <div class="stat-value">
+        <mat-icon class="bolt-icon">bolt</mat-icon>
+        <span>{{ formatAmount(totalSent()) }} sats</span>
+      </div>
+    </div>
+
+    <div class="stat-card received">
+      <div class="stat-header">
+        <mat-icon>trending_down</mat-icon>
+        <span class="stat-label">You Received</span>
+      </div>
+      <div class="stat-value">
+        <mat-icon class="bolt-icon">bolt</mat-icon>
+        <span>{{ formatAmount(totalReceived()) }} sats</span>
+      </div>
+    </div>
+
+    <div class="stat-card balance" [class.positive]="balance() > 0" [class.negative]="balance() < 0">
+      <div class="stat-header">
+        <mat-icon>account_balance</mat-icon>
+        <span class="stat-label">Balance</span>
+      </div>
+      <div class="stat-value">
+        <mat-icon class="bolt-icon">bolt</mat-icon>
+        <span>{{ balance() > 0 ? '+' : '' }}{{ formatAmount(balance()) }} sats</span>
+      </div>
+      <div class="balance-description">
+        @if (balance() > 0) {
+        <span>They owe you</span>
+        } @else if (balance() < 0) { <span>You owe them</span>
+          } @else {
+          <span>Balanced</span>
+          }
+      </div>
+    </div>
+  </div>
+
+  <!-- Payment History -->
+  <div class="history-section">
+    <h3 class="section-title">
+      <mat-icon>history</mat-icon>
+      Payment History
+    </h3>
+
+    @if (allZaps().length > 0) {
+    <div class="zaps-list">
+      @for (zap of allZaps(); track zap.zapReceipt.id) {
+      <div class="zap-entry" [class.sent]="zap.type === 'sent'" [class.received]="zap.type === 'received'">
+        <div class="zap-header">
+          <div class="zap-type">
+            <mat-icon class="type-icon">{{ zap.type === 'sent' ? 'trending_up' : 'trending_down' }}</mat-icon>
+            <span class="type-label">{{ zap.type === 'sent' ? 'Sent' : 'Received' }}</span>
+          </div>
+          <div class="zap-info">
+            <div class="zap-amount">
+              <mat-icon class="bolt-icon">bolt</mat-icon>
+              <span class="amount">{{ formatAmount(zap.amount) }} sats</span>
+            </div>
+            <div class="zap-time" [matTooltip]="zap.timestamp | timestamp: 'medium'">
+              {{ zap.timestamp | ago }}
+            </div>
+            <button mat-icon-button [matMenuTriggerFor]="zapMenu" class="zap-menu-button" matTooltip="More options">
+              <mat-icon>more_vert</mat-icon>
+            </button>
+            <mat-menu #zapMenu="matMenu">
+              <button mat-menu-item (click)="copyEventData(zap)">
+                <mat-icon>content_copy</mat-icon>
+                <span>Copy Event Data</span>
+              </button>
+              <button mat-menu-item (click)="layout.publishEvent(zap.zapReceipt)">
+                <mat-icon>publish</mat-icon>
+                <span>Publish Event</span>
+              </button>
+            </mat-menu>
+          </div>
+        </div>
+
+        @if (zap.comment) {
+        <div class="zap-comment">
+          <mat-icon class="comment-icon">format_quote</mat-icon>
+          <span class="comment-text">{{ zap.comment }}</span>
+        </div>
+        }
+
+        @if (zap.eventId) {
+        <div class="zap-context">
+          <mat-icon class="context-icon">note</mat-icon>
+          <a [routerLink]="['/e', zap.eventId]" class="context-link">
+            For event {{ zap.eventId.substring(0, 8) }}...
+          </a>
+        </div>
+        }
+      </div>
+      }
+    </div>
+    } @else {
+    <div class="empty-state">
+      <mat-icon class="empty-icon">bolt_off</mat-icon>
+      <h3>No payment history</h3>
+      <p>You haven't exchanged any zaps with this contact yet.</p>
+    </div>
+    }
+  </div>
+  }
+</div>

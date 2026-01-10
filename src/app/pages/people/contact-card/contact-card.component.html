@@ -68,6 +68,15 @@
       </ng-template>
       <app-contact-interactions [pubkey]="pubkey()"></app-contact-interactions>
     </mat-tab>
+
+    <!-- Monetary Tab -->
+    <mat-tab>
+      <ng-template mat-tab-label>
+        <mat-icon>bolt</mat-icon>
+        <span>Payments</span>
+      </ng-template>
+      <app-contact-monetary [pubkey]="pubkey()"></app-contact-monetary>
+    </mat-tab>
   </mat-tab-group>
   } @else {
   <div class="error-container">
