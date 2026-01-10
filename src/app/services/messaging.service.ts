@@ -206,12 +206,12 @@ export class MessagingService implements NostriaService {
     // Use pubkey directly as chatId - messages are merged regardless of encryption type
     const chatId = pubkey;
 
-    // Check if this message already exists in any chat to prevent duplicates
-    for (const existingChat of currentMap.values()) {
-      if (existingChat.messages.has(message.id)) {
-        // Message already exists, don't add it again
-        return;
-      }
+    // Check if this message already exists in the specific chat to prevent duplicates
+    const existingChat = currentMap.get(chatId);
+    if (existingChat && existingChat.messages.has(message.id)) {
+      // Message already exists in this chat, don't add it again
+      this.logger.debug(`Message ${message.id} already exists in chat ${chatId}, skipping to prevent duplicate`);
+      return;
     }
 
     // Create a new Map to ensure signal reactivity
@@ -665,6 +665,12 @@ export class MessagingService implements NostriaService {
         }
 
         if (!targetPubkey || targetPubkey === myPubkey) return;
+
+        // Check if message already exists to prevent duplicates
+        if (this.hasMessage(targetPubkey, unwrappedMessage.id)) {
+          this.logger.debug(`NIP-44 message ${unwrappedMessage.id} already exists, skipping`);
+          return;
+        }
 
         const directMessage: DirectMessage = {
           id: unwrappedMessage.id,
