@@ -454,16 +454,16 @@ export class FollowingService {
 
       case 'name-asc':
         return sorted.sort((a, b) => {
-          const aName = ((a.info?.['display_name'] as string) || (a.info?.['name'] as string) || a.pubkey).toLowerCase();
-          const bName = ((b.info?.['display_name'] as string) || (b.info?.['name'] as string) || b.pubkey).toLowerCase();
-          return aName.localeCompare(bName);
+          const aName = (a.profile?.data?.display_name as string) || (a.profile?.data?.name as string) || a.pubkey;
+          const bName = (b.profile?.data?.display_name as string) || (b.profile?.data?.name as string) || b.pubkey;
+          return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         });
 
       case 'name-desc':
         return sorted.sort((a, b) => {
-          const aName = ((a.info?.['display_name'] as string) || (a.info?.['name'] as string) || a.pubkey).toLowerCase();
-          const bName = ((b.info?.['display_name'] as string) || (b.info?.['name'] as string) || b.pubkey).toLowerCase();
-          return bName.localeCompare(aName);
+          const aName = (a.profile?.data?.display_name as string) || (a.profile?.data?.name as string) || a.pubkey;
+          const bName = (b.profile?.data?.display_name as string) || (b.profile?.data?.name as string) || b.pubkey;
+          return bName.localeCompare(aName, undefined, { sensitivity: 'base' });
         });
 
       case 'engagement-asc':
