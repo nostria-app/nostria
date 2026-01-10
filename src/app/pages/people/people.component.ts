@@ -105,7 +105,10 @@ export class PeopleComponent implements OnDestroy {
     const letters = new Set<string>();
 
     profiles.forEach(p => {
-      const name = ((p.profile?.data?.['display_name'] as string) || (p.profile?.data?.['name'] as string) || '').trim();
+      const displayName = ((p.profile?.data?.['display_name'] as string) || '').trim();
+      const nameField = ((p.profile?.data?.['name'] as string) || '').trim();
+      const name = displayName || nameField;
+
       if (name) {
         const firstChar = name.charAt(0).toUpperCase();
         if (/[A-Z]/.test(firstChar)) {
@@ -497,7 +500,10 @@ export class PeopleComponent implements OnDestroy {
 
     const profiles = this.filteredAndSortedProfiles();
     const index = profiles.findIndex(p => {
-      const name = ((p.profile?.data?.display_name as string) || (p.profile?.data?.name as string) || '').trim();
+      const displayName = ((p.profile?.data?.display_name as string) || '').trim();
+      const nameField = ((p.profile?.data?.name as string) || '').trim();
+      const name = displayName || nameField;
+
       if (!name) return false;
 
       const firstChar = name.charAt(0).toUpperCase();

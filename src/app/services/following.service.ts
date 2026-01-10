@@ -454,15 +454,27 @@ export class FollowingService {
 
       case 'name-asc':
         return sorted.sort((a, b) => {
-          const aName = (a.profile?.data?.display_name as string) || (a.profile?.data?.name as string) || a.pubkey;
-          const bName = (b.profile?.data?.display_name as string) || (b.profile?.data?.name as string) || b.pubkey;
+          const aDisplayName = ((a.profile?.data?.display_name as string) || '').trim();
+          const aNameField = ((a.profile?.data?.name as string) || '').trim();
+          const aName = aDisplayName || aNameField || a.pubkey;
+
+          const bDisplayName = ((b.profile?.data?.display_name as string) || '').trim();
+          const bNameField = ((b.profile?.data?.name as string) || '').trim();
+          const bName = bDisplayName || bNameField || b.pubkey;
+
           return aName.localeCompare(bName, undefined, { sensitivity: 'base' });
         });
 
       case 'name-desc':
         return sorted.sort((a, b) => {
-          const aName = (a.profile?.data?.display_name as string) || (a.profile?.data?.name as string) || a.pubkey;
-          const bName = (b.profile?.data?.display_name as string) || (b.profile?.data?.name as string) || b.pubkey;
+          const aDisplayName = ((a.profile?.data?.display_name as string) || '').trim();
+          const aNameField = ((a.profile?.data?.name as string) || '').trim();
+          const aName = aDisplayName || aNameField || a.pubkey;
+
+          const bDisplayName = ((b.profile?.data?.display_name as string) || '').trim();
+          const bNameField = ((b.profile?.data?.name as string) || '').trim();
+          const bName = bDisplayName || bNameField || b.pubkey;
+
           return bName.localeCompare(aName, undefined, { sensitivity: 'base' });
         });
 
