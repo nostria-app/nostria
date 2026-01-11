@@ -85,8 +85,14 @@
     } @else if (selectedCategory() === 'articles') {
     @for (bookmark of bookmarkService.bookmarkArticles(); track bookmark.id) {
     @let bm = bookmarkService.parseArticleId(bookmark.id);
-    <app-article [pubkey]="bm.id" [kind]="bm.kind" [slug]="bm.slug" mode="card" [showAuthor]="true"
-      [showMetadata]="true" [showActions]="false" [clickable]="true"></app-article>
+    <div class="bookmark-article-wrapper">
+      <app-article [pubkey]="bm.id" [kind]="bm.kind" [slug]="bm.slug" mode="card" [showAuthor]="true"
+        [showMetadata]="true" [showActions]="false" [clickable]="true"></app-article>
+      <button mat-icon-button class="remove-bookmark-btn" (click)="removeArticleBookmark(bookmark.id, $event)"
+        matTooltip="Remove from this list">
+        <mat-icon>delete</mat-icon>
+      </button>
+    </div>
     }
     } @else if (selectedCategory() === 'websites') {
     @for (bookmark of bookmarkService.bookmarkUrls(); track bookmark.id) {

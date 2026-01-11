@@ -253,6 +253,25 @@ export class BookmarksComponent implements OnInit {
     }
   }
 
+  async removeArticleBookmark(articleId: string, event: Event): Promise<void> {
+    event.stopPropagation();
+
+    this.loading.set(true);
+    try {
+      await this.bookmarkService.addBookmark(articleId, 'a'); // Toggle removes it from current list
+      this.snackBar.open('Removed from bookmark list', 'Close', {
+        duration: 2000,
+      });
+    } catch (error) {
+      this.logger.error('Error removing bookmark:', error);
+      this.snackBar.open('Failed to remove bookmark', 'Close', {
+        duration: 3000,
+      });
+    } finally {
+      this.loading.set(false);
+    }
+  }
+
   openBookmark(bookmark: Bookmark): void {
     if (bookmark.type === 'r') {
       window.open(bookmark.url, '_blank');
