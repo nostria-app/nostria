@@ -13,7 +13,7 @@ import { RouterModule, ActivatedRoute } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { LoggerService } from '../../services/logger.service';
 import { debounceTime } from 'rxjs/operators';
-import { Subject } from 'rxjs';
+import { Subject, firstValueFrom } from 'rxjs';
 import { UserProfileComponent } from '../../components/user-profile/user-profile.component';
 import { Router } from '@angular/router';
 import { ContactCardComponent } from './contact-card/contact-card.component';
@@ -23,6 +23,7 @@ import { LocalStorageService } from '../../services/local-storage.service';
 import { FavoritesService } from '../../services/favorites.service';
 import { MatDialog } from '@angular/material/dialog';
 import { AddPersonDialogComponent } from './add-person-dialog.component';
+import { CreateListDialogComponent, CreateListDialogResult } from '../../components/create-list-dialog/create-list-dialog.component';
 import {
   Interest,
   SuggestedProfile,
@@ -669,6 +670,39 @@ export class PeopleComponent implements OnDestroy {
         // FollowingService will automatically reload when following list changes
       }
     });
+  }
+
+  async createNewList(): Promise<void> {
+    const dialogRef = this.dialog.open(CreateListDialogComponent, {
+      data: {
+        initialPrivate: false,
+      },
+      width: '450px',
+    });
+
+    const result: CreateListDialogResult | null = await firstValueFrom(dialogRef.afterClosed());
+
+    if (!result || !result.title.trim()) {
+      return;
+    }
+
+    try {
+      // Create new list with empty array (will be encrypted if private)
+      const newSet = await this.followSetsService.createFollowSet(
+        result.title.trim(),
+        [], // Empty array - will be encrypted if isPrivate is true
+        result.isPrivate
+      );
+
+      if (newSet) {
+        this.notificationService.notify(`List "${newSet.title}" created successfully`);
+      } else {
+        this.notificationService.notify('Failed to create list');
+      }
+    } catch (error) {
+      this.logger.error('Failed to create list:', error);
+      this.notificationService.notify('Failed to create list');
+    }
   }
 
   // Followset methods - moved from FeedsComponent

@@ -28,9 +28,9 @@
           </button>
           }
           <mat-divider></mat-divider>
-          <button mat-menu-item routerLink="/lists">
-            <mat-icon>settings</mat-icon>
-            <span>Manage Lists</span>
+          <button mat-menu-item (click)="createNewList()">
+            <mat-icon>add_circle</mat-icon>
+            <span>Create new list</span>
           </button>
         </mat-menu>
         }
