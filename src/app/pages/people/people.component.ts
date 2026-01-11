@@ -34,6 +34,7 @@ import { AccountLocalStateService, PeopleFilters } from '../../services/account-
 import { FollowingService, FollowingProfile } from '../../services/following.service';
 import { FollowSetsService, FollowSet } from '../../services/follow-sets.service';
 import { ProfileHoverCardService } from '../../services/profile-hover-card.service';
+import { UtilitiesService } from '../../services/utilities.service';
 
 // Re-export for local use
 type FilterOptions = PeopleFilters;
@@ -79,6 +80,7 @@ export class PeopleComponent implements OnDestroy {
   readonly followingService = inject(FollowingService);
   private followSetsService = inject(FollowSetsService);
   private hoverCardService = inject(ProfileHoverCardService);
+  private utilities = inject(UtilitiesService);
 
   // Search functionality
   searchTerm = signal<string>('');
@@ -361,6 +363,33 @@ export class PeopleComponent implements OnDestroy {
       }
     });
 
+    // Watch for 'contact' query parameter and open contact card
+    effect(() => {
+      const params = this.queryParams();
+      const contactNpub = params?.['contact'];
+
+      if (contactNpub && typeof contactNpub === 'string') {
+        try {
+          const decoded = this.utilities.getPubkeyFromNpub(contactNpub);
+          if (decoded && this.selectedContactPubkey() !== decoded) {
+            this.selectedContactPubkey.set(decoded);
+            setTimeout(() => this.scrollToSelectedContact(), 100);
+          }
+        } catch (e) {
+          this.logger.error('Invalid contact npub in URL:', contactNpub);
+        }
+      } else if (!contactNpub && this.selectedContactPubkey()) {
+        // Clear selection when no contact parameter (unless we just set it)
+        // Check if we're in the middle of a selectContact call by checking if the URL will be updated
+        setTimeout(() => {
+          const currentParams = this.queryParams();
+          if (!currentParams?.['contact']) {
+            this.selectedContactPubkey.set(null);
+          }
+        }, 50);
+      }
+    });
+
     // Setup infinite scroll when sentinel becomes available
     effect(() => {
       const sentinel = this.scrollSentinel();
@@ -467,6 +496,14 @@ export class PeopleComponent implements OnDestroy {
     this.hoverCardService.closeHoverCard();
     this.selectedContactPubkey.set(pubkey);
 
+    // Update URL with contact parameter
+    const npub = this.utilities.getNpubFromPubkey(pubkey);
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { contact: npub },
+      queryParamsHandling: 'merge'
+    });
+
     // Auto-scroll to selected contact in compact mode
     setTimeout(() => this.scrollToSelectedContact(), 100);
   }
@@ -543,6 +580,13 @@ export class PeopleComponent implements OnDestroy {
   closeContactCard() {
     this.hoverCardService.closeHoverCard();
     this.selectedContactPubkey.set(null);
+
+    // Remove contact parameter from URL
+    this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { contact: null },
+      queryParamsHandling: 'merge'
+    });
   }
 
   /**

@@ -251,6 +251,13 @@
     }
   }
 
+  .user-profile-name-text {
+    color: inherit;
+    display: inline-block;
+    max-width: 100%;
+    cursor: pointer;
+  }
+
   .user-profile-npub-link {
     text-decoration: none;
     color: inherit;
