@@ -12,18 +12,47 @@
   </div>
   }
 
+  <!-- My Emojis (kind 10030) -->
+  @if (preferredEmojis().length > 0) {
+  <mat-card class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <mat-icon>favorite</mat-icon>
+        <h2 i18n="@@emoji-sets.my-emojis.title">My Emojis</h2>
+      </div>
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-content">
+      <div class="emoji-grid">
+        @for (emoji of preferredEmojis(); track $index) {
+        <span class="emoji-item">{{ emoji }}</span>
+        }
+      </div>
+    </div>
+  </mat-card>
+  }
+
+  <!-- Emoji Collections (kind 30030) -->
   <mat-card class="section-card">
     <div class="section-header">
       <div class="section-title">
         <mat-icon>emoji_emotions</mat-icon>
         <h2 i18n="@@emoji-sets.sets.title">Emoji Collections</h2>
       </div>
-      @if (!isEditingSet()) {
-      <button mat-flat-button color="primary" (click)="startCreatingSet()" i18n="@@emoji-sets.create">
-        <mat-icon>add</mat-icon>
-        Create Collection
-      </button>
-      }
+      <div class="header-actions">
+        @if (!isEditingSet()) {
+        <button mat-button (click)="findEmojis()" i18n="@@emoji-sets.find">
+          <mat-icon>search</mat-icon>
+          Find Emojis
+        </button>
+        <button mat-flat-button (click)="startCreatingSet()" i18n="@@emoji-sets.create">
+          <mat-icon>add</mat-icon>
+          Create Collection
+        </button>
+        }
+      </div>
     </div>
 
     <mat-divider></mat-divider>

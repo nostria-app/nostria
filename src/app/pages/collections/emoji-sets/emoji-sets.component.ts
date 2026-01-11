@@ -1,5 +1,6 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
 import { MatCardModule } from '@angular/material/card';
@@ -40,10 +41,12 @@ export class EmojiSetsComponent implements OnInit {
   private logger = inject(LoggerService);
   private snackBar = inject(MatSnackBar);
   private dialog = inject(MatDialog);
+  private router = inject(Router);
 
   // State
   isLoading = signal(false);
   emojiSets = signal<EmojiSet[]>([]);
+  preferredEmojis = signal<string[]>([]);
 
   // Editing state
   isEditingSet = signal(false);
@@ -64,11 +67,16 @@ export class EmojiSetsComponent implements OnInit {
         return;
       }
 
+      // Load emoji sets (kind 30030)
       const sets = await this.collectionSetsService.getEmojiSets(pubkey);
       this.emojiSets.set(sets);
+
+      // Load preferred emojis (kind 10030)
+      const preferred = await this.collectionSetsService.getPreferredEmojis(pubkey);
+      this.preferredEmojis.set(preferred);
     } catch (error) {
-      this.logger.error('Error loading emoji sets:', error);
-      this.snackBar.open('Error loading emoji sets', 'Close', { duration: 3000 });
+      this.logger.error('Error loading emoji data:', error);
+      this.snackBar.open('Error loading emoji data', 'Close', { duration: 3000 });
     } finally {
       this.isLoading.set(false);
     }
@@ -169,5 +177,11 @@ export class EmojiSetsComponent implements OnInit {
     } finally {
       this.isLoading.set(false);
     }
+  }
+
+  findEmojis(): void {
+    this.router.navigate(['/search'], {
+      queryParams: { q: 'kind:30030' }
+    });
   }
 }
