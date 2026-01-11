@@ -449,6 +449,11 @@ export class BookmarkService {
 
     // Publish the updated event
     await this.publish(event, targetListId);
+
+    // If this was a private list, decrypt it immediately so the UI can show the updated state
+    if (isPrivateList && targetListId !== 'default') {
+      await this.decryptPrivateList(targetListId);
+    }
   }
 
   async addBookmarkToList(id: string, type: BookmarkType, listId: string) {
@@ -462,16 +467,32 @@ export class BookmarkService {
   isBookmarked(id: string, type: BookmarkType = 'e', listId?: string): boolean {
     const targetListId = listId || this.selectedListId();
     let event: Event | null;
+    let isPrivate = false;
 
     if (targetListId === 'default') {
       event = this.bookmarkEvent();
     } else {
       const list = this.bookmarkLists().find(l => l.id === targetListId);
       event = list?.event || null;
+      isPrivate = list?.isPrivate || false;
     }
 
     if (!event) {
       return false;
+    }
+
+    // For private lists, we can't check tags until decrypted
+    // But after addBookmark, the event.content should be updated
+    // So we need to decrypt and check the content
+    if (isPrivate && event.content) {
+      // We can't do async here, so we'll check if tags are populated (already decrypted)
+      // If tags only have metadata (d, title, etc), it means not decrypted yet
+      const hasBookmarkTags = event.tags.some(tag => tag[0] === 'e' || tag[0] === 'a' || tag[0] === 't');
+      if (!hasBookmarkTags) {
+        // Not decrypted yet, can't determine from UI sync
+        // This is a limitation - private lists need to be selected/decrypted first
+        return false;
+      }
     }
 
     return event.tags.some(tag => tag[0] === type && tag[1] === id);
