@@ -222,6 +222,12 @@
             <mat-icon>settings</mat-icon>
           </button>
           }
+          @if (child.mediaSettings) {
+          <button mat-icon-button class="feed-edit-button" (click)="$event.stopPropagation(); openMediaSettings()"
+            i18n-matTooltip="@@app.media.settings" matTooltip="Media servers" tabindex="0">
+            <mat-icon>settings</mat-icon>
+          </button>
+          }
         </div>
         }
         }
