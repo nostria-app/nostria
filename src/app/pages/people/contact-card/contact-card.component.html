@@ -15,7 +15,7 @@
     <div class="contact-header-content">
       <div class="contact-avatar-large">
         @if (metadata.data?.picture) {
-        <img [src]="metadata.data.picture" alt="Profile photo" />
+        <img [src]="getOptimizedImageUrl(metadata.data.picture)" alt="Profile photo" />
         } @else {
         <mat-icon>account_circle</mat-icon>
         }
