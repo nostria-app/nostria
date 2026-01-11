@@ -6,9 +6,9 @@ import { MatListModule } from '@angular/material/list';
 import { MatDividerModule } from '@angular/material/divider';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { FormsModule } from '@angular/forms';
 import { BookmarkService, BookmarkList, BookmarkType } from '../../services/bookmark.service';
-import { MatSnackBar } from '@angular/material/snack-bar';
 
 export interface BookmarkListSelectorData {
   itemId: string;
@@ -25,6 +25,7 @@ export interface BookmarkListSelectorData {
     MatDividerModule,
     MatFormFieldModule,
     MatInputModule,
+    MatSnackBarModule,
     FormsModule
   ],
   templateUrl: './bookmark-list-selector.component.html',
