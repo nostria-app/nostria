@@ -58,13 +58,6 @@ export class CollectionsComponent {
       color: '#9c27b0',
     },
     {
-      title: $localize`:@@collections.interest-sets.title:Interest Sets`,
-      description: $localize`:@@collections.interest-sets.description:Topics organized by hashtags`,
-      icon: 'label',
-      route: '/lists?tab=sets&kind=30015',
-      color: '#ff9800',
-    },
-    {
       title: $localize`:@@collections.emoji-sets.title:Emoji Sets`,
       description: $localize`:@@collections.emoji-sets.description:Custom emoji collections`,
       icon: 'emoji_emotions',
