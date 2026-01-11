@@ -59,27 +59,48 @@
       }
     </div>
     }
+
+    <!-- Comfortable view - show name only -->
+    @if (view() === 'comfortable') {
+    <div class="user-profile-content">
+      @if (disableLink()) {
+      <div class="user-profile-name-text" #nameElement (mouseenter)="onMouseEnter($event, nameElement)"
+        (mouseleave)="onMouseLeave()">
+        <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
+      </div>
+      } @else {
+      <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-name-link" #nameElement
+        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()">
+        <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
+      </a>
+      }
+    </div>
+    }
+
     <!-- Content section with conditional rendering based on view -->
 
     @if (
     view() !== 'large' &&
     view() !== 'medium' &&
     view() !== 'small' &&
+    view() !== 'comfortable' &&
     view() !== 'icon' &&
     view() !== 'tiny' &&
     view() !== 'name'
     ) {
     <div class="user-profile-content">
       <!-- Name section -->
-      <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-name-link" #nameElement
-        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()">
+      <a [routerLink]="disableLink() ? null : [routePrefix(), npubValue()]" class="user-profile-name-link" #nameElement
+        (mouseenter)="onMouseEnter($event, nameElement)" (mouseleave)="onMouseLeave()"
+        (click)="disableLink() && $event.preventDefault()">
         <app-profile-display-name [pubkey]="pubkey()"></app-profile-display-name>
       </a>
 
       <!-- NPUB section - only shown in appropriate views -->
       @if (view() === 'list' || view() === 'details' || view() === 'grid') {
-      <a [routerLink]="[routePrefix(), npubValue()]" class="user-profile-npub-link" #npubElement
-        (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()">
+      <a [routerLink]="disableLink() ? null : [routePrefix(), npubValue()]" class="user-profile-npub-link" #npubElement
+        (mouseenter)="onMouseEnter($event, npubElement)" (mouseleave)="onMouseLeave()"
+        (click)="disableLink() && $event.preventDefault()">
         <div class="user-profile-npub">{{ aliasOrNpub() }}</div>
       </a>
       }
