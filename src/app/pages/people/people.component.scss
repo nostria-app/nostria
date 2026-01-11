@@ -36,6 +36,11 @@
   overflow-x: hidden;
   position: relative;
 
+  // Add bottom padding for mobile navigation menu
+  @media (max-width: 599px) {
+    padding-bottom: 80px;
+  }
+
   &.compact {
     max-width: 90px;
 
@@ -90,6 +95,11 @@
 
 .people-container {
   padding: 1rem;
+
+  // Add extra bottom padding on mobile for navigation menu
+  @media (max-width: 599px) {
+    padding-bottom: 120px;
+  }
 
   &.compact-avatars {
     display: flex;
@@ -215,13 +225,8 @@
 
 .people-content {
   padding: 0;
-  padding-bottom: 100px;
   flex: 1;
   min-height: 0;
-
-  @media (max-width: 599px) {
-    padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
-  }
 }
 
 .loading-container,
