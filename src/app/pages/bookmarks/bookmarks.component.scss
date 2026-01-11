@@ -111,6 +111,28 @@
       flex-direction: column;
       gap: 16px;
 
+      .bookmark-article-wrapper {
+        position: relative;
+
+        .remove-bookmark-btn {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 10;
+          background: var(--mat-sys-surface-container);
+          box-shadow: var(--mat-sys-level2);
+
+          &:hover {
+            background: var(--mat-sys-error-container);
+            color: var(--mat-sys-on-error-container);
+          }
+        }
+
+        app-article {
+          display: block;
+        }
+      }
+
       .bookmark-url-card {
         display: flex;
         align-items: center;
@@ -154,8 +176,31 @@
       gap: 16px;
 
       app-event,
-      app-article {
+      app-article,
+      .bookmark-article-wrapper {
         display: block;
+      }
+
+      .bookmark-article-wrapper {
+        position: relative;
+
+        .remove-bookmark-btn {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 10;
+          background: var(--mat-sys-surface-container);
+          box-shadow: var(--mat-sys-level2);
+
+          &:hover {
+            background: var(--mat-sys-error-container);
+            color: var(--mat-sys-on-error-container);
+          }
+        }
+
+        app-article {
+          display: block;
+        }
       }
 
       .bookmark-tile {

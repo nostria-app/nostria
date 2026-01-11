@@ -48,6 +48,7 @@ import { ReportedContentComponent } from '../reported-content/reported-content.c
 import { ReportingService } from '../../services/reporting.service';
 import { ZapButtonComponent } from '../zap-button/zap-button.component';
 import { ZapService } from '../../services/zap.service';
+import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 import { ReactionsDialogComponent } from '../reactions-dialog/reactions-dialog.component';
 import { PowService } from '../../services/pow.service';
 import { ContentWarningComponent } from '../content-warning/content-warning.component';
@@ -1602,7 +1603,15 @@ export class EventComponent implements AfterViewInit, OnDestroy {
       if (targetItem.event.kind === 32100) {
         this.togglePlaylistBookmark(targetItem.event);
       } else {
-        this.bookmark.toggleBookmark(targetItem.event.id);
+        // Open bookmark list selector dialog
+        this.dialog.open(BookmarkListSelectorComponent, {
+          data: {
+            itemId: targetItem.event.id,
+            type: 'e'
+          },
+          width: '400px',
+          panelClass: 'responsive-dialog'
+        });
       }
     }
   }
