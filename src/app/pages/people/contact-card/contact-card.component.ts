@@ -16,6 +16,7 @@ import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { UtilitiesService } from '../../../services/utilities.service';
 import { LayoutService } from '../../../services/layout.service';
+import { ImageCacheService } from '../../../services/image-cache.service';
 import { NostrRecord } from '../../../interfaces';
 import { nip19 } from 'nostr-tools';
 
@@ -51,6 +52,7 @@ export class ContactCardComponent {
   private logger = inject(LoggerService);
   private utilities = inject(UtilitiesService);
   private layout = inject(LayoutService);
+  private imageCacheService = inject(ImageCacheService);
 
   pubkey = signal<string>('');
   userMetadata = signal<NostrRecord | undefined>(undefined);
@@ -150,6 +152,12 @@ export class ContactCardComponent {
     if (pubkey) {
       this.layout.openSendMessage(pubkey);
     }
+  }
+
+  getOptimizedImageUrl(originalUrl: string): string {
+    if (!originalUrl) return '';
+
+    return this.imageCacheService.getOptimizedImageUrl(originalUrl);
   }
 
   private scrollToTop(): void {
