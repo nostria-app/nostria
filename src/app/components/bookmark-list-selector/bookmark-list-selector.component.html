@@ -12,7 +12,12 @@
         check_box_outline_blank
         }
       </mat-icon>
-      <span matListItemTitle>{{ list.name }}</span>
+      <span matListItemTitle>
+        {{ list.name }}
+        @if (list.isPrivate) {
+        <mat-icon class="private-icon" inline matTooltip="Private (Encrypted)">lock</mat-icon>
+        }
+      </span>
       @if (list.isDefault) {
       <span matListItemMeta class="default-badge">
         <mat-icon>bookmark</mat-icon>

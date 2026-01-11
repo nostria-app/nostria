@@ -53,6 +53,19 @@
       <mat-form-field appearance="outline" class="list-select-field">
         <mat-label>Bookmark List</mat-label>
         <mat-select [value]="bookmarkService.selectedListId()" (valueChange)="onListChange($event)">
+          <mat-select-trigger>
+            @for (list of bookmarkService.allBookmarkLists(); track list.id) {
+              @if (list.id === bookmarkService.selectedListId()) {
+                <div class="list-option-content">
+                  <mat-icon class="list-icon">{{ list.isDefault ? 'bookmark' : 'label' }}</mat-icon>
+                  <span class="list-name">{{ list.name }}</span>
+                  @if (list.isPrivate) {
+                  <mat-icon class="private-icon" matTooltip="Private (Encrypted)">lock</mat-icon>
+                  }
+                </div>
+              }
+            }
+          </mat-select-trigger>
           @for (list of bookmarkService.allBookmarkLists(); track list.id) {
           <mat-option [value]="list.id">
             <div class="list-option-content">

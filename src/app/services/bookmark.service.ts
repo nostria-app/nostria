@@ -164,15 +164,50 @@ export class BookmarkService {
   }
 
   async initialize() {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
     // Load kind 10003 - default bookmarks
     const bookmarksEvent = await this.database.getEventByPubkeyAndKind(
-      this.accountState.pubkey()!,
+      pubkey,
       kinds.BookmarkList
     );
     this.bookmarkEvent.set(bookmarksEvent);
 
-    // Load kind 30003 - bookmark lists
+    // Load kind 30003 - bookmark lists from database
     await this.loadBookmarkLists();
+
+    // Subscribe to bookmark lists from relays
+    await this.subscribeToBookmarkLists();
+  }
+
+  private async subscribeToBookmarkLists() {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) return;
+
+    try {
+      // Subscribe to kind 30003 bookmark lists
+      this.accountRelay.subscribe(
+        {
+          kinds: [30003],
+          authors: [pubkey],
+        },
+        async (event: Event) => {
+          // Save to database
+          const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+          if (dTag) {
+            await this.database.saveReplaceableEvent({ ...event, dTag });
+          }
+          // Reload lists
+          await this.loadBookmarkLists();
+        },
+        () => {
+          console.log('🔖 End of stored bookmark lists (EOSE)');
+        }
+      );
+    } catch (error) {
+      console.error('Failed to subscribe to bookmark lists:', error);
+    }
   }
 
   async loadBookmarkLists() {
@@ -258,6 +293,7 @@ export class BookmarkService {
       })
     );
 
+    console.log(`[BookmarkService] ✅ All decryption completed, setting ${lists.length} lists`);
     this.bookmarkLists.set(lists);
   }
 
