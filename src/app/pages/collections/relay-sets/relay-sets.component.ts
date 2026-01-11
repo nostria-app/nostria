@@ -11,10 +11,10 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
-import { RelayFeedsService, RelaySet } from '../../services/relay-feeds.service';
-import { AccountStateService } from '../../services/account-state.service';
-import { LoggerService } from '../../services/logger.service';
-import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
+import { RelayFeedsService, RelaySet } from '../../../services/relay-feeds.service';
+import { AccountStateService } from '../../../services/account-state.service';
+import { LoggerService } from '../../../services/logger.service';
+import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
 
 @Component({
   selector: 'app-relay-sets',
