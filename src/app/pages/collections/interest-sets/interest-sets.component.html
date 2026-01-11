@@ -1,0 +1,74 @@
+<div class="interest-sets-container">
+  <div class="page-header">
+    <h1 i18n="@@interest-sets.title">Interests</h1>
+    <p class="page-description" i18n="@@interest-sets.description">
+      Manage your hashtag interests. Your interests are stored in a kind 30015 event and help discover relevant content.
+    </p>
+  </div>
+
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  }
+
+  <mat-card class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <mat-icon>tag</mat-icon>
+        <h2 i18n="@@interest-sets.interests.title">My Interests</h2>
+      </div>
+      @if (!isEditing()) {
+      <div class="section-actions">
+        <button mat-button (click)="resetToDefaults()" i18n="@@interest-sets.reset">
+          <mat-icon>restore</mat-icon>
+          Reset to Defaults
+        </button>
+        <button mat-flat-button color="primary" (click)="startEditing()" i18n="@@interest-sets.edit">
+          <mat-icon>edit</mat-icon>
+          Edit
+        </button>
+      </div>
+      }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-content">
+      @if (isEditing()) {
+      <div class="edit-form">
+        <p class="help-text" i18n="@@interest-sets.edit-help">
+          Enter hashtags separated by commas or one per line. The # symbol is optional.
+        </p>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label i18n="@@interest-sets.hashtags-label">Hashtags</mat-label>
+          <textarea matInput [(ngModel)]="editingHashtags"
+            placeholder="catstr&#10;birdstr&#10;asknostr&#10;homesteading&#10;growstr&#10;farmstr"></textarea>
+          <mat-hint i18n="@@interest-sets.hashtags-hint">One hashtag per line or comma-separated</mat-hint>
+        </mat-form-field>
+        <div class="form-actions">
+          <button mat-button (click)="cancelEditing()" i18n="@@interest-sets.cancel">Cancel</button>
+          <button mat-flat-button color="primary" (click)="saveEdit()" [disabled]="isLoading()"
+            i18n="@@interest-sets.save">Save</button>
+        </div>
+      </div>
+      } @else {
+      @if (!interestSet() || interestSet()!.hashtags.length === 0) {
+      <p class="empty-state" i18n="@@interest-sets.empty">
+        No interests configured yet. Click "Edit" to add your hashtag interests.
+      </p>
+      } @else {
+      <div class="hashtags-container">
+        <mat-chip-set aria-label="Hashtags">
+          @for (hashtag of interestSet()!.hashtags; track hashtag) {
+          <mat-chip class="hashtag-chip" (click)="searchHashtag(hashtag)">
+            <span class="hashtag-text">#{{ hashtag }}</span>
+          </mat-chip>
+          }
+        </mat-chip-set>
+      </div>
+      }
+      }
+    </div>
+  </mat-card>
+</div>

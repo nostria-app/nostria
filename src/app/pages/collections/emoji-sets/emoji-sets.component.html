@@ -1,0 +1,97 @@
+<div class="emoji-sets-container">
+  <div class="page-header">
+    <h1 i18n="@@emoji-sets.title">Emojis</h1>
+    <p class="page-description" i18n="@@emoji-sets.description">
+      Manage your custom emoji collections. Emoji sets are stored in kind 30030 events.
+    </p>
+  </div>
+
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  }
+
+  <mat-card class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <mat-icon>emoji_emotions</mat-icon>
+        <h2 i18n="@@emoji-sets.sets.title">Emoji Collections</h2>
+      </div>
+      @if (!isEditingSet()) {
+      <button mat-flat-button color="primary" (click)="startCreatingSet()" i18n="@@emoji-sets.create">
+        <mat-icon>add</mat-icon>
+        Create Collection
+      </button>
+      }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-content">
+      @if (isEditingSet()) {
+      <div class="edit-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label i18n="@@emoji-sets.name-label">Collection Name</mat-label>
+          <input matInput [(ngModel)]="editingSetName" placeholder="My Emojis" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label i18n="@@emoji-sets.emojis-label">Emojis</mat-label>
+          <textarea matInput [(ngModel)]="editingSetEmojis" placeholder="😀 😃 😄&#10;😁 😆 😅&#10;..."></textarea>
+          <mat-hint i18n="@@emoji-sets.emojis-hint">Enter emojis separated by spaces or one per line</mat-hint>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-button (click)="cancelEditingSet()" i18n="@@emoji-sets.cancel">Cancel</button>
+          <button mat-flat-button color="primary" (click)="saveSetEdit()" [disabled]="isLoading()"
+            i18n="@@emoji-sets.save">Save</button>
+        </div>
+      </div>
+      } @else {
+      @if (emojiSets().length === 0) {
+      <p class="empty-state" i18n="@@emoji-sets.empty">
+        No emoji collections created yet. Click "Create Collection" to add your first emoji set.
+      </p>
+      } @else {
+      <div class="sets-grid">
+        @for (set of emojiSets(); track set.identifier) {
+        <div class="set-card">
+          <div class="set-header">
+            <div class="set-info">
+              <h3 class="set-name">{{ set.name }}</h3>
+            </div>
+            <div class="set-actions">
+              <button mat-icon-button (click)="startEditingSet(set)" matTooltip="Edit"
+                i18n-matTooltip="@@emoji-sets.edit-tooltip">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button (click)="deleteSet(set)" matTooltip="Delete"
+                i18n-matTooltip="@@emoji-sets.delete-tooltip">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+          <mat-divider></mat-divider>
+          <div class="emoji-preview">
+            <div class="emoji-count">
+              <mat-icon>emoji_emotions</mat-icon>
+              <span i18n="@@emoji-sets.emoji-count">{{ set.emojis.length }} emoji(s)</span>
+            </div>
+            <div class="emoji-grid">
+              @for (emoji of set.emojis.slice(0, 12); track $index) {
+              <span class="emoji-item">{{ emoji }}</span>
+              }
+              @if (set.emojis.length > 12) {
+              <span class="emoji-more" i18n="@@emoji-sets.more-emojis">+{{ set.emojis.length - 12 }}</span>
+              }
+            </div>
+          </div>
+        </div>
+        }
+      </div>
+      }
+      }
+    </div>
+  </mat-card>
+</div>

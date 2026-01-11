@@ -628,8 +628,20 @@ export const routes: Routes = [
   {
     path: 'relay-sets',
     data: { isRoot: true },
-    loadComponent: () => import('./pages/relay-sets/relay-sets.component').then(m => m.RelaySetsComponent),
-    title: 'Relay Sets',
+    loadComponent: () => import('./pages/collections/relay-sets/relay-sets.component').then(m => m.RelaySetsComponent),
+    title: 'Relays',
+  },
+  {
+    path: 'emoji-sets',
+    data: { isRoot: true },
+    loadComponent: () => import('./pages/collections/emoji-sets/emoji-sets.component').then(m => m.EmojiSetsComponent),
+    title: 'Emojis',
+  },
+  {
+    path: 'interest-sets',
+    data: { isRoot: true },
+    loadComponent: () => import('./pages/collections/interest-sets/interest-sets.component').then(m => m.InterestSetsComponent),
+    title: 'Interests',
   },
   {
     path: 'delete-event',

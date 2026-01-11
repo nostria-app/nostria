@@ -424,15 +424,21 @@ export class App implements OnInit {
             authenticated: false,
           },
           {
-            path: '/lists?tab=sets&kind=30030',
-            label: $localize`:@@app.nav.collections.emoji-sets:Emoji Sets`,
+            path: '/relay-sets',
+            label: $localize`:@@app.nav.collections.relays:Relays`,
+            icon: 'dns',
+            authenticated: false,
+          },
+          {
+            path: '/emoji-sets',
+            label: $localize`:@@app.nav.collections.emojis:Emojis`,
             icon: 'emoji_emotions',
             authenticated: false,
           },
           {
-            path: '/relay-sets',
-            label: $localize`:@@app.nav.collections.relay-sets:Relay Sets`,
-            icon: 'dns',
+            path: '/interest-sets',
+            label: $localize`:@@app.nav.collections.interests:Interests`,
+            icon: 'tag',
             authenticated: false,
           },
         ];
