@@ -21,6 +21,7 @@ import { MusicPlaylistService, MusicPlaylist } from '../../../services/music-pla
 import { EventService } from '../../../services/event';
 import { LayoutService } from '../../../services/layout.service';
 import { ImageCacheService } from '../../../services/image-cache.service';
+import { ZapService } from '../../../services/zap.service';
 import { NostrRecord, MediaItem } from '../../../interfaces';
 import {
   EditMusicPlaylistDialogComponent,
@@ -67,6 +68,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private layout = inject(LayoutService);
   private imageCache = inject(ImageCacheService);
   private dialog = inject(MatDialog);
+  private zapService = inject(ZapService);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
@@ -879,12 +881,20 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     if (!event) return;
 
     const profile = this.authorProfile();
+    const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+
+    // Parse zap splits from the playlist event
+    const zapSplits = this.zapService.parseZapSplits(event);
 
     const data: ZapDialogData = {
       recipientPubkey: event.pubkey,
       recipientName: this.artistName(),
       recipientMetadata: profile?.data,
       eventId: event.id,
+      eventKind: event.kind,
+      eventAddress: `${event.kind}:${event.pubkey}:${dTag}`,
+      event: event,
+      zapSplits: zapSplits.length > 0 ? zapSplits : undefined,
     };
 
     this.dialog.open(ZapDialogComponent, {
