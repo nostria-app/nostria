@@ -1,0 +1,165 @@
+<div class="relay-sets-container">
+  <div class="page-header">
+    <h1 i18n="@@relay-sets.title">Relay Sets</h1>
+    <p class="page-description" i18n="@@relay-sets.description">
+      Manage your browsable relay feeds and relay collections. Relay feeds are stored in a kind 10012 event, while relay
+      sets use kind 30002.
+    </p>
+  </div>
+
+  @if (isLoading()) {
+  <div class="loading-container">
+    <mat-spinner diameter="40"></mat-spinner>
+  </div>
+  }
+
+  <!-- Relay Feeds Section -->
+  <mat-card class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <mat-icon>dns</mat-icon>
+        <h2 i18n="@@relay-sets.feeds.title">Public Relay Feeds</h2>
+      </div>
+      @if (!isEditingFeeds()) {
+      <div class="section-actions">
+        <button mat-button (click)="resetFeedsToDefaults()" i18n="@@relay-sets.feeds.reset">
+          <mat-icon>restore</mat-icon>
+          Reset to Defaults
+        </button>
+        <button mat-flat-button color="primary" (click)="startEditingFeeds()" i18n="@@relay-sets.feeds.edit">
+          <mat-icon>edit</mat-icon>
+          Edit
+        </button>
+      </div>
+      }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-content">
+      @if (isEditingFeeds()) {
+      <div class="edit-form">
+        <p class="help-text" i18n="@@relay-sets.feeds.edit-help">
+          Enter one relay URL per line (e.g., wss://relay.damus.io or relay.damus.io)
+        </p>
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label i18n="@@relay-sets.feeds.relays-label">Relay URLs</mat-label>
+          <textarea matInput [(ngModel)]="editingFeedsInput"
+            placeholder="wss://relay.damus.io&#10;wss://nos.lol&#10;..."></textarea>
+        </mat-form-field>
+        <div class="form-actions">
+          <button mat-button (click)="cancelEditingFeeds()" i18n="@@relay-sets.cancel">Cancel</button>
+          <button mat-flat-button color="primary" (click)="saveFeedsEdit()" [disabled]="isLoading()"
+            i18n="@@relay-sets.save">Save</button>
+        </div>
+      </div>
+      } @else {
+      <div class="relay-list">
+        @if (relayFeeds().length === 0) {
+        <p class="empty-state" i18n="@@relay-sets.feeds.empty">No relay feeds configured</p>
+        } @else {
+        @for (relay of relayFeeds(); track relay) {
+        <div class="relay-item">
+          <mat-icon class="relay-icon">dns</mat-icon>
+          <span class="relay-url">{{ relay }}</span>
+        </div>
+        }
+        }
+      </div>
+      }
+    </div>
+  </mat-card>
+
+  <!-- Relay Sets Section -->
+  <mat-card class="section-card">
+    <div class="section-header">
+      <div class="section-title">
+        <mat-icon>folder</mat-icon>
+        <h2 i18n="@@relay-sets.sets.title">Relay Sets</h2>
+      </div>
+      @if (!isEditingSet()) {
+      <button mat-flat-button color="primary" (click)="startCreatingSet()" i18n="@@relay-sets.sets.create">
+        <mat-icon>add</mat-icon>
+        Create Set
+      </button>
+      }
+    </div>
+
+    <mat-divider></mat-divider>
+
+    <div class="section-content">
+      @if (isEditingSet()) {
+      <div class="edit-form">
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label i18n="@@relay-sets.sets.name-label">Set Name</mat-label>
+          <input matInput [(ngModel)]="editingSetName" placeholder="My Relay Set" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label i18n="@@relay-sets.sets.description-label">Description (optional)</mat-label>
+          <input matInput [(ngModel)]="editingSetDescription" placeholder="Description of this relay set" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="full-width">
+          <mat-label i18n="@@relay-sets.sets.relays-label">Relay URLs</mat-label>
+          <textarea matInput [(ngModel)]="editingSetRelays"
+            placeholder="wss://relay.damus.io&#10;wss://nos.lol&#10;..."></textarea>
+          <mat-hint i18n="@@relay-sets.sets.relays-hint">One relay URL per line</mat-hint>
+        </mat-form-field>
+
+        <div class="form-actions">
+          <button mat-button (click)="cancelEditingSet()" i18n="@@relay-sets.cancel">Cancel</button>
+          <button mat-flat-button color="primary" (click)="saveSetEdit()" [disabled]="isLoading()"
+            i18n="@@relay-sets.save">Save</button>
+        </div>
+      </div>
+      } @else {
+      @if (relaySets().length === 0) {
+      <p class="empty-state" i18n="@@relay-sets.sets.empty">
+        No relay sets created yet. Click "Create Set" to add your first relay collection.
+      </p>
+      } @else {
+      <div class="sets-grid">
+        @for (set of relaySets(); track set.identifier) {
+        <div class="set-card">
+          <div class="set-header">
+            <div class="set-info">
+              <h3 class="set-name">{{ set.name }}</h3>
+              @if (set.description) {
+              <p class="set-description">{{ set.description }}</p>
+              }
+            </div>
+            <div class="set-actions">
+              <button mat-icon-button (click)="startEditingSet(set)" matTooltip="Edit"
+                i18n-matTooltip="@@relay-sets.sets.edit-tooltip">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button (click)="deleteSet(set)" matTooltip="Delete"
+                i18n-matTooltip="@@relay-sets.sets.delete-tooltip">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+          <mat-divider></mat-divider>
+          <div class="set-relays">
+            <div class="relay-count">
+              <mat-icon>dns</mat-icon>
+              <span i18n="@@relay-sets.sets.relay-count">{{ set.relays.length }} relay(s)</span>
+            </div>
+            @for (relay of set.relays.slice(0, 3); track relay) {
+            <div class="relay-item-small">{{ relay }}</div>
+            }
+            @if (set.relays.length > 3) {
+            <div class="relay-item-small more-relays" i18n="@@relay-sets.sets.more-relays">
+              +{{ set.relays.length - 3 }} more...
+            </div>
+            }
+          </div>
+        </div>
+        }
+      </div>
+      }
+      }
+    </div>
+  </mat-card>
+</div>

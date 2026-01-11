@@ -41,6 +41,7 @@ import { FeedService, FeedConfig } from '../../services/feed.service';
 import {
   FeedsCollectionService,
 } from '../../services/feeds-collection.service';
+import { RelayFeedsService } from '../../services/relay-feeds.service';
 import { MediaItem, NostrRecord } from '../../interfaces';
 import { Event } from 'nostr-tools';
 import { UrlUpdateService } from '../../services/url-update.service';
@@ -110,6 +111,7 @@ export class FeedsComponent implements OnDestroy {
   protected accountState = inject(AccountStateService);
   private utilities = inject(UtilitiesService);
   private imagePlaceholder = inject(ImagePlaceholderService);
+  private relayFeedsService = inject(RelayFeedsService);
 
   // Dialog State Signals
   showNewFeedDialog = signal(false);
@@ -558,6 +560,21 @@ export class FeedsComponent implements OnDestroy {
   constructor() {
     // Mark the feeds page as active when component is constructed
     this.feedService.setFeedsPageActive(true);
+
+    // Pre-load relay feeds when the component is initialized
+    effect(() => {
+      const pubkey = this.accountState.pubkey();
+      if (pubkey) {
+        untracked(async () => {
+          try {
+            await this.relayFeedsService.getRelayFeeds(pubkey);
+            this.logger.debug('Relay feeds loaded for pubkey:', pubkey);
+          } catch (error) {
+            this.logger.error('Error loading relay feeds:', error);
+          }
+        });
+      }
+    });
 
     // Initialize data loading
     // this.loadTrendingContent();

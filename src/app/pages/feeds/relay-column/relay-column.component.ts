@@ -26,27 +26,10 @@ import { Router, ActivatedRoute } from '@angular/router';
 import { SimplePool, Filter } from 'nostr-tools';
 import { Event } from 'nostr-tools';
 import { AccountStateService } from '../../../services/account-state.service';
-import { AccountLocalStateService } from '../../../services/account-local-state.service';
+import { RelayFeedsService } from '../../../services/relay-feeds.service';
 import { RepostService } from '../../../services/repost.service';
 
 const PAGE_SIZE = 10;
-
-const DEFAULT_RELAYS: string[] = [
-  'trending.relays.land',
-  'nostrelites.org',
-  'wot.nostr.net',
-  'wotr.relatr.xyz',
-  'primus.nostr1.com',
-  'nostr.land',
-  'nos.lol',
-  'nostr.wine',
-  'news.utxo.one',
-  '140.f7z.io',
-  'pyramid.fiatjaf.com',
-  'relay.damus.io',
-  'relay.primal.net',
-  'nostr21.com',
-];
 
 @Component({
   selector: 'app-relay-column',
@@ -69,7 +52,7 @@ export class RelayColumnComponent implements OnDestroy {
   private relaysService = inject(RelaysService);
   private relayAuthService = inject(RelayAuthService);
   private accountState = inject(AccountStateService);
-  private accountLocalState = inject(AccountLocalStateService);
+  private relayFeedsService = inject(RelayFeedsService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
   private clipboard = inject(Clipboard);
@@ -146,14 +129,28 @@ export class RelayColumnComponent implements OnDestroy {
   hasEvents = computed(() => this.displayedEvents().length > 0);
   hasMore = computed(() => this.displayCount() < this.filteredEvents().length);
 
-  // Full WebSocket URL
-  relayUrl = computed(() => {
+  // Parse potentially comma-separated relay domains
+  relayDomains = computed(() => {
     const domain = this.relayDomain();
-    if (!domain) return '';
-    if (domain.startsWith('wss://') || domain.startsWith('ws://')) {
-      return domain;
-    }
-    return `wss://${domain}`;
+    if (!domain) return [];
+    return domain.split(',').map(d => d.trim()).filter(d => d.length > 0);
+  });
+
+  // Full WebSocket URLs (array for multiple relays)
+  relayUrls = computed(() => {
+    const domains = this.relayDomains();
+    return domains.map(domain => {
+      if (domain.startsWith('wss://') || domain.startsWith('ws://')) {
+        return domain;
+      }
+      return `wss://${domain}`;
+    });
+  });
+
+  // Full WebSocket URL (for backwards compatibility - uses first relay)
+  relayUrl = computed(() => {
+    const urls = this.relayUrls();
+    return urls.length > 0 ? urls[0] : '';
   });
 
   // Icon URL - try NIP-11 icon, then banner, then favicon
@@ -177,11 +174,15 @@ export class RelayColumnComponent implements OnDestroy {
 
   // Display name
   displayName = computed(() => {
+    const domains = this.relayDomains();
+    if (domains.length > 1) {
+      return `${domains.length} relays`;
+    }
     const info = this.relayInfo();
     if (info?.name) {
       return info.name;
     }
-    return this.relayDomain() || 'Unknown Relay';
+    return domains.length > 0 ? domains[0] : 'Unknown Relay';
   });
 
   // Check if contact is a URL or mailto
@@ -257,32 +258,33 @@ export class RelayColumnComponent implements OnDestroy {
 
   private cleanup(): void {
     this.abortController?.abort();
-    this.pool?.close([this.relayUrl()]);
+    const urls = this.relayUrls();
+    if (urls.length > 0) {
+      this.pool?.close(urls);
+    }
     this.pool = null;
   }
 
-  private loadSavedRelays(pubkey: string): void {
+  private async loadSavedRelays(pubkey: string): Promise<void> {
     try {
-      const stored = this.accountLocalState.getPublicRelayFeeds(pubkey);
-      if (stored && stored.length > 0) {
-        this.savedRelays.set(stored);
-      } else {
-        // Initialize with defaults
-        this.savedRelays.set([...DEFAULT_RELAYS]);
-        this.saveSavedRelays();
-      }
+      // Load from kind 10012 event via RelayFeedsService
+      const relays = await this.relayFeedsService.getRelayFeeds(pubkey);
+      this.savedRelays.set(relays);
     } catch (error) {
       this.logger.error('Error loading saved relays:', error);
-      this.savedRelays.set([...DEFAULT_RELAYS]);
+      // Fallback to defaults via service
+      const defaults = this.relayFeedsService.getDefaultRelays();
+      this.savedRelays.set(defaults);
     }
   }
 
-  private saveSavedRelays(): void {
+  private async saveSavedRelays(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
     try {
-      this.accountLocalState.setPublicRelayFeeds(pubkey, this.savedRelays());
+      // Save to kind 10012 event via RelayFeedsService
+      await this.relayFeedsService.saveRelayFeeds(this.savedRelays());
     } catch (error) {
       this.logger.error('Error saving relays:', error);
     }
@@ -290,8 +292,9 @@ export class RelayColumnComponent implements OnDestroy {
 
   private loadShowReplies(pubkey: string): void {
     try {
-      const showReplies = this.accountLocalState.getPublicRelayShowReplies(pubkey);
-      this.showReplies.set(showReplies);
+      const key = `relay-column-show-replies-${pubkey}`;
+      const stored = localStorage.getItem(key);
+      this.showReplies.set(stored === 'true');
     } catch (error) {
       this.logger.error('Error loading showReplies setting:', error);
       this.showReplies.set(false);
@@ -303,7 +306,8 @@ export class RelayColumnComponent implements OnDestroy {
     if (!pubkey) return;
 
     try {
-      this.accountLocalState.setPublicRelayShowReplies(pubkey, this.showReplies());
+      const key = `relay-column-show-replies-${pubkey}`;
+      localStorage.setItem(key, String(this.showReplies()));
     } catch (error) {
       this.logger.error('Error saving showReplies setting:', error);
     }
@@ -311,8 +315,9 @@ export class RelayColumnComponent implements OnDestroy {
 
   private loadShowReposts(pubkey: string): void {
     try {
-      const showReposts = this.accountLocalState.getPublicRelayShowReposts(pubkey);
-      this.showReposts.set(showReposts);
+      const key = `relay-column-show-reposts-${pubkey}`;
+      const stored = localStorage.getItem(key);
+      this.showReposts.set(stored !== 'false');
     } catch (error) {
       this.logger.error('Error loading showReposts setting:', error);
       this.showReposts.set(true);
@@ -324,7 +329,8 @@ export class RelayColumnComponent implements OnDestroy {
     if (!pubkey) return;
 
     try {
-      this.accountLocalState.setPublicRelayShowReposts(pubkey, this.showReposts());
+      const key = `relay-column-show-reposts-${pubkey}`;
+      localStorage.setItem(key, String(this.showReposts()));
     } catch (error) {
       this.logger.error('Error saving showReposts setting:', error);
     }
@@ -411,8 +417,8 @@ export class RelayColumnComponent implements OnDestroy {
   }
 
   async fetchEvents(): Promise<void> {
-    const url = this.relayUrl();
-    if (!url) return;
+    const urls = this.relayUrls();
+    if (urls.length === 0) return;
 
     // Cleanup previous subscription
     this.cleanup();
@@ -439,8 +445,8 @@ export class RelayColumnComponent implements OnDestroy {
       // Get auth callback for NIP-42 authentication
       const authCallback = this.relayAuthService.getAuthCallback();
 
-      // Query the relay with auth support
-      const sub = this.pool.subscribeMany([url], filter, {
+      // Query the relay(s) with auth support
+      const sub = this.pool.subscribeMany(urls, filter, {
         onauth: authCallback,
         onevent: (event: Event) => {
           events.push(event);
@@ -449,18 +455,18 @@ export class RelayColumnComponent implements OnDestroy {
           this.allEvents.set([...events]);
         },
         oneose: () => {
-          this.logger.debug(`Got ${events.length} events from ${url}`);
+          this.logger.debug(`Got ${events.length} events from ${urls.length} relay(s)`);
           this.isLoading.set(false);
           this.isRefreshing.set(false);
         },
         onclose: (reasons: string[]) => {
           // Reasons is an array of close reasons from all relays
           for (const reason of reasons) {
-            this.logger.debug(`Subscription closed for ${url}: ${reason}`);
+            this.logger.debug(`Subscription closed: ${reason}`);
 
             // Check for auth-required or restricted messages
             if (reason.includes('auth-required:') || reason.includes('restricted:')) {
-              this.logger.info(`Relay ${url} requires authentication: ${reason}`);
+              this.logger.info(`Relay requires authentication: ${reason}`);
               this.authRequired.set(true);
               this.authError.set(reason);
               this.isLoading.set(false);

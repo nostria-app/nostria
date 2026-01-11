@@ -626,6 +626,12 @@ export const routes: Routes = [
     title: 'Lists',
   },
   {
+    path: 'relay-sets',
+    data: { isRoot: true },
+    loadComponent: () => import('./pages/relay-sets/relay-sets.component').then(m => m.RelaySetsComponent),
+    title: 'Relay Sets',
+  },
+  {
     path: 'delete-event',
     loadComponent: () =>
       import('./pages/delete-event/delete-event.component').then(m => m.DeleteEventComponent),

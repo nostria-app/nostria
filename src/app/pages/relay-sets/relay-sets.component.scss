@@ -1,0 +1,246 @@
+.relay-sets-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.page-header {
+  margin-bottom: 32px;
+
+  h1 {
+    font-size: 32px;
+    margin: 0 0 8px 0;
+    color: var(--mat-sys-on-surface);
+  }
+
+  .page-description {
+    font-size: 14px;
+    color: var(--mat-sys-on-surface-variant);
+    margin: 0;
+  }
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 48px;
+}
+
+.section-card {
+  margin-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+
+  .section-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    mat-icon {
+      color: var(--mat-sys-primary);
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 20px;
+      color: var(--mat-sys-on-surface);
+    }
+  }
+
+  .section-actions {
+    display: flex;
+    gap: 8px;
+  }
+}
+
+.section-content {
+  padding: 24px;
+}
+
+.edit-form {
+  .help-text {
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 14px;
+    margin: 0 0 16px 0;
+  }
+
+  .full-width {
+    width: 100%;
+
+    textarea {
+      field-sizing: content;
+      min-height: 120px;
+      max-height: 400px;
+    }
+
+    ::ng-deep .mat-mdc-form-field-infix {
+      display: flex;
+      flex-direction: column;
+    }
+
+    ::ng-deep .mat-mdc-text-field-wrapper {
+      height: auto;
+    }
+  }
+
+  .form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px;
+  }
+}
+
+.relay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.relay-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--mat-sys-surface-container);
+  border-radius: 8px;
+
+  .relay-icon {
+    color: var(--mat-sys-on-surface-variant);
+  }
+
+  .relay-url {
+    font-family: monospace;
+    font-size: 14px;
+    color: var(--mat-sys-on-surface);
+  }
+}
+
+.sets-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+
+.set-card {
+  border: 1px solid var(--mat-sys-outline-variant);
+  border-radius: 12px;
+  padding: 16px;
+  background-color: var(--mat-sys-surface-container-low);
+
+  .set-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 12px;
+
+    .set-info {
+      flex: 1;
+      min-width: 0;
+
+      .set-name {
+        margin: 0 0 4px 0;
+        font-size: 18px;
+        color: var(--mat-sys-on-surface);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .set-description {
+        margin: 0;
+        font-size: 13px;
+        color: var(--mat-sys-on-surface-variant);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+    }
+
+    .set-actions {
+      display: flex;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+  }
+
+  .set-relays {
+    margin-top: 12px;
+
+    .relay-count {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: var(--mat-sys-on-surface-variant);
+      font-size: 14px;
+
+      mat-icon {
+        font-size: 18px;
+        width: 18px;
+        height: 18px;
+      }
+    }
+
+    .relay-item-small {
+      font-family: monospace;
+      font-size: 12px;
+      color: var(--mat-sys-on-surface-variant);
+      padding: 4px 8px;
+      background-color: var(--mat-sys-surface-container);
+      border-radius: 4px;
+      margin-bottom: 4px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+
+      &.more-relays {
+        font-family: inherit;
+        font-style: italic;
+        text-align: center;
+      }
+    }
+  }
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--mat-sys-on-surface-variant);
+  padding: 48px 24px;
+  margin: 0;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .relay-sets-container {
+    padding: 16px;
+  }
+
+  .page-header h1 {
+    font-size: 24px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+
+    .section-actions {
+      width: 100%;
+
+      button {
+        flex: 1;
+      }
+    }
+  }
+
+  .sets-grid {
+    grid-template-columns: 1fr;
+  }
+}
