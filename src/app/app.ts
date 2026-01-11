@@ -386,6 +386,12 @@ export class App implements OnInit {
       if (item.label === 'Collections') {
         const collectionChildren: NavItem[] = [
           {
+            path: '/relay-sets',
+            label: $localize`:@@app.nav.collections.relay-sets:Relay Sets`,
+            icon: 'dns',
+            authenticated: false,
+          },
+          {
             path: '/media',
             label: $localize`:@@app.nav.media:Media`,
             icon: 'photo_library',

@@ -18,26 +18,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { LoggerService } from '../../../services/logger.service';
 import { RelaysService, Nip11RelayInfo } from '../../../services/relays/relays';
 import { AccountStateService } from '../../../services/account-state.service';
-import { AccountLocalStateService } from '../../../services/account-local-state.service';
-
-const DEFAULT_RELAYS: string[] = [
-  'trending.relays.land',
-  'nostrelites.org',
-  'wot.nostr.net',
-  'wotr.relatr.xyz',
-  'primus.nostr1.com',
-  'nostr.land',
-  'nos.lol',
-  'nostr.wine',
-  'news.utxo.one',
-  '140.f7z.io',
-  'pyramid.fiatjaf.com',
-  'relay.damus.io',
-  'relay.primal.net',
-  'nostr21.com',
-  'ribo.eu.nostria.app',
-  'ribo.us.nostria.app',
-];
+import { RelayFeedsService, RelaySet } from '../../../services/relay-feeds.service';
 
 export interface RelayInfo {
   domain: string;
@@ -84,7 +65,7 @@ export interface RelayInfo {
         <button
           mat-menu-item
           (click)="onSelectRelay(relay)"
-          [class.active]="relay === selectedRelay()"
+          [class.active]="relay === selectedRelay() && !selectedSet()"
         >
           <div class="relay-item">
             @if (getRelayIcon(relay); as icon) {
@@ -96,7 +77,7 @@ export interface RelayInfo {
               <span class="relay-item-name">{{ getRelayName(relay) }}</span>
               <span class="relay-item-url">{{ relay }}</span>
             </div>
-            @if (relay === selectedRelay()) {
+            @if (relay === selectedRelay() && !selectedSet()) {
             <mat-icon class="active-check">check</mat-icon>
             }
             <button
@@ -111,6 +92,31 @@ export interface RelayInfo {
         </button>
         }
       </div>
+
+      @if (relaySets().length > 0) {
+        <mat-divider></mat-divider>
+        <div class="menu-section-label" role="presentation">Relay Sets</div>
+        <div class="relay-list">
+          @for (set of relaySets(); track set.identifier) {
+          <button
+            mat-menu-item
+            (click)="onSelectRelaySet(set)"
+            [class.active]="set.identifier === selectedSet()"
+          >
+            <div class="relay-item">
+              <mat-icon class="relay-item-icon-fallback">folder</mat-icon>
+              <div class="relay-item-info">
+                <span class="relay-item-name">{{ set.name }}</span>
+                <span class="relay-item-url">{{ set.relays.length }} relays</span>
+              </div>
+              @if (set.identifier === selectedSet()) {
+              <mat-icon class="active-check">check</mat-icon>
+              }
+            </div>
+          </button>
+          }
+        </div>
+      }
 
       <mat-divider></mat-divider>
 
@@ -169,6 +175,14 @@ export interface RelayInfo {
             height: 20px;
           }
         }
+      }
+
+      .menu-section-label {
+        padding: 8px 16px;
+        font-size: 12px;
+        font-weight: 500;
+        color: var(--mat-sys-on-surface-variant);
+        cursor: default;
       }
 
       .relay-list {
@@ -268,14 +282,16 @@ export class RelayFeedMenuComponent {
   private logger = inject(LoggerService);
   private relaysService = inject(RelaysService);
   private accountState = inject(AccountStateService);
-  private accountLocalState = inject(AccountLocalStateService);
+  private relayFeedsService = inject(RelayFeedsService);
 
   // Outputs
   relaySelected = output<string>();
 
   // State
   savedRelays = signal<string[]>([]);
+  relaySets = signal<RelaySet[]>([]);
   selectedRelay = signal<string>('');
+  selectedSet = signal<string>('');
   // Using a plain Map instead of a signal to prevent cache updates from
   // triggering change detection and stealing focus from the input field
   private relayInfoCache = new Map<string, Nip11RelayInfo>();
@@ -290,6 +306,7 @@ export class RelayFeedMenuComponent {
       if (pubkey && pubkey !== this.lastLoadedPubkey) {
         this.lastLoadedPubkey = pubkey;
         this.loadSavedRelays(pubkey);
+        this.loadRelaySets(pubkey);
       }
     });
 
@@ -307,27 +324,36 @@ export class RelayFeedMenuComponent {
     });
   }
 
-  private loadSavedRelays(pubkey: string): void {
+  private async loadSavedRelays(pubkey: string): Promise<void> {
     try {
-      const stored = this.accountLocalState.getPublicRelayFeeds(pubkey);
-      if (stored && stored.length > 0) {
-        this.savedRelays.set(stored);
-      } else {
-        this.savedRelays.set([...DEFAULT_RELAYS]);
-        this.saveSavedRelays();
-      }
+      // Load from kind 10012 event via RelayFeedsService
+      const relays = await this.relayFeedsService.getRelayFeeds(pubkey);
+      this.savedRelays.set(relays);
     } catch (error) {
       this.logger.error('Error loading saved relays:', error);
-      this.savedRelays.set([...DEFAULT_RELAYS]);
+      // Fallback to defaults via service
+      const defaults = this.relayFeedsService.getDefaultRelays();
+      this.savedRelays.set(defaults);
     }
   }
 
-  private saveSavedRelays(): void {
+  private async loadRelaySets(pubkey: string): Promise<void> {
+    try {
+      const sets = await this.relayFeedsService.getRelaySets(pubkey);
+      this.relaySets.set(sets);
+    } catch (error) {
+      this.logger.error('Error loading relay sets:', error);
+      this.relaySets.set([]);
+    }
+  }
+
+  private async saveSavedRelays(): Promise<void> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) return;
 
     try {
-      this.accountLocalState.setPublicRelayFeeds(pubkey, this.savedRelays());
+      // Save to kind 10012 event via RelayFeedsService
+      await this.relayFeedsService.saveRelayFeeds(this.savedRelays());
     } catch (error) {
       this.logger.error('Error saving relays:', error);
     }
@@ -374,7 +400,16 @@ export class RelayFeedMenuComponent {
 
   onSelectRelay(domain: string): void {
     this.selectedRelay.set(domain);
+    this.selectedSet.set('');
     this.relaySelected.emit(domain);
+  }
+
+  onSelectRelaySet(set: RelaySet): void {
+    this.selectedRelay.set('');
+    this.selectedSet.set(set.identifier);
+    // Emit all relay URLs from the set joined with commas
+    const relayUrls = set.relays.join(',');
+    this.relaySelected.emit(relayUrls);
   }
 
   onRemoveRelay(domain: string, event: Event): void {
@@ -385,6 +420,7 @@ export class RelayFeedMenuComponent {
     // If removed relay was selected, clear selection
     if (this.selectedRelay() === domain) {
       this.selectedRelay.set('');
+      this.selectedSet.set('');
       this.relaySelected.emit('');
     }
   }
@@ -405,31 +441,25 @@ export class RelayFeedMenuComponent {
 
   setSelectedRelay(domain: string): void {
     this.selectedRelay.set(domain);
+    this.selectedSet.set('');
     // Refresh saved relays from storage in case they changed (e.g., relay added from column)
-    // Only update if the arrays are actually different to prevent unnecessary re-renders
+    // Only update if the arrays kind 10012 event in case they changed
     const pubkey = this.accountState.pubkey();
     if (pubkey) {
-      const stored = this.accountLocalState.getPublicRelayFeeds(pubkey);
-      if (stored && stored.length > 0) {
-        const current = this.savedRelays();
-        const isDifferent = stored.length !== current.length || 
-          stored.some((r, i) => r !== current[i]);
-        if (isDifferent) {
-          this.savedRelays.set(stored);
-        }
-      }
+      this.loadSavedRelays(pubkey);
     }
     if (domain && !this.relayInfoCache.has(domain)) {
       this.fetchRelayInfo(domain);
     }
   }
 
-  onResetRelays(): void {
-    this.savedRelays.set([...DEFAULT_RELAYS]);
-    this.saveSavedRelays();
+  async onResetRelays(): Promise<void> {
+    const defaults = this.relayFeedsService.getDefaultRelays();
+    this.savedRelays.set(defaults);
+    await this.saveSavedRelays();
+
     // Clear selection if it's not in the default list
-    if (this.selectedRelay() && !DEFAULT_RELAYS.includes(this.selectedRelay())) {
-      this.selectedRelay.set('');
+    if (this.selectedRelay() && !defaults.includes(this.selectedRelay())) {
       this.relaySelected.emit('');
     }
   }
