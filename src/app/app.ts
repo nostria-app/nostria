@@ -455,6 +455,13 @@ export class App implements OnInit {
   navItems: NavItem[] = [
     { path: '', label: $localize`:@@app.nav.feeds:Feeds`, icon: 'stacks', authenticated: false },
     { path: 'summary', label: $localize`:@@app.nav.summary:Summary`, icon: 'dashboard', authenticated: true },
+    {
+      path: 'messages',
+      label: $localize`:@@app.nav.messages:Messages`,
+      icon: 'mail',
+      authenticated: true,
+      badge: () => this.getUnreadMessagesCount(),
+    },
     // { path: 'feed', label: 'Feed', icon: 'notes', showInMobile: true },
     // {
     //   path: 'articles',
@@ -473,13 +480,7 @@ export class App implements OnInit {
 
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
     { path: 'collections', label: $localize`:@@app.nav.collections:Collections`, icon: 'bookmarks', authenticated: true },
-    {
-      path: 'messages',
-      label: $localize`:@@app.nav.messages:Messages`,
-      icon: 'mail',
-      authenticated: true,
-      badge: () => this.getUnreadMessagesCount(),
-    },
+
     {
       path: 'media',
       label: $localize`:@@app.nav.media:Media`,
