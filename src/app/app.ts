@@ -385,6 +385,12 @@ export class App implements OnInit {
       if (item.label === 'Collections') {
         const collectionChildren: NavItem[] = [
           {
+            path: '/media',
+            label: $localize`:@@app.nav.media:Media`,
+            icon: 'photo_library',
+            authenticated: false,
+          },
+          {
             path: '/bookmarks',
             label: $localize`:@@app.nav.collections.bookmarks:Bookmarks`,
             icon: 'bookmark',
@@ -481,12 +487,6 @@ export class App implements OnInit {
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
     { path: 'collections', label: $localize`:@@app.nav.collections:Collections`, icon: 'bookmarks', authenticated: true },
 
-    {
-      path: 'media',
-      label: $localize`:@@app.nav.media:Media`,
-      icon: 'photo_library',
-      authenticated: true,
-    },
     {
       path: 'music',
       label: $localize`:@@app.nav.music:Music`,

@@ -284,8 +284,8 @@ mat-sidenav-content {
   // Full-width components can override this using CSS variables
   @media (min-width: 1200px) {
     &.sidenav-open-expanded {
-      padding-right: 200px; // Match expanded sidenav width (sidenav-labels)
-      --content-wrapper-padding-right: 200px;
+      padding-right: 240px; // Match expanded sidenav width (sidenav-labels)
+      --content-wrapper-padding-right: 240px;
     }
 
     &.sidenav-open-collapsed {
@@ -633,7 +633,7 @@ mat-sidenav-content {
 }
 
 .sidenav-labels {
-  width: 200px;
+  width: 240px;
 }
 
 .sidenav-small {
