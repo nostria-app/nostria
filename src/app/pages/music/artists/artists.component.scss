@@ -89,6 +89,7 @@
   transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   text-decoration: none;
   color: inherit;
+  position: relative;
 
   &:hover,
   &:focus {
@@ -96,6 +97,25 @@
     box-shadow: var(--mat-sys-level2);
     background-color: var(--mat-sys-surface-container-high);
     outline: none;
+  }
+
+  .artist-menu-btn {
+    position: absolute;
+    top: 0.25rem;
+    right: 0.25rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    mat-icon {
+      font-size: 1.25rem;
+      width: 1.25rem;
+      height: 1.25rem;
+    }
+  }
+
+  &:hover .artist-menu-btn,
+  &:focus .artist-menu-btn {
+    opacity: 1;
   }
 
   .artist-avatar {

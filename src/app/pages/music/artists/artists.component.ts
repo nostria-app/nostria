@@ -4,6 +4,8 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatButtonModule } from '@angular/material/button';
 import { MatIconModule } from '@angular/material/icon';
 import { MatSelectModule } from '@angular/material/select';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDialog } from '@angular/material/dialog';
 import { FormsModule } from '@angular/forms';
 import { Event, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -12,6 +14,7 @@ import { AccountRelayService } from '../../../services/relays/account-relay';
 import { ReportingService } from '../../../services/reporting.service';
 import { DatabaseService } from '../../../services/database.service';
 import { DataService } from '../../../services/data.service';
+import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 
 const MUSIC_KIND = 36787;
 
@@ -30,6 +33,7 @@ interface ArtistData {
     MatButtonModule,
     MatIconModule,
     MatSelectModule,
+    MatMenuModule,
     FormsModule,
   ],
   templateUrl: './artists.component.html',
@@ -43,6 +47,7 @@ export class ArtistsComponent implements OnDestroy {
   private database = inject(DatabaseService);
   private dataService = inject(DataService);
   private router = inject(Router);
+  private dialog = inject(MatDialog);
 
   allTracks = signal<Event[]>([]);
   loading = signal(true);
@@ -184,5 +189,23 @@ export class ArtistsComponent implements OnDestroy {
   getArtistPicture(pubkey: string): string | null {
     const profile = this.dataService.getCachedProfile(pubkey);
     return profile?.data?.picture || null;
+  }
+
+  zapArtist(event: MouseEvent, artistData: ArtistData): void {
+    event.stopPropagation();
+    
+    const profile = this.dataService.getCachedProfile(artistData.pubkey);
+
+    const data: ZapDialogData = {
+      recipientPubkey: artistData.pubkey,
+      recipientName: artistData.name,
+      recipientMetadata: profile?.data,
+    };
+
+    this.dialog.open(ZapDialogComponent, {
+      data,
+      width: '400px',
+      maxWidth: '95vw',
+    });
   }
 }

@@ -87,6 +87,10 @@ const MUSIC_KIND = 36787;
               <span>Edit Playlist</span>
             </button>
           }
+          <button mat-menu-item (click)="zapCreator($event)">
+            <mat-icon>bolt</mat-icon>
+            <span>Zap Creator</span>
+          </button>
           <button mat-menu-item (click)="sharePlaylist()">
             <mat-icon>share</mat-icon>
             <span>Share Playlist</span>
