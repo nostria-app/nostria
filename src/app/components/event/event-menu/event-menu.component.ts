@@ -37,6 +37,7 @@ import { AiInfoDialogComponent } from '../../ai-info-dialog/ai-info-dialog.compo
 import { ModelLoadDialogComponent } from '../../model-load-dialog/model-load-dialog.component';
 import { CustomDialogService } from '../../../services/custom-dialog.service';
 import { EventService } from '../../../services/event';
+import { BookmarkListSelectorComponent } from '../../bookmark-list-selector/bookmark-list-selector.component';
 
 @Component({
   selector: 'app-event-menu',
@@ -246,7 +247,15 @@ export class EventMenuComponent {
     event.stopPropagation();
     const targetItem = this.record();
     if (targetItem) {
-      this.bookmark.toggleBookmark(targetItem.event.id);
+      // Open bookmark list selector dialog
+      this.dialog.open(BookmarkListSelectorComponent, {
+        data: {
+          itemId: targetItem.event.id,
+          type: 'e'
+        },
+        width: '400px',
+        panelClass: 'responsive-dialog'
+      });
     }
   }
 
@@ -312,7 +321,7 @@ export class EventMenuComponent {
         // Delete from local database after successful deletion request
         // This ensures the user doesn't see the event cached locally
         await this.eventService.deleteEventFromLocalStorage(event.id);
-        
+
         this.snackBar.open('Note deleted successfully', 'Dismiss', {
           duration: 3000,
         });

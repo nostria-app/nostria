@@ -18,6 +18,13 @@ export interface ArticleBookmark {
   slug: string;
 }
 
+export interface BookmarkList {
+  id: string; // d-tag value
+  name: string; // title tag
+  event: Event | null;
+  isDefault: boolean; // true for kind 10003
+}
+
 @Injectable({
   providedIn: 'root',
 })
@@ -31,15 +38,54 @@ export class BookmarkService {
   layout = inject(LayoutService);
   database = inject(DatabaseService);
 
+  // Kind 10003 - default bookmarks event (single replaceable)
   bookmarkEvent = signal<Event | null>(null);
 
+  // Kind 30003 - bookmark lists (parameterized replaceable events)
+  bookmarkLists = signal<BookmarkList[]>([]);
+
+  // Currently selected bookmark list
+  selectedListId = signal<string>('default');
+
+  // Get the currently active bookmark list event
+  activeBookmarkEvent = computed<Event | null>(() => {
+    const listId = this.selectedListId();
+    if (listId === 'default') {
+      return this.bookmarkEvent();
+    }
+
+    const list = this.bookmarkLists().find(l => l.id === listId);
+    return list?.event || null;
+  });
+
+  // All bookmark lists including the default one
+  allBookmarkLists = computed<BookmarkList[]>(() => {
+    const lists: BookmarkList[] = [];
+
+    // Add default bookmark list
+    const defaultEvent = this.bookmarkEvent();
+    if (defaultEvent) {
+      lists.push({
+        id: 'default',
+        name: 'Bookmarks',
+        event: defaultEvent,
+        isDefault: true
+      });
+    }
+
+    // Add custom bookmark lists
+    lists.push(...this.bookmarkLists());
+
+    return lists;
+  });
+
   bookmarks = computed<any[]>(() => {
-    return this.bookmarkEvent()?.tags.map(tag => ({ id: tag[1] })).reverse() || [];
+    return this.activeBookmarkEvent()?.tags.map(tag => ({ id: tag[1] })).reverse() || [];
   });
 
   bookmarkEvents = computed<any[]>(() => {
     return (
-      this.bookmarkEvent()
+      this.activeBookmarkEvent()
         ?.tags.filter(tag => tag[0] === 'e')
         .map(tag => ({ id: tag[1] }))
         .reverse() || []
@@ -48,7 +94,7 @@ export class BookmarkService {
 
   bookmarkArticles = computed<any[]>(() => {
     return (
-      this.bookmarkEvent()
+      this.activeBookmarkEvent()
         ?.tags.filter(tag => tag[0] === 'a')
         .map(tag => ({ id: tag[1] }))
         .reverse() || []
@@ -57,7 +103,7 @@ export class BookmarkService {
 
   bookmarkUrls = computed<any[]>(() => {
     return (
-      this.bookmarkEvent()
+      this.activeBookmarkEvent()
         ?.tags.filter(tag => tag[0] === 'r')
         .map(tag => ({ id: tag[1] }))
         .reverse() || []
@@ -72,18 +118,45 @@ export class BookmarkService {
         await this.initialize();
       } else {
         this.bookmarkEvent.set(null);
+        this.bookmarkLists.set([]);
       }
     });
   }
 
   async initialize() {
-    // Bookmark list (kind 10003) is already fetched in the consolidated account query
-    // in nostr.service.ts, so we just load from storage
+    // Load kind 10003 - default bookmarks
     const bookmarksEvent = await this.database.getEventByPubkeyAndKind(
       this.accountState.pubkey()!,
       kinds.BookmarkList
     );
     this.bookmarkEvent.set(bookmarksEvent);
+
+    // Load kind 30003 - bookmark lists
+    await this.loadBookmarkLists();
+  }
+
+  async loadBookmarkLists() {
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      return;
+    }
+
+    // Query for all bookmark lists (kind 30003)
+    const events = await this.database.getEventsByPubkeyAndKind(pubkey, 30003);
+
+    const lists: BookmarkList[] = events.map(event => {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+      const titleTag = event.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
+
+      return {
+        id: dTag,
+        name: titleTag,
+        event: event,
+        isDefault: false
+      };
+    });
+
+    this.bookmarkLists.set(lists);
   }
 
   // Helper to get the appropriate signal based on bookmark type
@@ -110,7 +183,7 @@ export class BookmarkService {
     };
   }
 
-  async addBookmark(id: string, type: BookmarkType = 'e') {
+  async addBookmark(id: string, type: BookmarkType = 'e', listId?: string) {
     // Check if user is logged in
     const userPubkey = this.accountState.pubkey();
     const currentAccount = this.accountState.account();
@@ -120,11 +193,12 @@ export class BookmarkService {
       return;
     }
 
-    let event = this.bookmarkEvent();
+    const targetListId = listId || this.selectedListId();
+    let event: Event;
 
-    if (!event) {
-      // Create a new bookmark event if none exists
-      event = {
+    if (targetListId === 'default') {
+      // Use kind 10003
+      event = this.bookmarkEvent() || {
         kind: kinds.BookmarkList,
         pubkey: this.accountState.pubkey(),
         created_at: Math.floor(Date.now() / 1000),
@@ -133,12 +207,32 @@ export class BookmarkService {
         id: '',
         sig: '',
       };
+    } else {
+      // Use kind 30003
+      const list = this.bookmarkLists().find(l => l.id === targetListId);
+      if (!list) {
+        this.snackBar.open('Bookmark list not found', 'Close', { duration: 3000 });
+        return;
+      }
+
+      event = list.event || {
+        kind: 30003,
+        pubkey: this.accountState.pubkey(),
+        created_at: Math.floor(Date.now() / 1000),
+        content: '',
+        tags: [
+          ['d', targetListId],
+          ['title', list.name]
+        ],
+        id: '',
+        sig: '',
+      };
     }
 
     const bookmarkId = id;
 
     // Check if the bookmark already exists
-    const existingBookmark = this.bookmarks().find(b => b.id === bookmarkId);
+    const existingBookmark = event.tags.find(tag => tag[0] === type && tag[1] === bookmarkId);
 
     // If it exists, remove it; if not, add it
     if (existingBookmark) {
@@ -150,16 +244,70 @@ export class BookmarkService {
     }
 
     // Publish the updated event
-    await this.publish(event);
+    await this.publish(event, targetListId);
   }
 
-  toggleBookmark(id: string, type: BookmarkType = 'e') {
-    this.addBookmark(id, type); // Add and toggle are the same operation
+  async addBookmarkToList(id: string, type: BookmarkType, listId: string) {
+    return this.addBookmark(id, type, listId);
   }
 
-  isBookmarked(id: string, type: BookmarkType = 'e'): boolean {
-    const list = this.getBookmarkSignal(type)();
-    return list.find(b => b.id === id);
+  toggleBookmark(id: string, type: BookmarkType = 'e', listId?: string) {
+    this.addBookmark(id, type, listId); // Add and toggle are the same operation
+  }
+
+  isBookmarked(id: string, type: BookmarkType = 'e', listId?: string): boolean {
+    const targetListId = listId || this.selectedListId();
+    let event: Event | null;
+
+    if (targetListId === 'default') {
+      event = this.bookmarkEvent();
+    } else {
+      const list = this.bookmarkLists().find(l => l.id === targetListId);
+      event = list?.event || null;
+    }
+
+    if (!event) {
+      return false;
+    }
+
+    return event.tags.some(tag => tag[0] === type && tag[1] === id);
+  }
+
+  // Check if item is bookmarked in ANY list
+  isBookmarkedInAnyList(id: string, type: BookmarkType = 'e'): boolean {
+    // Check default list
+    if (this.bookmarkEvent()?.tags.some(tag => tag[0] === type && tag[1] === id)) {
+      return true;
+    }
+
+    // Check all custom lists
+    return this.bookmarkLists().some(list =>
+      list.event?.tags.some(tag => tag[0] === type && tag[1] === id)
+    );
+  }
+
+  // Get all lists that contain this bookmark
+  getListsContainingBookmark(id: string, type: BookmarkType = 'e'): BookmarkList[] {
+    const lists: BookmarkList[] = [];
+
+    // Check default list
+    if (this.bookmarkEvent()?.tags.some(tag => tag[0] === type && tag[1] === id)) {
+      lists.push({
+        id: 'default',
+        name: 'Bookmarks',
+        event: this.bookmarkEvent(),
+        isDefault: true
+      });
+    }
+
+    // Check custom lists
+    this.bookmarkLists().forEach(list => {
+      if (list.event?.tags.some(tag => tag[0] === type && tag[1] === id)) {
+        lists.push(list);
+      }
+    });
+
+    return lists;
   }
 
   // Helper method to get tooltip text based on bookmark status
@@ -169,10 +317,96 @@ export class BookmarkService {
 
   // Helper method to get icon based on bookmark status
   getBookmarkIcon(id: string, type: BookmarkType = 'e'): string {
-    return this.bookmarkEvents().find(b => b.id === id) ? 'bookmark_remove' : 'bookmark_add';
+    return this.isBookmarkedInAnyList(id, type) ? 'bookmark_remove' : 'bookmark_add';
   }
 
-  async publish(event: Event) {
+  async createBookmarkList(name: string): Promise<BookmarkList | null> {
+    const userPubkey = this.accountState.pubkey();
+    if (!userPubkey) {
+      await this.layout.showLoginDialog();
+      return null;
+    }
+
+    // Generate a unique d-tag
+    const dTag = Date.now().toString();
+
+    const event: Event = {
+      kind: 30003,
+      pubkey: userPubkey,
+      created_at: Math.floor(Date.now() / 1000),
+      content: '',
+      tags: [
+        ['d', dTag],
+        ['title', name]
+      ],
+      id: '',
+      sig: '',
+    };
+
+    await this.publish(event, dTag);
+
+    const newList: BookmarkList = {
+      id: dTag,
+      name: name,
+      event: event,
+      isDefault: false
+    };
+
+    return newList;
+  }
+
+  async updateBookmarkList(listId: string, name: string): Promise<void> {
+    const list = this.bookmarkLists().find(l => l.id === listId);
+    if (!list || !list.event) {
+      return;
+    }
+
+    const event = { ...list.event };
+
+    // Update the title tag
+    const titleTagIndex = event.tags.findIndex(t => t[0] === 'title');
+    if (titleTagIndex !== -1) {
+      event.tags[titleTagIndex] = ['title', name];
+    } else {
+      event.tags.push(['title', name]);
+    }
+
+    await this.publish(event, listId);
+  }
+
+  async deleteBookmarkList(listId: string): Promise<void> {
+    const list = this.bookmarkLists().find(l => l.id === listId);
+    if (!list || !list.event) {
+      return;
+    }
+
+    // Create a deletion event (kind 5)
+    const deletionEvent: Event = {
+      kind: 5,
+      pubkey: this.accountState.pubkey()!,
+      created_at: Math.floor(Date.now() / 1000),
+      content: 'Deleted bookmark list',
+      tags: [
+        ['a', `30003:${this.accountState.pubkey()}:${listId}`]
+      ],
+      id: '',
+      sig: '',
+    };
+
+    const signedEvent = await this.nostr.signEvent(deletionEvent);
+    const publishPromises = await this.accountRelay.publish(signedEvent);
+    await Promise.all(publishPromises || []);
+
+    // Remove from local state
+    this.bookmarkLists.set(this.bookmarkLists().filter(l => l.id !== listId));
+
+    // If this was the selected list, switch to default
+    if (this.selectedListId() === listId) {
+      this.selectedListId.set('default');
+    }
+  }
+
+  async publish(event: Event, listId?: string) {
     if (!event) {
       return;
     }
@@ -184,8 +418,29 @@ export class BookmarkService {
     // Sign the event
     const signedEvent = await this.nostr.signEvent(event);
 
-    // Update the local bookmark event with the signed event
-    this.bookmarkEvent.set(signedEvent);
+    // Update the local state based on event kind
+    if (signedEvent.kind === kinds.BookmarkList) {
+      this.bookmarkEvent.set(signedEvent);
+    } else if (signedEvent.kind === 30003) {
+      const dTag = signedEvent.tags.find(t => t[0] === 'd')?.[1] || '';
+      const titleTag = signedEvent.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
+
+      const updatedList: BookmarkList = {
+        id: dTag,
+        name: titleTag,
+        event: signedEvent,
+        isDefault: false
+      };
+
+      const existingIndex = this.bookmarkLists().findIndex(l => l.id === dTag);
+      if (existingIndex !== -1) {
+        const lists = [...this.bookmarkLists()];
+        lists[existingIndex] = updatedList;
+        this.bookmarkLists.set(lists);
+      } else {
+        this.bookmarkLists.set([...this.bookmarkLists(), updatedList]);
+      }
+    }
 
     // Publish to relays and get array of promises
     const publishPromises = await this.accountRelay.publish(signedEvent);

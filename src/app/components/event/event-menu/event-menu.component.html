@@ -49,10 +49,10 @@
     <mat-icon [matTooltip]="bookmark.getBookmarkTooltip(event().id)" matTooltipPosition="below">
       {{ bookmark.getBookmarkIcon(event().id) }}
     </mat-icon>
-    @if (bookmark.isBookmarked(event().id)) {
-    Remove Bookmark
+    @if (bookmark.isBookmarkedInAnyList(event().id)) {
+    Manage Bookmarks
     } @else {
-    Add Bookmark
+    Add to Bookmark List
     }
   </button>
   <button mat-menu-item (click)="layout.publishEvent(event())">

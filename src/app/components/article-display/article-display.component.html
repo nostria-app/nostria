@@ -201,25 +201,19 @@
   <footer class="article-footer">
     <div class="article-actions">
       @if (accountState.isCurrentUser(authorPubkey())) {
-      <button mat-button color="primary" (click)="layout.createArticle(link())" title="Edit Article">
+      <button mat-button (click)="layout.createArticle(link())" title="Edit Article">
         <mat-icon>edit</mat-icon>
         Edit
       </button>
       }
 
-      @if (bookmark.isBookmarked(id(), 'a')) {
-      <button mat-button color="primary" title="Remove bookmark" (click)="bookmark.toggleBookmark(id(), 'a')">
-        <mat-icon title="Remove bookmark">bookmark_remove</mat-icon>
+      <button mat-button (click)="openBookmarkSelector()"
+        [title]="bookmark.isBookmarkedInAnyList(id(), 'a') ? 'Manage bookmarks' : 'Add to bookmark list'">
+        <mat-icon>{{ bookmark.getBookmarkIcon(id(), 'a') }}</mat-icon>
         Bookmark
       </button>
-      } @else {
-      <button mat-button color="primary" title="Add bookmark" (click)="bookmark.toggleBookmark(id(), 'a')">
-        <mat-icon title="Add bookmark">bookmark_add</mat-icon>
-        Bookmark
-      </button>
-      }
 
-      <button mat-button color="primary" (click)="share.emit()">
+      <button mat-button (click)="share.emit()">
         <mat-icon>share</mat-icon>
         Share
       </button>

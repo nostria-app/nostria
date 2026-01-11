@@ -15,7 +15,26 @@
           <span>Tiles View</span>
         </button>
       </mat-menu>
-      <button mat-flat-button color="primary" (click)="addBookmark()" [disabled]="loading()">
+      <button mat-icon-button [matMenuTriggerFor]="listMenu" matTooltip="Manage Lists">
+        <mat-icon>more_vert</mat-icon>
+      </button>
+      <mat-menu #listMenu="matMenu">
+        <button mat-menu-item (click)="createNewList()">
+          <mat-icon>add</mat-icon>
+          <span>Create New List</span>
+        </button>
+        @if (bookmarkService.selectedListId() !== 'default') {
+        <button mat-menu-item (click)="renameCurrentList()">
+          <mat-icon>edit</mat-icon>
+          <span>Rename List</span>
+        </button>
+        <button mat-menu-item (click)="deleteCurrentList()">
+          <mat-icon>delete</mat-icon>
+          <span>Delete List</span>
+        </button>
+        }
+      </mat-menu>
+      <button mat-flat-button (click)="addBookmark()" [disabled]="loading()">
         <mat-icon>add</mat-icon>
         Add Bookmark
       </button>
@@ -29,8 +48,22 @@
   </div>
   } @else {
   <div class="filters-container">
-    <div class="categories-container">
+    <!-- Bookmark List Selector -->
+    <div class="list-selector">
+      <mat-form-field appearance="outline" class="list-select-field">
+        <mat-label>Bookmark List</mat-label>
+        <mat-select [value]="bookmarkService.selectedListId()" (valueChange)="onListChange($event)">
+          @for (list of bookmarkService.allBookmarkLists(); track list.id) {
+          <mat-option [value]="list.id">
+            <mat-icon class="list-icon">{{ list.isDefault ? 'bookmark' : 'label' }}</mat-icon>
+            {{ list.name }}
+          </mat-option>
+          }
+        </mat-select>
+      </mat-form-field>
+    </div>
 
+    <div class="categories-container">
       <div class="categories-list">
         @for (category of categories(); track category.id) {
         <div class="category-chip" [class.selected]="selectedCategory() === category.id" [style.background-color]="
