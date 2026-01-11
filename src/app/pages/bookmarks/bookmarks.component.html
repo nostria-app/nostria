@@ -28,6 +28,7 @@
           <mat-icon>edit</mat-icon>
           <span>Rename List</span>
         </button>
+        }
         <button mat-menu-item (click)="toggleListPrivacy()">
           <mat-icon>{{ currentList()?.isPrivate ? 'lock_open' : 'lock' }}</mat-icon>
           <span>{{ currentList()?.isPrivate ? 'Make Public' : 'Make Private' }}</span>
@@ -36,7 +37,6 @@
           <mat-icon>delete</mat-icon>
           <span>Delete List</span>
         </button>
-        }
       </mat-menu>
       <button mat-flat-button (click)="addBookmark()" [disabled]="loading()">
         <mat-icon>add</mat-icon>

@@ -453,7 +453,7 @@ export class BookmarksComponent implements OnInit {
     const currentListId = this.bookmarkService.selectedListId();
     const currentList = this.bookmarkService.allBookmarkLists().find(l => l.id === currentListId);
 
-    if (!currentList || currentList.isDefault) {
+    if (!currentList) {
       return;
     }
 
@@ -473,7 +473,7 @@ export class BookmarksComponent implements OnInit {
 
   async toggleListPrivacy() {
     const list = this.currentList();
-    if (!list || list.isDefault) {
+    if (!list) {
       return;
     }
 
@@ -501,7 +501,7 @@ export class BookmarksComponent implements OnInit {
     const currentListId = this.bookmarkService.selectedListId();
     const currentList = this.bookmarkService.allBookmarkLists().find(l => l.id === currentListId);
 
-    if (!currentList || currentList.isDefault) {
+    if (!currentList) {
       return;
     }
 
