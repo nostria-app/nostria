@@ -418,12 +418,6 @@ export class App implements OnInit {
             authenticated: false,
           },
           {
-            path: '/lists?tab=sets&kind=30015',
-            label: $localize`:@@app.nav.collections.interest-sets:Interest Sets`,
-            icon: 'label',
-            authenticated: false,
-          },
-          {
             path: '/relay-sets',
             label: $localize`:@@app.nav.collections.relays:Relays`,
             icon: 'dns',
