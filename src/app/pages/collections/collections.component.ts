@@ -33,7 +33,7 @@ export class CollectionsComponent {
       title: $localize`:@@collections.media.title:Media`,
       description: $localize`:@@collections.media.description:Video and photo collections`,
       icon: 'perm_media',
-      route: '/lists?tab=sets',
+      route: '/media',
       color: '#e91e63',
     },
     {
@@ -47,21 +47,21 @@ export class CollectionsComponent {
       title: $localize`:@@collections.relays.title:Relays`,
       description: $localize`:@@collections.relays.description:Manage your relay connections`,
       icon: 'dns',
-      route: '/collections/relay-sets',
+      route: '/relay-sets',
       color: '#ff9800',
     },
     {
       title: $localize`:@@collections.emoji-sets.title:Emoji Sets`,
       description: $localize`:@@collections.emoji-sets.description:Custom emoji collections`,
       icon: 'emoji_emotions',
-      route: '/lists?tab=sets&kind=30030',
+      route: '/emoji-sets',
       color: '#00bcd4',
     },
     {
       title: $localize`:@@collections.interests.title:Interests`,
       description: $localize`:@@collections.interests.description:Topics and hashtags you follow`,
       icon: 'tag',
-      route: '/collections/interest-sets',
+      route: '/interest-sets',
       color: '#9c27b0',
     },
   ];
