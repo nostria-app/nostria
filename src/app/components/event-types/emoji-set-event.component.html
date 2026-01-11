@@ -28,7 +28,7 @@
 
   @if (emojis().length > 0) {
   <div class="emoji-grid">
-    @for (emoji of emojis(); track emoji.shortcode) {
+    @for (emoji of emojis(); track $index) {
     <button mat-icon-button class="emoji-item"
       [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode" (click)="copyEmoji(emoji, $event)">
       <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
