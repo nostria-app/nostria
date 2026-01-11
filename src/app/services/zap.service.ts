@@ -527,16 +527,20 @@ export class ZapService {
       }
 
       // For now, use the first available wallet
-      const [, wallet] = walletEntries[0];
+      const [walletName, wallet] = walletEntries[0];
       const connectionString = wallet.connections[0];
+
+      this.logger.debug(`Using wallet: ${walletName}`);
 
       // Use Alby SDK to handle the NWC payment
       const ln = new LN(connectionString);
 
       this.logger.debug('Created Alby LN client, making payment...');
+      const paymentStartTime = Date.now();
       const result = await ln.pay(invoice);
+      const paymentDuration = Date.now() - paymentStartTime;
 
-      this.logger.info('✅ Payment completed successfully via Alby SDK');
+      this.logger.info(`✅ Payment completed successfully via Alby SDK (took ${paymentDuration}ms)`);
       this.logger.debug('Payment result:', result);
 
       // Extract preimage and fees from Alby SDK result
@@ -744,11 +748,21 @@ export class ZapService {
       throw new Error('No recipients have valid lightning addresses configured');
     }
 
-    // Send zaps to all recipients in parallel with timeout
-    const zapPromises = validPayments.map(async (payment) => {
-      const timeoutPromise = new Promise((_, reject) =>
+    // Send zaps sequentially to avoid NWC concurrency issues and rate limiting
+    // Many NWC providers (like Alby) may reject or block concurrent payment requests
+    const results: (boolean | null)[] = [];
+    let successCount = 0;
+
+    for (let i = 0; i < validPayments.length; i++) {
+      const payment = validPayments[i];
+      const timeoutPromise = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error(`Timeout sending zap to ${payment.pubkey}`)), 30000)
       );
+
+      this.logger.info(`Sending split zap ${i + 1}/${validPayments.length} to ${payment.pubkey.substring(0, 8)}...`, {
+        amount: payment.amount,
+        totalRecipients: validPayments.length
+      });
 
       const zapPromise = this.sendZap(
         payment.pubkey,
@@ -763,16 +777,22 @@ export class ZapService {
 
       try {
         await Promise.race([zapPromise, timeoutPromise]);
-        return true;
+        results.push(true);
+        successCount++;
+        this.logger.info(`✅ Split zap ${i + 1}/${validPayments.length} completed successfully`);
+
+        // Add a small delay between payments to avoid NWC rate limiting
+        // Skip delay after the last payment
+        if (i < validPayments.length - 1) {
+          this.logger.debug('Waiting 1 second before next split payment...');
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
       } catch (error) {
         // Log error but don't fail the entire split zap
-        this.logger.error(`Failed to send split zap to ${payment.pubkey}`, error);
-        return null;
+        this.logger.error(`❌ Failed to send split zap ${i + 1}/${validPayments.length} to ${payment.pubkey}`, error);
+        results.push(null);
       }
-    });
-
-    const results = await Promise.all(zapPromises);
-    const successCount = results.filter(r => r !== null).length;
+    }
 
     if (successCount === 0) {
       throw new Error('All split zap payments failed');
