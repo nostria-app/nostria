@@ -43,6 +43,20 @@
           <span class="artist-name">{{ artist.name }}</span>
           <span class="artist-track-count">{{ artist.trackCount }} track{{ artist.trackCount === 1 ? '' : 's' }}</span>
         </div>
+        <button mat-icon-button [matMenuTriggerFor]="artistMenu" class="artist-menu-btn" 
+          (click)="$event.stopPropagation()" aria-label="Artist options">
+          <mat-icon>more_vert</mat-icon>
+        </button>
+        <mat-menu #artistMenu="matMenu">
+          <button mat-menu-item (click)="zapArtist($event, artist)">
+            <mat-icon>bolt</mat-icon>
+            <span>Zap Artist</span>
+          </button>
+          <button mat-menu-item (click)="goToArtist(artist.pubkey)">
+            <mat-icon>person</mat-icon>
+            <span>View Artist</span>
+          </button>
+        </mat-menu>
       </div>
       }
     </div>
