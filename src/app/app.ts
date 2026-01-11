@@ -381,6 +381,43 @@ export class App implements OnInit {
         };
       }
 
+      // For the Collections item, add collection types as children
+      if (item.label === 'Collections') {
+        const collectionChildren: NavItem[] = [
+          {
+            path: '/bookmarks',
+            label: $localize`:@@app.nav.collections.bookmarks:Bookmarks`,
+            icon: 'bookmark',
+            authenticated: false,
+          },
+          {
+            path: '/lists?tab=sets&kind=30004',
+            label: $localize`:@@app.nav.collections.curated-lists:Curated Lists`,
+            icon: 'collections',
+            authenticated: false,
+          },
+          {
+            path: '/lists?tab=sets&kind=30015',
+            label: $localize`:@@app.nav.collections.interest-sets:Interest Sets`,
+            icon: 'label',
+            authenticated: false,
+          },
+          {
+            path: '/lists?tab=sets&kind=30030',
+            label: $localize`:@@app.nav.collections.emoji-sets:Emoji Sets`,
+            icon: 'emoji_emotions',
+            authenticated: false,
+          },
+        ];
+
+        return {
+          ...item,
+          expandable: true,
+          expanded: expandedItems['collections'] || false,
+          children: collectionChildren,
+        };
+      }
+
       return item;
     }).filter(item => {
       // Filter out items that are not authenticated if user is not logged in
@@ -423,6 +460,7 @@ export class App implements OnInit {
     { path: 'discover', label: $localize`:@@app.nav.discover:Discover`, icon: 'explore', authenticated: true },
 
     { path: 'people', label: $localize`:@@app.nav.people:People`, icon: 'people', authenticated: true },
+    { path: 'collections', label: $localize`:@@app.nav.collections:Collections`, icon: 'bookmarks', authenticated: true },
     {
       path: 'messages',
       label: $localize`:@@app.nav.messages:Messages`,

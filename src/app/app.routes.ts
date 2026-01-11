@@ -464,6 +464,13 @@ export const routes: Routes = [
     data: { isRoot: true },
   },
   {
+    path: 'collections',
+    data: { isRoot: true },
+    loadComponent: () =>
+      import('./pages/collections/collections.component').then(m => m.CollectionsComponent),
+    title: 'Collections',
+  },
+  {
     path: 'bookmarks',
     data: { isRoot: true },
     loadComponent: () =>
