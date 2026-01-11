@@ -30,32 +30,18 @@ export class CollectionsComponent {
 
   collections: CollectionItem[] = [
     {
+      title: $localize`:@@collections.media.title:Media`,
+      description: $localize`:@@collections.media.description:Video and photo collections`,
+      icon: 'perm_media',
+      route: '/lists?tab=sets',
+      color: '#e91e63',
+    },
+    {
       title: $localize`:@@collections.bookmarks.title:Bookmarks`,
       description: $localize`:@@collections.bookmarks.description:Your saved notes, articles, and links`,
       icon: 'bookmark',
       route: '/bookmarks',
       color: '#2196f3',
-    },
-    // {
-    //   title: $localize`:@@collections.curated-videos.title:Curated Videos`,
-    //   description: $localize`:@@collections.curated-videos.description:Video collections you've curated`,
-    //   icon: 'video_library',
-    //   route: '/lists?tab=sets&kind=30005',
-    //   color: '#f44336',
-    // },
-    // {
-    //   title: $localize`:@@collections.curated-pictures.title:Curated Pictures`,
-    //   description: $localize`:@@collections.curated-pictures.description:Photo collections you've curated`,
-    //   icon: 'photo_library',
-    //   route: '/lists?tab=sets&kind=30006',
-    //   color: '#4caf50',
-    // },
-    {
-      title: $localize`:@@collections.emoji-sets.title:Emoji Sets`,
-      description: $localize`:@@collections.emoji-sets.description:Custom emoji collections`,
-      icon: 'emoji_emotions',
-      route: '/lists?tab=sets&kind=30030',
-      color: '#00bcd4',
     },
     {
       title: $localize`:@@collections.relays.title:Relays`,
@@ -63,6 +49,13 @@ export class CollectionsComponent {
       icon: 'dns',
       route: '/collections/relay-sets',
       color: '#ff9800',
+    },
+    {
+      title: $localize`:@@collections.emoji-sets.title:Emoji Sets`,
+      description: $localize`:@@collections.emoji-sets.description:Custom emoji collections`,
+      icon: 'emoji_emotions',
+      route: '/lists?tab=sets&kind=30030',
+      color: '#00bcd4',
     },
     {
       title: $localize`:@@collections.interests.title:Interests`,
