@@ -362,15 +362,15 @@ export class BookmarkService {
     return this.isBookmarkedInAnyList(id, type) ? 'bookmark_remove' : 'bookmark_add';
   }
 
-  async createBookmarkList(name: string): Promise<BookmarkList | null> {
+  async createBookmarkList(name: string, customId?: string): Promise<BookmarkList | null> {
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) {
       await this.layout.showLoginDialog();
       return null;
     }
 
-    // Generate a unique d-tag
-    const dTag = Date.now().toString();
+    // Use custom ID if provided, otherwise generate a timestamp-based one
+    const dTag = customId || Date.now().toString();
 
     const event: Event = {
       kind: 30003,
