@@ -84,30 +84,66 @@ export class BookmarkService {
   });
 
   bookmarkEvents = computed<any[]>(() => {
-    return (
-      this.activeBookmarkEvent()
-        ?.tags.filter(tag => tag[0] === 'e')
-        .map(tag => ({ id: tag[1] }))
-        .reverse() || []
-    );
+    const event = this.activeBookmarkEvent();
+    if (!event) return [];
+
+    // Filter for 'e' tags and deduplicate by ID
+    const eventTags = event.tags.filter(tag => tag[0] === 'e');
+    const uniqueIds = new Set<string>();
+    const uniqueEvents: any[] = [];
+
+    // Reverse first to keep the most recent bookmarks
+    for (let i = eventTags.length - 1; i >= 0; i--) {
+      const id = eventTags[i][1];
+      if (!uniqueIds.has(id)) {
+        uniqueIds.add(id);
+        uniqueEvents.push({ id });
+      }
+    }
+
+    return uniqueEvents;
   });
 
   bookmarkArticles = computed<any[]>(() => {
-    return (
-      this.activeBookmarkEvent()
-        ?.tags.filter(tag => tag[0] === 'a')
-        .map(tag => ({ id: tag[1] }))
-        .reverse() || []
-    );
+    const event = this.activeBookmarkEvent();
+    if (!event) return [];
+
+    // Filter for 'a' tags and deduplicate by ID
+    const articleTags = event.tags.filter(tag => tag[0] === 'a');
+    const uniqueIds = new Set<string>();
+    const uniqueArticles: any[] = [];
+
+    // Reverse first to keep the most recent bookmarks
+    for (let i = articleTags.length - 1; i >= 0; i--) {
+      const id = articleTags[i][1];
+      if (!uniqueIds.has(id)) {
+        uniqueIds.add(id);
+        uniqueArticles.push({ id });
+      }
+    }
+
+    return uniqueArticles;
   });
 
   bookmarkUrls = computed<any[]>(() => {
-    return (
-      this.activeBookmarkEvent()
-        ?.tags.filter(tag => tag[0] === 'r')
-        .map(tag => ({ id: tag[1] }))
-        .reverse() || []
-    );
+    const event = this.activeBookmarkEvent();
+    if (!event) return [];
+
+    // Filter for 'r' tags and deduplicate by ID
+    const urlTags = event.tags.filter(tag => tag[0] === 'r');
+    const uniqueIds = new Set<string>();
+    const uniqueUrls: any[] = [];
+
+    // Reverse first to keep the most recent bookmarks
+    for (let i = urlTags.length - 1; i >= 0; i--) {
+      const id = urlTags[i][1];
+      if (!uniqueIds.has(id)) {
+        uniqueIds.add(id);
+        uniqueUrls.push({ id });
+      }
+    }
+
+    return uniqueUrls;
   });
 
   constructor() {
@@ -144,7 +180,13 @@ export class BookmarkService {
     // Query for all bookmark lists (kind 30003)
     const events = await this.database.getEventsByPubkeyAndKind(pubkey, 30003);
 
-    const lists: BookmarkList[] = events.map(event => {
+    // Filter out YouTube bookmarks (they have a 't' tag with 'youtube')
+    const filteredEvents = events.filter(event => {
+      const tTags = event.tags.filter(t => t[0] === 't');
+      return !tTags.some(t => t[1] === 'youtube');
+    });
+
+    const lists: BookmarkList[] = filteredEvents.map(event => {
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
       const titleTag = event.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
 
