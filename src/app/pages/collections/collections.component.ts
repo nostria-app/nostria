@@ -51,13 +51,6 @@ export class CollectionsComponent {
       color: '#4caf50',
     },
     {
-      title: $localize`:@@collections.curated-apps.title:Curated Apps`,
-      description: $localize`:@@collections.curated-apps.description:App collections you've curated`,
-      icon: 'apps',
-      route: '/lists?tab=sets&kind=30267',
-      color: '#9c27b0',
-    },
-    {
       title: $localize`:@@collections.emoji-sets.title:Emoji Sets`,
       description: $localize`:@@collections.emoji-sets.description:Custom emoji collections`,
       icon: 'emoji_emotions',
