@@ -52,12 +52,29 @@
         max-width: 400px;
       }
 
+      .list-option-content {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .list-name {
+          flex: 1;
+        }
+      }
+
       .list-icon {
         vertical-align: middle;
-        margin-right: 8px;
         font-size: 18px;
         width: 18px;
         height: 18px;
+      }
+
+      .private-icon {
+        font-size: 16px;
+        width: 16px;
+        height: 16px;
+        color: var(--mat-sys-on-surface-variant);
+        opacity: 0.7;
       }
     }
 

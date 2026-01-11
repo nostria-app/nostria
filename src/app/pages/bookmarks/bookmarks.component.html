@@ -55,8 +55,13 @@
         <mat-select [value]="bookmarkService.selectedListId()" (valueChange)="onListChange($event)">
           @for (list of bookmarkService.allBookmarkLists(); track list.id) {
           <mat-option [value]="list.id">
-            <mat-icon class="list-icon">{{ list.isDefault ? 'bookmark' : 'label' }}</mat-icon>
-            {{ list.name }}
+            <div class="list-option-content">
+              <mat-icon class="list-icon">{{ list.isDefault ? 'bookmark' : 'label' }}</mat-icon>
+              <span class="list-name">{{ list.name }}</span>
+              @if (list.isPrivate) {
+              <mat-icon class="private-icon" matTooltip="Private (Encrypted)">lock</mat-icon>
+              }
+            </div>
           </mat-option>
           }
         </mat-select>

@@ -3,11 +3,13 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDialogModule, MatDialogRef, MAT_DIALOG_DATA } from '@angular/material/dialog';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 import { FormsModule } from '@angular/forms';
 
 export interface CreateListDialogResult {
   name: string;
   id: string;
+  isPrivate: boolean;
 }
 
 export interface CreateListDialogData {
@@ -23,6 +25,7 @@ export interface CreateListDialogData {
     MatButtonModule,
     MatFormFieldModule,
     MatInputModule,
+    MatCheckboxModule,
     FormsModule
   ],
   templateUrl: './create-list-dialog.component.html',
@@ -34,6 +37,7 @@ export class CreateListDialogComponent {
 
   listName = signal(this.data?.name || '');
   listId = signal(this.data?.id || '');
+  isPrivate = signal(false);
   isRename = this.data?.isRename || false;
 
   // Generate a suggested ID based on the name
@@ -62,7 +66,7 @@ export class CreateListDialogComponent {
       return;
     }
 
-    this.dialogRef.close({ name, id });
+    this.dialogRef.close({ name, id, isPrivate: this.isPrivate() });
   }
 
   cancel() {
