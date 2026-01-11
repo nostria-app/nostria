@@ -61,6 +61,21 @@
 
 .section-content {
   padding: 24px;
+
+  .emoji-set-group {
+    margin-bottom: 32px;
+
+    &:last-child {
+      margin-bottom: 0;
+    }
+
+    .set-title {
+      margin: 0 0 12px 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--mat-sys-on-surface);
+    }
+  }
 }
 
 .edit-form {

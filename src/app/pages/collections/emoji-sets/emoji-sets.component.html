@@ -2,7 +2,7 @@
   <div class="page-header">
     <h1 i18n="@@emoji-sets.title">Emojis</h1>
     <p class="page-description" i18n="@@emoji-sets.description">
-      Manage your custom emoji collections. Emoji sets are stored in kind 30030 events.
+      Manage your custom emoji collections.
     </p>
   </div>
 
@@ -25,17 +25,20 @@
     <mat-divider></mat-divider>
 
     <div class="section-content">
-      @if (preferredEmojis().length > 0) {
-      <div class="emoji-grid">
-        @for (emoji of preferredEmojis(); track emoji.shortcode) {
-        <button mat-icon-button class="emoji-item"
-          [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode"
-          (click)="copyEmoji(emoji, $event)">
-          <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
-        </button>
-        }
-      </div>
-      <div class="emoji-count">{{ preferredEmojis().length }} {{ preferredEmojis().length === 1 ? 'emoji' : 'emojis' }}
+      @for (emojiSet of preferredEmojis(); track emojiSet.identifier) {
+      <div class="emoji-set-group">
+        <h3 class="set-title">{{ emojiSet.title }}</h3>
+        <div class="emoji-grid">
+          @for (emoji of emojiSet.emojis; track emoji.shortcode) {
+          <button mat-icon-button class="emoji-item"
+            [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode"
+            (click)="copyEmoji(emoji, $event)">
+            <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
+          </button>
+          }
+        </div>
+        <div class="emoji-count">{{ emojiSet.emojis.length }} {{ emojiSet.emojis.length === 1 ? 'emoji' : 'emojis' }}
+        </div>
       </div>
       }
     </div>
