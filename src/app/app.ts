@@ -391,9 +391,21 @@ export class App implements OnInit {
             authenticated: false,
           },
           {
-            path: '/lists?tab=sets&kind=30004',
-            label: $localize`:@@app.nav.collections.curated-lists:Curated Lists`,
-            icon: 'collections',
+            path: '/lists?tab=sets&kind=30005',
+            label: $localize`:@@app.nav.collections.curated-videos:Videos`,
+            icon: 'video_library',
+            authenticated: false,
+          },
+          {
+            path: '/lists?tab=sets&kind=30006',
+            label: $localize`:@@app.nav.collections.curated-pictures:Pictures`,
+            icon: 'photo_library',
+            authenticated: false,
+          },
+          {
+            path: '/lists?tab=sets&kind=30267',
+            label: $localize`:@@app.nav.collections.curated-apps:Apps`,
+            icon: 'apps',
             authenticated: false,
           },
           {

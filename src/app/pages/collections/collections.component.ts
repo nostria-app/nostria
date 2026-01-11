@@ -37,11 +37,25 @@ export class CollectionsComponent {
       color: '#2196f3',
     },
     {
-      title: $localize`:@@collections.curated-lists.title:Curated Lists`,
-      description: $localize`:@@collections.curated-lists.description:Organized collections of content`,
-      icon: 'collections',
-      route: '/lists?tab=sets&kind=30004',
+      title: $localize`:@@collections.curated-videos.title:Curated Videos`,
+      description: $localize`:@@collections.curated-videos.description:Video collections you've curated`,
+      icon: 'video_library',
+      route: '/lists?tab=sets&kind=30005',
+      color: '#f44336',
+    },
+    {
+      title: $localize`:@@collections.curated-pictures.title:Curated Pictures`,
+      description: $localize`:@@collections.curated-pictures.description:Photo collections you've curated`,
+      icon: 'photo_library',
+      route: '/lists?tab=sets&kind=30006',
       color: '#4caf50',
+    },
+    {
+      title: $localize`:@@collections.curated-apps.title:Curated Apps`,
+      description: $localize`:@@collections.curated-apps.description:App collections you've curated`,
+      icon: 'apps',
+      route: '/lists?tab=sets&kind=30267',
+      color: '#9c27b0',
     },
     {
       title: $localize`:@@collections.interest-sets.title:Interest Sets`,
@@ -55,7 +69,7 @@ export class CollectionsComponent {
       description: $localize`:@@collections.emoji-sets.description:Custom emoji collections`,
       icon: 'emoji_emotions',
       route: '/lists?tab=sets&kind=30030',
-      color: '#9c27b0',
+      color: '#00bcd4',
     },
   ];
 
