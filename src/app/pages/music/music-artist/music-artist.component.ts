@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -19,6 +20,7 @@ import { NostrRecord, MediaItem } from '../../../interfaces';
 import { MusicPlaylistCardComponent } from '../../../components/music-playlist-card/music-playlist-card.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
 import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
+import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -51,6 +53,7 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
   private accountState = inject(AccountStateService);
   private snackBar = inject(MatSnackBar);
   private clipboard = inject(Clipboard);
+  private dialog = inject(MatDialog);
 
   pubkey = signal<string>('');
   loading = signal(true);
@@ -522,5 +525,24 @@ export class MusicArtistComponent implements OnInit, OnDestroy {
     URL.revokeObjectURL(downloadUrl);
 
     this.snackBar.open('Tracks downloaded!', 'Close', { duration: 2000 });
+  }
+
+  zapArtist(): void {
+    const pk = this.pubkey();
+    if (!pk) return;
+
+    const profile = this.authorProfile();
+
+    const data: ZapDialogData = {
+      recipientPubkey: pk,
+      recipientName: this.artistName(),
+      recipientMetadata: profile?.data,
+    };
+
+    this.dialog.open(ZapDialogComponent, {
+      data,
+      width: '400px',
+      maxWidth: '95vw',
+    });
   }
 }
