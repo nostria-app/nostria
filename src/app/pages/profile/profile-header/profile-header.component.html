@@ -268,6 +268,10 @@
           <mat-icon>{{ isFavorite() ? 'heart_minus' : 'heart_plus' }}</mat-icon>
           <span>{{ isFavorite() ? 'Unfavorite' : 'Favorite' }}</span>
         </button>
+        <button mat-menu-item [matMenuTriggerFor]="followSetsMenu">
+          <mat-icon>group_add</mat-icon>
+          <span>Add to list</span>
+        </button>
 
         @if (hasLightningAddress()) {
         <button mat-menu-item (click)="zapUser()">
@@ -391,6 +395,21 @@
         <button mat-menu-item (click)="publishFollowingListEvent()">
           <mat-icon>people</mat-icon>
           <span>Following List</span>
+        </button>
+      </mat-menu>
+
+      <!-- Submenu for Lists -->
+      <mat-menu #followSetsMenu="matMenu">
+        @for (set of availableFollowSets(); track set.dTag) {
+        <button mat-menu-item (click)="addToFollowSet(set.dTag)">
+          <mat-icon>{{ isInFollowSet(set.dTag) ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+          <span>{{ set.title }}</span>
+        </button>
+        }
+        <mat-divider></mat-divider>
+        <button mat-menu-item (click)="createNewFollowSet()">
+          <mat-icon>add_circle</mat-icon>
+          <span>Create new list</span>
         </button>
       </mat-menu>
     </div>
