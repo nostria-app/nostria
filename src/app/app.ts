@@ -399,18 +399,18 @@ export class App implements OnInit {
             icon: 'bookmark',
             authenticated: false,
           },
-          {
-            path: '/lists?tab=sets&kind=30005',
-            label: $localize`:@@app.nav.collections.curated-videos:Videos`,
-            icon: 'video_library',
-            authenticated: false,
-          },
-          {
-            path: '/lists?tab=sets&kind=30006',
-            label: $localize`:@@app.nav.collections.curated-pictures:Pictures`,
-            icon: 'photo_library',
-            authenticated: false,
-          },
+          // {
+          //   path: '/lists?tab=sets&kind=30005',
+          //   label: $localize`:@@app.nav.collections.curated-videos:Videos`,
+          //   icon: 'video_library',
+          //   authenticated: false,
+          // },
+          // {
+          //   path: '/lists?tab=sets&kind=30006',
+          //   label: $localize`:@@app.nav.collections.curated-pictures:Pictures`,
+          //   icon: 'photo_library',
+          //   authenticated: false,
+          // },
           {
             path: '/relay-sets',
             label: $localize`:@@app.nav.collections.relays:Relays`,
