@@ -209,6 +209,39 @@ mat-sidenav-content {
   background-color: rgba(0, 0, 0, 0.3) !important;
 }
 
+// Override Angular Material's hover state to use lighter colors
+.sidenav mat-nav-list {
+
+  a[mat-list-item],
+  .mat-mdc-list-item {
+    // Use Material's CSS variables for proper hover effect
+    --mat-list-list-item-hover-state-layer-color: rgb(0, 0, 0);
+    --mat-list-list-item-hover-state-layer-opacity: 0.04;
+  }
+}
+
+:host-context(.dark) .sidenav mat-nav-list {
+
+  a[mat-list-item],
+  .mat-mdc-list-item {
+    // Use white for much lighter/brighter hover in dark mode
+    --mat-list-list-item-hover-state-layer-color: rgb(255, 255, 255);
+    --mat-list-list-item-hover-state-layer-opacity: 0.15;
+
+    &:hover:not(.active-link) {
+      background-color: rgba(255, 255, 255, 0.15) !important;
+
+      // Ensure text and icon have the same color on hover
+      color: var(--mat-sys-on-surface) !important;
+
+      .mat-icon,
+      mat-icon {
+        color: var(--mat-sys-on-surface) !important;
+      }
+    }
+  }
+}
+
 .active-link {
   background-color: rgba(0, 0, 0, 0.04);
 
