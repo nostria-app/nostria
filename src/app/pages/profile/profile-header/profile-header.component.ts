@@ -46,6 +46,8 @@ import { BadgeHoverCardService } from '../../../services/badge-hover-card.servic
 import { Router } from '@angular/router';
 import type { Event as NostrEvent } from 'nostr-tools';
 import { TrustService } from '../../../services/trust.service';
+import { FollowSetsService } from '../../../services/follow-sets.service';
+import { CreateListDialogComponent, CreateListDialogResult } from '../../../components/create-list-dialog/create-list-dialog.component';
 
 @Component({
   selector: 'app-profile-header',
@@ -90,6 +92,7 @@ export class ProfileHeaderComponent implements OnDestroy {
   private badgeHoverCardService = inject(BadgeHoverCardService);
   private router = inject(Router);
   private trustService = inject(TrustService);
+  private followSetsService = inject(FollowSetsService);
 
   // Add signal for QR code visibility
   showQrCode = signal<boolean>(false);
@@ -317,6 +320,11 @@ export class ProfileHeaderComponent implements OnDestroy {
 
   // Computed to check if trust is enabled
   trustEnabled = computed(() => this.trustService.isEnabled());
+
+  // Computed to get available follow sets
+  availableFollowSets = computed(() => {
+    return this.followSetsService.followSets();
+  });
 
   // Computed to check if user has premium subscription
   isPremium = computed(() => {
@@ -880,6 +888,63 @@ export class ProfileHeaderComponent implements OnDestroy {
           duration: 2000,
         });
       }
+    }
+  }
+
+  isInFollowSet(dTag: string): boolean {
+    const set = this.followSetsService.getFollowSetByDTag(dTag);
+    return set ? set.pubkeys.includes(this.pubkey()) : false;
+  }
+
+  async addToFollowSet(dTag: string): Promise<void> {
+    const pubkey = this.pubkey();
+    const isCurrentlyInSet = this.isInFollowSet(dTag);
+
+    try {
+      if (isCurrentlyInSet) {
+        // Remove from set
+        await this.followSetsService.removeFromFollowSet(dTag, pubkey);
+        this.layout.toast('Removed from list');
+      } else {
+        // Add to set
+        await this.followSetsService.addToFollowSet(dTag, pubkey);
+        this.layout.toast('Added to list');
+      }
+    } catch (error) {
+      this.layout.toast('Failed to update list');
+    }
+  }
+
+  async createNewFollowSet(): Promise<void> {
+    const dialogRef = this.dialog.open(CreateListDialogComponent, {
+      data: {
+        initialPrivate: false,
+      },
+      width: '450px',
+    });
+
+    const result: CreateListDialogResult | null = await firstValueFrom(dialogRef.afterClosed());
+
+    if (!result || !result.title.trim()) {
+      return;
+    }
+
+    try {
+      const pubkey = this.pubkey();
+      const newSet = await this.followSetsService.createFollowSet(
+        result.title.trim(),
+        [pubkey],
+        result.isPrivate
+      );
+
+      if (newSet) {
+        const privacyLabel = result.isPrivate ? 'private list' : 'list';
+        this.layout.toast(`Created ${privacyLabel} "${result.title}" and added user`);
+      } else {
+        this.layout.toast('Failed to create list');
+      }
+    } catch (error) {
+      this.layout.toast('Failed to create list');
     }
   }
 
