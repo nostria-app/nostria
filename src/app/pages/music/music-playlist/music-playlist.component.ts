@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatChipsModule } from '@angular/material/chips';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { MatDialog } from '@angular/material/dialog';
 import { Clipboard } from '@angular/cdk/clipboard';
 import { Event, Filter, kinds, nip19 } from 'nostr-tools';
 import { RelayPoolService } from '../../../services/relays/relay-pool';
@@ -27,6 +28,7 @@ import {
 } from '../edit-music-playlist-dialog/edit-music-playlist-dialog.component';
 import { MusicTrackMenuComponent } from '../../../components/music-track-menu/music-track-menu.component';
 import { MusicTrackDialogComponent, MusicTrackDialogData } from '../music-track-dialog/music-track-dialog.component';
+import { ZapDialogComponent, ZapDialogData } from '../../../components/zap-dialog/zap-dialog.component';
 
 const MUSIC_KIND = 36787;
 const MUSIC_PLAYLIST_KIND = 34139;
@@ -64,6 +66,7 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
   private eventService = inject(EventService);
   private layout = inject(LayoutService);
   private imageCache = inject(ImageCacheService);
+  private dialog = inject(MatDialog);
 
   playlist = signal<Event | null>(null);
   tracks = signal<Event[]>([]);
@@ -869,5 +872,25 @@ export class MusicPlaylistComponent implements OnInit, OnDestroy {
     URL.revokeObjectURL(url);
 
     this.snackBar.open('Playlist downloaded!', 'Close', { duration: 2000 });
+  }
+
+  zapPlaylist(): void {
+    const event = this.playlist();
+    if (!event) return;
+
+    const profile = this.authorProfile();
+
+    const data: ZapDialogData = {
+      recipientPubkey: event.pubkey,
+      recipientName: this.artistName(),
+      recipientMetadata: profile?.data,
+      eventId: event.id,
+    };
+
+    this.dialog.open(ZapDialogComponent, {
+      data,
+      width: '400px',
+      maxWidth: '95vw',
+    });
   }
 }
