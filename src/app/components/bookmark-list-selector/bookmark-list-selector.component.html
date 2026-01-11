@@ -1,0 +1,52 @@
+<h2 mat-dialog-title>Save to Bookmark List</h2>
+
+<mat-dialog-content>
+  @if (!showNewListInput()) {
+  <mat-list>
+    @for (list of allLists(); track list.id) {
+    <mat-list-item (click)="toggleBookmarkInList(list.id)" class="bookmark-list-item">
+      <mat-icon matListItemIcon>
+        @if (isInList(list.id)) {
+        check_box
+        } @else {
+        check_box_outline_blank
+        }
+      </mat-icon>
+      <span matListItemTitle>{{ list.name }}</span>
+      @if (list.isDefault) {
+      <mat-icon matListItemMeta class="default-badge">bookmark</mat-icon>
+      }
+    </mat-list-item>
+    }
+  </mat-list>
+
+  <mat-divider></mat-divider>
+
+  <button mat-button (click)="showNewListForm()" class="new-list-button">
+    <mat-icon>add</mat-icon>
+    Create New List
+  </button>
+  } @else {
+  <div class="new-list-form">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>List Name</mat-label>
+      <input matInput [(ngModel)]="newListName" placeholder="Enter list name" (keyup.enter)="createAndAddToNewList()">
+    </mat-form-field>
+
+    <div class="form-actions">
+      <button mat-button (click)="cancelNewList()" [disabled]="creatingList()">Cancel</button>
+      <button mat-flat-button (click)="createAndAddToNewList()" [disabled]="!newListName().trim() || creatingList()">
+        @if (creatingList()) {
+        Creating...
+        } @else {
+        Create & Add
+        }
+      </button>
+    </div>
+  </div>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="close()">Done</button>
+</mat-dialog-actions>

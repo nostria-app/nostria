@@ -12,6 +12,7 @@ import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatDialogModule, MatDialog } from '@angular/material/dialog';
 import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatSelectModule } from '@angular/material/select';
 import { LoggerService } from '../../services/logger.service';
 import { BookmarkCategoryDialogComponent } from './bookmark-category-dialog/bookmark-category-dialog.component';
 import { AddBookmarkDialogComponent } from './add-bookmark-dialog/add-bookmark-dialog.component';
@@ -24,6 +25,7 @@ import { Router } from '@angular/router';
 import { LayoutService } from '../../services/layout.service';
 import { EventComponent } from '../../components/event/event.component';
 import { ArticleComponent } from '../../components/article/article.component';
+import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 
 export interface Bookmark {
   id: string;
@@ -59,6 +61,7 @@ export type ViewMode = 'tiles' | 'content';
     MatDialogModule,
     MatSnackBarModule,
     MatProgressSpinnerModule,
+    MatSelectModule,
     EventComponent,
     ArticleComponent,
   ],
@@ -292,6 +295,64 @@ export class BookmarksComponent implements OnInit {
         return 'Website';
       default:
         return 'Bookmark';
+    }
+  }
+
+  onListChange(listId: string) {
+    this.bookmarkService.selectedListId.set(listId);
+  }
+
+  async createNewList() {
+    const name = prompt('Enter a name for the new bookmark list:');
+
+    if (name && name.trim()) {
+      const newList = await this.bookmarkService.createBookmarkList(name.trim());
+      if (newList) {
+        this.snackBar.open(`Created "${name.trim()}"`, 'Close', { duration: 2000 });
+        this.bookmarkService.selectedListId.set(newList.id);
+      }
+    }
+  }
+
+  async renameCurrentList() {
+    const currentListId = this.bookmarkService.selectedListId();
+    const currentList = this.bookmarkService.allBookmarkLists().find(l => l.id === currentListId);
+
+    if (!currentList || currentList.isDefault) {
+      return;
+    }
+
+    const name = prompt('Enter a new name for this bookmark list:', currentList.name);
+
+    if (name && name.trim() && name.trim() !== currentList.name) {
+      await this.bookmarkService.updateBookmarkList(currentListId, name.trim());
+      this.snackBar.open(`Renamed to "${name.trim()}"`, 'Close', { duration: 2000 });
+    }
+  }
+
+  async deleteCurrentList() {
+    const currentListId = this.bookmarkService.selectedListId();
+    const currentList = this.bookmarkService.allBookmarkLists().find(l => l.id === currentListId);
+
+    if (!currentList || currentList.isDefault) {
+      return;
+    }
+
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: 'Delete Bookmark List',
+        message: `Are you sure you want to delete "${currentList.name}"? This will remove all bookmarks in this list.`,
+        confirmText: 'Delete',
+        cancelText: 'Cancel',
+        confirmColor: 'warn'
+      }
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
+
+    if (confirmed) {
+      await this.bookmarkService.deleteBookmarkList(currentListId);
+      this.snackBar.open(`Deleted "${currentList.name}"`, 'Close', { duration: 2000 });
     }
   }
 }

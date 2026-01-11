@@ -7,6 +7,7 @@ import { MatDividerModule } from '@angular/material/divider';
 import { MatIconModule } from '@angular/material/icon';
 import { MatMenuModule } from '@angular/material/menu';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { MatDialog } from '@angular/material/dialog';
 import { RouterModule } from '@angular/router';
 import { SafeHtml } from '@angular/platform-browser';
 import { Event } from 'nostr-tools';
@@ -25,6 +26,7 @@ import { SharedRelayService } from '../../services/relays/shared-relay';
 import { EventService } from '../../services/event';
 import { ZapService } from '../../services/zap.service';
 import { LoggerService } from '../../services/logger.service';
+import { BookmarkListSelectorComponent } from '../bookmark-list-selector/bookmark-list-selector.component';
 
 export interface ArticleData {
   event?: Event;
@@ -172,6 +174,7 @@ export class ArticleDisplayComponent {
   // Services
   bookmark = inject(BookmarkService);
   accountState = inject(AccountStateService);
+  private dialog = inject(MatDialog);
   private sharedRelay = inject(SharedRelayService);
   private eventService = inject(EventService);
   private zapService = inject(ZapService);
@@ -379,5 +382,19 @@ export class ArticleDisplayComponent {
     } catch {
       return String(value);
     }
+  }
+
+  /**
+   * Open bookmark list selector dialog
+   */
+  openBookmarkSelector() {
+    this.dialog.open(BookmarkListSelectorComponent, {
+      data: {
+        itemId: this.id(),
+        type: 'a'
+      },
+      width: '400px',
+      panelClass: 'responsive-dialog'
+    });
   }
 }

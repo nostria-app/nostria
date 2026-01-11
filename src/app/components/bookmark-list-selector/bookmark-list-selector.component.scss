@@ -1,0 +1,40 @@
+.bookmark-list-item {
+  cursor: pointer;
+  border-radius: 8px;
+  margin: 4px 0;
+
+  &:hover {
+    background-color: var(--mat-sys-surface-container-highest);
+  }
+}
+
+.default-badge {
+  color: var(--mat-sys-primary);
+}
+
+.new-list-button {
+  width: 100%;
+  margin-top: 8px;
+  justify-content: flex-start;
+}
+
+.new-list-form {
+  padding: 16px 0;
+
+  .full-width {
+    width: 100%;
+  }
+
+  .form-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    margin-top: 8px;
+  }
+}
+
+mat-dialog-content {
+  min-width: 300px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
