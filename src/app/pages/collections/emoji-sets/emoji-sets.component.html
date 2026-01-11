@@ -25,11 +25,19 @@
     <mat-divider></mat-divider>
 
     <div class="section-content">
+      @if (preferredEmojis().length > 0) {
       <div class="emoji-grid">
-        @for (emoji of preferredEmojis(); track $index) {
-        <span class="emoji-item">{{ emoji }}</span>
+        @for (emoji of preferredEmojis(); track emoji.shortcode) {
+        <button mat-icon-button class="emoji-item"
+          [matTooltip]="copiedEmoji === emoji.shortcode ? 'Copied!' : emoji.shortcode"
+          (click)="copyEmoji(emoji, $event)">
+          <img [src]="emoji.url" [alt]="emoji.shortcode" class="emoji-image">
+        </button>
         }
       </div>
+      <div class="emoji-count">{{ preferredEmojis().length }} {{ preferredEmojis().length === 1 ? 'emoji' : 'emojis' }}
+      </div>
+      }
     </div>
   </mat-card>
   }

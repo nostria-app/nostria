@@ -36,6 +36,11 @@ const DEFAULT_HASHTAGS = [
   'farmstr',
 ];
 
+export interface EmojiItem {
+  shortcode: string;
+  url: string;
+}
+
 export interface EmojiSet {
   identifier: string; // d-tag
   name: string;
@@ -65,10 +70,12 @@ export class CollectionSetsService {
    * Get preferred emojis from user's emoji list (kind 10030)
    * This includes direct emoji characters from "emoji" tags
    */
-  async getPreferredEmojis(pubkey: string): Promise<string[]> {
+  async getPreferredEmojis(pubkey: string): Promise<EmojiItem[]> {
     try {
       // Query for user's preferred emoji list (kind 10030)
       const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, PREFERRED_EMOJI_KIND);
+
+      this.logger.info(`Found ${events.length} kind 10030 events for pubkey ${pubkey.substring(0, 8)}...`);
 
       if (events.length === 0) {
         return [];
@@ -76,15 +83,68 @@ export class CollectionSetsService {
 
       // Get the most recent event
       const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
+      this.logger.info('Latest kind 10030 event tags:', latestEvent.tags);
 
-      // Extract emoji characters from "emoji" tags
-      const emojis: string[] = [];
+      // Extract emojis from tags
+      // Kind 10030 can have:
+      // - "emoji" tags: ["emoji", shortcode, url]
+      // - "a" tags: ["a", "30030:pubkey:d-tag"] (references to emoji sets)
+      const emojis: EmojiItem[] = [];
+      const referencedSets: string[] = [];
+
       for (const tag of latestEvent.tags) {
-        if (tag[0] === 'emoji' && tag[1]) {
-          emojis.push(tag[1]);
+        // Handle direct emoji tags with shortcode and URL
+        if (tag[0] === 'emoji' && tag[1] && tag[2]) {
+          // Format: ["emoji", shortcode, url]
+          emojis.push({
+            shortcode: tag[1],
+            url: tag[2]
+          });
+        }
+        // Handle references to emoji sets
+        else if (tag[0] === 'a' && tag[1]) {
+          referencedSets.push(tag[1]);
         }
       }
 
+      // If we have referenced emoji sets, fetch them
+      if (referencedSets.length > 0) {
+        this.logger.info(`Found ${referencedSets.length} referenced emoji sets, fetching...`);
+
+        for (const ref of referencedSets) {
+          // Parse: "30030:pubkey:d-tag"
+          const parts = ref.split(':');
+          if (parts.length === 3 && parts[0] === '30030') {
+            const [, refPubkey, identifier] = parts;
+
+            // Fetch the referenced emoji set
+            const refEvents = await this.database.getEventsByPubkeyKindAndDTag(
+              refPubkey,
+              EMOJI_SET_KIND,
+              identifier
+            );
+
+            if (refEvents.length > 0) {
+              const refEvent = refEvents[0];
+              this.logger.info(`Fetched referenced emoji set "${identifier}":`, refEvent);
+
+              // Extract emojis from the referenced set
+              for (const tag of refEvent.tags) {
+                if (tag[0] === 'emoji' && tag[1] && tag[2]) {
+                  emojis.push({
+                    shortcode: tag[1],
+                    url: tag[2]
+                  });
+                }
+              }
+            } else {
+              this.logger.warn(`Referenced emoji set not found in database: ${ref}`);
+            }
+          }
+        }
+      }
+
+      this.logger.info(`Extracted ${emojis.length} emojis from kind 10030:`, emojis);
       return emojis;
     } catch (error) {
       this.logger.error('Error loading preferred emojis:', error);
@@ -99,6 +159,7 @@ export class CollectionSetsService {
     try {
       // Query for all kind 30030 events
       const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, EMOJI_SET_KIND);
+      this.logger.info(`Found ${events.length} kind 30030 events for pubkey ${pubkey.substring(0, 8)}...`);
 
       const sets: EmojiSet[] = [];
 
