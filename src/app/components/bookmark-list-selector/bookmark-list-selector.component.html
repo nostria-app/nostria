@@ -14,7 +14,9 @@
       </mat-icon>
       <span matListItemTitle>{{ list.name }}</span>
       @if (list.isDefault) {
-      <mat-icon matListItemMeta class="default-badge">bookmark</mat-icon>
+      <span matListItemMeta class="default-badge">
+        <mat-icon>bookmark</mat-icon>
+      </span>
       }
     </mat-list-item>
     }
