@@ -123,6 +123,10 @@
   }
 
   .bookmarks-list {
+    max-height: calc(100vh - 350px);
+    overflow-y: auto;
+    padding-right: 4px;
+
     &[data-view='content'] {
       display: flex;
       flex-direction: column;
@@ -464,6 +468,18 @@
           background-color: rgba(30, 30, 30, 0.9);
         }
       }
+    }
+  }
+
+  .load-more-indicator {
+    text-align: center;
+    padding: 24px;
+    color: var(--mat-sys-on-surface-variant);
+    font-size: 14px;
+    opacity: 0.7;
+
+    p {
+      margin: 0;
     }
   }
 }
