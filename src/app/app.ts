@@ -385,12 +385,7 @@ export class App implements OnInit {
       // For the Collections item, add collection types as children
       if (item.label === 'Collections') {
         const collectionChildren: NavItem[] = [
-          {
-            path: '/relay-sets',
-            label: $localize`:@@app.nav.collections.relay-sets:Relay Sets`,
-            icon: 'dns',
-            authenticated: false,
-          },
+
           {
             path: '/media',
             label: $localize`:@@app.nav.media:Media`,
@@ -432,6 +427,12 @@ export class App implements OnInit {
             path: '/lists?tab=sets&kind=30030',
             label: $localize`:@@app.nav.collections.emoji-sets:Emoji Sets`,
             icon: 'emoji_emotions',
+            authenticated: false,
+          },
+          {
+            path: '/relay-sets',
+            label: $localize`:@@app.nav.collections.relay-sets:Relay Sets`,
+            icon: 'dns',
             authenticated: false,
           },
         ];

@@ -244,14 +244,6 @@ const LIST_SETS: ListType[] = [
     expectedTags: ['e'],
   },
   {
-    kind: 30007,
-    name: 'Kind Mute Sets',
-    description: 'Mute pubkeys by event kinds',
-    icon: 'notifications_off',
-    isReplaceable: false,
-    expectedTags: ['p'],
-  },
-  {
     kind: 30015,
     name: 'Interest Sets',
     description: 'Interest topics by hashtags',
@@ -266,22 +258,6 @@ const LIST_SETS: ListType[] = [
     icon: 'emoji_emotions',
     isReplaceable: false,
     expectedTags: ['emoji'],
-  },
-  {
-    kind: 30063,
-    name: 'Release Artifact Sets',
-    description: 'Software release artifacts',
-    icon: 'package',
-    isReplaceable: false,
-    expectedTags: ['e', 'a'],
-  },
-  {
-    kind: 30267,
-    name: 'App Curation Sets',
-    description: 'Curated software applications',
-    icon: 'apps',
-    isReplaceable: false,
-    expectedTags: ['a'],
   },
   {
     kind: 31924,
