@@ -113,7 +113,7 @@
             </div>
             <div class="track-image">
               @if (track.image) {
-              <img [src]="track.image" [alt]="track.title" />
+              <img [src]="track.image" [alt]="track.title" [title]="track.title" />
               } @else {
               <mat-icon>music_note</mat-icon>
               }
@@ -122,8 +122,8 @@
               <span class="track-title">{{ track.title }}</span>
               <span class="track-artist">{{ track.artist }}</span>
             </div>
-            <button mat-icon-button (click)="removeTrack(i)" class="track-remove" aria-label="Remove track"
-              [disabled]="track.loading">
+            <button mat-icon-button type="button" (click)="removeTrack(i)" class="track-remove"
+              aria-label="Remove track" [disabled]="track.loading">
               <mat-icon>close</mat-icon>
             </button>
             <div class="track-drag-placeholder" *cdkDragPlaceholder></div>
@@ -134,6 +134,80 @@
           <mat-icon>info</mat-icon>
           Drag tracks to reorder
         </p>
+        }
+      </div>
+
+      <!-- Zap Splits Section -->
+      <div class="zap-splits-section">
+        <div class="splits-header">
+          <span class="splits-label">Zap Recipients</span>
+          @if (!isAddingSplit()) {
+          <button mat-stroked-button type="button" (click)="startAddSplit()">
+            <mat-icon>person_add</mat-icon>
+            Add Collaborator
+          </button>
+          }
+        </div>
+
+        @if (isAddingSplit()) {
+        <div class="add-split-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Collaborator npub, hex, or @username</mat-label>
+            <input matInput [value]="newSplitInput()" (input)="onSplitInputChange($event)"
+              (keydown)="onSplitInputKeyDown($event)" (keydown.enter)="confirmAddSplit()"
+              placeholder="@username, npub1..., or hex pubkey" #splitInput />
+            <mat-hint>Type @ to search, or enter an npub/hex pubkey</mat-hint>
+          </mat-form-field>
+          <div class="add-split-actions">
+            <button mat-button type="button" (click)="cancelAddSplit()">Cancel</button>
+            <button mat-flat-button type="button" (click)="confirmAddSplit()">Add</button>
+          </div>
+          <app-mention-autocomplete [config]="mentionConfig()" [position]="mentionPosition()" [maxResults]="6"
+            [maxHeight]="250" (mentionSelected)="onMentionSelected($event)" (dismissed)="onMentionDismissed()" />
+        </div>
+        }
+
+        <div class="splits-list">
+          @for (split of zapSplits(); track split.pubkey; let i = $index) {
+          <div class="split-item">
+            <div class="split-avatar">
+              @if (split.avatar) {
+              <img [src]="split.avatar" [alt]="split.name" [title]="split.name" />
+              } @else {
+              <mat-icon>person</mat-icon>
+              }
+            </div>
+            <div class="split-info">
+              <span class="split-name">{{ split.name }}</span>
+              <span class="split-role">{{ split.isUploader ? 'Uploader' : 'Collaborator' }} - receives {{
+                split.percentage }}% of zaps</span>
+            </div>
+            <div class="split-controls">
+              <input type="number" [value]="split.percentage" min="0" max="100"
+                (input)="updateSplitPercentage(i, +$any($event.target).value)" aria-label="Percentage" />
+              <span>%</span>
+              <button mat-icon-button type="button" (click)="removeSplit(i)" aria-label="Remove recipient">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+          </div>
+          }
+        </div>
+
+        @if (zapSplits().length > 0 && totalSplitPercentage() !== 100) {
+        <div class="split-warning">
+          <mat-icon>warning</mat-icon>
+          <span>Total must equal 100% (currently {{ totalSplitPercentage() }}%)</span>
+        </div>
+        }
+
+        @if (zapSplits().length === 0) {
+        <p class="splits-hint splits-default">
+          <mat-icon>info</mat-icon>
+          No split recipients - 100% of zaps go to your account
+        </p>
+        } @else {
+        <p class="splits-hint">Add collaborators to share zaps, or remove all to receive 100%.</p>
         }
       </div>
 

@@ -301,7 +301,7 @@ export class MusicPlaylistService {
    */
   async updatePlaylist(
     playlistId: string,
-    updates: Partial<CreateMusicPlaylistData> & { trackRefs?: string[] }
+    updates: Partial<CreateMusicPlaylistData> & { trackRefs?: string[]; zapSplits?: string[][] }
   ): Promise<MusicPlaylist | null> {
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
@@ -359,6 +359,13 @@ export class MusicPlaylistService {
     const trackRefs = updates.trackRefs ?? playlist.trackRefs;
     for (const ref of trackRefs) {
       newTags.push(['a', ref]);
+    }
+
+    // Add zap splits
+    if (updates.zapSplits && updates.zapSplits.length > 0) {
+      for (const zapTag of updates.zapSplits) {
+        newTags.push(zapTag);
+      }
     }
 
     const content = description || '';
