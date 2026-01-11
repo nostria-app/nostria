@@ -1,0 +1,24 @@
+<h2 mat-dialog-title>{{ isRename ? 'Rename Bookmark List' : 'Create Bookmark List' }}</h2>
+
+<mat-dialog-content>
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>List Name</mat-label>
+    <input matInput [(ngModel)]="listName" (ngModelChange)="generateIdFromName()" placeholder="My Reading List"
+      required>
+  </mat-form-field>
+
+  @if (!isRename) {
+  <mat-form-field appearance="outline" class="full-width">
+    <mat-label>Unique ID (d-tag)</mat-label>
+    <input matInput [(ngModel)]="listId" placeholder="my-reading-list" required>
+    <mat-hint>Used to uniquely identify this list. Can contain letters, numbers, and hyphens.</mat-hint>
+  </mat-form-field>
+  }
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="cancel()">Cancel</button>
+  <button mat-flat-button (click)="create()" [disabled]="!listName().trim() || (!isRename && !listId().trim())">
+    {{ isRename ? 'Rename' : 'Create' }}
+  </button>
+</mat-dialog-actions>

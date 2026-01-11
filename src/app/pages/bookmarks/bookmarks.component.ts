@@ -26,6 +26,7 @@ import { LayoutService } from '../../services/layout.service';
 import { EventComponent } from '../../components/event/event.component';
 import { ArticleComponent } from '../../components/article/article.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
+import { CreateListDialogComponent } from './create-list-dialog/create-list-dialog.component';
 
 export interface Bookmark {
   id: string;
@@ -322,12 +323,17 @@ export class BookmarksComponent implements OnInit {
   }
 
   async createNewList() {
-    const name = prompt('Enter a name for the new bookmark list:');
+    const dialogRef = this.dialog.open(CreateListDialogComponent, {
+      width: '500px',
+      panelClass: 'responsive-dialog'
+    });
 
-    if (name && name.trim()) {
-      const newList = await this.bookmarkService.createBookmarkList(name.trim());
+    const result = await dialogRef.afterClosed().toPromise();
+
+    if (result) {
+      const newList = await this.bookmarkService.createBookmarkList(result.name, result.id);
       if (newList) {
-        this.snackBar.open(`Created "${name.trim()}"`, 'Close', { duration: 2000 });
+        this.snackBar.open(`Created "${result.name}"`, 'Close', { duration: 2000 });
         this.bookmarkService.selectedListId.set(newList.id);
       }
     }
@@ -341,11 +347,17 @@ export class BookmarksComponent implements OnInit {
       return;
     }
 
-    const name = prompt('Enter a new name for this bookmark list:', currentList.name);
+    const dialogRef = this.dialog.open(CreateListDialogComponent, {
+      width: '500px',
+      panelClass: 'responsive-dialog',
+      data: { name: currentList.name, id: currentListId, isRename: true }
+    });
 
-    if (name && name.trim() && name.trim() !== currentList.name) {
-      await this.bookmarkService.updateBookmarkList(currentListId, name.trim());
-      this.snackBar.open(`Renamed to "${name.trim()}"`, 'Close', { duration: 2000 });
+    const result = await dialogRef.afterClosed().toPromise();
+
+    if (result && result.name.trim() !== currentList.name) {
+      await this.bookmarkService.updateBookmarkList(currentListId, result.name.trim());
+      this.snackBar.open(`Renamed to "${result.name.trim()}"`, 'Close', { duration: 2000 });
     }
   }
 
