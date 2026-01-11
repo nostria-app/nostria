@@ -235,7 +235,21 @@ export class BookmarkService {
 
     console.log('[BookmarkService] After YouTube filter:', filteredEvents.length);
 
-    const lists: BookmarkList[] = filteredEvents.map(event => {
+    // Deduplicate by d-tag (keep only the latest event for each d-tag)
+    const deduplicatedMap = new Map<string, Event>();
+    for (const event of filteredEvents) {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1];
+      if (!dTag) continue;
+
+      const existing = deduplicatedMap.get(dTag);
+      if (!existing || event.created_at > existing.created_at) {
+        deduplicatedMap.set(dTag, event);
+      }
+    }
+
+    console.log(`[BookmarkService] After deduplication: ${deduplicatedMap.size} unique lists`);
+
+    const lists: BookmarkList[] = Array.from(deduplicatedMap.values()).map(event => {
       const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
 
       // Per NIP-51: private lists have encrypted content, public lists have empty content
@@ -623,7 +637,7 @@ export class BookmarkService {
     }
 
     const newIsPrivate = !list.isPrivate;
-    console.log(`[BookmarkService] Toggling list "${list.name}" from ${list.isPrivate ? 'private' : 'public'} to ${newIsPrivate ? 'private' : 'public'}`);
+    console.log(`[BookmarkService] Toggling list "${list.name}" (d-tag: ${listId}) from ${list.isPrivate ? 'private' : 'public'} to ${newIsPrivate ? 'private' : 'public'}`);
 
     // Extract bookmark tags (e, a, t)
     const bookmarkTags = list.event.tags.filter(tag =>
@@ -634,6 +648,9 @@ export class BookmarkService {
     const metadataTags = list.event.tags.filter(tag =>
       tag[0] === 'd' || tag[0] === 'title' || tag[0] === 'description' || tag[0] === 'image'
     );
+
+    console.log(`[BookmarkService] Metadata tags:`, metadataTags);
+    console.log(`[BookmarkService] Bookmark tags count: ${bookmarkTags.length}`);
 
     let newContent = '';
     let newTags = [...metadataTags];
@@ -659,12 +676,16 @@ export class BookmarkService {
     }
 
     const event: Event = {
-      ...list.event,
+      kind: 30003,
+      pubkey: list.event.pubkey,
+      created_at: Math.floor(Date.now() / 1000),
       tags: newTags,
       content: newContent,
-      created_at: Math.floor(Date.now() / 1000)
+      id: '',
+      sig: ''
     };
 
+    console.log(`[BookmarkService] Publishing toggled list with ${newTags.length} tags, content length: ${newContent.length}`);
     await this.publish(event, listId);
     console.log(`[BookmarkService] ✅ List "${list.name}" is now ${newIsPrivate ? 'private' : 'public'}`);
   }
@@ -713,40 +734,20 @@ export class BookmarkService {
     // Sign the event
     const signedEvent = await this.nostr.signEvent(event);
 
-    // Update the local state based on event kind
+    // Update the local state for default bookmarks only
+    // For kind 30003, let the subscription handler update via loadBookmarkLists
     if (signedEvent.kind === kinds.BookmarkList) {
       this.bookmarkEvent.set(signedEvent);
-    } else if (signedEvent.kind === 30003) {
-      const dTag = signedEvent.tags.find(t => t[0] === 'd')?.[1] || '';
-      const titleTag = signedEvent.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
-
-      // Per NIP-51: private lists have encrypted content, public lists have empty content
-      const isPrivate = !!signedEvent.content && signedEvent.content.length > 0;
-
-      // Don't decrypt on publish - will decrypt on-demand when user selects the list
-      const updatedList: BookmarkList = {
-        id: dTag,
-        name: titleTag,
-        event: signedEvent,
-        isDefault: false,
-        isPrivate: isPrivate
-      };
-
-      const existingIndex = this.bookmarkLists().findIndex(l => l.id === dTag);
-      if (existingIndex !== -1) {
-        const lists = [...this.bookmarkLists()];
-        lists[existingIndex] = updatedList;
-        this.bookmarkLists.set(lists);
-      } else {
-        this.bookmarkLists.set([...this.bookmarkLists(), updatedList]);
-      }
     }
 
     // Save to local database immediately
     // Use saveReplaceableEvent for kind 30003 (parameterized replaceable) to ensure old versions are replaced
     if (signedEvent.kind === 30003) {
       const dTag = signedEvent.tags.find(t => t[0] === 'd')?.[1];
+      console.log(`[BookmarkService] Saving replaceable event with d-tag: "${dTag}"`);
       await this.database.saveReplaceableEvent({ ...signedEvent, dTag });
+      // Reload lists from database to update UI immediately
+      await this.loadBookmarkLists();
     } else {
       await this.database.saveEvent(signedEvent);
     }
