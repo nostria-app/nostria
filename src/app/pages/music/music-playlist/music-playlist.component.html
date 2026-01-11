@@ -136,6 +136,9 @@
         <mat-icon>{{ isLiked() ? 'favorite' : 'favorite_border' }}</mat-icon>
         }
       </button>
+      <button mat-icon-button (click)="zapPlaylist()" aria-label="Zap playlist">
+        <mat-icon>bolt</mat-icon>
+      </button>
       @if (isOwnPlaylist()) {
       <button mat-icon-button (click)="editPlaylist()" aria-label="Edit playlist">
         <mat-icon>edit</mat-icon>
