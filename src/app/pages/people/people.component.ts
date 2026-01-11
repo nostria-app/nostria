@@ -157,7 +157,7 @@ export class PeopleComponent implements OnDestroy {
   // All follow sets (no limit for dropdown in People component)
   allFollowSets = computed(() => {
     const sets = this.followSetsService.followSets();
-    return [...sets].sort((a, b) => b.createdAt - a.createdAt);
+    return [...sets].sort((a, b) => a.title.localeCompare(b.title));
   });
 
   // Read query parameters
