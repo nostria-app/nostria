@@ -180,13 +180,16 @@ export class SearchComponent implements OnInit, OnDestroy {
       const type = this.searchType();
       const isHashtagSearch = query.startsWith('#');
 
+      // Parse kind filter from query (e.g., "kind:30030")
+      const { cleanQuery, kindFilter } = this.parseSearchQuery(query);
+
       // Search based on source preference
       if (source === 'all' || source === 'local') {
-        await this.searchLocal(query, type, isHashtagSearch);
+        await this.searchLocal(cleanQuery, type, isHashtagSearch, kindFilter);
       }
 
       if (source === 'all' || source === 'relays') {
-        await this.searchRelays(query, type, isHashtagSearch);
+        await this.searchRelays(cleanQuery, type, isHashtagSearch, kindFilter);
       }
 
       // Set appropriate tab based on results
@@ -199,8 +202,62 @@ export class SearchComponent implements OnInit, OnDestroy {
     }
   }
 
-  private async searchLocal(query: string, type: SearchType, isHashtagSearch: boolean) {
-    this.logger.debug(`Searching local database for: ${query}`);
+  /**
+   * Parse search query to extract kind filter according to NIP-50
+   * Example: "kind:30030" -> { cleanQuery: "", kindFilter: [30030] }
+   * Example: "kind:30030 emoji" -> { cleanQuery: "emoji", kindFilter: [30030] }
+   */
+  private parseSearchQuery(query: string): { cleanQuery: string; kindFilter?: number[] } {
+    const kindMatch = query.match(/kind:(\d+)/i);
+
+    if (kindMatch) {
+      const kind = parseInt(kindMatch[1], 10);
+      // Remove the kind:XXXX part from the query
+      const cleanQuery = query.replace(/kind:\d+/gi, '').trim();
+      return { cleanQuery, kindFilter: [kind] };
+    }
+
+    return { cleanQuery: query };
+  }
+
+  private async searchLocal(query: string, type: SearchType, isHashtagSearch: boolean, kindFilter?: number[]) {
+    this.logger.debug(`Searching local database for: ${query}`, { kindFilter });
+
+    // If kind filter is specified, only search for those kinds
+    if (kindFilter) {
+      const localEvents = await this.searchLocalEvents(query, kindFilter, isHashtagSearch);
+
+      // Categorize results based on kind
+      for (const event of localEvents) {
+        if (event.kind === 0) {
+          this.profileResults.update(current => [...current, {
+            event,
+            source: 'local' as const,
+            type: 'profile' as const,
+          }]);
+        } else if (event.kind === kinds.ShortTextNote) {
+          this.noteResults.update(current => [...current, {
+            event,
+            source: 'local' as const,
+            type: 'note' as const,
+          }]);
+        } else if (event.kind === kinds.LongFormArticle) {
+          this.articleResults.update(current => [...current, {
+            event,
+            source: 'local' as const,
+            type: 'article' as const,
+          }]);
+        } else {
+          // For other kinds (like 30030), add to notes tab
+          this.noteResults.update(current => [...current, {
+            event,
+            source: 'local' as const,
+            type: 'note' as const,
+          }]);
+        }
+      }
+      return;
+    }
 
     // Search profiles locally
     if (type === 'all' || type === 'profiles') {
@@ -286,10 +343,26 @@ export class SearchComponent implements OnInit, OnDestroy {
     return results.sort((a, b) => b.created_at - a.created_at);
   }
 
-  private async searchRelays(query: string, type: SearchType, isHashtagSearch: boolean) {
-    this.logger.debug(`Searching relays for: ${query}`);
+  private async searchRelays(query: string, type: SearchType, isHashtagSearch: boolean, kindFilter?: number[]) {
+    this.logger.debug(`Searching relays for: ${query}`, { kindFilter });
 
     try {
+      // If kind filter is specified, search for those specific kinds
+      if (kindFilter) {
+        const events = await this.searchRelay.search(query, kindFilter, 50);
+        const existingIds = new Set(this.noteResults().map(r => r.event.id));
+
+        const newResults: SearchResultItem[] = events
+          .filter(event => !existingIds.has(event.id))
+          .map(event => ({
+            event,
+            source: 'relay' as const,
+            type: 'note' as const, // Use 'note' type for custom kinds
+          }));
+
+        this.noteResults.update(current => [...current, ...newResults]);
+        return;
+      }
       // Search profiles on relays
       if (type === 'all' || type === 'profiles') {
         const profileEvents = await this.searchRelay.searchProfiles(query, 20);
