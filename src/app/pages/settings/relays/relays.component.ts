@@ -1014,6 +1014,18 @@ export class RelaysComponent implements OnInit {
             // Add the main relay to account relays
             this.accountRelay.addRelay(selectedRegion.relayUrl);
 
+            // Add default relays (same as new user accounts)
+            const defaultRelays = [
+              'wss://relay.damus.io/',
+              'wss://relay.snort.social/',
+              'wss://nos.lol/',
+            ];
+
+            this.logger.info('Adding default relays for automated setup', { defaultRelays });
+            defaultRelays.forEach(relayUrl => {
+              this.accountRelay.addRelay(relayUrl);
+            });
+
             // Only automatically add discovery relay if user had zero relays initially
             // and doesn't already have this discovery relay (using normalized URL comparison)
             const discoveryRelayUrl = selectedRegion.discoveryRelay;
