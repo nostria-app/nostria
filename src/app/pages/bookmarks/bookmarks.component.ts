@@ -331,7 +331,7 @@ export class BookmarksComponent implements OnInit {
     const result = await dialogRef.afterClosed().toPromise();
 
     if (result) {
-      const newList = await this.bookmarkService.createBookmarkList(result.name, result.id);
+      const newList = await this.bookmarkService.createBookmarkList(result.name, result.id, result.isPrivate);
       if (newList) {
         this.snackBar.open(`Created "${result.name}"`, 'Close', { duration: 2000 });
         this.bookmarkService.selectedListId.set(newList.id);

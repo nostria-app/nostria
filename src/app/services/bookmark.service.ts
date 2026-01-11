@@ -8,6 +8,7 @@ import { Event, kinds } from 'nostr-tools';
 import { AccountStateService } from './account-state.service';
 import { AccountRelayService } from './relays/account-relay';
 import { DatabaseService } from './database.service';
+import { EncryptionService } from './encryption.service';
 
 // Define bookmark types
 export type BookmarkType = 'e' | 'a' | 'r' | 't';
@@ -23,6 +24,7 @@ export interface BookmarkList {
   name: string; // title tag
   event: Event | null;
   isDefault: boolean; // true for kind 10003
+  isPrivate: boolean; // true for encrypted lists
 }
 
 @Injectable({
@@ -37,6 +39,7 @@ export class BookmarkService {
   snackBar = inject(MatSnackBar);
   layout = inject(LayoutService);
   database = inject(DatabaseService);
+  encryption = inject(EncryptionService);
 
   // Kind 10003 - default bookmarks event (single replaceable)
   bookmarkEvent = signal<Event | null>(null);
@@ -69,7 +72,8 @@ export class BookmarkService {
         id: 'default',
         name: 'Bookmarks',
         event: defaultEvent,
-        isDefault: true
+        isDefault: true,
+        isPrivate: false
       });
     }
 
@@ -186,17 +190,64 @@ export class BookmarkService {
       return !tTags.some(t => t[1] === 'youtube');
     });
 
-    const lists: BookmarkList[] = filteredEvents.map(event => {
-      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
-      const titleTag = event.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
+    const lists: BookmarkList[] = await Promise.all(
+      filteredEvents.map(async event => {
+        const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
 
-      return {
-        id: dTag,
-        name: titleTag,
-        event: event,
-        isDefault: false
-      };
-    });
+        // Check if this is a private list (has 'encrypted' tag or encrypted content)
+        const encryptedTag = event.tags.find(t => t[0] === 'encrypted')?.[1];
+        const isPrivate = encryptedTag === 'true';
+
+        let titleTag = event.tags.find(t => t[0] === 'title')?.[1] || '';
+
+        // If private and title is encrypted, decrypt it
+        if (isPrivate && titleTag && this.encryption.isContentEncrypted(titleTag)) {
+          try {
+            titleTag = await this.encryption.decryptNip44(titleTag, pubkey);
+          } catch (error) {
+            console.error('Failed to decrypt bookmark list title:', error);
+            titleTag = 'Private List (Decrypt Failed)';
+          }
+        }
+
+        if (!titleTag) {
+          titleTag = 'Untitled List';
+        }
+
+        // Create a decrypted copy of the event for private lists
+        let processedEvent = event;
+        if (isPrivate) {
+          // Decrypt all bookmark tags ('e', 'a', 'r') for private lists
+          const decryptedTags = await Promise.all(
+            event.tags.map(async (tag) => {
+              if (['e', 'a', 'r'].includes(tag[0]) && tag[1]) {
+                try {
+                  const decryptedValue = await this.encryption.decryptNip44(tag[1], pubkey);
+                  return [tag[0], decryptedValue, ...tag.slice(2)];
+                } catch (error) {
+                  console.error('Failed to decrypt bookmark tag:', error);
+                  return tag; // Keep original if decryption fails
+                }
+              }
+              return tag;
+            })
+          );
+
+          processedEvent = {
+            ...event,
+            tags: decryptedTags
+          };
+        }
+
+        return {
+          id: dTag,
+          name: titleTag,
+          event: processedEvent,
+          isDefault: false,
+          isPrivate: isPrivate
+        };
+      })
+    );
 
     this.bookmarkLists.set(lists);
   }
@@ -237,6 +288,7 @@ export class BookmarkService {
 
     const targetListId = listId || this.selectedListId();
     let event: Event;
+    let isPrivateList = false;
 
     if (targetListId === 'default') {
       // Use kind 10003
@@ -257,6 +309,8 @@ export class BookmarkService {
         return;
       }
 
+      isPrivateList = list.isPrivate;
+
       event = list.event || {
         kind: 30003,
         pubkey: this.accountState.pubkey(),
@@ -273,16 +327,35 @@ export class BookmarkService {
 
     const bookmarkId = id;
 
-    // Check if the bookmark already exists
-    const existingBookmark = event.tags.find(tag => tag[0] === type && tag[1] === bookmarkId);
+    // For private lists, we need to decrypt existing tags to compare
+    let existingBookmark: string[] | undefined;
+    if (isPrivateList) {
+      // Decrypt all bookmark tags to find if this one exists
+      for (const tag of event.tags) {
+        if (tag[0] === type && tag[1]) {
+          try {
+            const decryptedId = await this.encryption.decryptNip44(tag[1], userPubkey);
+            if (decryptedId === bookmarkId) {
+              existingBookmark = tag;
+              break;
+            }
+          } catch {
+            // Tag might not be encrypted or decryption failed, skip
+          }
+        }
+      }
+    } else {
+      existingBookmark = event.tags.find(tag => tag[0] === type && tag[1] === bookmarkId);
+    }
 
     // If it exists, remove it; if not, add it
     if (existingBookmark) {
       // Remove from the bookmark event tags
-      event.tags = event.tags.filter(tag => !(tag[0] === type && tag[1] === bookmarkId));
+      event.tags = event.tags.filter(tag => tag !== existingBookmark);
     } else {
       // Add to the bookmark event tags
-      event.tags.push([type, bookmarkId]);
+      const tagValue = isPrivateList ? await this.encryption.encryptNip44(bookmarkId, userPubkey) : bookmarkId;
+      event.tags.push([type, tagValue]);
     }
 
     // Publish the updated event
@@ -338,7 +411,8 @@ export class BookmarkService {
         id: 'default',
         name: 'Bookmarks',
         event: this.bookmarkEvent(),
-        isDefault: true
+        isDefault: true,
+        isPrivate: false
       });
     }
 
@@ -362,7 +436,7 @@ export class BookmarkService {
     return this.isBookmarkedInAnyList(id, type) ? 'bookmark_remove' : 'bookmark_add';
   }
 
-  async createBookmarkList(name: string, customId?: string): Promise<BookmarkList | null> {
+  async createBookmarkList(name: string, customId?: string, isPrivate: boolean = false): Promise<BookmarkList | null> {
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) {
       await this.layout.showLoginDialog();
@@ -372,15 +446,25 @@ export class BookmarkService {
     // Use custom ID if provided, otherwise generate a timestamp-based one
     const dTag = customId || Date.now().toString();
 
+    // Encrypt the title if private
+    const titleValue = isPrivate ? await this.encryption.encryptNip44(name, userPubkey) : name;
+
+    const tags: string[][] = [
+      ['d', dTag],
+      ['title', titleValue]
+    ];
+
+    // Add encrypted tag to indicate this is a private list
+    if (isPrivate) {
+      tags.push(['encrypted', 'true']);
+    }
+
     const event: Event = {
       kind: 30003,
       pubkey: userPubkey,
       created_at: Math.floor(Date.now() / 1000),
       content: '',
-      tags: [
-        ['d', dTag],
-        ['title', name]
-      ],
+      tags: tags,
       id: '',
       sig: '',
     };
@@ -389,9 +473,10 @@ export class BookmarkService {
 
     const newList: BookmarkList = {
       id: dTag,
-      name: name,
+      name: name, // Store decrypted name locally
       event: event,
-      isDefault: false
+      isDefault: false,
+      isPrivate: isPrivate
     };
 
     return newList;
@@ -466,12 +551,15 @@ export class BookmarkService {
     } else if (signedEvent.kind === 30003) {
       const dTag = signedEvent.tags.find(t => t[0] === 'd')?.[1] || '';
       const titleTag = signedEvent.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
+      const encryptedTag = signedEvent.tags.find(t => t[0] === 'encrypted')?.[1];
+      const isPrivate = encryptedTag === 'true';
 
       const updatedList: BookmarkList = {
         id: dTag,
         name: titleTag,
         event: signedEvent,
-        isDefault: false
+        isDefault: false,
+        isPrivate: isPrivate
       };
 
       const existingIndex = this.bookmarkLists().findIndex(l => l.id === dTag);

@@ -13,6 +13,15 @@
     <input matInput [(ngModel)]="listId" placeholder="my-reading-list" required>
     <mat-hint>Used to uniquely identify this list. Can contain letters, numbers, and hyphens.</mat-hint>
   </mat-form-field>
+
+  <div class="private-checkbox">
+    <mat-checkbox [(ngModel)]="isPrivate">
+      <span class="checkbox-label">Private (Encrypted)</span>
+    </mat-checkbox>
+    <div class="checkbox-hint">
+      Private lists encrypt bookmark contents using NIP-44 so only you can see them
+    </div>
+  </div>
   }
 </mat-dialog-content>
 

@@ -11,3 +11,18 @@ mat-dialog-content {
 mat-hint {
   font-size: 12px;
 }
+
+.private-checkbox {
+  margin-top: 16px;
+
+  .checkbox-label {
+    font-weight: 500;
+  }
+
+  .checkbox-hint {
+    margin-top: 4px;
+    margin-left: 32px;
+    font-size: 12px;
+    color: var(--mat-sys-on-surface-variant);
+  }
+}
