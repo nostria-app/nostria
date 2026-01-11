@@ -12,7 +12,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatTooltipModule } from '@angular/material/tooltip';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { MatDialog } from '@angular/material/dialog';
-import { CollectionSetsService, EmojiSet } from '../../../services/collection-sets.service';
+import { CollectionSetsService, EmojiSet, EmojiItem } from '../../../services/collection-sets.service';
 import { AccountStateService } from '../../../services/account-state.service';
 import { LoggerService } from '../../../services/logger.service';
 import { ConfirmDialogComponent } from '../../../components/confirm-dialog/confirm-dialog.component';
@@ -46,7 +46,8 @@ export class EmojiSetsComponent implements OnInit {
   // State
   isLoading = signal(false);
   emojiSets = signal<EmojiSet[]>([]);
-  preferredEmojis = signal<string[]>([]);
+  preferredEmojis = signal<EmojiItem[]>([]);
+  copiedEmoji: string | null = null;
 
   // Editing state
   isEditingSet = signal(false);
@@ -69,10 +70,12 @@ export class EmojiSetsComponent implements OnInit {
 
       // Load emoji sets (kind 30030)
       const sets = await this.collectionSetsService.getEmojiSets(pubkey);
+      this.logger.info('Loaded emoji sets:', sets);
       this.emojiSets.set(sets);
 
       // Load preferred emojis (kind 10030)
       const preferred = await this.collectionSetsService.getPreferredEmojis(pubkey);
+      this.logger.info('Loaded preferred emojis:', preferred);
       this.preferredEmojis.set(preferred);
     } catch (error) {
       this.logger.error('Error loading emoji data:', error);
@@ -183,5 +186,20 @@ export class EmojiSetsComponent implements OnInit {
     this.router.navigate(['/search'], {
       queryParams: { q: 'kind:30030' }
     });
+  }
+
+  async copyEmoji(emoji: EmojiItem, event: MouseEvent): Promise<void> {
+    event.stopPropagation();
+
+    try {
+      await navigator.clipboard.writeText(`:${emoji.shortcode}:`);
+      this.copiedEmoji = emoji.shortcode;
+
+      setTimeout(() => {
+        this.copiedEmoji = null;
+      }, 2000);
+    } catch (err) {
+      this.logger.error('Failed to copy emoji:', err);
+    }
   }
 }

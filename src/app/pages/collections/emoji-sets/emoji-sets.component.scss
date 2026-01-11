@@ -150,15 +150,23 @@
 
     .emoji-grid {
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 8px;
+      grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+      gap: 4px;
       padding: 12px;
       background-color: var(--mat-sys-surface-container);
       border-radius: 8px;
 
       .emoji-item {
-        font-size: 24px;
-        text-align: center;
+        width: 64px;
+        height: 64px;
+        padding: 8px;
+        cursor: pointer;
+      }
+
+      .emoji-image {
+        width: 48px;
+        height: 48px;
+        object-fit: contain;
       }
 
       .emoji-more {
@@ -168,6 +176,12 @@
         align-self: center;
       }
     }
+  }
+}
+
+:host-context(.dark) {
+  .emoji-item:hover {
+    background-color: var(--mat-sys-surface-container-high);
   }
 }
 
