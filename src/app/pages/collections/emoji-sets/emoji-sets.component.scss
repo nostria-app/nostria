@@ -52,6 +52,11 @@
       color: var(--mat-sys-on-surface);
     }
   }
+
+  .header-actions {
+    display: flex;
+    gap: 12px;
+  }
 }
 
 .section-content {

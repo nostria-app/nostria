@@ -13,12 +13,18 @@ import { AccountRelayService } from './relays/account-relay';
  * - "emoji" (shortcode, image URL) - custom emojis
  * - "d" (identifier) - unique identifier for the set
  * 
+ * Kind 10030: User's preferred emojis
+ * Tags:
+ * - "emoji" (emoji character) - direct emoji
+ * - "a" (reference) - reference to kind 30030 emoji sets
+ * 
  * Kind 30015: Interest sets (hashtags)
  * Tags:
  * - "t" (hashtag) - interest hashtags
  * - "d" (identifier) - unique identifier, we use "interests" as standard
  */
 const EMOJI_SET_KIND = 30030;
+const PREFERRED_EMOJI_KIND = 10030;
 const INTEREST_SET_KIND = 30015;
 
 const DEFAULT_HASHTAGS = [
@@ -54,6 +60,37 @@ export class CollectionSetsService {
   private accountState = inject(AccountStateService);
   private publishService = inject(PublishService);
   private accountRelay = inject(AccountRelayService);
+
+  /**
+   * Get preferred emojis from user's emoji list (kind 10030)
+   * This includes direct emoji characters from "emoji" tags
+   */
+  async getPreferredEmojis(pubkey: string): Promise<string[]> {
+    try {
+      // Query for user's preferred emoji list (kind 10030)
+      const events = await this.accountRelay.getEventsByPubkeyAndKind(pubkey, PREFERRED_EMOJI_KIND);
+
+      if (events.length === 0) {
+        return [];
+      }
+
+      // Get the most recent event
+      const latestEvent = events.sort((a, b) => b.created_at - a.created_at)[0];
+
+      // Extract emoji characters from "emoji" tags
+      const emojis: string[] = [];
+      for (const tag of latestEvent.tags) {
+        if (tag[0] === 'emoji' && tag[1]) {
+          emojis.push(tag[1]);
+        }
+      }
+
+      return emojis;
+    } catch (error) {
+      this.logger.error('Error loading preferred emojis:', error);
+      return [];
+    }
+  }
 
   /**
    * Get emoji sets for the current user (kind 30030)
