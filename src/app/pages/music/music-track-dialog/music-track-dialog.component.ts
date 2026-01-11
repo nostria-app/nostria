@@ -386,40 +386,52 @@ export class MusicTrackDialogComponent {
     const ownerName = ownerProfile?.data?.name || ownerProfile?.data?.display_name || 'You';
     const ownerAvatar = ownerProfile?.data?.picture || null;
 
-    // Check if owner is in zap tags
-    const ownerZapTag = zapTags.find(t => t[1] === ownerPubkey);
-    const ownerPercentage = ownerZapTag ? parseInt(ownerZapTag[3], 10) || 0 : 100;
-
-    splits.push({
-      pubkey: ownerPubkey,
-      name: ownerName,
-      avatar: ownerAvatar,
-      percentage: ownerPercentage,
-      isUploader: true,
-    });
-
-    // Add other collaborators
-    for (const zapTag of zapTags) {
-      const pubkey = zapTag[1];
-      if (pubkey === ownerPubkey) continue;
-
-      const percentage = parseInt(zapTag[3], 10) || 0;
-      const profile = await this.dataService.getProfile(pubkey);
-      const name = profile?.data?.name || profile?.data?.display_name || 'Unknown';
-      const avatar = profile?.data?.picture || null;
-
-      splits.push({
-        pubkey,
-        name,
-        avatar,
-        percentage,
-        isUploader: false,
-      });
-    }
-
-    // If no zap tags, uploader gets 100%
     if (zapTags.length === 0) {
-      splits[0].percentage = 100;
+      // No zap tags, uploader gets 100%
+      splits.push({
+        pubkey: ownerPubkey,
+        name: ownerName,
+        avatar: ownerAvatar,
+        percentage: 100,
+        isUploader: true,
+      });
+    } else {
+      // Parse weights from zap tags
+      const rawSplits = zapTags.map(tag => ({
+        pubkey: tag[1],
+        weight: tag[3] ? parseFloat(tag[3]) : 0
+      }));
+
+      // Calculate total weight for normalization (NIP-57 Appendix G)
+      const totalWeight = rawSplits.reduce((sum, s) => sum + s.weight, 0);
+
+      // Normalize weights to percentages
+      const normalizedSplits = rawSplits.map(split => ({
+        pubkey: split.pubkey,
+        percentage: totalWeight > 0 ? Math.round((split.weight / totalWeight) * 100) : 0
+      }));
+
+      // Ensure percentages add up to exactly 100 due to rounding
+      const totalPercentage = normalizedSplits.reduce((sum, s) => sum + s.percentage, 0);
+      if (totalPercentage !== 100 && normalizedSplits.length > 0) {
+        normalizedSplits[0].percentage += (100 - totalPercentage);
+      }
+
+      // Load profiles for all splits
+      for (const normalizedSplit of normalizedSplits) {
+        const profile = await this.dataService.getProfile(normalizedSplit.pubkey);
+        const name = profile?.data?.name || profile?.data?.display_name ||
+          (normalizedSplit.pubkey === ownerPubkey ? 'You' : 'Unknown');
+        const avatar = profile?.data?.picture || null;
+
+        splits.push({
+          pubkey: normalizedSplit.pubkey,
+          name,
+          avatar,
+          percentage: normalizedSplit.percentage,
+          isUploader: normalizedSplit.pubkey === ownerPubkey,
+        });
+      }
     }
 
     this.zapSplits.set(splits);
