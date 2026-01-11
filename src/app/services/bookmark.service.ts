@@ -226,12 +226,12 @@ export class BookmarkService {
         let processedEvent = event;
         if (isPrivate) {
           // Decrypt content and convert to tags for private lists
-          let decryptedTags = [...event.tags];
+          const decryptedTags = [...event.tags];
 
           if (event.content) {
             try {
               const decryptedContent = await this.encryption.decryptNip44(event.content, pubkey);
-              const bookmarks: Array<[string, string]> = JSON.parse(decryptedContent);
+              const bookmarks: [string, string][] = JSON.parse(decryptedContent);
 
               // Convert bookmarks to tags for internal use
               for (const bookmark of bookmarks) {
@@ -338,7 +338,7 @@ export class BookmarkService {
 
     if (isPrivateList) {
       // For private lists, store bookmarks in encrypted content field
-      let bookmarks: Array<[string, string]> = [];
+      let bookmarks: [string, string][] = [];
 
       // Decrypt existing content if present
       if (event.content) {
@@ -457,7 +457,7 @@ export class BookmarkService {
     return this.isBookmarkedInAnyList(id, type) ? 'bookmark_remove' : 'bookmark_add';
   }
 
-  async createBookmarkList(name: string, customId?: string, isPrivate: boolean = false): Promise<BookmarkList | null> {
+  async createBookmarkList(name: string, customId?: string, isPrivate = false): Promise<BookmarkList | null> {
     const userPubkey = this.accountState.pubkey();
     if (!userPubkey) {
       await this.layout.showLoginDialog();
@@ -593,12 +593,12 @@ export class BookmarkService {
       if (isPrivate) {
         const pubkey = this.accountState.pubkey();
         if (pubkey) {
-          let decryptedTags = [...signedEvent.tags];
+          const decryptedTags = [...signedEvent.tags];
 
           if (signedEvent.content) {
             try {
               const decryptedContent = await this.encryption.decryptNip44(signedEvent.content, pubkey);
-              const bookmarks: Array<[string, string]> = JSON.parse(decryptedContent);
+              const bookmarks: [string, string][] = JSON.parse(decryptedContent);
 
               // Convert bookmarks to tags for internal use
               for (const bookmark of bookmarks) {
@@ -635,7 +635,13 @@ export class BookmarkService {
     }
 
     // Save to local database immediately
-    await this.database.saveEvent(signedEvent);
+    // Use saveReplaceableEvent for kind 30003 (parameterized replaceable) to ensure old versions are replaced
+    if (signedEvent.kind === 30003) {
+      const dTag = signedEvent.tags.find(t => t[0] === 'd')?.[1];
+      await this.database.saveReplaceableEvent({ ...signedEvent, dTag });
+    } else {
+      await this.database.saveEvent(signedEvent);
+    }
 
     // Publish to relays and get array of promises
     const publishPromises = await this.accountRelay.publish(signedEvent);
