@@ -111,6 +111,7 @@ interface NavItem {
   expanded?: boolean;
   feedId?: string;
   followSetId?: string;
+  mediaSettings?: boolean;
   badge?: () => number | null; // Function that returns badge count or null
 }
 
@@ -389,6 +390,7 @@ export class App implements OnInit {
             label: $localize`:@@app.nav.media:Media`,
             icon: 'photo_library',
             authenticated: false,
+            mediaSettings: true,
           },
           {
             path: '/bookmarks',
@@ -1511,6 +1513,28 @@ export class App implements OnInit {
     this.router.navigate(['/people'], {
       queryParams: { manage: 'true', set: followSetId }
     });
+
+    // Close sidenav on mobile
+    if (this.layout.isHandset()) {
+      this.localSettings.setMenuOpen(false);
+    }
+  }
+
+  openMediaSettings(): void {
+    // Navigate to media page with servers tab
+    this.router.navigate(['/media'], {
+      queryParams: { tab: 'servers' }
+    });
+
+    // Close sidenav on mobile
+    if (this.layout.isHandset()) {
+      this.localSettings.setMenuOpen(false);
+    }
+  }
+
+  openCollectionsSettings(): void {
+    // Navigate to collections/lists page
+    this.router.navigate(['/lists']);
 
     // Close sidenav on mobile
     if (this.layout.isHandset()) {
