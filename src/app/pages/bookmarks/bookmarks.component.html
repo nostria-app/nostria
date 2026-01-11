@@ -28,6 +28,10 @@
           <mat-icon>edit</mat-icon>
           <span>Rename List</span>
         </button>
+        <button mat-menu-item (click)="toggleListPrivacy()">
+          <mat-icon>{{ currentList()?.isPrivate ? 'lock_open' : 'lock' }}</mat-icon>
+          <span>{{ currentList()?.isPrivate ? 'Make Public' : 'Make Private' }}</span>
+        </button>
         <button mat-menu-item (click)="deleteCurrentList()">
           <mat-icon>delete</mat-icon>
           <span>Delete List</span>
@@ -55,15 +59,15 @@
         <mat-select [value]="bookmarkService.selectedListId()" (valueChange)="onListChange($event)">
           <mat-select-trigger>
             @for (list of bookmarkService.allBookmarkLists(); track list.id) {
-              @if (list.id === bookmarkService.selectedListId()) {
-                <div class="list-option-content">
-                  <mat-icon class="list-icon">{{ list.isDefault ? 'bookmark' : 'label' }}</mat-icon>
-                  <span class="list-name">{{ list.name }}</span>
-                  @if (list.isPrivate) {
-                  <mat-icon class="private-icon" matTooltip="Private (Encrypted)">lock</mat-icon>
-                  }
-                </div>
+            @if (list.id === bookmarkService.selectedListId()) {
+            <div class="list-option-content">
+              <mat-icon class="list-icon">{{ list.isDefault ? 'bookmark' : 'label' }}</mat-icon>
+              <span class="list-name">{{ list.name }}</span>
+              @if (list.isPrivate) {
+              <mat-icon class="private-icon" matTooltip="Private (Encrypted)">lock</mat-icon>
               }
+            </div>
+            }
             }
           </mat-select-trigger>
           @for (list of bookmarkService.allBookmarkLists(); track list.id) {
@@ -95,13 +99,13 @@
     </div>
   </div>
 
-  <div class="bookmarks-list" [attr.data-view]="viewMode()">
+  <div class="bookmarks-list" [attr.data-view]="viewMode()" (scroll)="onScroll($event)">
     @if (selectedCategory() === 'events') {
-    @for (bookmark of bookmarkService.bookmarkEvents(); track bookmark.id) {
+    @for (bookmark of displayedEvents(); track bookmark.id) {
     <app-event [id]="bookmark.id" [compact]="viewMode() === 'tiles'"></app-event>
     }
     } @else if (selectedCategory() === 'articles') {
-    @for (bookmark of bookmarkService.bookmarkArticles(); track bookmark.id) {
+    @for (bookmark of displayedArticles(); track bookmark.id) {
     @let bm = bookmarkService.parseArticleId(bookmark.id);
     <div class="bookmark-article-wrapper">
       <app-article [pubkey]="bm.id" [kind]="bm.kind" [slug]="bm.slug" mode="card" [showAuthor]="true"
@@ -113,7 +117,7 @@
     </div>
     }
     } @else if (selectedCategory() === 'websites') {
-    @for (bookmark of bookmarkService.bookmarkUrls(); track bookmark.id) {
+    @for (bookmark of displayedUrls(); track bookmark.id) {
     @if (viewMode() === 'content') {
     <div class="bookmark-url-card">
       <mat-icon>link</mat-icon>
@@ -160,6 +164,13 @@
     </div>
     }
     }
+    }
+
+    <!-- Load more indicator -->
+    @if (hasMoreToLoad()) {
+    <div class="load-more-indicator">
+      <p>Scroll for more...</p>
+    </div>
     }
   </div>
   }

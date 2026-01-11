@@ -23,6 +23,7 @@ export interface BookmarkList {
   id: string; // d-tag value
   name: string; // title tag
   event: Event | null;
+  originalEvent?: Event; // Original encrypted event for private lists
   isDefault: boolean; // true for kind 10003
   isPrivate: boolean; // true for encrypted lists
 }
@@ -210,7 +211,12 @@ export class BookmarkService {
     }
   }
 
+  /**
+   * Load all bookmark lists from database and decrypt private ones
+   * This is called on initialization and can be called again to retry failed decryptions
+   */
   async loadBookmarkLists() {
+    console.log('[BookmarkService] 🔄 Loading/reloading bookmark lists...');
     const pubkey = this.accountState.pubkey();
     if (!pubkey) {
       return;
@@ -229,72 +235,84 @@ export class BookmarkService {
 
     console.log('[BookmarkService] After YouTube filter:', filteredEvents.length);
 
-    const lists: BookmarkList[] = await Promise.all(
-      filteredEvents.map(async event => {
-        const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
+    const lists: BookmarkList[] = filteredEvents.map(event => {
+      const dTag = event.tags.find(t => t[0] === 'd')?.[1] || '';
 
-        // Check if this is a private list (has 'encrypted' tag or encrypted content)
-        const encryptedTag = event.tags.find(t => t[0] === 'encrypted')?.[1];
-        const isPrivate = encryptedTag === 'true';
+      // Per NIP-51: private lists have encrypted content, public lists have empty content
+      const isPrivate = !!event.content && event.content.length > 0;
 
-        console.log(`[BookmarkService] Processing list ${dTag}, isPrivate: ${isPrivate}`);
+      console.log(`[BookmarkService] Processing list ${dTag}, isPrivate: ${isPrivate}, content length: ${event.content?.length || 0}`);
 
-        let titleTag = event.tags.find(t => t[0] === 'title')?.[1] || '';
+      const titleTag = event.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
 
-        // If private and title is encrypted, decrypt it
-        if (isPrivate && titleTag) {
-          try {
-            console.log(`[BookmarkService] Decrypting title for ${dTag}`);
-            titleTag = await this.encryption.decryptNip44(titleTag, pubkey);
-            console.log(`[BookmarkService] Decrypted title: ${titleTag}`);
-          } catch (error) {
-            console.error('Failed to decrypt bookmark list title:', error);
-            titleTag = 'Private List (Decrypt Failed)';
-          }
-        }
+      // Don't decrypt content on load - only decrypt when user opens the list
+      // This is more efficient and follows lazy loading pattern
 
-        if (!titleTag) {
-          titleTag = 'Untitled List';
-        }
+      return {
+        id: dTag,
+        name: titleTag,
+        event: event, // Store original event, will decrypt on-demand
+        originalEvent: undefined, // Not needed - event already has original data
+        isDefault: false,
+        isPrivate: isPrivate
+      };
+    });
 
-        // Create a decrypted copy of the event for private lists
-        let processedEvent = event;
-        if (isPrivate) {
-          // Decrypt content and convert to tags for private lists
-          const decryptedTags = [...event.tags];
-
-          if (event.content) {
-            try {
-              const decryptedContent = await this.encryption.decryptNip44(event.content, pubkey);
-              const bookmarks: [string, string][] = JSON.parse(decryptedContent);
-
-              // Convert bookmarks to tags for internal use
-              for (const bookmark of bookmarks) {
-                decryptedTags.push(bookmark);
-              }
-            } catch (error) {
-              console.error('Failed to decrypt private list content:', error);
-            }
-          }
-
-          processedEvent = {
-            ...event,
-            tags: decryptedTags
-          };
-        }
-
-        return {
-          id: dTag,
-          name: titleTag,
-          event: processedEvent,
-          isDefault: false,
-          isPrivate: isPrivate
-        };
-      })
-    );
-
-    console.log(`[BookmarkService] ✅ All decryption completed, setting ${lists.length} lists`);
+    console.log(`[BookmarkService] ✅ List loading completed, setting ${lists.length} lists`);
     this.bookmarkLists.set(lists);
+  }
+
+  /**
+   * Decrypt and expand a private list's content when user selects it
+   * This is called on-demand when switching to a private list
+   */
+  async decryptPrivateList(listId: string): Promise<void> {
+    const list = this.bookmarkLists().find(l => l.id === listId);
+    if (!list || !list.isPrivate || !list.event) {
+      return; // Not a private list or no event
+    }
+
+    if (!list.event.content) {
+      return; // No content to decrypt
+    }
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      console.error('[BookmarkService] No pubkey for decryption');
+      return;
+    }
+
+    try {
+      console.log(`[BookmarkService] Decrypting private list "${list.name}" (${listId})...`);
+      const decryptedContent = await this.encryption.decryptNip44(list.event.content, pubkey);
+      const bookmarks: [string, string][] = JSON.parse(decryptedContent);
+
+      // Create a new event with decrypted bookmarks as tags
+      const decryptedEvent: Event = {
+        kind: list.event.kind,
+        pubkey: list.event.pubkey,
+        created_at: list.event.created_at,
+        content: list.event.content,
+        id: list.event.id,
+        sig: list.event.sig,
+        tags: [
+          ...list.event.tags,
+          ...bookmarks
+        ]
+      };
+
+      // Update the list with the decrypted event
+      const updatedLists = this.bookmarkLists().map(l =>
+        l.id === listId
+          ? { ...l, event: decryptedEvent }
+          : l
+      );
+      this.bookmarkLists.set(updatedLists);
+
+      console.log(`[BookmarkService] ✅ Decrypted ${bookmarks.length} bookmarks in list "${list.name}"`);
+    } catch (error) {
+      console.error(`[BookmarkService] ❌ Failed to decrypt private list "${list.name}":`, error);
+    }
   }
 
   // Helper to get the appropriate signal based on bookmark type
@@ -503,24 +521,27 @@ export class BookmarkService {
     // Use custom ID if provided, otherwise generate a timestamp-based one
     const dTag = customId || Date.now().toString();
 
-    // Encrypt the title if private
-    const titleValue = isPrivate ? await this.encryption.encryptNip44(name, userPubkey) : name;
+    console.log(`[BookmarkService] Creating bookmark list "${name}", isPrivate: ${isPrivate}`);
 
     const tags: string[][] = [
       ['d', dTag],
-      ['title', titleValue]
+      ['title', name] // Title is always plain text per NIP-51
     ];
 
-    // Add encrypted tag to indicate this is a private list
+    // Per NIP-51: private lists have encrypted content, public lists have empty content
+    // For private lists, encrypt an empty array so the app knows it's private
+    let content = '';
     if (isPrivate) {
-      tags.push(['encrypted', 'true']);
+      const emptyBookmarks: [string, string][] = [];
+      content = await this.encryption.encryptNip44(JSON.stringify(emptyBookmarks), userPubkey);
+      console.log(`[BookmarkService] Encrypted empty array for private list, content length: ${content.length}`);
     }
 
     const event: Event = {
       kind: 30003,
       pubkey: userPubkey,
       created_at: Math.floor(Date.now() / 1000),
-      content: '',
+      content: content,
       tags: tags,
       id: '',
       sig: '',
@@ -541,13 +562,38 @@ export class BookmarkService {
 
   async updateBookmarkList(listId: string, name: string): Promise<void> {
     const list = this.bookmarkLists().find(l => l.id === listId);
-    if (!list || !list.event) {
+    if (!list) {
+      console.error('List not found:', listId);
       return;
     }
 
-    const event = { ...list.event };
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      console.error('No pubkey available');
+      return;
+    }
 
-    // Update the title tag
+    if (!list.event) {
+      console.error('No event available for list:', listId);
+      return;
+    }
+
+    // For private lists, we need to use the original event with encrypted content
+    // Remove any decrypted bookmark tags (they start with 'e', 'a', or 't')
+    const cleanTags = list.event.tags.filter(tag =>
+      tag[0] === 'd' || tag[0] === 'title' || tag[0] === 'description' || tag[0] === 'image'
+    );
+
+    // Create a new event with updated title
+    const event = {
+      ...list.event,
+      tags: [...cleanTags]
+    };
+
+    // Per NIP-51: title is always plain text (in tags array, not encrypted)
+    console.log(`[BookmarkService] Updating list ${listId}, isPrivate: ${list.isPrivate}, title is plain text per NIP-51`);
+
+    // Update the title tag (always plain text)
     const titleTagIndex = event.tags.findIndex(t => t[0] === 'title');
     if (titleTagIndex !== -1) {
       event.tags[titleTagIndex] = ['title', name];
@@ -556,6 +602,71 @@ export class BookmarkService {
     }
 
     await this.publish(event, listId);
+  }
+
+  /**
+   * Toggle a list between public and private
+   * Public lists: bookmarks in tags array, empty content
+   * Private lists: encrypted bookmarks in content field, tags only have metadata
+   */
+  async toggleListPrivacy(listId: string): Promise<void> {
+    const list = this.bookmarkLists().find(l => l.id === listId);
+    if (!list || !list.event) {
+      console.error('List not found:', listId);
+      return;
+    }
+
+    const pubkey = this.accountState.pubkey();
+    if (!pubkey) {
+      console.error('No pubkey available');
+      return;
+    }
+
+    const newIsPrivate = !list.isPrivate;
+    console.log(`[BookmarkService] Toggling list "${list.name}" from ${list.isPrivate ? 'private' : 'public'} to ${newIsPrivate ? 'private' : 'public'}`);
+
+    // Extract bookmark tags (e, a, t)
+    const bookmarkTags = list.event.tags.filter(tag =>
+      tag[0] === 'e' || tag[0] === 'a' || tag[0] === 't'
+    );
+
+    // Extract metadata tags (d, title, description, image)
+    const metadataTags = list.event.tags.filter(tag =>
+      tag[0] === 'd' || tag[0] === 'title' || tag[0] === 'description' || tag[0] === 'image'
+    );
+
+    let newContent = '';
+    let newTags = [...metadataTags];
+
+    if (newIsPrivate) {
+      // Moving from public to private: encrypt bookmarks into content
+      // Always encrypt an array (even if empty) so the app knows it's private
+      const bookmarksJson = JSON.stringify(bookmarkTags);
+      newContent = await this.encryption.encryptNip44(bookmarksJson, pubkey);
+      console.log(`[BookmarkService] Encrypted ${bookmarkTags.length} bookmarks, content length: ${newContent.length}`);
+    } else {
+      // Moving from private to public: decrypt content and put in tags
+      if (list.event.content) {
+        try {
+          const decryptedContent = await this.encryption.decryptNip44(list.event.content, pubkey);
+          const decryptedBookmarks: [string, string][] = JSON.parse(decryptedContent);
+          newTags = [...metadataTags, ...decryptedBookmarks];
+        } catch (error) {
+          console.error('Failed to decrypt content:', error);
+          return;
+        }
+      }
+    }
+
+    const event: Event = {
+      ...list.event,
+      tags: newTags,
+      content: newContent,
+      created_at: Math.floor(Date.now() / 1000)
+    };
+
+    await this.publish(event, listId);
+    console.log(`[BookmarkService] ✅ List "${list.name}" is now ${newIsPrivate ? 'private' : 'public'}`);
   }
 
   async deleteBookmarkList(listId: string): Promise<void> {
@@ -607,55 +718,16 @@ export class BookmarkService {
       this.bookmarkEvent.set(signedEvent);
     } else if (signedEvent.kind === 30003) {
       const dTag = signedEvent.tags.find(t => t[0] === 'd')?.[1] || '';
-      let titleTag = signedEvent.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
-      const encryptedTag = signedEvent.tags.find(t => t[0] === 'encrypted')?.[1];
-      const isPrivate = encryptedTag === 'true';
+      const titleTag = signedEvent.tags.find(t => t[0] === 'title')?.[1] || 'Untitled List';
 
-      // Decrypt title if this is a private list
-      if (isPrivate && titleTag && this.encryption.isContentEncrypted(titleTag)) {
-        try {
-          const pubkey = this.accountState.pubkey();
-          if (pubkey) {
-            titleTag = await this.encryption.decryptNip44(titleTag, pubkey);
-          }
-        } catch (error) {
-          console.error('Failed to decrypt bookmark list title:', error);
-          titleTag = 'Private List (Decrypt Failed)';
-        }
-      }
+      // Per NIP-51: private lists have encrypted content, public lists have empty content
+      const isPrivate = !!signedEvent.content && signedEvent.content.length > 0;
 
-      // Decrypt content and convert to tags for private lists
-      let processedEvent = signedEvent;
-      if (isPrivate) {
-        const pubkey = this.accountState.pubkey();
-        if (pubkey) {
-          const decryptedTags = [...signedEvent.tags];
-
-          if (signedEvent.content) {
-            try {
-              const decryptedContent = await this.encryption.decryptNip44(signedEvent.content, pubkey);
-              const bookmarks: [string, string][] = JSON.parse(decryptedContent);
-
-              // Convert bookmarks to tags for internal use
-              for (const bookmark of bookmarks) {
-                decryptedTags.push(bookmark);
-              }
-            } catch (error) {
-              console.error('Failed to decrypt private list content:', error);
-            }
-          }
-
-          processedEvent = {
-            ...signedEvent,
-            tags: decryptedTags
-          };
-        }
-      }
-
+      // Don't decrypt on publish - will decrypt on-demand when user selects the list
       const updatedList: BookmarkList = {
         id: dTag,
         name: titleTag,
-        event: processedEvent,
+        event: signedEvent,
         isDefault: false,
         isPrivate: isPrivate
       };

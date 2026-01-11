@@ -1,4 +1,4 @@
-import { Component, inject, signal, effect, OnInit } from '@angular/core';
+import { Component, inject, signal, computed, effect, OnInit } from '@angular/core';
 
 import { FormsModule } from '@angular/forms';
 import { MatButtonModule } from '@angular/material/button';
@@ -84,6 +84,12 @@ export class BookmarksComponent implements OnInit {
   // Loading states
   loading = signal(false);
 
+  // Pagination for continuous scrolling
+  private readonly PAGE_SIZE = 10;
+  displayedEventCount = signal(this.PAGE_SIZE);
+  displayedArticleCount = signal(this.PAGE_SIZE);
+  displayedUrlCount = signal(this.PAGE_SIZE);
+
   // Default categories with types
   categories = signal<BookmarkCategory[]>([
     { id: 'events', name: 'Events', color: '#2196f3' },
@@ -96,12 +102,38 @@ export class BookmarksComponent implements OnInit {
   selectedCategory = signal('events');
   viewMode = signal<ViewMode>('content');
 
+  // Paginated/sliced bookmarks for display
+  displayedEvents = computed(() => {
+    const events = this.bookmarkService.bookmarkEvents();
+    const count = this.displayedEventCount();
+    return events.slice(0, count);
+  });
+
+  displayedArticles = computed(() => {
+    const articles = this.bookmarkService.bookmarkArticles();
+    const count = this.displayedArticleCount();
+    return articles.slice(0, count);
+  });
+
+  displayedUrls = computed(() => {
+    const urls = this.bookmarkService.bookmarkUrls();
+    const count = this.displayedUrlCount();
+    return urls.slice(0, count);
+  });
+
+  // Get the currently selected list
+  currentList = computed(() => {
+    const listId = this.bookmarkService.selectedListId();
+    return this.bookmarkService.allBookmarkLists().find(l => l.id === listId);
+  });
+
   constructor() {
     // Load categories and view preference from storage
     this.loadFromStorage();
 
     effect(() => {
       this.logger.debug('Selected category changed:', this.selectedCategory());
+      this.resetPagination();
     });
 
     effect(() => {
@@ -117,6 +149,79 @@ export class BookmarksComponent implements OnInit {
   ngOnInit(): void {
     // Scroll to top when bookmarks page is opened
     this.layout.scrollToTop();
+
+    // Reload bookmark lists to retry any failed decryptions
+    this.bookmarkService.loadBookmarkLists();
+
+    // Reset pagination when page opens
+    this.resetPagination();
+  }
+
+  private resetPagination(): void {
+    this.displayedEventCount.set(this.PAGE_SIZE);
+    this.displayedArticleCount.set(this.PAGE_SIZE);
+    this.displayedUrlCount.set(this.PAGE_SIZE);
+  }
+
+  /**
+   * Load more items when user scrolls near bottom
+   */
+  loadMore(): void {
+    const category = this.selectedCategory();
+
+    if (category === 'events') {
+      const current = this.displayedEventCount();
+      const total = this.bookmarkService.bookmarkEvents().length;
+      if (current < total) {
+        this.displayedEventCount.set(Math.min(current + this.PAGE_SIZE, total));
+        console.log(`[Bookmarks] Loaded more events: ${this.displayedEventCount()}/${total}`);
+      }
+    } else if (category === 'articles') {
+      const current = this.displayedArticleCount();
+      const total = this.bookmarkService.bookmarkArticles().length;
+      if (current < total) {
+        this.displayedArticleCount.set(Math.min(current + this.PAGE_SIZE, total));
+        console.log(`[Bookmarks] Loaded more articles: ${this.displayedArticleCount()}/${total}`);
+      }
+    } else if (category === 'websites') {
+      const current = this.displayedUrlCount();
+      const total = this.bookmarkService.bookmarkUrls().length;
+      if (current < total) {
+        this.displayedUrlCount.set(Math.min(current + this.PAGE_SIZE, total));
+        console.log(`[Bookmarks] Loaded more URLs: ${this.displayedUrlCount()}/${total}`);
+      }
+    }
+  }
+
+  /**
+   * Handle scroll events to trigger loading more items
+   */
+  onScroll(event: Event): void {
+    const element = event.target as HTMLElement;
+    const scrollPosition = element.scrollTop + element.clientHeight;
+    const scrollHeight = element.scrollHeight;
+
+    // Load more when scrolled to 80% of the way down
+    if (scrollPosition >= scrollHeight * 0.8) {
+      this.loadMore();
+    }
+  }
+
+  /**
+   * Check if there are more items to load
+   */
+  hasMoreToLoad(): boolean {
+    const category = this.selectedCategory();
+
+    if (category === 'events') {
+      return this.displayedEventCount() < this.bookmarkService.bookmarkEvents().length;
+    } else if (category === 'articles') {
+      return this.displayedArticleCount() < this.bookmarkService.bookmarkArticles().length;
+    } else if (category === 'websites') {
+      return this.displayedUrlCount() < this.bookmarkService.bookmarkUrls().length;
+    }
+
+    return false;
   }
 
   private loadFromStorage(): void {
@@ -318,8 +423,13 @@ export class BookmarksComponent implements OnInit {
     }
   }
 
-  onListChange(listId: string) {
+  async onListChange(listId: string) {
     this.bookmarkService.selectedListId.set(listId);
+
+    // Decrypt private list content on-demand when user selects it
+    if (listId !== 'default') {
+      await this.bookmarkService.decryptPrivateList(listId);
+    }
   }
 
   async createNewList() {
@@ -358,6 +468,32 @@ export class BookmarksComponent implements OnInit {
     if (result && result.name.trim() !== currentList.name) {
       await this.bookmarkService.updateBookmarkList(currentListId, result.name.trim());
       this.snackBar.open(`Renamed to "${result.name.trim()}"`, 'Close', { duration: 2000 });
+    }
+  }
+
+  async toggleListPrivacy() {
+    const list = this.currentList();
+    if (!list || list.isDefault) {
+      return;
+    }
+
+    const newState = list.isPrivate ? 'public' : 'private';
+    const dialogRef = this.dialog.open(ConfirmDialogComponent, {
+      data: {
+        title: `Make List ${list.isPrivate ? 'Public' : 'Private'}`,
+        message: list.isPrivate
+          ? `Are you sure you want to make "${list.name}" public? The bookmarks will be visible to everyone.`
+          : `Are you sure you want to make "${list.name}" private? The bookmarks will be encrypted and only visible to you.`,
+        confirmText: `Make ${list.isPrivate ? 'Public' : 'Private'}`,
+        cancelText: 'Cancel',
+      },
+    });
+
+    const confirmed = await dialogRef.afterClosed().toPromise();
+
+    if (confirmed) {
+      await this.bookmarkService.toggleListPrivacy(list.id);
+      this.snackBar.open(`List is now ${newState}`, 'Close', { duration: 2000 });
     }
   }
 
