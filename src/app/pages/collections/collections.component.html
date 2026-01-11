@@ -1,0 +1,20 @@
+<div class="collections-container">
+  <header class="collections-header">
+    <h1 class="title-font">Collections</h1>
+    <p class="subtitle">Organize and manage your saved content</p>
+  </header>
+
+  <div class="collections-grid">
+    @for (collection of collections; track collection.route) {
+      <mat-card class="collection-card" (click)="navigateTo(collection.route)">
+        <mat-card-content>
+          <div class="card-icon" [style.background-color]="collection.color">
+            <mat-icon>{{ collection.icon }}</mat-icon>
+          </div>
+          <h2>{{ collection.title }}</h2>
+          <p>{{ collection.description }}</p>
+        </mat-card-content>
+      </mat-card>
+    }
+  </div>
+</div>
