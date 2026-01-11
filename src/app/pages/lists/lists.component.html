@@ -83,7 +83,7 @@
         </div>
         }
 
-        @for (listType of listSets; track listType.kind) {
+        @for (listType of getFilteredListSets(); track listType.kind) {
         <div class="set-category">
           <div class="set-header">
             <div class="set-title">

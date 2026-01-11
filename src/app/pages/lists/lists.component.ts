@@ -354,6 +354,7 @@ export class ListsComponent implements OnInit {
   // State
   loading = signal(false);
   selectedTab = signal(0); // 0 = standard lists, 1 = sets
+  selectedKind = signal<number | undefined>(undefined); // Filter by specific kind
   private isLoadingLists = false; // Guard to prevent overlapping loads
 
   // Loaded lists data
@@ -390,6 +391,22 @@ export class ListsComponent implements OnInit {
     // Add to window for debugging
     if (typeof window !== 'undefined') {
       (window as unknown as { listComponent?: ListsComponent }).listComponent = this;
+    }
+
+    // Check for query parameters to set initial tab and filter
+    const queryParams = new URLSearchParams(window.location.search);
+    const tab = queryParams.get('tab');
+    const kind = queryParams.get('kind');
+
+    if (tab === 'sets') {
+      this.selectedTab.set(1);
+    }
+
+    if (kind) {
+      const kindNumber = parseInt(kind, 10);
+      if (!isNaN(kindNumber)) {
+        this.selectedKind.set(kindNumber);
+      }
     }
   }
 
@@ -1038,6 +1055,17 @@ export class ListsComponent implements OnInit {
    */
   getSets(kind: number): ListData[] {
     return this.setsData().get(kind) || [];
+  }
+
+  /**
+   * Get filtered list sets based on selectedKind
+   */
+  getFilteredListSets(): ListType[] {
+    const kind = this.selectedKind();
+    if (kind === undefined) {
+      return this.listSets;
+    }
+    return this.listSets.filter(listType => listType.kind === kind);
   }
 
   /**
