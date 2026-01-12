@@ -27,6 +27,7 @@ import { EventComponent } from '../../components/event/event.component';
 import { ArticleComponent } from '../../components/article/article.component';
 import { ConfirmDialogComponent } from '../../components/confirm-dialog/confirm-dialog.component';
 import { CreateListDialogComponent } from './create-list-dialog/create-list-dialog.component';
+import { SocialPreviewComponent } from '../../components/social-preview/social-preview.component';
 
 export interface Bookmark {
   id: string;
@@ -65,6 +66,7 @@ export type ViewMode = 'tiles' | 'content';
     MatSelectModule,
     EventComponent,
     ArticleComponent,
+    SocialPreviewComponent,
   ],
   templateUrl: './bookmarks.component.html',
   styleUrl: './bookmarks.component.scss',

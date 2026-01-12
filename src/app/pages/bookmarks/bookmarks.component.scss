@@ -189,6 +189,28 @@
           flex-shrink: 0;
         }
       }
+
+      .bookmark-url-preview {
+        position: relative;
+
+        app-social-preview {
+          display: block;
+        }
+
+        .remove-bookmark-btn {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          z-index: 10;
+          background: var(--mat-sys-surface-container);
+          box-shadow: var(--mat-sys-level2);
+
+          &:hover {
+            background: var(--mat-sys-error-container);
+            color: var(--mat-sys-on-error-container);
+          }
+        }
+      }
     }
 
     &[data-view='tiles'] {
