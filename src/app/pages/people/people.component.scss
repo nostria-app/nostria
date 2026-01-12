@@ -250,6 +250,16 @@
   p {
     margin: 0.5rem 0;
   }
+
+  .subtitle {
+    font-size: 0.875rem;
+    color: var(--mat-sys-on-surface-variant);
+    margin-bottom: 1.5rem;
+  }
+
+  button {
+    margin-top: 0.5rem;
+  }
 }
 
 .scroll-sentinel {

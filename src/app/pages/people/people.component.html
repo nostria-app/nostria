@@ -216,6 +216,14 @@
         <mat-icon>search_off</mat-icon>
         <p>No results</p>
         <button mat-button color="primary" (click)="updateSearch('')">Clear</button>
+        } @else if (selectedFollowSet()) {
+        <mat-icon>group_off</mat-icon>
+        <p>This list is empty</p>
+        <p class="subtitle">Add people to get started</p>
+        <button mat-flat-button (click)="openAddPersonDialog()">
+          <mat-icon>person_add</mat-icon>
+          Add Person
+        </button>
         } @else {
         <mat-icon>people_outline</mat-icon>
         <p>No people</p>
