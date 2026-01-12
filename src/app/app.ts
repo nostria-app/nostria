@@ -67,6 +67,7 @@ import { WhatsNewDialogComponent } from './components/whats-new-dialog/whats-new
 import { FeedsCollectionService } from './services/feeds-collection.service';
 import { FollowSetsService } from './services/follow-sets.service';
 import { NewFeedDialogComponent } from './pages/feeds/new-feed-dialog/new-feed-dialog.component';
+import { EditPeopleListDialogComponent, EditPeopleListDialogResult } from './pages/people/edit-people-list-dialog.component';
 import { FeedConfig } from './services/feed.service';
 import { FavoritesOverlayComponent } from './components/favorites-overlay/favorites-overlay.component';
 import { NostrRecord } from './interfaces';
@@ -1510,9 +1511,26 @@ export class App implements OnInit {
   }
 
   openFollowSetEditDialog(followSetId: string): void {
-    // Navigate to people page with management mode
-    this.router.navigate(['/people'], {
-      queryParams: { manage: 'true', set: followSetId }
+    // Get the follow set
+    const followSet = this.followSetsService.getFollowSetByDTag(followSetId);
+    if (!followSet) {
+      this.logger.error('Follow set not found:', followSetId);
+      return;
+    }
+
+    // Open the edit dialog
+    const dialogRef = this.dialog.open(EditPeopleListDialogComponent, {
+      data: {
+        followSet: followSet,
+      },
+      width: '500px',
+      maxWidth: '90vw',
+    });
+
+    dialogRef.afterClosed().subscribe((result: EditPeopleListDialogResult | null) => {
+      if (result) {
+        this.logger.info('Follow set updated, removed pubkeys:', result.removedPubkeys);
+      }
     });
 
     // Close sidenav on mobile

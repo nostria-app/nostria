@@ -47,6 +47,14 @@
           Add<span class="hide-tiny"> Person</span>
         </button>
 
+        <!-- Edit List Button - Only shown when a follow set is selected -->
+        @if (selectedFollowSet()) {
+        <button mat-button (click)="openEditListDialog()" matTooltip="Edit this list">
+          <mat-icon>edit</mat-icon>
+          Edit<span class="hide-tiny"> List</span>
+        </button>
+        }
+
         <!-- View menu -->
         <button mat-icon-button [matMenuTriggerFor]="viewMenu" matTooltip="View options">
           <mat-icon>view_comfy</mat-icon>
