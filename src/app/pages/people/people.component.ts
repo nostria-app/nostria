@@ -595,11 +595,9 @@ export class PeopleComponent implements OnDestroy {
    * Select a follow set to filter people
    */
   async selectFollowSet(followSet: FollowSet | null) {
-    this.selectedFollowSet.set(followSet);
-    this.followSetProfiles.set([]);
-
     // Reset display limit when follow set changes
     this.displayLimit.set(this.PAGE_SIZE);
+
     // Clear search when selecting a follow set
     if (followSet) {
       this.updateSearch('');
@@ -608,9 +606,15 @@ export class PeopleComponent implements OnDestroy {
       this.loadingFollowSetProfiles.set(true);
       try {
         const profiles = await this.followingService.loadProfilesForPubkeys(followSet.pubkeys);
+        // Only update the selected set and profiles after loading is complete
+        // This prevents the flicker where "All Following" shows during loading
+        this.selectedFollowSet.set(followSet);
         this.followSetProfiles.set(profiles);
       } catch (error) {
         console.error('Failed to load follow set profiles:', error);
+        // On error, still set the follow set but with empty profiles
+        this.selectedFollowSet.set(followSet);
+        this.followSetProfiles.set([]);
       } finally {
         this.loadingFollowSetProfiles.set(false);
       }
@@ -622,6 +626,10 @@ export class PeopleComponent implements OnDestroy {
         queryParamsHandling: 'merge'
       });
     } else {
+      // When clearing selection, update immediately
+      this.selectedFollowSet.set(null);
+      this.followSetProfiles.set([]);
+
       // Clear the query parameter when deselecting
       this.router.navigate([], {
         relativeTo: this.route,
