@@ -5,6 +5,16 @@
     <mat-form-field appearance="outline">
       <mat-label>Type</mat-label>
       <mat-select [ngModel]="selectedType()" (ngModelChange)="selectedType.set($event); onTypeChange()">
+        <mat-select-trigger>
+          @for (type of bookmarkTypes; track type.value) {
+            @if (type.value === selectedType()) {
+              <div class="type-option">
+                <mat-icon>{{ type.icon }}</mat-icon>
+                <span>{{ type.label }}</span>
+              </div>
+            }
+          }
+        </mat-select-trigger>
         @for (type of bookmarkTypes; track type.value) {
         <mat-option [value]="type.value">
           <div class="type-option">
